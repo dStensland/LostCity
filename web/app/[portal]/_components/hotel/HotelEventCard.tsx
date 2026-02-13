@@ -52,7 +52,7 @@ export default function HotelEventCard({ event, portalSlug, variant = "featured"
     return (
       <Link
         href={eventUrl}
-        className="group flex gap-4 bg-[var(--hotel-cream)] rounded-lg overflow-hidden p-4 hover:shadow-[var(--hotel-shadow-medium)] transition-shadow duration-500"
+        className="group isolate flex gap-4 bg-[var(--hotel-cream)] rounded-lg overflow-hidden p-4 hover:shadow-[var(--hotel-shadow-medium)] transition-shadow duration-500"
       >
         {/* Thumbnail */}
         <div className="relative w-20 h-20 flex-shrink-0 rounded-md overflow-hidden bg-[var(--hotel-sand)]">
@@ -60,7 +60,7 @@ export default function HotelEventCard({ event, portalSlug, variant = "featured"
             <img
               src={event.image_url}
               alt={event.title}
-              className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              className="absolute inset-0 h-full w-full object-cover group-hover:scale-105 transition-transform duration-500 transform-gpu will-change-transform [backface-visibility:hidden]"
               loading="lazy"
               onError={(e) => {
                 const img = e.currentTarget;
@@ -109,7 +109,7 @@ export default function HotelEventCard({ event, portalSlug, variant = "featured"
   return (
     <Link
       href={eventUrl}
-      className="group block bg-[var(--hotel-cream)] rounded-lg overflow-hidden shadow-[var(--hotel-shadow-soft)] hover:shadow-[var(--hotel-shadow-medium)] transition-shadow duration-500"
+      className="group isolate block bg-[var(--hotel-cream)] rounded-lg overflow-hidden shadow-[var(--hotel-shadow-soft)] hover:shadow-[var(--hotel-shadow-medium)] transition-shadow duration-500"
     >
       {/* Image */}
       <div className="relative aspect-[16/9] overflow-hidden bg-[var(--hotel-sand)]">
@@ -117,7 +117,7 @@ export default function HotelEventCard({ event, portalSlug, variant = "featured"
           <img
             src={event.image_url}
             alt={event.title}
-            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            className="absolute inset-0 h-full w-full object-cover group-hover:scale-105 transition-transform duration-500 transform-gpu will-change-transform [backface-visibility:hidden]"
             loading="lazy"
             onError={(e) => {
               const img = e.currentTarget;
@@ -130,7 +130,7 @@ export default function HotelEventCard({ event, portalSlug, variant = "featured"
           <img
             src={DEFAULT_EVENT_IMAGE}
             alt={event.title}
-            className="absolute inset-0 w-full h-full object-cover"
+            className="absolute inset-0 h-full w-full object-cover"
             loading="lazy"
           />
         )}

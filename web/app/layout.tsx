@@ -7,12 +7,16 @@ import { AuthProvider } from "@/lib/auth-context";
 import { ThemeProvider } from "@/lib/theme-context";
 import { ToastProvider } from "@/components/Toast";
 import { QueryProvider } from "@/lib/providers/QueryProvider";
+import { safeJsonLd } from "@/lib/formats";
+import { getSiteUrl } from "@/lib/site-url";
 import DarkHoursTheme from "@/components/DarkHoursTheme";
 import NavigationProgress from "@/components/NavigationProgress";
 import SkipLink from "@/components/SkipLink";
 import ClientEffects from "@/components/ClientEffects";
 import ScrollReset from "@/components/ScrollReset";
 import "./globals.css";
+
+const SITE_URL = getSiteUrl();
 
 // Primary sans-serif font - used globally
 // Only load weights we actually use to reduce font file size
@@ -32,12 +36,22 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://lostcity.ai"),
+  metadataBase: new URL(SITE_URL),
   title: "Lost City - Find Your People",
   description: "Find your people. Discover the underground events, shows, and happenings in your city.",
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
     title: "Lost City - Find Your People",
     description: "Find your people. Discover the underground.",
+    url: SITE_URL,
+    images: ["/og-image.png"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Lost City - Find Your People",
+    description: "Find your people. Discover the underground events, shows, and happenings in your city.",
     images: ["/og-image.png"],
   },
 };
@@ -48,11 +62,39 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const nonce = (await headers()).get("x-nonce") ?? "";
+  const organizationSchema = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "Lost City",
+    url: SITE_URL,
+    logo: `${SITE_URL}/og-image.png`,
+  };
+  const websiteSchema = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "Lost City",
+    url: SITE_URL,
+    potentialAction: {
+      "@type": "SearchAction",
+      target: `${SITE_URL}/?search={search_term_string}`,
+      "query-input": "required name=search_term_string",
+    },
+  };
 
   return (
     <html lang="en" style={{ backgroundColor: "#09090B" }}>
       <head>
         <meta name="csp-nonce" content={nonce} />
+        <script
+          nonce={nonce}
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: safeJsonLd(organizationSchema) }}
+        />
+        <script
+          nonce={nonce}
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: safeJsonLd(websiteSchema) }}
+        />
         {/* Preconnect to external domains for faster resource loading */}
         <link rel="preconnect" href="https://rtppvljfrkjtoxmaizea.supabase.co" />
         <link rel="preconnect" href="https://img.evbuc.com" />

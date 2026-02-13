@@ -43,7 +43,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const portal = await getCachedPortalBySlug(portalSlug);
 
   if (!series) {
-    return { title: "Series Not Found" };
+    return {
+      title: "Series Not Found",
+      robots: {
+        index: false,
+        follow: false,
+      },
+    };
   }
 
   const portalName = portal?.name || "Lost City";
@@ -60,6 +66,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `${series.title} | ${portalName}`,
     description,
+    alternates: {
+      canonical: `/${portal?.slug || portalSlug}/series/${slug}`,
+    },
     openGraph: {
       title: series.title,
       description,

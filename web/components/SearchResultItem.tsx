@@ -38,7 +38,7 @@ export default function SearchResultItem({
       href={href}
       scroll={false}
       onClick={onClick}
-      className={`flex items-center gap-3 rounded-lg hover:bg-[var(--twilight)]/50 transition-all group focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)] focus-visible:ring-inset border-l-2 border-transparent hover:border-l-2 ${hoverBorderClass} ${
+      className={`flex items-center gap-3 rounded-lg border border-transparent hover:border-[var(--twilight)] hover:bg-[var(--twilight)]/50 transition-all group focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)] focus-visible:ring-inset border-l-2 border-transparent hover:border-l-2 ${hoverBorderClass} ${
         compact ? "p-2" : "px-3 py-2.5"
       }`}
     >
@@ -60,7 +60,7 @@ export default function SearchResultItem({
         >
           {result.title}
         </p>
-        <p className={`text-[var(--soft)] truncate ${compact ? "text-xs" : "text-[0.8125rem]"}`}>
+        <p className={`text-[var(--muted)] truncate ${compact ? "text-xs" : "text-[0.8125rem]"}`}>
           {getSubtitle(result)}
         </p>
       </div>
@@ -451,13 +451,19 @@ export function SearchResultSection({
   const hasMore = count !== undefined && shownCount !== undefined && count > shownCount;
 
   return (
-    <div className="p-3">
-      <h3 className="flex items-center gap-2 text-xs font-mono font-semibold text-[var(--muted)] uppercase tracking-wider mb-2 px-2">
+    <div className="px-3 py-2.5">
+      <h3 className="flex items-center justify-between gap-3 text-xs font-mono font-semibold text-[var(--muted)] uppercase tracking-wider mb-2.5 px-1">
+        <span className="inline-flex items-center gap-2 min-w-0">
         <TypeIcon type={type} className={`w-3.5 h-3.5 ${config.iconClass}`} />
-        {labels[type] || type}
-        {count !== undefined && <span className="text-[var(--muted)]/60">({count})</span>}
+          {labels[type] || type}
+        </span>
+        {count !== undefined && (
+          <span className="text-[0.62rem] px-1.5 py-0.5 rounded-full bg-[var(--night)]/60 border border-[var(--twilight)] text-[var(--muted)]/90">
+            {count}
+          </span>
+        )}
       </h3>
-      <div className="space-y-0.5">{children}</div>
+      <div className="space-y-1">{children}</div>
       {hasMore && onSeeMore && (
         <button
           onClick={onSeeMore}

@@ -3,35 +3,54 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { getProxiedImageSrc } from "@/lib/image-proxy";
 
 interface HotelHeaderProps {
   portalSlug: string;
   portalName: string;
   logoUrl?: string | null;
+  showStayLink?: boolean;
+  useForthNav?: boolean;
 }
 
 /**
  * Minimal, refined header for hotel portal
  * Light background with thin border, hotel logo, and minimal navigation
  */
-export default function HotelHeader({ portalSlug, portalName, logoUrl }: HotelHeaderProps) {
+export default function HotelHeader({
+  portalSlug,
+  portalName,
+  logoUrl,
+  showStayLink = false,
+  useForthNav = false,
+}: HotelHeaderProps) {
   const searchParams = useSearchParams();
+  const pathname = usePathname();
   const view = searchParams.get("view") || "feed";
   const findType = searchParams.get("type") || "events";
   const [logoFailed, setLogoFailed] = useState(false);
+  const isStayPath = pathname === `/${portalSlug}/stay`;
   const resolvedLogoSrc = useMemo(() => {
     if (!logoUrl) return null;
     const proxied = getProxiedImageSrc(logoUrl);
     return typeof proxied === "string" ? proxied : null;
   }, [logoUrl]);
 
-  const navLinks = [
-    { href: `/${portalSlug}`, label: "Live", active: view === "feed" },
-    { href: `/${portalSlug}?view=find&type=events`, label: "Tonight", active: view === "find" && findType === "events" },
-    { href: `/${portalSlug}?view=find&type=destinations`, label: "Explore", active: view === "find" && findType === "destinations" },
-  ];
+  const navLinks = useForthNav
+    ? [
+      { href: `/${portalSlug}`, label: "Concierge", active: pathname === `/${portalSlug}` },
+      { href: `/${portalSlug}/plan`, label: "Plan Stay", active: pathname === `/${portalSlug}/plan` },
+      { href: `/${portalSlug}/dining`, label: "Eat + Drink", active: pathname === `/${portalSlug}/dining` },
+      ...(showStayLink ? [{ href: `/${portalSlug}/stay`, label: "Stay", active: pathname === `/${portalSlug}/stay` }] : []),
+      { href: `/${portalSlug}/club`, label: "Club", active: pathname === `/${portalSlug}/club` },
+    ]
+    : [
+      { href: `/${portalSlug}`, label: "Live", active: !isStayPath && view === "feed" },
+      { href: `/${portalSlug}?view=find&type=events`, label: "Tonight", active: !isStayPath && view === "find" && findType === "events" },
+      { href: `/${portalSlug}?view=find&type=destinations`, label: "Explore", active: !isStayPath && view === "find" && findType === "destinations" },
+      ...(showStayLink ? [{ href: `/${portalSlug}/stay`, label: "Stay", active: isStayPath }] : []),
+    ];
 
   return (
     <header className="sticky top-0 z-50 bg-[var(--hotel-ivory)]/95 backdrop-blur-md border-b border-[var(--hotel-sand)] shadow-sm">

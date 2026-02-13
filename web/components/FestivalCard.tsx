@@ -1,8 +1,7 @@
 "use client";
 
-import { memo, useMemo } from "react";
+import { memo } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { format, parseISO, isSameDay } from "date-fns";
 import { getSeriesTypeColor } from "@/lib/series-utils";
 import type { FestivalInfo, FestivalSummary } from "@/lib/event-grouping";
@@ -46,25 +45,18 @@ const FestivalCard = memo(function FestivalCard({
     if (normalized === "festival") return "Festival";
     if (normalized === "conference") return "Conference";
     if (normalized === "convention") return "Convention";
+    if (normalized === "market") return "Market";
+    if (normalized === "fair") return "Fair";
+    if (normalized === "expo") return "Expo";
+    if (normalized === "tournament") return "Tournament";
     return normalized
       .split("_")
       .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
       .join(" ");
   };
-  const searchParams = useSearchParams();
   const typeLabel = formatFestivalType(festival.festival_type);
   const festivalName = decodeHtmlEntities(festival.name);
-  const festivalUrl = useMemo(() => {
-    if (!portalSlug) return `/festivals/${festival.slug}`;
-    const params = new URLSearchParams(searchParams?.toString() || "");
-    params.delete("event");
-    params.delete("spot");
-    params.delete("series");
-    params.delete("festival");
-    params.delete("org");
-    params.set("festival", festival.slug);
-    return `/${portalSlug}?${params.toString()}`;
-  }, [portalSlug, festival.slug, searchParams]);
+  const festivalUrl = portalSlug ? `/${portalSlug}/festivals/${festival.slug}` : `/festivals/${festival.slug}`;
   const accentClass = createCssVarClass("--accent-color", typeColor, "accent");
   const contextAccentClass = contextColor
     ? createCssVarClass("--context-accent", contextColor, "context-accent")
@@ -109,7 +101,6 @@ const FestivalCard = memo(function FestivalCard({
         <ScopedStyles css={scopedCss} />
         <Link
           href={festivalUrl}
-          scroll={false}
           className={`find-row-card block ${disableMargin ? "" : "mb-2.5"} rounded-xl border border-[var(--twilight)]/75 group overflow-hidden border-l-[2px] border-l-[var(--accent-color)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)] ${accentClass?.className ?? ""} ${contextAccentClass?.className ?? ""} ${skipAnimation ? "" : "animate-card-emerge"} ${className ?? ""}`}
           tabIndex={0}
           data-list-row="true"
@@ -132,6 +123,22 @@ const FestivalCard = memo(function FestivalCard({
                 {typeLabel}
               </span>
             </div>
+
+            <div className="mt-1 flex items-center gap-1.5 font-mono text-[0.62rem] text-[var(--muted)] min-w-0">
+              <span className="truncate">{dateRangeLabel}</span>
+              {locationLabel && (
+                <>
+                  <span className="opacity-40">·</span>
+                  <span className="truncate">{locationLabel}</span>
+                </>
+              )}
+              {!isStandalone && summary.eventCount > 0 && (
+                <>
+                  <span className="opacity-40">·</span>
+                  <span className="truncate">{summary.eventCount} events</span>
+                </>
+              )}
+            </div>
           </div>
         </Link>
       </>
@@ -143,7 +150,6 @@ const FestivalCard = memo(function FestivalCard({
       <ScopedStyles css={scopedCss} />
       <Link
         href={festivalUrl}
-        scroll={false}
         className={`find-row-card block ${disableMargin ? "" : "mb-3 sm:mb-4"} rounded-2xl border border-[var(--twilight)]/75 group overflow-hidden border-l-[2px] border-l-[var(--accent-color)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)] ${accentClass?.className ?? ""} ${contextAccentClass?.className ?? ""} ${skipAnimation ? "" : "animate-card-emerge"} ${className ?? ""}`}
         tabIndex={0}
         data-list-row="true"

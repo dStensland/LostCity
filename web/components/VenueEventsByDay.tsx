@@ -16,6 +16,8 @@ import { getEffectiveDate } from "@/lib/event-grouping";
 import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
+import { FreeBadge } from "@/components/Badge";
+import { getReflectionClass } from "@/lib/card-utils";
 
 // Common event type that works with both EventDetailView and VenueDetailView
 export type VenueEvent = {
@@ -346,6 +348,7 @@ export function VenueEventCard({
   const { time, period } = formatTimeSplit(event.start_time);
   const accentColor = event.category ? getCategoryColor(event.category) : "var(--neon-magenta)";
   const accentClass = createCssVarClass("--accent-color", accentColor, "accent");
+  const reflectionClass = getReflectionClass(event.category ?? null);
   const goingCount = event.going_count ?? 0;
   const interestedCount = event.interested_count ?? 0;
   const recommendationCount = event.recommendation_count ?? 0;
@@ -376,17 +379,19 @@ export function VenueEventCard({
           }`}
         >
           {event.start_time && (
-            <span className="font-mono">
+            <span className="font-mono tabular-nums">
               {time}
-              {period}
+              {period && (
+                <span className="ml-0.5 text-[0.55rem] uppercase tracking-[0.1em] text-[var(--muted)]">
+                  {period}
+                </span>
+              )}
             </span>
           )}
           {event.is_free ? (
-            <span className="px-1.5 py-0.5 rounded border bg-[var(--neon-green)]/15 text-[var(--neon-green)] border-[var(--neon-green)]/25 font-mono text-[0.55rem]">
-              Free
-            </span>
+            <FreeBadge />
           ) : event.price_min ? (
-            <span>${event.price_min}+</span>
+            <span className="font-mono text-[0.65rem] text-[var(--muted)]">From ${event.price_min}</span>
           ) : null}
         </div>
         {hasSocialProof && (
@@ -469,15 +474,20 @@ export function VenueEventCard({
     </div>
   );
 
-  const cardClassName = `block w-full text-left border border-[var(--twilight)] rounded-lg bg-[var(--dusk)] hover:border-[var(--coral)]/50 transition-colors group ${
-    compact ? "p-3" : "p-4"
-  } ${accentClass?.className ?? ""} ${event.category ? "border-l-[3px] border-l-[var(--accent-color)]" : ""}`;
+  const cardClassName = `block w-full text-left find-row-card border border-[var(--twilight)]/75 ${reflectionClass} overflow-hidden group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)] ${
+    compact ? "rounded-xl px-3 py-2.5" : "rounded-2xl p-3.5 sm:p-4"
+  } ${accentClass?.className ?? ""} ${event.category ? "border-l-[2px] border-l-[var(--accent-color)]" : ""}`;
+
+  const cardStyle = {
+    background:
+      "linear-gradient(180deg, color-mix(in srgb, var(--night) 84%, transparent), color-mix(in srgb, var(--dusk) 72%, transparent))",
+  } as const;
 
   if (href) {
     return (
       <>
         <ScopedStyles css={accentClass?.css} />
-        <Link href={href} className={cardClassName}>
+        <Link href={href} className={cardClassName} style={cardStyle} data-row-primary-link="true">
           {cardContent}
         </Link>
       </>
@@ -487,7 +497,7 @@ export function VenueEventCard({
   return (
     <>
       <ScopedStyles css={accentClass?.css} />
-      <button onClick={onClick} className={cardClassName}>
+      <button onClick={onClick} className={cardClassName} style={cardStyle} data-row-primary-link="true">
         {cardContent}
       </button>
     </>

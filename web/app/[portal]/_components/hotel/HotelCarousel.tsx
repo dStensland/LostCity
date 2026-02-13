@@ -11,8 +11,8 @@ interface HotelCarouselProps {
  */
 export default function HotelCarousel({ children, className = "" }: HotelCarouselProps) {
   return (
-    <div className={`relative ${className}`}>
-      <div className="hotel-carousel flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2">
+    <div className={`relative max-w-full overflow-x-clip ${className}`}>
+      <div className="hotel-carousel flex w-full max-w-full gap-4 overflow-x-auto overflow-y-hidden snap-x snap-mandatory pb-2">
         {children}
       </div>
     </div>

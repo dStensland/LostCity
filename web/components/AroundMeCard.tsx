@@ -1,10 +1,11 @@
 "use client";
 
-import { memo } from "react";
+import { memo, type CSSProperties } from "react";
 import Link from "next/link";
 import type { AroundMeItem, AroundMeSpot, AroundMeEvent } from "@/app/api/around-me/route";
-import CategoryIcon from "./CategoryIcon";
+import CategoryIcon, { getCategoryColor } from "./CategoryIcon";
 import { formatTimeSplit } from "@/lib/formats";
+import { getReflectionClass, getSpotReflectionClass } from "@/lib/card-utils";
 
 interface Props {
   item: AroundMeItem;
@@ -20,13 +21,25 @@ function formatDistance(miles: number): string {
 
 // Spot card variant
 function SpotCardContent({ spot, distance, portalSlug }: { spot: AroundMeSpot; distance: number; portalSlug?: string }) {
+  const accentColor = "var(--neon-green)";
+  const reflectionClass = spot.venue_type ? getSpotReflectionClass(spot.venue_type) : "";
+
   return (
     <Link
       href={portalSlug ? `/${portalSlug}?spot=${spot.slug}` : `/spots/${spot.slug}`}
       scroll={false}
-      className="block p-3 rounded-sm border border-[var(--twilight)] bg-[var(--card-bg)] hover:border-[var(--neon-green)]/40 transition-all group border-l-[3px] border-l-[var(--neon-green)]"
+      data-category={spot.venue_type || "other"}
+      data-accent="spot"
+      className={`block find-row-card rounded-xl border border-[var(--twilight)]/75 ${reflectionClass} overflow-hidden group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)] border-l-[2px] border-l-[var(--accent-color)]`}
+      style={
+        {
+          "--accent-color": accentColor,
+          background:
+            "linear-gradient(180deg, color-mix(in srgb, var(--night) 84%, transparent), color-mix(in srgb, var(--dusk) 72%, transparent))",
+        } as CSSProperties
+      }
     >
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-3 p-3">
         {/* Type badge + icon column */}
         <div className="flex-shrink-0 flex flex-col items-center gap-1">
           <span className="font-mono text-[0.5rem] font-semibold text-[var(--neon-green)] uppercase tracking-wider bg-[var(--neon-green)]/10 px-1.5 py-0.5 rounded">
@@ -80,14 +93,25 @@ function SpotCardContent({ spot, distance, portalSlug }: { spot: AroundMeSpot; d
 // Event card variant
 function EventCardContent({ event, distance, portalSlug }: { event: AroundMeEvent; distance: number; portalSlug?: string }) {
   const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
+  const accentColor = event.category ? getCategoryColor(event.category) : "var(--neon-red)";
+  const reflectionClass = getReflectionClass(event.category);
 
   return (
     <Link
       href={portalSlug ? `/${portalSlug}?event=${event.id}` : `/events/${event.id}`}
       scroll={false}
-      className="block p-3 rounded-sm border border-[var(--twilight)] bg-[var(--card-bg)] hover:border-[var(--neon-red)]/40 transition-all group border-l-[3px] border-l-[var(--neon-red)]"
+      data-category={event.category || "other"}
+      data-accent={event.category ? "category" : ""}
+      className={`block find-row-card rounded-xl border border-[var(--twilight)]/75 ${reflectionClass} overflow-hidden group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)] border-l-[2px] border-l-[var(--accent-color)]`}
+      style={
+        {
+          "--accent-color": accentColor,
+          background:
+            "linear-gradient(180deg, color-mix(in srgb, var(--night) 84%, transparent), color-mix(in srgb, var(--dusk) 72%, transparent))",
+        } as CSSProperties
+      }
     >
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-3 p-3">
         {/* Type badge + icon column */}
         <div className="flex-shrink-0 flex flex-col items-center gap-1">
           <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[var(--neon-red)]/15 border border-[var(--neon-red)]/30">

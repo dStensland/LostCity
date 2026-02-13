@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 
 /**
  * Rain overlay effect that creates an atmospheric rainy night feel.
@@ -16,6 +17,7 @@ export default function RainEffect() {
   const [mounted, setMounted] = useState(false);
   const [designTesterActive, setDesignTesterActive] = useState(false);
   const [portalSuppressed, setPortalSuppressed] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- SSR hydration pattern
@@ -27,8 +29,16 @@ export default function RainEffect() {
       const inferredVertical = document.querySelector<HTMLElement>("[data-vertical]")?.dataset.vertical;
       const vertical = explicitVertical || inferredVertical;
       const forthBg = body.dataset.forthBg;
+      const forthExperience = body.dataset.forthExperience === "true";
       const hasForthExperience = Boolean(document.querySelector("[data-forth-experience='true']"));
-      const shouldSuppress = vertical === "hotel" || forthBg === "off" || hasForthExperience;
+      const isHospitalPath = pathname.startsWith("/emory-demo") || pathname.includes("/hospitals");
+      const shouldSuppress =
+        vertical === "hotel" ||
+        vertical === "hospital" ||
+        forthBg === "off" ||
+        forthExperience ||
+        hasForthExperience ||
+        isHospitalPath;
       setPortalSuppressed(shouldSuppress);
     };
     syncPortalSuppression();
@@ -101,7 +111,7 @@ export default function RainEffect() {
       window.removeEventListener("designOverridesChanged", handleDesignChange);
       observer.disconnect();
     };
-  }, []);
+  }, [pathname]);
 
   // Don't render until mounted to avoid hydration mismatch.
   if (!mounted) {

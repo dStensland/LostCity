@@ -7,9 +7,7 @@
  */
 
 import { createServiceClient } from "./supabase/service";
-import { analyzeQueryIntent, applyIntentBoost, type QueryIntentResult, type SearchType } from "./query-intent";
-import { getLocalDateString } from "@/lib/formats";
-import { escapeSQLPattern } from "@/lib/api-utils";
+import { analyzeQueryIntent, applyIntentBoost, extractCleanQuery, type QueryIntentResult, type SearchType } from "./query-intent";
 import { fetchSocialProofCounts } from "@/lib/search";
 
 // ============================================
@@ -73,6 +71,20 @@ export interface UnifiedSearchResponse {
   facets: SearchFacet[];
   total: number;
   didYouMean?: string[];
+}
+
+function dedupeByTypeAndId(results: SearchResult[]): SearchResult[] {
+  const byId = new Map<string, SearchResult>();
+
+  for (const result of results) {
+    const key = `${result.type}:${String(result.id)}`;
+    const existing = byId.get(key);
+    if (!existing || result.score > existing.score) {
+      byId.set(key, result);
+    }
+  }
+
+  return Array.from(byId.values());
 }
 
 // ============================================
@@ -139,6 +151,50 @@ interface OrganizationSearchRow {
   website: string | null;
   instagram: string | null;
   total_events_tracked: number | null;
+  ts_rank: number;
+  similarity_score: number;
+  combined_score: number;
+}
+
+interface SeriesSearchRow {
+  id: string;
+  title: string;
+  slug: string;
+  description: string | null;
+  series_type: string | null;
+  category: string | null;
+  image_url: string | null;
+  next_event_date: string | null;
+  upcoming_event_count: number;
+  ts_rank: number;
+  similarity_score: number;
+  combined_score: number;
+}
+
+interface ListSearchRow {
+  id: string;
+  title: string;
+  slug: string;
+  description: string | null;
+  category: string | null;
+  creator_id: string;
+  creator_name: string | null;
+  item_count: number;
+  ts_rank: number;
+  similarity_score: number;
+  combined_score: number;
+}
+
+interface FestivalSearchRow {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  image_url: string | null;
+  announced_start: string | null;
+  announced_end: string | null;
+  primary_type: string | null;
+  festival_type: string | null;
   ts_rank: number;
   similarity_score: number;
   combined_score: number;
@@ -348,6 +404,7 @@ export async function unifiedSearch(
 
   // Analyze query intent for smarter results
   const intent = useIntentAnalysis ? analyzeQueryIntent(trimmedQuery) : undefined;
+  const effectiveQuery = intent ? extractCleanQuery(trimmedQuery, intent) : trimmedQuery;
 
   // Use intent-derived date filter if not explicitly provided
   // Map "tonight" to "today" for the event search (they're handled the same at DB level)
@@ -366,7 +423,7 @@ export async function unifiedSearch(
   if (types.includes("event")) {
     searchTypes.push("event");
     searchPromises.push(
-      searchEvents(client, trimmedQuery, {
+      searchEvents(client, effectiveQuery, {
         limit: limitPerType,
         offset,
         categories,
@@ -383,7 +440,7 @@ export async function unifiedSearch(
   if (types.includes("venue")) {
     searchTypes.push("venue");
     searchPromises.push(
-      searchVenues(client, trimmedQuery, {
+      searchVenues(client, effectiveQuery, {
         limit: limitPerType,
         offset,
         neighborhoods,
@@ -394,7 +451,7 @@ export async function unifiedSearch(
   if (types.includes("organizer")) {
     searchTypes.push("organizer");
     searchPromises.push(
-      searchOrganizations(client, trimmedQuery, {
+      searchOrganizations(client, effectiveQuery, {
         limit: limitPerType,
         offset,
         categories,
@@ -405,7 +462,7 @@ export async function unifiedSearch(
   if (types.includes("series")) {
     searchTypes.push("series");
     searchPromises.push(
-      searchSeries(client, trimmedQuery, {
+      searchSeries(client, effectiveQuery, {
         limit: limitPerType,
         offset,
         categories,
@@ -416,7 +473,7 @@ export async function unifiedSearch(
   if (types.includes("list")) {
     searchTypes.push("list");
     searchPromises.push(
-      searchLists(client, trimmedQuery, {
+      searchLists(client, effectiveQuery, {
         limit: limitPerType,
         offset,
         portalId,
@@ -427,9 +484,10 @@ export async function unifiedSearch(
   if (types.includes("festival")) {
     searchTypes.push("festival");
     searchPromises.push(
-      searchFestivals(client, trimmedQuery, {
+      searchFestivals(client, effectiveQuery, {
         limit: limitPerType,
         offset,
+        portalId,
       })
     );
   }
@@ -437,12 +495,12 @@ export async function unifiedSearch(
   // Execute searches, facets, and spelling suggestions in parallel
   const [searchResultsArrays, facets, didYouMean] = await Promise.all([
     Promise.all(searchPromises),
-    getSearchFacets(client, trimmedQuery, portalId),
-    getSpellingSuggestions(client, trimmedQuery),
+    getSearchFacets(client, effectiveQuery, portalId),
+    getSpellingSuggestions(client, effectiveQuery),
   ]);
 
   // Combine all results
-  let allResults: SearchResult[] = searchResultsArrays.flat();
+  let allResults: SearchResult[] = dedupeByTypeAndId(searchResultsArrays.flat());
 
   // Apply enhanced scoring
   if (boostExactMatches || intent) {
@@ -451,7 +509,7 @@ export async function unifiedSearch(
 
       // Apply relevance scoring
       if (boostExactMatches) {
-        newScore = calculateRelevanceScore(trimmedQuery, result.title, newScore, {
+        newScore = calculateRelevanceScore(effectiveQuery, result.title, newScore, {
           date: result.metadata?.date,
           eventCount: result.metadata?.eventCount,
           followerCount: result.metadata?.followerCount,
@@ -813,7 +871,7 @@ async function searchOrganizations(
 }
 
 /**
- * Search series using direct table query with trigram similarity.
+ * Search series using the search_series_ranked RPC function.
  */
 async function searchSeries(
   client: ReturnType<typeof createServiceClient>,
@@ -824,104 +882,39 @@ async function searchSeries(
     categories?: string[];
   }
 ): Promise<SearchResult[]> {
-  try {
-    // Build query with trigram similarity
-    // Escape the query to prevent SQL injection in ILIKE pattern
-    const escapedQuery = escapeSQLPattern(query);
-    let supabaseQuery = client
-      .from("series")
-      .select(`
-        id,
-        title,
-        slug,
-        description,
-        series_type,
-        image_url,
-        category,
-        is_active
-      `)
-      .eq("is_active", true)
-      .ilike("title", `%${escapedQuery}%`)
-      .limit(options.limit)
-      .range(options.offset, options.offset + options.limit - 1);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (client.rpc as any)("search_series_ranked", {
+    p_query: query,
+    p_limit: options.limit,
+    p_offset: options.offset,
+    p_categories: options.categories || null,
+  });
 
-    // Apply category filter
-    if (options.categories && options.categories.length > 0) {
-      supabaseQuery = supabaseQuery.in("category", options.categories);
-    }
-
-    const { data, error } = await supabaseQuery;
-
-    if (error) {
-      console.error("Error searching series:", error);
-      return [];
-    }
-
-    if (!data || data.length === 0) {
-      return [];
-    }
-
-    // Type the data explicitly
-    type SeriesRow = {
-      id: string;
-      title: string;
-      slug: string;
-      description: string | null;
-      series_type: string | null;
-      image_url: string | null;
-      category: string | null;
-      is_active: boolean;
-    };
-    const typedData = data as SeriesRow[];
-
-    // Get event counts for each series
-    const seriesIds = typedData.map((s) => s.id);
-    const { data: eventCounts } = await client
-      .from("events")
-      .select("series_id")
-      .in("series_id", seriesIds)
-      .gte("start_date", getLocalDateString());
-
-    const countMap = new Map<string, number>();
-    (eventCounts as Array<{ series_id: string | null }> | null)?.forEach((e) => {
-      const id = e.series_id as string;
-      if (id) {
-        countMap.set(id, (countMap.get(id) || 0) + 1);
-      }
-    });
-
-    return typedData.map((row) => {
-      // Calculate similarity score
-      const titleLower = row.title.toLowerCase();
-      const queryLower = query.toLowerCase();
-      const similarity = titleLower.includes(queryLower)
-        ? titleLower.startsWith(queryLower)
-          ? 0.9
-          : 0.6
-        : 0.3;
-
-      return {
-        id: row.id,
-        type: "series" as const,
-        title: row.title,
-        subtitle: row.series_type || undefined,
-        href: `/series/${row.slug}`,
-        score: similarity * 100,
-        metadata: {
-          category: row.category || undefined,
-          seriesType: row.series_type || undefined,
-          eventCount: countMap.get(row.id) || 0,
-        },
-      };
-    });
-  } catch (error) {
-    console.error("Error in searchSeries:", error);
+  if (error) {
+    console.error("Error searching series:", error);
     return [];
   }
+
+  const rows = (data as SeriesSearchRow[]) || [];
+
+  return rows.map((row) => ({
+    id: row.id,
+    type: "series" as const,
+    title: row.title,
+    subtitle: row.series_type || undefined,
+    href: `/series/${row.slug}`,
+    score: row.combined_score,
+    metadata: {
+      category: row.category || undefined,
+      seriesType: row.series_type || undefined,
+      eventCount: row.upcoming_event_count || 0,
+      nextEventDate: row.next_event_date || undefined,
+    },
+  }));
 }
 
 /**
- * Search lists using direct table query with trigram similarity.
+ * Search lists using the search_lists_ranked RPC function.
  */
 async function searchLists(
   client: ReturnType<typeof createServiceClient>,
@@ -932,110 +925,38 @@ async function searchLists(
     portalId?: string;
   }
 ): Promise<SearchResult[]> {
-  try {
-    // Build query
-    // Escape the query to prevent SQL injection in ILIKE pattern
-    const escapedQuery = escapeSQLPattern(query);
-    let supabaseQuery = client
-      .from("lists")
-      .select(`
-        id,
-        title,
-        slug,
-        description,
-        category,
-        creator_id,
-        is_public,
-        status
-      `)
-      .eq("is_public", true)
-      .eq("status", "active")
-      .ilike("title", `%${escapedQuery}%`)
-      .limit(options.limit)
-      .range(options.offset, options.offset + options.limit - 1);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (client.rpc as any)("search_lists_ranked", {
+    p_query: query,
+    p_limit: options.limit,
+    p_offset: options.offset,
+    p_portal_id: options.portalId || null,
+  });
 
-    // Apply portal filter
-    if (options.portalId) {
-      supabaseQuery = supabaseQuery.eq("portal_id", options.portalId);
-    }
-
-    const { data, error } = await supabaseQuery;
-
-    if (error) {
-      console.error("Error searching lists:", error);
-      return [];
-    }
-
-    if (!data || data.length === 0) {
-      return [];
-    }
-
-    // Type the data explicitly
-    type ListRow = {
-      id: string;
-      title: string;
-      slug: string;
-      description: string | null;
-      category: string | null;
-      creator_id: string;
-      is_public: boolean;
-      status: string;
-    };
-    const typedData = data as ListRow[];
-
-    // Get item counts and creator names
-    const listIds = typedData.map((l) => l.id);
-    const [itemCountsResult, creatorsResult] = await Promise.all([
-      client.from("list_items").select("list_id").in("list_id", listIds),
-      client.from("profiles").select("id, display_name").in(
-        "id",
-        typedData.map((l) => l.creator_id)
-      ),
-    ]);
-
-    const itemCountMap = new Map<string, number>();
-    (itemCountsResult.data as Array<{ list_id: string }> | null)?.forEach((item) => {
-      const id = item.list_id;
-      itemCountMap.set(id, (itemCountMap.get(id) || 0) + 1);
-    });
-
-    const creatorMap = new Map<string, string>();
-    (creatorsResult.data as Array<{ id: string; display_name: string | null }> | null)?.forEach((profile) => {
-      creatorMap.set(profile.id, profile.display_name || "Unknown");
-    });
-
-    return typedData.map((row) => {
-      // Calculate similarity score
-      const titleLower = row.title.toLowerCase();
-      const queryLower = query.toLowerCase();
-      const similarity = titleLower.includes(queryLower)
-        ? titleLower.startsWith(queryLower)
-          ? 0.9
-          : 0.6
-        : 0.3;
-
-      return {
-        id: row.id,
-        type: "list" as const,
-        title: row.title,
-        subtitle: row.category || undefined,
-        href: `/list/${row.slug}`,
-        score: similarity * 100,
-        metadata: {
-          category: row.category || undefined,
-          itemCount: itemCountMap.get(row.id) || 0,
-          curatorName: creatorMap.get(row.creator_id) || undefined,
-        },
-      };
-    });
-  } catch (error) {
-    console.error("Error in searchLists:", error);
+  if (error) {
+    console.error("Error searching lists:", error);
     return [];
   }
+
+  const rows = (data as ListSearchRow[]) || [];
+
+  return rows.map((row) => ({
+    id: row.id,
+    type: "list" as const,
+    title: row.title,
+    subtitle: row.category || undefined,
+    href: `/list/${row.slug}`,
+    score: row.combined_score,
+    metadata: {
+      category: row.category || undefined,
+      itemCount: row.item_count || 0,
+      curatorName: row.creator_name || undefined,
+    },
+  }));
 }
 
 /**
- * Search festivals using direct table query with trigram similarity.
+ * Search festivals using the search_festivals_ranked RPC function.
  */
 async function searchFestivals(
   client: ReturnType<typeof createServiceClient>,
@@ -1043,90 +964,38 @@ async function searchFestivals(
   options: {
     limit: number;
     offset: number;
+    portalId?: string;
   }
 ): Promise<SearchResult[]> {
-  try {
-    const escapedQuery = escapeSQLPattern(query);
-    const supabaseQuery = client
-      .from("festivals")
-      .select(`
-        id,
-        name,
-        slug,
-        description,
-        image_url,
-        announced_start,
-        announced_end,
-        primary_type
-      `)
-      .or(`name.ilike.%${escapedQuery}%,description.ilike.%${escapedQuery}%`)
-      .limit(options.limit)
-      .range(options.offset, options.offset + options.limit - 1);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (client.rpc as any)("search_festivals_ranked", {
+    p_query: query,
+    p_limit: options.limit,
+    p_offset: options.offset,
+    p_portal_id: options.portalId || null,
+  });
 
-    const { data, error } = await supabaseQuery;
-
-    if (error) {
-      console.error("Error searching festivals:", error);
-      return [];
-    }
-
-    if (!data || data.length === 0) {
-      return [];
-    }
-
-    type FestivalRow = {
-      id: string;
-      name: string;
-      slug: string;
-      description: string | null;
-      image_url: string | null;
-      announced_start: string | null;
-      announced_end: string | null;
-      primary_type: string | null;
-    };
-    const typedData = data as FestivalRow[];
-
-    return typedData.map((row) => {
-      const titleLower = row.name.toLowerCase();
-      const queryLower = query.toLowerCase();
-
-      // Base similarity score
-      let similarity = 0.3;
-      if (titleLower === queryLower) {
-        similarity = 1.0;
-      } else if (titleLower.startsWith(queryLower)) {
-        similarity = 0.9;
-      } else if (titleLower.includes(queryLower)) {
-        similarity = 0.6;
-      }
-
-      // Boost festivals with images and upcoming dates
-      let bonus = 0;
-      if (row.image_url) bonus += 5;
-      if (row.announced_start) {
-        const daysUntil = getDaysUntilDate(row.announced_start);
-        if (daysUntil >= 0 && daysUntil <= 90) bonus += 10;
-      }
-
-      return {
-        id: row.id,
-        type: "festival" as const,
-        title: row.name,
-        subtitle: row.announced_start
-          ? formatFestivalDateRange(row.announced_start, row.announced_end)
-          : undefined,
-        href: `/festivals/${row.slug}`,
-        score: similarity * 100 + bonus,
-        metadata: {
-          category: row.primary_type || undefined,
-          date: row.announced_start || undefined,
-        },
-      };
-    });
-  } catch (error) {
-    console.error("Error in searchFestivals:", error);
+  if (error) {
+    console.error("Error searching festivals:", error);
     return [];
   }
+
+  const rows = (data as FestivalSearchRow[]) || [];
+
+  return rows.map((row) => ({
+    id: row.id,
+    type: "festival" as const,
+    title: row.name,
+    subtitle: row.announced_start
+      ? formatFestivalDateRange(row.announced_start, row.announced_end)
+      : undefined,
+    href: `/festivals/${row.slug}`,
+    score: row.combined_score,
+    metadata: {
+      category: row.primary_type || row.festival_type || undefined,
+      date: row.announced_start || undefined,
+    },
+  }));
 }
 
 /**
@@ -1167,7 +1036,7 @@ async function getSearchFacets(
   const rows = (data as FacetRow[]) || [];
 
   return rows.map((row) => ({
-    type: row.entity_type as "event" | "venue" | "organizer",
+    type: row.entity_type as "event" | "venue" | "organizer" | "series" | "list" | "festival",
     count: Number(row.count),
   }));
 }

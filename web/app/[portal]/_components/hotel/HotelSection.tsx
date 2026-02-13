@@ -16,8 +16,8 @@ interface HotelSectionProps {
 export default function HotelSection({ title, subtitle, children, className = "", id, action }: HotelSectionProps) {
   return (
     <section className={`${className}`} id={id}>
-      <div className="mb-8 flex items-end justify-between gap-4">
-        <div>
+      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0">
           <h2 className="font-display font-semibold text-2xl md:text-3xl text-[var(--hotel-charcoal)] tracking-tight mb-2">
             {title}
           </h2>

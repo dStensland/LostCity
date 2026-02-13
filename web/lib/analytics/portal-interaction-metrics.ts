@@ -14,6 +14,8 @@ export type PortalInteractionRow = {
   portal_id: string;
   action_type: PortalInteractionAction;
   mode_context: string | null;
+  section_key: string | null;
+  target_kind: string | null;
   created_at: string;
 };
 
@@ -24,6 +26,15 @@ export type InteractionSummary = {
   resource_clicked: number;
   wayfinding_open_rate: number;
   resource_click_rate: number;
+  conversion_action_rail_clicks: number;
+  conversion_action_rail_click_rate: number;
+  conversion_action_rail_by_mode: Array<{
+    mode: string;
+    clicks: number;
+    mode_selections: number;
+    ctr: number | null;
+  }>;
+  conversion_action_rail_by_target_kind: Array<{ target_kind: string; clicks: number }>;
   mode_breakdown: Array<{ mode: string; count: number }>;
   interactions_by_day: Array<{ date: string; count: number }>;
 };
@@ -45,7 +56,7 @@ export async function fetchPortalInteractionRows(
   while (true) {
     const { data, error } = await supabase
       .from("portal_interaction_events")
-      .select("portal_id, action_type, mode_context, created_at")
+      .select("portal_id, action_type, mode_context, section_key, target_kind, created_at")
       .in("portal_id", portalIds)
       .gte("created_at", startTimestamp)
       .lte("created_at", endTimestamp)
@@ -78,8 +89,12 @@ export function summarizeInteractionRows(
   let modeSelected = 0;
   let wayfindingOpened = 0;
   let resourceClicked = 0;
+  let conversionActionRailClicks = 0;
 
   const modeCounts = new Map<string, number>();
+  const modeSelectionCounts = new Map<string, number>();
+  const conversionActionRailByMode = new Map<string, number>();
+  const conversionActionRailByTargetKind = new Map<string, number>();
   const dayCounts = new Map<string, number>();
 
   for (const row of rows) {
@@ -87,11 +102,27 @@ export function summarizeInteractionRows(
       modeSelected += 1;
       if (row.mode_context) {
         modeCounts.set(row.mode_context, (modeCounts.get(row.mode_context) || 0) + 1);
+        modeSelectionCounts.set(row.mode_context, (modeSelectionCounts.get(row.mode_context) || 0) + 1);
       }
     } else if (row.action_type === "wayfinding_opened") {
       wayfindingOpened += 1;
     } else if (row.action_type === "resource_clicked") {
       resourceClicked += 1;
+    }
+
+    if (
+      row.section_key === "conversion_action_rail" &&
+      (row.action_type === "resource_clicked" || row.action_type === "wayfinding_opened")
+    ) {
+      conversionActionRailClicks += 1;
+      const mode = row.mode_context || "unknown";
+      conversionActionRailByMode.set(mode, (conversionActionRailByMode.get(mode) || 0) + 1);
+
+      const targetKind = row.target_kind || "unknown";
+      conversionActionRailByTargetKind.set(
+        targetKind,
+        (conversionActionRailByTargetKind.get(targetKind) || 0) + 1
+      );
     }
 
     const day = row.created_at.slice(0, 10);
@@ -105,6 +136,14 @@ export function summarizeInteractionRows(
   const resourceClickRate = totalViews > 0
     ? Number(((resourceClicked / totalViews) * 100).toFixed(2))
     : 0;
+  const conversionActionRailClickRate = totalViews > 0
+    ? Number(((conversionActionRailClicks / totalViews) * 100).toFixed(2))
+    : 0;
+
+  const conversionRailModes = new Set<string>([
+    ...modeSelectionCounts.keys(),
+    ...conversionActionRailByMode.keys(),
+  ]);
 
   return {
     total_interactions: totalInteractions,
@@ -113,6 +152,26 @@ export function summarizeInteractionRows(
     resource_clicked: resourceClicked,
     wayfinding_open_rate: wayfindingOpenRate,
     resource_click_rate: resourceClickRate,
+    conversion_action_rail_clicks: conversionActionRailClicks,
+    conversion_action_rail_click_rate: conversionActionRailClickRate,
+    conversion_action_rail_by_mode: Array.from(conversionRailModes.values())
+      .map((mode) => {
+        const clicks = conversionActionRailByMode.get(mode) || 0;
+        const selections = modeSelectionCounts.get(mode) || 0;
+        const ctr = selections > 0
+          ? Number(((clicks / selections) * 100).toFixed(2))
+          : null;
+        return {
+          mode,
+          clicks,
+          mode_selections: selections,
+          ctr,
+        };
+      })
+      .sort((a, b) => b.clicks - a.clicks || a.mode.localeCompare(b.mode)),
+    conversion_action_rail_by_target_kind: Array.from(conversionActionRailByTargetKind.entries())
+      .map(([target_kind, clicks]) => ({ target_kind, clicks }))
+      .sort((a, b) => b.clicks - a.clicks || a.target_kind.localeCompare(b.target_kind)),
     mode_breakdown: Array.from(modeCounts.entries())
       .map(([mode, count]) => ({ mode, count }))
       .sort((a, b) => b.count - a.count),
@@ -142,6 +201,10 @@ export function summarizeRowsByPortal(
       mode_selected: summary.mode_selected,
       wayfinding_opened: summary.wayfinding_opened,
       resource_clicked: summary.resource_clicked,
+      conversion_action_rail_clicks: summary.conversion_action_rail_clicks,
+      conversion_action_rail_click_rate: summary.conversion_action_rail_click_rate,
+      conversion_action_rail_by_mode: summary.conversion_action_rail_by_mode,
+      conversion_action_rail_by_target_kind: summary.conversion_action_rail_by_target_kind,
       mode_breakdown: summary.mode_breakdown,
       interactions_by_day: summary.interactions_by_day,
     });

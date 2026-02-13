@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useCallback, useRef } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 import {
   format,
@@ -20,6 +20,7 @@ import CategoryIcon from "@/components/CategoryIcon";
 import { decodeHtmlEntities, formatCompactCount, formatTimeSplit } from "@/lib/formats";
 import { DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
 import { useCalendarEvents, type CalendarEvent } from "@/lib/hooks/useCalendarEvents";
+import WeekStrip, { type WeekStripDay } from "@/components/calendar/WeekStrip";
 
 interface Props {
   portalId?: string;
@@ -57,7 +58,6 @@ export default function MobileCalendarView({
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [isExpanded, setIsExpanded] = useState(false);
-  const weekStripRef = useRef<HTMLDivElement>(null);
 
   // Use React Query hook for calendar events
   const { eventsByDate, isLoading, isRefetching } = useCalendarEvents({
@@ -70,16 +70,18 @@ export default function MobileCalendarView({
   const initialLoadDone = eventsByDate.size > 0 || !isLoading;
 
   // Generate week days for the strip (current week of selected date)
-  const weekDays = useMemo(() => {
+  const weekStripDays = useMemo((): WeekStripDay[] => {
     const weekStart = startOfWeek(selectedDate);
-    const days = [];
+    const days: WeekStripDay[] = [];
     for (let i = 0; i < 7; i++) {
       const date = addDays(weekStart, i);
       const dateKey = format(date, "yyyy-MM-dd");
+      const dayEvents = eventsByDate.get(dateKey) || [];
       days.push({
         date,
         dateKey,
-        events: eventsByDate.get(dateKey) || [],
+        eventCount: dayEvents.length,
+        topCategory: dayEvents[0]?.category || null,
         isToday: isToday(date),
         isPast: isBefore(date, new Date()) && !isToday(date),
         isSelected: isSameDay(date, selectedDate),
@@ -267,60 +269,7 @@ export default function MobileCalendarView({
 
       {/* Week Strip (collapsed view) */}
       {!isExpanded && (
-        <div
-          ref={weekStripRef}
-          className="grid grid-cols-7 gap-1 mb-4 px-1"
-        >
-          {weekDays.map((day) => {
-            const hasEvents = day.events.length > 0;
-            const topCategory = day.events[0]?.category;
-
-            return (
-              <button
-                key={day.dateKey}
-                onClick={() => handleDaySelect(day.date)}
-                className={`
-                  flex flex-col items-center py-2 px-1 rounded-xl transition-all outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]/70 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--void)]
-                  ${day.isSelected
-                    ? "bg-[var(--coral)] shadow-lg shadow-[var(--coral)]/20"
-                    : "hover:bg-[var(--twilight)]/50"
-                  }
-                  ${day.isToday && !day.isSelected ? "ring-2 ring-[var(--gold)] ring-offset-1 ring-offset-[var(--void)]" : ""}
-                `}
-              >
-                {/* Day letter */}
-                <span className={`
-                  font-mono text-[0.6rem] uppercase
-                  ${day.isSelected ? "text-[var(--void)]" : "text-[var(--muted)]"}
-                `}>
-                  {weekDayLabels[day.date.getDay()]}
-                </span>
-
-                {/* Date number */}
-                <span className={`
-                  font-mono text-lg font-bold
-                  ${day.isSelected ? "text-[var(--void)]" : ""}
-                  ${day.isToday && !day.isSelected ? "text-[var(--gold)]" : ""}
-                  ${!day.isSelected && !day.isToday ? (day.isPast ? "text-[var(--muted)]" : "text-[var(--cream)]") : ""}
-                `}>
-                  {format(day.date, "d")}
-                </span>
-
-                {/* Event indicator dot */}
-                {hasEvents && (
-                  <span
-                    data-category={!day.isSelected ? (topCategory || undefined) : undefined}
-                    className={`w-1.5 h-1.5 rounded-full mt-0.5 ${
-                      day.isSelected
-                        ? "bg-[var(--void)]"
-                        : "bg-[var(--category-color,var(--coral))]"
-                    }`}
-                  />
-                )}
-              </button>
-            );
-          })}
-        </div>
+        <WeekStrip days={weekStripDays} onSelect={handleDaySelect} className="mb-4 px-1" />
       )}
 
       {/* Full Month Grid (expanded view) */}

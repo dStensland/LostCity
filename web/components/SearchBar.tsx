@@ -35,6 +35,100 @@ interface InstantSearchResponse {
   };
 }
 
+type IntentType = "time" | "location" | "category" | "venue" | "organizer" | "series" | "general";
+
+function getIntentAwareGroupOrder(
+  baseOrder: SearchResult["type"][],
+  intentType: IntentType | null,
+  query: string
+): SearchResult["type"][] {
+  const intentOrderMap: Partial<Record<IntentType, SearchResult["type"][]>> = {
+    time: ["event", "festival", "series", "venue", "organizer", "list", "neighborhood", "category"],
+    category: ["event", "festival", "series", "venue", "organizer", "list", "neighborhood", "category"],
+    venue: ["venue", "event", "neighborhood", "festival", "organizer", "series", "list", "category"],
+    location: ["venue", "neighborhood", "event", "festival", "organizer", "series", "list", "category"],
+    organizer: ["organizer", "event", "series", "venue", "festival", "list", "neighborhood", "category"],
+    series: ["series", "event", "venue", "organizer", "festival", "list", "neighborhood", "category"],
+  };
+
+  const trimmed = query.trim().toLowerCase();
+  const liveLike = /\blive\b/.test(trimmed);
+  const preferredByIntent = intentType ? intentOrderMap[intentType] : undefined;
+  const preferred = preferredByIntent || (liveLike
+    ? ["event", "venue", "series", "festival", "organizer", "list", "neighborhood", "category"]
+    : baseOrder);
+
+  return Array.from(new Set([...preferred, ...baseOrder]));
+}
+
+function dedupeResultsByIdentity<T extends SearchResult>(results: T[]): T[] {
+  const byKey = new Map<string, T>();
+  for (const result of results) {
+    const key = `${result.type}:${String(result.id)}`;
+    const existing = byKey.get(key);
+    if (!existing || result.score > existing.score) {
+      byKey.set(key, result);
+    }
+  }
+  return Array.from(byKey.values());
+}
+
+function normalizeSearchText(value?: string): string {
+  return (value || "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function dedupeResultsSemantically<T extends SearchResult>(results: T[]): T[] {
+  const identityDeduped = dedupeResultsByIdentity(results);
+  const semanticSeen = new Set<string>();
+  const deduped: T[] = [];
+
+  for (const result of identityDeduped) {
+    const shouldUseSemanticKey =
+      result.type === "event" || result.type === "venue" || result.type === "organizer";
+
+    if (!shouldUseSemanticKey) {
+      deduped.push(result);
+      continue;
+    }
+
+    const semanticKey = [
+      result.type,
+      normalizeSearchText(result.title),
+      normalizeSearchText(result.subtitle),
+      result.metadata?.date || "",
+      result.metadata?.time || "",
+    ].join(":");
+
+    if (semanticSeen.has(semanticKey)) {
+      continue;
+    }
+    semanticSeen.add(semanticKey);
+    deduped.push(result);
+  }
+
+  return deduped;
+}
+
+function dedupeGroupedResults(
+  grouped: Record<string, SearchResult[]>
+): Record<string, SearchResult[]> {
+  const output: Record<string, SearchResult[]> = {};
+  for (const [type, results] of Object.entries(grouped)) {
+    output[type] = dedupeResultsSemantically(results);
+  }
+  return output;
+}
+
+function dedupeQuickActions(actions: QuickAction[]): QuickAction[] {
+  const byId = new Map<string, QuickAction>();
+  for (const action of actions) {
+    if (!byId.has(action.id)) {
+      byId.set(action.id, action);
+    }
+  }
+  return Array.from(byId.values());
+}
+
 // ============================================
 // Component
 // ============================================
@@ -64,6 +158,7 @@ export default function SearchBar() {
   });
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [isLoading, setIsLoading] = useState(false);
+  const [intentType, setIntentType] = useState<IntentType | null>(null);
 
   // Refs
   const inputRef = useRef<HTMLInputElement>(null);
@@ -97,6 +192,7 @@ export default function SearchBar() {
       setQuickActions([]);
       setFacets([]);
       setApiGroupedResults({});
+      setIntentType(null);
       return;
     }
 
@@ -131,12 +227,17 @@ export default function SearchBar() {
         const data: InstantSearchResponse = await response.json();
 
         // Apply client-side ranking with personalization
-        const rankedResults = rankResults(data.suggestions, rankingContext);
+        const rankedResults = dedupeResultsSemantically(
+          rankResults(data.suggestions, rankingContext)
+        );
+        const fallbackActions = detectQuickActions(query, portalSlug);
+        const nextQuickActions = dedupeQuickActions(data.quickActions || fallbackActions);
 
         setSuggestions(rankedResults);
-        setQuickActions(data.quickActions || detectQuickActions(query, portalSlug));
+        setQuickActions(nextQuickActions);
         setFacets(data.facets || []);
-        setApiGroupedResults(data.groupedResults || {});
+        setApiGroupedResults(dedupeGroupedResults(data.groupedResults || {}));
+        setIntentType((data.intent?.type as IntentType | undefined) || null);
         setSelectedIndex(-1);
       } catch (err) {
         console.error("Search error:", err);
@@ -144,6 +245,7 @@ export default function SearchBar() {
         setQuickActions([]);
         setFacets([]);
         setApiGroupedResults({});
+        setIntentType(null);
       } finally {
         if (fetchId === fetchIdRef.current) {
           setIsLoading(false);
@@ -198,6 +300,7 @@ export default function SearchBar() {
     setSuggestions([]);
     setQuickActions([]);
     setApiGroupedResults({});
+    setIntentType(null);
   }, []);
 
   const handleFocus = useCallback(() => {
@@ -346,8 +449,19 @@ export default function SearchBar() {
   }, [showSuggestions, suggestions, apiGroupedResults]);
 
   const groupOrder = useMemo(() => {
-    return getGroupDisplayOrder(rankingContext);
-  }, [rankingContext]);
+    const baseOrder = Array.from(new Set(getGroupDisplayOrder(rankingContext)));
+    return getIntentAwareGroupOrder(baseOrder, intentType, query);
+  }, [rankingContext, intentType, query]);
+
+  const totalResultCount = useMemo(() => {
+    const facetTotal = facets.reduce((sum, facet) => sum + facet.count, 0);
+    if (facetTotal > 0) return facetTotal;
+
+    return Object.values(groupedSuggestions).reduce(
+      (sum, results) => sum + results.length,
+      0
+    );
+  }, [facets, groupedSuggestions]);
 
   // Build flat list for keyboard navigation
   const allItems = useMemo(() => {
@@ -471,7 +585,7 @@ export default function SearchBar() {
           id={suggestionsId}
           role="listbox"
           aria-label="Search suggestions"
-          className="absolute top-full left-0 right-0 mt-1 border border-[var(--twilight)] rounded-lg shadow-xl shadow-[0_4px_20px_rgba(0,0,0,0.5)] z-[10000] overflow-hidden animate-dropdown-in bg-[var(--dusk)]"
+          className="absolute top-full left-0 right-0 mt-1 border border-[var(--twilight)] rounded-lg shadow-xl shadow-[0_4px_20px_rgba(0,0,0,0.5)] z-[10000] overflow-hidden max-h-[78vh] sm:max-h-[72vh] overflow-y-auto animate-dropdown-in bg-[var(--dusk)]"
         >
           {/* Recent Searches */}
           {showRecent && (
@@ -496,11 +610,10 @@ export default function SearchBar() {
                   key={term}
                   className="group relative"
                 >
-                  <button
+                  <div
                     id={`suggestion-${idx}`}
                     role="option"
                     aria-selected={selectedIndex === idx}
-                    onMouseDown={() => selectRecentSearch(term)}
                     onMouseEnter={() => setSelectedIndex(idx)}
                     className={`flex items-center gap-2.5 w-full text-left px-3 py-2 text-sm rounded-lg transition-all ${
                       selectedIndex === idx
@@ -508,10 +621,15 @@ export default function SearchBar() {
                         : "text-[var(--cream)] hover:bg-[var(--twilight)]/50"
                     }`}
                   >
-                    <svg className="h-3.5 w-3.5 text-[var(--soft)] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span className="truncate flex-1">{term}</span>
+                    <button
+                      onMouseDown={() => selectRecentSearch(term)}
+                      className="flex items-center gap-2.5 min-w-0 flex-1 text-left"
+                    >
+                      <svg className="h-3.5 w-3.5 text-[var(--soft)] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span className="truncate flex-1">{term}</span>
+                    </button>
                     <button
                       onMouseDown={(e) => handleRemoveRecent(term, e)}
                       className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-[var(--dusk)] transition-all"
@@ -522,9 +640,22 @@ export default function SearchBar() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                       </svg>
                     </button>
-                  </button>
+                  </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {showSuggestions && (
+            <div className="px-3 py-2 border-b border-[var(--twilight)] bg-[var(--night)]/45">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[0.65rem] font-mono uppercase tracking-wider text-[var(--soft)] truncate">
+                  Search: <span className="text-[var(--cream)] normal-case tracking-normal">&quot;{query}&quot;</span>
+                </p>
+                <span className="text-[0.62rem] px-2 py-0.5 rounded-full bg-[var(--twilight)] text-[var(--muted)]">
+                  {totalResultCount} results
+                </span>
+              </div>
             </div>
           )}
 
@@ -546,7 +677,7 @@ export default function SearchBar() {
           {/* Grouped Suggestions */}
           {showSuggestions && (
             <div className="p-2">
-              {groupOrder.map((type) => {
+              {groupOrder.map((type, groupIdx) => {
                 const results = groupedSuggestions[type as SearchResult["type"]] || [];
                 if (results.length === 0) return null;
 
@@ -558,30 +689,38 @@ export default function SearchBar() {
                 const hasMore = totalCount > 3;
 
                 return (
-                  <SuggestionGroup
+                  <div
                     key={type}
-                    type={type as SearchResult["type"]}
-                    results={results}
-                    query={query}
-                    selectedIndex={selectedIndex}
-                    startIndex={startIdx}
-                    onSelect={selectSuggestion}
-                    onHover={setSelectedIndex}
-                    maxItems={3}
-                    totalCount={facetCount}
-                    onViewAll={hasMore ? () => {
-                      setShowDropdown(false);
-                      setSelectedIndex(-1);
-                      if (type === "festival") {
-                        router.push(`/${portalSlug}/festivals?search=${encodeURIComponent(query)}`, { scroll: false });
-                      } else if (type === "organizer") {
-                        router.push(`/${portalSlug}?view=community&search=${encodeURIComponent(query)}`, { scroll: false });
-                      } else {
-                        const findType = type === "venue" ? "destinations" : "events";
-                        router.push(`/${portalSlug}?view=find&type=${findType}&search=${encodeURIComponent(query)}`, { scroll: false });
-                      }
-                    } : undefined}
-                  />
+                    className="motion-safe:animate-fade-up"
+                    style={{
+                      animationDelay: `${Math.min(groupIdx * 40, 200)}ms`,
+                      animationFillMode: "forwards",
+                    }}
+                  >
+                    <SuggestionGroup
+                      type={type as SearchResult["type"]}
+                      results={results}
+                      query={query}
+                      selectedIndex={selectedIndex}
+                      startIndex={startIdx}
+                      onSelect={selectSuggestion}
+                      onHover={setSelectedIndex}
+                      maxItems={3}
+                      totalCount={facetCount}
+                      onViewAll={hasMore ? () => {
+                        setShowDropdown(false);
+                        setSelectedIndex(-1);
+                        if (type === "festival") {
+                          router.push(`/${portalSlug}/festivals?search=${encodeURIComponent(query)}`, { scroll: false });
+                        } else if (type === "organizer") {
+                          router.push(`/${portalSlug}?view=community&search=${encodeURIComponent(query)}`, { scroll: false });
+                        } else {
+                          const findType = type === "venue" ? "destinations" : "events";
+                          router.push(`/${portalSlug}?view=find&type=${findType}&search=${encodeURIComponent(query)}`, { scroll: false });
+                        }
+                      } : undefined}
+                    />
+                  </div>
                 );
               })}
             </div>

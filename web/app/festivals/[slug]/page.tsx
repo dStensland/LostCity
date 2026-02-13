@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation";
+import { permanentRedirect } from "next/navigation";
 
 export default async function FestivalPage({
   params,
@@ -6,5 +6,5 @@ export default async function FestivalPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  redirect(`/atlanta/festivals/${slug}`);
+  permanentRedirect(`/atlanta/festivals/${slug}`);
 }

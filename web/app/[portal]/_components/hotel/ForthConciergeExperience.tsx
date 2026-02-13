@@ -3,7 +3,9 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 import type { Portal } from "@/lib/portal-context";
+import { useAuth } from "@/lib/auth-context";
 import { getProxiedImageSrc } from "@/lib/image-proxy";
 import HotelHeader from "./HotelHeader";
 import HotelSection from "./HotelSection";
@@ -74,6 +76,9 @@ type SpecialsMeta = {
 };
 
 type DayPart = "morning" | "afternoon" | "evening" | "late_night";
+type DiscoveryMode = "tonight" | "future";
+type PlanAheadCategory = "all" | "food" | "entertainment" | "destinations";
+type ConciergeDaypart = "all" | "morning" | "day" | "evening" | "late_night";
 type GuestIntent = "business" | "romance" | "night_out" | "wellness";
 type ExperienceView = "operate" | "property" | "explore";
 type VisitorPersona = "first_time" | "business_traveler" | "weekend_couple" | "wellness_guest" | "club_member";
@@ -103,6 +108,58 @@ type CuratorMode = {
   id: CuratorModeId;
   label: string;
   hint: string;
+};
+
+type AgentNarrative = {
+  heroTitle: string;
+  heroSubtitle: string;
+  briefingTitle: string;
+  summary: string;
+};
+
+type AgentJourney = {
+  title: string;
+  steps: Array<{
+    title: string;
+    detail: string;
+  }>;
+  primaryAction: string;
+};
+
+type OrchestratedConciergeResponse = {
+  session?: {
+    persona?: string;
+    intent?: string;
+    view?: string;
+  };
+  guest_explainers?: string[];
+  agent_outputs?: {
+    ux_architecture?: {
+      flow_title?: string;
+      flow_steps?: Array<{
+        title?: string;
+        detail?: string;
+      }>;
+      primary_action?: string;
+    };
+    voice_narrative?: {
+      hero_title?: string;
+      hero_subtitle?: string;
+      briefing_title?: string;
+      summary?: string;
+    };
+  };
+  data?: {
+    sections?: Array<{
+      title?: string;
+      slug?: string;
+      description?: string;
+      events?: Array<Record<string, unknown>>;
+    }>;
+    destinations?: Destination[];
+    live_destinations?: Destination[];
+    meta?: SpecialsMeta | null;
+  };
 };
 
 const GUEST_INTENT_OPTIONS: Array<{
@@ -209,7 +266,7 @@ const EXPERIENCE_VIEW_OPTIONS: Array<{
 const DISCOVERY_FOCUS_OPTIONS: DiscoveryFocus[] = [
   {
     id: "any",
-    label: "Open To Anything",
+    label: "Surprise Me",
     hint: "A broad mix of tonight's strongest event and venue picks.",
     eventKeywords: [],
     venueTypes: [],
@@ -252,7 +309,7 @@ const DISCOVERY_FOCUS_OPTIONS: DiscoveryFocus[] = [
 const FOOD_DRINK_FOCUS_OPTIONS: FoodDrinkFocus[] = [
   {
     id: "any",
-    label: "Open To Anything",
+    label: "Surprise Me",
     hint: "A balanced mix of bars, restaurants, and easy nearby stops.",
     venueTypes: [],
     keywords: [],
@@ -317,6 +374,121 @@ const CURATOR_MODES: CuratorMode[] = [
     hint: "Bolder jumps, farther stops, and high-energy options.",
   },
 ];
+
+const PLAN_AHEAD_CATEGORY_OPTIONS: Array<{ id: PlanAheadCategory; label: string }> = [
+  { id: "all", label: "All" },
+  { id: "food", label: "Food" },
+  { id: "entertainment", label: "Entertainment" },
+  { id: "destinations", label: "Destinations" },
+];
+
+const CONCIERGE_DAYPART_OPTIONS: Array<{ id: ConciergeDaypart; label: string }> = [
+  { id: "all", label: "Any Time" },
+  { id: "morning", label: "Morning" },
+  { id: "day", label: "Day" },
+  { id: "evening", label: "Evening" },
+  { id: "late_night", label: "Late Night" },
+];
+
+const DISCOVERY_FOCUS_VISUAL_ORDER: DiscoveryFocusId[] = [
+  "any",
+  "live_music",
+  "comedy",
+  "sports",
+  "arts",
+];
+
+const FOOD_DRINK_FOCUS_VISUAL_ORDER: FoodDrinkFocusId[] = [
+  "any",
+  "cocktails",
+  "sports_bar",
+  "mexican",
+  "coffee",
+  "rooftop",
+];
+
+const DISCOVERY_FOCUS_VISUALS: Record<DiscoveryFocusId, { eyebrow: string; sources: string[] }> = {
+  any: {
+    eyebrow: "Concierge Mix",
+    sources: [
+      "https://images.unsplash.com/photo-1470337458703-46ad1756a187?auto=format&fit=crop&w=1800&q=80",
+      "https://images.unsplash.com/photo-1514933651103-005eec06c04b2?auto=format&fit=crop&w=1800&q=80",
+    ],
+  },
+  live_music: {
+    eyebrow: "Live",
+    sources: [
+      "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=1800&q=80",
+      "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=1800&q=80",
+    ],
+  },
+  comedy: {
+    eyebrow: "Comedy",
+    sources: [
+      "https://images.unsplash.com/photo-1527224538127-2104bb71c51b?auto=format&fit=crop&w=1800&q=80",
+      "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?auto=format&fit=crop&w=1800&q=80",
+    ],
+  },
+  sports: {
+    eyebrow: "Game Night",
+    sources: [
+      "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?auto=format&fit=crop&w=1800&q=80",
+      "https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1800&q=80",
+    ],
+  },
+  arts: {
+    eyebrow: "Arts",
+    sources: [
+      "https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?auto=format&fit=crop&w=1800&q=80",
+      "https://images.unsplash.com/photo-1518998053901-5348d3961a04?auto=format&fit=crop&w=1800&q=80",
+    ],
+  },
+};
+
+const FOOD_DRINK_FOCUS_VISUALS: Record<FoodDrinkFocusId, { eyebrow: string; sources: string[] }> = {
+  any: {
+    eyebrow: "Mixed Picks",
+    sources: [
+      "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=1800&q=80",
+      "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1800&q=80",
+    ],
+  },
+  cocktails: {
+    eyebrow: "Cocktails",
+    sources: [
+      "https://images.unsplash.com/photo-1470337458703-46ad1756a187?auto=format&fit=crop&w=1800&q=80",
+      "https://images.unsplash.com/photo-1514361892635-a72a2472a7ee?auto=format&fit=crop&w=1800&q=80",
+    ],
+  },
+  sports_bar: {
+    eyebrow: "Sports Bar",
+    sources: [
+      "https://images.unsplash.com/photo-1521412644187-c49fa049e84d?auto=format&fit=crop&w=1800&q=80",
+      "https://images.unsplash.com/photo-1511886929837-354d827aae26?auto=format&fit=crop&w=1800&q=80",
+    ],
+  },
+  mexican: {
+    eyebrow: "Mexican",
+    sources: [
+      "https://images.unsplash.com/photo-1615870216519-2f9fa575fa5c?auto=format&fit=crop&w=1800&q=80",
+      "https://images.unsplash.com/photo-1552332386-f8dd00dc2f85?auto=format&fit=crop&w=1800&q=80",
+    ],
+  },
+  coffee: {
+    eyebrow: "Coffee + Casual",
+    sources: [
+      "https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=1800&q=80",
+      "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=1800&q=80",
+    ],
+  },
+  rooftop: {
+    eyebrow: "Rooftop",
+    sources: [
+      "https://images.unsplash.com/photo-1470123808288-1e59739d9351?auto=format&fit=crop&w=1800&q=80",
+      "https://images.unsplash.com/photo-1544148103-0773bf10d330?auto=format&fit=crop&w=1800&q=80",
+    ],
+  },
+};
 
 type ConciergeBundle = {
   id: string;
@@ -432,6 +604,10 @@ type PlanCandidate = {
 type ConciergeStateSnapshot = {
   visitorPersona?: VisitorPersona;
   experienceView?: ExperienceView;
+  discoveryMode?: DiscoveryMode;
+  daypart?: ConciergeDaypart;
+  futureDate?: string | null;
+  planAheadCategory?: PlanAheadCategory;
   guestIntent?: GuestIntent;
   discoveryFocusId?: DiscoveryFocusId;
   foodDrinkFocusId?: FoodDrinkFocusId;
@@ -441,6 +617,7 @@ type ConciergeStateSnapshot = {
   requestTicketsByService?: Record<string, string>;
   activeBundleId?: string | null;
   isBriefMode?: boolean;
+  showDetailedPlan?: boolean;
 };
 
 type EditorialMoment = {
@@ -452,9 +629,26 @@ type EditorialMoment = {
   imageSrc: string;
 };
 
+type PreviewItem = {
+  id: string;
+  title: string;
+  subtitle: string;
+  badge: string;
+  href: string;
+  imageSources: Array<string | null | undefined>;
+};
+
+type DecisionAction = {
+  label: string;
+  href: string;
+  note: string;
+};
+
 const DINE_TYPES = new Set(["restaurant", "food_hall"]);
 const DRINK_TYPES = new Set(["bar", "brewery", "rooftop", "sports_bar", "distillery", "nightclub"]);
+const ENTERTAINMENT_TYPES = new Set(["bar", "rooftop", "sports_bar", "nightclub", "brewery", "distillery", "theater", "museum", "gallery"]);
 const HOTEL_AMENITY_TYPES = new Set(["hotel", "spa", "fitness_center", "restaurant", "bar", "rooftop"]);
+const FOOD_EVENT_HINTS = ["dinner", "brunch", "lunch", "tasting", "wine", "cocktail", "chef", "happy hour", "menu", "food"];
 
 const BELTLINE_NEIGHBORHOODS = new Set([
   "old fourth ward",
@@ -620,6 +814,56 @@ function getDayPartCopy(dayPart: DayPart): { title: string; subtitle: string } {
   };
 }
 
+function parseHourFromEventTime(value: string | null | undefined): number | null {
+  if (!value) return null;
+  const [hours] = value.split(":");
+  const parsed = Number.parseInt(hours, 10);
+  if (Number.isNaN(parsed) || parsed < 0 || parsed > 23) return null;
+  return parsed;
+}
+
+function daypartFromHour(hour: number): ConciergeDaypart {
+  if (hour >= 6 && hour < 11) return "morning";
+  if (hour >= 11 && hour < 17) return "day";
+  if (hour >= 17 && hour < 23) return "evening";
+  return "late_night";
+}
+
+function matchesEventDaypart(event: FeedSection["events"][number], daypart: ConciergeDaypart): boolean {
+  if (daypart === "all") return true;
+  const hour = parseHourFromEventTime(event.start_time);
+  if (hour === null) return true;
+  return daypartFromHour(hour) === daypart;
+}
+
+function matchesDestinationDaypart(destination: Destination, daypart: ConciergeDaypart): boolean {
+  if (daypart === "all") return true;
+
+  const venueType = normalizeToken(destination.venue.venue_type);
+  const searchBlob = [
+    normalizeToken(destination.venue.name),
+    normalizeToken(destination.venue.short_description),
+    normalizeToken(destination.top_special?.title),
+  ].join(" ");
+
+  if (daypart === "morning") {
+    return venueType === "coffee_shop" || searchBlob.includes("coffee") || searchBlob.includes("brunch") || searchBlob.includes("breakfast");
+  }
+  if (daypart === "day") {
+    return ["restaurant", "food_hall", "museum", "gallery", "park", "coffee_shop"].includes(venueType) || searchBlob.includes("market");
+  }
+  if (daypart === "evening") {
+    return ["restaurant", "bar", "rooftop", "theater", "nightclub"].includes(venueType) || searchBlob.includes("dinner");
+  }
+  return ["bar", "rooftop", "nightclub", "sports_bar", "brewery", "distillery"].includes(venueType) || searchBlob.includes("late");
+}
+
+function formatConciergeDaypart(daypart: ConciergeDaypart): string {
+  if (daypart === "all") return "Any Time";
+  if (daypart === "late_night") return "Late Night";
+  return daypart.charAt(0).toUpperCase() + daypart.slice(1);
+}
+
 function buildImageCandidates(sources: Array<string | null | undefined>): string[] {
   const seen = new Set<string>();
   const candidates: string[] = [];
@@ -680,11 +924,6 @@ function isBeltlineDestination(destination: Destination): boolean {
   return BELTLINE_NAME_HINTS.some((hint) => name.includes(hint));
 }
 
-function isWorldCupWindow(now: Date): boolean {
-  const current = now.toISOString().slice(0, 10);
-  return current >= "2026-06-11" && current <= "2026-07-19";
-}
-
 function findDestinationByKeywords(destinations: Destination[], keywords: string[]): Destination | null {
   for (const destination of destinations) {
     const name = destination.venue.name.toLowerCase();
@@ -701,13 +940,6 @@ function titleCase(value: string): string {
     .split(" ")
     .map((part) => (part ? part[0].toUpperCase() + part.slice(1) : part))
     .join(" ");
-}
-
-function getFreshnessHours(lastVerifiedAt: string | null): number | null {
-  if (!lastVerifiedAt) return null;
-  const ts = Date.parse(lastVerifiedAt);
-  if (Number.isNaN(ts)) return null;
-  return Math.max(0, Math.round((Date.now() - ts) / (1000 * 60 * 60)));
 }
 
 function getIntentTypeWeight(intent: GuestIntent, venueType: string | null): number {
@@ -792,6 +1024,31 @@ function mapsSearchHref(label: string): string {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(label)}`;
 }
 
+function toLocalDateStamp(value: Date): string {
+  const year = value.getFullYear();
+  const month = `${value.getMonth() + 1}`.padStart(2, "0");
+  const day = `${value.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function formatDateChip(value: string): string {
+  const parsed = new Date(`${value}T12:00:00`);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+}
+
+function hoursSinceTimestamp(value: string | null | undefined): number | null {
+  if (!value) return null;
+  const parsed = Date.parse(value);
+  if (Number.isNaN(parsed)) return null;
+  return Math.max(0, Math.round((Date.now() - parsed) / (1000 * 60 * 60)));
+}
+
+function isVerifiedWithinHours(value: string | null | undefined, hourWindow: number): boolean {
+  const hours = hoursSinceTimestamp(value);
+  return hours !== null && hours <= hourWindow;
+}
+
 function normalizeToken(value: string | null | undefined): string {
   return (value || "").toLowerCase().trim();
 }
@@ -853,6 +1110,39 @@ function matchesFoodDrinkFocus(destination: Destination, focus: FoodDrinkFocus):
   return searchable.some((value) => hasKeywordMatch(value, focus.keywords));
 }
 
+function matchesPlanAheadCategoryForEvent(
+  event: FeedSection["events"][number],
+  category: PlanAheadCategory
+): boolean {
+  if (category === "all") return true;
+
+  const searchable = [
+    normalizeToken(event.title),
+    normalizeToken(event.description),
+    normalizeToken(event.venue_name),
+    normalizeToken(event.category),
+    normalizeToken(event.subcategory),
+  ].join(" ");
+
+  const isFood = FOOD_EVENT_HINTS.some((keyword) => searchable.includes(keyword));
+  if (category === "food") return isFood;
+  if (category === "entertainment") return !isFood;
+  if (category === "destinations") return false;
+  return true;
+}
+
+function matchesPlanAheadCategoryForDestination(destination: Destination, category: PlanAheadCategory): boolean {
+  if (category === "all") return true;
+
+  const venueType = normalizeToken(destination.venue.venue_type);
+  const isFoodOrDrink = DINE_TYPES.has(venueType) || DRINK_TYPES.has(venueType);
+
+  if (category === "food") return isFoodOrDrink;
+  if (category === "entertainment") return ENTERTAINMENT_TYPES.has(venueType);
+  if (category === "destinations") return !isFoodOrDrink;
+  return true;
+}
+
 function confidenceScore(confidence: "high" | "medium" | "low" | null | undefined): number {
   if (confidence === "high") return 22;
   if (confidence === "medium") return 10;
@@ -895,17 +1185,33 @@ function rankPlanCandidatesForMode(candidates: PlanCandidate[], mode: CuratorMod
 
 interface ForthConciergeExperienceProps {
   portal: Portal;
+  mode?: "default" | "stay";
+  routeIntent?: "tonight" | "plan" | "dining" | "club";
 }
 
-export default function ForthConciergeExperience({ portal }: ForthConciergeExperienceProps) {
+export default function ForthConciergeExperience({
+  portal,
+  mode = "default",
+  routeIntent = "tonight",
+}: ForthConciergeExperienceProps) {
+  const { profile } = useAuth();
   const [sections, setSections] = useState<FeedSection[]>([]);
   const [destinations, setDestinations] = useState<Destination[]>([]);
   const [liveDestinations, setLiveDestinations] = useState<Destination[]>([]);
-  const [specialsMeta, setSpecialsMeta] = useState<SpecialsMeta | null>(null);
-  const [visitorPersona, setVisitorPersona] = useState<VisitorPersona>("first_time");
+  const [visitorPersona, setVisitorPersona] = useState<VisitorPersona>(
+    routeIntent === "club" ? "club_member" : "first_time"
+  );
+  const [discoveryMode, setDiscoveryMode] = useState<DiscoveryMode>(
+    routeIntent === "plan" ? "future" : "tonight"
+  );
+  const [selectedDaypart, setSelectedDaypart] = useState<ConciergeDaypart>("all");
+  const [futureDate, setFutureDate] = useState<string | null>(null);
+  const [planAheadCategory, setPlanAheadCategory] = useState<PlanAheadCategory>("all");
   const [guestIntent, setGuestIntent] = useState<GuestIntent>("night_out");
   const [discoveryFocusId, setDiscoveryFocusId] = useState<DiscoveryFocusId>("any");
-  const [foodDrinkFocusId, setFoodDrinkFocusId] = useState<FoodDrinkFocusId>("any");
+  const [foodDrinkFocusId, setFoodDrinkFocusId] = useState<FoodDrinkFocusId>(
+    routeIntent === "dining" ? "cocktails" : "any"
+  );
   const [curatorModeId, setCuratorModeId] = useState<CuratorModeId>("safe");
   const [requestedServiceIds, setRequestedServiceIds] = useState<string[]>([]);
   const [requestTicketsByService, setRequestTicketsByService] = useState<Record<string, string>>({});
@@ -913,18 +1219,37 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
   const [submittingRequestId, setSubmittingRequestId] = useState<string | null>(null);
   const [selectedPlanIds, setSelectedPlanIds] = useState<string[]>([]);
   const [planInitialized, setPlanInitialized] = useState(false);
-  const [experienceView, setExperienceView] = useState<ExperienceView>("operate");
+  const [experienceView, setExperienceView] = useState<ExperienceView>(
+    routeIntent === "club" ? "explore" : "operate"
+  );
   const [activeBundleId, setActiveBundleId] = useState<string | null>(null);
   const [isBriefMode, setIsBriefMode] = useState(false);
+  const [showDetailedPlan, setShowDetailedPlan] = useState(false);
   const [copiedBriefing, setCopiedBriefing] = useState(false);
+  const [agentNarrative, setAgentNarrative] = useState<AgentNarrative | null>(null);
+  const [agentJourney, setAgentJourney] = useState<AgentJourney | null>(null);
   const [loading, setLoading] = useState(true);
 
   const logoUrl = portal.branding?.logo_url as string | null | undefined;
+  const searchParams = useSearchParams();
   const conciergePhoneDisplay = typeof portal.settings?.concierge_phone === "string"
     ? portal.settings.concierge_phone
     : "+1 (404) 555-0144";
   const conciergePhoneLink = phoneHref(conciergePhoneDisplay);
   const knownServiceIds = useMemo(() => IN_ROOM_REQUESTS.map((request) => request.id), []);
+  const showStudioControls = profile?.is_admin === true && searchParams.get("studio") === "1";
+  const isStayMode = mode === "stay";
+  const isPlanRoute = routeIntent === "plan";
+  const isDiningRoute = routeIntent === "dining";
+  const isClubRoute = routeIntent === "club";
+
+  useEffect(() => {
+    const body = document.body;
+    body.dataset.forthExperience = "true";
+    return () => {
+      delete body.dataset.forthExperience;
+    };
+  }, []);
 
   useEffect(() => {
     async function fetchData() {
@@ -943,30 +1268,117 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
         const baseQuery = search.toString();
         const allQuery = baseQuery ? `${baseQuery}&include_upcoming_hours=5&limit=120` : "include_upcoming_hours=5&limit=120";
         const activeQuery = baseQuery ? `${baseQuery}&active_now=true&limit=36` : "active_now=true&limit=36";
+        const orchestrationQuery = baseQuery
+          ? `${baseQuery}&include_upcoming_hours=5&limit=120&live_limit=36`
+          : "include_upcoming_hours=5&limit=120&live_limit=36";
 
-        const [feedRes, allDestRes, liveDestRes] = await Promise.all([
-          fetch(`/api/portals/${portal.slug}/feed`),
-          fetch(`/api/portals/${portal.slug}/destinations/specials?${allQuery}`),
-          fetch(`/api/portals/${portal.slug}/destinations/specials?${activeQuery}`),
-        ]);
+        let feedData: { sections?: Array<{ title?: string; slug?: string; description?: string; events?: Array<Record<string, unknown>> }> } = {};
+        let allDestData: { destinations?: Destination[]; meta?: SpecialsMeta | null } = {};
+        let liveDestData: { destinations?: Destination[] } = {};
+        let orchestrated = false;
 
-        const feedData = await feedRes.json();
-        const allDestData = await allDestRes.json();
-        const liveDestData = await liveDestRes.json();
+        try {
+          const orchestratedRes = await fetch(`/api/portals/${portal.slug}/concierge/orchestrated?${orchestrationQuery}`);
+          if (orchestratedRes.ok) {
+            const orchestratedData = await orchestratedRes.json() as OrchestratedConciergeResponse;
+            feedData = { sections: orchestratedData.data?.sections };
+            allDestData = {
+              destinations: orchestratedData.data?.destinations,
+              meta: orchestratedData.data?.meta || null,
+            };
+            liveDestData = { destinations: orchestratedData.data?.live_destinations };
+            orchestrated = true;
+            const journey = orchestratedData.agent_outputs?.ux_architecture;
+            const journeySteps = Array.isArray(journey?.flow_steps)
+              ? journey.flow_steps
+                .filter((step): step is { title?: string; detail?: string } => Boolean(step))
+                .map((step) => ({
+                  title: String(step.title || "").trim(),
+                  detail: String(step.detail || "").trim(),
+                }))
+                .filter((step) => step.title.length > 0 && step.detail.length > 0)
+                .slice(0, 3)
+              : [];
+            if (journey?.flow_title && journey?.primary_action && journeySteps.length > 0) {
+              setAgentJourney({
+                title: journey.flow_title,
+                steps: journeySteps,
+                primaryAction: journey.primary_action,
+              });
+            } else {
+              setAgentJourney(null);
+            }
+
+            const narrative = orchestratedData.agent_outputs?.voice_narrative;
+            if (narrative?.hero_title && narrative.hero_subtitle && narrative.briefing_title && narrative.summary) {
+              setAgentNarrative({
+                heroTitle: narrative.hero_title,
+                heroSubtitle: narrative.hero_subtitle,
+                briefingTitle: narrative.briefing_title,
+                summary: narrative.summary,
+              });
+            } else {
+              setAgentNarrative(null);
+            }
+
+            if (typeof window !== "undefined") {
+              const params = new URLSearchParams(window.location.search);
+              const hasExplicitSessionParams = [
+                "guest_persona",
+                "concierge_intent",
+                "concierge_view",
+                "concierge_focus",
+                "concierge_food_focus",
+                "concierge_mode",
+              ].some((key) => params.has(key));
+              const hasSavedSnapshot = Boolean(window.localStorage.getItem(`forth-concierge:${portal.slug}`));
+              if (!hasExplicitSessionParams && !hasSavedSnapshot && orchestratedData.session) {
+                const candidatePersona = orchestratedData.session.persona;
+                const candidateIntent = orchestratedData.session.intent;
+                const candidateView = orchestratedData.session.view;
+                if (candidatePersona && PERSONA_PROFILES.some((persona) => persona.id === candidatePersona)) {
+                  setVisitorPersona(candidatePersona as VisitorPersona);
+                }
+                if (candidateIntent && GUEST_INTENT_OPTIONS.some((option) => option.id === candidateIntent)) {
+                  setGuestIntent(candidateIntent as GuestIntent);
+                }
+                if (candidateView && EXPERIENCE_VIEW_OPTIONS.some((option) => option.id === candidateView)) {
+                  const normalizedView = (!isStayMode && candidateView === "property")
+                    ? "operate"
+                    : candidateView;
+                  setExperienceView(normalizedView as ExperienceView);
+                }
+              }
+            }
+          }
+        } catch {
+          // Fall through to standard data fetch below.
+        }
+
+        if (!orchestrated) {
+          setAgentNarrative(null);
+          setAgentJourney(null);
+          const [feedRes, allDestRes, liveDestRes] = await Promise.all([
+            fetch(`/api/portals/${portal.slug}/feed`),
+            fetch(`/api/portals/${portal.slug}/destinations/specials?${allQuery}`),
+            fetch(`/api/portals/${portal.slug}/destinations/specials?${activeQuery}`),
+          ]);
+
+          feedData = await feedRes.json();
+          allDestData = await allDestRes.json();
+          liveDestData = await liveDestRes.json();
+        }
 
         if (feedData.sections) {
           const normalized: FeedSection[] = feedData.sections
             .filter((s: { events?: unknown[] }) => (s.events || []).length > 0)
-            .map((section: {
-              title: string;
-              slug?: string;
-              description?: string;
-              events: Array<Record<string, unknown>>;
-            }) => ({
-              title: section.title,
-              slug: section.slug,
-              description: section.description,
-              events: section.events.map((event) => ({
+            .map((section) => {
+              const events = Array.isArray(section.events) ? section.events : [];
+              return {
+                title: String(section.title || ""),
+                slug: typeof section.slug === "string" ? section.slug : undefined,
+                description: typeof section.description === "string" ? section.description : undefined,
+                events: events.map((event) => ({
                 id: String(event.id),
                 title: String(event.title || ""),
                 start_date: String(event.start_date || ""),
@@ -983,13 +1395,13 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
                 is_free: Boolean(event.is_free),
                 price_min: typeof event.price_min === "number" ? event.price_min : null,
               })),
-            }));
+              };
+            });
           setSections(normalized);
         }
 
         setDestinations((allDestData.destinations || []) as Destination[]);
         setLiveDestinations((liveDestData.destinations || []) as Destination[]);
-        setSpecialsMeta((allDestData.meta || null) as SpecialsMeta | null);
       } catch (error) {
         console.error("Failed to fetch FORTH concierge data:", error);
       } finally {
@@ -998,7 +1410,7 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
     }
 
     fetchData();
-  }, [portal.slug, portal.filters?.geo_center, portal.filters?.geo_radius_km]);
+  }, [isStayMode, portal.slug, portal.filters?.geo_center, portal.filters?.geo_radius_km]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -1014,6 +1426,11 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
     const focusFromUrl = params.get("concierge_focus");
     const foodFocusFromUrl = params.get("concierge_food_focus");
     const modeFromUrl = params.get("concierge_mode");
+    const planningFromUrl = params.get("concierge_planning");
+    const daypartFromUrl = params.get("concierge_daypart");
+    const futureDateFromUrl = params.get("concierge_future_date");
+    const planTypeFromUrl = params.get("concierge_plan_type");
+    const detailedFromUrl = params.get("concierge_detailed");
     const briefFromUrl = params.get("concierge_brief");
 
     const applyIntent = (value: string | null | undefined) => {
@@ -1043,11 +1460,15 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
     const applyView = (value: string | null | undefined) => {
       if (!value) return;
       if (EXPERIENCE_VIEW_OPTIONS.some((option) => option.id === value)) {
-        setExperienceView(value as ExperienceView);
+        const normalizedView = (!isStayMode && value === "property")
+          ? "operate"
+          : value;
+        setExperienceView(normalizedView as ExperienceView);
       }
     };
 
     const applyBundle = (value: string | null | undefined) => {
+      if (!showStudioControls) return;
       if (!value) return;
       if (COMMAND_BUNDLES.some((bundle) => bundle.id === value)) {
         setActiveBundleId(value);
@@ -1069,9 +1490,38 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
     };
 
     const applyCuratorMode = (value: string | null | undefined) => {
+      if (!showStudioControls) return;
       if (!value) return;
       if (CURATOR_MODES.some((mode) => mode.id === value)) {
         setCuratorModeId(value as CuratorModeId);
+      }
+    };
+
+    const applyPlanning = (value: string | null | undefined) => {
+      if (!value) return;
+      if (value === "tonight" || value === "future") {
+        setDiscoveryMode(value as DiscoveryMode);
+      }
+    };
+
+    const applyDaypart = (value: string | null | undefined) => {
+      if (!value) return;
+      if (CONCIERGE_DAYPART_OPTIONS.some((option) => option.id === value)) {
+        setSelectedDaypart(value as ConciergeDaypart);
+      }
+    };
+
+    const applyFutureDate = (value: string | null | undefined) => {
+      if (!value) return;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        setFutureDate(value);
+      }
+    };
+
+    const applyPlanType = (value: string | null | undefined) => {
+      if (!value) return;
+      if (PLAN_AHEAD_CATEGORY_OPTIONS.some((option) => option.id === value)) {
+        setPlanAheadCategory(value as PlanAheadCategory);
       }
     };
 
@@ -1085,6 +1535,11 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
       focusFromUrl ||
       foodFocusFromUrl ||
       modeFromUrl ||
+      planningFromUrl ||
+      daypartFromUrl ||
+      futureDateFromUrl ||
+      planTypeFromUrl ||
+      detailedFromUrl ||
       briefFromUrl
     ) {
       applyPersona(personaFromUrl);
@@ -1093,9 +1548,14 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
       applyFocus(focusFromUrl);
       applyFoodFocus(foodFocusFromUrl);
       applyCuratorMode(modeFromUrl);
+      applyPlanning(planningFromUrl);
+      applyDaypart(daypartFromUrl);
+      applyFutureDate(futureDateFromUrl);
+      applyPlanType(planTypeFromUrl);
       applyIntent(intentFromUrl);
       applyRequested(requestedFromUrl?.split(",").filter(Boolean));
       applyPlan(planFromUrl?.split(",").filter(Boolean));
+      setShowDetailedPlan(detailedFromUrl === "1" || detailedFromUrl === "true");
       setIsBriefMode(briefFromUrl === "1" || briefFromUrl === "true");
       return;
     }
@@ -1109,6 +1569,10 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
       applyFocus(parsed.discoveryFocusId);
       applyFoodFocus(parsed.foodDrinkFocusId);
       applyCuratorMode(parsed.curatorModeId);
+      applyPlanning(parsed.discoveryMode);
+      applyDaypart(parsed.daypart);
+      applyFutureDate(parsed.futureDate);
+      applyPlanType(parsed.planAheadCategory);
       applyIntent(parsed.guestIntent);
       applyRequested(parsed.requestedServiceIds);
       applyPlan(parsed.selectedPlanIds);
@@ -1121,15 +1585,20 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
       if (typeof parsed.isBriefMode === "boolean") {
         setIsBriefMode(parsed.isBriefMode);
       }
+      if (typeof parsed.showDetailedPlan === "boolean") {
+        setShowDetailedPlan(parsed.showDetailedPlan);
+      }
     } catch {
       // Ignore malformed local state snapshots.
     }
-  }, [knownServiceIds, portal.slug]);
+  }, [isStayMode, knownServiceIds, portal.slug, showStudioControls]);
 
   const now = useMemo(() => new Date(), []);
   const dayPart = useMemo(() => getDayPart(now), [now]);
   const greeting = useMemo(() => getDayPartCopy(dayPart), [dayPart]);
-  const worldCupActive = useMemo(() => isWorldCupWindow(now), [now]);
+  const heroTitle = agentNarrative?.heroTitle || greeting.title;
+  const heroSubtitle = agentNarrative?.heroSubtitle || greeting.subtitle;
+  const todayStamp = useMemo(() => toLocalDateStamp(now), [now]);
 
   const tonightSection = sections.find((s) => s.slug === "tonight" || s.slug === "today" || s.slug === "this-evening") || sections[0];
   const picksSection = sections.find((s) => s.slug === "curated" || s.slug === "picks" || s.slug === "our-picks");
@@ -1149,12 +1618,34 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
     () => GUEST_INTENT_OPTIONS.find((option) => option.id === guestIntent) || GUEST_INTENT_OPTIONS[0],
     [guestIntent]
   );
+  const allEventPool = useMemo(() => sections.flatMap((section) => section.events), [sections]);
+  const futureNightDates = useMemo(() => {
+    const unique = new Set<string>();
+    for (const event of allEventPool) {
+      if (!event.start_date || event.start_date <= todayStamp) continue;
+      unique.add(event.start_date);
+    }
+    return Array.from(unique).sort().slice(0, 7);
+  }, [allEventPool, todayStamp]);
+  const hasFutureNights = futureNightDates.length > 0;
+  const effectiveDiscoveryMode: DiscoveryMode = !isStayMode && discoveryMode === "future" && hasFutureNights
+    ? "future"
+    : "tonight";
+  const selectedFutureDate = effectiveDiscoveryMode === "future"
+    ? (futureDate && futureNightDates.includes(futureDate) ? futureDate : futureNightDates[0] || null)
+    : null;
   const hasGuidedVenueFilter = activeDiscoveryFocus.id !== "any" || activeFoodDrinkFocus.id !== "any";
   const activeVenueGuidanceLabel = useMemo(() => {
+    if (effectiveDiscoveryMode === "future") {
+      if (planAheadCategory === "food") return "Food";
+      if (planAheadCategory === "entertainment") return "Entertainment";
+      if (planAheadCategory === "destinations") return "Destinations";
+      return "Future Night";
+    }
     if (activeFoodDrinkFocus.id !== "any") return activeFoodDrinkFocus.label;
     if (activeDiscoveryFocus.id !== "any") return activeDiscoveryFocus.label;
     return activeIntent.label;
-  }, [activeDiscoveryFocus.id, activeDiscoveryFocus.label, activeFoodDrinkFocus.id, activeFoodDrinkFocus.label, activeIntent.label]);
+  }, [activeDiscoveryFocus.id, activeDiscoveryFocus.label, activeFoodDrinkFocus.id, activeFoodDrinkFocus.label, activeIntent.label, effectiveDiscoveryMode, planAheadCategory]);
   const activePersona = useMemo(
     () => PERSONA_PROFILES.find((persona) => persona.id === visitorPersona) || PERSONA_PROFILES[0],
     [visitorPersona]
@@ -1194,39 +1685,79 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
     return matches.length > 0 ? matches : focusedLiveDestinations;
   }, [activeFoodDrinkFocus, focusedLiveDestinations]);
 
-  const allEventPool = useMemo(() => sections.flatMap((section) => section.events), [sections]);
-  const discoveryFocusCounts = useMemo(() => {
-    const entries = DISCOVERY_FOCUS_OPTIONS.map((focus) => {
-      if (focus.id === "any") {
-        return [focus.id, { events: allEventPool.length, venues: rankedDestinations.length }] as const;
-      }
-
-      const eventCount = allEventPool.filter((event) => matchesEventFocus(event, focus)).length;
-      const venueCount = rankedDestinations.filter((destination) => matchesDestinationFocus(destination, focus)).length;
-      return [focus.id, { events: eventCount, venues: venueCount }] as const;
-    });
-
-    return Object.fromEntries(entries) as Record<DiscoveryFocusId, { events: number; venues: number }>;
-  }, [allEventPool, rankedDestinations]);
-
-  const foodDrinkFocusCounts = useMemo(() => {
-    const entries = FOOD_DRINK_FOCUS_OPTIONS.map((focus) => {
-      if (focus.id === "any") {
-        return [focus.id, { venues: focusedDestinations.length }] as const;
-      }
-      const venueCount = focusedDestinations.filter((destination) => matchesFoodDrinkFocus(destination, focus)).length;
-      return [focus.id, { venues: venueCount }] as const;
-    });
-
-    return Object.fromEntries(entries) as Record<FoodDrinkFocusId, { venues: number }>;
-  }, [focusedDestinations]);
-
-  const guidedTonightEvents = useMemo(() => {
+  const guidedTonightEventsBase = useMemo(() => {
     const events = tonightSection?.events || [];
     if (activeDiscoveryFocus.id === "any") return events;
     const matches = events.filter((event) => matchesEventFocus(event, activeDiscoveryFocus));
     return matches.length > 0 ? matches : events;
   }, [activeDiscoveryFocus, tonightSection]);
+
+  const guidedTonightEvents = useMemo(() => {
+    if (selectedDaypart === "all") return guidedTonightEventsBase;
+    const matches = guidedTonightEventsBase.filter((event) => matchesEventDaypart(event, selectedDaypart));
+    return matches.length > 0 ? matches : guidedTonightEventsBase;
+  }, [guidedTonightEventsBase, selectedDaypart]);
+
+  const futureNightEventsBase = useMemo(() => {
+    if (!selectedFutureDate) return [];
+    const futurePool = allEventPool.filter((event) => event.start_date === selectedFutureDate);
+    if (activeDiscoveryFocus.id === "any") return futurePool;
+    const matches = futurePool.filter((event) => matchesEventFocus(event, activeDiscoveryFocus));
+    return matches.length > 0 ? matches : futurePool;
+  }, [activeDiscoveryFocus, allEventPool, selectedFutureDate]);
+
+  const futureNightEvents = useMemo(() => {
+    if (selectedDaypart === "all") return futureNightEventsBase;
+    const matches = futureNightEventsBase.filter((event) => matchesEventDaypart(event, selectedDaypart));
+    return matches.length > 0 ? matches : futureNightEventsBase;
+  }, [futureNightEventsBase, selectedDaypart]);
+
+  const planAheadEvents = useMemo(() => {
+    if (effectiveDiscoveryMode !== "future") return futureNightEvents;
+    if (planAheadCategory === "destinations") return [];
+    if (planAheadCategory === "all") return futureNightEvents;
+
+    const matches = futureNightEvents.filter((event) => matchesPlanAheadCategoryForEvent(event, planAheadCategory));
+    return isPlanRoute ? matches : (matches.length > 0 ? matches : futureNightEvents);
+  }, [effectiveDiscoveryMode, futureNightEvents, isPlanRoute, planAheadCategory]);
+
+  const planAheadDestinations = useMemo(() => {
+    if (effectiveDiscoveryMode !== "future") return foodFocusedDestinations;
+    if (planAheadCategory === "all") return foodFocusedDestinations;
+
+    const matches = foodFocusedDestinations.filter((destination) => (
+      matchesPlanAheadCategoryForDestination(destination, planAheadCategory)
+    ));
+    return isPlanRoute ? matches : (matches.length > 0 ? matches : foodFocusedDestinations);
+  }, [effectiveDiscoveryMode, foodFocusedDestinations, isPlanRoute, planAheadCategory]);
+
+  const explorationDestinationsBase = useMemo(
+    () => effectiveDiscoveryMode === "future" ? planAheadDestinations : foodFocusedLiveDestinations,
+    [effectiveDiscoveryMode, foodFocusedLiveDestinations, planAheadDestinations]
+  );
+  const explorationDestinations = useMemo(() => {
+    if (selectedDaypart === "all") return explorationDestinationsBase;
+    const matches = explorationDestinationsBase.filter((destination) => matchesDestinationDaypart(destination, selectedDaypart));
+    return matches.length > 0 ? matches : explorationDestinationsBase;
+  }, [explorationDestinationsBase, selectedDaypart]);
+
+  const fallbackExplorationDestinationsBase = useMemo(() => {
+    if (effectiveDiscoveryMode !== "future") return focusedLiveDestinations;
+    if (planAheadCategory === "all") return focusedDestinations;
+
+    const matches = focusedDestinations.filter((destination) => (
+      matchesPlanAheadCategoryForDestination(destination, planAheadCategory)
+    ));
+    return isPlanRoute ? matches : (matches.length > 0 ? matches : focusedDestinations);
+  }, [effectiveDiscoveryMode, focusedDestinations, focusedLiveDestinations, isPlanRoute, planAheadCategory]);
+
+  const fallbackExplorationDestinations = useMemo(() => {
+    if (selectedDaypart === "all") return fallbackExplorationDestinationsBase;
+    const matches = fallbackExplorationDestinationsBase.filter((destination) => matchesDestinationDaypart(destination, selectedDaypart));
+    return matches.length > 0 ? matches : fallbackExplorationDestinationsBase;
+  }, [fallbackExplorationDestinationsBase, selectedDaypart]);
+
+  const featuredEvents = effectiveDiscoveryMode === "future" ? planAheadEvents : guidedTonightEvents;
 
   const startingSoon = useMemo(
     () => foodFocusedDestinations.filter((d) => d.special_state === "starting_soon").slice(0, 9),
@@ -1278,6 +1809,32 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
     [destinations]
   );
 
+  const topAmenityPreviewItems = useMemo(() => {
+    const signaturePreviews: PreviewItem[] = signatureVenueEntries.map(({ preset, destination }) => ({
+      id: `signature-${preset.id}`,
+      title: destination?.venue.name || preset.name,
+      subtitle: preset.spotlight,
+      badge: preset.kind === "restaurant" ? "Dining" : "Bar",
+      href: destination
+        ? `/${portal.slug}?spot=${destination.venue.slug}`
+        : `/${portal.slug}?view=find&type=destinations&search=${encodeURIComponent(preset.name)}`,
+      imageSources: [destination?.venue.image_url, preset.photoUrl, ...FORTH_IMAGE_FALLBACKS],
+    }));
+
+    const amenityPreviews: PreviewItem[] = amenityEntries.map(({ amenity, destination }) => ({
+      id: `amenity-${amenity.id}`,
+      title: amenity.name,
+      subtitle: amenity.detail,
+      badge: "Amenity",
+      href: destination
+        ? `/${portal.slug}?spot=${destination.venue.slug}`
+        : `/${portal.slug}?view=find&type=destinations&search=${encodeURIComponent(amenity.name)}`,
+      imageSources: [destination?.venue.image_url, amenity.photoUrl, ...FORTH_IMAGE_FALLBACKS],
+    }));
+
+    return [...signaturePreviews, ...amenityPreviews].slice(0, 6);
+  }, [amenityEntries, portal.slug, signatureVenueEntries]);
+
   const propertyDestinations = useMemo(
     () => foodFocusedDestinations
       .filter((d) => isLikelyHotelAmenity(d, portal.name) && !signatureVenueIds.has(d.venue.id))
@@ -1287,72 +1844,138 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
 
   const beltline = useMemo(() => foodFocusedDestinations.filter(isBeltlineDestination).slice(0, 8), [foodFocusedDestinations]);
 
-  const highConfidence = useMemo(
-    () => foodFocusedDestinations.filter((d) => d.top_special?.confidence === "high").length,
-    [foodFocusedDestinations]
+  const futureEventCount = planAheadEvents.length;
+  const highConfidenceDestinationCount = useMemo(
+    () => explorationDestinations.filter((destination) => destination.top_special?.confidence === "high").length,
+    [explorationDestinations]
   );
-
-  const refreshedToday = useMemo(
-    () => foodFocusedDestinations.filter((d) => {
-      const ageHours = getFreshnessHours(d.top_special?.last_verified_at || null);
-      return ageHours !== null && ageHours <= 24;
-    }).length,
-    [foodFocusedDestinations]
+  const verifiedWithinDayCount = useMemo(
+    () => explorationDestinations.filter((destination) => isVerifiedWithinHours(destination.top_special?.last_verified_at, 24)).length,
+    [explorationDestinations]
   );
+  const walkableDestinationCount = useMemo(
+    () => explorationDestinations.filter((destination) => destination.proximity_tier === "walkable").length,
+    [explorationDestinations]
+  );
+  const freshestSignalHours = useMemo(() => {
+    const hours = explorationDestinations
+      .map((destination) => hoursSinceTimestamp(destination.top_special?.last_verified_at))
+      .filter((value): value is number => value !== null)
+      .sort((a, b) => a - b);
+    return hours[0] ?? null;
+  }, [explorationDestinations]);
+  const quickActions = useMemo<DecisionAction[]>(() => {
+    if (isStayMode) {
+      return [
+        {
+          label: "Signature Dining At FORTH",
+          href: "#forth-signature-venues",
+          note: "Start with FORTH's flagship dining and bar rooms.",
+        },
+        {
+          label: "Book Spa + Wellness",
+          href: "#forth-amenities",
+          note: "Browse high-value amenities before you go out.",
+        },
+        {
+          label: "Submit In-Room Request",
+          href: "#guest-service-layer",
+          note: "Send a concierge request in one step.",
+        },
+      ];
+    }
 
-  const quickActions = useMemo(() => {
+    if (isDiningRoute) {
+      return [
+        {
+          label: "Great Cocktails Nearby",
+          href: `/${portal.slug}?view=find&type=destinations&search=cocktail bar`,
+          note: "Bars and rooftops tuned for strong drink programs.",
+        },
+        {
+          label: "Reserve Dinner",
+          href: `/${portal.slug}?view=find&type=destinations&venue_type=restaurant,rooftop,bar`,
+          note: "Open reservation-friendly restaurant picks.",
+        },
+        {
+          label: "Sports Bar Energy",
+          href: `/${portal.slug}?view=find&type=destinations&search=sports bar`,
+          note: "Game-night options with live atmosphere.",
+        },
+      ];
+    }
+
+    if (effectiveDiscoveryMode === "future") {
+      return [
+        {
+          label: selectedFutureDate ? `Events ${formatDateChip(selectedFutureDate)}` : "Explore Upcoming Events",
+          href: `/${portal.slug}?view=find&type=events`,
+          note: "See what is happening on your stay date first.",
+        },
+        {
+          label: "Where To Eat",
+          href: `/${portal.slug}?view=find&type=destinations&venue_type=restaurant,rooftop,bar`,
+          note: "Open dining picks with reservation potential.",
+        },
+        {
+          label: "Neighborhoods To Bookmark",
+          href: `/${portal.slug}?view=find&type=destinations&neighborhoods=Old Fourth Ward,Inman Park,Poncey-Highland,Midtown`,
+          note: "Save walkable or short-ride anchors for your trip.",
+        },
+      ];
+    }
+
     if (activePersona.id === "club_member") {
       return [
         {
-          label: "Club Dining + Bar",
+          label: "Member-Favorite Dining",
           href: `/${portal.slug}?view=find&type=destinations&venue_type=restaurant,bar,rooftop`,
+          note: "Start with destinations that fit FORTH Club habits.",
         },
         {
-          label: "Wellness + Pool",
-          href: `/${portal.slug}?view=find&type=destinations&venue_type=spa,fitness_center`,
-        },
-        {
-          label: "Member Events",
+          label: "Club-Adjacent Events",
           href: `/${portal.slug}?view=find&type=events&search=club`,
+          note: "Find events aligned to member social rhythms.",
         },
         {
-          label: "Priority Dinner",
-          href: `/${portal.slug}?view=find&type=destinations&search=premio`,
+          label: "Wellness + Recovery",
+          href: `/${portal.slug}?view=find&type=destinations&venue_type=spa,fitness_center`,
+          note: "Balance social plans with reset options.",
         },
       ];
     }
 
     return [
       {
-        label: "Happy Hour",
+        label: "Best Happy Hour Right Now",
         href: `/${portal.slug}?view=find&type=destinations&venue_type=bar,rooftop,brewery,sports_bar`,
+        note: "Fast decision if you want drinks first.",
       },
       {
-        label: "Dinner Nearby",
+        label: "Dinner Near FORTH",
         href: `/${portal.slug}?view=find&type=destinations&venue_type=restaurant,food_hall`,
+        note: "Closest strong restaurant choices for tonight.",
       },
       {
         label: "Tonight's Events",
         href: `/${portal.slug}?view=find&type=events&date=today`,
-      },
-      {
-        label: "Walk The BeltLine",
-        href: `/${portal.slug}?view=find&type=destinations&neighborhoods=Old Fourth Ward,Inman Park,Poncey-Highland`,
+        note: "Open the strongest event options now.",
       },
     ];
-  }, [activePersona.id, portal.slug]);
-  const topTonightEvent = guidedTonightEvents[0];
+  }, [activePersona.id, effectiveDiscoveryMode, isDiningRoute, isStayMode, portal.slug, selectedFutureDate]);
+  const decisionStackLabel = effectiveDiscoveryMode === "future" ? "Start Planning" : "Start Here";
+  const topFeaturedEvent = featuredEvents[0];
   const editorialMoments = useMemo(() => {
     const items: EditorialMoment[] = [];
 
-    if (topTonightEvent) {
+    if (topFeaturedEvent) {
       items.push({
-        id: `moment-event-${topTonightEvent.id}`,
-        title: topTonightEvent.title,
-        subtitle: topTonightEvent.venue_name || "Tonight's featured event",
-        href: `/${portal.slug}/events/${topTonightEvent.id}`,
+        id: `moment-event-${topFeaturedEvent.id}`,
+        title: topFeaturedEvent.title,
+        subtitle: topFeaturedEvent.venue_name || "Tonight's featured event",
+        href: `/${portal.slug}/events/${topFeaturedEvent.id}`,
         badge: "Tonight's Lead",
-        imageSrc: getProxiedImageSrc(topTonightEvent.image_url || HERO_PHOTOS_BY_DAYPART[dayPart]) as string,
+        imageSrc: getProxiedImageSrc(topFeaturedEvent.image_url || HERO_PHOTOS_BY_DAYPART[dayPart]) as string,
       });
     }
 
@@ -1404,22 +2027,22 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
     }
 
     return items.slice(0, 3);
-  }, [amenityEntries, dayPart, portal.slug, signatureVenueEntries, topTonightEvent]);
+  }, [amenityEntries, dayPart, portal.slug, signatureVenueEntries, topFeaturedEvent]);
 
   const planCandidates = useMemo(() => {
     const items: PlanCandidate[] = [];
     const seen = new Set<string>();
 
-    if (topTonightEvent) {
-      const id = `event-${topTonightEvent.id}`;
+    if (topFeaturedEvent) {
+      const id = `event-${topFeaturedEvent.id}`;
       seen.add(id);
       items.push({
         id,
-        title: topTonightEvent.title,
-        subtitle: topTonightEvent.venue_name || "Tonight's lead event",
+        title: topFeaturedEvent.title,
+        subtitle: topFeaturedEvent.venue_name || "Tonight's lead event",
         kind: "event",
         venueType: null,
-        href: `/${portal.slug}/events/${topTonightEvent.id}`,
+        href: `/${portal.slug}/events/${topFeaturedEvent.id}`,
         etaMinutes: 0,
         confidence: null,
         proximityTier: null,
@@ -1428,16 +2051,22 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
       });
     }
 
-    for (const [index, destination] of foodFocusedLiveDestinations.slice(0, 5).entries()) {
+    const planSourceDestinations = effectiveDiscoveryMode === "future"
+      ? foodFocusedDestinations
+      : foodFocusedLiveDestinations;
+
+    for (const [index, destination] of planSourceDestinations.slice(0, 5).entries()) {
       const id = `dest-${destination.venue.id}`;
       if (seen.has(id)) continue;
       seen.add(id);
 
-      const liveBias = destination.special_state === "active_now"
-        ? 35 + index * 35
-        : destination.top_special?.starts_in_minutes !== null && destination.top_special?.starts_in_minutes !== undefined
-          ? Math.max(25, destination.top_special.starts_in_minutes + 30)
-          : 90 + index * 25;
+      const liveBias = effectiveDiscoveryMode === "future"
+        ? 120 + index * 45
+        : destination.special_state === "active_now"
+          ? 35 + index * 35
+          : destination.top_special?.starts_in_minutes !== null && destination.top_special?.starts_in_minutes !== undefined
+            ? Math.max(25, destination.top_special.starts_in_minutes + 30)
+            : 90 + index * 25;
 
       items.push({
         id,
@@ -1450,7 +2079,7 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
         confidence: destination.top_special?.confidence || null,
         proximityTier: destination.proximity_tier,
         isSignature: false,
-        isFromLive: true,
+        isFromLive: effectiveDiscoveryMode !== "future",
       });
     }
 
@@ -1475,7 +2104,7 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
     }
 
     return items.slice(0, 8);
-  }, [foodFocusedLiveDestinations, portal.slug, signatureVenueEntries, topTonightEvent]);
+  }, [effectiveDiscoveryMode, foodFocusedDestinations, foodFocusedLiveDestinations, portal.slug, signatureVenueEntries, topFeaturedEvent]);
 
   const rankedPlanCandidates = useMemo(
     () => rankPlanCandidatesForMode(planCandidates, curatorModeId),
@@ -1493,6 +2122,16 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
     setPlanInitialized(true);
   }, [planInitialized, rankedPlanCandidates]);
 
+  useEffect(() => {
+    if (showStudioControls) return;
+    if (curatorModeId !== "safe") {
+      setCuratorModeId("safe");
+    }
+    if (activeBundleId !== null) {
+      setActiveBundleId(null);
+    }
+  }, [activeBundleId, curatorModeId, showStudioControls]);
+
   const selectedPlan = useMemo(() => {
     return selectedPlanIds
       .map((id) => planCandidateById.get(id))
@@ -1506,18 +2145,23 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
     const snapshot: ConciergeStateSnapshot = {
       visitorPersona,
       experienceView,
+      discoveryMode,
+      daypart: selectedDaypart,
+      futureDate,
+      planAheadCategory,
       guestIntent,
       discoveryFocusId,
       foodDrinkFocusId,
-      curatorModeId,
+      curatorModeId: showStudioControls ? curatorModeId : "safe",
       requestedServiceIds,
       selectedPlanIds,
       requestTicketsByService,
-      activeBundleId,
+      activeBundleId: showStudioControls ? activeBundleId : null,
       isBriefMode,
+      showDetailedPlan,
     };
     window.localStorage.setItem(key, JSON.stringify(snapshot));
-  }, [activeBundleId, curatorModeId, discoveryFocusId, experienceView, foodDrinkFocusId, guestIntent, isBriefMode, portal.slug, requestedServiceIds, requestTicketsByService, selectedPlanIds, visitorPersona]);
+  }, [activeBundleId, curatorModeId, discoveryFocusId, discoveryMode, experienceView, foodDrinkFocusId, futureDate, guestIntent, isBriefMode, planAheadCategory, portal.slug, requestedServiceIds, requestTicketsByService, selectedDaypart, selectedPlanIds, showStudioControls, showDetailedPlan, visitorPersona]);
 
   const submitServiceRequest = async (requestId: string) => {
     if (requestedServiceIds.includes(requestId)) {
@@ -1574,6 +2218,7 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
   };
 
   const applyCuratorModeProfile = (modeId: CuratorModeId) => {
+    if (!showStudioControls) return;
     setCuratorModeId(modeId);
     const ranked = rankPlanCandidatesForMode(planCandidates, modeId);
     if (ranked.length > 0) {
@@ -1583,6 +2228,7 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
   };
 
   const applyCommandBundle = (bundle: ConciergeBundle) => {
+    if (!showStudioControls) return;
     setGuestIntent(bundle.intent);
 
     const selected = new Set<string>();
@@ -1630,7 +2276,14 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
   const applyPersonaProfile = (persona: PersonaProfile) => {
     setVisitorPersona(persona.id);
     setGuestIntent(persona.intent);
-    setExperienceView(persona.defaultView);
+    const normalizedView = (!isStayMode && persona.defaultView === "property")
+      ? "operate"
+      : persona.defaultView;
+    setExperienceView(normalizedView);
+    if (!showStudioControls) {
+      setActiveBundleId(null);
+      return;
+    }
     const preferredBundle = COMMAND_BUNDLES.find((bundle) => bundle.id === persona.preferredBundleId);
     if (preferredBundle) {
       applyCommandBundle(preferredBundle);
@@ -1641,44 +2294,38 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
 
   const briefingPath = useMemo(() => {
     const params = new URLSearchParams();
+    if (showStudioControls) {
+      params.set("studio", "1");
+    }
     params.set("guest_persona", visitorPersona);
     params.set("concierge_view", experienceView);
+    params.set("concierge_planning", effectiveDiscoveryMode);
+    params.set("concierge_daypart", selectedDaypart);
+    if (selectedFutureDate) {
+      params.set("concierge_future_date", selectedFutureDate);
+    }
+    params.set("concierge_plan_type", planAheadCategory);
     params.set("concierge_intent", guestIntent);
     params.set("concierge_focus", discoveryFocusId);
     params.set("concierge_food_focus", foodDrinkFocusId);
-    params.set("concierge_mode", curatorModeId);
-    if (activeBundleId) {
-      params.set("concierge_bundle", activeBundleId);
+    if (showStudioControls) {
+      params.set("concierge_mode", curatorModeId);
+      if (activeBundleId) {
+        params.set("concierge_bundle", activeBundleId);
+      }
     }
     if (selectedPlanIds.length > 0) {
       params.set("concierge_plan", selectedPlanIds.join(","));
     }
     if (requestedServiceIds.length > 0) {
       params.set("concierge_services", requestedServiceIds.join(","));
+    }
+    if (showDetailedPlan) {
+      params.set("concierge_detailed", "1");
     }
     params.set("concierge_brief", "1");
     return `/${portal.slug}?${params.toString()}`;
-  }, [activeBundleId, curatorModeId, discoveryFocusId, experienceView, foodDrinkFocusId, guestIntent, portal.slug, requestedServiceIds, selectedPlanIds, visitorPersona]);
-
-  const fullExperiencePath = useMemo(() => {
-    const params = new URLSearchParams();
-    params.set("guest_persona", visitorPersona);
-    params.set("concierge_view", experienceView);
-    params.set("concierge_intent", guestIntent);
-    params.set("concierge_focus", discoveryFocusId);
-    params.set("concierge_food_focus", foodDrinkFocusId);
-    params.set("concierge_mode", curatorModeId);
-    if (activeBundleId) {
-      params.set("concierge_bundle", activeBundleId);
-    }
-    if (selectedPlanIds.length > 0) {
-      params.set("concierge_plan", selectedPlanIds.join(","));
-    }
-    if (requestedServiceIds.length > 0) {
-      params.set("concierge_services", requestedServiceIds.join(","));
-    }
-    return `/${portal.slug}?${params.toString()}`;
-  }, [activeBundleId, curatorModeId, discoveryFocusId, experienceView, foodDrinkFocusId, guestIntent, portal.slug, requestedServiceIds, selectedPlanIds, visitorPersona]);
+  }, [activeBundleId, curatorModeId, discoveryFocusId, effectiveDiscoveryMode, experienceView, foodDrinkFocusId, guestIntent, planAheadCategory, portal.slug, requestedServiceIds, selectedDaypart, selectedFutureDate, selectedPlanIds, showStudioControls, showDetailedPlan, visitorPersona]);
 
   const copyBriefingLink = async () => {
     if (typeof window === "undefined") return;
@@ -1697,26 +2344,132 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
     window.print();
   };
 
+  useEffect(() => {
+    if (isStayMode) {
+      if (experienceView !== "property") {
+        setExperienceView("property");
+      }
+      return;
+    }
+    if (experienceView === "property") {
+      setExperienceView("operate");
+    }
+  }, [experienceView, isStayMode]);
+
   const showFullExperience = !isBriefMode;
-  const showOperate = showFullExperience && experienceView === "operate";
-  const showProperty = showFullExperience && experienceView === "property";
-  const showExplore = showFullExperience && experienceView === "explore";
-  const activeView = EXPERIENCE_VIEW_OPTIONS.find((option) => option.id === experienceView) || EXPERIENCE_VIEW_OPTIONS[0];
+  const effectiveView: ExperienceView = isStayMode
+    ? "property"
+    : experienceView === "property"
+      ? "operate"
+      : experienceView;
+  const showOperate = showFullExperience && effectiveView === "operate";
+  const showProperty = showFullExperience && effectiveView === "property";
+  const showExplore = showFullExperience && effectiveView === "explore";
+  const activeView = EXPERIENCE_VIEW_OPTIONS.find((option) => option.id === effectiveView) || EXPERIENCE_VIEW_OPTIONS[0];
+  const experienceOptions = isStayMode
+    ? EXPERIENCE_VIEW_OPTIONS
+    : EXPERIENCE_VIEW_OPTIONS.filter((option) => option.id !== "property");
+  const showExperienceSwitcher = showStudioControls && !isPlanRoute && !isDiningRoute && !isClubRoute;
+  const showGuidedSetup = showFullExperience && !isStayMode && !isClubRoute && showStudioControls;
+  const showServiceLayer = showFullExperience && isStayMode;
+  const showPlanBuilder = showStudioControls && showOperate && !isStayMode && !isDiningRoute && !isClubRoute && !isPlanRoute;
+  const planAheadShowsEvents = !isPlanRoute || planAheadCategory === "all" || planAheadCategory === "entertainment";
+  const planAheadShowsDestinations = !isPlanRoute || planAheadCategory === "all" || planAheadCategory === "food" || planAheadCategory === "destinations";
+  const planAheadSummaryLabel = planAheadCategory === "food"
+    ? "Food-first planning"
+    : planAheadCategory === "entertainment"
+      ? "Entertainment-first planning"
+      : planAheadCategory === "destinations"
+        ? "Neighborhood-first planning"
+        : "Balanced planning";
+  const planAheadEventSectionTitle = isPlanRoute
+    ? planAheadCategory === "entertainment"
+      ? "Future Night Entertainment"
+      : "Future Night Cultural Highlights"
+    : "Future Night Best Bets";
+  const planAheadEventSectionSubtitle = isPlanRoute
+    ? planAheadCategory === "entertainment"
+      ? "Shows, comedy, sports, and events worth planning your night around."
+      : "Top event options for your selected date."
+    : "Top options for your selected date, so you can plan before arrival.";
+  const planAheadDestinationSectionTitle = isPlanRoute
+    ? planAheadCategory === "food"
+      ? "Dining Worth Booking"
+      : planAheadCategory === "destinations"
+        ? "Destinations To Bookmark"
+        : "Near FORTH For Your Stay"
+    : "Near FORTH For Your Stay";
+  const planAheadDestinationSectionSubtitle = isPlanRoute
+    ? planAheadCategory === "food"
+      ? "Restaurants, bars, and rooftops aligned to your date."
+      : planAheadCategory === "destinations"
+        ? "Neighborhood-led places to anchor your stay."
+        : "Dining, drinks, and neighborhood options to bookmark before check-in."
+    : "Dining, drinks, and neighborhood options to bookmark before check-in.";
+  const showPersonaSelector = !isDiningRoute;
+  const showMoodSelector = !isDiningRoute;
+  const setupLabel = isPlanRoute ? "Plan Ahead Setup" : isDiningRoute ? "Dining Setup" : "Tonight Setup";
+  const setupTitle = isPlanRoute
+    ? "What Kind Of Night Are You Planning?"
+    : isDiningRoute
+      ? "What Are You In The Mood To Drink Or Eat?"
+      : "Tell Us What Sounds Good";
+  const setupSubtitle = isPlanRoute
+    ? "Pick your date and preferences so we can surface events and places worth booking before you arrive."
+    : isDiningRoute
+      ? "Choose your dining style first. We will tune the feed to bars, restaurants, and rooftops that match."
+      : "Pick who this plan is for, the mood, and the food vibe. We will tailor everything below instantly.";
+  const visualDiscoveryFocuses = useMemo(
+    () => DISCOVERY_FOCUS_VISUAL_ORDER
+      .map((id) => DISCOVERY_FOCUS_OPTIONS.find((focus) => focus.id === id))
+      .filter((focus): focus is DiscoveryFocus => Boolean(focus)),
+    []
+  );
+  const visualFoodDrinkFocuses = useMemo(
+    () => FOOD_DRINK_FOCUS_VISUAL_ORDER
+      .map((id) => FOOD_DRINK_FOCUS_OPTIONS.find((focus) => focus.id === id))
+      .filter((focus): focus is FoodDrinkFocus => Boolean(focus)),
+    []
+  );
+
+  useEffect(() => {
+    if (isPlanRoute && discoveryMode !== "future") {
+      setDiscoveryMode("future");
+    }
+    if (!isPlanRoute && !isStayMode && discoveryMode !== "tonight") {
+      setDiscoveryMode("tonight");
+    }
+    if (isPlanRoute && !isStayMode && experienceView !== "operate") {
+      setExperienceView("operate");
+    }
+    if (isClubRoute && visitorPersona !== "club_member") {
+      setVisitorPersona("club_member");
+    }
+    if (isClubRoute && !isStayMode && experienceView !== "explore") {
+      setExperienceView("explore");
+    }
+    if (isDiningRoute && !isStayMode && experienceView !== "explore") {
+      setExperienceView("explore");
+    }
+    if (isDiningRoute && foodDrinkFocusId === "any") {
+      setFoodDrinkFocusId("cocktails");
+    }
+  }, [discoveryMode, experienceView, foodDrinkFocusId, isClubRoute, isDiningRoute, isPlanRoute, isStayMode, visitorPersona]);
 
   if (loading) {
     return <ForthLoadingSkeleton />;
   }
 
   return (
-    <div data-forth-experience="true" className="relative min-h-screen bg-[var(--hotel-ivory)]">
+    <div data-forth-experience="true" className="relative min-h-screen bg-[var(--hotel-ivory)] overflow-x-clip">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_0%_0%,rgba(212,175,122,0.11),transparent_34%),radial-gradient(circle_at_100%_10%,rgba(201,168,138,0.08),transparent_32%),linear-gradient(180deg,rgba(253,251,247,1)_0%,rgba(253,251,247,0.985)_36%,rgba(247,245,240,0.95)_100%)]" />
 
       <div className="relative">
-        <HotelHeader portalSlug={portal.slug} portalName={portal.name} logoUrl={logoUrl} />
+        <HotelHeader portalSlug={portal.slug} portalName={portal.name} logoUrl={logoUrl} showStayLink useForthNav />
 
-        <main className="max-w-7xl mx-auto px-5 md:px-8 py-8 md:py-12">
+        <main className="max-w-7xl mx-auto px-5 md:px-8 py-8 md:py-12 overflow-x-clip">
           <section className="mb-12 grid lg:grid-cols-[1.4fr_1fr] gap-5 md:gap-6">
-            <div className="relative overflow-hidden rounded-2xl border border-[var(--hotel-sand)] text-white p-6 md:p-8 shadow-[var(--hotel-shadow-strong)]">
+            <div className="relative min-w-0 overflow-hidden rounded-2xl border border-[var(--hotel-sand)] text-white p-6 md:p-8 shadow-[var(--hotel-shadow-strong)]">
               <ResilientImage
                 sources={[HERO_PHOTOS_BY_DAYPART[dayPart], ...FORTH_IMAGE_FALLBACKS]}
                 alt="FORTH guest experience backdrop"
@@ -1727,23 +2480,31 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
               <div className="absolute inset-0 bg-[linear-gradient(160deg,rgba(12,11,11,0.78),rgba(20,18,16,0.86),rgba(14,13,12,0.92))]" />
 
               <div className="relative z-10">
-                <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--hotel-champagne)] mb-2">Your FORTH Guide</p>
-                <h1 className="font-display text-3xl md:text-5xl leading-tight mb-3">{greeting.title}</h1>
-                <p className="text-sm md:text-base text-white/75 max-w-[56ch] leading-relaxed">{greeting.subtitle}</p>
+                <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--hotel-champagne)] mb-2">Guest Concierge</p>
+                <h1 className="font-display text-3xl md:text-5xl leading-tight mb-3">
+                  {isStayMode
+                    ? "Stay At FORTH"
+                    : isDiningRoute
+                      ? "Dining + Drinks At FORTH"
+                      : isClubRoute
+                        ? "FORTH Club Concierge"
+                    : effectiveDiscoveryMode === "future"
+                      ? "Plan Your FORTH Stay"
+                      : heroTitle}
+                </h1>
+                <p className="text-sm md:text-base text-white/75 max-w-[56ch] leading-relaxed">
+                  {isStayMode
+                    ? "Restaurants, bars, amenities, and in-room services in one polished property view."
+                    : isDiningRoute
+                      ? "From cocktails to late-night tables, discover where to eat and drink with confidence."
+                      : isClubRoute
+                        ? "Member-led recommendations, guest policy context, and tonight's strongest club-adjacent picks."
+                    : effectiveDiscoveryMode === "future"
+                      ? "Pick your future date, explore events, and line up restaurants before arrival."
+                      : heroSubtitle}
+                </p>
 
-                <div className="mt-6 grid sm:grid-cols-2 gap-3">
-                  {quickActions.map((action) => (
-                    <Link
-                      key={action.label}
-                      href={action.href}
-                      className="rounded-xl border border-white/18 bg-white/5 px-4 py-3 text-sm tracking-wide hover:bg-white/12 transition-colors forth-hover-lift"
-                    >
-                      {action.label}
-                    </Link>
-                  ))}
-                </div>
-
-                <div className="mt-3 flex flex-wrap gap-2">
+                <div className="mt-6 flex flex-wrap gap-2">
                   <a
                     href={conciergePhoneLink}
                     className="rounded-full border border-white/18 bg-white/8 px-3 py-1.5 text-[11px] uppercase tracking-[0.13em] text-white/88 hover:bg-white/14 transition-colors"
@@ -1757,106 +2518,159 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
                     Text Desk
                   </a>
                   <a
-                    href="#guest-service-layer"
-                    onClick={() => setExperienceView("operate")}
+                    href={isStayMode ? "#guest-service-layer" : `/${portal.slug}/stay#guest-service-layer`}
                     className="rounded-full border border-white/18 bg-white/8 px-3 py-1.5 text-[11px] uppercase tracking-[0.13em] text-white/88 hover:bg-white/14 transition-colors"
                   >
                     In-Room Requests
                   </a>
                 </div>
+
+                <div className="mt-5 rounded-xl border border-white/15 bg-white/5 p-3 md:p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-[10px] uppercase tracking-[0.16em] text-white/65">{decisionStackLabel}</p>
+                    <span className="text-[10px] uppercase tracking-[0.13em] text-white/55">3 quick decisions</span>
+                  </div>
+                  <div className="mt-2 space-y-2">
+                    {quickActions.map((action, index) => (
+                      <Link
+                        key={action.label}
+                        href={action.href}
+                        className="group flex items-start justify-between gap-3 rounded-lg border border-white/16 bg-black/15 px-3 py-2.5 hover:bg-white/12 transition-colors"
+                      >
+                        <div>
+                          <p className="text-sm text-white/92">
+                            <span className="text-white/60 mr-2">{index + 1}.</span>
+                            {action.label}
+                          </p>
+                          <p className="mt-0.5 text-xs text-white/62">{action.note}</p>
+                        </div>
+                        <span className="pt-1 text-xs text-white/55 group-hover:text-white/78 transition-colors">Open</span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="rounded-2xl border border-[var(--hotel-sand)] bg-[var(--hotel-cream)] p-5 md:p-6 shadow-[var(--hotel-shadow-medium)]">
-              <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--hotel-stone)] mb-4">Now / Next / Later</p>
-              <div className="grid grid-cols-3 gap-2">
-                <MetricCard
-                  label="Live"
-                  value={hasGuidedVenueFilter ? foodFocusedLiveDestinations.length : (specialsMeta?.active_now ?? liveDestinations.length)}
-                />
-                <MetricCard
-                  label="Soon"
-                  value={hasGuidedVenueFilter ? startingSoon.length : (specialsMeta?.starting_soon ?? startingSoon.length)}
-                />
-                <MetricCard
-                  label="Walkable"
-                  value={hasGuidedVenueFilter ? walkable.length : (specialsMeta?.tiers.walkable ?? walkable.length)}
-                />
+            <div className="min-w-0 rounded-2xl border border-[var(--hotel-sand)] bg-[var(--hotel-cream)] p-5 md:p-6 shadow-[var(--hotel-shadow-medium)]">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--hotel-stone)]">At FORTH</p>
+                  <h2 className="font-display text-2xl text-[var(--hotel-charcoal)] mt-1">Amenities Preview</h2>
+                  <p className="mt-2 text-xs text-[var(--hotel-stone)] max-w-[34ch]">
+                    Signature dining, bars, and property amenities with direct links into the stay experience.
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <TrustChip label="High confidence" value={`${highConfidenceDestinationCount}`} />
+                    <TrustChip label="Verified <24h" value={`${verifiedWithinDayCount}`} />
+                    <TrustChip label="Walkable" value={`${walkableDestinationCount}`} />
+                    {freshestSignalHours !== null && <TrustChip label="Freshest signal" value={`${freshestSignalHours}h ago`} />}
+                  </div>
+                </div>
+                <Link
+                  href={`/${portal.slug}/stay`}
+                  className="text-[10px] uppercase tracking-[0.14em] text-[var(--hotel-champagne)] hover:text-[var(--hotel-charcoal)] transition-colors"
+                >
+                  Open stay page
+                </Link>
               </div>
 
-              <div className="mt-5 space-y-2 text-xs text-[var(--hotel-stone)]">
-                <div className="flex items-center justify-between border-b border-[var(--hotel-sand)] pb-2">
-                  <span>Most reliable picks</span>
-                  <span className="text-[var(--hotel-charcoal)]">{highConfidence}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Updated in last 24h</span>
-                  <span className="text-[var(--hotel-charcoal)]">{refreshedToday}</span>
-                </div>
-              </div>
-              <div className="mt-4 rounded-xl border border-[var(--hotel-sand)] bg-[var(--hotel-ivory)] px-3 py-2">
-                <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--hotel-stone)]">Active Profile</p>
-                <p className="text-sm text-[var(--hotel-charcoal)] mt-1">{activePersona.label}</p>
-                <p className="text-xs text-[var(--hotel-stone)] mt-1">Desk line: {conciergePhoneDisplay}</p>
-              </div>
-
-              <div className="mt-4 rounded-xl border border-[var(--hotel-sand)] bg-[var(--hotel-ivory)] px-3 py-3">
-                <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--hotel-stone)]">Concierge Actions</p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <a
-                    href="#itinerary-composer"
-                    onClick={() => setExperienceView("operate")}
-                    className="rounded-full border border-[var(--hotel-sand)] bg-[var(--hotel-cream)] px-3 py-1.5 text-[10px] uppercase tracking-[0.13em] text-[var(--hotel-charcoal)] hover:border-[var(--hotel-champagne)] transition-colors"
-                  >
-                    Build Itinerary
-                  </a>
+              <HotelCarousel className="mt-4">
+                {topAmenityPreviewItems.map((item) => (
                   <Link
-                    href={isBriefMode ? fullExperiencePath : briefingPath}
-                    className="rounded-full border border-[var(--hotel-sand)] bg-[var(--hotel-cream)] px-3 py-1.5 text-[10px] uppercase tracking-[0.13em] text-[var(--hotel-charcoal)] hover:border-[var(--hotel-champagne)] transition-colors"
-                    onClick={() => setIsBriefMode((current) => !current)}
+                    key={item.id}
+                    href={item.href}
+                    className="group flex-shrink-0 snap-start w-[82vw] max-w-[250px] sm:w-[250px] overflow-hidden rounded-xl border border-[var(--hotel-sand)] bg-[var(--hotel-ivory)] shadow-[var(--hotel-shadow-soft)] hover:border-[var(--hotel-champagne)] transition-all forth-hover-lift"
                   >
-                    {isBriefMode ? "Full Experience" : "Share Summary"}
+                    <div className="relative aspect-[4/3]">
+                      <ResilientImage
+                        sources={item.imageSources}
+                        alt={item.title}
+                        sizes="(max-width: 640px) 82vw, 250px"
+                        className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105 forth-zoom-image"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/20 to-transparent" />
+                      <div className="absolute left-3 top-3">
+                        <span className="rounded-full bg-black/50 px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-[var(--hotel-champagne)]">
+                          {item.badge}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="p-3">
+                      <p className="font-display text-xl text-[var(--hotel-charcoal)] leading-tight">{item.title}</p>
+                      <p className="mt-1 text-xs text-[var(--hotel-stone)] line-clamp-2">{item.subtitle}</p>
+                    </div>
                   </Link>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void copyBriefingLink();
-                    }}
-                    className="rounded-full border border-[var(--hotel-sand)] bg-[var(--hotel-cream)] px-3 py-1.5 text-[10px] uppercase tracking-[0.13em] text-[var(--hotel-charcoal)] hover:border-[var(--hotel-champagne)] transition-colors"
-                  >
-                    {copiedBriefing ? "Copied" : "Copy Link"}
-                  </button>
-                </div>
-              </div>
+                ))}
+              </HotelCarousel>
 
-              {worldCupActive && (
-                <div className="mt-5 rounded-xl border border-[var(--hotel-champagne)]/45 bg-[var(--hotel-ivory)] px-3 py-2">
-                  <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--hotel-champagne)]">World Cup Mode</p>
-                  <p className="text-sm text-[var(--hotel-charcoal)] mt-1">Match-day watch parties and pre/post-match picks are prioritized.</p>
-                </div>
-              )}
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Link
+                  href={`/${portal.slug}/stay#forth-signature-venues`}
+                  className="rounded-full border border-[var(--hotel-sand)] bg-[var(--hotel-ivory)] px-3 py-1.5 text-[10px] uppercase tracking-[0.13em] text-[var(--hotel-charcoal)] hover:border-[var(--hotel-champagne)] transition-colors"
+                >
+                  Dining + Bars
+                </Link>
+                <Link
+                  href={`/${portal.slug}/stay#forth-amenities`}
+                  className="rounded-full border border-[var(--hotel-sand)] bg-[var(--hotel-ivory)] px-3 py-1.5 text-[10px] uppercase tracking-[0.13em] text-[var(--hotel-charcoal)] hover:border-[var(--hotel-champagne)] transition-colors"
+                >
+                  Amenities
+                </Link>
+                <Link
+                  href={`/${portal.slug}/stay#guest-service-layer`}
+                  className="rounded-full border border-[var(--hotel-sand)] bg-[var(--hotel-ivory)] px-3 py-1.5 text-[10px] uppercase tracking-[0.13em] text-[var(--hotel-charcoal)] hover:border-[var(--hotel-champagne)] transition-colors"
+                >
+                  In-Room Requests
+                </Link>
+              </div>
             </div>
           </section>
 
-          {showFullExperience && (
+          {showFullExperience && !isStayMode && effectiveDiscoveryMode === "future" && (
             <section className="mb-10 rounded-2xl border border-[var(--hotel-sand)] bg-[var(--hotel-cream)] p-5 md:p-6 shadow-[var(--hotel-shadow-soft)]">
-              <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--hotel-stone)]">Planning Console</p>
-                  <h2 className="font-display text-2xl text-[var(--hotel-charcoal)] mt-1">Plan The Stay With Guided Preferences</h2>
-                  <p className="text-sm text-[var(--hotel-stone)] mt-2 max-w-2xl">
-                    Choose the guest profile, choose trip style, then set event and food/bar preferences.
+                  <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--hotel-stone)]">Plan Ahead</p>
+                  <h2 className="font-display text-2xl text-[var(--hotel-charcoal)] mt-1">Choose Date + Type</h2>
+                  <p className="text-sm text-[var(--hotel-stone)] mt-2">
+                    Select when you are staying and what you want to prioritize.
                   </p>
                 </div>
-                <div className="w-full md:w-auto md:max-w-[430px]">
-                  <OptionRail>
-                    {EXPERIENCE_VIEW_OPTIONS.map((option) => (
+                {selectedFutureDate && (
+                  <span className="rounded-full border border-[var(--hotel-sand)] bg-[var(--hotel-ivory)] px-3 py-1.5 text-[10px] uppercase tracking-[0.13em] text-[var(--hotel-charcoal)]">
+                    {formatDateChip(selectedFutureDate)}
+                  </span>
+                )}
+              </div>
+
+              {hasFutureNights ? (
+                <>
+                  <OptionRail className="mt-4">
+                    {futureNightDates.map((dateValue) => (
+                      <button
+                        key={dateValue}
+                        type="button"
+                        onClick={() => setFutureDate(dateValue)}
+                        className={`rounded-full px-3 py-1.5 text-[11px] uppercase tracking-[0.13em] transition-colors whitespace-nowrap ${
+                          selectedFutureDate === dateValue
+                            ? "bg-[var(--hotel-champagne)] text-[var(--hotel-ink)]"
+                            : "border border-[var(--hotel-sand)] bg-[var(--hotel-ivory)] text-[var(--hotel-stone)] hover:border-[var(--hotel-champagne)]"
+                        }`}
+                      >
+                        {formatDateChip(dateValue)}
+                      </button>
+                    ))}
+                  </OptionRail>
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {PLAN_AHEAD_CATEGORY_OPTIONS.map((option) => (
                       <button
                         key={option.id}
                         type="button"
-                        onClick={() => setExperienceView(option.id)}
-                        className={`rounded-full px-3 py-1.5 text-[11px] uppercase tracking-[0.13em] transition-colors whitespace-nowrap ${
-                          experienceView === option.id
+                        onClick={() => setPlanAheadCategory(option.id)}
+                        className={`rounded-full px-3 py-1.5 text-[11px] uppercase tracking-[0.13em] transition-colors ${
+                          planAheadCategory === option.id
                             ? "bg-[var(--hotel-charcoal)] text-[var(--hotel-cream)]"
                             : "border border-[var(--hotel-sand)] bg-[var(--hotel-ivory)] text-[var(--hotel-stone)] hover:border-[var(--hotel-champagne)]"
                         }`}
@@ -1864,196 +2678,254 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
                         {option.label}
                       </button>
                     ))}
-                  </OptionRail>
-                </div>
-              </div>
-              <p className="mt-3 text-xs text-[var(--hotel-stone)]">{activeView.hint}</p>
-
-              <div className="mt-5 grid lg:grid-cols-2 gap-5">
-                <div className="rounded-xl border border-[var(--hotel-sand)] bg-[var(--hotel-ivory)] px-4 py-3">
-                  <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--hotel-stone)]">1. Guest Profile</p>
-                  <OptionRail className="mt-2">
-                    {PERSONA_PROFILES.map((persona) => (
-                      <button
-                        key={persona.id}
-                        type="button"
-                        onClick={() => applyPersonaProfile(persona)}
-                        className={`rounded-full px-3 py-1.5 text-[11px] uppercase tracking-[0.13em] transition-colors whitespace-nowrap ${
-                          visitorPersona === persona.id
-                            ? "bg-[var(--hotel-charcoal)] text-[var(--hotel-cream)]"
-                            : "border border-[var(--hotel-sand)] bg-[var(--hotel-cream)] text-[var(--hotel-stone)] hover:border-[var(--hotel-champagne)]"
-                        }`}
-                      >
-                        {persona.label}
-                      </button>
-                    ))}
-                  </OptionRail>
-                  <p className="mt-2 text-xs text-[var(--hotel-stone)]">{activePersona.sublabel}</p>
-                </div>
-
-                <div className="rounded-xl border border-[var(--hotel-sand)] bg-[var(--hotel-ivory)] px-4 py-3">
-                  <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--hotel-stone)]">2. Trip Style</p>
-                  <OptionRail className="mt-2">
-                    {GUEST_INTENT_OPTIONS.map((option) => (
-                      <button
-                        key={option.id}
-                        type="button"
-                        onClick={() => setGuestIntent(option.id)}
-                        className={`rounded-full px-3 py-1.5 text-[11px] uppercase tracking-[0.13em] transition-colors whitespace-nowrap ${
-                          guestIntent === option.id
-                            ? "bg-[var(--hotel-champagne)] text-[var(--hotel-ink)]"
-                            : "border border-[var(--hotel-sand)] bg-[var(--hotel-cream)] text-[var(--hotel-stone)] hover:border-[var(--hotel-champagne)]"
-                        }`}
-                      >
-                        {option.label}
-                      </button>
-                    ))}
-                  </OptionRail>
-                  <p className="mt-2 text-xs text-[var(--hotel-stone)]">{activeIntent.hint}</p>
-                </div>
-              </div>
-
-              <div className="mt-5 rounded-xl border border-[var(--hotel-sand)] bg-[var(--hotel-ivory)] px-4 py-3">
-                <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--hotel-stone)]">3. What Are You Looking For Tonight?</p>
-                <p className="mt-2 text-sm text-[var(--hotel-stone)] max-w-3xl">
-                  Pick a mode if you already know the vibe. If you do not, keep it open and we will balance all categories.
-                </p>
-                <OptionRail className="mt-3">
-                  {DISCOVERY_FOCUS_OPTIONS.map((focus) => {
-                    const counts = discoveryFocusCounts[focus.id] || { events: 0, venues: 0 };
-                    return (
-                      <button
-                        key={focus.id}
-                        type="button"
-                        onClick={() => setDiscoveryFocusId(focus.id)}
-                        className={`rounded-full px-3 py-1.5 text-[11px] uppercase tracking-[0.13em] transition-colors whitespace-nowrap ${
-                          discoveryFocusId === focus.id
-                            ? "bg-[var(--hotel-charcoal)] text-[var(--hotel-cream)]"
-                            : "border border-[var(--hotel-sand)] bg-[var(--hotel-cream)] text-[var(--hotel-stone)] hover:border-[var(--hotel-champagne)]"
-                        }`}
-                      >
-                        {focus.label} · {counts.events}/{counts.venues}
-                      </button>
-                    );
-                  })}
-                </OptionRail>
-                <p className="mt-2 text-xs text-[var(--hotel-stone)]">{activeDiscoveryFocus.hint}</p>
-                {activeDiscoveryFocus.id !== "any" && (
-                  <div className="mt-3">
-                    <Link
-                      href={`/${portal.slug}?view=find&type=events&date=today&search=${encodeURIComponent(activeDiscoveryFocus.searchQuery)}`}
-                      className="inline-flex rounded-full border border-[var(--hotel-sand)] bg-[var(--hotel-charcoal)] px-3 py-1.5 text-[10px] uppercase tracking-[0.13em] text-[var(--hotel-cream)] hover:border-[var(--hotel-champagne)] transition-colors"
-                    >
-                      Matching Events
-                    </Link>
                   </div>
-                )}
-              </div>
 
-              <div className="mt-5 rounded-xl border border-[var(--hotel-sand)] bg-[var(--hotel-ivory)] px-4 py-3">
-                <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--hotel-stone)]">4. Food + Drink Preferences</p>
-                <p className="mt-2 text-sm text-[var(--hotel-stone)] max-w-3xl">
-                  Tell the concierge what kind of venue you want right now and we will bias the destination stack.
-                </p>
-                <OptionRail className="mt-3">
-                  {FOOD_DRINK_FOCUS_OPTIONS.map((focus) => {
-                    const counts = foodDrinkFocusCounts[focus.id] || { venues: 0 };
-                    return (
-                      <button
-                        key={focus.id}
-                        type="button"
-                        onClick={() => setFoodDrinkFocusId(focus.id)}
-                        className={`rounded-full px-3 py-1.5 text-[11px] uppercase tracking-[0.13em] transition-colors whitespace-nowrap ${
-                          foodDrinkFocusId === focus.id
-                            ? "bg-[var(--hotel-charcoal)] text-[var(--hotel-cream)]"
-                            : "border border-[var(--hotel-sand)] bg-[var(--hotel-cream)] text-[var(--hotel-stone)] hover:border-[var(--hotel-champagne)]"
-                        }`}
-                      >
-                        {focus.label} · {counts.venues}
-                      </button>
-                    );
-                  })}
-                </OptionRail>
-                <p className="mt-2 text-xs text-[var(--hotel-stone)]">{activeFoodDrinkFocus.hint}</p>
-                {activeFoodDrinkFocus.id !== "any" && (
-                  <div className="mt-3">
-                    <Link
-                      href={`/${portal.slug}?view=find&type=destinations&search=${encodeURIComponent(activeFoodDrinkFocus.searchQuery)}`}
-                      className="inline-flex rounded-full border border-[var(--hotel-sand)] bg-[var(--hotel-charcoal)] px-3 py-1.5 text-[10px] uppercase tracking-[0.13em] text-[var(--hotel-cream)] hover:border-[var(--hotel-champagne)] transition-colors"
-                    >
-                      Matching Venues
-                    </Link>
+                  <div className="mt-4 grid grid-cols-3 gap-2">
+                    <SummaryChip label="Lens" value={planAheadSummaryLabel} />
+                    <SummaryChip label="Events" value={`${futureEventCount}`} />
+                    <SummaryChip label="Venues" value={`${explorationDestinations.length}`} />
                   </div>
-                )}
-              </div>
-
-              <div className="mt-5 rounded-xl border border-[var(--hotel-sand)] bg-[var(--hotel-ivory)] px-4 py-3">
-                <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--hotel-stone)]">5. Build My Tonight</p>
-                <p className="mt-2 text-sm text-[var(--hotel-stone)] max-w-3xl">
-                  Choose how bold tonight should feel. We will reorder itinerary candidates instantly.
+                </>
+              ) : (
+                <p className="mt-4 text-sm text-[var(--hotel-stone)]">
+                  Future-night event data has not loaded yet. You can still browse destinations below.
                 </p>
-                <div className="mt-3 grid md:grid-cols-3 gap-3">
-                  {CURATOR_MODES.map((mode) => (
-                    <button
-                      key={mode.id}
-                      type="button"
-                      onClick={() => applyCuratorModeProfile(mode.id)}
-                      className={`rounded-xl border px-4 py-3 text-left transition-colors ${
-                        curatorModeId === mode.id
-                          ? "border-[var(--hotel-charcoal)] bg-[var(--hotel-ivory)]"
-                          : "border-[var(--hotel-sand)] bg-[var(--hotel-ivory)] hover:border-[var(--hotel-champagne)]"
-                      }`}
-                    >
-                      <p className="font-display text-xl text-[var(--hotel-charcoal)] leading-tight">{mode.label}</p>
-                      <p className="text-xs text-[var(--hotel-stone)] mt-1">{mode.hint}</p>
-                    </button>
-                  ))}
+              )}
+            </section>
+          )}
+
+          {showGuidedSetup && (
+            <section className="mb-10 rounded-2xl border border-[var(--hotel-sand)] bg-[var(--hotel-cream)] p-5 md:p-6 shadow-[var(--hotel-shadow-soft)] overflow-x-clip">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--hotel-stone)]">{setupLabel}</p>
+                  <h2 className="font-display text-2xl text-[var(--hotel-charcoal)] mt-1">{setupTitle}</h2>
+                  <p className="text-sm text-[var(--hotel-stone)] mt-2 max-w-2xl">
+                    {setupSubtitle}
+                  </p>
                 </div>
-                <p className="mt-2 text-xs text-[var(--hotel-stone)]">{activeCuratorMode.hint}</p>
-                {rankedPlanCandidates.length > 0 && (
-                  <div className="mt-3 rounded-xl border border-[var(--hotel-sand)] bg-[var(--hotel-ivory)] px-3 py-3">
-                    <p className="text-[10px] uppercase tracking-[0.13em] text-[var(--hotel-stone)]">Suggested Sequence</p>
-                    <ol className="mt-2 space-y-1.5">
-                      {rankedPlanCandidates.slice(0, 3).map((candidate, index) => (
-                        <li key={candidate.id} className="flex items-center justify-between gap-3 text-sm">
-                          <span className="text-[var(--hotel-charcoal)]">
-                            {index + 1}. {candidate.title}
-                          </span>
-                          <span className="text-[10px] uppercase tracking-[0.12em] text-[var(--hotel-stone)]">
-                            {formatMinutes(candidate.etaMinutes)}
-                          </span>
-                        </li>
+                {showExperienceSwitcher && (
+                  <div className="w-full md:w-auto md:max-w-[430px] min-w-0">
+                    <OptionRail>
+                      {experienceOptions.map((option) => (
+                        <button
+                          key={option.id}
+                          type="button"
+                          onClick={() => setExperienceView(option.id)}
+                          className={`rounded-full px-3 py-1.5 text-[11px] uppercase tracking-[0.13em] transition-colors whitespace-nowrap ${
+                            experienceView === option.id
+                              ? "bg-[var(--hotel-charcoal)] text-[var(--hotel-cream)]"
+                              : "border border-[var(--hotel-sand)] bg-[var(--hotel-ivory)] text-[var(--hotel-stone)] hover:border-[var(--hotel-champagne)]"
+                          }`}
+                        >
+                          {option.label}
+                        </button>
                       ))}
-                    </ol>
+                    </OptionRail>
                   </div>
                 )}
               </div>
+              {showStudioControls && (
+                <p className="mt-3 text-xs text-[var(--hotel-stone)]">{activeView.hint}</p>
+              )}
 
-              <div className="mt-5 rounded-xl border border-[var(--hotel-sand)] bg-[var(--hotel-ivory)] px-4 py-3">
-                <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--hotel-stone)]">6. Quick Plans</p>
-                <div className="mt-3 flex gap-3 overflow-x-auto scroll-touch scrollbar-hide pb-1 pr-8">
-                  {COMMAND_BUNDLES.map((bundle) => (
-                    <button
-                      key={bundle.id}
-                      type="button"
-                      onClick={() => applyCommandBundle(bundle)}
-                      className={`rounded-xl border px-4 py-3 text-left transition-colors forth-hover-lift min-w-[220px] md:min-w-[240px] flex-shrink-0 ${
-                        activeBundleId === bundle.id
-                          ? "border-[var(--hotel-champagne)] bg-[var(--hotel-ivory)]"
-                          : "border-[var(--hotel-sand)] bg-[var(--hotel-cream)] hover:border-[var(--hotel-champagne)]"
-                      }`}
+              <div className="mt-4 flex flex-wrap gap-2">
+                {showPersonaSelector && <SummaryChip label="Guest" value={activePersona.label} />}
+                {showMoodSelector && <SummaryChip label="Mood" value={activeDiscoveryFocus.label} />}
+                <SummaryChip
+                  label={isPlanRoute ? "Reserve Around" : "Craving"}
+                  value={activeFoodDrinkFocus.label}
+                />
+                {showStudioControls && <SummaryChip label="Pace" value={activeCuratorMode.label} />}
+              </div>
+
+              {showStudioControls && agentJourney && (
+                <div className="mt-5 rounded-xl border border-[var(--hotel-sand)] bg-[var(--hotel-ivory)] px-4 py-4">
+                  <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--hotel-stone)]">Guest Journey</p>
+                  <h3 className="font-display text-xl text-[var(--hotel-charcoal)] mt-1">{agentJourney.title}</h3>
+                  <div className="mt-3 grid md:grid-cols-3 gap-3">
+                    {agentJourney.steps.map((step, index) => (
+                      <div key={`${step.title}-${index}`} className="rounded-lg border border-[var(--hotel-sand)] bg-[var(--hotel-cream)] px-3 py-3">
+                        <p className="text-[10px] uppercase tracking-[0.13em] text-[var(--hotel-stone)]">Step {index + 1}</p>
+                        <p className="text-sm font-medium text-[var(--hotel-charcoal)] mt-1">{step.title}</p>
+                        <p className="text-xs text-[var(--hotel-stone)] mt-1">{step.detail}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-3">
+                    <a
+                      href="#itinerary-composer"
+                      onClick={() => setExperienceView("operate")}
+                      className="inline-flex rounded-full border border-[var(--hotel-sand)] bg-[var(--hotel-charcoal)] px-3 py-1.5 text-[10px] uppercase tracking-[0.13em] text-[var(--hotel-cream)] hover:border-[var(--hotel-champagne)] transition-colors"
                     >
-                      <p className="font-display text-xl text-[var(--hotel-charcoal)] leading-tight">{bundle.label}</p>
-                      <p className="text-xs text-[var(--hotel-stone)] mt-1">{bundle.description}</p>
-                    </button>
-                  ))}
+                      {agentJourney.primaryAction}
+                    </a>
+                  </div>
                 </div>
-                <p className="mt-2 text-xs text-[var(--hotel-stone)]">Swipe to compare bundles and pick one primary path.</p>
+              )}
+
+              <div className={`mt-5 grid gap-5 ${showPersonaSelector || showStudioControls ? "xl:grid-cols-[1fr_1.25fr]" : "xl:grid-cols-1"}`}>
+                {(showPersonaSelector || showStudioControls) && (
+                  <div className="min-w-0 space-y-4">
+                    {showPersonaSelector && (
+                      <div className="rounded-xl border border-[var(--hotel-sand)] bg-[var(--hotel-ivory)] px-4 py-3">
+                        <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--hotel-stone)]">Who Is This For?</p>
+                        <OptionRail className="mt-2">
+                          {PERSONA_PROFILES.map((persona) => (
+                            <button
+                              key={persona.id}
+                              type="button"
+                              onClick={() => applyPersonaProfile(persona)}
+                              className={`rounded-full px-3 py-1.5 text-[11px] uppercase tracking-[0.13em] transition-colors whitespace-nowrap ${
+                                visitorPersona === persona.id
+                                  ? "bg-[var(--hotel-charcoal)] text-[var(--hotel-cream)]"
+                                  : "border border-[var(--hotel-sand)] bg-[var(--hotel-cream)] text-[var(--hotel-stone)] hover:border-[var(--hotel-champagne)]"
+                              }`}
+                            >
+                              {persona.label}
+                            </button>
+                          ))}
+                        </OptionRail>
+                        <p className="mt-2 text-xs text-[var(--hotel-stone)]">{activePersona.sublabel}</p>
+                      </div>
+                    )}
+
+                    {showStudioControls && (
+                      <div className="rounded-xl border border-[var(--hotel-sand)] bg-[var(--hotel-ivory)] px-4 py-3">
+                        <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--hotel-stone)]">Express Plans</p>
+                        <p className="mt-2 text-sm text-[var(--hotel-stone)]">
+                          Quick bundles for guests who want fast recommendations without extra setup.
+                        </p>
+                        <div className="mt-3 flex w-full min-w-0 gap-3 overflow-x-auto overflow-y-hidden scroll-touch scrollbar-hide pb-1 pr-2 sm:pr-4">
+                          {COMMAND_BUNDLES.map((bundle) => (
+                            <button
+                              key={bundle.id}
+                              type="button"
+                              onClick={() => applyCommandBundle(bundle)}
+                              className={`rounded-xl border px-4 py-3 text-left transition-colors forth-hover-lift min-w-[72vw] max-w-[82vw] sm:min-w-[220px] sm:max-w-none md:min-w-[240px] flex-shrink-0 ${
+                                activeBundleId === bundle.id
+                                  ? "border-[var(--hotel-champagne)] bg-[var(--hotel-ivory)]"
+                                  : "border-[var(--hotel-sand)] bg-[var(--hotel-cream)] hover:border-[var(--hotel-champagne)]"
+                              }`}
+                            >
+                              <p className="font-display text-xl text-[var(--hotel-charcoal)] leading-tight">{bundle.label}</p>
+                              <p className="text-xs text-[var(--hotel-stone)] mt-1">{bundle.description}</p>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="min-w-0 space-y-4">
+                  {showMoodSelector && (
+                    <div className="rounded-xl border border-[var(--hotel-sand)] bg-[var(--hotel-ivory)] px-4 py-3">
+                      <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--hotel-stone)]">
+                        {isPlanRoute ? "What Do You Want To Do?" : "Tonight&apos;s Mood"}
+                      </p>
+                      <p className="mt-2 text-sm text-[var(--hotel-stone)] max-w-3xl">
+                        {isPlanRoute
+                          ? "Choose the kind of events or energy you want so we can tune future-night recommendations."
+                          : "Choose the kind of night you want and we will prioritize matching events and destinations."}
+                      </p>
+                      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                        {visualDiscoveryFocuses.map((focus) => {
+                          const visual = DISCOVERY_FOCUS_VISUALS[focus.id];
+                          return (
+                            <ChoiceCard
+                              key={focus.id}
+                              label={focus.label}
+                              hint={focus.hint}
+                              eyebrow={visual.eyebrow}
+                              selected={discoveryFocusId === focus.id}
+                              sources={[...visual.sources, ...FORTH_IMAGE_FALLBACKS]}
+                              onClick={() => setDiscoveryFocusId(focus.id)}
+                            />
+                          );
+                        })}
+                      </div>
+                      <p className="mt-2 text-xs text-[var(--hotel-stone)]">{activeDiscoveryFocus.hint}</p>
+                    </div>
+                  )}
+
+                  <div className="rounded-xl border border-[var(--hotel-sand)] bg-[var(--hotel-ivory)] px-4 py-3">
+                    <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--hotel-stone)]">
+                      {isPlanRoute ? "Food + Drink To Book Around" : "Food + Drink Craving"}
+                    </p>
+                    <p className="mt-2 text-sm text-[var(--hotel-stone)] max-w-3xl">
+                      {isPlanRoute
+                        ? "Pick the dining vibe you want nearby so reservation-friendly recommendations stay relevant."
+                        : "Choose what sounds best right now and we will tune the nearby recommendations."}
+                    </p>
+                    <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                      {visualFoodDrinkFocuses.map((focus) => {
+                        const visual = FOOD_DRINK_FOCUS_VISUALS[focus.id];
+                        return (
+                          <ChoiceCard
+                            key={focus.id}
+                            label={focus.label}
+                            hint={focus.hint}
+                            eyebrow={visual.eyebrow}
+                            selected={foodDrinkFocusId === focus.id}
+                            sources={[...visual.sources, ...FORTH_IMAGE_FALLBACKS]}
+                            onClick={() => setFoodDrinkFocusId(focus.id)}
+                          />
+                        );
+                      })}
+                    </div>
+                    <p className="mt-2 text-xs text-[var(--hotel-stone)]">{activeFoodDrinkFocus.hint}</p>
+                  </div>
+
+                  {showStudioControls && (
+                    <div className="rounded-xl border border-[var(--hotel-sand)] bg-[var(--hotel-ivory)] px-4 py-3">
+                      <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--hotel-stone)]">Tonight&apos;s Tempo</p>
+                      <p className="mt-2 text-sm text-[var(--hotel-stone)] max-w-3xl">
+                        Select how adventurous the recommendations should be.
+                      </p>
+                      <div className="mt-3 grid md:grid-cols-3 gap-3">
+                        {CURATOR_MODES.map((mode) => (
+                          <button
+                            key={mode.id}
+                            type="button"
+                            onClick={() => applyCuratorModeProfile(mode.id)}
+                            className={`rounded-xl border px-4 py-3 text-left transition-colors ${
+                              curatorModeId === mode.id
+                                ? "border-[var(--hotel-charcoal)] bg-[var(--hotel-ivory)]"
+                                : "border-[var(--hotel-sand)] bg-[var(--hotel-ivory)] hover:border-[var(--hotel-champagne)]"
+                            }`}
+                          >
+                            <p className="font-display text-xl text-[var(--hotel-charcoal)] leading-tight">{mode.label}</p>
+                            <p className="text-xs text-[var(--hotel-stone)] mt-1">{mode.hint}</p>
+                          </button>
+                        ))}
+                      </div>
+                      <p className="mt-2 text-xs text-[var(--hotel-stone)]">{activeCuratorMode.hint}</p>
+                      {rankedPlanCandidates.length > 0 && (
+                        <div className="mt-3 rounded-xl border border-[var(--hotel-sand)] bg-[var(--hotel-ivory)] px-3 py-3">
+                          <p className="text-[10px] uppercase tracking-[0.13em] text-[var(--hotel-stone)]">Suggested Sequence</p>
+                          <ol className="mt-2 space-y-1.5">
+                            {rankedPlanCandidates.slice(0, 3).map((candidate, index) => (
+                              <li key={candidate.id} className="flex items-center justify-between gap-3 text-sm">
+                                <span className="text-[var(--hotel-charcoal)]">
+                                  {index + 1}. {candidate.title}
+                                </span>
+                                <span className="text-[10px] uppercase tracking-[0.12em] text-[var(--hotel-stone)]">
+                                  {formatMinutes(candidate.etaMinutes)}
+                                </span>
+                              </li>
+                            ))}
+                          </ol>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </section>
           )}
 
-          {showFullExperience && visitorPersona === "club_member" && (
+          {showFullExperience && !isStayMode && showExplore && !isDiningRoute && !isPlanRoute && visitorPersona === "club_member" && (
             <section className="mb-12 rounded-2xl border border-[var(--hotel-sand)] bg-[var(--hotel-cream)] p-5 md:p-6 shadow-[var(--hotel-shadow-soft)]">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
@@ -2104,7 +2976,7 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
             </section>
           )}
 
-          {showFullExperience && visitorPersona !== "club_member" && (
+          {showFullExperience && !isStayMode && showExplore && !isDiningRoute && !isPlanRoute && visitorPersona !== "club_member" && (
             <section className="mb-12 rounded-2xl border border-[var(--hotel-sand)] bg-[var(--hotel-cream)] p-5 md:p-6 shadow-[var(--hotel-shadow-soft)]">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
@@ -2136,9 +3008,9 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
             </section>
           )}
 
-          {showFullExperience && editorialMoments.length > 0 && (
+          {showFullExperience && !isStayMode && showExplore && !isDiningRoute && !isPlanRoute && !isClubRoute && editorialMoments.length > 0 && (
             <section className="mb-14">
-              <div className="flex items-start justify-between gap-4 mb-4">
+              <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
                 <div>
                   <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--hotel-stone)]">FORTH Editorial Layer</p>
                   <h2 className="font-display text-2xl text-[var(--hotel-charcoal)]">Property Atmosphere</h2>
@@ -2180,7 +3052,7 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
 
           {isBriefMode && (
             <section className="mb-14 rounded-2xl border border-[var(--hotel-sand)] bg-[var(--hotel-cream)] p-5 md:p-6 shadow-[var(--hotel-shadow-medium)]">
-              <div className="flex items-start justify-between gap-4">
+              <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--hotel-stone)]">Shareable Summary</p>
                   <h2 className="font-display text-2xl text-[var(--hotel-charcoal)] mt-1">Tonight&apos;s Snapshot</h2>
@@ -2188,7 +3060,7 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
                     A clean view you can share with your guest or travel companion.
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
                     onClick={printBrief}
@@ -2226,9 +3098,9 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
           )}
 
           {showProperty && (
-            <section className="mb-14 grid xl:grid-cols-[1.45fr_1fr] gap-5">
+            <section id="forth-signature-venues" className="mb-14 grid xl:grid-cols-[1.45fr_1fr] gap-5">
             <div className="rounded-2xl border border-[var(--hotel-sand)] bg-[var(--hotel-cream)] p-5 md:p-6 shadow-[var(--hotel-shadow-medium)]">
-              <div className="flex items-start justify-between gap-3 mb-4">
+              <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
                 <div>
                   <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--hotel-stone)]">FORTH Signature Venues</p>
                   <h2 className="font-display text-2xl text-[var(--hotel-charcoal)]">Restaurants + Bars In-House</h2>
@@ -2295,7 +3167,7 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
                         )}
                       </div>
                       <div className="p-4 space-y-2">
-                        <div className="flex items-start justify-between gap-3">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
                           <p className="font-display text-xl text-[var(--hotel-charcoal)] leading-tight">{destination?.venue.name || preset.name}</p>
                           <span className="text-[10px] uppercase tracking-[0.14em] text-[var(--hotel-stone)]">{venueType}</span>
                         </div>
@@ -2316,7 +3188,7 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
               </div>
             </div>
 
-            <div className="rounded-2xl border border-[var(--hotel-sand)] bg-[var(--hotel-cream)] p-5 md:p-6 shadow-[var(--hotel-shadow-medium)]">
+            <div id="forth-amenities" className="rounded-2xl border border-[var(--hotel-sand)] bg-[var(--hotel-cream)] p-5 md:p-6 shadow-[var(--hotel-shadow-medium)]">
               <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--hotel-stone)]">Hotel Amenities</p>
               <h2 className="font-display text-2xl text-[var(--hotel-charcoal)] mt-1">On-Property Services</h2>
               <p className="text-sm text-[var(--hotel-stone)] mt-2">
@@ -2337,7 +3209,7 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent" />
                       </div>
-                      <div className="flex items-center justify-between gap-3">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
                         <p className="font-display text-xl text-[var(--hotel-charcoal)] leading-tight">{amenity.name}</p>
                         <span className="text-[10px] uppercase tracking-[0.12em] text-[var(--hotel-stone)]">{amenity.serviceWindow}</span>
                       </div>
@@ -2363,10 +3235,10 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
             </section>
           )}
 
-          {showOperate && (
-          <section className="mb-14 grid xl:grid-cols-[1fr_1.35fr] gap-5">
+          {showServiceLayer && (
+          <section className={`mb-14 grid gap-5 ${showPlanBuilder ? "xl:grid-cols-[1fr_1.35fr]" : ""}`}>
             <div id="guest-service-layer" className="rounded-2xl border border-[var(--hotel-sand)] bg-[var(--hotel-cream)] p-5 md:p-6 shadow-[var(--hotel-shadow-medium)]">
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--hotel-stone)]">In-Room Requests</p>
                   <h2 className="font-display text-2xl text-[var(--hotel-charcoal)]">In-Room Services</h2>
@@ -2391,7 +3263,7 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
                           : "border-[var(--hotel-sand)] bg-[var(--hotel-ivory)]"
                       }`}
                     >
-                      <div className="flex items-start justify-between gap-3">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
                           <p className="font-display text-xl text-[var(--hotel-charcoal)] leading-tight">{request.title}</p>
                           <p className="text-sm text-[var(--hotel-stone)] mt-1">{request.detail}</p>
@@ -2426,13 +3298,14 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
               </div>
             </div>
 
+            {showPlanBuilder && (
             <div id="itinerary-composer" className="rounded-2xl border border-[var(--hotel-sand)] bg-[var(--hotel-cream)] p-5 md:p-6 shadow-[var(--hotel-shadow-medium)]">
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--hotel-stone)]">Plan Builder</p>
                   <h2 className="font-display text-2xl text-[var(--hotel-charcoal)]">Build Tonight&apos;s Plan</h2>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                   <button
                     type="button"
                     onClick={() => {
@@ -2469,7 +3342,7 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
                           : "border-[var(--hotel-sand)] bg-[var(--hotel-ivory)] hover:border-[var(--hotel-champagne)]"
                       }`}
                     >
-                      <div className="flex items-start justify-between gap-3">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
                           <p className="text-sm font-medium text-[var(--hotel-charcoal)]">{candidate.title}</p>
                           <p className="text-xs text-[var(--hotel-stone)]">{candidate.subtitle}</p>
@@ -2491,7 +3364,7 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
                       const stepTime = new Date(Date.now() + item.etaMinutes * 60 * 1000);
                       return (
                         <li key={item.id} className="rounded-lg border border-[var(--hotel-sand)] bg-[var(--hotel-cream)] px-3 py-2">
-                          <div className="flex items-center justify-between gap-3">
+                          <div className="flex flex-wrap items-start justify-between gap-3">
                             <p className="text-sm font-medium text-[var(--hotel-charcoal)]">{item.title}</p>
                             <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--hotel-stone)]">
                               Stop {index + 1} · {formatClockTime(stepTime)}
@@ -2531,55 +3404,288 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
                 </div>
               </div>
             </div>
+            )}
           </section>
           )}
 
-          {showOperate && foodFocusedLiveDestinations.length > 0 && (
+          {showOperate && planAheadShowsEvents && featuredEvents.length > 0 && (
             <HotelSection
-              title={`Right Now: ${activeVenueGuidanceLabel}`}
-              subtitle={hasGuidedVenueFilter
-                ? "Live specials guided by your selected preferences with proximity and reliability indicators."
-                : "Live specials with proximity and reliability indicators."}
+              title={effectiveDiscoveryMode === "future" ? planAheadEventSectionTitle : "Tonight's Best Bets"}
+              subtitle={effectiveDiscoveryMode === "future"
+                ? planAheadEventSectionSubtitle
+                : "Top events and standout picks, selected for fast decisions."}
               className="mb-14"
               action={{
-                label: "All live destinations",
-                href: activeFoodDrinkFocus.id !== "any"
-                  ? `/${portal.slug}?view=find&type=destinations&search=${encodeURIComponent(activeFoodDrinkFocus.searchQuery)}`
+                label: "All events",
+                href: effectiveDiscoveryMode === "future"
+                  ? planAheadCategory === "entertainment"
+                    ? `/${portal.slug}?view=find&type=events&search=music`
+                    : `/${portal.slug}?view=find&type=events`
                   : activeDiscoveryFocus.id === "any"
-                    ? `/${portal.slug}?view=find&type=destinations`
-                    : `/${portal.slug}?view=find&type=destinations&search=${encodeURIComponent(activeDiscoveryFocus.searchQuery)}`,
+                    ? `/${portal.slug}?view=find&type=events`
+                    : `/${portal.slug}?view=find&type=events&search=${encodeURIComponent(activeDiscoveryFocus.searchQuery)}`,
+              }}
+            >
+              <div className="mb-4 flex flex-wrap gap-2">
+                <TrustChip label="High confidence venues" value={`${highConfidenceDestinationCount}`} />
+                <TrustChip label="Verified <24h" value={`${verifiedWithinDayCount}`} />
+                <TrustChip label="Walkable options" value={`${walkableDestinationCount}`} />
+              </div>
+              <p className="mb-4 text-xs text-[var(--hotel-stone)]">
+                {effectiveDiscoveryMode === "future"
+                  ? "Future-night recommendations are prioritized by your selected date and tuned for bookable dining plus event quality."
+                  : `Lead recommendation is weighted toward ${activeDiscoveryFocus.label.toLowerCase()} and ${activeFoodDrinkFocus.label.toLowerCase()} with live destination freshness checks.`}
+                {freshestSignalHours !== null ? ` Freshest destination signal is ${freshestSignalHours}h old.` : ""}
+              </p>
+              <HotelHeroCard event={featuredEvents[0]} portalSlug={portal.slug} />
+              {topFeaturedEvent && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Link
+                    href={`/${portal.slug}/events/${topFeaturedEvent.id}`}
+                    className="rounded-full border border-[var(--hotel-sand)] bg-[var(--hotel-cream)] px-3 py-1.5 text-[11px] uppercase tracking-[0.13em] text-[var(--hotel-charcoal)] hover:border-[var(--hotel-champagne)] transition-colors"
+                  >
+                    Open event
+                  </Link>
+                  <Link
+                    href={`/${portal.slug}?view=find&type=destinations&search=${encodeURIComponent(topFeaturedEvent.venue_name || topFeaturedEvent.title)}`}
+                    className="rounded-full border border-[var(--hotel-sand)] bg-[var(--hotel-cream)] px-3 py-1.5 text-[11px] uppercase tracking-[0.13em] text-[var(--hotel-charcoal)] hover:border-[var(--hotel-champagne)] transition-colors"
+                  >
+                    Route nearby
+                  </Link>
+                  <Link
+                    href={activeDiscoveryFocus.id === "any"
+                      ? `/${portal.slug}?view=find&type=events&date=today`
+                      : `/${portal.slug}?view=find&type=events&date=today&search=${encodeURIComponent(activeDiscoveryFocus.searchQuery)}`}
+                    className="rounded-full border border-[var(--hotel-sand)] bg-[var(--hotel-cream)] px-3 py-1.5 text-[11px] uppercase tracking-[0.13em] text-[var(--hotel-charcoal)] hover:border-[var(--hotel-champagne)] transition-colors"
+                  >
+                    {effectiveDiscoveryMode === "future" ? "More upcoming" : "More tonight"}
+                  </Link>
+                </div>
+              )}
+              {featuredEvents.length > 1 && (
+                <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {featuredEvents.slice(1, 5).map((event) => (
+                    <HotelEventCard key={event.id} event={event} portalSlug={portal.slug} variant="compact" />
+                  ))}
+                </div>
+              )}
+            </HotelSection>
+          )}
+
+          {showOperate && planAheadShowsEvents && featuredEvents.length === 0 && effectiveDiscoveryMode === "future" && (
+            <section className="mb-14 rounded-2xl border border-[var(--hotel-sand)] bg-[var(--hotel-cream)] p-5 md:p-6">
+              <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--hotel-stone)]">{planAheadEventSectionTitle}</p>
+              <p className="mt-2 text-sm text-[var(--hotel-stone)]">
+                No event matches for this filter yet. Try another date or switch your type above.
+              </p>
+            </section>
+          )}
+
+          {showOperate && planAheadShowsDestinations && explorationDestinations.length > 0 && (
+            <HotelSection
+              title={effectiveDiscoveryMode === "future"
+                ? `${planAheadDestinationSectionTitle}: ${activeVenueGuidanceLabel}`
+                : `Near FORTH Right Now: ${activeVenueGuidanceLabel}`}
+              subtitle={effectiveDiscoveryMode === "future"
+                ? planAheadDestinationSectionSubtitle
+                : hasGuidedVenueFilter
+                  ? "Live nearby picks guided by your mood and craving selections."
+                  : "Live nearby picks around FORTH right now."}
+              className="mb-14"
+              action={{
+                label: effectiveDiscoveryMode === "future" ? "All destinations" : "All live destinations",
+                href: effectiveDiscoveryMode === "future"
+                  ? planAheadCategory === "food"
+                    ? `/${portal.slug}?view=find&type=destinations&venue_type=restaurant,food_hall,bar,rooftop`
+                    : planAheadCategory === "entertainment"
+                      ? `/${portal.slug}?view=find&type=destinations&search=live music`
+                      : planAheadCategory === "destinations"
+                        ? `/${portal.slug}?view=find&type=destinations&neighborhoods=Old Fourth Ward,Inman Park,Poncey-Highland,Midtown`
+                        : `/${portal.slug}?view=find&type=destinations`
+                  : activeFoodDrinkFocus.id !== "any"
+                    ? `/${portal.slug}?view=find&type=destinations&search=${encodeURIComponent(activeFoodDrinkFocus.searchQuery)}`
+                    : activeDiscoveryFocus.id === "any"
+                      ? `/${portal.slug}?view=find&type=destinations`
+                      : `/${portal.slug}?view=find&type=destinations&search=${encodeURIComponent(activeDiscoveryFocus.searchQuery)}`,
               }}
             >
               <HotelCarousel>
-                {foodFocusedLiveDestinations.slice(0, 18).map((destination) => (
-                  <div key={destination.venue.id} className="flex-shrink-0 snap-start w-[304px]">
-                    <HotelDestinationCard destination={destination} portalSlug={portal.slug} variant="live" />
+                {explorationDestinations.slice(0, 18).map((destination) => (
+                  <div key={destination.venue.id} className="flex-shrink-0 snap-start w-[82vw] max-w-[304px] sm:w-[304px]">
+                    <HotelDestinationCard destination={destination} portalSlug={portal.slug} variant={effectiveDiscoveryMode === "future" ? "standard" : "live"} />
                   </div>
                 ))}
               </HotelCarousel>
             </HotelSection>
           )}
 
-          {showOperate && foodFocusedLiveDestinations.length === 0 && focusedLiveDestinations.length > 0 && (
+          {showOperate && planAheadShowsDestinations && explorationDestinations.length === 0 && fallbackExplorationDestinations.length > 0 && (
             <HotelSection
-              title="Right Now"
-              subtitle="No direct matches for current food/drink filters yet. Showing broader nearby options."
+              title={effectiveDiscoveryMode === "future" ? "Near FORTH For Your Stay" : "Near FORTH Right Now"}
+              subtitle={effectiveDiscoveryMode === "future"
+                ? "No direct matches yet. Showing broader options for upcoming stay planning."
+                : "No direct matches yet. Showing broader nearby options around FORTH."}
               className="mb-14"
-              action={{ label: "All live destinations", href: `/${portal.slug}?view=find&type=destinations` }}
+              action={{ label: effectiveDiscoveryMode === "future" ? "All destinations" : "All live destinations", href: `/${portal.slug}?view=find&type=destinations` }}
             >
               <HotelCarousel>
-                {focusedLiveDestinations.slice(0, 12).map((destination) => (
-                  <div key={destination.venue.id} className="flex-shrink-0 snap-start w-[304px]">
-                    <HotelDestinationCard destination={destination} portalSlug={portal.slug} variant="live" />
+                {fallbackExplorationDestinations.slice(0, 12).map((destination) => (
+                  <div key={destination.venue.id} className="flex-shrink-0 snap-start w-[82vw] max-w-[304px] sm:w-[304px]">
+                    <HotelDestinationCard destination={destination} portalSlug={portal.slug} variant={effectiveDiscoveryMode === "future" ? "standard" : "live"} />
                   </div>
                 ))}
               </HotelCarousel>
             </HotelSection>
           )}
 
-          {showOperate && startingSoon.length > 0 && (
+          {showOperate && planAheadShowsDestinations && explorationDestinations.length === 0 && fallbackExplorationDestinations.length === 0 && effectiveDiscoveryMode === "future" && (
             <section className="mb-14 rounded-2xl border border-[var(--hotel-sand)] bg-[var(--hotel-cream)] p-5 md:p-6">
-              <div className="flex items-center justify-between mb-4">
+              <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--hotel-stone)]">{planAheadDestinationSectionTitle}</p>
+              <p className="mt-2 text-sm text-[var(--hotel-stone)]">
+                No venue matches for this filter yet. Try another type or date above.
+              </p>
+            </section>
+          )}
+
+          {showPlanBuilder && !showDetailedPlan && (
+            <section className="mb-14 rounded-2xl border border-[var(--hotel-sand)] bg-[var(--hotel-cream)] p-5 md:p-6 shadow-[var(--hotel-shadow-soft)]">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--hotel-stone)]">Optional</p>
+                  <h2 className="font-display text-2xl text-[var(--hotel-charcoal)] mt-1">Need A Detailed Schedule?</h2>
+                  <p className="text-sm text-[var(--hotel-stone)] mt-2">
+                    Most guests browse quickly. Open this only if you want to build a step-by-step night plan.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowDetailedPlan(true)}
+                  className="rounded-full border border-[var(--hotel-sand)] bg-[var(--hotel-charcoal)] px-4 py-2 text-[11px] uppercase tracking-[0.13em] text-[var(--hotel-cream)] hover:border-[var(--hotel-champagne)] transition-colors"
+                >
+                  Open Step-By-Step Plan
+                </button>
+              </div>
+            </section>
+          )}
+
+          {showPlanBuilder && showDetailedPlan && (
+            <section id="itinerary-composer" className="mb-14 rounded-2xl border border-[var(--hotel-sand)] bg-[var(--hotel-cream)] p-5 md:p-6 shadow-[var(--hotel-shadow-medium)]">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--hotel-stone)]">Step-By-Step Plan</p>
+                  <h2 className="font-display text-2xl text-[var(--hotel-charcoal)]">Build Your Night</h2>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowDetailedPlan(false)}
+                    className="text-[10px] uppercase tracking-[0.14em] text-[var(--hotel-stone)] hover:text-[var(--hotel-charcoal)] transition-colors"
+                  >
+                    Hide planner
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void copyBriefingLink();
+                    }}
+                    className="text-[10px] uppercase tracking-[0.14em] text-[var(--hotel-stone)] hover:text-[var(--hotel-charcoal)] transition-colors"
+                  >
+                    {copiedBriefing ? "Copied" : "Copy plan"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPlanIds([])}
+                    className="text-[10px] uppercase tracking-[0.14em] text-[var(--hotel-stone)] hover:text-[var(--hotel-charcoal)] transition-colors"
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
+              <p className="text-sm text-[var(--hotel-stone)] mt-2">
+                Pick up to a few stops and we will create a clean sequence for the evening.
+              </p>
+
+              <div className="mt-5 grid gap-2">
+                {rankedPlanCandidates.map((candidate) => {
+                  const selected = selectedPlanIds.includes(candidate.id);
+                  return (
+                    <button
+                      key={candidate.id}
+                      type="button"
+                      onClick={() => togglePlanCandidate(candidate.id)}
+                      className={`rounded-xl border px-3 py-2 text-left transition-colors ${
+                        selected
+                          ? "border-[var(--hotel-champagne)] bg-[var(--hotel-ivory)]"
+                          : "border-[var(--hotel-sand)] bg-[var(--hotel-ivory)] hover:border-[var(--hotel-champagne)]"
+                      }`}
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-medium text-[var(--hotel-charcoal)]">{candidate.title}</p>
+                          <p className="text-xs text-[var(--hotel-stone)]">{candidate.subtitle}</p>
+                        </div>
+                        <span className="text-[10px] uppercase tracking-[0.12em] text-[var(--hotel-stone)]">
+                          {candidate.kind === "event" ? "Event" : "Destination"}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="mt-5 rounded-xl border border-[var(--hotel-sand)] bg-[var(--hotel-ivory)] px-4 py-3">
+                <p className="text-[11px] uppercase tracking-[0.13em] text-[var(--hotel-stone)]">Selected Stops</p>
+                {selectedPlan.length > 0 ? (
+                  <ol className="mt-3 space-y-2">
+                    {selectedPlan.map((item, index) => {
+                      const stepTime = new Date(Date.now() + item.etaMinutes * 60 * 1000);
+                      return (
+                        <li key={item.id} className="rounded-lg border border-[var(--hotel-sand)] bg-[var(--hotel-cream)] px-3 py-2">
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <p className="text-sm font-medium text-[var(--hotel-charcoal)]">{item.title}</p>
+                            <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--hotel-stone)]">
+                              Stop {index + 1} · {formatClockTime(stepTime)}
+                            </p>
+                          </div>
+                          <p className="text-xs text-[var(--hotel-stone)] mt-1">{item.subtitle}</p>
+                          <div className="mt-2">
+                            <Link
+                              href={item.href}
+                              className="text-[10px] uppercase tracking-[0.13em] text-[var(--hotel-charcoal)] hover:text-[var(--hotel-champagne)] transition-colors"
+                            >
+                              Open detail
+                            </Link>
+                            <a
+                              href={mapsSearchHref(item.title)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="ml-3 text-[10px] uppercase tracking-[0.13em] text-[var(--hotel-charcoal)] hover:text-[var(--hotel-champagne)] transition-colors"
+                            >
+                              Directions
+                            </a>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                ) : (
+                  <p className="mt-2 text-sm text-[var(--hotel-stone)]">Select at least one stop to generate your plan.</p>
+                )}
+                <div className="mt-3">
+                  <Link
+                    href={briefingPath}
+                    className="text-[10px] uppercase tracking-[0.13em] text-[var(--hotel-charcoal)] hover:text-[var(--hotel-champagne)] transition-colors"
+                  >
+                    Open share link
+                  </Link>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {showOperate && effectiveDiscoveryMode === "tonight" && showStudioControls && startingSoon.length > 0 && (
+            <section className="mb-14 rounded-2xl border border-[var(--hotel-sand)] bg-[var(--hotel-cream)] p-5 md:p-6">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--hotel-stone)]">Starting Soon</p>
                   <h2 className="font-display text-2xl text-[var(--hotel-charcoal)]">Next Three Hours</h2>
@@ -2601,7 +3707,7 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
                   <Link
                     key={destination.venue.id}
                     href={`/${portal.slug}?spot=${destination.venue.slug}`}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-[var(--hotel-sand)] bg-[var(--hotel-ivory)] px-4 py-3 hover:border-[var(--hotel-champagne)] transition-colors"
+                    className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-[var(--hotel-sand)] bg-[var(--hotel-ivory)] px-4 py-3 hover:border-[var(--hotel-champagne)] transition-colors"
                   >
                     <div>
                       <p className="text-sm font-medium text-[var(--hotel-charcoal)]">{destination.venue.name}</p>
@@ -2609,7 +3715,7 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
                         {destination.top_special?.title || "Special window opening"} · {destination.proximity_label}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="text-xs uppercase tracking-[0.14em] text-[var(--hotel-stone)]">
                         {formatMinutes(destination.top_special?.starts_in_minutes ?? null)}
                       </span>
@@ -2623,9 +3729,9 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
             </section>
           )}
 
-          {showOperate && guidedTonightEvents.length > 0 && (
+          {showExplore && !isDiningRoute && !isPlanRoute && guidedTonightEvents.length > 0 && (
             <HotelSection
-              title="Tonight's Briefing"
+              title={agentNarrative?.briefingTitle || "Tonight's Briefing"}
               subtitle={activeDiscoveryFocus.id === "any"
                 ? "The top event plus a compact stack for immediate decision-making."
                 : `Focused on ${activeDiscoveryFocus.label.toLowerCase()} so guests can choose faster.`}
@@ -2638,16 +3744,16 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
               }}
             >
               <HotelHeroCard event={guidedTonightEvents[0]} portalSlug={portal.slug} />
-              {topTonightEvent && (
+              {guidedTonightEvents[0] && (
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Link
-                    href={`/${portal.slug}/events/${topTonightEvent.id}`}
+                    href={`/${portal.slug}/events/${guidedTonightEvents[0].id}`}
                     className="rounded-full border border-[var(--hotel-sand)] bg-[var(--hotel-cream)] px-3 py-1.5 text-[11px] uppercase tracking-[0.13em] text-[var(--hotel-charcoal)] hover:border-[var(--hotel-champagne)] transition-colors"
                   >
                     Open event
                   </Link>
                   <Link
-                    href={`/${portal.slug}?view=find&type=destinations&search=${encodeURIComponent(topTonightEvent.venue_name || topTonightEvent.title)}`}
+                    href={`/${portal.slug}?view=find&type=destinations&search=${encodeURIComponent(guidedTonightEvents[0].venue_name || guidedTonightEvents[0].title)}`}
                     className="rounded-full border border-[var(--hotel-sand)] bg-[var(--hotel-cream)] px-3 py-1.5 text-[11px] uppercase tracking-[0.13em] text-[var(--hotel-charcoal)] hover:border-[var(--hotel-champagne)] transition-colors"
                   >
                     Route nearby
@@ -2674,7 +3780,7 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
 
           {showExplore && beltline.length > 0 && (
             <section className="mb-14 rounded-2xl border border-[var(--hotel-sand)] bg-[var(--hotel-cream)] p-5 md:p-6">
-              <div className="flex items-start justify-between gap-4 mb-4">
+              <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
                 <div>
                   <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--hotel-stone)]">Route Layer</p>
                   <h2 className="font-display text-2xl text-[var(--hotel-charcoal)]">BeltLine Walk</h2>
@@ -2693,7 +3799,7 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
                     <span className="absolute left-1 top-3 h-full w-px bg-[var(--hotel-sand)]" aria-hidden="true" />
                     <span className="absolute left-0 top-2 inline-flex h-3 w-3 rounded-full bg-[var(--hotel-champagne)]" aria-hidden="true" />
                     <Link href={`/${portal.slug}?spot=${destination.venue.slug}`} className="block rounded-xl border border-[var(--hotel-sand)] bg-[var(--hotel-ivory)] px-4 py-3 hover:border-[var(--hotel-champagne)] transition-colors">
-                      <div className="flex items-center justify-between gap-3">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
                         <p className="text-sm font-medium text-[var(--hotel-charcoal)]">{destination.venue.name}</p>
                         <p className="text-xs uppercase tracking-[0.14em] text-[var(--hotel-stone)]">Stop {index + 1}</p>
                       </div>
@@ -2707,13 +3813,13 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
             </section>
           )}
 
-          {showFullExperience && ((showProperty && propertyDestinations.length > 0) || (showExplore && walkable.length > 0)) && (
+          {showFullExperience && !isStayMode && ((showProperty && propertyDestinations.length > 0) || (showExplore && walkable.length > 0)) && (
             <section className="mb-14 grid lg:grid-cols-2 gap-5">
               {showProperty && propertyDestinations.length > 0 && (
                 <HotelSection title="Near FORTH" subtitle="Closest destinations adjacent to the hotel footprint." className="mb-0">
                   <HotelCarousel>
                     {propertyDestinations.map((destination) => (
-                      <div key={destination.venue.id} className="flex-shrink-0 snap-start w-[286px]">
+                      <div key={destination.venue.id} className="flex-shrink-0 snap-start w-[82vw] max-w-[286px] sm:w-[286px]">
                         <HotelDestinationCard destination={destination} portalSlug={portal.slug} />
                       </div>
                     ))}
@@ -2725,7 +3831,7 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
                 <HotelSection title="Walkable" subtitle="Best options within a short walk from FORTH." className="mb-0">
                   <HotelCarousel>
                     {walkable.map((destination) => (
-                      <div key={destination.venue.id} className="flex-shrink-0 snap-start w-[286px]">
+                      <div key={destination.venue.id} className="flex-shrink-0 snap-start w-[82vw] max-w-[286px] sm:w-[286px]">
                         <HotelDestinationCard destination={destination} portalSlug={portal.slug} />
                       </div>
                     ))}
@@ -2796,22 +3902,85 @@ export default function ForthConciergeExperience({ portal }: ForthConciergeExper
   );
 }
 
-function MetricCard({ label, value }: { label: string; value: number }) {
+function SummaryChip({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-[var(--hotel-sand)] bg-[var(--hotel-ivory)] px-3 py-3 text-center">
-      <p className="font-display text-2xl text-[var(--hotel-charcoal)] leading-none">{value}</p>
-      <p className="mt-1 text-[10px] uppercase tracking-[0.14em] text-[var(--hotel-stone)]">{label}</p>
+    <div className="rounded-full border border-[var(--hotel-sand)] bg-[var(--hotel-ivory)] px-3 py-1.5">
+      <p className="text-[9px] uppercase tracking-[0.13em] text-[var(--hotel-stone)]">{label}</p>
+      <p className="text-xs text-[var(--hotel-charcoal)] leading-tight">{value}</p>
     </div>
+  );
+}
+
+function TrustChip({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-full border border-[var(--hotel-sand)] bg-[var(--hotel-ivory)] px-3 py-1">
+      <p className="text-[9px] uppercase tracking-[0.12em] text-[var(--hotel-stone)]">{label}</p>
+      <p className="text-[11px] text-[var(--hotel-charcoal)] leading-tight">{value}</p>
+    </div>
+  );
+}
+
+function ChoiceCard({
+  label,
+  hint,
+  eyebrow,
+  selected,
+  sources,
+  onClick,
+}: {
+  label: string;
+  hint: string;
+  eyebrow: string;
+  selected: boolean;
+  sources: Array<string | null | undefined>;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`group relative overflow-hidden rounded-xl border text-left transition-all forth-hover-lift ${
+        selected
+          ? "border-[var(--hotel-champagne)] shadow-[var(--hotel-shadow-medium)]"
+          : "border-[var(--hotel-sand)] hover:border-[var(--hotel-champagne)] shadow-[var(--hotel-shadow-soft)]"
+      }`}
+    >
+      <div className="relative aspect-[16/10]">
+        <ResilientImage
+          sources={sources}
+          alt={label}
+          sizes="(max-width: 1024px) 100vw, 420px"
+          className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105 forth-zoom-image"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/35 to-black/15" />
+        <div className="absolute top-3 left-3">
+          <span className="rounded-full bg-black/45 px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-[var(--hotel-champagne)]">
+            {eyebrow}
+          </span>
+        </div>
+        {selected && (
+          <div className="absolute top-3 right-3">
+            <span className="rounded-full bg-[var(--hotel-champagne)] px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-[var(--hotel-ink)]">
+              Selected
+            </span>
+          </div>
+        )}
+        <div className="absolute inset-x-0 bottom-0 p-3">
+          <p className="font-display text-2xl leading-tight text-white">{label}</p>
+          <p className="mt-1 text-xs text-white/80 line-clamp-2">{hint}</p>
+        </div>
+      </div>
+    </button>
   );
 }
 
 function OptionRail({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
-    <div className={`relative ${className}`}>
-      <div className="flex gap-2 overflow-x-auto scroll-touch scrollbar-hide pb-1 pr-8">
+    <div className={`relative w-full max-w-full min-w-0 overflow-x-clip ${className}`}>
+      <div className="flex w-full max-w-full min-w-0 gap-2 overflow-x-auto overflow-y-hidden scroll-touch scrollbar-hide pb-1 pr-4 sm:pr-8">
         {children}
       </div>
-      <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-[var(--hotel-cream)] to-transparent" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-8 sm:w-10 bg-gradient-to-l from-[var(--hotel-cream)] to-transparent" />
     </div>
   );
 }

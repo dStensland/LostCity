@@ -9,7 +9,8 @@ import GlowOrb from "@/components/home/GlowOrb";
 import CategoryIcon from "@/components/CategoryIcon";
 import { DEFAULT_PORTAL_SLUG, DEFAULT_PORTAL_NAME } from "@/lib/constants";
 import { createClient } from "@/lib/supabase/server";
-import { formatCompactCount } from "@/lib/formats";
+import { formatCompactCount, safeJsonLd } from "@/lib/formats";
+import { getSiteUrl } from "@/lib/site-url";
 
 function formatStat(n: number): string {
   if (n >= 1000) {
@@ -45,9 +46,26 @@ async function getStats() {
 
 export default async function Home() {
   const stats = await getStats();
+  const siteUrl = getSiteUrl();
+  const homepageSchema = {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    name: "Lost City - Find Your People",
+    description: "Find your people. Discover the underground events, shows, and happenings in your city.",
+    url: siteUrl,
+    isPartOf: {
+      "@type": "WebSite",
+      name: "Lost City",
+      url: siteUrl,
+    },
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-[#08080c] relative overflow-x-hidden">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(homepageSchema) }}
+      />
       {/* Ambient glow orbs for atmosphere - hidden on mobile for performance */}
       <div className="hidden md:block">
         <GlowOrb color="cyan" size={400} top={30} left={20} blur={120} />

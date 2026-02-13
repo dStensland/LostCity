@@ -7,7 +7,7 @@ const FindView = dynamic(() => import("@/components/find/FindView"), {
   loading: () => (
     <div className="py-4 space-y-4">
       <div className="flex gap-2">
-        {[1, 2, 3].map((i) => (
+        {[1, 2, 3, 4].map((i) => (
           <div key={i} className="h-8 w-20 skeleton-shimmer rounded-full" />
         ))}
       </div>

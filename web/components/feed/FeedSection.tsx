@@ -217,17 +217,15 @@ const THEMED_SECTION_ICONS: Record<string, { icon: React.ReactNode; color: strin
     ),
   },
   "black-history-month": {
-    color: "#9B59B6", // Purple
+    color: "#e53935", // Pan-African red
     icon: (
       <Image src="/icons/raised-fist.png" alt="" width={32} height={32} className="w-full h-full object-cover" />
     ),
   },
   "mardi-gras": {
-    color: "var(--violet)",
+    color: "#ffd700", // Mardi Gras gold
     icon: (
-      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M12 2L9 9H2l5.5 4.5L5 21l7-5 7 5-2.5-7.5L22 9h-7L12 2z" />
-      </svg>
+      <Image src="/images/mardi-gras-mask.svg" alt="" width={32} height={32} className="w-full h-full object-contain"  />
     ),
   },
 };
@@ -245,18 +243,18 @@ const HOLIDAY_CARD_STYLES: Record<string, { gradient: string; glowColor: string;
     subtitle: "Embrace the unlucky",
   },
   "mardi-gras": {
-    gradient: "linear-gradient(135deg, #0d0520 0%, #1a0a35 30%, #15082a 60%, #0d0520 100%)",
-    glowColor: "#9b59b6",
+    gradient: "linear-gradient(135deg, #0d0520 0%, #1a0a35 25%, #0a1a08 50%, #1a1505 75%, #0d0520 100%)",
+    glowColor: "#d040ff",
     subtitle: "Laissez les bons temps rouler",
   },
   "lunar-new-year": {
     gradient: "linear-gradient(135deg, #1a0505 0%, #350a0a 30%, #2a0808 60%, #1a0303 100%)",
     glowColor: "#cc0000",
-    subtitle: "Year of the Horse",
+    subtitle: "A Year of Fire Horsin' Around",
   },
   "black-history-month": {
-    gradient: "linear-gradient(135deg, #0a0a05 0%, #1a1508 30%, #0f0d05 60%, #0a0a05 100%)",
-    glowColor: "#c8960e",
+    gradient: "linear-gradient(135deg, #1a0505 0%, #0c0c0c 35%, #0c0c0c 65%, #051a05 100%)",
+    glowColor: "#43a047",
     subtitle: "Honoring Black culture, art & community",
   },
 };
@@ -727,6 +725,7 @@ function EventList({ section, portalSlug }: { section: FeedSectionData; portalSl
             summary={item.summary}
             portalSlug={portalSlug}
             skipAnimation
+            density="compact"
           />
         );
       case "series-group":
@@ -737,6 +736,7 @@ function EventList({ section, portalSlug }: { section: FeedSectionData; portalSl
             venueGroups={item.venueGroups}
             portalSlug={portalSlug}
             skipAnimation
+            density="compact"
           />
         );
       case "venue-group":
@@ -749,6 +749,7 @@ function EventList({ section, portalSlug }: { section: FeedSectionData; portalSl
             portalSlug={portalSlug}
             venueSlug={item.venueSlug}
             skipAnimation
+            density="compact"
           />
         );
       case "category-group":
@@ -760,6 +761,7 @@ function EventList({ section, portalSlug }: { section: FeedSectionData; portalSl
             events={item.events}
             portalSlug={portalSlug}
             skipAnimation
+            density="compact"
           />
         );
       case "event":

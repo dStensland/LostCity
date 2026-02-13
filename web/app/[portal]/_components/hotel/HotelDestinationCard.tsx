@@ -102,20 +102,20 @@ export default function HotelDestinationCard({ destination, portalSlug, variant 
   return (
     <Link
       href={href}
-      className={`group block rounded-xl overflow-hidden bg-[var(--hotel-cream)] border transition-all duration-500 ${
+      className={`group isolate block rounded-xl overflow-hidden bg-[var(--hotel-cream)] border transition-all duration-500 ${
         isLive
           ? "border-[var(--hotel-champagne)]/45 shadow-[var(--hotel-shadow-medium)] hover:shadow-[var(--hotel-shadow-strong)]"
           : "border-[var(--hotel-sand)] shadow-[var(--hotel-shadow-soft)] hover:shadow-[var(--hotel-shadow-medium)]"
       }`}
     >
-      <div className="relative aspect-[4/3] bg-[var(--hotel-sand)] overflow-hidden">
+      <div className="relative aspect-[4/3] bg-[var(--hotel-sand)] overflow-hidden rounded-t-[inherit]">
         {imageSrc ? (
           <Image
             src={imageSrc}
             alt={destination.venue.name}
             fill
             sizes="(max-width: 768px) 90vw, 320px"
-            className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+            className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105 transform-gpu will-change-transform [backface-visibility:hidden]"
             onError={() => {
               setImageIndex((current) => (current < imageCandidates.length - 1 ? current + 1 : current));
             }}

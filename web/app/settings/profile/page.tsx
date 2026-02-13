@@ -21,7 +21,6 @@ export default function ProfileSettingsPage() {
   const [bio, setBio] = useState("");
   const [location, setLocation] = useState("");
   const [website, setWebsite] = useState("");
-  const [isPublic, setIsPublic] = useState(true);
 
   // Load existing profile data
   useEffect(() => {
@@ -31,7 +30,6 @@ export default function ProfileSettingsPage() {
       setBio(profile.bio || "");
       setLocation(profile.location || "");
       setWebsite(profile.website || "");
-      setIsPublic(profile.is_public ?? true);
       setLoading(false);
     } else if (user) {
       // Profile might not be loaded yet, fetch directly
@@ -49,7 +47,6 @@ export default function ProfileSettingsPage() {
           bio: string | null;
           location: string | null;
           website: string | null;
-          is_public: boolean | null;
         };
         const profile = data as ProfileData | null;
         if (profile) {
@@ -57,7 +54,6 @@ export default function ProfileSettingsPage() {
           setBio(profile.bio || "");
           setLocation(profile.location || "");
           setWebsite(profile.website || "");
-          setIsPublic(profile.is_public ?? true);
         }
         setLoading(false);
       }
@@ -87,7 +83,6 @@ export default function ProfileSettingsPage() {
         bio: bio.trim() || null,
         location: location.trim() || null,
         website: website.trim() || null,
-        is_public: isPublic,
       })
       .eq("id", user.id);
 
@@ -125,14 +120,27 @@ export default function ProfileSettingsPage() {
             href="/settings"
             className="text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
             </svg>
           </Link>
           <h1 className="text-2xl font-semibold text-[var(--cream)]">
-            Edit Profile
+            Profile Details
           </h1>
         </div>
+        <p className="font-mono text-xs text-[var(--muted)] -mt-5 mb-6">
+          Manage how your profile appears across Lost City.
+        </p>
 
         {loading ? (
           <div className="py-12 text-center">
@@ -219,28 +227,33 @@ export default function ProfileSettingsPage() {
               />
             </div>
 
-            {/* Profile Visibility */}
-            <div className="flex items-center justify-between p-4 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)]">
-              <div>
-                <h3 className="font-mono text-sm font-medium text-[var(--cream)]">
-                  Public Profile
-                </h3>
-                <p className="font-mono text-xs text-[var(--muted)] mt-1">
-                  Allow others to see your profile and activity
-                </p>
-              </div>
-              <button
-                onClick={() => setIsPublic(!isPublic)}
-                className={`relative w-12 h-6 rounded-full transition-colors ${
-                  isPublic ? "bg-[var(--coral)]" : "bg-[var(--twilight)]"
-                }`}
+            <div className="p-4 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)]">
+              <h3 className="font-mono text-sm font-medium text-[var(--cream)]">
+                Privacy
+              </h3>
+              <p className="font-mono text-xs text-[var(--muted)] mt-1">
+                Profile visibility and recommendation privacy are now in Privacy
+                Controls.
+              </p>
+              <Link
+                href="/settings/privacy"
+                className="inline-flex items-center gap-1 mt-3 font-mono text-xs text-[var(--coral)] hover:text-[var(--rose)] transition-colors"
               >
-                <span
-                  className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${
-                    isPublic ? "left-7" : "left-1"
-                  }`}
-                />
-              </button>
+                Open Privacy Controls
+                <svg
+                  className="w-3.5 h-3.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </Link>
             </div>
 
             {/* Actions */}

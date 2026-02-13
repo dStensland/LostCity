@@ -87,20 +87,24 @@ export default async function FestivalsIndexPage({ params, searchParams }: Props
   const TYPE_GROUPS: Record<string, { label: string; types: string[] }> = {
     cons_gaming: { label: "Cons & Gaming", types: ["pop_culture_con", "tech_conference"] },
     expos: { label: "Expos & Shows", types: ["hobby_expo"] },
-    markets: { label: "Markets", types: ["market", "fair"] },
+    markets: { label: "Markets & Fairs", types: ["market", "fair"] },
     music: { label: "Music", types: ["music_festival"] },
     food_drink: { label: "Food & Drink", types: ["food_festival"] },
     arts_culture: { label: "Arts & Culture", types: ["arts_festival", "cultural_festival", "film_festival", "performing_arts_festival"] },
     community: { label: "Community", types: ["community_festival", "holiday_spectacle", "athletic_event"] },
     lifestyle: { label: "Lifestyle", types: ["fashion_event", "wellness_festival", "comedy_festival"] },
+    tournaments: { label: "Tournaments", types: ["tournament"] },
   };
+
+  // Helper: check if a festival matches a type group (by primary_type or festival_type)
+  const matchesGroup = (f: Festival, groupTypes: string[]) =>
+    (f.primary_type && groupTypes.includes(f.primary_type)) ||
+    (f.festival_type && groupTypes.includes(f.festival_type));
 
   // Derive which groups have festivals
   const activeGroups: { key: string; label: string; types: string[] }[] = [];
   for (const [key, group] of Object.entries(TYPE_GROUPS)) {
-    const hasMatch = festivals.some(
-      (f) => f.primary_type && group.types.includes(f.primary_type)
-    );
+    const hasMatch = festivals.some((f) => matchesGroup(f, group.types));
     if (hasMatch) {
       activeGroups.push({ key, ...group });
     }
@@ -117,12 +121,8 @@ export default async function FestivalsIndexPage({ params, searchParams }: Props
   // Filter by type group if selected
   if (selectedType && TYPE_GROUPS[selectedType]) {
     const allowedTypes = TYPE_GROUPS[selectedType].types;
-    upcoming = upcoming.filter(
-      (f) => f.primary_type && allowedTypes.includes(f.primary_type)
-    );
-    past = past.filter(
-      (f) => f.primary_type && allowedTypes.includes(f.primary_type)
-    );
+    upcoming = upcoming.filter((f) => matchesGroup(f, allowedTypes));
+    past = past.filter((f) => matchesGroup(f, allowedTypes));
   }
 
   return (

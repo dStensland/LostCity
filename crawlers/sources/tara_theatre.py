@@ -471,6 +471,17 @@ def extract_upcoming_movies(
     return events_found, events_new, events_updated
 
 
+def _click_tara_tab(page: Page) -> None:
+    """Click the 'THE TARA' tab if visible (site shows both Tara and Plaza)."""
+    try:
+        tara_tab = page.locator("text=THE TARA").first
+        if tara_tab.is_visible(timeout=2000):
+            tara_tab.click()
+            page.wait_for_timeout(1500)
+    except Exception:
+        pass
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
     """Crawl Tara Theatre showtimes for today and upcoming days."""
     source_id = source["id"]
@@ -496,6 +507,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page.goto(HOME_URL, wait_until="domcontentloaded", timeout=30000)
             page.wait_for_timeout(4000)  # Wait for JS to load
 
+            # Click "THE TARA" tab (site shows both Tara and Plaza)
+            _click_tara_tab(page)
+
             # Extract movie images from the page
             image_map = extract_movie_images(page)
 
@@ -512,50 +526,75 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     f"  {today.strftime('%Y-%m-%d')}: {found} movies found, {new} new"
                 )
 
-            # Click through the quick-select day buttons (Sat, Sun, Mon, Tue, etc.)
-            day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+            # Navigate upcoming days via the Quasar date picker (calendar).
+            # The site's day-name buttons ("Fri", "Sat") are unreliable because
+            # text locators match other page elements. Instead, we click "Other"
+            # to open the Q-Date picker and use JS to click specific day buttons
+            # within the .q-date element.
+            current_calendar_month = today.month
 
-            # Try clicking each upcoming day for the next 10 days
-            for day_offset in range(1, 11):
+            for day_offset in range(1, 14):
                 target_date = today + timedelta(days=day_offset)
-                day_name = day_names[target_date.weekday()]
                 day_num = target_date.day
+                target_month = target_date.month
                 date_str = target_date.strftime("%Y-%m-%d")
 
-                # Try to click the day button by name or number
-                clicked = False
+                # Open the calendar picker
                 try:
-                    # First try clicking by day name (e.g., "Sun", "Mon")
-                    day_btn = page.locator(f"text={day_name}").first
-                    if day_btn.is_visible(timeout=1000):
-                        day_btn.click()
-                        page.wait_for_timeout(2000)
-                        clicked = True
+                    other_btn = page.locator("text=Other").first
+                    if not other_btn.is_visible(timeout=2000):
+                        logger.debug(f"Other button not visible for {date_str}")
+                        continue
+                    other_btn.click()
+                    page.wait_for_timeout(1500)
                 except Exception:
-                    pass
-
-                if not clicked:
-                    # Try clicking "Other" and then the date number in calendar
-                    try:
-                        other_btn = page.locator("text=Other").first
-                        if other_btn.is_visible(timeout=1000):
-                            other_btn.click()
-                            page.wait_for_timeout(1500)
-
-                            # Click the day number in the calendar
-                            day_cell = page.locator(f"text=/^{day_num}$/").first
-                            if day_cell.is_visible(timeout=1000):
-                                day_cell.click()
-                                page.wait_for_timeout(2000)
-                                clicked = True
-                    except Exception:
-                        pass
-
-                if not clicked:
-                    logger.debug(f"Could not select date {date_str}, skipping")
+                    logger.debug(f"Could not open calendar for {date_str}")
                     continue
 
-                logger.info(f"Scraping {day_name} {day_num} ({date_str})")
+                # Navigate to the correct month if needed
+                if target_month != current_calendar_month:
+                    try:
+                        page.evaluate("""() => {
+                            const picker = document.querySelector('.q-date');
+                            if (!picker) return;
+                            const nextBtn = picker.querySelector('.q-date__arrow button[aria-label="Next month"]');
+                            if (nextBtn) nextBtn.click();
+                        }""")
+                        page.wait_for_timeout(1000)
+                        current_calendar_month = target_month
+                    except Exception:
+                        logger.debug(f"Could not navigate to month {target_month}")
+
+                # Click the target day within the calendar
+                click_result = page.evaluate(f"""() => {{
+                    const picker = document.querySelector('.q-date');
+                    if (!picker) return 'no_picker';
+                    const items = picker.querySelectorAll('.q-date__calendar-item');
+                    for (const item of items) {{
+                        const btn = item.querySelector('button');
+                        if (btn && btn.innerText.trim() === '{day_num}') {{
+                            const isAvailable = item.classList.contains('q-date__calendar-item--in');
+                            btn.click();
+                            return isAvailable ? 'ok' : 'unavailable';
+                        }}
+                    }}
+                    return 'not_found';
+                }}""")
+
+                if click_result != "ok":
+                    if click_result == "unavailable":
+                        logger.info(f"  {date_str}: No showtimes scheduled (calendar --out)")
+                    else:
+                        logger.debug(f"  {date_str}: Calendar click result: {click_result}")
+                    # Stop after first unavailable date (theater hasn't published further)
+                    break
+
+                page.wait_for_timeout(2000)
+
+                # Re-select THE TARA tab (may reset after date change)
+                _click_tara_tab(page)
+
+                logger.info(f"Scraping {date_str}")
                 found, new, updated = extract_movies_for_date(
                     page,
                     datetime.combine(target_date, datetime.min.time()),
@@ -568,12 +607,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 total_new += new
                 total_updated += updated
 
-                if found > 0:
-                    logger.info(f"  {date_str}: {found} movies found, {new} new")
-                else:
-                    # If no movies found, probably no schedule for this date yet
-                    logger.info(f"  {date_str}: No showtimes scheduled")
-                    break  # Stop trying further dates
+                if found == 0:
+                    logger.info(f"  {date_str}: No showtimes found")
+                    break
 
             # Skip Coming Soon page - these movies don't have real dates/times
             # and show up as TBA which isn't useful for users

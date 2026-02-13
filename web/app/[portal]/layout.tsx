@@ -44,6 +44,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `${portal.name} Events | Lost City`,
     description: portal.tagline || `Find your people in ${portal.name}. ${portal.portal_type === "city" ? "Shows, sounds, scenes, and the good stuff." : ""}`,
+    alternates: {
+      canonical: `/${portal.slug}`,
+    },
     openGraph: {
       title: `${portal.name} | Lost City`,
       description: portal.tagline || `Find your people in ${portal.name}`,

@@ -45,7 +45,7 @@ export default function HotelVenueCard({ venue, portalSlug, variant = "default" 
   return (
     <Link
       href={venueUrl}
-      className={`group block bg-[var(--hotel-cream)] rounded-lg overflow-hidden shadow-[var(--hotel-shadow-soft)] hover:shadow-[var(--hotel-shadow-medium)] transition-shadow duration-500 ${
+      className={`group isolate block bg-[var(--hotel-cream)] rounded-lg overflow-hidden shadow-[var(--hotel-shadow-soft)] hover:shadow-[var(--hotel-shadow-medium)] transition-shadow duration-500 ${
         isCarousel ? "flex-shrink-0 snap-start w-[260px]" : ""
       }`}
     >
@@ -55,7 +55,7 @@ export default function HotelVenueCard({ venue, portalSlug, variant = "default" 
           <img
             src={venue.image_url}
             alt={venue.name}
-            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            className="absolute inset-0 h-full w-full object-cover group-hover:scale-105 transition-transform duration-500 transform-gpu will-change-transform [backface-visibility:hidden]"
             loading="lazy"
           />
         ) : (

@@ -40,7 +40,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const portal = await getCachedPortalBySlug(portalSlug);
 
   if (!artist) {
-    return { title: "Artist Not Found" };
+    return {
+      title: "Artist Not Found",
+      robots: {
+        index: false,
+        follow: false,
+      },
+    };
   }
 
   const portalName = portal?.name || "Lost City";
@@ -51,6 +57,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `${artist.name} | ${portalName}`,
     description,
+    alternates: {
+      canonical: `/${portal?.slug || portalSlug}/artists/${slug}`,
+    },
     openGraph: {
       title: artist.name,
       description,

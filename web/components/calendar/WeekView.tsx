@@ -130,17 +130,17 @@ export default function WeekView({
   }, [weekDays]);
 
   return (
-    <div className="bg-gradient-to-br from-[var(--deep-violet)] to-[var(--midnight-blue)] rounded-xl border border-[var(--nebula)] overflow-hidden">
+    <div className="rounded-2xl border border-[var(--twilight)]/85 bg-[var(--void)]/65 shadow-[0_18px_40px_rgba(0,0,0,0.28)] overflow-hidden">
       <ScopedStyles css={[hourTopCss, gridHeightClass?.css].filter(Boolean).join("\n")} />
       {/* Week header */}
-      <div className="flex items-center justify-between p-4 border-b border-[var(--nebula)]">
+      <div className="flex items-center justify-between p-4 border-b border-[var(--twilight)]/75 bg-gradient-to-b from-[var(--night)]/94 to-[var(--void)]/82">
         <div className="flex items-center gap-3">
           <h2 className="font-mono text-lg font-bold text-[var(--cream)]">
             {format(weekStart, "MMM d")} - {format(addDays(weekStart, 6), "MMM d, yyyy")}
           </h2>
           <button
             onClick={goToToday}
-            className="px-3 py-1 rounded-full font-mono text-xs font-medium bg-[var(--coral)]/20 text-[var(--coral)] hover:bg-[var(--coral)]/30 transition-colors"
+            className="px-3 py-1 rounded-full font-mono text-xs font-medium bg-[var(--gold)] text-[var(--void)] hover:bg-[var(--coral)] transition-colors"
           >
             Today
           </button>
@@ -149,7 +149,7 @@ export default function WeekView({
         <div className="flex items-center gap-1">
           <button
             onClick={goToPrevWeek}
-            className="p-2 rounded-lg hover:bg-[var(--twilight-purple)] text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
+            className="p-2 rounded-lg hover:bg-[var(--twilight)]/70 text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
             aria-label="Previous week"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -158,7 +158,7 @@ export default function WeekView({
           </button>
           <button
             onClick={goToNextWeek}
-            className="p-2 rounded-lg hover:bg-[var(--twilight-purple)] text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
+            className="p-2 rounded-lg hover:bg-[var(--twilight)]/70 text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
             aria-label="Next week"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -169,16 +169,16 @@ export default function WeekView({
       </div>
 
       {/* Day headers */}
-      <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-[var(--nebula)]">
+      <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-[var(--twilight)]/75">
         <div className="p-2" /> {/* Time column spacer */}
         {weekDays.map((day) => (
           <button
             key={day.dateKey}
             onClick={() => onDayClick(day.date)}
             className={`
-              p-3 text-center border-l border-[var(--nebula)]/50 transition-colors
-              ${day.isSelected ? "bg-[var(--cosmic-blue)]" : "hover:bg-[var(--twilight-purple)]/30"}
-              ${day.isToday ? "bg-[var(--twilight-purple)]/20" : ""}
+              p-3 text-center border-l border-[var(--twilight)]/55 transition-colors
+              ${day.isSelected ? "bg-[var(--twilight)]/72" : "hover:bg-[var(--twilight)]/34"}
+              ${day.isToday ? "bg-[var(--twilight)]/24" : ""}
             `}
           >
             <div className="font-mono text-[0.65rem] text-[var(--muted)] uppercase">
@@ -200,14 +200,14 @@ export default function WeekView({
 
       {/* All-day events row */}
       {Array.from(allDayEventsByDate.values()).some((e) => e.length > 0) && (
-        <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-[var(--nebula)]">
+        <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-[var(--twilight)]/75">
           <div className="p-2 font-mono text-[0.6rem] text-[var(--muted)]">ALL DAY</div>
           {weekDays.map((day) => {
             const allDayEvents = allDayEventsByDate.get(day.dateKey) || [];
             return (
               <div
                 key={`allday-${day.dateKey}`}
-                className="p-1 border-l border-[var(--nebula)]/50 min-h-[40px]"
+                className="p-1 border-l border-[var(--twilight)]/55 min-h-[40px]"
               >
                 {allDayEvents.slice(0, 2).map((event) => (
                   <Link
@@ -257,16 +257,16 @@ export default function WeekView({
             <div
               key={`grid-${day.dateKey}`}
               className={`
-                relative border-l border-[var(--nebula)]/50
-                ${day.isToday ? "bg-[var(--twilight-purple)]/10" : ""}
-                ${day.isSelected ? "bg-[var(--cosmic-blue)]/20" : ""}
+                relative border-l border-[var(--twilight)]/55
+                ${day.isToday ? "bg-[var(--twilight)]/12" : ""}
+                ${day.isSelected ? "bg-[var(--twilight)]/24" : ""}
               `}
             >
               {/* Hour lines */}
               {HOURS.map((hour) => (
                 <div
                   key={`line-${hour}`}
-                  className={`absolute w-full border-t border-[var(--nebula)]/20 calendar-hour-line ${
+                  className={`absolute w-full border-t border-[var(--twilight)]/30 calendar-hour-line ${
                     hourTopClasses[hour - 6]?.className ?? ""
                   }`}
                 />

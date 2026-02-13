@@ -107,6 +107,14 @@ def infer_tags(
         if venue_type in ("wine_bar", "cocktail_bar"):
             tags.add("date-night")
 
+    # --- Infer showtime tag for film events at cinema venues ---
+    # Every film event at a cinema venue gets the showtime tag.
+    # This ensures indie cinemas (Plaza, Starlight, etc.) are included
+    # alongside chains. Special screenings are distinguished in the UI
+    # by other tags, not by absence of "showtime".
+    if category == "film" and venue_type == "cinema":
+        tags.add("showtime")
+
     # --- Infer from category ---
     if category == "comedy":
         tags.add("date-night")

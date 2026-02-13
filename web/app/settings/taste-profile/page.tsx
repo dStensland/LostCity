@@ -4,7 +4,11 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
-import CategoryIcon, { getCategoryColor, CATEGORY_CONFIG, type CategoryType } from "@/components/CategoryIcon";
+import CategoryIcon, {
+  getCategoryColor,
+  CATEGORY_CONFIG,
+  type CategoryType,
+} from "@/components/CategoryIcon";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass, createCssVarClassForLength } from "@/lib/css-utils";
 import PageFooter from "@/components/PageFooter";
@@ -23,11 +27,24 @@ type ProfileData = {
     interaction_count: number;
   }>;
   stats: {
-    topCategories: Array<{ category: string; score: number; interactionCount: number }>;
-    topVenues: Array<{ venueId: string; score: number; interactionCount: number }>;
-    topNeighborhoods: Array<{ neighborhood: string; score: number; interactionCount: number }>;
+    topCategories: Array<{
+      category: string;
+      score: number;
+      interactionCount: number;
+    }>;
+    topVenues: Array<{
+      venueId: string;
+      score: number;
+      interactionCount: number;
+    }>;
+    topNeighborhoods: Array<{
+      neighborhood: string;
+      score: number;
+      interactionCount: number;
+    }>;
     followedVenues: number;
-    followedProducers: number;
+    followedOrganizations: number;
+    followedProducers?: number; // Legacy key kept for backward compatibility
     rsvps: {
       going: number;
       interested: number;
@@ -120,24 +137,30 @@ export default function TasteProfilePage() {
   // Calculate max score for bar scaling
   const maxCategoryScore = Math.max(
     ...profile.stats.topCategories.map((c) => c.score),
-    1
+    1,
   );
 
-  const categoryKeys = Array.from(new Set([
-    ...profile.explicit.favorite_categories,
-    ...profile.stats.topCategories.map((cat) => cat.category),
-  ]));
+  const categoryKeys = Array.from(
+    new Set([
+      ...profile.explicit.favorite_categories,
+      ...profile.stats.topCategories.map((cat) => cat.category),
+    ]),
+  );
 
   const categoryAccentClasses = Object.fromEntries(
     categoryKeys.map((cat) => [
       cat,
       createCssVarClass("--accent-color", getCategoryColor(cat), "taste-cat"),
-    ])
+    ]),
   ) as Record<string, ReturnType<typeof createCssVarClass> | null>;
 
   const categoryBarWidthClasses = profile.stats.topCategories.map((cat) => {
     const percentage = (cat.score / maxCategoryScore) * 100;
-    return createCssVarClassForLength("--bar-width", `${percentage}%`, "taste-bar");
+    return createCssVarClassForLength(
+      "--bar-width",
+      `${percentage}%`,
+      "taste-bar",
+    );
   });
 
   const scopedCss = [
@@ -157,11 +180,23 @@ export default function TasteProfilePage() {
             href="/settings"
             className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 19l-7-7 7-7"
+              />
             </svg>
           </Link>
-          <h1 className="text-lg font-semibold text-[var(--cream)]">Taste Profile</h1>
+          <h1 className="text-lg font-semibold text-[var(--cream)]">
+            Taste Profile
+          </h1>
         </div>
       </header>
 
@@ -170,21 +205,31 @@ export default function TasteProfilePage() {
         <section className="grid grid-cols-3 gap-3">
           <div className="p-4 rounded-xl border border-[var(--twilight)] text-center bg-[var(--card-bg)]">
             <div className="text-2xl font-semibold text-[var(--coral)]">
-              {profile.stats.rsvps.going + profile.stats.rsvps.interested + profile.stats.rsvps.went}
+              {profile.stats.rsvps.going +
+                profile.stats.rsvps.interested +
+                profile.stats.rsvps.went}
             </div>
-            <div className="text-xs text-[var(--muted)] font-mono mt-1">RSVPs</div>
+            <div className="text-xs text-[var(--muted)] font-mono mt-1">
+              RSVPs
+            </div>
           </div>
           <div className="p-4 rounded-xl border border-[var(--twilight)] text-center bg-[var(--card-bg)]">
             <div className="text-2xl font-semibold text-[var(--neon-cyan)]">
               {profile.stats.followedVenues}
             </div>
-            <div className="text-xs text-[var(--muted)] font-mono mt-1">Venues</div>
+            <div className="text-xs text-[var(--muted)] font-mono mt-1">
+              Venues
+            </div>
           </div>
           <div className="p-4 rounded-xl border border-[var(--twilight)] text-center bg-[var(--card-bg)]">
             <div className="text-2xl font-semibold text-[var(--lavender)]">
-              {profile.stats.followedProducers}
+              {profile.stats.followedOrganizations ??
+                profile.stats.followedProducers ??
+                0}
             </div>
-            <div className="text-xs text-[var(--muted)] font-mono mt-1">Producers</div>
+            <div className="text-xs text-[var(--muted)] font-mono mt-1">
+              Organizations
+            </div>
           </div>
         </section>
 
@@ -192,8 +237,12 @@ export default function TasteProfilePage() {
         <section className="rounded-xl border border-[var(--twilight)] p-5 bg-[var(--card-bg)]">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="font-semibold text-[var(--cream)]">Your Preferences</h2>
-              <p className="text-xs text-[var(--muted)] mt-0.5">Categories and vibes you&apos;ve told us you like</p>
+              <h2 className="font-semibold text-[var(--cream)]">
+                Your Preferences
+              </h2>
+              <p className="text-xs text-[var(--muted)] mt-0.5">
+                Categories and vibes you&apos;ve told us you like
+              </p>
             </div>
             <Link
               href="/settings/preferences"
@@ -203,23 +252,26 @@ export default function TasteProfilePage() {
             </Link>
           </div>
 
-          {profile.explicit.favorite_categories.length > 0 || profile.explicit.favorite_vibes.length > 0 ? (
+          {profile.explicit.favorite_categories.length > 0 ||
+          profile.explicit.favorite_vibes.length > 0 ? (
             <div className="space-y-4">
               {profile.explicit.favorite_categories.length > 0 && (
                 <div>
-                  <h3 className="text-xs text-[var(--muted)] font-mono uppercase tracking-wider mb-2">Categories</h3>
+                  <h3 className="text-xs text-[var(--muted)] font-mono uppercase tracking-wider mb-2">
+                    Categories
+                  </h3>
                   <div className="flex flex-wrap gap-2">
                     {profile.explicit.favorite_categories.map((cat) => {
                       const accentClass = categoryAccentClasses[cat];
                       return (
-                      <span
-                        key={cat}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-mono bg-accent-15 text-accent ${accentClass?.className ?? ""}`}
-                      >
-                        <CategoryIcon type={cat} size={14} />
-                        {CATEGORY_CONFIG[cat as CategoryType]?.label || cat}
-                      </span>
-                    );
+                        <span
+                          key={cat}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-mono bg-accent-15 text-accent ${accentClass?.className ?? ""}`}
+                        >
+                          <CategoryIcon type={cat} size={14} />
+                          {CATEGORY_CONFIG[cat as CategoryType]?.label || cat}
+                        </span>
+                      );
                     })}
                   </div>
                 </div>
@@ -227,7 +279,9 @@ export default function TasteProfilePage() {
 
               {profile.explicit.favorite_vibes.length > 0 && (
                 <div>
-                  <h3 className="text-xs text-[var(--muted)] font-mono uppercase tracking-wider mb-2">Vibes</h3>
+                  <h3 className="text-xs text-[var(--muted)] font-mono uppercase tracking-wider mb-2">
+                    Vibes
+                  </h3>
                   <div className="flex flex-wrap gap-2">
                     {profile.explicit.favorite_vibes.map((vibe) => (
                       <span
@@ -244,7 +298,10 @@ export default function TasteProfilePage() {
           ) : (
             <p className="text-sm text-[var(--muted)] text-center py-4">
               No preferences set yet.{" "}
-              <Link href="/settings/preferences" className="text-[var(--coral)] hover:underline">
+              <Link
+                href="/settings/preferences"
+                className="text-[var(--coral)] hover:underline"
+              >
                 Add some
               </Link>
             </p>
@@ -255,8 +312,12 @@ export default function TasteProfilePage() {
         <section className="rounded-xl border border-[var(--twilight)] p-5 bg-[var(--card-bg)]">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="font-semibold text-[var(--cream)]">Category Affinity</h2>
-              <p className="text-xs text-[var(--muted)] mt-0.5">Learned from your activity</p>
+              <h2 className="font-semibold text-[var(--cream)]">
+                Category Affinity
+              </h2>
+              <p className="text-xs text-[var(--muted)] mt-0.5">
+                Learned from your activity
+              </p>
             </div>
           </div>
 
@@ -271,7 +332,8 @@ export default function TasteProfilePage() {
                       <div className="flex items-center gap-2">
                         <CategoryIcon type={cat.category} size={14} />
                         <span className="text-sm text-[var(--cream)]">
-                          {CATEGORY_CONFIG[cat.category as CategoryType]?.label || cat.category}
+                          {CATEGORY_CONFIG[cat.category as CategoryType]
+                            ?.label || cat.category}
                         </span>
                       </div>
                       <span className="text-xs text-[var(--muted)] font-mono">
@@ -298,8 +360,12 @@ export default function TasteProfilePage() {
         {profile.stats.topNeighborhoods.length > 0 && (
           <section className="rounded-xl border border-[var(--twilight)] p-5 bg-[var(--card-bg)]">
             <div className="mb-4">
-              <h2 className="font-semibold text-[var(--cream)]">Favorite Neighborhoods</h2>
-              <p className="text-xs text-[var(--muted)] mt-0.5">Where you like to go</p>
+              <h2 className="font-semibold text-[var(--cream)]">
+                Favorite Neighborhoods
+              </h2>
+              <p className="text-xs text-[var(--muted)] mt-0.5">
+                Where you like to go
+              </p>
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -308,8 +374,18 @@ export default function TasteProfilePage() {
                   key={n.neighborhood}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-mono bg-[var(--gold)]/15 text-[var(--gold)]"
                 >
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <svg
+                    className="w-3 h-3"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                    />
                   </svg>
                   {n.neighborhood}
                 </span>
@@ -322,9 +398,12 @@ export default function TasteProfilePage() {
         <section className="rounded-xl border border-[var(--twilight)] p-5 bg-[var(--card-bg)]">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="font-semibold text-[var(--cream)]">Reset Learned Preferences</h2>
+              <h2 className="font-semibold text-[var(--cream)]">
+                Reset Learned Preferences
+              </h2>
               <p className="text-xs text-[var(--muted)] mt-0.5">
-                Clear activity-based preferences. Your explicit preferences will remain.
+                Clear activity-based preferences. Your explicit preferences will
+                remain.
               </p>
             </div>
             <button
@@ -338,7 +417,8 @@ export default function TasteProfilePage() {
           {showResetConfirm && (
             <div className="mt-4 p-4 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)]/30">
               <p className="text-sm text-[var(--cream)] mb-3">
-                Are you sure? This will clear all learned preferences based on your activity.
+                Are you sure? This will clear all learned preferences based on
+                your activity.
               </p>
               <div className="flex gap-3">
                 <button

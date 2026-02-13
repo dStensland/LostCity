@@ -1354,6 +1354,12 @@ body[data-vertical="hotel"]::after {
 body:has([data-vertical="hotel"])::after {
   opacity: 0;
 }
+body[data-vertical="hospital"]::after {
+  opacity: 0;
+}
+body:has([data-vertical="hospital"])::after {
+  opacity: 0;
+}
 
 /* FORTH override: configurable per portal via settings.forth_background_mode. */
 body[data-forth-bg="off"]::after {
@@ -1362,6 +1368,28 @@ body[data-forth-bg="off"]::after {
 
 body[data-forth-bg="subtle"]::after {
   opacity: 0.0035;
+}
+
+/* Force-disable global grain/rain overlays when FORTH concierge experience is mounted. */
+body[data-forth-experience="true"]::after {
+  opacity: 0 !important;
+}
+
+body:has([data-forth-experience="true"])::after {
+  opacity: 0 !important;
+}
+
+body[data-forth-experience="true"] .rain-overlay {
+  display: none !important;
+}
+
+body:has([data-forth-experience="true"]) .rain-overlay {
+  display: none !important;
+}
+
+body[data-forth-experience="true"],
+body:has([data-forth-experience="true"]) {
+  overflow-x: clip;
 }
 
 /* Ambient glow */
@@ -2438,6 +2466,165 @@ body[data-forth-bg="subtle"]::after {
   }
 }
 
+/* RSVP bloom animation */
+@keyframes rsvp-bloom-ring {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.6;
+  }
+  55% {
+    opacity: 0.35;
+  }
+  100% {
+    transform: scale(1.18);
+    opacity: 0;
+  }
+}
+
+@keyframes rsvp-bloom-glow {
+  0% {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  35% {
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(1.06);
+    opacity: 0;
+  }
+}
+
+@keyframes rsvp-button-enter-going {
+  0% {
+    transform: translateY(0) scale(1);
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  }
+  40% {
+    transform: translateY(-1px) scale(1.02);
+    box-shadow: 0 10px 22px color-mix(in srgb, var(--coral) 20%, transparent);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  }
+}
+
+@keyframes rsvp-button-enter-maybe {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  45% {
+    transform: translateY(-0.5px) scale(1.015);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes rsvp-check-draw {
+  0% {
+    stroke-dashoffset: 24;
+    opacity: 0.5;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
+
+@keyframes rsvp-star-twinkle {
+  0% {
+    transform: scale(0.82) rotate(-6deg);
+    opacity: 0.75;
+    filter: drop-shadow(0 0 0 transparent);
+  }
+  52% {
+    transform: scale(1.12) rotate(4deg);
+    opacity: 1;
+    filter: drop-shadow(0 0 4px color-mix(in srgb, var(--gold) 55%, transparent));
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+    filter: drop-shadow(0 0 0 transparent);
+  }
+}
+
+.rsvp-celebration-bloom {
+  --rsvp-bloom-color: var(--coral);
+  position: absolute;
+  inset: -6px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.rsvp-celebration-bloom-coral {
+  --rsvp-bloom-color: var(--coral);
+}
+
+.rsvp-celebration-bloom-gold {
+  --rsvp-bloom-color: var(--gold);
+}
+
+.rsvp-celebration-ring,
+.rsvp-celebration-glow {
+  position: absolute;
+  inset: 0;
+  border-radius: 0.9rem;
+}
+
+.rsvp-celebration-ring {
+  border: 1px solid color-mix(in srgb, var(--rsvp-bloom-color) 72%, white 12%);
+  animation: rsvp-bloom-ring 520ms cubic-bezier(0.23, 1, 0.32, 1) forwards;
+}
+
+.rsvp-celebration-glow {
+  background:
+    radial-gradient(
+      circle at 50% 50%,
+      color-mix(in srgb, var(--rsvp-bloom-color) 28%, transparent) 0%,
+      transparent 75%
+    );
+  filter: blur(5px);
+  animation: rsvp-bloom-glow 520ms ease-out forwards;
+}
+
+.rsvp-button-enter-going {
+  animation: rsvp-button-enter-going 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.rsvp-button-enter-maybe {
+  animation: rsvp-button-enter-maybe 480ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+.rsvp-status-icon-going,
+.rsvp-status-icon-maybe {
+  transform-origin: 50% 50%;
+  will-change: transform, opacity, filter;
+}
+
+.rsvp-status-icon-going .rsvp-check-path {
+  stroke-dasharray: 24;
+  stroke-dashoffset: 24;
+  animation: rsvp-check-draw 360ms ease-out forwards;
+}
+
+.rsvp-status-icon-maybe {
+  animation: rsvp-star-twinkle 430ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rsvp-celebration-ring,
+  .rsvp-celebration-glow,
+  .rsvp-button-enter-going,
+  .rsvp-button-enter-maybe,
+  .rsvp-status-icon-going .rsvp-check-path,
+  .rsvp-status-icon-maybe {
+    animation: none !important;
+  }
+}
+
 /* Neon spinner */
 @keyframes neon-spin {
   0% {
@@ -3464,6 +3651,8 @@ textarea:focus-visible {
 /* Portal-level suppression for premium hotel variants. */
 body[data-vertical="hotel"] .rain-overlay,
 body:has([data-vertical="hotel"]) .rain-overlay,
+body[data-vertical="hospital"] .rain-overlay,
+body:has([data-vertical="hospital"]) .rain-overlay,
 body[data-forth-bg="off"] .rain-overlay {
   display: none !important;
 }

@@ -37,7 +37,24 @@ export interface PersonalizationInfo {
   followedOrgIds: string[];
   favoriteNeighborhoods: string[];
   favoriteCategories: string[];
+  favoriteGenres?: string[];
+  needsAccessibility?: string[];
+  needsDietary?: string[];
+  needsFamily?: string[];
+  hideAdultContent?: boolean;
+  crossPortalRecommendations?: boolean;
   isPersonalized: boolean;
+}
+
+export interface FeedSection {
+  id:
+    | "tonight_for_you"
+    | "this_week_fits_your_taste"
+    | "from_places_people_you_follow"
+    | "explore_something_new";
+  title: string;
+  description: string;
+  events: FeedEvent[];
 }
 
 /**
@@ -45,6 +62,7 @@ export interface PersonalizationInfo {
  */
 interface FeedResponse {
   events: FeedEvent[];
+  sections?: FeedSection[];
   cursor: string | null;
   hasMore: boolean;
   hasPreferences: boolean;
@@ -125,7 +143,7 @@ export function useForYouEvents(options: UseForYouEventsOptions = {}) {
 
       return params;
     },
-    [searchParams, portalSlug]
+    [searchParams, portalSlug],
   );
 
   // Infinite query for feed events
@@ -138,6 +156,7 @@ export function useForYouEvents(options: UseForYouEventsOptions = {}) {
       if (res.status === 401) {
         return {
           events: [],
+          sections: [],
           cursor: null,
           hasMore: false,
           hasPreferences: false,
@@ -193,6 +212,11 @@ export function useForYouEvents(options: UseForYouEventsOptions = {}) {
     return firstPage?.personalization || null;
   }, [query.data?.pages]);
 
+  const sections = useMemo((): FeedSection[] => {
+    const firstPage = query.data?.pages?.[0];
+    return firstPage?.sections || [];
+  }, [query.data?.pages]);
+
   // Get hasPreferences from first page
   const hasPreferences = useMemo(() => {
     const firstPage = query.data?.pages?.[0];
@@ -228,6 +252,7 @@ export function useForYouEvents(options: UseForYouEventsOptions = {}) {
 
   return {
     events,
+    sections,
     personalization,
     hasPreferences,
     isLoading,

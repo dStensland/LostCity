@@ -15,7 +15,16 @@ export default function PortalThemeClient({ portal }: PortalThemeClientProps) {
   const componentStyle = resolvedBranding.component_style;
   const themeMode = (branding.theme_mode as string) || "dark";
   const isLight = themeMode === "light";
-  const vertical = typeof settings.vertical === "string" ? settings.vertical : undefined;
+  const pageTemplate = typeof portal.page_template === "string"
+    ? portal.page_template.toLowerCase()
+    : "";
+  const inferredVertical = typeof settings.vertical === "string"
+    ? settings.vertical
+    : pageTemplate === "hotel"
+      ? "hotel"
+      : pageTemplate === "hospital"
+        ? "hospital"
+        : undefined;
   const experienceVariant = typeof settings.experience_variant === "string"
     ? settings.experience_variant.toLowerCase()
     : "";
@@ -116,8 +125,8 @@ export default function PortalThemeClient({ portal }: PortalThemeClientProps) {
     }
 
     // Expose portal vertical at body-level for global pseudo-elements.
-    if (vertical) {
-      body.dataset.vertical = vertical;
+    if (inferredVertical) {
+      body.dataset.vertical = inferredVertical;
     } else {
       delete body.dataset.vertical;
     }
@@ -143,7 +152,7 @@ export default function PortalThemeClient({ portal }: PortalThemeClientProps) {
       delete body.dataset.forthBg;
       delete body.dataset.forthMotion;
     };
-  }, [componentStyle, forthBackgroundMode, forthMotionMode, isForthVariant, isLight, vertical]);
+  }, [componentStyle, forthBackgroundMode, forthMotionMode, inferredVertical, isForthVariant, isLight]);
 
   return null;
 }

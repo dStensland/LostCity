@@ -55,22 +55,22 @@ export default function SuggestionGroup({
   const hasMore = displayCount > maxItems;
 
   return (
-    <div className="py-1">
+    <div className="pt-2 pb-1">
       {/* Group header */}
-      <div className="flex items-center gap-2 px-3 pb-1.5 pt-1">
-        <TypeIcon type={type} className={`h-3 w-3 ${typeColor}`} />
-        <span className={`text-[0.6rem] font-mono uppercase tracking-wider ${typeColor}`}>
+      <div className="flex items-center gap-2 px-3 pb-2">
+        <TypeIcon type={type} className={`h-3.5 w-3.5 ${typeColor}`} />
+        <span className={`text-[0.64rem] font-mono uppercase tracking-wider ${typeColor}`}>
           {typeLabel}
         </span>
         {displayCount > 0 && (
-          <span className="text-[0.55rem] text-[var(--muted)]">
+          <span className="text-[0.58rem] text-[var(--muted)]">
             ({displayCount})
           </span>
         )}
         {hasMore && onViewAll && (
           <button
             onMouseDown={onViewAll}
-            className="text-[0.55rem] text-[var(--coral)] hover:text-[var(--rose)] transition-colors ml-auto font-mono"
+            className="text-[0.58rem] text-[var(--coral)] hover:text-[var(--rose)] transition-colors ml-auto font-mono"
           >
             view all
           </button>
@@ -90,53 +90,55 @@ export default function SuggestionGroup({
             aria-selected={isSelected}
             onMouseDown={() => onSelect(result)}
             onMouseEnter={() => onHover(globalIndex)}
-            className={`flex items-center gap-2.5 w-full text-left px-3 py-2 text-sm rounded-lg transition-all mx-1 w-[calc(100%-8px)] ${
+            className={`flex items-start gap-2.5 w-full text-left px-3 py-2.5 rounded-lg transition-all mx-1 w-[calc(100%-8px)] border border-transparent ${
               isSelected
-                ? "bg-[var(--twilight)] text-[var(--cream)] translate-x-0.5"
+                ? "bg-[var(--twilight)] text-[var(--cream)] translate-x-0.5 border-[var(--coral)]/30"
                 : "text-[var(--cream)] hover:bg-[var(--twilight)]/50"
             }`}
           >
             {/* Result icon */}
-            <TypeIcon
-              type={result.type}
-              className={`h-3.5 w-3.5 flex-shrink-0 ${typeColor}`}
-            />
-
-            {/* Title with highlight */}
-            <span className="flex-1 truncate">
-              <HighlightMatch text={result.title} query={query} />
+            <span className="mt-0.5 inline-flex items-center justify-center w-7 h-7 rounded-md bg-[var(--twilight)]/70 flex-shrink-0">
+              <TypeIcon
+                type={result.type}
+                className={`h-3.5 w-3.5 flex-shrink-0 ${typeColor}`}
+              />
             </span>
 
-            {/* Metadata */}
-            <div className="flex items-center gap-2 flex-shrink-0">
-              {/* Personalization badge */}
-              {result.personalizationReason && (
-                <span className="text-[0.5rem] font-medium px-1.5 py-0.5 rounded bg-[var(--coral)]/20 text-[var(--coral)]">
-                  {result.personalizationReason}
-                </span>
-              )}
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-[var(--cream)] truncate">
+                <HighlightMatch text={result.title} query={query} />
+              </p>
 
-              {/* Subtitle/metadata */}
-              {result.subtitle && (
-                <span className="text-[0.65rem] text-[var(--muted)] max-w-[100px] truncate">
-                  {result.subtitle}
-                </span>
-              )}
+              <div className="mt-0.5 flex items-center gap-1.5 min-w-0 flex-wrap">
+                {result.subtitle && (
+                  <span className="text-[0.67rem] text-[var(--muted)] truncate max-w-[180px]">
+                    {result.subtitle}
+                  </span>
+                )}
 
-              {/* Date for events */}
-              {result.type === "event" && result.metadata?.date && (
-                <span className="text-[0.6rem] text-[var(--soft)]">
-                  {formatEventDate(result.metadata.date)}
-                </span>
-              )}
+                {result.type === "event" && result.metadata?.date && (
+                  <span className="text-[0.58rem] px-1.5 py-0.5 rounded-full bg-[var(--night)]/60 border border-[var(--twilight)] text-[var(--soft)]">
+                    {formatEventDate(result.metadata.date)}
+                  </span>
+                )}
 
-              {/* Free badge */}
-              {result.metadata?.isFree && (
-                <span className="text-[0.5rem] font-medium px-1.5 py-0.5 rounded bg-[var(--neon-green)]/20 text-[var(--neon-green)]">
-                  Free
-                </span>
-              )}
+                {result.metadata?.isFree && (
+                  <span className="text-[0.58rem] font-medium px-1.5 py-0.5 rounded-full bg-[var(--neon-green)]/15 text-[var(--neon-green)] border border-[var(--neon-green)]/30">
+                    Free
+                  </span>
+                )}
+
+                {result.personalizationReason && (
+                  <span className="text-[0.58rem] font-medium px-1.5 py-0.5 rounded-full bg-[var(--coral)]/15 text-[var(--coral)] border border-[var(--coral)]/30">
+                    {result.personalizationReason}
+                  </span>
+                )}
+              </div>
             </div>
+
+            <svg className={`h-3.5 w-3.5 mt-2 flex-shrink-0 transition-colors ${isSelected ? "text-[var(--coral)]" : "text-[var(--muted)]"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
           </button>
         );
       })}

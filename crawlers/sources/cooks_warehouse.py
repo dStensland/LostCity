@@ -24,18 +24,19 @@ BASE_URL = "https://cookswarehouse.com"
 EVENTS_URL = f"{BASE_URL}/all-classes/"
 
 VENUE_DATA = {
-    "name": "The Cook's Warehouse",
+    "name": "Cook's Warehouse",
     "slug": "cooks-warehouse",
-    "address": "1544 Piedmont Ave NE, STE 403-R",
-    "neighborhood": "Ansley Park",
+    "address": "1544 Piedmont Ave NE Suite 403-R",
+    "neighborhood": "Midtown",
     "city": "Atlanta",
     "state": "GA",
     "zip": "30324",
-    "lat": 33.7993,
-    "lng": -84.3733,
-    "venue_type": "retail",
-    "spot_type": "cooking_school",
+    "lat": 33.8058,
+    "lng": -84.3560,
+    "venue_type": "studio",
+    "spot_type": "studio",
     "website": BASE_URL,
+    "vibes": ["workshop", "hands-on", "cooking-class", "culinary", "date-night"],
 }
 
 
@@ -171,7 +172,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         content_hash = generate_content_hash(
                             title,
-                            "The Cook's Warehouse",
+                            "Cook's Warehouse",
                             start_date
                         )
 
@@ -190,6 +191,22 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         description = "Cooking class at The Cook's Warehouse"
                         image_url = image_map.get(title)
 
+                        # Generate smart tags based on title
+                        tags = ["cooking-class", "culinary", "hands-on"]
+                        title_lower = title.lower()
+
+                        # Family/kids
+                        if any(word in title_lower for word in ["kids", "children", "family", "teen", "youth"]):
+                            tags.append("family-friendly")
+
+                        # Date night
+                        if "date night" in title_lower or "couples" in title_lower:
+                            tags.append("date-night")
+
+                        # Beverages
+                        if any(word in title_lower for word in ["wine", "cocktail", "beer", "champagne"]):
+                            tags.append("food-drink")
+
                         event_record = {
                             "source_id": source_id,
                             "venue_id": venue_id,
@@ -201,14 +218,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "end_time": None,
                             "is_all_day": False,
                             "category": "learning",
-                            "subcategory": None,
-                            "tags": [
-                                "cooks-warehouse",
-                                "cooking-class",
-                                "culinary",
-                                "ansley-park",
-                                "hands-on",
-                            ],
+                            "subcategory": "workshop",
+                            "tags": tags,
                             "price_min": price_min,
                             "price_max": price_max,
                             "price_note": price_note,

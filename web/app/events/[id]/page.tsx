@@ -1,10 +1,10 @@
-import { redirect } from 'next/navigation'
+import { permanentRedirect } from "next/navigation";
 
 export default async function EventPage({
   params
 }: {
   params: Promise<{ id: string }>
 }) {
-  const { id } = await params
-  redirect(`/atlanta/events/${id}`)
+  const { id } = await params;
+  permanentRedirect(`/atlanta/events/${id}`);
 }

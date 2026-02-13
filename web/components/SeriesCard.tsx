@@ -164,18 +164,60 @@ const SeriesCard = memo(function SeriesCard({
           } as CSSProperties
         }
       >
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-2.5">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2 px-3 py-2.5">
           <Link href={seriesUrl} scroll={false} data-row-primary-link="true" className="min-w-0">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <span className="flex-shrink-0 font-mono text-[0.72rem] font-semibold uppercase tracking-[0.1em] text-[var(--accent-color)] min-w-[76px] sm:min-w-[82px]">
-                {compactTimeLabel}
-              </span>
-              <span className="truncate text-[0.94rem] sm:text-[0.98rem] font-medium text-[var(--cream)] group-hover:text-[var(--accent-color)] transition-colors">
-                {seriesTitle}
-              </span>
-              <span className="inline-block max-w-[84px] sm:max-w-[120px] truncate flex-shrink-0 font-mono text-[0.62rem] font-medium uppercase tracking-[0.08em] text-[var(--muted)]">
-                {compactSeriesTypeLabel}
-              </span>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <span className="flex-shrink-0 font-mono text-[0.72rem] font-semibold uppercase tracking-[0.1em] text-[var(--accent-color)] min-w-[76px] sm:min-w-[82px]">
+                  {compactTimeLabel}
+                </span>
+                <span className="truncate text-[0.94rem] sm:text-[0.98rem] font-medium text-[var(--cream)] group-hover:text-[var(--accent-color)] transition-colors">
+                  {seriesTitle}
+                </span>
+                <span className="inline-block max-w-[84px] sm:max-w-[120px] truncate flex-shrink-0 font-mono text-[0.62rem] font-medium uppercase tracking-[0.08em] text-[var(--muted)]">
+                  {compactSeriesTypeLabel}
+                </span>
+              </div>
+
+              <div className="mt-1 flex items-center gap-1.5 font-mono text-[0.62rem] text-[var(--muted)] min-w-0">
+                {recurrenceText && (
+                  <>
+                    <span className="truncate">{recurrenceText}</span>
+                    {(firstVenueName || totalShowtimes > 0) && <span className="opacity-40">·</span>}
+                  </>
+                )}
+                {firstVenueName && (
+                  <>
+                    <span className="truncate">{firstVenueName}</span>
+                    {firstVenueNeighborhood && <span className="opacity-40">·</span>}
+                  </>
+                )}
+                {firstVenueNeighborhood && <span className="truncate">{firstVenueNeighborhood}</span>}
+                {!firstVenueName && !firstVenueNeighborhood && totalShowtimes > 0 && (
+                  <span className="truncate">
+                    {totalShowtimes} {totalShowtimes === 1 ? "show" : "shows"}
+                  </span>
+                )}
+
+                {goingCount > 0 && (
+                  <>
+                    <span className="opacity-40">·</span>
+                    <span className="text-[var(--coral)] font-medium">{formatCompactCount(goingCount)} going</span>
+                  </>
+                )}
+                {interestedCount > 0 && (
+                  <>
+                    <span className="opacity-40">·</span>
+                    <span className="text-[var(--gold)] font-medium">{formatCompactCount(interestedCount)} maybe</span>
+                  </>
+                )}
+                {recommendationCount > 0 && (
+                  <>
+                    <span className="opacity-40">·</span>
+                    <span className="text-[var(--lavender)] font-medium">{formatCompactCount(recommendationCount)} rec&apos;d</span>
+                  </>
+                )}
+              </div>
             </div>
           </Link>
           {primaryEventId && (

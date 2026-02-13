@@ -26,7 +26,7 @@ EVENTS_URL = f"{BASE_URL}/events-calendar/"
 
 VENUE_DATA = {
     "name": "Central Presbyterian Church",
-    "slug": "central-presbyterian-atlanta",
+    "slug": "central-presbyterian-church",
     "address": "201 Washington St SW",
     "neighborhood": "Downtown",
     "city": "Atlanta",

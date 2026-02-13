@@ -9,6 +9,7 @@ import CalendarView from "@/components/CalendarView";
 import MobileCalendarView from "@/components/calendar/MobileCalendarView";
 import PortalSpotsView from "@/components/PortalSpotsView";
 import ClassesView from "@/components/find/ClassesView";
+import ShowtimesView from "@/components/find/ShowtimesView";
 import { ActiveFiltersRow } from "@/components/filters";
 import AddNewChooser from "@/components/find/AddNewChooser";
 import { getNeighborhoodByName, NEIGHBORHOOD_NAMES } from "@/config/neighborhoods";
@@ -18,7 +19,7 @@ import MapListDrawer from "@/components/map/MapListDrawer";
 import MapBottomSheet from "@/components/map/MapBottomSheet";
 import MapDatePills from "@/components/map/MapDatePills";
 
-type FindType = "events" | "classes" | "destinations";
+type FindType = "events" | "classes" | "destinations" | "showtimes";
 type DisplayMode = "list" | "map" | "calendar";
 type ListDensity = "comfortable" | "compact";
 
@@ -61,6 +62,15 @@ const TYPE_OPTIONS: { key: FindType; label: string; icon: React.ReactNode }[] = 
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+    ),
+  },
+  {
+    key: "showtimes",
+    label: "Now Playing",
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
       </svg>
     ),
   },
@@ -235,11 +245,10 @@ function FindViewInner({
   const availableDisplayModes: DisplayMode[] = useMemo(() => {
     if (findType === "events") return ["list", "calendar", "map"];
     if (findType === "destinations") return ["list", "map"];
-    return ["list"];
+    return []; // classes and showtimes have no display mode toggles
   }, [findType]);
   const listDensity: ListDensity = searchParams?.get("density") === "compact" ? "compact" : "comfortable";
   const showDensityToggle = findType === "events" && displayMode === "list";
-
   const handleDisplayModeChange = useCallback((mode: DisplayMode) => {
     const params = new URLSearchParams(searchParams?.toString() || "");
     params.set("view", "find");
@@ -312,7 +321,7 @@ function FindViewInner({
       <section className="relative z-40 rounded-2xl border border-[var(--twilight)]/80 bg-gradient-to-b from-[var(--night)]/94 to-[var(--void)]/86 shadow-[0_14px_30px_rgba(0,0,0,0.24)] backdrop-blur-md p-3 sm:p-4">
         {/* Type selector tabs */}
         <div className="flex items-center justify-between gap-3">
-          <div className="flex p-1 bg-[var(--void)]/72 border border-[var(--twilight)]/80 rounded-xl flex-1 sm:flex-initial sm:max-w-md min-w-0">
+          <div className="flex p-1 bg-[var(--void)]/72 border border-[var(--twilight)]/80 rounded-xl flex-1 min-w-0 overflow-x-auto">
             {TYPE_OPTIONS.map((option) => {
               const isActive = findType === option.key;
               return (
@@ -320,7 +329,7 @@ function FindViewInner({
                   key={option.key}
                   onClick={() => handleTypeChange(option.key)}
                   aria-label={option.label}
-                  className={`flex-1 flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-2.5 sm:py-2 rounded-lg font-mono text-xs whitespace-nowrap transition-all ${
+                  className={`flex-1 sm:flex-none shrink-0 flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-2.5 sm:py-2 rounded-lg font-mono text-xs whitespace-nowrap transition-all ${
                     isActive
                       ? "bg-gradient-to-r from-[var(--gold)] to-[var(--coral)] text-[var(--void)] font-semibold shadow-[0_6px_16px_rgba(0,0,0,0.25)]"
                       : "text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/55"
@@ -442,8 +451,10 @@ function FindViewInner({
         )}
 
         {/* Mobile: Add button on separate row */}
-        <div className="sm:hidden mt-3">
-          <AddNewChooser portalSlug={portalSlug} />
+        <div className="sm:hidden mt-3 flex items-center gap-2">
+          <div className="flex-1 min-w-0">
+            <AddNewChooser portalSlug={portalSlug} />
+          </div>
         </div>
 
         {/* Filter bar for events */}
@@ -638,6 +649,15 @@ function FindViewInner({
         </Suspense>
       )}
 
+      {findType === "showtimes" && (
+        <Suspense fallback={<div className="py-16 text-center text-[var(--muted)]">Loading showtimes...</div>}>
+          <ShowtimesView
+            portalId={portalId}
+            portalSlug={portalSlug}
+          />
+        </Suspense>
+      )}
+
       {findType === "destinations" && displayMode === "list" && (
         <Suspense fallback={<div className="py-16 text-center text-[var(--muted)]">Loading destinations...</div>}>
           <PortalSpotsView
@@ -703,7 +723,7 @@ export default function FindView(props: FindViewProps) {
       fallback={
         <div className="py-3 space-y-3">
           <div className="flex gap-2">
-            {[1, 2, 3].map((i) => (
+            {[1, 2, 3, 4].map((i) => (
               <div key={i} className="h-8 w-20 skeleton-shimmer rounded-full" />
             ))}
           </div>

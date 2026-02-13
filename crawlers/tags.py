@@ -271,7 +271,7 @@ VALID_ORG_TYPES = {
 }
 
 # Canonical valid festival types
-VALID_FESTIVAL_TYPES = {"festival", "conference", "convention"}
+VALID_FESTIVAL_TYPES = {"festival", "conference", "convention", "market", "fair", "expo", "tournament"}
 
 # Genre → experiential tag mapping
 GENRE_TO_TAGS: dict[str, list[str]] = {

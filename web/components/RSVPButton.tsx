@@ -6,8 +6,6 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/components/Toast";
 import { VISIBILITY_OPTIONS, DEFAULT_VISIBILITY, type Visibility } from "@/lib/visibility";
-import Lasers from "./ui/Lasers";
-import Sparkles from "./ui/Sparkles";
 import { PostRsvpNeedsPrompt } from "./PostRsvpNeedsPrompt";
 
 export type RSVPStatus = "going" | "interested" | "went" | null;
@@ -53,10 +51,12 @@ export default function RSVPButton({
   const [menuOpen, setMenuOpen] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(0);
-  const [showLasers, setShowLasers] = useState(false);
-  const [showSparkles, setShowSparkles] = useState(false);
+  const [celebrationTone, setCelebrationTone] = useState<"coral" | "gold" | null>(null);
   const [menuPos, setMenuPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const [showNeedsPrompt, setShowNeedsPrompt] = useState(false);
+  const actionInFlightRef = useRef(false);
+  const loadingSafetyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const celebrationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const statusOptions = Object.keys(STATUS_CONFIG) as (keyof typeof STATUS_CONFIG)[];
   const menuItemCount = statusOptions.length + (status ? 1 : 0); // +1 for "Remove RSVP"
@@ -174,6 +174,18 @@ export default function RSVPButton({
   }, [menuOpen, updateMenuPosition]);
 
   useEffect(() => {
+    return () => {
+      actionInFlightRef.current = false;
+      if (loadingSafetyTimeoutRef.current) {
+        clearTimeout(loadingSafetyTimeoutRef.current);
+      }
+      if (celebrationTimeoutRef.current) {
+        clearTimeout(celebrationTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     if (!menuOpen) return;
 
     const onScrollOrResize = () => updateMenuPosition();
@@ -231,67 +243,90 @@ export default function RSVPButton({
   }, [user, authLoading, eventId]);
 
   const handleStatusChange = async (newStatus: RSVPStatus) => {
+    if (actionInFlightRef.current || authLoading) {
+      return;
+    }
+
     if (!user) {
+      setMenuOpen(false);
       router.push(`/auth/login?redirect=${encodeURIComponent(window.location.pathname)}`);
       return;
     }
 
+    actionInFlightRef.current = true;
     setActionLoading(true);
     const previousStatus = status;
+    setMenuOpen(false);
 
     // Trigger pop animation
     setIsAnimating(true);
     setTimeout(() => setIsAnimating(false), 150);
 
-    // Trigger lasers for "going" status
-    if (newStatus === "going" && status !== "going") {
-      setShowLasers(true);
-      setTimeout(() => setShowLasers(false), 100);
+    // Subtle status bloom animation
+    if (celebrationTimeoutRef.current) {
+      clearTimeout(celebrationTimeoutRef.current);
+      celebrationTimeoutRef.current = null;
     }
-
-    // Trigger sparkles for "maybe" status
-    if (newStatus === "interested" && status !== "interested") {
-      setShowSparkles(true);
-      setTimeout(() => setShowSparkles(false), 100);
+    if (newStatus === "going" && status !== "going") {
+      setCelebrationTone("coral");
+      celebrationTimeoutRef.current = setTimeout(() => setCelebrationTone(null), 520);
+    } else if (newStatus === "interested" && status !== "interested") {
+      setCelebrationTone("gold");
+      celebrationTimeoutRef.current = setTimeout(() => setCelebrationTone(null), 520);
+    } else {
+      setCelebrationTone(null);
     }
 
     // Optimistic update
     setStatus(newStatus);
+
+    if (loadingSafetyTimeoutRef.current) {
+      clearTimeout(loadingSafetyTimeoutRef.current);
+      loadingSafetyTimeoutRef.current = null;
+    }
+    loadingSafetyTimeoutRef.current = setTimeout(() => {
+      actionInFlightRef.current = false;
+      setActionLoading(false);
+    }, 12000);
 
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 8000);
 
       let response: Response;
-
-      if (newStatus === null) {
-        // Remove RSVP
-        response = await fetch(`/api/rsvp?event_id=${eventId}`, {
-          method: "DELETE",
-          signal: controller.signal,
-        });
-      } else {
-        // Create or update RSVP
-        response = await fetch("/api/rsvp", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            event_id: eventId,
-            status: newStatus,
-            visibility,
-          }),
-          signal: controller.signal,
-        });
+      try {
+        if (newStatus === null) {
+          // Remove RSVP
+          response = await fetch(`/api/rsvp?event_id=${eventId}`, {
+            method: "DELETE",
+            signal: controller.signal,
+          });
+        } else {
+          // Create or update RSVP
+          response = await fetch("/api/rsvp", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              event_id: eventId,
+              status: newStatus,
+              visibility,
+            }),
+            signal: controller.signal,
+          });
+        }
+      } finally {
+        clearTimeout(timeoutId);
       }
-
-      clearTimeout(timeoutId);
 
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to save");
+        let data: { error?: string } | null = null;
+        try {
+          data = await response.json();
+        } catch {
+          data = null;
+        }
+        throw new Error(data?.error || "Failed to save");
       }
-
-      setMenuOpen(false);
 
       // Show needs prompt after first-time RSVP (going status only, with venue data)
       if (newStatus === "going" && previousStatus === null && venueId && venueName) {
@@ -300,7 +335,11 @@ export default function RSVPButton({
 
       // Notify parent of successful status change
       if (onRSVPChange) {
-        onRSVPChange(newStatus, previousStatus);
+        try {
+          onRSVPChange(newStatus, previousStatus);
+        } catch (callbackError) {
+          console.error("RSVP callback failed:", callbackError);
+        }
       }
     } catch (error) {
       // Rollback on error
@@ -314,12 +353,19 @@ export default function RSVPButton({
       if (err.code === "23503" || err.message?.includes("foreign key") || err.message?.includes("profiles")) {
         // Foreign key violation - user doesn't have a profile
         errMsg = "Please complete your profile setup first";
+      } else if ((err as Error).name === "AbortError") {
+        errMsg = "Request timed out. Please try again";
       } else if (err.message) {
         errMsg = err.message;
       }
 
       showToast(errMsg, "error");
     } finally {
+      if (loadingSafetyTimeoutRef.current) {
+        clearTimeout(loadingSafetyTimeoutRef.current);
+        loadingSafetyTimeoutRef.current = null;
+      }
+      actionInFlightRef.current = false;
       setActionLoading(false);
     }
   };
@@ -366,8 +412,13 @@ export default function RSVPButton({
 
   // Variant-specific styles
   const getButtonClasses = () => {
-    const baseClasses = "font-mono font-medium rounded-xl transition-all duration-150 flex items-center gap-2 active:scale-[0.98] touch-action-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)]";
+    const baseClasses = "relative z-[1] font-mono font-medium rounded-xl transition-all duration-150 flex items-center gap-2 active:scale-[0.98] touch-action-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)]";
     const animationClass = isAnimating ? "scale-95" : "scale-100";
+    const celebrationClass = celebrationTone === "coral"
+      ? "rsvp-button-enter-going"
+      : celebrationTone === "gold"
+        ? "rsvp-button-enter-maybe"
+        : "";
 
     if (variant === "compact") {
       // Icon-only button for sticky bar
@@ -375,7 +426,7 @@ export default function RSVPButton({
         status
           ? `${currentConfig?.color} text-[var(--void)] border-transparent shadow-[0_8px_18px_rgba(0,0,0,0.28),0_0_10px_var(--cta-glow,rgba(255,107,122,0.2))]`
           : "bg-[var(--dusk)]/72 text-[var(--muted)] border-[var(--twilight)]/75 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.02)] hover:text-[var(--cream)] hover:border-[var(--cta-border,rgba(255,107,122,0.7))] hover:shadow-[0_0_16px_var(--cta-glow,rgba(255,107,122,0.2))]"
-      } ${animationClass}`;
+      } ${animationClass} ${celebrationClass}`;
     }
 
     if (variant === "primary") {
@@ -384,7 +435,7 @@ export default function RSVPButton({
         status
           ? `${currentConfig?.color} text-[var(--void)]`
           : "bg-[var(--coral)] text-[var(--void)] hover:bg-[var(--rose)]"
-      } ${animationClass}`;
+      } ${animationClass} ${celebrationClass}`;
     }
 
     // Default variant
@@ -392,7 +443,7 @@ export default function RSVPButton({
       status
         ? `${currentConfig?.color} text-[var(--void)] shadow-sm`
         : "bg-[var(--dusk)] text-[var(--muted)] hover:text-[var(--cream)] border border-[var(--twilight)]"
-    } ${animationClass}`;
+    } ${animationClass} ${celebrationClass}`;
   };
 
   // No loading skeleton - show functional button immediately
@@ -401,6 +452,9 @@ export default function RSVPButton({
   const currentConfig = status && status in STATUS_CONFIG
     ? STATUS_CONFIG[status as keyof typeof STATUS_CONFIG]
     : null;
+  const shouldAnimateStatusIcon =
+    (celebrationTone === "coral" && status === "going") ||
+    (celebrationTone === "gold" && status === "interested");
 
   // Render button content based on variant
   const renderButtonContent = () => {
@@ -411,7 +465,7 @@ export default function RSVPButton({
     if (variant === "compact") {
       // Icon only - star for interest
       return status ? (
-        <StatusIcon status={status} />
+        <StatusIcon status={status} animated={shouldAnimateStatusIcon} />
       ) : (
         <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v14M5 12h14" />
@@ -422,7 +476,7 @@ export default function RSVPButton({
     if (variant === "primary") {
       return status ? (
         <>
-          <StatusIcon status={status} />
+          <StatusIcon status={status} animated={shouldAnimateStatusIcon} />
           {currentConfig?.label}
         </>
       ) : (
@@ -438,7 +492,7 @@ export default function RSVPButton({
     // Default variant
     return status ? (
       <>
-        <StatusIcon status={status} />
+        <StatusIcon status={status} animated={shouldAnimateStatusIcon} />
         {currentConfig?.label}
         <svg className="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -457,29 +511,38 @@ export default function RSVPButton({
   return (
     <>
       <div className={`relative ${className}`} ref={menuRef}>
-        <Lasers isActive={showLasers} originRef={buttonRef} />
-        <Sparkles isActive={showSparkles} originRef={buttonRef} />
+        {celebrationTone && (
+          <span
+            aria-hidden
+            className={`rsvp-celebration-bloom ${
+              celebrationTone === "coral" ? "rsvp-celebration-bloom-coral" : "rsvp-celebration-bloom-gold"
+            }`}
+          >
+            <span className="rsvp-celebration-ring" />
+            <span className="rsvp-celebration-glow" />
+          </span>
+        )}
         <button
-        ref={buttonRef}
-        onClick={(e) => {
-          // Prevent parent cards/cells from treating this as a navigation click.
-          e.preventDefault();
-          e.stopPropagation();
-          setMenuOpen(!menuOpen);
-        }}
-        onMouseDown={(e) => {
-          // Prevent document-level handlers in parent containers from immediately closing the menu.
-          e.preventDefault();
-          e.stopPropagation();
-        }}
-        disabled={actionLoading}
-        aria-haspopup="menu"
-        aria-expanded={menuOpen}
-        style={{ touchAction: 'manipulation' }}
-        className={getButtonClasses()}
-      >
-        {renderButtonContent()}
-      </button>
+          ref={buttonRef}
+          onClick={(e) => {
+            // Prevent parent cards/cells from treating this as a navigation click.
+            e.preventDefault();
+            e.stopPropagation();
+            setMenuOpen(!menuOpen);
+          }}
+          onMouseDown={(e) => {
+            // Prevent document-level handlers in parent containers from immediately closing the menu.
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          disabled={actionLoading}
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+          style={{ touchAction: "manipulation" }}
+          className={getButtonClasses()}
+        >
+          {renderButtonContent()}
+        </button>
 
       {/* Dropdown Menu */}
       {menuOpen && typeof document !== "undefined" &&
@@ -610,18 +673,40 @@ export default function RSVPButton({
   );
 }
 
-function StatusIcon({ status }: { status: NonNullable<RSVPStatus> }) {
+function StatusIcon({
+  status,
+  animated = false,
+}: {
+  status: NonNullable<RSVPStatus>;
+  animated?: boolean;
+}) {
   switch (status) {
     case "going":
       return (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+        <svg
+          className={`w-4 h-4 ${animated ? "rsvp-status-icon-going" : ""}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            className={animated ? "rsvp-check-path" : ""}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M5 13l4 4L19 7"
+          />
         </svg>
       );
     case "interested":
     default:
       return (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg
+          className={`w-4 h-4 ${animated ? "rsvp-status-icon-maybe" : ""}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
         </svg>
       );

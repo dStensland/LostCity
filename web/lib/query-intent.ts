@@ -66,7 +66,7 @@ const LOCATION_PATTERNS: RegExp[] = [
 
 // Category-related patterns and keywords
 const CATEGORY_KEYWORDS: { pattern: RegExp; category: string }[] = [
-  { pattern: /\b(live music|concert|band|show)\b/i, category: "music" },
+  { pattern: /\b(live music|live show|live band|concert|band|show|live)\b/i, category: "music" },
   { pattern: /\b(comedy|standup|stand-up|improv|open mic)\b/i, category: "comedy" },
   { pattern: /\b(theater|theatre|play|musical|drama)\b/i, category: "theater" },
   { pattern: /\b(art|gallery|exhibit|exhibition|museum)\b/i, category: "art" },

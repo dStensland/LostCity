@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { errorResponse } from "@/lib/api-utils";
 import { logger } from "@/lib/logger";
-import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import {
+  applyRateLimit,
+  RATE_LIMITS,
+  getClientIdentifier,
+} from "@/lib/rate-limit";
 
 type UserPreferences = {
   favorite_categories: string[] | null;
@@ -29,25 +33,29 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
+    const rateLimitResult = await applyRateLimit(
+      request,
+      RATE_LIMITS.read,
+      getClientIdentifier(request),
+    );
     if (rateLimitResult) return rateLimitResult;
 
     const supabase = await createClient();
 
     // Get explicit preferences
-    const { data: explicitPrefs } = await supabase
+    const { data: explicitPrefs } = (await supabase
       .from("user_preferences")
       .select("*")
       .eq("user_id", user.id)
-      .maybeSingle() as { data: UserPreferences | null };
+      .maybeSingle()) as { data: UserPreferences | null };
 
     // Get inferred preferences (top 20 by score)
-    const { data: inferredPrefs } = await supabase
+    const { data: inferredPrefs } = (await supabase
       .from("inferred_preferences")
       .select("*")
       .eq("user_id", user.id)
       .order("score", { ascending: false })
-      .limit(20) as { data: InferredPreference[] | null };
+      .limit(20)) as { data: InferredPreference[] | null };
 
     // Get follow counts
     const { count: venueFollowCount } = await supabase
@@ -63,10 +71,10 @@ export async function GET(request: Request) {
       .not("followed_organization_id", "is", null);
 
     // Get RSVP stats
-    const { data: rsvpStats } = await supabase
+    const { data: rsvpStats } = (await supabase
       .from("event_rsvps")
       .select("status")
-      .eq("user_id", user.id) as { data: RsvpStat[] | null };
+      .eq("user_id", user.id)) as { data: RsvpStat[] | null };
 
     const rsvpCounts = (rsvpStats || []).reduce(
       (acc, r) => {
@@ -74,7 +82,7 @@ export async function GET(request: Request) {
         acc[status] = (acc[status] || 0) + 1;
         return acc;
       },
-      {} as Record<string, number>
+      {} as Record<string, number>,
     );
 
     // Calculate top categories from inferred preferences
@@ -118,6 +126,8 @@ export async function GET(request: Request) {
         topVenues: venuePrefs,
         topNeighborhoods: neighborhoodPrefs,
         followedVenues: venueFollowCount || 0,
+        // Keep both keys for backward compatibility while clients migrate.
+        followedProducers: organizationFollowCount || 0,
         followedOrganizations: organizationFollowCount || 0,
         rsvps: {
           going: rsvpCounts["going"] || 0,
@@ -133,7 +143,11 @@ export async function GET(request: Request) {
 
 // DELETE - Reset learned preferences
 export async function DELETE(request: Request) {
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
+  const rateLimitResult = await applyRateLimit(
+    request,
+    RATE_LIMITS.write,
+    getClientIdentifier(request),
+  );
   if (rateLimitResult) return rateLimitResult;
 
   try {
@@ -154,7 +168,7 @@ export async function DELETE(request: Request) {
       logger.error("Error resetting preferences", error);
       return NextResponse.json(
         { error: "Failed to reset preferences" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 

@@ -7,6 +7,10 @@ import PreferencesClient from "./PreferencesClient";
 export const metadata: Metadata = {
   title: "Preferences | Lost City",
   description: "Set your favorite categories, neighborhoods, vibes, and price preferences on Lost City.",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 type UserPreferences = Database["public"]["Tables"]["user_preferences"]["Row"] & {

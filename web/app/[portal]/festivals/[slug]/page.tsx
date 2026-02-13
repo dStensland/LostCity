@@ -41,7 +41,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const portal = await getCachedPortalBySlug(portalSlug);
 
   if (!festival) {
-    return { title: "Festival Not Found" };
+    return {
+      title: "Festival Not Found",
+      robots: {
+        index: false,
+        follow: false,
+      },
+    };
   }
 
   const portalName = portal?.name || "Lost City";
@@ -50,6 +56,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `${festival.name} | ${portalName}`,
     description,
+    alternates: {
+      canonical: `/${portal?.slug || portalSlug}/festivals/${slug}`,
+    },
     openGraph: {
       title: festival.name,
       description,
@@ -173,6 +182,22 @@ function getDurationLabel(festival: NonNullable<Awaited<ReturnType<typeof getFes
   return "Varies";
 }
 
+const SIMPLE_SCHEDULE_TYPES = new Set(["market", "fair"]);
+
+function formatTypeLabel(festivalType?: string | null): string {
+  if (!festivalType) return "Festival";
+  const map: Record<string, string> = {
+    festival: "Festival",
+    conference: "Conference",
+    convention: "Convention",
+    market: "Market",
+    fair: "Fair",
+    expo: "Expo",
+    tournament: "Tournament",
+  };
+  return map[festivalType] || "Festival";
+}
+
 export default async function PortalFestivalPage({ params }: Props) {
   const { slug, portal: portalSlug } = await params;
   const festival = await getCachedFestivalBySlug(slug);
@@ -246,7 +271,7 @@ export default async function PortalFestivalPage({ params }: Props) {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 4v16m0-12h9l-1.5 3L14 14H5" />
                 </svg>
-                Festival
+                {formatTypeLabel(festival.festival_type)}
               </span>
             }
           />
@@ -289,7 +314,10 @@ export default async function PortalFestivalPage({ params }: Props) {
               sessions={sessions}
               programs={programs}
               portalSlug={activePortalSlug}
+              previewLimit={24}
               fullScheduleHref={`/${activePortalSlug}/festivals/${festival.slug}/schedule`}
+              fullScheduleLabel="View Full Schedule"
+              festivalType={festival.festival_type}
             />
           ) : (
             <section className="rounded-lg border border-[var(--twilight)] bg-[var(--card-bg)] p-5 sm:p-6">
@@ -372,8 +400,8 @@ export default async function PortalFestivalPage({ params }: Props) {
             )}
           </InfoCard>
 
-          {/* Lineup / Featured Artists — labels auto-derived from artist disciplines */}
-          {festivalArtists.length > 0 && (
+          {/* Lineup / Featured Artists — hidden for markets/fairs */}
+          {festivalArtists.length > 0 && !SIMPLE_SCHEDULE_TYPES.has(festival.festival_type ?? "") && (
             <LineupSection
               artists={festivalArtists}
               portalSlug={activePortalSlug}

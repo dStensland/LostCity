@@ -213,8 +213,7 @@ export default function FestivalDebugPanel({ portalSlug }: { portalSlug: string 
                 <span>{festival.sessionCount} sessions</span>
               </div>
               <Link
-                href={`/${portalSlug}?festival=${festival.slug}`}
-                scroll={false}
+                href={`/${portalSlug}/festivals/${festival.slug}`}
                 className="ml-auto px-2.5 py-1 rounded-full text-[0.6rem] font-mono bg-[var(--neon-amber)]/20 text-[var(--neon-amber)] hover:bg-[var(--neon-amber)]/30 transition-colors"
               >
                 Open

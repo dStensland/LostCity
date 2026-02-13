@@ -57,6 +57,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!event) {
     return {
       title: "Event Not Found | Lost City",
+      robots: {
+        index: false,
+        follow: false,
+      },
     };
   }
 
@@ -71,6 +75,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `${event.title} | ${venueName} | ${portalName}`,
     description,
+    alternates: {
+      canonical: `/${portalSlug}/events/${event.id}`,
+    },
     openGraph: {
       title: event.title,
       description,
@@ -466,8 +473,7 @@ export default async function PortalEventPage({ params }: Props) {
                 <SectionHeader title="Series" />
                 {event.series.festival && (
                   <Link
-                    href={`/${activePortalSlug}?festival=${event.series.festival.slug}`}
-                    scroll={false}
+                    href={`/${activePortalSlug}/festivals/${event.series.festival.slug}`}
                     className={`flex items-center gap-3 p-4 rounded-lg border border-[var(--twilight)] bg-[var(--void)] transition-all hover:bg-[var(--card-bg-hover)] hover:border-[var(--soft)] group mb-3 ${festivalAccentClass?.className ?? ""}`}
                   >
                     <svg

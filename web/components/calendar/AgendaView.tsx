@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import Image from "@/components/SmartImage";
-import { format, isToday, isTomorrow, isThisWeek, isBefore, parseISO } from "date-fns";
+import { format, isToday, isBefore, parseISO } from "date-fns";
 import CategoryIcon from "@/components/CategoryIcon";
 import { formatTimeSplit, formatPriceDetailed, type PriceableEvent } from "@/lib/formats";
 import { getSmartDateLabel } from "@/lib/card-utils";
@@ -90,7 +90,7 @@ export default function AgendaView({
 
   if (sortedDates.length === 0) {
     return (
-      <div className="bg-gradient-to-br from-[var(--deep-violet)] to-[var(--midnight-blue)] rounded-xl border border-[var(--nebula)] p-8 text-center">
+      <div className="rounded-2xl border border-[var(--twilight)]/85 bg-[var(--void)]/65 shadow-[0_18px_40px_rgba(0,0,0,0.28)] p-8 text-center">
         <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[var(--twilight-purple)]/30 flex items-center justify-center">
           <svg
             className="w-8 h-8 text-[var(--muted)]"
@@ -121,7 +121,7 @@ export default function AgendaView({
   }
 
   return (
-    <div className="bg-gradient-to-br from-[var(--deep-violet)] to-[var(--midnight-blue)] rounded-xl border border-[var(--nebula)] overflow-hidden">
+    <div className="rounded-2xl border border-[var(--twilight)]/85 bg-[var(--void)]/65 shadow-[0_18px_40px_rgba(0,0,0,0.28)] overflow-hidden">
       {sortedDates.map((dateStr) => {
         const dayEvents = eventsByDate.get(dateStr) || [];
         const dayFriendEvents = friendEventsByDate.get(dateStr) || [];
@@ -129,14 +129,14 @@ export default function AgendaView({
         const isDateToday = isToday(parseISO(dateStr));
 
         return (
-          <div key={dateStr} className="border-b border-[var(--nebula)] last:border-b-0">
+          <div key={dateStr} className="border-b border-[var(--twilight)]/70 last:border-b-0">
             {/* Date header */}
             <div
               className={`
-                sticky top-0 z-10 px-4 py-3 border-b border-[var(--nebula)]/50
+                sticky top-0 z-10 px-4 py-3 border-b border-[var(--twilight)]/55
                 ${isDateToday
-                  ? "bg-[var(--twilight-purple)] text-[var(--neon-magenta)]"
-                  : "bg-[var(--deep-violet)] text-[var(--cream)]"
+                  ? "bg-[var(--twilight)]/70 text-[var(--gold)]"
+                  : "bg-[var(--night)]/92 text-[var(--cream)]"
                 }
               `}
             >
@@ -156,7 +156,7 @@ export default function AgendaView({
             </div>
 
             {/* Events for this date */}
-            <div className="divide-y divide-[var(--nebula)]/30">
+            <div className="divide-y divide-[var(--twilight)]/45">
               {dayEvents.map((event) => {
                 const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
                 const priceResult = formatPriceDetailed(event as PriceableEvent);
@@ -168,7 +168,7 @@ export default function AgendaView({
                     key={event.id}
                     href={`/${portalSlug}?event=${event.id}`}
                     scroll={false}
-                    className="flex gap-4 p-4 hover:bg-[var(--twilight-purple)]/20 transition-colors group"
+                    className="flex gap-4 p-4 hover:bg-[var(--twilight)]/25 transition-colors group"
                   >
                     {/* Event image or category icon */}
                     <div className="relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-[var(--cosmic-blue)]">
@@ -336,7 +336,7 @@ export default function AgendaView({
                       key={`friend-${friendEvent.id}-${friendEvent.friend.id}`}
                       href={`/${portalSlug}?event=${friendEvent.id}`}
                       scroll={false}
-                      className="flex gap-4 p-4 hover:bg-[var(--twilight-purple)]/20 transition-colors group bg-[var(--cosmic-blue)]/10"
+                      className="flex gap-4 p-4 hover:bg-[var(--twilight)]/20 transition-colors group bg-[var(--twilight)]/15"
                     >
                       {/* Friend indicator */}
                       <div className="relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 bg-[var(--twilight-purple)]/50 flex items-center justify-center">

@@ -775,87 +775,123 @@ export const CompactEventCard = memo(function CompactEventCard({ event, isAltern
   const isPopular = goingCount >= 10;
   const isTrending = event.is_trending || false;
   const eventStatus = getFeedEventStatus(event.start_date, event.start_time);
+  const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
+  const accentColor = event.category ? getCategoryColor(event.category) : "var(--neon-magenta)";
+  const reflectionClass = getReflectionClass(event.category);
+  const compactTimeLabel = event.is_all_day ? "All Day" : `${time}${period ? ` ${period}` : ""}`;
+  const compactCategoryLabel = event.category ? getCategoryLabel(event.category as CategoryType) : null;
 
   const hierarchyClass = isTrending ? "card-trending" : isPopular ? "card-popular" : "";
 
   return (
-    <Link
-      href={portalSlug ? `/${portalSlug}?event=${event.id}` : `/events/${event.id}`}
-      data-category={event.category || "other"}
-      data-accent={event.category ? "category" : ""}
-      className={`flex items-center gap-3 px-3 py-3 rounded-lg border transition-all group card-atmospheric glow-accent reflection-accent ${hierarchyClass} hover:border-[var(--coral)]/30 ${
-        isPopular || isTrending
-          ? "border-[var(--coral)]/20"
-          : isAlternate
-            ? "border-transparent"
-            : "border-[var(--twilight)]"
-      } ${isPopular ? "bg-[var(--coral-bg)]" : "bg-[var(--card-bg)]"} ${
-        event.category ? "border-l-[3px] border-l-[var(--accent-color)]" : ""
+    <div
+      className={`find-row-card rounded-xl border border-[var(--twilight)]/75 ${reflectionClass} ${hierarchyClass} overflow-hidden group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)] ${
+        event.category ? "border-l-[2px] border-l-[var(--accent-color)]" : ""
       }`}
+      data-list-row="true"
+      aria-label={`${event.title}, ${getSmartDateLabel(event.start_date)} ${event.is_all_day ? "all day" : `${compactTimeLabel}`}`}
+      style={
+        {
+          "--accent-color": accentColor,
+          "--cta-border": "color-mix(in srgb, var(--accent-color) 70%, transparent)",
+          "--cta-glow": "color-mix(in srgb, var(--accent-color) 35%, transparent)",
+          background:
+            isAlternate
+              ? "linear-gradient(180deg, color-mix(in srgb, var(--night) 80%, transparent), color-mix(in srgb, var(--dusk) 68%, transparent))"
+              : "linear-gradient(180deg, color-mix(in srgb, var(--night) 84%, transparent), color-mix(in srgb, var(--dusk) 72%, transparent))",
+        } as CSSProperties
+      }
     >
-      {/* Smart Time */}
-      <div className="flex-shrink-0 w-16 font-mono text-sm text-[var(--soft)] text-center">
-        <div className="font-medium">{event.start_time ? formatTime(event.start_time) : "All day"}</div>
-      </div>
-
-      {/* Category icon */}
-      {event.category && (
-        <CategoryIcon type={event.category} size={16} className="flex-shrink-0 opacity-60" />
-      )}
-
-      {/* Content */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="font-medium text-sm text-[var(--cream)] truncate transition-all group-hover:text-glow">
-            {event.title}
-          </span>
-          {isPopular && (
-            <span className="flex-shrink-0 text-[var(--coral)]">
-              <TrendingIcon className="w-3 h-3" />
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-2.5">
+        <Link
+          href={portalSlug ? `/${portalSlug}?event=${event.id}` : `/events/${event.id}`}
+          scroll={false}
+          data-row-primary-link="true"
+          data-category={event.category || "other"}
+          data-accent={event.category ? "category" : ""}
+          className="min-w-0"
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="flex-shrink-0 font-mono text-[0.72rem] font-semibold uppercase tracking-[0.1em] text-[var(--accent-color)] min-w-[76px] sm:min-w-[82px]">
+              {compactTimeLabel}
             </span>
-          )}
-        </div>
-        <div className="flex items-center gap-1.5 font-mono text-[0.65rem] text-[var(--muted)]">
-          {showDate && (
-            <>
-              <span>{getSmartDateLabel(event.start_date)}</span>
-              {event.venue && <span className="opacity-40">·</span>}
-            </>
-          )}
-          {event.venue && (
-            <span className="truncate">{event.venue.name}</span>
-          )}
-          {goingCount > 0 && (
-            <>
-              <span className="opacity-40">·</span>
-              <span className="text-[var(--coral)] font-medium">{goingCount} going</span>
-            </>
-          )}
-          {interestedCount > 0 && (
-            <>
-              <span className="opacity-40">·</span>
-              <span className="text-[var(--gold)] font-medium">{interestedCount} maybe</span>
-            </>
-          )}
-          {recommendationCount > 0 && (
-            <>
-              <span className="opacity-40">·</span>
-              <span className="text-[var(--lavender)] font-medium">{recommendationCount} rec&apos;d</span>
-            </>
-          )}
-        </div>
-      </div>
+            <span className="truncate text-[0.94rem] sm:text-[0.98rem] font-medium text-[var(--cream)] group-hover:text-[var(--accent-color)] transition-colors">
+              {event.title}
+            </span>
+            {compactCategoryLabel && (
+              <span className="inline-block max-w-[92px] sm:max-w-[140px] truncate flex-shrink-0 font-mono text-[0.62rem] font-medium uppercase tracking-[0.08em] text-[var(--muted)]">
+                {compactCategoryLabel}
+              </span>
+            )}
+            {isPopular && (
+              <span className="flex-shrink-0 text-[var(--coral)]">
+                <TrendingIcon className="w-3 h-3" />
+              </span>
+            )}
+          </div>
 
-      {/* Badges */}
-      <div className="flex-shrink-0 flex items-center gap-2">
-        {eventStatus === "live" && <LiveBadge />}
-        {eventStatus === "soon" && <SoonBadge />}
-        {event.is_free && <FreeBadge />}
-        <svg className="w-4 h-4 text-[var(--muted)] opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
+          <div className="mt-1 flex items-center gap-1.5 font-mono text-[0.62rem] text-[var(--muted)] min-w-0">
+            {showDate && (
+              <>
+                <span className="truncate">{getSmartDateLabel(event.start_date)}</span>
+                {event.venue && <span className="opacity-40">·</span>}
+              </>
+            )}
+            {event.venue?.name && <span className="truncate">{event.venue.name}</span>}
+            {event.is_free && (
+              <>
+                <span className="opacity-40">·</span>
+                <span className="text-[var(--neon-green)] font-medium">Free</span>
+              </>
+            )}
+            {!event.is_free && event.price_min !== null && (
+              <>
+                <span className="opacity-40">·</span>
+                <span className="truncate">From ${event.price_min}</span>
+              </>
+            )}
+            {goingCount > 0 && (
+              <>
+                <span className="opacity-40">·</span>
+                <span className="text-[var(--coral)] font-medium">{formatCompactCount(goingCount)} going</span>
+              </>
+            )}
+            {interestedCount > 0 && (
+              <>
+                <span className="opacity-40">·</span>
+                <span className="text-[var(--gold)] font-medium">{formatCompactCount(interestedCount)} maybe</span>
+              </>
+            )}
+            {recommendationCount > 0 && (
+              <>
+                <span className="opacity-40">·</span>
+                <span className="text-[var(--lavender)] font-medium">{formatCompactCount(recommendationCount)} rec&apos;d</span>
+              </>
+            )}
+          </div>
+        </Link>
+
+        <div className="flex items-center gap-1.5">
+          <div data-row-save-action="true">
+            <RSVPButton eventId={event.id} variant="compact" className="list-save-trigger" />
+          </div>
+          <div className="flex items-center gap-1.5">
+            {eventStatus === "live" && <LiveBadge />}
+            {eventStatus === "soon" && <SoonBadge />}
+            {event.is_free && <FreeBadge />}
+          </div>
+          <svg
+            className="w-4 h-4 text-[var(--muted)] opacity-70 group-hover:opacity-100 transition-opacity"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
       </div>
-    </Link>
+    </div>
   );
 });
 

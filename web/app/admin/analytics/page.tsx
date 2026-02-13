@@ -62,6 +62,10 @@ type AnalyticsData = {
     resource_clicked: number;
     wayfinding_open_rate: number;
     resource_click_rate: number;
+    conversion_action_rail_clicks: number;
+    conversion_action_rail_click_rate: number;
+    conversion_action_rail_by_mode: { mode: string; clicks: number; mode_selections: number; ctr: number | null }[];
+    conversion_action_rail_by_target_kind: { target_kind: string; clicks: number }[];
     mode_breakdown: { mode: string; count: number }[];
   };
   interaction_time_series: TimeSeriesPoint[];
@@ -306,7 +310,7 @@ export default function AnalyticsDashboardPage() {
                   <h2 className="font-mono text-xs text-[var(--muted)] uppercase tracking-wide mb-4">
                     Interaction Health
                   </h2>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
                     <AnalyticsKPICard
                       label="Mode Selections"
                       value={data.interaction_kpis.mode_selected}
@@ -322,6 +326,10 @@ export default function AnalyticsDashboardPage() {
                     <AnalyticsKPICard
                       label="Wayfinding / 100 Views"
                       value={data.interaction_kpis.wayfinding_open_rate}
+                    />
+                    <AnalyticsKPICard
+                      label="Rail Clicks / 100 Views"
+                      value={data.interaction_kpis.conversion_action_rail_click_rate}
                     />
                   </div>
                 </div>

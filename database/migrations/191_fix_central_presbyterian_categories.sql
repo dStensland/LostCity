@@ -6,7 +6,7 @@
 UPDATE venues
 SET venue_type = 'church',
     spot_type = 'church'
-WHERE slug = 'central-presbyterian-atlanta'
+WHERE slug = 'central-presbyterian-church'
   AND venue_type = 'event_space';
 
 -- Fix shelter / social services events
@@ -14,7 +14,7 @@ UPDATE events
 SET category = 'community',
     subcategory = 'service',
     tags = array_remove(tags, 'live-music')
-WHERE venue_id = (SELECT id FROM venues WHERE slug = 'central-presbyterian-atlanta')
+WHERE venue_id = (SELECT id FROM venues WHERE slug = 'central-presbyterian-church')
   AND category = 'music'
   AND (
     title ILIKE '%shelter%'
@@ -28,7 +28,7 @@ UPDATE events
 SET category = 'community',
     subcategory = 'advocacy',
     tags = array_remove(tags, 'live-music')
-WHERE venue_id = (SELECT id FROM venues WHERE slug = 'central-presbyterian-atlanta')
+WHERE venue_id = (SELECT id FROM venues WHERE slug = 'central-presbyterian-church')
   AND category = 'music'
   AND (
     title ILIKE '%advocacy%'
@@ -44,7 +44,7 @@ UPDATE events
 SET category = 'religious',
     subcategory = NULL,
     tags = array_remove(tags, 'live-music')
-WHERE venue_id = (SELECT id FROM venues WHERE slug = 'central-presbyterian-atlanta')
+WHERE venue_id = (SELECT id FROM venues WHERE slug = 'central-presbyterian-church')
   AND category = 'music'
   AND (
     title ILIKE '%worship%'
@@ -66,7 +66,7 @@ UPDATE events
 SET category = 'learning',
     subcategory = 'lecture',
     tags = array_remove(tags, 'live-music')
-WHERE venue_id = (SELECT id FROM venues WHERE slug = 'central-presbyterian-atlanta')
+WHERE venue_id = (SELECT id FROM venues WHERE slug = 'central-presbyterian-church')
   AND category = 'music'
   AND (
     title ILIKE '%lecture%'
@@ -86,7 +86,7 @@ UPDATE events
 SET category = 'community',
     subcategory = NULL,
     tags = array_remove(tags, 'live-music')
-WHERE venue_id = (SELECT id FROM venues WHERE slug = 'central-presbyterian-atlanta')
+WHERE venue_id = (SELECT id FROM venues WHERE slug = 'central-presbyterian-church')
   AND category = 'music'
   AND title NOT ILIKE '%concert%'
   AND title NOT ILIKE '%recital%'

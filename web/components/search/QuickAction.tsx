@@ -40,21 +40,27 @@ export function QuickAction({
       aria-selected={isSelected}
       onMouseDown={() => onSelect(action)}
       onMouseEnter={() => onHover(index)}
-      className={`flex items-center gap-2.5 w-full text-left px-3 py-2 text-sm rounded-lg transition-all mx-1 w-[calc(100%-8px)] ${
+      className={`flex items-start gap-2.5 w-full text-left px-3 py-2.5 rounded-lg transition-all mx-1 w-[calc(100%-8px)] border border-transparent ${
         isSelected
-          ? "bg-[var(--coral)]/20 text-[var(--coral)] translate-x-0.5"
+          ? "bg-[var(--coral)]/14 text-[var(--coral)] translate-x-0.5 border-[var(--coral)]/35"
           : "text-[var(--cream)] hover:bg-[var(--twilight)]/50"
       }`}
     >
       {/* Lightning bolt icon */}
-      <QuickActionIcon icon={action.icon} isSelected={isSelected} />
+      <span className="mt-0.5 inline-flex items-center justify-center w-7 h-7 rounded-md bg-[var(--twilight)]/70 flex-shrink-0">
+        <QuickActionIcon icon={action.icon} isSelected={isSelected} />
+      </span>
 
-      {/* Label */}
-      <span className="flex-1 font-medium">{action.label}</span>
+      <span className="flex-1 min-w-0">
+        <span className="block text-sm font-medium truncate">{action.label}</span>
+        <span className="block text-[0.66rem] text-[var(--muted)] truncate mt-0.5">
+          {action.description}
+        </span>
+      </span>
 
       {/* Arrow indicator */}
       <svg
-        className={`h-3 w-3 transition-transform ${
+        className={`h-3.5 w-3.5 mt-2 transition-transform ${
           isSelected ? "translate-x-0.5 text-[var(--coral)]" : "text-[var(--muted)]"
         }`}
         fill="none"
@@ -82,11 +88,11 @@ export default function QuickActionsList({
   if (actions.length === 0) return null;
 
   return (
-    <div className="py-1 border-b border-[var(--twilight)]">
+    <div className="pt-2 pb-1 border-b border-[var(--twilight)]">
       {/* Header */}
-      <div className="flex items-center gap-2 px-3 pb-1.5 pt-1">
+      <div className="flex items-center gap-2 px-3 pb-2">
         <svg
-          className="h-3 w-3 text-[var(--coral)]"
+          className="h-3.5 w-3.5 text-[var(--coral)]"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -98,7 +104,7 @@ export default function QuickActionsList({
             d="M13 10V3L4 14h7v7l9-11h-7z"
           />
         </svg>
-        <span className="text-[0.6rem] font-mono uppercase tracking-wider text-[var(--coral)]">
+        <span className="text-[0.64rem] font-mono uppercase tracking-wider text-[var(--coral)]">
           Quick Actions
         </span>
       </div>

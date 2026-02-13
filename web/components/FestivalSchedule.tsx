@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { FestivalSession, FestivalProgram } from "@/lib/festivals";
@@ -15,6 +15,7 @@ interface FestivalScheduleProps {
   prefetchLimit?: number;
   fullScheduleHref?: string;
   fullScheduleLabel?: string;
+  festivalType?: string | null;
 }
 
 function formatShortDate(dateStr: string): string {
@@ -47,7 +48,9 @@ export default function FestivalSchedule({
   prefetchLimit = 10,
   fullScheduleHref,
   fullScheduleLabel = "Open Full View",
+  festivalType,
 }: FestivalScheduleProps) {
+  const isSimplifiedView = festivalType === "market" || festivalType === "fair";
   const router = useRouter();
   const isPreviewEnabled = previewLimit > 0;
 
@@ -77,32 +80,69 @@ export default function FestivalSchedule({
   const sortedPrograms = useMemo(() => {
     return [...programs].sort((a, b) => a.title.localeCompare(b.title));
   }, [programs]);
+  const programTitleById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const program of programs) {
+      map.set(program.id, decodeHtmlEntities(program.title));
+    }
+    return map;
+  }, [programs]);
+  const daySessionCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const session of sessions) {
+      counts.set(session.start_date, (counts.get(session.start_date) || 0) + 1);
+    }
+    return counts;
+  }, [sessions]);
 
-  // Default to today if it's one of the festival days, otherwise first day
+  // Used for "today" indicator on day chips.
   const todayStr = useMemo(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   }, []);
-  const [selectedDay, setSelectedDay] = useState(
-    days.includes(todayStr) ? todayStr : days[0] || ""
-  );
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [selectedVenue, setSelectedVenue] = useState<number | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedProgram, setSelectedProgram] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(!isPreviewEnabled);
+  const controlsRef = useRef<HTMLDivElement>(null);
   const resetExpanded = () => setExpanded(!isPreviewEnabled);
   const hasDayTabs = days.length > 1;
-  const hasFilterControls = venues.length > 1 || categories.length > 1 || programs.length > 1;
+  const hasFilterControls = venues.length > 1 || (!isSimplifiedView && (categories.length > 1 || programs.length > 1));
+  const hasProgramContext = !isSimplifiedView && sortedPrograms.length > 1;
+  const effectiveSelectedDay = selectedDay !== null && days.includes(selectedDay) ? selectedDay : null;
+
+  const applyStickyOffset = useCallback(() => {
+    const headers = Array.from(document.querySelectorAll<HTMLElement>("header"));
+    const stickyHeader = headers.find((node) => {
+      const style = window.getComputedStyle(node);
+      return (style.position === "sticky" || style.position === "fixed") && node.getBoundingClientRect().height > 0;
+    });
+    const measured = stickyHeader ? Math.round(stickyHeader.getBoundingClientRect().height) : 56;
+    const clamped = Math.max(48, Math.min(160, measured));
+    controlsRef.current?.style.setProperty("--festival-schedule-sticky-top", `${clamped}px`);
+  }, []);
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(applyStickyOffset);
+    window.addEventListener("resize", applyStickyOffset, { passive: true });
+    window.addEventListener("orientationchange", applyStickyOffset, { passive: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("resize", applyStickyOffset);
+      window.removeEventListener("orientationchange", applyStickyOffset);
+    };
+  }, [applyStickyOffset]);
 
   const filtered = useMemo(() => {
     return sessions.filter((s) => {
-      if (selectedDay && s.start_date !== selectedDay) return false;
+      if (effectiveSelectedDay !== null && s.start_date !== effectiveSelectedDay) return false;
       if (selectedVenue !== null && s.venue?.id !== selectedVenue) return false;
       if (selectedCategory && s.category !== selectedCategory) return false;
       if (selectedProgram && s.series_id !== selectedProgram) return false;
       return true;
     });
-  }, [sessions, selectedDay, selectedVenue, selectedCategory, selectedProgram]);
+  }, [sessions, effectiveSelectedDay, selectedVenue, selectedCategory, selectedProgram]);
 
   const visibleSessions = useMemo(
     () => (!isPreviewEnabled || expanded ? filtered : filtered.slice(0, previewLimit)),
@@ -118,7 +158,7 @@ export default function FestivalSchedule({
     }
   }, [router, portalSlug, visibleSessions, prefetchLimit]);
 
-  const activeFilters = [selectedVenue, selectedCategory, selectedProgram].filter((v) => v !== null).length;
+  const activeFilters = [effectiveSelectedDay, selectedVenue, selectedCategory, selectedProgram].filter((v) => v !== null).length;
 
   return (
     <div id="schedule">
@@ -127,7 +167,7 @@ export default function FestivalSchedule({
           <svg className="w-5 h-5 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
-          Schedule
+          {isSimplifiedView ? "Hours & Events" : "Schedule"}
           <span className="text-sm font-normal text-[var(--muted)]">
             ({filtered.length} session{filtered.length !== 1 ? "s" : ""})
           </span>
@@ -147,7 +187,11 @@ export default function FestivalSchedule({
 
       {/* Mobile sticky controls + desktop static controls */}
       {(hasDayTabs || hasFilterControls) && (
-        <div className="sticky top-[56px] z-30 -mx-4 px-4 py-2 mb-4 border-y border-[var(--twilight)]/30 bg-[var(--void)]/95 backdrop-blur-sm sm:static sm:mx-0 sm:px-0 sm:py-0 sm:mb-4 sm:border-0 sm:bg-transparent sm:backdrop-blur-none">
+        <div
+          ref={controlsRef}
+          className="sticky z-30 -mx-4 px-4 py-2 mb-4 border-y border-[var(--twilight)]/30 bg-[var(--void)]/95 backdrop-blur-sm sm:static sm:mx-0 sm:px-0 sm:py-0 sm:mb-4 sm:border-0 sm:bg-transparent sm:backdrop-blur-none"
+          style={{ top: "var(--festival-schedule-sticky-top, 56px)" }}
+        >
           {/* Day tabs */}
           {hasDayTabs && (
             <div className="relative mb-2 sm:mb-4">
@@ -155,14 +199,27 @@ export default function FestivalSchedule({
               <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-[var(--void)] to-transparent z-10 pointer-events-none sm:hidden" />
               <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
                 <div className="flex gap-2 min-w-min">
+                  <button
+                    onClick={() => {
+                      setSelectedDay(null);
+                      resetExpanded();
+                    }}
+                    className={`relative px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                      effectiveSelectedDay === null
+                        ? "bg-accent-20 text-accent border border-accent-40"
+                        : "bg-[var(--twilight)]/30 text-[var(--soft)] hover:bg-[var(--twilight)]/60 border border-transparent"
+                    }`}
+                  >
+                    All dates
+                  </button>
                   {days.map((day) => {
-                    const isSelected = selectedDay === day;
+                    const isSelected = effectiveSelectedDay === day;
                     const isToday = day === todayStr;
                     return (
                       <button
                         key={day}
                         onClick={() => {
-                          setSelectedDay(day);
+                          setSelectedDay((prev) => (prev === day ? null : day));
                           resetExpanded();
                         }}
                         className={`relative px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
@@ -171,7 +228,10 @@ export default function FestivalSchedule({
                             : "bg-[var(--twilight)]/30 text-[var(--soft)] hover:bg-[var(--twilight)]/60 border border-transparent"
                         }`}
                       >
-                        {formatShortDate(day)}
+                        <span>{formatShortDate(day)}</span>
+                        <span className="ml-1.5 text-[0.65rem] opacity-75">
+                          {daySessionCounts.get(day) || 0}
+                        </span>
                         {isToday && (
                           <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-accent shadow-[0_0_6px_rgba(255,107,122,0.6)]" />
                         )}
@@ -205,8 +265,8 @@ export default function FestivalSchedule({
             </button>
           ))}
 
-          {/* Category chips */}
-          {categories.length > 1 && categories.map((c) => (
+          {/* Category chips (hidden for markets/fairs) */}
+          {!isSimplifiedView && categories.length > 1 && categories.map((c) => (
             <button
               key={c}
               onClick={() => {
@@ -224,8 +284,8 @@ export default function FestivalSchedule({
             </button>
           ))}
 
-          {/* Program chips — only show when manageable count */}
-          {sortedPrograms.length > 1 && sortedPrograms.length <= 8 && sortedPrograms.map((p) => (
+          {/* Program chips — hidden for markets/fairs, only show when manageable count */}
+          {!isSimplifiedView && sortedPrograms.length > 1 && sortedPrograms.length <= 8 && sortedPrograms.map((p) => (
             <button
               key={p.id}
               onClick={() => {
@@ -243,8 +303,8 @@ export default function FestivalSchedule({
             </button>
           ))}
 
-          {/* Program select for larger festivals */}
-          {sortedPrograms.length > 8 && (
+          {/* Program select for larger festivals (hidden for markets/fairs) */}
+          {!isSimplifiedView && sortedPrograms.length > 8 && (
             <label className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs border border-[var(--twilight)]/40 bg-[var(--twilight)]/10 text-[var(--soft)]">
               Program
               <select
@@ -269,6 +329,7 @@ export default function FestivalSchedule({
           {activeFilters > 0 && (
             <button
               onClick={() => {
+                setSelectedDay(null);
                 setSelectedVenue(null);
                 setSelectedCategory(null);
                 setSelectedProgram(null);
@@ -305,6 +366,11 @@ export default function FestivalSchedule({
                 >
                   {/* Time */}
                   <div className="flex-shrink-0 w-14 sm:w-20 pt-0.5 sm:pt-1">
+                    {effectiveSelectedDay === null && (
+                      <div className="font-mono text-[10px] text-[var(--muted)] mb-1 truncate">
+                        {formatShortDate(session.start_date)}
+                      </div>
+                    )}
                     <span className="inline-flex rounded px-1.5 py-0.5 font-mono text-[11px] sm:text-sm text-[var(--muted)] bg-[var(--twilight)]/25">
                       {formatTime(session.start_time) || "TBA"}
                     </span>
@@ -315,13 +381,17 @@ export default function FestivalSchedule({
                     <Link
                       href={`/${portalSlug}/events/${session.id}`}
                       prefetch
-                      scroll={false}
                       className="font-medium text-sm sm:text-base text-[var(--cream)] hover:text-accent transition-colors line-clamp-2"
                     >
                       {decodeHtmlEntities(session.title)}
                     </Link>
 
                     <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                      {hasProgramContext && session.series_id && programTitleById.get(session.series_id) && (
+                        <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium border border-[var(--twilight)]/50 bg-[var(--twilight)]/20 text-[var(--soft)]">
+                          {programTitleById.get(session.series_id)}
+                        </span>
+                      )}
                       {session.venue && (
                         <Link
                           href={`/${portalSlug}/spots/${session.venue.slug}`}
@@ -335,7 +405,7 @@ export default function FestivalSchedule({
                         </Link>
                       )}
 
-                      {session.category && (
+                      {!isSimplifiedView && session.category && (
                         <span
                           className="px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium border"
                           style={{

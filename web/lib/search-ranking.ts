@@ -241,6 +241,7 @@ const CATEGORY_PATTERNS: { pattern: RegExp; category: string; label: string }[] 
   { pattern: /\bjazz\b/i, category: "music", label: "jazz" },
   { pattern: /\bcomedy\b/i, category: "comedy", label: "comedy" },
   { pattern: /\blive music\b/i, category: "music", label: "live music" },
+  { pattern: /\blive\b/i, category: "music", label: "live music" },
   { pattern: /\bmusic\b/i, category: "music", label: "music" },
   { pattern: /\bart\b/i, category: "art", label: "art" },
   { pattern: /\bfilm\b/i, category: "film", label: "film" },

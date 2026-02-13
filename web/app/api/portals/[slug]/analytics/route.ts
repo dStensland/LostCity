@@ -138,6 +138,15 @@ export async function GET(
     resource_clicked: 0,
     wayfinding_open_rate: 0,
     resource_click_rate: 0,
+    conversion_action_rail_clicks: 0,
+    conversion_action_rail_click_rate: 0,
+    conversion_action_rail_by_mode: [] as Array<{
+      mode: string;
+      clicks: number;
+      mode_selections: number;
+      ctr: number | null;
+    }>,
+    conversion_action_rail_by_target_kind: [] as Array<{ target_kind: string; clicks: number }>,
     mode_breakdown: [] as Array<{ mode: string; count: number }>,
     interactions_by_day: [] as Array<{ date: string; count: number }>,
   };
@@ -178,6 +187,10 @@ export async function GET(
       resource_clicked: interactionSummary.resource_clicked,
       wayfinding_open_rate: interactionSummary.wayfinding_open_rate,
       resource_click_rate: interactionSummary.resource_click_rate,
+      conversion_action_rail_clicks: interactionSummary.conversion_action_rail_clicks,
+      conversion_action_rail_click_rate: interactionSummary.conversion_action_rail_click_rate,
+      conversion_action_rail_by_mode: interactionSummary.conversion_action_rail_by_mode,
+      conversion_action_rail_by_target_kind: interactionSummary.conversion_action_rail_by_target_kind,
       mode_breakdown: interactionSummary.mode_breakdown,
     },
   });

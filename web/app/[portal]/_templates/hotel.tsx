@@ -1,5 +1,6 @@
 import HotelConciergeFeed from "../_components/hotel/HotelConciergeFeed";
-import ForthConciergeExperience from "../_components/hotel/ForthConciergeExperience";
+import TonightExperienceView from "../_components/hotel/forth/views/TonightExperienceView";
+import { isForthVariantPortal } from "../_components/hotel/forth/server-utils";
 import type { Portal } from "@/lib/portal-context";
 
 interface HotelTemplateProps {
@@ -11,13 +12,10 @@ interface HotelTemplateProps {
  * Shows tonight-first feed, hotel amenities, neighborhood venues, and curated picks
  */
 export async function HotelTemplate({ portal }: HotelTemplateProps) {
-  const variant = typeof portal.settings?.experience_variant === "string"
-    ? portal.settings.experience_variant.toLowerCase()
-    : "";
-  const isForthVariant = portal.slug === "forth" || variant === "forth" || variant === "forth_signature";
+  const isForthVariant = isForthVariantPortal(portal);
 
   if (isForthVariant) {
-    return <ForthConciergeExperience portal={portal} />;
+    return <TonightExperienceView portal={portal} />;
   }
 
   return <HotelConciergeFeed portal={portal} />;

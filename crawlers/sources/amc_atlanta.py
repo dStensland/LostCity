@@ -1,7 +1,7 @@
 """
 Crawler for AMC Theatres Atlanta-area locations.
 
-Navigates to amctheatres.com showtime pages for each location,
+Navigates to amctheatres.com theater showtime pages for each location,
 extracts movie titles and showtimes using Playwright.
 6 locations: Phipps Plaza, North DeKalb, Southlake Pavilion,
 Sugarloaf Mills, Camp Creek, Mansell Crossing.
@@ -11,14 +11,16 @@ from __future__ import annotations
 
 import logging
 import re
-from datetime import datetime
-from typing import Optional
+from datetime import datetime, timedelta
 
 from playwright.sync_api import Page
 
 from sources.chain_cinema_base import ChainCinemaCrawler, parse_time
 
 logger = logging.getLogger(__name__)
+
+# Time pattern: "7:30pm", "3:00PM", "10:15am"
+TIME_RE = re.compile(r"^(\d{1,2}:\d{2})\s*(am|pm)$", re.IGNORECASE)
 
 
 class AMCAtlantaCrawler(ChainCinemaCrawler):
@@ -124,123 +126,181 @@ class AMCAtlantaCrawler(ChainCinemaCrawler):
     ]
 
     def get_showtime_url(self, location: dict, date: datetime) -> str:
-        date_str = date.strftime("%Y-%m-%d")
+        """Theater showtimes page with date parameter."""
         slug = location["url_slug"]
-        return f"https://www.amctheatres.com/movie-theatres/atlanta/{slug}/showtimes/all/{date_str}/all"
+        date_str = date.strftime("%Y-%m-%d")
+        return f"https://www.amctheatres.com/movie-theatres/atlanta/{slug}/showtimes?date={date_str}"
+
+    def _crawl_location(
+        self,
+        page: Page,
+        location: dict,
+        source_id: int,
+        venue_id: int,
+        venue_name: str,
+        seen_hashes: set[str],
+    ) -> tuple[int, int, int]:
+        """Override: navigate to each date URL directly (no tab clicking)."""
+        from db import insert_event, find_event_by_hash
+        from dedupe import generate_content_hash
+
+        found = 0
+        new = 0
+        updated = 0
+        today = datetime.now().date()
+
+        for day_offset in range(self.DAYS_AHEAD):
+            target_date = today + timedelta(days=day_offset)
+            target_dt = datetime.combine(target_date, datetime.min.time())
+            date_str = target_date.strftime("%Y-%m-%d")
+
+            url = self.get_showtime_url(location, target_dt)
+            logger.info(f"  Loading {venue_name} for {date_str}: {url}")
+
+            try:
+                page.goto(url, wait_until="domcontentloaded", timeout=30000)
+                page.wait_for_timeout(8000)
+            except Exception as e:
+                logger.warning(f"  Failed to load {url}: {e}")
+                continue
+
+            # Check for 404 / error page
+            body_text = page.inner_text("body")
+            if "gone off script" in body_text or "ERROR 404" in body_text:
+                logger.warning(f"  {venue_name}: 404 page — theater may have moved or closed")
+                return found, new, updated
+
+            movies = self.extract_showtimes(page, location, target_dt)
+
+            if not movies:
+                logger.debug(f"  No showtimes for {venue_name} on {date_str}")
+                continue
+
+            for movie in movies:
+                title = movie["title"]
+                times = movie["times"]
+                image_url = movie.get("image_url")
+
+                for start_time in times:
+                    found += 1
+                    content_hash = generate_content_hash(
+                        title, venue_name, f"{date_str}|{start_time}"
+                    )
+                    seen_hashes.add(content_hash)
+
+                    existing = find_event_by_hash(content_hash)
+                    if existing:
+                        updated += 1
+                        continue
+
+                    event_record = {
+                        "source_id": source_id,
+                        "venue_id": venue_id,
+                        "title": title,
+                        "description": None,
+                        "start_date": date_str,
+                        "start_time": start_time,
+                        "end_date": None,
+                        "end_time": None,
+                        "is_all_day": False,
+                        "category": "film",
+                        "subcategory": "cinema",
+                        "tags": ["film", "cinema", "chain-cinema", "showtime", self.CHAIN_TAG],
+                        "price_min": None,
+                        "price_max": None,
+                        "price_note": None,
+                        "is_free": False,
+                        "source_url": url,
+                        "ticket_url": None,
+                        "image_url": image_url,
+                        "raw_text": None,
+                        "extraction_confidence": 0.85,
+                        "is_recurring": False,
+                        "recurrence_rule": None,
+                        "content_hash": content_hash,
+                    }
+
+                    series_hint = {
+                        "series_type": "film",
+                        "series_title": title,
+                    }
+
+                    try:
+                        insert_event(event_record, series_hint=series_hint)
+                        new += 1
+                        logger.info(f"    Added: {title} at {start_time}")
+                    except Exception as e:
+                        logger.error(f"    Failed to insert {title}: {e}")
+
+            logger.info(f"  {venue_name} {date_str}: {len(movies)} movies found")
+
+        return found, new, updated
 
     def extract_showtimes(self, page: Page, location: dict, target_date: datetime) -> list[dict]:
         """Extract movies and showtimes from AMC showtime page.
 
-        AMC renders movie cards with showtime buttons. Structure:
-        - Movie title in h3 or showtime card header
-        - Showtime buttons with time text
-        - Movie poster images
+        AMC text structure per movie:
+            Movie Title
+            X HR Y MIN
+            RATING (G/PG/PG13/R/NC17/NR)
+            AMC Theater Name
+            FORMAT NAME (e.g. "DOLBY CINEMA AT AMC")
+            :
+            Format tagline (e.g. "COMPLETELY CAPTIVATING")
+            Amenities...
+            Time buttons (e.g. "7:30pm")
+            ...repeat format sections...
+            Next Movie Title
+            X HR Y MIN
+            ...
+
+        Key: movie titles are identified by being followed by a duration line.
+        Format taglines (after ':') are NOT movie titles.
         """
         movies = []
 
         try:
-            # Wait for showtime content to load
-            page.wait_for_selector(".ShowtimeButtons-amenityBtn, .Showtime--a, .showtimes-movie-container", timeout=10000)
+            body_text = page.inner_text("body")
         except Exception:
-            logger.debug(f"  No showtime elements found for {location['venue_data']['name']}")
-            # Try alternate approach with page text
-            return self._extract_from_text(page)
+            return movies
 
-        # Try to find movie containers
-        containers = page.query_selector_all(".ShowtimesMovieCard, .showtimes-movie-container, [data-testid='showtime-movie-card']")
+        lines = [line.strip() for line in body_text.split("\n") if line.strip()]
 
-        if not containers:
-            return self._extract_from_text(page)
+        time_re = re.compile(r"^(\d{1,2}:\d{2})(am|pm)", re.IGNORECASE)
+        duration_re = re.compile(r"^\d+ HR \d+ MIN$")
 
-        for container in containers:
-            try:
-                # Extract title
-                title_el = container.query_selector("h3, h2, .MovieTitleHeader-title, [data-testid='movie-title']")
-                if not title_el:
-                    continue
-                title = title_el.inner_text().strip()
-                if not title or len(title) < 2:
-                    continue
+        # Two-pass approach:
+        # Pass 1: Find movie titles (lines followed by duration lines)
+        movie_indices: list[int] = []
+        for i in range(len(lines) - 1):
+            if duration_re.match(lines[i + 1]) and len(lines[i]) > 2 and len(lines[i]) < 100:
+                movie_indices.append(i)
 
-                # Clean title
-                title = " ".join(title.split())
+        if not movie_indices:
+            return movies
 
-                # Extract showtimes
-                time_buttons = container.query_selector_all(".Showtime--a, .ShowtimeButtons-amenityBtn, button[data-testid='showtime-btn']")
-                times = []
-                for btn in time_buttons:
-                    try:
-                        btn_text = btn.inner_text().strip()
-                        parsed = parse_time(btn_text)
-                        if parsed and parsed not in times:
-                            times.append(parsed)
-                    except Exception:
-                        continue
+        # Pass 2: For each movie, collect all times until the next movie
+        for idx, movie_line_idx in enumerate(movie_indices):
+            title = " ".join(lines[movie_line_idx].split())
 
-                if not times:
-                    continue
+            # Collect times from this movie's section until next movie
+            end_idx = movie_indices[idx + 1] if idx + 1 < len(movie_indices) else len(lines)
+            times: list[str] = []
 
-                # Extract image
-                img_el = container.query_selector("img")
-                image_url = None
-                if img_el:
-                    image_url = img_el.get_attribute("src") or img_el.get_attribute("data-src")
+            for j in range(movie_line_idx + 1, end_idx):
+                time_match = time_re.match(lines[j])
+                if time_match:
+                    time_text = time_match.group(1) + time_match.group(2)
+                    parsed = parse_time(time_text)
+                    if parsed and parsed not in times:
+                        times.append(parsed)
 
+            if times:
                 movies.append({
                     "title": title,
                     "times": times,
-                    "image_url": image_url,
-                })
-
-            except Exception as e:
-                logger.debug(f"  Error parsing AMC movie container: {e}")
-                continue
-
-        return movies
-
-    def _extract_from_text(self, page: Page) -> list[dict]:
-        """Fallback text-based extraction for AMC pages."""
-        movies = []
-        try:
-            body_text = page.inner_text("body")
-            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
-
-            time_pattern = re.compile(r'^(\d{1,2}:\d{2})\s*(AM|PM)$', re.IGNORECASE)
-            current_movie = None
-            current_times: list[str] = []
-
-            for line in lines:
-                time_match = time_pattern.match(line)
-                if time_match:
-                    parsed = parse_time(line)
-                    if parsed and current_movie and parsed not in current_times:
-                        current_times.append(parsed)
-                elif len(line) > 3 and not time_pattern.match(line) and not line.startswith("•"):
-                    # Potential movie title - save previous movie
-                    if current_movie and current_times:
-                        movies.append({
-                            "title": current_movie,
-                            "times": current_times,
-                            "image_url": None,
-                        })
-                    # Check if this looks like a movie title (not UI text)
-                    skip_words = ["AMC", "Filter", "Sort", "Today", "Select", "Menu", "Sign", "Gift"]
-                    if not any(line.startswith(w) for w in skip_words) and len(line) < 100:
-                        current_movie = " ".join(line.split())
-                        current_times = []
-                    else:
-                        current_movie = None
-                        current_times = []
-
-            if current_movie and current_times:
-                movies.append({
-                    "title": current_movie,
-                    "times": current_times,
                     "image_url": None,
                 })
-
-        except Exception as e:
-            logger.warning(f"  AMC text extraction failed: {e}")
 
         return movies
 

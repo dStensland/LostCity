@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Edit Profile | Lost City",
-  description: "Edit your Lost City profile - update your username, display name, bio, and avatar.",
+  title: "Profile Details | Lost City",
+  description:
+    "Edit your Lost City profile details including display name, bio, location, and website.",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export default function ProfileSettingsLayout({

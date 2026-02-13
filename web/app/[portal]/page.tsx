@@ -1,5 +1,5 @@
 import { getCachedPortalBySlug, getPortalVertical } from "@/lib/portal";
-import { PortalHeader } from "@/components/headers";
+import { EmoryDemoHeader, PortalHeader } from "@/components/headers";
 import { AmbientBackground } from "@/components/ambient";
 import FindView from "@/components/find/FindViewLazy";
 import CommunityView from "@/components/community/CommunityView";
@@ -10,6 +10,10 @@ import { TimelineTemplate } from "./_templates/timeline";
 import { HotelTemplate } from "./_templates/hotel";
 import { HospitalTemplate } from "./_templates/hospital";
 import { normalizeHospitalMode } from "@/lib/hospital-modes";
+import { normalizeEmoryPersona, resolveHospitalModeForPersona } from "@/lib/emory-personas";
+import { isEmoryDemoPortal } from "@/lib/hospital-art";
+import { safeJsonLd } from "@/lib/formats";
+import { toAbsoluteUrl } from "@/lib/site-url";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
@@ -17,7 +21,7 @@ export const revalidate = 60;
 
 type ViewMode = "feed" | "find" | "community";
 type FeedTab = "curated" | "foryou";
-type FindType = "events" | "classes" | "destinations";
+type FindType = "events" | "classes" | "destinations" | "showtimes";
 type FindDisplay = "list" | "map" | "calendar";
 
 type PortalSearchParams = {
@@ -37,6 +41,7 @@ type PortalSearchParams = {
   display?: string;
   mood?: string;
   mode?: string;
+  persona?: string;
   // Detail view params
   event?: string;
   spot?: string;
@@ -62,13 +67,15 @@ export default async function PortalPage({ params, searchParams }: Props) {
 
   // Check vertical type for hotel/specialty portals
   const vertical = getPortalVertical(portal);
+  const isEmoryPortal = isEmoryDemoPortal(portal.slug);
   const isHotel = vertical === "hotel";
-  const isHospital = vertical === "hospital";
+  const isHospital = vertical === "hospital" || isEmoryPortal;
+  const isEmoryNativeHospital = isHospital && isEmoryPortal;
 
   // Hotel portals always show the hotel feed (no view switching)
   if (isHotel) {
     return (
-      <div className="min-h-screen">
+      <div className="min-h-screen overflow-x-hidden">
         <Suspense fallback={null}>
           <DetailViewRouter portalSlug={portal.slug}>
             <HotelTemplate portal={portal} />
@@ -162,28 +169,60 @@ export default async function PortalPage({ params, searchParams }: Props) {
     searchParamsData.date ||
     searchParamsData.mood
   );
-  const hospitalMode = normalizeHospitalMode(searchParamsData.mode);
+  const emoryPersona = normalizeEmoryPersona(searchParamsData.persona);
+  const hospitalMode = isHospital
+    ? resolveHospitalModeForPersona({
+        persona: emoryPersona,
+        modeParam: searchParamsData.mode,
+      })
+    : normalizeHospitalMode(searchParamsData.mode);
+  const portalPageSchema = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: `${portal.name} Events | Lost City`,
+    description: portal.tagline || `Find events, people, and community in ${portal.name}.`,
+    url: toAbsoluteUrl(`/${portal.slug}`),
+    isPartOf: {
+      "@type": "WebSite",
+      name: "Lost City",
+      url: toAbsoluteUrl("/"),
+    },
+  };
+
+  const mainClassName =
+    viewMode === "find" && findDisplay === "map"
+      ? ""
+      : viewMode === "find" && findDisplay === "calendar"
+        ? "max-w-[1500px] mx-auto px-4 pb-20"
+        : isEmoryNativeHospital
+          ? "max-w-6xl mx-auto px-4 pb-20"
+          : "max-w-5xl mx-auto px-4 pb-20";
 
   return (
-    <div className="min-h-screen">
-      {/* Portal-aware ambient background effect */}
-      <AmbientBackground />
-
-      {/* Portal-aware header (template selected from branding) */}
-      <PortalHeader
-        portalSlug={portal.slug}
-        portalName={portal.name}
+    <div className={`min-h-screen ${isEmoryNativeHospital ? "bg-[#f2f5fa] text-[#002f6c]" : ""}`}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(portalPageSchema) }}
       />
+      {isEmoryNativeHospital && (
+        <style>{`
+          body::before { opacity: 0 !important; }
+          body::after { opacity: 0 !important; }
+          .ambient-glow { opacity: 0 !important; }
+          .rain-overlay { display: none !important; }
+        `}</style>
+      )}
+      {!isEmoryNativeHospital && <AmbientBackground />}
+      {isEmoryNativeHospital ? (
+        <EmoryDemoHeader portalSlug={portal.slug} />
+      ) : (
+        <PortalHeader
+          portalSlug={portal.slug}
+          portalName={portal.name}
+        />
+      )}
 
-      <main
-        className={
-          viewMode === "find" && findDisplay === "map"
-            ? ""
-            : viewMode === "find" && findDisplay === "calendar"
-              ? "max-w-[1500px] mx-auto px-4 pb-20"
-              : "max-w-5xl mx-auto px-4 pb-20"
-        }
-      >
+      <main className={mainClassName}>
         {/* DetailViewRouter handles showing detail views (event, venue, series, org) as overlays.
             It uses useSearchParams which requires Suspense, but we use a minimal fallback since
             each content view below has its own appropriate skeleton. */}
@@ -200,7 +239,12 @@ export default async function PortalPage({ params, searchParams }: Props) {
                   {viewMode === "feed" && (
                     <Suspense fallback={<FeedSkeleton />}>
                       {isHospital ? (
-                        <HospitalTemplate portal={portal} feedTab={feedTab} mode={hospitalMode} />
+                        <HospitalTemplate
+                          portal={portal}
+                          feedTab={feedTab}
+                          mode={hospitalMode}
+                          persona={emoryPersona}
+                        />
                       ) : (
                         /* Template system - select based on portal.page_template */
                         portal.page_template === "gallery" ? (
@@ -253,8 +297,8 @@ function FindViewSkeleton() {
   return (
     <div className="py-6 space-y-4">
       {/* Type selector skeleton */}
-      <div className="flex gap-1 p-1 bg-[var(--night)] rounded-xl border border-[var(--twilight)]/30 max-w-md">
-        {[1, 2, 3].map((i) => (
+      <div className="flex gap-1 p-1 bg-[var(--night)] rounded-xl border border-[var(--twilight)]/30 max-w-lg">
+        {[1, 2, 3, 4].map((i) => (
           <div key={i} className="flex-1 h-10 skeleton-shimmer rounded-lg" />
         ))}
       </div>

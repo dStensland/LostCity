@@ -65,19 +65,21 @@ const HOLIDAYS: HolidayConfig[] = [
     tag: "mardi-gras",
     title: "Mardi Gras",
     subtitle: "Laissez les bons temps rouler",
-    gradient: "linear-gradient(135deg, #0d0520 0%, #1a0a35 30%, #15082a 60%, #0d0520 100%)",
-    accentColor: "#f0c420",
-    glowColor: "#9b59b6",
-    icon: "\u269C\uFE0F",
+    gradient: "linear-gradient(135deg, #0d0520 0%, #1a0a35 25%, #0a1a08 50%, #1a1505 75%, #0d0520 100%)",
+    accentColor: "#ffd700",
+    glowColor: "#d040ff",
+    icon: "/images/mardi-gras-mask.svg",
     showFrom: [2, 15],
     showUntil: [2, 17],
     eventDate: [2026, 2, 17],
+    iconBgGlow: true,
+    iconGlowRing: true,
   },
   {
     slug: "lunar-new-year",
     tag: "lunar-new-year",
     title: "Lunar New Year",
-    subtitle: "G\u014Dng x\u01D0 f\u0101 c\u00E1i \u2014 Year of the Horse",
+    subtitle: "A Year of Fire Horsin' Around",
     gradient: "linear-gradient(135deg, #1a0505 0%, #350a0a 30%, #2a0808 60%, #1a0303 100%)",
     accentColor: "#ff4444",
     glowColor: "#cc0000",
@@ -92,31 +94,37 @@ const HOLIDAYS: HolidayConfig[] = [
     tag: "black-history-month",
     title: "Black History Month",
     subtitle: "Honoring Black culture, art & community in Atlanta",
-    gradient: "linear-gradient(135deg, #0a0a05 0%, #1a1508 30%, #0f0d05 60%, #0a0a05 100%)",
-    accentColor: "#d4a017",
-    glowColor: "#c8960e",
+    gradient: "linear-gradient(135deg, #1a0505 0%, #0c0c0c 35%, #0c0c0c 65%, #051a05 100%)",
+    accentColor: "#e53935",
+    glowColor: "#43a047",
     icon: "\u270A\uD83C\uDFFF",
     showFrom: [2, 1],
     showUntil: [2, 28],
     eventDate: [2026, 2, 1],
     countdownOverride: "ALL MONTH",
+    iconGlowRing: true,
   },
 ];
 
-/** Returns the slug of any holiday currently promoted to hero, so HolidayGrid can exclude it */
-export function getActiveHeroSlug(): string | null {
+/** Returns slugs of all holidays currently promoted to hero (up to 2), sorted by nearest event date */
+export function getActiveHeroSlugs(): string[] {
   const now = new Date();
-  const month = now.getMonth() + 1;
-  const day = now.getDate();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-  for (const h of HOLIDAYS) {
-    const [fromM, fromD] = h.showFrom;
-    const [untilM, untilD] = h.showUntil;
-    const afterStart = month > fromM || (month === fromM && day >= fromD);
-    const beforeEnd = month < untilM || (month === untilM && day <= untilD);
-    if (afterStart && beforeEnd) return h.slug;
-  }
-  return null;
+  const active = HOLIDAYS
+    .filter(h => isHolidayActive(h))
+    .map(h => {
+      const eventDate = new Date(h.eventDate[0], h.eventDate[1] - 1, h.eventDate[2]);
+      const daysUntil = Math.ceil((eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      return { slug: h.slug, daysUntil, isObservance: !!h.countdownOverride };
+    })
+    .sort((a, b) => {
+      // Single-day holidays sort before month-long observances
+      if (a.isObservance !== b.isObservance) return a.isObservance ? 1 : -1;
+      return a.daysUntil - b.daysUntil;
+    });
+
+  return active.slice(0, 2).map(h => h.slug);
 }
 
 function isHolidayActive(h: HolidayConfig): boolean {
@@ -127,7 +135,16 @@ function isHolidayActive(h: HolidayConfig): boolean {
   const [untilM, untilD] = h.showUntil;
   const afterStart = month > fromM || (month === fromM && day >= fromD);
   const beforeEnd = month < untilM || (month === untilM && day <= untilD);
-  return afterStart && beforeEnd;
+  if (!afterStart || !beforeEnd) return false;
+
+  // Single-day holidays expire after their event date passes
+  if (!h.countdownOverride) {
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const eventDate = new Date(h.eventDate[0], h.eventDate[1] - 1, h.eventDate[2]);
+    if (eventDate < today) return false;
+  }
+
+  return true;
 }
 
 function computeCountdown(h: HolidayConfig): { countdown: string; daysUntil: number } {
@@ -351,34 +368,22 @@ function HolidayCard({
 }
 
 // ============================================================================
-// HolidayHero — shows the first active holiday (Valentine's gets priority)
+// HolidayHero — shows active holidays sorted by nearest event date
 // ============================================================================
 
 interface HolidayHeroProps {
   portalSlug: string;
-  /** If set, only show this specific holiday slug */
-  slug?: string;
-  /** Slugs to exclude from matching (used when a holiday is shown elsewhere) */
-  exclude?: string[];
+  /** Which hero position (1 = nearest event, 2 = second nearest). Default 1. */
+  position?: number;
 }
 
-export default function HolidayHero({ portalSlug, slug, exclude }: HolidayHeroProps) {
+export default function HolidayHero({ portalSlug, position = 1 }: HolidayHeroProps) {
   const [eventCount, setEventCount] = useState<number | null>(null);
 
-  // Find the right holiday
-  let holiday: ReturnType<typeof getActiveHoliday> = null;
-  if (slug) {
-    holiday = getActiveHoliday(slug);
-  } else {
-    // First active match, skipping excluded slugs
-    for (const h of HOLIDAYS) {
-      if (exclude?.includes(h.slug)) continue;
-      if (!isHolidayActive(h)) continue;
-      const { countdown, daysUntil } = computeCountdown(h);
-      holiday = { ...h, countdown, daysUntil };
-      break;
-    }
-  }
+  // Get the holiday for this position, sorted by nearest event date
+  const slugs = getActiveHeroSlugs();
+  const targetSlug = slugs[position - 1] ?? null;
+  const holiday = targetSlug ? getActiveHoliday(targetSlug) : null;
 
   useEffect(() => {
     if (!holiday) return;

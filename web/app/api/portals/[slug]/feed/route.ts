@@ -314,7 +314,17 @@ export async function GET(request: NextRequest, { params }: Props) {
   const allSections = (sectionsData || []) as Section[];
 
   // Filter sections by visibility rules
-  const sections = allSections.filter(isSectionVisible);
+  const sections = allSections.filter((section) => {
+    if (!isSectionVisible(section)) return false;
+
+    // "Outdoor Wellness" is a health-vertical block and feels out of place in
+    // general city feed experiences; keep it for hospital portals only.
+    if (section.slug === "outdoor-wellness" && portal.portal_type !== "hospital") {
+      return false;
+    }
+
+    return true;
+  });
 
   // Collect all event IDs from curated sections
   const eventIds = new Set<number>();
@@ -715,8 +725,8 @@ export async function GET(request: NextRequest, { params }: Props) {
       });
     }
 
-    // Valentine's Day section (Jan 20 - Feb 16)
-    if ((currentMonth === 1 && currentDay >= 20) || (currentMonth === 2 && currentDay <= 16)) {
+    // Valentine's Day section (Jan 20 - Feb 14)
+    if ((currentMonth === 1 && currentDay >= 20) || (currentMonth === 2 && currentDay <= 14)) {
       holidaySections.push({
         id: `valentines-${currentYear}`,
         title: "Valentine's Day",
@@ -748,8 +758,8 @@ export async function GET(request: NextRequest, { params }: Props) {
       });
     }
 
-    // Mardi Gras section (Feb 12-18 for Fat Tuesday Feb 17, 2026)
-    if (currentMonth === 2 && currentDay >= 12 && currentDay <= 18) {
+    // Mardi Gras section (Feb 12-17 for Fat Tuesday Feb 17, 2026)
+    if (currentMonth === 2 && currentDay >= 12 && currentDay <= 17) {
       holidaySections.push({
         id: `mardi-gras-${currentYear}`,
         title: "Mardi Gras",
@@ -774,8 +784,8 @@ export async function GET(request: NextRequest, { params }: Props) {
         show_after_time: null,
         show_before_time: null,
         style: {
-          accent_color: "#9b59b6", // Purple
-          icon: "fleur-de-lis",
+          accent_color: "#ffd700", // Mardi Gras gold
+          icon: "mardi-gras-mask",
         },
         portal_section_items: [],
       });
@@ -787,7 +797,7 @@ export async function GET(request: NextRequest, { params }: Props) {
         id: `lunar-new-year-${currentYear}`,
         title: "Lunar New Year",
         slug: "lunar-new-year",
-        description: "A whole year of fire horsin around",
+        description: "A Year of Fire Horsin' Around",
         section_type: "auto",
         block_type: "collapsible_events",
         layout: "grid",
@@ -873,7 +883,7 @@ export async function GET(request: NextRequest, { params }: Props) {
         show_after_time: null,
         show_before_time: null,
         style: {
-          accent_color: "#9B59B6", // Purple
+          accent_color: "#e53935", // Pan-African red
           icon: "raised-fist",
         },
         portal_section_items: [],

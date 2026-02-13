@@ -44,11 +44,12 @@ export default function DayCell({
   isSelected,
   onClick,
 }: DayCellProps) {
-  const MAX_VISIBLE_EVENTS = 3;
-  const visibleEvents = events.slice(0, MAX_VISIBLE_EVENTS);
-  const overflowCount = events.length - MAX_VISIBLE_EVENTS;
   const hasEvents = events.length > 0;
   const hasFriendEvents = friendEvents.length > 0;
+  const eventCount = events.length;
+  const uniqueCategories = Array.from(new Set(events.map((event) => event.category).filter(Boolean))).slice(0, 3);
+  const topCategory = uniqueCategories[0] || null;
+  const extraCategoryCount = Math.max(uniqueCategories.length - 1, 0);
 
   // Get unique friend avatars
   const friendAvatars = Array.from(
@@ -56,83 +57,61 @@ export default function DayCell({
   ).slice(0, 3);
 
   const dayNumber = format(date, "d");
-  const dayName = format(date, "EEE");
+  const eventCountLabel = eventCount > 99 ? "99+" : String(eventCount);
 
   return (
     <button
       onClick={onClick}
       disabled={!isCurrentMonth}
       className={`
-        relative min-h-[90px] p-1.5 rounded-lg border transition-all duration-200 text-left
+        relative min-h-[68px] sm:min-h-[76px] p-1.5 rounded-lg border transition-all duration-150 text-left outline-none
+        focus-visible:ring-2 focus-visible:ring-[var(--coral)]/70 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--void)]
         ${isCurrentMonth
-          ? "hover:border-[var(--coral)]/50 hover:scale-[1.01]"
-          : "opacity-30 cursor-default"
+          ? "hover:border-[var(--coral)]/55 hover:bg-[var(--twilight)]/42"
+          : "opacity-30 cursor-default pointer-events-none"
         }
         ${isSelected
-          ? "border-[var(--coral)] bg-[var(--cosmic-blue)] shadow-[0_0_15px_rgba(255,107,107,0.2)]"
-          : "border-[var(--nebula)]/30 bg-[var(--midnight-blue)] hover:bg-[var(--twilight-purple)]/30"
+          ? "border-[var(--gold)] bg-[var(--twilight)]/72 shadow-[0_10px_24px_rgba(0,0,0,0.26)]"
+          : "border-[var(--twilight)]/60 bg-[var(--night)]/34"
         }
         ${isToday && !isSelected
-          ? "ring-2 ring-[var(--neon-magenta)] ring-offset-1 ring-offset-[var(--deep-violet)]"
+          ? "ring-2 ring-[var(--gold)] ring-offset-1 ring-offset-[var(--void)]"
           : ""
         }
-        ${isPast && !isSelected ? "opacity-60" : ""}
+        ${isPast && !isSelected ? "opacity-70" : ""}
       `}
+      aria-label={`${format(date, "EEEE, MMMM d, yyyy")}${eventCount > 0 ? `, ${eventCount} events` : ", no events"}`}
     >
-      {/* Header row: date + day name */}
-      <div className="flex items-baseline justify-between mb-1">
+      <div className="flex items-start justify-between gap-1">
         <span
           className={`
-            font-mono text-sm font-semibold
-            ${isToday ? "text-[var(--neon-magenta)]" : ""}
-            ${isSelected ? "text-[var(--coral)]" : ""}
-            ${!isToday && !isSelected ? (isPast ? "text-[var(--muted)]" : "text-[var(--cream)]") : ""}
+            font-mono text-[13px] font-semibold
+            ${isToday ? "text-[var(--gold)]" : ""}
+            ${isSelected && !isToday ? "text-[var(--cream)]" : ""}
+            ${!isToday && !isSelected ? (isPast ? "text-[var(--soft)]/70" : "text-[var(--cream)]/95") : ""}
           `}
         >
           {dayNumber}
         </span>
-        <span className="font-mono text-[0.55rem] text-[var(--muted)] uppercase">
-          {dayName}
-        </span>
+        {hasEvents && isCurrentMonth && (
+          <span className={`inline-flex items-center px-1.5 py-0.5 rounded-md font-mono text-[0.58rem] font-semibold border leading-none ${
+            isSelected
+              ? "text-[var(--cream)] border-[var(--gold)]/50 bg-[var(--twilight)]/88"
+              : eventCount >= 6
+                ? "text-[var(--cream)] border-[var(--coral)]/55 bg-[var(--coral)]/22"
+                : "text-[var(--soft)] border-[var(--twilight)]/75 bg-[var(--void)]/56"
+          }`}>
+            {eventCountLabel}
+          </span>
+        )}
       </div>
 
-      {/* Events list */}
-      {hasEvents && isCurrentMonth && (
-        <div className="space-y-0.5">
-          {visibleEvents.map((event) => (
-            <div
-              key={event.id}
-              className="flex items-center gap-1 group/event"
-              title={event.title}
-            >
-              {/* Category dot */}
-              <span
-                data-category={event.category}
-                className="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-[var(--category-color)]"
-              />
-              {/* Event title */}
-              <span className="text-[0.6rem] text-[var(--cream)] truncate leading-tight">
-                {event.title}
-              </span>
-            </div>
-          ))}
-
-          {/* Overflow indicator */}
-          {overflowCount > 0 && (
-            <span className="text-[0.55rem] text-[var(--muted)] font-mono">
-              +{overflowCount} more
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* Friend avatars at bottom */}
       {hasFriendEvents && isCurrentMonth && (
-        <div className="absolute bottom-1 right-1 flex -space-x-1">
+        <div className="absolute bottom-1.5 right-1.5 flex -space-x-1">
           {friendAvatars.map((friend) => (
             <div
               key={friend.id}
-              className="w-4 h-4 rounded-full border border-[var(--cosmic-blue)] overflow-hidden bg-[var(--twilight-purple)]"
+              className="w-4 h-4 rounded-full border border-[var(--void)] overflow-hidden bg-[var(--twilight-purple)]"
               title={friend.display_name || friend.username}
             >
               {friend.avatar_url ? (
@@ -151,29 +130,34 @@ export default function DayCell({
             </div>
           ))}
           {friendEvents.length > 3 && (
-            <span className="w-4 h-4 rounded-full border border-[var(--cosmic-blue)] bg-[var(--twilight-purple)] flex items-center justify-center text-[0.4rem] text-[var(--muted)]">
+            <span className="w-4 h-4 rounded-full border border-[var(--void)] bg-[var(--twilight-purple)] flex items-center justify-center text-[0.4rem] text-[var(--muted)]">
               +{friendEvents.length - 3}
             </span>
           )}
         </div>
       )}
 
-      {/* RSVP status indicators */}
       {hasEvents && isCurrentMonth && (
-        <div className="absolute top-1 right-1 flex gap-0.5">
-          {events.some((e) => e.rsvp_status === "going") && (
+        <div className="absolute bottom-1.5 left-1.5 flex items-center gap-1">
+          {topCategory && (
             <span
-              className="w-2 h-2 rounded-full bg-[var(--coral)]"
-              title="Going"
+              data-category={topCategory}
+              className="w-1.5 h-1.5 rounded-full bg-[var(--category-color,var(--muted))]"
             />
           )}
-          {events.some((e) => e.rsvp_status === "interested") &&
-           !events.some((e) => e.rsvp_status === "going") && (
-            <span
-              className="w-2 h-2 rounded-full bg-[var(--gold)]"
-              title="Interested"
-            />
+          {extraCategoryCount > 0 && (
+            <span className="font-mono text-[0.5rem] text-[var(--muted)]/90">
+              +{extraCategoryCount}
+            </span>
           )}
+          <span
+            className={`w-1.5 h-1.5 rounded-full ${
+              events.some((e) => e.rsvp_status === "going")
+                ? "bg-[var(--coral)]"
+                : "bg-[var(--gold)]"
+            }`}
+            title={events.some((e) => e.rsvp_status === "going") ? "Going" : "Interested"}
+          />
         </div>
       )}
     </button>

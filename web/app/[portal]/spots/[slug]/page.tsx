@@ -36,12 +36,17 @@ type Props = {
 const getCachedSpotBySlug = cache(getSpotBySlug);
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { slug } = await params;
+  const { slug, portal: portalSlug } = await params;
   const spot = await getCachedSpotBySlug(slug);
+  const portal = await getCachedPortalBySlug(portalSlug);
 
   if (!spot) {
     return {
       title: "Spot Not Found | Lost City",
+      robots: {
+        index: false,
+        follow: false,
+      },
     };
   }
 
@@ -52,6 +57,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `${spot.name} | Lost City`,
     description,
+    alternates: {
+      canonical: `/${portal?.slug || portalSlug}/spots/${slug}`,
+    },
     openGraph: {
       title: spot.name,
       description,

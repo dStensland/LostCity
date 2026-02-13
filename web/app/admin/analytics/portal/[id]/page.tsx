@@ -49,6 +49,10 @@ type PortalAnalytics = {
     resource_clicked: number;
     wayfinding_open_rate: number;
     resource_click_rate: number;
+    conversion_action_rail_clicks: number;
+    conversion_action_rail_click_rate: number;
+    conversion_action_rail_by_mode: { mode: string; clicks: number; mode_selections: number; ctr: number | null }[];
+    conversion_action_rail_by_target_kind: { target_kind: string; clicks: number }[];
     mode_breakdown: { mode: string; count: number }[];
   };
   content: {
@@ -325,7 +329,7 @@ export default function PortalAnalyticsPage({ params }: Props) {
           <h2 className="font-mono text-xs text-[var(--muted)] uppercase tracking-wide mb-4">
             Interaction Health
           </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
             <AnalyticsKPICard
               label="Mode Selections"
               value={data.interaction_kpis.mode_selected}
@@ -342,8 +346,30 @@ export default function PortalAnalyticsPage({ params }: Props) {
               label="Wayfinding / 100 Views"
               value={data.interaction_kpis.wayfinding_open_rate}
             />
+            <AnalyticsKPICard
+              label="Rail Clicks / 100 Views"
+              value={data.interaction_kpis.conversion_action_rail_click_rate}
+            />
           </div>
         </div>
+
+        {data.interaction_kpis.conversion_action_rail_by_mode.length > 0 && (
+          <div className="mb-8">
+            <h2 className="font-mono text-xs text-[var(--muted)] uppercase tracking-wide mb-4">
+              Action Rail CTR by Mode
+            </h2>
+            <div className="bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg p-6 space-y-2">
+              {data.interaction_kpis.conversion_action_rail_by_mode.map((entry) => (
+                <div key={entry.mode} className="flex items-center justify-between gap-3">
+                  <span className="font-mono text-xs text-[var(--muted)] capitalize">{entry.mode}</span>
+                  <span className="font-mono text-xs text-[var(--cream)]">
+                    {entry.clicks} clicks · {entry.mode_selections} selections · {entry.ctr === null ? "n/a" : `${entry.ctr.toFixed(2)}%`}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Charts */}
         <div className="mb-8">

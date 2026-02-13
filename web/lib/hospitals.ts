@@ -197,6 +197,33 @@ export function getHospitalWayfindingHref(hospital: HospitalLocation): string {
   return `https://maps.google.com/?q=${encodeURIComponent(`${hospital.name} ${hospital.address}`)}`;
 }
 
+function readMetadataUrl(metadata: Record<string, unknown> | null, keys: string[]): string | null {
+  if (!metadata) return null;
+  for (const key of keys) {
+    const value = metadata[key];
+    if (typeof value !== "string") continue;
+    const trimmed = value.trim();
+    if (!trimmed) continue;
+    if (/^https?:\/\//i.test(trimmed) || trimmed.startsWith("/")) {
+      return trimmed;
+    }
+  }
+  return null;
+}
+
+export function getHospitalBookVisitHref(hospital: HospitalLocation): string {
+  const metadataUrl = readMetadataUrl(hospital.metadata, [
+    "book_visit_url",
+    "appointment_url",
+    "appointments_url",
+    "patient_portal_url",
+    "visit_url",
+  ]);
+  if (metadataUrl) return metadataUrl;
+  if (hospital.website) return hospital.website;
+  return getHospitalWayfindingHref(hospital);
+}
+
 export function getVenueMapsHref(venue: Pick<HospitalNearbyVenue, "name" | "address">): string {
   const query = venue.address ? `${venue.name} ${venue.address}` : venue.name;
   return `https://maps.google.com/?q=${encodeURIComponent(query)}`;

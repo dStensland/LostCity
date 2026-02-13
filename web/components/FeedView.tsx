@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { usePortal } from "@/lib/portal-context";
 import FeedSection, { type FeedSectionData, THEMED_SLUGS, HolidayGrid } from "./feed/FeedSection";
-import { getActiveHeroSlug } from "./feed/HolidayHero";
+import { getActiveHeroSlugs } from "./feed/HolidayHero";
 import FestivalDebugPanel from "@/components/FestivalDebugPanel";
 
 
@@ -67,51 +67,34 @@ export default function FeedView() {
     setShowAllSections(false);
   }, [sections.length]);
 
-  // Loading state - matches actual feed layout with shimmer
+  // Loading state — matches actual feed layout (holiday grid + compact sections)
   if (loading) {
     return (
-      <div className="py-6 space-y-10">
-        {/* Hero banner skeleton */}
-        <div className="rounded-2xl h-56 sm:h-64 skeleton-shimmer" />
-
-        {/* Carousel section skeleton */}
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <div className="h-6 w-36 rounded skeleton-shimmer" />
-            <div className="h-6 w-16 rounded-full skeleton-shimmer" />
-          </div>
-          <div className="flex gap-3 overflow-hidden -mx-4 px-4">
-            {[...Array(4)].map((_, j) => (
-              <div key={j} className="flex-shrink-0 w-72 rounded-xl h-52 skeleton-shimmer" />
-            ))}
-          </div>
-        </div>
-
-        {/* Grid section skeleton */}
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <div className="h-6 w-32 rounded skeleton-shimmer" />
-            <div className="h-6 w-16 rounded-full skeleton-shimmer" />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            {[...Array(4)].map((_, j) => (
-              <div key={j} className="rounded-xl h-52 skeleton-shimmer" />
-            ))}
-          </div>
-        </div>
-
-        {/* List section skeleton */}
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <div className="h-6 w-28 rounded skeleton-shimmer" />
-            <div className="h-6 w-16 rounded-full skeleton-shimmer" />
-          </div>
+      <div>
+        {/* Holiday grid skeleton */}
+        <div className="mb-4 sm:mb-6">
+          <div className="h-5 w-52 rounded skeleton-shimmer mb-3" />
           <div className="space-y-2">
-            {[...Array(5)].map((_, j) => (
-              <div key={j} className="rounded-lg h-16 skeleton-shimmer" />
+            {[...Array(3)].map((_, j) => (
+              <div key={j} className="rounded-2xl h-[60px] skeleton-shimmer" />
             ))}
           </div>
         </div>
+
+        {/* Section skeleton (collapsible/list style) */}
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="mb-4 sm:mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <div className="h-5 w-32 rounded skeleton-shimmer" />
+              <div className="h-5 w-14 rounded-full skeleton-shimmer" />
+            </div>
+            <div className="space-y-2">
+              {[...Array(3)].map((_, j) => (
+                <div key={j} className="rounded-xl h-16 skeleton-shimmer" />
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
     );
   }
@@ -168,10 +151,10 @@ export default function FeedView() {
   }
 
   // Separate holiday sections from regular sections
-  // Exclude any holiday that has hero treatment in HolidayHero to avoid duplication
-  const heroSlug = getActiveHeroSlug();
+  // Exclude any holidays that have hero treatment in HolidayHero to avoid duplication
+  const heroSlugs = getActiveHeroSlugs();
   const holidaySections = sections.filter(
-    s => THEMED_SLUGS.includes(s.slug) && s.slug !== heroSlug
+    s => THEMED_SLUGS.includes(s.slug) && !heroSlugs.includes(s.slug)
   );
   const regularSections = sections.filter(s => !THEMED_SLUGS.includes(s.slug));
   const visibleRegularSections = showAllSections

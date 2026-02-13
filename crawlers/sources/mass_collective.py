@@ -1,233 +1,331 @@
 """
-Crawler for MASS Collective (masscollective.org/classes).
-Atlanta-based artist collective offering printmaking workshops and community art events.
-Uses Squarespace with Eventbrite integration.
+Crawler for MASS Collective (masscollective.org).
+
+Atlanta's premier community makerspace offering welding, woodworking, machining,
+leatherwork, and other hands-on workshop classes. Events are hosted on Eventbrite.
+
+Uses Eventbrite API to fetch events for organizer ID 4567583831.
 """
 
 from __future__ import annotations
 
 import logging
 import re
+import time
+import requests
 from datetime import datetime
 from typing import Optional
-from urllib.parse import urljoin
 
-from playwright.sync_api import sync_playwright
-
+from config import get_config
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = "https://www.masscollective.org"
-EVENTS_URL = f"{BASE_URL}/classes"
+ORGANIZER_ID = "4567583831"
+API_BASE = "https://www.eventbriteapi.com/v3/"
 
-MAX_EVENTS = 50
-
-MASS_VENUE = {
+VENUE_DATA = {
     "name": "MASS Collective",
     "slug": "mass-collective",
-    "address": "Atlanta",
+    "address": "364 Nelson St SW",
+    "neighborhood": "West End",
     "city": "Atlanta",
     "state": "GA",
-    "zip": "30312",
-    "venue_type": "arts_center",
-    "website": BASE_URL,
+    "zip": "30313",
+    "lat": 33.7450,
+    "lng": -84.4020,
+    "venue_type": "studio",
+    "spot_type": "studio",
+    "website": "https://www.masscollective.org",
+    "vibes": ["workshop", "hands-on", "makerspace", "woodworking", "welding", "leatherwork"],
 }
 
 
-def parse_date(date_text: str) -> Optional[str]:
-    """Parse date string to 'YYYY-MM-DD'."""
-    if not date_text:
-        return None
+def get_api_headers() -> dict:
+    """Get API request headers with authentication."""
+    cfg = get_config()
+    api_key = cfg.api.eventbrite_api_key
+    if not api_key:
+        raise ValueError("EVENTBRITE_API_KEY not configured")
+    return {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+
+
+def parse_datetime(dt_str: str) -> tuple[Optional[str], Optional[str]]:
+    """Parse Eventbrite datetime to date and time strings."""
+    if not dt_str:
+        return None, None
+    try:
+        dt = datetime.fromisoformat(dt_str.replace("Z", "+00:00"))
+        return dt.strftime("%Y-%m-%d"), dt.strftime("%H:%M")
+    except Exception as e:
+        logger.debug(f"Could not parse datetime '{dt_str}': {e}")
+        return None, None
+
+
+def parse_price(event_data: dict) -> tuple[Optional[float], Optional[float], bool]:
+    """
+    Extract price information from Eventbrite event data.
+    Returns (price_min, price_max, is_free).
+    """
+    is_free = event_data.get("is_free", False)
+    if is_free:
+        return None, None, True
+
+    # Try to get ticket classes if available
+    ticket_availability = event_data.get("ticket_availability") or {}
+    if ticket_availability:
+        # API includes ticket data in expanded response
+        min_price = ticket_availability.get("minimum_ticket_price")
+        max_price = ticket_availability.get("maximum_ticket_price")
+
+        if min_price and max_price:
+            try:
+                # Prices are in cents
+                min_val = float(min_price.get("major_value", 0))
+                max_val = float(max_price.get("major_value", 0))
+                return min_val, max_val, False
+            except (ValueError, AttributeError):
+                pass
+
+    return None, None, False
+
+
+def determine_tags(title: str, description: str) -> list[str]:
+    """Determine event tags based on title and description."""
+    text = f"{title} {description}".lower()
+    tags = ["makerspace", "hands-on", "workshop"]
+
+    if any(kw in text for kw in ["welding", "weld", "mig", "tig"]):
+        tags.extend(["welding", "metalwork"])
+
+    if any(kw in text for kw in ["woodworking", "wood", "carpentry"]):
+        tags.append("woodworking")
+
+    if any(kw in text for kw in ["machining", "machine shop", "lathe", "mill"]):
+        tags.extend(["machining", "metalwork"])
+
+    if any(kw in text for kw in ["leather", "leatherwork"]):
+        tags.extend(["leatherwork", "crafts"])
+
+    if any(kw in text for kw in ["blacksmith", "forge", "forging"]):
+        tags.extend(["blacksmithing", "metalwork"])
+
+    if any(kw in text for kw in ["intro", "introduction", "beginner", "basics"]):
+        tags.append("beginner-friendly")
+
+    if any(kw in text for kw in ["certification", "certified", "safety"]):
+        tags.append("certification")
+
+    # Remove duplicates while preserving order
+    seen = set()
+    unique_tags = []
+    for tag in tags:
+        if tag not in seen:
+            seen.add(tag)
+            unique_tags.append(tag)
+
+    return unique_tags
+
+
+def fetch_organizer_events() -> list[dict]:
+    """Fetch all live events for MASS Collective organizer from Eventbrite API."""
+    all_events = []
+    continuation = None
+    page = 1
 
     try:
-        date_text = re.sub(r'^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),?\s*', '', date_text, flags=re.IGNORECASE)
+        while True:
+            url = f"{API_BASE}organizers/{ORGANIZER_ID}/events/"
+            params = {
+                "status": "live",
+                "order_by": "start_asc",
+                "expand": "venue,ticket_availability",
+            }
 
-        for fmt in ['%B %d, %Y', '%b %d, %Y', '%m/%d/%Y', '%Y-%m-%d', '%B %d']:
-            try:
-                dt = datetime.strptime(date_text.strip(), fmt)
-                if dt.year == 1900:
-                    dt = dt.replace(year=datetime.now().year)
-                return dt.strftime('%Y-%m-%d')
-            except ValueError:
+            if continuation:
+                params["continuation"] = continuation
+
+            logger.info(f"Fetching MASS Collective events page {page}")
+            response = requests.get(url, headers=get_api_headers(), params=params, timeout=15)
+
+            if response.status_code == 404:
+                logger.warning(f"Organizer {ORGANIZER_ID} not found")
+                break
+            elif response.status_code == 429:
+                logger.warning("Rate limited, waiting 30 seconds...")
+                time.sleep(30)
                 continue
-        return None
-    except Exception:
-        return None
+
+            response.raise_for_status()
+            data = response.json()
+
+            events = data.get("events", [])
+            if not events:
+                logger.info(f"No more events on page {page}")
+                break
+
+            all_events.extend(events)
+            logger.info(f"Page {page}: Found {len(events)} events ({len(all_events)} total)")
+
+            # Check for pagination
+            pagination = data.get("pagination", {})
+            continuation = pagination.get("continuation")
+
+            if not continuation or not pagination.get("has_more_items"):
+                break
+
+            page += 1
+            time.sleep(0.5)  # Be nice to API
+
+    except Exception as e:
+        logger.error(f"Error fetching organizer events: {e}")
+        raise
+
+    return all_events
 
 
-def parse_time(time_text: str) -> Optional[str]:
-    """Parse time string to 'HH:MM:SS' format."""
-    if not time_text:
-        return None
-
+def process_event(event_data: dict, source_id: int, venue_id: int) -> Optional[dict]:
+    """Process Eventbrite event data into our format."""
     try:
-        time_text = time_text.strip().upper()
-        for fmt in ['%I:%M %p', '%I:%M%p', '%I %p', '%I%p']:
-            try:
-                dt = datetime.strptime(time_text, fmt)
-                return dt.strftime('%H:%M:%S')
-            except ValueError:
-                continue
-        return None
-    except Exception:
+        # Extract basic info
+        title = event_data.get("name", {}).get("text", "").strip()
+        if not title:
+            return None
+
+        # Parse dates
+        start_info = event_data.get("start", {})
+        start_date, start_time = parse_datetime(start_info.get("local"))
+        if not start_date:
+            logger.debug(f"No valid date for: {title}")
+            return None
+
+        # Skip past events
+        if start_date < datetime.now().strftime("%Y-%m-%d"):
+            return None
+
+        end_info = event_data.get("end", {})
+        end_date, end_time = parse_datetime(end_info.get("local"))
+
+        # Get description
+        description = event_data.get("description", {}).get("text", "")
+        if description:
+            description = description[:1000]
+
+        # Parse price
+        price_min, price_max, is_free = parse_price(event_data)
+
+        # Get image
+        logo = event_data.get("logo") or {}
+        image_url = None
+        if logo:
+            original = logo.get("original") or {}
+            image_url = original.get("url")
+
+        # Get URL
+        event_url = event_data.get("url", "")
+
+        # Determine tags
+        tags = determine_tags(title, description)
+
+        # Generate content hash
+        content_hash = generate_content_hash(title, "MASS Collective", start_date)
+
+        # Check if already exists
+        existing = find_event_by_hash(content_hash)
+        if existing:
+            return {"status": "exists"}
+
+        # Build price note
+        price_note = None
+        if is_free:
+            price_note = "Free"
+        elif price_min and price_max:
+            if price_min == price_max:
+                price_note = f"${price_min:.0f}"
+            else:
+                price_note = f"${price_min:.0f}-${price_max:.0f}"
+
+        return {
+            "source_id": source_id,
+            "venue_id": venue_id,
+            "title": title[:200],
+            "description": description if description else None,
+            "start_date": start_date,
+            "start_time": start_time,
+            "end_date": end_date if end_date != start_date else None,
+            "end_time": end_time,
+            "is_all_day": False,
+            "category": "learning",
+            "subcategory": "workshop",
+            "tags": tags,
+            "price_min": price_min,
+            "price_max": price_max,
+            "price_note": price_note,
+            "is_free": is_free,
+            "source_url": event_url,
+            "ticket_url": event_url,
+            "image_url": image_url,
+            "raw_text": f"{title} {description}"[:500] if description else title[:500],
+            "extraction_confidence": 0.95,
+            "is_recurring": False,
+            "recurrence_rule": None,
+            "content_hash": content_hash,
+        }
+    except Exception as e:
+        logger.error(f"Error processing event: {e}")
         return None
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl MASS Collective classes/events page."""
-    source_id = source['id']
-    source_url = source.get('url', EVENTS_URL)
-    producer_id = source.get('producer_id')
-
+    """Crawl MASS Collective events from Eventbrite API."""
+    source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
 
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-                viewport={'width': 1920, 'height': 1080},
-            )
-            page = context.new_page()
+        # Create/get venue
+        venue_id = get_or_create_venue(VENUE_DATA)
 
-            logger.info(f"Fetching MASS Collective events: {source_url}")
-            page.goto(source_url, wait_until='domcontentloaded', timeout=30000)
-            page.wait_for_timeout(3000)
+        # Fetch all events from API
+        logger.info(f"Fetching events for MASS Collective (organizer {ORGANIZER_ID})...")
+        events_data = fetch_organizer_events()
 
-            for _ in range(3):
-                page.evaluate('window.scrollBy(0, 1000)')
-                page.wait_for_timeout(1000)
+        if not events_data:
+            logger.warning("No events found from API")
+            return 0, 0, 0
 
-            venue_id = get_or_create_venue(MASS_VENUE)
+        logger.info(f"Processing {len(events_data)} events from Eventbrite API")
 
-            # Squarespace events/classes structure
-            event_items = page.query_selector_all('article, .eventlist-event, [data-item-id], .summary-item')
-            logger.info(f"Found {len(event_items)} event items")
+        for event_data in events_data:
+            try:
+                events_found += 1
 
-            for item in event_items[:MAX_EVENTS]:
-                try:
-                    link = item.query_selector('a[href*="/classes/"], a[href*="eventbrite"], a')
-                    if not link:
-                        continue
-
-                    event_url = link.get_attribute('href')
-                    if not event_url:
-                        continue
-                    if not event_url.startswith('http'):
-                        event_url = urljoin(BASE_URL, event_url)
-
-                    # Skip non-event links
-                    if any(skip in event_url for skip in ['instagram', 'facebook', 'twitter', '#']):
-                        continue
-
-                    # Extract title
-                    title_el = item.query_selector('h1, h2, h3, .summary-title, .eventlist-title')
-                    title = title_el.inner_text().strip() if title_el else None
-                    if not title:
-                        continue
-
-                    # Extract date
-                    date_el = item.query_selector('.eventlist-meta-date, time, [datetime], .summary-metadata-item')
-                    date_text = None
-                    if date_el:
-                        date_text = date_el.get_attribute('datetime') or date_el.inner_text()
-
-                    start_date = parse_date(date_text)
-                    if not start_date:
-                        # Look for date in text content
-                        full_text = item.inner_text()
-                        date_match = re.search(r'(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d+(?:,?\s*\d{4})?', full_text, re.IGNORECASE)
-                        if date_match:
-                            start_date = parse_date(date_match.group(0))
-
-                    if not start_date:
-                        logger.debug(f"No date found for: {title}")
-                        continue
-
-                    events_found += 1
-
-                    # Extract time
-                    start_time = None
-                    end_time = None
-                    full_text = item.inner_text()
-                    times = re.findall(r'\d+:\d+\s*(?:AM|PM|am|pm)', full_text)
-                    if times:
-                        start_time = parse_time(times[0])
-                        if len(times) > 1:
-                            end_time = parse_time(times[1])
-
-                    # Extract description
-                    desc_el = item.query_selector('.summary-excerpt, .eventlist-description, p')
-                    description = desc_el.inner_text().strip()[:500] if desc_el else None
-
-                    # Printmaking workshops are the main offering
-                    category = 'art'
-                    subcategory = 'workshop'
-                    if 'print' in title.lower():
-                        subcategory = 'printmaking'
-
-                    content_hash = generate_content_hash(title, MASS_VENUE['name'], start_date)
-
-                    existing = find_event_by_hash(content_hash)
-                    if existing:
-                        events_updated += 1
-                        continue
-
-                    img = item.query_selector('img')
-                    image_url = None
-                    if img:
-                        image_url = img.get_attribute('src') or img.get_attribute('data-src')
-                        if image_url and not image_url.startswith('http'):
-                            image_url = urljoin(BASE_URL, image_url)
-
-                    tags = ['mass-collective', 'printmaking', 'workshop', 'art']
-
-                    event_record = {
-                        'source_id': source_id,
-                        'venue_id': venue_id,
-                        'producer_id': producer_id,
-                        'title': title[:500],
-                        'description': description,
-                        'start_date': start_date,
-                        'start_time': start_time,
-                        'end_date': start_date,
-                        'end_time': end_time,
-                        'is_all_day': False,
-                        'category': category,
-                        'subcategory': subcategory,
-                        'tags': tags,
-                        'price_min': None,
-                        'price_max': None,
-                        'price_note': None,
-                        'is_free': False,
-                        'source_url': event_url,
-                        'ticket_url': event_url,
-                        'image_url': image_url,
-                        'raw_text': None,
-                        'extraction_confidence': 0.85,
-                        'is_recurring': False,
-                        'recurrence_rule': None,
-                        'content_hash': content_hash,
-                    }
-
-                    try:
-                        insert_event(event_record)
-                        events_new += 1
-                        logger.info(f"Added: {title[:50]}... on {start_date}")
-                    except Exception as e:
-                        logger.error(f"Failed to insert event: {title[:50]}: {e}")
-
-                except Exception as e:
-                    logger.error(f"Error processing event: {e}")
+                # Process into our format
+                result = process_event(event_data, source_id, venue_id)
+                if not result:
                     continue
 
-            browser.close()
+                if result.get("status") == "exists":
+                    events_updated += 1
+                    continue
 
-        logger.info(f"MASS Collective crawl complete: {events_found} found, {events_new} new, {events_updated} updated")
+                # Insert event
+                insert_event(result)
+                events_new += 1
+                logger.info(f"Added: {result['title'][:50]}... on {result['start_date']}")
+
+            except Exception as e:
+                logger.error(f"Error processing event: {e}")
+                continue
+
+        logger.info(
+            f"MASS Collective crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
+        )
 
     except Exception as e:
         logger.error(f"Failed to crawl MASS Collective: {e}")

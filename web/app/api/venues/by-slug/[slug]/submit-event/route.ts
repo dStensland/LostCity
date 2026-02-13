@@ -12,6 +12,7 @@ import {
   checkBodySize,
 } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import { getSiteUrl } from "@/lib/site-url";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +57,8 @@ type Props = {
 };
 
 export async function POST(request: NextRequest, { params }: Props) {
+  const siteUrl = getSiteUrl();
+
   // Rate limiting
   const rateLimitResult = await applyRateLimit(
     request,
@@ -228,7 +231,7 @@ export async function POST(request: NextRequest, { params }: Props) {
     price_note: body.price_note ? sanitizeString(body.price_note) : null,
     source_type: "venue_submission",
     submitted_by: user.id,
-    source_url: `https://lostcity.app/venue/${slug}`, // Link back to venue page
+    source_url: `${siteUrl}/venue/${slug}`,
   };
 
   const { data: event, error: eventError } = await serviceClient

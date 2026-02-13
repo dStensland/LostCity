@@ -34,9 +34,9 @@ export default function CuratedContent({ portalSlug }: CuratedContentProps) {
         <HappeningNowCTA portalSlug={portalSlug} />
       </Suspense>
 
-      {/* Holiday hero: Valentine's Day at top (priority) */}
+      {/* Holiday hero: nearest event date gets top position */}
       <Suspense fallback={null}>
-        <HolidayHero portalSlug={portalSlug} slug="valentines-day" />
+        <HolidayHero portalSlug={portalSlug} />
       </Suspense>
 
       {/* Above-fold: Tonight's Picks - Critical content */}
@@ -51,9 +51,9 @@ export default function CuratedContent({ portalSlug }: CuratedContentProps) {
         <MomentsSection portalSlug={portalSlug} />
       </Suspense>
 
-      {/* Friday the 13th + other holidays (below festivals) */}
+      {/* Second holiday hero (below festivals) */}
       <Suspense fallback={null}>
-        <HolidayHero portalSlug={portalSlug} exclude={["valentines-day"]} />
+        <HolidayHero portalSlug={portalSlug} position={2} />
       </Suspense>
 
       {/* Time-of-day contextual section: "Patio SZN" / "After Hours" / "Brunch & Markets" */}
@@ -102,11 +102,23 @@ function BrowseByActivitySkeleton() {
 
 function FeedViewSkeleton() {
   return (
-    <div className="space-y-4">
-      <div className="h-6 w-48 skeleton-shimmer rounded mb-4" />
-      {[1, 2, 3, 4].map((i) => (
-        <div key={i} className="h-32 skeleton-shimmer rounded-xl" />
-      ))}
+    <div>
+      {/* Matches actual FeedView: compact holiday rows + section headers */}
+      <div className="mb-4">
+        <div className="h-5 w-52 rounded skeleton-shimmer mb-3" />
+        <div className="space-y-2">
+          <div className="rounded-2xl h-[60px] skeleton-shimmer" />
+          <div className="rounded-2xl h-[60px] skeleton-shimmer" />
+        </div>
+      </div>
+      <div className="mb-4">
+        <div className="h-5 w-32 rounded skeleton-shimmer mb-3" />
+        <div className="space-y-2">
+          <div className="rounded-xl h-16 skeleton-shimmer" />
+          <div className="rounded-xl h-16 skeleton-shimmer" />
+          <div className="rounded-xl h-16 skeleton-shimmer" />
+        </div>
+      </div>
     </div>
   );
 }

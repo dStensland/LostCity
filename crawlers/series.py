@@ -28,8 +28,16 @@ def infer_festival_type(festival_name: str) -> Optional[str]:
     name = festival_name.lower()
     if re.search(r"\b(conference|summit|symposium|forum|congress)\b", name):
         return "conference"
-    if re.search(r"\b(convention|expo|con)\b", name):
+    if re.search(r"\b(convention|con)\b", name):
         return "convention"
+    if re.search(r"(market|flea|bazaar)\b", name):
+        return "market"
+    if re.search(r"\bfair\b", name) and "affair" not in name:
+        return "fair"
+    if re.search(r"\bexpo\b|trade show", name):
+        return "expo"
+    if re.search(r"\b(tournament|tourney|championship)\b", name):
+        return "tournament"
     return None
 
 

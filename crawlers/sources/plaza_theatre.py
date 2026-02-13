@@ -336,6 +336,7 @@ def _extract_movies_from_text(
         "NOW PLAYING", "COMING SOON", "SPECIAL", "PLAZA THEATRE", "TARA",
         "Today", "Other", "Date", "STORE", "ABOUT", "DONATE", "RENTALS",
         "accessible", "Digital", "THEATRE", "Theatre",
+        "Showtimes, news and more", "Showtimes",
         "Wed", "Thu", "Fri", "Sat", "Sun", "Mon", "Tue",
         "Feb", "Jan", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
     ]
@@ -478,6 +479,7 @@ def extract_special_events(
         "STORE", "ABOUT", "DONATE", "RENTALS", "accessible", "expand_more",
         "arrow", "Email", "Facebook", "Instagram", "Copyright", "Subscribe",
         "Mailing List", "Join", "Newsletter", "Sign Up",
+        "Showtimes, news and more", "Showtimes",
     ]
 
     i = 0
@@ -613,6 +615,17 @@ def extract_special_events(
     return events_found, events_new, events_updated
 
 
+def _click_plaza_tab(page: Page) -> None:
+    """Click the 'Plaza Theatre Atlanta' tab if visible."""
+    try:
+        plaza_tab = page.locator("text=Plaza Theatre Atlanta").first
+        if plaza_tab.is_visible(timeout=2000):
+            plaza_tab.click()
+            page.wait_for_timeout(1500)
+    except Exception:
+        pass
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
     """Crawl Plaza Theatre showtimes from now-showing and special-events pages."""
     source_id = source["id"]
@@ -644,16 +657,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page.wait_for_timeout(4000)
 
             # Click "Plaza Theatre Atlanta" tab (site shows both Plaza and Tara)
-            try:
-                plaza_tab = page.locator("text=Plaza Theatre Atlanta").first
-                if plaza_tab.is_visible(timeout=3000):
-                    plaza_tab.click()
-                    page.wait_for_timeout(2000)
-                    logger.debug("Clicked Plaza Theatre Atlanta tab")
-                else:
-                    logger.debug("Plaza Theatre Atlanta tab not visible")
-            except Exception as e:
-                logger.debug(f"Could not find Plaza Theatre Atlanta tab: {e}")
+            _click_plaza_tab(page)
 
             # Extract movie images
             image_map = extract_movie_images(page)
@@ -668,44 +672,75 @@ def crawl(source: dict) -> tuple[int, int, int]:
             total_new += new
             total_updated += updated
 
-            # Click through day buttons for upcoming days
-            day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+            # Navigate upcoming days via the Quasar date picker (calendar).
+            # The site's day-name buttons ("Fri", "Sat") are unreliable because
+            # text locators match other page elements (e.g. "EVERY FRIDAY AT 11PM").
+            # Instead, we click "Other" to open the Q-Date picker and use JS to
+            # click specific day buttons within the .q-date element.
+            current_calendar_month = today.month
 
-            for day_offset in range(1, 11):
+            for day_offset in range(1, 14):
                 target_date = today + timedelta(days=day_offset)
-                day_name = day_names[target_date.weekday()]
                 day_num = target_date.day
+                target_month = target_date.month
                 date_str = target_date.strftime("%Y-%m-%d")
 
-                clicked = False
+                # Open the calendar picker
                 try:
-                    day_btn = page.locator(f"text={day_name}").first
-                    if day_btn.is_visible(timeout=1000):
-                        day_btn.click()
-                        page.wait_for_timeout(2000)
-                        clicked = True
+                    other_btn = page.locator("text=Other").first
+                    if not other_btn.is_visible(timeout=2000):
+                        logger.debug(f"Other button not visible for {date_str}")
+                        continue
+                    other_btn.click()
+                    page.wait_for_timeout(1500)
                 except Exception:
-                    pass
-
-                if not clicked:
-                    try:
-                        other_btn = page.locator("text=Other").first
-                        if other_btn.is_visible(timeout=1000):
-                            other_btn.click()
-                            page.wait_for_timeout(1500)
-                            day_cell = page.locator(f"text=/^{day_num}$/").first
-                            if day_cell.is_visible(timeout=1000):
-                                day_cell.click()
-                                page.wait_for_timeout(2000)
-                                clicked = True
-                    except Exception:
-                        pass
-
-                if not clicked:
-                    logger.debug(f"Could not select date {date_str}, skipping")
+                    logger.debug(f"Could not open calendar for {date_str}")
                     continue
 
-                logger.info(f"Scraping {day_name} {day_num} ({date_str})")
+                # Navigate to the correct month if needed
+                if target_month != current_calendar_month:
+                    try:
+                        page.evaluate("""() => {
+                            const picker = document.querySelector('.q-date');
+                            if (!picker) return;
+                            const nextBtn = picker.querySelector('.q-date__arrow button[aria-label="Next month"]');
+                            if (nextBtn) nextBtn.click();
+                        }""")
+                        page.wait_for_timeout(1000)
+                        current_calendar_month = target_month
+                    except Exception:
+                        logger.debug(f"Could not navigate to month {target_month}")
+
+                # Click the target day within the calendar
+                click_result = page.evaluate(f"""() => {{
+                    const picker = document.querySelector('.q-date');
+                    if (!picker) return 'no_picker';
+                    const items = picker.querySelectorAll('.q-date__calendar-item');
+                    for (const item of items) {{
+                        const btn = item.querySelector('button');
+                        if (btn && btn.innerText.trim() === '{day_num}') {{
+                            const isAvailable = item.classList.contains('q-date__calendar-item--in');
+                            btn.click();
+                            return isAvailable ? 'ok' : 'unavailable';
+                        }}
+                    }}
+                    return 'not_found';
+                }}""")
+
+                if click_result != "ok":
+                    if click_result == "unavailable":
+                        logger.info(f"  {date_str}: No showtimes scheduled (calendar --out)")
+                    else:
+                        logger.debug(f"  {date_str}: Calendar click result: {click_result}")
+                    # Stop after first unavailable date (theater hasn't published further)
+                    break
+
+                page.wait_for_timeout(2000)
+
+                # Re-select Plaza Theatre tab (may reset after date change)
+                _click_plaza_tab(page)
+
+                logger.info(f"Scraping {date_str}")
                 found, new, updated = extract_movies_for_date(
                     page, datetime.combine(target_date, datetime.min.time()),
                     source_id, venue_id, letterboxd_movies, image_map, seen_hashes
@@ -715,7 +750,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 total_updated += updated
 
                 if found == 0:
-                    logger.info(f"  {date_str}: No showtimes scheduled")
+                    logger.info(f"  {date_str}: No showtimes found")
                     break
 
             # --- Special Events page ---

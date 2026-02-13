@@ -127,6 +127,13 @@ export default function StandardHeader({
 
 
   const getHref = useCallback((tab: typeof TABS[0]) => {
+    if (tab.key === "feed") {
+      // Feed = clean portal URL. Carrying over stale find-signal params
+      // (search, categories, etc.) would trick the portal page into
+      // rendering Find instead of the feed.
+      return `/${portalSlug}`;
+    }
+
     const params = new URLSearchParams(searchParams?.toString() || "");
     params.delete("event");
     params.delete("spot");
@@ -134,12 +141,7 @@ export default function StandardHeader({
     params.delete("festival");
     params.delete("org");
 
-    if (tab.key === "feed") {
-      params.delete("view");
-      params.delete("type");
-      params.delete("display");
-      params.delete("tab");
-    } else if (tab.key === "find") {
+    if (tab.key === "find") {
       params.set("view", "find");
       params.delete("tab");
     } else {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, Fragment } from "react";
+import { useState, useEffect, useRef, useCallback, Fragment, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { usePortalOptional, DEFAULT_PORTAL } from "@/lib/portal-context";
@@ -19,7 +19,18 @@ interface SearchOverlayProps {
 }
 
 const POPULAR_SEARCHES = ["Live Music", "Comedy", "Free", "Rooftop", "Late Night"];
-const QUICK_ACTIONS = ["Tonight", "This Weekend", "Free", "Live Music"];
+type QuickActionId = "tonight" | "weekend" | "free" | "live_music";
+
+const QUICK_ACTIONS: Array<{
+  id: QuickActionId;
+  label: string;
+  description: string;
+}> = [
+  { id: "tonight", label: "Tonight", description: "Events still happening today" },
+  { id: "weekend", label: "This Weekend", description: "Weekend events (Sat–Sun)" },
+  { id: "free", label: "Free", description: "Free events this week" },
+  { id: "live_music", label: "Live Music", description: "Live music this week" },
+];
 
 const SEARCH_PLACEHOLDERS = [
   "Search events, venues, organizers...",
@@ -96,6 +107,55 @@ function clearCacheForPortal(portalId: string | undefined) {
   }
 }
 
+function normalizeText(value: string | undefined): string {
+  return (value || "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function dedupeSearchResults(items: SearchResult[]): SearchResult[] {
+  const byIdentity = new Map<string, SearchResult>();
+
+  // First pass: hard dedupe by canonical identity.
+  for (const item of items) {
+    const identity = `${item.type}:${String(item.id)}`;
+    const existing = byIdentity.get(identity);
+    if (!existing || item.score > existing.score) {
+      byIdentity.set(identity, item);
+    }
+  }
+
+  // Second pass: collapse visually identical cards from different sources.
+  const byScore = Array.from(byIdentity.values()).sort((a, b) => b.score - a.score);
+  const semanticSeen = new Set<string>();
+  const deduped: SearchResult[] = [];
+
+  for (const item of byScore) {
+    const shouldCollapseSemanticDuplicate =
+      item.type === "event" || item.type === "venue" || item.type === "organizer";
+
+    if (!shouldCollapseSemanticDuplicate) {
+      deduped.push(item);
+      continue;
+    }
+
+    const semanticKey = [
+      item.type,
+      normalizeText(item.title),
+      normalizeText(item.subtitle),
+      item.metadata?.date || "",
+      item.metadata?.time || "",
+    ].join(":");
+
+    if (semanticSeen.has(semanticKey)) {
+      continue;
+    }
+
+    semanticSeen.add(semanticKey);
+    deduped.push(item);
+  }
+
+  return deduped;
+}
+
 export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
   const portalContext = usePortalOptional();
   const portal = portalContext?.portal ?? DEFAULT_PORTAL;
@@ -114,10 +174,17 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
   const [trendingLoading, setTrendingLoading] = useState(false);
   const [tonight, setTonight] = useState<TonightEvent[]>([]);
   const [tonightLoading, setTonightLoading] = useState(false);
+  const [activeQuickAction, setActiveQuickAction] = useState<QuickActionId | null>(null);
+  const [quickResults, setQuickResults] = useState<SearchResult[]>([]);
+  const [quickResultsLoading, setQuickResultsLoading] = useState(false);
+  const [quickResultsError, setQuickResultsError] = useState<string | null>(null);
+  const [quickFetchNonce, setQuickFetchNonce] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const previousPortalId = useRef<string | undefined>(portal?.id);
   const activeTypeFilterRef = useRef<TypeFilter>(activeTypeFilter);
+  const searchAbortRef = useRef<AbortController | null>(null);
+  const searchRequestIdRef = useRef(0);
 
   // Keep ref in sync with state
   useEffect(() => {
@@ -172,15 +239,38 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
   // Reset on close
   useEffect(() => {
     if (!isOpen) {
+      searchAbortRef.current?.abort();
+      searchAbortRef.current = null;
       setQuery("");
       setResults([]);
       setFacets([]);
       setDidYouMean([]);
       setActiveTypeFilter(null);
       setError(null);
+      setActiveQuickAction(null);
+      setQuickResults([]);
+      setQuickResultsLoading(false);
+      setQuickResultsError(null);
       setSelectedResultIndex(-1);
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    return () => {
+      searchAbortRef.current?.abort();
+    };
+  }, []);
+
+  // Reset quick action mode when user starts typing
+  useEffect(() => {
+    if (query.trim().length > 0 && activeQuickAction) {
+      setActiveQuickAction(null);
+      setQuickResults([]);
+      setQuickResultsLoading(false);
+      setQuickResultsError(null);
+      setSelectedResultIndex(-1);
+    }
+  }, [query, activeQuickAction]);
 
   // Load trending events for empty state
   useEffect(() => {
@@ -247,6 +337,100 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
     onClose();
   }, [query, onClose]);
 
+  const router = useRouter();
+
+  const basePath = portal?.slug ? `/${portal.slug}` : "";
+
+  const navigateToHref = useCallback(
+    (href: string) => {
+      onClose();
+      router.push(href);
+    },
+    [onClose, router]
+  );
+
+  // Load quick action results (filter-only events list)
+  useEffect(() => {
+    if (!isOpen) return;
+    if (!activeQuickAction) return;
+    if (query.trim().length > 0) return;
+
+    let cancelled = false;
+    setQuickResultsLoading(true);
+    setQuickResultsError(null);
+
+    const params = new URLSearchParams({
+      pageSize: "15",
+      page: "1",
+      exclude_classes: "true",
+    });
+
+    if (portal?.id) {
+      params.set("portal_id", portal.id);
+    }
+
+    switch (activeQuickAction) {
+      case "tonight":
+        params.set("date", "today");
+        break;
+      case "weekend":
+        params.set("date", "weekend");
+        break;
+      case "free":
+        params.set("price", "free");
+        params.set("date", "week");
+        break;
+      case "live_music":
+        params.set("categories", "music");
+        params.set("date", "week");
+        break;
+    }
+
+    fetch(`/api/events?${params.toString()}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (cancelled) return;
+        const events = (data?.events || []) as Array<{
+          id: number;
+          title: string;
+          start_date: string;
+          start_time: string | null;
+          is_all_day: boolean;
+          is_free: boolean;
+          category: string | null;
+          venue: { name: string; neighborhood: string | null } | null;
+        }>;
+
+        const mapped: SearchResult[] = events.map((event, idx) => ({
+          id: event.id,
+          type: "event",
+          title: event.title,
+          subtitle: event.venue?.name || undefined,
+          href: `/event/${event.id}`,
+          score: events.length - idx,
+          metadata: {
+            date: event.start_date,
+            time: event.start_time || undefined,
+            neighborhood: event.venue?.neighborhood || undefined,
+            category: event.category || undefined,
+            isFree: event.is_free,
+          },
+        }));
+
+        setQuickResults(dedupeSearchResults(mapped));
+      })
+      .catch(() => {
+        if (!cancelled) setQuickResultsError("Couldn’t load results. Try again.");
+      })
+      .finally(() => {
+        if (!cancelled) setQuickResultsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, activeQuickAction, query, portal?.id, quickFetchNonce]);
+
   // Handle keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -255,26 +439,45 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
         return;
       }
 
+      const resultsForNav = activeQuickAction ? quickResults : results;
+      const currentTypeFilter = activeTypeFilterRef.current;
+      const filtered = currentTypeFilter
+        ? resultsForNav.filter((r) => r.type === currentTypeFilter)
+        : resultsForNav;
+
+      const grouped = {
+        event: filtered.filter((r) => r.type === "event"),
+        venue: filtered.filter((r) => r.type === "venue"),
+        organizer: filtered.filter((r) => r.type === "organizer"),
+        series: filtered.filter((r) => r.type === "series"),
+        list: filtered.filter((r) => r.type === "list"),
+      };
+
+      const flattened = (["event", "venue", "organizer", "series", "list"] as const).flatMap(
+        (t) => grouped[t]
+      );
+
       // Only handle arrow keys when we have results
-      if (results.length === 0) return;
+      if (flattened.length === 0) return;
 
       if (e.key === "ArrowDown") {
         e.preventDefault();
         setSelectedResultIndex((prev) =>
-          prev < results.length - 1 ? prev + 1 : 0
+          prev < flattened.length - 1 ? prev + 1 : 0
         );
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
         setSelectedResultIndex((prev) =>
-          prev > 0 ? prev - 1 : results.length - 1
+          prev > 0 ? prev - 1 : flattened.length - 1
         );
       } else if (e.key === "Enter" && selectedResultIndex >= 0) {
         e.preventDefault();
-        const selectedResult = results[selectedResultIndex];
+        const selectedResult = flattened[selectedResultIndex];
         if (selectedResult) {
-          handleResultClick();
-          // Navigate to the result
-          window.location.href = mapToPortalPath(selectedResult, portal?.slug);
+          if (query.trim()) {
+            addRecentSearch(query.trim());
+          }
+          navigateToHref(mapToPortalPath(selectedResult, portal?.slug));
         }
       }
     };
@@ -287,12 +490,12 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
       document.removeEventListener("keydown", handleKeyDown);
       document.body.style.overflow = "";
     };
-  }, [isOpen, onClose, results, selectedResultIndex, portal?.slug, handleResultClick]);
+  }, [isOpen, onClose, results, quickResults, activeQuickAction, selectedResultIndex, portal?.slug, query, navigateToHref]);
 
   // Reset selected index when results change
   useEffect(() => {
     setSelectedResultIndex(-1);
-  }, [results]);
+  }, [results, quickResults, activeQuickAction]);
 
   // Scroll selected result into view
   useEffect(() => {
@@ -307,9 +510,13 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
   // Main search function with caching
   const search = useCallback(async (searchQuery: string, clearCache = false) => {
     if (searchQuery.length < 2) {
+      searchAbortRef.current?.abort();
+      searchAbortRef.current = null;
       setResults([]);
       setFacets([]);
+      setDidYouMean([]);
       setError(null);
+      setIsLoading(false);
       return;
     }
 
@@ -328,9 +535,15 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
       setResults(cached.data);
       setFacets(cached.facets);
+      setDidYouMean([]);
       setError(null);
       return;
     }
+
+    searchAbortRef.current?.abort();
+    const controller = new AbortController();
+    searchAbortRef.current = controller;
+    const requestId = ++searchRequestIdRef.current;
 
     setIsLoading(true);
     setError(null);
@@ -351,25 +564,25 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
         params.set("portal", portal.id);
       }
 
-      const response = await fetch(`/api/search?${params.toString()}`);
+      const response = await fetch(`/api/search?${params.toString()}`, {
+        signal: controller.signal,
+      });
       if (!response.ok) {
         throw new Error("Search request failed");
       }
 
       const data = await response.json();
+      if (controller.signal.aborted || requestId !== searchRequestIdRef.current) {
+        return;
+      }
 
-      // Map hrefs to portal-aware paths
-      const mappedResults = (data.results || []).map((result: SearchResult) => ({
-        ...result,
-        href: mapToPortalPath(result, portal?.slug),
-      }));
-
-      setResults(mappedResults);
+      const nextResults = dedupeSearchResults((data.results || []) as SearchResult[]);
+      setResults(nextResults);
       setFacets(data.facets || []);
 
       // Cache the results and prune if needed
       searchCache.set(cacheKey, {
-        data: mappedResults,
+        data: nextResults,
         facets: data.facets || [],
         timestamp: Date.now(),
       });
@@ -382,14 +595,22 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
         setDidYouMean([]);
       }
     } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        return;
+      }
+      if (requestId !== searchRequestIdRef.current) {
+        return;
+      }
       console.error("Search error:", err);
       setError("Search failed. Please try again.");
       setResults([]);
       setFacets([]);
     } finally {
-      setIsLoading(false);
+      if (!controller.signal.aborted && requestId === searchRequestIdRef.current) {
+        setIsLoading(false);
+      }
     }
-  }, [portal?.id, portal?.slug]);
+  }, [portal?.id]);
 
   // Map result href to portal-aware path
   function mapToPortalPath(result: SearchResult, portalSlug?: string): string {
@@ -451,8 +672,6 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
     search(debouncedQuery);
   };
 
-  const router = useRouter();
-
   const handleActivityClick = (activity: typeof POPULAR_ACTIVITIES[number]) => {
     // Build URL for the activity filter
     const params = new URLSearchParams();
@@ -460,7 +679,6 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
     params.set("type", "events");
     params.set("categories", activity.value);
 
-    const basePath = portal?.slug ? `/${portal.slug}` : "";
     onClose();
     router.push(`${basePath}?${params.toString()}`);
   };
@@ -471,28 +689,38 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
     setMounted(true);
   }, []);
 
-  if (!isOpen || !mounted) return null;
+  const resultsToDisplay = useMemo(
+    () => dedupeSearchResults(activeQuickAction ? quickResults : results),
+    [activeQuickAction, quickResults, results]
+  );
 
-  const hasResults = results.length > 0;
-  const showEmptyState = query.length < 2;
+  const { filteredResults, groupedResults } = useMemo(() => {
+    const filtered = activeTypeFilter
+      ? resultsToDisplay.filter((r) => r.type === activeTypeFilter)
+      : resultsToDisplay;
+
+    const grouped = {
+      event: filtered.filter((r) => r.type === "event"),
+      venue: filtered.filter((r) => r.type === "venue"),
+      organizer: filtered.filter((r) => r.type === "organizer"),
+      series: filtered.filter((r) => r.type === "series"),
+      list: filtered.filter((r) => r.type === "list"),
+    };
+
+    return {
+      filteredResults: filtered,
+      groupedResults: grouped,
+    };
+  }, [resultsToDisplay, activeTypeFilter]);
+
+  const hasResults = filteredResults.length > 0;
+  const showEmptyState = query.length < 2 && !activeQuickAction;
   const showNoResults = !isLoading && query.length >= 2 && !hasResults && !error;
-
-  // Filter results by active type
-  const filteredResults = activeTypeFilter
-    ? results.filter((r) => r.type === activeTypeFilter)
-    : results;
-
-  // Group results by type for display
-  const groupedResults = {
-    event: filteredResults.filter((r) => r.type === "event"),
-    venue: filteredResults.filter((r) => r.type === "venue"),
-    organizer: filteredResults.filter((r) => r.type === "organizer"),
-    series: filteredResults.filter((r) => r.type === "series"),
-    list: filteredResults.filter((r) => r.type === "list"),
-  };
 
   // Get facet count for a type, falling back to local result count
   const getFacetCount = (type: string): number | undefined => {
+    // Quick actions use filter-only event results and don't return facets
+    if (activeQuickAction) return undefined;
     const facet = facets.find((f) => f.type === type);
     if (facet && facet.count > 0) return facet.count;
     // When facets are unavailable (DB issue), return undefined
@@ -512,6 +740,8 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
     }
     return index;
   };
+
+  if (!isOpen || !mounted) return null;
 
   return createPortal(
     <>
@@ -613,15 +843,42 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
             {/* Quick actions (when search is empty) */}
             {query.length === 0 && (
               <div className="px-6 py-3 border-t border-[var(--twilight)] flex flex-wrap gap-2">
-                {QUICK_ACTIONS.map((term) => (
+                {QUICK_ACTIONS.map((action) => (
                   <button
-                    key={term}
-                    onClick={() => handlePopularSearch(term)}
-                    className="px-3 py-1.5 rounded-full bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--dusk)] transition-colors text-xs font-mono focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]"
+                    key={action.label}
+                    onClick={() => {
+                      setSelectedResultIndex(-1);
+                      setDidYouMean([]);
+                      setActiveTypeFilter(null);
+                      setActiveQuickAction((prev) => (prev === action.id ? null : action.id));
+                      setQuickResults([]);
+                      setQuickResultsError(null);
+                      setQuickFetchNonce((n) => n + 1);
+                    }}
+                    className={`px-3 py-1.5 rounded-full transition-colors text-xs font-mono focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)] ${
+                      activeQuickAction === action.id
+                        ? "bg-[var(--dusk)] text-[var(--cream)] border border-[var(--coral)]/40 shadow-[0_0_0_1px_rgba(255,255,255,0.04)]"
+                        : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--dusk)]"
+                    }`}
+                    title={action.description}
                   >
-                    {term}
+                    {action.label}
                   </button>
                 ))}
+                {activeQuickAction && (
+                  <button
+                    onClick={() => {
+                      setSelectedResultIndex(-1);
+                      setActiveQuickAction(null);
+                      setQuickResults([]);
+                      setQuickResultsError(null);
+                      setQuickResultsLoading(false);
+                    }}
+                    className="px-3 py-1.5 rounded-full bg-transparent text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)] transition-colors text-xs font-mono focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)] border border-[var(--twilight)]"
+                  >
+                    Clear
+                  </button>
+                )}
               </div>
             )}
 
@@ -707,7 +964,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
               ref={resultsRef}
               id="search-results"
               role="listbox"
-              className="border-t border-[var(--twilight)] max-h-[75vh] overflow-y-auto"
+              className="border-t border-[var(--twilight)] h-[min(75vh,calc(100vh-14rem))] overflow-y-auto"
             >
               {showLoadingSpinner && (
                 <div className="p-4 text-center">
@@ -751,6 +1008,62 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                       </span>
                     ))}
                   </p>
+                </div>
+              )}
+
+              {/* Quick Action Results (filter-only) */}
+              {!isLoading && !error && activeQuickAction && (
+                <div className="p-4 border-b border-[var(--twilight)]">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-[var(--cream)]">
+                        {QUICK_ACTIONS.find((a) => a.id === activeQuickAction)?.label}
+                      </p>
+                      <p className="text-xs text-[var(--soft)]">
+                        {QUICK_ACTIONS.find((a) => a.id === activeQuickAction)?.description}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setSelectedResultIndex(-1);
+                        setActiveQuickAction(null);
+                        setQuickResults([]);
+                        setQuickResultsError(null);
+                        setQuickResultsLoading(false);
+                      }}
+                      className="text-[0.65rem] text-[var(--muted)] hover:text-[var(--cream)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)] rounded px-1"
+                    >
+                      Clear
+                    </button>
+                  </div>
+
+                  {quickResultsLoading && (
+                    <div className="mt-4 text-center">
+                      <div className="animate-spin h-5 w-5 border-2 border-[var(--neon-magenta)] border-t-transparent rounded-full mx-auto" />
+                      <p className="text-xs text-[var(--soft)] mt-2">Loading…</p>
+                    </div>
+                  )}
+
+                  {!quickResultsLoading && quickResultsError && (
+                    <div className="mt-4 text-center">
+                      <p className="text-sm text-[var(--soft)]">{quickResultsError}</p>
+                      <button
+                        onClick={() => {
+                          setQuickResultsError(null);
+                          setQuickFetchNonce((n) => n + 1);
+                        }}
+                        className="mt-3 px-4 py-2 bg-[var(--twilight)] hover:bg-[var(--dusk)] text-[var(--cream)] rounded-lg text-sm transition-colors"
+                      >
+                        Try Again
+                      </button>
+                    </div>
+                  )}
+
+                  {!quickResultsLoading && !quickResultsError && quickResults.length === 0 && (
+                    <div className="mt-4 text-center">
+                      <p className="text-sm text-[var(--soft)]">No matches right now.</p>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -842,8 +1155,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                               <button
                                 key={event.id}
                                 onClick={() => {
-                                  handleResultClick();
-                                  window.location.href = href;
+                                  navigateToHref(href);
                                 }}
                                 className="w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-[var(--twilight)]/60 hover:bg-[var(--twilight)] transition-colors text-left border border-transparent hover:border-[var(--neon-amber)]/40 shadow-[0_0_0_1px_rgba(255,255,255,0.04)]"
                               >
@@ -891,8 +1203,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                               <button
                                 key={event.id}
                                 onClick={() => {
-                                  handleResultClick();
-                                  window.location.href = href;
+                                  navigateToHref(href);
                                 }}
                                 className="w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-[var(--twilight)]/50 hover:bg-[var(--twilight)] transition-colors text-left"
                               >
@@ -960,7 +1271,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                         const resultIndex = getResultIndex("event", idx);
                         return (
                           <div
-                            key={result.id}
+                            key={`${result.type}-${result.id}-${idx}`}
                             data-result-index={resultIndex}
                             id={`result-${resultIndex}`}
                             role="option"
@@ -990,7 +1301,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                         const resultIndex = getResultIndex("venue", idx);
                         return (
                           <div
-                            key={result.id}
+                            key={`${result.type}-${result.id}-${idx}`}
                             data-result-index={resultIndex}
                             id={`result-${resultIndex}`}
                             role="option"
@@ -1020,7 +1331,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                         const resultIndex = getResultIndex("organizer", idx);
                         return (
                           <div
-                            key={result.id}
+                            key={`${result.type}-${result.id}-${idx}`}
                             data-result-index={resultIndex}
                             id={`result-${resultIndex}`}
                             role="option"
@@ -1050,7 +1361,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                         const resultIndex = getResultIndex("series", idx);
                         return (
                           <div
-                            key={result.id}
+                            key={`${result.type}-${result.id}-${idx}`}
                             data-result-index={resultIndex}
                             id={`result-${resultIndex}`}
                             role="option"
@@ -1080,7 +1391,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                         const resultIndex = getResultIndex("list", idx);
                         return (
                           <div
-                            key={result.id}
+                            key={`${result.type}-${result.id}-${idx}`}
                             data-result-index={resultIndex}
                             id={`result-${resultIndex}`}
                             role="option"
