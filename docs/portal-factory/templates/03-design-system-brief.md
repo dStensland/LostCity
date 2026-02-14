@@ -1,5 +1,10 @@
 # Template 03: Unified Design System Brief
 
+## Surface Target (Required)
+
+- Surface: `consumer` | `admin` | `both`
+- If `both`, attach separate visual intent notes for each surface.
+
 ## Visual Intent
 
 - Emotional direction:
@@ -26,4 +31,4 @@
 
 - What changes by persona:
 - What never changes by persona:
-
+- Do not introduce admin/operator patterns in consumer design.

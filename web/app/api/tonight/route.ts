@@ -17,6 +17,7 @@ type TonightEvent = {
   category: string | null;
   image_url: string | null;
   description: string | null;
+  tags: string[] | null;
   venue_id: number | null;
   series_id?: string | null;
   series?: {
@@ -50,9 +51,9 @@ type ScoredEvent = TonightEvent & {
 
 // Period-specific configuration
 const PERIOD_CONFIG: Record<HighlightsPeriod, { limit: number; candidateLimit: number; cacheSMaxAge: number; cacheStaleWhileRevalidate: number }> = {
-  today: { limit: 10, candidateLimit: 80, cacheSMaxAge: 300, cacheStaleWhileRevalidate: 600 },
-  week: { limit: 12, candidateLimit: 150, cacheSMaxAge: 900, cacheStaleWhileRevalidate: 1800 },
-  month: { limit: 16, candidateLimit: 200, cacheSMaxAge: 1800, cacheStaleWhileRevalidate: 3600 },
+  today: { limit: 10, candidateLimit: 120, cacheSMaxAge: 300, cacheStaleWhileRevalidate: 600 },
+  week: { limit: 12, candidateLimit: 250, cacheSMaxAge: 900, cacheStaleWhileRevalidate: 1800 },
+  month: { limit: 16, candidateLimit: 400, cacheSMaxAge: 1800, cacheStaleWhileRevalidate: 3600 },
 };
 
 // Categories that appeal to young hip crowd
@@ -98,6 +99,16 @@ const GENERIC_VENUE_PATTERNS = [
   /chuck e/i,
 ];
 
+// Chain cinema patterns — regular showtimes here aren't highlight-worthy
+const CHAIN_CINEMA_PATTERNS = [
+  /^regal\b/i,
+  /^amc\b/i,
+  /^cinemark\b/i,
+  /^cmx\b/i,
+  /^ncg\b/i,
+  /springs cinema/i,
+];
+
 // Calculate quality score optimized for young hip audience
 function calculateQualityScore(
   event: TonightEvent,
@@ -120,6 +131,14 @@ function calculateQualityScore(
   // Penalize generic/chain venues (-30, effectively removes them)
   if (GENERIC_VENUE_PATTERNS.some(p => p.test(venueName))) {
     score -= 30;
+  }
+
+  // Hard-exclude chain cinema showtimes — never highlight-worthy.
+  // Only indie/arthouse cinemas (Plaza, Tara, etc.) belong in highlights.
+  const tags = event.tags || [];
+  const isChainCinema = CHAIN_CINEMA_PATTERNS.some(p => p.test(venueName));
+  if (cat === "film" && isChainCinema) {
+    score -= 200; // effectively removed
   }
 
   // Venue has user recommendations (+3 per rec, cap at 15)
@@ -189,6 +208,29 @@ function calculateQualityScore(
   // Boost events with hip keywords
   if (/\b(tour|live|dj|party|21\+|18\+|drag|burlesque|improv|open mic|showcase)\b/i.test(title)) {
     score += 5;
+  }
+
+  // Boost community events that feel special/unique (not boring admin stuff)
+  if (cat === "community" || cat === "learning" || cat === "food_drink") {
+    const specialTags = ["date-night", "holiday", "21+", "late-night", "outdoor", "festival"];
+    const specialTagCount = specialTags.filter(t => tags.includes(t)).length;
+    score += specialTagCount * 3;
+
+    // Boost events at interesting venues
+    if (/museum|cemetery|botanical|aquarium|market|historic|ferst|pullman/i.test(venueName)) {
+      score += 8;
+    }
+
+    // Penalize boring/administrative community events hard
+    if (/\b(meeting|board meeting|authorities|committee|council|symposium|preview day|registration|volunteer registration|orientation|open house)\b/i.test(title)) {
+      score -= 40;
+    }
+
+    // Penalize generic class/workshop titles
+    if (/\b(class|workshop|certification|training session|webinar|seminar)\b/i.test(title) &&
+        !/\b(master\s*class|cocktail|mixology|pottery|art|paint|cook)/i.test(title)) {
+      score -= 15;
+    }
   }
 
   // Penalize nightlife events in the morning (likely miscategorized)
@@ -273,7 +315,7 @@ function getDateRange(period: HighlightsPeriod, now: Date): { dates: string[]; c
 const EVENT_SELECT = `
   id, title, start_date, start_time, end_date, end_time,
   is_all_day, is_free, category, image_url, description, venue_id,
-  series_id,
+  tags, series_id,
   series:series_id(
     id, slug, title, series_type, image_url, frequency, day_of_week,
     festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
@@ -367,28 +409,45 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Fetch events for the date range
-    const { data: events, error } = await supabase
-      .from("events")
-      .select(EVENT_SELECT)
+    // Fetch candidates in two pools to ensure diversity:
+    // 1. Non-film events (the diverse pool — music, comedy, art, etc.)
+    // 2. Small indie film sample (chain cinemas excluded entirely — only arthouse/indie)
+    // Without this split, film showtimes (~60% of all events) flood the candidate pool.
+    const baseFilters = (query: ReturnType<typeof supabase.from>) => query
       .in("start_date", dates)
       .is("canonical_event_id", null)
       .not("image_url", "is", null)
       .or("is_class.eq.false,is_class.is.null")
       .or("is_sensitive.eq.false,is_sensitive.is.null")
-      .or(`portal_id.eq.${atlantaPortal.id},portal_id.is.null`)
-      .order("start_date", { ascending: true })
-      .order("start_time", { ascending: true })
-      .limit(config.candidateLimit);
+      .or(`portal_id.eq.${atlantaPortal.id},portal_id.is.null`);
 
-    if (error || !events) {
-      console.error("Failed to fetch tonight events:", error);
+    const [nonFilmResult, filmResult] = await Promise.all([
+      baseFilters(supabase.from("events").select(EVENT_SELECT))
+        .neq("category", "film")
+        .order("start_date", { ascending: true })
+        .order("start_time", { ascending: true })
+        .limit(config.candidateLimit),
+      // Only fetch film events that AREN'T regular chain showtimes
+      // (special screenings at chains are fine, indie cinemas are great)
+      baseFilters(supabase.from("events").select(EVENT_SELECT))
+        .eq("category", "film")
+        .not("tags", "cs", "{showtime}")
+        .order("start_date", { ascending: true })
+        .order("start_time", { ascending: true })
+        .limit(20),
+    ]);
+
+    if (nonFilmResult.error && filmResult.error) {
+      console.error("Failed to fetch tonight events:", nonFilmResult.error);
       return NextResponse.json({ events: [], period }, {
         headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120" }
       });
     }
 
-    const allEvents = events as unknown as TonightEvent[];
+    const allEvents = [
+      ...((nonFilmResult.data || []) as unknown as TonightEvent[]),
+      ...((filmResult.data || []) as unknown as TonightEvent[]),
+    ];
 
     // Filter out today's events that already happened (started > 2 hours ago)
     // Only applies to today's date — future dates always included
@@ -500,6 +559,10 @@ export async function GET(request: NextRequest) {
     const venuesSeen = new Set<string>();
     const selected: ScoredEvent[] = [];
     const selectedIds = new Set<number>();
+    const categoryCounts = new Map<string, number>();
+    const seriesSeen = new Set<string>();
+    // Today keeps tight variety (max 2), week/month allow a bit more
+    const MAX_PER_CATEGORY = period === "today" ? 2 : 3;
 
     // Pass 1: Pick top-scoring event from each hip category (ensures variety)
     const MIN_FEATURED_SCORE = 20;
@@ -512,45 +575,67 @@ export async function GET(request: NextRequest) {
       if (hipCategoriesSeen.has(cat)) continue;
       if (venueName && venuesSeen.has(venueName)) continue;
       if (event.quality_score < MIN_FEATURED_SCORE) continue;
+      // Series dedup: only one event per series (e.g. same film at different theaters)
+      if (event.series_id && seriesSeen.has(event.series_id)) continue;
 
       selected.push(event);
       selectedIds.add(event.id);
       hipCategoriesSeen.add(cat);
+      categoryCounts.set(cat, (categoryCounts.get(cat) || 0) + 1);
       if (venueName) venuesSeen.add(venueName);
+      if (event.series_id) seriesSeen.add(event.series_id);
 
       if (selected.length >= config.limit) break;
     }
 
-    // Pass 2: Fill remaining slots with highest-scoring events (unique venues, any category)
+    // Pass 2: Fill remaining slots with highest-scoring events
+    // Enforce category diversity (max per category) and series/venue uniqueness
     if (selected.length < config.limit) {
       for (const event of qualityEvents) {
         if (selectedIds.has(event.id)) continue;
+        const cat = event.category || "other";
         const venueName = normalizeVenueName(event.venue?.name || "");
+
         if (venueName && venuesSeen.has(venueName)) continue;
+        // Category cap: don't let any single category dominate
+        if ((categoryCounts.get(cat) || 0) >= MAX_PER_CATEGORY) continue;
+        // Series dedup: skip if we already have an event from same series
+        if (event.series_id && seriesSeen.has(event.series_id)) continue;
 
         selected.push(event);
         selectedIds.add(event.id);
+        categoryCounts.set(cat, (categoryCounts.get(cat) || 0) + 1);
         if (venueName) venuesSeen.add(venueName);
+        if (event.series_id) seriesSeen.add(event.series_id);
 
         if (selected.length >= config.limit) break;
       }
     }
 
-    // If still not enough, fall back to any events (but sorted by score)
-    if (selected.length < 3) {
-      scoredEvents.sort((a, b) => b.quality_score - a.quality_score);
-      const fallbackIds = new Set(selected.map(e => e.id));
-      for (const event of scoredEvents) {
-        if (!fallbackIds.has(event.id)) {
-          selected.push(event);
-          if (selected.length >= config.limit) break;
-        }
+    // Pass 3: If still short, relax category cap (allow up to cap+2) but keep venue dedup
+    if (selected.length < config.limit) {
+      for (const event of qualityEvents) {
+        if (selectedIds.has(event.id)) continue;
+        const cat = event.category || "other";
+        const venueName = normalizeVenueName(event.venue?.name || "");
+
+        if (venueName && venuesSeen.has(venueName)) continue;
+        if ((categoryCounts.get(cat) || 0) >= MAX_PER_CATEGORY + 2) continue;
+        if (event.series_id && seriesSeen.has(event.series_id)) continue;
+
+        selected.push(event);
+        selectedIds.add(event.id);
+        categoryCounts.set(cat, (categoryCounts.get(cat) || 0) + 1);
+        if (venueName) venuesSeen.add(venueName);
+        if (event.series_id) seriesSeen.add(event.series_id);
+
+        if (selected.length >= config.limit) break;
       }
     }
 
     // Strip internal scoring fields before returning
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const result = selected.map(({ quality_score: _, rsvp_count, description: _d, venue_id: _v, ...event }) => ({
+    const result = selected.map(({ quality_score: _, rsvp_count, description: _d, venue_id: _v, tags: _t, ...event }) => ({
       ...event,
       rsvp_count: rsvp_count > 0 ? rsvp_count : undefined,
     }));

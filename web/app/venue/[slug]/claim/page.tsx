@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { DEFAULT_PORTAL_SLUG } from "@/lib/constants";
 
 export default function VenueClaimPage({
   params,
@@ -123,7 +124,7 @@ export default function VenueClaimPage({
           <h1 className="text-2xl font-bold mb-2">Error</h1>
           <p className="text-[var(--muted)] mb-6">{error}</p>
           <Link
-            href={`/atlanta/spots/${params.slug}`}
+            href={`/${DEFAULT_PORTAL_SLUG}/spots/${params.slug}`}
             className="text-[var(--coral)] hover:underline"
           >
             Back to venue
@@ -137,7 +138,7 @@ export default function VenueClaimPage({
     <div className="min-h-screen bg-[var(--void)] text-[var(--cream)]">
       <div className="max-w-2xl mx-auto px-4 py-12">
         <Link
-          href={`/atlanta/spots/${params.slug}`}
+          href={`/${DEFAULT_PORTAL_SLUG}/spots/${params.slug}`}
           className="inline-flex items-center gap-2 text-[var(--muted)] hover:text-[var(--cream)] mb-8 transition-colors"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

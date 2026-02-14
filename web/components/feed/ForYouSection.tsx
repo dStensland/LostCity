@@ -65,7 +65,8 @@ export async function ForYouSection({ portalSlug }: { portalSlug: string }) {
     `)
     .gte("start_date", today)
     .is("canonical_event_id", null)
-    .eq("is_active", true);
+    .eq("is_active", true)
+    .or("is_sensitive.eq.false,is_sensitive.is.null");
 
   // Build OR condition for categories and genres
   const conditions: string[] = [];

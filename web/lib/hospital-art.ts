@@ -1,4 +1,5 @@
 import { Noto_Serif, Source_Sans_3 } from "next/font/google";
+import { resolvePortalSlugAlias } from "@/lib/portal-aliases";
 
 export const hospitalDisplayFont = Noto_Serif({
   subsets: ["latin"],
@@ -13,98 +14,134 @@ export const hospitalBodyFont = Source_Sans_3({
 export const EMORY_DEMO_SLUG = "emory-demo";
 
 export function isEmoryDemoPortal(portalSlug: string): boolean {
-  return portalSlug === EMORY_DEMO_SLUG;
+  return resolvePortalSlugAlias(portalSlug) === EMORY_DEMO_SLUG;
 }
 
 export const EMORY_THEME_SCOPE_CLASS = "emory-brand-native";
 
 export const EMORY_THEME_CSS = `
+  @import url("https://use.typekit.net/usv3fbs.css");
+
   .${EMORY_THEME_SCOPE_CLASS} {
-    --cream: #002f6c;
-    --ink: #1e3d64;
-    --muted: #4f6687;
-    --night: #edf3fb;
+    --cream: #111827;
+    --ink: #1a1a1a;
+    --muted: #4b5563;
     --card-bg: #ffffff;
-    --twilight: #c7d5ea;
-    --line-strong: #aac0df;
-    --surface-1: #f9fbff;
-    --surface-2: #f1f5fc;
-    --surface-warm: #f7f1e8;
+    --twilight: #d7dce4;
+    --line-strong: #c4ccd8;
+    --surface-1: #f8f9fb;
+    --surface-2: #f2f5f9;
+    --surface-warm: #f7f7f7;
     --action-primary: #8ed585;
-    --action-primary-hover: #7bcf74;
+    --action-primary-hover: #7fcf75;
     --btn-primary-text: #002f6c;
-    --portal-accent: #245ebc;
-    --card-shadow: 0 16px 38px rgba(3, 43, 100, 0.1);
-    --card-shadow-soft: 0 8px 24px rgba(3, 43, 100, 0.08);
+    --portal-accent: #143b83;
+    --card-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+    --card-shadow-soft: 0 6px 18px rgba(0, 0, 0, 0.06);
   }
 
   .${EMORY_THEME_SCOPE_CLASS} {
     color: var(--ink);
+    font-family: "scandia-web", "source-sans-pro", "Source Sans 3", Arial, sans-serif;
+  }
+
+  .${EMORY_THEME_SCOPE_CLASS} h1,
+  .${EMORY_THEME_SCOPE_CLASS} h2,
+  .${EMORY_THEME_SCOPE_CLASS} h3,
+  .${EMORY_THEME_SCOPE_CLASS} .emory-display {
+    font-family: "superior-title", "Noto Serif", Georgia, serif;
+    letter-spacing: -0.012em;
   }
 
   .${EMORY_THEME_SCOPE_CLASS} .emory-kicker {
-    font-size: 10px;
-    letter-spacing: 0.14em;
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--muted);
+    color: #6b7280;
     font-weight: 700;
   }
 
   .${EMORY_THEME_SCOPE_CLASS} .emory-panel {
-    background: linear-gradient(180deg, var(--card-bg) 0%, var(--surface-1) 100%);
-    border: 1px solid color-mix(in srgb, var(--twilight) 85%, white 15%);
+    background: var(--card-bg);
+    border: 1px solid var(--twilight);
     box-shadow: var(--card-shadow-soft);
+    border-radius: 20px;
   }
 
   .${EMORY_THEME_SCOPE_CLASS} .emory-panel-subtle {
-    background: linear-gradient(180deg, var(--surface-1) 0%, var(--surface-2) 100%);
-    border: 1px solid color-mix(in srgb, var(--twilight) 78%, white 22%);
+    background: var(--surface-1);
+    border: 1px solid var(--twilight);
+    box-shadow: none;
+    border-radius: 14px;
   }
 
   .${EMORY_THEME_SCOPE_CLASS} .emory-chip {
-    border-radius: 9999px;
-    border: 1px solid color-mix(in srgb, var(--twilight) 80%, white 20%);
-    background: color-mix(in srgb, var(--surface-2) 70%, white 30%);
-    color: var(--muted);
-    font-size: 10px;
+    border-radius: 999px;
+    border: 1px solid var(--line-strong);
+    background: #f9fafb;
+    color: #4b5563;
+    font-size: 10.5px;
     font-weight: 700;
-    letter-spacing: 0.08em;
-    padding: 0.25rem 0.65rem;
+    letter-spacing: 0.03em;
     text-transform: uppercase;
+    padding: 0.24rem 0.58rem;
   }
 
   .${EMORY_THEME_SCOPE_CLASS} .emory-primary-btn {
-    border-radius: 9999px;
-    border: 1px solid color-mix(in srgb, var(--action-primary) 80%, #68bf5d 20%);
-    background: linear-gradient(90deg, var(--action-primary) 0%, color-mix(in srgb, var(--action-primary) 75%, white 25%) 100%);
+    border-radius: 6px;
+    border: 1px solid #7ecf75;
+    background: var(--action-primary);
     color: var(--btn-primary-text);
     font-weight: 700;
-    box-shadow: 0 4px 14px color-mix(in srgb, var(--action-primary) 34%, transparent);
+    transition: background 160ms ease, border-color 160ms ease;
   }
 
   .${EMORY_THEME_SCOPE_CLASS} .emory-primary-btn:hover {
-    background: linear-gradient(90deg, var(--action-primary-hover) 0%, color-mix(in srgb, var(--action-primary-hover) 78%, white 22%) 100%);
+    background: var(--action-primary-hover);
+    border-color: #69bb5f;
+  }
+
+  .${EMORY_THEME_SCOPE_CLASS} .emory-primary-btn:focus-visible {
+    outline: 2px solid var(--portal-accent);
+    outline-offset: 2px;
   }
 
   .${EMORY_THEME_SCOPE_CLASS} .emory-secondary-btn {
-    border-radius: 9999px;
-    border: 1px solid color-mix(in srgb, var(--line-strong) 70%, white 30%);
-    background: color-mix(in srgb, var(--card-bg) 70%, var(--surface-1) 30%);
-    color: var(--cream);
+    border-radius: 6px;
+    border: 1px solid var(--line-strong);
+    background: #ffffff;
+    color: #143b83;
     font-weight: 600;
+    transition: background 160ms ease, border-color 160ms ease;
   }
 
   .${EMORY_THEME_SCOPE_CLASS} .emory-secondary-btn:hover {
-    background: color-mix(in srgb, var(--surface-1) 82%, white 18%);
+    background: #f6f8fc;
+    border-color: #b7c2d3;
+  }
+
+  .${EMORY_THEME_SCOPE_CLASS} .emory-secondary-btn:focus-visible {
+    outline: 2px solid var(--portal-accent);
+    outline-offset: 2px;
+  }
+
+  .${EMORY_THEME_SCOPE_CLASS} .emory-link-btn {
+    color: var(--portal-accent);
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .${EMORY_THEME_SCOPE_CLASS} .emory-link-btn:hover {
+    text-decoration: underline;
   }
 
   .${EMORY_THEME_SCOPE_CLASS} .emory-photo-hero {
     position: relative;
     overflow: hidden;
-    border: 1px solid color-mix(in srgb, var(--twilight) 70%, white 30%);
-    background:
-      linear-gradient(102deg, rgba(8, 35, 78, 0.86) 0%, rgba(7, 37, 82, 0.7) 48%, rgba(7, 38, 82, 0.32) 100%),
-      var(--hero-image, url("https://images.unsplash.com/photo-1666214280557-f1b5022eb634?auto=format&fit=crop&w=1800&q=80")) var(--hero-position, center)/cover no-repeat;
+    border: 1px solid var(--twilight);
+    border-radius: 14px;
+    background: var(--hero-image, url("https://images.unsplash.com/photo-1666214280557-f1b5022eb634?auto=format&fit=crop&w=1800&q=80")) var(--hero-position, center) / cover no-repeat;
     box-shadow: var(--card-shadow);
   }
 
@@ -113,52 +150,50 @@ export const EMORY_THEME_CSS = `
     position: absolute;
     inset: 0;
     pointer-events: none;
-    background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 40%);
+    background: linear-gradient(180deg, rgba(255,255,255,0) 62%, rgba(0,0,0,0.34) 100%);
   }
 
   .${EMORY_THEME_SCOPE_CLASS} .emory-photo-hero .emory-kicker {
-    color: #bfd0ea;
+    color: #e5e7eb;
   }
 
   .${EMORY_THEME_SCOPE_CLASS} .emory-hero-title {
-    color: #f6faff;
+    color: #f9fafb;
   }
 
   .${EMORY_THEME_SCOPE_CLASS} .emory-hero-lede {
-    color: #dce8fa;
+    color: #e5e7eb;
   }
 
   .${EMORY_THEME_SCOPE_CLASS} .emory-hero-chip {
-    border-radius: 9999px;
-    border: 1px solid rgba(186, 205, 230, 0.55);
-    background: rgba(255, 255, 255, 0.14);
-    color: #f1f7ff;
+    border-radius: 999px;
+    border: 1px solid rgba(229, 231, 235, 0.8);
+    background: rgba(0, 47, 108, 0.86);
+    color: #f9fafb;
     font-size: 10px;
     font-weight: 700;
-    letter-spacing: 0.08em;
-    padding: 0.3rem 0.68rem;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
+    padding: 0.3rem 0.62rem;
   }
 
   .${EMORY_THEME_SCOPE_CLASS} .emory-hero-lens {
-    border-radius: 18px;
-    border: 1px solid #c0d8bb;
-    background: linear-gradient(180deg, rgba(247, 252, 255, 0.95) 0%, rgba(234, 245, 251, 0.95) 100%);
-    box-shadow: 0 12px 30px rgba(4, 39, 88, 0.18);
-    backdrop-filter: blur(4px);
+    border-radius: 12px;
+    border: 1px solid #dce2ea;
+    background: #f9fafb;
+    box-shadow: none;
   }
 
   .${EMORY_THEME_SCOPE_CLASS} .emory-warm-section {
-    background:
-      linear-gradient(180deg, var(--card-bg) 0%, color-mix(in srgb, var(--surface-warm) 40%, var(--surface-1) 60%) 100%);
+    background: var(--surface-warm);
   }
 
   .${EMORY_THEME_SCOPE_CLASS} .emory-photo-card {
     position: relative;
-    border-radius: 14px;
+    border-radius: 10px;
     overflow: hidden;
-    border: 1px solid color-mix(in srgb, var(--twilight) 80%, white 20%);
-    min-height: 132px;
+    border: 1px solid var(--twilight);
+    min-height: 150px;
     background: var(--photo, linear-gradient(120deg, #d7e3f6, #eef3fb));
     background-size: cover;
     background-position: center;

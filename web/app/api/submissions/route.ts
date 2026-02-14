@@ -20,6 +20,7 @@ import { createEventFromSubmission } from "@/lib/submissions/approval";
 import crypto from "crypto";
 import { logger } from "@/lib/logger";
 import { escapeSQLPattern } from "@/lib/api-utils";
+import { getLocalDateString } from "@/lib/formats";
 
 // Rate limits for submissions (per day) - admins bypass these
 const SUBMISSION_LIMITS = {
@@ -509,11 +510,8 @@ function validateSubmissionData(
     if (!/^\d{4}-\d{2}-\d{2}$/.test(eventData.start_date)) {
       return "Invalid start_date format. Use YYYY-MM-DD";
     }
-    // Check date is not in the past
-    const startDate = new Date(eventData.start_date);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (startDate < today) {
+    // Compare YYYY-MM-DD strings in local time to avoid UTC offset bugs.
+    if (eventData.start_date < getLocalDateString()) {
       return "Event start_date cannot be in the past";
     }
     // Must have either venue_id or venue data

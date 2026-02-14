@@ -18,7 +18,7 @@ from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
 
-MAX_DESCRIPTION_LENGTH = 500
+MAX_DESCRIPTION_LENGTH = 2000
 
 
 def extract_description_from_html(html: str) -> Optional[str]:
@@ -31,7 +31,7 @@ def extract_description_from_html(html: str) -> Optional[str]:
     4. Common CSS selectors for event content
     5. First significant <p> tag
 
-    Returns cleaned text truncated to 500 chars, or None.
+    Returns cleaned text truncated to 2000 chars, or None.
     """
     if not html:
         return None
@@ -68,19 +68,48 @@ def extract_description_from_html(html: str) -> Optional[str]:
             continue
 
     # Strategy 4: Common CSS selectors for event description content
+    # Includes selectors for theater CMS platforms (Spektrix, PatronManager,
+    # Tessitura, On The Stage) and comedy venue sites
     selectors = [
+        # General event selectors
         ".event-description",
         ".event-details",
         ".event-content",
         ".event-info",
         "[class*='description']",
         "[class*='event-detail']",
+        # Theater / performing arts CMS
+        ".show-description",
+        ".production-description",
+        ".performance-details",
+        ".show-info",
+        ".show-content",
+        ".production-info",
+        ".production-content",
+        ".synopsis",
+        "[class*='synopsis']",
+        "[class*='show-detail']",
+        "[class*='production-detail']",
+        # Spektrix
+        ".SpktxContent",
+        ".event-description-text",
+        # PatronManager
+        ".pm-event-description",
+        ".pm-production-description",
+        # On The Stage / ShowTix4U
+        ".show-about",
+        ".event-about",
+        # Comedy venue sites
+        ".comedian-bio",
+        ".artist-bio",
+        ".performer-info",
+        ".act-description",
+        # General CMS
         "article .content",
-        "article p",
-        ".entry-content p",
-        ".post-content p",
-        ".content p",
+        ".entry-content",
+        ".post-content",
         ".body-text",
+        ".page-content",
     ]
     for selector in selectors:
         elems = soup.select(selector)
@@ -89,13 +118,19 @@ def extract_description_from_html(html: str) -> Optional[str]:
             if _is_useful_description(text):
                 return text[:MAX_DESCRIPTION_LENGTH]
 
-    # Strategy 5: First significant <p> tag in main content area
+    # Strategy 5: Combine multiple <p> tags from main content for richer descriptions
     main = soup.find("main") or soup.find("article") or soup.find("body")
     if main:
+        paragraphs = []
         for p in main.find_all("p"):
             text = _clean_text(p.get_text())
             if _is_useful_description(text):
-                return text[:MAX_DESCRIPTION_LENGTH]
+                paragraphs.append(text)
+                combined = " ".join(paragraphs)
+                if len(combined) >= MAX_DESCRIPTION_LENGTH:
+                    return combined[:MAX_DESCRIPTION_LENGTH]
+        if paragraphs:
+            return " ".join(paragraphs)[:MAX_DESCRIPTION_LENGTH]
 
     return None
 

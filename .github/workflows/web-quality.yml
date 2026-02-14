@@ -1,0 +1,52 @@
+name: Web Quality
+
+on:
+  pull_request:
+    paths:
+      - "web/**"
+      - "docs/frontend/**"
+      - ".github/workflows/web-quality.yml"
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - "web/**"
+      - "docs/frontend/**"
+      - ".github/workflows/web-quality.yml"
+  workflow_dispatch:
+
+jobs:
+  validate-web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify skeleton contract
+        run: npm run test:skeletons
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build

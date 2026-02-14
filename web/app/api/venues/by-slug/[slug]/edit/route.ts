@@ -31,6 +31,74 @@ type Props = {
   params: Promise<{ slug: string }>;
 };
 
+export async function GET(request: NextRequest, { params }: Props) {
+  const rateLimitResult = await applyRateLimit(
+    request,
+    RATE_LIMITS.read,
+    getClientIdentifier(request)
+  );
+  if (rateLimitResult) return rateLimitResult;
+
+  const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return errorApiResponse("Authentication required", 401);
+  }
+
+  const { slug } = await params;
+  if (!isValidString(slug, 1, 200)) {
+    return validationError("Invalid venue slug");
+  }
+
+  const serviceClient = createServiceClient();
+  const { data: venue, error: venueError } = await serviceClient
+    .from("venues")
+    .select(
+      "id, name, slug, claimed_by, is_verified, description, website, hours, image_url, accessibility_notes, vibes, phone, menu_url, reservation_url"
+    )
+    .eq("slug", slug)
+    .maybeSingle() as {
+      data: {
+        id: number;
+        name: string;
+        slug: string;
+        claimed_by: string | null;
+        is_verified: boolean | null;
+        description: string | null;
+        website: string | null;
+        hours: string | null;
+        image_url: string | null;
+        accessibility_notes: string | null;
+        vibes: string[] | null;
+        phone: string | null;
+        menu_url: string | null;
+        reservation_url: string | null;
+      } | null;
+      error: unknown;
+    };
+
+  if (venueError) {
+    console.error("Error fetching venue:", venueError);
+    return errorApiResponse("Failed to fetch venue", 500);
+  }
+
+  if (!venue) {
+    return errorApiResponse("Venue not found", 404);
+  }
+
+  if (venue.claimed_by !== user.id) {
+    return errorApiResponse("You do not have permission to view this venue", 403);
+  }
+
+  return successResponse({
+    venue: {
+      ...venue,
+      hours_display: venue.hours,
+    },
+  });
+}
+
 export async function PATCH(request: NextRequest, { params }: Props) {
   // Rate limiting
   const rateLimitResult = await applyRateLimit(

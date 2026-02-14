@@ -35,6 +35,7 @@ VENUE_DATA = {
     "venue_type": "nightclub",
     "spot_type": "nightclub",
     "website": BASE_URL,
+    "vibes": ["nightclub", "upscale", "dj", "dancing", "late-night"],
 }
 
 

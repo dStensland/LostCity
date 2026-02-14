@@ -21,6 +21,9 @@ interface GooglePlaceResult {
     lat: number;
     lng: number;
   };
+  website?: string;
+  category?: string;
+  categoryName?: string;
 }
 
 type SearchResult =
@@ -40,6 +43,9 @@ interface GooglePlaceAutocompleteProps {
     google_place_id?: string;
     venue_id?: number;
     location?: { lat: number; lng: number };
+    website?: string;
+    category?: string;
+    categoryName?: string;
   } | null) => void;
   placeholder?: string;
   required?: boolean;
@@ -151,6 +157,9 @@ export function GooglePlaceAutocomplete({
         address: place.address,
         google_place_id: place.id,
         location: place.location,
+        website: place.website,
+        category: place.category,
+        categoryName: place.categoryName,
       });
       setQuery(place.name);
     }
@@ -304,11 +313,11 @@ export function GooglePlaceAutocomplete({
                       </>
                     ) : (
                       <>
-                        {(data as GooglePlaceResult).address && (
-                          <div className="font-mono text-xs text-[var(--muted)] mt-0.5">
-                            {(data as GooglePlaceResult).address}
-                          </div>
-                        )}
+                        <div className="font-mono text-xs text-[var(--muted)] mt-0.5">
+                          {[(data as GooglePlaceResult).categoryName, (data as GooglePlaceResult).address]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </div>
                       </>
                     )}
                   </div>

@@ -136,9 +136,9 @@ def fetch_film_metadata(title: str, year: Optional[str] = None) -> Optional[Film
         api_key = get_config().api.omdb_api_key
         search_query = title.replace(" ", "+")
         if year:
-            omdb_url = f"https://www.omdbapi.com/?t={search_query}&y={year}&apikey={api_key}"
+            omdb_url = f"https://www.omdbapi.com/?t={search_query}&y={year}&plot=full&apikey={api_key}"
         else:
-            omdb_url = f"https://www.omdbapi.com/?t={search_query}&apikey={api_key}"
+            omdb_url = f"https://www.omdbapi.com/?t={search_query}&plot=full&apikey={api_key}"
 
         response = requests.get(omdb_url, timeout=10)
 

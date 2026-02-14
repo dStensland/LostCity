@@ -18,6 +18,7 @@ export const CATEGORIES = [
   { value: "religious", label: "Religious" },
   { value: "markets", label: "Markets" },
   { value: "wellness", label: "Wellness" },
+  { value: "support_group", label: "Support Group" },
   { value: "gaming", label: "Gaming" },
   { value: "outdoors", label: "Outdoors" },
   { value: "other", label: "Other" },

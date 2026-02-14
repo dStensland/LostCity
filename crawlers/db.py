@@ -15,7 +15,7 @@ from typing import Optional, Tuple
 from supabase import create_client, Client
 from config import get_config
 from tags import VALID_CATEGORIES, VALID_VENUE_TYPES, VALID_VIBES
-from tag_inference import infer_tags, infer_is_class, infer_genres
+from tag_inference import infer_tags, infer_is_class, infer_is_support_group, infer_genres
 from genre_normalize import normalize_genres
 from description_fetcher import generate_synthetic_description
 from series import get_or_create_series, update_series_metadata
@@ -24,6 +24,31 @@ from artist_images import get_info_for_music_event
 from date_utils import MAX_FUTURE_DAYS_DEFAULT
 
 logger = logging.getLogger(__name__)
+
+
+# ===== TITLE CASE HELPER =====
+# Python's .title() breaks on apostrophes: "JOHN'S" -> "John'S" (wrong)
+# This function handles possessives/contractions correctly.
+_SMALL_WORDS = {"a", "an", "the", "and", "but", "or", "for", "nor", "on", "at", "to", "in", "of", "by", "is", "vs"}
+
+def smart_title_case(text: str) -> str:
+    """Title-case that correctly handles apostrophes and small words."""
+    # Normalize smart/curly apostrophes to ASCII before processing
+    text = text.replace("\u2019", "'").replace("\u2018", "'")
+    words = text.lower().split()
+    result = []
+    for i, word in enumerate(words):
+        if "'" in word:
+            # Handle contractions: "valentine's" -> "Valentine's", "don't" -> "Don't"
+            parts = word.split("'")
+            parts[0] = parts[0].capitalize()
+            # Keep everything after apostrophe lowercase
+            result.append("'".join(parts))
+        elif i == 0 or word not in _SMALL_WORDS:
+            result.append(word.capitalize())
+        else:
+            result.append(word)
+    return " ".join(result)
 
 
 # ===== VALIDATION STATISTICS TRACKING =====
@@ -539,12 +564,47 @@ def get_or_create_venue(venue_data: dict) -> int:
         if result.data and len(result.data) > 0:
             return result.data[0]["id"]
 
-    # Try to find by name
+    # Try to find by name (exact match)
     name = venue_data.get("name")
     if name:
         result = client.table("venues").select("id").eq("name", name).execute()
         if result.data and len(result.data) > 0:
             return result.data[0]["id"]
+
+    # Proximity dedup: if a venue with a similar name exists within 100m, reuse it
+    lat = venue_data.get("lat")
+    lng = venue_data.get("lng")
+    if name and lat and lng:
+        # ~100m box
+        lat_delta = 0.001
+        lng_delta = 0.001
+        try:
+            nearby = (
+                client.table("venues")
+                .select("id, name")
+                .gte("lat", lat - lat_delta)
+                .lte("lat", lat + lat_delta)
+                .gte("lng", lng - lng_delta)
+                .lte("lng", lng + lng_delta)
+                .execute()
+            )
+            if nearby.data:
+                name_lower = name.lower().strip()
+                for row in nearby.data:
+                    existing_name = (row.get("name") or "").lower().strip()
+                    # Check if names share substantial overlap (>60% of shorter name)
+                    shorter = min(len(name_lower), len(existing_name))
+                    if shorter < 3:
+                        continue
+                    # Simple substring check: one contains the other, or starts the same
+                    if (name_lower in existing_name or existing_name in name_lower
+                            or name_lower[:shorter] == existing_name[:shorter]):
+                        logger.info(
+                            f"Proximity dedup: reusing '{row['name']}' (id={row['id']}) for '{name}'"
+                        )
+                        return row["id"]
+        except Exception as e:
+            logger.debug(f"Proximity dedup check failed: {e}")
 
     # Auto-fetch description for new venues with websites
     if venue_data.get("website") and not venue_data.get("description"):
@@ -623,8 +683,12 @@ def sanitize_text(text: str) -> str:
     Sanitize text field by:
     - Stripping whitespace
     - Removing HTML tags (robust: handles malformed tags)
-    - Escaping any remaining HTML entities to prevent stored XSS
+    - Decoding HTML entities (&#8211; → –, &amp; → &, etc.)
     - Normalizing whitespace (collapse multiple spaces/newlines)
+
+    Note: We decode rather than escape HTML entities because this data is
+    stored as plain text and rendered by React (which auto-escapes on output).
+    The old html.escape() call was double-encoding entities from crawlers.
     """
     if not text:
         return text
@@ -638,8 +702,9 @@ def sanitize_text(text: str) -> str:
     # Second pass: catch unclosed tags like <img src=x onerror=alert(1)
     text = re.sub(r"<[^>]*$", "", text)
 
-    # Escape any remaining HTML special chars to prevent stored XSS
-    text = html.escape(text, quote=False)
+    # Decode HTML entities to plain text (&#8211; → –, &amp; → &, etc.)
+    # Run twice to handle double-encoded entities (&amp;#8211; → &#8211; → –)
+    text = html.unescape(html.unescape(text))
 
     # Normalize whitespace - collapse multiple spaces
     text = re.sub(r"\s+", " ", text)
@@ -745,8 +810,7 @@ def validate_event(event_data: dict) -> Tuple[bool, Optional[str], list[str]]:
 
     # Check for all-caps title (likely extraction artifact)
     if title.isupper() and len(title) > 5:
-        # Title-case it
-        event_data["title"] = title.title()
+        event_data["title"] = smart_title_case(title)
         warnings.append("All-caps title converted to title case")
         _validation_stats.record_warning("all_caps_title")
 
@@ -1033,6 +1097,21 @@ def insert_event(
         logger.warning(f'Rejected bad title: "{title[:80]}"')
         raise ValueError(f'Invalid event title: "{title[:50]}"')
 
+    # Reject events where title is just the venue name (junk / "place is open")
+    venue_id = event_data.get("venue_id")
+    if venue_id and title:
+        try:
+            venue_row = client.table("venues").select("name").eq("id", venue_id).maybe_single().execute()
+            if venue_row.data:
+                venue_name_db = (venue_row.data.get("name") or "").strip().lower()
+                if venue_name_db and title.strip().lower() == venue_name_db:
+                    logger.warning(f'Rejected title=venue_name junk: "{title[:80]}"')
+                    raise ValueError(f'Event title matches venue name: "{title[:50]}"')
+        except ValueError:
+            raise  # Re-raise our own ValueError
+        except Exception:
+            pass  # Don't block insert on lookup failure
+
     # Remove producer_id if present (not a database column)
     if "producer_id" in event_data:
         event_data.pop("producer_id")
@@ -1068,6 +1147,16 @@ def insert_event(
             venue_vibes = venue.get("vibes") or []
             venue_type = venue.get("venue_type")
 
+            # Reject events at venues outside metro Atlanta
+            venue_state = (venue.get("state") or "").upper().strip()
+            if venue_state and venue_state != "GA":
+                msg = (
+                    f"Venue outside Georgia: {venue.get('name')} "
+                    f"({venue.get('city')}, {venue_state})"
+                )
+                logger.warning(f"Event rejected: {msg}")
+                raise ValueError(msg)
+
     # Auto-fetch movie metadata (poster, director, runtime, etc.) for film events
     film_metadata = None
     if event_data.get("category") == "film":
@@ -1077,7 +1166,8 @@ def insert_event(
         if film_metadata and not event_data.get("image_url"):
             event_data["image_url"] = film_metadata.poster_url
 
-    # Auto-fetch artist image and genres for music events
+    # Auto-fetch artist image, genres, and bio for music events
+    music_info = None
     if event_data.get("category") == "music":
         music_info = get_info_for_music_event(
             event_data.get("title", ""),
@@ -1100,6 +1190,11 @@ def insert_event(
     if not is_class_flag:
         if infer_is_class(event_data, source_slug=source_slug, venue_type=venue_type):
             is_class_flag = True
+
+    # Auto-detect support groups — reclassify and mark sensitive
+    if infer_is_support_group(event_data, source_slug=source_slug):
+        event_data["category"] = "support_group"
+        is_sensitive_flag = True
 
     # Festival/conference rollup hints based on source
     festival_hint = get_festival_source_hint(source_slug, source_name)
@@ -1241,47 +1336,31 @@ def insert_event(
                 if backfill:
                     update_series_metadata(client, series_id, backfill)
 
-    # Add genres for standalone events (events without a series)
-    if genres and not event_data.get("series_id"):
+    # Always store genres on the event row for discoverability
+    # (series also stores genres, but event-level enables filtering/display)
+    if genres:
         event_data["genres"] = genres
 
     # Backfill description from film metadata when missing or too short to be useful
     existing_desc = event_data.get("description") or ""
     if film_metadata and film_metadata.plot and len(existing_desc) < 80:
-        event_data["description"] = film_metadata.plot[:500]
+        event_data["description"] = film_metadata.plot[:2000]
 
-    # Last-resort: generate synthetic description so no event is inserted with NULL
-    if not event_data.get("description"):
-        venue_name = None
-        if event_data.get("venue_id"):
-            v = get_venue_by_id_cached(event_data["venue_id"])
-            if v:
-                venue_name = v.get("name")
-        # For music events with parsed lineup, generate lineup-based description
-        parsed_artists = event_data.get("_parsed_artists")
-        if event_data.get("category") == "music" and parsed_artists:
-            # Enrich parsed artists with cached Deezer genres for description
-            from artist_images import fetch_artist_info as _fetch_info
+    # Backfill description from artist Wikipedia bio for music events
+    existing_desc = event_data.get("description") or ""
+    if music_info and music_info.bio and len(existing_desc) < 80:
+        event_data["description"] = music_info.bio[:2000]
 
-            enriched = []
-            for pa in parsed_artists:
-                entry = dict(pa)
-                info = _fetch_info(pa["name"])  # uses in-memory cache, no API call
-                if info and info.genres:
-                    entry["genres"] = info.genres
-                enriched.append(entry)
-            event_data["description"] = generate_synthetic_description(
-                event_data.get("title", ""),
-                venue_name=venue_name,
-                category="music",
-                artists=enriched,
-            )
-        else:
-            event_data["description"] = generate_synthetic_description(
-                event_data.get("title", ""),
-                venue_name=venue_name,
-                category=event_data.get("category"),
-            )
+    # Strip template/filler descriptions — NULL is better than "Event at X".
+    desc = event_data.get("description") or ""
+    if re.match(
+        r"^(Event at |Live music at .+ featuring|Comedy show at |"
+        r"Theater performance at |Film screening at |Sporting event at |"
+        r"Arts event at |Food & drink event at |Fitness class at |"
+        r"Creative workshop at |Performance at |Show at |Paint and sip class at )",
+        desc,
+    ):
+        event_data["description"] = None
 
     # Inherit portal_id from source if not explicitly set
     if (

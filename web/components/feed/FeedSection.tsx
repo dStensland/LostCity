@@ -778,47 +778,68 @@ function EventList({ section, portalSlug }: { section: FeedSectionData; portalSl
     }
   };
 
-  // Group events by date for better scannability
-  const eventsByDate = section.events.reduce((acc, event) => {
-    const dateKey = event.start_date;
-    if (!acc[dateKey]) acc[dateKey] = [];
-    acc[dateKey].push(event);
-    return acc;
-  }, {} as Record<string, FeedEvent[]>);
+  // Group events into progressive buckets: Today, This Week, This Month
+  const now = new Date();
+  const todayStr = now.toISOString().split("T")[0];
+  // End of week = next Sunday (or today if Sunday)
+  const dayOfWeek = now.getDay(); // 0=Sun
+  const daysUntilEndOfWeek = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
+  const endOfWeek = new Date(now);
+  endOfWeek.setDate(now.getDate() + daysUntilEndOfWeek);
+  const endOfWeekStr = endOfWeek.toISOString().split("T")[0];
 
-  const sortedDates = Object.keys(eventsByDate).sort();
-  const showDateHeaders = sortedDates.length > 1;
+  const todayEvents: FeedEvent[] = [];
+  const weekEvents: FeedEvent[] = [];
+  const monthEvents: FeedEvent[] = [];
+
+  for (const event of section.events) {
+    const d = event.start_date;
+    if (d === todayStr) {
+      todayEvents.push(event);
+    } else if (d <= endOfWeekStr) {
+      weekEvents.push(event);
+    } else {
+      monthEvents.push(event);
+    }
+  }
+
+  const buckets: { key: string; label: string; events: FeedEvent[] }[] = [];
+  if (todayEvents.length > 0) buckets.push({ key: "today", label: "Today", events: todayEvents });
+  if (weekEvents.length > 0) buckets.push({ key: "week", label: "Soon", events: weekEvents });
+  if (monthEvents.length > 0) buckets.push({ key: "month", label: "A Bit Later", events: monthEvents });
+
+  const showBucketHeaders = buckets.length > 1;
 
   return (
     <section className="mb-4 sm:mb-6">
       <SectionHeader section={section} portalSlug={portalSlug} />
 
-      {/* List grouped by date */}
+      {/* List grouped by progressive date buckets */}
       <div className="space-y-4">
-        {sortedDates.map((date) => (
-          <div key={date}>
-            {/* Date header - only show if multiple dates */}
-            {showDateHeaders && (
+        {buckets.map((bucket) => (
+          <div key={bucket.key}>
+            {/* Bucket header */}
+            {showBucketHeaders && (
               <div
                 data-accent
                 className="group flex items-center gap-3 mb-2 px-3 py-2 -mx-3 rounded-lg cursor-default transition-all hover:bg-[var(--twilight)]/20 card-atmospheric glow-accent reflection-accent"
               >
                 <span className="font-mono text-xs font-medium text-[var(--coral)] transition-all group-hover:text-glow">
-                  {getSmartDateLabel(date)}
+                  {bucket.label}
                 </span>
                 <div className="flex-1 h-px bg-[var(--twilight)]/50" />
               </div>
             )}
-            {/* Events for this date */}
+            {/* Events for this bucket */}
             <div className="space-y-2">
               {groupEventsForDisplay(
-                eventsByDate[date].map((event) => ({
+                bucket.events.map((event) => ({
                   ...event,
                   category_id: event.category,
                   subcategory_id: event.subcategory,
                 })) as unknown as EventWithLocation[],
                 { collapseFestivals: true, collapseFestivalPrograms: true }
-              ).map((item, idx) => renderDisplayItem(item, idx, !showDateHeaders))}
+              ).map((item, idx) => renderDisplayItem(item, idx, !showBucketHeaders))}
             </div>
           </div>
         ))}

@@ -593,7 +593,7 @@ def create_author_artists(
             # Backfill bio, photo, genres if missing
             updates = {}
             if author.get("bio") and not artist.get("bio"):
-                updates["bio"] = author["bio"][:500]
+                updates["bio"] = author["bio"][:2000]
             if author.get("photo_url") and not artist.get("image_url"):
                 updates["image_url"] = author["photo_url"]
             if author.get("genres") and not artist.get("genres"):

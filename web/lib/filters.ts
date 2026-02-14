@@ -30,6 +30,7 @@ export async function getFilteredEvents(
       { count: "exact" }
     )
     .gte("start_date", today)
+    .or("is_sensitive.eq.false,is_sensitive.is.null")
     .order("start_date", { ascending: true })
     .order("start_time", { ascending: true });
 
@@ -117,6 +118,7 @@ export async function getAllFilteredEvents(
     `
     )
     .gte("start_date", today)
+    .or("is_sensitive.eq.false,is_sensitive.is.null")
     .order("start_date", { ascending: true })
     .order("start_time", { ascending: true })
     .limit(limit);
@@ -135,6 +137,7 @@ export async function getAllFilteredEvents(
       )
       .ilike("venue.city", filters.city)
       .gte("start_date", today)
+      .or("is_sensitive.eq.false,is_sensitive.is.null")
       .order("start_date", { ascending: true })
       .order("start_time", { ascending: true })
       .limit(limit);

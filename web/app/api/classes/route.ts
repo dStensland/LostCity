@@ -135,7 +135,8 @@ export async function GET(request: NextRequest) {
         { count: "exact" }
       )
       .eq("is_class", true)
-      .gte("start_date", startDate || today);
+      .gte("start_date", startDate || today)
+      .or("is_sensitive.eq.false,is_sensitive.is.null");
 
     // Apply filters
     if (endDate) {

@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { hospitalBodyFont, hospitalDisplayFont } from "@/lib/hospital-art";
+import { hospitalBodyFont } from "@/lib/hospital-art";
 
 type EmoryDemoHeaderProps = {
   portalSlug: string;
 };
 
-type NavKey = "feed" | "find" | "community" | "hospitals";
+type NavKey = "hospital_hub" | "hospitals" | "concierge" | "community_hub" | "programs";
 
 type NavItem = {
   key: NavKey;
@@ -17,6 +17,7 @@ type NavItem = {
 };
 
 const SEARCH_KEYS_TO_CLEAR = ["event", "spot", "series", "festival", "org"] as const;
+const DEFAULT_EMORY_CONCIERGE_HOSPITAL = "emory-university-hospital";
 
 function getBaseQuery(searchParams: URLSearchParams): URLSearchParams {
   const params = new URLSearchParams(searchParams.toString());
@@ -24,7 +25,7 @@ function getBaseQuery(searchParams: URLSearchParams): URLSearchParams {
   return params;
 }
 
-function buildPortalHref(portalSlug: string, currentParams: URLSearchParams, view: "feed" | "find" | "community"): string {
+function buildPortalHref(portalSlug: string, currentParams: URLSearchParams, view: "feed" | "community"): string {
   const params = getBaseQuery(currentParams);
 
   if (view === "feed") {
@@ -32,115 +33,125 @@ function buildPortalHref(portalSlug: string, currentParams: URLSearchParams, vie
     params.delete("type");
     params.delete("display");
     params.delete("tab");
-  } else if (view === "find") {
-    params.set("view", "find");
-    params.set("type", "events");
-    params.delete("tab");
   } else {
     params.set("view", "community");
     params.delete("type");
     params.delete("display");
-    params.set("tab", "people");
+    params.set("tab", "groups");
   }
 
   const query = params.toString();
   return query ? `/${portalSlug}?${query}` : `/${portalSlug}`;
 }
 
+function buildHospitalsHref(portalSlug: string, currentParams: URLSearchParams, modeOverride?: string): string {
+  const params = getBaseQuery(currentParams);
+  params.delete("view");
+  params.delete("tab");
+  params.delete("type");
+  params.delete("display");
+  if (modeOverride) params.set("mode", modeOverride);
+  const query = params.toString();
+  return query ? `/${portalSlug}/hospitals?${query}` : `/${portalSlug}/hospitals`;
+}
+
+function buildConciergeHref(portalSlug: string, currentParams: URLSearchParams): string {
+  const params = getBaseQuery(currentParams);
+  params.delete("view");
+  params.delete("tab");
+  params.delete("type");
+  params.delete("display");
+  params.set("mode", "visitor");
+  const query = params.toString();
+  return query
+    ? `/${portalSlug}/hospitals/${DEFAULT_EMORY_CONCIERGE_HOSPITAL}?${query}`
+    : `/${portalSlug}/hospitals/${DEFAULT_EMORY_CONCIERGE_HOSPITAL}`;
+}
+
 function getActiveNav(pathname: string, searchParams: URLSearchParams, portalSlug: string): NavKey {
-  if (pathname.startsWith(`/${portalSlug}/hospitals`)) {
-    return "hospitals";
-  }
+  if (pathname.startsWith(`/${portalSlug}/programs`)) return "programs";
+  if (pathname.startsWith(`/${portalSlug}/hospitals/`)) return "concierge";
+  if (pathname === `/${portalSlug}/hospitals` || pathname.startsWith(`/${portalSlug}/hospitals?`)) return "hospitals";
 
   const view = searchParams.get("view");
-  if (view === "find" || view === "events" || view === "spots" || view === "map" || view === "calendar") {
-    return "find";
-  }
-  if (view === "community") {
-    return "community";
-  }
-  return "feed";
+  if (view === "community") return "community_hub";
+  return "hospital_hub";
 }
 
 function navClass(active: boolean): string {
-  if (active) {
-    return "bg-[#edf3fb] text-[#002f6c] border-[#245ebc]/30 shadow-[inset_0_-2px_0_#245ebc]";
-  }
-  return "text-[#2d3d54] border-transparent hover:text-[#002f6c] hover:border-[#245ebc]/25 hover:bg-[#f7fafc]";
+  if (active) return "bg-[#8ed585] text-[#0f2f5f] border-[#7fcf75] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.3)]";
+  return "text-[#374151] border-transparent hover:text-[#143b83] hover:bg-[#f3f5f8]";
 }
 
 export default function EmoryDemoHeader({ portalSlug }: EmoryDemoHeaderProps) {
   const pathname = usePathname() || "";
   const searchParams = useSearchParams();
   const queryParams = new URLSearchParams(searchParams?.toString() || "");
+
+  const hospitalHubHref = buildPortalHref(portalSlug, queryParams, "feed");
+  const communityHref = buildPortalHref(portalSlug, queryParams, "community");
+  const hospitalsHref = buildHospitalsHref(portalSlug, queryParams);
+  const conciergeHref = buildConciergeHref(portalSlug, queryParams);
+  const programsHref = `/${portalSlug}/programs`;
+
   const activeNav = getActiveNav(pathname, queryParams, portalSlug);
-  const mode = queryParams.get("mode");
-  const persona = queryParams.get("persona");
-  const directoryParams = new URLSearchParams();
-  if (mode) directoryParams.set("mode", mode);
-  if (persona) directoryParams.set("persona", persona);
-  const directoryHref = directoryParams.toString()
-    ? `/${portalSlug}/hospitals?${directoryParams.toString()}`
-    : `/${portalSlug}/hospitals`;
 
   const navItems: NavItem[] = [
-    { key: "feed", label: "Feed", href: buildPortalHref(portalSlug, queryParams, "feed") },
-    { key: "find", label: "Find", href: buildPortalHref(portalSlug, queryParams, "find") },
-    { key: "community", label: "Community", href: buildPortalHref(portalSlug, queryParams, "community") },
-    { key: "hospitals", label: "Hospitals", href: directoryHref },
+    { key: "hospital_hub", label: "Hospital Hub", href: hospitalHubHref },
+    { key: "hospitals", label: "Hospitals", href: hospitalsHref },
+    { key: "concierge", label: "Concierge", href: conciergeHref },
+    { key: "community_hub", label: "Community Hub", href: communityHref },
+    { key: "programs", label: "Programs", href: programsHref },
   ];
 
   return (
-    <header className="sticky top-0 z-[130] shadow-[0_1px_0_rgba(0,0,0,0.08)]">
-      <div className="border-b border-white/15 bg-black text-white">
-        <div className="mx-auto flex h-10 max-w-6xl items-center justify-between px-4">
-          <div className="hidden items-center gap-4 text-[11px] uppercase tracking-[0.07em] text-white/85 md:flex">
-            <span>Medical Records</span>
-            <span>Appointments</span>
-            <span>Refer a Patient</span>
-            <span>Contact Us</span>
+    <header className="sticky top-0 z-[130] bg-[#f8f8f8]/95 backdrop-blur supports-[backdrop-filter]:bg-[#f8f8f8]/85">
+      <div className={`${hospitalBodyFont.className} border-b border-[#d7dce4]`}>
+        <div className="mx-auto flex max-w-[1240px] items-center justify-between gap-3 px-3 sm:px-4 lg:px-6 py-3">
+          <Link href={hospitalHubHref} className="min-w-0 leading-none">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#002f6c] text-[10px] font-bold text-white">E</span>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.07em] text-[#111827]">Emory Health</p>
+              <span className="hidden text-[11px] text-[#6b7280] sm:inline">Together</span>
+            </div>
+          </Link>
+
+          <nav className="hidden items-center gap-1.5 lg:flex" aria-label="Portal sections">
+            {navItems.map((item) => {
+              const isActive = item.key === activeNav;
+              return (
+                <Link
+                  key={item.key}
+                  href={item.href}
+                  className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold leading-none transition-colors ${navClass(isActive)}`}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+
+          <div className="flex items-center gap-1.5">
+            <Link
+              href={hospitalsHref}
+              className="hidden sm:inline-flex items-center rounded-md border border-[#111111] bg-[#111111] px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-[#1f1f1f]"
+            >
+              Find Care
+            </Link>
+            <Link
+              href={conciergeHref}
+              className="hidden sm:inline-flex items-center rounded-md border border-[#111111] bg-[#111111] px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-[#1f1f1f]"
+            >
+              My Concierge
+            </Link>
+            <Link
+              href={hospitalsHref}
+              className="inline-flex items-center rounded-md border border-[#111111] bg-[#111111] px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-[#1f1f1f]"
+            >
+              Directions
+            </Link>
           </div>
-          <div className="text-[11px] uppercase tracking-[0.08em] text-white/85 md:hidden">Emory Healthcare</div>
-          <button
-            type="button"
-            aria-label="Search"
-            className="inline-flex h-7 w-7 items-center justify-center rounded border border-white/25 text-white/85"
-          >
-            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m21 21-4.4-4.4m1.4-5.1a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z" />
-            </svg>
-          </button>
         </div>
-      </div>
-
-      <div className={`${hospitalBodyFont.className} border-b border-[#d6dfeb] bg-white`}>
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3.5">
-          <Link href={`/${portalSlug}`} className="leading-none">
-            <p className={`${hospitalDisplayFont.className} font-serif text-[46px] leading-[0.82] tracking-[-0.02em] text-[#111820]`}>EMORY</p>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-[#111820]">Healthcare</p>
-          </Link>
-          <Link
-            href={directoryHref}
-            className="inline-flex items-center rounded-lg border border-[#7dcf74] bg-[#8ed585] px-4 py-2 text-sm font-semibold text-[#0d325d] shadow-[0_4px_14px_rgba(115,199,106,0.35)] transition-colors hover:bg-[#7dcf74]"
-          >
-            Hospital Directory
-          </Link>
-        </div>
-
-        <nav className="mx-auto flex max-w-6xl items-center gap-1 px-4 pb-3" aria-label="Portal sections">
-          {navItems.map((item) => {
-            const isActive = item.key === activeNav;
-            return (
-              <Link
-                key={item.key}
-                href={item.href}
-                className={`inline-flex rounded-md border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.11em] transition-colors ${navClass(isActive)}`}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
       </div>
     </header>
   );

@@ -280,6 +280,50 @@ def run_festival_schedules() -> dict:
     return stats
 
 
+def demote_stale_festival_dates() -> int:
+    """Demote festivals whose announced_start is in the past.
+
+    Skips festivals that are currently ongoing (announced_end >= today).
+    Moves announced dates to pending for re-verification.
+
+    Returns count of demoted festivals.
+    """
+    from db import get_client
+    from datetime import date
+
+    client = get_client()
+    today_str = date.today().isoformat()
+
+    # Find festivals with past announced_start
+    result = (
+        client.table("festivals")
+        .select("id,slug,announced_start,announced_end")
+        .not_.is_("announced_start", "null")
+        .lt("announced_start", today_str)
+        .execute()
+    )
+    festivals = result.data or []
+
+    demoted = 0
+    for f in festivals:
+        # Skip ongoing festivals (end date is today or future)
+        if f.get("announced_end") and f["announced_end"] >= today_str:
+            continue
+
+        client.table("festivals").update({
+            "pending_start": f["announced_start"],
+            "pending_end": f.get("announced_end"),
+            "announced_start": None,
+            "announced_end": None,
+            "date_confidence": 20,
+            "date_source": "auto-demoted-stale",
+        }).eq("id", f["id"]).execute()
+        demoted += 1
+        logger.debug(f"Demoted stale festival: {f['slug']} ({f['announced_start']})")
+
+    return demoted
+
+
 def run_all_sources(parallel: bool = True, max_workers: int = MAX_WORKERS, adaptive: bool = True) -> dict[str, bool]:
     """
     Run crawlers for all active sources.
@@ -409,6 +453,15 @@ def run_all_sources(parallel: bool = True, max_workers: int = MAX_WORKERS, adapt
         )
     except Exception as e:
         logger.warning(f"Festival schedule extraction failed: {e}")
+
+    # 2b. Demote stale festival dates (announced_start in the past)
+    logger.info("Demoting stale festival dates...")
+    try:
+        demoted_count = demote_stale_festival_dates()
+        if demoted_count > 0:
+            logger.info(f"Demoted {demoted_count} festivals with past announced dates")
+    except Exception as e:
+        logger.warning(f"Festival date demotion failed: {e}")
 
     # 3. Deactivate TBA events (missing start_time after enrichment)
     logger.info("Deactivating TBA events (missing start_time)...")

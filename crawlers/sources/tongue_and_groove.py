@@ -19,22 +19,23 @@ from utils import extract_images_from_page, extract_event_links, find_event_url
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = "https://www.tandgclub.com"
+BASE_URL = "https://tandgonline.com"
 EVENTS_URL = f"{BASE_URL}/events"
 
 VENUE_DATA = {
     "name": "Tongue and Groove",
     "slug": "tongue-and-groove",
-    "address": "3055 Peachtree Rd NE",
+    "address": "565 Main St NE",
     "neighborhood": "Buckhead",
     "city": "Atlanta",
     "state": "GA",
-    "zip": "30305",
-    "lat": 33.8402,
-    "lng": -84.3783,
+    "zip": "30324",
+    "lat": 33.8177,
+    "lng": -84.3616,
     "venue_type": "nightclub",
     "spot_type": "nightclub",
     "website": BASE_URL,
+    "vibes": ["nightclub", "dancing", "dj", "upscale", "late-night"],
 }
 
 

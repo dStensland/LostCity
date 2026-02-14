@@ -8,6 +8,8 @@ import PortalFooter from "@/components/PortalFooter";
 import { PortalTracker } from "./_components/PortalTracker";
 import { Cormorant_Garamond, Inter } from "next/font/google";
 import { Suspense } from "react";
+import { isEmoryDemoPortal } from "@/lib/hospital-art";
+import { isPCMDemoPortal } from "@/lib/marketplace-art";
 
 import type { Metadata } from "next";
 
@@ -75,11 +77,72 @@ export default async function PortalLayout({ children, params }: Props) {
   // Detect vertical type to apply appropriate styling and components
   const vertical = getPortalVertical(portal);
   const isHotel = vertical === "hotel";
+  const isFilm = vertical === "film";
+  const isMarketplace = vertical === "marketplace" || isPCMDemoPortal(portal.slug);
+  const isEmoryDemo = isEmoryDemoPortal(portal.slug);
 
   return (
     <PortalProvider portal={portal}>
       <PortalTheme portal={portal} />
       <PortalThemeClient portal={portal} />
+      {isMarketplace && (
+        <style>{`
+          body::before { opacity: 0 !important; }
+          body::after { opacity: 0 !important; }
+          .ambient-glow { opacity: 0 !important; }
+          .rain-overlay { display: none !important; }
+          .cursor-glow { display: none !important; }
+
+          [data-vertical="marketplace"] .animate-page-enter,
+          [data-vertical="marketplace"] .animate-glitch-flicker,
+          [data-vertical="marketplace"] .animate-flicker,
+          [data-vertical="marketplace"] .animate-flicker-fast,
+          [data-vertical="marketplace"] .animate-coral-shimmer,
+          [data-vertical="marketplace"] .animate-coral-scan,
+          [data-vertical="marketplace"] .animate-coral-pulse,
+          [data-vertical="marketplace"] .animate-happening-now-pulse,
+          [data-vertical="marketplace"] .animate-pulse-glow {
+            animation: none !important;
+          }
+
+          [data-vertical="marketplace"] [class*="animate-"] {
+            animation: none !important;
+          }
+        `}</style>
+      )}
+      {isFilm && (
+        <style>{`
+          [data-vertical="film"] {
+            --coral: #b8c8f8;
+            --coral-hsl: 225 80% 85%;
+            --neon-amber: #b8c8f8;
+            --neon-amber-hsl: 225 80% 85%;
+            --gold: #dbe5ff;
+          }
+
+          body::before { opacity: 0 !important; }
+          body::after { opacity: 0 !important; }
+          .ambient-glow { opacity: 0 !important; }
+          .rain-overlay { display: none !important; }
+          .cursor-glow { display: none !important; }
+
+          [data-vertical="film"] .animate-page-enter,
+          [data-vertical="film"] .animate-glitch-flicker,
+          [data-vertical="film"] .animate-flicker,
+          [data-vertical="film"] .animate-flicker-fast,
+          [data-vertical="film"] .animate-coral-shimmer,
+          [data-vertical="film"] .animate-coral-scan,
+          [data-vertical="film"] .animate-coral-pulse,
+          [data-vertical="film"] .animate-happening-now-pulse,
+          [data-vertical="film"] .animate-pulse-glow {
+            animation: none !important;
+          }
+
+          [data-vertical="film"] [class*="animate-"] {
+            animation: none !important;
+          }
+        `}</style>
+      )}
       <div
         data-vertical={vertical}
         className={isHotel ? `${cormorantGaramond.variable} ${inter.variable}` : ""}
@@ -88,8 +151,8 @@ export default async function PortalLayout({ children, params }: Props) {
           <PortalTracker portalSlug={portal.slug} />
         </Suspense>
         {children}
-        <PortalFooter />
-        <CannyWidget />
+        {!isEmoryDemo && <PortalFooter />}
+        {!isEmoryDemo && <CannyWidget />}
       </div>
     </PortalProvider>
   );

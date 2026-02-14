@@ -1,5 +1,12 @@
 # Template 02: Source and Attribution Contract
 
+## Surface Scope (Required)
+
+- Primary surface: `consumer` | `admin` | `both`
+- Consumer display policy:
+- Admin visibility policy:
+- If `both`, list exact differences:
+
 ## Source Tiers
 
 | Tier | Allowed source types | Usage rule | Promotion eligibility |
@@ -16,15 +23,15 @@
 
 ## Provenance Display Requirements
 
-- Source name:
-- Source class (public/nonprofit/partner/owned):
-- Freshness timestamp:
-- Confidence or trust tier:
-- Reason included:
+- Consumer Portal:
+  - Keep end-user UI simple; no operator-only provenance fields unless legally or contractually required.
+  - If shown, keep to minimal plain-language context.
+- Admin Portal:
+  - Full source and policy detail for governance and QA.
+  - Include freshness and policy status needed for operator decisions.
 
 ## Failure Behavior
 
-- If provenance missing: do not surface as primary action.
-- If source confidence low: demote with clear labeling.
+- If required provenance data is missing: suppress from primary surfacing.
 - If policy conflict: suppress and log policy event.
-
+- Never expose internal confidence/scoring mechanics in consumer UI.

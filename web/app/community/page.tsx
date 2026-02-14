@@ -40,7 +40,8 @@ const getEventCounts = unstable_cache(
       .from("events")
       .select("organization_id")
       .gte("start_date", today)
-      .not("organization_id", "is", null);
+      .not("organization_id", "is", null)
+      .or("is_sensitive.eq.false,is_sensitive.is.null");
 
     const counts: Record<string, number> = {};
     for (const event of (events || []) as { organization_id: string }[]) {

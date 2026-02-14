@@ -35,6 +35,7 @@ VENUE_DATA = {
     "venue_type": "bar",
     "spot_type": "bar",
     "website": BASE_URL,
+    "vibes": ["lgbtq", "barcade", "arcade", "gaming", "late-night"],
 }
 
 

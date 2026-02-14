@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { checkBodySize, isValidEnum, sanitizeString, type AnySupabase } from "@/lib/api-utils";
+import { resolvePortalSlugAlias } from "@/lib/portal-aliases";
 
 const VALID_ACTION_TYPES = ["mode_selected", "wayfinding_opened", "resource_clicked"] as const;
 const VALID_PAGE_TYPES = ["feed", "find", "event", "spot", "series", "community", "hospital"] as const;
@@ -32,6 +33,7 @@ export async function POST(
   if (sizeCheck) return sizeCheck;
 
   const { slug } = await params;
+  const canonicalSlug = resolvePortalSlugAlias(slug);
 
   let body: Record<string, unknown>;
   try {
@@ -73,7 +75,7 @@ export async function POST(
   const { data: portal } = await supabase
     .from("portals")
     .select("id")
-    .eq("slug", slug)
+    .eq("slug", canonicalSlug)
     .eq("status", "active")
     .maybeSingle();
 

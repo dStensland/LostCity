@@ -137,6 +137,18 @@ const CATEGORY_MAP: Record<string, string> = {
 // Store created user IDs for later use
 const createdUserIds: Map<string, string> = new Map();
 
+// Default portal for seeded lists
+let defaultPortalId: string | null = null;
+
+async function resolveDefaultPortal(): Promise<string | null> {
+  const { data } = await supabase
+    .from("portals")
+    .select("id")
+    .eq("slug", "atlanta")
+    .maybeSingle();
+  return data?.id || null;
+}
+
 async function findCoachUser(): Promise<string | null> {
   console.log("Looking for @coach user...");
 
@@ -232,8 +244,10 @@ async function clearExistingSeedUsers() {
     await supabase.from("event_rsvps").delete().eq("user_id", user.id);
     await supabase.from("follows").delete().eq("follower_id", user.id);
     await supabase.from("follows").delete().eq("followed_user_id", user.id);
-    await supabase.from("friend_requests").delete().eq("from_user_id", user.id);
-    await supabase.from("friend_requests").delete().eq("to_user_id", user.id);
+    await supabase.from("friend_requests").delete().eq("inviter_id", user.id);
+    await supabase.from("friend_requests").delete().eq("invitee_id", user.id);
+    await supabase.from("friendships").delete().eq("user_a_id", user.id);
+    await supabase.from("friendships").delete().eq("user_b_id", user.id);
     await supabase.from("list_items").delete().eq("added_by", user.id);
     // Get and delete lists created by this user
     const { data: userLists } = await supabase
@@ -540,6 +554,7 @@ async function createCoachLists(coachId: string | null) {
       .from("lists")
       .insert({
         creator_id: coachId,
+        portal_id: defaultPortalId,
         title: listDef.title,
         description: listDef.description,
         is_public: true,
@@ -588,6 +603,7 @@ async function createSeedUserLists() {
         .from("lists")
         .insert({
           creator_id: userId,
+          portal_id: defaultPortalId,
           title: listDef.title,
           description: listDef.description,
           is_public: true,
@@ -695,6 +711,10 @@ async function main() {
   console.log("\n=== Lost City Persona Seeding ===\n");
 
   try {
+    // Resolve default portal for lists
+    defaultPortalId = await resolveDefaultPortal();
+    console.log(`Default portal: ${defaultPortalId || "none found"}`);
+
     // Clear existing seed users
     await clearExistingSeedUsers();
 

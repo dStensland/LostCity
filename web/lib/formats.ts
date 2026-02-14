@@ -240,6 +240,50 @@ export function formatPriceDetailed(event: PriceableEvent): PriceFormatResult {
 }
 
 // ============================================================================
+// EXHIBITION DATE FORMATTING
+// ============================================================================
+
+/**
+ * Format exhibition dates with awareness of opening, ongoing, and closing states.
+ * Used when event has end_date and spans > 7 days (multi-week exhibition).
+ */
+export function formatExhibitionDate(
+  startDate: string,
+  endDate: string | null
+): { label: string; isHighlight: boolean } {
+  if (!endDate) return formatSmartDate(startDate);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const start = new Date(startDate + "T00:00:00");
+  const end = new Date(endDate + "T00:00:00");
+
+  // Future opening — use normal smart date
+  if (start > today) {
+    return formatSmartDate(startDate);
+  }
+
+  // Ongoing: start <= today <= end
+  if (start <= today && today <= end) {
+    const daysUntilClose = Math.ceil((end.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (daysUntilClose <= 7) {
+      const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      return { label: `Closing ${dayNames[end.getDay()]}`, isHighlight: true };
+    }
+
+    if (daysUntilClose <= 30) {
+      return { label: `Thru ${end.getMonth() + 1}/${end.getDate()}`, isHighlight: false };
+    }
+
+    return { label: "Open now", isHighlight: true };
+  }
+
+  // Past — fallback to smart date
+  return formatSmartDate(startDate);
+}
+
+// ============================================================================
 // COUNT FORMATTING
 // ============================================================================
 

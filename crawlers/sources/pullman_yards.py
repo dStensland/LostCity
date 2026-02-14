@@ -182,32 +182,6 @@ def generate_recurring_dates(weekday: str, num_weeks: int = 4) -> list[str]:
     return dates
 
 
-def generate_exhibition_dates(
-    opening_date_str: str,
-    open_weekdays: list[int],
-    num_weeks: int = 12,
-) -> list[str]:
-    """Generate entries for each open day of a long-running exhibition.
-
-    Args:
-        opening_date_str: YYYY-MM-DD of the opening.
-        open_weekdays: List of weekday ints (0=Mon, 6=Sun) the exhibition is open.
-        num_weeks: How many weeks of entries to generate.
-    """
-    opening = datetime.strptime(opening_date_str, "%Y-%m-%d").date()
-    today = datetime.now().date()
-    start = max(opening, today)
-    end = start + timedelta(weeks=num_weeks)
-    dates = []
-
-    current = start
-    while current <= end:
-        if current.weekday() in open_weekdays:
-            dates.append(current.strftime("%Y-%m-%d"))
-        current += timedelta(days=1)
-
-    return dates
-
 
 def scrape_exhibition_schedule(page, url: str) -> tuple[list[int], Optional[str], Optional[str]]:
     """Visit an exhibition's external ticket/info page and extract the schedule.
@@ -533,6 +507,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     end_time = None
                     is_recurring = False
                     recurrence_rule = None
+                    subcategory = None
                     dates_to_create = []
 
                     # Check for recurring pattern (e.g. "Wednesdays at 7:30 PM")
@@ -560,18 +535,19 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 page, exhibit_url
                             )
 
-                            is_recurring = True
-                            day_abbrevs = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
-                            recurrence_rule = "FREQ=WEEKLY;BYDAY=" + ",".join(
-                                day_abbrevs[d] for d in sorted(open_days)
-                            )
+                            # Exhibitions are NOT recurring events — they're date-range entities
+                            is_recurring = False
+                            recurrence_rule = None
                             start_time = ex_start
                             end_time = ex_end
-                            dates_to_create = generate_exhibition_dates(
-                                start_date, open_days, num_weeks=12
-                            )
+                            # Single event with date range
+                            end_date_dt = datetime.strptime(start_date, "%Y-%m-%d") + timedelta(weeks=12)
+                            end_date = end_date_dt.strftime("%Y-%m-%d")
+                            dates_to_create = [start_date]
+                            # Force subcategory to exhibition
+                            subcategory = "exhibition"
                             logger.info(
-                                f"Exhibition series: {title} - {len(dates_to_create)} entries, "
+                                f"Exhibition: {title} - {start_date} to {end_date}, "
                                 f"{start_time}-{end_time}"
                             )
                         else:
@@ -599,8 +575,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     # Event URL
                     event_url = external_url or find_event_url(title, event_links, EVENTS_URL)
 
-                    # Category
-                    category, subcategory, tags = determine_category(title, description or "")
+                    # Category — preserve exhibition subcategory if already set by exhibition branch
+                    category, det_subcategory, tags = determine_category(title, description or "")
+                    if subcategory is None:
+                        subcategory = det_subcategory
 
                     # Create event(s)
                     for event_date in dates_to_create:

@@ -162,7 +162,10 @@ function groupClassesByDayAndVenue(classes: ClassEvent[]): DayGroup[] {
       const paintTwistClasses: ClassEvent[] = [];
 
       for (const cls of classesOnDate) {
-        if (cls.series_id && cls.series) {
+        // PWAT events always go to venue grouping (not series cards)
+        if (isPaintTwistVenue(cls.venue?.name)) {
+          paintTwistClasses.push(cls);
+        } else if (cls.series_id && cls.series) {
           const seriesInfo = cls.series as unknown as SeriesInfo;
           const existing = seriesMap.get(cls.series_id);
           if (existing) {
@@ -170,8 +173,6 @@ function groupClassesByDayAndVenue(classes: ClassEvent[]): DayGroup[] {
           } else {
             seriesMap.set(cls.series_id, { series: seriesInfo, events: [cls] });
           }
-        } else if (isPaintTwistVenue(cls.venue?.name)) {
-          paintTwistClasses.push(cls);
         } else {
           standalone.push(cls);
         }
@@ -394,6 +395,7 @@ function ClassRow({
 }
 
 // Venue section within a day — matches EventGroup card styling
+// Single-class venues render flat (no accordion), multi-class venues get expand/collapse
 function VenueSection({
   venue,
   portalSlug,
@@ -404,6 +406,7 @@ function VenueSection({
   defaultOpen: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
+  const isSingle = venue.classes.length === 1 && !venue.locationGroups;
 
   // Derive dominant category from classes for accent color
   const dominantCategory = venue.classes[0]?.category || null;
@@ -411,6 +414,98 @@ function VenueSection({
   const reflectionClass = getReflectionClass(dominantCategory);
   const accentColor = categoryColor || "var(--neon-magenta)";
   const accentClass = createCssVarClass("--accent-color", accentColor, "accent");
+
+  // Single class: render the same card shell for consistency, without accordion behavior
+  if (isSingle) {
+    const cls = venue.classes[0];
+    const timeParts = cls.is_all_day
+      ? { time: "All Day", period: "" }
+      : formatTimeSplit(cls.start_time);
+    const categoryLabel = getCategoryLabel(cls.class_category || cls.category || "learning");
+
+    return (
+      <>
+        <ScopedStyles css={accentClass?.css} />
+        <div
+          className={`find-row-card rounded-2xl border border-[var(--twilight)]/75 overflow-hidden ${reflectionClass} ${accentClass?.className ?? ""} ${
+            categoryColor ? "border-l-[2px] border-l-[var(--accent-color)]" : ""
+          }`}
+        >
+          <Link href={`/${portalSlug}?event=${cls.id}`} scroll={false} className="group block">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2 sm:gap-3">
+              <div className="min-w-0 p-3.5 sm:p-4 group-hover:bg-[var(--twilight)]/10 transition-colors">
+                <div className="flex gap-3 sm:gap-4">
+                  <div className="hidden sm:flex flex-shrink-0 self-stretch relative w-[124px] -ml-3.5 sm:-ml-4 -my-3.5 sm:-my-4 overflow-hidden list-rail-media border-r border-[var(--twilight)]/60">
+                    <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/56 to-black/20 pointer-events-none" />
+                    <div className="relative z-10 flex h-full flex-col items-start justify-center gap-1.5 pl-3 pr-2 py-3 sm:py-4">
+                      <span className="font-mono text-[0.62rem] font-semibold text-[var(--accent-color)] leading-none uppercase tracking-[0.12em]">
+                        1 class
+                      </span>
+                      <span className="font-mono text-[1.42rem] font-bold leading-none tabular-nums text-[var(--cream)]">
+                        {timeParts.time}
+                      </span>
+                      {timeParts.period && (
+                        <span className="font-mono text-[0.58rem] font-medium uppercase tracking-[0.12em] text-[var(--soft)]">
+                          {timeParts.period}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex-1 min-w-0 text-left">
+                    <div className="sm:hidden flex items-center gap-2 mb-2">
+                      <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-accent-20 border border-[var(--twilight)]/50">
+                        <CategoryIcon type={dominantCategory || "learning"} size={14} glow="subtle" />
+                      </span>
+                      <span className="font-mono text-[0.66rem] font-semibold uppercase tracking-[0.1em] text-[var(--accent-color)] truncate">
+                        {timeParts.time}
+                        {timeParts.period ? ` ${timeParts.period}` : ""}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2.5 mb-1">
+                      <span className="hidden sm:inline-flex flex-shrink-0 items-center justify-center w-9 h-9 rounded-lg bg-accent-20 border border-[var(--twilight)]/55">
+                        <CategoryIcon type={dominantCategory || "learning"} size={18} glow="subtle" />
+                      </span>
+                      <span className="font-semibold text-[1.05rem] sm:text-[1.3rem] text-[var(--cream)] group-hover:text-[var(--accent-color)] truncate block transition-colors leading-tight">
+                        {cls.title}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 text-sm text-[var(--text-secondary)] mt-1.5 leading-relaxed flex-wrap">
+                      <span className="truncate max-w-[75%] sm:max-w-[55%] text-[var(--text-base)]">
+                        {venue.venueName}
+                      </span>
+                      <span className="opacity-40">·</span>
+                      <span className="font-mono text-[0.66rem] uppercase tracking-[0.08em] text-[var(--muted)]">
+                        1 class
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col items-end gap-2 pt-3 pr-3 pb-3 sm:pt-4 sm:pr-4 sm:pb-4 flex-shrink-0">
+                <span
+                  className={`font-mono text-[0.62rem] px-2 py-1 rounded-full whitespace-nowrap font-medium ${
+                    categoryColor ? "bg-accent-20 text-accent border border-[var(--twilight)]/45" : "bg-[var(--twilight)] text-[var(--cream)] border border-[var(--twilight)]/60"
+                  }`}
+                >
+                  {categoryLabel}
+                </span>
+                <span className="inline-flex w-10 h-10 items-center justify-center rounded-xl border border-[var(--twilight)]/75 bg-[var(--dusk)]/72 text-[var(--muted)] backdrop-blur-[2px] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.02)] group-hover:text-[var(--cream)] group-hover:border-[var(--accent-color)]/55 transition-all">
+                  <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 3h7v7m0-7L10 14" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10v8a1 1 0 001 1h8" />
+                  </svg>
+                </span>
+              </div>
+            </div>
+          </Link>
+        </div>
+      </>
+    );
+  }
 
   // Earliest class time
   const earliestClass = venue.classes[0];
@@ -434,7 +529,7 @@ function VenueSection({
             <div className="min-w-0 p-3.5 sm:p-4 group-hover:bg-[var(--twilight)]/10 transition-colors">
               <div className="flex gap-3 sm:gap-4">
                 <div className="hidden sm:flex flex-shrink-0 self-stretch relative w-[124px] -ml-3.5 sm:-ml-4 -my-3.5 sm:-my-4 overflow-hidden list-rail-media border-r border-[var(--twilight)]/60">
-                  <div className="absolute inset-0 bg-gradient-to-r from-black/56 via-black/36 to-black/10 pointer-events-none" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/56 to-black/20 pointer-events-none" />
                   <div className="relative z-10 flex h-full flex-col items-start justify-center gap-1.5 pl-3 pr-2 py-3 sm:py-4">
                     <span className="font-mono text-[0.62rem] font-semibold text-[var(--accent-color)] leading-none uppercase tracking-[0.12em]">
                       {venue.classes.length} {venue.classes.length === 1 ? "class" : "classes"}
@@ -469,12 +564,12 @@ function VenueSection({
                         href={`/${portalSlug}?spot=${venue.venueSlug}`}
                         scroll={false}
                         onClick={(e) => e.stopPropagation()}
-                        className="font-semibold text-[1.05rem] sm:text-[1.24rem] text-[var(--cream)] hover:text-[var(--accent-color)] truncate block transition-colors leading-tight"
+                        className="font-semibold text-[1.05rem] sm:text-[1.3rem] text-[var(--cream)] hover:text-[var(--accent-color)] truncate block transition-colors leading-tight"
                       >
                         {venue.venueName}
                       </Link>
                     ) : (
-                      <span className="font-semibold text-[1.05rem] sm:text-[1.24rem] text-[var(--cream)] group-hover:text-[var(--accent-color)] truncate block transition-colors leading-tight">
+                      <span className="font-semibold text-[1.05rem] sm:text-[1.3rem] text-[var(--cream)] group-hover:text-[var(--accent-color)] truncate block transition-colors leading-tight">
                         {venue.venueName}
                       </span>
                     )}
@@ -488,7 +583,7 @@ function VenueSection({
                     )}
                     <span className="opacity-40">·</span>
                     <span className="font-mono text-[0.66rem] uppercase tracking-[0.08em] text-[var(--muted)]">
-                      rollup
+                      {venue.classes.length} {venue.classes.length === 1 ? "class" : "classes"}
                     </span>
                   </div>
                 </div>
@@ -503,7 +598,7 @@ function VenueSection({
               >
                 {venue.classes.length}
               </span>
-              <span className="inline-flex w-9 h-9 items-center justify-center rounded-lg border border-[var(--twilight)]/75 bg-[var(--dusk)]/72 text-[var(--muted)] group-hover:text-[var(--cream)] group-hover:border-[var(--accent-color)]/55 transition-all">
+              <span className="inline-flex w-10 h-10 items-center justify-center rounded-xl border border-[var(--twilight)]/75 bg-[var(--dusk)]/72 text-[var(--muted)] backdrop-blur-[2px] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.02)] group-hover:text-[var(--cream)] group-hover:border-[var(--accent-color)]/55 transition-all">
                 <svg
                   className={`w-4.5 h-4.5 transition-transform ${isOpen ? "rotate-180" : ""}`}
                   fill="none"
@@ -664,7 +759,7 @@ export default function ClassesView({
 
   return (
     <div>
-      <section className="mb-4 rounded-2xl border border-[var(--twilight)]/80 bg-[var(--void)]/70 backdrop-blur-md p-3 sm:p-4">
+      <section className="mb-4 rounded-2xl border border-[var(--twilight)]/80 bg-[var(--void)]/70 backdrop-blur-md p-3 sm:p-4 relative z-30">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <CategoryDropdown category={category} onSelect={setCategory} />
           {!loading && (
@@ -704,6 +799,7 @@ export default function ClassesView({
                       venueGroups={group.venueGroups}
                       portalSlug={portalSlug}
                       skipAnimation
+                      disableMargin
                     />
                   ))}
                 </div>

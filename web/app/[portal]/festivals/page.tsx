@@ -1,8 +1,9 @@
 import { getAllFestivals, type Festival } from "@/lib/festivals";
-import { getCachedPortalBySlug } from "@/lib/portal";
+import { getCachedPortalBySlug, getPortalVertical } from "@/lib/portal";
 import { computeCountdown, getUrgencyColor } from "@/lib/moments-utils";
 import { getLocalDateString } from "@/lib/formats";
 import { PortalHeader } from "@/components/headers";
+import FilmPortalNav from "../_components/film/FilmPortalNav";
 import Link from "next/link";
 import Image from "@/components/SmartImage";
 import type { Metadata } from "next";
@@ -72,6 +73,7 @@ export default async function FestivalsIndexPage({ params, searchParams }: Props
 
   const activePortalSlug = portal?.slug || portalSlug;
   const activePortalName = portal?.name || portalSlug.charAt(0).toUpperCase() + portalSlug.slice(1);
+  const isFilmPortal = portal ? getPortalVertical(portal) === "film" : false;
   const today = getLocalDateString();
 
   // Split into upcoming and past
@@ -136,6 +138,7 @@ export default async function FestivalsIndexPage({ params, searchParams }: Props
         />
 
         <main className="max-w-4xl mx-auto px-4 py-6 pb-16 space-y-8">
+          {isFilmPortal && <FilmPortalNav portalSlug={activePortalSlug} />}
           {/* Page header */}
           <div>
             <h1 className="text-2xl font-bold text-[var(--cream)] mb-2">

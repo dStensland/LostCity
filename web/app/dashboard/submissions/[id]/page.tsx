@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import UnifiedHeader from "@/components/UnifiedHeader";
 import { useAuth } from "@/lib/auth-context";
+import { DEFAULT_PORTAL_SLUG } from "@/lib/constants";
 import type {
   SubmissionStatus,
   SubmissionType,
@@ -20,6 +21,12 @@ const STATUS_LABELS: Record<SubmissionStatus, { label: string; color: string }> 
   approved: { label: "Approved", color: "green" },
   rejected: { label: "Not Approved", color: "red" },
   needs_edit: { label: "Needs Changes", color: "orange" },
+};
+const STATUS_BADGE_CLASSES: Record<SubmissionStatus, string> = {
+  pending: "bg-yellow-500/20 text-yellow-400",
+  approved: "bg-green-500/20 text-green-400",
+  rejected: "bg-red-500/20 text-red-400",
+  needs_edit: "bg-orange-500/20 text-orange-400",
 };
 
 const TYPE_LABELS: Record<SubmissionType, string> = {
@@ -42,6 +49,7 @@ type SubmissionDetailResponse = {
     approved_venue_id: number | null;
     approved_organization_id: string | null;
     image_urls: string[] | null;
+    portal?: { slug?: string | null } | null;
     data: EventSubmissionData | VenueSubmissionData | ProducerSubmissionData;
   };
   duplicateDetails: Record<string, unknown> | null;
@@ -89,6 +97,10 @@ export default function SubmissionDetailPage() {
 
   const submission = detail?.submission;
   const statusInfo = submission ? STATUS_LABELS[submission.status] : null;
+  const statusBadgeClass = submission
+    ? STATUS_BADGE_CLASSES[submission.status]
+    : "bg-[var(--twilight)] text-[var(--muted)]";
+  const approvedPortalSlug = submission?.portal?.slug || DEFAULT_PORTAL_SLUG;
 
   const editHref = useMemo(() => {
     if (!submission) return "/submit";
@@ -170,7 +182,7 @@ export default function SubmissionDetailPage() {
                 <div>
                   <div className="flex items-center gap-2 mb-2">
                     {statusInfo && (
-                      <span className={`px-2 py-0.5 rounded text-xs font-mono bg-${statusInfo.color}-500/20 text-${statusInfo.color}-400`}>
+                      <span className={`px-2 py-0.5 rounded text-xs font-mono ${statusBadgeClass}`}>
                         {statusInfo.label}
                       </span>
                     )}
@@ -243,7 +255,7 @@ export default function SubmissionDetailPage() {
                   )}
                   {detail.approvedEntity.type === "venue" && detail.approvedEntity.data.slug && (
                     <Link
-                      href={`/atlanta/spots/${detail.approvedEntity.data.slug}`}
+                      href={`/${approvedPortalSlug}/spots/${detail.approvedEntity.data.slug}`}
                       className="text-[var(--coral)] font-mono text-xs hover:underline"
                     >
                       View venue
@@ -251,7 +263,7 @@ export default function SubmissionDetailPage() {
                   )}
                   {detail.approvedEntity.type === "organization" && detail.approvedEntity.data.slug && (
                     <Link
-                      href={`/atlanta/community/${detail.approvedEntity.data.slug}`}
+                      href={`/${approvedPortalSlug}/community/${detail.approvedEntity.data.slug}`}
                       className="text-[var(--coral)] font-mono text-xs hover:underline"
                     >
                       View organization

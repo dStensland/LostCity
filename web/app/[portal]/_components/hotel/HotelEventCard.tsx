@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { format } from "date-fns";
+import { getProxiedImageSrc } from "@/lib/image-proxy";
 
 const DEFAULT_EVENT_IMAGE = "https://forthatlanta.com/hubfs/Forth/Website/Images/Club/hero-banner-club-faq-desktop.jpg";
 
@@ -10,6 +11,22 @@ function formatTime(time: string): string {
   const ampm = h >= 12 ? "PM" : "AM";
   const h12 = h % 12 || 12;
   return minutes === "00" ? `${h12} ${ampm}` : `${h12}:${minutes} ${ampm}`;
+}
+
+function resolveEventHref(
+  portalSlug: string,
+  event: { id?: string | null; title: string; venue_name?: string | null }
+): string {
+  const id = typeof event.id === "string" ? event.id.trim() : "";
+  if (id) return `/${portalSlug}/events/${id}`;
+  const fallbackQuery = event.venue_name || event.title;
+  return `/${portalSlug}?view=find&type=events&search=${encodeURIComponent(fallbackQuery)}`;
+}
+
+function formatEventDate(dateValue: string): string {
+  const parsed = new Date(dateValue);
+  if (Number.isNaN(parsed.getTime())) return "Today";
+  return format(parsed, "EEEE, MMM d");
 }
 
 interface HotelEventCardProps {
@@ -28,6 +45,7 @@ interface HotelEventCardProps {
   };
   portalSlug: string;
   variant?: "featured" | "compact";
+  contextLabel?: string;
 }
 
 /**
@@ -38,8 +56,10 @@ interface HotelEventCardProps {
  * Uses <img> instead of next/image to avoid unconfigured hostname errors
  * from event images across many external domains.
  */
-export default function HotelEventCard({ event, portalSlug, variant = "featured" }: HotelEventCardProps) {
-  const eventUrl = `/${portalSlug}/events/${event.id}`;
+export default function HotelEventCard({ event, portalSlug, variant = "featured", contextLabel }: HotelEventCardProps) {
+  const eventUrl = resolveEventHref(portalSlug, event);
+  const imageSrc = getProxiedImageSrc(event.image_url || DEFAULT_EVENT_IMAGE) as string;
+  const fallbackImageSrc = getProxiedImageSrc(DEFAULT_EVENT_IMAGE) as string;
 
   // Format distance if available
   const distanceText = event.distance_km
@@ -56,27 +76,18 @@ export default function HotelEventCard({ event, portalSlug, variant = "featured"
       >
         {/* Thumbnail */}
         <div className="relative w-20 h-20 flex-shrink-0 rounded-md overflow-hidden bg-[var(--hotel-sand)]">
-          {event.image_url ? (
-            <img
-              src={event.image_url}
-              alt={event.title}
-              className="absolute inset-0 h-full w-full object-cover group-hover:scale-105 transition-transform duration-500 transform-gpu will-change-transform [backface-visibility:hidden]"
-              loading="lazy"
-              onError={(e) => {
-                const img = e.currentTarget;
-                if (img.src !== DEFAULT_EVENT_IMAGE) {
-                  img.src = DEFAULT_EVENT_IMAGE;
-                }
-              }}
-            />
-          ) : (
-            <img
-              src={DEFAULT_EVENT_IMAGE}
-              alt={event.title}
-              className="absolute inset-0 w-full h-full object-cover"
-              loading="lazy"
-            />
-          )}
+          <img
+            src={imageSrc}
+            alt={event.title}
+            className="absolute inset-0 block h-full w-full object-cover group-hover:scale-105 transition-transform duration-500 transform-gpu will-change-transform [backface-visibility:hidden]"
+            loading="lazy"
+            onError={(e) => {
+              const img = e.currentTarget;
+              if (img.src !== fallbackImageSrc) {
+                img.src = fallbackImageSrc;
+              }
+            }}
+          />
         </div>
 
         {/* Content */}
@@ -100,6 +111,9 @@ export default function HotelEventCard({ event, portalSlug, variant = "featured"
               {formatTime(event.start_time)}
             </p>
           )}
+          {contextLabel && (
+            <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--hotel-stone)] mt-1">{contextLabel}</p>
+          )}
         </div>
       </Link>
     );
@@ -112,37 +126,33 @@ export default function HotelEventCard({ event, portalSlug, variant = "featured"
       className="group isolate block bg-[var(--hotel-cream)] rounded-lg overflow-hidden shadow-[var(--hotel-shadow-soft)] hover:shadow-[var(--hotel-shadow-medium)] transition-shadow duration-500"
     >
       {/* Image */}
-      <div className="relative aspect-[16/9] overflow-hidden bg-[var(--hotel-sand)]">
-        {event.image_url ? (
-          <img
-            src={event.image_url}
-            alt={event.title}
-            className="absolute inset-0 h-full w-full object-cover group-hover:scale-105 transition-transform duration-500 transform-gpu will-change-transform [backface-visibility:hidden]"
-            loading="lazy"
-            onError={(e) => {
-              const img = e.currentTarget;
-              if (img.src !== DEFAULT_EVENT_IMAGE) {
-                img.src = DEFAULT_EVENT_IMAGE;
-              }
-            }}
-          />
-        ) : (
-          <img
-            src={DEFAULT_EVENT_IMAGE}
-            alt={event.title}
-            className="absolute inset-0 h-full w-full object-cover"
-            loading="lazy"
-          />
-        )}
+      <div className="relative aspect-[16/9] overflow-hidden rounded-t-[inherit] bg-[var(--hotel-sand)] [clip-path:inset(0_round_0.5rem)]">
+        <img
+          src={imageSrc}
+          alt={event.title}
+          className="absolute inset-0 block h-full w-full object-cover group-hover:scale-105 transition-transform duration-500 transform-gpu will-change-transform [backface-visibility:hidden]"
+          loading="lazy"
+          onError={(e) => {
+            const img = e.currentTarget;
+            if (img.src !== fallbackImageSrc) {
+              img.src = fallbackImageSrc;
+            }
+          }}
+        />
       </div>
 
       {/* Content */}
       <div className="p-6 space-y-3">
         {/* Date & Time */}
         <p className="text-xs font-body text-[var(--hotel-stone)] uppercase tracking-[0.15em]">
-          {format(new Date(event.start_date), "EEEE, MMM d")}
+          {formatEventDate(event.start_date)}
           {event.start_time && ` \u00B7 ${formatTime(event.start_time)}`}
         </p>
+        {contextLabel && (
+          <p className="text-[10px] font-body text-[var(--hotel-stone)] uppercase tracking-[0.14em]">
+            {contextLabel}
+          </p>
+        )}
 
         {/* Title */}
         <h3 className="font-display font-semibold text-xl md:text-2xl text-[var(--hotel-charcoal)] tracking-tight leading-tight line-clamp-2">

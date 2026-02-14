@@ -145,7 +145,11 @@ function SpotCard({ spot, portalSlug }: { spot: Spot; portalSlug: string }) {
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2 sm:gap-3">
         <div className="min-w-0 p-3.5 sm:p-4">
           <div className="flex gap-3 sm:gap-4">
-            <div className={`hidden sm:flex flex-shrink-0 self-stretch ${hasImage ? "relative w-[124px] -ml-3.5 sm:-ml-4 -my-3.5 sm:-my-4 overflow-hidden list-rail-media border-r border-[var(--twilight)]/60" : "w-[72px] flex-col items-start justify-center gap-1.5 pr-3 border-r border-[var(--twilight)]/60"}`}>
+            <div
+              className={`hidden sm:flex flex-shrink-0 self-stretch relative w-[124px] -ml-3.5 sm:-ml-4 -my-3.5 sm:-my-4 overflow-hidden list-rail-media border-r border-[var(--twilight)]/60 ${
+                hasImage ? "" : "bg-[color-mix(in_srgb,var(--night)_84%,transparent)]"
+              }`}
+            >
               {hasImage ? (
                 <>
                   <LazyImage
@@ -160,8 +164,8 @@ function SpotCard({ spot, portalSlug }: { spot: Spot; portalSlug: string }) {
                   <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/56 to-black/20 pointer-events-none" />
                 </>
               ) : null}
-              <div className={`relative z-10 flex flex-col items-start justify-center gap-1.5 ${hasImage ? "h-full pl-3 pr-2 py-3 sm:py-4" : ""}`}>
-                <span className={`font-mono text-[0.62rem] font-semibold leading-none uppercase tracking-[0.12em] ${hasImage ? "text-[var(--accent-color)]" : "text-[var(--accent-color)]"}`}>
+              <div className="relative z-10 flex h-full flex-col items-start justify-center gap-1.5 pl-3 pr-2 py-3 sm:py-4">
+                <span className="font-mono text-[0.62rem] font-semibold leading-none uppercase tracking-[0.12em] text-[var(--accent-color)]">
                   {placeTypeLabel}
                 </span>
                 <span className={`font-mono text-[0.66rem] leading-none uppercase tracking-[0.1em] ${hasImage ? "text-white/82" : "text-[var(--soft)]"}`}>

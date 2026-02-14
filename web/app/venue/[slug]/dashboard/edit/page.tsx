@@ -34,13 +34,13 @@ export default function VenueEditPage({
   useEffect(() => {
     const fetchVenue = async () => {
       try {
-        const response = await fetch(`/api/venues/search?slug=${params.slug}`);
+        const response = await fetch(`/api/venues/by-slug/${params.slug}/edit`);
         if (!response.ok) {
           throw new Error("Failed to fetch venue");
         }
 
         const data = await response.json();
-        const venueData = data.venues?.[0];
+        const venueData = data.venue;
 
         if (!venueData) {
           setError("Venue not found");

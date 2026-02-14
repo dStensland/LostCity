@@ -54,6 +54,8 @@ class ArtistInfo:
     name: str
     image_url: Optional[str] = None
     genres: Optional[list[str]] = None
+    bio: Optional[str] = None  # Wikipedia intro paragraph
+    website: Optional[str] = None  # Official band/artist website
     deezer_id: Optional[int] = None  # kept for backward compat, no longer populated
     musicbrainz_id: Optional[str] = None
     wikidata_id: Optional[str] = None
@@ -181,10 +183,11 @@ def _search_musicbrainz(name: str) -> tuple[Optional[str], Optional[str], Option
         logger.debug(f"MusicBrainz search error for '{name}': {e}")
         return None, None, None
 
-    # Step 2: Lookup with URL relationships to get Wikidata / Spotify links
+    # Step 2: Lookup with URL relationships to get Wikidata / Spotify / website links
     _mb_rate_limit()
     wikidata_qid = None
     spotify_id = None
+    website = None
 
     try:
         resp = requests.get(
@@ -195,11 +198,12 @@ def _search_musicbrainz(name: str) -> tuple[Optional[str], Optional[str], Option
         )
         if resp.status_code != 200:
             logger.debug(f"MusicBrainz lookup returned {resp.status_code} for mbid {mbid}")
-            return mbid, None, None
+            return mbid, None, None, None
 
         data = resp.json()
         for rel in data.get("relations", []):
             url_resource = rel.get("url", {}).get("resource", "")
+            rel_type = rel.get("type", "")
 
             # Wikidata: https://www.wikidata.org/wiki/Q123456
             if "wikidata.org" in url_resource:
@@ -213,11 +217,15 @@ def _search_musicbrainz(name: str) -> tuple[Optional[str], Optional[str], Option
                 if parts:
                     spotify_id = parts[-1]
 
+            # Official homepage
+            if rel_type == "official homepage" and not website:
+                website = url_resource
+
     except Exception as e:
         logger.debug(f"MusicBrainz lookup error for mbid {mbid}: {e}")
-        return mbid, None, None
+        return mbid, None, None, None
 
-    return mbid, wikidata_qid, spotify_id
+    return mbid, wikidata_qid, spotify_id, website
 
 
 # ---------------------------------------------------------------------------
@@ -230,11 +238,12 @@ def _wikidata_headers() -> dict[str, str]:
     return {"User-Agent": config.crawler.user_agent}
 
 
-def _fetch_wikidata_info(qid: str) -> tuple[Optional[list[str]], Optional[str]]:
-    """Fetch genres (P136 labels) and image filename (P18) from Wikidata.
+def _fetch_wikidata_info(qid: str) -> tuple[Optional[list[str]], Optional[str], Optional[str]]:
+    """Fetch genres (P136 labels), image filename (P18), and Wikipedia bio from Wikidata.
 
-    Returns (genres, commons_filename).
+    Returns (genres, commons_filename, bio).
     """
+    bio = None
     try:
         resp = requests.get(
             "https://www.wikidata.org/wiki/Special:EntityData/" + qid + ".json",
@@ -242,7 +251,7 @@ def _fetch_wikidata_info(qid: str) -> tuple[Optional[list[str]], Optional[str]]:
             timeout=10,
         )
         if resp.status_code != 200:
-            return None, None
+            return None, None, None
 
         entity = resp.json().get("entities", {}).get(qid, {})
         claims = entity.get("claims", {})
@@ -272,11 +281,76 @@ def _fetch_wikidata_info(qid: str) -> tuple[Optional[list[str]], Optional[str]]:
             if genre_qids:
                 genres = _resolve_wikidata_labels(genre_qids)
 
+        # Fetch Wikipedia intro bio
+        bio = _fetch_wikipedia_bio(qid)
+
     except Exception as e:
         logger.debug(f"Wikidata fetch error for {qid}: {e}")
-        return None, None
+        return None, None, None
 
-    return genres, commons_filename
+    return genres, commons_filename, bio
+
+
+def _fetch_wikipedia_bio(wikidata_qid: str) -> Optional[str]:
+    """Fetch the Wikipedia intro paragraph for an artist via the Wikidata sitelink.
+
+    Uses the Wikidata entity to find the English Wikipedia article title,
+    then fetches the intro extract via the MediaWiki API.
+
+    Returns the first ~2000 chars of the Wikipedia intro, or None.
+    """
+    try:
+        # Step 1: Get English Wikipedia sitelink from Wikidata entity
+        resp = requests.get(
+            f"https://www.wikidata.org/w/api.php",
+            params={
+                "action": "wbgetentities",
+                "ids": wikidata_qid,
+                "props": "sitelinks",
+                "sitefilter": "enwiki",
+                "format": "json",
+            },
+            headers=_wikidata_headers(),
+            timeout=10,
+        )
+        if resp.status_code != 200:
+            return None
+
+        entity = resp.json().get("entities", {}).get(wikidata_qid, {})
+        enwiki = entity.get("sitelinks", {}).get("enwiki", {})
+        title = enwiki.get("title")
+        if not title:
+            return None
+
+        # Step 2: Fetch intro extract from English Wikipedia
+        resp = requests.get(
+            "https://en.wikipedia.org/w/api.php",
+            params={
+                "action": "query",
+                "titles": title,
+                "prop": "extracts",
+                "exintro": True,
+                "explaintext": True,
+                "format": "json",
+            },
+            headers=_wikidata_headers(),
+            timeout=10,
+        )
+        if resp.status_code != 200:
+            return None
+
+        pages = resp.json().get("query", {}).get("pages", {})
+        for page in pages.values():
+            extract = page.get("extract", "")
+            if extract and len(extract) >= 50:
+                # Clean up and truncate
+                bio = re.sub(r"\s+", " ", extract).strip()
+                return bio[:2000]
+
+    except Exception as e:
+        logger.debug(f"Wikipedia bio fetch error for {wikidata_qid}: {e}")
+
+    return None
 
 
 def _resolve_wikidata_labels(qids: list[str]) -> Optional[list[str]]:
@@ -378,14 +452,23 @@ def _get_spotify_token() -> Optional[str]:
         return None
 
 
-def _fetch_spotify_image(spotify_id: str) -> Optional[str]:
-    """Fetch the largest artist image from Spotify.
+@dataclass
+class SpotifyArtistData:
+    """Data returned from Spotify artist endpoint."""
+    image_url: Optional[str] = None
+    genres: Optional[list[str]] = None
 
-    Returns None if no token or request fails.
+
+def _fetch_spotify_artist(spotify_id: str) -> SpotifyArtistData:
+    """Fetch artist image and genres from Spotify.
+
+    Returns SpotifyArtistData with whatever was available.
     """
+    result = SpotifyArtistData()
+
     token = _get_spotify_token()
     if not token:
-        return None
+        return result
 
     try:
         resp = requests.get(
@@ -393,20 +476,39 @@ def _fetch_spotify_image(spotify_id: str) -> Optional[str]:
             headers={"Authorization": f"Bearer {token}"},
             timeout=10,
         )
+        if resp.status_code == 429:
+            retry_after = resp.headers.get("Retry-After", "5")
+            logger.debug(f"Spotify rate limited, retry after {retry_after}s")
+            return result
         if resp.status_code != 200:
             logger.debug(f"Spotify artist lookup returned {resp.status_code}")
-            return None
+            return result
 
         data = resp.json()
+
+        # Image — largest first
         images = data.get("images", [])
         if images:
-            # Images are sorted largest first by Spotify
-            return images[0].get("url")
+            result.image_url = images[0].get("url")
+
+        # Genres — Spotify's micro-genres (e.g. "atlanta indie", "chamber pop")
+        genres = data.get("genres", [])
+        if genres:
+            result.genres = [g.lower() for g in genres]
 
     except Exception as e:
-        logger.debug(f"Spotify image fetch error: {e}")
+        logger.debug(f"Spotify artist fetch error: {e}")
 
-    return None
+    return result
+
+
+def _fetch_spotify_image(spotify_id: str) -> Optional[str]:
+    """Fetch the largest artist image from Spotify.
+
+    Legacy wrapper — use _fetch_spotify_artist() for full data.
+    """
+    data = _fetch_spotify_artist(spotify_id)
+    return data.image_url
 
 
 # ---------------------------------------------------------------------------
@@ -419,10 +521,11 @@ def fetch_artist_info(artist_name: str) -> Optional[ArtistInfo]:
 
     Pipeline:
       1. Search MusicBrainz → get MBID, Wikidata QID, Spotify ID
-      2. Fetch Wikidata → genres, Commons image filename
+      2. Fetch Wikidata → genres, Commons image, Wikipedia bio
       3. Resolve Commons thumbnail → image URL
-      4. If no image and Spotify configured → fetch Spotify image
-      5. Return ArtistInfo
+      4. Fetch Spotify → micro-genres, image fallback
+      5. Merge genres (Spotify micro-genres + Wikidata broad labels)
+      6. Return ArtistInfo
 
     Args:
         artist_name: Artist name to search for
@@ -439,7 +542,7 @@ def fetch_artist_info(artist_name: str) -> Optional[ArtistInfo]:
 
     try:
         # Step 1: MusicBrainz search + lookup
-        mbid, wikidata_qid, spotify_id = _search_musicbrainz(artist_name)
+        mbid, wikidata_qid, spotify_id, website = _search_musicbrainz(artist_name)
 
         if not mbid:
             _artist_cache[cache_key] = None
@@ -447,23 +550,35 @@ def fetch_artist_info(artist_name: str) -> Optional[ArtistInfo]:
 
         image_url = None
         genres = None
+        bio = None
 
-        # Step 2: Wikidata — genres and image
+        # Step 2: Wikidata — genres, image, and Wikipedia bio
         if wikidata_qid:
-            genres, commons_filename = _fetch_wikidata_info(wikidata_qid)
+            genres, commons_filename, bio = _fetch_wikidata_info(wikidata_qid)
 
             # Step 3: Resolve Commons thumbnail
             if commons_filename:
                 image_url = _resolve_commons_thumbnail(commons_filename)
 
-        # Step 4: Spotify fallback for image
-        if not image_url and spotify_id:
-            image_url = _fetch_spotify_image(spotify_id)
+        # Step 4: Spotify — always fetch for genres; image as fallback
+        if spotify_id:
+            spotify_data = _fetch_spotify_artist(spotify_id)
+            if not image_url and spotify_data.image_url:
+                image_url = spotify_data.image_url
+            # Merge Spotify genres with Wikidata genres (Spotify first — more specific)
+            if spotify_data.genres:
+                wikidata_genres = genres or []
+                # Spotify genres are micro-genres; dedupe against Wikidata's broader labels
+                merged = list(dict.fromkeys(spotify_data.genres + wikidata_genres))
+                genres = merged
+                logger.debug(f"Spotify genres for '{artist_name}': {spotify_data.genres}")
 
         artist_info = ArtistInfo(
             name=artist_name,
             image_url=image_url,
             genres=genres,
+            bio=bio,
+            website=website,
             musicbrainz_id=mbid,
             wikidata_id=wikidata_qid,
             spotify_id=spotify_id,
@@ -473,6 +588,8 @@ def fetch_artist_info(artist_name: str) -> Optional[ArtistInfo]:
             logger.debug(f"Found image for '{artist_name}' (source: {'Commons' if commons_filename else 'Spotify'})")
         if genres:
             logger.debug(f"Found genres for '{artist_name}': {genres}")
+        if bio:
+            logger.debug(f"Found Wikipedia bio for '{artist_name}' ({len(bio)} chars)")
 
     except Exception as e:
         logger.debug(f"Error fetching artist info for '{artist_name}': {e}")
@@ -513,6 +630,7 @@ class MusicEventInfo:
     image_url: Optional[str] = None
     genres: Optional[list[str]] = None
     artist_name: Optional[str] = None
+    bio: Optional[str] = None  # Wikipedia intro for the headliner
 
 
 def get_info_for_music_event(
@@ -553,6 +671,8 @@ def get_info_for_music_event(
                 result.image_url = info.image_url
             if not result.genres and info.genres:
                 result.genres = info.genres
+            if info.bio:
+                result.bio = info.bio
 
     return result
 

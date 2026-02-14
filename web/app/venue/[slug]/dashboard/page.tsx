@@ -1,7 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
+import { getLocalDateString } from "@/lib/formats";
+import { DEFAULT_PORTAL_SLUG } from "@/lib/constants";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -58,7 +61,7 @@ export default async function VenueDashboardPage({ params }: Props) {
             You do not have permission to manage this venue.
           </p>
           <Link
-            href={`/atlanta/spots/${slug}`}
+            href={`/${DEFAULT_PORTAL_SLUG}/spots/${slug}`}
             className="text-[var(--coral)] hover:underline"
           >
             View venue page
@@ -73,7 +76,7 @@ export default async function VenueDashboardPage({ params }: Props) {
     .from("events")
     .select("*", { count: "exact", head: true })
     .eq("venue_id", venue.id)
-    .gte("start_date", new Date().toISOString().split("T")[0]);
+    .gte("start_date", getLocalDateString());
 
   return (
     <div className="min-h-screen bg-[var(--void)] text-[var(--cream)]">
@@ -180,7 +183,7 @@ export default async function VenueDashboardPage({ params }: Props) {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-bold">Venue Preview</h2>
               <Link
-                href={`/atlanta/spots/${slug}`}
+                href={`/${DEFAULT_PORTAL_SLUG}/spots/${slug}`}
                 className="text-[var(--coral)] hover:underline text-sm"
               >
                 View public page →
@@ -188,9 +191,12 @@ export default async function VenueDashboardPage({ params }: Props) {
             </div>
             <div className="flex gap-4">
               {venue.image_url && (
-                <img
+                <Image
                   src={venue.image_url}
                   alt={venue.name}
+                  width={128}
+                  height={128}
+                  unoptimized
                   className="w-32 h-32 object-cover rounded"
                 />
               )}

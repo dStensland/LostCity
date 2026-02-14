@@ -1,6 +1,5 @@
 "use client";
 
-import { createPortal } from "react-dom";
 import HospitalTrackedLink from "@/app/[portal]/_components/hospital/HospitalTrackedLink";
 import type { HospitalAudienceMode } from "@/lib/hospital-modes";
 
@@ -32,12 +31,11 @@ export default function EmoryActionRail({
   actions,
 }: EmoryActionRailProps) {
   if (actions.length === 0) return null;
-  if (typeof document === "undefined") return null;
 
-  return createPortal(
-    <div data-emory-action-rail className="fixed inset-x-3 bottom-24 z-[9988] pointer-events-none sm:bottom-5 sm:left-1/2 sm:right-auto sm:w-[min(760px,calc(100%-2rem))] sm:-translate-x-1/2">
-      <div className="pointer-events-auto rounded-2xl border border-[var(--line-strong)]/70 bg-[color:color-mix(in_srgb,var(--card-bg)_88%,white_12%)]/95 p-2 shadow-[0_18px_38px_rgba(3,43,100,0.2)] backdrop-blur-md">
-        <div className="grid grid-cols-3 gap-2">
+  return (
+    <section data-emory-action-rail className="mt-5">
+      <div className="rounded-2xl border border-[var(--line-strong)]/70 bg-[color:color-mix(in_srgb,var(--card-bg)_92%,white_8%)] p-2 shadow-[0_10px_24px_rgba(3,43,100,0.12)]">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           {actions.map((action, index) => (
             <HospitalTrackedLink
               key={action.key}
@@ -63,7 +61,6 @@ export default function EmoryActionRail({
           ))}
         </div>
       </div>
-    </div>,
-    document.body
+    </section>
   );
 }

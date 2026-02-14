@@ -13,6 +13,7 @@ function getSeriesTypeLabel(type: string): string {
     class_series: "Class Series",
     festival_program: "Program",
     tour: "Tour",
+    exhibition: "Exhibition",
     other: "Series",
   };
   return labels[type] || "Series";
@@ -25,6 +26,7 @@ function getSeriesTypeColor(type: string): string {
     class_series: "#6EE7B7", // green
     festival_program: "#FBBF24", // amber
     tour: "#C4B5FD", // purple
+    exhibition: "#F59E0B", // amber
     other: "#94A3B8", // slate
   };
   return colors[type] || "#94A3B8";
@@ -45,8 +47,9 @@ function SeriesBadge({ seriesType, frequency, dayOfWeek, compact = true }: Serie
   const seriesClass = createCssVarClass("--series-color", typeColor, "series-color");
 
   if (compact) {
-    // Compact version: show recurrence if available, otherwise type
-    const displayText = recurrenceText || typeLabel;
+    // Exhibition: always show "Exhibition" label, never recurrence text
+    const isExhibition = seriesType === "exhibition";
+    const displayText = isExhibition ? typeLabel : (recurrenceText || typeLabel);
 
     return (
       <>
@@ -54,8 +57,13 @@ function SeriesBadge({ seriesType, frequency, dayOfWeek, compact = true }: Serie
         <span
           className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[0.6rem] font-mono font-medium series-bg-20 series-accent ${seriesClass?.className ?? ""}`}
         >
-        {/* Repeat icon for recurring events */}
-        {recurrenceText && (
+        {/* Picture frame icon for exhibitions, repeat icon for recurring */}
+        {isExhibition ? (
+          <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16l4-4 2 2 4-4 6 6" />
+          </svg>
+        ) : recurrenceText ? (
           <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               strokeLinecap="round"
@@ -64,7 +72,7 @@ function SeriesBadge({ seriesType, frequency, dayOfWeek, compact = true }: Serie
               d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
             />
           </svg>
-        )}
+        ) : null}
         {displayText}
         </span>
       </>
@@ -94,9 +102,15 @@ function SeriesBadge({ seriesType, frequency, dayOfWeek, compact = true }: Serie
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
           </svg>
         )}
+        {seriesType === "exhibition" && (
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4-4 2 2 4-4 6 6" />
+          </svg>
+        )}
         {typeLabel}
       </span>
-      {recurrenceText && (
+      {recurrenceText && seriesType !== "exhibition" && (
         <span className="text-xs text-[var(--muted)]">
           {recurrenceText}
         </span>

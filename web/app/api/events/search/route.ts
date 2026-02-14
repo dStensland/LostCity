@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
     `
     )
     .ilike("title", `%${escapeSQLPattern(normalizedQuery)}%`)
-    .gte("start_date", new Date().toISOString().split("T")[0])
+    .or(`start_date.gte.${new Date().toISOString().split("T")[0]},end_date.gte.${new Date().toISOString().split("T")[0]}`)
     .order("start_date", { ascending: true })
     .limit(limit);
 

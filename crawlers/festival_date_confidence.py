@@ -6,8 +6,11 @@ Classifies URLs, computes extraction confidence, and guards updates.
 """
 
 import re
+from datetime import date, datetime, timedelta
 from typing import Optional
 from urllib.parse import urlparse
+
+from date_utils import MAX_FUTURE_DAYS_DEFAULT
 
 # Domains and path patterns that indicate generic calendar/event pages
 GENERIC_PATH_PATTERNS = [
@@ -172,3 +175,74 @@ def _months_match(typical: Optional[int], extracted: Optional[int]) -> bool:
     if diff > 6:
         diff = 12 - diff
     return diff <= 1
+
+
+def _month_distance(a: int, b: int) -> int:
+    """Circular month distance (0-6)."""
+    diff = abs(a - b)
+    return min(diff, 12 - diff)
+
+
+def validate_festival_dates(
+    start: str,
+    end: Optional[str],
+    typical_month: Optional[int] = None,
+    typical_duration_days: Optional[int] = None,
+) -> tuple[bool, str, Optional[str]]:
+    """Validate and optionally heal festival dates before DB write.
+
+    Returns (is_valid, cleaned_start, cleaned_end).
+    On failure, cleaned_start is the rejection reason string.
+    """
+    today = date.today()
+    max_future = today + timedelta(days=MAX_FUTURE_DAYS_DEFAULT)
+
+    # 1. Parse check
+    try:
+        start_dt = datetime.strptime(start, "%Y-%m-%d").date()
+    except (ValueError, TypeError):
+        return (False, f"invalid start date: {start}", None)
+
+    end_dt = None
+    if end:
+        try:
+            end_dt = datetime.strptime(end, "%Y-%m-%d").date()
+        except (ValueError, TypeError):
+            return (False, f"invalid end date: {end}", None)
+
+    # 2. No past-year start dates
+    if start_dt.year < today.year:
+        return (False, f"past-year start: {start}", None)
+
+    # 3. No far-future dates
+    if start_dt > max_future:
+        return (False, f"too far future: {start} (>{MAX_FUTURE_DAYS_DEFAULT}d)", None)
+
+    # 4. End >= start (with Dec->Jan healing)
+    if end_dt and end_dt < start_dt:
+        start_month = start_dt.month
+        end_month = end_dt.month
+        # Dec->Jan wrap: start is Nov/Dec and end is Jan/Feb
+        if start_month >= 11 and end_month <= 2:
+            end_dt = end_dt.replace(year=end_dt.year + 1)
+            end = end_dt.isoformat()
+        else:
+            return (False, f"end before start: {start} to {end}", None)
+
+    # 5. Duration sanity
+    if end_dt:
+        duration = (end_dt - start_dt).days
+        if typical_duration_days:
+            max_dur = max(typical_duration_days * 3, 30)
+        else:
+            max_dur = 60
+        if duration > max_dur:
+            return (False, f"duration {duration}d exceeds max {max_dur}d", None)
+
+    # 6. Month sanity
+    if typical_month:
+        dist = _month_distance(start_dt.month, typical_month)
+        if dist > 2:
+            return (False, f"month {start_dt.month} too far from typical {typical_month}", None)
+
+    return (True, start, end)

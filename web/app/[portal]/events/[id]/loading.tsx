@@ -1,10 +1,83 @@
+"use client";
+
 import UnifiedHeader from "@/components/UnifiedHeader";
 import Skeleton from "@/components/Skeleton";
+import { useParams } from "next/navigation";
+import { usePortalOptional } from "@/lib/portal-context";
+import { resolveSkeletonVertical } from "@/lib/skeleton-contract";
 
 export default function EventLoading() {
+  const params = useParams();
+  const portalSlug = (params?.portal as string) || "atlanta";
+  const portalContext = usePortalOptional();
+  const portal = portalContext?.portal;
+  const vertical = resolveSkeletonVertical(portal, portalSlug);
+
+  if (vertical === "hotel") {
+    return (
+      <div data-skeleton-route="event-detail" data-skeleton-vertical="hotel" className="min-h-screen bg-[var(--hotel-ivory)]">
+        <main className="max-w-5xl mx-auto px-4 py-8">
+          <div className="h-[420px] rounded-2xl skeleton-shimmer mb-6" />
+          <div className="rounded-2xl border border-[var(--hotel-sand)] bg-[var(--hotel-cream)] p-6 sm:p-8">
+            <Skeleton className="h-4 w-24 rounded mb-4" />
+            <Skeleton className="h-10 w-[72%] rounded mb-2" />
+            <Skeleton className="h-5 w-52 rounded mt-3" delay="0.05s" />
+            <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="rounded-xl border border-[var(--hotel-sand)] p-3">
+                  <Skeleton className="h-3 w-16 rounded mb-2" delay={`${i * 0.05}s`} />
+                  <Skeleton className="h-5 w-20 rounded" delay={`${i * 0.05 + 0.05}s`} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (vertical === "hospital") {
+    return (
+      <div data-skeleton-route="event-detail" data-skeleton-vertical="hospital" className="min-h-screen bg-[#f2f5fa]">
+        <main className="max-w-6xl mx-auto px-4 py-8">
+          <div className="h-72 rounded-2xl skeleton-shimmer mb-6" />
+          <div className="rounded-2xl border border-[#d5dfef] bg-white p-6 sm:p-8">
+            <Skeleton className="h-4 w-24 rounded mb-4" />
+            <Skeleton className="h-10 w-[68%] rounded mb-3" />
+            <Skeleton className="h-4 w-60 rounded" delay="0.05s" />
+            <div className="mt-6 space-y-2">
+              <Skeleton className="h-4 w-full rounded" delay="0.1s" />
+              <Skeleton className="h-4 w-[86%] rounded" delay="0.15s" />
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (vertical === "film") {
+    return (
+      <div data-skeleton-route="event-detail" data-skeleton-vertical="film" className="min-h-screen bg-[#070a12]">
+        <main className="max-w-6xl mx-auto px-4 py-8">
+          <div className="h-80 rounded-2xl skeleton-shimmer mb-6" />
+          <div className="rounded-2xl border border-[#2a3244] bg-[#0c1321] p-6 sm:p-8">
+            <Skeleton className="h-4 w-24 rounded mb-4" />
+            <Skeleton className="h-10 w-[74%] rounded mb-3" />
+            <Skeleton className="h-4 w-48 rounded" delay="0.05s" />
+            <div className="mt-6 grid grid-cols-3 gap-3">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-20 rounded-xl" delay={`${i * 0.05}s`} />
+              ))}
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen">
-      <UnifiedHeader />
+    <div data-skeleton-route="event-detail" data-skeleton-vertical="city" className="min-h-screen">
+      <UnifiedHeader portalSlug={portalSlug} />
 
       <main
         className="max-w-3xl mx-auto px-4 py-8 animate-fade-in"

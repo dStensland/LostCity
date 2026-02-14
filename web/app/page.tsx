@@ -23,24 +23,32 @@ function formatStat(n: number): string {
 async function getStats() {
   try {
     const supabase = await createClient();
-    const [eventsResult, venuesResult, sourcesResult] = await Promise.all([
+    type NeighborhoodRow = { neighborhood: string | null };
+    const [eventsResult, venuesResult, artistsResult] = await Promise.all([
       supabase
         .from("events")
         .select("*", { count: "exact", head: true })
-        .gte("start_date", new Date().toISOString().split("T")[0]),
+        .gte("start_date", new Date().toISOString().split("T")[0])
+        .or("is_sensitive.eq.false,is_sensitive.is.null"),
       supabase.from("venues").select("*", { count: "exact", head: true }),
-      supabase
-        .from("sources")
-        .select("*", { count: "exact", head: true })
-        .eq("is_active", true),
+      supabase.from("artists").select("*", { count: "exact", head: true }),
     ]);
+    // Distinct neighborhood count via unique values
+    const { data: hoodData } = await supabase
+      .from("venues")
+      .select("neighborhood")
+      .not("neighborhood", "is", null) as { data: { neighborhood: string }[] | null };
+    const neighborhoods = new Set(
+      ((hoodData as NeighborhoodRow[] | null) ?? []).map((v) => v.neighborhood).filter(Boolean)
+    ).size;
     return {
       events: eventsResult.count || 0,
       venues: venuesResult.count || 0,
-      sources: sourcesResult.count || 0,
+      artists: artistsResult.count || 0,
+      neighborhoods,
     };
   } catch {
-    return { events: 5000, venues: 500, sources: 450 };
+    return { events: 5000, venues: 500, artists: 500, neighborhoods: 100 };
   }
 }
 
@@ -178,12 +186,13 @@ export default async function Home() {
 
       {/* Stats — staggered reveal */}
       <div className="px-4 pb-10 md:pb-14 relative z-10">
-        <div className="max-w-xl mx-auto">
-          <div className="grid grid-cols-3 gap-3 md:gap-5">
+        <div className="max-w-2xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5">
             {[
               { value: formatStat(stats.events), label: "events", colorClass: "home-stat-cyan" },
               { value: formatStat(stats.venues), label: "venues", colorClass: "home-stat-pink" },
-              { value: formatStat(stats.sources), label: "sources", colorClass: "home-stat-purple" },
+              { value: formatStat(stats.artists), label: "artists", colorClass: "home-stat-purple" },
+              { value: formatStat(stats.neighborhoods), label: "hoods", colorClass: "home-stat-cyan" },
             ].map((stat, i) => (
               <ScrollReveal key={stat.label} direction="up" delay={i * 100}>
                 <div className="text-center p-4 md:p-6 rounded-lg border border-[#1a1a24] hover:border-[#2a2a34] home-stat-card transition-all duration-300 group">

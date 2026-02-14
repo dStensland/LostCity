@@ -33,7 +33,7 @@ load_dotenv(env_path)
 
 sys.path.insert(0, str(Path(__file__).parent))
 from db import get_client
-from festival_date_confidence import classify_url, compute_confidence, should_update
+from festival_date_confidence import classify_url, compute_confidence, should_update, validate_festival_dates
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
@@ -182,7 +182,7 @@ def check_festival_dates(
         # Review pending_start rows: re-fetch and try to promote
         result = (
             client.table("festivals")
-            .select("id,slug,name,website,typical_month,announced_start,pending_start,pending_end,date_confidence,date_source")
+            .select("id,slug,name,website,typical_month,typical_duration_days,announced_start,pending_start,pending_end,date_confidence,date_source")
             .not_.is_("pending_start", "null")
             .not_.is_("website", "null")
             .order("typical_month")
@@ -192,7 +192,7 @@ def check_festival_dates(
         # Get festivals missing announced_start that have websites
         result = (
             client.table("festivals")
-            .select("id,slug,name,website,typical_month,announced_start,date_confidence,date_source")
+            .select("id,slug,name,website,typical_month,typical_duration_days,announced_start,date_confidence,date_source")
             .is_("announced_start", "null")
             .not_.is_("website", "null")
             .order("typical_month")
@@ -234,6 +234,7 @@ def check_festival_dates(
     found_count = 0
     promoted_count = 0
     pending_count = 0
+    rejected_count = 0
     failed_count = 0
 
     for i, f in enumerate(festivals, 1):
@@ -265,6 +266,18 @@ def check_festival_dates(
 
             if not should_update(existing_source, existing_confidence, method, confidence):
                 logger.info(f"{prefix}  SKIP (existing {existing_source} c={existing_confidence})")
+                time.sleep(0.5)
+                continue
+
+            # Validate dates before writing
+            valid, start, end = validate_festival_dates(
+                start, end,
+                typical_month=typical_month,
+                typical_duration_days=f.get("typical_duration_days"),
+            )
+            if not valid:
+                rejected_count += 1
+                logger.info(f"{prefix}  REJECTED: {start}")
                 time.sleep(0.5)
                 continue
 
@@ -310,7 +323,7 @@ def check_festival_dates(
         time.sleep(0.5)
 
     logger.info(f"\n{'=' * 70}")
-    logger.info(f"Checked: {len(festivals)} | Found: {found_count} | Promoted: {promoted_count} | Pending: {pending_count} | Failed: {failed_count}")
+    logger.info(f"Checked: {len(festivals)} | Found: {found_count} | Promoted: {promoted_count} | Pending: {pending_count} | Rejected: {rejected_count} | Failed: {failed_count}")
     if dry_run:
         logger.info("DRY RUN — no changes written")
 

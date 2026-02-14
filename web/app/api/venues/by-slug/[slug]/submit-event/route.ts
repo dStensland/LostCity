@@ -13,6 +13,7 @@ import {
 } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { getSiteUrl } from "@/lib/site-url";
+import { getLocalDateString } from "@/lib/formats";
 
 export const dynamic = "force-dynamic";
 
@@ -140,12 +141,9 @@ export async function POST(request: NextRequest, { params }: Props) {
     return validationError("Start date must be in YYYY-MM-DD format");
   }
 
-  // Validate future date
+  // Validate future date using local YYYY-MM-DD to avoid UTC offset bugs.
   const startDate = new Date(body.start_date);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  if (startDate < today) {
+  if (body.start_date < getLocalDateString()) {
     return validationError("Start date must be in the future");
   }
 
@@ -208,7 +206,11 @@ export async function POST(request: NextRequest, { params }: Props) {
     return validationError("Price max must be a non-negative number");
   }
 
-  if (body.price_min && body.price_max && body.price_min > body.price_max) {
+  if (
+    body.price_min !== undefined &&
+    body.price_max !== undefined &&
+    body.price_min > body.price_max
+  ) {
     return validationError("Price min cannot be greater than price max");
   }
 
@@ -226,8 +228,8 @@ export async function POST(request: NextRequest, { params }: Props) {
     ticket_url: body.ticket_url || null,
     image_url: body.image_url || null,
     is_free: body.is_free || false,
-    price_min: body.price_min || null,
-    price_max: body.price_max || null,
+    price_min: body.price_min ?? null,
+    price_max: body.price_max ?? null,
     price_note: body.price_note ? sanitizeString(body.price_note) : null,
     source_type: "venue_submission",
     submitted_by: user.id,

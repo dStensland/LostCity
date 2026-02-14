@@ -93,7 +93,8 @@ export async function getPortalSections(portalId: string): Promise<PortalSection
             is_free,
             venue:venues(id, name, slug)
           `)
-          .in("id", eventIds);
+          .in("id", eventIds)
+          .or("is_sensitive.eq.false,is_sensitive.is.null");
 
         type EventData = {
           id: number;

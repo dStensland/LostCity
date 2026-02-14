@@ -60,9 +60,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
             event_links = extract_event_links(page, BASE_URL)
 
             # Freedom Market: Year-round, Saturdays 8:30am-12pm
-            # Generate next 6 months of Saturdays
+            # Generate next 8 weeks of Saturdays (avoid spamming months of recurring events)
             current_date = datetime.now()
-            end_date = current_date + timedelta(days=180)
+            end_date = current_date + timedelta(days=56)
 
             # Find next Saturday
             current = current_date

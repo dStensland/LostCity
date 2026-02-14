@@ -19,7 +19,7 @@ type DestinationSpecial = {
 
 type Destination = {
   venue: {
-    slug: string;
+    slug: string | null;
     name: string;
     neighborhood: string | null;
     venue_type: string | null;
@@ -37,10 +37,13 @@ type Destination = {
   } | null;
 };
 
+type DaypartContext = "all" | "morning" | "day" | "evening" | "late_night";
+
 interface HotelDestinationCardProps {
   destination: Destination;
   portalSlug: string;
   variant?: "standard" | "live";
+  daypartContext?: DaypartContext;
 }
 
 function formatSpecialType(type: string): string {
@@ -77,8 +80,28 @@ function hoursSince(timestamp: string | null | undefined): number | null {
   return Math.max(0, Math.round((Date.now() - parsed) / (1000 * 60 * 60)));
 }
 
-export default function HotelDestinationCard({ destination, portalSlug, variant = "standard" }: HotelDestinationCardProps) {
-  const href = `/${portalSlug}?spot=${destination.venue.slug}`;
+function contextBadgeLabel(destination: Destination, daypartContext: DaypartContext): string | null {
+  if (destination.special_state === "active_now") return "Open now";
+  if (daypartContext === "late_night") return "Open late";
+  if (daypartContext === "morning") return "Morning pick";
+  if (daypartContext === "day") return "Daytime pick";
+  if (daypartContext === "evening") return "Evening pick";
+  return null;
+}
+
+function resolveDestinationHref(portalSlug: string, destination: Destination): string {
+  const slug = typeof destination.venue.slug === "string" ? destination.venue.slug.trim() : "";
+  if (slug) return `/${portalSlug}?spot=${slug}`;
+  return `/${portalSlug}?view=find&type=destinations&search=${encodeURIComponent(destination.venue.name)}`;
+}
+
+export default function HotelDestinationCard({
+  destination,
+  portalSlug,
+  variant = "standard",
+  daypartContext = "all",
+}: HotelDestinationCardProps) {
+  const href = resolveDestinationHref(portalSlug, destination);
   const isLive = variant === "live";
   const imageCandidates = useMemo(() => {
     const rawSources = [destination.venue.image_url, DEFAULT_DESTINATION_IMAGE];
@@ -98,17 +121,18 @@ export default function HotelDestinationCard({ destination, portalSlug, variant 
   const imageSrc = imageCandidates[Math.min(imageIndex, imageCandidates.length - 1)] || null;
   const confidence = confidenceLabel(destination.top_special?.confidence);
   const freshnessHours = hoursSince(destination.top_special?.last_verified_at);
+  const contextBadge = contextBadgeLabel(destination, daypartContext);
 
   return (
     <Link
       href={href}
-      className={`group isolate block rounded-xl overflow-hidden bg-[var(--hotel-cream)] border transition-all duration-500 ${
+      className={`group isolate block rounded-xl overflow-hidden bg-[var(--hotel-cream)] border transition-all duration-500 [clip-path:inset(0_round_0.75rem)] ${
         isLive
           ? "border-[var(--hotel-champagne)]/45 shadow-[var(--hotel-shadow-medium)] hover:shadow-[var(--hotel-shadow-strong)]"
           : "border-[var(--hotel-sand)] shadow-[var(--hotel-shadow-soft)] hover:shadow-[var(--hotel-shadow-medium)]"
       }`}
     >
-      <div className="relative aspect-[4/3] bg-[var(--hotel-sand)] overflow-hidden rounded-t-[inherit]">
+      <div className="relative aspect-[4/3] bg-[var(--hotel-sand)] overflow-hidden rounded-t-[inherit] [clip-path:inset(0_round_0.75rem_0.75rem_0_0)]">
         {imageSrc ? (
           <Image
             src={imageSrc}
@@ -126,6 +150,11 @@ export default function HotelDestinationCard({ destination, portalSlug, variant 
         {destination.special_state !== "none" && (
           <div className="absolute top-3 left-3 rounded-full bg-[var(--hotel-ink)]/75 text-[10px] tracking-[0.14em] uppercase text-[var(--hotel-champagne)] px-3 py-1">
             {destination.special_state === "active_now" ? "Live" : "Soon"}
+          </div>
+        )}
+        {contextBadge && (
+          <div className="absolute top-3 right-3 rounded-full bg-black/55 text-[10px] tracking-[0.13em] uppercase text-white/88 px-3 py-1">
+            {contextBadge}
           </div>
         )}
       </div>

@@ -15,6 +15,7 @@ interface EventQuickActionsProps {
     start_date: string;
     start_time: string | null;
     end_time: string | null;
+    end_date?: string | null;
     is_all_day?: boolean;
     ticket_url: string | null;
     source_url: string | null;
@@ -38,7 +39,9 @@ interface EventQuickActionsProps {
 export default function EventQuickActions({ event, isLive, className = "" }: EventQuickActionsProps) {
   const { text: priceText, isFree } = formatPriceDetailed(event);
   const dateObj = parseISO(event.start_date);
-  const dateDisplay = format(dateObj, "EEE, MMM d");
+  const dateDisplay = event.end_date
+    ? `${format(dateObj, "MMM d")} – ${format(parseISO(event.end_date), "MMM d")}`
+    : format(dateObj, "EEE, MMM d");
   const isActuallyTicketed = isTicketingUrl(event.ticket_url);
 
   // Format time

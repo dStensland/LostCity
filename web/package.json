@@ -9,9 +9,11 @@
     "lint": "eslint",
     "test": "vitest",
     "test:run": "vitest run",
+    "test:skeletons": "vitest run lib/skeleton-contract.test.ts app/\\[portal\\]/_components/__tests__/skeleton-process.test.ts",
     "test:coverage": "vitest run --coverage",
     "seed": "tsx scripts/seed-staging.ts",
-    "seed:clear": "tsx scripts/seed-staging.ts --clear"
+    "seed:clear": "tsx scripts/seed-staging.ts --clear",
+    "seed:emory-venues": "tsx scripts/backfill-emory-nearby-venues.ts"
   },
   "dependencies": {
     "@google/genai": "^1.39.0",

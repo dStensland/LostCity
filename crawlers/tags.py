@@ -102,6 +102,7 @@ VALID_CATEGORIES = {
     "religious",
     "markets",
     "wellness",
+    "support_group",
     "gaming",
     "outdoors",
     "other",

@@ -120,6 +120,7 @@ export async function getSeriesEvents(
       )
     `)
     .eq("series_id", seriesId)
+    .or("is_sensitive.eq.false,is_sensitive.is.null")
     .order("start_date", { ascending: true })
     .order("start_time", { ascending: true });
 
@@ -182,7 +183,8 @@ export async function getSeriesWithEventCounts(
     .from("events")
     .select("series_id")
     .in("series_id", seriesIds)
-    .gte("start_date", today);
+    .gte("start_date", today)
+    .or("is_sensitive.eq.false,is_sensitive.is.null");
 
   // Count events per series
   const counts: Record<string, number> = {};

@@ -143,7 +143,8 @@ export function useLiveEventCount(): number {
       const { count: liveCount } = await supabase
         .from("events")
         .select("*", { count: "exact", head: true })
-        .eq("is_live", true);
+        .eq("is_live", true)
+        .or("is_sensitive.eq.false,is_sensitive.is.null");
 
       if (mountedRef.current) {
         setCount(liveCount || 0);

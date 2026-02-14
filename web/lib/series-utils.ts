@@ -11,6 +11,7 @@ export function getSeriesTypeLabel(type: string): string {
     class_series: "Class Series",
     festival_program: "Program",
     tour: "Tour",
+    exhibition: "Exhibition",
     other: "Series",
   };
   return labels[type] || "Series";
@@ -24,6 +25,7 @@ export function getSeriesTypeColor(type: string): string {
     class_series: "#6EE7B7", // green
     festival_program: "#FBBF24", // amber
     tour: "#C4B5FD", // purple
+    exhibition: "#F59E0B", // amber
     other: "#94A3B8", // slate
   };
   return colors[type] || "#94A3B8";

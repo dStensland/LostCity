@@ -226,8 +226,8 @@ def enrich_organizations(dry_run: bool = False, limit: int = 200) -> None:
 
         if description and not has_description:
             # Truncate if too long
-            if len(description) > 500:
-                description = description[:497] + "..."
+            if len(description) > 2000:
+                description = description[:1997] + "..."
             update_data['description'] = description
             stats['descriptions_found'] += 1
             logger.info(f"  Found description: {description[:100]}...")

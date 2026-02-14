@@ -31,7 +31,7 @@ load_dotenv(env_path)
 sys.path.insert(0, str(Path(__file__).parent))
 
 from db import get_client
-from festival_date_confidence import classify_url, compute_confidence, should_update
+from festival_date_confidence import classify_url, compute_confidence, should_update, validate_festival_dates
 from pipeline.fetch import fetch_html
 from pipeline.detail_enrich import enrich_from_detail
 from pipeline.models import DetailConfig, FetchConfig
@@ -183,17 +183,105 @@ def extract_festival_dates(html: str, default_year: int = 2026) -> tuple[Optiona
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _extract_meta_description(html: str) -> Optional[str]:
-    """Extract og:description / meta description from HTML."""
+def _extract_festival_description(html: str, website: str = "", fetch_cfg=None) -> Optional[str]:
+    """Extract the best available description from festival HTML.
+
+    Tries multiple strategies in order of quality:
+    1. JSON-LD description (often the longest/most complete)
+    2. og:description / meta description
+    3. Main content area paragraphs (combined for richer descriptions)
+    4. About page fallback (fetches /about if main page yielded nothing)
+    """
     from bs4 import BeautifulSoup
+    import json as _json
+
     soup = BeautifulSoup(html, "html.parser")
+    best: Optional[str] = None
+    best_len = 0
+
+    # Strategy 1: JSON-LD description (often the most complete)
+    for script in soup.find_all("script", type="application/ld+json"):
+        try:
+            data = _json.loads(script.string or "")
+            items = data if isinstance(data, list) else [data]
+            for item in items:
+                desc = item.get("description", "")
+                if isinstance(desc, str) and len(desc.strip()) > best_len:
+                    candidate = re.sub(r"\s+", " ", desc).strip()
+                    if len(candidate) >= 30:
+                        best = candidate
+                        best_len = len(candidate)
+        except (ValueError, TypeError, AttributeError):
+            continue
+
+    # Strategy 2: Meta tags (og, standard, twitter)
     for tag_name in ["og:description", "description", "twitter:description"]:
         meta_tag = soup.find("meta", attrs={"property": tag_name}) or soup.find("meta", attrs={"name": tag_name})
         if meta_tag and meta_tag.get("content", "").strip():
             candidate = meta_tag["content"].strip()
-            if len(candidate) >= 30:
-                return candidate
-    return None
+            if len(candidate) >= 30 and len(candidate) > best_len:
+                best = candidate
+                best_len = len(candidate)
+
+    # Strategy 3: Combine main content paragraphs for a richer description
+    main = soup.find("main") or soup.find("article") or soup.find("[role='main']")
+    if main:
+        paragraphs = []
+        for p in main.find_all("p"):
+            text = re.sub(r"\s+", " ", p.get_text()).strip()
+            if len(text) >= 30 and not _is_boilerplate(text):
+                paragraphs.append(text)
+        if paragraphs:
+            combined = " ".join(paragraphs)[:2000]
+            if len(combined) > best_len:
+                best = combined
+                best_len = len(combined)
+
+    # Strategy 4: Try /about page if we got nothing useful from the main page
+    if best_len < 80 and website and fetch_cfg:
+        about_url = _build_about_url(website)
+        if about_url:
+            try:
+                about_html, about_err = fetch_html(about_url, fetch_cfg)
+                if about_html and not about_err:
+                    about_soup = BeautifulSoup(about_html, "html.parser")
+                    about_main = about_soup.find("main") or about_soup.find("article") or about_soup.find("body")
+                    if about_main:
+                        paras = []
+                        for p in about_main.find_all("p"):
+                            text = re.sub(r"\s+", " ", p.get_text()).strip()
+                            if len(text) >= 30 and not _is_boilerplate(text):
+                                paras.append(text)
+                        if paras:
+                            combined = " ".join(paras)[:2000]
+                            if len(combined) > best_len:
+                                best = combined
+                                best_len = len(combined)
+            except Exception:
+                pass  # Never block enrichment on about page fetch
+
+    return best
+
+
+def _build_about_url(website: str) -> Optional[str]:
+    """Build an /about URL from a festival website."""
+    from urllib.parse import urlparse, urlunparse
+    parsed = urlparse(website)
+    if not parsed.scheme or not parsed.netloc:
+        return None
+    # Try /about path
+    return urlunparse((parsed.scheme, parsed.netloc, "/about", "", "", ""))
+
+
+def _is_boilerplate(text: str) -> bool:
+    """Quick check if text is nav/footer boilerplate."""
+    lower = text.lower()
+    markers = [
+        "skip to content", "cookie", "privacy policy", "terms of",
+        "all rights reserved", "powered by", "javascript", "loading",
+        "subscribe", "newsletter", "follow us", "copyright",
+    ]
+    return any(lower.startswith(m) for m in markers)
 
 
 # ---------------------------------------------------------------------------
@@ -211,7 +299,7 @@ def enrich_festivals(
     # Query all festivals with websites
     query = (
         client.table("festivals")
-        .select("id,slug,name,website,description,image_url,ticket_url,announced_start,announced_end,typical_month,date_confidence,date_source,pending_start,pending_end")
+        .select("id,slug,name,website,description,image_url,ticket_url,announced_start,announced_end,typical_month,typical_duration_days,date_confidence,date_source,pending_start,pending_end")
         .not_.is_("website", "null")
     )
     if slug:
@@ -277,7 +365,7 @@ def enrich_festivals(
         # Run extraction stack
         enriched = enrich_from_detail(html, website, f["slug"], detail_cfg)
         start_date, end_date, method = extract_festival_dates(html)
-        meta_desc = _extract_meta_description(html)
+        meta_desc = _extract_festival_description(html, website, fetch_cfg)
 
         # Smart JS retry: if plain fetch yielded no useful data, retry with Playwright
         has_useful = (
@@ -293,7 +381,7 @@ def enrich_festivals(
                 html = html_js
                 enriched = enrich_from_detail(html, website, f["slug"], detail_cfg)
                 start_date, end_date, method = extract_festival_dates(html)
-                meta_desc = _extract_meta_description(html)
+                meta_desc = _extract_festival_description(html, website, fetch_cfg)
                 used_js = True
                 stats["js_retry"] += 1
 
@@ -304,7 +392,7 @@ def enrich_festivals(
         # Description
         desc = enriched.get("description") or meta_desc
         if desc and len(str(desc)) >= 30 and (force or not f.get("description")):
-            updates["description"] = str(desc)[:500]
+            updates["description"] = str(desc)[:2000]
             markers.append("desc \u2713")
             stats["description"] += 1
         else:
@@ -328,7 +416,18 @@ def enrich_festivals(
         else:
             markers.append("ticket \u2717")
 
-        # Dates — confidence-based staging
+        # Dates — validate then confidence-based staging
+        if start_date and method:
+            valid, start_date, end_date = validate_festival_dates(
+                start_date, end_date,
+                typical_month=f.get("typical_month"),
+                typical_duration_days=f.get("typical_duration_days"),
+            )
+            if not valid:
+                markers.append(f"dates rejected ({start_date})")
+                start_date = None  # prevent further date processing
+                method = ""  # prevent fallthrough to "dates ✗"
+
         if start_date and method:
             url_type = classify_url(website, f["slug"])
             extracted_month = int(start_date[5:7])

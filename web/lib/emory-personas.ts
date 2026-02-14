@@ -37,8 +37,8 @@ export const EMORY_PERSONA_PROFILES: Record<EmoryPersonaKey, EmoryPersonaProfile
     primaryActionLabel: "Start Visit",
     secondaryActionLabel: "Get Directions",
     tertiaryActionLabel: "View Services",
-    companionActionLabel: "Open Visitor Companion",
-    sourcePolicyNote: "CDC/DPH/nonprofit provenance on. Competitor systems excluded.",
+    companionActionLabel: "Open Visitor Guide",
+    sourcePolicyNote: "Hospital navigation and practical community support only.",
   },
   "out-of-town-family": {
     key: "out-of-town-family",
@@ -53,8 +53,8 @@ export const EMORY_PERSONA_PROFILES: Record<EmoryPersonaKey, EmoryPersonaProfile
     primaryActionLabel: "Plan Stay",
     secondaryActionLabel: "Get Directions",
     tertiaryActionLabel: "View Services",
-    companionActionLabel: "Open Stay Companion",
-    sourcePolicyNote: "Hospital records plus vetted civic/nonprofit resource layers.",
+    companionActionLabel: "Open Stay Guide",
+    sourcePolicyNote: "Travel, stay, and daily logistics support for longer care journeys.",
   },
   "patient-logistics": {
     key: "patient-logistics",
@@ -69,8 +69,8 @@ export const EMORY_PERSONA_PROFILES: Record<EmoryPersonaKey, EmoryPersonaProfile
     primaryActionLabel: "Plan Arrival",
     secondaryActionLabel: "Get Directions",
     tertiaryActionLabel: "View Services",
-    companionActionLabel: "Open Patient Companion",
-    sourcePolicyNote: "Location intelligence only. Clinical coordination is intentionally out of scope.",
+    companionActionLabel: "Open Patient Guide",
+    sourcePolicyNote: "Non-clinical logistics support. Medical decisions stay with your care team.",
   },
   "staff-shift": {
     key: "staff-shift",
@@ -85,8 +85,8 @@ export const EMORY_PERSONA_PROFILES: Record<EmoryPersonaKey, EmoryPersonaProfile
     primaryActionLabel: "Start Shift Route",
     secondaryActionLabel: "Get Directions",
     tertiaryActionLabel: "View Essentials",
-    companionActionLabel: "Open Shift Companion",
-    sourcePolicyNote: "Operational utility first with strict attribution visibility.",
+    companionActionLabel: "Open Shift Guide",
+    sourcePolicyNote: "Shift logistics support focused on speed and reliability.",
   },
   "community-health-seeker": {
     key: "community-health-seeker",
@@ -94,15 +94,15 @@ export const EMORY_PERSONA_PROFILES: Record<EmoryPersonaKey, EmoryPersonaProfile
     shortLabel: "Community",
     headline: "Public-health and wellness support around Emory campuses.",
     summary:
-      "Explore prevention, food-access, and community wellness resources tied to trusted public and nonprofit sources.",
+      "Explore prevention, food-access, and community wellness resources from public and nonprofit programs.",
     focusTitle: "Community Resource Discovery",
     focusNarrative: "Prioritizing prevention, wellness, and family resource access across Atlanta.",
     defaultMode: "visitor",
     primaryActionLabel: "Explore Community Health",
     secondaryActionLabel: "Get Directions",
     tertiaryActionLabel: "View Resources",
-    companionActionLabel: "Open Community Companion",
-    sourcePolicyNote: "Public-agency and nonprofit source tiers are surfaced with provenance.",
+    companionActionLabel: "Open Community Guide",
+    sourcePolicyNote: "Community programs and household support around Emory campuses.",
   },
 };
 
@@ -139,4 +139,3 @@ export function resolveHospitalModeForPersona(args: {
   }
   return normalizeHospitalMode(modeParam);
 }
-

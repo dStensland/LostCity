@@ -6,7 +6,7 @@ export type HospitalModeConfig = {
   shortLabel: string;
   description: string;
   heroHint: string;
-  sectionOrder: Array<"services" | "late" | "food" | "stay">;
+  sectionOrder: Array<"services" | "late" | "food" | "stay" | "essentials">;
 };
 
 export const HOSPITAL_MODE_CONFIG: Record<HospitalAudienceMode, HospitalModeConfig> = {
@@ -16,7 +16,7 @@ export const HOSPITAL_MODE_CONFIG: Record<HospitalAudienceMode, HospitalModeConf
     shortLabel: "Help Now",
     description: "Get calm, immediate guidance to wayfinding, contacts, and essential support.",
     heroHint: "Prioritizing immediate support, navigation, and after-hours essentials.",
-    sectionOrder: ["services", "late", "food", "stay"],
+    sectionOrder: ["services", "late", "essentials", "food", "stay"],
   },
   treatment: {
     key: "treatment",
@@ -24,7 +24,7 @@ export const HOSPITAL_MODE_CONFIG: Record<HospitalAudienceMode, HospitalModeConf
     shortLabel: "Treatment",
     description: "Designed for repeat visits, extended care timelines, and out-of-town coordination.",
     heroHint: "Prioritizing on-campus services, lodging, and dependable planning.",
-    sectionOrder: ["services", "stay", "food", "late"],
+    sectionOrder: ["services", "stay", "essentials", "food", "late"],
   },
   visitor: {
     key: "visitor",
@@ -32,7 +32,7 @@ export const HOSPITAL_MODE_CONFIG: Record<HospitalAudienceMode, HospitalModeConf
     shortLabel: "Visitor",
     description: "Confident visitor guidance for where to go, what is open, and what is nearby.",
     heroHint: "Prioritizing visitor logistics, comfort, and nearby essentials.",
-    sectionOrder: ["services", "food", "stay", "late"],
+    sectionOrder: ["services", "food", "essentials", "stay", "late"],
   },
   staff: {
     key: "staff",
@@ -40,7 +40,7 @@ export const HOSPITAL_MODE_CONFIG: Record<HospitalAudienceMode, HospitalModeConf
     shortLabel: "Staff",
     description: "Shift-friendly support with late-night options and fast operational routing.",
     heroHint: "Prioritizing speed, reliability, and quick essentials.",
-    sectionOrder: ["late", "food", "services", "stay"],
+    sectionOrder: ["late", "food", "essentials", "services", "stay"],
   },
 };
 

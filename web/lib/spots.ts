@@ -130,7 +130,8 @@ export async function getSpotsWithEventCounts(
   const { data: eventCounts, error: countError } = await supabase
     .from("events")
     .select("venue_id")
-    .gte("start_date", today);
+    .gte("start_date", today)
+    .or("is_sensitive.eq.false,is_sensitive.is.null");
 
   if (countError) {
     console.error("Error fetching event counts:", countError);
@@ -195,6 +196,7 @@ export async function getUpcomingEventsForSpot(
     )
     .eq("venue_id", venueId)
     .or(`start_date.gte.${today},end_date.gte.${today}`)
+    .or("is_sensitive.eq.false,is_sensitive.is.null")
     .order("start_date", { ascending: true })
     .order("start_time", { ascending: true })
     .limit(limit);

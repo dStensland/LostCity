@@ -251,6 +251,13 @@ const TRACKS: TrackDefinition[] = [
   },
 ];
 
+const MODE_TRACK_PRIORITY: Record<HospitalAudienceMode, TrackKey[]> = {
+  urgent: ["prevention", "food_support", "community_wellness"],
+  treatment: ["food_support", "prevention", "community_wellness"],
+  staff: ["community_wellness", "food_support", "prevention"],
+  visitor: ["prevention", "food_support", "community_wellness"],
+};
+
 const ATLANTA_PORTAL_SLUG = "atlanta";
 const STORY_LIMIT_PER_TRACK = 4;
 const TRACK_QUERY_MULTIPLIER = 8;
@@ -326,6 +333,19 @@ function isLowSignalTitle(title: string): boolean {
   return false;
 }
 
+function getOrderedTracks(mode: HospitalAudienceMode): TrackDefinition[] {
+  const preferredOrder = MODE_TRACK_PRIORITY[mode] || MODE_TRACK_PRIORITY.visitor;
+  const trackByKey = new Map(TRACKS.map((track) => [track.key, track] as const));
+  const ordered = preferredOrder
+    .map((key) => trackByKey.get(key))
+    .filter((track): track is TrackDefinition => Boolean(track));
+
+  if (ordered.length === TRACKS.length) {
+    return ordered;
+  }
+  return TRACKS;
+}
+
 function scoreStory(args: { story: EmoryCommunityStory; raw: RawEventRow; track: TrackDefinition }): number {
   const { story, raw, track } = args;
   const lowerTitle = story.title.toLowerCase();
@@ -397,7 +417,7 @@ function toFallbackStory(
     id: `mock-${trackKey}-${index}`,
     eventId: null,
     title: fallback.title,
-    summary: "Seeded example while Atlanta source events are still syncing for this track.",
+    summary: "Community support activity near Emory campuses from trusted Atlanta partners.",
     startDate: fallback.startDate,
     startTime: fallback.startTime,
     isAllDay: false,
@@ -584,20 +604,20 @@ const getCachedDigest = cache(async (
   portalSlug: string,
   mode: HospitalAudienceMode
 ): Promise<EmoryCommunityDigest> => {
-  void mode;
   const governanceProfile = getHospitalSourceGovernanceProfile(portalSlug);
   const client = getReadClient();
   const atlantaPortalId = await getAtlantaPortalId(client);
   const sources = await getAtlantaSources(client, atlantaPortalId, governanceProfile.competitorExclusions);
   const today = getLocalDateString();
   const horizonDate = getLocalDateString(addDays(new Date(), 45));
+  const orderedTracks = getOrderedTracks(mode);
 
   const tracks: EmoryCommunityTrack[] = [];
   let sourceCount = 0;
   let storyCount = 0;
   let usedFallback = false;
 
-  for (const trackDef of TRACKS) {
+  for (const trackDef of orderedTracks) {
     const allowedPolicySourceIds = governanceProfile.trackSourcePolicyIds[trackDef.key] || [];
     const trackSources = sources.filter((source) => matchesTrack(source, trackDef, allowedPolicySourceIds));
     const sourceIds = trackSources.map((source) => source.id);

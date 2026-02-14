@@ -551,10 +551,15 @@ CLASS_SOURCES = {
     "atlanta-dance-ballroom",
     "atlanta-clay-works",
     "mudfire",
+    "mudfire-pottery-studio",
     "spruill-center",
+    "spruill-center-for-the-arts",
     "irwin-street-cooking",
     "publix-aprons",
     "cooks-warehouse",
+    "callanwolde-fine-arts-center",
+    "sndbath",
+    "central-rock-gym-atlanta",
     # Dance studios
     "academy-ballroom",
     "ballroom-impact",
@@ -587,7 +592,7 @@ CLASS_SOURCES = {
 }
 
 # Class studio venue types
-CLASS_VENUE_TYPES = {"studio", "cooking_school", "dance_studio"}
+CLASS_VENUE_TYPES = {"studio", "cooking_school", "dance_studio", "fitness_center"}
 
 # Title/description patterns that indicate a class
 CLASS_TITLE_PATTERNS = [
@@ -611,6 +616,10 @@ CLASS_TITLE_PATTERNS = [
     "paint and sip",
     "paint & sip",
     "paint-and-sip",
+    "sip and paint",
+    "sip & paint",
+    "paint -n- sip",
+    "paint + sip",
     "hands-on class",
     "hands on class",
     "masterclass",
@@ -627,6 +636,72 @@ CLASS_TITLE_PATTERNS = [
     "certification course",
     "certificate program",
 ]
+
+
+SUPPORT_GROUP_KEYWORDS = [
+    "support group",
+    "grief share",
+    "griefshare",
+    "grief support",
+    "bereavement group",
+    "recovery group",
+    "recovery meeting",
+    "celebrate recovery",
+    "al-anon",
+    "nar-anon",
+    "na meeting",
+    "aa meeting",
+    "alcoholics anonymous",
+    "narcotics anonymous",
+    "survivors group",
+    "divorce care",
+    "divorcecare",
+    "cancer support",
+    "caregiver support",
+    "mental health support group",
+    "nami",
+]
+
+# Sources that are always support groups
+SUPPORT_GROUP_SOURCES = {
+    "griefshare-atlanta",
+    "griefshare",
+    "celebrate-recovery",
+    "na-georgia",
+    "aa-atlanta",
+    "divorcecare-atlanta",
+}
+
+
+def infer_is_support_group(
+    event: dict,
+    source_slug: str | None = None,
+) -> bool:
+    """
+    Infer whether an event is a support group.
+    Support groups should be categorized as support_group and marked is_sensitive.
+    """
+    if event.get("category") == "support_group":
+        return True
+
+    if source_slug and source_slug in SUPPORT_GROUP_SOURCES:
+        return True
+
+    title = (event.get("title") or "").lower()
+    desc = (event.get("description") or "").lower()
+    text = f"{title} {desc}"
+
+    for kw in SUPPORT_GROUP_KEYWORDS:
+        if kw in text:
+            # Short keywords need word-boundary check to avoid false positives
+            # e.g. "nami" matching "examination", "na meeting" matching "sauna meeting"
+            if len(kw) <= 4:
+                import re as _re
+                if _re.search(r'\b' + _re.escape(kw) + r'\b', text):
+                    return True
+            else:
+                return True
+    return False
 
 
 def infer_is_class(

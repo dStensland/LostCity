@@ -13,11 +13,28 @@ Each phase is a self-contained block of work an agent can pick up cold. Phases w
 **Key reference docs:**
 - `BACKLOG.md` — Product roadmap
 - `ARCHITECTURE_PLAN.md` — System gaps and implementation priorities
+- `docs/portal-surfaces-contract.md` — Consumer Portal vs Admin Portal contract
 - `STRATEGIC_PRINCIPLES.md` — Core hypotheses and decision framework
 - `TECH_DEBT.md` — Code-level debt items
 - `prds/004-taxonomy-personalization-refactor.md` — Taxonomy + personalization bible (most detailed PRD)
 - `crawlers/CLAUDE.md` — Crawler patterns and data requirements
 - `web/CLAUDE.md` — Web app patterns, auth, API routes
+
+---
+
+## Surface Declaration Rule (Required)
+
+Every new phase/PRD/checklist must declare target surface:
+- `consumer` — Consumer Portal
+- `admin` — Admin Portal
+- `both` — only if acceptance criteria are split by surface
+
+If this declaration is missing, the work is not ready.
+
+Anti-conflation check:
+1. Does this accidentally introduce admin UX into consumer flows?
+2. Does this accidentally simplify away needed operational depth in admin UX?
+3. Are acceptance criteria written for the correct surface?
 
 ---
 
@@ -35,7 +52,7 @@ Each phase is a self-contained block of work an agent can pick up cold. Phases w
 | H: User Profile & Preferences UX | Done | 2026-02-10 | UX |
 | I: Discovery UX (genre filter pills, cross-entity search) | Done (pre-existing) | 2026-02-10 | UX |
 | J: Hotel Concierge Demo | Done | 2026-02-10 | Demo |
-| K: Portal Onboarding Flow | Delivered (Paused) | 2026-02-10 | Demo |
+| K: Admin Portal Onboarding Flow | Delivered (Paused) | 2026-02-10 | Demo |
 | L: API Route Test Coverage | Done (events route) | 2026-02-10 | Eng Health |
 | M: Community Needs Tags | Done | 2026-02-10 | Network |
 | N: Strict Portal Attribution Hardening | In Progress | 2026-02-11 | Foundation |
@@ -53,10 +70,21 @@ Execution is now constrained by the launch hypothesis:
 1. **Strict portal attribution first** across data, behavior, enrichment, and analytics.
 2. **Atlanta usage and quality proof** before productizing self-serve workflows.
 3. **Demo quality over demo quantity** (FORTH first, then 1-2 high-signal vertical demos).
-4. **Self-serve portal onboarding/admin expansion paused** until customer pull is real.
+4. **Self-serve Admin Portal onboarding/product expansion paused** until customer pull is real.
 5. **Public Developer API iceboxed** until after launch traction.
 
 This means completed work like Phase K remains available but is not an active investment area until reprioritized.
+
+---
+
+## Surface Map (Planning Guardrail)
+
+- Shared infrastructure (not a UX surface): `A`, `B`, `C`, `D`, `E`, `F`, `N`, `Q`
+- Consumer Portal-first: `G`, `H`, `I`, `J`, `M`, `O`, `P`
+- Admin Portal-first: `K`
+- Both consumer + admin concerns: `L` (API test coverage), selected parts of `N`
+
+When editing any phase, add or preserve a `Surface:` line in that phase block.
 
 ---
 
@@ -322,6 +350,8 @@ Applied two migrations to add all taxonomy + personalization columns:
 
 ### Phase J: Hotel Concierge Demo
 
+**Surface:** `consumer`
+
 **Goal:** Build the FORTH Hotel concierge portal as a distinct vertical.
 
 **Why:** First sales vertical. All the taxonomy and UX patterns from Tiers 2-3 are now in place.
@@ -344,16 +374,18 @@ Applied two migrations to add all taxonomy + personalization columns:
 
 ---
 
-### Phase K: Portal Onboarding Flow
+### Phase K: Admin Portal Onboarding Flow
 
-**Goal:** Keep existing wizard functional, but pause major self-serve expansion.
+**Surface:** `admin`
+
+**Goal:** Keep existing Admin Portal onboarding wizard functional, but pause major self-serve expansion.
 
 **Why:** Self-serve is intentionally deferred until post-launch customer pull. Current priority is attribution, Atlanta usage, and demo quality.
 
 **Reference:** `prds/002-portal-onboarding-wizard.md`
 
 **Scope now:**
-1. Maintain current flow for internal operator use.
+1. Maintain current Admin Portal onboarding flow for internal operator use.
 2. Fix critical defects only.
 3. Do not invest in broad UX polish or public self-serve growth features.
 
@@ -364,6 +396,8 @@ Applied two migrations to add all taxonomy + personalization columns:
 ## Tier 5: Launch Foundation (Current Priority)
 
 ### Phase N: Strict Portal Attribution Hardening
+
+**Surface:** `both` (shared infra with consumer-facing impact and admin-facing reporting impact)
 
 **Goal:** Make portal attribution explicit and enforceable across all critical write paths.
 
@@ -380,6 +414,8 @@ Applied two migrations to add all taxonomy + personalization columns:
 
 ### Phase O: Atlanta Usage + Quality Proof
 
+**Surface:** `consumer`
+
 **Goal:** Improve Atlanta engagement and reliability metrics used in sales narratives.
 
 **Why:** Launch thesis depends on proving user value in the core city product.
@@ -393,6 +429,8 @@ Applied two migrations to add all taxonomy + personalization columns:
 **Verification:** Atlanta usage dashboards show measurable week-over-week improvement in engagement quality metrics.
 
 ### Phase P: Demo Portfolio Expansion
+
+**Surface:** `consumer`
 
 **Goal:** Deliver polished demo experiences for high-priority vertical sales motions.
 
@@ -425,6 +463,8 @@ Applied two migrations to add all taxonomy + personalization columns:
 
 ### Phase L: API Route Test Coverage
 
+**Surface:** `both` (consumer + admin APIs)
+
 **Goal:** Add tests for the most critical API routes. Currently 139 routes, 0 tests.
 
 **Why:** TECH_DEBT A1. Highest-risk gap.
@@ -440,6 +480,8 @@ Applied two migrations to add all taxonomy + personalization columns:
 ## Tier 7: Network Effects
 
 ### Phase M: Community Needs Tags
+
+**Surface:** `consumer`
 
 **Goal:** Extend venue tag voting to accessibility/dietary/family needs across all entities.
 

@@ -36,6 +36,15 @@ interface PlaceResult {
     lat: number;
     lng: number;
   };
+  website?: string;
+  category?: string;
+  categoryName?: string;
+}
+
+interface FoursquareCategory {
+  id: number;
+  name: string;
+  short_name?: string;
 }
 
 interface FoursquarePlace {
@@ -49,7 +58,10 @@ interface FoursquarePlace {
     locality?: string;
     region?: string;
     postcode?: string;
+    neighborhood?: string[];
   };
+  categories?: FoursquareCategory[];
+  website?: string;
 }
 
 /**
@@ -133,6 +145,7 @@ export async function POST(request: NextRequest) {
       ll: `${searchLocation.lat},${searchLocation.lng}`,
       radius: "50000", // 50km radius
       limit: "10",
+      fields: "fsq_place_id,name,location,categories,website,geocodes",
     });
 
     // Add timeout to prevent hanging requests
@@ -167,6 +180,38 @@ export async function POST(request: NextRequest) {
     const data = await response.json();
     const places: FoursquarePlace[] = data.results || [];
 
+    // Map Foursquare category names to our venue types
+    const mapFoursquareCategory = (categories: FoursquareCategory[] | undefined): string | undefined => {
+      if (!categories || categories.length === 0) return undefined;
+      const name = categories[0].name.toLowerCase();
+      if (/bar|pub|lounge|cocktail|dive bar|speakeasy/.test(name)) return "bar";
+      if (/restaurant|diner|cafe|eatery|bistro|grill|pizz|sushi|taco|burger|bbq|seafood|steakhouse/.test(name)) return "restaurant";
+      if (/nightclub|dance club|disco/.test(name)) return "nightclub";
+      if (/music venue|concert|jazz|blues club/.test(name)) return "music_venue";
+      if (/comedy/.test(name)) return "comedy_club";
+      if (/gallery|art/.test(name)) return "gallery";
+      if (/museum/.test(name)) return "museum";
+      if (/brew|taproom/.test(name)) return "brewery";
+      if (/coffee|tea room/.test(name)) return "coffee_shop";
+      if (/bookstore|book shop/.test(name)) return "bookstore";
+      if (/movie|cinema|theater|theatre/.test(name)) return "cinema";
+      if (/park|garden|trail/.test(name)) return "park";
+      if (/market|farmer/.test(name)) return "farmers_market";
+      if (/food hall|food court/.test(name)) return "food_hall";
+      if (/arena|stadium/.test(name)) return "arena";
+      if (/hotel|inn|motel/.test(name)) return "hotel";
+      if (/gym|fitness|yoga|pilates/.test(name)) return "fitness_center";
+      if (/distillery/.test(name)) return "distillery";
+      if (/winery/.test(name)) return "winery";
+      if (/sports bar/.test(name)) return "sports_bar";
+      if (/record|vinyl/.test(name)) return "record_store";
+      if (/church|mosque|temple|synagogue/.test(name)) return "church";
+      if (/library/.test(name)) return "library";
+      if (/event space|banquet|convention/.test(name)) return "event_space";
+      if (/coworking/.test(name)) return "coworking";
+      return undefined;
+    };
+
     // Map to simplified format (using new API field names)
     const results: PlaceResult[] = places.map((place) => {
       // Build formatted address
@@ -176,6 +221,8 @@ export async function POST(request: NextRequest) {
           .filter(Boolean)
           .join(", ");
 
+      const mappedCategory = mapFoursquareCategory(place.categories);
+
       return {
         id: place.fsq_place_id,
         name: place.name,
@@ -184,6 +231,9 @@ export async function POST(request: NextRequest) {
           lat: place.latitude || 0,
           lng: place.longitude || 0,
         },
+        website: place.website || undefined,
+        category: mappedCategory,
+        categoryName: place.categories?.[0]?.name || undefined,
       };
     });
 

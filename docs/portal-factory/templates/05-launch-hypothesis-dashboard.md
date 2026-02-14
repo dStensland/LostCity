@@ -1,5 +1,10 @@
 # Template 05: Launch Hypothesis Dashboard
 
+## Surface Scope (Required)
+
+- Surface: `consumer` | `admin` | `both`
+- If `both`, split hypotheses and metrics by surface.
+
 ## North Star
 
 - Metric:
@@ -16,15 +21,17 @@
 
 ## Minimum Instrumentation
 
-- `mode_selected`
-- `wayfinding_opened`
-- `resource_clicked`
-- `source_policy_enforced`
-- `attribution_rendered`
+- Consumer Portal events:
+  - `mode_selected`
+  - `wayfinding_opened`
+  - `resource_clicked`
+- Admin Portal events:
+  - `source_policy_enforced`
+  - `policy_override_attempted`
+  - `content_publish`
 
 ## Reporting Cadence
 
 - Daily launch checks
 - Weekly decision review
 - Monthly product and GTM iteration checkpoint
-

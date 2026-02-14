@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DEFAULT_PORTAL_SLUG } from "@/lib/constants";
 
 export default function ClaimSuccessPage({
   params,
@@ -19,13 +20,13 @@ export default function ClaimSuccessPage({
         </p>
         <div className="space-y-3">
           <Link
-            href={`/atlanta/spots/${params.slug}`}
+            href={`/${DEFAULT_PORTAL_SLUG}/spots/${params.slug}`}
             className="block w-full px-6 py-3 bg-[var(--coral)] text-[var(--void)] font-medium rounded hover:bg-[var(--coral)]/90 transition-colors"
           >
             Back to Venue
           </Link>
           <Link
-            href="/atlanta"
+            href={`/${DEFAULT_PORTAL_SLUG}`}
             className="block w-full px-6 py-3 border border-[var(--border)] rounded hover:bg-[var(--void)] transition-colors"
           >
             Explore More

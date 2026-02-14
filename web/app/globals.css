@@ -1360,6 +1360,61 @@ body[data-vertical="hospital"]::after {
 body:has([data-vertical="hospital"])::after {
   opacity: 0;
 }
+body[data-vertical="film"]::after {
+  opacity: 0;
+}
+body:has([data-vertical="film"])::after {
+  opacity: 0;
+}
+body[data-vertical="film"],
+body:has([data-vertical="film"]) {
+  --coral: #b8c8f8;
+  --coral-hsl: 225 80% 85%;
+  --neon-amber: #b8c8f8;
+  --neon-amber-hsl: 225 80% 85%;
+  --gold: #dbe5ff;
+}
+
+/* Film vertical: restrained look, no ambient overlays/noisy neon states. */
+body[data-vertical="film"] .ambient-glow,
+body:has([data-vertical="film"]) .ambient-glow,
+body[data-vertical="film"] .rain-overlay,
+body:has([data-vertical="film"]) .rain-overlay,
+body[data-vertical="film"] .cursor-glow,
+body:has([data-vertical="film"]) .cursor-glow {
+  display: none !important;
+}
+
+body[data-vertical="film"] .nav-tab-shadow,
+body:has([data-vertical="film"]) .nav-tab-shadow {
+  text-shadow: none;
+}
+
+body[data-vertical="film"] .nav-tab-active,
+body:has([data-vertical="film"]) .nav-tab-active {
+  background: linear-gradient(180deg, #d7e1ff 0%, #b8c8f8 100%);
+  box-shadow: none;
+  color: #0b1020 !important;
+}
+
+body[data-vertical="film"] .nav-tab:not(.nav-tab-active):hover,
+body:has([data-vertical="film"]) .nav-tab:not(.nav-tab-active):hover {
+  background: rgba(172, 191, 242, 0.12);
+  border-bottom: 2px solid rgba(172, 191, 242, 0.35);
+}
+
+body[data-vertical="film"] .mobile-menu-active,
+body:has([data-vertical="film"]) .mobile-menu-active {
+  color: #dbe5ff !important;
+  background: linear-gradient(90deg, rgba(172, 191, 242, 0.2) 0%, rgba(172, 191, 242, 0.05) 100%);
+  text-shadow: none;
+}
+
+body[data-vertical="film"] .mobile-menu-active::before,
+body:has([data-vertical="film"]) .mobile-menu-active::before {
+  background: #dbe5ff;
+  box-shadow: none;
+}
 
 /* FORTH override: configurable per portal via settings.forth_background_mode. */
 body[data-forth-bg="off"]::after {
@@ -6493,6 +6548,143 @@ body[data-forth-bg="off"] .rain-overlay {
   background: linear-gradient(to right, transparent, var(--hotel-sand) 20%, var(--hotel-sand) 80%, transparent);
   margin: 0 0 3rem 0;
 }
+
+/* ============================================
+   MARKETPLACE PORTAL VERTICAL
+   Mixed-use development / market hall theme
+   ============================================ */
+
+[data-vertical="marketplace"] {
+  /* Color Palette - Warm Industrial */
+  --mkt-ivory: #FBF8F3;
+  --mkt-cream: #F3EDE4;
+  --mkt-sand: #E4DDD2;
+  --mkt-brick: #B5674A;
+  --mkt-steel: #7A8A94;
+  --mkt-charcoal: #2C2824;
+  --mkt-ink: #1C1A17;
+
+  /* Semantic Accents */
+  --mkt-beltline: #5A8C5F;
+  --mkt-amber: #C8944A;
+  --mkt-sky: #6B7FA3;
+
+  /* Category Colors - Warm Muted */
+  --mkt-cat-food: #C8944A;
+  --mkt-cat-drink: #B5674A;
+  --mkt-cat-shop: #7A8A94;
+  --mkt-cat-event: #6B7FA3;
+  --mkt-cat-wellness: #5A8C5F;
+  --mkt-cat-art: #9B8A7A;
+
+  /* Shadows - Soft, Architectural */
+  --mkt-shadow-soft: 0 1px 3px rgba(44, 40, 36, 0.06), 0 1px 2px rgba(44, 40, 36, 0.04);
+  --mkt-shadow-medium: 0 4px 12px rgba(44, 40, 36, 0.08), 0 2px 4px rgba(44, 40, 36, 0.04);
+  --mkt-shadow-strong: 0 8px 24px rgba(44, 40, 36, 0.10), 0 4px 8px rgba(44, 40, 36, 0.05);
+
+  /* Timing */
+  --mkt-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --mkt-duration-fast: 200ms;
+  --mkt-duration-base: 350ms;
+  --mkt-duration-slow: 500ms;
+
+  /* Apply theme colors to standard CSS vars */
+  --background: var(--mkt-ivory);
+  --foreground: var(--mkt-charcoal);
+  --muted: var(--mkt-steel);
+  --accent: var(--mkt-brick);
+  --card: var(--mkt-cream);
+  --card-border: var(--mkt-sand);
+
+  /* Override neon colors for marketplace context */
+  --neon-magenta: var(--mkt-brick);
+  --neon-cyan: var(--mkt-beltline);
+  --neon-amber: var(--mkt-amber);
+
+  /* Disable ambient effects */
+  --grain-opacity: 0;
+  color-scheme: light;
+}
+
+/* Marketplace Animations */
+@keyframes mkt-fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes mkt-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+[data-vertical="marketplace"] .mkt-enter {
+  animation: mkt-fade-in 600ms var(--mkt-ease);
+}
+
+[data-vertical="marketplace"] .mkt-card-enter {
+  animation: mkt-fade-up 500ms var(--mkt-ease);
+}
+
+[data-vertical="marketplace"] .mkt-grid > * {
+  animation: mkt-fade-up 500ms var(--mkt-ease);
+}
+
+[data-vertical="marketplace"] .mkt-grid > *:nth-child(1) { animation-delay: 0ms; }
+[data-vertical="marketplace"] .mkt-grid > *:nth-child(2) { animation-delay: 80ms; }
+[data-vertical="marketplace"] .mkt-grid > *:nth-child(3) { animation-delay: 160ms; }
+[data-vertical="marketplace"] .mkt-grid > *:nth-child(4) { animation-delay: 240ms; }
+[data-vertical="marketplace"] .mkt-grid > *:nth-child(5) { animation-delay: 320ms; }
+[data-vertical="marketplace"] .mkt-grid > *:nth-child(6) { animation-delay: 400ms; }
+
+/* Disable all glow effects for marketplace vertical */
+[data-vertical="marketplace"] .icon-neon,
+[data-vertical="marketplace"] .icon-neon-subtle,
+[data-vertical="marketplace"] .icon-neon-intense,
+[data-vertical="marketplace"] .icon-neon-pulse,
+[data-vertical="marketplace"] .icon-neon-flicker,
+[data-vertical="marketplace"] .ambient-glow {
+  filter: none !important;
+  animation: none !important;
+  opacity: 0 !important;
+}
+
+/* Hide glass effects and particle fields */
+[data-vertical="marketplace"] .glass-panel,
+[data-vertical="marketplace"] .particle-field {
+  display: none !important;
+}
+
+/* Marketplace Nav Pills */
+[data-vertical="marketplace"] .mkt-pill {
+  border: 1px solid var(--mkt-sand);
+  white-space: nowrap;
+  transition: all var(--mkt-duration-fast) var(--mkt-ease);
+}
+[data-vertical="marketplace"] .mkt-pill-active {
+  border-color: var(--mkt-charcoal);
+  background: var(--mkt-charcoal);
+  color: var(--mkt-ivory);
+}
+
+/* Marketplace Hero Gradient */
+[data-vertical="marketplace"] .mkt-hero-gradient {
+  background: linear-gradient(to top, rgba(28, 26, 23, 0.82) 0%, rgba(28, 26, 23, 0.36) 45%, transparent 75%);
+}
+
+/* Marketplace Section Divider */
+[data-vertical="marketplace"] .mkt-divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--mkt-sand) 20%, var(--mkt-sand) 80%, transparent);
+  margin: 0 0 2.5rem 0;
+}
+
+/* BeltLine highlight accent */
+[data-vertical="marketplace"] .mkt-beltline-tag {
+  color: var(--mkt-beltline);
+  border-color: color-mix(in srgb, var(--mkt-beltline) 40%, transparent);
+  background: color-mix(in srgb, var(--mkt-beltline) 8%, transparent);
+}
+
 /* ============================================
    ONBOARDING ANIMATIONS
    ============================================ */
@@ -6635,4 +6827,650 @@ body[data-forth-bg="off"] .rain-overlay {
     animation: none !important;
     transition: none !important;
   }
+}
+
+/* ============================================
+   ATLANTA NIGHT MOODBOARD SYSTEM
+   Route-scoped art direction for:
+   /atlanta-test and /atlanta-test-mood-{1,2,3}
+   ============================================ */
+
+body:is(
+  [data-portal-slug="atlanta-test"],
+  [data-portal-slug="atlanta-test-mood-1"],
+  [data-portal-slug="atlanta-test-mood-2"],
+  [data-portal-slug="atlanta-test-mood-3"]
+) {
+  --void: #050713;
+  --night: #0b1130;
+  --dusk: #11193b;
+  --twilight: #232f62;
+  --cream: #e8edff;
+  --soft: #bcc8f4;
+  --muted: #8b98c9;
+  --coral: #e4a64f;
+  --coral-light: #f2c06f;
+  --rose: #d77d37;
+  --gold: #e4a64f;
+  --neon-magenta: #7068d4;
+  --neon-cyan: #6f82d8;
+  --neon-amber: #d99e48;
+  --neon-green: #d9bf79;
+  --neon-red: #d56b3c;
+  --deep-violet: #1c1b43;
+  --midnight-blue: #102045;
+  --twilight-purple: #363273;
+  --cosmic-blue: #21396f;
+  --nebula: #4f468e;
+  --card-bg: color-mix(in srgb, var(--dusk) 92%, #000);
+  --card-bg-hover: color-mix(in srgb, var(--dusk) 88%, var(--neon-amber) 12%);
+  --glass-bg: linear-gradient(140deg, rgba(10, 16, 40, 0.96), rgba(20, 14, 46, 0.9));
+  --glass-bg-compact: rgba(10, 16, 40, 0.88);
+  --glass-border: rgba(107, 124, 210, 0.24);
+  --glass-shadow: 0 24px 70px rgba(1, 4, 14, 0.72), inset 0 1px 0 rgba(255, 207, 132, 0.05);
+  --glass-shadow-compact: 0 12px 30px rgba(1, 4, 14, 0.62);
+  --grain-opacity: 0.06;
+  --font-outfit: "Space Grotesk", "Inter", system-ui, sans-serif;
+  background:
+    radial-gradient(140% 75% at 50% -12%, rgba(223, 151, 63, 0.08) 0%, rgba(223, 151, 63, 0.02) 38%, transparent 60%),
+    radial-gradient(90% 70% at 0% 22%, rgba(100, 122, 231, 0.16) 0%, rgba(100, 122, 231, 0.03) 58%, transparent 78%),
+    linear-gradient(180deg, #040611 0%, #070b1c 36%, #050713 100%);
+}
+
+body:is(
+  [data-portal-slug="atlanta-test"],
+  [data-portal-slug="atlanta-test-mood-1"],
+  [data-portal-slug="atlanta-test-mood-2"],
+  [data-portal-slug="atlanta-test-mood-3"]
+)::after {
+  opacity: 0.055;
+}
+
+body:is(
+  [data-portal-slug="atlanta-test"],
+  [data-portal-slug="atlanta-test-mood-1"],
+  [data-portal-slug="atlanta-test-mood-2"],
+  [data-portal-slug="atlanta-test-mood-3"]
+) .ambient-glow {
+  background:
+    radial-gradient(ellipse at 50% -8%, rgba(233, 156, 69, 0.12) 0%, rgba(233, 156, 69, 0.03) 42%, transparent 66%),
+    radial-gradient(ellipse at 14% 26%, rgba(111, 130, 216, 0.16) 0%, rgba(111, 130, 216, 0.05) 45%, transparent 72%),
+    radial-gradient(ellipse at 80% 88%, rgba(93, 108, 190, 0.08) 0%, transparent 62%);
+}
+
+body:is(
+  [data-portal-slug="atlanta-test"],
+  [data-portal-slug="atlanta-test-mood-1"],
+  [data-portal-slug="atlanta-test-mood-2"],
+  [data-portal-slug="atlanta-test-mood-3"]
+) .rain-overlay {
+  --rain-opacity: 0.45;
+}
+
+body:is(
+  [data-portal-slug="atlanta-test"],
+  [data-portal-slug="atlanta-test-mood-1"],
+  [data-portal-slug="atlanta-test-mood-2"],
+  [data-portal-slug="atlanta-test-mood-3"]
+) .rain-overlay::before {
+  opacity: 0.035;
+  background:
+    repeating-linear-gradient(-67deg, transparent 0, transparent 12px, rgba(111, 130, 216, 0.42) 12px, rgba(111, 130, 216, 0.42) 14px),
+    repeating-linear-gradient(-74deg, transparent 0, transparent 18px, rgba(69, 88, 173, 0.36) 18px, rgba(69, 88, 173, 0.36) 20px),
+    repeating-linear-gradient(-58deg, transparent 0, transparent 30px, rgba(217, 158, 72, 0.2) 30px, rgba(217, 158, 72, 0.2) 32px);
+  filter: blur(0.75px) saturate(85%);
+}
+
+body:is(
+  [data-portal-slug="atlanta-test"],
+  [data-portal-slug="atlanta-test-mood-1"],
+  [data-portal-slug="atlanta-test-mood-2"],
+  [data-portal-slug="atlanta-test-mood-3"]
+) .rain-overlay::after {
+  opacity: 0.022;
+  background:
+    repeating-linear-gradient(-60deg, transparent 0, transparent 14px, rgba(84, 101, 190, 0.34) 14px, rgba(84, 101, 190, 0.34) 16px),
+    repeating-linear-gradient(-80deg, transparent 0, transparent 24px, rgba(66, 80, 153, 0.28) 24px, rgba(66, 80, 153, 0.28) 26px),
+    repeating-linear-gradient(-72deg, transparent 0, transparent 34px, rgba(208, 135, 62, 0.13) 34px, rgba(208, 135, 62, 0.13) 36px);
+  filter: blur(1px) saturate(82%);
+}
+
+body:is(
+  [data-portal-slug="atlanta-test"],
+  [data-portal-slug="atlanta-test-mood-1"],
+  [data-portal-slug="atlanta-test-mood-2"],
+  [data-portal-slug="atlanta-test-mood-3"]
+) .section-header-primary,
+body:is(
+  [data-portal-slug="atlanta-test"],
+  [data-portal-slug="atlanta-test-mood-1"],
+  [data-portal-slug="atlanta-test-mood-2"],
+  [data-portal-slug="atlanta-test-mood-3"]
+) .section-header-secondary {
+  letter-spacing: 0.04em;
+}
+
+body:is(
+  [data-portal-slug="atlanta-test"],
+  [data-portal-slug="atlanta-test-mood-1"],
+  [data-portal-slug="atlanta-test-mood-2"],
+  [data-portal-slug="atlanta-test-mood-3"]
+) .section-header-primary {
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--cream) 82%, var(--soft));
+}
+
+body:is(
+  [data-portal-slug="atlanta-test"],
+  [data-portal-slug="atlanta-test-mood-1"],
+  [data-portal-slug="atlanta-test-mood-2"],
+  [data-portal-slug="atlanta-test-mood-3"]
+) .glass-panel,
+body:is(
+  [data-portal-slug="atlanta-test"],
+  [data-portal-slug="atlanta-test-mood-1"],
+  [data-portal-slug="atlanta-test-mood-2"],
+  [data-portal-slug="atlanta-test-mood-3"]
+) .glass-panel-compact {
+  border-color: color-mix(in srgb, var(--neon-cyan) 32%, var(--glass-border));
+  box-shadow:
+    0 14px 34px rgba(0, 0, 0, 0.58),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+body:is(
+  [data-portal-slug="atlanta-test"],
+  [data-portal-slug="atlanta-test-mood-1"],
+  [data-portal-slug="atlanta-test-mood-2"],
+  [data-portal-slug="atlanta-test-mood-3"]
+) .card,
+body:is(
+  [data-portal-slug="atlanta-test"],
+  [data-portal-slug="atlanta-test-mood-1"],
+  [data-portal-slug="atlanta-test-mood-2"],
+  [data-portal-slug="atlanta-test-mood-3"]
+) .event-card,
+body:is(
+  [data-portal-slug="atlanta-test"],
+  [data-portal-slug="atlanta-test-mood-1"],
+  [data-portal-slug="atlanta-test-mood-2"],
+  [data-portal-slug="atlanta-test-mood-3"]
+) .venue-card {
+  border-color: color-mix(in srgb, var(--twilight) 86%, var(--neon-cyan) 14%);
+  box-shadow:
+    0 8px 20px rgba(1, 5, 16, 0.44),
+    inset 0 1px 0 rgba(255, 255, 255, 0.025);
+}
+
+body:is(
+  [data-portal-slug="atlanta-test"],
+  [data-portal-slug="atlanta-test-mood-1"],
+  [data-portal-slug="atlanta-test-mood-2"],
+  [data-portal-slug="atlanta-test-mood-3"]
+) .card:hover,
+body:is(
+  [data-portal-slug="atlanta-test"],
+  [data-portal-slug="atlanta-test-mood-1"],
+  [data-portal-slug="atlanta-test-mood-2"],
+  [data-portal-slug="atlanta-test-mood-3"]
+) .event-card:hover,
+body:is(
+  [data-portal-slug="atlanta-test"],
+  [data-portal-slug="atlanta-test-mood-1"],
+  [data-portal-slug="atlanta-test-mood-2"],
+  [data-portal-slug="atlanta-test-mood-3"]
+) .venue-card:hover {
+  border-color: color-mix(in srgb, var(--neon-amber) 52%, var(--twilight));
+  box-shadow:
+    0 18px 36px rgba(2, 6, 20, 0.56),
+    0 0 0 1px rgba(217, 158, 72, 0.16);
+}
+
+body:is(
+  [data-portal-slug="atlanta-test"],
+  [data-portal-slug="atlanta-test-mood-1"],
+  [data-portal-slug="atlanta-test-mood-2"],
+  [data-portal-slug="atlanta-test-mood-3"]
+) .nav-tab-shadow {
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
+}
+
+body:is(
+  [data-portal-slug="atlanta-test"],
+  [data-portal-slug="atlanta-test-mood-1"],
+  [data-portal-slug="atlanta-test-mood-2"],
+  [data-portal-slug="atlanta-test-mood-3"]
+) .nav-tab-active {
+  background: linear-gradient(180deg, rgba(228, 166, 79, 0.9) 0%, rgba(185, 117, 54, 0.9) 100%);
+  box-shadow:
+    0 0 0 1px rgba(237, 186, 109, 0.42),
+    0 8px 20px rgba(1, 5, 16, 0.44),
+    inset 0 1px 0 rgba(255, 241, 204, 0.25);
+}
+
+body:is(
+  [data-portal-slug="atlanta-test"],
+  [data-portal-slug="atlanta-test-mood-1"],
+  [data-portal-slug="atlanta-test-mood-2"],
+  [data-portal-slug="atlanta-test-mood-3"]
+) .nav-tab:not(.nav-tab-active):hover {
+  background: rgba(111, 130, 216, 0.16);
+  border-bottom: 2px solid rgba(150, 167, 238, 0.36);
+}
+
+body:is(
+  [data-portal-slug="atlanta-test"],
+  [data-portal-slug="atlanta-test-mood-1"],
+  [data-portal-slug="atlanta-test-mood-2"],
+  [data-portal-slug="atlanta-test-mood-3"]
+) .section-header-icon {
+  background-color: color-mix(in srgb, var(--neon-amber) 18%, transparent);
+}
+
+body:is(
+  [data-portal-slug="atlanta-test"],
+  [data-portal-slug="atlanta-test-mood-1"],
+  [data-portal-slug="atlanta-test-mood-2"],
+  [data-portal-slug="atlanta-test-mood-3"]
+) .section-header-see-all {
+  background-color: color-mix(in srgb, var(--neon-amber) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--neon-amber) 26%, transparent);
+}
+
+body:is(
+  [data-portal-slug="atlanta-test"],
+  [data-portal-slug="atlanta-test-mood-1"],
+  [data-portal-slug="atlanta-test-mood-2"],
+  [data-portal-slug="atlanta-test-mood-3"]
+) .filter-bar-surface {
+  background: linear-gradient(180deg, rgba(6, 10, 25, 0.92), rgba(4, 8, 19, 0.86));
+  border-bottom: 1px solid rgba(111, 130, 216, 0.2);
+  box-shadow: 0 12px 32px rgba(1, 4, 14, 0.62);
+}
+
+body:is(
+  [data-portal-slug="atlanta-test"],
+  [data-portal-slug="atlanta-test-mood-1"],
+  [data-portal-slug="atlanta-test-mood-2"],
+  [data-portal-slug="atlanta-test-mood-3"]
+) .search-surface {
+  background: linear-gradient(180deg, rgba(8, 12, 28, 0.96), rgba(6, 10, 22, 0.92));
+  border-color: rgba(111, 130, 216, 0.24);
+}
+
+/* Mood 01: controlled boost. */
+body[data-portal-slug="atlanta-test-mood-1"] {
+  --void: #040611;
+  --night: #0c1233;
+  --dusk: #121d45;
+  --twilight: #273567;
+  --coral: #e9ae54;
+  --coral-light: #f4c477;
+  --rose: #d97536;
+  --gold: #e9ae54;
+  --neon-cyan: #7a90ef;
+  --neon-amber: #cf9244;
+  --grain-opacity: 0.065;
+  background:
+    radial-gradient(145% 78% at 52% -12%, rgba(232, 163, 79, 0.11) 0%, rgba(232, 163, 79, 0.03) 40%, transparent 62%),
+    radial-gradient(95% 74% at 4% 20%, rgba(112, 135, 244, 0.2) 0%, rgba(112, 135, 244, 0.04) 58%, transparent 78%),
+    linear-gradient(180deg, #03050f 0%, #080d22 38%, #040611 100%);
+}
+
+body[data-portal-slug="atlanta-test-mood-1"] .rain-overlay {
+  --rain-opacity: 0.5;
+}
+
+body[data-portal-slug="atlanta-test-mood-1"] .rain-overlay::before {
+  opacity: 0.04;
+}
+
+body[data-portal-slug="atlanta-test-mood-1"] .rain-overlay::after {
+  opacity: 0.026;
+}
+
+/* Mood 02: higher contrast and stronger electric bleed. */
+body[data-portal-slug="atlanta-test-mood-2"] {
+  --void: #03040f;
+  --night: #0a0f2c;
+  --dusk: #131d47;
+  --twilight: #2b3c7f;
+  --cream: #eaf0ff;
+  --soft: #c4d0ff;
+  --muted: #95a4dc;
+  --coral: #f1b45a;
+  --coral-light: #ffd08a;
+  --rose: #f07e3b;
+  --gold: #f1b45a;
+  --neon-cyan: #8ea4ff;
+  --neon-amber: #e0a14d;
+  --card-bg: color-mix(in srgb, var(--dusk) 90%, #000);
+  --card-bg-hover: color-mix(in srgb, var(--dusk) 80%, var(--neon-amber) 20%);
+  --glass-border: rgba(131, 152, 255, 0.34);
+  --grain-opacity: 0.07;
+  background:
+    radial-gradient(150% 82% at 50% -14%, rgba(242, 172, 76, 0.14) 0%, rgba(242, 172, 76, 0.04) 42%, transparent 64%),
+    radial-gradient(110% 76% at 2% 18%, rgba(146, 167, 255, 0.24) 0%, rgba(146, 167, 255, 0.06) 56%, transparent 78%),
+    linear-gradient(180deg, #02030c 0%, #070b20 34%, #03040f 100%);
+}
+
+body[data-portal-slug="atlanta-test-mood-2"]::after {
+  opacity: 0.065;
+}
+
+body[data-portal-slug="atlanta-test-mood-2"] .ambient-glow {
+  background:
+    radial-gradient(ellipse at 52% -8%, rgba(242, 172, 76, 0.17) 0%, rgba(242, 172, 76, 0.05) 42%, transparent 66%),
+    radial-gradient(ellipse at 14% 22%, rgba(146, 167, 255, 0.24) 0%, rgba(146, 167, 255, 0.08) 45%, transparent 72%),
+    radial-gradient(ellipse at 80% 88%, rgba(115, 130, 212, 0.11) 0%, transparent 62%);
+}
+
+body[data-portal-slug="atlanta-test-mood-2"] .rain-overlay {
+  --rain-opacity: 0.58;
+}
+
+body[data-portal-slug="atlanta-test-mood-2"] .rain-overlay::before {
+  opacity: 0.05;
+  filter: blur(0.7px) saturate(95%);
+}
+
+body[data-portal-slug="atlanta-test-mood-2"] .rain-overlay::after {
+  opacity: 0.03;
+  filter: blur(1.05px) saturate(90%);
+}
+
+body[data-portal-slug="atlanta-test-mood-2"] .nav-tab-active {
+  background: linear-gradient(180deg, rgba(241, 180, 90, 0.94) 0%, rgba(212, 123, 56, 0.94) 100%);
+  box-shadow:
+    0 0 0 1px rgba(248, 200, 121, 0.55),
+    0 12px 28px rgba(2, 7, 24, 0.52),
+    0 0 22px rgba(241, 180, 90, 0.22),
+    inset 0 1px 0 rgba(255, 241, 204, 0.3);
+}
+
+/* Mood 03: maximum intensity, still noir. */
+body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-3"]) {
+  --void: #02030b;
+  --night: #120b2f;
+  --dusk: #1e1956;
+  --twilight: #4a3e9f;
+  --cream: #edf2ff;
+  --soft: #d8cbff;
+  --muted: #a2b2ea;
+  --coral: #ffc166;
+  --coral-light: #ffdca0;
+  --rose: #ff8f45;
+  --gold: #ffc166;
+  --neon-cyan: #9aafff;
+  --neon-amber: #f0ac53;
+  --card-bg: color-mix(in srgb, var(--dusk) 88%, #000);
+  --card-bg-hover: color-mix(in srgb, var(--dusk) 73%, var(--neon-amber) 27%);
+  --glass-border: rgba(154, 175, 255, 0.4);
+  --grain-opacity: 0.078;
+  background:
+    radial-gradient(160% 88% at 52% -14%, rgba(255, 187, 92, 0.3) 0%, rgba(255, 187, 92, 0.11) 38%, transparent 66%),
+    radial-gradient(112% 78% at 3% 18%, rgba(122, 79, 238, 0.26) 0%, rgba(122, 79, 238, 0.1) 52%, transparent 76%),
+    linear-gradient(180deg, #010208 0%, #12092e 34%, #02030b 100%);
+}
+
+body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-3"])::after {
+  opacity: 0.072;
+}
+
+body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-3"]) .ambient-glow {
+  background:
+    radial-gradient(ellipse at 52% -8%, rgba(255, 205, 126, 0.52) 0%, rgba(255, 188, 102, 0.24) 34%, transparent 66%),
+    radial-gradient(ellipse at 18% 22%, rgba(255, 130, 46, 0.36) 0%, rgba(255, 130, 46, 0.15) 38%, transparent 70%),
+    radial-gradient(ellipse at 78% 86%, rgba(146, 82, 255, 0.2) 0%, rgba(146, 82, 255, 0.08) 42%, transparent 66%);
+  mix-blend-mode: normal;
+  filter: saturate(188%) blur(7px);
+}
+
+body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-3"]) .rain-overlay {
+  --rain-opacity: 0.68;
+}
+
+body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-3"]) .rain-overlay::before {
+  opacity: 0.06;
+  background:
+    repeating-linear-gradient(-67deg, transparent 0, transparent 12px, rgba(154, 175, 255, 0.46) 12px, rgba(154, 175, 255, 0.46) 14px),
+    repeating-linear-gradient(-74deg, transparent 0, transparent 18px, rgba(111, 130, 216, 0.38) 18px, rgba(111, 130, 216, 0.38) 20px),
+    repeating-linear-gradient(-58deg, transparent 0, transparent 30px, rgba(240, 172, 83, 0.2) 30px, rgba(240, 172, 83, 0.2) 32px);
+  filter: blur(0.7px) saturate(110%);
+}
+
+body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-3"]) .rain-overlay::after {
+  opacity: 0.036;
+  background:
+    repeating-linear-gradient(-60deg, transparent 0, transparent 14px, rgba(138, 153, 236, 0.36) 14px, rgba(138, 153, 236, 0.36) 16px),
+    repeating-linear-gradient(-80deg, transparent 0, transparent 24px, rgba(93, 108, 190, 0.3) 24px, rgba(93, 108, 190, 0.3) 26px),
+    repeating-linear-gradient(-72deg, transparent 0, transparent 34px, rgba(230, 148, 72, 0.16) 34px, rgba(230, 148, 72, 0.16) 36px);
+  filter: blur(1.08px) saturate(102%);
+}
+
+body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-3"]) .card:hover,
+body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-3"]) .event-card:hover,
+body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-3"]) .venue-card:hover {
+  border-color: color-mix(in srgb, var(--neon-amber) 64%, var(--twilight));
+  box-shadow:
+    0 22px 44px rgba(2, 8, 28, 0.64),
+    0 0 0 1px rgba(248, 187, 104, 0.26);
+}
+
+body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-3"]) .nav-tab-active {
+  background: linear-gradient(180deg, rgba(255, 193, 102, 0.98) 0%, rgba(237, 136, 60, 0.95) 100%);
+  box-shadow:
+    0 0 0 1px rgba(255, 207, 133, 0.65),
+    0 14px 34px rgba(2, 8, 28, 0.58),
+    0 0 28px rgba(255, 193, 102, 0.3),
+    inset 0 1px 0 rgba(255, 247, 224, 0.35);
+}
+
+body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-3"]) .nav-tab {
+  border-radius: 9999px !important;
+  border: 1px solid rgba(154, 175, 255, 0.28);
+  background: linear-gradient(180deg, rgba(38, 37, 96, 0.66) 0%, rgba(19, 18, 56, 0.6) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(214, 202, 255, 0.12),
+    0 4px 14px rgba(4, 5, 22, 0.45);
+}
+
+body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-3"]) .nav-tab:not(.nav-tab-active):hover {
+  background: linear-gradient(180deg, rgba(80, 84, 175, 0.46) 0%, rgba(50, 47, 124, 0.54) 100%);
+  border: 1px solid rgba(168, 184, 255, 0.38);
+  box-shadow:
+    0 0 16px rgba(154, 175, 255, 0.26),
+    inset 0 1px 0 rgba(220, 229, 255, 0.16);
+}
+
+body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-3"]) .tonight-picks-glow {
+  opacity: 0.66 !important;
+  background:
+    radial-gradient(114% 80% at 16% 16%, rgba(255, 198, 110, 0.86) 0%, rgba(255, 198, 110, 0.34) 38%, transparent 72%),
+    radial-gradient(96% 64% at 68% 0%, rgba(255, 118, 38, 0.52) 0%, rgba(255, 118, 38, 0.16) 40%, transparent 72%),
+    radial-gradient(85% 72% at 84% 48%, rgba(164, 92, 255, 0.2) 0%, rgba(164, 92, 255, 0.08) 42%, transparent 66%);
+  filter: blur(19px) saturate(192%);
+  mix-blend-mode: normal;
+}
+
+body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-3"]) .tonight-picks-glow + div {
+  background:
+    radial-gradient(120% 96% at 50% 6%, rgba(25, 13, 54, 0.72) 0%, rgba(13, 7, 31, 0.46) 44%, transparent 78%),
+    linear-gradient(to bottom, rgba(4, 3, 15, 0.62) 0%, rgba(4, 3, 15, 0.34) 42%, transparent 84%);
+}
+
+body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-3"]) .card-hero {
+  background: linear-gradient(
+    150deg,
+    rgba(255, 191, 102, 0.08) 0%,
+    rgba(164, 124, 255, 0.08) 38%,
+    rgba(31, 21, 74, 0.2) 100%
+  );
+  border-color: color-mix(in srgb, var(--neon-amber) 38%, rgba(154, 175, 255, 0.36));
+}
+
+body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-3"]) .card-hero::before {
+  background:
+    radial-gradient(130% 80% at 20% 12%, rgba(162, 143, 255, 0.22) 0%, transparent 68%),
+    linear-gradient(135deg, rgba(255, 193, 102, 0.22), transparent 52%);
+  filter: blur(0.4px);
+}
+
+body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-3"]) .picks-atmosphere-shell {
+  border-radius: 1.35rem;
+  isolation: isolate;
+}
+
+body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-3"]) .picks-atmosphere-shell .tonight-picks-glow,
+body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-3"]) .picks-atmosphere-shell .tonight-picks-glow + div {
+  inset: 0.2rem;
+  border-radius: 1.15rem;
+}
+
+body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-3"]) :is(
+  .picks-hero-card,
+  .picks-preview-card,
+  .festival-glass-hero,
+  .festival-glass-card,
+  .festival-glass-compact
+) {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  border-color: color-mix(in srgb, var(--neon-cyan) 40%, var(--twilight));
+  background: linear-gradient(155deg, rgba(34, 28, 86, 0.72) 0%, rgba(18, 15, 50, 0.64) 100%);
+  backdrop-filter: blur(13px) saturate(138%);
+  box-shadow:
+    0 14px 32px rgba(4, 4, 20, 0.55),
+    inset 0 1px 0 rgba(236, 225, 255, 0.1);
+  transition:
+    transform 220ms ease,
+    border-color 220ms ease,
+    box-shadow 220ms ease,
+    background 220ms ease;
+}
+
+body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-3"]) :is(
+  .picks-hero-card,
+  .picks-preview-card,
+  .festival-glass-hero,
+  .festival-glass-card,
+  .festival-glass-compact
+):hover {
+  border-color: color-mix(in srgb, var(--neon-amber) 55%, var(--neon-cyan));
+  background: linear-gradient(155deg, rgba(48, 34, 95, 0.78) 0%, rgba(24, 19, 60, 0.7) 100%);
+  box-shadow:
+    0 18px 40px rgba(4, 4, 22, 0.62),
+    0 0 24px rgba(255, 170, 82, 0.22),
+    inset 0 1px 0 rgba(255, 236, 198, 0.18);
+}
+
+body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-3"]) :is(
+  .picks-hero-card,
+  .picks-preview-card,
+  .festival-glass-hero,
+  .festival-glass-card,
+  .festival-glass-compact
+):active {
+  transform: translateY(1px) scale(0.995);
+}
+
+body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-3"]) .activity-card .neon-mood-icon,
+body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-3"]) .activity-panel .neon-mood-icon {
+  filter: drop-shadow(0 0 3px currentColor);
+}
+
+body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-3"]) .activity-card .neon-mood-icon .icon-neon-intense,
+body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-3"]) .activity-panel .neon-mood-icon .icon-neon {
+  filter:
+    drop-shadow(0 0 3px currentColor)
+    drop-shadow(0 0 8px currentColor)
+    drop-shadow(0 0 16px color-mix(in srgb, currentColor 68%, transparent));
+}
+
+body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-3"]) .highlights-tabs-shell {
+  border-radius: 9999px;
+  padding: 0.3rem;
+  border-color: rgba(154, 175, 255, 0.35);
+  background: linear-gradient(180deg, rgba(23, 20, 62, 0.86) 0%, rgba(12, 12, 36, 0.82) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(224, 214, 255, 0.12),
+    0 0 20px rgba(94, 112, 228, 0.2);
+}
+
+body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-3"]) .highlights-tab-btn {
+  border-radius: 9999px;
+}
+
+body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-3"]) .highlights-tab-active {
+  background: linear-gradient(180deg, rgba(255, 194, 108, 0.96) 0%, rgba(234, 137, 67, 0.92) 100%) !important;
+  color: #1f1b3d !important;
+  border-color: rgba(255, 220, 160, 0.68) !important;
+  box-shadow:
+    0 0 18px rgba(255, 190, 100, 0.34),
+    0 8px 20px rgba(8, 7, 30, 0.42),
+    inset 0 1px 0 rgba(255, 247, 226, 0.32);
+}
+
+/* Mood 03 accent treatment: subtle amber halo on yellow/orange UI accents. */
+body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-3"]) {
+  --amber-glow-soft: color-mix(in srgb, var(--neon-amber) 20%, transparent);
+  --amber-glow-mid: color-mix(in srgb, var(--neon-amber) 34%, transparent);
+}
+
+body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-3"]) :is(
+  .section-header-icon,
+  .section-header-see-all,
+  .badge-accent,
+  .btn-primary,
+  .btn-pill,
+  .featured-badge
+) {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--neon-amber) 22%, transparent),
+    0 0 14px var(--amber-glow-soft);
+}
+
+body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-3"]) :is(
+  .text-accent,
+  .text-accent-glow,
+  .text-coral-glow,
+  .text-coral-glow-main
+) {
+  text-shadow: 0 0 10px var(--amber-glow-mid);
+}
+
+body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-3"]) [class*="text-[var(--coral)]"],
+body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-3"]) [class*="text-[var(--gold)]"],
+body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-3"]) [class*="text-[var(--neon-amber)]"] {
+  text-shadow: 0 0 10px var(--amber-glow-mid);
+}
+
+body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-3"]) [class*="bg-[var(--coral)]"],
+body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-3"]) [class*="bg-[var(--gold)]"],
+body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-3"]) [class*="bg-[var(--neon-amber)]"] {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--neon-amber) 18%, transparent),
+    0 0 16px var(--amber-glow-soft);
+}
+
+body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-3"]) [class*="border-[var(--coral)]"],
+body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-3"]) [class*="border-[var(--gold)]"],
+body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-3"]) [class*="border-[var(--neon-amber)]"] {
+  box-shadow: 0 0 12px color-mix(in srgb, var(--neon-amber) 24%, transparent);
+}
+
+.logo-root[data-portal="atlanta-test"] {
+  --portal-color: #e6aa54;
+}
+
+.logo-root[data-portal="atlanta-test-mood-1"] {
+  --portal-color: #ebae56;
+}
+
+.logo-root[data-portal="atlanta-test-mood-2"] {
+  --portal-color: #f0b35c;
+}
+
+.logo-root[data-portal="atlanta-test-mood-3"] {
+  --portal-color: #ffc56a;
 }

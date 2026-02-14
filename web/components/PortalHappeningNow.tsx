@@ -47,6 +47,7 @@ export default function PortalHappeningNow({ portalId, portalSlug, isExclusive =
         `)
         .eq("start_date", today)
         .lte("start_time", currentTime)
+        .or("is_sensitive.eq.false,is_sensitive.is.null")
         .order("start_time", { ascending: true });
 
       // Filter by portal

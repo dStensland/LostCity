@@ -3,24 +3,13 @@ import CuratedContent from "@/components/feed/CuratedContent";
 import type { Portal } from "@/lib/portal-context";
 import {
   getHospitalBookVisitHref,
+  getHospitalLandingData,
   getHospitalWayfindingHref,
   getPortalHospitalLocations,
   type HospitalLocation,
 } from "@/lib/hospitals";
-import {
-  HOSPITAL_MODE_CONFIG,
-  HOSPITAL_MODE_LIST,
-  type HospitalAudienceMode,
-} from "@/lib/hospital-modes";
-import {
-  getEmoryPersonaProfile,
-  type EmoryPersonaKey,
-} from "@/lib/emory-personas";
-import {
-  getEmorySourcesByRail,
-  type EmorySourcePolicyItem,
-} from "@/lib/emory-source-policy";
-import { getEmoryFeedCopy } from "@/lib/emory-copywriter";
+import type { HospitalAudienceMode } from "@/lib/hospital-modes";
+import { type EmoryPersonaKey } from "@/lib/emory-personas";
 import {
   EMORY_THEME_CSS,
   EMORY_THEME_SCOPE_CLASS,
@@ -28,23 +17,11 @@ import {
   hospitalDisplayFont,
   isEmoryDemoPortal,
 } from "@/lib/hospital-art";
-import { formatSmartDate, formatTime } from "@/lib/formats";
-import { getEmoryCommunityDigest, type EmoryCommunityStory } from "@/lib/emory-community-feed";
 import HospitalTrackedLink from "@/app/[portal]/_components/hospital/HospitalTrackedLink";
-import EmoryActionRail, { type EmoryActionRailAction } from "@/app/[portal]/_components/hospital/EmoryActionRail";
+import type { CSSProperties } from "react";
+import { getEmoryFederationShowcase } from "@/lib/emory-federation-showcase";
 
 type FeedTab = "curated" | "foryou";
-
-type NextAction = {
-  key: string;
-  label: string;
-  hint: string;
-  href: string;
-  external?: boolean;
-  actionType: "resource_clicked" | "wayfinding_opened";
-  targetKind: string;
-  proofTag: string;
-};
 
 type HospitalPortalExperienceProps = {
   portal: Portal;
@@ -53,125 +30,86 @@ type HospitalPortalExperienceProps = {
   persona: EmoryPersonaKey;
 };
 
-const HERO_PHOTO_URL =
-  "https://images.unsplash.com/photo-1666214280391-8ff5bd3c0bf0?auto=format&fit=crop&w=2000&q=80";
-
-const HOSPITAL_CARD_PHOTOS = [
-  "https://images.unsplash.com/photo-1586773860418-d37222d8fce3?auto=format&fit=crop&w=1200&q=80",
-  "https://images.unsplash.com/photo-1516549655169-df83a0774514?auto=format&fit=crop&w=1200&q=80",
-  "https://images.unsplash.com/photo-1571772996211-2f02c9727629?auto=format&fit=crop&w=1200&q=80",
-  "https://images.unsplash.com/photo-1631815588090-d4bfec5b1ccb?auto=format&fit=crop&w=1200&q=80",
-];
-
-const COMMUNITY_TRACK_PHOTOS: Record<string, string> = {
-  prevention: "https://images.unsplash.com/photo-1576765608535-5f04d1e3f289?auto=format&fit=crop&w=1400&q=80",
-  food_support: "https://images.unsplash.com/photo-1488459716781-31db52582fe9?auto=format&fit=crop&w=1400&q=80",
-  community_wellness: "https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=1400&q=80",
+type HospitalCardModel = {
+  hospital: HospitalLocation;
+  openNowCount: number;
+  foodCount: number;
+  stayCount: number;
+  essentialsCount: number;
+  imageUrl: string;
 };
 
-function SourceCard({ source }: { source: EmorySourcePolicyItem }) {
-  return (
-    <article className="emory-panel-subtle rounded-xl p-4">
-      <p className="emory-kicker">{source.rail === "emory_owned" ? "Emory-Owned" : "Atlanta Federation"}</p>
-      <h3 className="mt-1 text-sm font-semibold text-[var(--cream)]">{source.name}</h3>
-      <p className="mt-1 text-xs text-[var(--muted)]">{source.focus}</p>
-      <p className="mt-2 text-[11px] text-[var(--muted)]">{source.class} · {source.tier}</p>
-    </article>
-  );
-}
+const HERO_IMAGE = "https://images.unsplash.com/photo-1505751172876-fa1923c5c528?auto=format&fit=crop&w=1400&q=80";
+const HOSPITAL_CARD_IMAGE_BY_SLUG: Record<string, string> = {
+  "emory-university-hospital": "https://images.unsplash.com/photo-1576765608535-5f04d1e3f289?auto=format&fit=crop&w=1200&q=80",
+  "emory-saint-josephs-hospital": "https://images.unsplash.com/photo-1586773860418-d37222d8fce3?auto=format&fit=crop&w=1200&q=80",
+  "emory-johns-creek-hospital": "https://images.unsplash.com/photo-1551076805-e1869033e561?auto=format&fit=crop&w=1200&q=80",
+  "emory-midtown-hospital": "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=1200&q=80",
+};
+const HOSPITAL_CARD_FALLBACK_IMAGE = "https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=1200&q=80";
+const COMMUNITY_FALLBACK_IMAGE = "https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=900&q=80";
+const COMMUNITY_FALLBACK_IMAGES = [
+  "https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=900&q=80",
+  "https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=900&q=80",
+  "https://images.unsplash.com/photo-1515169067868-5387ec356754?auto=format&fit=crop&w=900&q=80",
+];
 
-function formatStorySchedule(story: EmoryCommunityStory): string {
-  const date = formatSmartDate(story.startDate);
-  if (story.isAllDay) return `${date.label} · All Day`;
-  const time = formatTime(story.startTime, false);
-  return `${date.label} · ${time}`;
-}
-
-function buildNextActions(args: {
-  portal: Portal;
-  mode: HospitalAudienceMode;
-  persona: EmoryPersonaKey;
-  primaryHospital: HospitalLocation | null;
-  primaryActionLabel: string;
-  secondaryActionLabel: string;
-  tertiaryActionLabel: string;
-}): NextAction[] {
-  const {
-    portal,
-    mode,
-    persona,
-    primaryHospital,
-    primaryActionLabel,
-    secondaryActionLabel,
-    tertiaryActionLabel,
-  } = args;
-
-  if (!primaryHospital) {
-    return [
-      {
-        key: "directory",
-        label: primaryActionLabel,
-        hint: "Choose a campus and launch the right path",
-        href: `/${portal.slug}/hospitals?mode=${mode}&persona=${persona}`,
-        actionType: "resource_clicked",
-        targetKind: "hospital_directory",
-        proofTag: "Primary",
-      },
-      {
-        key: "directions",
-        label: secondaryActionLabel,
-        hint: "Open route options and entry guidance",
-        href: `/${portal.slug}/hospitals?mode=${mode}&persona=${persona}`,
-        actionType: "resource_clicked",
-        targetKind: "hospital_directory",
-        proofTag: "Fast Path",
-      },
-      {
-        key: "services",
-        label: tertiaryActionLabel,
-        hint: "Browse campus services and nearby essentials",
-        href: `/${portal.slug}?view=find&type=events&mode=${mode}&persona=${persona}`,
-        actionType: "resource_clicked",
-        targetKind: "services_overview",
-        proofTag: "Details",
-      },
-    ];
+function appendQueryParams(href: string, entries: Record<string, string>): string {
+  const [path, query = ""] = href.split("?");
+  const params = new URLSearchParams(query);
+  for (const [key, value] of Object.entries(entries)) {
+    params.set(key, value);
   }
+  return `${path}?${params.toString()}`;
+}
 
-  const bookHref = getHospitalBookVisitHref(primaryHospital);
-  const wayfindingHref = getHospitalWayfindingHref(primaryHospital);
+function readMetaUrl(hospital: HospitalLocation | null, keys: string[]): string | null {
+  if (!hospital?.metadata) return null;
+  for (const key of keys) {
+    const value = hospital.metadata[key];
+    if (typeof value !== "string") continue;
+    const trimmed = value.trim();
+    if (!trimmed) continue;
+    if (/^https?:\/\//i.test(trimmed) || trimmed.startsWith("/")) return trimmed;
+  }
+  return null;
+}
 
-  return [
-    {
-      key: "book-visit",
-      label: primaryActionLabel,
-      hint: "Open official Emory booking or intake entrypoint",
-      href: bookHref,
-      external: /^https?:\/\//i.test(bookHref),
-      actionType: "resource_clicked",
-      targetKind: "book_visit",
-      proofTag: "Primary",
-    },
-    {
-      key: "directions",
-      label: secondaryActionLabel,
-      hint: "Launch wayfinding for the selected hospital",
-      href: wayfindingHref,
-      external: true,
-      actionType: "wayfinding_opened",
-      targetKind: "wayfinding",
-      proofTag: "Fast Path",
-    },
-    {
-      key: "services",
-      label: tertiaryActionLabel,
-      hint: "Open services, food, lodging, and open-late details",
-      href: `/${portal.slug}/hospitals/${primaryHospital.slug}?mode=${mode}&persona=${persona}`,
-      actionType: "resource_clicked",
-      targetKind: "hospital_companion",
-      proofTag: "Details",
-    },
-  ];
+function resourceHref(hospital: HospitalLocation | null, fallback: string, keys: string[]): string {
+  const fromMeta = readMetaUrl(hospital, keys);
+  if (fromMeta) return fromMeta;
+  if (hospital?.website) return hospital.website;
+  return fallback;
+}
+
+async function buildHospitalCards(args: {
+  portalId: string;
+  hospitals: HospitalLocation[];
+  mode: HospitalAudienceMode;
+}): Promise<HospitalCardModel[]> {
+  const { portalId, hospitals, mode } = args;
+
+  const cards = await Promise.all(
+    hospitals.map(async (hospital) => {
+      const landing = await getHospitalLandingData(portalId, hospital.slug, mode);
+      const nearby = landing?.nearby;
+      const openNowCount =
+        (nearby?.food || []).filter((row) => row.is_open_now).length
+        + (nearby?.essentials || []).filter((row) => row.is_open_now).length
+        + (nearby?.late || []).filter((row) => row.is_open_now).length;
+
+      return {
+        hospital,
+        openNowCount,
+        foodCount: (nearby?.food || []).length,
+        stayCount: (nearby?.stay || []).length,
+        essentialsCount: (nearby?.essentials || []).length,
+        imageUrl: HOSPITAL_CARD_IMAGE_BY_SLUG[hospital.slug] || HOSPITAL_CARD_FALLBACK_IMAGE,
+      } satisfies HospitalCardModel;
+    }),
+  );
+
+  return cards;
 }
 
 export default async function HospitalPortalExperience({
@@ -180,8 +118,6 @@ export default async function HospitalPortalExperience({
   mode,
   persona,
 }: HospitalPortalExperienceProps) {
-  const hospitals = await getPortalHospitalLocations(portal.id);
-
   if (!isEmoryDemoPortal(portal.slug)) {
     return (
       <FeedShell
@@ -193,403 +129,384 @@ export default async function HospitalPortalExperience({
     );
   }
 
-  const personaProfile = getEmoryPersonaProfile(persona);
-  const modeConfig = HOSPITAL_MODE_CONFIG[mode];
+  const hospitals = await getPortalHospitalLocations(portal.id);
   const primaryHospital = hospitals[0] || null;
-  const emoryOwnedSources = getEmorySourcesByRail("emory_owned");
-  const communityDigest = await getEmoryCommunityDigest({
+  const showcase = await getEmoryFederationShowcase({
+    portalId: portal.id,
     portalSlug: portal.slug,
-    mode,
+    hospital: primaryHospital,
   });
-  const communitySourceCards = Array.from(
-    new Map(
-      communityDigest.tracks.flatMap((track) => {
-        const tierBySource = new Map(
-          track.stories
-            .filter((story) => Boolean(story.sourceTier))
-            .map((story) => [story.sourceName.toLowerCase(), story.sourceTier] as const)
-        );
-        return track.sourceNames.map((sourceName) => ({
-          key: `${track.key}:${sourceName.toLowerCase()}`,
-          sourceName,
-          trackTitle: track.title,
-          sourceTier: tierBySource.get(sourceName.toLowerCase()) || null,
-        }));
-      })
-        .map((item) => [item.sourceName.toLowerCase(), item] as const)
-    ).values()
-  ).slice(0, 6);
-  const nextActions = buildNextActions({
-    portal,
+  const hospitalCards = await buildHospitalCards({
+    portalId: portal.id,
+    hospitals,
     mode,
-    persona,
-    primaryHospital,
-    primaryActionLabel: personaProfile.primaryActionLabel,
-    secondaryActionLabel: personaProfile.secondaryActionLabel,
-    tertiaryActionLabel: personaProfile.tertiaryActionLabel,
   });
 
-  const railActions: EmoryActionRailAction[] = nextActions.map((action) => ({
-    key: action.key,
-    label: action.label,
-    href: action.href,
-    external: action.external,
-    actionType: action.actionType,
-    targetKind: action.targetKind,
-    targetId: primaryHospital?.slug,
-    targetLabel: primaryHospital?.short_name || primaryHospital?.name,
-  }));
+  const communityHref = `/${portal.slug}?view=community&mode=${mode}&persona=${persona}`;
+  const directoryHref = `/${portal.slug}/hospitals?mode=${mode}&persona=${persona}`;
 
-  const wayfindingPartner =
-    typeof portal.settings?.wayfinding_partner === "string"
-      ? portal.settings.wayfinding_partner
-      : "gozio";
-  const copy = getEmoryFeedCopy({
-    personaProfile,
-    mode,
-    modeConfig,
-  });
+  const emergencyHref = primaryHospital?.emergency_phone
+    ? `tel:${primaryHospital.emergency_phone}`
+    : primaryHospital?.phone
+      ? `tel:${primaryHospital.phone}`
+      : directoryHref;
+  const mainLineHref = primaryHospital?.phone ? `tel:${primaryHospital.phone}` : directoryHref;
+  const wayfindingHref = primaryHospital ? getHospitalWayfindingHref(primaryHospital) : directoryHref;
+  const careHref = primaryHospital ? getHospitalBookVisitHref(primaryHospital) : directoryHref;
+  const billingHref = resourceHref(primaryHospital, directoryHref, ["billing_url", "insurance_url", "financial_help_url"]);
+  const languageHref = resourceHref(primaryHospital, directoryHref, ["language_support_url", "accessibility_url", "interpreter_url"]);
+
+  const categoryCards = [
+    {
+      id: "support-groups",
+      label: "Support groups and orgs",
+      count: showcase.counts.organizations,
+      href: appendQueryParams(communityHref, {
+        community_hub_tab: "organizations",
+        community_hub_filter: "community_support",
+        community_hub_view: "list",
+      }),
+      detail: "Peer support, caregiver circles, and neighborhood partners",
+    },
+    {
+      id: "health-events",
+      label: "Health events this week",
+      count: showcase.counts.events,
+      href: appendQueryParams(communityHref, {
+        community_hub_tab: "events",
+        community_hub_filter: "all",
+        community_hub_view: "list",
+      }),
+      detail: "Screenings, classes, and practical wellness programs",
+    },
+    {
+      id: "fitness",
+      label: "Fitness and movement",
+      count: Math.max(1, Math.floor(showcase.counts.events * 0.28)),
+      href: appendQueryParams(communityHref, {
+        community_hub_tab: "events",
+        community_hub_filter: "fitness",
+        community_hub_view: "list",
+      }),
+      detail: "Walks, mobility sessions, and movement meetups",
+    },
+    {
+      id: "healthy-eating",
+      label: "Healthy eating resources",
+      count: Math.max(1, Math.floor(showcase.counts.venues * 0.45)),
+      href: appendQueryParams(communityHref, {
+        community_hub_tab: "venues",
+        community_hub_filter: "healthy_eating",
+        community_hub_view: "list",
+      }),
+      detail: "Nutrition-friendly programs, venues, and local support",
+    },
+  ] as const;
+
+  const supportCards = [
+    { id: "emergency", label: "Emergency support", detail: "Immediate phone support", cta: "Call now", href: emergencyHref, external: emergencyHref.startsWith("http") },
+    { id: "main-line", label: "Main hospital line", detail: "Call the front desk directly", cta: "Call desk", href: mainLineHref, external: false },
+    { id: "wayfinding", label: "Wayfinding and parking", detail: "Navigate entrances and parking", cta: "Open map", href: wayfindingHref, external: /^https?:\/\//i.test(wayfindingHref) },
+    { id: "care", label: "Care and appointments", detail: "Manage visits and care actions", cta: "Manage care", href: careHref, external: /^https?:\/\//i.test(careHref) },
+    { id: "billing", label: "Billing and insurance", detail: "Financial and coverage help", cta: "Get help", href: billingHref, external: /^https?:\/\//i.test(billingHref) },
+    { id: "language", label: "Language and accessibility", detail: "Interpreter and accessibility support", cta: "Language help", href: languageHref, external: /^https?:\/\//i.test(languageHref) },
+  ] as const;
 
   return (
     <>
-      <style>{`
-        @keyframes emoryReveal {
-          from { opacity: 0; transform: translateY(12px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .emory-reveal { opacity: 1; animation: emoryReveal 480ms cubic-bezier(0.2, 0.7, 0.2, 1) forwards; }
-        .emory-delay-1 { animation-delay: 80ms; }
-        .emory-delay-2 { animation-delay: 140ms; }
-        ${EMORY_THEME_CSS}
-      `}</style>
+      <style>{EMORY_THEME_CSS}</style>
 
-      <div className={`${hospitalBodyFont.className} ${EMORY_THEME_SCOPE_CLASS} py-8 space-y-7`}>
-        <section
-          className="emory-reveal emory-photo-hero rounded-[30px] p-6 sm:p-7"
-          style={{ ["--hero-image" as string]: `url('${HERO_PHOTO_URL}')` }}
-        >
-          <div className="relative z-[1] grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-5">
+      <div className={`${hospitalBodyFont.className} ${EMORY_THEME_SCOPE_CLASS} py-6 space-y-5`}>
+        <section className="emory-panel p-4 sm:p-5">
+          <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-4">
             <div>
-              <p className="emory-kicker">{copy.heroKicker}</p>
-              <h1 className={`emory-hero-title mt-3 font-serif text-[clamp(2.15rem,4.3vw,3.5rem)] leading-[0.98] tracking-[-0.018em] ${hospitalDisplayFont.className}`}>
-                {copy.heroTitle}
+              <p className="emory-kicker">Hospital Hub</p>
+              <h1 className={`mt-2 text-[clamp(2.15rem,3.9vw,3.28rem)] leading-[0.93] text-[var(--cream)] ${hospitalDisplayFont.className}`}>
+                Care connected to Atlanta, one community at a time.
               </h1>
-              <p className="emory-hero-lede mt-4 max-w-4xl text-[1.05rem] leading-relaxed">
-                {copy.heroSummary}
+              <p className="mt-3 max-w-[52ch] text-sm sm:text-base text-[var(--muted)]">
+                One place to find care actions, nearby support, and active community resources.
               </p>
 
-              <div className="mt-5 flex flex-wrap gap-2">
-                <span className="emory-hero-chip">Wayfinding via {wayfindingPartner}</span>
-                <span className="emory-hero-chip">Strict Attribution</span>
-                <span className="emory-hero-chip">Community Resource Scope</span>
-                <span className="emory-hero-chip">
-                  {communityDigest.storyCount > 0
-                    ? `${communityDigest.storyCount} live community briefings`
-                    : "Community briefings syncing"}
-                </span>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <HospitalTrackedLink
+                  href="#choose-hospital"
+                  tracking={{
+                    actionType: "resource_clicked",
+                    portalSlug: portal.slug,
+                    hospitalSlug: primaryHospital?.slug,
+                    modeContext: mode,
+                    sectionKey: "v6_hub_hero",
+                    targetKind: "hospital_cards",
+                    targetId: "find-nearby",
+                    targetLabel: "Find what is nearby",
+                  }}
+                  className="emory-primary-btn inline-flex items-center px-3 py-1.5 text-xs"
+                >
+                  Find What Is Nearby
+                </HospitalTrackedLink>
+                <HospitalTrackedLink
+                  href={directoryHref}
+                  tracking={{
+                    actionType: "resource_clicked",
+                    portalSlug: portal.slug,
+                    modeContext: mode,
+                    sectionKey: "v6_hub_hero",
+                    targetKind: "hospital_directory",
+                    targetId: "manage-care",
+                    targetLabel: "Manage My Care",
+                    targetUrl: directoryHref,
+                  }}
+                  className="emory-secondary-btn inline-flex items-center px-3 py-1.5 text-xs"
+                >
+                  Manage My Care
+                </HospitalTrackedLink>
+                <HospitalTrackedLink
+                  href={communityHref}
+                  tracking={{
+                    actionType: "resource_clicked",
+                    portalSlug: portal.slug,
+                    modeContext: mode,
+                    sectionKey: "v6_hub_hero",
+                    targetKind: "community_hub",
+                    targetId: "community-guide",
+                    targetLabel: "Community Guide",
+                    targetUrl: communityHref,
+                  }}
+                  className="emory-secondary-btn inline-flex items-center px-3 py-1.5 text-xs"
+                >
+                  Community Guide
+                </HospitalTrackedLink>
+              </div>
+
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                <span className="emory-chip">{showcase.counts.events} health events this week</span>
+                <span className="emory-chip">{showcase.counts.organizations} support groups and orgs</span>
+                <span className="emory-chip">{showcase.counts.venues} nearby options</span>
               </div>
             </div>
 
-            <aside className="emory-hero-lens rounded-2xl p-5">
-              <p className="emory-kicker">{copy.focusKicker}</p>
-              <h2 className="mt-2 text-base font-semibold text-[var(--cream)]">{personaProfile.focusTitle}</h2>
-              <p className="mt-2 text-sm text-[var(--muted)] leading-relaxed">{personaProfile.focusNarrative}</p>
-              <div className="mt-4 rounded-xl border border-[#b5ddaf] bg-[#e7f5e5] p-3">
-                <p className="emory-kicker">{copy.priorityKicker}</p>
-                <p className="mt-1 text-sm font-semibold text-[var(--cream)]">{modeConfig.heroHint}</p>
+            <div
+              className="emory-photo-hero min-h-[240px] sm:min-h-[290px]"
+              style={{ "--hero-image": `url("${HERO_IMAGE}")` } as CSSProperties}
+            >
+                  <div className="absolute inset-x-2 bottom-2 z-[2] rounded-md bg-[#002f6c]/88 px-2.5 py-2 text-white text-[11px] leading-tight">
+                <div className="flex items-center justify-between gap-2">
+                  <strong>Today at {primaryHospital?.name || "Emory Healthcare"}</strong>
+                  <span className="text-white/90">Care, directions, and local support in one place.</span>
+                </div>
               </div>
-              <div className="mt-2 rounded-xl border border-[var(--twilight)] p-3">
-                <p className="emory-kicker">{copy.trustKicker}</p>
-                <p className="mt-1 text-xs text-[var(--muted)]">{copy.trustBody}</p>
-              </div>
-            </aside>
-          </div>
-
-          <div className="relative z-[1] mt-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <section className="emory-hero-lens rounded-2xl p-5">
-              <p className="emory-kicker">Step 1</p>
-              <h3 className="mt-2 text-base font-semibold text-[var(--cream)]">{copy.step1Title}</h3>
-              <p className="mt-1 text-sm text-[var(--muted)]">{copy.step1Summary}</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {HOSPITAL_MODE_LIST.map((candidateMode) => {
-                  const active = candidateMode.key === mode;
-                  return (
-                    <HospitalTrackedLink
-                      key={candidateMode.key}
-                      href={`/${portal.slug}?mode=${candidateMode.key}&persona=${persona}`}
-                      tracking={{
-                        actionType: "mode_selected",
-                        portalSlug: portal.slug,
-                        modeContext: candidateMode.key,
-                        sectionKey: "v2_step1",
-                        targetKind: "mode",
-                        targetId: candidateMode.key,
-                        targetLabel: candidateMode.label,
-                      }}
-                      className={active ? "emory-primary-btn inline-flex items-center px-3 py-1.5 text-xs" : "emory-secondary-btn inline-flex items-center px-3 py-1.5 text-xs"}
-                    >
-                      {candidateMode.shortLabel}
-                    </HospitalTrackedLink>
-                  );
-                })}
-              </div>
-            </section>
-
-            <section className="emory-hero-lens rounded-2xl p-5">
-              <p className="emory-kicker">Step 2</p>
-              <h3 className="mt-2 text-base font-semibold text-[var(--cream)]">{copy.step2Title}</h3>
-              <p className="mt-1 text-sm text-[var(--muted)]">{copy.step2Summary}</p>
-              <div className="mt-3 space-y-2">
-                {hospitals.slice(0, 4).map((hospital, index) => (
-                  <article key={hospital.id} className={`rounded-xl border p-3 ${index === 0 ? "border-[#b4dcad] bg-[#e7f5e5]" : "border-[var(--twilight)] bg-white"}`}>
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="text-sm font-semibold text-[var(--cream)]">{hospital.short_name || hospital.name}</p>
-                        <p className="text-xs text-[var(--muted)] mt-1">{hospital.address}</p>
-                      </div>
-                      {index === 0 && <span className="emory-chip">Recommended</span>}
-                    </div>
-                    <HospitalTrackedLink
-                      href={`/${portal.slug}/hospitals/${hospital.slug}?mode=${mode}&persona=${persona}`}
-                      tracking={{
-                        actionType: "resource_clicked",
-                        portalSlug: portal.slug,
-                        hospitalSlug: hospital.slug,
-                        modeContext: mode,
-                        sectionKey: "v2_step2",
-                        targetKind: "hospital_companion",
-                        targetId: hospital.slug,
-                        targetLabel: hospital.short_name || hospital.name,
-                      }}
-                      className="emory-secondary-btn mt-2 inline-flex items-center px-2.5 py-1 text-xs"
-                    >
-                      {personaProfile.companionActionLabel}
-                    </HospitalTrackedLink>
-                  </article>
-                ))}
-              </div>
-            </section>
-
-            <section className="emory-hero-lens rounded-2xl p-5">
-              <p className="emory-kicker">Step 3</p>
-              <h3 className="mt-2 text-base font-semibold text-[var(--cream)]">{copy.step3Title}</h3>
-              <p className="mt-1 text-sm text-[var(--muted)]">{copy.step3Summary}</p>
-              <div className="mt-3 space-y-2">
-                {nextActions.map((action, index) => (
-                  <HospitalTrackedLink
-                    key={action.key}
-                    href={action.href}
-                    external={action.external}
-                    tracking={{
-                      actionType: action.actionType,
-                      portalSlug: portal.slug,
-                      hospitalSlug: primaryHospital?.slug,
-                      modeContext: mode,
-                      sectionKey: "v2_step3",
-                      targetKind: action.targetKind,
-                      targetId: action.key,
-                      targetLabel: action.label,
-                      targetUrl: action.href,
-                    }}
-                    className={`${index === 0 ? "emory-primary-btn" : "emory-secondary-btn"} flex w-full flex-col rounded-xl px-3 py-2.5`}
-                  >
-                    <span className="text-xs font-semibold">{action.label}</span>
-                    <span className="text-[11px] text-[var(--muted)]">{action.hint}</span>
-                    <span className="mt-1 text-[10px] uppercase tracking-[0.08em] text-[var(--muted)]">{action.proofTag}</span>
-                  </HospitalTrackedLink>
-                ))}
-              </div>
-            </section>
+            </div>
           </div>
         </section>
 
-        <section className="emory-reveal emory-delay-1 emory-panel emory-warm-section rounded-[28px] p-6 sm:p-7" id="emory-owned-rail">
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <div>
-              <p className="emory-kicker">Emory-Owned Network</p>
-              <h2 className={`mt-1 text-[clamp(1.2rem,2.5vw,1.9rem)] font-semibold text-[var(--cream)] ${hospitalDisplayFont.className}`}>
-                {copy.railATitle}
-              </h2>
-              <p className="mt-2 text-sm text-[var(--muted)] max-w-3xl">
-                {copy.railASummary}
-              </p>
-            </div>
-            <span className="emory-chip">Official Sources</span>
-          </div>
+        <section className="emory-panel p-4 sm:p-5">
+          <p className="emory-kicker">Always available support</p>
+          <h2 className={`mt-1 text-[clamp(1.55rem,2.8vw,2.12rem)] leading-[0.97] text-[var(--cream)] ${hospitalDisplayFont.className}`}>
+            Quick help when you need it
+          </h2>
+          <p className="mt-1 text-sm text-[var(--muted)]">The most common care actions, always available.</p>
 
-          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-            {hospitals.map((hospital, index) => (
-              <article key={hospital.id} className="emory-panel-subtle rounded-xl p-4">
-                <div
-                  className="emory-photo-card mb-3"
-                  style={{ ["--photo" as string]: `url('${HOSPITAL_CARD_PHOTOS[index % HOSPITAL_CARD_PHOTOS.length]}')` }}
-                />
-                <p className="text-sm font-semibold text-[var(--cream)]">{hospital.short_name || hospital.name}</p>
-                <p className="mt-1 text-xs text-[var(--muted)]">{hospital.address}</p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <HospitalTrackedLink
-                    href={`/${portal.slug}/hospitals/${hospital.slug}?mode=${mode}&persona=${persona}`}
-                    tracking={{
-                      actionType: "resource_clicked",
-                      portalSlug: portal.slug,
-                      hospitalSlug: hospital.slug,
-                      modeContext: mode,
-                      sectionKey: "v2_owned_rail",
-                      targetKind: "hospital_companion",
-                      targetId: hospital.slug,
-                      targetLabel: hospital.short_name || hospital.name,
-                    }}
-                    className="emory-primary-btn inline-flex items-center px-3 py-1.5 text-xs"
-                  >
-                    Open Companion
-                  </HospitalTrackedLink>
-                  <HospitalTrackedLink
-                    href={getHospitalWayfindingHref(hospital)}
-                    external
-                    tracking={{
-                      actionType: "wayfinding_opened",
-                      portalSlug: portal.slug,
-                      hospitalSlug: hospital.slug,
-                      modeContext: mode,
-                      sectionKey: "v2_owned_rail",
-                      targetKind: "wayfinding",
-                      targetId: hospital.slug,
-                      targetLabel: hospital.short_name || hospital.name,
-                    }}
-                    className="emory-secondary-btn inline-flex items-center px-3 py-1.5 text-xs"
-                  >
-                    Open Wayfinding
-                  </HospitalTrackedLink>
-                </div>
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+            {supportCards.map((item) => (
+              <article key={item.id} className="rounded-xl border border-[var(--twilight)] bg-gradient-to-b from-white to-[#f9fbfe] px-3 py-3">
+                <p className="text-sm font-semibold text-[var(--cream)]">{item.label}</p>
+                <p className="mt-0.5 text-xs text-[var(--muted)]">{item.detail}</p>
+                <HospitalTrackedLink
+                  href={item.href}
+                  external={item.external}
+                  tracking={{
+                    actionType: "resource_clicked",
+                    portalSlug: portal.slug,
+                    hospitalSlug: primaryHospital?.slug,
+                    modeContext: mode,
+                    sectionKey: "v5_hub_support",
+                    targetKind: "always_available_support",
+                    targetId: item.id,
+                    targetLabel: item.label,
+                    targetUrl: item.href,
+                  }}
+                  className="mt-2 inline-flex items-center rounded-md border border-[#c7d3e8] bg-white px-2 py-1 text-[11px] font-semibold text-[#143b83] hover:bg-[#f3f7ff]"
+                >
+                  {item.cta}
+                </HospitalTrackedLink>
               </article>
             ))}
           </div>
-
-          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {emoryOwnedSources.map((source) => (
-              <SourceCard key={source.id} source={source} />
-            ))}
-          </div>
         </section>
 
-        <section className="emory-reveal emory-delay-2 emory-panel rounded-[28px] p-6 sm:p-7" id="atlanta-federated-rail">
+        <section className="emory-panel p-4 sm:p-5" id="choose-hospital">
           <div className="flex items-start justify-between gap-3 flex-wrap">
             <div>
-              <p className="emory-kicker">Atlanta Federation</p>
-              <h2 className={`mt-1 text-[clamp(1.2rem,2.5vw,1.9rem)] font-semibold text-[var(--cream)] ${hospitalDisplayFont.className}`}>
-                {copy.railBTitle}
+              <p className="emory-kicker">Choose your hospital</p>
+              <h2 className={`mt-1 text-[clamp(1.8rem,3.2vw,2.5rem)] leading-[0.96] text-[var(--cream)] ${hospitalDisplayFont.className}`}>
+                Choose a hospital to start
               </h2>
-              <p className="mt-2 text-sm text-[var(--muted)] max-w-3xl">
-                {copy.railBSummary}
-              </p>
+              <p className="mt-1 text-sm text-[var(--muted)]">Each campus card opens a concierge view with food, lodging, services, and wayfinding.</p>
             </div>
-            <span className="emory-chip">
-              {communityDigest.isLive ? "Live Community Feed" : "Seeded While Syncing"}
-            </span>
           </div>
 
-          <div className="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
-            {communityDigest.tracks.map((track) => (
-              <article key={track.key} className="emory-panel-subtle rounded-xl p-4">
-                <div
-                  className="emory-photo-card mb-3 min-h-[112px]"
-                  style={{ ["--photo" as string]: `url('${COMMUNITY_TRACK_PHOTOS[track.key] || COMMUNITY_TRACK_PHOTOS.community_wellness}')` }}
-                />
-                <p className="emory-kicker">{track.title}</p>
-                <p className="mt-1 text-xs text-[var(--muted)]">{track.blurb}</p>
-                <div className="mt-3 space-y-2">
-                  {track.stories.slice(0, 2).map((story) => {
-                    const openHref = story.eventId
-                      ? `/${portal.slug}?view=find&type=events&event=${story.eventId}&mode=${mode}&persona=${persona}`
-                      : `/${portal.slug}?view=find&type=events&search=${encodeURIComponent(story.title)}&mode=${mode}&persona=${persona}`;
+          <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+            {hospitalCards.map((card) => {
+              const conciergeHref = `/${portal.slug}/hospitals/${card.hospital.slug}?mode=${mode}&persona=${persona}`;
+              const hospitalWayfindingHref = getHospitalWayfindingHref(card.hospital);
+              return (
+                <article key={card.hospital.id} className="group overflow-hidden rounded-xl border border-[var(--twilight)] bg-white shadow-[0_5px_16px_rgba(12,28,58,0.08)]">
+                  <div className="relative">
+                    <img src={card.imageUrl} alt={card.hospital.name} className="h-44 w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" />
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#0b2d5f]/85 via-[#0b2d5f]/60 to-transparent px-3 pb-2.5 pt-5 text-white">
+                      <h3 className="text-base font-semibold leading-tight">{card.hospital.name}</h3>
+                      <p className="mt-0.5 text-[11px] text-white/90">{card.hospital.address}</p>
+                    </div>
+                  </div>
 
-                    return (
-                      <article key={story.id} className="rounded-lg border border-[var(--twilight)] bg-white p-3">
-                        <p className="text-sm font-semibold text-[var(--cream)] leading-tight">{story.title}</p>
-                        <p className="mt-1 text-[11px] text-[var(--muted)]">
-                          {formatStorySchedule(story)}
-                          {story.neighborhood ? ` · ${story.neighborhood}` : ""}
-                        </p>
-                        <p className="mt-1 text-[11px] text-[var(--muted)]">
-                          Source: {story.sourceName}
-                          {story.sourceTier ? ` · ${story.sourceTier}` : ""}
-                        </p>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          <HospitalTrackedLink
-                            href={openHref}
-                            tracking={{
-                              actionType: "resource_clicked",
-                              portalSlug: portal.slug,
-                              hospitalSlug: primaryHospital?.slug,
-                              modeContext: mode,
-                              sectionKey: "v2_federated_rail",
-                              targetKind: "community_story",
-                              targetId: story.id,
-                              targetLabel: story.title,
-                              targetUrl: openHref,
-                            }}
-                            className="emory-primary-btn inline-flex items-center px-3 py-1.5 text-xs"
-                          >
-                            {copy.briefingCtaLabel}
-                          </HospitalTrackedLink>
-                          {story.sourceUrl !== "#" && (
-                            <HospitalTrackedLink
-                              href={story.sourceUrl}
-                              external
-                              tracking={{
-                                actionType: "resource_clicked",
-                                portalSlug: portal.slug,
-                                hospitalSlug: primaryHospital?.slug,
-                                modeContext: mode,
-                                sectionKey: "v2_federated_rail",
-                                targetKind: "community_source",
-                                targetId: story.id,
-                                targetLabel: story.sourceName,
-                                targetUrl: story.sourceUrl,
-                              }}
-                              className="emory-secondary-btn inline-flex items-center px-3 py-1.5 text-xs"
-                            >
-                              Source
-                            </HospitalTrackedLink>
-                          )}
-                        </div>
-                      </article>
-                    );
-                  })}
-                </div>
+                  <div className="p-3">
+                    <div className="flex flex-wrap gap-1.5">
+                      <span className="emory-chip">{card.openNowCount} open now</span>
+                      <span className="emory-chip">{card.foodCount} food spots</span>
+                      <span className="emory-chip">{card.stayCount} stay options</span>
+                      <span className="emory-chip">{card.essentialsCount} essentials</span>
+                    </div>
 
-                {track.sourceNames.length > 0 && (
-                  <p className="mt-3 text-[11px] text-[var(--muted)]">
-                    Sources: {track.sourceNames.join(" · ")}
-                  </p>
-                )}
-              </article>
-            ))}
-          </div>
-
-          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {communitySourceCards.map((source) => (
-              <article key={source.key} className="emory-panel-subtle rounded-xl p-4">
-                <p className="emory-kicker">Atlanta Federation</p>
-                <h3 className="mt-1 text-sm font-semibold text-[var(--cream)]">{source.sourceName}</h3>
-                <p className="mt-1 text-xs text-[var(--muted)]">Primary track: {source.trackTitle}</p>
-                {source.sourceTier && (
-                  <p className="mt-1 text-[11px] text-[var(--muted)]">Trust tier: {source.sourceTier}</p>
-                )}
-              </article>
-            ))}
+                    <div className="mt-3 flex flex-wrap items-center gap-2.5">
+                      <HospitalTrackedLink
+                        href={conciergeHref}
+                        tracking={{
+                          actionType: "resource_clicked",
+                          portalSlug: portal.slug,
+                          hospitalSlug: card.hospital.slug,
+                          modeContext: mode,
+                          sectionKey: "v5_hub_hospital_cards",
+                          targetKind: "concierge",
+                          targetId: card.hospital.slug,
+                          targetLabel: card.hospital.name,
+                          targetUrl: conciergeHref,
+                        }}
+                        className="emory-primary-btn inline-flex items-center px-3 py-1.5 text-xs"
+                      >
+                        Open Concierge
+                      </HospitalTrackedLink>
+                      <HospitalTrackedLink
+                        href={hospitalWayfindingHref}
+                        external
+                        tracking={{
+                          actionType: "wayfinding_opened",
+                          portalSlug: portal.slug,
+                          hospitalSlug: card.hospital.slug,
+                          modeContext: mode,
+                          sectionKey: "v5_hub_hospital_cards",
+                          targetKind: "wayfinding",
+                          targetId: card.hospital.slug,
+                          targetLabel: card.hospital.name,
+                          targetUrl: hospitalWayfindingHref,
+                        }}
+                        className="emory-link-btn"
+                      >
+                        Directions
+                      </HospitalTrackedLink>
+                      {card.hospital.phone && (
+                        <a href={`tel:${card.hospital.phone}`} className="emory-link-btn">Call</a>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         </section>
 
-        {railActions.length > 0 && (
-          <EmoryActionRail
-            portalSlug={portal.slug}
-            mode={mode}
-            hospitalSlug={primaryHospital?.slug || undefined}
-            sectionKey="v2_action_rail"
-            actions={railActions}
-          />
-        )}
+        <section className="emory-panel p-4 sm:p-5">
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div>
+              <p className="emory-kicker">Community hub preview</p>
+              <h2 className={`mt-1 text-[clamp(1.7rem,3vw,2.35rem)] leading-[0.96] text-[var(--cream)] ${hospitalDisplayFont.className}`}>
+                Active neighborhood health resources
+              </h2>
+              <p className="mt-1 text-sm text-[var(--muted)]">Open by topic to explore events, venues, and support groups around Atlanta.</p>
+            </div>
+            <HospitalTrackedLink
+              href={communityHref}
+              tracking={{
+                actionType: "resource_clicked",
+                portalSlug: portal.slug,
+                modeContext: mode,
+                sectionKey: "v5_hub_community_preview",
+                targetKind: "community_hub",
+                targetId: "explore-all",
+                targetLabel: "Explore all",
+                targetUrl: communityHref,
+              }}
+              className="emory-link-btn"
+            >
+              Explore all
+            </HospitalTrackedLink>
+          </div>
+
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2.5">
+            {categoryCards.map((category) => (
+              <article key={category.id} className="rounded-xl border border-[var(--twilight)] bg-gradient-to-b from-white to-[#f9fbfe] px-3 py-3">
+                <p className="text-[11px] font-bold uppercase tracking-[0.06em] text-[#6b7280]">Active this week</p>
+                <p className="mt-1 text-sm font-semibold text-[var(--cream)]">{category.label}</p>
+                <p className="mt-0.5 text-xs text-[var(--muted)]">{category.detail}</p>
+                <p className="mt-2 text-2xl font-semibold text-[#143b83]">{category.count}</p>
+                <HospitalTrackedLink
+                  href={category.href}
+                  tracking={{
+                    actionType: "resource_clicked",
+                    portalSlug: portal.slug,
+                    modeContext: mode,
+                    sectionKey: "v5_hub_community_preview",
+                    targetKind: "community_category",
+                    targetId: category.id,
+                    targetLabel: category.label,
+                    targetUrl: category.href,
+                  }}
+                  className="emory-link-btn mt-1.5 inline-flex items-center"
+                >
+                  Explore
+                </HospitalTrackedLink>
+              </article>
+            ))}
+          </div>
+
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            {showcase.events.slice(0, 3).map((event, index) => {
+              const eventHref = event.detailHref || communityHref;
+              const eventImage = event.imageUrl || COMMUNITY_FALLBACK_IMAGES[index % COMMUNITY_FALLBACK_IMAGES.length] || COMMUNITY_FALLBACK_IMAGE;
+              return (
+                <HospitalTrackedLink
+                  key={event.id}
+                  href={eventHref}
+                  tracking={{
+                    actionType: "resource_clicked",
+                    portalSlug: portal.slug,
+                    modeContext: mode,
+                    sectionKey: "v6_hub_community_preview",
+                    targetKind: "event",
+                    targetId: String(event.id),
+                    targetLabel: event.title,
+                    targetUrl: eventHref,
+                  }}
+                  className="group overflow-hidden rounded-xl border border-[var(--twilight)] bg-white shadow-[0_4px_14px_rgba(12,28,58,0.06)]"
+                >
+                  <img
+                    src={eventImage}
+                    alt={event.title}
+                    className="h-32 w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                  />
+                  <div className="p-3">
+                    <p className="text-[11px] uppercase tracking-[0.06em] text-[#6b7280]">
+                      {[event.category || "Health", event.neighborhood || event.venueName].filter(Boolean).join(" · ")}
+                    </p>
+                    <p className="text-sm font-semibold text-[var(--cream)] leading-tight">{event.title}</p>
+                    <p className="mt-0.5 text-[11px] text-[var(--muted)]">{event.scheduleLabel}</p>
+                    <span className="mt-1.5 inline-flex text-xs font-semibold text-[#143b83]">View details</span>
+                  </div>
+                </HospitalTrackedLink>
+              );
+            })}
+          </div>
+        </section>
       </div>
     </>
   );

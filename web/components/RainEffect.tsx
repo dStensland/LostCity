@@ -33,6 +33,7 @@ export default function RainEffect() {
       const hasForthExperience = Boolean(document.querySelector("[data-forth-experience='true']"));
       const isHospitalPath = pathname.startsWith("/emory-demo") || pathname.includes("/hospitals");
       const shouldSuppress =
+        vertical === "film" ||
         vertical === "hotel" ||
         vertical === "hospital" ||
         forthBg === "off" ||

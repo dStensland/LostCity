@@ -115,6 +115,10 @@ def enrich_artist(artist: dict) -> dict:
         updates["image_url"] = info.image_url
     if info.genres and not artist.get("genres"):
         updates["genres"] = info.genres
+    if info.bio and not artist.get("bio"):
+        updates["bio"] = info.bio
+    if info.website and not artist.get("website"):
+        updates["website"] = info.website
 
     if updates:
         from datetime import datetime, timezone

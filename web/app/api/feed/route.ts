@@ -141,7 +141,6 @@ export async function GET(request: Request) {
           title,
           series_type,
           image_url,
-          blurhash,
           frequency,
           day_of_week,
           festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
@@ -358,7 +357,6 @@ export async function GET(request: Request) {
         title,
         series_type,
         image_url,
-        blurhash,
         frequency,
         day_of_week,
         festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
@@ -366,7 +364,7 @@ export async function GET(request: Request) {
       venue:venues(id, name, neighborhood, slug, blurhash)
     `,
       )
-      .gte("start_date", startDateFilter)
+      .or(`start_date.gte.${startDateFilter},end_date.gte.${startDateFilter}`) // Include ongoing events (exhibitions with end_date)
       .is("canonical_event_id", null) // Only show canonical events, not duplicates
       .or("is_class.eq.false,is_class.is.null")
       .or("is_sensitive.eq.false,is_sensitive.is.null")
@@ -449,7 +447,6 @@ export async function GET(request: Request) {
       title,
       series_type,
       image_url,
-      blurhash,
       frequency,
       day_of_week,
       festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
@@ -781,7 +778,6 @@ export async function GET(request: Request) {
         title: string;
         series_type: string;
         image_url: string | null;
-        blurhash: string | null;
         frequency: string | null;
         day_of_week: string | null;
         festival?: {

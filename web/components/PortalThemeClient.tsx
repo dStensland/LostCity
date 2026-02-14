@@ -25,6 +25,7 @@ export default function PortalThemeClient({ portal }: PortalThemeClientProps) {
       : pageTemplate === "hospital"
         ? "hospital"
         : undefined;
+  const isFilm = inferredVertical === "film" || pageTemplate === "film";
   const experienceVariant = typeof settings.experience_variant === "string"
     ? settings.experience_variant.toLowerCase()
     : "";
@@ -96,8 +97,8 @@ export default function PortalThemeClient({ portal }: PortalThemeClientProps) {
       delete body.dataset.buttonStyle;
     }
 
-    // Set glow state
-    if (!componentStyle.glow_enabled) {
+    // Film surfaces use a restrained aesthetic: no glow effects.
+    if (isFilm || !componentStyle.glow_enabled) {
       body.dataset.glow = "disabled";
     } else {
       delete body.dataset.glow;
@@ -110,8 +111,10 @@ export default function PortalThemeClient({ portal }: PortalThemeClientProps) {
       delete body.dataset.glass;
     }
 
-    // Set animation level
-    if (componentStyle.animations && componentStyle.animations !== "full") {
+    // Film surfaces disable global animation to avoid visual flicker/noise.
+    if (isFilm) {
+      body.dataset.animations = "none";
+    } else if (componentStyle.animations && componentStyle.animations !== "full") {
       body.dataset.animations = componentStyle.animations;
     } else {
       delete body.dataset.animations;
@@ -124,9 +127,13 @@ export default function PortalThemeClient({ portal }: PortalThemeClientProps) {
       delete body.dataset.theme;
     }
 
+    // Expose active portal slug for route-scoped art direction overrides.
+    body.dataset.portalSlug = portal.slug;
+
     // Expose portal vertical at body-level for global pseudo-elements.
-    if (inferredVertical) {
-      body.dataset.vertical = inferredVertical;
+    const resolvedVertical = isFilm ? "film" : inferredVertical;
+    if (resolvedVertical) {
+      body.dataset.vertical = resolvedVertical;
     } else {
       delete body.dataset.vertical;
     }
@@ -149,10 +156,11 @@ export default function PortalThemeClient({ portal }: PortalThemeClientProps) {
       delete body.dataset.animations;
       delete body.dataset.theme;
       delete body.dataset.vertical;
+      delete body.dataset.portalSlug;
       delete body.dataset.forthBg;
       delete body.dataset.forthMotion;
     };
-  }, [componentStyle, forthBackgroundMode, forthMotionMode, inferredVertical, isForthVariant, isLight]);
+  }, [componentStyle, forthBackgroundMode, forthMotionMode, inferredVertical, isFilm, isForthVariant, isLight, portal.slug]);
 
   return null;
 }

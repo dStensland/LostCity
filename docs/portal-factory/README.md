@@ -22,6 +22,16 @@ This system standardizes how Lost City builds white-label portals with radical c
 
 One design system per client portal. Persona differences adjust action priority, defaults, ranking, and message emphasis, not visual quality.
 
+## Two-Surface Model (Required)
+
+Every portal program must declare and preserve two distinct products:
+- `Consumer Portal` (end users: patients/guests/filmmakers/residents)
+- `Admin Portal` (operators: content/ops/governance/reporting)
+
+Use `docs/portal-surfaces-contract.md` as the authoritative boundary.
+
+Non-negotiable: shared infrastructure is expected; mixed UX intent is not.
+
 ## Vertical Invariants
 
 - Shared architecture planes remain constant: Federation, Experience, Trust, Insight.
@@ -43,4 +53,3 @@ Every review issue must map to:
 1. Immediate product fix.
 2. Root process failure.
 3. Permanent template/checklist update.
-

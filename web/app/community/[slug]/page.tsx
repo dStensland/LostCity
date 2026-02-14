@@ -1,4 +1,5 @@
 import { permanentRedirect } from "next/navigation";
+import { DEFAULT_PORTAL_SLUG } from "@/lib/constants";
 
 export default async function CommunityPage({
   params
@@ -6,5 +7,5 @@ export default async function CommunityPage({
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params;
-  permanentRedirect(`/atlanta/community/${slug}`);
+  permanentRedirect(`/${DEFAULT_PORTAL_SLUG}/community/${slug}`);
 }

@@ -11,7 +11,8 @@ import DirectionsDropdown from "@/components/DirectionsDropdown";
 import EventQuickActions from "@/components/EventQuickActions";
 import VenueVibes from "@/components/VenueVibes";
 import LinkifyText from "@/components/LinkifyText";
-import { formatTimeSplit, formatCompactCount } from "@/lib/formats";
+import { formatTimeSplit, formatCompactCount, formatTimeRange } from "@/lib/formats";
+import { format, parseISO } from "date-fns";
 import { EntityTagList } from "@/components/tags/EntityTagList";
 import FlagButton from "@/components/FlagButton";
 import { getSeriesTypeLabel, getSeriesTypeColor } from "@/lib/series-utils";
@@ -114,25 +115,49 @@ interface EventDetailViewProps {
 
 function parseRecurrenceRule(rule: string | null | undefined): string | null {
   if (!rule) return null;
-  const match = rule.match(/FREQ=(\w+)(?:;BYDAY=(\w+))?/i);
+  const match = rule.match(/FREQ=(\w+)(?:;BYDAY=([\w,]+))?/i);
   if (!match) return null;
 
   const freq = match[1]?.toUpperCase();
-  const day = match[2];
+  const days = match[2];
 
   const dayNames: Record<string, string> = {
     MO: "Monday", TU: "Tuesday", WE: "Wednesday",
     TH: "Thursday", FR: "Friday", SA: "Saturday", SU: "Sunday"
   };
 
-  if (freq === "WEEKLY" && day && dayNames[day]) {
-    return `Every ${dayNames[day]}`;
+  const shortDayNames: Record<string, string> = {
+    MO: "Mon", TU: "Tue", WE: "Wed",
+    TH: "Thu", FR: "Fri", SA: "Sat", SU: "Sun"
+  };
+
+  if (freq === "WEEKLY" && days) {
+    const dayList = days.split(",");
+    if (dayList.length === 1 && dayNames[dayList[0]]) {
+      return `Every ${dayNames[dayList[0]]}`;
+    }
+    const names = dayList.map(d => shortDayNames[d]).filter(Boolean);
+    if (names.length > 0) return names.join(", ");
   }
   if (freq === "WEEKLY") return "Weekly";
   if (freq === "MONTHLY") return "Monthly";
   if (freq === "DAILY") return "Daily";
 
   return null;
+}
+
+function parseRecurrenceDays(rule: string | null | undefined): string[] {
+  if (!rule) return [];
+  const match = rule.match(/BYDAY=([\w,]+)/i);
+  if (!match) return [];
+  const dayNames: Record<string, string> = {
+    MO: "Mon", TU: "Tue", WE: "Wed", TH: "Thu", FR: "Fri", SA: "Sat", SU: "Sun"
+  };
+  return match[1].split(",").map(d => dayNames[d]).filter(Boolean);
+}
+
+function isExhibition(event: EventData): boolean {
+  return event.subcategory === "exhibition" || event.series?.series_type === "exhibition";
 }
 
 export default function EventDetailView({ eventId, portalSlug, onClose }: EventDetailViewProps) {
@@ -388,8 +413,47 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
       {/* Quick Actions */}
       <EventQuickActions event={event} isLive={isLive} className="mb-6" />
 
-      {/* Recurring Event Badge */}
-      {event.is_recurring && recurrenceText && (
+      {/* Exhibition Info Card */}
+      {isExhibition(event) && (
+        <div className="flex items-center gap-3 p-4 rounded-lg border border-[#F59E0B]/30 mb-6 bg-[#F59E0B]/5">
+          <div className="w-10 h-10 rounded-full bg-[#F59E0B]/15 flex items-center justify-center flex-shrink-0">
+            <svg className="w-5 h-5 text-[#F59E0B]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4-4 2 2 4-4 6 6" />
+            </svg>
+          </div>
+          <div>
+            <p className="text-[var(--cream)] font-medium">
+              Exhibition
+              {event.end_date && (() => {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const endDate = parseISO(event.end_date!);
+                const startDate = parseISO(event.start_date);
+                if (startDate > today) {
+                  return ` · Opens ${format(startDate, "MMM d")}`;
+                }
+                return ` · Through ${format(endDate, "MMM d")}`;
+              })()}
+            </p>
+            <p className="text-sm text-[var(--muted)]">
+              {(() => {
+                const days = parseRecurrenceDays(event.recurrence_rule);
+                const hours = formatTimeRange(event.start_time, event.end_time);
+                if (days.length > 0 && hours !== "TBA") {
+                  return `${days.join(", ")} · ${hours}`;
+                }
+                if (days.length > 0) return days.join(", ");
+                if (hours !== "TBA") return hours;
+                return "See venue for hours";
+              })()}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Recurring Event Badge (non-exhibition) */}
+      {!isExhibition(event) && event.is_recurring && recurrenceText && (
         <div className="flex items-center gap-3 p-4 rounded-lg border border-[var(--twilight)] mb-6 bg-[var(--dusk)]">
           <div className="w-10 h-10 rounded-full bg-[var(--twilight)] flex items-center justify-center flex-shrink-0">
             <svg className="w-5 h-5 text-[var(--coral)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { checkBodySize, sanitizeString, isValidEnum } from "@/lib/api-utils";
+import { resolvePortalSlugAlias } from "@/lib/portal-aliases";
 
 const VALID_PAGE_TYPES = ["feed", "find", "event", "spot", "series", "community"] as const;
 
@@ -19,6 +20,7 @@ export async function POST(
   if (sizeCheck) return sizeCheck;
 
   const { slug } = await params;
+  const canonicalSlug = resolvePortalSlugAlias(slug);
 
   let body: Record<string, unknown>;
   try {
@@ -42,7 +44,7 @@ export async function POST(
   const { data: portal } = await supabase
     .from("portals")
     .select("id")
-    .eq("slug", slug)
+    .eq("slug", canonicalSlug)
     .eq("status", "active")
     .maybeSingle();
 

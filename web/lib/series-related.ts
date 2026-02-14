@@ -59,7 +59,8 @@ export async function getRelatedSeries(
     .from("events")
     .select("series_id")
     .in("series_id", seriesIds)
-    .gte("start_date", today);
+    .gte("start_date", today)
+    .or("is_sensitive.eq.false,is_sensitive.is.null");
 
   // Count events per series
   const counts: Record<string, number> = {};

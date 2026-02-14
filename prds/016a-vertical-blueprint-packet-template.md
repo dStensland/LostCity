@@ -11,6 +11,17 @@ Use this for every new vertical or major portal redesign.
 - Priority:
 - Date:
 
+## Surface Declaration (Required)
+- Primary surface: `consumer` | `admin` | `both`
+- Secondary surface (if any):
+- Consumer Portal objective:
+- Admin Portal objective:
+- Consumer non-goals (explicit):
+- Admin non-goals (explicit):
+
+Reference contract:
+- `docs/portal-surfaces-contract.md`
+
 ## BP-1 Strategy Lock
 1. Problem statement
 2. Target users and jobs-to-be-done
@@ -29,6 +40,15 @@ Output file:
 
 Output file:
 - `prds/<id>-<vertical>-consumer-ia.md`
+
+## BP-2b Admin Portal IA (If surface is `admin` or `both`)
+1. Admin jobs-to-be-done (management, governance, operations, reporting)
+2. Admin route map and permissions model
+3. Workflow states and operational handoffs
+4. Explicit exclusions from Admin Portal scope
+
+Output file:
+- `prds/<id>-<vertical>-admin-ia.md`
 
 ## BP-3 Design Direction
 1. Visual contrast vs existing platform defaults
@@ -78,9 +98,16 @@ Output file:
 ## Required Hard Gates
 1. Action clarity in <10 seconds
 2. Mobile no-horizontal-overflow
-3. Guest vs admin control separation
+3. Consumer Portal and Admin Portal separation is explicit and testable
 4. Source attribution/freshness integrity
 5. Measurable success metrics attached to key UX flows
+
+## Surface Acceptance Gate (Required)
+Before launch, confirm all of the below:
+1. Surface target is declared for every major feature.
+2. Consumer UI has no admin/operator language or controls.
+3. Admin UI contains required operational depth and controls.
+4. Shared infrastructure is allowed; mixed UX intent is not.
 
 ## Handoff Package
 Before launch, ship:

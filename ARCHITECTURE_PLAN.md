@@ -1,5 +1,15 @@
 # Architecture Plan: Portal Federation & Bespoke Frontends
 
+## Portal Surfaces Contract (Hard Boundary)
+
+This architecture supports two separate products that share infrastructure but must not share UX intent:
+- `Consumer Portal` — end-user product (patients/guests/filmmakers/residents).
+- `Admin Portal` — operator product (content management, governance, operations, analytics).
+
+Authoritative contract: `docs/portal-surfaces-contract.md`.
+
+Non-negotiable rule: do not conflate consumer and admin concerns in IA, copy, routing, or feature acceptance criteria.
+
 ## Execution Update (2026-02-11)
 
 This architecture remains directionally correct, but execution order is now constrained:
@@ -7,7 +17,7 @@ This architecture remains directionally correct, but execution order is now cons
 1. **Strict portal attribution is launch-critical** and takes precedence over feature expansion.
 2. **Atlanta usage + quality proof** is the primary validation loop before broad productization.
 3. **Vertical demos are operator-led** (FORTH first, then additional demos), not self-serve.
-4. **Self-serve portal onboarding/admin expansion is deferred** until customer pull.
+4. **Self-serve Admin Portal onboarding/expansion is deferred** until customer pull.
 5. **Public Developer API is iceboxed until post-launch traction.**
 
 ## Current State Assessment
@@ -62,6 +72,18 @@ This architecture remains directionally correct, but execution order is now cons
 ---
 
 ## Gap Analysis
+
+### Surface Ownership By Gap
+
+| Gap | Primary Surface | Notes |
+|-----|------------------|-------|
+| Gap 1: Cross-Portal Enrichment Flow | `admin` + shared data layer | Admin actions write enrichments; consumer may read outcomes |
+| Gap 2: Cross-Portal User Graph | `consumer` + shared data layer | Consumer behavior and personalization |
+| Gap 3: Public Developer API | `admin`/platform | Not a consumer UX surface |
+| Gap 4: Bespoke Frontend Architecture | `consumer` | Vertical-specific end-user experiences |
+| Gap 5: Admin Portal Analytics | `admin` | Operator reporting and decisions |
+| Gap 6: Billing Integration | `admin` | Operator billing and plan controls |
+| Gap 7: Venue Self-Service | `admin` | Claimed-entity management workflows |
 
 ### What's Missing for the Full Vision
 
@@ -174,17 +196,17 @@ Portal `settings.vertical` determines which route group renders. Shares one depl
 
 ---
 
-#### Gap 5: Portal Analytics
+#### Gap 5: Admin Portal Analytics
 **Status**: Basic crawl logs exist, no portal-facing analytics
-**What we have**: `crawl_logs` tracks crawler execution. `activities` logs user actions. No portal admin dashboard showing engagement metrics.
-**What's missing**: Portal admins need to see: page views, event clicks, popular venues, user engagement, search queries, RSVP counts.
+**What we have**: `crawl_logs` tracks crawler execution. `activities` logs user actions. No Admin Portal dashboard showing engagement metrics.
+**What's missing**: Admin Portal users need to see: page views, event clicks, popular venues, user engagement, search queries, RSVP counts.
 
 **Fix**: Build analytics from existing data + lightweight event tracking.
 
 **Implementation**:
 - [ ] Track portal-scoped page views (lightweight, maybe PostHog or custom)
 - [ ] Aggregate `activities` + `event_rsvps` + `saved_items` by portal for admin dashboard
-- [ ] Portal admin dashboard showing: active users, popular events, search terms, engagement trends
+- [ ] Admin Portal dashboard showing: active users, popular events, search terms, engagement trends
 - [ ] For venue analytics (future product): views per venue, click-through, comparative metrics
 - [ ] Export capability for portal admins (CSV/PDF reports)
 
@@ -201,7 +223,7 @@ Portal `settings.vertical` determines which route group renders. Shares one depl
 - [ ] Stripe Customer per portal owner (org or user)
 - [ ] Stripe Subscription per portal, mapped to plan tier
 - [ ] Webhook handler for subscription events (upgrade, downgrade, cancel, payment failure)
-- [ ] Billing settings page in portal admin
+- [ ] Billing settings page in Admin Portal
 - [ ] Plan limits enforced at API level (not just UI)
 - [ ] Usage-based billing option for API product (metered billing)
 
@@ -240,15 +262,15 @@ Portal `settings.vertical` determines which route group renders. Shares one depl
                     │   Rate limiting by plan           │
                     └──────────────┬──────────────────┘
                                    │
-              ┌────────────────────┼────────────────────┐
-              │                    │                     │
-    ┌─────────┴──────┐  ┌─────────┴──────┐  ┌──────────┴─────┐
-    │  City Portal   │  │  Hotel Portal  │  │  Film Portal   │
-    │  (default UI)  │  │  (concierge)   │  │  (schedule)    │
-    │  /atlanta      │  │  /forth-hotel  │  │  /atlff        │
-    └────────────────┘  └────────────────┘  └────────────────┘
-              │                    │                     │
-              └────────────────────┼────────────────────┘
+              ┌────────────────────┼───────────────────────┐
+              │                    │                        │
+    ┌─────────┴────────┐  ┌────────┴────────┐   ┌──────────┴─────────┐
+    │ Consumer Portals  │  │  Admin Portal   │   │ Shared Service APIs │
+    │ city/hotel/film   │  │ content+ops+BI  │   │ internal/external   │
+    │ patient/guest/etc │  │ operator-facing │   │ clients             │
+    └───────────────────┘  └─────────────────┘   └─────────────────────┘
+              │                    │
+              └────────────────────┼───────────────────────┘
                                    │
                     ┌──────────────┴──────────────────┐
                     │      Data Federation Layer       │
@@ -283,8 +305,8 @@ Portal `settings.vertical` determines which route group renders. Shares one depl
 The key architectural principle: **facts are global, preferences are local.**
 
 ```
-Portal Admin Action              → Where It Goes
-─────────────────────────────── → ──────────────────────────
+Admin Portal Action             → Where It Goes
+────────────────────────────── → ──────────────────────────
 Pin venue to top of feed         → portal_content (local)
 Set display order of sections    → portal_sections (local)
 Tag venue as "wheelchair access" → venue_tags (global) + contributed_by_portal_id
@@ -297,29 +319,29 @@ Submit a new event               → events table (global) via submissions workf
 Hide an event from their portal  → portal_content exclusion (local)
 ```
 
-This means every portal interaction that produces a **fact** enriches the global layer. Every portal interaction that expresses a **preference** stays scoped.
+This means every Admin Portal interaction that produces a **fact** enriches the global layer. Every Admin Portal interaction that expresses a **preference** stays scoped.
 
 ---
 
 ## Cross-Portal User Graph Design
 
 ```
-User interacts on Hotel Portal:
+User interacts on Hotel Consumer Portal:
   → activities (global, portal_id = hotel for attribution)
   → inferred_preferences updated (global, aggregated)
   → saved_items (global)
 
-User later visits Film Portal:
+User later visits Film Consumer Portal:
   → "For You" feed reflects hotel preferences + film preferences
   → Recommendations span both portals' data
   → User sees same saved items
 
-User visits City Portal:
+User visits City Consumer Portal:
   → Full aggregated taste profile
   → Most personalized experience (has data from hotel + film + city)
 ```
 
-**Privacy model**: Users can see which portals they've interacted with. Portal admins can see aggregate analytics but NOT individual user profiles from other portals.
+**Privacy model**: Users can see which portals they've interacted with. Admin Portal users can see aggregate analytics but NOT individual user profiles from other portals.
 
 ---
 
@@ -355,8 +377,8 @@ Activate only after launch traction and first customer pull.
 
 - [ ] Public API with key auth, rate limits, docs
 - [ ] Developer portal page
-- [ ] Self-serve portal onboarding and broad admin productization
-- [ ] Portal analytics dashboard for paying customers
+- [ ] Self-serve Admin Portal onboarding and broader operator productization
+- [ ] Admin Portal analytics dashboard for paying customers
 
 ### Phase 5: Scale (Weeks 13+)
 Things that compound the network.

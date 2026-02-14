@@ -41,7 +41,7 @@ function modeTone(mode: HospitalAudienceMode): string {
       return "Shift-ready guidance with open-now and late-hour utility first.";
     case "visitor":
     default:
-      return "Visitor-first confidence with practical campus and nearby support.";
+      return "Visitor-first support with practical campus and nearby options.";
   }
 }
 
@@ -51,26 +51,25 @@ export function getEmoryFeedCopy(args: {
   modeConfig: HospitalModeConfig;
 }) {
   const { personaProfile, mode, modeConfig } = args;
-  const proof = stripFramePrefix(HOSPITAL_COPY_FRAMEWORK.narrative_framework[2] || "");
 
   return {
-    heroKicker: "Emory Healthcare Concierge",
+    heroKicker: "Emory Community Companion",
     heroTitle: personaProfile.headline,
     heroSummary: buildHeroSummary({ personaProfile, mode }),
-    focusKicker: "Today's Focus",
+    focusKicker: "Today's Support",
     priorityKicker: "Priority",
-    trustKicker: "Trust Guardrail",
-    trustBody: `${personaProfile.sourcePolicyNote} ${proof}`.replace(/\s+/g, " ").trim(),
-    step1Title: "Set Your Mode",
-    step1Summary: `${modeConfig.description} Set context first so every recommendation matches why you are here.`,
-    step2Title: "Pick a Campus",
-    step2Summary: "Choose one Emory campus to unlock booking, wayfinding, and local support.",
+    trustKicker: "Mode Guidance",
+    trustBody: "Start with one clear action, then use backup options if needed.",
+    step1Title: "Choose Your Need",
+    step1Summary: `${modeConfig.description} Pick what fits your situation, then move forward with one clear path.`,
+    step2Title: "Choose a Campus",
+    step2Summary: "Choose one Emory campus for booking, wayfinding, and nearby practical support.",
     step3Title: "Take Next Action",
-    step3Summary: "Take one primary action now, then use clear backup paths as needed.",
-    railATitle: "Emory-Owned Hospital Network",
-    railASummary: "Official Emory campus metadata, service records, and direct action endpoints.",
-    railBTitle: "Emory Community Briefings",
-    railBSummary: "Atlanta public-health and nonprofit resources, vetted and ranked for practical family utility.",
+    step3Summary: "Take one primary action first, then use backup options if needed.",
+    railATitle: "Hospital Operations",
+    railASummary: "Official campus details and direct action links.",
+    railBTitle: "Community Support",
+    railBSummary: "Live Atlanta public-health and nonprofit resources for everyday support.",
     briefingCtaLabel: "Open Briefing",
   };
 }
@@ -80,24 +79,23 @@ export function getEmoryDirectoryCopy(args: {
   mode: HospitalAudienceMode;
 }) {
   const { personaProfile, mode } = args;
-  const problem = stripFramePrefix(HOSPITAL_COPY_FRAMEWORK.narrative_framework[0] || "");
 
   return {
     heroKicker: "Emory Healthcare Directory",
     heroTitle: "Choose Your Hospital Companion",
-    heroSummary: "Select a campus, launch the right action, and keep services, wayfinding, and trusted community support in one place.",
-    lensKicker: "Today's Lens",
+    heroSummary: "Select a campus to open practical guidance for booking links, wayfinding, on-site services, and nearby community support.",
+    lensKicker: "Today's View",
     objectiveKicker: "Primary Objective",
     objectiveBody: "Route each visitor to the right hospital action in one tap.",
-    guardrailKicker: "Trust Guardrail",
+    guardrailKicker: "Support Scope",
     guardrailBody: personaProfile.sourcePolicyNote,
-    federationKicker: "Atlanta Federation",
-    federationLiveLabel: "live community briefings from vetted Atlanta partners.",
-    federationSyncingLabel: "Community briefings are refreshing from vetted Atlanta partners.",
+    federationKicker: "Community Updates",
+    federationLiveLabel: "community support updates available now.",
+    federationSyncingLabel: "Community support updates are refreshing now.",
     modeTone: modeTone(mode),
-    railATitle: "Authoritative hospital layer",
-    railBTitle: "Emory community support layer",
-    railBSubcopy: `Practical prevention, food, and wellness support with source context visible before action. ${problem}`,
+    railATitle: "Emory Operations",
+    railBTitle: "Emory Community Support",
+    railBSubcopy: "Practical prevention, food, and wellness support around each campus.",
     briefingCtaLabel: "Open Briefing",
   };
 }
@@ -110,8 +108,8 @@ export function getEmoryCompanionCopy(args: {
   const { personaProfile, mode, modeConfig } = args;
 
   return {
-    heroKicker: "Hospital Companion",
-    focusKicker: "Today's Lens",
+    heroKicker: "Hospital Guide",
+    focusKicker: "Today's Support View",
     scopeChip:
       mode === "urgent"
         ? "Urgent Support"
@@ -120,15 +118,15 @@ export function getEmoryCompanionCopy(args: {
           : mode === "treatment"
             ? "Treatment Support"
             : "Visitor Support",
-    communityTitle: "Emory Community Briefings",
-    communitySummary: "Vetted Atlanta public-health and nonprofit resources surfaced in an Emory-ready companion flow.",
-    attributionTitle: "Attribution Guardrail",
-    attributionBody: "Every briefing shows source and trust context before action.",
-    scopeTitle: "Scope Guardrail",
+    communityTitle: "Emory Community Updates",
+    communitySummary: "Atlanta public-health and nonprofit support surfaced as practical next steps for visitors and families.",
+    attributionTitle: "Next Step",
+    attributionBody: "Choose one primary action first, then continue with support options.",
+    scopeTitle: "Support Scope",
     scopeBody: "Community and location support only. Clinical coordination remains in Emory systems.",
-    federationTitle: "Federation Status",
-    federationLiveBody: "Live Atlanta source federation is active for this companion.",
-    federationSyncingBody: "Using seeded examples while Atlanta sources refresh.",
+    federationTitle: "Community Status",
+    federationLiveBody: "Community support updates are active for this hospital guide.",
+    federationSyncingBody: "Community support updates are refreshing.",
     modeNarrative: `${modeTone(mode)} ${personaProfile.focusNarrative} ${modeConfig.heroHint}`,
   };
 }

@@ -8,6 +8,7 @@ import { GooglePlaceAutocomplete } from "@/components/GooglePlaceAutocomplete";
 import { useAuth } from "@/lib/auth-context";
 import type { VenueSubmissionData } from "@/lib/types";
 import { VENUE_SUBMISSION_NEIGHBORHOODS } from "@/config/neighborhoods";
+import { DEFAULT_PORTAL_SLUG } from "@/lib/constants";
 import PageFooter from "@/components/PageFooter";
 
 const VENUE_TYPES = [
@@ -50,12 +51,26 @@ export default function SubmitVenuePage() {
     google_place_id?: string; // Field name kept for compatibility, contains Foursquare ID
     venue_id?: number;
     location?: { lat: number; lng: number };
+    website?: string;
+    category?: string;
+    categoryName?: string;
   } | null>(null);
 
   // Additional optional fields
   const [venueType, setVenueType] = useState("");
   const [neighborhood, setNeighborhood] = useState("");
   const [website, setWebsite] = useState("");
+
+  // Auto-fill fields when a Foursquare place is selected
+  useEffect(() => {
+    if (!selectedPlace?.google_place_id) return;
+    if (selectedPlace.category && !venueType) {
+      setVenueType(selectedPlace.category);
+    }
+    if (selectedPlace.website && !website) {
+      setWebsite(selectedPlace.website);
+    }
+  }, [selectedPlace]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!user) {
@@ -351,7 +366,7 @@ export default function SubmitVenuePage() {
             <div className="flex flex-wrap justify-center gap-3">
               {!editSubmissionId && autoApproved && approvedVenueSlug && (
                 <Link
-                  href={`/atlanta/spots/${approvedVenueSlug}`}
+                  href={`/${DEFAULT_PORTAL_SLUG}/spots/${approvedVenueSlug}`}
                   className="px-5 py-2.5 rounded-lg bg-[var(--coral)] text-[var(--void)] font-mono text-sm font-medium hover:bg-[var(--rose)] transition-colors"
                 >
                   View venue

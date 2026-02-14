@@ -586,6 +586,7 @@ export async function unifiedSearch(
             .from("events")
             .select("id, series_id")
             .in("series_id", seriesIds)
+            .or("is_sensitive.eq.false,is_sensitive.is.null")
         : Promise.resolve({ data: null }),
     ]);
 

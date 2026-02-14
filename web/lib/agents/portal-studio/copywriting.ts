@@ -52,6 +52,24 @@ export function getCopywritingFramework(vertical: PortalStudioVertical): PortalC
     };
   }
 
+  if (vertical === "film") {
+    return {
+      voice_system: voiceSystem.concat([
+        "Use critic-grade language with scene credibility, never generic promo voice.",
+        "Balance festival/editorial tone with practical utility for times, venues, and tickets.",
+      ]),
+      narrative_framework: [
+        "Problem frame: film communities are fragmented across venues, newsletters, and social feeds.",
+        "Resolution frame: one premium, city-wide film layer with repertory, indie, and festival context.",
+        "Proof frame: faster showtime decisions, stronger member conversion, and higher repeat visitation.",
+      ],
+      conversion_copy_patterns: conversionPatterns.concat([
+        "Primary CTA should prioritize showtimes, tickets, or membership actions.",
+        "Sponsor copy must read like programming context, not display-ad language.",
+      ]),
+    };
+  }
+
   return {
     voice_system: voiceSystem,
     narrative_framework: [
@@ -62,4 +80,3 @@ export function getCopywritingFramework(vertical: PortalStudioVertical): PortalC
     conversion_copy_patterns: conversionPatterns,
   };
 }
-

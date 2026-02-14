@@ -14,7 +14,7 @@ export type HospitalSourceGovernanceProfile = {
 const EMORY_GOVERNANCE_PROFILE: HospitalSourceGovernanceProfile = {
   id: "emory-community-v1",
   label: "Emory Community Governance",
-  portalSlugs: ["emory-demo"],
+  portalSlugs: ["emory", "emory-demo", "emory-test"],
   competitorExclusions: EMORY_COMPETITOR_EXCLUSIONS,
   minStoryScore: 2.3,
   trackSourcePolicyIds: {
@@ -23,16 +23,31 @@ const EMORY_GOVERNANCE_PROFILE: HospitalSourceGovernanceProfile = {
       "ga-dph",
       "fulton-board-health",
       "dekalb-public-health",
+      "aid-atlanta",
+      "grady-health",
+      "nami-georgia",
+      "mha-georgia",
+      "dekalb-library",
     ],
     food_support: [
       "atl-food-bank",
       "open-hand",
       "red-cross-ga",
+      "food-well-alliance",
+      "georgia-organics",
+      "giving-kitchen",
+      "united-way-atlanta",
+      "meals-on-wheels-atlanta",
     ],
     community_wellness: [
       "atl-parks",
       "ymca-atl",
       "dekalb-public-health",
+      "beltline-fitness",
+      "park-pride",
+      "hands-on-atlanta",
+      "nami-georgia",
+      "mha-georgia",
     ],
   },
 };
@@ -62,4 +77,3 @@ export function getHospitalSourceGovernanceProfile(portalSlug: string): Hospital
     ) || DEFAULT_GOVERNANCE_PROFILE
   );
 }
-

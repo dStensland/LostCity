@@ -1,15 +1,23 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import SubmitVenueModal from "@/components/SubmitVenueModal";
-import SubmitEventModal from "@/components/find/SubmitEventModal";
-import SubmitOrgModal from "@/components/find/SubmitOrgModal";
 
 interface AddNewChooserProps {
   portalSlug: string;
 }
 
 type Option = "event" | "destination" | "organization";
+
+function Spinner() {
+  return (
+    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+    </svg>
+  );
+}
 
 const OPTIONS: { key: Option; label: string; icon: React.ReactNode }[] = [
   {
@@ -43,8 +51,10 @@ const OPTIONS: { key: Option; label: string; icon: React.ReactNode }[] = [
 ];
 
 export default function AddNewChooser({ portalSlug }: AddNewChooserProps) {
+  const router = useRouter();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [activeModal, setActiveModal] = useState<Option | null>(null);
+  const [isVenueModalOpen, setIsVenueModalOpen] = useState(false);
+  const [navigatingTo, setNavigatingTo] = useState<Option | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown on click outside
@@ -81,11 +91,20 @@ export default function AddNewChooser({ portalSlug }: AddNewChooserProps) {
 
   const handleOptionClick = (option: Option) => {
     setIsDropdownOpen(false);
-    setActiveModal(option);
+    if (option === "destination") {
+      setIsVenueModalOpen(true);
+      return;
+    }
+    setNavigatingTo(option);
+    if (option === "event") {
+      router.push("/submit/event");
+      return;
+    }
+    router.push("/submit/org");
   };
 
   const closeModal = () => {
-    setActiveModal(null);
+    setIsVenueModalOpen(false);
   };
 
   return (
@@ -115,7 +134,7 @@ export default function AddNewChooser({ portalSlug }: AddNewChooserProps) {
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
-          <span className="font-mono text-xs">Submit an event or destination</span>
+          <span className="font-mono text-xs">Submit an event, destination, or organization</span>
         </button>
 
         {isDropdownOpen && (
@@ -124,9 +143,12 @@ export default function AddNewChooser({ portalSlug }: AddNewChooserProps) {
               <button
                 key={option.key}
                 onClick={() => handleOptionClick(option.key)}
-                className="flex items-center gap-3 w-full px-4 py-2.5 text-left font-mono text-sm text-[var(--cream)] hover:bg-[var(--twilight)] transition-colors"
+                disabled={navigatingTo !== null}
+                className="flex items-center gap-3 w-full px-4 py-2.5 text-left font-mono text-sm text-[var(--cream)] hover:bg-[var(--twilight)] transition-colors disabled:opacity-50"
               >
-                <span className="text-[var(--muted)]">{option.icon}</span>
+                <span className="text-[var(--muted)]">
+                  {navigatingTo === option.key ? <Spinner /> : option.icon}
+                </span>
                 {option.label}
               </button>
             ))}
@@ -136,17 +158,9 @@ export default function AddNewChooser({ portalSlug }: AddNewChooserProps) {
 
       {/* Modals */}
       <SubmitVenueModal
-        isOpen={activeModal === "destination"}
+        isOpen={isVenueModalOpen}
         onClose={closeModal}
         portalSlug={portalSlug}
-      />
-      <SubmitEventModal
-        isOpen={activeModal === "event"}
-        onClose={closeModal}
-      />
-      <SubmitOrgModal
-        isOpen={activeModal === "organization"}
-        onClose={closeModal}
       />
     </>
   );

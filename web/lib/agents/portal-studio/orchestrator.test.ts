@@ -81,4 +81,33 @@ describe("runPortalStudioOrchestration", () => {
     expect(output.blueprint.security_privacy.controls.join(" ").toLowerCase()).toContain("portal-scoped");
     expect(output.scorecard.launch_readiness_score).toBeGreaterThanOrEqual(90);
   });
+
+  it("generates film-native guidance for curation and sponsor-safe monetization", () => {
+    const output = runPortalStudioOrchestration({
+      requestId: "PS-TEST-004",
+      now,
+      portal: {
+        id: "portal-4",
+        slug: "atlanta-film",
+        name: "Atlanta Film",
+        vertical: "film",
+      },
+      session: {
+        lifecycle: "launch",
+        commercialFocus: "sales",
+        wayfindingPartner: "not_required",
+        excludedCompetitors: ["Example Cinema Chain"],
+      },
+    });
+
+    const journeys = output.blueprint.domain_experience.hero_journeys
+      .map((item) => `${item.journey} ${item.objective}`)
+      .join(" ")
+      .toLowerCase();
+
+    expect(journeys).toContain("screening");
+    expect(output.blueprint.product_ux.conversion_stack.join(" ").toLowerCase()).toContain("showtimes");
+    expect(output.quality_gates.some((gate) => gate.id === "sponsor_native_placement")).toBe(true);
+    expect(output.blueprint.copywriting.voice_system.join(" ").toLowerCase()).toContain("critic-grade");
+  });
 });

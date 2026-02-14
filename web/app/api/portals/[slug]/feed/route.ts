@@ -6,6 +6,7 @@ import { getPortalSourceAccess } from "@/lib/federation";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { errorResponse, isValidUUID } from "@/lib/api-utils";
 import { fetchSocialProofCounts } from "@/lib/search";
+import { normalizePortalSlug, resolvePortalSlugAlias } from "@/lib/portal-aliases";
 
 // Cache feed for 5 minutes at CDN, allow stale for 1 hour while revalidating
 export const revalidate = 300;
@@ -211,6 +212,8 @@ export async function GET(request: NextRequest, { params }: Props) {
   if (rateLimitResult) return rateLimitResult;
 
   const { slug } = await params;
+  const requestSlug = normalizePortalSlug(slug);
+  const canonicalSlug = resolvePortalSlugAlias(requestSlug);
   const { searchParams } = new URL(request.url);
   const sectionIds = searchParams.get("sections")?.split(",").filter(Boolean);
   const defaultLimit = parseInt(searchParams.get("limit") || "5");
@@ -220,7 +223,7 @@ export async function GET(request: NextRequest, { params }: Props) {
   let portalResult = await supabase
     .from("portals")
     .select("id, slug, name, portal_type, parent_portal_id, settings")
-    .eq("slug", slug)
+    .eq("slug", canonicalSlug)
     .eq("status", "active")
     .maybeSingle();
 
@@ -228,7 +231,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     portalResult = await supabase
       .from("portals")
       .select("id, slug, name, portal_type, settings")
-      .eq("slug", slug)
+      .eq("slug", canonicalSlug)
       .eq("status", "active")
       .maybeSingle();
   }
@@ -241,7 +244,7 @@ export async function GET(request: NextRequest, { params }: Props) {
 
   const portal = {
     id: portalData.id,
-    slug: portalData.slug,
+    slug: requestSlug,
     name: portalData.name,
     portal_type: portalData.portal_type,
     parent_portal_id: portalData.parent_portal_id ?? null,
@@ -317,9 +320,9 @@ export async function GET(request: NextRequest, { params }: Props) {
   const sections = allSections.filter((section) => {
     if (!isSectionVisible(section)) return false;
 
-    // "Outdoor Wellness" is a health-vertical block and feels out of place in
-    // general city feed experiences; keep it for hospital portals only.
-    if (section.slug === "outdoor-wellness" && portal.portal_type !== "hospital") {
+    // Health-vertical sections belong only on hospital portals, not city feeds.
+    const hospitalOnlySections = ["outdoor-wellness", "food-access-support", "public-health-resources"];
+    if (hospitalOnlySections.includes(section.slug) && portal.portal_type !== "hospital") {
       return false;
     }
 
@@ -374,7 +377,7 @@ export async function GET(request: NextRequest, { params }: Props) {
         venue:venues(id, name, neighborhood, slug)
       `)
       .in("id", Array.from(eventIds))
-      .gte("start_date", getLocalDateString())
+      .or(`start_date.gte.${getLocalDateString()},end_date.gte.${getLocalDateString()}`)
       .is("canonical_event_id", null)
       .or("is_class.eq.false,is_class.is.null") // Only show canonical non-class events
       .or("is_sensitive.eq.false,is_sensitive.is.null");
@@ -480,14 +483,14 @@ export async function GET(request: NextRequest, { params }: Props) {
     }
 
     // Calculate max events needed
-    const maxEventsNeeded = sectionsNeedingAutoEvents.reduce((sum, s) => {
+    // Per-section budget for each date bucket
+    const perBucketLimit = sectionsNeedingAutoEvents.reduce((sum, s) => {
       return sum + ((s.max_items || feedSettings.items_per_section || defaultLimit) * 2);
     }, 0);
 
-    // Fetch a pool of events that covers all sections' needs
-    let poolQuery = supabase
-      .from("events")
-      .select(`
+    // Build a base query with shared filters, then run it per date bucket
+    // so that busy days (100+ events) don't starve later dates
+    const eventSelect = `
         id,
         title,
         start_date,
@@ -517,51 +520,78 @@ export async function GET(request: NextRequest, { params }: Props) {
         ),
         source_id,
         venue:venues(id, name, neighborhood, slug)
-      `)
-      .gte("start_date", today)
-      .lte("start_date", maxEndDate)
-      .is("canonical_event_id", null)
-      .or("is_class.eq.false,is_class.is.null") // Only show canonical non-class events
-      .or("is_sensitive.eq.false,is_sensitive.is.null");
+    `;
 
-    // Apply portal filter with federation support
-    if (isExclusivePortal) {
-      if (hasSubscribedSources) {
-        // Exclusive business portal with subscriptions: portal events + subscribed sources
-        const sourceIdList = federationAccess.sourceIds.join(",");
-        poolQuery = poolQuery.or(`portal_id.eq.${portal.id},source_id.in.(${sourceIdList})`);
-      } else {
-        // Exclusive business portal without subscriptions: only portal-specific events
-        poolQuery = poolQuery.eq("portal_id", portal.id);
-      }
-    } else {
-      // City + white-label portals: public events + portal-specific events + subscribed sources
-      if (hasSubscribedSources) {
-        const sourceIdList = federationAccess.sourceIds.join(",");
-        poolQuery = poolQuery.or(`portal_id.eq.${portal.id},portal_id.is.null,source_id.in.(${sourceIdList})`);
-      } else {
-        poolQuery = poolQuery.or(`portal_id.eq.${portal.id},portal_id.is.null`);
-      }
-    }
-
-    const { data: poolEvents } = await poolQuery
-      .order("start_date", { ascending: true })
-      .order("start_time", { ascending: true })
-      .limit(Math.min(maxEventsNeeded, 200)); // Cap at 200 for safety
-
-    for (const event of (poolEvents || []) as Event[]) {
-      // Apply federation category constraints
-      // If event is from a subscribed source, check if its category is allowed
-      if (event.source_id && federationAccess.categoryConstraints.has(event.source_id)) {
-        const allowedCategories = federationAccess.categoryConstraints.get(event.source_id);
-        // null means all categories allowed, otherwise check if event category is in allowed list
-        // Note: allowedCategories could be undefined from Map.get(), but we checked .has() above
-        if (allowedCategories !== null && allowedCategories !== undefined && event.category && !allowedCategories.includes(event.category)) {
-          continue; // Skip events from sources where this category isn't allowed
+    const applyPortalFilter = (query: ReturnType<typeof supabase.from>) => {
+      if (isExclusivePortal) {
+        if (hasSubscribedSources) {
+          const sourceIdList = federationAccess.sourceIds.join(",");
+          return query.or(`portal_id.eq.${portal.id},source_id.in.(${sourceIdList})`);
         }
+        return query.eq("portal_id", portal.id);
       }
-      autoEventPool.set(event.id, event);
-    }
+      if (hasSubscribedSources) {
+        const sourceIdList = federationAccess.sourceIds.join(",");
+        return query.or(`portal_id.eq.${portal.id},portal_id.is.null,source_id.in.(${sourceIdList})`);
+      }
+      return query.or(`portal_id.eq.${portal.id},portal_id.is.null`);
+    };
+
+    // Date bucket boundaries
+    const dayOfWeek = new Date().getDay();
+    const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
+    const endOfWeekDate = new Date();
+    endOfWeekDate.setDate(endOfWeekDate.getDate() + daysUntilSunday);
+    const endOfWeekStr = getLocalDateString(endOfWeekDate);
+    const tomorrowDate = new Date();
+    tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+    const tomorrowStr = getLocalDateString(tomorrowDate);
+
+    // Run 3 queries in parallel: today, rest of week, rest of month
+    const buildBucketQuery = (startDate: string, endDate: string, limit: number) => {
+      let q = supabase
+        .from("events")
+        .select(eventSelect)
+        .gte("start_date", startDate)
+        .lte("start_date", endDate)
+        .is("canonical_event_id", null)
+        .or("is_class.eq.false,is_class.is.null")
+        .or("is_sensitive.eq.false,is_sensitive.is.null");
+      q = applyPortalFilter(q);
+      return q
+        .order("start_date", { ascending: true })
+        .order("start_time", { ascending: true })
+        .limit(limit);
+    };
+
+    const [todayResult, weekResult, laterResult] = await Promise.all([
+      buildBucketQuery(today, today, perBucketLimit),
+      daysUntilSunday > 0
+        ? buildBucketQuery(tomorrowStr, endOfWeekStr, perBucketLimit)
+        : Promise.resolve({ data: [] as Event[] }),
+      buildBucketQuery(
+        getLocalDateString(new Date(endOfWeekDate.getTime() + 86400000)),
+        maxEndDate,
+        perBucketLimit
+      ),
+    ]);
+
+    // Merge all buckets into the pool
+    const addToPool = (events: Event[]) => {
+      for (const event of events) {
+        if (event.source_id && federationAccess.categoryConstraints.has(event.source_id)) {
+          const allowedCategories = federationAccess.categoryConstraints.get(event.source_id);
+          if (allowedCategories !== null && allowedCategories !== undefined && event.category && !allowedCategories.includes(event.category)) {
+            continue;
+          }
+        }
+        autoEventPool.set(event.id, event);
+      }
+    };
+
+    addToPool((todayResult.data || []) as Event[]);
+    addToPool(((weekResult as { data: Event[] | null }).data || []) as Event[]);
+    addToPool((laterResult.data || []) as Event[]);
 
     // Supplemental query: explicitly pull from constrained sources/venues so those
     // sections always have a fair candidate pool before section-level filtering.
@@ -599,7 +629,7 @@ export async function GET(request: NextRequest, { params }: Props) {
           source_id,
           venue:venues(id, name, neighborhood, slug)
         `)
-        .gte("start_date", today)
+        .or(`start_date.gte.${today},end_date.gte.${today}`) // Include ongoing events (exhibitions)
         .lte("start_date", maxEndDate)
         .is("canonical_event_id", null)
         .or("is_class.eq.false,is_class.is.null")
@@ -1101,7 +1131,44 @@ export async function GET(request: NextRequest, { params }: Props) {
           break;
       }
 
-      events = filtered.slice(0, limit);
+      // Distribute events across progressive date buckets (today / this week / later)
+      // so one busy day doesn't monopolize the entire section
+      if (limit >= 8 && filtered.length > limit) {
+        const todayStr = getLocalDateString();
+        const dayOfWeek = new Date().getDay();
+        const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
+        const endOfWeekDate = new Date();
+        endOfWeekDate.setDate(endOfWeekDate.getDate() + daysUntilSunday);
+        const endOfWeekStr = getLocalDateString(endOfWeekDate);
+
+        const todayPool = filtered.filter(e => e.start_date === todayStr);
+        const weekPool = filtered.filter(e => e.start_date > todayStr && e.start_date <= endOfWeekStr);
+        const laterPool = filtered.filter(e => e.start_date > endOfWeekStr);
+
+        // Budget: today gets half, week and later split the rest
+        const todayBudget = Math.min(todayPool.length, Math.ceil(limit / 2));
+        const remaining = limit - todayBudget;
+        const weekBudget = Math.min(weekPool.length, Math.ceil(remaining / 2));
+        const laterBudget = Math.min(laterPool.length, remaining - weekBudget);
+
+        // Fill any unused budget from other buckets
+        let result = [
+          ...todayPool.slice(0, todayBudget),
+          ...weekPool.slice(0, weekBudget),
+          ...laterPool.slice(0, laterBudget),
+        ];
+
+        // If we have room left, backfill from whichever buckets have more
+        if (result.length < limit) {
+          const used = new Set(result.map(e => e.id));
+          const backfill = filtered.filter(e => !used.has(e.id));
+          result = [...result, ...backfill.slice(0, limit - result.length)];
+        }
+
+        events = result;
+      } else {
+        events = filtered.slice(0, limit);
+      }
 
       // For mixed sections, also add curated items at the top
       if (section.section_type === "mixed") {

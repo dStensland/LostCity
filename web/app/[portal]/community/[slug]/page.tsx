@@ -90,6 +90,7 @@ const getOrganizationEvents = unstable_cache(
       `)
       .eq("organization_id", organizationId)
       .gte("start_date", today)
+      .or("is_sensitive.eq.false,is_sensitive.is.null")
       .order("start_date", { ascending: true })
       .order("start_time", { ascending: true })
       .limit(50);

@@ -13,6 +13,7 @@ export interface Artist {
   image_url: string | null;
   genres: string[] | null;
   hometown: string | null;
+  website: string | null;
   spotify_id: string | null;
   musicbrainz_id: string | null;
   wikidata_id: string | null;

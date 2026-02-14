@@ -3,6 +3,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { getUser } from "@/lib/supabase/server";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { checkBodySize, isValidEnum } from "@/lib/api-utils";
+import { resolvePortalSlugAlias } from "@/lib/portal-aliases";
 
 const VALID_SHARE_METHODS = ["native", "clipboard", "unknown"] as const;
 
@@ -17,6 +18,7 @@ export async function POST(
   if (sizeCheck) return sizeCheck;
 
   const { slug } = await params;
+  const canonicalSlug = resolvePortalSlugAlias(slug);
   let body: { event_id?: unknown; method?: unknown };
 
   try {
@@ -40,7 +42,7 @@ export async function POST(
   const { data: portal } = await supabase
     .from("portals")
     .select("id")
-    .eq("slug", slug)
+    .eq("slug", canonicalSlug)
     .eq("status", "active")
     .maybeSingle();
 

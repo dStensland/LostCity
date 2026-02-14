@@ -25,6 +25,7 @@ type RawEventArtist = {
     image_url: string | null;
     genres: string[] | null;
     hometown: string | null;
+    website: string | null;
     spotify_id: string | null;
     musicbrainz_id: string | null;
     wikidata_id: string | null;
@@ -43,6 +44,7 @@ type RawArtistEvent = {
     start_time: string | null;
     category: string | null;
     image_url: string | null;
+    is_sensitive: boolean | null;
     venues: {
       id: number;
       name: string;
@@ -59,7 +61,7 @@ export async function getArtistBySlug(slug: string): Promise<Artist | null> {
 
   const { data, error } = await supabase
     .from("artists")
-    .select("id, name, slug, discipline, bio, image_url, genres, hometown, spotify_id, musicbrainz_id, wikidata_id, created_at")
+    .select("id, name, slug, discipline, bio, image_url, genres, hometown, website, spotify_id, musicbrainz_id, wikidata_id, created_at")
     .eq("slug", slug)
     .maybeSingle();
 
@@ -83,7 +85,7 @@ export async function getEventArtists(eventId: number): Promise<EventArtist[]> {
       billing_order,
       is_headliner,
       artists (
-        id, name, slug, discipline, bio, image_url, genres, hometown,
+        id, name, slug, discipline, bio, image_url, genres, hometown, website,
         spotify_id, musicbrainz_id, wikidata_id, created_at
       )
     `)
@@ -129,7 +131,8 @@ export async function getFestivalArtists(festivalId: string): Promise<EventArtis
     .from("events")
     .select("id")
     .in("series_id", seriesIds)
-    .gte("start_date", today);
+    .gte("start_date", today)
+    .or("is_sensitive.eq.false,is_sensitive.is.null");
 
   if (eventError || !eventData || eventData.length === 0) {
     return [];
@@ -148,7 +151,7 @@ export async function getFestivalArtists(festivalId: string): Promise<EventArtis
       billing_order,
       is_headliner,
       artists (
-        id, name, slug, discipline, bio, image_url, genres, hometown,
+        id, name, slug, discipline, bio, image_url, genres, hometown, website,
         spotify_id, musicbrainz_id, wikidata_id, created_at
       )
     `)
@@ -202,6 +205,7 @@ export async function getArtistEvents(
         start_time,
         category,
         image_url,
+        is_sensitive,
         venues (
           id, name, slug, neighborhood
         )
@@ -220,6 +224,7 @@ export async function getArtistEvents(
 
   return (data as RawArtistEvent[])
     .filter((row) => row.events != null)
+    .filter((row) => !row.events!.is_sensitive)
     .filter((row) => !today || row.events!.start_date >= today)
     .map((row) => ({
       id: row.events!.id,
@@ -255,7 +260,8 @@ export async function getArtistFestivals(artistId: string): Promise<ArtistFestiv
     .from("events")
     .select("series_id")
     .in("id", eventIds)
-    .not("series_id", "is", null);
+    .not("series_id", "is", null)
+    .or("is_sensitive.eq.false,is_sensitive.is.null");
 
   if (evError || !events || events.length === 0) {
     return [];

@@ -14,6 +14,12 @@ const STATUS_LABELS: Record<SubmissionStatus, { label: string; color: string }> 
   rejected: { label: "Not Approved", color: "red" },
   needs_edit: { label: "Needs Changes", color: "orange" },
 };
+const STATUS_BADGE_CLASSES: Record<SubmissionStatus, string> = {
+  pending: "bg-yellow-500/20 text-yellow-400",
+  approved: "bg-green-500/20 text-green-400",
+  rejected: "bg-red-500/20 text-red-400",
+  needs_edit: "bg-orange-500/20 text-orange-400",
+};
 const STATUS_FILTERS: SubmissionStatus[] = ["pending", "approved", "rejected", "needs_edit"];
 
 const TYPE_LABELS: Record<SubmissionType, string> = {
@@ -289,6 +295,8 @@ export default function UserSubmissionsPage() {
               const data = submission.data as { title?: string; name?: string };
               const title = data.title || data.name || "Untitled";
               const statusInfo = STATUS_LABELS[submission.status as SubmissionStatus];
+              const statusBadgeClass = STATUS_BADGE_CLASSES[submission.status as SubmissionStatus]
+                || "bg-[var(--twilight)] text-[var(--muted)]";
 
               return (
                 <div
@@ -298,7 +306,7 @@ export default function UserSubmissionsPage() {
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className={`px-2 py-0.5 rounded text-xs font-mono bg-${statusInfo.color}-500/20 text-${statusInfo.color}-400`}>
+                        <span className={`px-2 py-0.5 rounded text-xs font-mono ${statusBadgeClass}`}>
                           {statusInfo.label}
                         </span>
                         <span className="px-2 py-0.5 rounded text-xs font-mono bg-[var(--twilight)] text-[var(--muted)]">

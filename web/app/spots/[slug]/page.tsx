@@ -1,4 +1,5 @@
 import { permanentRedirect } from "next/navigation";
+import { DEFAULT_PORTAL_SLUG } from "@/lib/constants";
 
 export default async function SpotPage({
   params
@@ -6,5 +7,5 @@ export default async function SpotPage({
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params;
-  permanentRedirect(`/atlanta/spots/${slug}`);
+  permanentRedirect(`/${DEFAULT_PORTAL_SLUG}/spots/${slug}`);
 }

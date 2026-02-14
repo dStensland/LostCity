@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
-import { errorResponse, isValidUUID } from "@/lib/api-utils";
+import { errorResponse, isValidString, isValidUUID } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
+import { getLocalDateString } from "@/lib/formats";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -186,7 +187,7 @@ export async function PUT(request: NextRequest, { params }: Props) {
   // Check if submission exists and belongs to user
   const { data: existingData, error: fetchError } = await supabase
     .from("submissions")
-    .select("id, submitted_by, status")
+    .select("id, submitted_by, status, submission_type")
     .eq("id", id)
     .maybeSingle();
 
@@ -194,7 +195,12 @@ export async function PUT(request: NextRequest, { params }: Props) {
     return NextResponse.json({ error: "Submission not found" }, { status: 404 });
   }
 
-  const existing = existingData as { id: string; submitted_by: string; status: string };
+  const existing = existingData as {
+    id: string;
+    submitted_by: string;
+    status: string;
+    submission_type: "event" | "venue" | "producer" | "organization";
+  };
 
   // Only owner can update
   if (existing.submitted_by !== user.id) {
@@ -216,6 +222,10 @@ export async function PUT(request: NextRequest, { params }: Props) {
   const updates: Record<string, unknown> = {};
 
   if (data !== undefined) {
+    const validationError = validateUpdatedSubmissionData(existing.submission_type, data);
+    if (validationError) {
+      return NextResponse.json({ error: validationError }, { status: 400 });
+    }
     updates.data = data;
     updates.status = "pending"; // Reset to pending if data changed
   }
@@ -293,4 +303,64 @@ export async function DELETE(request: NextRequest, { params }: Props) {
   }
 
   return NextResponse.json({ success: true, message: "Submission deleted" });
+}
+
+function validateUpdatedSubmissionData(
+  submissionType: "event" | "venue" | "producer" | "organization",
+  data: unknown
+): string | null {
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    return "Missing or invalid data object";
+  }
+
+  if (submissionType === "event") {
+    const eventData = data as {
+      title?: unknown;
+      start_date?: unknown;
+      venue_id?: unknown;
+      venue?: unknown;
+    };
+
+    if (!isValidString(eventData.title, 3, 200)) {
+      return "Event title is required (3-200 characters)";
+    }
+
+    if (!isValidString(eventData.start_date, 10, 10) || !/^\d{4}-\d{2}-\d{2}$/.test(eventData.start_date)) {
+      return "Invalid start_date format. Use YYYY-MM-DD";
+    }
+
+    if (eventData.start_date < getLocalDateString()) {
+      return "Event start_date cannot be in the past";
+    }
+
+    const hasVenueId = typeof eventData.venue_id === "number" && Number.isInteger(eventData.venue_id) && eventData.venue_id > 0;
+    const venueName = (
+      eventData.venue &&
+      typeof eventData.venue === "object" &&
+      "name" in eventData.venue
+    )
+      ? (eventData.venue as { name?: unknown }).name
+      : undefined;
+    const hasInlineVenueName = isValidString(venueName, 1, 200);
+
+    if (!hasVenueId && !hasInlineVenueName) {
+      return "Event must have a venue_id or venue name";
+    }
+
+    return null;
+  }
+
+  if (submissionType === "venue") {
+    const venueData = data as { name?: unknown };
+    if (!isValidString(venueData.name, 2, 200)) {
+      return "Venue name is required (2-200 characters)";
+    }
+    return null;
+  }
+
+  const producerData = data as { name?: unknown };
+  if (!isValidString(producerData.name, 2, 200)) {
+    return "Organization name is required (2-200 characters)";
+  }
+  return null;
 }

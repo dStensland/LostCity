@@ -86,12 +86,10 @@ export default async function RootLayout({
       <head>
         <meta name="csp-nonce" content={nonce} />
         <script
-          nonce={nonce}
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: safeJsonLd(organizationSchema) }}
         />
         <script
-          nonce={nonce}
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: safeJsonLd(websiteSchema) }}
         />

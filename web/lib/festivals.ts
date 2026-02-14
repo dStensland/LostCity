@@ -165,6 +165,7 @@ export async function getFestivalEvents(
       category,
       image_url,
       series_id,
+      is_all_day,
       venues (
         id,
         name,
@@ -173,6 +174,8 @@ export async function getFestivalEvents(
       )
     `)
     .in("series_id", seriesIds)
+    // Hide TBA events (no start_time, not all-day)
+    .or("start_time.not.is.null,is_all_day.eq.true")
     .order("start_date", { ascending: true })
     .order("start_time", { ascending: true });
 
@@ -206,6 +209,8 @@ export async function getAllFestivals(portalId?: string): Promise<Festival[]> {
   let query = supabase
     .from("festivals")
     .select("*")
+    // Only show festivals with confirmed dates — no TBA/unconfirmed
+    .not("announced_start", "is", null)
     .order("announced_start", { ascending: true, nullsFirst: false });
 
   if (portalId) {
@@ -218,7 +223,27 @@ export async function getAllFestivals(portalId?: string): Promise<Festival[]> {
     return [];
   }
 
-  return data as Festival[];
+  // Defense-in-depth: filter out bad data at query time
+  const currentYear = new Date().getFullYear();
+
+  return (data as Festival[]).filter((f) => {
+    // Reject stale dates from past years
+    if (f.announced_start) {
+      const startYear = parseInt(f.announced_start.substring(0, 4));
+      if (startYear < currentYear) return false;
+    }
+
+    // Reject absurd durations (>60 days) unless typical_duration is also long
+    if (f.announced_start && f.announced_end) {
+      const startMs = new Date(f.announced_start).getTime();
+      const endMs = new Date(f.announced_end).getTime();
+      const days = (endMs - startMs) / (1000 * 60 * 60 * 24);
+      if (days > 60 && (f.typical_duration_days ?? 0) < 30) return false;
+      if (days < 0) return false; // end before start
+    }
+
+    return true;
+  });
 }
 
 export function groupEventsByDay(sessions: FestivalSession[]): Map<string, FestivalSession[]> {

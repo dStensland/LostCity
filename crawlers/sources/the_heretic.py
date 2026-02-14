@@ -19,7 +19,7 @@ from utils import extract_images_from_page, extract_event_links, find_event_url
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = "https://www.heretic.com"
+BASE_URL = "https://www.hereticatlanta.com"
 EVENTS_URL = f"{BASE_URL}/events"
 
 VENUE_DATA = {
@@ -35,6 +35,7 @@ VENUE_DATA = {
     "venue_type": "nightclub",
     "spot_type": "nightclub",
     "website": BASE_URL,
+    "vibes": ["lgbtq", "gay-club", "dancing", "dj", "drag", "late-night"],
 }
 
 

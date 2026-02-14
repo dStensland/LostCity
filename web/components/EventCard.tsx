@@ -5,7 +5,7 @@ import type { CSSProperties } from "react";
 import Link from "next/link";
 import type { Event } from "@/lib/supabase";
 import { AvatarStack } from "./UserAvatar";
-import { decodeHtmlEntities, formatTimeSplit, formatSmartDate, formatPriceDetailed, formatCompactCount, formatTime } from "@/lib/formats";
+import { decodeHtmlEntities, formatTimeSplit, formatSmartDate, formatPriceDetailed, formatCompactCount, formatTime, formatExhibitionDate } from "@/lib/formats";
 import CategoryIcon, { getCategoryColor, getCategoryLabel, CATEGORY_CONFIG, type CategoryType } from "./CategoryIcon";
 import { getReflectionClass, isTicketingUrl, getLinkOutLabel, getSmartDateLabel, getFeedEventStatus } from "@/lib/card-utils";
 import { LiveBadge, SoonBadge, FreeBadge } from "./Badge";
@@ -127,7 +127,18 @@ function EventCard({
   density = "comfortable",
 }: Props) {
   const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
-  const dateInfo = formatSmartDate(event.start_date);
+  // Use exhibition date formatting for multi-week exhibitions (>7 day duration with end_date)
+  const dateInfo = (() => {
+    if (event.end_date) {
+      const start = new Date(event.start_date + "T00:00:00");
+      const end = new Date(event.end_date + "T00:00:00");
+      const durationDays = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
+      if (durationDays > 7) {
+        return formatExhibitionDate(event.start_date, event.end_date);
+      }
+    }
+    return formatSmartDate(event.start_date);
+  })();
   const isLive = event.is_live || false;
   // Only apply stagger animation to first 10 initial items, not infinite scroll items
   const staggerClass = !skipAnimation && index < 10 ? `stagger-${index + 1}` : "";

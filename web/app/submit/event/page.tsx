@@ -10,6 +10,7 @@ import OrganizationAutocomplete from "@/components/OrganizationAutocomplete";
 import { useAuth } from "@/lib/auth-context";
 import type { EventSubmissionData, VenueSubmissionData } from "@/lib/types";
 import { VENUE_SUBMISSION_NEIGHBORHOODS } from "@/config/neighborhoods";
+import { getLocalDateString } from "@/lib/formats";
 import PageFooter from "@/components/PageFooter";
 
 const EVENT_CATEGORIES = [
@@ -109,7 +110,7 @@ export default function SubmitEventPage() {
     [tagsInput]
   );
 
-  const minDate = useMemo(() => new Date().toISOString().split("T")[0], []);
+  const minDate = useMemo(() => getLocalDateString(), []);
 
   useEffect(() => {
     if (!user) {

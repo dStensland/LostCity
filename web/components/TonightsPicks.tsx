@@ -187,7 +187,7 @@ export default function TonightsPicks({ portalSlug }: { portalSlug?: string } = 
   const heroCategory = heroEvent?.category || "other";
 
   return (
-    <section className="-mx-4 px-4 relative overflow-hidden">
+    <section className="-mx-4 px-4 relative overflow-hidden rounded-[1.35rem] picks-atmosphere-shell">
       {/* Atmospheric background glow */}
       <div
         data-category={heroCategory}
@@ -214,7 +214,7 @@ export default function TonightsPicks({ portalSlug }: { portalSlug?: string } = 
               href={portalSlug ? `/${portalSlug}?event=${heroEvent.id}` : `/events/${heroEvent.id}`}
               scroll={false}
               data-category={heroCategory}
-              className="block relative rounded-[1.35rem] overflow-hidden group card-atmospheric card-hero transition-transform duration-300 hover:scale-[1.01] glow-category will-change-transform"
+              className="block relative rounded-[1.35rem] overflow-hidden group card-atmospheric card-hero picks-hero-card transition-transform duration-300 hover:scale-[1.01] glow-category will-change-transform"
             >
               {/* Background - using native img to support any image host */}
               {heroEvent.image_url ? (
@@ -325,7 +325,7 @@ export default function TonightsPicks({ portalSlug }: { portalSlug?: string } = 
                 <Link
                   key={event.id}
                   href={eventHref}
-                  className={`relative overflow-hidden rounded-xl border transition-all text-left group card-atmospheric min-w-[9.5rem] snap-start sm:min-w-0 sm:w-auto ${
+                  className={`relative overflow-hidden rounded-xl border transition-all text-left group card-atmospheric picks-preview-card min-w-[9.5rem] snap-start sm:min-w-0 sm:w-auto ${
                     index === safeHeroIndex
                       ? "border-[var(--neon-magenta)]/70 shadow-[0_0_18px_rgba(255,85,170,0.35)]"
                       : "border-[var(--twilight)] hover:border-[var(--neon-magenta)]/40"

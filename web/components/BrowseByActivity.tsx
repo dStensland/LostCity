@@ -510,8 +510,8 @@ function CategoryCard({
         <CategoryIcon
           type={activity.iconType}
           size={18}
-          glow="subtle"
-          className="text-[var(--category-color)]"
+          glow="intense"
+          className="text-[var(--category-color)] neon-mood-icon"
         />
       </div>
 
@@ -580,8 +580,8 @@ function ExpandedCategoryPanel({
           <CategoryIcon
             type={activity.iconType}
             size={18}
-            glow="subtle"
-            className="text-[var(--category-color)]"
+            glow="default"
+            className="text-[var(--category-color)] neon-mood-icon"
           />
         </div>
         <div className="flex-1 min-w-0">

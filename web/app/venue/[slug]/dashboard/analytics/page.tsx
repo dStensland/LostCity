@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
+import { getLocalDateString } from "@/lib/formats";
+import { DEFAULT_PORTAL_SLUG } from "@/lib/constants";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -52,7 +54,7 @@ export default async function VenueAnalyticsPage({ params }: Props) {
             You do not have permission to view analytics for this venue.
           </p>
           <Link
-            href={`/atlanta/spots/${slug}`}
+            href={`/${DEFAULT_PORTAL_SLUG}/spots/${slug}`}
             className="text-[var(--coral)] hover:underline"
           >
             View venue page
@@ -67,7 +69,7 @@ export default async function VenueAnalyticsPage({ params }: Props) {
     .from("events")
     .select("*", { count: "exact", head: true })
     .eq("venue_id", venue.id)
-    .gte("start_date", new Date().toISOString().split("T")[0]);
+    .gte("start_date", getLocalDateString());
 
   const { count: totalEvents } = await supabase
     .from("events")

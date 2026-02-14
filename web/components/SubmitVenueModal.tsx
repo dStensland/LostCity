@@ -53,10 +53,24 @@ export default function SubmitVenueModal({ isOpen, onClose, portalSlug = "atlant
     google_place_id?: string;
     venue_id?: number;
     location?: { lat: number; lng: number };
+    website?: string;
+    category?: string;
+    categoryName?: string;
   } | null>(null);
   const [venueType, setVenueType] = useState("");
   const [neighborhood, setNeighborhood] = useState("");
   const [website, setWebsite] = useState("");
+
+  // Auto-fill fields when a Foursquare place is selected
+  useEffect(() => {
+    if (!selectedPlace?.google_place_id) return;
+    if (selectedPlace.category && !venueType) {
+      setVenueType(selectedPlace.category);
+    }
+    if (selectedPlace.website && !website) {
+      setWebsite(selectedPlace.website);
+    }
+  }, [selectedPlace]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const resetForm = useCallback(() => {
     setSelectedPlace(null);

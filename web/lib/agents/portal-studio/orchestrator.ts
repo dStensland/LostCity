@@ -117,6 +117,23 @@ function createVerticalJourneys(vertical: PortalStudioVertical, wayfindingPartne
     ];
   }
 
+  if (vertical === "film") {
+    return [
+      {
+        journey: "Tonight intent -> best screening in two taps",
+        objective: "Collapse fragmented showtimes into one high-confidence decision layer.",
+      },
+      {
+        journey: "Cinephile mode -> repertory + indie depth",
+        objective: "Surface curatorial context around venues, series, and special runs.",
+      },
+      {
+        journey: "Community mode -> festival, membership, and partner conversion",
+        objective: "Convert discovery sessions into ticketing, memberships, and sponsor actions.",
+      },
+    ];
+  }
+
   return [
     {
       journey: "Intent selection -> focused feed",
@@ -150,6 +167,14 @@ function createServiceLayers(vertical: PortalStudioVertical): string[] {
       "Membership / VIP policy overlays",
     ];
   }
+  if (vertical === "film") {
+    return [
+      "Unified showtimes intelligence across partner cinemas",
+      "Festival and repertory programming overlays",
+      "Venue and neighborhood context for confidence-to-go decisions",
+      "Membership, sponsor, and partner conversion surfaces",
+    ];
+  }
   return [
     "Federated local content feed",
     "Intent-aware discovery and filtering",
@@ -180,7 +205,110 @@ function defaultVisualRules(vertical: PortalStudioVertical): string[] {
     ]);
   }
 
+  if (vertical === "film") {
+    return base.concat([
+      "Use an editorial cinema rhythm: strong title hierarchy, restrained copy, and poster-led modules.",
+      "Sponsor surfaces must be native to programming context, never banner-like interruptions.",
+      "Keep showtime decisions above the fold with confidence markers and venue context.",
+    ]);
+  }
+
   return base;
+}
+
+function designDirectionForVertical(portalName: string, vertical: PortalStudioVertical): string {
+  if (vertical === "film") {
+    return `${portalName} signature system: cinematic editorial tone, festival-grade curation, and sponsor-native utility.`;
+  }
+  if (vertical === "hotel") {
+    return `${portalName} signature system: cinematic depth, concierge polish, and conversion-safe luxury pacing.`;
+  }
+  if (vertical === "hospital") {
+    return `${portalName} signature system: clinical calm, operational clarity, and trust-first action framing.`;
+  }
+  return `${portalName} signature system: editorial precision, premium utility, brand-native trust.`;
+}
+
+function conversionStackForVertical(vertical: PortalStudioVertical): string[] {
+  if (vertical === "film") {
+    return [
+      "Primary action rail with showtimes, tickets, and save-to-calendar semantics.",
+      "Program context blocks that connect screenings to venue identity and series arcs.",
+      "Sponsor and partner modules mapped to conversion-safe placements.",
+    ];
+  }
+
+  return [
+    "Primary action rail with booking/directions/services semantics.",
+    "Mode-aware routing (visitor/patient/staff or guest/intent).",
+    "Context panel with objective + trust guardrail + partner integration state.",
+  ];
+}
+
+function requiredStatesForVertical(vertical: PortalStudioVertical): string[] {
+  if (vertical === "film") {
+    return [
+      "When live showtimes fail, portal still serves curated programming without dead-end states.",
+      "Late-night handling prioritizes currently playing and next-available screenings.",
+      "Sponsor modules degrade gracefully and never block discovery or core actions.",
+    ];
+  }
+
+  return [
+    "Loading, empty, and degraded data states preserve trust and usability.",
+    "Late-hour state shifts prioritize open-now and operationally available options.",
+    "Fallback path remains available when partner integrations are unavailable.",
+  ];
+}
+
+function launchHypothesesForVertical(vertical: PortalStudioVertical): Array<{ hypothesis: string; proof_metric: string }> {
+  if (vertical === "film") {
+    return [
+      {
+        hypothesis: "Showtime-first hero composition increases ticket-intent clicks compared with feed-first landing.",
+        proof_metric: "Showtime CTA click-through and downstream ticket-domain outbound rate.",
+      },
+      {
+        hypothesis: "Visible provenance and curation labels increase confidence for independent venue discovery.",
+        proof_metric: "Detail-view open rate and return session rate on film-mode journeys.",
+      },
+      {
+        hypothesis: "Native sponsor placements outperform interruptive ad formats on partner conversion quality.",
+        proof_metric: "Sponsor CTA conversion rate and sponsor-driven repeat session share.",
+      },
+    ];
+  }
+
+  return [
+    {
+      hypothesis: "Action-first IA improves primary CTA conversion versus baseline feed browsing.",
+      proof_metric: "Primary CTA click-through rate and completion depth.",
+    },
+    {
+      hypothesis: "Visible provenance increases trust-driven repeat usage.",
+      proof_metric: "7-day return rate among users exposed to provenance labels.",
+    },
+    {
+      hypothesis: "Mode-aware flows reduce time-to-right-action in high-stress contexts.",
+      proof_metric: "Median time-to-first-successful action by mode.",
+    },
+  ];
+}
+
+function demoProofPointsForVertical(vertical: PortalStudioVertical): string[] {
+  if (vertical === "film") {
+    return [
+      "Film-native design system with editorial hierarchy and showtime-first clarity.",
+      "Cross-venue curation with provenance labels on every decision-critical surface.",
+      "Sponsor modules that feel like programming partnerships, not ad inventory.",
+    ];
+  }
+
+  return [
+    "Brand-native art direction system mapped to customer visual identity.",
+    "Domain-specialized concierge flows with measurable action completion gains.",
+    "Security and scale architecture that supports enterprise rollout confidence.",
+  ];
 }
 
 function nonGoals(): string[] {
@@ -321,6 +449,15 @@ function qualityGates(vertical: PortalStudioVertical): PortalStudioQualityGate[]
     });
   }
 
+  if (vertical === "film") {
+    base.push({
+      id: "sponsor_native_placement",
+      title: "Sponsor-native placement",
+      pass_criteria: "Partner surfaces read as programming context and never as intrusive ad units.",
+      severity: "high",
+    });
+  }
+
   return base;
 }
 
@@ -406,7 +543,7 @@ export function runPortalStudioOrchestration(input: PortalStudioInput): PortalSt
     active_agents: AGENT_LIBRARY,
     blueprint: {
       art_direction: {
-        design_direction: `${portal.name} signature system: editorial precision, premium utility, brand-native trust.`,
+        design_direction: designDirectionForVertical(portal.name, portal.vertical),
         visual_rules: defaultVisualRules(portal.vertical),
         anti_patterns: [
           "Generic template UI that looks interchangeable between portals.",
@@ -421,16 +558,8 @@ export function runPortalStudioOrchestration(input: PortalStudioInput): PortalSt
       },
       product_ux: {
         navigation_model: "Action-first triad: Feed, Find, Community with vertical-specific companion layers.",
-        conversion_stack: [
-          "Primary action rail with booking/directions/services semantics.",
-          "Mode-aware routing (visitor/patient/staff or guest/intent).",
-          "Context panel with objective + trust guardrail + partner integration state.",
-        ],
-        required_states: [
-          "Loading, empty, and degraded data states preserve trust and usability.",
-          "Late-hour state shifts prioritize open-now and operationally available options.",
-          "Fallback path remains available when partner integrations are unavailable.",
-        ],
+        conversion_stack: conversionStackForVertical(portal.vertical),
+        required_states: requiredStatesForVertical(portal.vertical),
       },
       copywriting: getCopywritingFramework(portal.vertical),
       content_curation: {
@@ -487,20 +616,7 @@ export function runPortalStudioOrchestration(input: PortalStudioInput): PortalSt
           : session.commercialFocus === "operations"
             ? "Successful action completion under 10 seconds"
             : "High-confidence action CTR per session",
-        launch_hypotheses: [
-          {
-            hypothesis: "Action-first IA improves primary CTA conversion versus baseline feed browsing.",
-            proof_metric: "Primary CTA click-through rate and completion depth.",
-          },
-          {
-            hypothesis: "Visible provenance increases trust-driven repeat usage.",
-            proof_metric: "7-day return rate among users exposed to provenance labels.",
-          },
-          {
-            hypothesis: "Mode-aware flows reduce time-to-right-action in high-stress contexts.",
-            proof_metric: "Median time-to-first-successful action by mode.",
-          },
-        ],
+        launch_hypotheses: launchHypothesesForVertical(portal.vertical),
         dashboard_modules: [
           "Conversion action rail performance by mode and target kind.",
           "Attribution compliance and source quality distribution.",
@@ -515,9 +631,7 @@ export function runPortalStudioOrchestration(input: PortalStudioInput): PortalSt
           "Connect engagement and conversion data directly to enterprise buyer outcomes.",
         ],
         demo_proof_points: [
-          "Brand-native art direction system mapped to customer visual identity.",
-          "Domain-specialized concierge flows with measurable action completion gains.",
-          "Security and scale architecture that supports enterprise rollout confidence.",
+          ...demoProofPointsForVertical(portal.vertical),
         ],
       },
     },

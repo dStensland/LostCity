@@ -60,6 +60,7 @@ export type HospitalLandingData = {
     food: HospitalNearbyVenue[];
     stay: HospitalNearbyVenue[];
     late: HospitalNearbyVenue[];
+    essentials: HospitalNearbyVenue[];
   };
 };
 
@@ -68,7 +69,7 @@ type HospitalNearbyCategory = keyof HospitalLandingData["nearby"];
 export type HospitalWayfindingDestination = {
   id: string;
   name: string;
-  category: "hospital" | "food" | "stay" | "late";
+  category: "hospital" | "food" | "stay" | "late" | "essentials";
   address: string | null;
   lat: number | null;
   lng: number | null;
@@ -99,6 +100,7 @@ export type HospitalWayfindingPayload = {
     food: HospitalWayfindingDestination[];
     stay: HospitalWayfindingDestination[];
     late: HospitalWayfindingDestination[];
+    essentials: HospitalWayfindingDestination[];
   };
 };
 
@@ -134,7 +136,8 @@ const STAY_VENUE_TYPES = new Set([
   "hotel",
 ]);
 
-const LATE_FRIENDLY_KEYWORDS = /pharmacy|cvs|walgreens|market|diner|grill|coffee|cafe/i;
+const LATE_FRIENDLY_KEYWORDS = /pharmacy|cvs|walgreens|\bmarket\b|diner|grill|coffee|cafe/i;
+const ESSENTIAL_KEYWORDS = /laundry|laundromat|pharmacy|\bmarket\b|grocery|target|walgreens|cvs|\bups\b|fedex|urgent care/i;
 
 function isTableMissing(message: string | undefined): boolean {
   if (!message) return false;
@@ -187,6 +190,14 @@ function isLateFriendlyVenue(venue: VenueCandidate): boolean {
   return isFoodVenue(venue) || isStayVenue(venue) || LATE_FRIENDLY_KEYWORDS.test(venue.name);
 }
 
+function isEssentialVenue(venue: VenueCandidate): boolean {
+  const type = (venue.venue_type || "").toLowerCase();
+  if (type === "pharmacy" || type === "market" || type === "grocery" || type === "urgent_care") {
+    return true;
+  }
+  return ESSENTIAL_KEYWORDS.test(venue.name);
+}
+
 function isPiedmontVenue(venue: VenueCandidate): boolean {
   return /piedmont/i.test(venue.name) || /piedmont/i.test(venue.slug || "");
 }
@@ -237,7 +248,7 @@ function getModeWeights(mode: HospitalAudienceMode) {
         openNowBoost: 28,
         openLateBoost: 30,
         lowCostBoost: 8,
-        categoryBoost: { food: 8, stay: 2, late: 16 } as Record<HospitalNearbyCategory, number>,
+        categoryBoost: { food: 8, stay: 2, late: 16, essentials: 18 } as Record<HospitalNearbyCategory, number>,
       };
     case "treatment":
       return {
@@ -245,7 +256,7 @@ function getModeWeights(mode: HospitalAudienceMode) {
         openNowBoost: 10,
         openLateBoost: 6,
         lowCostBoost: 10,
-        categoryBoost: { food: 6, stay: 20, late: 4 } as Record<HospitalNearbyCategory, number>,
+        categoryBoost: { food: 6, stay: 20, late: 4, essentials: 9 } as Record<HospitalNearbyCategory, number>,
       };
     case "staff":
       return {
@@ -253,7 +264,7 @@ function getModeWeights(mode: HospitalAudienceMode) {
         openNowBoost: 24,
         openLateBoost: 26,
         lowCostBoost: 6,
-        categoryBoost: { food: 8, stay: 2, late: 20 } as Record<HospitalNearbyCategory, number>,
+        categoryBoost: { food: 8, stay: 2, late: 20, essentials: 14 } as Record<HospitalNearbyCategory, number>,
       };
     case "visitor":
     default:
@@ -262,7 +273,7 @@ function getModeWeights(mode: HospitalAudienceMode) {
         openNowBoost: 14,
         openLateBoost: 10,
         lowCostBoost: 7,
-        categoryBoost: { food: 14, stay: 10, late: 5 } as Record<HospitalNearbyCategory, number>,
+        categoryBoost: { food: 14, stay: 10, late: 5, essentials: 11 } as Record<HospitalNearbyCategory, number>,
       };
   }
 }
@@ -452,11 +463,11 @@ async function getNearbyHospitalVenues(
     .lte("lat", hospital.lat + latDelta)
     .gte("lng", hospital.lng - lngDelta)
     .lte("lng", hospital.lng + lngDelta)
-    .limit(500);
+    .limit(650);
 
   if (error) {
     console.error("Error fetching nearby venues:", error);
-    return { food: [], stay: [], late: [] };
+    return { food: [], stay: [], late: [], essentials: [] };
   }
 
   const now = new Date();
@@ -473,7 +484,7 @@ async function getNearbyHospitalVenues(
       if (lat === null || lng === null) return null;
 
       const distanceMiles = getDistanceMiles(hospital.lat, hospital.lng, lat, lng);
-      if (distanceMiles > 6) return null;
+      if (distanceMiles > 3.5) return null;
 
       const hours = normalizeHours(venue.hours);
       const is24Hours = isLikely24Hours(venue.hours_display);
@@ -526,7 +537,8 @@ async function getNearbyHospitalVenues(
       const source = sourceById.get(venue.id);
       return source ? isFoodVenue(source) : false;
     })
-      .slice(0, 24),
+      .filter((venue) => venue.distance_miles <= 2.2)
+      .slice(0, 32),
     "food",
     mode
   ).slice(0, 10);
@@ -537,7 +549,8 @@ async function getNearbyHospitalVenues(
       const source = sourceById.get(venue.id);
       return source ? isStayVenue(source) : false;
     })
-      .slice(0, 20),
+      .filter((venue) => venue.distance_miles <= 3.2)
+      .slice(0, 26),
     "stay",
     mode
   ).slice(0, 8);
@@ -549,12 +562,25 @@ async function getNearbyHospitalVenues(
       if (!source) return false;
       return isLateFriendlyVenue(source) && venue.open_late;
     })
-      .slice(0, 24),
+      .filter((venue) => venue.distance_miles <= 2.6)
+      .slice(0, 30),
     "late",
     mode
   ).slice(0, 10);
 
-  return { food, stay, late };
+  const essentials = rankNearbyVenues(
+    normalized
+      .filter((venue) => {
+        const source = sourceById.get(venue.id);
+        return source ? isEssentialVenue(source) : false;
+      })
+      .filter((venue) => venue.distance_miles <= 2.8)
+      .slice(0, 30),
+    "essentials",
+    mode
+  ).slice(0, 10);
+
+  return { food, stay, late, essentials };
 }
 
 export async function getHospitalLandingData(
@@ -678,6 +704,7 @@ export function getHospitalWayfindingPayload(args: {
       food: nearby.food.slice(0, 8).map((venue) => toDestination(venue, "food")),
       stay: nearby.stay.slice(0, 8).map((venue) => toDestination(venue, "stay")),
       late: nearby.late.slice(0, 8).map((venue) => toDestination(venue, "late")),
+      essentials: nearby.essentials.slice(0, 8).map((venue) => toDestination(venue, "essentials")),
     },
   };
 }
