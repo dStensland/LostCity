@@ -76,15 +76,15 @@ def determine_category(title: str, description: str) -> tuple[str, Optional[str]
     if any(w in combined for w in ["camp", "summer"]):
         return "family", "camp", tags + ["camp", "kids"]
     if any(w in combined for w in ["workshop", "studio", "class", "make", "stitch"]):
-        return "art", "workshop", tags + ["workshop", "class"]
+        return "museums", "workshop", tags + ["workshop", "class"]
     if any(w in combined for w in ["tour", "docent"]):
-        return "art", "tour", tags + ["tour"]
+        return "museums", "tour", tags + ["tour"]
     if any(w in combined for w in ["conversation", "lecture", "talk"]):
         return "learning", "lecture", tags + ["lecture"]
     if any(w in combined for w in ["teen", "9th", "10th", "11th", "12th", "grade"]):
         return "family", "teens", tags + ["teens"]
 
-    return "art", "museum", tags
+    return "museums", "museum", tags
 
 
 def crawl(source: dict) -> tuple[int, int, int]:

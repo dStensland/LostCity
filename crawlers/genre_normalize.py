@@ -74,6 +74,8 @@ ART_GENRES = {
 NIGHTLIFE_GENRES = {
     "dj", "drag", "trivia", "karaoke", "dance-party", "game-night",
     "burlesque", "wine-night", "cocktail-night",
+    "poker", "bingo", "bar-games", "pub-crawl", "specials",
+    "latin-night", "line-dancing",
 }
 
 LEARNING_GENRES = {

@@ -1785,6 +1785,142 @@ body:has([data-forth-experience="true"]) {
   box-shadow: 0 0 8px var(--neon-amber);
 }
 
+/* ============================================
+   PORTAL FEED HEADER - intentional, non-corporate
+   ============================================ */
+.portal-feed-header {
+  --header-edge: color-mix(in srgb, var(--neon-cyan) 32%, var(--twilight));
+  --header-panel: linear-gradient(
+    165deg,
+    rgba(7, 10, 17, 0.94) 0%,
+    rgba(9, 12, 20, 0.9) 58%,
+    rgba(14, 18, 28, 0.86) 100%
+  );
+  background: var(--header-panel);
+  border-bottom-color: color-mix(in srgb, var(--header-edge) 58%, transparent) !important;
+  box-shadow:
+    0 14px 32px rgba(0, 0, 0, 0.36),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.portal-feed-header::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(
+      -65deg,
+      transparent 0,
+      transparent 14px,
+      rgba(112, 143, 255, 0.08) 14px,
+      rgba(112, 143, 255, 0.08) 16px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(255, 104, 124, 0.06) 0%,
+      rgba(117, 225, 255, 0.05) 52%,
+      transparent 100%
+    );
+  opacity: 0.5;
+}
+
+.portal-feed-header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 107, 122, 0.5) 0%,
+    rgba(255, 204, 112, 0.42) 32%,
+    rgba(102, 216, 255, 0.54) 68%,
+    rgba(255, 107, 122, 0.5) 100%
+  );
+}
+
+.portal-feed-header-row {
+  border-bottom: 1px dashed rgba(145, 156, 196, 0.26);
+}
+
+.portal-feed-logo-wrap {
+  position: relative;
+  padding-right: 0.4rem;
+}
+
+.portal-feed-logo-wrap::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 0.15rem;
+  bottom: 0.15rem;
+  width: 1px;
+  background: linear-gradient(to bottom, transparent, rgba(150, 170, 255, 0.55), transparent);
+}
+
+.portal-feed-logo-link {
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.72));
+}
+
+.portal-feed-nav:not(.nav-tab-underline):not(.nav-tab-minimal) {
+  border-radius: 999px;
+  border: 1px solid rgba(126, 148, 220, 0.36);
+  background: linear-gradient(145deg, rgba(9, 13, 22, 0.84), rgba(15, 19, 30, 0.66));
+  padding: 0.22rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 10px 20px rgba(0, 0, 0, 0.3);
+}
+
+.portal-feed-tab {
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.portal-feed-nav:not(.nav-tab-underline):not(.nav-tab-minimal) .portal-feed-tab:not(.nav-tab-active) {
+  border-style: dashed !important;
+  border-color: transparent !important;
+}
+
+.portal-feed-nav:not(.nav-tab-underline):not(.nav-tab-minimal) .portal-feed-tab:not(.nav-tab-active):hover {
+  border-color: rgba(255, 191, 95, 0.42) !important;
+  background: linear-gradient(145deg, rgba(255, 186, 86, 0.16), rgba(255, 124, 144, 0.08));
+  transform: translateY(-1px);
+}
+
+.portal-feed-nav:not(.nav-tab-underline):not(.nav-tab-minimal) .portal-feed-tab.nav-tab-active {
+  box-shadow:
+    0 0 14px hsl(var(--neon-amber-hsl) / 0.62),
+    0 0 26px hsl(var(--neon-amber-hsl) / 0.3),
+    0 2px 0 hsl(var(--neon-amber-hsl) / 0.92),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.portal-feed-actions {
+  position: relative;
+}
+
+.portal-feed-actions::before {
+  content: "";
+  position: absolute;
+  left: -0.55rem;
+  top: 0.35rem;
+  bottom: 0.35rem;
+  width: 1px;
+  background: linear-gradient(to bottom, transparent, rgba(142, 155, 198, 0.45), transparent);
+}
+
+.portal-feed-nav-mobile {
+  background: linear-gradient(180deg, rgba(9, 12, 19, 0.92), rgba(9, 11, 16, 0.86));
+}
+
+.portal-feed-nav-mobile .portal-feed-tab {
+  border-radius: 0.52rem;
+}
+
 /* Event item - classified style */
 .event-item {
   display: grid;
@@ -4087,6 +4223,7 @@ body[data-forth-bg="off"] .rain-overlay {
 .find-row-card {
   position: relative;
   isolation: isolate;
+  backface-visibility: hidden;
   box-shadow:
     0 10px 24px rgba(0, 0, 0, 0.22),
     0 2px 8px rgba(0, 0, 0, 0.2),
@@ -4106,7 +4243,6 @@ body[data-forth-bg="off"] .rain-overlay {
   pointer-events: none;
   border-radius: inherit;
   opacity: 0;
-  transform: translateX(-1.5%);
   background:
     radial-gradient(
       120% 72% at 16% 50%,
@@ -4119,11 +4255,10 @@ body[data-forth-bg="off"] .rain-overlay {
       color-mix(in srgb, var(--accent-color, var(--coral)) 8%, transparent) 38%,
       transparent 78%
     );
-  transition: opacity 220ms ease, transform 300ms ease;
+  transition: opacity 220ms ease;
 }
 
 .find-row-card:hover {
-  transform: translateY(-1px);
   border-color: color-mix(in srgb, var(--accent-color, var(--coral)) 45%, var(--twilight));
   box-shadow:
     0 18px 40px color-mix(in srgb, var(--accent-color, var(--coral)) 16%, rgba(0, 0, 0, 0.35)),
@@ -4134,7 +4269,6 @@ body[data-forth-bg="off"] .rain-overlay {
 
 .find-row-card:hover::before {
   opacity: 0.9;
-  transform: translateX(0);
 }
 
 /* Density-aware depth tuning */
@@ -4179,6 +4313,23 @@ body[data-forth-bg="off"] .rain-overlay {
   isolation: isolate;
 }
 
+.list-rail-media::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  opacity: 0.55;
+  background:
+    linear-gradient(
+      155deg,
+      rgba(7, 9, 14, 0.78) 0%,
+      rgba(11, 14, 20, 0.62) 46%,
+      rgba(20, 24, 34, 0.28) 100%
+    );
+  transition: opacity 240ms ease;
+}
+
 .list-rail-media::after {
   content: "";
   position: absolute;
@@ -4197,15 +4348,29 @@ body[data-forth-bg="off"] .rain-overlay {
 
 .list-rail-media img {
   transition: transform 300ms ease, filter 300ms ease;
+  filter: saturate(1.12) contrast(1.05) brightness(0.9);
+}
+
+.list-rail-caption {
+  padding: 0.42rem 0.5rem;
+  border-radius: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
 }
 
 .find-row-card:hover .list-rail-media::after {
   opacity: 0.56;
 }
 
+.find-row-card:hover .list-rail-media::before {
+  opacity: 0.66;
+}
+
 .find-row-card:hover .list-rail-media img {
-  transform: scale(1.08);
-  filter: saturate(1.1) contrast(1.03);
+  filter: saturate(1.16) contrast(1.08) brightness(0.94);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -4215,7 +4380,6 @@ body[data-forth-bg="off"] .rain-overlay {
 
   .find-row-card::before {
     transition: opacity 180ms ease;
-    transform: none;
   }
 
   .find-row-card:hover {
@@ -5012,29 +5176,38 @@ body[data-forth-bg="off"] .rain-overlay {
 .section-header-primary {
   font-family: var(--font-outfit), system-ui, sans-serif;
   font-size: var(--text-2xl);
-  font-weight: 600;
+  font-weight: 700;
   line-height: var(--leading-tight);
   letter-spacing: var(--tracking-tighter);
   color: var(--cream);
+  text-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.55),
+    0 0 16px color-mix(in srgb, var(--section-accent, var(--coral)) 22%, transparent);
 }
 
 .section-header-secondary {
   font-family: var(--font-outfit), system-ui, sans-serif;
   font-size: var(--text-xl);
-  font-weight: 600;
+  font-weight: 700;
   line-height: var(--leading-snug);
   letter-spacing: var(--tracking-tight);
   color: var(--cream);
+  text-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.5),
+    0 0 12px color-mix(in srgb, var(--section-accent, var(--coral)) 18%, transparent);
 }
 
 .section-header-tertiary {
   font-family: var(--font-mono), monospace;
   font-size: var(--text-base);
-  font-weight: 500;
+  font-weight: 700;
   line-height: var(--leading-normal);
   text-transform: uppercase;
   letter-spacing: var(--tracking-wider);
-  color: var(--soft);
+  color: color-mix(in srgb, var(--cream) 94%, var(--soft));
+  text-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.5),
+    0 0 10px color-mix(in srgb, var(--section-accent, var(--coral)) 16%, transparent);
 }
 
 /* Section header icon containers - use --section-accent CSS variable */
@@ -5055,11 +5228,19 @@ body[data-forth-bg="off"] .rain-overlay {
 
 /* Section header see-all button */
 .section-header-see-all {
-  background-color: color-mix(in srgb, var(--section-accent) 10%, transparent);
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--section-accent) 24%, transparent),
+      color-mix(in srgb, var(--section-accent) 10%, transparent)
+    );
+  border: 1px solid color-mix(in srgb, var(--section-accent) 42%, transparent);
 }
 
 .section-header-see-all-primary {
-  box-shadow: 0 0 12px color-mix(in srgb, var(--section-accent) 30%, transparent);
+  box-shadow:
+    0 0 14px color-mix(in srgb, var(--section-accent) 30%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
 /* ============================================
@@ -6380,7 +6561,7 @@ body[data-forth-bg="off"] .rain-overlay {
   --hotel-ivory: #FDFBF7;
   --hotel-cream: #F5F3EE;
   --hotel-sand: #E8E4DD;
-  --hotel-stone: #9B968C;
+  --hotel-stone: #7A756C;
   --hotel-charcoal: #2F2D2A;
   --hotel-ink: #1A1816;
   
@@ -7457,6 +7638,170 @@ body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-
 body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-3"]) [class*="border-[var(--gold)]"],
 body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-3"]) [class*="border-[var(--neon-amber)]"] {
   box-shadow: 0 0 12px color-mix(in srgb, var(--neon-amber) 24%, transparent);
+}
+
+/* ============================================
+   EXPLORE — Display headline font (Syne)
+   ============================================ */
+.explore-display-heading {
+  font-family: var(--font-display-alt), var(--font-outfit), system-ui, sans-serif;
+  font-weight: 700;
+  font-style: normal;
+  text-transform: none;
+}
+
+/* ============================================
+   EXPLORE TRACK BANNERS — Photography treatment
+   Mobile: dimmed for text readability
+   Desktop: vibrant, let the photography breathe
+   ============================================ */
+.explore-banner-img {
+  filter: brightness(0.5) saturate(0.85) contrast(1.1);
+  transition: filter 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              transform 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.explore-banner-gradient {
+  background: linear-gradient(
+    to top,
+    rgba(10, 10, 10, 0.97) 0%,
+    rgba(10, 10, 10, 0.85) 25%,
+    rgba(10, 10, 10, 0.45) 55%,
+    rgba(10, 10, 10, 0.1) 75%,
+    transparent 100%
+  );
+}
+
+@media (min-width: 768px) {
+  .explore-banner-img {
+    filter: brightness(0.75) saturate(1.1) contrast(1.08);
+  }
+
+  .explore-banner-gradient {
+    background: linear-gradient(
+      to top,
+      rgba(10, 10, 10, 0.95) 0%,
+      rgba(10, 10, 10, 0.75) 22%,
+      rgba(10, 10, 10, 0.35) 50%,
+      rgba(10, 10, 10, 0.05) 70%,
+      transparent 100%
+    );
+  }
+}
+
+/* Hover — images brighten, subtle zoom handled by component */
+.explore-track-banner:hover .explore-banner-img {
+  filter: brightness(0.6) saturate(0.95) contrast(1.08);
+}
+
+@media (min-width: 768px) {
+  .explore-track-banner:hover .explore-banner-img {
+    filter: brightness(0.88) saturate(1.2) contrast(1.08);
+  }
+}
+
+/* Text shadows — multi-layer for bulletproof readability */
+.explore-banner-text {
+  text-shadow:
+    0 2px 12px rgba(0,0,0,0.7),
+    0 1px 3px rgba(0,0,0,0.9),
+    0 0 40px rgba(0,0,0,0.3);
+}
+.explore-banner-text-sm {
+  text-shadow:
+    0 1px 6px rgba(0,0,0,0.8),
+    0 0 16px rgba(0,0,0,0.4);
+}
+
+/* ============================================
+   EXPLORE TRACK ANIMATIONS — Cinematic entrance
+   ============================================ */
+@keyframes fadeUpIn {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.explore-track-enter {
+  animation: fadeUpIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ============================================
+   EXPLORE TRACK PILLS — Glass morphism
+   ============================================ */
+.explore-pill {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.explore-pill-tonight:hover {
+  box-shadow: 0 0 12px rgba(224, 58, 62, 0.25);
+}
+
+/* ============================================
+   EXPLORE TRACK SKELETONS — Shimmer animation
+   ============================================ */
+@keyframes skeleton-shimmer-wave {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.explore-skeleton-banner {
+  background: linear-gradient(
+    90deg,
+    rgba(22, 22, 22, 0.6) 0%,
+    rgba(36, 36, 36, 0.7) 50%,
+    rgba(22, 22, 22, 0.6) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer-wave 1.8s ease-in-out infinite;
+}
+
+/* ============================================
+   EXPLORE TRACK DETAIL — Hero & Card animations
+   ============================================ */
+@keyframes heroFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.track-detail-hero {
+  animation: heroFadeIn 0.4s ease-out;
+}
+
+.venue-card-lift {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.venue-card-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+}
+
+.explore-skeleton-text {
+  background: linear-gradient(
+    90deg,
+    rgba(22, 22, 22, 0.8) 0%,
+    rgba(32, 32, 32, 1) 50%,
+    rgba(22, 22, 22, 0.8) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer-wave 1.8s ease-in-out infinite;
 }
 
 .logo-root[data-portal="atlanta-test"] {

@@ -345,4 +345,36 @@ def _is_useful_description(text: str) -> bool:
         if lower.startswith(bp):
             return False
 
+    # Reject event-calendar UI sludge that occasionally gets scraped as copy.
+    schedule_noise_terms = [
+        "sort shows by",
+        "show calendar",
+        "calendar view",
+        "upcoming shows",
+        "buy tickets",
+        "more info",
+        "view details",
+        "load more",
+        "filter by",
+        "all shows",
+    ]
+    noise_hits = sum(1 for term in schedule_noise_terms if term in lower)
+    if noise_hits >= 3:
+        return False
+
+    if lower.count("more info") >= 2 or lower.count("buy tickets") >= 2:
+        return False
+
+    # Repeated date/time fragments with little narrative are usually schedule rows.
+    date_time_fragments = len(re.findall(r"\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\b", lower))
+    meridiem_fragments = lower.count(" am") + lower.count(" pm")
+    if len(text) > 220 and date_time_fragments >= 3 and meridiem_fragments >= 3:
+        return False
+
+    tokens = re.findall(r"[a-z0-9]+", lower)
+    if len(tokens) >= 80:
+        unique_ratio = len(set(tokens)) / len(tokens)
+        if unique_ratio < 0.35:
+            return False
+
     return True

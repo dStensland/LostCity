@@ -11,6 +11,7 @@ Usage:
     python3 enrich_festivals.py --dry-run              # Preview without writing
     python3 enrich_festivals.py --slug dragon-con      # Single festival
     python3 enrich_festivals.py --force                # Re-enrich even if populated
+    python3 enrich_festivals.py --stale                # Re-enrich migration/low-confidence dates
     python3 enrich_festivals.py --render-js            # Playwright for JS-heavy sites
 """
 
@@ -121,19 +122,25 @@ def extract_festival_dates(html: str, default_year: int = 2026) -> tuple[Optiona
         except (json.JSONDecodeError, TypeError):
             continue
 
-    # 2. <time> with datetime
+    # 2. <time> with datetime — collect ALL, use min/max for range
+    time_dates = []
     for tag in soup.find_all("time"):
         dt = tag.get("datetime")
         if dt and len(dt) >= 10 and re.match(r"\d{4}-\d{2}-\d{2}", dt):
-            return dt[:10], dt[:10], "time"
+            time_dates.append(dt[:10])
+    if time_dates:
+        return min(time_dates), max(time_dates), "time"
 
-    # 3. <meta> with date content
+    # 3. <meta> with date content — collect ALL, use min/max for range
+    meta_dates = []
     for meta in soup.find_all("meta"):
         prop = meta.get("property", "") or meta.get("name", "")
         if "date" in prop.lower() and meta.get("content"):
             content = meta["content"].strip()
             if len(content) >= 10 and re.match(r"\d{4}-\d{2}-\d{2}", content):
-                return content[:10], content[:10], "meta"
+                meta_dates.append(content[:10])
+    if meta_dates:
+        return min(meta_dates), max(meta_dates), "meta"
 
     # 4. Regex on page text
     text = soup.get_text(" ", strip=True)
@@ -273,6 +280,77 @@ def _build_about_url(website: str) -> Optional[str]:
     return urlunparse((parsed.scheme, parsed.netloc, "/about", "", "", ""))
 
 
+# Non-Atlanta location signals — prevent enriching festivals from other cities
+NON_ATLANTA_SIGNALS = re.compile(
+    r"\b(?:Nashville|Charlotte|Birmingham|Jacksonville|Chattanooga|Greenville|Columbia|Raleigh|Memphis|Knoxville)"
+    r",?\s*(?:TN|NC|AL|FL|SC)"
+    r"|\bBridgestone Arena\b|\bNissan Stadium\b|\bRyman Auditorium\b",
+    re.IGNORECASE,
+)
+
+
+def _check_non_local(html: str, description: Optional[str] = None) -> Optional[str]:
+    """Check if festival page indicates a non-Atlanta location.
+
+    Returns the matched signal string if non-local, None if OK.
+    """
+    import json as _json
+    from bs4 import BeautifulSoup
+
+    # Check description text
+    if description:
+        m = NON_ATLANTA_SIGNALS.search(description)
+        if m:
+            return m.group(0)
+
+    soup = BeautifulSoup(html, "html.parser")
+
+    # Check JSON-LD location.address for non-GA state
+    for script in soup.find_all("script", type="application/ld+json"):
+        try:
+            data = _json.loads(script.string or "")
+            items = data if isinstance(data, list) else [data]
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                loc = item.get("location", {})
+                if isinstance(loc, dict):
+                    addr = loc.get("address", {})
+                    if isinstance(addr, dict):
+                        state = addr.get("addressRegion", "")
+                        if state and state.upper() not in ("GA", "GEORGIA"):
+                            return f"JSON-LD state: {state}"
+                    elif isinstance(addr, str):
+                        m = NON_ATLANTA_SIGNALS.search(addr)
+                        if m:
+                            return m.group(0)
+        except (ValueError, TypeError):
+            continue
+
+    # Check page text (limited to first 5000 chars to avoid false positives in footer links)
+    page_text = soup.get_text(" ", strip=True)[:5000]
+    m = NON_ATLANTA_SIGNALS.search(page_text)
+    if m:
+        return m.group(0)
+
+    return None
+
+
+def _check_redirect(url: str) -> Optional[str]:
+    """Return final URL if it differs from input (permanent redirect)."""
+    import httpx
+
+    try:
+        with httpx.Client(follow_redirects=True, timeout=10) as c:
+            resp = c.head(url)
+            final = str(resp.url)
+            if final.rstrip("/") != url.rstrip("/"):
+                return final
+    except Exception:
+        pass
+    return None
+
+
 def _is_boilerplate(text: str) -> bool:
     """Quick check if text is nav/footer boilerplate."""
     lower = text.lower()
@@ -292,6 +370,7 @@ def enrich_festivals(
     dry_run: bool = False,
     slug: Optional[str] = None,
     force: bool = False,
+    stale: bool = False,
     render_js: bool = False,
 ):
     client = get_client()
@@ -308,7 +387,18 @@ def enrich_festivals(
     result = query.order("name").execute()
     all_festivals = result.data or []
 
-    if not force:
+    if stale:
+        # Re-enrich festivals with stale or low-confidence date data
+        festivals = [
+            f for f in all_festivals
+            if f.get("date_source") == "migration"
+            or (f.get("date_confidence") or 0) < 70
+            or (
+                f.get("announced_start") == f.get("announced_end")
+                and (f.get("typical_duration_days") or 1) > 1
+            )
+        ]
+    elif not force:
         # Filter to those missing at least one field
         festivals = [
             f for f in all_festivals
@@ -339,7 +429,8 @@ def enrich_festivals(
     logger.info(f"Festival Enrichment Pipeline")
     logger.info(f"{'=' * 70}")
     logger.info(f"Total with website: {len(all_festivals)} | To enrich: {len(festivals)}")
-    logger.info(f"Mode: {'DRY RUN' if dry_run else 'LIVE'} | Render JS: {render_js}")
+    mode = "DRY RUN" if dry_run else "STALE" if stale else "LIVE"
+    logger.info(f"Mode: {mode} | Force: {force} | Render JS: {render_js}")
     logger.info(f"{'=' * 70}")
 
     for i, f in enumerate(festivals, 1):
@@ -347,6 +438,14 @@ def enrich_festivals(
         website = f["website"]
 
         prefix = f"[{i:3d}/{len(festivals)}] {name[:35]:<35}"
+
+        # Check for permanent redirects and update stored URL
+        redirected = _check_redirect(website)
+        if redirected:
+            logger.info(f"{prefix} URL redirect: {website} → {redirected}")
+            if not dry_run:
+                client.table("festivals").update({"website": redirected}).eq("id", f["id"]).execute()
+            website = redirected
 
         # Fetch HTML
         used_js = render_js
@@ -384,6 +483,15 @@ def enrich_festivals(
                 meta_desc = _extract_festival_description(html, website, fetch_cfg)
                 used_js = True
                 stats["js_retry"] += 1
+
+        # Geographic gate — skip non-Atlanta festivals
+        desc_for_check = enriched.get("description") or meta_desc
+        non_local = _check_non_local(html, desc_for_check)
+        if non_local:
+            logger.info(f"{prefix} SKIP non-local: {non_local}")
+            stats["skipped"] += 1
+            time.sleep(0.5)
+            continue
 
         # Build update dict — only fill NULL fields (unless --force)
         updates: dict = {}
@@ -498,6 +606,7 @@ if __name__ == "__main__":
     parser.add_argument("--dry-run", action="store_true", help="Preview without writing")
     parser.add_argument("--slug", type=str, help="Enrich a single festival by slug")
     parser.add_argument("--force", action="store_true", help="Re-enrich even if fields populated")
+    parser.add_argument("--stale", action="store_true", help="Re-enrich stale/low-confidence data (migration source, low confidence, wrong duration)")
     parser.add_argument("--render-js", action="store_true", help="Use Playwright for JS-heavy sites")
     args = parser.parse_args()
 
@@ -505,5 +614,6 @@ if __name__ == "__main__":
         dry_run=args.dry_run,
         slug=args.slug,
         force=args.force,
+        stale=args.stale,
         render_js=args.render_js,
     )

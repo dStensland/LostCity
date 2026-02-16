@@ -74,7 +74,7 @@ def determine_category(title: str, category_type: str) -> tuple[str, Optional[st
     if "aglow" in title_lower or "wildwoods" in title_lower:
         return "family", "outdoor", tags + ["outdoor", "nature"]
 
-    return "community", "museum", tags
+    return "museums", "museum", tags
 
 
 def crawl(source: dict) -> tuple[int, int, int]:

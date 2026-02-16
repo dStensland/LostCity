@@ -19,6 +19,8 @@ from icalendar import Calendar
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
+from description_fetcher import fetch_description_from_url
+from utils import enrich_event_record
 
 logger = logging.getLogger(__name__)
 
@@ -234,18 +236,23 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     elif isinstance(end_val, date):
                         end_date = end_val.strftime("%Y-%m-%d")
 
-                # Description
+                # URL (extract early for description fetching)
+                source_url = str(component.get("URL", f"{BASE_URL}/events/"))
+
+                # Description — prefer iCal, fall back to web page, then generic
                 description = clean_ical_text(str(component.get("DESCRIPTION", "")))
-                if not description or len(description) < 10:
-                    description = f"{title} at Callanwolde Fine Arts Center"
+                if not description or len(description) < 80:
+                    fetched = fetch_description_from_url(source_url)
+                    if fetched:
+                        description = fetched
+                        logger.debug(f"Fetched description from URL for: {title}")
+                    elif not description or len(description) < 10:
+                        description = f"{title} at Callanwolde Fine Arts Center"
 
                 # Check if public
                 if not is_public_event(title, description):
                     logger.debug(f"Skipping internal event: {title}")
                     continue
-
-                # URL
-                source_url = str(component.get("URL", f"{BASE_URL}/events/"))
 
                 # Image from ATTACH
                 image_url = None
@@ -306,6 +313,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "recurrence_rule": None,
                     "content_hash": content_hash,
                 }
+
+                # Enrich from detail page if missing image or description
+                if source_url and source_url != f"{BASE_URL}/events/":
+                    event_record = enrich_event_record(event_record, source_name="Callanwolde Fine Arts Center")
 
                 try:
                     insert_event(event_record)

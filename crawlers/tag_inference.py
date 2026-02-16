@@ -369,10 +369,22 @@ def infer_tags(
 
     # --- Specific cultural/holiday tags ---
 
-    # Valentine's Day (Feb events with valentine references)
+    # Parse event date once for all date-aware holiday checks
+    start_date_str = event.get("start_date") or ""
+    event_month = 0
+    event_day = 0
+    if start_date_str:
+        try:
+            event_month = int(start_date_str[5:7])
+            event_day = int(start_date_str[8:10])
+        except (ValueError, IndexError):
+            pass
+
+    # Valentine's Day — only tag events in the Valentine's window (Feb 1-16)
     if any(kw in text for kw in ["valentine", "galentine", "love day"]):
-        tags.add("valentines")
-        tags.add("holiday")
+        if event_month == 2 and 1 <= event_day <= 16:
+            tags.add("valentines")
+            tags.add("holiday")
 
     # Mardi Gras
     if any(kw in text for kw in ["mardi gras", "fat tuesday", "krewe", "king cake"]):
@@ -391,15 +403,6 @@ def infer_tags(
     ]):
         tags.add("lunar-new-year")
         tags.add("holiday")
-
-    # Black History Month (February events with BHM references)
-    start_date_str = event.get("start_date") or ""
-    event_month = 0
-    if start_date_str:
-        try:
-            event_month = int(start_date_str[5:7])
-        except (ValueError, IndexError):
-            pass
 
     bhm_keywords = [
         "black history", "african american", "african-american",
@@ -1142,19 +1145,72 @@ def infer_genres(
             if any(kw in text for kw in keywords):
                 genres.add(genre)
 
+    elif category == "museums":
+        museum_patterns: list[tuple[list[str], str]] = [
+            (
+                ["exhibition", "exhibit", "retrospective", "collection", "gallery show"],
+                "exhibition",
+            ),
+            (
+                ["science", "stem", "planetarium", "observatory", "dinosaur", "fossil"],
+                "science",
+            ),
+            (
+                ["history", "historic", "civil war", "civil rights", "heritage", "archive"],
+                "history",
+            ),
+            (
+                ["children", "kids", "family day", "youth", "storytime"],
+                "children",
+            ),
+            (
+                ["cultural", "culture", "indigenous", "african", "diaspora"],
+                "cultural",
+            ),
+            (
+                ["opening reception", "first friday", "art walk", "member preview"],
+                "opening",
+            ),
+            (
+                ["lecture", "talk", "panel", "symposium", "curator"],
+                "lecture",
+            ),
+            (["workshop", "hands-on", "craft", "make your own"], "workshop"),
+            (["tour", "guided", "docent", "walkthrough"], "tour"),
+        ]
+        for keywords, genre in museum_patterns:
+            if any(kw in text for kw in keywords):
+                genres.add(genre)
+
     elif category == "nightlife":
         nightlife_patterns: list[tuple[list[str], str]] = [
-            (["dj", "club night", "dance floor", " set ", "spinning"], "dj"),
-            (["drag", "drag show", "queen", "pageant", "lip sync"], "drag"),
+            (["dj", "club night", "dance floor", " set ", "spinning", "remix", "mixtape", "mixed tape"], "dj"),
+            (["drag", "drag show", "queen", "pageant", "lip sync", "tossed salad"], "drag"),
             (["trivia", "quiz night", "pub quiz", "team trivia"], "trivia"),
             (["karaoke", "sing-along", "noraebang", "mic night"], "karaoke"),
             (
                 ["dance party", "80s night", "90s night", "silent disco", "throwback"],
                 "dance-party",
             ),
-            (["board game", "bingo", "arcade", "game night", "poker"], "game-night"),
+            (["poker", "texas hold", "hold 'em", "holdem", "freeroll", "card tournament"], "poker"),
+            (["bingo", "drag bingo", "music bingo", "b-i-n-g-o"], "bingo"),
+            (["board game", "arcade", "game night", "darts", "shuffleboard", "cornhole", "bocce", "skee-ball", "ping pong", "pool tournament", "billiards"], "bar-games"),
+            (["pub crawl", "bar crawl", "brewery crawl", "brewery tour", "beer tour"], "pub-crawl"),
+            (
+                ["happy hour", "drink special", "taco tuesday", "wing night", "crab night",
+                 "oyster night", "wing wednesday", "thirsty thursday", "ladies night",
+                 "industry night", "burger night", "half off", "half-price",
+                 "bottomless", "all you can", "prix fixe"],
+                "specials",
+            ),
+            (
+                ["latin night", "salsa night", "bachata", "reggaeton", "cumbia",
+                 "merengue", "noche latina", "noche de", "tropical night"],
+                "latin-night",
+            ),
+            (["line dancing", "line dance", "two-step", "two step", "honky tonk", "country night", "boot scoot"], "line-dancing"),
             (["burlesque", "cabaret", "variety show", "vaudeville"], "burlesque"),
-            (["wine night", "wine down", "wine bar", "happy hour"], "wine-night"),
+            (["wine night", "wine down", "wine bar"], "wine-night"),
             (
                 ["speakeasy", "cocktail party", "mixology", "craft cocktail"],
                 "cocktail-night",
@@ -1498,6 +1554,22 @@ def infer_subcategory(event: dict) -> str | None:
             return "film.repertory"
         return "film.new"  # Default
 
+    # Museums subcategories
+    if category == "museums":
+        if any(term in text for term in ["art museum", "fine art", "contemporary art", "modern art", "painting", "sculpture"]):
+            return "museums.art"
+        if any(term in text for term in ["history", "historic", "civil war", "civil rights", "heritage"]):
+            return "museums.history"
+        if any(term in text for term in ["science", "stem", "planetarium", "natural history", "dinosaur", "fossil"]):
+            return "museums.science"
+        if any(term in text for term in ["children", "kids", "youth", "imagine it"]):
+            return "museums.children"
+        if any(term in text for term in ["exhibition", "exhibit", "retrospective", "collection"]):
+            return "museums.exhibition"
+        if any(term in text for term in ["cultural", "culture", "indigenous", "diaspora"]):
+            return "museums.cultural"
+        return "museums.exhibition"  # Default
+
     # Community subcategories
     if category == "community":
         if any(term in text for term in ["volunteer", "volunteering"]):
@@ -1514,9 +1586,27 @@ def infer_subcategory(event: dict) -> str | None:
     if category == "nightlife":
         if any(term in text for term in ["trivia", "quiz"]):
             return "nightlife.trivia"
-        if any(term in text for term in ["drag", "drag show", "drag brunch"]):
+        if any(term in text for term in ["drag", "drag show", "drag brunch", "tossed salad"]):
             return "nightlife.drag"
-        if any(term in text for term in ["dj", "dance night", "dance party"]):
+        if any(term in text for term in ["karaoke", "sing-along", "noraebang"]):
+            return "nightlife.karaoke"
+        if any(term in text for term in ["poker", "texas hold", "holdem", "freeroll"]):
+            return "nightlife.poker"
+        if any(term in text for term in ["bingo", "drag bingo", "music bingo"]):
+            return "nightlife.bingo"
+        if any(term in text for term in ["board game", "darts", "shuffleboard", "cornhole", "bocce", "skee-ball", "ping pong", "pool tournament", "billiards"]):
+            return "nightlife.bar_games"
+        if any(term in text for term in ["pub crawl", "bar crawl", "brewery crawl"]):
+            return "nightlife.pub_crawl"
+        if any(term in text for term in ["happy hour", "drink special", "taco tuesday", "wing night", "crab night", "ladies night", "industry night", "half off", "half-price"]):
+            return "nightlife.specials"
+        if any(term in text for term in ["latin night", "salsa night", "bachata", "reggaeton", "noche latina"]):
+            return "nightlife.latin_night"
+        if any(term in text for term in ["line dancing", "line dance", "two-step", "honky tonk", "country night"]):
+            return "nightlife.line_dancing"
+        if any(term in text for term in ["party", "celebration", "bash"]):
+            return "nightlife.party"
+        if any(term in text for term in ["dj", "dance night", "dance party", "remix", "mixtape", "mixed tape"]):
             return "nightlife.dj"
         if any(term in text for term in ["burlesque"]):
             return "nightlife.burlesque"

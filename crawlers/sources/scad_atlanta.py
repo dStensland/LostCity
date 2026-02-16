@@ -106,11 +106,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
             if "fash" in title_lower or "fashion" in title_lower or "film" in title_lower:
                 venue_data = VENUES["scad_fash"]
                 venue_id = get_or_create_venue(venue_data)
-                category, subcategory = "art", "exhibition"
+                category, subcategory = "museums", "exhibition"
             else:
                 venue_data = VENUES["scad_atlanta"]
                 venue_id = get_or_create_venue(venue_data)
-                category, subcategory = "art", "exhibition"
+                category, subcategory = "museums", "exhibition"
 
             content_hash = generate_content_hash(title, venue_data["name"], start_date)
             existing = find_event_by_hash(content_hash)

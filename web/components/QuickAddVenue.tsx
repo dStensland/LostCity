@@ -35,11 +35,13 @@ interface QuickAddVenueProps {
   trigger?: React.ReactNode;
   /** Called when a venue is added (either existing or newly submitted) */
   onAdd?: (venue: { id?: number; name: string; slug?: string }) => void;
+  /** Called when a venue is removed from the list */
+  onRemove?: (venue: { name: string; slug?: string }) => void;
   /** Button size variant */
   size?: "sm" | "md";
 }
 
-export default function QuickAddVenue({ trigger, onAdd, size = "sm" }: QuickAddVenueProps) {
+export default function QuickAddVenue({ trigger, onAdd, onRemove, size = "sm" }: QuickAddVenueProps) {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -370,25 +372,24 @@ export default function QuickAddVenue({ trigger, onAdd, size = "sm" }: QuickAddV
             {added.map((item, i) => (
               <span
                 key={i}
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-mono text-xs bg-[var(--neon-green)]/10 text-[var(--neon-green)] border border-[var(--neon-green)]/20"
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-mono text-xs bg-[var(--neon-green)]/10 text-[var(--neon-green)] border border-[var(--neon-green)]/20 group"
               >
-                <svg
-                  className="w-3 h-3"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
                 {item.name}
                 {item.pending && (
                   <span className="text-[var(--muted)]">(pending)</span>
                 )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAdded((prev) => prev.filter((_, idx) => idx !== i));
+                    onRemove?.({ name: item.name, slug: item.slug });
+                  }}
+                  className="ml-0.5 rounded-full p-0.5 hover:bg-[var(--neon-green)]/20 transition-colors"
+                >
+                  <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
               </span>
             ))}
           </div>

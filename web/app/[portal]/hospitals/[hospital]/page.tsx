@@ -12,7 +12,6 @@ import {
   type HospitalService,
 } from "@/lib/hospitals";
 import { normalizeHospitalMode } from "@/lib/hospital-modes";
-import { normalizeEmoryPersona } from "@/lib/emory-personas";
 import {
   EMORY_THEME_CSS,
   EMORY_THEME_SCOPE_CLASS,
@@ -24,36 +23,66 @@ import HospitalTrackedLink from "@/app/[portal]/_components/hospital/HospitalTra
 import type { CSSProperties } from "react";
 import {
   getEmoryFederationShowcase,
-  type EmoryFederationShowcase,
+  type EmoryFederationEventPreview,
 } from "@/lib/emory-federation-showcase";
 import EmoryConciergeFoodExplorer, {
   type ConciergeExplorerItem,
 } from "@/app/[portal]/_components/hospital/EmoryConciergeFoodExplorer";
+import { getDistanceMiles } from "@/lib/geo";
 
 type Props = {
   params: Promise<{ portal: string; hospital: string }>;
   searchParams: Promise<{ mode?: string; persona?: string }>;
 };
 
-type SpotlightCard = {
+type NearbyEventCard = {
   id: string;
   title: string;
-  meta: string;
-  summary: string;
+  schedule: string;
+  subtitle: string;
   imageUrl: string | null;
-  href: string;
-  targetKind: "venue_maps" | "venue_detail";
+  detailHref: string;
+  mapsHref: string | null;
+  distanceMiles: number | null;
 };
 
-const HERO_IMAGE = "https://images.unsplash.com/photo-1550831107-1553da8c8464?auto=format&fit=crop&w=1400&q=80";
+type NearbyBucket = "food" | "stay" | "late" | "essentials" | "services" | "fitness" | "escapes";
+
+const DEFAULT_HERO_IMAGE = "https://images.pexels.com/photos/263402/pexels-photo-263402.jpeg?auto=compress&cs=tinysrgb&w=1600";
+
+const HOSPITAL_HERO_IMAGE_BY_SLUG: Record<string, string> = {
+  "emory-university-hospital": "https://images.pexels.com/photos/263402/pexels-photo-263402.jpeg?auto=compress&cs=tinysrgb&w=1600",
+  "emory-university-hospital-midtown": "https://images.pexels.com/photos/2383010/pexels-photo-2383010.jpeg?auto=compress&cs=tinysrgb&w=1600",
+  "emory-saint-josephs-hospital": "https://images.pexels.com/photos/17057065/pexels-photo-17057065.jpeg?auto=compress&cs=tinysrgb&w=1600",
+  "emory-johns-creek-hospital": "https://images.pexels.com/photos/7722603/pexels-photo-7722603.jpeg?auto=compress&cs=tinysrgb&w=1600",
+};
+
+const HOSPITAL_EVENT_POSITIVE = /\b(health|wellness|caregiver|support|family|nutrition|meal prep|food pantry|screening|clinic|public health|pharmacy|fitness|walk|yoga|movement|mental|mindful|recovery|education|workshop|class|volunteer)\b/i;
+const HOSPITAL_EVENT_NEGATIVE = /\b(concert|dj|nightlife|party|happy hour|bar crawl|club|cocktail|beer|wine|comedy|dating|festival afterparty)\b/i;
 
 function normalize(value: string | null | undefined): string {
   return (value || "").toLowerCase();
 }
 
+function getHospitalHeroImage(hospitalSlug: string): string {
+  return HOSPITAL_HERO_IMAGE_BY_SLUG[hospitalSlug] || DEFAULT_HERO_IMAGE;
+}
+
 function buildFallbackCampusResources(hospitalName: string): HospitalService[] {
   const short = hospitalName.split(" ").slice(0, 2).join(" ");
   return [
+    {
+      id: "fallback-resource-main-cafe",
+      hospital_location_id: "fallback",
+      category: "Dining",
+      name: "Main Concourse Cafe",
+      description: "Quick meals and coffee options near the main entrance.",
+      open_hours: "Daily 6:30 AM-8:00 PM",
+      location_hint: "Main concourse",
+      cta_label: null,
+      cta_url: null,
+      display_order: 1,
+    },
     {
       id: "fallback-resource-pharmacy",
       hospital_location_id: "fallback",
@@ -62,18 +91,6 @@ function buildFallbackCampusResources(hospitalName: string): HospitalService[] {
       description: `${short} prescription pickup and essential over-the-counter supplies.`,
       open_hours: "Mon-Fri 8:00 AM-7:00 PM",
       location_hint: "Main level near discharge",
-      cta_label: null,
-      cta_url: null,
-      display_order: 1,
-    },
-    {
-      id: "fallback-resource-cafe",
-      hospital_location_id: "fallback",
-      category: "Dining",
-      name: "Main Concourse Cafe",
-      description: "Quick meals and coffee options with grab-and-go service.",
-      open_hours: "Daily 6:30 AM-8:00 PM",
-      location_hint: "Main concourse",
       cta_label: null,
       cta_url: null,
       display_order: 2,
@@ -90,35 +107,54 @@ function buildFallbackCampusResources(hospitalName: string): HospitalService[] {
       cta_url: null,
       display_order: 3,
     },
+    {
+      id: "fallback-resource-quiet-room",
+      hospital_location_id: "fallback",
+      category: "Support",
+      name: "Quiet Family Lounge",
+      description: "A quiet waiting area for caregivers and families.",
+      open_hours: "Hours vary",
+      location_hint: "Near north tower elevators",
+      cta_label: null,
+      cta_url: null,
+      display_order: 4,
+    },
   ];
 }
 
-function isMealExcluded(venue: HospitalNearbyVenue): boolean {
-  const type = (venue.venue_type || "").toLowerCase();
-  const name = venue.name.toLowerCase();
+function isMealExcluded(venue: Pick<HospitalNearbyVenue, "venue_type" | "name">): boolean {
+  const type = normalize(venue.venue_type);
+  const name = normalize(venue.name);
   if (type === "bar" || type === "nightclub") return true;
-  if (/\b(bar|night ?club|cocktail|lounge|taproom|brewpub|speakeasy|happy hour)\b/i.test(name)) {
-    return true;
-  }
-  return false;
+  return /\b(bar|night ?club|cocktail|taproom|speakeasy|pub)\b/.test(name);
 }
 
 function classifyConciergeCategory(args: {
-  bucket: "food" | "stay" | "late" | "essentials";
+  bucket?: NearbyBucket;
   venueType: string | null;
   name: string;
+  searchBlob?: string;
 }): ConciergeExplorerItem["category"] {
   const venueType = normalize(args.venueType);
-  const name = normalize(args.name);
-  const categoryBlob = `${venueType} ${name}`;
-
-  if (/\b(hotel|motel|inn|suite|suites|lodge|residence)\b/.test(categoryBlob)) return "lodging";
-  if (/\b(pharmacy|drug|market|grocery|convenience)\b/.test(categoryBlob)) return "essentials";
-  if (/\b(restaurant|coffee|cafe|bakery|kitchen|deli|food)\b/.test(categoryBlob)) return "food";
+  const blob = `${venueType} ${normalize(args.name)} ${normalize(args.searchBlob)}`;
 
   if (args.bucket === "stay") return "lodging";
   if (args.bucket === "food") return "food";
   if (args.bucket === "essentials") return "essentials";
+  if (args.bucket === "late") {
+    if (/\b(pharmacy|drug|market|grocery|urgent care|clinic)\b/.test(blob)) return "essentials";
+    return "food";
+  }
+  if (args.bucket === "services") return "services";
+  if (args.bucket === "fitness") return "fitness";
+  if (args.bucket === "escapes") return "escapes";
+
+  if (/\b(gym|fitness|yoga|pilates|spin|crossfit|workout|athletic|rec center|ymca|training|strength)\b/.test(blob)) return "fitness";
+  if (/\b(park|museum|garden|trail|greenway|library|cinema|theater|gallery|aquarium|botanical|quiet)\b/.test(blob)) return "escapes";
+  if (/\b(hotel|motel|inn|suite|suites|lodge|residence)\b/.test(blob)) return "lodging";
+  if (/\b(pharmacy|drug|market|grocery|convenience|supply|urgent care|clinic)\b/.test(blob)) return "essentials";
+  if (/\b(restaurant|coffee|cafe|bakery|kitchen|deli|food|eatery|grill|pizza|breakfast|lunch|dinner)\b/.test(blob)) return "food";
+
   return "services";
 }
 
@@ -127,29 +163,30 @@ function buildConciergeExplorerItems(args: {
   stay: HospitalNearbyVenue[];
   late: HospitalNearbyVenue[];
   essentials: HospitalNearbyVenue[];
+  services: HospitalNearbyVenue[];
+  fitness: HospitalNearbyVenue[];
+  escapes: HospitalNearbyVenue[];
 }): ConciergeExplorerItem[] {
   const byId = new Map<string, ConciergeExplorerItem>();
-  const bucketKeywords: Record<"food" | "stay" | "late" | "essentials", string> = {
-    food: "food breakfast lunch dinner coffee cafe healthy meal",
-    stay: "stay lodging hotel overnight family",
-    late: "late night overnight 24/7 pharmacy essentials",
-    essentials: "essentials pharmacy supplies grocery market",
-  };
 
-  const ingest = (
-    bucket: "food" | "stay" | "late" | "essentials",
-    rows: HospitalNearbyVenue[],
-  ) => {
+  const ingestNearby = (bucket: NearbyBucket, rows: HospitalNearbyVenue[]) => {
     for (const row of rows) {
       if (bucket === "food" && isMealExcluded(row)) continue;
+
       const key = String(row.id);
       const existing = byId.get(key);
-      const addition = [bucketKeywords[bucket], row.relevance_reason, row.status_label]
+      const searchBlob = [row.relevance_reason, row.status_label, row.venue_type, row.neighborhood]
         .filter(Boolean)
         .join(" ");
 
       if (existing) {
-        existing.searchBlob = `${existing.searchBlob} ${addition}`.trim();
+        existing.searchBlob = `${existing.searchBlob} ${searchBlob}`.trim();
+        existing.isOpenNow = existing.isOpenNow || row.is_open_now;
+        existing.openLate = existing.openLate || row.open_late;
+        if (row.distance_miles < existing.distanceMiles) {
+          existing.distanceMiles = row.distance_miles;
+          existing.summary = row.status_label || existing.summary;
+        }
         continue;
       }
 
@@ -165,48 +202,92 @@ function buildConciergeExplorerItems(args: {
         imageUrl: row.image_url || null,
         mapsHref: getVenueMapsHref(row),
         websiteHref: row.website || null,
-        searchBlob: addition,
+        searchBlob,
         category: classifyConciergeCategory({
           bucket,
           venueType: row.venue_type,
           name: row.name,
+          searchBlob,
         }),
       });
     }
   };
 
-  ingest("food", args.food);
-  ingest("stay", args.stay);
-  ingest("late", args.late);
-  ingest("essentials", args.essentials);
+  ingestNearby("food", args.food);
+  ingestNearby("stay", args.stay);
+  ingestNearby("late", args.late);
+  ingestNearby("essentials", args.essentials);
+  ingestNearby("services", args.services);
+  ingestNearby("fitness", args.fitness);
+  ingestNearby("escapes", args.escapes);
 
   return [...byId.values()];
 }
 
-function toSpotlightCards(args: {
-  showcase: EmoryFederationShowcase;
-  kind: "break" | "fitness";
-}): SpotlightCard[] {
-  const { showcase, kind } = args;
-  const patterns = kind === "break"
-    ? /\b(park|museum|garden|trail|quiet|library|walk|mindful|wellness|art)\b/i
-    : /\b(gym|fitness|yoga|pilates|studio|ymca|run|workout|movement|strength)\b/i;
+function getEventTimestamp(event: EmoryFederationEventPreview): number {
+  const iso = event.startTime ? `${event.startDate}T${event.startTime}` : `${event.startDate}T12:00:00`;
+  const timestamp = Date.parse(iso);
+  return Number.isNaN(timestamp) ? Number.MAX_SAFE_INTEGER : timestamp;
+}
 
-  return showcase.venues
-    .filter((venue) => patterns.test([venue.name, venue.venueType, venue.neighborhood].filter(Boolean).join(" ")))
-    .sort((a, b) => (a.distanceMiles ?? 99) - (b.distanceMiles ?? 99))
-    .slice(0, 3)
-    .map((venue) => ({
-      id: `venue-${venue.id}`,
-      title: venue.name,
-      meta: [venue.neighborhood, venue.distanceLabel].filter(Boolean).join(" · ") || "Nearby",
-      summary: kind === "break"
-        ? "Nearby place for a short reset."
-        : "Nearby option for movement and fitness.",
-      imageUrl: venue.imageUrl || null,
-      href: venue.mapsHref || venue.detailHref,
-      targetKind: venue.mapsHref ? "venue_maps" : "venue_detail",
-    }));
+function buildNearbyEventCards(args: {
+  events: EmoryFederationEventPreview[];
+  hospitalLat: number;
+  hospitalLng: number;
+}): NearbyEventCard[] {
+  const cards = args.events
+    .map((event) => {
+      if (!event.detailHref.includes("event=")) {
+        return null;
+      }
+
+      const contentBlob = [
+        event.title,
+        event.category,
+        event.venueName,
+        event.neighborhood,
+      ].filter(Boolean).join(" ");
+
+      if (!HOSPITAL_EVENT_POSITIVE.test(contentBlob) || HOSPITAL_EVENT_NEGATIVE.test(contentBlob)) {
+        return null;
+      }
+
+      const distanceMiles = (event.lat !== null && event.lng !== null)
+        ? getDistanceMiles(args.hospitalLat, args.hospitalLng, event.lat, event.lng)
+        : null;
+
+      if (distanceMiles !== null && distanceMiles > 2.2) {
+        return null;
+      }
+
+      const subtitleParts = [
+        event.venueName,
+        event.neighborhood,
+        distanceMiles !== null ? `${distanceMiles.toFixed(1)} mi` : null,
+      ].filter(Boolean);
+
+      return {
+        id: String(event.id),
+        title: event.title,
+        schedule: event.scheduleLabel,
+        subtitle: subtitleParts.join(" · ") || "Nearby",
+        imageUrl: event.imageUrl || null,
+        detailHref: event.detailHref,
+        mapsHref: event.mapsHref || null,
+        distanceMiles,
+      } satisfies NearbyEventCard;
+    })
+    .filter((card): card is NearbyEventCard => card !== null)
+    .sort((a, b) => {
+      const aEvent = args.events.find((event) => String(event.id) === a.id);
+      const bEvent = args.events.find((event) => String(event.id) === b.id);
+      const timeDelta = (aEvent ? getEventTimestamp(aEvent) : Number.MAX_SAFE_INTEGER)
+        - (bEvent ? getEventTimestamp(bEvent) : Number.MAX_SAFE_INTEGER);
+      if (timeDelta !== 0) return timeDelta;
+      return (a.distanceMiles ?? Number.MAX_SAFE_INTEGER) - (b.distanceMiles ?? Number.MAX_SAFE_INTEGER);
+    });
+
+  return cards.slice(0, 4);
 }
 
 export default async function HospitalLandingPage({ params, searchParams }: Props) {
@@ -219,10 +300,10 @@ export default async function HospitalLandingPage({ params, searchParams }: Prop
   if (getPortalVertical(portal) !== "hospital" && !isEmoryBrand) notFound();
 
   const mode = normalizeHospitalMode(searchParamsData.mode);
-  const persona = normalizeEmoryPersona(searchParamsData.persona);
   const hospitalLocations = await getPortalHospitalLocations(portal.id);
   const data = await getHospitalLandingData(portal.id, hospitalSlug, mode);
   if (!data) notFound();
+
   const showcase = await getEmoryFederationShowcase({
     portalId: portal.id,
     portalSlug: portal.slug,
@@ -234,18 +315,26 @@ export default async function HospitalLandingPage({ params, searchParams }: Prop
     stay: data.nearby.stay || [],
     late: data.nearby.late || [],
     essentials: data.nearby.essentials || [],
+    services: data.nearby.services || [],
+    fitness: data.nearby.fitness || [],
+    escapes: data.nearby.escapes || [],
   });
-  const directoryHref = `/${portal.slug}/hospitals?mode=${mode}&persona=${persona}`;
-  const communityHref = `/${portal.slug}?view=community&mode=${mode}&persona=${persona}`;
+
+  const nearbyEventCards = buildNearbyEventCards({
+    events: showcase.events,
+    hospitalLat: data.hospital.lat,
+    hospitalLng: data.hospital.lng,
+  });
+
   const wayfindingHref = getHospitalWayfindingHref(data.hospital);
   const bookVisitHref = getHospitalBookVisitHref(data.hospital);
+  const hospitalDirectoryHref = `/${portal.slug}/hospitals`;
+  const communityHubHref = `/${portal.slug}?view=community`;
+  const hospitalHeroImage = getHospitalHeroImage(data.hospital.slug);
+
   const campusResources = (data.services.length > 0
     ? data.services.slice(0, 6)
     : buildFallbackCampusResources(data.hospital.name));
-
-  const breakCards = toSpotlightCards({ showcase, kind: "break" });
-  const fitnessCards = toSpotlightCards({ showcase, kind: "fitness" });
-  const openNowCount = conciergeExplorerItems.filter((item) => item.isOpenNow).length;
 
   return (
     <div className={`min-h-screen ${isEmoryBrand ? "bg-[#f2f5fa] text-[#002f6c]" : ""}`}>
@@ -265,34 +354,16 @@ export default async function HospitalLandingPage({ params, searchParams }: Prop
 
         <div className={`${hospitalBodyFont.className} ${isEmoryBrand ? EMORY_THEME_SCOPE_CLASS : ""} py-6 space-y-5`}>
           <section className="emory-panel p-4 sm:p-5">
-            <div className="grid grid-cols-1 lg:grid-cols-[1.05fr_0.95fr] gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-[1.08fr_0.92fr] gap-4 items-stretch">
               <div>
-                <p className="emory-kicker">Concierge</p>
-                <h1 className={`mt-2 text-[clamp(2.1rem,3.8vw,3.15rem)] leading-[0.94] text-[var(--cream)] ${hospitalDisplayFont.className}`}>
-                  Explore support around your hospital.
+                <p className="emory-kicker">Your campus</p>
+                <h1 className={`mt-1 text-[clamp(2.4rem,4.2vw,3.4rem)] leading-[0.94] text-[var(--cream)] ${hospitalDisplayFont.className}`}>
+                  {data.hospital.name}
                 </h1>
-                <p className="mt-3 max-w-[48ch] text-sm sm:text-base text-[var(--muted)]">
-                  Campus resources first, then nearby meals, essentials, and reset options by moment.
-                </p>
+                <p className="mt-1 text-sm text-[var(--muted)]">{data.hospital.address}</p>
 
                 <div className="mt-4 flex flex-wrap gap-2">
                   <HospitalTrackedLink
-                    href="#concierge-explorer"
-                    tracking={{
-                      actionType: "resource_clicked",
-                      portalSlug: portal.slug,
-                      hospitalSlug: data.hospital.slug,
-                      modeContext: mode,
-                      sectionKey: "v4_concierge_hero",
-                      targetKind: "meals_explorer",
-                      targetId: "meals",
-                      targetLabel: "Find Meals Nearby",
-                    }}
-                    className="emory-primary-btn inline-flex items-center px-3 py-1.5 text-xs"
-                  >
-                    Find Meals Nearby
-                  </HospitalTrackedLink>
-                  <HospitalTrackedLink
                     href={wayfindingHref}
                     external
                     tracking={{
@@ -300,147 +371,23 @@ export default async function HospitalLandingPage({ params, searchParams }: Prop
                       portalSlug: portal.slug,
                       hospitalSlug: data.hospital.slug,
                       modeContext: mode,
-                      sectionKey: "v5_concierge_hero",
+                      sectionKey: "v8_hospital_hero",
                       targetKind: "wayfinding",
                       targetId: data.hospital.slug,
-                      targetLabel: "Open Directions",
+                      targetLabel: "Wayfinding",
                       targetUrl: wayfindingHref,
                     }}
-                    className="emory-secondary-btn inline-flex items-center px-3 py-1.5 text-xs"
+                    className="emory-primary-btn inline-flex items-center"
                   >
-                    Open Directions
+                    Wayfinding
                   </HospitalTrackedLink>
-                  <HospitalTrackedLink
-                    href={directoryHref}
-                    tracking={{
-                      actionType: "resource_clicked",
-                      portalSlug: portal.slug,
-                      hospitalSlug: data.hospital.slug,
-                      modeContext: mode,
-                      sectionKey: "v4_concierge_hero",
-                      targetKind: "hospital_directory",
-                      targetId: "change-campus",
-                      targetLabel: "Change Campus",
-                      targetUrl: directoryHref,
-                    }}
-                    className="emory-secondary-btn inline-flex items-center px-3 py-1.5 text-xs"
-                  >
-                    Change Campus
-                  </HospitalTrackedLink>
-                </div>
 
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                  <span className="emory-chip">{openNowCount} open now</span>
-                  <span className="emory-chip">{data.nearby.food.length} food options</span>
-                  <span className="emory-chip">{data.nearby.stay.length} stay options</span>
-                  <span className="emory-chip">{data.nearby.essentials.length} essentials</span>
-                </div>
-              </div>
+                  {data.hospital.phone && (
+                    <a href={`tel:${data.hospital.phone}`} className="emory-secondary-btn inline-flex items-center">
+                      Call main desk
+                    </a>
+                  )}
 
-              <div
-                className="emory-photo-hero min-h-[240px] sm:min-h-[290px]"
-                style={{ "--hero-image": `url("${HERO_IMAGE}")` } as CSSProperties}
-              >
-                <div className="absolute inset-x-2 bottom-2 z-[2] rounded-md bg-[#002f6c]/88 px-2.5 py-2 text-white text-[11px] leading-tight">
-                  <div className="flex items-center justify-between gap-2">
-                    <strong>{data.hospital.name}</strong>
-                    <span className="text-white/90">Practical support for patients, caregivers, and visitors.</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-4 rounded-lg border border-[var(--twilight)] bg-[#f8fafe] p-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.07em] text-[#6b7280]">Switch hospital</p>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {hospitalLocations.map((hospital) => {
-                  const isActive = hospital.slug === data.hospital.slug;
-                  const href = `/${portal.slug}/hospitals/${hospital.slug}?mode=${mode}&persona=${persona}`;
-                  return (
-                    <HospitalTrackedLink
-                      key={hospital.id}
-                      href={href}
-                      tracking={{
-                        actionType: "resource_clicked",
-                        portalSlug: portal.slug,
-                        hospitalSlug: hospital.slug,
-                        modeContext: mode,
-                        sectionKey: "v6_concierge_switch_hospital",
-                        targetKind: "hospital_switch",
-                        targetId: hospital.slug,
-                        targetLabel: hospital.name,
-                        targetUrl: href,
-                      }}
-                      className={isActive
-                        ? "inline-flex items-center rounded-md border border-[#7ecf75] bg-[#8ed585] px-2 py-1 text-[11px] font-semibold text-[#002f6c]"
-                        : "inline-flex items-center rounded-md border border-[#c7d3e8] bg-white px-2 py-1 text-[11px] font-semibold text-[#143b83] hover:bg-[#f3f7ff]"}
-                    >
-                      {hospital.name}
-                    </HospitalTrackedLink>
-                  );
-                })}
-              </div>
-            </div>
-          </section>
-
-          <section className="grid grid-cols-1 lg:grid-cols-[1.15fr_0.85fr] gap-4">
-            <article className="emory-panel p-4 sm:p-5">
-              <p className="emory-kicker">Campus overview</p>
-              <h2 className={`mt-1 text-[clamp(1.6rem,2.9vw,2.2rem)] leading-[0.98] text-[var(--cream)] ${hospitalDisplayFont.className}`}>
-                On-campus support and resources
-              </h2>
-              <p className="mt-1 text-sm text-[var(--muted)]">{data.hospital.address}</p>
-
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {data.hospital.neighborhood && <span className="emory-chip">{data.hospital.neighborhood}</span>}
-                {data.hospital.phone && <span className="emory-chip">Main line available</span>}
-                {data.hospital.emergency_phone && <span className="emory-chip">Emergency line available</span>}
-              </div>
-
-              <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {campusResources.map((service) => (
-                  <article key={service.id} className="rounded-xl border border-[var(--twilight)] bg-gradient-to-b from-white to-[#f9fbfe] px-3 py-3">
-                    <p className="text-sm font-semibold text-[var(--cream)]">{service.name}</p>
-                    <p className="mt-0.5 text-xs text-[var(--muted)]">{service.description || "On-campus support service."}</p>
-                    <p className="mt-1 text-[11px] text-[var(--muted)]">
-                      {[service.open_hours, service.location_hint].filter(Boolean).join(" · ") || "Check with main desk"}
-                    </p>
-                  </article>
-                ))}
-              </div>
-            </article>
-
-            <article className="emory-panel p-4 sm:p-5">
-              <p className="emory-kicker">Wayfinding</p>
-              <h2 className={`mt-1 text-[clamp(1.4rem,2.4vw,1.85rem)] leading-[0.98] text-[var(--cream)] ${hospitalDisplayFont.className}`}>
-                Directions, parking, and contact
-              </h2>
-
-              <div className="mt-3 space-y-2">
-                <article className="rounded-xl border border-[var(--twilight)] bg-gradient-to-b from-white to-[#f9fbfe] px-3 py-3">
-                  <p className="text-sm font-semibold text-[var(--cream)]">Campus directions and parking</p>
-                  <HospitalTrackedLink
-                    href={wayfindingHref}
-                    external
-                    tracking={{
-                      actionType: "wayfinding_opened",
-                      portalSlug: portal.slug,
-                      hospitalSlug: data.hospital.slug,
-                      modeContext: mode,
-                      sectionKey: "v4_concierge_wayfinding",
-                      targetKind: "wayfinding",
-                      targetId: data.hospital.slug,
-                      targetLabel: "Open Wayfinding",
-                      targetUrl: wayfindingHref,
-                    }}
-                    className="mt-2 inline-flex items-center rounded-md border border-[#c7d3e8] bg-white px-2 py-1 text-[11px] font-semibold text-[#143b83] hover:bg-[#f3f7ff]"
-                  >
-                    Open map
-                  </HospitalTrackedLink>
-                </article>
-
-                <article className="rounded-xl border border-[var(--twilight)] bg-gradient-to-b from-white to-[#f9fbfe] px-3 py-3">
-                  <p className="text-sm font-semibold text-[var(--cream)]">Appointments and care actions</p>
                   <HospitalTrackedLink
                     href={bookVisitHref}
                     external={/^https?:\/\//i.test(bookVisitHref)}
@@ -449,36 +396,103 @@ export default async function HospitalLandingPage({ params, searchParams }: Prop
                       portalSlug: portal.slug,
                       hospitalSlug: data.hospital.slug,
                       modeContext: mode,
-                      sectionKey: "v4_concierge_wayfinding",
+                      sectionKey: "v8_hospital_hero",
                       targetKind: "care_action",
                       targetId: "manage-care",
-                      targetLabel: "Manage Care",
+                      targetLabel: "Manage care",
                       targetUrl: bookVisitHref,
                     }}
-                    className="mt-2 inline-flex items-center rounded-md border border-[#c7d3e8] bg-white px-2 py-1 text-[11px] font-semibold text-[#143b83] hover:bg-[#f3f7ff]"
+                    className="emory-secondary-btn inline-flex items-center"
                   >
                     Manage care
                   </HospitalTrackedLink>
-                </article>
 
-                {data.hospital.phone && (
-                  <article className="rounded-xl border border-[var(--twilight)] bg-gradient-to-b from-white to-[#f9fbfe] px-3 py-3">
-                    <p className="text-sm font-semibold text-[var(--cream)]">Need help now?</p>
-                    <a href={`tel:${data.hospital.phone}`} className="mt-2 inline-flex items-center rounded-md border border-[#c7d3e8] bg-white px-2 py-1 text-[11px] font-semibold text-[#143b83] hover:bg-[#f3f7ff]">
-                      Call main desk
-                    </a>
-                  </article>
-                )}
+                  <HospitalTrackedLink
+                    href={hospitalDirectoryHref}
+                    tracking={{
+                      actionType: "resource_clicked",
+                      portalSlug: portal.slug,
+                      hospitalSlug: data.hospital.slug,
+                      modeContext: mode,
+                      sectionKey: "v8_hospital_hero",
+                      targetKind: "hospital_directory",
+                      targetId: "switch-hospital",
+                      targetLabel: "Switch hospital",
+                      targetUrl: hospitalDirectoryHref,
+                    }}
+                    className="emory-secondary-btn inline-flex items-center"
+                  >
+                    Switch hospital
+                  </HospitalTrackedLink>
+                </div>
+
+                <div className="mt-4 rounded-lg border border-[var(--twilight)] bg-[#f8fafe] p-2.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.07em] text-[#6b7280]">Choose campus</p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {hospitalLocations.map((hospital) => {
+                      const isActive = hospital.slug === data.hospital.slug;
+                      const href = `/${portal.slug}/hospitals/${hospital.slug}`;
+                      return (
+                        <HospitalTrackedLink
+                          key={hospital.id}
+                          href={href}
+                          tracking={{
+                            actionType: "resource_clicked",
+                            portalSlug: portal.slug,
+                            hospitalSlug: hospital.slug,
+                            modeContext: mode,
+                            sectionKey: "v8_hospital_switch",
+                            targetKind: "hospital_switch",
+                            targetId: hospital.slug,
+                            targetLabel: hospital.name,
+                            targetUrl: href,
+                          }}
+                          className={isActive
+                            ? "inline-flex items-center rounded-md border border-[#7ecf75] bg-[#8ed585] px-2 py-1 text-[11px] font-semibold text-[#0f2f5f]"
+                            : "inline-flex items-center rounded-md border border-[#c7d3e8] bg-white px-2 py-1 text-[11px] font-semibold text-[#143b83] hover:bg-[#f3f7ff]"}
+                        >
+                          {hospital.name}
+                        </HospitalTrackedLink>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
-            </article>
+
+              <div
+                className="emory-photo-hero min-h-[260px] sm:min-h-[320px]"
+                style={{ "--hero-image": `url("${hospitalHeroImage}")` } as CSSProperties}
+              >
+                <div className="absolute inset-x-2 bottom-2 z-[2] rounded-md bg-[#002f6c]/88 px-2.5 py-2 text-white text-[11px] leading-tight">
+                  <div className="flex items-center justify-between gap-2">
+                    <strong>{data.hospital.name}</strong>
+                    <span className="text-white/90">Care, directions, and nearby support in one place.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2.5">
+              {campusResources.map((service) => (
+                <article key={service.id} className="rounded-xl border border-[var(--twilight)] bg-gradient-to-b from-white to-[#f9fbfe] px-3 py-3">
+                  <p className="text-[11px] uppercase tracking-[0.06em] text-[#6b7280]">{service.category}</p>
+                  <p className="mt-0.5 text-sm font-semibold text-[var(--cream)]">{service.name}</p>
+                  <p className="mt-0.5 text-xs text-[var(--muted)]">{service.description || "On-campus support service."}</p>
+                  <p className="mt-1 text-[11px] text-[var(--muted)]">
+                    {[service.open_hours, service.location_hint].filter(Boolean).join(" · ") || "Check with main desk"}
+                  </p>
+                </article>
+              ))}
+            </div>
           </section>
 
           <section className="emory-panel p-4 sm:p-5" id="concierge-explorer">
-            <p className="emory-kicker">Contextual meals</p>
-            <h2 className={`mt-1 text-[clamp(1.7rem,3vw,2.35rem)] leading-[0.96] text-[var(--cream)] ${hospitalDisplayFont.className}`}>
-              Find what fits this moment
+            <p className="emory-kicker">What's nearby</p>
+            <h2 className={`mt-1 text-[clamp(1.9rem,3.3vw,2.6rem)] leading-[0.96] text-[var(--cream)] ${hospitalDisplayFont.className}`}>
+              Find what you need around campus
             </h2>
-            <p className="mt-1 text-sm text-[var(--muted)]">Switch by time of day and preference to explore nearby options quickly.</p>
+            <p className="mt-1 text-sm text-[var(--muted)]">Food, lodging, pharmacies, fitness, and more within a few miles.</p>
+
             <div className="mt-3">
               <EmoryConciergeFoodExplorer
                 portalSlug={portal.slug}
@@ -489,119 +503,98 @@ export default async function HospitalLandingPage({ params, searchParams }: Prop
             </div>
           </section>
 
-          <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <article className="emory-panel p-4 sm:p-5">
-              <p className="emory-kicker">Need a break</p>
-              <h2 className={`mt-1 text-[clamp(1.45rem,2.5vw,1.9rem)] leading-[0.98] text-[var(--cream)] ${hospitalDisplayFont.className}`}>
-                Nearby reset options
-              </h2>
-              <p className="mt-1 text-sm text-[var(--muted)]">Parks, museums, and low-effort local breaks close to campus.</p>
+          <section className="emory-panel p-4 sm:p-5">
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div>
+                <p className="emory-kicker">Nearby this week</p>
+                <h2 className={`mt-1 text-[clamp(1.7rem,2.9vw,2.3rem)] leading-[0.98] text-[var(--cream)] ${hospitalDisplayFont.className}`}>
+                  Events and programs near {data.hospital.short_name || data.hospital.name}
+                </h2>
+                <p className="mt-1 text-sm text-[var(--muted)]">Relevant events close to campus for patients, guests, and caregivers.</p>
+              </div>
+              <HospitalTrackedLink
+                href={communityHubHref}
+                tracking={{
+                  actionType: "resource_clicked",
+                  portalSlug: portal.slug,
+                  hospitalSlug: data.hospital.slug,
+                  modeContext: mode,
+                  sectionKey: "v8_hospital_events",
+                  targetKind: "community_hub",
+                  targetId: "open-community-hub",
+                  targetLabel: "Open Community Hub",
+                  targetUrl: communityHubHref,
+                }}
+                className="emory-link-btn"
+              >
+                Open community hub
+              </HospitalTrackedLink>
+            </div>
 
-              <div className="mt-3 grid grid-cols-1 gap-2.5">
-                {breakCards.slice(0, 3).map((card) => (
-                  <article key={card.id} className="rounded-lg border border-[var(--twilight)] bg-white overflow-hidden">
-                    {card.imageUrl ? (
-                      <img src={card.imageUrl} alt={card.title} className="h-28 w-full object-cover" />
+            {nearbyEventCards.length > 0 ? (
+              <div className="mt-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+                {nearbyEventCards.map((eventCard) => (
+                  <article key={eventCard.id} className="rounded-lg border border-[var(--twilight)] bg-white overflow-hidden">
+                    {eventCard.imageUrl ? (
+                      <img src={eventCard.imageUrl} alt={eventCard.title} className="h-32 w-full object-cover" />
                     ) : (
-                      <div className="flex h-28 w-full items-center justify-center bg-[#eef2f7] px-3 text-center text-xs text-[#6b7280]">
-                        No partner photo available
-                      </div>
+                      <div className="h-32 w-full bg-gradient-to-br from-[#e8ecf2] to-[#d7dce6]" />
                     )}
-                    <div className="p-2.5">
-                      <p className="text-sm font-semibold text-[var(--cream)]">{card.title}</p>
-                      <p className="mt-0.5 text-[11px] text-[var(--muted)]">{card.meta}</p>
-                      <p className="mt-0.5 text-xs text-[var(--muted)]">{card.summary}</p>
-                      <HospitalTrackedLink
-                        href={card.href}
-                        external={card.targetKind === "venue_maps"}
-                        tracking={{
-                          actionType: "resource_clicked",
-                          portalSlug: portal.slug,
-                          hospitalSlug: data.hospital.slug,
-                          modeContext: mode,
-                          sectionKey: "v4_concierge_break",
-                          targetKind: card.targetKind,
-                          targetId: card.id,
-                          targetLabel: card.title,
-                          targetUrl: card.href,
-                      }}
-                        className="mt-2 inline-flex items-center rounded-md border border-[#c7d3e8] bg-white px-2 py-1 text-[11px] font-semibold text-[#143b83] hover:bg-[#f3f7ff]"
-                      >
-                        {card.targetKind === "venue_maps" ? "Get directions" : "View details"}
-                      </HospitalTrackedLink>
+                    <div className="p-3">
+                      <p className="text-[11px] uppercase tracking-[0.06em] text-[#6b7280]">Event</p>
+                      <h3 className="mt-0.5 text-[1rem] leading-[1.08] text-[var(--cream)] font-semibold">{eventCard.title}</h3>
+                      <p className="mt-1 text-xs text-[var(--muted)]">{eventCard.schedule}</p>
+                      <p className="mt-0.5 text-[11px] text-[var(--muted)]">{eventCard.subtitle}</p>
+
+                      <div className="mt-2 flex flex-wrap gap-3">
+                        <HospitalTrackedLink
+                          href={eventCard.detailHref}
+                          tracking={{
+                            actionType: "resource_clicked",
+                            portalSlug: portal.slug,
+                            hospitalSlug: data.hospital.slug,
+                            modeContext: mode,
+                            sectionKey: "v8_hospital_events",
+                            targetKind: "event_detail",
+                            targetId: eventCard.id,
+                            targetLabel: eventCard.title,
+                            targetUrl: eventCard.detailHref,
+                          }}
+                          className="emory-link-btn"
+                        >
+                          View details
+                        </HospitalTrackedLink>
+
+                        {eventCard.mapsHref && (
+                          <HospitalTrackedLink
+                            href={eventCard.mapsHref}
+                            external
+                            tracking={{
+                              actionType: "resource_clicked",
+                              portalSlug: portal.slug,
+                              hospitalSlug: data.hospital.slug,
+                              modeContext: mode,
+                              sectionKey: "v8_hospital_events",
+                              targetKind: "event_maps",
+                              targetId: eventCard.id,
+                              targetLabel: eventCard.title,
+                              targetUrl: eventCard.mapsHref,
+                            }}
+                            className="emory-link-btn"
+                          >
+                            Directions
+                          </HospitalTrackedLink>
+                        )}
+                      </div>
                     </div>
                   </article>
                 ))}
-                {breakCards.length === 0 && (
-                  <article className="rounded-lg border border-[var(--twilight)] bg-white px-3 py-2.5">
-                    <p className="text-sm text-[var(--muted)]">Explore nearby parks, museums, and events from the community hub.</p>
-                    <HospitalTrackedLink href={communityHref} className="emory-link-btn mt-1 inline-flex items-center" tracking={{
-                      actionType: "resource_clicked",
-                      portalSlug: portal.slug,
-                      hospitalSlug: data.hospital.slug,
-                      modeContext: mode,
-                      sectionKey: "v4_concierge_break",
-                      targetKind: "community_hub",
-                      targetId: "community-fallback",
-                      targetLabel: "Open Community Hub",
-                      targetUrl: communityHref,
-                    }}>
-                      Open community hub
-                    </HospitalTrackedLink>
-                  </article>
-                )}
               </div>
-            </article>
-
-            <article className="emory-panel p-4 sm:p-5">
-              <p className="emory-kicker">Drop-in fitness</p>
-              <h2 className={`mt-1 text-[clamp(1.45rem,2.5vw,1.9rem)] leading-[0.98] text-[var(--cream)] ${hospitalDisplayFont.className}`}>
-                Find a place to move
-              </h2>
-              <p className="mt-1 text-sm text-[var(--muted)]">Gyms, studios, and movement options near campus.</p>
-
-              <div className="mt-3 grid grid-cols-1 gap-2.5">
-                {fitnessCards.slice(0, 3).map((card) => (
-                  <article key={card.id} className="rounded-lg border border-[var(--twilight)] bg-white overflow-hidden">
-                    {card.imageUrl ? (
-                      <img src={card.imageUrl} alt={card.title} className="h-28 w-full object-cover" />
-                    ) : (
-                      <div className="flex h-28 w-full items-center justify-center bg-[#eef2f7] px-3 text-center text-xs text-[#6b7280]">
-                        No partner photo available
-                      </div>
-                    )}
-                    <div className="p-2.5">
-                      <p className="text-sm font-semibold text-[var(--cream)]">{card.title}</p>
-                      <p className="mt-0.5 text-[11px] text-[var(--muted)]">{card.meta}</p>
-                      <p className="mt-0.5 text-xs text-[var(--muted)]">{card.summary}</p>
-                      <HospitalTrackedLink
-                        href={card.href}
-                        external={card.targetKind === "venue_maps"}
-                        tracking={{
-                          actionType: "resource_clicked",
-                          portalSlug: portal.slug,
-                          hospitalSlug: data.hospital.slug,
-                          modeContext: mode,
-                          sectionKey: "v4_concierge_fitness",
-                          targetKind: card.targetKind,
-                          targetId: card.id,
-                          targetLabel: card.title,
-                          targetUrl: card.href,
-                      }}
-                        className="mt-2 inline-flex items-center rounded-md border border-[#c7d3e8] bg-white px-2 py-1 text-[11px] font-semibold text-[#143b83] hover:bg-[#f3f7ff]"
-                      >
-                        {card.targetKind === "venue_maps" ? "Get directions" : "View details"}
-                      </HospitalTrackedLink>
-                    </div>
-                  </article>
-                ))}
-                {fitnessCards.length === 0 && (
-                  <article className="rounded-lg border border-[var(--twilight)] bg-white px-3 py-2.5">
-                    <p className="text-sm text-[var(--muted)]">No fitness highlights yet for this area. Try another campus or open the community hub.</p>
-                  </article>
-                )}
+            ) : (
+              <div className="mt-3 rounded-lg border border-dashed border-[var(--twilight)] bg-[#f9fbfe] px-3 py-3">
+                <p className="text-sm text-[var(--muted)]">No nearby events are currently in range. Open the community hub to browse citywide programs.</p>
               </div>
-            </article>
+            )}
           </section>
         </div>
       </main>

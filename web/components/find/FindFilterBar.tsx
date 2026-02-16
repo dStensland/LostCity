@@ -85,7 +85,7 @@ export default function FindFilterBar({ variant = "full" }: FindFilterBarProps) 
   );
   const currentMood = searchParams.get("mood") || "";
   const currentDateFilter = searchParams.get("date") || "";
-  const currentFreeOnly = searchParams.get("free") === "1";
+  const currentFreeOnly = searchParams.get("free") === "1" || searchParams.get("price") === "free";
 
   const hasFilters =
     currentCategories.length > 0 ||

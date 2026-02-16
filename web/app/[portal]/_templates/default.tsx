@@ -3,7 +3,7 @@ import CuratedContent from "@/components/feed/CuratedContent";
 import { FamilyFeed } from "@/components/family";
 import type { Portal } from "@/lib/portal-context";
 
-type FeedTab = "curated" | "foryou";
+type FeedTab = "curated" | "explore" | "foryou";
 
 interface DefaultTemplateProps {
   portal: Portal;

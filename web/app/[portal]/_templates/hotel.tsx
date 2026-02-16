@@ -1,21 +1,22 @@
 import HotelConciergeFeed from "../_components/hotel/HotelConciergeFeed";
-import TonightExperienceView from "../_components/hotel/forth/views/TonightExperienceView";
-import { isForthVariantPortal } from "../_components/hotel/forth/server-utils";
+import ConciergeExperience from "../_components/concierge/ConciergeExperience";
+import { isConciergePortal } from "@/lib/concierge/concierge-config";
 import type { Portal } from "@/lib/portal-context";
+import type { Pillar } from "@/lib/concierge/concierge-types";
 
 interface HotelTemplateProps {
   portal: Portal;
+  initialPillar?: Pillar;
 }
 
 /**
  * Hotel template - luxury concierge guided experience
- * Shows tonight-first feed, hotel amenities, neighborhood venues, and curated picks
+ * Uses the concierge framework for FORTH-variant portals,
+ * falls back to HotelConciergeFeed for others.
  */
-export async function HotelTemplate({ portal }: HotelTemplateProps) {
-  const isForthVariant = isForthVariantPortal(portal);
-
-  if (isForthVariant) {
-    return <TonightExperienceView portal={portal} />;
+export async function HotelTemplate({ portal, initialPillar }: HotelTemplateProps) {
+  if (isConciergePortal(portal)) {
+    return <ConciergeExperience portal={portal} initialPillar={initialPillar} />;
   }
 
   return <HotelConciergeFeed portal={portal} />;

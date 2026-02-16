@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Explore Atlanta — Comp D2: Hybrid V2 (Descriptive + Alive)</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0E0E0E;
+    color: #fff;
+    font-family: 'Inter', -apple-system, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .phone-frame {
+    max-width: 390px;
+    margin: 20px auto;
+    background: #0E0E0E;
+    min-height: 100vh;
+    position: relative;
+  }
+
+  /* ===== Header ===== */
+  .header {
+    padding: 16px 20px 12px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: linear-gradient(to bottom, #0E0E0E 70%, transparent);
+  }
+
+  .header h1 {
+    font-size: 26px;
+    font-weight: 900;
+    letter-spacing: -0.5px;
+  }
+
+  .header .subtitle {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #555;
+    margin-top: 4px;
+  }
+
+  /* ===== Track Banners ===== */
+  .track-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 4px 12px 40px;
+  }
+
+  .track-banner {
+    position: relative;
+    border-radius: 14px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .track-banner:hover { transform: scale(1.01); }
+  .track-banner:active { transform: scale(0.99); }
+
+  .banner-bg {
+    width: 100%;
+    aspect-ratio: 2.2/1;
+    background-size: cover;
+    background-position: center;
+    filter: brightness(0.3) saturate(0.55) contrast(1.15);
+    transition: transform 0.5s ease;
+  }
+
+  .track-banner:hover .banner-bg { transform: scale(1.05); }
+
+  .banner-gradient {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to top,
+      rgba(14,14,14,0.98) 0%,
+      rgba(14,14,14,0.75) 40%,
+      rgba(14,14,14,0.2) 75%,
+      transparent 100%
+    );
+  }
+
+  .banner-accent {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    z-index: 5;
+    border-radius: 14px 0 0 14px;
+  }
+
+  .banner-content {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 40px;
+    padding: 14px 18px;
+    z-index: 2;
+  }
+
+  .banner-category {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 4px;
+    opacity: 0.9;
+  }
+
+  .banner-title {
+    font-size: 21px;
+    font-weight: 900;
+    line-height: 1.1;
+    letter-spacing: -0.4px;
+    margin-bottom: 5px;
+  }
+
+  /* NEW: Category description instead of quote */
+  .banner-desc {
+    font-size: 12px;
+    line-height: 1.4;
+    color: rgba(255,255,255,0.45);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* NEW: Descriptive activity pills */
+  .banner-pills {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+
+  .pill {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.06);
+    color: rgba(255,255,255,0.4);
+    white-space: nowrap;
+  }
+
+  .pill.tonight {
+    background: rgba(224,58,62,0.15);
+    border-color: rgba(224,58,62,0.3);
+    color: #E03A3E;
+  }
+
+  .pill.tonight::before {
+    content: '';
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #E03A3E;
+    margin-right: 4px;
+    animation: blink 1.5s ease-in-out infinite;
+  }
+
+  .pill.weekend {
+    background: rgba(193,211,47,0.1);
+    border-color: rgba(193,211,47,0.2);
+    color: #C1D32F;
+  }
+
+  .pill.free {
+    background: rgba(52,211,153,0.1);
+    border-color: rgba(52,211,153,0.2);
+    color: #34D399;
+  }
+
+  .pill.seasonal {
+    background: rgba(251,146,60,0.12);
+    border-color: rgba(251,146,60,0.25);
+    color: #FB923C;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+
+  .banner-arrow {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 3;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255,255,255,0.3);
+    font-size: 14px;
+    transition: all 0.2s;
+  }
+
+  .track-banner:hover .banner-arrow {
+    background: rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.6);
+  }
+
+  /* ===== DRILL-IN ===== */
+  .detail-section {
+    margin-top: 40px;
+    border-top: 2px solid rgba(255,255,255,0.04);
+  }
+
+  .section-title {
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #444;
+    letter-spacing: 0.08em;
+    padding: 20px 20px 16px;
+  }
+
+  .detail-hero {
+    position: relative;
+    min-height: 260px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    overflow: hidden;
+  }
+
+  .detail-hero .hero-bg {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center top;
+    filter: brightness(0.28) saturate(0.5) contrast(1.2);
+  }
+
+  .detail-hero .hero-grad {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, #0E0E0E 0%, rgba(14,14,14,0.7) 40%, transparent 100%);
+  }
+
+  .detail-hero-content {
+    position: relative;
+    z-index: 2;
+    padding: 24px 20px;
+  }
+
+  .detail-back {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: rgba(255,255,255,0.35);
+    margin-bottom: 12px;
+    cursor: pointer;
+  }
+
+  .detail-track-cat {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #FB923C;
+    margin-bottom: 8px;
+  }
+
+  .detail-title {
+    font-size: 32px;
+    font-weight: 900;
+    line-height: 1.05;
+    letter-spacing: -0.6px;
+    margin-bottom: 10px;
+  }
+
+  .detail-quote {
+    font-size: 15px;
+    font-style: italic;
+    color: rgba(255,255,255,0.45);
+    line-height: 1.4;
+    margin-bottom: 4px;
+  }
+
+  .detail-attribution {
+    font-size: 11px;
+    color: rgba(255,255,255,0.25);
+  }
+
+  .detail-desc {
+    padding: 16px 20px;
+    font-size: 14px;
+    line-height: 1.7;
+    color: rgba(255,255,255,0.5);
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+
+  /* Activity summary bar */
+  .activity-bar {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+
+  .activity-stat {
+    flex: 1;
+    padding: 12px 16px;
+    text-align: center;
+    border-right: 1px solid rgba(255,255,255,0.04);
+  }
+
+  .activity-stat:last-child { border-right: none; }
+
+  .activity-stat .val {
+    font-size: 18px;
+    font-weight: 800;
+  }
+
+  .activity-stat .val.tonight-val { color: #E03A3E; }
+  .activity-stat .val.weekend-val { color: #C1D32F; }
+  .activity-stat .val.free-val { color: #34D399; }
+
+  .activity-stat .lbl {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px;
+    color: rgba(255,255,255,0.3);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 2px;
+  }
+
+  /* Filter chips */
+  .filter-row {
+    display: flex;
+    gap: 6px;
+    padding: 10px 16px;
+    overflow-x: auto;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+
+  .filter-chip {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    padding: 5px 12px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.06);
+    color: rgba(255,255,255,0.4);
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .filter-chip.active {
+    background: rgba(251,146,60,0.12);
+    border-color: rgba(251,146,60,0.3);
+    color: #FB923C;
+  }
+
+  /* ===== VENUE CARDS ===== */
+  .venue-list {
+    padding: 12px 16px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .venue-list .section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(255,255,255,0.25);
+    padding: 4px 0;
+  }
+
+  .venue-card {
+    border-radius: 12px;
+    overflow: hidden;
+    background: #141414;
+    border: 1px solid rgba(255,255,255,0.04);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .venue-card:hover {
+    background: #181818;
+    border-color: rgba(255,255,255,0.08);
+  }
+
+  .venue-card.has-tonight {
+    border-color: rgba(224,58,62,0.2);
+  }
+
+  .venue-card.has-events {
+    border-color: rgba(193,211,47,0.12);
+  }
+
+  .vc-image {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16/9;
+    background-size: cover;
+    background-position: center;
+    filter: contrast(1.06) saturate(0.8);
+  }
+
+  .vc-image::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 50%);
+  }
+
+  .vc-badges {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-end;
+  }
+
+  .badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .badge-tonight { background: #E03A3E; color: #fff; animation: pulse 1.5s ease-in-out infinite; }
+  .badge-thisweek { background: #C1D32F; color: #0E0E0E; }
+  .badge-free { background: #34D399; color: #0E0E0E; }
+  .badge-new { background: #39FF14; color: #0E0E0E; }
+  .badge-exhibit { background: rgba(167,139,250,0.9); color: #fff; }
+  .badge-seasonal { background: rgba(251,146,60,0.9); color: #0E0E0E; }
+  .badge-weekend { background: rgba(96,165,250,0.9); color: #0E0E0E; }
+
+  .vc-body { padding: 12px 14px; }
+
+  .vc-name {
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: 2px;
+  }
+
+  .vc-hood {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: rgba(255,255,255,0.3);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .vc-blurb {
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: rgba(255,255,255,0.5);
+    margin-bottom: 10px;
+  }
+
+  /* ===== EVENT SIGNALS — the alive stuff ===== */
+  .vc-events {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.04);
+    margin-bottom: 10px;
+  }
+
+  .event-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 9px 11px;
+    background: rgba(255,255,255,0.02);
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+  }
+
+  .event-row:last-child { border-bottom: none; }
+
+  .event-row.is-tonight {
+    background: rgba(224,58,62,0.06);
+  }
+
+  .event-row.is-exhibit {
+    background: rgba(167,139,250,0.04);
+  }
+
+  .event-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 600;
+    min-width: 52px;
+    flex-shrink: 0;
+    padding-top: 1px;
+  }
+
+  .event-time.tonight { color: #E03A3E; }
+  .event-time.thisweek { color: #C1D32F; }
+  .event-time.weekend { color: #60A5FA; }
+  .event-time.ongoing { color: #A78BFA; }
+
+  .event-details {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .event-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.75);
+    line-height: 1.3;
+  }
+
+  .event-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: rgba(255,255,255,0.3);
+    margin-top: 2px;
+    display: flex;
+    gap: 8px;
+  }
+
+  .event-meta .free-tag {
+    color: #34D399;
+    font-weight: 600;
+  }
+
+  .event-meta .price-tag {
+    color: rgba(255,255,255,0.4);
+  }
+
+  .event-meta .cat-tag {
+    color: rgba(255,255,255,0.25);
+  }
+
+  /* Footer */
+  .vc-divider {
+    height: 1px;
+    background: rgba(255,255,255,0.04);
+    margin: 0 0 10px;
+  }
+
+  .vc-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .vc-tags {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
+  .vc-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.04);
+    color: rgba(255,255,255,0.3);
+  }
+
+  .vc-action {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: rgba(255,255,255,0.25);
+  }
+
+  /* Compact grid */
+  .venue-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .vc-compact {
+    border-radius: 10px;
+    overflow: hidden;
+    background: #141414;
+    border: 1px solid rgba(255,255,255,0.04);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .vc-compact:hover { background: #181818; }
+
+  .vc-compact .vc-img-sm {
+    width: 100%;
+    aspect-ratio: 4/3;
+    background-size: cover;
+    background-position: center;
+    filter: contrast(1.06) saturate(0.75);
+    position: relative;
+  }
+
+  .vc-compact .vc-img-sm::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 40%);
+  }
+
+  .vc-compact .vc-badges-sm {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    align-items: flex-end;
+  }
+
+  .vc-compact .badge-sm {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 7px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+  }
+
+  .vc-compact .vc-next-event {
+    position: absolute;
+    bottom: 6px;
+    left: 6px;
+    right: 6px;
+    z-index: 3;
+    font-size: 9px;
+    color: rgba(255,255,255,0.8);
+    text-shadow: 0 1px 4px rgba(0,0,0,0.9);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    line-height: 1.3;
+  }
+
+  .vc-compact .vc-next-event .time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px;
+    font-weight: 600;
+    color: #C1D32F;
+    flex-shrink: 0;
+  }
+
+  .vc-compact .vc-body-sm { padding: 8px 9px; }
+
+  .vc-compact .vc-name-sm {
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.25;
+    margin-bottom: 2px;
+  }
+
+  .vc-compact .vc-hood-sm {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px;
+    color: rgba(255,255,255,0.25);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .vc-compact .vc-blurb-sm {
+    font-size: 10.5px;
+    line-height: 1.45;
+    color: rgba(255,255,255,0.4);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .see-all-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 12px;
+    padding: 12px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.02);
+    border: 1px dashed rgba(255,255,255,0.08);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: rgba(255,255,255,0.3);
+    cursor: pointer;
+  }
+
+  .comp-label {
+    text-align: center;
+    padding: 40px 20px 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #555;
+    letter-spacing: 0.04em;
+    line-height: 1.6;
+  }
+
+  .comp-label h2 {
+    font-family: 'Inter', sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+    color: #C1D32F;
+    margin-bottom: 4px;
+    letter-spacing: -0.3px;
+  }
+
+  .section-divider {
+    height: 2px;
+    background: rgba(255,255,255,0.03);
+    margin: 32px 16px;
+  }
+
+  .section-header {
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #444;
+    letter-spacing: 0.08em;
+    padding-bottom: 16px;
+  }
+</style>
+</head>
+<body>
+
+<div class="comp-label">
+  <h2>COMP D2: Hybrid V2</h2>
+  DESCRIPTIONS NOT QUOTES &middot; SPECIFIC ACTIVITY PILLS &middot; EVENT-RICH CARDS<br>
+  All signals use real data we have: event titles, dates, times, prices, categories
+</div>
+
+<!-- ============================================ -->
+<!-- PART 1: TRACK LIST                           -->
+<!-- ============================================ -->
+<div class="phone-frame">
+  <div class="header">
+    <h1>Explore Atlanta</h1>
+    <div class="subtitle">14 curated tracks through the city</div>
+  </div>
+
+  <div class="track-list">
+
+    <!-- Good Trouble -->
+    <div class="track-banner">
+      <div class="banner-bg" style="background-image: url('https://images.unsplash.com/photo-1590077428593-a55bb07c4665?w=800&q=80')"></div>
+      <div class="banner-gradient"></div>
+      <div class="banner-accent" style="background: #E03A3E"></div>
+      <div class="banner-content">
+        <div class="banner-category" style="color: #E03A3E">CIVIL RIGHTS HERITAGE</div>
+        <div class="banner-title">Good Trouble</div>
+        <div class="banner-desc">MLK's birthplace, lunch counter simulations, the Freedom Riders bus, and the streets where history marched.</div>
+        <div class="banner-pills">
+          <span class="pill tonight">2 tonight</span>
+          <span class="pill free">Free tours daily</span>
+          <span class="pill seasonal">BHM programming</span>
+        </div>
+      </div>
+      <div class="banner-arrow">&rsaquo;</div>
+    </div>
+
+    <!-- The South Got Something to Say -->
+    <div class="track-banner">
+      <div class="banner-bg" style="background-image: url('https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&q=80')"></div>
+      <div class="banner-gradient"></div>
+      <div class="banner-accent" style="background: #D4A574"></div>
+      <div class="banner-content">
+        <div class="banner-category" style="color: #D4A574">HIP-HOP & MUSIC</div>
+        <div class="banner-title">The South Got Something to Say</div>
+        <div class="banner-desc">The studios where OutKast recorded, the stages where trap was born, and the record shops that soundtrack the city.</div>
+        <div class="banner-pills">
+          <span class="pill tonight">5 shows tonight</span>
+          <span class="pill weekend">12 this weekend</span>
+          <span class="pill">74 venues</span>
+        </div>
+      </div>
+      <div class="banner-arrow">&rsaquo;</div>
+    </div>
+
+    <!-- The Itis -->
+    <div class="track-banner">
+      <div class="banner-bg" style="background-image: url('https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800&q=80')"></div>
+      <div class="banner-gradient"></div>
+      <div class="banner-accent" style="background: #FB923C"></div>
+      <div class="banner-content">
+        <div class="banner-category" style="color: #FB923C">FOOD SCENE</div>
+        <div class="banner-title">The Itis</div>
+        <div class="banner-desc">James Beard finalists, Buford Highway legends, soul food institutions, and the food halls rewriting the rules.</div>
+        <div class="banner-pills">
+          <span class="pill tonight">Wine dinner tonight</span>
+          <span class="pill">23 restaurants</span>
+        </div>
+      </div>
+      <div class="banner-arrow">&rsaquo;</div>
+    </div>
+
+    <!-- Hard in Da Paint -->
+    <div class="track-banner">
+      <div class="banner-bg" style="background-image: url('https://images.unsplash.com/photo-1569017388730-020b5f80a004?w=800&q=80')"></div>
+      <div class="banner-gradient"></div>
+      <div class="banner-accent" style="background: #14B8A6"></div>
+      <div class="banner-content">
+        <div class="banner-category" style="color: #14B8A6">STREET ART & GALLERIES</div>
+        <div class="banner-title">Hard in Da Paint</div>
+        <div class="banner-desc">Krog Tunnel graffiti, BeltLine murals that change monthly, gallery crawls in Castleberry Hill, and the art that makes Atlanta a canvas.</div>
+        <div class="banner-pills">
+          <span class="pill weekend">Gallery walk Sat</span>
+          <span class="pill free">Free outdoor art</span>
+          <span class="pill">82 spots</span>
+        </div>
+      </div>
+      <div class="banner-arrow">&rsaquo;</div>
+    </div>
+
+    <!-- The Midnight Train -->
+    <div class="track-banner">
+      <div class="banner-bg" style="background-image: url('https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800&q=80')"></div>
+      <div class="banner-gradient"></div>
+      <div class="banner-accent" style="background: #A78BFA"></div>
+      <div class="banner-content">
+        <div class="banner-category" style="color: #A78BFA">QUIRKY & HIDDEN GEMS</div>
+        <div class="banner-title">The Midnight Train</div>
+        <div class="banner-desc">A cotton mill with goats, the oldest indie theater in Georgia, a 747 you can walk through, and the Clermont Lounge.</div>
+        <div class="banner-pills">
+          <span class="pill tonight">Rocky Horror Fri</span>
+          <span class="pill">19 spots</span>
+        </div>
+      </div>
+      <div class="banner-arrow">&rsaquo;</div>
+    </div>
+
+    <!-- Keep Swinging -->
+    <div class="track-banner">
+      <div class="banner-bg" style="background-image: url('https://images.unsplash.com/photo-1461896836934-bd45ba2c1b9a?w=800&q=80')"></div>
+      <div class="banner-gradient"></div>
+      <div class="banner-accent" style="background: #F472B6"></div>
+      <div class="banner-content">
+        <div class="banner-category" style="color: #F472B6">SPORTS & GAME DAY</div>
+        <div class="banner-title">Keep Swinging</div>
+        <div class="banner-desc">Mercedes-Benz Stadium, Truist Park, Atlanta United watch parties, and the sports bars where the city loses its mind.</div>
+        <div class="banner-pills">
+          <span class="pill tonight">Hawks vs Celtics 7:30</span>
+          <span class="pill weekend">United home Sat</span>
+          <span class="pill">67 venues</span>
+        </div>
+      </div>
+      <div class="banner-arrow">&rsaquo;</div>
+    </div>
+
+    <!-- City in a Forest -->
+    <div class="track-banner">
+      <div class="banner-bg" style="background-image: url('https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800&q=80')"></div>
+      <div class="banner-gradient"></div>
+      <div class="banner-accent" style="background: #34D399"></div>
+      <div class="banner-content">
+        <div class="banner-category" style="color: #34D399">GREAT OUTDOORS</div>
+        <div class="banner-title">City in a Forest</div>
+        <div class="banner-desc">Piedmont Park, the BeltLine, a flooded granite quarry, waterfall hikes 30 minutes from downtown, and the canopy that earned the name.</div>
+        <div class="banner-pills">
+          <span class="pill free">Always free</span>
+          <span class="pill weekend">Trail run Sat 8am</span>
+          <span class="pill">87 parks</span>
+        </div>
+      </div>
+      <div class="banner-arrow">&rsaquo;</div>
+    </div>
+
+    <!-- Welcome to Atlanta -->
+    <div class="track-banner">
+      <div class="banner-bg" style="background-image: url('https://images.unsplash.com/photo-1575931953324-fcac7094999e?w=800&q=80')"></div>
+      <div class="banner-gradient"></div>
+      <div class="banner-accent" style="background: #C1D32F"></div>
+      <div class="banner-content">
+        <div class="banner-category" style="color: #C1D32F">CLASSIC ATLANTA</div>
+        <div class="banner-title">Welcome to Atlanta</div>
+        <div class="banner-desc">Georgia Aquarium, World of Coca-Cola, the Fox Theatre, Six Flags, and the greatest hits everybody comes to see.</div>
+        <div class="banner-pills">
+          <span class="pill tonight">Shark Week After Dark</span>
+          <span class="pill">12 attractions</span>
+        </div>
+      </div>
+      <div class="banner-arrow">&rsaquo;</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- PART 2: DRILL-IN (The Itis — food track)     -->
+<!-- ============================================ -->
+<div class="section-divider"></div>
+<div class="section-header">TAPPING "THE ITIS" LOADS THIS VIEW &darr;</div>
+
+<div class="phone-frame">
+
+  <div class="detail-hero">
+    <div class="hero-bg" style="background-image: url('https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800&q=80')"></div>
+    <div class="hero-grad"></div>
+    <div class="detail-hero-content">
+      <div class="detail-back">&larr; All Tracks</div>
+      <div class="detail-track-cat" style="color: #FB923C">FOOD SCENE</div>
+      <div class="detail-title">The Itis</div>
+      <div class="detail-quote">"The itis is that drowsy, beautiful feeling after a meal so good you can't move."</div>
+      <div class="detail-attribution">— The Boondocks / Aaron McGruder (Adult Swim HQ is in Atlanta)</div>
+    </div>
+  </div>
+
+  <div class="detail-desc">
+    Soul food institutions, James Beard semifinalists, Buford Highway's global corridor, and the food halls rewriting the rules. This is the city that taught the South how to eat.
+  </div>
+
+  <!-- Activity summary -->
+  <div class="activity-bar">
+    <div class="activity-stat">
+      <div class="val tonight-val">1</div>
+      <div class="lbl">Tonight</div>
+    </div>
+    <div class="activity-stat">
+      <div class="val weekend-val">4</div>
+      <div class="lbl">This weekend</div>
+    </div>
+    <div class="activity-stat">
+      <div class="val free-val">3</div>
+      <div class="lbl">Free events</div>
+    </div>
+    <div class="activity-stat">
+      <div class="val">23</div>
+      <div class="lbl">Places</div>
+    </div>
+  </div>
+
+  <div class="filter-row">
+    <span class="filter-chip active">All</span>
+    <span class="filter-chip">Tonight</span>
+    <span class="filter-chip">This Weekend</span>
+    <span class="filter-chip">Free</span>
+    <span class="filter-chip">$$$+</span>
+  </div>
+
+  <div class="venue-list">
+
+    <div class="section-label">Happening this week</div>
+
+    <!-- STAPLEHOUSE — rich card with real event data -->
+    <div class="venue-card has-tonight">
+      <div class="vc-image" style="background-image: url('https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&q=80')">
+        <div class="vc-badges">
+          <span class="badge badge-tonight">TONIGHT</span>
+        </div>
+      </div>
+      <div class="vc-body">
+        <div class="vc-name">Staplehouse</div>
+        <div class="vc-hood">OLD FOURTH WARD &middot; $$$$</div>
+        <div class="vc-blurb">James Beard Award winner. Every plate tells a story. The tasting menu is a love letter to Georgia.</div>
+        <div class="vc-events">
+          <div class="event-row is-tonight">
+            <div class="event-time tonight">TONIGHT</div>
+            <div class="event-details">
+              <div class="event-title">Valentine's Day Wine Pairing Dinner</div>
+              <div class="event-meta">
+                <span>7pm &middot; 5-course</span>
+                <span class="price-tag">$185/person</span>
+                <span class="cat-tag">Dining</span>
+              </div>
+            </div>
+          </div>
+          <div class="event-row">
+            <div class="event-time thisweek">SAT</div>
+            <div class="event-details">
+              <div class="event-title">Chef's Table: Georgia Terroir</div>
+              <div class="event-meta">
+                <span>6:30pm</span>
+                <span class="price-tag">$225/person</span>
+                <span class="cat-tag">Tasting Menu</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="vc-divider"></div>
+        <div class="vc-footer">
+          <div class="vc-tags">
+            <span class="vc-tag">James Beard</span>
+            <span class="vc-tag">Tasting Menu</span>
+            <span class="vc-tag">Reservations Only</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TWISTED SOUL — event + context -->
+    <div class="venue-card has-events">
+      <div class="vc-image" style="background-image: url('https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&q=80')">
+        <div class="vc-badges">
+          <span class="badge badge-thisweek">3 this week</span>
+        </div>
+      </div>
+      <div class="vc-body">
+        <div class="vc-name">Twisted Soul Cookhouse & Pours</div>
+        <div class="vc-hood">WESTSIDE &middot; $$$</div>
+        <div class="vc-blurb">Global soul food. Chef Deborah VanTrece turns comfort food into something transcendent. Don't skip the oxtails.</div>
+        <div class="vc-events">
+          <div class="event-row">
+            <div class="event-time thisweek">FRI</div>
+            <div class="event-details">
+              <div class="event-title">Live Jazz Brunch</div>
+              <div class="event-meta">
+                <span>11am - 3pm</span>
+                <span class="cat-tag">Live Music + Dining</span>
+              </div>
+            </div>
+          </div>
+          <div class="event-row">
+            <div class="event-time weekend">SUN</div>
+            <div class="event-details">
+              <div class="event-title">Southern Sunday Supper</div>
+              <div class="event-meta">
+                <span>5pm</span>
+                <span class="price-tag">$45/person</span>
+                <span class="cat-tag">Prix Fixe</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="vc-divider"></div>
+        <div class="vc-footer">
+          <div class="vc-tags">
+            <span class="vc-tag">Soul Food</span>
+            <span class="vc-tag">Live Music</span>
+            <span class="vc-tag">$$$</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label" style="margin-top: 8px">More restaurants</div>
+
+    <!-- Compact grid -->
+    <div class="venue-grid">
+
+      <div class="vc-compact">
+        <div class="vc-img-sm" style="background-image: url('https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&q=80')">
+          <div class="vc-badges-sm">
+            <span class="badge-sm" style="background: #C1D32F; color: #0E0E0E;">2 this week</span>
+          </div>
+          <div class="vc-next-event">
+            <span class="time">SAT 6PM</span> Supper Club
+          </div>
+        </div>
+        <div class="vc-body-sm">
+          <div class="vc-name-sm">Miller Union</div>
+          <div class="vc-hood-sm">WESTSIDE &middot; $$$$</div>
+          <div class="vc-blurb-sm">Farm-to-table that actually means it. The vegetable plate is the move.</div>
+        </div>
+      </div>
+
+      <div class="vc-compact">
+        <div class="vc-img-sm" style="background-image: url('https://images.unsplash.com/photo-1559339352-11d035aa65de?w=400&q=80')">
+          <div class="vc-badges-sm">
+            <span class="badge-sm" style="background: #39FF14; color: #0E0E0E;">NEW</span>
+          </div>
+        </div>
+        <div class="vc-body-sm">
+          <div class="vc-name-sm">Virgil's Gullah Kitchen</div>
+          <div class="vc-hood-sm">KIRKWOOD &middot; $$</div>
+          <div class="vc-blurb-sm">Lowcountry Gullah-Geechee food. The shrimp and grits are spiritual.</div>
+        </div>
+      </div>
+
+      <div class="vc-compact">
+        <div class="vc-img-sm" style="background-image: url('https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=400&q=80')">
+          <div class="vc-next-event">
+            <span class="time">FRI 7PM</span> Omakase Night
+          </div>
+        </div>
+        <div class="vc-body-sm">
+          <div class="vc-name-sm">Northern China Eatery</div>
+          <div class="vc-hood-sm">BUFORD HWY &middot; $</div>
+          <div class="vc-blurb-sm">Hand-pulled noodles made in front of you. Cash only.</div>
+        </div>
+      </div>
+
+      <div class="vc-compact">
+        <div class="vc-img-sm" style="background-image: url('https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&q=80')">
+          <div class="vc-badges-sm">
+            <span class="badge-sm" style="background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.15); color: #fff;">Popular</span>
+          </div>
+        </div>
+        <div class="vc-body-sm">
+          <div class="vc-name-sm">Paschal's</div>
+          <div class="vc-hood-sm">CASTLEBERRY HILL &middot; $$</div>
+          <div class="vc-blurb-sm">Where MLK planned strategy over fried chicken. The back booth changed history.</div>
+        </div>
+      </div>
+
+      <div class="vc-compact">
+        <div class="vc-img-sm" style="background-image: url('https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=400&q=80')">
+          <div class="vc-badges-sm">
+            <span class="badge-sm" style="background: #C1D32F; color: #0E0E0E;">1 this week</span>
+          </div>
+          <div class="vc-next-event">
+            <span class="time">SUN 12PM</span> Filipino Feast
+          </div>
+        </div>
+        <div class="vc-body-sm">
+          <div class="vc-name-sm">Kamayan ATL</div>
+          <div class="vc-hood-sm">DULUTH &middot; $$</div>
+          <div class="vc-blurb-sm">Eat-with-your-hands Filipino feasts. The lechon is extraordinary.</div>
+        </div>
+      </div>
+
+      <div class="vc-compact">
+        <div class="vc-img-sm" style="background-image: url('https://images.unsplash.com/photo-1476224203421-9ac39bcb3327?w=400&q=80')"></div>
+        <div class="vc-body-sm">
+          <div class="vc-name-sm">Gunshow</div>
+          <div class="vc-hood-sm">GLENWOOD PARK &middot; $$$</div>
+          <div class="vc-blurb-sm">Dim sum meets Southern. Chefs bring dishes to your table. You pick what looks good.</div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="see-all-row">All 23 places &middot; 9 events this week &rarr;</div>
+
+  </div>
+</div>
+
+</body>
+</html>

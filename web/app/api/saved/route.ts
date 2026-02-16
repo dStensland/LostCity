@@ -3,6 +3,7 @@ import { parseIntParam, validationError, checkBodySize } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { ensureUserProfile } from "@/lib/user-utils";
 import { withOptionalAuth, withAuth } from "@/lib/api-middleware";
+import { resolvePortalId } from "@/lib/portal-resolution";
 import { logger } from "@/lib/logger";
 
 /**
@@ -79,13 +80,17 @@ export const POST = withAuth(async (request, { user, serviceClient }) => {
     // Ensure profile exists
     await ensureUserProfile(user, serviceClient);
 
+    // Resolve portal context
+    const portalId = await resolvePortalId(request);
+
     // Insert saved item
-    const insertData: { user_id: string; event_id?: number; venue_id?: number } = {
+    const insertData: { user_id: string; event_id?: number; venue_id?: number; portal_id?: string } = {
       user_id: user.id,
     };
 
     if (event_id) insertData.event_id = event_id;
     if (venue_id) insertData.venue_id = venue_id;
+    if (portalId) insertData.portal_id = portalId;
 
     const { error } = await serviceClient
       .from("saved_items")

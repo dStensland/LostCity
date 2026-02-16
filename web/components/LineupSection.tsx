@@ -12,6 +12,8 @@ interface LineupSectionProps {
   title?: string;
   headlinerLabel?: string;
   supportLabel?: string;
+  fallbackImageUrl?: string | null;
+  fallbackGenres?: string[] | null;
 }
 
 export default function LineupSection({
@@ -21,6 +23,8 @@ export default function LineupSection({
   title,
   headlinerLabel,
   supportLabel,
+  fallbackImageUrl = null,
+  fallbackGenres = null,
 }: LineupSectionProps) {
   const [expanded, setExpanded] = useState(false);
 
@@ -73,6 +77,8 @@ export default function LineupSection({
                 artist={artist}
                 portalSlug={portalSlug}
                 variant="card"
+                fallbackImageUrl={fallbackImageUrl}
+                fallbackGenres={fallbackGenres}
               />
             ))}
           </div>
@@ -95,6 +101,8 @@ export default function LineupSection({
                 artist={artist}
                 portalSlug={portalSlug}
                 variant="card"
+                fallbackImageUrl={fallbackImageUrl}
+                fallbackGenres={fallbackGenres}
               />
             ))}
           </div>

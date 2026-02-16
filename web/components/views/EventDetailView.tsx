@@ -11,7 +11,7 @@ import DirectionsDropdown from "@/components/DirectionsDropdown";
 import EventQuickActions from "@/components/EventQuickActions";
 import VenueVibes from "@/components/VenueVibes";
 import LinkifyText from "@/components/LinkifyText";
-import { formatTimeSplit, formatCompactCount, formatTimeRange } from "@/lib/formats";
+import { formatTime, formatTimeSplit, formatCompactCount, formatTimeRange } from "@/lib/formats";
 import { format, parseISO } from "date-fns";
 import { EntityTagList } from "@/components/tags/EntityTagList";
 import FlagButton from "@/components/FlagButton";
@@ -21,27 +21,43 @@ import { formatCloseTime } from "@/lib/hours";
 import VenueEventsByDay from "@/components/VenueEventsByDay";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
+import { isDogPortal } from "@/lib/dog-art";
+import { usePortal } from "@/lib/portal-context";
+import type { EventArtist } from "@/lib/artists-utils";
+import LineupSection from "@/components/LineupSection";
+import { deriveShowSignals } from "@/lib/show-signals";
+import ShowSignalsPanel from "@/components/ShowSignalsPanel";
+import { inferLineupGenreFallback } from "@/lib/artist-fallbacks";
 
 type EventData = {
   id: number;
   title: string;
   description: string | null;
+  display_description?: string | null;
   start_date: string;
   start_time: string | null;
+  doors_time?: string | null;
   end_time: string | null;
   end_date: string | null;
   is_all_day: boolean;
   is_free: boolean;
   price_min: number | null;
   price_max: number | null;
+  price_note?: string | null;
   category: string | null;
   subcategory: string | null;
   tags: string[] | null;
+  genres?: string[] | null;
   ticket_url: string | null;
   source_url: string | null;
   image_url: string | null;
   is_recurring: boolean;
   recurrence_rule: string | null;
+  is_adult?: boolean | null;
+  age_policy?: string | null;
+  ticket_status?: string | null;
+  reentry_policy?: string | null;
+  set_times_mentioned?: boolean | null;
   is_live?: boolean;
   venue: {
     id: number;
@@ -163,7 +179,9 @@ function isExhibition(event: EventData): boolean {
 export default function EventDetailView({ eventId, portalSlug, onClose }: EventDetailViewProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { portal } = usePortal();
   const [event, setEvent] = useState<EventData | null>(null);
+  const [eventArtists, setEventArtists] = useState<EventArtist[]>([]);
   const [venueEvents, setVenueEvents] = useState<RelatedEvent[]>([]);
   const [nearbyEvents, setNearbyEvents] = useState<RelatedEvent[]>([]);
   const [nearbyDestinations, setNearbyDestinations] = useState<NearbyDestinations>({
@@ -186,12 +204,14 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
       setError(null);
 
       try {
-        const res = await fetch(`/api/events/${eventId}`);
+        const eventUrl = portal?.id ? `/api/events/${eventId}?portal_id=${portal.id}` : `/api/events/${eventId}`;
+        const res = await fetch(eventUrl);
         if (!res.ok) {
           throw new Error("Event not found");
         }
         const data = await res.json();
         setEvent(data.event);
+        setEventArtists(data.eventArtists || []);
         setVenueEvents(data.venueEvents || []);
         setNearbyEvents(data.nearbyEvents || []);
         setNearbyDestinations(data.nearbyDestinations || {
@@ -209,7 +229,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
     }
 
     fetchEvent();
-  }, [eventId]);
+  }, [eventId, portal?.id]);
 
   // Navigate to another detail view, clearing all detail params first
   // so only one is active at a time. Each push adds to history for proper back nav.
@@ -281,8 +301,12 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
   }
 
   const isLive = event.is_live || false;
+  const isDog = isDogPortal(portalSlug);
   const recurrenceText = parseRecurrenceRule(event.recurrence_rule);
   const showImage = event.image_url && !imageError;
+  const dogTags = isDog && event.tags
+    ? event.tags.filter((t) => ["dog-friendly", "pets", "adoption", "outdoor", "family-friendly"].includes(t))
+    : [];
   const heroAccentClass = createCssVarClass(
     "--hero-accent",
     getCategoryColor(event.category || "other"),
@@ -312,6 +336,42 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
   const hasCaffeine = nearbyDestinations.caffeine.length > 0;
   const hasFun = nearbyDestinations.fun.length > 0;
   const hasRelatedContent = hasVenueEvents || hasNearbyEvents || hasFood || hasDrinks || hasNightlife || hasCaffeine || hasFun;
+  const descriptionText = event.display_description || event.description;
+  const lineupGenreFallback = inferLineupGenreFallback(event.genres, event.tags, event.category);
+  const derivedSignals = deriveShowSignals({
+    title: event.title,
+    description: descriptionText,
+    price_note: event.price_note,
+    tags: event.tags,
+    start_time: event.start_time,
+    doors_time: event.doors_time,
+    end_time: event.end_time,
+    is_all_day: event.is_all_day,
+    is_free: event.is_free,
+    is_adult: event.is_adult,
+    ticket_url: event.ticket_url,
+    age_policy: event.age_policy,
+    ticket_status: event.ticket_status,
+    reentry_policy: event.reentry_policy,
+    set_times_mentioned: event.set_times_mentioned,
+  });
+  const defaultStartLabel = formatTime(event.start_time, event.is_all_day || undefined);
+  const showSignals = {
+    ...derivedSignals,
+    showTime: derivedSignals.showTime === defaultStartLabel ? null : derivedSignals.showTime,
+  };
+  const hasShowSignals = Boolean(
+    showSignals.showTime ||
+      showSignals.doorsTime ||
+      showSignals.endTime ||
+      showSignals.agePolicy ||
+      showSignals.ticketStatus ||
+      showSignals.reentryPolicy ||
+      showSignals.hasSetTimesMention
+  );
+  const hasLineup = eventArtists.length > 0;
+  const hasAboutContent = Boolean(descriptionText) || hasLineup;
+  const hasIntroContent = hasAboutContent || hasShowSignals;
 
   return (
     <div className="pt-6 pb-8">
@@ -413,6 +473,29 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
       {/* Quick Actions */}
       <EventQuickActions event={event} isLive={isLive} className="mb-6" />
 
+      {/* Dog-friendly event highlights (dog portal only) */}
+      {isDog && dogTags.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-6">
+          {dogTags.map((tag) => (
+            <span
+              key={tag}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold"
+              style={{
+                background: "rgba(255, 107, 53, 0.1)",
+                color: "#FF6B35",
+                border: "1px solid rgba(255, 107, 53, 0.25)",
+              }}
+            >
+              {tag === "dog-friendly" && "🐾 Dog Friendly"}
+              {tag === "pets" && "🐕 Pet Event"}
+              {tag === "adoption" && "❤️ Adoption"}
+              {tag === "outdoor" && "🌳 Outdoor"}
+              {tag === "family-friendly" && "👨‍👩‍👧 Family Friendly"}
+            </span>
+          ))}
+        </div>
+      )}
+
       {/* Exhibition Info Card */}
       {isExhibition(event) && (
         <div className="flex items-center gap-3 p-4 rounded-lg border border-[#F59E0B]/30 mb-6 bg-[#F59E0B]/5">
@@ -470,20 +553,43 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
       {/* Main event info card */}
       <div className="border border-[var(--twilight)] rounded-xl p-5 sm:p-6 bg-[var(--dusk)]">
         {/* Description */}
-        {event.description && (
+        {descriptionText && (
           <div className="mb-5">
             <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
               About
             </h2>
             <p className="text-[var(--soft)] whitespace-pre-wrap leading-relaxed">
-              <LinkifyText text={event.description} />
+              <LinkifyText text={descriptionText} />
             </p>
+          </div>
+        )}
+
+        {/* Artists */}
+        {hasLineup && (
+          <div className={`mb-5 ${descriptionText ? "pt-5 border-t border-[var(--twilight)]" : ""}`}>
+            <LineupSection
+              artists={eventArtists}
+              portalSlug={portalSlug}
+              maxDisplay={20}
+              title="Artists"
+              fallbackImageUrl={event.image_url}
+              fallbackGenres={lineupGenreFallback}
+            />
+          </div>
+        )}
+
+        {hasShowSignals && (
+          <div className={`mb-5 ${hasAboutContent ? "pt-5 border-t border-[var(--twilight)]" : ""}`}>
+            <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
+              Show Details
+            </h2>
+            <ShowSignalsPanel signals={showSignals} ticketUrl={event.ticket_url} />
           </div>
         )}
 
         {/* Location */}
         {event.venue && event.venue.address && (
-          <div className={`mb-5 ${event.description ? "pt-5 border-t border-[var(--twilight)]" : ""}`}>
+          <div className={`mb-5 ${hasIntroContent ? "pt-5 border-t border-[var(--twilight)]" : ""}`}>
             <div className="flex items-center justify-between mb-3">
               <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest">
                 Location

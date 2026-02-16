@@ -220,7 +220,7 @@ export default function StandardHeader({
     <>
       {/* Main Header Bar */}
       <header
-        className="sticky top-0 z-[100] border-b border-[var(--twilight)]/30 bg-[var(--void)]/95 backdrop-blur-sm relative"
+        className="portal-feed-header sticky top-0 z-[100] border-b border-[var(--twilight)]/30 bg-[var(--void)]/95 backdrop-blur-sm relative"
       >
         {/* Atlanta atmospheric backdrop — inverted skyline, photo-negative feel */}
         {portalSlug === "atlanta" && (
@@ -283,7 +283,7 @@ export default function StandardHeader({
         )}
         {/* Content layer */}
         <div className="relative flex flex-col">
-        <div className="px-4 py-2 sm:py-3 flex items-center gap-3 relative">
+        <div className="portal-feed-header-row px-4 py-2 sm:py-3 flex items-center gap-3 relative">
           {/* Left: Back button (optional) + Logo */}
           <div className="flex items-center gap-2 flex-shrink-0">
             {backLink && (
@@ -295,8 +295,8 @@ export default function StandardHeader({
             )}
 
             {branding?.logo_url ? (
-              <div className="flex items-center gap-2">
-                <Link href={`/${portalSlug}`}>
+              <div className="flex items-center gap-2 portal-feed-logo-wrap">
+                <Link href={`/${portalSlug}`} className="portal-feed-logo-link">
                   <Image
                     src={branding.logo_url}
                     alt={portalName}
@@ -323,7 +323,7 @@ export default function StandardHeader({
           {/* Center: Nav tabs (desktop only) */}
           {!hideNav && (
             <nav
-              className={`hidden sm:flex items-center flex-1 max-w-md mx-auto ${getNavStyleClass()}`}
+              className={`portal-feed-nav hidden sm:flex items-center flex-1 max-w-md mx-auto ${getNavStyleClass()}`}
               role="tablist"
               aria-label="Main navigation"
             >
@@ -333,7 +333,7 @@ export default function StandardHeader({
                   <Link
                     key={tab.key}
                     href={getHref(tab)}
-                    className={`nav-tab relative flex-1 text-center px-3 py-1.5 rounded-md font-mono text-xs whitespace-nowrap transition-all duration-300 ${
+                    className={`portal-feed-tab nav-tab relative flex-1 text-center px-3 py-1.5 rounded-md font-mono text-xs whitespace-nowrap transition-all duration-300 ${
                       active
                         ? "nav-tab-active text-[var(--void)] font-medium"
                         : "text-[var(--muted)] hover:text-[var(--neon-amber)] border border-transparent"
@@ -352,7 +352,7 @@ export default function StandardHeader({
           )}
 
           {/* Right: Search, User menu, Mobile menu */}
-          <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0 ml-auto" style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.9)) drop-shadow(0 0 6px rgba(0,0,0,0.5))" }}>
+          <div className="portal-feed-actions flex items-center gap-1.5 sm:gap-2 flex-shrink-0 ml-auto" style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.9)) drop-shadow(0 0 6px rgba(0,0,0,0.5))" }}>
             {headerConfig.show_search_in_header !== false && <HeaderSearchButton />}
             <UserMenu />
 
@@ -437,7 +437,7 @@ export default function StandardHeader({
         {/* Mobile Nav Bar (below header on mobile) */}
         {!hideNav && (
           <nav
-            className={`sm:hidden border-t border-[var(--twilight)]/30 bg-[var(--night)]/95 ${getNavStyleClass()}`}
+            className={`portal-feed-nav portal-feed-nav-mobile sm:hidden border-t border-[var(--twilight)]/30 bg-[var(--night)]/95 ${getNavStyleClass()}`}
             role="tablist"
             aria-label="Main navigation"
           >
@@ -448,7 +448,7 @@ export default function StandardHeader({
                   <Link
                     key={tab.key}
                     href={getHref(tab)}
-                    className={`nav-tab relative flex-1 text-center py-1 rounded-md font-mono text-[0.65rem] whitespace-nowrap transition-all duration-300 ${
+                    className={`portal-feed-tab nav-tab relative flex-1 text-center py-1 rounded-md font-mono text-[0.65rem] whitespace-nowrap transition-all duration-300 ${
                       active
                         ? "nav-tab-active text-[var(--void)] font-medium"
                         : "text-[var(--muted)] hover:text-[var(--neon-amber)] border border-transparent"

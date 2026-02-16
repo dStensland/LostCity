@@ -131,7 +131,8 @@ def should_update(
     """Determine if a new extraction should overwrite existing date data.
 
     Rules:
-    - Never overwrite 'manual' or 'migration' source
+    - Never overwrite 'manual' source
+    - Always allow overwriting 'migration' source (seed data, not scraped)
     - Never downgrade confidence by more than 20 points
     - Always allow upgrade from lower-quality source
     """
@@ -139,9 +140,13 @@ def should_update(
     if existing_source is None or existing_confidence is None:
         return True
 
-    # Never overwrite manual or migration entries
-    if existing_source in ("manual", "migration"):
+    # Never overwrite manual entries
+    if existing_source == "manual":
         return False
+
+    # Migration data is seed/inherited — always allow overwrite from actual scrape
+    if existing_source == "migration":
+        return True
 
     # Never downgrade confidence by more than 20
     if new_confidence < existing_confidence - 20:

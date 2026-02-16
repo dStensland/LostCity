@@ -61,6 +61,9 @@ export type HospitalLandingData = {
     stay: HospitalNearbyVenue[];
     late: HospitalNearbyVenue[];
     essentials: HospitalNearbyVenue[];
+    services: HospitalNearbyVenue[];
+    fitness: HospitalNearbyVenue[];
+    escapes: HospitalNearbyVenue[];
   };
 };
 
@@ -127,8 +130,6 @@ type VenueCandidate = {
 const FOOD_VENUE_TYPES = new Set([
   "restaurant",
   "coffee_shop",
-  "brewery",
-  "bar",
   "farmers_market",
 ]);
 
@@ -138,6 +139,10 @@ const STAY_VENUE_TYPES = new Set([
 
 const LATE_FRIENDLY_KEYWORDS = /pharmacy|cvs|walgreens|\bmarket\b|diner|grill|coffee|cafe/i;
 const ESSENTIAL_KEYWORDS = /laundry|laundromat|pharmacy|\bmarket\b|grocery|target|walgreens|cvs|\bups\b|fedex|urgent care/i;
+const FITNESS_KEYWORDS = /\b(gym|fitness|yoga|pilates|crossfit|workout|strength|training|spin|barre|ymca|athletic)\b/i;
+const ESCAPE_KEYWORDS = /\b(park|museum|garden|trail|library|gallery|theater|cinema|aquarium|arboretum|botanical|greenway)\b/i;
+const SERVICE_KEYWORDS = /\b(urgent care|clinic|laundry|shipping|mail|bank|salon|barber|transport|pickup|delivery|supplies)\b/i;
+const BAR_KEYWORDS = /\b(bar|taproom|brewery|brewpub|pub|cocktail|night ?club|lounge|speakeasy)\b/i;
 
 function isTableMissing(message: string | undefined): boolean {
   if (!message) return false;
@@ -190,12 +195,39 @@ function isLateFriendlyVenue(venue: VenueCandidate): boolean {
   return isFoodVenue(venue) || isStayVenue(venue) || LATE_FRIENDLY_KEYWORDS.test(venue.name);
 }
 
+function isBarOrAlcoholVenue(venue: VenueCandidate): boolean {
+  const type = (venue.venue_type || "").toLowerCase();
+  if (type === "bar" || type === "brewery" || type === "nightclub") return true;
+  return BAR_KEYWORDS.test(venue.name);
+}
+
 function isEssentialVenue(venue: VenueCandidate): boolean {
   const type = (venue.venue_type || "").toLowerCase();
   if (type === "pharmacy" || type === "market" || type === "grocery" || type === "urgent_care") {
     return true;
   }
   return ESSENTIAL_KEYWORDS.test(venue.name);
+}
+
+function isFitnessVenue(venue: VenueCandidate): boolean {
+  const type = (venue.venue_type || "").toLowerCase();
+  if (type === "fitness" || type === "wellness" || type === "gym") return true;
+  return FITNESS_KEYWORDS.test(venue.name);
+}
+
+function isEscapeVenue(venue: VenueCandidate): boolean {
+  const type = (venue.venue_type || "").toLowerCase();
+  if (type === "park" || type === "museum" || type === "library" || type === "theater") return true;
+  return ESCAPE_KEYWORDS.test(venue.name);
+}
+
+function isServiceVenue(venue: VenueCandidate): boolean {
+  if (isFoodVenue(venue) || isStayVenue(venue) || isEssentialVenue(venue) || isFitnessVenue(venue) || isEscapeVenue(venue)) {
+    return false;
+  }
+  const type = (venue.venue_type || "").toLowerCase();
+  if (type === "service" || type === "clinic" || type === "urgent_care") return true;
+  return SERVICE_KEYWORDS.test(venue.name);
 }
 
 function isPiedmontVenue(venue: VenueCandidate): boolean {
@@ -248,7 +280,7 @@ function getModeWeights(mode: HospitalAudienceMode) {
         openNowBoost: 28,
         openLateBoost: 30,
         lowCostBoost: 8,
-        categoryBoost: { food: 8, stay: 2, late: 16, essentials: 18 } as Record<HospitalNearbyCategory, number>,
+        categoryBoost: { food: 8, stay: 2, late: 16, essentials: 18, services: 14, fitness: 8, escapes: 6 } as Record<HospitalNearbyCategory, number>,
       };
     case "treatment":
       return {
@@ -256,7 +288,7 @@ function getModeWeights(mode: HospitalAudienceMode) {
         openNowBoost: 10,
         openLateBoost: 6,
         lowCostBoost: 10,
-        categoryBoost: { food: 6, stay: 20, late: 4, essentials: 9 } as Record<HospitalNearbyCategory, number>,
+        categoryBoost: { food: 6, stay: 20, late: 4, essentials: 9, services: 12, fitness: 10, escapes: 8 } as Record<HospitalNearbyCategory, number>,
       };
     case "staff":
       return {
@@ -264,7 +296,7 @@ function getModeWeights(mode: HospitalAudienceMode) {
         openNowBoost: 24,
         openLateBoost: 26,
         lowCostBoost: 6,
-        categoryBoost: { food: 8, stay: 2, late: 20, essentials: 14 } as Record<HospitalNearbyCategory, number>,
+        categoryBoost: { food: 8, stay: 2, late: 20, essentials: 14, services: 16, fitness: 10, escapes: 8 } as Record<HospitalNearbyCategory, number>,
       };
     case "visitor":
     default:
@@ -273,7 +305,7 @@ function getModeWeights(mode: HospitalAudienceMode) {
         openNowBoost: 14,
         openLateBoost: 10,
         lowCostBoost: 7,
-        categoryBoost: { food: 14, stay: 10, late: 5, essentials: 11 } as Record<HospitalNearbyCategory, number>,
+        categoryBoost: { food: 14, stay: 10, late: 5, essentials: 11, services: 10, fitness: 9, escapes: 9 } as Record<HospitalNearbyCategory, number>,
       };
   }
 }
@@ -467,7 +499,7 @@ async function getNearbyHospitalVenues(
 
   if (error) {
     console.error("Error fetching nearby venues:", error);
-    return { food: [], stay: [], late: [], essentials: [] };
+    return { food: [], stay: [], late: [], essentials: [], services: [], fitness: [], escapes: [] };
   }
 
   const now = new Date();
@@ -535,7 +567,7 @@ async function getNearbyHospitalVenues(
     normalized
     .filter((venue) => {
       const source = sourceById.get(venue.id);
-      return source ? isFoodVenue(source) : false;
+      return source ? isFoodVenue(source) && !isBarOrAlcoholVenue(source) : false;
     })
       .filter((venue) => venue.distance_miles <= 2.2)
       .slice(0, 32),
@@ -555,18 +587,26 @@ async function getNearbyHospitalVenues(
     mode
   ).slice(0, 8);
 
-  const late = rankNearbyVenues(
-    normalized
+  const lateCandidates = normalized
     .filter((venue) => {
       const source = sourceById.get(venue.id);
       if (!source) return false;
-      return isLateFriendlyVenue(source) && venue.open_late;
+      return (
+        venue.open_late
+        && (isLateFriendlyVenue(source) || isEssentialVenue(source) || isBarOrAlcoholVenue(source))
+      );
     })
-      .filter((venue) => venue.distance_miles <= 2.6)
-      .slice(0, 30),
-    "late",
-    mode
-  ).slice(0, 10);
+    .filter((venue) => venue.distance_miles <= 2.6);
+
+  const lateNonBarCandidates = lateCandidates.filter((venue) => {
+    const source = sourceById.get(venue.id);
+    if (!source) return false;
+    return !isBarOrAlcoholVenue(source);
+  });
+
+  const latePool = (lateNonBarCandidates.length > 0 ? lateNonBarCandidates : lateCandidates).slice(0, 30);
+
+  const late = rankNearbyVenues(latePool, "late", mode).slice(0, 10);
 
   const essentials = rankNearbyVenues(
     normalized
@@ -580,7 +620,43 @@ async function getNearbyHospitalVenues(
     mode
   ).slice(0, 10);
 
-  return { food, stay, late, essentials };
+  const fitness = rankNearbyVenues(
+    normalized
+      .filter((venue) => {
+        const source = sourceById.get(venue.id);
+        return source ? isFitnessVenue(source) : false;
+      })
+      .filter((venue) => venue.distance_miles <= 2.8)
+      .slice(0, 30),
+    "fitness",
+    mode
+  ).slice(0, 10);
+
+  const escapes = rankNearbyVenues(
+    normalized
+      .filter((venue) => {
+        const source = sourceById.get(venue.id);
+        return source ? isEscapeVenue(source) : false;
+      })
+      .filter((venue) => venue.distance_miles <= 2.8)
+      .slice(0, 30),
+    "escapes",
+    mode
+  ).slice(0, 10);
+
+  const services = rankNearbyVenues(
+    normalized
+      .filter((venue) => {
+        const source = sourceById.get(venue.id);
+        return source ? isServiceVenue(source) : false;
+      })
+      .filter((venue) => venue.distance_miles <= 2.8)
+      .slice(0, 30),
+    "services",
+    mode
+  ).slice(0, 10);
+
+  return { food, stay, late, essentials, services, fitness, escapes };
 }
 
 export async function getHospitalLandingData(

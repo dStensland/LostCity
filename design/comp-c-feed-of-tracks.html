@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Explore Atlanta — Comp C: Feed of Tracks</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0E0E0E;
+    color: #fff;
+    font-family: 'Inter', -apple-system, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .phone-frame {
+    max-width: 390px;
+    margin: 20px auto;
+    background: #0E0E0E;
+    min-height: 100vh;
+    position: relative;
+  }
+
+  /* ===== Header ===== */
+  .header {
+    padding: 16px 20px 12px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: linear-gradient(to bottom, #0E0E0E 70%, transparent);
+  }
+
+  .header h1 {
+    font-size: 26px;
+    font-weight: 900;
+    letter-spacing: -0.5px;
+    color: #fff;
+  }
+
+  .header .subtitle {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #666;
+    margin-top: 4px;
+  }
+
+  /* ===== Track Sections ===== */
+  .track-feed {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  /* Cinematic Hero Banner per track */
+  .track-hero-banner {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .track-hero-banner .bg {
+    width: 100%;
+    aspect-ratio: 21/9;
+    background-size: cover;
+    background-position: center;
+    filter: brightness(0.35) saturate(0.6) contrast(1.15);
+  }
+
+  .track-hero-banner .gradient {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to top,
+      #0E0E0E 0%,
+      rgba(14,14,14,0.85) 25%,
+      rgba(14,14,14,0.3) 60%,
+      rgba(14,14,14,0.15) 100%
+    );
+  }
+
+  .track-hero-banner .hero-content {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 20px;
+    z-index: 2;
+  }
+
+  .track-label-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .accent-line {
+    width: 24px;
+    height: 2px;
+    border-radius: 1px;
+  }
+
+  .track-category {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+
+  .hero-track-name {
+    font-size: 28px;
+    font-weight: 900;
+    line-height: 1.1;
+    letter-spacing: -0.5px;
+    margin-bottom: 6px;
+  }
+
+  .hero-quote {
+    font-size: 14px;
+    font-weight: 500;
+    font-style: italic;
+    color: rgba(255,255,255,0.55);
+    line-height: 1.4;
+    margin-bottom: 4px;
+  }
+
+  .hero-attribution {
+    font-size: 11px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.3);
+  }
+
+  .hero-meta {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  .hero-pill {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 500;
+    padding: 3px 10px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.5);
+  }
+
+  .hero-pill.alive {
+    background: rgba(193,211,47,0.1);
+    border-color: rgba(193,211,47,0.25);
+    color: #C1D32F;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+
+  /* Inline venue snippet grid */
+  .venue-snippet {
+    padding: 12px 16px 24px;
+  }
+
+  .snippet-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .snippet-card {
+    border-radius: 10px;
+    overflow: hidden;
+    background: #141414;
+    border: 1px solid rgba(255,255,255,0.04);
+    transition: transform 0.2s;
+    cursor: pointer;
+  }
+
+  .snippet-card:hover {
+    transform: scale(1.02);
+  }
+
+  .snippet-card.wide {
+    grid-column: span 2;
+    display: flex;
+    gap: 12px;
+  }
+
+  .snippet-img {
+    width: 100%;
+    aspect-ratio: 3/2;
+    background-size: cover;
+    background-position: center;
+    filter: contrast(1.08) saturate(0.75);
+    position: relative;
+  }
+
+  .snippet-card.wide .snippet-img {
+    width: 120px;
+    aspect-ratio: auto;
+    min-height: 90px;
+    flex-shrink: 0;
+    border-radius: 10px 0 0 10px;
+  }
+
+  .snippet-img::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 40%);
+  }
+
+  .snippet-badge {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    z-index: 3;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 20px;
+    background: #C1D32F;
+    color: #0E0E0E;
+  }
+
+  .snippet-info {
+    padding: 8px 10px;
+  }
+
+  .snippet-card.wide .snippet-info {
+    padding: 10px 12px 10px 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .snippet-name {
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: 2px;
+  }
+
+  .snippet-hood {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px;
+    color: rgba(255,255,255,0.3);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .snippet-blurb {
+    font-size: 11px;
+    line-height: 1.45;
+    color: rgba(255,255,255,0.4);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* See all link */
+  .see-all-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.02);
+    border: 1px dashed rgba(255,255,255,0.08);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: rgba(255,255,255,0.3);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .see-all-row:hover {
+    background: rgba(255,255,255,0.04);
+    color: rgba(255,255,255,0.5);
+  }
+
+  /* Track divider */
+  .track-divider {
+    height: 1px;
+    margin: 0 20px;
+    background: rgba(255,255,255,0.04);
+  }
+
+  .comp-label {
+    text-align: center;
+    padding: 40px 20px 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: #666;
+    letter-spacing: 0.05em;
+  }
+
+  .comp-label h2 {
+    font-family: 'Inter', sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+    color: #C1D32F;
+    margin-bottom: 4px;
+    letter-spacing: -0.3px;
+  }
+</style>
+</head>
+<body>
+
+<div class="comp-label">
+  <h2>COMP C: Feed of Tracks</h2>
+  CINEMATIC HEROES &middot; NO TAPS NEEDED &middot; INLINE VENUE SNIPPETS &middot; SCROLL-FIRST
+</div>
+
+<div class="phone-frame">
+  <div class="header">
+    <h1>Explore Atlanta</h1>
+    <div class="subtitle">14 curated tracks through the city</div>
+  </div>
+
+  <div class="track-feed">
+
+    <!-- ===== TRACK 1: Good Trouble ===== -->
+    <div class="track-hero-banner">
+      <div class="bg" style="background-image: url('https://images.unsplash.com/photo-1590077428593-a55bb07c4665?w=800&q=80')"></div>
+      <div class="gradient"></div>
+      <div class="hero-content">
+        <div class="track-label-row">
+          <span class="accent-line" style="background: #E03A3E"></span>
+          <span class="track-category" style="color: #E03A3E">CIVIL RIGHTS</span>
+        </div>
+        <div class="hero-track-name">Good Trouble</div>
+        <div class="hero-quote">"Get in good trouble, necessary trouble, and help redeem the soul of America."</div>
+        <div class="hero-attribution">— John Lewis</div>
+        <div class="hero-meta">
+          <span class="hero-pill">9 places</span>
+          <span class="hero-pill alive">12 upcoming</span>
+        </div>
+      </div>
+    </div>
+    <div class="venue-snippet">
+      <div class="snippet-grid">
+        <div class="snippet-card wide">
+          <div class="snippet-img" style="background-image: url('https://images.unsplash.com/photo-1568667256549-094345857637?w=400&q=80')">
+            <div class="snippet-badge">3 live</div>
+          </div>
+          <div class="snippet-info">
+            <div class="snippet-name">National Center for Civil and Human Rights</div>
+            <div class="snippet-hood">DOWNTOWN</div>
+            <div class="snippet-blurb">The lunch counter sit-in simulation will shake you. The Freedom Riders bus is upstairs.</div>
+          </div>
+        </div>
+        <div class="snippet-card">
+          <div class="snippet-img" style="background-image: url('https://images.unsplash.com/photo-1584483766114-2cea6facdf57?w=400&q=80')">
+            <div class="snippet-badge">5 live</div>
+          </div>
+          <div class="snippet-info">
+            <div class="snippet-name">MLK National Historical Park</div>
+            <div class="snippet-hood">SWEET AUBURN</div>
+          </div>
+        </div>
+        <div class="snippet-card">
+          <div class="snippet-img" style="background-image: url('https://images.unsplash.com/photo-1533907650686-70576141c030?w=400&q=80')"></div>
+          <div class="snippet-info">
+            <div class="snippet-name">Sweet Auburn Curb Market</div>
+            <div class="snippet-hood">SWEET AUBURN</div>
+          </div>
+        </div>
+      </div>
+      <div class="see-all-row">See all 9 places in Good Trouble &rarr;</div>
+    </div>
+
+    <div class="track-divider"></div>
+
+    <!-- ===== TRACK 2: The South Got Something to Say ===== -->
+    <div class="track-hero-banner">
+      <div class="bg" style="background-image: url('https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&q=80')"></div>
+      <div class="gradient"></div>
+      <div class="hero-content">
+        <div class="track-label-row">
+          <span class="accent-line" style="background: #D4A574"></span>
+          <span class="track-category" style="color: #D4A574">HIP-HOP & MUSIC</span>
+        </div>
+        <div class="hero-track-name">The South Got Something to Say</div>
+        <div class="hero-quote">"The South got something to say!"</div>
+        <div class="hero-attribution">— Andre 3000, 1995 Source Awards</div>
+        <div class="hero-meta">
+          <span class="hero-pill">74 places</span>
+          <span class="hero-pill alive">48 upcoming</span>
+        </div>
+      </div>
+    </div>
+    <div class="venue-snippet">
+      <div class="snippet-grid">
+        <div class="snippet-card wide">
+          <div class="snippet-img" style="background-image: url('https://images.unsplash.com/photo-1501612780327-45045538702b?w=400&q=80')">
+            <div class="snippet-badge">8 live</div>
+          </div>
+          <div class="snippet-info">
+            <div class="snippet-name">The Tabernacle</div>
+            <div class="snippet-hood">DOWNTOWN</div>
+            <div class="snippet-blurb">Converted church turned concert hall. The stained glass is still there. The sound is sacred.</div>
+          </div>
+        </div>
+        <div class="snippet-card">
+          <div class="snippet-img" style="background-image: url('https://images.unsplash.com/photo-1524368535928-5b5e00ddc76b?w=400&q=80')">
+            <div class="snippet-badge">4 live</div>
+          </div>
+          <div class="snippet-info">
+            <div class="snippet-name">Variety Playhouse</div>
+            <div class="snippet-hood">LITTLE FIVE POINTS</div>
+          </div>
+        </div>
+        <div class="snippet-card">
+          <div class="snippet-img" style="background-image: url('https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400&q=80')"></div>
+          <div class="snippet-info">
+            <div class="snippet-name">Patchwerk Studios</div>
+            <div class="snippet-hood">WEST END</div>
+          </div>
+        </div>
+      </div>
+      <div class="see-all-row">See all 74 places in this track &rarr;</div>
+    </div>
+
+    <div class="track-divider"></div>
+
+    <!-- ===== TRACK 3: Hard in Da Paint ===== -->
+    <div class="track-hero-banner">
+      <div class="bg" style="background-image: url('https://images.unsplash.com/photo-1569017388730-020b5f80a004?w=800&q=80')"></div>
+      <div class="gradient"></div>
+      <div class="hero-content">
+        <div class="track-label-row">
+          <span class="accent-line" style="background: #14B8A6"></span>
+          <span class="track-category" style="color: #14B8A6">STREET ART & PUBLIC ART</span>
+        </div>
+        <div class="hero-track-name">Hard in Da Paint</div>
+        <div class="hero-quote">"Krog Tunnel, BeltLine murals, gallery crawls, and the street art that makes Atlanta a canvas."</div>
+        <div class="hero-attribution">— Waka Flocka Flame</div>
+        <div class="hero-meta">
+          <span class="hero-pill">82 places</span>
+          <span class="hero-pill alive">31 upcoming</span>
+        </div>
+      </div>
+    </div>
+    <div class="venue-snippet">
+      <div class="snippet-grid">
+        <div class="snippet-card">
+          <div class="snippet-img" style="background-image: url('https://images.unsplash.com/photo-1499781350541-7783f6c6a0c8?w=400&q=80')">
+            <div class="snippet-badge">6 live</div>
+          </div>
+          <div class="snippet-info">
+            <div class="snippet-name">Krog Street Tunnel</div>
+            <div class="snippet-hood">CABBAGETOWN</div>
+            <div class="snippet-blurb">Atlanta's graffiti cathedral. New art appears daily.</div>
+          </div>
+        </div>
+        <div class="snippet-card">
+          <div class="snippet-img" style="background-image: url('https://images.unsplash.com/photo-1561059488-916d69792237?w=400&q=80')"></div>
+          <div class="snippet-info">
+            <div class="snippet-name">BeltLine Eastside Murals</div>
+            <div class="snippet-hood">INMAN PARK</div>
+            <div class="snippet-blurb">3 miles of rotating street art. New installations every season.</div>
+          </div>
+        </div>
+        <div class="snippet-card">
+          <div class="snippet-img" style="background-image: url('https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=400&q=80')">
+            <div class="snippet-badge">2 live</div>
+          </div>
+          <div class="snippet-info">
+            <div class="snippet-name">Eyedrum Art Gallery</div>
+            <div class="snippet-hood">DOWNTOWN</div>
+          </div>
+        </div>
+        <div class="snippet-card">
+          <div class="snippet-img" style="background-image: url('https://images.unsplash.com/photo-1578926375605-eaf7559b1458?w=400&q=80')"></div>
+          <div class="snippet-info">
+            <div class="snippet-name">Living Walls</div>
+            <div class="snippet-hood">OLD FOURTH WARD</div>
+          </div>
+        </div>
+      </div>
+      <div class="see-all-row">See all 82 places in this track &rarr;</div>
+    </div>
+
+    <div class="track-divider"></div>
+
+    <!-- ===== TRACK 4: The Itis ===== -->
+    <div class="track-hero-banner">
+      <div class="bg" style="background-image: url('https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800&q=80')"></div>
+      <div class="gradient"></div>
+      <div class="hero-content">
+        <div class="track-label-row">
+          <span class="accent-line" style="background: #FB923C"></span>
+          <span class="track-category" style="color: #FB923C">FOOD SCENE</span>
+        </div>
+        <div class="hero-track-name">The Itis</div>
+        <div class="hero-quote">"Soul food, James Beard finalists, Buford Highway legends, and the food coma that follows."</div>
+        <div class="hero-attribution">— The Boondocks / Aaron McGruder</div>
+        <div class="hero-meta">
+          <span class="hero-pill">23 places</span>
+          <span class="hero-pill alive">9 upcoming</span>
+        </div>
+      </div>
+    </div>
+    <div class="venue-snippet">
+      <div class="snippet-grid">
+        <div class="snippet-card wide">
+          <div class="snippet-img" style="background-image: url('https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400&q=80')"></div>
+          <div class="snippet-info">
+            <div class="snippet-name">Staplehouse</div>
+            <div class="snippet-hood">OLD FOURTH WARD</div>
+            <div class="snippet-blurb">James Beard winner. Every plate tells a story. The tasting menu is a love letter to Georgia.</div>
+          </div>
+        </div>
+        <div class="snippet-card">
+          <div class="snippet-img" style="background-image: url('https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&q=80')"></div>
+          <div class="snippet-info">
+            <div class="snippet-name">Twisted Soul</div>
+            <div class="snippet-hood">WESTSIDE</div>
+          </div>
+        </div>
+        <div class="snippet-card">
+          <div class="snippet-img" style="background-image: url('https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&q=80')"></div>
+          <div class="snippet-info">
+            <div class="snippet-name">Paschal's</div>
+            <div class="snippet-hood">CASTLEBERRY HILL</div>
+          </div>
+        </div>
+      </div>
+      <div class="see-all-row">See all 23 places in this track &rarr;</div>
+    </div>
+
+    <div class="track-divider"></div>
+
+    <!-- ===== TRACK 5: The Midnight Train ===== -->
+    <div class="track-hero-banner">
+      <div class="bg" style="background-image: url('https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800&q=80')"></div>
+      <div class="gradient"></div>
+      <div class="hero-content">
+        <div class="track-label-row">
+          <span class="accent-line" style="background: #A78BFA"></span>
+          <span class="track-category" style="color: #A78BFA">QUIRKY & HIDDEN GEMS</span>
+        </div>
+        <div class="hero-track-name">The Midnight Train</div>
+        <div class="hero-quote">"Atlanta gets weird — and it's magnificent."</div>
+        <div class="hero-attribution">— Gladys Knight & the Pips</div>
+        <div class="hero-meta">
+          <span class="hero-pill">19 places</span>
+          <span class="hero-pill">7 upcoming</span>
+        </div>
+      </div>
+    </div>
+    <div class="venue-snippet">
+      <div class="snippet-grid">
+        <div class="snippet-card">
+          <div class="snippet-img" style="background-image: url('https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=400&q=80')">
+            <div class="snippet-badge">2 live</div>
+          </div>
+          <div class="snippet-info">
+            <div class="snippet-name">Plaza Theatre</div>
+            <div class="snippet-hood">PONCEY-HIGHLAND</div>
+            <div class="snippet-blurb">Oldest indie theater since 1939. Rocky Horror shadow casts.</div>
+          </div>
+        </div>
+        <div class="snippet-card">
+          <div class="snippet-img" style="background-image: url('https://images.unsplash.com/photo-1572981779307-38b8cabb2407?w=400&q=80')"></div>
+          <div class="snippet-info">
+            <div class="snippet-name">The Goat Farm</div>
+            <div class="snippet-hood">WEST MIDTOWN</div>
+            <div class="snippet-blurb">19th-century cotton mill. 300+ studios and actual goats.</div>
+          </div>
+        </div>
+        <div class="snippet-card wide">
+          <div class="snippet-img" style="background-image: url('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80')"></div>
+          <div class="snippet-info">
+            <div class="snippet-name">Dad's Garage Theatre</div>
+            <div class="snippet-hood">OLD FOURTH WARD</div>
+            <div class="snippet-blurb">Improv comedy in a converted church. Alumni include Archer and Adult Swim voice actors.</div>
+          </div>
+        </div>
+      </div>
+      <div class="see-all-row">See all 19 places in this track &rarr;</div>
+    </div>
+
+    <div class="track-divider"></div>
+
+    <!-- ===== TRACK 6: Welcome to Atlanta ===== -->
+    <div class="track-hero-banner">
+      <div class="bg" style="background-image: url('https://images.unsplash.com/photo-1575931953324-fcac7094999e?w=800&q=80')"></div>
+      <div class="gradient"></div>
+      <div class="hero-content">
+        <div class="track-label-row">
+          <span class="accent-line" style="background: #C1D32F"></span>
+          <span class="track-category" style="color: #C1D32F">CLASSIC ATLANTA</span>
+        </div>
+        <div class="hero-track-name">Welcome to Atlanta</div>
+        <div class="hero-quote">"Welcome to Atlanta where the playas play."</div>
+        <div class="hero-attribution">— Ludacris & Jermaine Dupri, 2001</div>
+        <div class="hero-meta">
+          <span class="hero-pill">12 places</span>
+          <span class="hero-pill alive">18 upcoming</span>
+        </div>
+      </div>
+    </div>
+    <div class="venue-snippet">
+      <div class="snippet-grid">
+        <div class="snippet-card">
+          <div class="snippet-img" style="background-image: url('https://images.unsplash.com/photo-1582555172866-f73bb12a2ab3?w=400&q=80')">
+            <div class="snippet-badge">6 live</div>
+          </div>
+          <div class="snippet-info">
+            <div class="snippet-name">Georgia Aquarium</div>
+            <div class="snippet-hood">DOWNTOWN</div>
+          </div>
+        </div>
+        <div class="snippet-card">
+          <div class="snippet-img" style="background-image: url('https://images.unsplash.com/photo-1567093719338-8e6be68b3c2d?w=400&q=80')">
+            <div class="snippet-badge">4 live</div>
+          </div>
+          <div class="snippet-info">
+            <div class="snippet-name">World of Coca-Cola</div>
+            <div class="snippet-hood">DOWNTOWN</div>
+          </div>
+        </div>
+        <div class="snippet-card">
+          <div class="snippet-img" style="background-image: url('https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=400&q=80')"></div>
+          <div class="snippet-info">
+            <div class="snippet-name">Fox Theatre</div>
+            <div class="snippet-hood">MIDTOWN</div>
+          </div>
+        </div>
+        <div class="snippet-card">
+          <div class="snippet-img" style="background-image: url('https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=400&q=80')">
+            <div class="snippet-badge">3 live</div>
+          </div>
+          <div class="snippet-info">
+            <div class="snippet-name">Centennial Olympic Park</div>
+            <div class="snippet-hood">DOWNTOWN</div>
+          </div>
+        </div>
+      </div>
+      <div class="see-all-row">See all 12 places in this track &rarr;</div>
+    </div>
+
+    <div class="track-divider"></div>
+
+    <!-- ===== TRACK 7: City in a Forest ===== -->
+    <div class="track-hero-banner">
+      <div class="bg" style="background-image: url('https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800&q=80')"></div>
+      <div class="gradient"></div>
+      <div class="hero-content">
+        <div class="track-label-row">
+          <span class="accent-line" style="background: #34D399"></span>
+          <span class="track-category" style="color: #34D399">GREAT OUTDOORS</span>
+        </div>
+        <div class="hero-track-name">City in a Forest</div>
+        <div class="hero-quote">"Trails, parks, swimming holes, and the canopy that earned the name."</div>
+        <div class="hero-attribution">— Official Atlanta slogan</div>
+        <div class="hero-meta">
+          <span class="hero-pill">87 places</span>
+          <span class="hero-pill alive">24 upcoming</span>
+        </div>
+      </div>
+    </div>
+    <div class="venue-snippet">
+      <div class="snippet-grid">
+        <div class="snippet-card wide">
+          <div class="snippet-img" style="background-image: url('https://images.unsplash.com/photo-1502082553048-f009c37129b9?w=400&q=80')">
+            <div class="snippet-badge">5 live</div>
+          </div>
+          <div class="snippet-info">
+            <div class="snippet-name">Piedmont Park</div>
+            <div class="snippet-hood">MIDTOWN</div>
+            <div class="snippet-blurb">Atlanta's Central Park. 200 acres of green in the heart of Midtown.</div>
+          </div>
+        </div>
+        <div class="snippet-card">
+          <div class="snippet-img" style="background-image: url('https://images.unsplash.com/photo-1448375240586-882707db888b?w=400&q=80')"></div>
+          <div class="snippet-info">
+            <div class="snippet-name">Westside Park</div>
+            <div class="snippet-hood">WEST MIDTOWN</div>
+          </div>
+        </div>
+        <div class="snippet-card">
+          <div class="snippet-img" style="background-image: url('https://images.unsplash.com/photo-1476231682828-37e571bc172f?w=400&q=80')"></div>
+          <div class="snippet-info">
+            <div class="snippet-name">Sweetwater Creek</div>
+            <div class="snippet-hood">LITHIA SPRINGS</div>
+          </div>
+        </div>
+      </div>
+      <div class="see-all-row">See all 87 places in this track &rarr;</div>
+    </div>
+
+    <div class="track-divider"></div>
+
+    <!-- ===== TRACK 8: Keep Swinging ===== -->
+    <div class="track-hero-banner">
+      <div class="bg" style="background-image: url('https://images.unsplash.com/photo-1461896836934-bd45ba2c1b9a?w=800&q=80')"></div>
+      <div class="gradient"></div>
+      <div class="hero-content">
+        <div class="track-label-row">
+          <span class="accent-line" style="background: #F472B6"></span>
+          <span class="track-category" style="color: #F472B6">SPORTS & GAME DAY</span>
+        </div>
+        <div class="hero-track-name">Keep Swinging</div>
+        <div class="hero-quote">"Mercedes-Benz Stadium, Truist Park, and the roar of 70,000."</div>
+        <div class="hero-attribution">— Hank Aaron</div>
+        <div class="hero-meta">
+          <span class="hero-pill">67 places</span>
+          <span class="hero-pill alive">42 upcoming</span>
+        </div>
+      </div>
+    </div>
+    <div class="venue-snippet">
+      <div class="snippet-grid">
+        <div class="snippet-card">
+          <div class="snippet-img" style="background-image: url('https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=400&q=80')">
+            <div class="snippet-badge">12 live</div>
+          </div>
+          <div class="snippet-info">
+            <div class="snippet-name">Mercedes-Benz Stadium</div>
+            <div class="snippet-hood">DOWNTOWN</div>
+          </div>
+        </div>
+        <div class="snippet-card">
+          <div class="snippet-img" style="background-image: url('https://images.unsplash.com/photo-1471295253337-3ceaaedca402?w=400&q=80')">
+            <div class="snippet-badge">8 live</div>
+          </div>
+          <div class="snippet-info">
+            <div class="snippet-name">Truist Park</div>
+            <div class="snippet-hood">COBB COUNTY</div>
+          </div>
+        </div>
+        <div class="snippet-card">
+          <div class="snippet-img" style="background-image: url('https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=400&q=80')"></div>
+          <div class="snippet-info">
+            <div class="snippet-name">Park Tavern</div>
+            <div class="snippet-hood">MIDTOWN</div>
+          </div>
+        </div>
+        <div class="snippet-card">
+          <div class="snippet-img" style="background-image: url('https://images.unsplash.com/photo-1461896836934-bd45ba2c1b9a?w=400&q=80')"></div>
+          <div class="snippet-info">
+            <div class="snippet-name">The Beverly</div>
+            <div class="snippet-hood">WEST END</div>
+          </div>
+        </div>
+      </div>
+      <div class="see-all-row">See all 67 places in this track &rarr;</div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

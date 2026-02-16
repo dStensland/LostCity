@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import re
 from dataclasses import dataclass
 from urllib.parse import urljoin
 
@@ -29,6 +30,7 @@ from db import (
     format_event_update_message,
     create_crawl_log,
     update_crawl_log,
+    find_events_by_date_and_venue,
 )
 from dedupe import generate_content_hash
 from crawler_health import record_crawl_start, record_crawl_success, record_crawl_failure
@@ -232,6 +234,148 @@ def _normalize_link_list(links: list) -> list[dict]:
     return normalized
 
 
+_LINEUP_SPLIT_RE = re.compile(
+    r"\s+(?:w/|with|feat\.?|ft\.?|featuring|support(?:ing)?|special guests?|openers?|opening)\s+",
+    flags=re.IGNORECASE,
+)
+_NOISY_TITLE_PREFIX_RE = re.compile(
+    r"^(with|w/|special guests?|support(?:ing)?|opening|openers?)\b",
+    flags=re.IGNORECASE,
+)
+
+
+def _normalize_text(value: str | None) -> str:
+    if not value:
+        return ""
+    return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9\s]", " ", value.lower())).strip()
+
+
+def _normalized_headliner(title: str | None) -> str:
+    if not title:
+        return ""
+    first_chunk = (title.split(",")[0] or title).strip()
+    first_chunk = (_LINEUP_SPLIT_RE.split(first_chunk)[0] or first_chunk).strip()
+    return _normalize_text(first_chunk)
+
+
+def _event_quality_score(event: dict) -> int:
+    score = 0
+    if event.get("detail_url"):
+        score += 3
+    if event.get("ticket_url"):
+        score += 2
+    if event.get("artists"):
+        score += 2
+    if event.get("image_url"):
+        score += 1
+    if event.get("description") and len(str(event.get("description") or "")) > 80:
+        score += 1
+    if event.get("confidence") is not None:
+        try:
+            score += int(float(event.get("confidence") or 0) * 2)
+        except (TypeError, ValueError):
+            pass
+
+    title = str(event.get("title") or "").strip()
+    if _NOISY_TITLE_PREFIX_RE.match(title):
+        score -= 3
+    if not re.search(r"[a-z]", title):
+        score -= 1
+
+    return score
+
+
+def _dedupe_discovered_events(events: list[dict]) -> list[dict]:
+    """Collapse duplicate discoveries from multiple pages before enrichment.
+
+    Prefers richer records (detail URL, artists, ticket URL, description) and
+    merges per-slot variants that are usually the same show.
+    """
+    if not events:
+        return []
+
+    # Pass 1: dedupe by date/time/headliner fingerprint.
+    by_fingerprint: dict[tuple[str, str, str], dict] = {}
+    for event in events:
+        date = event.get("start_date") or ""
+        if not date:
+            continue
+        time = event.get("start_time") or "00:00"
+        headliner = _normalized_headliner(event.get("title"))
+        key = (date, time, headliner or _normalize_text(event.get("title")))
+        current = by_fingerprint.get(key)
+        if current is None or _event_quality_score(event) > _event_quality_score(current):
+            by_fingerprint[key] = event
+
+    # Pass 2: within each exact date/time slot, keep the strongest entries.
+    by_slot: dict[tuple[str, str], list[dict]] = {}
+    for event in by_fingerprint.values():
+        slot_key = (event.get("start_date") or "", event.get("start_time") or "00:00")
+        by_slot.setdefault(slot_key, []).append(event)
+
+    deduped: list[dict] = []
+    for slot_events in by_slot.values():
+        if len(slot_events) == 1:
+            deduped.extend(slot_events)
+            continue
+
+        ranked = sorted(
+            slot_events,
+            key=lambda e: (_event_quality_score(e), len(str(e.get("title") or ""))),
+            reverse=True,
+        )
+        winner = ranked[0]
+        deduped.append(winner)
+
+        # Keep a second item only when it appears to be a genuinely distinct show.
+        winner_score = _event_quality_score(winner)
+        winner_headliner = _normalized_headliner(winner.get("title"))
+        for candidate in ranked[1:]:
+            candidate_score = _event_quality_score(candidate)
+            candidate_headliner = _normalized_headliner(candidate.get("title"))
+            if candidate_headliner and candidate_headliner == winner_headliner:
+                continue
+            if winner_score - candidate_score > 1:
+                continue
+            deduped.append(candidate)
+
+    deduped.sort(
+        key=lambda e: (
+            e.get("start_date") or "",
+            e.get("start_time") or "",
+            str(e.get("title") or "").lower(),
+        )
+    )
+    return deduped
+
+
+def _find_existing_event(event_record: dict, title: str, venue_id: int | None, start_date: str):
+    existing = find_event_by_hash(event_record["content_hash"])
+    if existing:
+        return existing
+
+    if not venue_id:
+        return None
+
+    # Fallback: match by venue/date + normalized headliner to avoid duplicate inserts
+    # from alternate discovery URLs that format titles slightly differently.
+    incoming_headliner = _normalized_headliner(title)
+    incoming_time = (event_record.get("start_time") or "")[:5]
+    if not incoming_headliner:
+        return None
+
+    for candidate in find_events_by_date_and_venue(start_date, venue_id):
+        candidate_headliner = _normalized_headliner(candidate.get("title"))
+        if not candidate_headliner or candidate_headliner != incoming_headliner:
+            continue
+        candidate_time = str(candidate.get("start_time") or "")[:5]
+        if incoming_time and candidate_time and incoming_time != candidate_time:
+            continue
+        return candidate
+
+    return None
+
+
 def _should_skip_jsonld_only(profile, detail_url: str | None, enriched: dict) -> bool:
     if not profile.detail.jsonld_only:
         return False
@@ -292,6 +436,8 @@ def run_profile(slug: str, dry_run: bool, limit: int | None) -> CrawlResult:
                 seen_keys.add(key)
                 all_seeds.append(seed)
 
+        all_seeds = _dedupe_discovered_events(all_seeds)
+
         if limit:
             all_seeds = all_seeds[:limit]
 
@@ -346,6 +492,15 @@ def run_profile(slug: str, dry_run: bool, limit: int | None) -> CrawlResult:
                 "price_min": enriched.get("price_min"),
                 "price_max": enriched.get("price_max"),
                 "price_note": enriched.get("price_note"),
+                "doors_time": enriched.get("doors_time") or seed.get("doors_time"),
+                "age_policy": enriched.get("age_policy") or seed.get("age_policy"),
+                "ticket_status": enriched.get("ticket_status") or seed.get("ticket_status"),
+                "reentry_policy": enriched.get("reentry_policy") or seed.get("reentry_policy"),
+                "set_times_mentioned": (
+                    enriched.get("set_times_mentioned")
+                    if enriched.get("set_times_mentioned") is not None
+                    else seed.get("set_times_mentioned")
+                ),
                 "is_free": bool(enriched.get("is_free")),
                 "source_url": source_url,
                 "ticket_url": enriched.get("ticket_url") or seed.get("ticket_url"),
@@ -370,6 +525,16 @@ def run_profile(slug: str, dry_run: bool, limit: int | None) -> CrawlResult:
             if image_url and "image_url" not in field_provenance:
                 field_provenance["image_url"] = {"source": "discovery", "url": source_url}
                 field_confidence["image_url"] = _DISCOVERY_CONFIDENCE
+            for signal_field in ("doors_time", "age_policy", "ticket_status", "reentry_policy"):
+                if event_record.get(signal_field) and signal_field not in field_provenance:
+                    field_provenance[signal_field] = {"source": "discovery", "url": source_url}
+                    field_confidence[signal_field] = _DISCOVERY_CONFIDENCE
+            if (
+                event_record.get("set_times_mentioned") is not None
+                and "set_times_mentioned" not in field_provenance
+            ):
+                field_provenance["set_times_mentioned"] = {"source": "discovery", "url": source_url}
+                field_confidence["set_times_mentioned"] = _DISCOVERY_CONFIDENCE
 
             _ensure_link(links, "event", source_url, "discovery", 0.9)
             if ticket_url:
@@ -383,9 +548,14 @@ def run_profile(slug: str, dry_run: bool, limit: int | None) -> CrawlResult:
                 event_record["field_confidence"] = field_confidence
 
             result.events_found += 1
-            existing = find_event_by_hash(content_hash)
+            existing = _find_existing_event(event_record, title, default_venue_id, start_date)
             if existing:
                 update_data, changes, cancelled = compute_event_update(existing, event_record)
+                if dry_run:
+                    if update_data:
+                        result.events_updated += 1
+                        logger.info(f"[DRY RUN] Update: {title} ({start_date})")
+                    continue
                 if update_data:
                     update_event(existing["id"], update_data)
                     result.events_updated += 1
@@ -456,6 +626,8 @@ def run_profile(slug: str, dry_run: bool, limit: int | None) -> CrawlResult:
             seen_keys.add(key)
             all_seeds.append(seed)
 
+    all_seeds = _dedupe_discovered_events(all_seeds)
+
     if limit:
         all_seeds = all_seeds[:limit]
 
@@ -510,6 +682,15 @@ def run_profile(slug: str, dry_run: bool, limit: int | None) -> CrawlResult:
             "price_min": enriched.get("price_min"),
             "price_max": enriched.get("price_max"),
             "price_note": enriched.get("price_note"),
+            "doors_time": enriched.get("doors_time") or seed.get("doors_time"),
+            "age_policy": enriched.get("age_policy") or seed.get("age_policy"),
+            "ticket_status": enriched.get("ticket_status") or seed.get("ticket_status"),
+            "reentry_policy": enriched.get("reentry_policy") or seed.get("reentry_policy"),
+            "set_times_mentioned": (
+                enriched.get("set_times_mentioned")
+                if enriched.get("set_times_mentioned") is not None
+                else seed.get("set_times_mentioned")
+            ),
             "is_free": bool(enriched.get("is_free")),
             "source_url": source_url,
             "ticket_url": enriched.get("ticket_url") or seed.get("ticket_url"),
@@ -534,6 +715,16 @@ def run_profile(slug: str, dry_run: bool, limit: int | None) -> CrawlResult:
         if image_url and "image_url" not in field_provenance:
             field_provenance["image_url"] = {"source": "discovery", "url": source_url}
             field_confidence["image_url"] = _DISCOVERY_CONFIDENCE
+        for signal_field in ("doors_time", "age_policy", "ticket_status", "reentry_policy"):
+            if event_record.get(signal_field) and signal_field not in field_provenance:
+                field_provenance[signal_field] = {"source": "discovery", "url": source_url}
+                field_confidence[signal_field] = _DISCOVERY_CONFIDENCE
+        if (
+            event_record.get("set_times_mentioned") is not None
+            and "set_times_mentioned" not in field_provenance
+        ):
+            field_provenance["set_times_mentioned"] = {"source": "discovery", "url": source_url}
+            field_confidence["set_times_mentioned"] = _DISCOVERY_CONFIDENCE
 
         _ensure_link(links, "event", source_url, "discovery", 0.9)
         if ticket_url:
@@ -547,9 +738,14 @@ def run_profile(slug: str, dry_run: bool, limit: int | None) -> CrawlResult:
             event_record["field_confidence"] = field_confidence
 
         result.events_found += 1
-        existing = find_event_by_hash(content_hash)
+        existing = _find_existing_event(event_record, title, default_venue_id, start_date)
         if existing:
             update_data, changes, cancelled = compute_event_update(existing, event_record)
+            if dry_run:
+                if update_data:
+                    result.events_updated += 1
+                    logger.info(f"[DRY RUN] Update: {title} ({start_date})")
+                continue
             if update_data:
                 update_event(existing["id"], update_data)
                 result.events_updated += 1
@@ -614,6 +810,8 @@ def _process_llm_discovery(profile, source, default_venue_id: int | None, dry_ru
         )
         all_events.extend(events)
 
+    all_events = _dedupe_discovered_events(all_events)
+
     if limit:
         all_events = all_events[:limit]
 
@@ -671,6 +869,15 @@ def _process_llm_discovery(profile, source, default_venue_id: int | None, dry_ru
             "price_min": enriched.get("price_min") or event.get("price_min"),
             "price_max": enriched.get("price_max") or event.get("price_max"),
             "price_note": enriched.get("price_note") or event.get("price_note"),
+            "doors_time": enriched.get("doors_time") or event.get("doors_time"),
+            "age_policy": enriched.get("age_policy") or event.get("age_policy"),
+            "ticket_status": enriched.get("ticket_status") or event.get("ticket_status"),
+            "reentry_policy": enriched.get("reentry_policy") or event.get("reentry_policy"),
+            "set_times_mentioned": (
+                enriched.get("set_times_mentioned")
+                if enriched.get("set_times_mentioned") is not None
+                else event.get("set_times_mentioned")
+            ),
             "is_free": bool(enriched.get("is_free") or event.get("is_free")),
             "source_url": detail_url or event.get("detail_url") or event.get("ticket_url") or profile.discovery.urls[0],
             "ticket_url": enriched.get("ticket_url") or event.get("ticket_url"),
@@ -696,6 +903,16 @@ def _process_llm_discovery(profile, source, default_venue_id: int | None, dry_ru
         if image_url and "image_url" not in field_provenance:
             field_provenance["image_url"] = {"source": "discovery", "url": source_url}
             field_confidence["image_url"] = _DISCOVERY_CONFIDENCE
+        for signal_field in ("doors_time", "age_policy", "ticket_status", "reentry_policy"):
+            if event_record.get(signal_field) and signal_field not in field_provenance:
+                field_provenance[signal_field] = {"source": "discovery", "url": source_url}
+                field_confidence[signal_field] = _DISCOVERY_CONFIDENCE
+        if (
+            event_record.get("set_times_mentioned") is not None
+            and "set_times_mentioned" not in field_provenance
+        ):
+            field_provenance["set_times_mentioned"] = {"source": "discovery", "url": source_url}
+            field_confidence["set_times_mentioned"] = _DISCOVERY_CONFIDENCE
 
         _ensure_link(links, "event", source_url, "discovery", 0.9)
         if ticket_url:
@@ -709,9 +926,14 @@ def _process_llm_discovery(profile, source, default_venue_id: int | None, dry_ru
             event_record["field_confidence"] = field_confidence
 
         result.events_found += 1
-        existing = find_event_by_hash(content_hash)
+        existing = _find_existing_event(event_record, title, venue_id, start_date)
         if existing:
             update_data, changes, cancelled = compute_event_update(existing, event_record)
+            if dry_run:
+                if update_data:
+                    result.events_updated += 1
+                    logger.info(f"[DRY RUN] Update: {title} ({start_date})")
+                continue
             if update_data:
                 update_event(existing["id"], update_data)
                 result.events_updated += 1
@@ -791,6 +1013,11 @@ def _process_api_events(events: list[dict], source: dict, profile, default_venue
             "price_min": event.get("price_min"),
             "price_max": event.get("price_max"),
             "price_note": None,
+            "doors_time": event.get("doors_time"),
+            "age_policy": event.get("age_policy"),
+            "ticket_status": event.get("ticket_status"),
+            "reentry_policy": event.get("reentry_policy"),
+            "set_times_mentioned": event.get("set_times_mentioned"),
             "is_free": False,
             "source_url": event.get("source_url"),
             "ticket_url": event.get("ticket_url"),
@@ -806,7 +1033,21 @@ def _process_api_events(events: list[dict], source: dict, profile, default_venue
         if not event_record.get("ticket_url") and event_record.get("source_url"):
             event_record["ticket_url"] = event_record["source_url"]
 
-        for key in ("title", "description", "start_date", "start_time", "ticket_url", "image_url", "price_min", "price_max"):
+        for key in (
+            "title",
+            "description",
+            "start_date",
+            "start_time",
+            "ticket_url",
+            "image_url",
+            "price_min",
+            "price_max",
+            "doors_time",
+            "age_policy",
+            "ticket_status",
+            "reentry_policy",
+            "set_times_mentioned",
+        ):
             if event_record.get(key) is not None:
                 field_provenance[key] = {"source": "api", "url": event.get("source_url")}
                 field_confidence[key] = api_confidence
@@ -827,9 +1068,14 @@ def _process_api_events(events: list[dict], source: dict, profile, default_venue
             _ensure_link(links, "ticket", event.get("ticket_url"), "api", api_confidence)
 
         result.events_found += 1
-        existing = find_event_by_hash(content_hash)
+        existing = _find_existing_event(event_record, title, venue_id, start_date)
         if existing:
             update_data, changes, cancelled = compute_event_update(existing, event_record)
+            if dry_run:
+                if update_data:
+                    result.events_updated += 1
+                    logger.info(f"[DRY RUN] Update: {title} ({start_date})")
+                continue
             if update_data:
                 update_event(existing["id"], update_data)
                 result.events_updated += 1

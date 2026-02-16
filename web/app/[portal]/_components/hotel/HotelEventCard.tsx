@@ -72,15 +72,18 @@ export default function HotelEventCard({ event, portalSlug, variant = "featured"
     return (
       <Link
         href={eventUrl}
-        className="group isolate flex gap-4 bg-[var(--hotel-cream)] rounded-lg overflow-hidden p-4 hover:shadow-[var(--hotel-shadow-medium)] transition-shadow duration-500"
+        className="group isolate flex gap-4 bg-[var(--hotel-cream)] rounded-lg overflow-hidden p-4 hover:shadow-[var(--hotel-shadow-medium)] hover:-translate-y-0.5 transition-[shadow,transform] duration-500"
       >
         {/* Thumbnail */}
         <div className="relative w-20 h-20 flex-shrink-0 rounded-md overflow-hidden bg-[var(--hotel-sand)]">
+          <div className="absolute inset-0 animate-pulse bg-[var(--hotel-sand)]" />
           <img
             src={imageSrc}
             alt={event.title}
-            className="absolute inset-0 block h-full w-full object-cover group-hover:scale-105 transition-transform duration-500 transform-gpu will-change-transform [backface-visibility:hidden]"
+            className="absolute inset-0 block h-full w-full object-cover group-hover:scale-105 transition-[transform,opacity] duration-500 transform-gpu will-change-transform [backface-visibility:hidden]"
             loading="lazy"
+            onLoad={(e) => { e.currentTarget.style.opacity = "1"; }}
+            style={{ opacity: 0 }}
             onError={(e) => {
               const img = e.currentTarget;
               if (img.src !== fallbackImageSrc) {
@@ -123,15 +126,18 @@ export default function HotelEventCard({ event, portalSlug, variant = "featured"
   return (
     <Link
       href={eventUrl}
-      className="group isolate block bg-[var(--hotel-cream)] rounded-lg overflow-hidden shadow-[var(--hotel-shadow-soft)] hover:shadow-[var(--hotel-shadow-medium)] transition-shadow duration-500"
+      className="group isolate block bg-[var(--hotel-cream)] rounded-lg overflow-hidden shadow-[var(--hotel-shadow-soft)] hover:shadow-[var(--hotel-shadow-medium)] hover:-translate-y-0.5 transition-[shadow,transform] duration-500"
     >
       {/* Image */}
       <div className="relative aspect-[16/9] overflow-hidden rounded-t-[inherit] bg-[var(--hotel-sand)] [clip-path:inset(0_round_0.5rem)]">
+        <div className="absolute inset-0 animate-pulse bg-[var(--hotel-sand)]" />
         <img
           src={imageSrc}
           alt={event.title}
-          className="absolute inset-0 block h-full w-full object-cover group-hover:scale-105 transition-transform duration-500 transform-gpu will-change-transform [backface-visibility:hidden]"
+          className="absolute inset-0 block h-full w-full object-cover group-hover:scale-105 transition-[transform,opacity] duration-500 transform-gpu will-change-transform [backface-visibility:hidden]"
           loading="lazy"
+          onLoad={(e) => { e.currentTarget.style.opacity = "1"; }}
+          style={{ opacity: 0 }}
           onError={(e) => {
             const img = e.currentTarget;
             if (img.src !== fallbackImageSrc) {
@@ -180,7 +186,7 @@ export default function HotelEventCard({ event, portalSlug, variant = "featured"
         {/* Price */}
         {(event.is_free || (event.price_min !== null && event.price_min !== undefined)) && (
           <p className="text-sm font-body text-[var(--hotel-champagne)]">
-            {event.is_free || event.price_min === 0 ? "Complimentary for Guests" : `From $${event.price_min}`}
+            {event.is_free || event.price_min === 0 ? "Free admission" : `From $${event.price_min}`}
           </p>
         )}
       </div>

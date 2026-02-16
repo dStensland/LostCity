@@ -18,6 +18,7 @@ from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeo
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
+from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
 
@@ -118,6 +119,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 page.wait_for_timeout(1000)
 
+            # Extract image map for event images
+            image_map = extract_images_from_page(page)
+
             venue_id = get_or_create_venue(VENUE_DATA)
 
             # Parse the page content
@@ -179,6 +183,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             events_updated += 1
                             continue
 
+                        # Find image by title match
+                        event_image = None
+                        title_lower = title.lower()
+                        for img_alt, img_url in image_map.items():
+                            if img_alt.lower() == title_lower or title_lower in img_alt.lower() or img_alt.lower() in title_lower:
+                                event_image = img_url
+                                break
+
                         event_record = {
                             "source_id": source_id,
                             "venue_id": venue_id,
@@ -198,7 +210,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "is_free": False,
                             "source_url": SONGKICK_URL,
                             "ticket_url": SONGKICK_URL,
-                            "image_url": None,
+                            "image_url": event_image,
                             "raw_text": f"{title} - {start_date}",
                             "extraction_confidence": 0.80,
                             "is_recurring": False,
@@ -271,6 +283,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             i += 1
                             continue
 
+                        # Find image by title match
+                        event_image = None
+                        title_lower = title.lower()
+                        for img_alt, img_url in image_map.items():
+                            if img_alt.lower() == title_lower or title_lower in img_alt.lower() or img_alt.lower() in title_lower:
+                                event_image = img_url
+                                break
+
                         event_record = {
                             "source_id": source_id,
                             "venue_id": venue_id,
@@ -290,7 +310,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "is_free": False,
                             "source_url": SONGKICK_URL,
                             "ticket_url": SONGKICK_URL,
-                            "image_url": None,
+                            "image_url": event_image,
                             "raw_text": f"{title} - {start_date}",
                             "extraction_confidence": 0.80,
                             "is_recurring": False,

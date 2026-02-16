@@ -7,10 +7,11 @@ import TrendingNow from "@/components/TrendingNow";
 import TonightsPicksSkeleton from "@/components/TonightsPicksSkeleton";
 import TrendingNowSkeleton from "@/components/TrendingNowSkeleton";
 import HappeningNowCTA from "./HappeningNowCTA";
-import HolidayHero from "./HolidayHero";
+import HolidayHero, { getActiveHeroSlugs } from "./HolidayHero";
 import MomentsSection from "./MomentsSection";
-import TimeContextSection from "./TimeContextSection";
 import BrowseByActivity from "@/components/BrowseByActivity";
+import SectionErrorBoundary from "./SectionErrorBoundary";
+import { useCuratedFeedData } from "./useCuratedFeedData";
 
 /** Delays showing skeleton by `delay` ms so fast loads don't flash placeholders */
 function DelayedFallback({ children, delay = 150 }: { children: ReactNode; delay?: number }) {
@@ -27,56 +28,81 @@ interface CuratedContentProps {
 }
 
 export default function CuratedContent({ portalSlug }: CuratedContentProps) {
+  const { sections, moments, loading } = useCuratedFeedData(portalSlug);
+
+  // Extract event counts for each HolidayHero from shared feed data
+  const heroSlugs = getActiveHeroSlugs();
+  function getEventCount(position: number): number | null {
+    if (loading) return null;
+    const slug = heroSlugs[position - 1];
+    if (!slug) return null;
+    const section = sections.find(s => s.slug === slug);
+    return section?.events ? section.events.length : null;
+  }
+
   return (
     <div className="space-y-6">
       {/* Above-fold: Happening Now CTA - Priority load */}
-      <Suspense fallback={null}>
-        <HappeningNowCTA portalSlug={portalSlug} />
-      </Suspense>
+      <SectionErrorBoundary>
+        <Suspense fallback={null}>
+          <HappeningNowCTA portalSlug={portalSlug} />
+        </Suspense>
+      </SectionErrorBoundary>
 
       {/* Holiday hero: nearest event date gets top position */}
-      <Suspense fallback={null}>
-        <HolidayHero portalSlug={portalSlug} />
-      </Suspense>
+      <SectionErrorBoundary>
+        <Suspense fallback={null}>
+          <HolidayHero portalSlug={portalSlug} eventCount={getEventCount(1)} />
+        </Suspense>
+      </SectionErrorBoundary>
 
       {/* Above-fold: Tonight's Picks - Critical content */}
-      <Suspense fallback={<DelayedFallback><TonightsPicksSkeleton /></DelayedFallback>}>
-        <HighlightsPicks portalSlug={portalSlug} />
-      </Suspense>
+      <SectionErrorBoundary>
+        <Suspense fallback={<DelayedFallback><TonightsPicksSkeleton /></DelayedFallback>}>
+          <HighlightsPicks portalSlug={portalSlug} />
+        </Suspense>
+      </SectionErrorBoundary>
 
       <div className="pt-4 border-t border-[var(--twilight)]/40" />
 
       {/* Festival moments: takeover hero + imminent festivals */}
-      <Suspense fallback={null}>
-        <MomentsSection portalSlug={portalSlug} />
-      </Suspense>
+      <SectionErrorBoundary>
+        <Suspense fallback={null}>
+          <MomentsSection portalSlug={portalSlug} prefetchedData={moments} />
+        </Suspense>
+      </SectionErrorBoundary>
 
       {/* Second holiday hero (below festivals) */}
-      <Suspense fallback={null}>
-        <HolidayHero portalSlug={portalSlug} position={2} />
-      </Suspense>
-
-      {/* Time-of-day contextual section: "Patio SZN" / "After Hours" / "Brunch & Markets" */}
-      <Suspense fallback={null}>
-        <TimeContextSection portalSlug={portalSlug} />
-      </Suspense>
+      <SectionErrorBoundary>
+        <Suspense fallback={null}>
+          <HolidayHero portalSlug={portalSlug} position={2} eventCount={getEventCount(2)} />
+        </Suspense>
+      </SectionErrorBoundary>
 
       {/* Above-fold: Trending Now - High priority */}
-      <Suspense fallback={<DelayedFallback><TrendingNowSkeleton /></DelayedFallback>}>
-        <TrendingNow portalSlug={portalSlug} />
-      </Suspense>
+      <SectionErrorBoundary>
+        <Suspense fallback={<DelayedFallback><TrendingNowSkeleton /></DelayedFallback>}>
+          <TrendingNow portalSlug={portalSlug} />
+        </Suspense>
+      </SectionErrorBoundary>
 
       <div className="pt-4 border-t border-[var(--twilight)]/40" />
 
       {/* Below-fold: Main Feed - Deferred load */}
-      <Suspense fallback={<DelayedFallback><FeedViewSkeleton /></DelayedFallback>}>
-        <FeedView />
-      </Suspense>
+      <SectionErrorBoundary>
+        {loading ? (
+          <DelayedFallback><FeedViewSkeleton /></DelayedFallback>
+        ) : (
+          <FeedView prefetchedSections={sections} />
+        )}
+      </SectionErrorBoundary>
 
       {/* Below-fold: Browse by Activity - Lazy loaded */}
-      <Suspense fallback={<DelayedFallback><BrowseByActivitySkeleton /></DelayedFallback>}>
-        <BrowseByActivity portalSlug={portalSlug} />
-      </Suspense>
+      <SectionErrorBoundary>
+        <Suspense fallback={<DelayedFallback><BrowseByActivitySkeleton /></DelayedFallback>}>
+          <BrowseByActivity portalSlug={portalSlug} />
+        </Suspense>
+      </SectionErrorBoundary>
     </div>
   );
 }

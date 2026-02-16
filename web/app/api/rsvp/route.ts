@@ -3,6 +3,7 @@ import { parseIntParam, validationError, checkBodySize } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { ensureUserProfile } from "@/lib/user-utils";
 import { withAuth } from "@/lib/api-middleware";
+import { resolvePortalId } from "@/lib/portal-resolution";
 import { logger } from "@/lib/logger";
 
 const VALID_STATUSES = ["going", "interested", "went"] as const;
@@ -44,6 +45,9 @@ export const POST = withAuth(async (request, { user, serviceClient }) => {
     // Ensure user has a profile (create if missing)
     await ensureUserProfile(user, serviceClient);
 
+    // Resolve portal context (non-blocking — null is OK)
+    const portalId = await resolvePortalId(request);
+
     // Upsert the RSVP
     const { data, error } = await serviceClient
       .from("event_rsvps")
@@ -54,6 +58,7 @@ export const POST = withAuth(async (request, { user, serviceClient }) => {
           status,
           visibility,
           updated_at: new Date().toISOString(),
+          ...(portalId ? { portal_id: portalId } : {}),
         } as never,
         { onConflict: "user_id,event_id" }
       )
@@ -125,6 +130,10 @@ export const DELETE = withAuth(async (request, { user, serviceClient }) => {
  * Get user's RSVP for an event
  */
 export const GET = withAuth(async (request, { user, serviceClient }) => {
+  const rateLimitId = `${user.id}:${getClientIdentifier(request)}`;
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, rateLimitId);
+  if (rateLimitResult) return rateLimitResult;
+
   try {
     const { searchParams } = new URL(request.url);
     const eventId = parseIntParam(searchParams.get("event_id"));

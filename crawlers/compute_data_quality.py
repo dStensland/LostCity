@@ -34,18 +34,17 @@ logger = logging.getLogger(__name__)
 # Each dict maps field_name -> points. Points sum to 100.
 
 VENUE_WEIGHTS = {
-    "address": 10,
-    "lat": 8,
-    "lng": 8,
-    "neighborhood": 10,
-    "city": 5,
-    "state": 3,
-    "zip": 4,
-    "venue_type": 10,
-    "website": 7,
     "image_url": 15,
-    "description": 15,
-    "vibes": 5,
+    "hero_image_url": 10,
+    "description": 20,
+    "venue_type": 15,
+    "neighborhood": 10,
+    "website": 10,
+    "hours": 5,
+    "phone": 5,
+    "parking_type": 5,
+    "lat": 2.5,
+    "lng": 2.5,
 }  # 100 pts total
 
 EVENT_WEIGHTS = {

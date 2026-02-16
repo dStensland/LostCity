@@ -755,6 +755,7 @@ export type Database = {
           created_at: string | null
           data_quality: number | null
           description: string | null
+          doors_time: string | null
           end_date: string | null
           end_time: string | null
           extraction_confidence: number | null
@@ -780,6 +781,7 @@ export type Database = {
           price_max: number | null
           price_min: number | null
           price_note: string | null
+          reentry_policy: string | null
           raw_text: string | null
           recurrence_rule: string | null
           search_vector: unknown
@@ -789,14 +791,17 @@ export type Database = {
           source_url: string
           start_date: string
           start_time: string | null
+          set_times_mentioned: boolean | null
           subcategory: string | null
           subcategory_id: string | null
           submitted_by: string | null
           tags: string[] | null
+          ticket_status: string | null
           ticket_url: string | null
           title: string
           updated_at: string | null
           venue_id: number | null
+          age_policy: string | null
         }
         Insert: {
           attendee_count?: number | null
@@ -810,6 +815,7 @@ export type Database = {
           created_at?: string | null
           data_quality?: number | null
           description?: string | null
+          doors_time?: string | null
           end_date?: string | null
           end_time?: string | null
           extraction_confidence?: number | null
@@ -835,6 +841,7 @@ export type Database = {
           price_max?: number | null
           price_min?: number | null
           price_note?: string | null
+          reentry_policy?: string | null
           raw_text?: string | null
           recurrence_rule?: string | null
           search_vector?: unknown
@@ -844,14 +851,17 @@ export type Database = {
           source_url: string
           start_date: string
           start_time?: string | null
+          set_times_mentioned?: boolean | null
           subcategory?: string | null
           subcategory_id?: string | null
           submitted_by?: string | null
           tags?: string[] | null
+          ticket_status?: string | null
           ticket_url?: string | null
           title: string
           updated_at?: string | null
           venue_id?: number | null
+          age_policy?: string | null
         }
         Update: {
           attendee_count?: number | null
@@ -865,6 +875,7 @@ export type Database = {
           created_at?: string | null
           data_quality?: number | null
           description?: string | null
+          doors_time?: string | null
           end_date?: string | null
           end_time?: string | null
           extraction_confidence?: number | null
@@ -890,6 +901,7 @@ export type Database = {
           price_max?: number | null
           price_min?: number | null
           price_note?: string | null
+          reentry_policy?: string | null
           raw_text?: string | null
           recurrence_rule?: string | null
           search_vector?: unknown
@@ -899,14 +911,17 @@ export type Database = {
           source_url?: string
           start_date?: string
           start_time?: string | null
+          set_times_mentioned?: boolean | null
           subcategory?: string | null
           subcategory_id?: string | null
           submitted_by?: string | null
           tags?: string[] | null
+          ticket_status?: string | null
           ticket_url?: string | null
           title?: string
           updated_at?: string | null
           venue_id?: number | null
+          age_policy?: string | null
         }
         Relationships: [
           {
@@ -3378,6 +3393,7 @@ export type Database = {
           content_hash: string | null
           created_at: string | null
           description: string | null
+          doors_time: string | null
           end_date: string | null
           end_time: string | null
           extraction_confidence: number | null
@@ -3393,6 +3409,7 @@ export type Database = {
           price_max: number | null
           price_min: number | null
           price_note: string | null
+          reentry_policy: string | null
           producer_id: string | null
           raw_text: string | null
           recurrence_rule: string | null
@@ -3400,13 +3417,16 @@ export type Database = {
           source_url: string | null
           start_date: string | null
           start_time: string | null
+          set_times_mentioned: boolean | null
           subcategory: string | null
           subcategory_id: string | null
           tags: string[] | null
+          ticket_status: string | null
           ticket_url: string | null
           title: string | null
           updated_at: string | null
           venue_id: number | null
+          age_policy: string | null
         }
         Insert: {
           attendee_count?: number | null
@@ -3416,6 +3436,7 @@ export type Database = {
           content_hash?: string | null
           created_at?: string | null
           description?: string | null
+          doors_time?: string | null
           end_date?: string | null
           end_time?: string | null
           extraction_confidence?: number | null
@@ -3431,6 +3452,7 @@ export type Database = {
           price_max?: number | null
           price_min?: number | null
           price_note?: string | null
+          reentry_policy?: string | null
           producer_id?: string | null
           raw_text?: string | null
           recurrence_rule?: string | null
@@ -3438,13 +3460,16 @@ export type Database = {
           source_url?: string | null
           start_date?: string | null
           start_time?: string | null
+          set_times_mentioned?: boolean | null
           subcategory?: string | null
           subcategory_id?: string | null
           tags?: string[] | null
+          ticket_status?: string | null
           ticket_url?: string | null
           title?: string | null
           updated_at?: string | null
           venue_id?: number | null
+          age_policy?: string | null
         }
         Update: {
           attendee_count?: number | null
@@ -3454,6 +3479,7 @@ export type Database = {
           content_hash?: string | null
           created_at?: string | null
           description?: string | null
+          doors_time?: string | null
           end_date?: string | null
           end_time?: string | null
           extraction_confidence?: number | null
@@ -3469,6 +3495,7 @@ export type Database = {
           price_max?: number | null
           price_min?: number | null
           price_note?: string | null
+          reentry_policy?: string | null
           producer_id?: string | null
           raw_text?: string | null
           recurrence_rule?: string | null
@@ -3476,13 +3503,16 @@ export type Database = {
           source_url?: string | null
           start_date?: string | null
           start_time?: string | null
+          set_times_mentioned?: boolean | null
           subcategory?: string | null
           subcategory_id?: string | null
           tags?: string[] | null
+          ticket_status?: string | null
           ticket_url?: string | null
           title?: string | null
           updated_at?: string | null
           venue_id?: number | null
+          age_policy?: string | null
         }
         Relationships: [
           {

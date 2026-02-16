@@ -555,6 +555,9 @@ async function applySearchFilters(
     query = query.or("is_class.eq.false,is_class.is.null");
   }
 
+  // Always exclude sensitive events (support groups, etc.) from public search
+  query = query.or("is_sensitive.eq.false,is_sensitive.is.null");
+
   // Apply multiple venues filter (portal filter)
   if (filters.venue_ids && filters.venue_ids.length > 0) {
     query = query.in("venue_id", filters.venue_ids);
@@ -1125,27 +1128,43 @@ export type SearchSuggestion = {
   type: "venue" | "event" | "neighborhood" | "organizer";
 };
 
-export async function getSearchSuggestions(prefix: string): Promise<SearchSuggestion[]> {
+export async function getSearchSuggestions(prefix: string, options?: { portalId?: string; portalCities?: string[] }): Promise<SearchSuggestion[]> {
   if (prefix.length < 2) return [];
 
   const searchTerm = `${escapePostgrestValue(prefix)}%`;
   // Use date-fns format to get local date (not UTC from toISOString)
   const today = format(startOfDay(new Date()), "yyyy-MM-dd");
 
+  // Build venue query with optional city filter
+  let venueQuery = supabase.from("venues").select("name").ilike("name", searchTerm);
+  if (options?.portalCities?.length) {
+    venueQuery = venueQuery.in("city", options.portalCities);
+  }
+
+  // Build event query with optional portal filter
+  let eventQuery = supabase
+    .from("events")
+    .select("title")
+    .ilike("title", searchTerm)
+    .or(`start_date.gte.${today},end_date.gte.${today}`);
+  if (options?.portalId) {
+    eventQuery = eventQuery.or(`portal_id.eq.${options.portalId},portal_id.is.null`);
+  }
+
+  // Build neighborhood query with optional city filter
+  let neighborhoodQuery = supabase
+    .from("venues")
+    .select("neighborhood")
+    .ilike("neighborhood", searchTerm)
+    .not("neighborhood", "is", null);
+  if (options?.portalCities?.length) {
+    neighborhoodQuery = neighborhoodQuery.in("city", options.portalCities);
+  }
+
   const [venueResult, eventResult, neighborhoodResult, producerResult] = await Promise.all([
-    supabase.from("venues").select("name").ilike("name", searchTerm).limit(3),
-    supabase
-      .from("events")
-      .select("title")
-      .ilike("title", searchTerm)
-      .or(`start_date.gte.${today},end_date.gte.${today}`)
-      .limit(3),
-    supabase
-      .from("venues")
-      .select("neighborhood")
-      .ilike("neighborhood", searchTerm)
-      .not("neighborhood", "is", null)
-      .limit(3),
+    venueQuery.limit(3),
+    eventQuery.limit(3),
+    neighborhoodQuery.limit(3),
     supabase
       .from("organizations")
       .select("name")

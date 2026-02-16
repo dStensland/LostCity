@@ -96,3 +96,46 @@ def generate_text(system_prompt: str, user_message: str) -> str:
         return ""
 
     raise RuntimeError(f"Unknown LLM provider: {provider}")
+
+
+def generate_text_with_images(
+    system_prompt: str,
+    user_message: str,
+    image_urls: list,
+    model: Optional[str] = None,
+) -> str:
+    """
+    Generate text from images using OpenAI GPT-4o vision API.
+
+    Args:
+        system_prompt: System instruction for the model.
+        user_message: Text prompt to accompany the images.
+        image_urls: List of image URLs or base64 data URIs.
+        model: OpenAI model to use (default: gpt-4o).
+
+    Returns:
+        Raw text output from the model.
+    """
+    cfg = get_config()
+    client = _get_openai_client()
+    model = model or "gpt-4o"
+
+    # Build content array with text + images
+    content: list[dict] = [{"type": "text", "text": user_message}]
+    for url in image_urls:
+        content.append({
+            "type": "image_url",
+            "image_url": {"url": url, "detail": "high"},
+        })
+
+    response = client.chat.completions.create(
+        model=model,
+        temperature=cfg.llm.temperature,
+        max_tokens=cfg.llm.max_tokens,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": content},
+        ],
+    )
+    result = response.choices[0].message.content if response.choices else ""
+    return result or ""

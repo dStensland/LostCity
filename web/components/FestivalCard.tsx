@@ -10,6 +10,7 @@ import { createCssVarClass } from "@/lib/css-utils";
 import { decodeHtmlEntities, formatTimeSplit, getLocalDateString } from "@/lib/formats";
 import { computeCountdown, formatFestivalDates } from "@/lib/moments-utils";
 import Image from "@/components/SmartImage";
+import { useImageParallax } from "@/lib/hooks/useImageParallax";
 
 interface Props {
   festival: FestivalInfo;
@@ -38,6 +39,7 @@ const FestivalCard = memo(function FestivalCard({
   contextColor,
   density = "comfortable",
 }: Props) {
+  const { containerRef: parallaxContainerRef, imageRef: parallaxImageRef } = useImageParallax();
   const typeColor = getSeriesTypeColor("festival_program");
   const formatFestivalType = (value?: string | null) => {
     if (!value) return "Festival";
@@ -162,20 +164,20 @@ const FestivalCard = memo(function FestivalCard({
       >
       <div className="p-3.5 sm:p-4 flex gap-3 sm:gap-4">
         {/* Date cell - matches EventCard time cell */}
-        <div className={`hidden sm:flex flex-shrink-0 self-stretch ${festival.image_url ? "relative w-[124px] -ml-3.5 sm:-ml-4 -my-3.5 sm:-my-4 overflow-hidden list-rail-media border-r border-[var(--twilight)]/60" : "w-[72px] flex-col items-start justify-center gap-1.5 pr-3 border-r border-[var(--twilight)]/60"}`}>
+        <div ref={parallaxContainerRef} className={`hidden sm:flex flex-shrink-0 self-stretch ${festival.image_url ? "relative w-[124px] -ml-3.5 sm:-ml-4 -my-3.5 sm:-my-4 overflow-hidden list-rail-media border-r border-[var(--twilight)]/60" : "w-[72px] flex-col items-start justify-center gap-1.5 pr-3 border-r border-[var(--twilight)]/60"}`}>
           {festival.image_url && (
-            <>
+            <div ref={parallaxImageRef} className="absolute inset-0 transform-gpu will-change-transform">
               <Image
                 src={festival.image_url}
                 alt={festivalName}
                 fill
                 sizes="124px"
-                className="object-cover scale-[1.03]"
+                className="object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/56 to-black/20 pointer-events-none" />
-            </>
+            </div>
           )}
-          <div className={`relative z-10 flex flex-col items-start justify-center gap-1.5 ${festival.image_url ? "h-full pl-3 pr-2 py-3 sm:py-4" : ""}`}>
+          <div className={`relative z-10 flex flex-col items-start justify-center gap-1.5 ${festival.image_url ? "h-full pl-3 pr-2 py-3 sm:py-4 list-rail-caption" : ""}`}>
             <span className="font-mono text-[0.62rem] font-semibold text-[var(--accent-color)] leading-none uppercase tracking-[0.12em]">
               {format(startDate, "MMM")}
             </span>

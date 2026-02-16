@@ -19,6 +19,7 @@ import SeriesBadge from "./SeriesBadge";
 import RSVPButton from "./RSVPButton";
 import { isTicketingUrl, getLinkOutLabel } from "@/lib/card-utils";
 import Image from "@/components/SmartImage";
+import { useImageParallax } from "@/lib/hooks/useImageParallax";
 
 export interface SeriesVenueGroup {
   venue: {
@@ -94,6 +95,7 @@ const SeriesCard = memo(function SeriesCard({
   contextColor,
   density = "comfortable",
 }: Props) {
+  const { containerRef: parallaxContainerRef, imageRef: parallaxImageRef } = useImageParallax();
   const typeColor = getSeriesTypeColor(series.series_type);
   const seriesTitle = decodeHtmlEntities(series.title);
   const seriesUrl = useMemo(() => {
@@ -280,25 +282,26 @@ const SeriesCard = memo(function SeriesCard({
             <div className="flex gap-3 sm:gap-4">
               {/* Time cell - matches EventCard typography */}
               <div
+                ref={parallaxContainerRef}
                 className={`hidden sm:flex flex-shrink-0 self-stretch relative w-[124px] -ml-3.5 sm:-ml-4 -my-3.5 sm:-my-4 overflow-hidden border-r border-[var(--twilight)]/60 ${
                   hasRailImage ? "list-rail-media" : "bg-[var(--night)]/44"
                 }`}
                 style={{ borderTopLeftRadius: "inherit", borderBottomLeftRadius: "inherit" }}
               >
                 {railImageUrl && (
-                  <>
+                  <div ref={parallaxImageRef} className="absolute inset-0 transform-gpu will-change-transform">
                     <Image
                       src={railImageUrl}
                       alt={seriesTitle}
                       fill
                       blurhash={railBlurhash}
                       sizes="124px"
-                      className="object-cover scale-[1.03] transform-gpu will-change-transform"
+                      className="object-cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/56 to-black/20 pointer-events-none" />
-                  </>
+                  </div>
                 )}
-                <div className="relative z-10 flex h-full flex-col items-start justify-center gap-1.5 pl-3 pr-2 py-3 sm:py-4">
+                <div className="relative z-10 flex h-full flex-col items-start justify-center gap-1.5 pl-3 pr-2 py-3 sm:py-4 list-rail-caption">
                   <span className="font-mono text-[0.62rem] font-semibold leading-none uppercase tracking-[0.12em] text-[var(--accent-color)]">
                     {totalShowtimes} {series.series_type === "film" ? (totalShowtimes === 1 ? "show" : "shows") : (totalShowtimes === 1 ? "time" : "times")}
                   </span>

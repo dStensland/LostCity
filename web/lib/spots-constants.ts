@@ -67,6 +67,15 @@ export const VENUE_TYPES_MAP = {
   zoo: { label: "Zoo", icon: "🦁" },
   aquarium: { label: "Aquarium", icon: "🐠" },
 
+  // Landmarks & Sightseeing
+  landmark: { label: "Landmark", icon: "🏛️" },
+  skyscraper: { label: "Skyscraper", icon: "🏙️" },
+  artifact: { label: "Artifact", icon: "🏺" },
+  public_art: { label: "Public Art", icon: "🎨" },
+  viewpoint: { label: "Viewpoint", icon: "👁️" },
+  trail: { label: "Trail", icon: "🥾" },
+  historic_site: { label: "Historic Site", icon: "📜" },
+
   // Healthcare
   healthcare: { label: "Healthcare", icon: "🏥" },
   hospital: { label: "Hospital", icon: "🏥" },
@@ -137,6 +146,13 @@ export const PLACE_VENUE_TYPES = [
   "lgbtq",
   "food_hall",
   "eatertainment",
+  "landmark",
+  "skyscraper",
+  "artifact",
+  "public_art",
+  "viewpoint",
+  "trail",
+  "historic_site",
 ] as const;
 
 // Category groupings for "In the area" section on event detail page

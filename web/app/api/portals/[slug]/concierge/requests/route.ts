@@ -1,10 +1,23 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
-import { checkBodySize, isValidEnum } from "@/lib/api-utils";
+import {
+  checkBodySize,
+  isValidEnum,
+  isValidString,
+  successResponse,
+  createdResponse,
+  errorApiResponse,
+  validationError,
+} from "@/lib/api-utils";
 
-const VALID_REQUEST_TYPES = ["spa-reset", "dining-hold", "house-car", "late-checkout"] as const;
-const VALID_GUEST_INTENTS = ["business", "romance", "night_out", "wellness"] as const;
+const VALID_REQUEST_TYPES = [
+  "restaurant_reservation",
+  "activity_booking",
+  "transportation",
+  "custom",
+] as const;
 
 type RouteContext = {
   params: Promise<{ slug: string }>;
@@ -12,19 +25,61 @@ type RouteContext = {
 
 type ConciergeRequestBody = {
   request_type?: string;
-  guest_intent?: string;
-  itinerary_ids?: string[];
-  source?: string;
+  details?: string;
+  preferred_time?: string;
+  party_size?: number;
+  guest_contact?: {
+    name?: string;
+    room?: string;
+    phone?: string;
+    email?: string;
+  };
 };
 
-function createRequestId(): string {
-  const base = typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? crypto.randomUUID().split("-")[0]
-    : Math.random().toString(36).slice(2, 10);
-  return `CR-${Date.now().toString(36).toUpperCase()}-${base.toUpperCase()}`;
+// GET /api/portals/[slug]/concierge/requests — list user's requests
+export async function GET(request: NextRequest, context: RouteContext) {
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
+  if (rateLimitResult) return rateLimitResult;
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return errorApiResponse("Unauthorized", 401);
+  }
+
+  const { slug } = await context.params;
+  const serviceClient = createServiceClient();
+
+  const { data: portal } = await serviceClient
+    .from("portals")
+    .select("id")
+    .eq("slug", slug)
+    .eq("status", "active")
+    .maybeSingle();
+
+  const portalData = portal as { id: string } | null;
+  if (!portalData) {
+    return errorApiResponse("Portal not found", 404);
+  }
+
+  const { data: requests, error } = await serviceClient
+    .from("concierge_requests")
+    .select("*")
+    .eq("portal_id", portalData.id)
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  if (error) {
+    console.error("Error fetching concierge requests:", error.message);
+    return errorApiResponse("Failed to fetch requests", 500);
+  }
+
+  return successResponse({ requests: requests || [] });
 }
 
-// POST /api/portals/[slug]/concierge/requests - Queue a concierge service request
+// POST /api/portals/[slug]/concierge/requests — submit a concierge request
 export async function POST(request: NextRequest, context: RouteContext) {
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
@@ -38,25 +93,27 @@ export async function POST(request: NextRequest, context: RouteContext) {
   try {
     body = (await request.json()) as ConciergeRequestBody;
   } catch {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    return validationError("Invalid JSON body");
   }
 
   if (!isValidEnum(body.request_type, VALID_REQUEST_TYPES)) {
-    return NextResponse.json({ error: "Invalid request_type" }, { status: 400 });
+    return validationError("Invalid request_type. Must be: restaurant_reservation, activity_booking, transportation, or custom");
   }
 
-  if (!isValidEnum(body.guest_intent, VALID_GUEST_INTENTS)) {
-    return NextResponse.json({ error: "Invalid guest_intent" }, { status: 400 });
+  if (!isValidString(body.details, 1, 1000)) {
+    return validationError("details is required (max 1000 characters)");
   }
-
-  const itineraryIds = Array.isArray(body.itinerary_ids)
-    ? body.itinerary_ids.filter((value) => typeof value === "string").slice(0, 12)
-    : [];
-
-  const source = typeof body.source === "string" ? body.source.slice(0, 80) : "portal";
 
   const supabase = await createClient();
-  const { data: portal } = await supabase
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return errorApiResponse("Unauthorized", 401);
+  }
+
+  const serviceClient = createServiceClient();
+
+  const { data: portal } = await serviceClient
     .from("portals")
     .select("id, slug")
     .eq("slug", slug)
@@ -64,25 +121,53 @@ export async function POST(request: NextRequest, context: RouteContext) {
     .maybeSingle();
 
   const portalData = portal as { id: string; slug: string } | null;
-
   if (!portalData) {
-    return NextResponse.json({ error: "Portal not found" }, { status: 404 });
+    return errorApiResponse("Portal not found", 404);
   }
 
-  const requestId = createRequestId();
+  const insertData = {
+    portal_id: portalData.id,
+    user_id: user.id,
+    request_type: body.request_type,
+    details: body.details!.slice(0, 1000),
+    preferred_time: typeof body.preferred_time === "string"
+      ? body.preferred_time.slice(0, 100)
+      : null,
+    party_size: typeof body.party_size === "number" && body.party_size > 0 && body.party_size <= 50
+      ? body.party_size
+      : null,
+    guest_contact: body.guest_contact && typeof body.guest_contact === "object"
+      ? {
+          name: typeof body.guest_contact.name === "string"
+            ? body.guest_contact.name.slice(0, 100)
+            : undefined,
+          room: typeof body.guest_contact.room === "string"
+            ? body.guest_contact.room.slice(0, 20)
+            : undefined,
+          phone: typeof body.guest_contact.phone === "string"
+            ? body.guest_contact.phone.slice(0, 20)
+            : undefined,
+          email: typeof body.guest_contact.email === "string"
+            ? body.guest_contact.email.slice(0, 100)
+            : undefined,
+        }
+      : {},
+    status: "pending",
+  };
 
-  return NextResponse.json(
-    {
-      request_id: requestId,
-      status: "queued",
-      portal_slug: portalData.slug,
-      request_type: body.request_type,
-      guest_intent: body.guest_intent,
-      itinerary_ids: itineraryIds,
-      source,
-      submitted_at: new Date().toISOString(),
-      note: "Queued in concierge intake (pitch mode).",
-    },
-    { status: 202 }
-  );
+  const { data: req, error } = await serviceClient
+    .from("concierge_requests")
+    .insert(insertData as never)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error creating concierge request:", error.message);
+    return errorApiResponse("Failed to submit request", 500);
+  }
+
+  return createdResponse({
+    request: req,
+    message: "Your request has been submitted. Our team will be in touch shortly.",
+  });
 }

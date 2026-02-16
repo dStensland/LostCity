@@ -30,23 +30,11 @@ export interface FestivalMoment {
   isLive: boolean;
 }
 
-export type TimeOfDay = "morning" | "afternoon" | "evening" | "latenight";
-export type Season = "spring" | "summer" | "fall" | "winter";
-
-export interface TimeContext {
-  timeOfDay: TimeOfDay;
-  season: Season;
-  isWeekend: boolean;
-  sectionLabel: string | null;
-  sectionCategories: string[];
-}
-
 export interface MomentsResponse {
   takeover: FestivalMoment | null;
   imminent: FestivalMoment[];
   upcoming: FestivalMoment[];
   saveTheDate: { month: string; festivals: FestivalMoment[] }[];
-  timeContext: TimeContext;
 }
 
 /** Map countdown urgency to a CSS color variable */

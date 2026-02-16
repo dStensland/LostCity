@@ -65,8 +65,12 @@ function HeroImage({
   const [error, setError] = useState(false);
   const overlayClass =
     overlay === "soft"
-      ? "bg-gradient-to-t from-black/70 via-black/35 to-black/10"
-      : "bg-gradient-to-t from-black/95 via-black/60 to-black/20";
+      ? "bg-gradient-to-t from-black/80 via-black/40 to-black/5"
+      : "bg-gradient-to-t from-black/92 via-black/50 to-black/10";
+  const glassDepthClass =
+    overlay === "soft"
+      ? "bg-[radial-gradient(circle_at_78%_18%,rgba(255,255,255,0.08),transparent_44%)]"
+      : "bg-[radial-gradient(circle_at_78%_18%,rgba(255,255,255,0.10),transparent_42%)]";
 
   if (error) {
     return <CategoryPlaceholder category={category} size={size} />;
@@ -89,6 +93,7 @@ function HeroImage({
         loading={loading}
       />
       <div className={`absolute inset-0 ${overlayClass}`} />
+      <div className={`absolute inset-0 pointer-events-none ${glassDepthClass}`} />
     </div>
   );
 }
@@ -127,11 +132,11 @@ function getSectionHeader(period: HighlightsPeriod): { title: string; subtitle: 
   const todayLabel = new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric" }).format(new Date());
   switch (period) {
     case "today":
-      return { title: `Some picks for ${todayLabel}`, subtitle: "Piping hot picks straight from the oven" };
+      return { title: `Picks for ${todayLabel}`, subtitle: "What's happening today" };
     case "week":
-      return { title: "This week's highlights", subtitle: "The best of the next 7 days" };
+      return { title: "This week", subtitle: "The best of the next 7 days" };
     case "month":
-      return { title: "This month's highlights", subtitle: "Don't miss these this month" };
+      return { title: "This month", subtitle: "Don't miss these this month" };
   }
 }
 
@@ -161,7 +166,7 @@ interface HighlightsLayoutProps {
 }
 
 function HighlightsLayout({ events, period, portalSlug, heroIndex, onHeroChange }: HighlightsLayoutProps) {
-  const carouselEvents = events.slice(0, period === "today" ? 10 : period === "week" ? 12 : 16);
+  const carouselEvents = events.slice(0, period === "today" ? 12 : period === "week" ? 16 : 20);
   const hasCarousel = carouselEvents.length > 1;
   const safeHeroIndex = heroIndex < carouselEvents.length ? heroIndex : 0;
 
@@ -208,74 +213,77 @@ function HighlightsLayout({ events, period, portalSlug, heroIndex, onHeroChange 
               <CategoryPlaceholder category={heroEvent.category} size="lg" />
             )}
 
-            <div className="relative p-5 pt-36 sm:pt-40">
-              <div className="flex items-center gap-2 mb-2">
-                {period === "today" ? (
-                  (() => {
-                    const badge = getTimeBadge(heroEvent.start_time, heroEvent.is_all_day);
-                    return (
-                      <span className={`px-2 py-0.5 rounded-full text-[0.65rem] font-mono font-medium backdrop-blur-sm ${
-                        badge.isNow
-                          ? "bg-[var(--neon-red)]/30 text-[var(--neon-red)]"
-                          : "bg-[var(--neon-magenta)]/30 text-[var(--neon-magenta)]"
-                      }`}>
-                        {badge.text}
+            {/* Glassy top-light sheen */}
+            <div className="absolute inset-x-0 top-0 h-[35%] bg-gradient-to-b from-white/[0.06] to-transparent pointer-events-none rounded-t-[1.35rem]" />
+
+            <div className="relative p-5 pt-36 sm:pt-44">
+                {/* Category pill + time badge row */}
+                <div className="flex items-center gap-2 mb-3 drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]">
+                  {heroEvent.category && (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[0.6rem] font-mono font-semibold tracking-wider uppercase bg-[color-mix(in_srgb,var(--category-color)_25%,rgba(0,0,0,0.45))] border border-[color-mix(in_srgb,var(--category-color)_45%,transparent)] text-[var(--category-color)] shadow-[0_0_14px_color-mix(in_srgb,var(--category-color)_20%,transparent)] backdrop-blur-[2px]">
+                      <CategoryIcon type={heroEvent.category} size={12} glow="none" />
+                      {getCategoryLabel(heroEvent.category)}
+                    </span>
+                  )}
+                  {period === "today" ? (
+                    (() => {
+                      const badge = getTimeBadge(heroEvent.start_time, heroEvent.is_all_day);
+                      return (
+                        <span className={`px-2.5 py-1 rounded-full text-[0.6rem] font-mono font-semibold tracking-wider uppercase backdrop-blur-[2px] ${
+                          badge.isNow
+                            ? "bg-[var(--neon-red)]/30 text-[var(--neon-red)] border border-[var(--neon-red)]/45 shadow-[0_0_14px_rgba(255,69,69,0.35)]"
+                            : "bg-white/10 text-white/90 border border-white/20"
+                        }`}>
+                          {badge.text}
+                        </span>
+                      );
+                    })()
+                  ) : (
+                    <span className="px-2.5 py-1 rounded-full text-[0.6rem] font-mono font-semibold tracking-wider uppercase backdrop-blur-[2px] bg-white/10 text-white/90 border border-white/20">
+                      {formatShortDate(heroEvent.start_date)}
+                    </span>
+                  )}
+                </div>
+
+                {/* Title — larger, tighter tracking, category-color on hover */}
+                <h3 className="text-[1.5rem] sm:text-[1.85rem] font-bold text-white mb-2.5 tracking-[-0.02em] leading-[1.15] group-hover:text-[var(--category-color)] transition-colors duration-300 line-clamp-2 drop-shadow-[0_2px_12px_rgba(0,0,0,0.8)]">
+                  {heroEvent.title}
+                </h3>
+
+                {/* Metadata row — cleaner mono treatment */}
+                <div className="flex items-center gap-2.5 text-[0.78rem] text-white/85 font-mono tracking-[0.01em] drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)] group-hover:text-[color-mix(in_srgb,var(--category-color)_70%,white)] transition-colors duration-300">
+                  {heroEvent.start_time && (
+                    <span className="font-semibold tabular-nums">
+                      {formatTimeSplit(heroEvent.start_time, heroEvent.is_all_day).time}
+                      <span className="opacity-65 ml-0.5 text-[0.65rem] font-medium">
+                        {formatTimeSplit(heroEvent.start_time, heroEvent.is_all_day).period}
                       </span>
-                    );
-                  })()
-                ) : (
-                  <span className="px-2 py-0.5 rounded-full text-[0.65rem] font-mono font-medium backdrop-blur-sm bg-[var(--neon-cyan)]/20 text-[var(--neon-cyan)]">
-                    {formatShortDate(heroEvent.start_date)}
-                  </span>
-                )}
-                {heroEvent.category && (
-                  <span
-                    data-category={heroCategory}
-                    className="px-2 py-0.5 rounded-full text-[0.65rem] font-mono font-medium tonights-category-badge"
-                  >
-                    <CategoryIcon type={heroEvent.category} size={10} className="inline mr-1" glow="none" />
-                    {heroEvent.category}
-                  </span>
-                )}
-              </div>
-
-              <h3 className="text-xl font-semibold text-white mb-2 group-hover:text-[var(--neon-magenta)] transition-colors line-clamp-2">
-                {heroEvent.title}
-              </h3>
-
-              <div className="flex items-center gap-2 text-sm text-white/80 font-mono">
-                {heroEvent.start_time && (
-                  <span className="font-medium">
-                    {formatTimeSplit(heroEvent.start_time, heroEvent.is_all_day).time}
-                    <span className="opacity-60 ml-0.5 text-xs">
-                      {formatTimeSplit(heroEvent.start_time, heroEvent.is_all_day).period}
                     </span>
-                  </span>
-                )}
-                {heroEvent.venue && (
-                  <>
-                    <span className="opacity-40">·</span>
-                    <span>{heroEvent.venue.name}</span>
-                  </>
-                )}
-                {heroEvent.is_free && (
-                  <>
-                    <span className="opacity-40">·</span>
-                    <span className="text-[var(--neon-green)]">Free</span>
-                  </>
-                )}
-                {heroEvent.rsvp_count && heroEvent.rsvp_count >= 2 && (
-                  <>
-                    <span className="opacity-40">·</span>
-                    <span className="text-[var(--neon-cyan)] flex items-center gap-1">
-                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
-                      </svg>
-                      {heroEvent.rsvp_count} going
-                    </span>
-                  </>
-                )}
-              </div>
+                  )}
+                  {heroEvent.venue && (
+                    <>
+                      <span className="opacity-40">·</span>
+                      <span className="font-medium">{heroEvent.venue.name}</span>
+                    </>
+                  )}
+                  {heroEvent.is_free && (
+                    <>
+                      <span className="opacity-40">·</span>
+                      <span className="text-[var(--neon-green)] font-semibold">Free</span>
+                    </>
+                  )}
+                  {heroEvent.rsvp_count && heroEvent.rsvp_count >= 2 && (
+                    <>
+                      <span className="opacity-40">·</span>
+                      <span className="text-[var(--neon-cyan)] flex items-center gap-1 font-medium">
+                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
+                        </svg>
+                        {heroEvent.rsvp_count} going
+                      </span>
+                    </>
+                  )}
+                </div>
             </div>
 
             <div className="absolute bottom-4 right-4 w-8 h-8 rounded-full bg-white/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm">
@@ -315,12 +323,14 @@ function HighlightsLayout({ events, period, portalSlug, heroIndex, onHeroChange 
               <Link
                 key={event.id}
                 href={eventHref}
-                className={`relative overflow-hidden rounded-xl border transition-all text-left group card-atmospheric picks-preview-card min-w-[9.5rem] snap-start sm:min-w-0 sm:w-auto ${
+                data-category={event.category || "other"}
+                className={`relative overflow-hidden rounded-xl border transition-all duration-300 text-left group picks-preview-card min-w-[9.5rem] snap-start sm:min-w-0 sm:w-auto hover:shadow-[0_0_24px_color-mix(in_srgb,var(--category-color)_35%,transparent)] hover:border-[color-mix(in_srgb,var(--category-color)_60%,transparent)] ${
                   index === safeHeroIndex
-                    ? "border-[var(--neon-magenta)]/70 shadow-[0_0_18px_rgba(255,85,170,0.35)]"
-                    : "border-[var(--twilight)] hover:border-[var(--neon-magenta)]/40"
-                } ${isSecondaryRow ? "sm:scale-[0.96] sm:opacity-80" : ""}`}
+                    ? "border-[color-mix(in_srgb,var(--category-color)_55%,transparent)] shadow-[0_0_20px_color-mix(in_srgb,var(--category-color)_30%,transparent)]"
+                    : "border-white/12"
+                } ${isSecondaryRow ? "sm:scale-[0.97] sm:opacity-85 sm:hover:opacity-100 sm:hover:scale-100" : ""}`}
               >
+                {/* Image */}
                 <div className="absolute inset-0">
                   {event.image_url ? (
                     <HeroImage
@@ -335,27 +345,42 @@ function HighlightsLayout({ events, period, portalSlug, heroIndex, onHeroChange 
                     <CategoryPlaceholder category={event.category} size="sm" />
                   )}
                 </div>
-                <div className="absolute inset-0 ring-1 ring-white/10 rounded-xl pointer-events-none" />
-                <div className="absolute inset-x-0 bottom-0 h-3/4 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none rounded-b-xl" />
-                <div className="relative p-3 pt-20">
-                  <div className="flex items-center justify-between text-[0.55rem] text-white/70 font-mono mb-1">
-                    <span>
-                      {showDateOnCards
-                        ? formatShortDate(event.start_date)
-                        : event.start_time
-                          ? formatTimeSplit(event.start_time, event.is_all_day).time
-                          : "Today"}
-                    </span>
-                    {event.category && (
-                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-black/60 border border-white/10 text-white/80 text-[0.5rem] max-w-[6.5rem]">
-                        <CategoryIcon type={event.category} size={10} glow="none" className="opacity-90" />
-                        <span className="truncate">{getCategoryLabel(event.category)}</span>
+
+                {/* Glassy skeuomorphic light — top highlight sheen */}
+                <div className="absolute inset-x-0 top-0 h-[45%] bg-gradient-to-b from-white/[0.09] via-white/[0.03] to-transparent pointer-events-none rounded-t-xl" />
+                <div className="absolute top-0 right-0 w-[60%] h-[40%] bg-[radial-gradient(ellipse_at_85%_15%,rgba(255,255,255,0.12),transparent_65%)] pointer-events-none" />
+
+                {/* Bottom scrim for text */}
+                <div className="absolute inset-x-0 bottom-0 h-[65%] bg-gradient-to-t from-black/88 via-black/50 to-transparent pointer-events-none rounded-b-xl" />
+
+                {/* Inner border highlight for glass depth */}
+                <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-white/[0.08] pointer-events-none" />
+
+                {/* Content */}
+                <div className="relative p-3 pt-[4.5rem] flex flex-col justify-end">
+                  {/* Category pill — uses category color */}
+                  {event.category && (
+                    <div className="mb-2">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.55rem] font-mono font-semibold tracking-wide uppercase bg-[color-mix(in_srgb,var(--category-color)_22%,rgba(0,0,0,0.5))] border border-[color-mix(in_srgb,var(--category-color)_40%,transparent)] text-[var(--category-color)] shadow-[0_0_10px_color-mix(in_srgb,var(--category-color)_15%,transparent)] backdrop-blur-[2px]">
+                        <CategoryIcon type={event.category} size={10} glow="none" />
+                        <span className="truncate max-w-[5.5rem]">{getCategoryLabel(event.category)}</span>
                       </span>
-                    )}
-                  </div>
-                  <h4 className="text-xs text-white/90 font-semibold line-clamp-2">
+                    </div>
+                  )}
+
+                  {/* Title — bolder, hover transitions to category color */}
+                  <h4 className="text-[0.88rem] sm:text-[0.92rem] text-white font-semibold leading-[1.3] line-clamp-2 tracking-[-0.01em] group-hover:text-[var(--category-color)] transition-colors duration-300 drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)]">
                     {event.title}
                   </h4>
+
+                  {/* Time/date — mono, hover transitions to category color */}
+                  <span className="mt-1.5 font-mono text-[0.6rem] font-medium tracking-[0.04em] text-white/70 group-hover:text-[color-mix(in_srgb,var(--category-color)_80%,white)] transition-colors duration-300 drop-shadow-[0_1px_4px_rgba(0,0,0,0.7)]">
+                    {showDateOnCards
+                      ? formatShortDate(event.start_date)
+                      : event.start_time
+                        ? (<>{formatTimeSplit(event.start_time, event.is_all_day).time}<span className="opacity-65 ml-0.5">{formatTimeSplit(event.start_time, event.is_all_day).period}</span></>)
+                        : "Today"}
+                  </span>
                 </div>
               </Link>
             );

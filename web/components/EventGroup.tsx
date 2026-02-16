@@ -269,7 +269,7 @@ export default function EventGroup({
                   <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/56 to-black/20 pointer-events-none" />
                 </>
               )}
-              <div className={`relative z-10 flex flex-col items-start justify-center gap-1.5 ${railImageUrl ? "h-full pl-3 pr-2 py-3 sm:py-4" : ""}`}>
+              <div className={`relative z-10 flex flex-col items-start justify-center gap-1.5 ${railImageUrl ? "h-full pl-3 pr-2 py-3 sm:py-4 list-rail-caption" : ""}`}>
                 <span className="font-mono text-[0.62rem] font-semibold text-[var(--accent-color)] leading-none uppercase tracking-[0.12em]">
                   {events.length} {events.length === 1 ? "item" : "items"}
                 </span>

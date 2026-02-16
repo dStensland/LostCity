@@ -220,7 +220,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "end_date": end_date,
                         "end_time": None,
                         "is_all_day": True,
-                        "category": "community",
+                        "category": "museums",
                         "subcategory": None,
                         "tags": [
                             "college-football",

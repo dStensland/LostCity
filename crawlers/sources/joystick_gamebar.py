@@ -35,7 +35,7 @@ VENUE_DATA = {
     "venue_type": "bar",
     "spot_type": "bar",
     "website": BASE_URL,
-    "vibes": ["lgbtq", "barcade", "arcade", "gaming", "late-night"],
+    "vibes": ["lgbtq", "arcade", "games", "bar-games", "casual", "retro"],
 }
 
 
@@ -158,11 +158,22 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         continue
 
                     # Get specific event URL
-
-
                     event_url = find_event_url(title, event_links, EVENTS_URL)
 
+                    # Infer subcategory and genres from title
+                    title_lower = title.lower()
+                    subcategory = "nightlife.bar_games"
+                    genres = ["bar-games"]
+                    tags = ["arcade", "21+", "lgbtq"]
 
+                    if "bingo" in title_lower:
+                        subcategory = "nightlife.bingo"
+                        genres = ["bingo", "bar-games"]
+                        tags.append("bingo")
+                    elif "tournament" in title_lower or "compete" in title_lower:
+                        tags.extend(["bar-games", "tournament"])
+                    else:
+                        tags.append("bar-games")
 
                     event_record = {
                         "source_id": source_id,
@@ -175,16 +186,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "end_time": None,
                         "is_all_day": False,
                         "category": "nightlife",
-                        "subcategory": "club",
-                        "tags": [
-                        "joystick",
-                        "lgbtq",
-                        "barcade",
-                        "arcade",
-                        "edgewood",
-                        "gaming",
-                        "pinball",
-                    ],
+                        "subcategory": subcategory,
+                        "genres": genres,
+                        "tags": tags,
                         "price_min": None,
                         "price_max": None,
                         "price_note": None,

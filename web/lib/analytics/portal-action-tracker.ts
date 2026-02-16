@@ -2,7 +2,22 @@
 
 import type { HospitalAudienceMode } from "@/lib/hospital-modes";
 
-export type PortalActionType = "mode_selected" | "wayfinding_opened" | "resource_clicked";
+export type PortalActionType =
+  | "mode_selected"
+  | "wayfinding_opened"
+  | "resource_clicked"
+  | "itinerary_created"
+  | "itinerary_item_added"
+  | "itinerary_shared"
+  | "concierge_request_submitted"
+  | "preference_completed"
+  | "booking_click"
+  | "reservation_click"
+  | "ticket_click"
+  | "phone_call_click"
+  | "pdf_downloaded"
+  | "community_story_click"
+  | "community_org_click";
 
 export type PortalActionPayload = {
   action_type: PortalActionType;

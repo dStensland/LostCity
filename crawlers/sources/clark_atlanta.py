@@ -237,7 +237,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 # Determine category
                 title_lower = title.lower()
                 if "art" in title_lower or "museum" in title_lower or "exhibition" in title_lower:
-                    category, subcategory = "art", "exhibition"
+                    category, subcategory = "museums", "exhibition"
                 elif "concert" in title_lower or "music" in title_lower:
                     category, subcategory = "music", "concert"
                 elif "athletics" in title_lower or "game" in title_lower:

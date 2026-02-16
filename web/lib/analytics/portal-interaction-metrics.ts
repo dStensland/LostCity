@@ -6,6 +6,16 @@ export const PORTAL_INTERACTION_ACTIONS = [
   "mode_selected",
   "wayfinding_opened",
   "resource_clicked",
+  "itinerary_created",
+  "itinerary_item_added",
+  "itinerary_shared",
+  "concierge_request_submitted",
+  "preference_completed",
+  "booking_click",
+  "reservation_click",
+  "ticket_click",
+  "phone_call_click",
+  "pdf_downloaded",
 ] as const;
 
 export type PortalInteractionAction = (typeof PORTAL_INTERACTION_ACTIONS)[number];

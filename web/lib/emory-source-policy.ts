@@ -239,6 +239,51 @@ export const EMORY_SOURCE_POLICY_ITEMS: EmorySourcePolicyItem[] = [
     focus: "Home-delivered meals and food support for vulnerable residents",
     url: "https://mealsonwheelsatlanta.org/",
   },
+  {
+    id: "community-farmers-markets",
+    name: "Community Farmers Markets",
+    rail: "atlanta_federated",
+    tier: "Tier 2",
+    class: "nonprofit",
+    focus: "Fresh local food access through weekly neighborhood farmers markets",
+    url: "https://cfmatl.org/",
+  },
+  {
+    id: "empowerline",
+    name: "Empowerline",
+    rail: "atlanta_federated",
+    tier: "Tier 2",
+    class: "civic",
+    focus: "Aging and disability services, caregiver support, and senior wellness",
+    url: "https://empowerline.org/",
+  },
+  {
+    id: "alzheimers-association-georgia",
+    name: "Alzheimer's Association Georgia",
+    rail: "atlanta_federated",
+    tier: "Tier 2",
+    class: "nonprofit",
+    focus: "Caregiver education, dementia support groups, and advocacy events",
+    url: "https://www.alz.org/georgia",
+  },
+  {
+    id: "good-samaritan-health",
+    name: "Good Samaritan Health Center",
+    rail: "atlanta_federated",
+    tier: "Tier 2",
+    class: "nonprofit",
+    focus: "Free primary care, dental, and behavioral health for underserved residents",
+    url: "https://goodsamatlanta.org/",
+  },
+  {
+    id: "medshare",
+    name: "MedShare",
+    rail: "atlanta_federated",
+    tier: "Tier 2",
+    class: "nonprofit",
+    focus: "Medical supply sorting volunteer sessions and global health fundraisers",
+    url: "https://www.medshare.org/",
+  },
 ];
 
 export function getEmorySourcesByRail(rail: EmorySourceRail): EmorySourcePolicyItem[] {
@@ -347,6 +392,28 @@ const SOURCE_POLICY_ALIASES: Record<string, string[]> = {
   ],
   "meals-on-wheels-atlanta": [
     "meals on wheels atlanta",
+  ],
+  "community-farmers-markets": [
+    "community farmers markets",
+    "cfm atlanta",
+    "cfmatl",
+  ],
+  empowerline: [
+    "empowerline",
+    "atlanta regional commission aging",
+  ],
+  "alzheimers-association-georgia": [
+    "alzheimers association georgia",
+    "alzheimer association georgia",
+    "alz georgia",
+  ],
+  "good-samaritan-health": [
+    "good samaritan health center",
+    "good samaritan atlanta",
+  ],
+  medshare: [
+    "medshare",
+    "medshare international",
   ],
 };
 

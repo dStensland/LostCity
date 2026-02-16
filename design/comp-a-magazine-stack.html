@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Explore Atlanta — Comp A: Magazine Stack</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0E0E0E;
+    color: #fff;
+    font-family: 'Inter', -apple-system, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .phone-frame {
+    max-width: 390px;
+    margin: 20px auto;
+    background: #0E0E0E;
+    min-height: 100vh;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* ===== Header ===== */
+  .header {
+    padding: 16px 20px 8px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: linear-gradient(to bottom, #0E0E0E 60%, transparent);
+  }
+
+  .header h1 {
+    font-size: 26px;
+    font-weight: 900;
+    letter-spacing: -0.5px;
+    color: #fff;
+  }
+
+  .header .subtitle {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #666;
+    margin-top: 4px;
+    letter-spacing: 0.02em;
+  }
+
+  /* ===== Track Cards ===== */
+  .track-list {
+    padding: 8px 16px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .track-card {
+    border-radius: 16px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+  }
+
+  .track-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+
+  /* Collapsed track hero */
+  .track-hero {
+    position: relative;
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 24px 20px;
+    overflow: hidden;
+  }
+
+  .track-hero .bg-image {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    filter: brightness(0.35) saturate(0.7) contrast(1.1);
+    transform: scale(1.05);
+  }
+
+  .track-hero .gradient-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to top,
+      rgba(14,14,14,0.95) 0%,
+      rgba(14,14,14,0.6) 40%,
+      rgba(14,14,14,0.2) 70%,
+      transparent 100%
+    );
+  }
+
+  /* Glass quote card */
+  .quote-card {
+    position: relative;
+    z-index: 2;
+    background: rgba(255,255,255,0.06);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 20px;
+  }
+
+  .track-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .accent-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  .quote-text {
+    font-size: 22px;
+    font-weight: 800;
+    line-height: 1.25;
+    letter-spacing: -0.3px;
+    margin-bottom: 12px;
+  }
+
+  .quote-attribution {
+    font-size: 12px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.5);
+  }
+
+  .track-meta {
+    display: flex;
+    gap: 12px;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .meta-pill {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.6);
+  }
+
+  .meta-pill.alive {
+    color: #C1D32F;
+    border-color: rgba(193,211,47,0.3);
+    background: rgba(193,211,47,0.08);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+
+  /* ===== Expanded Track ===== */
+  .track-card.expanded .track-hero {
+    min-height: 240px;
+  }
+
+  .track-content {
+    background: #141414;
+    padding: 16px;
+  }
+
+  .track-description {
+    font-size: 14px;
+    line-height: 1.6;
+    color: rgba(255,255,255,0.6);
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(255,255,255,0.35);
+    margin-bottom: 12px;
+  }
+
+  /* Masonry grid */
+  .venue-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .venue-card {
+    border-radius: 10px;
+    overflow: hidden;
+    background: #1a1a1a;
+    border: 1px solid rgba(255,255,255,0.05);
+    transition: transform 0.2s ease;
+  }
+
+  .venue-card:hover {
+    transform: scale(1.02);
+  }
+
+  .venue-card.featured {
+    grid-column: span 2;
+  }
+
+  .venue-image {
+    width: 100%;
+    aspect-ratio: 4/3;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+    filter: contrast(1.08) saturate(0.8);
+  }
+
+  .venue-card.featured .venue-image {
+    aspect-ratio: 16/9;
+  }
+
+  /* Film grain overlay */
+  .venue-image::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 50%);
+  }
+
+  .alive-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 3;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 20px;
+    background: #C1D32F;
+    color: #0E0E0E;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  .venue-info {
+    padding: 10px;
+  }
+
+  .venue-name {
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: 2px;
+  }
+
+  .venue-hood {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: rgba(255,255,255,0.35);
+    margin-bottom: 6px;
+  }
+
+  .venue-blurb {
+    font-size: 11px;
+    line-height: 1.5;
+    color: rgba(255,255,255,0.5);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* See all link */
+  .see-all {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 16px;
+    padding: 12px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.03);
+    border: 1px dashed rgba(255,255,255,0.1);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.4);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .see-all:hover {
+    background: rgba(255,255,255,0.06);
+    color: rgba(255,255,255,0.6);
+  }
+
+  /* Collapsed peek — show venue strip */
+  .venue-peek {
+    display: flex;
+    gap: 6px;
+    padding: 0 16px 12px;
+    overflow: hidden;
+  }
+
+  .peek-thumb {
+    width: 52px;
+    height: 52px;
+    border-radius: 8px;
+    background-size: cover;
+    background-position: center;
+    flex-shrink: 0;
+    filter: brightness(0.7) saturate(0.7);
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .peek-more {
+    width: 52px;
+    height: 52px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.06);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: rgba(255,255,255,0.3);
+    flex-shrink: 0;
+  }
+
+  /* Track accent colors */
+  .track-card[data-track="good-trouble"] .accent-dot { background: #E03A3E; }
+  .track-card[data-track="good-trouble"] .track-name { color: #E03A3E; }
+
+  .track-card[data-track="south-got-something"] .accent-dot { background: #D4A574; }
+  .track-card[data-track="south-got-something"] .track-name { color: #D4A574; }
+
+  .track-card[data-track="hard-in-da-paint"] .accent-dot { background: #14B8A6; }
+  .track-card[data-track="hard-in-da-paint"] .track-name { color: #14B8A6; }
+
+  .track-card[data-track="midnight-train"] .accent-dot { background: #A78BFA; }
+  .track-card[data-track="midnight-train"] .track-name { color: #A78BFA; }
+
+  .track-card[data-track="the-itis"] .accent-dot { background: #FB923C; }
+  .track-card[data-track="the-itis"] .track-name { color: #FB923C; }
+
+  .track-card[data-track="welcome"] .accent-dot { background: #C1D32F; }
+  .track-card[data-track="welcome"] .track-name { color: #C1D32F; }
+
+  .track-card[data-track="city-forest"] .accent-dot { background: #34D399; }
+  .track-card[data-track="city-forest"] .track-name { color: #34D399; }
+
+  .track-card[data-track="keep-swinging"] .accent-dot { background: #F472B6; }
+  .track-card[data-track="keep-swinging"] .track-name { color: #F472B6; }
+
+  /* Annotation labels */
+  .annotation {
+    position: fixed;
+    right: 20px;
+    background: rgba(193,211,47,0.15);
+    border: 1px solid rgba(193,211,47,0.3);
+    color: #C1D32F;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    pointer-events: none;
+    z-index: 200;
+    max-width: 180px;
+    line-height: 1.4;
+  }
+
+  .comp-label {
+    text-align: center;
+    padding: 40px 20px 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: #666;
+    letter-spacing: 0.05em;
+  }
+
+  .comp-label h2 {
+    font-family: 'Inter', sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+    color: #C1D32F;
+    margin-bottom: 4px;
+    letter-spacing: -0.3px;
+  }
+</style>
+</head>
+<body>
+
+<div class="comp-label">
+  <h2>COMP A: Magazine Stack</h2>
+  STACKED CARDS WITH PEEK &middot; GLASSMORPHISM QUOTES &middot; MASONRY GRID
+</div>
+
+<div class="phone-frame">
+  <div class="header">
+    <h1>Explore Atlanta</h1>
+    <div class="subtitle">14 curated tracks through the city</div>
+  </div>
+
+  <div class="track-list">
+
+    <!-- ===== TRACK 1: EXPANDED (Good Trouble) ===== -->
+    <div class="track-card expanded" data-track="good-trouble">
+      <div class="track-hero">
+        <div class="bg-image" style="background-image: url('https://images.unsplash.com/photo-1590077428593-a55bb07c4665?w=800&q=80')"></div>
+        <div class="gradient-overlay"></div>
+        <div class="quote-card">
+          <div class="track-name">
+            <span class="accent-dot"></span>
+            GOOD TROUBLE
+          </div>
+          <div class="quote-text">"Get in good trouble, necessary trouble."</div>
+          <div class="quote-attribution">— John Lewis</div>
+          <div class="track-meta">
+            <span class="meta-pill">9 places</span>
+            <span class="meta-pill alive">12 upcoming events</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="track-content">
+        <p class="track-description">
+          The sites that shaped America's Civil Rights Movement. From MLK's birthplace to the streets where history was made — this is Atlanta's moral spine.
+        </p>
+
+        <div class="section-label">Featured Places</div>
+
+        <div class="venue-grid">
+          <!-- Featured venue (spans 2 cols) -->
+          <div class="venue-card featured">
+            <div class="venue-image" style="background-image: url('https://images.unsplash.com/photo-1568667256549-094345857637?w=800&q=80')">
+              <div class="alive-badge">3 upcoming</div>
+            </div>
+            <div class="venue-info">
+              <div class="venue-name">National Center for Civil and Human Rights</div>
+              <div class="venue-hood">DOWNTOWN</div>
+              <div class="venue-blurb">The lunch counter sit-in simulation will shake you. The Freedom Riders bus is upstairs.</div>
+            </div>
+          </div>
+
+          <!-- Regular venue cards -->
+          <div class="venue-card">
+            <div class="venue-image" style="background-image: url('https://images.unsplash.com/photo-1584483766114-2cea6facdf57?w=400&q=80')">
+              <div class="alive-badge">5 upcoming</div>
+            </div>
+            <div class="venue-info">
+              <div class="venue-name">MLK National Historical Park</div>
+              <div class="venue-hood">SWEET AUBURN</div>
+              <div class="venue-blurb">MLK's birth home, Ebenezer Baptist Church, and the reflecting pool.</div>
+            </div>
+          </div>
+
+          <div class="venue-card">
+            <div class="venue-image" style="background-image: url('https://images.unsplash.com/photo-1533907650686-70576141c030?w=400&q=80')"></div>
+            <div class="venue-info">
+              <div class="venue-name">Sweet Auburn Curb Market</div>
+              <div class="venue-hood">SWEET AUBURN</div>
+              <div class="venue-blurb">The 1918 market that fed Atlanta through segregation. Still alive, still feeding.</div>
+            </div>
+          </div>
+
+          <div class="venue-card">
+            <div class="venue-image" style="background-image: url('https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=400&q=80')"></div>
+            <div class="venue-info">
+              <div class="venue-name">Herndon Home Museum</div>
+              <div class="venue-hood">VINE CITY</div>
+              <div class="venue-blurb">Born enslaved, became Atlanta's first Black millionaire. This is his house.</div>
+            </div>
+          </div>
+
+          <div class="venue-card">
+            <div class="venue-image" style="background-image: url('https://images.unsplash.com/photo-1569930784237-ea65a702c65a?w=400&q=80')">
+              <div class="alive-badge">2 upcoming</div>
+            </div>
+            <div class="venue-info">
+              <div class="venue-name">Atlanta History Center</div>
+              <div class="venue-hood">BUCKHEAD</div>
+              <div class="venue-blurb">The Cyclorama is a 360-degree painting of the Battle of Atlanta.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="see-all">See all 9 places in this track &rarr;</div>
+      </div>
+    </div>
+
+    <!-- ===== TRACK 2: COLLAPSED (The South Got Something to Say) ===== -->
+    <div class="track-card" data-track="south-got-something">
+      <div class="track-hero">
+        <div class="bg-image" style="background-image: url('https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&q=80')"></div>
+        <div class="gradient-overlay"></div>
+        <div class="quote-card">
+          <div class="track-name">
+            <span class="accent-dot"></span>
+            THE SOUTH GOT SOMETHING TO SAY
+          </div>
+          <div class="quote-text">"The South got something to say!"</div>
+          <div class="quote-attribution">— Andre 3000, 1995 Source Awards</div>
+          <div class="track-meta">
+            <span class="meta-pill">74 places</span>
+            <span class="meta-pill alive">48 upcoming events</span>
+          </div>
+        </div>
+      </div>
+      <div class="venue-peek">
+        <div class="peek-thumb" style="background-image: url('https://images.unsplash.com/photo-1501612780327-45045538702b?w=200&q=60')"></div>
+        <div class="peek-thumb" style="background-image: url('https://images.unsplash.com/photo-1524368535928-5b5e00ddc76b?w=200&q=60')"></div>
+        <div class="peek-thumb" style="background-image: url('https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=200&q=60')"></div>
+        <div class="peek-thumb" style="background-image: url('https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=200&q=60')"></div>
+        <div class="peek-thumb" style="background-image: url('https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=200&q=60')"></div>
+        <div class="peek-more">+69</div>
+      </div>
+    </div>
+
+    <!-- ===== TRACK 3: COLLAPSED (Hard in Da Paint) ===== -->
+    <div class="track-card" data-track="hard-in-da-paint">
+      <div class="track-hero">
+        <div class="bg-image" style="background-image: url('https://images.unsplash.com/photo-1569017388730-020b5f80a004?w=800&q=80')"></div>
+        <div class="gradient-overlay"></div>
+        <div class="quote-card">
+          <div class="track-name">
+            <span class="accent-dot"></span>
+            HARD IN DA PAINT
+          </div>
+          <div class="quote-text">"Krog Tunnel, BeltLine murals, gallery crawls, and the street art that makes Atlanta a canvas."</div>
+          <div class="quote-attribution">— Waka Flocka Flame</div>
+          <div class="track-meta">
+            <span class="meta-pill">82 places</span>
+            <span class="meta-pill alive">31 upcoming events</span>
+          </div>
+        </div>
+      </div>
+      <div class="venue-peek">
+        <div class="peek-thumb" style="background-image: url('https://images.unsplash.com/photo-1499781350541-7783f6c6a0c8?w=200&q=60')"></div>
+        <div class="peek-thumb" style="background-image: url('https://images.unsplash.com/photo-1561059488-916d69792237?w=200&q=60')"></div>
+        <div class="peek-thumb" style="background-image: url('https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=200&q=60')"></div>
+        <div class="peek-thumb" style="background-image: url('https://images.unsplash.com/photo-1578926375605-eaf7559b1458?w=200&q=60')"></div>
+        <div class="peek-more">+78</div>
+      </div>
+    </div>
+
+    <!-- ===== TRACK 4: COLLAPSED (The Midnight Train) ===== -->
+    <div class="track-card" data-track="midnight-train">
+      <div class="track-hero">
+        <div class="bg-image" style="background-image: url('https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800&q=80')"></div>
+        <div class="gradient-overlay"></div>
+        <div class="quote-card">
+          <div class="track-name">
+            <span class="accent-dot"></span>
+            THE MIDNIGHT TRAIN
+          </div>
+          <div class="quote-text">"Atlanta gets weird — and it's magnificent."</div>
+          <div class="quote-attribution">— Gladys Knight & the Pips</div>
+          <div class="track-meta">
+            <span class="meta-pill">19 places</span>
+            <span class="meta-pill">7 upcoming events</span>
+          </div>
+        </div>
+      </div>
+      <div class="venue-peek">
+        <div class="peek-thumb" style="background-image: url('https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=200&q=60')"></div>
+        <div class="peek-thumb" style="background-image: url('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=60')"></div>
+        <div class="peek-thumb" style="background-image: url('https://images.unsplash.com/photo-1572981779307-38b8cabb2407?w=200&q=60')"></div>
+        <div class="peek-more">+16</div>
+      </div>
+    </div>
+
+    <!-- ===== TRACK 5: COLLAPSED (The Itis) ===== -->
+    <div class="track-card" data-track="the-itis">
+      <div class="track-hero">
+        <div class="bg-image" style="background-image: url('https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800&q=80')"></div>
+        <div class="gradient-overlay"></div>
+        <div class="quote-card">
+          <div class="track-name">
+            <span class="accent-dot"></span>
+            THE ITIS
+          </div>
+          <div class="quote-text">"Soul food, James Beard finalists, Buford Highway legends, and the food coma that follows."</div>
+          <div class="quote-attribution">— The Boondocks / Aaron McGruder</div>
+          <div class="track-meta">
+            <span class="meta-pill">23 places</span>
+            <span class="meta-pill alive">9 upcoming events</span>
+          </div>
+        </div>
+      </div>
+      <div class="venue-peek">
+        <div class="peek-thumb" style="background-image: url('https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=200&q=60')"></div>
+        <div class="peek-thumb" style="background-image: url('https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=200&q=60')"></div>
+        <div class="peek-thumb" style="background-image: url('https://images.unsplash.com/photo-1559339352-11d035aa65de?w=200&q=60')"></div>
+        <div class="peek-thumb" style="background-image: url('https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=200&q=60')"></div>
+        <div class="peek-more">+19</div>
+      </div>
+    </div>
+
+    <!-- ===== TRACK 6: COLLAPSED (Welcome to Atlanta) ===== -->
+    <div class="track-card" data-track="welcome">
+      <div class="track-hero">
+        <div class="bg-image" style="background-image: url('https://images.unsplash.com/photo-1575931953324-fcac7094999e?w=800&q=80')"></div>
+        <div class="gradient-overlay"></div>
+        <div class="quote-card">
+          <div class="track-name">
+            <span class="accent-dot"></span>
+            WELCOME TO ATLANTA
+          </div>
+          <div class="quote-text">"Welcome to Atlanta where the playas play."</div>
+          <div class="quote-attribution">— Ludacris & Jermaine Dupri, 2001</div>
+          <div class="track-meta">
+            <span class="meta-pill">12 places</span>
+            <span class="meta-pill alive">18 upcoming events</span>
+          </div>
+        </div>
+      </div>
+      <div class="venue-peek">
+        <div class="peek-thumb" style="background-image: url('https://images.unsplash.com/photo-1582555172866-f73bb12a2ab3?w=200&q=60')"></div>
+        <div class="peek-thumb" style="background-image: url('https://images.unsplash.com/photo-1567093719338-8e6be68b3c2d?w=200&q=60')"></div>
+        <div class="peek-more">+10</div>
+      </div>
+    </div>
+
+    <!-- ===== TRACK 7: COLLAPSED (City in a Forest) ===== -->
+    <div class="track-card" data-track="city-forest">
+      <div class="track-hero">
+        <div class="bg-image" style="background-image: url('https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800&q=80')"></div>
+        <div class="gradient-overlay"></div>
+        <div class="quote-card">
+          <div class="track-name">
+            <span class="accent-dot"></span>
+            CITY IN A FOREST
+          </div>
+          <div class="quote-text">"Trails, parks, and the tree canopy that earned the name."</div>
+          <div class="quote-attribution">— Official Atlanta slogan</div>
+          <div class="track-meta">
+            <span class="meta-pill">87 places</span>
+            <span class="meta-pill alive">24 upcoming events</span>
+          </div>
+        </div>
+      </div>
+      <div class="venue-peek">
+        <div class="peek-thumb" style="background-image: url('https://images.unsplash.com/photo-1502082553048-f009c37129b9?w=200&q=60')"></div>
+        <div class="peek-thumb" style="background-image: url('https://images.unsplash.com/photo-1448375240586-882707db888b?w=200&q=60')"></div>
+        <div class="peek-thumb" style="background-image: url('https://images.unsplash.com/photo-1476231682828-37e571bc172f?w=200&q=60')"></div>
+        <div class="peek-thumb" style="background-image: url('https://images.unsplash.com/photo-1425913397330-cf8af2ff40a1?w=200&q=60')"></div>
+        <div class="peek-more">+83</div>
+      </div>
+    </div>
+
+    <!-- ===== TRACK 8: COLLAPSED (Keep Swinging) ===== -->
+    <div class="track-card" data-track="keep-swinging">
+      <div class="track-hero">
+        <div class="bg-image" style="background-image: url('https://images.unsplash.com/photo-1461896836934-bd45ba2c1b9a?w=800&q=80')"></div>
+        <div class="gradient-overlay"></div>
+        <div class="quote-card">
+          <div class="track-name">
+            <span class="accent-dot"></span>
+            KEEP SWINGING
+          </div>
+          <div class="quote-text">"Mercedes-Benz Stadium, Truist Park, Atlanta United, and the roar of 70,000."</div>
+          <div class="quote-attribution">— Hank Aaron</div>
+          <div class="track-meta">
+            <span class="meta-pill">67 places</span>
+            <span class="meta-pill alive">42 upcoming events</span>
+          </div>
+        </div>
+      </div>
+      <div class="venue-peek">
+        <div class="peek-thumb" style="background-image: url('https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?w=200&q=60')"></div>
+        <div class="peek-thumb" style="background-image: url('https://images.unsplash.com/photo-1471295253337-3ceaaedca402?w=200&q=60')"></div>
+        <div class="peek-thumb" style="background-image: url('https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=200&q=60')"></div>
+        <div class="peek-more">+64</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

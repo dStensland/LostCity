@@ -122,9 +122,9 @@ def determine_category(
     if "family" in type_lower or any(w in title_lower for w in ["family", "kids", "children"]):
         return "family", "kids", tags + ["family", "kids"]
     if "tour" in type_lower or "tour" in title_lower:
-        return "art", "tour", tags + ["tour"]
+        return "museums", "tour", tags + ["tour"]
     if any(w in type_lower for w in ["art making", "workshop"]):
-        return "art", "workshop", tags + ["workshop", "class"]
+        return "museums", "workshop", tags + ["workshop", "class"]
     if "lecture" in type_lower or "talk" in type_lower:
         return "community", "education", tags + ["lecture", "education"]
     if any(w in title_lower for w in ["music", "concert", "jazz"]):
@@ -132,7 +132,7 @@ def determine_category(
     if "film" in title_lower or "screening" in title_lower:
         return "film", None, tags + ["film"]
 
-    return "art", "museum", tags
+    return "museums", "museum", tags
 
 
 def crawl(source: dict) -> tuple[int, int, int]:

@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Explore Atlanta — Comp D: Hybrid (Cinematic + Drill-In + Alive Cards)</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0E0E0E;
+    color: #fff;
+    font-family: 'Inter', -apple-system, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .phone-frame {
+    max-width: 390px;
+    margin: 20px auto;
+    background: #0E0E0E;
+    min-height: 100vh;
+    position: relative;
+  }
+
+  /* ===== Header ===== */
+  .header {
+    padding: 16px 20px 12px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: linear-gradient(to bottom, #0E0E0E 70%, transparent);
+  }
+
+  .header h1 {
+    font-size: 26px;
+    font-weight: 900;
+    letter-spacing: -0.5px;
+  }
+
+  .header .subtitle {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #555;
+    margin-top: 4px;
+  }
+
+  /* ===== Track List (Cinematic Heroes) ===== */
+  .track-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 4px 12px 40px;
+  }
+
+  /* Each track card — cinematic banner that's tappable */
+  .track-banner {
+    position: relative;
+    border-radius: 14px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .track-banner:hover {
+    transform: scale(1.01);
+  }
+
+  .track-banner:active {
+    transform: scale(0.99);
+  }
+
+  .banner-bg {
+    width: 100%;
+    aspect-ratio: 2.2/1;
+    background-size: cover;
+    background-position: center;
+    filter: brightness(0.3) saturate(0.55) contrast(1.15);
+    transition: transform 0.5s ease;
+  }
+
+  .track-banner:hover .banner-bg {
+    transform: scale(1.05);
+  }
+
+  .banner-gradient {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to top,
+      rgba(14,14,14,0.98) 0%,
+      rgba(14,14,14,0.7) 35%,
+      rgba(14,14,14,0.2) 70%,
+      transparent 100%
+    );
+  }
+
+  /* Accent edge glow */
+  .banner-accent {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    z-index: 5;
+    border-radius: 14px 0 0 14px;
+  }
+
+  .banner-content {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 16px 18px;
+    z-index: 2;
+  }
+
+  .banner-category {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 5px;
+    opacity: 0.9;
+  }
+
+  .banner-title {
+    font-size: 22px;
+    font-weight: 900;
+    line-height: 1.1;
+    letter-spacing: -0.4px;
+    margin-bottom: 4px;
+  }
+
+  .banner-quote {
+    font-size: 12px;
+    font-style: italic;
+    color: rgba(255,255,255,0.45);
+    line-height: 1.35;
+  }
+
+  .banner-stats {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .stat-chip {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.06);
+    color: rgba(255,255,255,0.45);
+  }
+
+  .stat-chip.alive {
+    background: rgba(193,211,47,0.1);
+    border-color: rgba(193,211,47,0.2);
+    color: #C1D32F;
+  }
+
+  .stat-chip.alive::before {
+    content: '';
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #C1D32F;
+    margin-right: 4px;
+    animation: blink 2s ease-in-out infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+
+  /* Arrow affordance */
+  .banner-arrow {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 3;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255,255,255,0.3);
+    font-size: 14px;
+    transition: all 0.2s;
+  }
+
+  .track-banner:hover .banner-arrow {
+    background: rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.6);
+  }
+
+  /* ===== DRILL-IN: Track Detail ===== */
+  .detail-section {
+    margin-top: 40px;
+    border-top: 2px solid rgba(255,255,255,0.04);
+  }
+
+  .detail-label {
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #444;
+    padding: 20px;
+    letter-spacing: 0.05em;
+  }
+
+  /* Full hero */
+  .detail-hero {
+    position: relative;
+    min-height: 280px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    overflow: hidden;
+  }
+
+  .detail-hero .hero-bg {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center top;
+    filter: brightness(0.28) saturate(0.5) contrast(1.2);
+  }
+
+  .detail-hero .hero-grad {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, #0E0E0E 0%, rgba(14,14,14,0.7) 40%, transparent 100%);
+  }
+
+  .detail-hero-content {
+    position: relative;
+    z-index: 2;
+    padding: 24px 20px;
+  }
+
+  .detail-back {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: rgba(255,255,255,0.35);
+    margin-bottom: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .detail-track-cat {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #E03A3E;
+    margin-bottom: 8px;
+  }
+
+  .detail-title {
+    font-size: 32px;
+    font-weight: 900;
+    line-height: 1.05;
+    letter-spacing: -0.6px;
+    margin-bottom: 10px;
+  }
+
+  .detail-quote {
+    font-size: 16px;
+    font-style: italic;
+    color: rgba(255,255,255,0.5);
+    line-height: 1.4;
+    margin-bottom: 6px;
+  }
+
+  .detail-attribution {
+    font-size: 12px;
+    color: rgba(255,255,255,0.3);
+  }
+
+  /* Description */
+  .detail-desc {
+    padding: 20px;
+    font-size: 14px;
+    line-height: 1.7;
+    color: rgba(255,255,255,0.55);
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+
+  /* Filter chips */
+  .filter-row {
+    display: flex;
+    gap: 6px;
+    padding: 12px 20px;
+    overflow-x: auto;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+
+  .filter-chip {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    padding: 5px 12px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.06);
+    color: rgba(255,255,255,0.4);
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .filter-chip:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.6); }
+
+  .filter-chip.active {
+    background: rgba(193,211,47,0.12);
+    border-color: rgba(193,211,47,0.3);
+    color: #C1D32F;
+  }
+
+  /* ===== ALIVE VENUE CARDS ===== */
+  .venue-list {
+    padding: 12px 16px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .venue-list .section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(255,255,255,0.25);
+    padding: 4px 0;
+  }
+
+  /* Individual venue card — rich and alive */
+  .venue-card {
+    border-radius: 12px;
+    overflow: hidden;
+    background: #141414;
+    border: 1px solid rgba(255,255,255,0.04);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .venue-card:hover {
+    background: #181818;
+    border-color: rgba(255,255,255,0.08);
+  }
+
+  .venue-card.has-events {
+    border-color: rgba(193,211,47,0.15);
+  }
+
+  /* Image area */
+  .vc-image {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16/9;
+    background-size: cover;
+    background-position: center;
+    filter: contrast(1.06) saturate(0.8);
+  }
+
+  .vc-image::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.65) 0%, transparent 50%);
+  }
+
+  /* Badges floating on image */
+  .vc-badges {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-end;
+  }
+
+  .badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .badge-tonight {
+    background: #E03A3E;
+    color: #fff;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  .badge-live {
+    background: #C1D32F;
+    color: #0E0E0E;
+  }
+
+  .badge-new {
+    background: #39FF14;
+    color: #0E0E0E;
+  }
+
+  .badge-popular {
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: #fff;
+    backdrop-filter: blur(8px);
+  }
+
+  .badge-seasonal {
+    background: rgba(251,146,60,0.9);
+    color: #0E0E0E;
+  }
+
+  /* Open now indicator on image bottom-left */
+  .vc-open {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    z-index: 3;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.6);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .open-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #34D399;
+    animation: blink 2s ease-in-out infinite;
+  }
+
+  /* Card body */
+  .vc-body {
+    padding: 12px 14px;
+  }
+
+  .vc-name {
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: 2px;
+  }
+
+  .vc-hood {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: rgba(255,255,255,0.3);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-bottom: 8px;
+  }
+
+  .vc-blurb {
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: rgba(255,255,255,0.5);
+    margin-bottom: 10px;
+  }
+
+  /* Activity signals row */
+  .vc-signals {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .signal {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
+  .signal-icon {
+    font-size: 12px;
+    flex-shrink: 0;
+    width: 16px;
+    text-align: center;
+    margin-top: 1px;
+  }
+
+  .signal-text {
+    color: rgba(255,255,255,0.5);
+  }
+
+  .signal-text strong {
+    color: rgba(255,255,255,0.8);
+    font-weight: 600;
+  }
+
+  .signal-text .highlight {
+    color: #C1D32F;
+    font-weight: 600;
+  }
+
+  .signal-text .tonight {
+    color: #E03A3E;
+    font-weight: 600;
+  }
+
+  .signal-text .date {
+    color: rgba(255,255,255,0.35);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+  }
+
+  /* Divider inside card */
+  .vc-divider {
+    height: 1px;
+    background: rgba(255,255,255,0.04);
+    margin: 10px 0;
+  }
+
+  /* Footer row */
+  .vc-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .vc-tags {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
+  .vc-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.04);
+    color: rgba(255,255,255,0.3);
+  }
+
+  .vc-action {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: rgba(255,255,255,0.25);
+    cursor: pointer;
+  }
+
+  /* ===== Compact card variant (2-column grid) ===== */
+  .venue-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .vc-compact {
+    border-radius: 10px;
+    overflow: hidden;
+    background: #141414;
+    border: 1px solid rgba(255,255,255,0.04);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .vc-compact:hover {
+    background: #181818;
+  }
+
+  .vc-compact .vc-img-sm {
+    width: 100%;
+    aspect-ratio: 4/3;
+    background-size: cover;
+    background-position: center;
+    filter: contrast(1.06) saturate(0.75);
+    position: relative;
+  }
+
+  .vc-compact .vc-img-sm::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 40%);
+  }
+
+  .vc-compact .vc-badges-sm {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    align-items: flex-end;
+  }
+
+  .vc-compact .badge-sm {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 7px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+  }
+
+  .vc-compact .vc-signal-sm {
+    position: absolute;
+    bottom: 6px;
+    left: 6px;
+    right: 6px;
+    z-index: 3;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px;
+    color: rgba(255,255,255,0.7);
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+  }
+
+  .vc-compact .vc-body-sm {
+    padding: 8px 9px;
+  }
+
+  .vc-compact .vc-name-sm {
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.25;
+    margin-bottom: 2px;
+  }
+
+  .vc-compact .vc-hood-sm {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px;
+    color: rgba(255,255,255,0.25);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .vc-compact .vc-blurb-sm {
+    font-size: 10.5px;
+    line-height: 1.45;
+    color: rgba(255,255,255,0.4);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .see-all-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 12px;
+    padding: 12px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.02);
+    border: 1px dashed rgba(255,255,255,0.08);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: rgba(255,255,255,0.3);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .see-all-row:hover {
+    background: rgba(255,255,255,0.04);
+    color: rgba(255,255,255,0.5);
+  }
+
+  .comp-label {
+    text-align: center;
+    padding: 40px 20px 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #555;
+    letter-spacing: 0.05em;
+    line-height: 1.6;
+  }
+
+  .comp-label h2 {
+    font-family: 'Inter', sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+    color: #C1D32F;
+    margin-bottom: 4px;
+    letter-spacing: -0.3px;
+  }
+
+  .section-divider {
+    height: 2px;
+    background: rgba(255,255,255,0.03);
+    margin: 32px 16px;
+  }
+
+  .section-title {
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #444;
+    letter-spacing: 0.08em;
+    padding-bottom: 16px;
+  }
+</style>
+</head>
+<body>
+
+<div class="comp-label">
+  <h2>COMP D: The Hybrid</h2>
+  C'S CINEMATIC ENERGY &middot; TAP TO DRILL IN &middot; ALIVE VENUE CARDS<br>
+  Shows: events tonight, current exhibits, open now, trending, seasonal, new
+</div>
+
+<!-- ============================================ -->
+<!-- PART 1: TRACK LIST (cinematic banners)       -->
+<!-- ============================================ -->
+<div class="phone-frame">
+  <div class="header">
+    <h1>Explore Atlanta</h1>
+    <div class="subtitle">14 curated tracks through the city</div>
+  </div>
+
+  <div class="track-list">
+
+    <div class="track-banner" style="--accent: #E03A3E">
+      <div class="banner-bg" style="background-image: url('https://images.unsplash.com/photo-1590077428593-a55bb07c4665?w=800&q=80')"></div>
+      <div class="banner-gradient"></div>
+      <div class="banner-accent" style="background: #E03A3E"></div>
+      <div class="banner-content">
+        <div class="banner-category" style="color: #E03A3E">CIVIL RIGHTS</div>
+        <div class="banner-title">Good Trouble</div>
+        <div class="banner-quote">"Get in good trouble, necessary trouble."</div>
+        <div class="banner-stats">
+          <span class="stat-chip">9 places</span>
+          <span class="stat-chip alive">12 upcoming</span>
+        </div>
+      </div>
+      <div class="banner-arrow">&rsaquo;</div>
+    </div>
+
+    <div class="track-banner" style="--accent: #D4A574">
+      <div class="banner-bg" style="background-image: url('https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&q=80')"></div>
+      <div class="banner-gradient"></div>
+      <div class="banner-accent" style="background: #D4A574"></div>
+      <div class="banner-content">
+        <div class="banner-category" style="color: #D4A574">HIP-HOP & MUSIC</div>
+        <div class="banner-title">The South Got Something to Say</div>
+        <div class="banner-quote">"The South got something to say!"</div>
+        <div class="banner-stats">
+          <span class="stat-chip">74 places</span>
+          <span class="stat-chip alive">48 upcoming</span>
+        </div>
+      </div>
+      <div class="banner-arrow">&rsaquo;</div>
+    </div>
+
+    <div class="track-banner" style="--accent: #14B8A6">
+      <div class="banner-bg" style="background-image: url('https://images.unsplash.com/photo-1569017388730-020b5f80a004?w=800&q=80')"></div>
+      <div class="banner-gradient"></div>
+      <div class="banner-accent" style="background: #14B8A6"></div>
+      <div class="banner-content">
+        <div class="banner-category" style="color: #14B8A6">STREET ART</div>
+        <div class="banner-title">Hard in Da Paint</div>
+        <div class="banner-quote">"Krog Tunnel, BeltLine murals, and the art that makes Atlanta a canvas."</div>
+        <div class="banner-stats">
+          <span class="stat-chip">82 places</span>
+          <span class="stat-chip alive">31 upcoming</span>
+        </div>
+      </div>
+      <div class="banner-arrow">&rsaquo;</div>
+    </div>
+
+    <div class="track-banner" style="--accent: #FB923C">
+      <div class="banner-bg" style="background-image: url('https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800&q=80')"></div>
+      <div class="banner-gradient"></div>
+      <div class="banner-accent" style="background: #FB923C"></div>
+      <div class="banner-content">
+        <div class="banner-category" style="color: #FB923C">FOOD SCENE</div>
+        <div class="banner-title">The Itis</div>
+        <div class="banner-quote">"Soul food, James Beard, Buford Hwy, and the food coma that follows."</div>
+        <div class="banner-stats">
+          <span class="stat-chip">23 places</span>
+          <span class="stat-chip alive">9 upcoming</span>
+        </div>
+      </div>
+      <div class="banner-arrow">&rsaquo;</div>
+    </div>
+
+    <div class="track-banner" style="--accent: #A78BFA">
+      <div class="banner-bg" style="background-image: url('https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800&q=80')"></div>
+      <div class="banner-gradient"></div>
+      <div class="banner-accent" style="background: #A78BFA"></div>
+      <div class="banner-content">
+        <div class="banner-category" style="color: #A78BFA">QUIRKY & HIDDEN GEMS</div>
+        <div class="banner-title">The Midnight Train</div>
+        <div class="banner-quote">"Atlanta gets weird — and it's magnificent."</div>
+        <div class="banner-stats">
+          <span class="stat-chip">19 places</span>
+          <span class="stat-chip">7 upcoming</span>
+        </div>
+      </div>
+      <div class="banner-arrow">&rsaquo;</div>
+    </div>
+
+    <div class="track-banner" style="--accent: #C1D32F">
+      <div class="banner-bg" style="background-image: url('https://images.unsplash.com/photo-1575931953324-fcac7094999e?w=800&q=80')"></div>
+      <div class="banner-gradient"></div>
+      <div class="banner-accent" style="background: #C1D32F"></div>
+      <div class="banner-content">
+        <div class="banner-category" style="color: #C1D32F">CLASSIC ATLANTA</div>
+        <div class="banner-title">Welcome to Atlanta</div>
+        <div class="banner-quote">"Welcome to Atlanta where the playas play."</div>
+        <div class="banner-stats">
+          <span class="stat-chip">12 places</span>
+          <span class="stat-chip alive">18 upcoming</span>
+        </div>
+      </div>
+      <div class="banner-arrow">&rsaquo;</div>
+    </div>
+
+    <div class="track-banner" style="--accent: #34D399">
+      <div class="banner-bg" style="background-image: url('https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800&q=80')"></div>
+      <div class="banner-gradient"></div>
+      <div class="banner-accent" style="background: #34D399"></div>
+      <div class="banner-content">
+        <div class="banner-category" style="color: #34D399">GREAT OUTDOORS</div>
+        <div class="banner-title">City in a Forest</div>
+        <div class="banner-quote">"Trails, parks, and the canopy that earned the name."</div>
+        <div class="banner-stats">
+          <span class="stat-chip">87 places</span>
+          <span class="stat-chip alive">24 upcoming</span>
+        </div>
+      </div>
+      <div class="banner-arrow">&rsaquo;</div>
+    </div>
+
+    <div class="track-banner" style="--accent: #F472B6">
+      <div class="banner-bg" style="background-image: url('https://images.unsplash.com/photo-1461896836934-bd45ba2c1b9a?w=800&q=80')"></div>
+      <div class="banner-gradient"></div>
+      <div class="banner-accent" style="background: #F472B6"></div>
+      <div class="banner-content">
+        <div class="banner-category" style="color: #F472B6">SPORTS & GAME DAY</div>
+        <div class="banner-title">Keep Swinging</div>
+        <div class="banner-quote">"Mercedes-Benz, Truist Park, and the roar of 70,000."</div>
+        <div class="banner-stats">
+          <span class="stat-chip">67 places</span>
+          <span class="stat-chip alive">42 upcoming</span>
+        </div>
+      </div>
+      <div class="banner-arrow">&rsaquo;</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- PART 2: DRILL-IN (Good Trouble — rich cards) -->
+<!-- ============================================ -->
+<div class="section-divider"></div>
+<div class="section-title">TAPPING "GOOD TROUBLE" LOADS THIS VIEW &darr;</div>
+
+<div class="phone-frame">
+
+  <div class="detail-hero">
+    <div class="hero-bg" style="background-image: url('https://images.unsplash.com/photo-1590077428593-a55bb07c4665?w=800&q=80')"></div>
+    <div class="hero-grad"></div>
+    <div class="detail-hero-content">
+      <div class="detail-back">&larr; All Tracks</div>
+      <div class="detail-track-cat">CIVIL RIGHTS HERITAGE</div>
+      <div class="detail-title">Good Trouble</div>
+      <div class="detail-quote">"Get in good trouble, necessary trouble, and help redeem the soul of America."</div>
+      <div class="detail-attribution">— John Lewis, Civil Rights Icon & Congressman</div>
+    </div>
+  </div>
+
+  <div class="detail-desc">
+    The sites that shaped America's Civil Rights Movement — from MLK's birthplace on Auburn Avenue to the lunch counter simulations downtown. This is Atlanta's moral spine, still pulsing.
+  </div>
+
+  <!-- Filter chips -->
+  <div class="filter-row">
+    <span class="filter-chip active">All 9</span>
+    <span class="filter-chip">Happening Now</span>
+    <span class="filter-chip">Open Today</span>
+    <span class="filter-chip">Free Entry</span>
+  </div>
+
+  <!-- ===== Rich venue cards ===== -->
+  <div class="venue-list">
+
+    <div class="section-label">Featured</div>
+
+    <!-- VENUE 1: Full rich card with tons of signals -->
+    <div class="venue-card has-events">
+      <div class="vc-image" style="background-image: url('https://images.unsplash.com/photo-1568667256549-094345857637?w=800&q=80')">
+        <div class="vc-badges">
+          <span class="badge badge-tonight">TONIGHT</span>
+          <span class="badge badge-live">3 events this week</span>
+        </div>
+        <div class="vc-open"><span class="open-dot"></span> Open now &middot; closes 5pm</div>
+      </div>
+      <div class="vc-body">
+        <div class="vc-name">National Center for Civil and Human Rights</div>
+        <div class="vc-hood">DOWNTOWN &middot; 0.8 mi</div>
+        <div class="vc-blurb">The lunch counter sit-in simulation will shake you. The Freedom Riders bus is upstairs.</div>
+        <div class="vc-signals">
+          <div class="signal">
+            <span class="signal-icon">🎭</span>
+            <span class="signal-text"><strong class="tonight">Tonight 7pm</strong> — "Voices of the Movement" spoken word &middot; <span class="date">Free admission</span></span>
+          </div>
+          <div class="signal">
+            <span class="signal-icon">🖼️</span>
+            <span class="signal-text"><strong>Current exhibit:</strong> "The Bridge" — rarely seen photos from Selma, 1965 &middot; <span class="date">Through Mar 30</span></span>
+          </div>
+          <div class="signal">
+            <span class="signal-icon">📅</span>
+            <span class="signal-text">Next: <strong>Freedom Rider Film Screening</strong> &middot; <span class="date">Sat Feb 22, 2pm</span></span>
+          </div>
+        </div>
+        <div class="vc-divider"></div>
+        <div class="vc-footer">
+          <div class="vc-tags">
+            <span class="vc-tag">Museum</span>
+            <span class="vc-tag">Interactive</span>
+            <span class="vc-tag">$$</span>
+          </div>
+          <span class="vc-action">View details &rsaquo;</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- VENUE 2: Active with events + seasonal -->
+    <div class="venue-card has-events">
+      <div class="vc-image" style="background-image: url('https://images.unsplash.com/photo-1584483766114-2cea6facdf57?w=800&q=80')">
+        <div class="vc-badges">
+          <span class="badge badge-live">5 upcoming</span>
+          <span class="badge badge-seasonal">Black History Month</span>
+        </div>
+        <div class="vc-open"><span class="open-dot"></span> Open now &middot; closes 6pm</div>
+      </div>
+      <div class="vc-body">
+        <div class="vc-name">Martin Luther King Jr. National Historical Park</div>
+        <div class="vc-hood">SWEET AUBURN &middot; 1.2 mi</div>
+        <div class="vc-blurb">MLK's birth home, Ebenezer Baptist Church, and the reflecting pool with his tomb.</div>
+        <div class="vc-signals">
+          <div class="signal">
+            <span class="signal-icon">🎤</span>
+            <span class="signal-text"><strong>Special programming:</strong> Extended hours + guided tours for <span class="highlight">Black History Month</span></span>
+          </div>
+          <div class="signal">
+            <span class="signal-icon">📅</span>
+            <span class="signal-text">Next: <strong>Ranger-Led Tour: Auburn Avenue</strong> &middot; <span class="date">Tomorrow 10am &middot; Free</span></span>
+          </div>
+        </div>
+        <div class="vc-divider"></div>
+        <div class="vc-footer">
+          <div class="vc-tags">
+            <span class="vc-tag">National Park</span>
+            <span class="vc-tag">Free</span>
+            <span class="vc-tag">Guided Tours</span>
+          </div>
+          <span class="vc-action">View details &rsaquo;</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label" style="margin-top: 8px">More in this track</div>
+
+    <!-- Compact 2-column grid for remaining venues -->
+    <div class="venue-grid">
+
+      <!-- Compact venue with events -->
+      <div class="vc-compact">
+        <div class="vc-img-sm" style="background-image: url('https://images.unsplash.com/photo-1533907650686-70576141c030?w=400&q=80')">
+          <div class="vc-badges-sm">
+            <span class="badge-sm" style="background: #C1D32F; color: #0E0E0E;">2 events</span>
+          </div>
+          <div class="vc-signal-sm"><span class="open-dot" style="width:4px;height:4px;"></span> Open now</div>
+        </div>
+        <div class="vc-body-sm">
+          <div class="vc-name-sm">Sweet Auburn Curb Market</div>
+          <div class="vc-hood-sm">SWEET AUBURN</div>
+          <div class="vc-blurb-sm">The 1918 market that fed Atlanta through segregation. Still alive.</div>
+        </div>
+      </div>
+
+      <!-- Compact venue — new addition -->
+      <div class="vc-compact">
+        <div class="vc-img-sm" style="background-image: url('https://images.unsplash.com/photo-1569930784237-ea65a702c65a?w=400&q=80')">
+          <div class="vc-badges-sm">
+            <span class="badge-sm" style="background: #39FF14; color: #0E0E0E;">NEW</span>
+          </div>
+        </div>
+        <div class="vc-body-sm">
+          <div class="vc-name-sm">Paschal's Restaurant</div>
+          <div class="vc-hood-sm">CASTLEBERRY HILL</div>
+          <div class="vc-blurb-sm">Where MLK and the SCLC planned strategy over fried chicken.</div>
+        </div>
+      </div>
+
+      <!-- Compact venue with trending -->
+      <div class="vc-compact">
+        <div class="vc-img-sm" style="background-image: url('https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=400&q=80')">
+          <div class="vc-badges-sm">
+            <span class="badge-sm" style="background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.15); color: #fff;">🔥 Popular</span>
+          </div>
+        </div>
+        <div class="vc-body-sm">
+          <div class="vc-name-sm">Herndon Home Museum</div>
+          <div class="vc-hood-sm">VINE CITY</div>
+          <div class="vc-blurb-sm">Born enslaved, became Atlanta's first Black millionaire.</div>
+        </div>
+      </div>
+
+      <!-- Compact venue with upcoming -->
+      <div class="vc-compact">
+        <div class="vc-img-sm" style="background-image: url('https://images.unsplash.com/photo-1569930784237-ea65a702c65a?w=400&q=80')">
+          <div class="vc-badges-sm">
+            <span class="badge-sm" style="background: #C1D32F; color: #0E0E0E;">2 events</span>
+          </div>
+          <div class="vc-signal-sm"><span class="open-dot" style="width:4px;height:4px;"></span> Open now</div>
+        </div>
+        <div class="vc-body-sm">
+          <div class="vc-name-sm">Atlanta History Center</div>
+          <div class="vc-hood-sm">BUCKHEAD</div>
+          <div class="vc-blurb-sm">The Cyclorama is a 360-degree painting of the Battle of Atlanta.</div>
+        </div>
+      </div>
+
+      <!-- Compact venue minimal -->
+      <div class="vc-compact">
+        <div class="vc-img-sm" style="background-image: url('https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&q=80')"></div>
+        <div class="vc-body-sm">
+          <div class="vc-name-sm">APEX Museum</div>
+          <div class="vc-hood-sm">SWEET AUBURN</div>
+          <div class="vc-blurb-sm">Sweet Auburn's story, told by the people who lived it.</div>
+        </div>
+      </div>
+
+      <div class="vc-compact">
+        <div class="vc-img-sm" style="background-image: url('https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=400&q=80')"></div>
+        <div class="vc-body-sm">
+          <div class="vc-name-sm">Oakland Cemetery</div>
+          <div class="vc-hood-sm">GRANT PARK</div>
+          <div class="vc-blurb-sm">Segregated in life, integrated in death. 70,000 rest here.</div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="see-all-row">See all 9 places &middot; 12 upcoming events &rarr;</div>
+
+  </div>
+</div>
+
+</body>
+</html>

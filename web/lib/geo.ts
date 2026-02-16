@@ -68,23 +68,41 @@ export type ProximityTier = "walkable" | "close" | "destination";
 const WALK_SPEED_KMH = 5;
 
 /**
- * Get proximity tier based on distance in km.
- * - walkable: < 1.2km (~15 min walk) — show everything
- * - close: 1.2-3km — filter to notable venues
- * - destination: 3km+ — marquee only
+ * Urban grid walking multiplier. Haversine gives straight-line distance,
+ * but real walking routes average 1.3x longer due to street grids,
+ * intersections, and detours. Validated against OSRM routing for Atlanta.
+ */
+const WALK_ROUTE_MULTIPLIER = 1.3;
+
+/**
+ * Estimate realistic walking distance from straight-line (haversine) distance.
+ * Applies a 1.3x urban grid multiplier validated against OSRM routing data.
+ */
+export function estimateWalkingDistanceKm(haversineKm: number): number {
+  return haversineKm * WALK_ROUTE_MULTIPLIER;
+}
+
+/**
+ * Get proximity tier based on haversine distance in km.
+ * Applies walking route multiplier before classifying.
+ * - walkable: < 1.2km walking (~15 min) — show everything
+ * - close: 1.2-3km walking — filter to notable venues
+ * - destination: 3km+ walking — marquee only
  */
 export function getProximityTier(distanceKm: number): ProximityTier {
-  if (distanceKm < 1.2) return "walkable";
-  if (distanceKm < 3) return "close";
+  const walkKm = estimateWalkingDistanceKm(distanceKm);
+  if (walkKm < 1.2) return "walkable";
+  if (walkKm < 3) return "close";
   return "destination";
 }
 
 /**
- * Get walking time in minutes from distance in km.
- * Assumes 5 km/h average walking speed.
+ * Get walking time in minutes from haversine distance in km.
+ * Applies walking route multiplier, then 5 km/h pace.
  */
 export function getWalkingMinutes(distanceKm: number): number {
-  return Math.round((distanceKm / WALK_SPEED_KMH) * 60);
+  const walkKm = estimateWalkingDistanceKm(distanceKm);
+  return Math.round((walkKm / WALK_SPEED_KMH) * 60);
 }
 
 /**

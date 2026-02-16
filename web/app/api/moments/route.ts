@@ -28,13 +28,6 @@ export async function GET(request: NextRequest) {
         imminent: [],
         upcoming: [],
         saveTheDate: [],
-        timeContext: {
-          timeOfDay: "evening",
-          season: "spring",
-          isWeekend: false,
-          sectionLabel: null,
-          sectionCategories: [],
-        },
       },
       { status: 500 }
     );

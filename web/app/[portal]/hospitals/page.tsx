@@ -7,7 +7,6 @@ import {
   getPortalHospitalLocations,
 } from "@/lib/hospitals";
 import { normalizeHospitalMode } from "@/lib/hospital-modes";
-import { normalizeEmoryPersona } from "@/lib/emory-personas";
 import {
   EMORY_THEME_CSS,
   EMORY_THEME_SCOPE_CLASS,
@@ -32,9 +31,8 @@ export default async function HospitalDirectoryPage({ params, searchParams }: Pr
   if (getPortalVertical(portal) !== "hospital" && !isEmoryBrand) notFound();
 
   const mode = normalizeHospitalMode(searchParamsData.mode);
-  const persona = normalizeEmoryPersona(searchParamsData.persona);
   const hospitals = await getPortalHospitalLocations(portal.id);
-  const communityHref = `/${portal.slug}?view=community&mode=${mode}&persona=${persona}`;
+  const communityHref = `/${portal.slug}?view=community`;
 
   return (
     <div className={`min-h-screen ${isEmoryBrand ? "bg-[#f2f5fa] text-[#002f6c]" : ""}`}>
@@ -56,17 +54,17 @@ export default async function HospitalDirectoryPage({ params, searchParams }: Pr
         <div className={`${hospitalBodyFont.className} ${isEmoryBrand ? EMORY_THEME_SCOPE_CLASS : ""} py-6 space-y-4`}>
           <section className="emory-panel p-4 sm:p-5">
             <p className="emory-kicker">Hospital Network</p>
-            <h1 className={`mt-2 text-[clamp(2.1rem,3.8vw,3.15rem)] leading-[0.94] text-[var(--cream)] ${hospitalDisplayFont.className}`}>
+            <h1 className={`mt-2 text-[clamp(2.5rem,4.5vw,3.6rem)] leading-[0.94] text-[var(--cream)] ${hospitalDisplayFont.className}`}>
               Choose a campus
             </h1>
             <p className="mt-3 max-w-[52ch] text-sm sm:text-base text-[var(--muted)]">
-              Open a concierge view for nearby meals, services, and support around your visit.
+              Find nearby food, lodging, and support services for each campus.
             </p>
           </section>
 
           <section className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {hospitals.map((hospital) => {
-              const conciergeHref = `/${portal.slug}/hospitals/${hospital.slug}?mode=${mode}&persona=${persona}`;
+              const conciergeHref = `/${portal.slug}/hospitals/${hospital.slug}`;
               const wayfindingHref = getHospitalWayfindingHref(hospital);
               return (
                 <article key={hospital.id} className="emory-panel p-4 sm:p-5">
@@ -94,9 +92,9 @@ export default async function HospitalDirectoryPage({ params, searchParams }: Pr
                         targetLabel: hospital.short_name || hospital.name,
                         targetUrl: conciergeHref,
                       }}
-                      className="emory-primary-btn inline-flex items-center px-3 py-1.5 text-xs"
+                      className="emory-primary-btn inline-flex items-center"
                     >
-                      Open Concierge
+                      Explore Campus
                     </HospitalTrackedLink>
 
                     <HospitalTrackedLink
@@ -113,7 +111,7 @@ export default async function HospitalDirectoryPage({ params, searchParams }: Pr
                         targetLabel: hospital.short_name || hospital.name,
                         targetUrl: wayfindingHref,
                       }}
-                      className="emory-secondary-btn inline-flex items-center px-3 py-1.5 text-xs"
+                      className="emory-secondary-btn inline-flex items-center"
                     >
                       Directions
                     </HospitalTrackedLink>
@@ -131,8 +129,8 @@ export default async function HospitalDirectoryPage({ params, searchParams }: Pr
 
           <section className="emory-panel p-4 sm:p-5">
             <p className="emory-kicker">Community Hub</p>
-            <h2 className={`mt-1 text-[clamp(1.7rem,3vw,2.35rem)] leading-[0.96] text-[var(--cream)] ${hospitalDisplayFont.className}`}>
-              Continue with local classes, events, and neighborhood support
+            <h2 className={`mt-1 text-[clamp(1.9rem,3.3vw,2.6rem)] leading-[0.96] text-[var(--cream)] ${hospitalDisplayFont.className}`}>
+              Explore community health programs and events
             </h2>
             <HospitalTrackedLink
               href={communityHref}
@@ -146,9 +144,9 @@ export default async function HospitalDirectoryPage({ params, searchParams }: Pr
                 targetLabel: "Open Community Hub",
                 targetUrl: communityHref,
               }}
-              className="emory-primary-btn mt-3 inline-flex items-center px-4 py-2 text-sm"
+              className="emory-primary-btn mt-3 inline-flex items-center"
             >
-              Open Community Hub
+              Browse Community Health
             </HospitalTrackedLink>
           </section>
         </div>

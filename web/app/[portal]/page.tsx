@@ -1,5 +1,5 @@
 import { getCachedPortalBySlug, getPortalVertical } from "@/lib/portal";
-import { EmoryDemoHeader, PortalHeader } from "@/components/headers";
+import { EmoryDemoHeader, PortalHeader, DogHeader } from "@/components/headers";
 import { AmbientBackground } from "@/components/ambient";
 import FindView from "@/components/find/FindViewLazy";
 import CommunityView from "@/components/community/CommunityView";
@@ -9,14 +9,18 @@ import { GalleryTemplate } from "./_templates/gallery";
 import { TimelineTemplate } from "./_templates/timeline";
 import { FilmTemplate } from "./_templates/film";
 import { HotelTemplate } from "./_templates/hotel";
+import type { Pillar } from "@/lib/concierge/concierge-types";
 import { HospitalTemplate } from "./_templates/hospital";
 import EmoryCommunityExperience from "./_components/hospital/EmoryCommunityExperience";
 import { normalizeHospitalMode } from "@/lib/hospital-modes";
-import { normalizeEmoryPersona, resolveHospitalModeForPersona } from "@/lib/emory-personas";
 import { isEmoryDemoPortal } from "@/lib/hospital-art";
 import { isPCMDemoPortal } from "@/lib/marketplace-art";
 import { normalizeMarketplacePersona } from "@/lib/marketplace-art";
 import { MarketplaceTemplate } from "./_templates/marketplace";
+import { DogTemplate } from "./_templates/dog";
+import DogMapView from "./_components/dog/DogMapView";
+import DogSavedView from "./_components/dog/DogSavedView";
+import { isDogPortal, DOG_PORTAL_VAR_OVERRIDES, DOG_DETAIL_VIEW_CSS } from "@/lib/dog-art";
 import { safeJsonLd } from "@/lib/formats";
 import { toAbsoluteUrl } from "@/lib/site-url";
 import { notFound } from "next/navigation";
@@ -25,7 +29,7 @@ import { Suspense } from "react";
 export const revalidate = 60;
 
 type ViewMode = "feed" | "find" | "community";
-type FeedTab = "curated" | "foryou";
+type FeedTab = "curated" | "explore" | "foryou";
 type FindType = "events" | "classes" | "destinations" | "showtimes";
 type FindDisplay = "list" | "map" | "calendar";
 
@@ -53,6 +57,8 @@ type PortalSearchParams = {
   spot?: string;
   series?: string;
   org?: string;
+  // Concierge pillar
+  pillar?: string;
 };
 
 type Props = {
@@ -79,15 +85,19 @@ export default async function PortalPage({ params, searchParams }: Props) {
   const isHospital = vertical === "hospital" || isEmoryPortal;
   const isEmoryNativeHospital = isHospital && isEmoryPortal;
   const isMarketplace = vertical === "marketplace" || isPCMDemoPortal(portal.slug);
-  const disableAmbientEffects = isEmoryNativeHospital || isFilm || isMarketplace;
+  const isDog = vertical === "dog" || isDogPortal(portal.slug);
+  const disableAmbientEffects = isEmoryNativeHospital || isFilm || isMarketplace || isDog;
 
-  // Hotel portals always show the hotel feed (no view switching)
+  // Hotel portals always show the concierge experience (no view switching)
   if (isHotel) {
+    const validPillars: Pillar[] = ["services", "around", "planner"];
+    const rawPillar = typeof searchParamsData.pillar === "string" ? searchParamsData.pillar : undefined;
+    const pillarParam = rawPillar && validPillars.includes(rawPillar as Pillar) ? (rawPillar as Pillar) : undefined;
     return (
       <div className="min-h-screen overflow-x-hidden">
         <Suspense fallback={null}>
           <DetailViewRouter portalSlug={portal.slug}>
-            <HotelTemplate portal={portal} />
+            <HotelTemplate portal={portal} initialPillar={pillarParam} />
           </DetailViewRouter>
         </Suspense>
       </div>
@@ -111,6 +121,50 @@ export default async function PortalPage({ params, searchParams }: Props) {
             <MarketplaceTemplate portal={portal} persona={marketplacePersona} />
           </DetailViewRouter>
         </Suspense>
+      </div>
+    );
+  }
+
+  // Dog portals show the dog discovery experience
+  if (isDog) {
+    const dogView = searchParamsData.view;
+    return (
+      <div className="min-h-screen overflow-x-hidden" style={{ background: "#FFFBEB" }}>
+        <style>{`
+          body::before { opacity: 0 !important; }
+          body::after { opacity: 0 !important; }
+          .ambient-glow { opacity: 0 !important; }
+          .rain-overlay { display: none !important; }
+          .cursor-glow { display: none !important; }
+          .dog-portal-root { ${DOG_PORTAL_VAR_OVERRIDES} }
+          .dog-portal-root ${DOG_DETAIL_VIEW_CSS}
+        `}</style>
+        <div className="dog-portal-root">
+          <Suspense fallback={null}>
+            <DogHeader portalSlug={portal.slug} />
+          </Suspense>
+          {dogView === "find" ? (
+            <Suspense fallback={<DogMapSkeleton />}>
+              <DetailViewRouter portalSlug={portal.slug}>
+                <DogMapView />
+              </DetailViewRouter>
+            </Suspense>
+          ) : dogView === "community" ? (
+            <Suspense fallback={<DogSavedSkeleton />}>
+              <DetailViewRouter portalSlug={portal.slug}>
+                <DogSavedView portalSlug={portal.slug} />
+              </DetailViewRouter>
+            </Suspense>
+          ) : (
+            <Suspense fallback={null}>
+              <DetailViewRouter portalSlug={portal.slug}>
+                <DogTemplate portal={portal} />
+              </DetailViewRouter>
+            </Suspense>
+          )}
+          {/* Bottom nav spacer for mobile (not needed on map view) */}
+          {dogView !== "find" && <div className="sm:hidden h-20" />}
+        </div>
       </div>
     );
   }
@@ -158,7 +212,9 @@ export default async function PortalPage({ params, searchParams }: Props) {
 
   // Parse sub-parameters - handle legacy "activity" tab by treating it as curated
   let feedTab: FeedTab = "curated";
-  if (searchParamsData.tab === "foryou") {
+  if (searchParamsData.tab === "explore") {
+    feedTab = "explore";
+  } else if (searchParamsData.tab === "foryou") {
     feedTab = "foryou";
   }
 
@@ -203,13 +259,7 @@ export default async function PortalPage({ params, searchParams }: Props) {
     searchParamsData.date ||
     searchParamsData.mood
   );
-  const emoryPersona = normalizeEmoryPersona(searchParamsData.persona);
-  const hospitalMode = isHospital
-    ? resolveHospitalModeForPersona({
-        persona: emoryPersona,
-        modeParam: searchParamsData.mode,
-      })
-    : normalizeHospitalMode(searchParamsData.mode);
+  const hospitalMode = normalizeHospitalMode(searchParamsData.mode);
   const portalPageSchema = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
@@ -281,7 +331,6 @@ export default async function PortalPage({ params, searchParams }: Props) {
                           portal={portal}
                           feedTab={feedTab}
                           mode={hospitalMode}
-                          persona={emoryPersona}
                         />
                       ) : isFilm ? (
                         <FilmTemplate portal={portal} />
@@ -318,7 +367,6 @@ export default async function PortalPage({ params, searchParams }: Props) {
                         <EmoryCommunityExperience
                           portal={portal}
                           mode={hospitalMode}
-                          persona={emoryPersona}
                           includeSupportSensitive={searchParamsData.support === "1"}
                         />
                       ) : (
@@ -579,7 +627,8 @@ function FeedSkeleton({
   return (
     <div data-skeleton-route="feed-view" data-skeleton-vertical={skeletonVertical} className="py-6 space-y-6">
       {/* Feed tabs skeleton */}
-      <div className="flex gap-1 p-1 bg-[var(--night)] rounded-xl border border-[var(--twilight)]/30 max-w-xs">
+      <div className="flex gap-1 p-1 bg-[var(--night)] rounded-xl border border-[var(--twilight)]/30 max-w-sm">
+        <div className="flex-1 h-10 skeleton-shimmer rounded-lg" />
         <div className="flex-1 h-10 skeleton-shimmer rounded-lg" />
         <div className="flex-1 h-10 skeleton-shimmer rounded-lg" />
       </div>
@@ -602,6 +651,35 @@ function FeedSkeleton({
           <div key={i} className="h-24 skeleton-shimmer rounded-xl" />
         ))}
       </div>
+    </div>
+  );
+}
+
+function DogSavedSkeleton() {
+  return (
+    <div className="max-w-2xl mx-auto px-4 pt-4 pb-20">
+      <div className="flex gap-1 p-1 rounded-xl" style={{ background: "rgba(253, 232, 138, 0.25)" }}>
+        <div className="flex-1 h-10 rounded-lg skeleton-shimmer" />
+        <div className="flex-1 h-10 rounded-lg skeleton-shimmer" style={{ animationDelay: "60ms" }} />
+      </div>
+      <div className="mt-4 space-y-3">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="h-20 rounded-2xl skeleton-shimmer" style={{ animationDelay: `${i * 70}ms` }} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DogMapSkeleton() {
+  return (
+    <div style={{ height: "calc(100dvh - 56px - 64px)" }} className="flex flex-col">
+      <div className="flex gap-2 px-4 py-3">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <div key={i} className="h-8 w-20 rounded-full skeleton-shimmer flex-shrink-0" style={{ animationDelay: `${i * 40}ms` }} />
+        ))}
+      </div>
+      <div className="flex-1 skeleton-shimmer" />
     </div>
   );
 }

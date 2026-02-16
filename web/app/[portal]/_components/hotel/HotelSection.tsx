@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ReactNode } from "react";
 
 interface HotelSectionProps {
@@ -29,12 +30,12 @@ export default function HotelSection({ title, subtitle, children, className = ""
         </div>
         {action && (
           action.href ? (
-            <a
+            <Link
               href={action.href}
               className="flex-shrink-0 text-xs font-body uppercase tracking-[0.15em] text-[var(--hotel-champagne)] hover:text-[var(--hotel-brass)] transition-colors"
             >
               {action.label} &rarr;
-            </a>
+            </Link>
           ) : (
             <button
               onClick={action.onClick}

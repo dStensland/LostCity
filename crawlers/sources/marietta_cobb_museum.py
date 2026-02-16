@@ -109,19 +109,19 @@ def determine_category(title: str, description: str = "") -> tuple[str, Optional
     tags = ["art", "museum", "marietta"]
 
     if any(w in text for w in ["exhibition", "exhibit", "opening", "gallery"]):
-        return "art", "exhibition", tags + ["exhibition"]
+        return "museums", "exhibition", tags + ["exhibition"]
     if any(w in text for w in ["workshop", "class", "studio"]):
-        return "art", "workshop", tags + ["workshop", "class"]
+        return "museums", "workshop", tags + ["workshop", "class"]
     if any(w in text for w in ["tour", "gallery tour"]):
-        return "art", "tour", tags + ["tour"]
+        return "museums", "tour", tags + ["tour"]
     if any(w in text for w in ["kids", "children", "family", "youth"]):
         return "family", "kids", tags + ["family", "kids"]
     if any(w in text for w in ["lecture", "talk", "discussion"]):
         return "education", "lecture", tags + ["lecture", "education"]
     if any(w in text for w in ["reception", "opening reception"]):
-        return "art", "reception", tags + ["reception", "social"]
+        return "museums", "reception", tags + ["reception", "social"]
 
-    return "art", "exhibition", tags
+    return "museums", "exhibition", tags
 
 
 def crawl(source: dict) -> tuple[int, int, int]:

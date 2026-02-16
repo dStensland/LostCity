@@ -62,6 +62,7 @@ export type Event = {
   description: string | null;
   start_date: string;
   start_time: string | null;
+  doors_time?: string | null;
   end_date: string | null;
   end_time: string | null;
   is_all_day: boolean;
@@ -74,7 +75,12 @@ export type Event = {
   price_min: number | null;
   price_max: number | null;
   price_note: string | null;
+  age_policy?: string | null;
+  ticket_status?: string | null;
+  reentry_policy?: string | null;
+  set_times_mentioned?: boolean | null;
   is_free: boolean;
+  is_adult?: boolean | null;
   source_url: string;
   ticket_url: string | null;
   image_url: string | null;
@@ -156,42 +162,59 @@ export async function getEventById(id: number): Promise<EventWithProducer | null
 
 export async function getRelatedEvents(
   event: Event,
+  options?: { portalId?: string },
   limit = 4
 ): Promise<{ venueEvents: Event[]; sameDateEvents: Event[] }> {
   const today = getLocalDateString();
   const venueId = event.venue?.id;
+  const portalId = options?.portalId;
 
   // Parallelize independent queries
   const [venueEventsResult, sameDateEventsResult] = await Promise.all([
     // Get other events at the same venue
     venueId
-      ? supabase
-          .from("events")
-          .select(
+      ? (() => {
+          let q = supabase
+            .from("events")
+            .select(
+              `
+              *,
+              venue:venues(id, name, slug, address, neighborhood, city, state)
             `
-            *,
-            venue:venues(id, name, slug, address, neighborhood, city, state)
-          `
-          )
-          .eq("venue_id", venueId)
-          .neq("id", event.id)
-          .gte("start_date", today)
-          .order("start_date", { ascending: true })
-          .limit(limit)
+            )
+            .eq("venue_id", venueId)
+            .neq("id", event.id)
+            .is("canonical_event_id", null)
+            .gte("start_date", today);
+          if (portalId) {
+            q = q.or(`portal_id.eq.${portalId},portal_id.is.null`);
+          }
+          return q
+            .order("start_date", { ascending: true })
+            .order("start_time", { ascending: true })
+            .limit(limit);
+        })()
       : Promise.resolve({ data: null }),
-    // Get other events on the same date
-    supabase
-      .from("events")
-      .select(
+    // Get other events on the same date (scoped to portal)
+    (() => {
+      let q = supabase
+        .from("events")
+        .select(
+          `
+          *,
+          venue:venues(id, name, slug, address, neighborhood, city, state)
         `
-        *,
-        venue:venues(id, name, slug, address, neighborhood, city, state)
-      `
-      )
-      .eq("start_date", event.start_date)
-      .neq("id", event.id)
-      .order("start_time", { ascending: true })
-      .limit(limit),
+        )
+        .eq("start_date", event.start_date)
+        .neq("id", event.id)
+        .is("canonical_event_id", null);
+      if (portalId) {
+        q = q.or(`portal_id.eq.${portalId},portal_id.is.null`);
+      }
+      return q
+        .order("start_time", { ascending: true })
+        .limit(limit);
+    })(),
   ]);
 
   const venueEvents = (venueEventsResult.data as Event[]) || [];

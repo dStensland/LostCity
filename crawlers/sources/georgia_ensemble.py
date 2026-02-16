@@ -17,6 +17,7 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
+from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
 
@@ -205,6 +206,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page.goto(SEASON_URL, wait_until="domcontentloaded", timeout=30000)
             page.wait_for_timeout(2000)
 
+            # Extract image map for event images
+            image_map = extract_images_from_page(page)
+
             # Georgia Ensemble Theatre lists shows in h5 headings on the season page
             show_headings = page.query_selector_all('h5.wp-block-heading')
 
@@ -286,6 +290,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         events_updated += 1
                         continue
 
+                    # Find image by title match
+                    event_image = None
+                    title_lower = title.lower()
+                    for img_alt, img_url in image_map.items():
+                        if img_alt.lower() == title_lower or title_lower in img_alt.lower() or img_alt.lower() in title_lower:
+                            event_image = img_url
+                            break
+
                     # Create series hint for the show run
                     series_hint = None
                     if end_date and end_date != start_date:
@@ -295,7 +307,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         }
                         if description:
                             series_hint["description"] = description
-                        # No image_url available for georgia_ensemble
+                        if event_image:
+                            series_hint["image_url"] = event_image
 
                     event_record = {
                         "source_id": source_id,
@@ -316,7 +329,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "is_free": False,
                         "source_url": SEASON_URL,
                         "ticket_url": ticket_url,
-                        "image_url": None,  # Could be enhanced to scrape images
+                        "image_url": event_image,
                         "raw_text": heading_text,
                         "extraction_confidence": 0.92,
                         "is_recurring": True if end_date and end_date != start_date else False,

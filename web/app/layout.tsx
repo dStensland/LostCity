@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { Suspense } from "react";
-import { Outfit, JetBrains_Mono } from "next/font/google";
+import { Outfit, JetBrains_Mono, Space_Grotesk } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { AuthProvider } from "@/lib/auth-context";
 import { ThemeProvider } from "@/lib/theme-context";
@@ -31,6 +31,14 @@ const outfit = Outfit({
 const jetbrainsMono = JetBrains_Mono({
   weight: ["400", "500"],
   variable: "--font-mono",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+// Display font - geometric with full descenders for Explore track headlines
+const spaceGrotesk = Space_Grotesk({
+  weight: ["700"],
+  variable: "--font-display-alt",
   subsets: ["latin"],
   display: "swap",
 });
@@ -100,7 +108,7 @@ export default async function RootLayout({
         <link rel="preconnect" href="https://s1.ticketm.net" />
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
       </head>
-      <body className={`${outfit.variable} ${jetbrainsMono.variable} antialiased`}>
+      <body className={`${outfit.variable} ${jetbrainsMono.variable} ${spaceGrotesk.variable} antialiased`}>
         <ThemeProvider>
           <QueryProvider>
             {/* Skip link for keyboard users */}

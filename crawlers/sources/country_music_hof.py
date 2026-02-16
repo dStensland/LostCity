@@ -218,7 +218,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     title_lower = title.lower()
                     if any(w in title_lower for w in ["tour", "guided tour"]):
-                        event_category = "art"
+                        event_category = "museums"
                         subcategory = "tour"
                         tags.append("tour")
                     elif any(w in title_lower for w in ["workshop", "class"]):

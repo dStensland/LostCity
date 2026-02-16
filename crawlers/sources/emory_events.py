@@ -126,7 +126,7 @@ def map_category(category_calendar: str, title: str) -> str:
     if "film" in category_lower:
         return "film"
     if any(keyword in category_lower for keyword in ["visual arts", "exhibitions", "art"]):
-        return "art"
+        return "museums"
     if "dance" in category_lower:
         return "dance"
     if any(keyword in category_lower for keyword in ["theater", "theatre"]):
@@ -140,7 +140,7 @@ def map_category(category_calendar: str, title: str) -> str:
     if any(keyword in title_lower for keyword in ["film", "movie", "screening"]):
         return "film"
     if any(keyword in title_lower for keyword in ["exhibition", "gallery", "art show"]):
-        return "art"
+        return "museums"
     if any(keyword in title_lower for keyword in ["dance", "ballet"]):
         return "dance"
     if any(keyword in title_lower for keyword in ["theater", "theatre", "play"]):

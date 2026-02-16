@@ -22,6 +22,7 @@ from series import get_or_create_series, update_series_metadata
 from posters import get_metadata_for_film_event
 from artist_images import get_info_for_music_event
 from date_utils import MAX_FUTURE_DAYS_DEFAULT
+from show_signals import derive_show_signals
 
 logger = logging.getLogger(__name__)
 
@@ -130,6 +131,7 @@ _client: Optional[Client] = None
 _SOURCE_CACHE: dict[int, dict] = {}
 _VENUE_CACHE: dict[int, dict] = {}
 _BLURHASH_EXECUTOR = ThreadPoolExecutor(max_workers=2, thread_name_prefix="blurhash")
+_EVENTS_HAS_SHOW_SIGNAL_COLUMNS: Optional[bool] = None
 
 
 def retry_on_network_error(max_retries: int = 3, base_delay: float = 0.5):
@@ -215,6 +217,44 @@ def get_client() -> Client:
             cfg.database.supabase_url, cfg.database.supabase_service_key
         )
     return _client
+
+
+def events_support_show_signal_columns() -> bool:
+    """
+    Detect whether first-class show metadata columns exist on events.
+
+    Keeps crawler writes backward compatible before SQL migration is applied.
+    """
+    global _EVENTS_HAS_SHOW_SIGNAL_COLUMNS
+    if _EVENTS_HAS_SHOW_SIGNAL_COLUMNS is not None:
+        return _EVENTS_HAS_SHOW_SIGNAL_COLUMNS
+
+    client = get_client()
+    try:
+        (
+            client.table("events")
+            .select("doors_time,age_policy,ticket_status,reentry_policy,set_times_mentioned")
+            .limit(1)
+            .execute()
+        )
+        _EVENTS_HAS_SHOW_SIGNAL_COLUMNS = True
+    except Exception as e:
+        error_str = str(e).lower()
+        if "does not exist" in error_str and (
+            "doors_time" in error_str
+            or "age_policy" in error_str
+            or "ticket_status" in error_str
+            or "reentry_policy" in error_str
+            or "set_times_mentioned" in error_str
+        ):
+            _EVENTS_HAS_SHOW_SIGNAL_COLUMNS = False
+            logger.warning(
+                "events table missing show signal columns; run migration 20260216110000_event_show_signal_columns.sql"
+            )
+        else:
+            raise
+
+    return bool(_EVENTS_HAS_SHOW_SIGNAL_COLUMNS)
 
 
 def get_source_info(source_id: int) -> Optional[dict]:
@@ -617,6 +657,25 @@ def get_or_create_venue(venue_data: dict) -> int:
                 )
         except Exception:
             pass  # Never block venue creation on description fetch
+
+    # Auto-extract parking info for new venues with websites
+    if venue_data.get("website") and not venue_data.get("parking_note"):
+        try:
+            from parking_extract import extract_parking_info
+
+            parking = extract_parking_info(venue_data["website"])
+            if parking:
+                venue_data["parking_note"] = parking["parking_note"]
+                venue_data["parking_type"] = parking["parking_type"]
+                venue_data["parking_free"] = parking["parking_free"]
+                venue_data["parking_source"] = "scraped"
+                if parking.get("transit_note"):
+                    venue_data["transit_note"] = parking["transit_note"]
+                logger.debug(
+                    "Auto-extracted parking for %s", venue_data.get("name", "unknown")
+                )
+        except Exception:
+            pass  # Never block venue creation on parking fetch
 
     # Validate venue_type (warn, don't reject)
     vtype = venue_data.get("venue_type")
@@ -1180,11 +1239,21 @@ def insert_event(
         if music_info.genres and not genres:
             genres = music_info.genres
 
-        # Parse lineup from title for later event_artists population
+    # Parse lineup from title for event_artists population (music + comedy)
+    if event_data.get("category") in ("music", "comedy"):
         if not event_data.get("_parsed_artists"):
             parsed = parse_lineup_from_title(event_data.get("title", ""))
             if parsed:
                 event_data["_parsed_artists"] = parsed
+
+    # Venue image fallback: if event still has no image after film/music enrichment,
+    # use the venue's image. Covers venues like Callanwolde, MJCCA, GWCC where
+    # crawlers don't extract per-event images but the venue has a good photo.
+    if not event_data.get("image_url") and venue:
+        venue_image = venue.get("image_url")
+        if venue_image:
+            event_data["image_url"] = venue_image
+            logger.debug(f"Using venue image fallback for: {event_data.get('title', '')[:50]}")
 
     # Auto-infer is_class if not explicitly set
     if not is_class_flag:
@@ -1209,25 +1278,29 @@ def insert_event(
             else:
                 series_type = "festival_program"
 
-            # For festival programs, avoid falling back to event title:
-            # that creates one "program" series per session and confuses UI grouping.
+            # For festival programs, consolidate under inferred program or festival name.
+            # NEVER fall back to event title — that creates one series per event.
             inferred_program = infer_program_title(event_data.get("title"))
             series_title = (
                 inferred_program
                 or festival_hint.get("festival_name")
-                or event_data.get("title")
             )
-            series_hint = {
-                "series_type": series_type,
-                "series_title": series_title,
-            }
+            if not series_title:
+                # No usable series title — skip series creation entirely
+                festival_hint = None
+            else:
+                series_hint = {
+                    "series_type": series_type,
+                    "series_title": series_title,
+                }
 
-        if festival_hint.get("festival_name") and not series_hint.get("festival_name"):
-            series_hint["festival_name"] = festival_hint["festival_name"]
-        if festival_hint.get("festival_type") and not series_hint.get("festival_type"):
-            series_hint["festival_type"] = festival_hint["festival_type"]
-        if source_url and not series_hint.get("festival_website"):
-            series_hint["festival_website"] = source_url
+        if festival_hint and series_hint:
+            if festival_hint.get("festival_name") and not series_hint.get("festival_name"):
+                series_hint["festival_name"] = festival_hint["festival_name"]
+            if festival_hint.get("festival_type") and not series_hint.get("festival_type"):
+                series_hint["festival_type"] = festival_hint["festival_type"]
+            if source_url and not series_hint.get("festival_website"):
+                series_hint["festival_website"] = source_url
 
     # Class rollup hints
     if not series_hint and is_class_flag:
@@ -1382,6 +1455,20 @@ def insert_event(
     if event_data.get("price_min") is not None and event_data["price_min"] > 0:
         event_data["is_free"] = False
 
+    # Persist first-class show metadata (doors, age policy, ticket state, etc.)
+    signal_fields = (
+        "doors_time",
+        "age_policy",
+        "ticket_status",
+        "reentry_policy",
+        "set_times_mentioned",
+    )
+    if events_support_show_signal_columns():
+        event_data.update(derive_show_signals(event_data))
+    else:
+        for field in signal_fields:
+            event_data.pop(field, None)
+
     # Pop transient and deprecated fields before DB insert
     parsed_artists_for_insert = event_data.pop("_parsed_artists", None)
     event_data.pop("subcategory", None)  # DEPRECATED: migrated to genres[]
@@ -1405,26 +1492,65 @@ def insert_event(
 def parse_lineup_from_title(title: str) -> list[dict]:
     """Parse artist lineup from event title.
 
-    Returns list of dicts: [{name, billing_order, is_headliner}, ...]
+    Returns list of dicts: [{name, role, billing_order, is_headliner}, ...]
     """
-    from extractors.lineup import split_lineup_text, dedupe_artists
-    from artist_images import extract_artist_from_title
+    from extractors.lineup import (
+        split_lineup_text_with_roles,
+        dedupe_artist_entries,
+    )
+    from artist_images import extract_artist_from_title, _ARTIST_BLOCKLIST
 
-    # Try full lineup split first (handles "w/", "+", ",", etc.)
-    artists = dedupe_artists(split_lineup_text(title))
-    if not artists:
+    parsed_entries = dedupe_artist_entries(split_lineup_text_with_roles(title))
+    if not parsed_entries:
         # Fallback: single artist extraction (removes tour names, prefixes, etc.)
         headliner = extract_artist_from_title(title)
         if headliner:
-            artists = [headliner]
+            parsed_entries = [{"name": headliner, "role": "headliner"}]
 
-    if not artists:
+    if not parsed_entries:
         return []
 
-    return [
-        {"name": a, "billing_order": i, "is_headliner": i == 1}
-        for i, a in enumerate(artists, 1)
-    ]
+    # Filter out blocklisted terms and single short words
+    filtered_entries: list[dict] = []
+    for entry in parsed_entries:
+        name = str(entry.get("name") or "").strip()
+        if not name:
+            continue
+        if name.lower() in _ARTIST_BLOCKLIST:
+            continue
+        if len(name) < 4 and " " not in name:
+            continue
+        filtered_entries.append({"name": name, "role": entry.get("role")})
+
+    if not filtered_entries:
+        return []
+
+    has_explicit_headliner = any(
+        str(entry.get("role") or "").lower() == "headliner"
+        for entry in filtered_entries
+    )
+
+    result: list[dict] = []
+    for idx, entry in enumerate(filtered_entries, 1):
+        role = str(entry.get("role") or "").lower() or ("headliner" if idx == 1 else "support")
+        if role not in {"headliner", "support", "opener"}:
+            role = "headliner" if idx == 1 else "support"
+
+        is_headliner = role == "headliner"
+        if not has_explicit_headliner and idx == 1:
+            is_headliner = True
+            role = "headliner"
+
+        result.append(
+            {
+                "name": entry["name"],
+                "role": role,
+                "billing_order": idx,
+                "is_headliner": is_headliner,
+            }
+        )
+
+    return result
 
 
 def update_event(event_id: int, event_data: dict) -> None:
@@ -1735,46 +1861,47 @@ def compute_event_update(
     """Compute update fields and a change summary for notifications."""
     update_data: dict = {}
     changes: list[str] = []
+    incoming_with_signals = {**incoming, **derive_show_signals(incoming, preserve_existing=False)}
 
     # Time/date changes
-    if incoming.get("start_date") and incoming.get("start_date") != existing.get(
+    if incoming_with_signals.get("start_date") and incoming_with_signals.get("start_date") != existing.get(
         "start_date"
     ):
         changes.append(
-            f"date {existing.get('start_date')} → {incoming.get('start_date')}"
+            f"date {existing.get('start_date')} → {incoming_with_signals.get('start_date')}"
         )
-        update_data["start_date"] = incoming.get("start_date")
-    if incoming.get("start_time") and incoming.get("start_time") != existing.get(
+        update_data["start_date"] = incoming_with_signals.get("start_date")
+    if incoming_with_signals.get("start_time") and incoming_with_signals.get("start_time") != existing.get(
         "start_time"
     ):
         changes.append(
-            f"time {existing.get('start_time') or 'TBA'} → {incoming.get('start_time')}"
+            f"time {existing.get('start_time') or 'TBA'} → {incoming_with_signals.get('start_time')}"
         )
-        update_data["start_time"] = incoming.get("start_time")
-    if incoming.get("end_date") and incoming.get("end_date") != existing.get(
+        update_data["start_time"] = incoming_with_signals.get("start_time")
+    if incoming_with_signals.get("end_date") and incoming_with_signals.get("end_date") != existing.get(
         "end_date"
     ):
-        update_data["end_date"] = incoming.get("end_date")
-    if incoming.get("end_time") and incoming.get("end_time") != existing.get(
+        update_data["end_date"] = incoming_with_signals.get("end_date")
+    if incoming_with_signals.get("end_time") and incoming_with_signals.get("end_time") != existing.get(
         "end_time"
     ):
-        update_data["end_time"] = incoming.get("end_time")
+        update_data["end_time"] = incoming_with_signals.get("end_time")
 
     # Venue change
-    if incoming.get("venue_id") and incoming.get("venue_id") != existing.get(
+    if incoming_with_signals.get("venue_id") and incoming_with_signals.get("venue_id") != existing.get(
         "venue_id"
     ):
         changes.append("venue updated")
-        update_data["venue_id"] = incoming.get("venue_id")
+        update_data["venue_id"] = incoming_with_signals.get("venue_id")
 
     # Title change (preserve cancellation/reschedule markers)
-    incoming_title = incoming.get("title")
+    incoming_title = incoming_with_signals.get("title")
     if incoming_title and incoming_title != existing.get("title"):
-        if _event_looks_cancelled(incoming_title, incoming.get("description")):
+        if _event_looks_cancelled(incoming_title, incoming_with_signals.get("description")):
             update_data["title"] = incoming_title
 
     # Description (prefer longer)
-    incoming_desc = incoming.get("description")
+    incoming_desc = incoming_with_signals.get("description")
     if incoming_desc and (
         not existing.get("description")
         or len(incoming_desc) > len(existing.get("description", ""))
@@ -1783,14 +1910,25 @@ def compute_event_update(
 
     # Image / ticket / price if missing
     for field in ("image_url", "ticket_url", "price_note"):
-        if incoming.get(field) and not existing.get(field):
-            update_data[field] = incoming.get(field)
+        if incoming_with_signals.get(field) and not existing.get(field):
+            update_data[field] = incoming_with_signals.get(field)
     for field in ("price_min", "price_max"):
-        if incoming.get(field) is not None and existing.get(field) is None:
-            update_data[field] = incoming.get(field)
+        if incoming_with_signals.get(field) is not None and existing.get(field) is None:
+            update_data[field] = incoming_with_signals.get(field)
+
+    # First-class show metadata
+    if events_support_show_signal_columns():
+        for field in ("doors_time", "age_policy", "ticket_status", "reentry_policy"):
+            incoming_value = incoming_with_signals.get(field)
+            if incoming_value and incoming_value != existing.get(field):
+                update_data[field] = incoming_value
+
+        incoming_set_times = incoming_with_signals.get("set_times_mentioned")
+        if incoming_set_times is True and not existing.get("set_times_mentioned"):
+            update_data["set_times_mentioned"] = True
 
     cancelled = _event_looks_cancelled(
-        incoming.get("title"), incoming.get("description")
+        incoming_with_signals.get("title"), incoming_with_signals.get("description")
     ) and not _event_looks_cancelled(existing.get("title"), existing.get("description"))
 
     return update_data, changes, cancelled
@@ -1995,14 +2133,8 @@ def update_crawl_log(
     if error_message:
         update_data["error_message"] = error_message
 
-    # Try with events_rejected first, fall back without if column doesn't exist
-    if events_rejected > 0:
-        try:
-            update_data["events_rejected"] = events_rejected
-            client.table("crawl_logs").update(update_data).eq("id", log_id).execute()
-            return
-        except Exception:
-            del update_data["events_rejected"]
+    # events_rejected column guaranteed by migration 20260215000000
+    update_data["events_rejected"] = events_rejected
 
     client.table("crawl_logs").update(update_data).eq("id", log_id).execute()
 
@@ -2105,3 +2237,163 @@ def deactivate_tba_events() -> int:
         )
 
     return tba_count
+
+
+# ===== SMART CRAWL SCHEDULING =====
+
+
+def update_source_last_crawled(source_id: int) -> None:
+    """Set last_crawled_at = NOW() for a source after successful crawl."""
+    client = get_client()
+    client.table("sources").update(
+        {"last_crawled_at": datetime.utcnow().isoformat()}
+    ).eq("id", source_id).execute()
+
+
+def update_expected_event_count(source_id: int, events_found: int) -> None:
+    """Update rolling average of expected event count for zero-event detection.
+
+    Uses exponential moving average: new = 0.7 * old + 0.3 * current.
+    If old is NULL, sets directly.
+    """
+    client = get_client()
+    result = (
+        client.table("sources")
+        .select("expected_event_count")
+        .eq("id", source_id)
+        .execute()
+    )
+    old = None
+    if result.data:
+        old = result.data[0].get("expected_event_count")
+
+    if old is None:
+        new_count = events_found
+    else:
+        new_count = int(0.7 * old + 0.3 * events_found)
+
+    client.table("sources").update(
+        {"expected_event_count": new_count}
+    ).eq("id", source_id).execute()
+
+
+def get_sources_due_for_crawl() -> list[dict]:
+    """Fetch active sources that are due for a crawl based on crawl_frequency.
+
+    Uses slightly-under thresholds to prevent drift from cron timing:
+    - daily: >20 hours ago
+    - twice_weekly: >3 days ago
+    - weekly: >6.5 days ago
+    - monthly: >28 days ago
+    """
+    client = get_client()
+    sources = client.table("sources").select("*").eq("is_active", True).execute()
+    all_sources = sources.data or []
+
+    now = datetime.utcnow()
+    thresholds = {
+        "daily": timedelta(hours=20),
+        "twice_weekly": timedelta(days=3),
+        "weekly": timedelta(days=6, hours=12),
+        "monthly": timedelta(days=28),
+    }
+
+    due = []
+    for source in all_sources:
+        freq = source.get("crawl_frequency") or "daily"
+        threshold = thresholds.get(freq, thresholds["daily"])
+        last = source.get("last_crawled_at")
+
+        if last is None:
+            due.append(source)
+            continue
+
+        # Parse ISO timestamp
+        if isinstance(last, str):
+            # Handle both with and without timezone
+            last_str = last.replace("Z", "+00:00")
+            try:
+                last_dt = datetime.fromisoformat(last_str).replace(tzinfo=None)
+            except ValueError:
+                due.append(source)
+                continue
+        else:
+            last_dt = last
+
+        if (now - last_dt) > threshold:
+            due.append(source)
+
+    return due
+
+
+def get_sources_by_cadence(cadence: str) -> list[dict]:
+    """Fetch all active sources with a specific crawl_frequency."""
+    client = get_client()
+    result = (
+        client.table("sources")
+        .select("*")
+        .eq("is_active", True)
+        .eq("crawl_frequency", cadence)
+        .execute()
+    )
+    return result.data or []
+
+
+def detect_zero_event_sources() -> tuple[int, list[str]]:
+    """Detect and auto-deactivate sources with persistent zero-event crawls.
+
+    Checks sources where expected_event_count > 5. If the last 3 successful
+    crawls all returned 0 events_found, deactivates the source and tags it.
+
+    Returns:
+        Tuple of (count_deactivated, list_of_slugs)
+    """
+    client = get_client()
+
+    # Get sources with meaningful expected_event_count
+    result = (
+        client.table("sources")
+        .select("id, slug, expected_event_count, health_tags")
+        .eq("is_active", True)
+        .gt("expected_event_count", 5)
+        .execute()
+    )
+    candidates = result.data or []
+
+    deactivated_slugs = []
+
+    for source in candidates:
+        # Get last 3 successful crawl logs
+        logs = (
+            client.table("crawl_logs")
+            .select("events_found")
+            .eq("source_id", source["id"])
+            .eq("status", "success")
+            .order("completed_at", desc=True)
+            .limit(3)
+            .execute()
+        )
+        log_data = logs.data or []
+
+        if len(log_data) < 3:
+            continue
+
+        # Check if all 3 returned 0 events
+        if all(log.get("events_found", 0) == 0 for log in log_data):
+            # Auto-deactivate
+            existing_tags = source.get("health_tags") or []
+            if "zero-events-deactivated" not in existing_tags:
+                existing_tags.append("zero-events-deactivated")
+
+            client.table("sources").update({
+                "is_active": False,
+                "health_tags": existing_tags,
+            }).eq("id", source["id"]).execute()
+
+            deactivated_slugs.append(source["slug"])
+            logger.warning(
+                f"Auto-deactivated source '{source['slug']}': "
+                f"3 consecutive zero-event crawls (expected ~{source['expected_event_count']})"
+            )
+
+    return len(deactivated_slugs), deactivated_slugs

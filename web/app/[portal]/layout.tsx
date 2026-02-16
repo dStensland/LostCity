@@ -110,6 +110,31 @@ export default async function PortalLayout({ children, params }: Props) {
           }
         `}</style>
       )}
+      {vertical === "dog" && (
+        <style>{`
+          body::before { opacity: 0 !important; }
+          body::after { opacity: 0 !important; }
+          .ambient-glow { opacity: 0 !important; }
+          .rain-overlay { display: none !important; }
+          .cursor-glow { display: none !important; }
+
+          [data-vertical="dog"] .animate-page-enter,
+          [data-vertical="dog"] .animate-glitch-flicker,
+          [data-vertical="dog"] .animate-flicker,
+          [data-vertical="dog"] .animate-flicker-fast,
+          [data-vertical="dog"] .animate-coral-shimmer,
+          [data-vertical="dog"] .animate-coral-scan,
+          [data-vertical="dog"] .animate-coral-pulse,
+          [data-vertical="dog"] .animate-happening-now-pulse,
+          [data-vertical="dog"] .animate-pulse-glow {
+            animation: none !important;
+          }
+
+          [data-vertical="dog"] [class*="animate-"] {
+            animation: none !important;
+          }
+        `}</style>
+      )}
       {isFilm && (
         <style>{`
           [data-vertical="film"] {

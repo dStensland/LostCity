@@ -110,20 +110,26 @@ def extract_dates_from_html(html: str) -> tuple[Optional[str], Optional[str], st
         except (json.JSONDecodeError, TypeError):
             continue
 
-    # 2. <meta> tags with date content
+    # 2. <time> elements — collect ALL, use min/max for range
+    time_dates = []
+    for tag in soup.find_all("time"):
+        dt = tag.get("datetime", "")
+        if str(CURRENT_YEAR) in dt and len(dt) >= 10 and re.match(r"\d{4}-\d{2}-\d{2}", dt):
+            time_dates.append(dt[:10])
+    if time_dates:
+        return min(time_dates), max(time_dates), "time-el"
+
+    # 3. <meta> tags with date content — collect ALL, use min/max for range
+    meta_dates = []
     for meta in soup.find_all("meta"):
         prop = (meta.get("property", "") + meta.get("name", "")).lower()
         content = meta.get("content", "")
         if "date" in prop and str(CURRENT_YEAR) in content:
             m = re.match(r"(\d{4}-\d{2}-\d{2})", content)
             if m:
-                return m.group(1), m.group(1), "meta"
-
-    # 3. <time> elements
-    for tag in soup.find_all("time"):
-        dt = tag.get("datetime", "")
-        if str(CURRENT_YEAR) in dt and len(dt) >= 10:
-            return dt[:10], dt[:10], "time-el"
+                meta_dates.append(m.group(1))
+    if meta_dates:
+        return min(meta_dates), max(meta_dates), "meta"
 
     # 4. Regex on visible text
     text = soup.get_text(" ", strip=True)

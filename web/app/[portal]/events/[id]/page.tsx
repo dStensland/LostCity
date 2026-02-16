@@ -16,7 +16,7 @@ import type { Metadata } from "next";
 import DirectionsDropdown from "@/components/DirectionsDropdown";
 import VenueVibes from "@/components/VenueVibes";
 import LinkifyText from "@/components/LinkifyText";
-import { formatTimeSplit, formatPriceDetailed, safeJsonLd, formatRelativeTime } from "@/lib/formats";
+import { formatTime, formatTimeSplit, formatPriceDetailed, safeJsonLd, formatRelativeTime } from "@/lib/formats";
 import VenueTagList from "@/components/VenueTagList";
 import FlagButton from "@/components/FlagButton";
 import LiveIndicator from "@/components/LiveIndicator";
@@ -39,6 +39,10 @@ import VenueEventsByDay from "@/components/VenueEventsByDay";
 import ScopedStylesServer from "@/components/ScopedStylesServer";
 import { createCssVarClass } from "@/lib/css-utils";
 import { cache } from "react";
+import { buildDisplayDescription } from "@/lib/event-description";
+import { deriveShowSignals } from "@/lib/show-signals";
+import ShowSignalsPanel from "@/components/ShowSignalsPanel";
+import { inferLineupGenreFallback } from "@/lib/artist-fallbacks";
 
 export const revalidate = 60;
 
@@ -261,11 +265,51 @@ export default async function PortalEventPage({ params }: Props) {
   const activePortalName = portal?.name || portalSlug.charAt(0).toUpperCase() + portalSlug.slice(1);
 
   const [{ venueEvents, sameDateEvents }, nearbySpots, eventArtists] = await Promise.all([
-    getRelatedEvents(event),
+    getRelatedEvents(event, { portalId: portal?.id }),
     event.venue?.id ? getNearbySpots(event.venue.id) : Promise.resolve([]),
     getEventArtists(event.id),
   ]);
+  const displayDescription = buildDisplayDescription(event.description, eventArtists, {
+    eventGenres: event.genres,
+    eventTags: event.tags,
+    eventCategory: event.category,
+  });
+  const derivedSignals = deriveShowSignals({
+    title: event.title,
+    description: displayDescription || event.description,
+    price_note: event.price_note,
+    tags: event.tags,
+    start_time: event.start_time,
+    doors_time: (event as { doors_time?: string | null }).doors_time,
+    end_time: event.end_time,
+    is_all_day: event.is_all_day,
+    is_free: event.is_free,
+    is_adult: (event as { is_adult?: boolean | null }).is_adult,
+    ticket_url: event.ticket_url,
+    age_policy: (event as { age_policy?: string | null }).age_policy,
+    ticket_status: (event as { ticket_status?: string | null }).ticket_status,
+    reentry_policy: (event as { reentry_policy?: string | null }).reentry_policy,
+    set_times_mentioned: (event as { set_times_mentioned?: boolean | null }).set_times_mentioned,
+  });
+  const defaultStartLabel = formatTime(event.start_time, event.is_all_day || undefined);
+  const showSignals = {
+    ...derivedSignals,
+    showTime: derivedSignals.showTime === defaultStartLabel ? null : derivedSignals.showTime,
+  };
+  const hasShowSignals = Boolean(
+    showSignals.showTime ||
+      showSignals.doorsTime ||
+      showSignals.endTime ||
+      showSignals.agePolicy ||
+      showSignals.ticketStatus ||
+      showSignals.reentryPolicy ||
+      showSignals.hasSetTimesMention
+  );
+  const lineupGenreFallback = inferLineupGenreFallback(event.genres, event.tags, event.category);
   const eventSchema = withPerformerSchema(generateEventSchema(event), eventArtists);
+  if (displayDescription) {
+    eventSchema.description = displayDescription;
+  }
 
   // Event state
   const isLive = (event as { is_live?: boolean }).is_live || false;
@@ -399,24 +443,34 @@ export default async function PortalEventPage({ params }: Props) {
             />
 
             {/* Description */}
-            {event.description && (
+            {displayDescription && (
               <>
                 <SectionHeader title="About" />
                 <p className="text-[var(--soft)] whitespace-pre-wrap leading-relaxed mb-6">
-                  <LinkifyText text={event.description} />
+                  <LinkifyText text={displayDescription} />
                 </p>
               </>
             )}
 
-            {/* Lineup / Performers — labels auto-derived from artist disciplines */}
+            {/* Artists / Performers */}
             {eventArtists.length > 0 && (
               <div className="mb-6">
                 <LineupSection
                   artists={eventArtists}
                   portalSlug={activePortalSlug}
                   maxDisplay={12}
+                  title="Artists"
+                  fallbackImageUrl={event.image_url}
+                  fallbackGenres={lineupGenreFallback}
                 />
               </div>
+            )}
+
+            {hasShowSignals && (
+              <>
+                <SectionHeader title="Show Details" />
+                <ShowSignalsPanel signals={showSignals} ticketUrl={event.ticket_url} className="mb-6" />
+              </>
             )}
 
             {/* Location */}
@@ -654,6 +708,7 @@ export default async function PortalEventPage({ params }: Props) {
             <RelatedSection
               title={`More at ${event.venue.name}`}
               count={venueEvents.length}
+              layout="content"
             >
               <VenueEventsByDay
                 events={venueEvents}

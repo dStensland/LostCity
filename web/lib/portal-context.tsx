@@ -372,6 +372,6 @@ export function usePortalCity() {
 /**
  * Get the portal vertical type (defaults to "city" if not set)
  */
-export function getPortalVertical(portal: Portal): "city" | "hotel" | "film" | "hospital" | "community" | "marketplace" {
+export function getPortalVertical(portal: Portal): "city" | "hotel" | "film" | "hospital" | "community" | "marketplace" | "dog" {
   return portal.settings?.vertical || "city";
 }

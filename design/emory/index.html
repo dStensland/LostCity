@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Emory Portal Screens</title>
+    <style>
+      @import url("https://use.typekit.net/usv3fbs.css");
+
+      :root {
+        --bg: #f8f8f8;
+        --card: #ffffff;
+        --line: #d2d2d2;
+        --text: #000000;
+        --primary: #002f6c;
+        --accent: #8ed585;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "scandia-web", Arial, Tahoma, sans-serif;
+        color: var(--text);
+        background: linear-gradient(180deg, #ffffff, var(--bg));
+      }
+
+      .page {
+        width: min(980px, calc(100% - 2rem));
+        margin: 0 auto;
+        padding: 2rem 0 2.5rem;
+      }
+
+      h1 {
+        margin: 0;
+        font-family: "superior-title", Georgia, serif;
+        font-size: clamp(2.4rem, 3.8vw, 3.4rem);
+        line-height: 0.95;
+      }
+
+      p {
+        margin: 0.55rem 0 1.1rem;
+        color: #4a4a4a;
+        max-width: 68ch;
+        line-height: 1.45;
+        font-size: 0.9rem;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.8rem;
+      }
+
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 0.85rem;
+        background: var(--card);
+      }
+
+      .card h2 {
+        margin: 0;
+        font-size: 1.02rem;
+        font-family: "superior-title", Georgia, serif;
+        line-height: 1;
+      }
+
+      .card p {
+        margin: 0.35rem 0 0.72rem;
+        font-size: 0.76rem;
+      }
+
+      .card a {
+        display: inline-block;
+        border: 2px solid var(--accent);
+        background: var(--accent);
+        color: #000;
+        border-radius: 5px;
+        padding: 0.35rem 0.62rem;
+        font-size: 0.7rem;
+        text-decoration: none;
+      }
+
+      .card a:hover {
+        background: #bbe6b6;
+        border-color: #000;
+      }
+
+      @media (max-width: 820px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <h1>Emory Consumer Portal Screens</h1>
+      <p>
+        High-level static screens focused on a clean, people-first consumer experience with practical local discovery.
+      </p>
+      <section class="grid">
+        <article class="card">
+          <h2>Golden Flow: Hospital Now</h2>
+          <p>Flagship decision flow: find nearby breakfast/support in under 30 seconds.</p>
+          <a href="./golden-flow-hospital-now.html">Open Screen</a>
+        </article>
+        <article class="card">
+          <h2>Hospital Hub</h2>
+          <p>Simple front door for care, immediate actions, and what is happening nearby this week.</p>
+          <a href="./hospital-hub.html">Open Screen</a>
+        </article>
+        <article class="card">
+          <h2>Concierge</h2>
+          <p>Hospitality-style planning for lodging, meals, and services around appointments.</p>
+          <a href="./concierge.html">Open Screen</a>
+        </article>
+        <article class="card">
+          <h2>Community Hub</h2>
+          <p>Keeping Atlanta healthy with programs, organizations, classes, and neighborhood activation.</p>
+          <a href="./community-hub.html">Open Screen</a>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

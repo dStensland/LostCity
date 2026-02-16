@@ -3,15 +3,16 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useMemo, useState } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { getProxiedImageSrc } from "@/lib/image-proxy";
+import { phoneHref } from "@/lib/forth-types";
 
 interface HotelHeaderProps {
   portalSlug: string;
   portalName: string;
   logoUrl?: string | null;
-  showStayLink?: boolean;
-  useForthNav?: boolean;
+  hideNav?: boolean;
+  conciergePhone?: string;
 }
 
 /**
@@ -22,35 +23,24 @@ export default function HotelHeader({
   portalSlug,
   portalName,
   logoUrl,
-  showStayLink = false,
-  useForthNav = false,
+  hideNav = false,
+  conciergePhone,
 }: HotelHeaderProps) {
   const searchParams = useSearchParams();
-  const pathname = usePathname();
   const view = searchParams.get("view") || "feed";
   const findType = searchParams.get("type") || "events";
   const [logoFailed, setLogoFailed] = useState(false);
-  const isStayPath = pathname === `/${portalSlug}/stay`;
   const resolvedLogoSrc = useMemo(() => {
     if (!logoUrl) return null;
     const proxied = getProxiedImageSrc(logoUrl);
     return typeof proxied === "string" ? proxied : null;
   }, [logoUrl]);
 
-  const navLinks = useForthNav
-    ? [
-      { href: `/${portalSlug}`, label: "Concierge", active: pathname === `/${portalSlug}` },
-      { href: `/${portalSlug}/plan`, label: "Plan Stay", active: pathname === `/${portalSlug}/plan` },
-      { href: `/${portalSlug}/dining`, label: "Eat + Drink", active: pathname === `/${portalSlug}/dining` },
-      ...(showStayLink ? [{ href: `/${portalSlug}/stay`, label: "Stay", active: pathname === `/${portalSlug}/stay` }] : []),
-      { href: `/${portalSlug}/club`, label: "Club", active: pathname === `/${portalSlug}/club` },
-    ]
-    : [
-      { href: `/${portalSlug}`, label: "Live", active: !isStayPath && view === "feed" },
-      { href: `/${portalSlug}?view=find&type=events`, label: "Tonight", active: !isStayPath && view === "find" && findType === "events" },
-      { href: `/${portalSlug}?view=find&type=destinations`, label: "Explore", active: !isStayPath && view === "find" && findType === "destinations" },
-      ...(showStayLink ? [{ href: `/${portalSlug}/stay`, label: "Stay", active: isStayPath }] : []),
-    ];
+  const navLinks = [
+    { href: `/${portalSlug}`, label: "Live", active: view === "feed" },
+    { href: `/${portalSlug}?view=find&type=events`, label: "Tonight", active: view === "find" && findType === "events" },
+    { href: `/${portalSlug}?view=find&type=destinations`, label: "Explore", active: view === "find" && findType === "destinations" },
+  ];
 
   return (
     <header className="sticky top-0 z-50 bg-[var(--hotel-ivory)]/95 backdrop-blur-md border-b border-[var(--hotel-sand)] shadow-sm">
@@ -81,35 +71,54 @@ export default function HotelHeader({
           </span>
         </Link>
 
-        {/* Navigation - desktop */}
-        <nav className="hidden md:flex items-center gap-8">
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={`text-sm font-body uppercase tracking-wide transition-colors ${
-                link.active
-                  ? "text-[var(--hotel-charcoal)]"
-                  : "text-[var(--hotel-stone)] hover:text-[var(--hotel-champagne)]"
-              }`}
-            >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
+        {/* Navigation - desktop (hidden when pillar nav is used) */}
+        {!hideNav && (
+          <nav className="hidden md:flex items-center gap-8">
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`text-sm font-body uppercase tracking-wide transition-colors ${
+                  link.active
+                    ? "text-[var(--hotel-charcoal)]"
+                    : "text-[var(--hotel-stone)] hover:text-[var(--hotel-champagne)]"
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
+        )}
 
-        {/* Right side - search/menu */}
-        <div className="flex items-center gap-4">
-          <button
-            className="text-[var(--hotel-stone)] hover:text-[var(--hotel-charcoal)] transition-colors"
-            aria-label="Search"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </button>
+        {/* Right side - concierge phone */}
+        <div className="flex items-center gap-3">
+          {conciergePhone && (
+            <>
+              {/* Desktop: full CTA */}
+              <a
+                href={phoneHref(conciergePhone)}
+                className="hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--hotel-charcoal)] text-white text-sm font-body hover:bg-[var(--hotel-ink)] transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                </svg>
+                Concierge
+              </a>
+              {/* Mobile: phone icon */}
+              <a
+                href={phoneHref(conciergePhone)}
+                className="md:hidden text-[var(--hotel-stone)] hover:text-[var(--hotel-charcoal)] transition-colors"
+                aria-label="Call Concierge"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                </svg>
+              </a>
+            </>
+          )}
         </div>
       </div>
+
     </header>
   );
 }

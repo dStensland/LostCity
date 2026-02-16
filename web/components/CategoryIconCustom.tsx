@@ -8,6 +8,7 @@ export const CATEGORY_CONFIG = {
   comedy: { label: "Comedy", color: "#FCD34D" },
   theater: { label: "Theater", color: "#F0ABFC" },
   art: { label: "Art", color: "#C4B5FD" },
+  museums: { label: "Museums", color: "#94A3B8" },
   community: { label: "Community", color: "#6EE7B7" },
   food_drink: { label: "Food & Drink", color: "#FDBA74" },
   sports: { label: "Sports", color: "#7DD3FC" },
@@ -103,7 +104,7 @@ interface Props {
  * - Negative space embraces the void
  */
 
-const iconPaths: Record<string, ReactNode> = {
+export const iconPaths: Record<string, ReactNode> = {
   // ═══════════════════════════════════════════
   // MUSIC & AUDIO
   // ═══════════════════════════════════════════
@@ -207,7 +208,16 @@ const iconPaths: Record<string, ReactNode> = {
     </>
   ),
 
-  // Museum - Columns (classical, minimal)
+  // Museums - Category icon (columns, classical)
+  museums: (
+    <>
+      <path d="M12 2L3 7h18L12 2z" strokeWidth={1.5} strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <path d="M5 7v12M9.5 7v12M14.5 7v12M19 7v12" strokeWidth={1.5} stroke="currentColor" />
+      <path d="M3 19h18" strokeWidth={1.5} stroke="currentColor" />
+    </>
+  ),
+
+  // Museum - Spot type icon (columns, classical)
   museum: (
     <>
       <path d="M12 2L3 7h18L12 2z" strokeWidth={1.5} strokeLinejoin="round" fill="none" stroke="currentColor" />
@@ -320,6 +330,145 @@ const iconPaths: Record<string, ReactNode> = {
   // ═══════════════════════════════════════════
   // NIGHTLIFE & ENTERTAINMENT
   // ═══════════════════════════════════════════
+
+  // ═══════════════════════════════════════════
+  // NIGHTLIFE ACTIVITY ICONS
+  // ═══════════════════════════════════════════
+
+  // Karaoke - Microphone with note
+  karaoke: (
+    <>
+      <path d="M12 2a3 3 0 00-3 3v5a3 3 0 006 0V5a3 3 0 00-3-3z" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M12 14v4M8 18h8" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" />
+      <path d="M19 7c.5 1 .5 2-.5 3" strokeWidth={1.5} strokeLinecap="round" fill="none" stroke="currentColor" opacity={0.6} />
+    </>
+  ),
+
+  // Trivia - Question mark in circle
+  trivia: (
+    <>
+      <circle cx="12" cy="12" r="9" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M9 9a3 3 0 114 2.83V13" strokeWidth={1.5} strokeLinecap="round" fill="none" stroke="currentColor" />
+      <circle cx="12" cy="16" r="1" fill="currentColor" />
+    </>
+  ),
+
+  // Bar Games - Dartboard / target
+  bar_games: (
+    <>
+      <circle cx="12" cy="12" r="9" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <circle cx="12" cy="12" r="5.5" strokeWidth={1.5} fill="none" stroke="currentColor" opacity={0.6} />
+      <circle cx="12" cy="12" r="2" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <circle cx="12" cy="12" r="0.8" fill="currentColor" />
+    </>
+  ),
+
+  // Poker - Spade card
+  poker: (
+    <>
+      <rect x="5" y="2" width="14" height="20" rx="2" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M12 7c-2 2-4 3.5-4 5.5a4 4 0 004 4 4 4 0 004-4c0-2-2-3.5-4-5.5z" fill="currentColor" />
+      <path d="M12 16.5v2" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" />
+    </>
+  ),
+
+  // Bingo - Grid with dots
+  bingo: (
+    <>
+      <rect x="4" y="4" width="16" height="16" rx="2" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <circle cx="8" cy="8" r="1.2" fill="currentColor" />
+      <circle cx="16" cy="8" r="1.2" fill="currentColor" opacity={0.5} />
+      <circle cx="12" cy="12" r="1.2" fill="currentColor" />
+      <circle cx="8" cy="16" r="1.2" fill="currentColor" opacity={0.5} />
+      <circle cx="16" cy="16" r="1.2" fill="currentColor" />
+      <path d="M12 4v16M4 12h16" strokeWidth={1} stroke="currentColor" opacity={0.25} />
+    </>
+  ),
+
+  // DJ - Headphones
+  dj: (
+    <>
+      <path d="M4 13a8 8 0 0116 0" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <rect x="2" y="13" width="4" height="6" rx="1.5" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <rect x="18" y="13" width="4" height="6" rx="1.5" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <circle cx="12" cy="5" r="1" fill="currentColor" opacity={0.5} />
+    </>
+  ),
+
+  // Latin Night - Maracas
+  latin_night: (
+    <>
+      <ellipse cx="8" cy="8" rx="4" ry="5" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M8 13v8" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" />
+      <ellipse cx="17" cy="7" rx="3.5" ry="4.5" strokeWidth={1.5} fill="none" stroke="currentColor" opacity={0.7} transform="rotate(15, 17, 7)" />
+      <path d="M17 11.5v7" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" opacity={0.7} />
+      <circle cx="7" cy="6" r="0.8" fill="currentColor" opacity={0.5} />
+      <circle cx="9" cy="9" r="0.8" fill="currentColor" opacity={0.5} />
+    </>
+  ),
+
+  // Line Dancing - Cowboy boot
+  line_dancing: (
+    <>
+      <path d="M8 3v8l-4 4v3h12v-3c0-1-.5-2-1.5-2.5L13 12V3" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <path d="M8 3h5" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" />
+      <path d="M4 18h12" strokeWidth={1.5} stroke="currentColor" opacity={0.4} />
+      <path d="M16 18h4v3h-4" strokeWidth={1.5} strokeLinejoin="round" fill="none" stroke="currentColor" />
+    </>
+  ),
+
+  // Party - Party horn / popper
+  party: (
+    <>
+      <path d="M4 20L14 4" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" />
+      <path d="M14 4c2 3 4 7 3 10l-7 2" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <circle cx="18" cy="6" r="1" fill="currentColor" opacity={0.6} />
+      <circle cx="20" cy="10" r="0.8" fill="currentColor" opacity={0.4} />
+      <circle cx="16" cy="2" r="0.8" fill="currentColor" opacity={0.5} />
+      <path d="M2 18l3-2" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" opacity={0.5} />
+    </>
+  ),
+
+  // Pub Crawl - Beer mug with path dots
+  pub_crawl: (
+    <>
+      <path d="M4 6h9v10a2 2 0 01-2 2H6a2 2 0 01-2-2V6z" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <path d="M13 9h1.5a2.5 2.5 0 010 5H13" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <ellipse cx="8.5" cy="4.5" rx="3.5" ry="1.5" fill="currentColor" opacity={0.5} />
+      <circle cx="18" cy="6" r="1" fill="currentColor" opacity={0.6} />
+      <circle cx="20" cy="10" r="1" fill="currentColor" opacity={0.4} />
+      <circle cx="19" cy="15" r="1" fill="currentColor" opacity={0.3} />
+    </>
+  ),
+
+  // Specials - Cocktail with tag
+  specials: (
+    <>
+      <path d="M6 3h12l-5 8v7h-2v-7L6 3z" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <path d="M8 21h8" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" />
+      <path d="M18 7l2-2M20 5l1.5 1.5M18 7l1.5 1.5" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" opacity={0.6} />
+    </>
+  ),
+
+  // Comedy Jester - Jester hat / clown nose
+  comedy_jester: (
+    <>
+      <circle cx="12" cy="14" r="7" strokeWidth={1.5} fill="none" stroke="currentColor" />
+      <circle cx="12" cy="14" r="2" fill="currentColor" />
+      <path d="M7 7L5 2M12 5V1M17 7l2-5" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" />
+      <circle cx="5" cy="2" r="1.5" fill="currentColor" opacity={0.6} />
+      <circle cx="12" cy="1" r="1.5" fill="currentColor" opacity={0.6} />
+      <circle cx="19" cy="2" r="1.5" fill="currentColor" opacity={0.6} />
+    </>
+  ),
+
+  // Drag - Star on stage
+  drag: (
+    <>
+      <path d="M12 2l2.5 5 5.5.8-4 3.9.9 5.5L12 14.7l-4.9 2.5.9-5.5-4-3.9 5.5-.8L12 2z" strokeWidth={1.5} strokeLinejoin="round" fill="none" stroke="currentColor" />
+      <path d="M4 20h16" strokeWidth={1.5} strokeLinecap="round" stroke="currentColor" opacity={0.4} />
+    </>
+  ),
 
   // Nightlife - Moon/crescent
   nightlife: (

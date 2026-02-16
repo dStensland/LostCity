@@ -18,16 +18,23 @@ import FestivalDebugPanel from "@/components/FestivalDebugPanel";
 //   default_layout?: string;
 // };
 
-export default function FeedView() {
+interface FeedViewProps {
+  /** Pre-fetched sections — skips internal fetch when provided. */
+  prefetchedSections?: FeedSectionData[];
+}
+
+export default function FeedView({ prefetchedSections }: FeedViewProps = {}) {
   const { portal } = usePortal();
   const searchParams = useSearchParams();
   const showFestivalDebug = searchParams?.get("debug") === "festivals";
   const INITIAL_VISIBLE_SECTIONS = 5;
 
-  const [sections, setSections] = useState<FeedSectionData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [sections, setSections] = useState<FeedSectionData[]>(prefetchedSections ?? []);
+  const [loading, setLoading] = useState(!prefetchedSections);
   const [error, setError] = useState<string | null>(null);
   const [showAllSections, setShowAllSections] = useState(false);
+
+  const hasPrefetched = prefetchedSections !== undefined;
 
   const loadFeed = useCallback(async (signal: AbortSignal) => {
     try {
@@ -57,10 +64,19 @@ export default function FeedView() {
   }, [portal.slug]);
 
   useEffect(() => {
+    if (hasPrefetched) return;
     const controller = new AbortController();
     loadFeed(controller.signal);
     return () => controller.abort();
-  }, [loadFeed]);
+  }, [loadFeed, hasPrefetched]);
+
+  // Sync state when prefetched data changes (e.g. parent reload)
+  useEffect(() => {
+    if (prefetchedSections !== undefined) {
+      setSections(prefetchedSections);
+      setLoading(false);
+    }
+  }, [prefetchedSections]);
 
   // Reset progressive disclosure after data refresh.
   useEffect(() => {
@@ -161,6 +177,7 @@ export default function FeedView() {
     ? regularSections
     : regularSections.slice(0, INITIAL_VISIBLE_SECTIONS);
   const hiddenSectionCount = Math.max(regularSections.length - visibleRegularSections.length, 0);
+  const canToggleSectionDensity = regularSections.length > INITIAL_VISIBLE_SECTIONS;
 
   return (
     <div>
@@ -176,11 +193,11 @@ export default function FeedView() {
         </div>
       ))}
 
-      {hiddenSectionCount > 0 && (
+      {canToggleSectionDensity && (
         <div className="pt-3 pb-1">
           <button
             type="button"
-            onClick={() => setShowAllSections(true)}
+            onClick={() => setShowAllSections((prev) => !prev)}
             className="w-full rounded-xl border border-[var(--twilight)]/50 bg-[var(--night)]/55 px-4 py-3 text-left transition-all duration-200 hover:border-[var(--coral)]/45 hover:bg-[var(--night)]/75 hover:shadow-[0_12px_32px_rgba(0,0,0,0.3)]"
           >
             <div className="flex items-center justify-between gap-3">
@@ -189,11 +206,13 @@ export default function FeedView() {
                   Continue Browsing
                 </p>
                 <p className="text-sm text-[var(--cream)] font-medium">
-                  Show {hiddenSectionCount} more {hiddenSectionCount === 1 ? "section" : "sections"}
+                  {showAllSections
+                    ? "Show fewer sections"
+                    : `Show ${hiddenSectionCount} more ${hiddenSectionCount === 1 ? "section" : "sections"}`}
                 </p>
               </div>
               <span className="inline-flex h-8 min-w-8 items-center justify-center rounded-full border border-[var(--coral)]/40 px-2 font-mono text-xs text-[var(--coral)]">
-                +{hiddenSectionCount}
+                {showAllSections ? "−" : `+${hiddenSectionCount}`}
               </span>
             </div>
           </button>

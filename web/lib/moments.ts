@@ -5,9 +5,6 @@ import {
   computeCountdown,
   type FestivalTier,
   type FestivalMoment,
-  type TimeOfDay,
-  type Season,
-  type TimeContext,
   type MomentsResponse,
 } from "@/lib/moments-utils";
 
@@ -48,54 +45,6 @@ export function classifyFestivalTier(
 }
 
 // ============================================================================
-// TIME CONTEXT
-// ============================================================================
-
-function getTimeOfDay(hour: number): TimeOfDay {
-  if (hour >= 5 && hour < 12) return "morning";
-  if (hour >= 12 && hour < 17) return "afternoon";
-  if (hour >= 17 && hour < 22) return "evening";
-  return "latenight";
-}
-
-function getSeason(month: number): Season {
-  if (month >= 3 && month <= 5) return "spring";
-  if (month >= 6 && month <= 8) return "summer";
-  if (month >= 9 && month <= 11) return "fall";
-  return "winter";
-}
-
-export function getTimeContext(now: Date = new Date()): TimeContext {
-  const hour = now.getHours();
-  const day = now.getDay();
-  const month = now.getMonth() + 1;
-
-  const timeOfDay = getTimeOfDay(hour);
-  const season = getSeason(month);
-  const isWeekend = day === 0 || day === 5 || day === 6; // Fri, Sat, Sun
-
-  let sectionLabel: string | null = null;
-  let sectionCategories: string[] = [];
-
-  if (timeOfDay === "morning" && isWeekend) {
-    sectionLabel = "Brunch & Markets";
-    sectionCategories = ["food_drink", "markets"];
-  } else if (
-    timeOfDay === "afternoon" &&
-    (season === "spring" || season === "summer")
-  ) {
-    sectionLabel = "Patio SZN";
-    sectionCategories = ["nightlife", "food_drink"];
-  } else if (timeOfDay === "latenight" && isWeekend) {
-    sectionLabel = "After Hours";
-    sectionCategories = ["nightlife"];
-  }
-  // Evening + Fri/Sat is skipped — TonightsPicks handles this
-
-  return { timeOfDay, season, isWeekend, sectionLabel, sectionCategories };
-}
-
-// ============================================================================
 // MOMENTS AGGREGATION
 // ============================================================================
 
@@ -105,7 +54,6 @@ export async function computeMoments(
   const portal = await getCachedPortalBySlug(portalSlug);
   const festivals = await getAllFestivals(portal?.id);
   const today = getLocalDateString();
-  const timeContext = getTimeContext();
 
   const moments: FestivalMoment[] = festivals
     .map((festival) => {
@@ -179,5 +127,5 @@ export async function computeMoments(
     ([month, festivals]) => ({ month, festivals })
   );
 
-  return { takeover, imminent, upcoming, saveTheDate, timeContext };
+  return { takeover, imminent, upcoming, saveTheDate };
 }

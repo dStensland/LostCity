@@ -5,5 +5,5 @@ export function isForthVariantPortal(portal: Portal): boolean {
     ? portal.settings.experience_variant.toLowerCase()
     : "";
 
-  return portal.slug === "forth" || variant === "forth" || variant === "forth_signature";
+  return portal.slug === "forth" || variant === "forth" || variant === "forth_signature" || variant === "concierge";
 }

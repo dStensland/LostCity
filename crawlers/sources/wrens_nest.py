@@ -113,14 +113,14 @@ def categorize_event(title: str, description: str) -> tuple[str, str, list[str]]
         tags = base_tags + ["storytelling", "family-friendly"]
         if any(w in title_lower for w in ["br'er rabbit", "uncle remus", "folk tales"]):
             tags.append("folklore")
-        return "cultural", "storytelling", tags
+        return "museums", "storytelling", tags
 
     # Tours
     if any(w in title_lower for w in ["tour", "guided tour", "house tour"]):
         tags = base_tags + ["tours", "history"]
         if "black history" in title_lower or "african american" in title_lower:
             tags.append("black-history-month")
-        return "cultural", "tour", tags
+        return "museums", "tour", tags
 
     # Family programs
     if any(w in title_lower for w in ["family", "kids", "children", "camp", "young"]):
@@ -130,11 +130,11 @@ def categorize_event(title: str, description: str) -> tuple[str, str, list[str]]
     if "black history" in title_lower or (
         datetime.now().month == 2 and any(w in title_lower for w in ["heritage", "history", "celebration"])
     ):
-        return "cultural", "special_event", base_tags + ["black-history-month", "community", "heritage"]
+        return "museums", "special_event", base_tags + ["black-history-month", "community", "heritage"]
 
     # Literary/Author events
     if any(w in title_lower for w in ["author", "book", "reading", "literature", "writing"]):
-        return "cultural", "book_event", base_tags + ["literary", "community", "authors"]
+        return "museums", "book_event", base_tags + ["literary", "community", "authors"]
 
     # Music/Performance
     if any(w in title_lower for w in ["concert", "music", "performance", "jazz", "folk music"]):
@@ -142,14 +142,14 @@ def categorize_event(title: str, description: str) -> tuple[str, str, list[str]]
 
     # Workshops/Classes
     if any(w in title_lower for w in ["workshop", "class", "learn", "craft"]):
-        return "cultural", "workshop", base_tags + ["hands-on", "educational"]
+        return "museums", "workshop", base_tags + ["hands-on", "educational"]
 
     # Special events & celebrations
     if any(w in title_lower for w in ["festival", "celebration", "party", "gala", "fundraiser"]):
         return "community", "special_event", base_tags + ["community", "celebration"]
 
-    # Default to cultural tour
-    return "cultural", "tour", base_tags + ["museum", "history"]
+    # Default to museums tour
+    return "museums", "tour", base_tags + ["museum", "history"]
 
 
 def crawl(source: dict) -> tuple[int, int, int]:

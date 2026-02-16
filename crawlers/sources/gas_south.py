@@ -20,7 +20,7 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, remove_stale_source_events
 from dedupe import generate_content_hash
-from utils import extract_event_links, find_event_url
+from utils import extract_event_links, find_event_url, extract_images_from_page
 
 logger = logging.getLogger(__name__)
 
@@ -245,6 +245,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 page.wait_for_timeout(1000)
 
+            # Extract image map for event images
+            image_map = extract_images_from_page(page)
+
             # Extract event links for specific URLs
             event_links = extract_event_links(page, BASE_URL)
 
@@ -294,11 +297,15 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         category = infer_category(title)
 
                         # Get specific event URL
-
-
                         event_url = find_event_url(title, event_links, EVENTS_URL)
 
-
+                        # If no JSON-LD image, try matching from image map
+                        if not image_url:
+                            title_lower = title.lower()
+                            for img_alt, img_url_mapped in image_map.items():
+                                if img_alt.lower() == title_lower or title_lower in img_alt.lower() or img_alt.lower() in title_lower:
+                                    image_url = img_url_mapped
+                                    break
 
                         event_record = {
                             "source_id": source_id,
@@ -404,11 +411,15 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         category = infer_category(title)
 
                         # Get specific event URL
-
-
                         event_url = find_event_url(title, event_links, EVENTS_URL)
 
-
+                        # Find image by title match
+                        event_image = None
+                        title_lower = title.lower()
+                        for img_alt, img_url in image_map.items():
+                            if img_alt.lower() == title_lower or title_lower in img_alt.lower() or img_alt.lower() in title_lower:
+                                event_image = img_url
+                                break
 
                         event_record = {
                             "source_id": source_id,
@@ -429,7 +440,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "is_free": False,
                             "source_url": event_url,
                             "ticket_url": event_url,
-                            "image_url": None,
+                            "image_url": event_image,
                             "raw_text": f"{title} - {date_text} {time_text}",
                             "extraction_confidence": 0.80,
                             "is_recurring": False,

@@ -258,7 +258,7 @@ const MODE_TRACK_PRIORITY: Record<HospitalAudienceMode, TrackKey[]> = {
   visitor: ["prevention", "food_support", "community_wellness"],
 };
 
-const ATLANTA_PORTAL_SLUG = "atlanta";
+const SUPPORT_PORTAL_SLUG = "atlanta-support";
 const STORY_LIMIT_PER_TRACK = 4;
 const TRACK_QUERY_MULTIPLIER = 8;
 
@@ -451,12 +451,12 @@ function matchesTrack(
   return track.sourceNameHints.some((hint) => name.includes(hint));
 }
 
-async function getAtlantaPortalId(client: ReturnType<typeof getReadClient>): Promise<string | null> {
+async function getSupportPortalId(client: ReturnType<typeof getReadClient>): Promise<string | null> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (client as any)
     .from("portals")
     .select("id")
-    .eq("slug", ATLANTA_PORTAL_SLUG)
+    .eq("slug", SUPPORT_PORTAL_SLUG)
     .maybeSingle();
 
   if (error || !data?.id) {
@@ -466,9 +466,9 @@ async function getAtlantaPortalId(client: ReturnType<typeof getReadClient>): Pro
   return String(data.id);
 }
 
-async function getAtlantaSources(
+async function getSupportSources(
   client: ReturnType<typeof getReadClient>,
-  atlantaPortalId: string | null,
+  supportPortalId: string | null,
   competitorExclusions: readonly string[]
 ): Promise<SourceRow[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -477,8 +477,8 @@ async function getAtlantaSources(
     .select("id, slug, name, url, owner_portal_id")
     .eq("is_active", true);
 
-  if (atlantaPortalId) {
-    query = query.eq("owner_portal_id", atlantaPortalId);
+  if (supportPortalId) {
+    query = query.eq("owner_portal_id", supportPortalId);
   }
 
   const { data, error } = await query;
@@ -606,8 +606,8 @@ const getCachedDigest = cache(async (
 ): Promise<EmoryCommunityDigest> => {
   const governanceProfile = getHospitalSourceGovernanceProfile(portalSlug);
   const client = getReadClient();
-  const atlantaPortalId = await getAtlantaPortalId(client);
-  const sources = await getAtlantaSources(client, atlantaPortalId, governanceProfile.competitorExclusions);
+  const supportPortalId = await getSupportPortalId(client);
+  const sources = await getSupportSources(client, supportPortalId, governanceProfile.competitorExclusions);
   const today = getLocalDateString();
   const horizonDate = getLocalDateString(addDays(new Date(), 45));
   const orderedTracks = getOrderedTracks(mode);

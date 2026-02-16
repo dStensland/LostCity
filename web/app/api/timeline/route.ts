@@ -22,16 +22,36 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const priceParam = searchParams.get("price");
     const priceFilter = PRICE_FILTERS.find(p => p.value === priceParam);
-    const isFree = priceParam === "free" || undefined;
+    const isFree = priceParam === "free" || searchParams.get("free") === "1" || undefined;
     const priceMax = priceFilter?.max || undefined;
     const venueParam = searchParams.get("venue");
     const venueId = venueParam ? safeParseInt(venueParam, 0, 0, 999999) : undefined;
     const portalId = searchParams.get("portal_id") || undefined;
     const portalExclusive = searchParams.get("portal_exclusive") === "true";
 
+    const supabase = await createClient();
+
+    // Resolve portal city for geographic scoping of NULL-portal events
+    let portalCity: string | undefined;
+    if (portalId && !portalExclusive) {
+      const { data: portalData } = await supabase
+        .from("portals")
+        .select("filters")
+        .eq("id", portalId)
+        .maybeSingle();
+      const portalFilters = portalData as { filters?: Record<string, unknown> | string | null } | null;
+      if (portalFilters?.filters) {
+        const pf = (typeof portalFilters.filters === "string"
+          ? JSON.parse(portalFilters.filters)
+          : portalFilters.filters) as { city?: string };
+        portalCity = pf.city || undefined;
+      }
+    }
+
     const filters: SearchFilters = {
       search: searchParams.get("search") || undefined,
       categories: searchParams.get("categories")?.split(",").filter(Boolean) || undefined,
+      genres: searchParams.get("genres")?.split(",").filter(Boolean) || undefined,
       tags: searchParams.get("tags")?.split(",").filter(Boolean) || undefined,
       vibes: searchParams.get("vibes")?.split(",").filter(Boolean) || undefined,
       neighborhoods: searchParams.get("neighborhoods")?.split(",").filter(Boolean) || undefined,
@@ -42,6 +62,7 @@ export async function GET(request: Request) {
       mood: (searchParams.get("mood") as MoodId) || undefined,
       portal_id: portalId,
       portal_exclusive: portalExclusive,
+      city: portalCity,
       exclude_classes: true,
     };
 
@@ -57,8 +78,6 @@ export async function GET(request: Request) {
       filters.vibes?.length ||
       filters.venue_id
     );
-
-    const supabase = await createClient();
     const today = getLocalDateString(new Date());
 
     const [eventsResult, festivalsResult] = await Promise.all([

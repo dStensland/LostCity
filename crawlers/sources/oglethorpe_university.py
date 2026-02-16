@@ -100,7 +100,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             if "museum" in title_lower or "exhibition" in title_lower or "art" in title_lower:
                 venue_data = VENUES["museum"]
                 venue_id = get_or_create_venue(venue_data)
-                category, subcategory = "art", "exhibition"
+                category, subcategory = "museums", "exhibition"
             elif any(w in title_lower for w in ["athletics", "game", "petrels"]):
                 category, subcategory = "sports", "college"
             elif any(w in title_lower for w in ["theater", "theatre", "performance"]):

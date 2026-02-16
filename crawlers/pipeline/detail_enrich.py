@@ -11,7 +11,11 @@ from urllib.parse import urljoin
 from bs4 import BeautifulSoup
 
 from extractors.structured import extract_jsonld_event_fields, extract_open_graph_fields
-from extractors.lineup import dedupe_artists, split_lineup_text
+from extractors.lineup import (
+    dedupe_artist_entries,
+    normalize_artist_role,
+    split_lineup_text_with_roles,
+)
 from extractors.selectors import extract_all, extract_first
 from extractors.heuristic import extract_heuristic_fields
 from extractors.llm_detail import extract_detail_with_llm
@@ -28,6 +32,16 @@ CONFIDENCE_BY_SOURCE = {
 }
 
 EXTRACTION_VERSION = "pipeline_v3"
+
+
+def _artist_entries_from_value(value: Any) -> list[dict[str, str]]:
+    if not value:
+        return []
+    if isinstance(value, str):
+        return dedupe_artist_entries(split_lineup_text_with_roles(value))
+    if isinstance(value, list):
+        return dedupe_artist_entries(value)
+    return []
 
 
 def _merge_field(field: str, current: Any, new: Any) -> Any:
@@ -48,23 +62,13 @@ def _merge_field(field: str, current: Any, new: Any) -> Any:
         return current
 
     if field == "artists":
-        def _to_list(value: Any) -> list:
-            if not value:
-                return []
-            if isinstance(value, list):
-                return value
-            if isinstance(value, str):
-                parsed = split_lineup_text(value)
-                return parsed or [value]
-            return []
-
-        current_list = _to_list(current)
-        new_list = _to_list(new)
-        if not current_list:
-            return new_list or current
-        if not new_list:
-            return current_list or current
-        return dedupe_artists(current_list + new_list)
+        current_entries = _artist_entries_from_value(current)
+        new_entries = _artist_entries_from_value(new)
+        if not current_entries:
+            return new_entries or current
+        if not new_entries:
+            return current_entries or current
+        return dedupe_artist_entries(current_entries + new_entries)
 
     return current
 
@@ -116,16 +120,36 @@ def _extract_selector_fields(html: str, selectors: SelectorSet) -> dict:
             continue
         if field == "artists":
             matches = soup.select(spec)
-            texts: list[str] = []
+            entries: list[dict[str, str]] = []
             for match in matches:
                 text = match.get_text(" ", strip=True)
-                if text:
-                    texts.append(text)
-            if texts:
-                artists: list[str] = []
-                for text in texts:
-                    artists.extend(split_lineup_text(text) or [text])
-                result[field] = dedupe_artists(artists)
+                if not text:
+                    continue
+
+                role_hint: Optional[str] = None
+                classes = " ".join(match.get("class") or []).lower()
+                node_id = str(match.get("id") or "").lower()
+                parent = match.find_parent()
+                parent_classes = " ".join(parent.get("class") or []).lower() if parent else ""
+                parent_id = str(parent.get("id") or "").lower() if parent else ""
+                context = " ".join([classes, node_id, parent_classes, parent_id])
+                if "headliner" in context:
+                    role_hint = "headliner"
+                elif any(token in context for token in ("support", "opener", "opening", "special-guest")):
+                    role_hint = "support"
+
+                parsed_entries = split_lineup_text_with_roles(text)
+                if not parsed_entries:
+                    parsed_entries = [{"name": text, "role": role_hint or "headliner"}]
+
+                for parsed in parsed_entries:
+                    role = normalize_artist_role(parsed.get("role")) or "headliner"
+                    if role == "headliner" and role_hint:
+                        role = role_hint
+                    entries.append({"name": parsed.get("name", ""), "role": role})
+
+            if entries:
+                result[field] = dedupe_artist_entries(entries)
             continue
 
         if field in ("image_url", "ticket_url"):

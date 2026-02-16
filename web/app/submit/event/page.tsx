@@ -66,6 +66,9 @@ export default function SubmitEventPage() {
   const [editStatus, setEditStatus] = useState<string | null>(null);
   const [editRejectionReason, setEditRejectionReason] = useState<string | null>(null);
   const [editLoading, setEditLoading] = useState(false);
+  const [scanningPoster, setScanningPoster] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const [posterScanned, setPosterScanned] = useState(false);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -362,7 +365,56 @@ export default function SubmitEventPage() {
     setEditSubmissionId(null);
     setEditStatus(null);
     setEditRejectionReason(null);
+    setScanError(null);
+    setScanningPoster(false);
+    setPosterScanned(false);
     setStep("details");
+  };
+
+  const handlePosterScan = async (uploadedUrl: string) => {
+    setImageUrl(uploadedUrl);
+    setScanError(null);
+    setScanningPoster(true);
+
+    try {
+      const res = await fetch("/api/extract/event-from-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image_url: uploadedUrl }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (res.status === 422) {
+          setScanError("This doesn't appear to be an event poster. You can still fill in the form manually.");
+          return;
+        }
+        throw new Error(data.error || "Extraction failed");
+      }
+
+      const ext = data.extracted;
+      if (ext.title) setTitle(ext.title);
+      if (ext.start_date) setStartDate(ext.start_date);
+      if (ext.start_time) setStartTime(ext.start_time);
+      if (ext.category) setCategory(ext.category);
+      if (ext.description) setDescription(ext.description);
+      if (ext.is_free) setIsFree(ext.is_free);
+      if (ext.price_note) setPriceNote(ext.price_note);
+
+      // If venue name was extracted, pre-fill new venue fields
+      if (ext.venue_name) {
+        setVenueMode("new");
+        setVenueName(ext.venue_name);
+        if (ext.venue_address) setVenueAddress(ext.venue_address);
+      }
+
+      setPosterScanned(true);
+    } catch (err) {
+      setScanError(err instanceof Error ? err.message : "Failed to read poster");
+    } finally {
+      setScanningPoster(false);
+    }
   };
 
   const venueSummary = venueMode === "existing"
@@ -606,6 +658,52 @@ export default function SubmitEventPage() {
           </div>
         ) : (
           <form onSubmit={handleReview} className="space-y-6">
+            {/* Poster scan shortcut */}
+            {!posterScanned && (
+              <div className="p-5 rounded-xl bg-[var(--dusk)] border border-[var(--twilight)]">
+                <div className="flex items-center gap-3 mb-3">
+                  <svg className="w-6 h-6 text-[var(--coral)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <div>
+                    <p className="text-[var(--cream)] font-medium text-sm">Have a poster or flyer?</p>
+                    <p className="text-[var(--muted)] font-mono text-xs">Upload it and we&apos;ll fill in the details automatically.</p>
+                  </div>
+                </div>
+
+                {scanningPoster ? (
+                  <div className="flex items-center gap-3 py-4 justify-center">
+                    <div className="w-5 h-5 border-2 border-[var(--coral)] border-t-transparent rounded-full animate-spin" />
+                    <span className="text-[var(--soft)] font-mono text-sm">Reading poster...</span>
+                  </div>
+                ) : (
+                  <ImageUploader
+                    value={null}
+                    onChange={(url) => {
+                      if (url) handlePosterScan(url);
+                    }}
+                    placeholder="Drop a poster here, or click to upload"
+                  />
+                )}
+
+                {scanError && (
+                  <p className="mt-3 text-orange-300 font-mono text-xs">{scanError}</p>
+                )}
+              </div>
+            )}
+
+            {posterScanned && (
+              <div className="p-4 rounded-lg bg-[var(--neon-green)]/10 border border-[var(--neon-green)]/30">
+                <div className="flex items-center gap-2">
+                  <svg className="w-5 h-5 text-[var(--neon-green)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <p className="text-[var(--cream)] font-mono text-sm">Poster scanned — review the details below and edit anything that needs fixing.</p>
+                </div>
+              </div>
+            )}
+
             <div className="grid gap-4">
               <div className="p-4 rounded-lg bg-[var(--void)]/60 border border-[var(--twilight)]">
                 <div className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider">

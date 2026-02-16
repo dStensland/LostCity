@@ -116,7 +116,7 @@ def determine_category(event_type: str, title: str, description: str = "") -> tu
 
     # Contemporary Talks
     if "contemporary talks" in event_type_lower or "artist talk" in title_lower:
-        return "art", "talk", tags + ["talk", "artist-talk"]
+        return "museums", "talk", tags + ["talk", "artist-talk"]
 
     # Contemporary Kids
     if "contemporary kids" in event_type_lower or "kids" in event_type_lower:
@@ -125,20 +125,20 @@ def determine_category(event_type: str, title: str, description: str = "") -> tu
     # Special Events - openings, receptions
     if "special event" in event_type_lower or "opening" in combined:
         if "opening" in combined or "reception" in combined:
-            return "art", "opening", tags + ["opening", "reception"]
-        return "art", "event", tags + ["special-event"]
+            return "museums", "opening", tags + ["opening", "reception"]
+        return "museums", "event", tags + ["special-event"]
 
     # Open Studios
     if "open studios" in event_type_lower or "open studio" in title_lower:
-        return "art", "studio", tags + ["open-studios", "studio-visit"]
+        return "museums", "studio", tags + ["open-studios", "studio-visit"]
 
     # Workshops
     if "workshop" in combined or "class" in combined:
-        return "art", "workshop", tags + ["workshop", "class"]
+        return "museums", "workshop", tags + ["workshop", "class"]
 
     # Member Programs
     if "member" in event_type_lower:
-        return "art", "member", tags + ["member-exclusive"]
+        return "museums", "member", tags + ["member-exclusive"]
 
     # Film screenings
     if any(w in combined for w in ["film", "screening", "movie"]):
@@ -150,10 +150,10 @@ def determine_category(event_type: str, title: str, description: str = "") -> tu
 
     # Exhibitions
     if any(w in combined for w in ["exhibition", "exhibit", "gallery", "show"]):
-        return "art", "exhibition", tags + ["exhibition"]
+        return "museums", "exhibition", tags + ["exhibition"]
 
-    # Default to art
-    return "art", None, tags
+    # Default to museums
+    return "museums", None, tags
 
 
 def crawl(source: dict) -> tuple[int, int, int]:

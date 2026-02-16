@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { errorResponse, checkBodySize } from "@/lib/api-utils";
+import { resolvePortalId } from "@/lib/portal-resolution";
 import { logger } from "@/lib/logger";
 
 type ActionType = "view" | "save" | "share" | "rsvp_going" | "rsvp_interested" | "went";
@@ -84,6 +85,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Resolve portal context for attribution
+    const portalId = await resolvePortalId(request);
+
     const weight = ACTION_WEIGHTS[action];
     const signals: { type: string; value: string }[] = [];
 
@@ -149,6 +153,7 @@ export async function POST(request: NextRequest) {
               signal_value: signal.value,
               score: weight,
               interaction_count: 1,
+              ...(portalId ? { portal_id: portalId } : {}),
             } as never);
 
             if (insertError) {

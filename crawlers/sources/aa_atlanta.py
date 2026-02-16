@@ -149,7 +149,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         response = requests.get(
             MEETINGS_JSON_URL,
             headers={"User-Agent": "Mozilla/5.0 (compatible; LostCity/1.0)"},
-            timeout=30
+            timeout=15
         )
         response.raise_for_status()
 

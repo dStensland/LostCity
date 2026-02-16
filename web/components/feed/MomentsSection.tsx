@@ -7,24 +7,31 @@ import type { MomentsResponse } from "@/lib/moments-utils";
 
 interface MomentsSectionProps {
   portalSlug: string;
+  /** Pre-fetched moments data — skips internal fetch when provided. */
+  prefetchedData?: MomentsResponse | null;
 }
 
-export default function MomentsSection({ portalSlug }: MomentsSectionProps) {
-  const [data, setData] = useState<MomentsResponse | null>(null);
+export default function MomentsSection({ portalSlug, prefetchedData }: MomentsSectionProps) {
+  const [fetchedData, setFetchedData] = useState<MomentsResponse | null>(null);
 
+  const hasPrefetched = prefetchedData !== undefined;
   useEffect(() => {
+    if (hasPrefetched) return;
+
     async function fetchMoments() {
       try {
         const res = await fetch(`/api/moments?portal=${portalSlug}`);
         if (res.ok) {
-          setData(await res.json());
+          setFetchedData(await res.json());
         }
       } catch (error) {
         console.error("Failed to fetch moments:", error);
       }
     }
     fetchMoments();
-  }, [portalSlug]);
+  }, [portalSlug, hasPrefetched]);
+
+  const data = hasPrefetched ? (prefetchedData ?? null) : fetchedData;
 
   if (!data) return null;
 

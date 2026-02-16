@@ -108,6 +108,27 @@ const nextConfig: NextConfig = {
         destination: "/emory-demo/:path*",
         permanent: false,
       },
+      // FORTH hotel: old route-based nav → pillar-based concierge
+      {
+        source: "/:portal/stay",
+        destination: "/:portal?pillar=services",
+        permanent: true,
+      },
+      {
+        source: "/:portal/dining",
+        destination: "/:portal?pillar=services",
+        permanent: true,
+      },
+      {
+        source: "/:portal/plan",
+        destination: "/:portal?pillar=planner",
+        permanent: true,
+      },
+      {
+        source: "/:portal/club",
+        destination: "/:portal",
+        permanent: true,
+      },
     ];
   },
   async headers() {

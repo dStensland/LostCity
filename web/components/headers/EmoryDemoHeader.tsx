@@ -1,14 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { useEffect } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { hospitalBodyFont } from "@/lib/hospital-art";
+import { DEFAULT_HOSPITAL_MODE } from "@/lib/hospital-modes";
+import LanguageSelector from "@/components/LanguageSelector";
 
 type EmoryDemoHeaderProps = {
   portalSlug: string;
 };
 
-type NavKey = "hospital_hub" | "hospitals" | "concierge" | "community_hub" | "programs";
+type NavKey = "hospital_hub" | "concierge" | "community_hub";
 
 type NavItem = {
   key: NavKey;
@@ -19,59 +22,12 @@ type NavItem = {
 const SEARCH_KEYS_TO_CLEAR = ["event", "spot", "series", "festival", "org"] as const;
 const DEFAULT_EMORY_CONCIERGE_HOSPITAL = "emory-university-hospital";
 
-function getBaseQuery(searchParams: URLSearchParams): URLSearchParams {
-  const params = new URLSearchParams(searchParams.toString());
-  SEARCH_KEYS_TO_CLEAR.forEach((key) => params.delete(key));
-  return params;
-}
-
-function buildPortalHref(portalSlug: string, currentParams: URLSearchParams, view: "feed" | "community"): string {
-  const params = getBaseQuery(currentParams);
-
-  if (view === "feed") {
-    params.delete("view");
-    params.delete("type");
-    params.delete("display");
-    params.delete("tab");
-  } else {
-    params.set("view", "community");
-    params.delete("type");
-    params.delete("display");
-    params.set("tab", "groups");
-  }
-
-  const query = params.toString();
-  return query ? `/${portalSlug}?${query}` : `/${portalSlug}`;
-}
-
-function buildHospitalsHref(portalSlug: string, currentParams: URLSearchParams, modeOverride?: string): string {
-  const params = getBaseQuery(currentParams);
-  params.delete("view");
-  params.delete("tab");
-  params.delete("type");
-  params.delete("display");
-  if (modeOverride) params.set("mode", modeOverride);
-  const query = params.toString();
-  return query ? `/${portalSlug}/hospitals?${query}` : `/${portalSlug}/hospitals`;
-}
-
-function buildConciergeHref(portalSlug: string, currentParams: URLSearchParams): string {
-  const params = getBaseQuery(currentParams);
-  params.delete("view");
-  params.delete("tab");
-  params.delete("type");
-  params.delete("display");
-  params.set("mode", "visitor");
-  const query = params.toString();
-  return query
-    ? `/${portalSlug}/hospitals/${DEFAULT_EMORY_CONCIERGE_HOSPITAL}?${query}`
-    : `/${portalSlug}/hospitals/${DEFAULT_EMORY_CONCIERGE_HOSPITAL}`;
+function buildConciergeHref(portalSlug: string): string {
+  return `/${portalSlug}/hospitals/${DEFAULT_EMORY_CONCIERGE_HOSPITAL}`;
 }
 
 function getActiveNav(pathname: string, searchParams: URLSearchParams, portalSlug: string): NavKey {
-  if (pathname.startsWith(`/${portalSlug}/programs`)) return "programs";
-  if (pathname.startsWith(`/${portalSlug}/hospitals/`)) return "concierge";
-  if (pathname === `/${portalSlug}/hospitals` || pathname.startsWith(`/${portalSlug}/hospitals?`)) return "hospitals";
+  if (pathname.startsWith(`/${portalSlug}/hospitals`)) return "concierge";
 
   const view = searchParams.get("view");
   if (view === "community") return "community_hub";
@@ -84,25 +40,50 @@ function navClass(active: boolean): string {
 }
 
 export default function EmoryDemoHeader({ portalSlug }: EmoryDemoHeaderProps) {
+  const router = useRouter();
   const pathname = usePathname() || "";
   const searchParams = useSearchParams();
-  const queryParams = new URLSearchParams(searchParams?.toString() || "");
+  const queryString = searchParams?.toString() || "";
+  const queryParams = new URLSearchParams(queryString);
 
-  const hospitalHubHref = buildPortalHref(portalSlug, queryParams, "feed");
-  const communityHref = buildPortalHref(portalSlug, queryParams, "community");
-  const hospitalsHref = buildHospitalsHref(portalSlug, queryParams);
-  const conciergeHref = buildConciergeHref(portalSlug, queryParams);
-  const programsHref = `/${portalSlug}/programs`;
+  const hospitalHubHref = `/${portalSlug}`;
+  const communityHref = `/${portalSlug}?view=community`;
+  const hospitalsHref = `/${portalSlug}/hospitals`;
+  const conciergeHref = buildConciergeHref(portalSlug);
 
   const activeNav = getActiveNav(pathname, queryParams, portalSlug);
 
   const navItems: NavItem[] = [
     { key: "hospital_hub", label: "Hospital Hub", href: hospitalHubHref },
-    { key: "hospitals", label: "Hospitals", href: hospitalsHref },
     { key: "concierge", label: "Concierge", href: conciergeHref },
     { key: "community_hub", label: "Community Hub", href: communityHref },
-    { key: "programs", label: "Programs", href: programsHref },
   ];
+
+  const params = new URLSearchParams(queryParams.toString());
+  const isPortalRoot = pathname === `/${portalSlug}`;
+  const isCommunityView = isPortalRoot && params.get("view") === "community";
+
+  SEARCH_KEYS_TO_CLEAR.forEach((key) => params.delete(key));
+
+  if (params.get("mode") === DEFAULT_HOSPITAL_MODE) params.delete("mode");
+
+  if (!isCommunityView) {
+    params.delete("view");
+    params.delete("tab");
+    params.delete("support");
+    for (const key of Array.from(params.keys())) {
+      if (key.startsWith("community_hub_")) params.delete(key);
+    }
+  } else if (params.get("tab") === "groups") {
+    params.delete("tab");
+  }
+  const cleanedQuery = params.toString();
+
+  useEffect(() => {
+    const currentQuery = queryString;
+    if (cleanedQuery === currentQuery) return;
+    router.replace(cleanedQuery ? `${pathname}?${cleanedQuery}` : pathname, { scroll: false });
+  }, [cleanedQuery, pathname, queryString, router]);
 
   return (
     <header className="sticky top-0 z-[130] bg-[#f8f8f8]/95 backdrop-blur supports-[backdrop-filter]:bg-[#f8f8f8]/85">
@@ -131,24 +112,13 @@ export default function EmoryDemoHeader({ portalSlug }: EmoryDemoHeaderProps) {
             })}
           </nav>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2">
+            <LanguageSelector onLocaleChange={() => window.location.reload()} />
             <Link
               href={hospitalsHref}
-              className="hidden sm:inline-flex items-center rounded-md border border-[#111111] bg-[#111111] px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-[#1f1f1f]"
+              className="inline-flex items-center rounded-md border border-[#002f6c] bg-[#002f6c] px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-[#003d8f]"
             >
-              Find Care
-            </Link>
-            <Link
-              href={conciergeHref}
-              className="hidden sm:inline-flex items-center rounded-md border border-[#111111] bg-[#111111] px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-[#1f1f1f]"
-            >
-              My Concierge
-            </Link>
-            <Link
-              href={hospitalsHref}
-              className="inline-flex items-center rounded-md border border-[#111111] bg-[#111111] px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-[#1f1f1f]"
-            >
-              Directions
+              All Hospitals
             </Link>
           </div>
         </div>

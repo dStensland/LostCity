@@ -33,6 +33,12 @@ export type VenueEvent = {
   going_count?: number;
   interested_count?: number;
   recommendation_count?: number;
+  lineup?: string | null;
+  artists?: {
+    name: string;
+    billing_order?: number | null;
+    is_headliner?: boolean;
+  }[];
 };
 
 interface VenueEventsByDayProps {
@@ -45,6 +51,42 @@ interface VenueEventsByDayProps {
   compact?: boolean; // Smaller variant for detail pages (default: false)
   previewLimit?: number; // Limit visible events per date (default: 5)
 }
+
+const normalizeLabel = (value: string | null | undefined) =>
+  (value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const buildLineupSummary = (event: VenueEvent) => {
+  const artists = event.artists || [];
+  if (artists.length > 0) {
+    const sorted = [...artists].sort((a, b) => {
+      const aOrder = a.billing_order ?? 999;
+      const bOrder = b.billing_order ?? 999;
+      return aOrder - bOrder;
+    });
+    const headliner =
+      sorted.find((artist) => artist.is_headliner)?.name || sorted[0]?.name;
+    const supports = sorted
+      .map((artist) => artist.name)
+      .filter((name) => name && name !== headliner);
+
+    if (supports.length > 0) {
+      return `with ${supports.join(", ")}`;
+    }
+
+    if (headliner && normalizeLabel(headliner) !== normalizeLabel(event.title)) {
+      return headliner;
+    }
+  }
+
+  const lineup = event.lineup?.trim();
+  if (!lineup) return null;
+  if (normalizeLabel(lineup) === normalizeLabel(event.title)) return null;
+  return lineup;
+};
 
 export default function VenueEventsByDay({
   events,
@@ -353,6 +395,7 @@ export function VenueEventCard({
   const interestedCount = event.interested_count ?? 0;
   const recommendationCount = event.recommendation_count ?? 0;
   const hasSocialProof = goingCount > 0 || interestedCount > 0 || recommendationCount > 0;
+  const lineupSummary = buildLineupSummary(event);
 
   const cardContent = (
     <div className="flex items-start justify-between gap-3">
@@ -366,16 +409,21 @@ export function VenueEventCard({
             </span>
           )}
           <h3
-            className={`text-[var(--cream)] font-medium truncate group-hover:text-[var(--coral)] transition-colors ${
-              compact ? "text-sm" : ""
-            }`}
+            className={`text-[var(--cream)] font-medium group-hover:text-[var(--coral)] transition-colors ${
+              compact ? "text-sm leading-tight line-clamp-2" : "truncate"
+            } [text-shadow:0_1px_6px_rgba(0,0,0,0.4)]`}
           >
             {event.title}
           </h3>
         </div>
+        {lineupSummary && (
+          <p className="mt-1 text-[0.72rem] sm:text-xs text-[var(--cream)]/80 truncate">
+            {lineupSummary}
+          </p>
+        )}
         <div
           className={`flex items-center gap-2 mt-1 text-[var(--muted)] ${
-            compact ? "text-xs" : "text-sm"
+            compact ? "text-[0.72rem]" : "text-sm"
           }`}
         >
           {event.start_time && (
@@ -474,13 +522,13 @@ export function VenueEventCard({
     </div>
   );
 
-  const cardClassName = `block w-full text-left find-row-card border border-[var(--twilight)]/75 ${reflectionClass} overflow-hidden group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)] ${
+  const cardClassName = `block w-full text-left find-row-card border border-[var(--twilight)]/75 ${reflectionClass} overflow-hidden group supports-[backdrop-filter]:backdrop-blur-[8px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)] ${
     compact ? "rounded-xl px-3 py-2.5" : "rounded-2xl p-3.5 sm:p-4"
   } ${accentClass?.className ?? ""} ${event.category ? "border-l-[2px] border-l-[var(--accent-color)]" : ""}`;
 
   const cardStyle = {
     background:
-      "linear-gradient(180deg, color-mix(in srgb, var(--night) 84%, transparent), color-mix(in srgb, var(--dusk) 72%, transparent))",
+      "linear-gradient(180deg, color-mix(in srgb, var(--night) 82%, transparent), color-mix(in srgb, var(--dusk) 64%, transparent))",
   } as const;
 
   if (href) {

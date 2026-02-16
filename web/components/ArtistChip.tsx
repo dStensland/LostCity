@@ -11,6 +11,25 @@ interface ArtistChipProps {
   artist: EventArtist;
   portalSlug: string;
   variant?: "card" | "inline";
+  fallbackImageUrl?: string | null;
+  fallbackGenres?: string[] | null;
+}
+
+function formatRoleLabel(role: string | null | undefined, isHeadliner: boolean): string | null {
+  if (isHeadliner) return "Headliner";
+  if (!role) return null;
+
+  const normalized = role.toLowerCase().trim();
+  if (!normalized) return null;
+
+  if (normalized.includes("support")) return "Support";
+  if (normalized.includes("opener") || normalized.includes("opening")) return "Opener";
+
+  return role
+    .split(/[_\s]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }
 
 /** Get initials from a display name (up to 2 chars) */
@@ -64,17 +83,27 @@ function InitialsFallback({ name, discipline, size = "sm" }: { name: string; dis
   );
 }
 
-export default function ArtistChip({ artist, portalSlug, variant = "card" }: ArtistChipProps) {
+export default function ArtistChip({
+  artist,
+  portalSlug,
+  variant = "card",
+  fallbackImageUrl = null,
+  fallbackGenres = null,
+}: ArtistChipProps) {
   const linkedArtist = artist.artist;
   const displayName = linkedArtist?.name || artist.name;
-  const imageUrl = linkedArtist?.image_url || null;
+  const imageUrl = linkedArtist?.image_url || fallbackImageUrl || null;
   const discipline = linkedArtist?.discipline || "musician";
-  const genres = linkedArtist?.genres || [];
+  const genres = (linkedArtist?.genres && linkedArtist.genres.length > 0)
+    ? linkedArtist.genres
+    : (fallbackGenres || []);
+  const hometown = linkedArtist?.hometown || null;
   const slug = linkedArtist?.slug;
   const accentColor = getDisciplineColor(discipline);
   const accentClass = createCssVarClass("--accent-color", accentColor, "artist");
 
   const isHeadliner = artist.is_headliner || artist.billing_order === 1;
+  const roleLabel = formatRoleLabel(artist.role, isHeadliner);
 
   if (variant === "inline") {
     const content = (
@@ -97,8 +126,10 @@ export default function ArtistChip({ artist, portalSlug, variant = "card" }: Art
           <span className="text-sm font-medium text-[var(--cream)] truncate block">
             {displayName}
           </span>
-          {artist.role && (
-            <span className="text-xs text-[var(--muted)] capitalize">{artist.role}</span>
+          {roleLabel && (
+            <span className="text-xs text-[var(--muted)] uppercase tracking-wide font-mono">
+              {roleLabel}
+            </span>
           )}
         </div>
       </div>
@@ -149,6 +180,14 @@ export default function ArtistChip({ artist, portalSlug, variant = "card" }: Art
       >
         {displayName}
       </span>
+
+      {(roleLabel || hometown) && (
+        <div className="text-[0.58rem] uppercase tracking-widest text-[var(--muted)] font-mono leading-tight">
+          {roleLabel}
+          {roleLabel && hometown ? " · " : ""}
+          {hometown}
+        </div>
+      )}
 
       {/* Genre chips */}
       {genres.length > 0 && (

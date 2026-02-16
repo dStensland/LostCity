@@ -41,7 +41,17 @@ type TonightEvent = {
   venue: {
     name: string;
     neighborhood: string | null;
+    image_url?: string | null;
+    city?: string | null;
   } | null;
+  event_artists?: {
+    artist_id: string | null;
+    is_headliner: boolean | null;
+    billing_order: number | null;
+    artist: {
+      image_url: string | null;
+    } | null;
+  }[] | null;
 };
 
 type ScoredEvent = TonightEvent & {
@@ -51,13 +61,13 @@ type ScoredEvent = TonightEvent & {
 
 // Period-specific configuration
 const PERIOD_CONFIG: Record<HighlightsPeriod, { limit: number; candidateLimit: number; cacheSMaxAge: number; cacheStaleWhileRevalidate: number }> = {
-  today: { limit: 10, candidateLimit: 120, cacheSMaxAge: 300, cacheStaleWhileRevalidate: 600 },
-  week: { limit: 12, candidateLimit: 250, cacheSMaxAge: 900, cacheStaleWhileRevalidate: 1800 },
-  month: { limit: 16, candidateLimit: 400, cacheSMaxAge: 1800, cacheStaleWhileRevalidate: 3600 },
+  today: { limit: 12, candidateLimit: 200, cacheSMaxAge: 300, cacheStaleWhileRevalidate: 600 },
+  week: { limit: 16, candidateLimit: 600, cacheSMaxAge: 900, cacheStaleWhileRevalidate: 1800 },
+  month: { limit: 20, candidateLimit: 1000, cacheSMaxAge: 1800, cacheStaleWhileRevalidate: 3600 },
 };
 
 // Categories that appeal to young hip crowd
-const HIP_CATEGORIES = ["music", "comedy", "nightlife", "art", "film", "theater"];
+const HIP_CATEGORIES = ["music", "comedy", "nightlife", "art", "film", "theater", "sports"];
 const GENERIC_CATEGORIES = ["family", "fitness", "classes"];
 
 // Venue name patterns that indicate hip/cool venues
@@ -78,10 +88,14 @@ const HIP_VENUE_PATTERNS = [
   // Nightlife & bars
   /\b(mary'?s|sister louisa|joystick|mother|church|octopus)\b/i,
   /\b(tongue.groove|opera|ravine|compound|believe music)\b/i,
+  // Arenas & stadiums (major concerts, sporting events)
+  /\b(state farm arena|mercedes.benz stadium|gas south|cadence bank|lakewood)\b/i,
   // Breweries
   /\b(monday night|three taverns|orpheus|sweetwater|wild heaven)\b/i,
   // Shops & bookstores
-  /\b(criminal records|wax n facts)\b/i,
+  /\b(criminal records|wax n facts|a cappella books)\b/i,
+  // Special venues
+  /\b(atlanta botanical|oakland cemetery|fernbank|krog street market|ponce city)\b/i,
 ];
 
 // Venue patterns to deprioritize (generic/chain/kids)
@@ -115,11 +129,18 @@ function calculateQualityScore(
   rsvpCounts: Map<number, { going: number; interested: number }>,
   venueRecCounts: Map<number, number>,
   currentHour: number,
-  period: HighlightsPeriod
+  period: HighlightsPeriod,
+  curatedEventIds?: Set<number>
 ): number {
   let score = 0;
   const venueName = event.venue?.name || "";
   const cat = event.category || "other";
+
+  // Editor-curated boost: if this event was hand-picked but curated set was too
+  // small to return standalone, give it a strong scoring advantage
+  if (curatedEventIds?.has(event.id)) {
+    score += 25;
+  }
 
   // === VENUE QUALITY (biggest factor) ===
 
@@ -139,6 +160,20 @@ function calculateQualityScore(
   const isChainCinema = CHAIN_CINEMA_PATTERNS.some(p => p.test(venueName));
   if (cat === "film" && isChainCinema) {
     score -= 200; // effectively removed
+  }
+
+  // Hard-exclude corporate upsells, VIP suite packages, sponsored add-ons.
+  // These are premium ticket add-ons, not real events people discover.
+  const title = event.title || "";
+  if (/\b(delta sky\s?360|sky360|suite (add-on|pass|f\/b)|premium (seating|tasting)|red carpet experience|private suite|hawks suite)\b/i.test(title)) {
+    score -= 200;
+  }
+  // "- Suites" or "- Suite" suffix = corporate suite listing (e.g. "Gladiators vs Orlando - Suites")
+  if (/\s-\s+suites?\s*$/i.test(title)) {
+    score -= 200;
+  }
+  if (/\b(co-?sponsored|sponsored by)\b/i.test(title)) {
+    score -= 50;
   }
 
   // Venue has user recommendations (+3 per rec, cap at 15)
@@ -173,9 +208,11 @@ function calculateQualityScore(
 
   // === CONTENT QUALITY ===
 
-  // Has image (+5)
+  // Has image — strong bonus since highlights are visual-first
   if (event.image_url) {
-    score += 5;
+    score += 8;
+  } else {
+    score -= 5; // Penalty for no image — pushed down in ranking, only fills remaining slots
   }
 
   // Has substantial description (+3)
@@ -184,7 +221,6 @@ function calculateQualityScore(
   }
 
   // Penalize ALL_CAPS titles (often low-quality data)
-  const title = event.title || "";
   if (title.length > 5 && title === title.toUpperCase()) {
     score -= 8;
   }
@@ -192,6 +228,11 @@ function calculateQualityScore(
   // Penalize very short or generic titles
   if (title.length <= 5) {
     score -= 10;
+  }
+
+  // Penalize truncated/stub titles (e.g. "Swarm vs.", "TBA -", "Artist:")
+  if (/\b(vs\.?|feat\.?|with|at|the|-|:)\s*$/i.test(title.trim())) {
+    score -= 50;
   }
 
   // Hard penalty for canceled events
@@ -206,8 +247,71 @@ function calculateQualityScore(
   }
 
   // Boost events with hip keywords
-  if (/\b(tour|live|dj|party|21\+|18\+|drag|burlesque|improv|open mic|showcase)\b/i.test(title)) {
+  if (/\b(tour|live|dj|party|21\+|18\+|drag|burlesque|improv|open mic|showcase|headliner|sold out)\b/i.test(title)) {
     score += 5;
+  }
+
+  // Extra boost for touring acts / concerts (often highest quality events)
+  if ((cat === "music" || cat === "comedy") && /\b(tour|presents|live at|feat\.?|w\/|with special guest)\b/i.test(title)) {
+    score += 5;
+  }
+
+  // Marquee events: touring acts at major venues are the crown jewels
+  const isMajorVenue = /\b(state farm|mercedes.benz|fox theatre|tabernacle|coca.cola roxy|the eastern|buckhead theatre|variety)\b/i.test(venueName);
+  if (isMajorVenue && /\b(tour|world tour|live)\b/i.test(title)) {
+    score += 15;
+  }
+
+  // === DISCOVERY BONUS ===
+  // The whole point: surface events you'd never find on your own.
+  // These are the "oddities festival" moments — unique, one-of-a-kind experiences.
+  const titleLower = title.toLowerCase();
+  const titleDesc = `${titleLower} ${(event.description || "").toLowerCase()}`;
+
+  // Immersive / experiential / one-of-a-kind (+12)
+  if (/\b(immersive|experiential|pop-?up|speakeasy|secret|underground)\b/i.test(titleDesc)) {
+    score += 12;
+  }
+
+  // Performance spectacle: burlesque, cabaret, variety, circus, drag show (+10)
+  if (/\b(burlesque|cabaret|variety show|vaudeville|circus|aerial|sideshow|fire.?dance|fire.?show)\b/i.test(titleDesc)) {
+    score += 10;
+  }
+
+  // Festivals, fairs, and special gatherings (+10)
+  if (/\b(festival|fest\b|block party|night market|flea market|art market|bazaar|craft fair|expo)\b/i.test(titleLower) &&
+      !/\bfilm fest/i.test(titleLower)) { // Separate boost for film fests below
+    score += 10;
+  }
+
+  // Oddball / counterculture / niche (+8)
+  if (/\b(oddities|bizarre|weird|occult|tarot|paranormal|ghost|séance|fortune|mystic|witchy)\b/i.test(titleDesc)) {
+    score += 8;
+  }
+
+  // Unique experiences: silent disco, murder mystery, scavenger hunt, etc (+8)
+  if (/\b(silent disco|murder mystery|escape room|scavenger hunt|supper club|listening party|glow hike|moonlight|stargazing)\b/i.test(titleDesc)) {
+    score += 8;
+  }
+
+  // Craft / maker culture (+6)
+  if (/\b(blacksmith|glass.?blow|letterpress|taxidermy|foraging|ferment|zine|comic con|cosplay)\b/i.test(titleDesc)) {
+    score += 6;
+  }
+
+  // Drag + themed events at bars/venues (+6, stacks with hip keywords above)
+  if (/\b(drag (brunch|bingo|show|race|queen)|themed night|costume|masquerade ball)\b/i.test(titleDesc)) {
+    score += 6;
+  }
+
+  // Film premieres / special screenings (not regular showtimes) (+5)
+  if (/\b(premiere|film fest|special screening|documentary|cast (meet|q&a))\b/i.test(titleDesc)) {
+    score += 5;
+  }
+
+  // Penalize academic/institutional screenings — fine events but not "discovery"
+  if (cat === "film" && /\b(cinematheque|film (series|club)|screening series)\b/i.test(titleLower)) {
+    score -= 5;
   }
 
   // Boost community events that feel special/unique (not boring admin stuff)
@@ -254,17 +358,58 @@ function calculateQualityScore(
     score -= 15;
   }
 
-  // === TIME RELEVANCE (reduced weight for week/month) ===
+  // === TIME RELEVANCE (stronger time-of-day awareness) ===
   const timeWeight = period === "today" ? 1.0 : period === "week" ? 0.3 : 0.1;
 
-  const isEvening = currentHour >= 17 || currentHour < 4;
-
-  // Evening events at night get boost
-  if (isEvening && event.start_time) {
+  if (event.start_time && event.start_time !== "00:00:00") {
     const eventHour = parseInt(event.start_time.split(":")[0]);
-    if (eventHour >= 19 || eventHour < 4) {
-      score += 5 * timeWeight; // Late night events
+
+    if (currentHour < 12) {
+      // Morning user: boost morning/afternoon events
+      if (eventHour >= 6 && eventHour < 17) score += 8 * timeWeight;
+    } else if (currentHour < 17) {
+      // Afternoon user: boost afternoon/evening events
+      if (eventHour >= 12 && eventHour < 22) score += 8 * timeWeight;
+    } else {
+      // Evening user: boost evening/late night, penalize already-passed morning
+      if (eventHour >= 17 || eventHour < 4) score += 10 * timeWeight;
+      const todayStr = new Date().toISOString().split("T")[0];
+      if (event.start_date === todayStr && eventHour < 14) score -= 10 * timeWeight;
     }
+  }
+
+  // === FRESHNESS SIGNAL ===
+  // Deprioritize weekly recurring — prefer one-off specials and discovery events.
+  // Weekly open mics and recurring shows are fine but shouldn't crowd out unique stuff.
+  if (event.series?.frequency === "weekly") {
+    score -= 4;
+    // Extra penalty for very generic recurring titles
+    if (/\b(open mic|trivia night|karaoke night|bingo night|jazz jam)\b/i.test(titleLower)) {
+      score -= 6;
+    }
+  }
+  // Boost one-time events (no series — likely special/unique)
+  if (!event.series_id) {
+    score += 5;
+  }
+
+  // === WEEKEND PREMIUM ===
+  {
+    const eventDate = new Date(event.start_date + "T12:00:00");
+    const dayOfWeek = eventDate.getDay(); // 0=Sun, 5=Fri, 6=Sat
+    const isWeekendEvening = (dayOfWeek === 5 || dayOfWeek === 6) && event.start_time && parseInt(event.start_time.split(":")[0]) >= 18;
+    if (isWeekendEvening) {
+      score += 5;
+      // Music and comedy are the stars of weekend nights
+      if (cat === "music" || cat === "comedy" || cat === "nightlife") {
+        score += 8;
+      }
+    }
+  }
+
+  // === FREE EVENT SIGNAL ===
+  if (event.is_free) {
+    score += 3;
   }
 
   // Penalty for no venue (sketchy)
@@ -277,39 +422,41 @@ function calculateQualityScore(
     score -= 8;
   }
 
+  // For month view: meaningful boost for events in weeks 2-4 to spread beyond
+  // the first week (which already appears in the "This Week" tab).
+  // Without this, nearby events always outscore future marquee events.
+  if (period === "month") {
+    const daysOut = Math.floor((new Date(event.start_date).getTime() - new Date().getTime()) / 86400000);
+    if (daysOut >= 7 && daysOut < 21) {
+      score += 8; // Sweet spot: not too far, not already in "This Week"
+    } else if (daysOut >= 21) {
+      score += 5; // Still good, just further out
+    }
+  }
+
   return score;
 }
 
 /** Calculate date range and curated_picks lookup date for a given period */
-function getDateRange(period: HighlightsPeriod, now: Date): { dates: string[]; curatedDate: string } {
+function getDateRange(period: HighlightsPeriod, now: Date): { startDate: string; endDate: string; curatedDate: string } {
   const today = format(startOfDay(now), "yyyy-MM-dd");
 
   if (period === "today") {
     // Today + 2-day fallback
-    const tomorrow = format(addDays(now, 1), "yyyy-MM-dd");
     const dayAfter = format(addDays(now, 2), "yyyy-MM-dd");
-    return { dates: [today, tomorrow, dayAfter], curatedDate: today };
+    return { startDate: today, endDate: dayAfter, curatedDate: today };
   }
 
   if (period === "week") {
-    // Next 7 days from today
-    const dates: string[] = [];
-    for (let i = 0; i < 7; i++) {
-      dates.push(format(addDays(now, i), "yyyy-MM-dd"));
-    }
-    // Curated picks for week use Monday of the current week
+    const endDate = format(addDays(now, 7), "yyyy-MM-dd");
     const monday = format(startOfWeek(now, { weekStartsOn: 1 }), "yyyy-MM-dd");
-    return { dates, curatedDate: monday };
+    return { startDate: today, endDate, curatedDate: monday };
   }
 
   // month: next 30 days
-  const dates: string[] = [];
-  for (let i = 0; i < 30; i++) {
-    dates.push(format(addDays(now, i), "yyyy-MM-dd"));
-  }
-  // Curated picks for month use 1st of the current month
+  const endDate = format(addDays(now, 30), "yyyy-MM-dd");
   const firstOfMonth = format(startOfMonth(now), "yyyy-MM-dd");
-  return { dates, curatedDate: firstOfMonth };
+  return { startDate: today, endDate, curatedDate: firstOfMonth };
 }
 
 const EVENT_SELECT = `
@@ -320,7 +467,8 @@ const EVENT_SELECT = `
     id, slug, title, series_type, image_url, frequency, day_of_week,
     festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
   ),
-  venue:venues(name, neighborhood)
+  venue:venues(name, neighborhood, image_url, city),
+  event_artists(artist_id, is_headliner, billing_order, artist:artists(image_url))
 `;
 
 export async function GET(request: NextRequest) {
@@ -338,7 +486,7 @@ export async function GET(request: NextRequest) {
     const now = new Date();
     const currentHour = now.getHours();
     const today = format(startOfDay(now), "yyyy-MM-dd");
-    const { dates, curatedDate } = getDateRange(period, now);
+    const { startDate, endDate, curatedDate } = getDateRange(period, now);
 
     const cacheHeaders = {
       "Cache-Control": `public, s-maxage=${config.cacheSMaxAge}, stale-while-revalidate=${config.cacheStaleWhileRevalidate}`,
@@ -373,39 +521,56 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ events: [], period }, { status: 500 });
     }
 
+    // Curated picks: only use if they provide at least 80% of the target limit.
+    // Otherwise fall through to the algorithm and boost curated events in scoring.
+    const curatedEventIds = new Set<number>();
     if (curatedPicks && curatedPicks.length > 0) {
       const curatedIds = (curatedPicks as { event_id: number; position: number }[]).map(p => p.event_id);
-      const { data: curatedEvents } = await supabase
-        .from("events")
-        .select(EVENT_SELECT)
-        .in("id", curatedIds);
 
-      if (curatedEvents && curatedEvents.length > 0) {
-        // Sort by curated position order
-        const orderMap = new Map(curatedIds.map((id, i) => [id, i]));
-        const sorted = (curatedEvents as unknown as TonightEvent[]).sort(
-          (a, b) => (orderMap.get(a.id) ?? 99) - (orderMap.get(b.id) ?? 99)
-        );
+      // Only return curated-only if they fill most of the target
+      if (curatedIds.length >= Math.floor(config.limit * 0.8)) {
+        const { data: curatedEvents } = await supabase
+          .from("events")
+          .select(EVENT_SELECT)
+          .in("id", curatedIds);
 
-        // Fetch RSVP counts for curated events
-        const cIds = sorted.map(e => e.id);
-        const { data: cRsvps } = await supabase
-          .from("event_rsvps")
-          .select("event_id, status")
-          .in("event_id", cIds)
-          .in("status", ["going", "interested"]);
+        if (curatedEvents && curatedEvents.length >= Math.floor(config.limit * 0.8)) {
+          // Filter to only future events (curated picks may include past events)
+          const validEvents = (curatedEvents as unknown as TonightEvent[]).filter(
+            e => e.start_date >= today
+          );
 
-        const cRsvpCounts = new Map<number, number>();
-        for (const r of (cRsvps || []) as { event_id: number; status: string }[]) {
-          cRsvpCounts.set(r.event_id, (cRsvpCounts.get(r.event_id) || 0) + 1);
+          if (validEvents.length >= Math.floor(config.limit * 0.8)) {
+            const orderMap = new Map(curatedIds.map((id, i) => [id, i]));
+            const sorted = validEvents.sort(
+              (a, b) => (orderMap.get(a.id) ?? 99) - (orderMap.get(b.id) ?? 99)
+            );
+
+            const cIds = sorted.map(e => e.id);
+            const { data: cRsvps } = await supabase
+              .from("event_rsvps")
+              .select("event_id, status")
+              .in("event_id", cIds)
+              .in("status", ["going", "interested"]);
+
+            const cRsvpCounts = new Map<number, number>();
+            for (const r of (cRsvps || []) as { event_id: number; status: string }[]) {
+              cRsvpCounts.set(r.event_id, (cRsvpCounts.get(r.event_id) || 0) + 1);
+            }
+
+            const result = sorted.map(({ description: _d, venue_id: _v, ...event }) => ({
+              ...event,
+              rsvp_count: (cRsvpCounts.get(event.id) || 0) > 0 ? cRsvpCounts.get(event.id) : undefined,
+            }));
+
+            return NextResponse.json({ events: result, period }, { headers: cacheHeaders });
+          }
         }
+      }
 
-        const result = sorted.map(({ description: _d, venue_id: _v, ...event }) => ({
-          ...event,
-          rsvp_count: (cRsvpCounts.get(event.id) || 0) > 0 ? cRsvpCounts.get(event.id) : undefined,
-        }));
-
-        return NextResponse.json({ events: result, period }, { headers: cacheHeaders });
+      // If curated picks didn't fill the target, use them as a scoring boost
+      for (const id of curatedIds) {
+        curatedEventIds.add(id);
       }
     }
 
@@ -414,40 +579,112 @@ export async function GET(request: NextRequest) {
     // 2. Small indie film sample (chain cinemas excluded entirely — only arthouse/indie)
     // Without this split, film showtimes (~60% of all events) flood the candidate pool.
     const baseFilters = (query: ReturnType<typeof supabase.from>) => query
-      .in("start_date", dates)
+      .gte("start_date", startDate)
+      .lte("start_date", endDate)
       .is("canonical_event_id", null)
-      .not("image_url", "is", null)
       .or("is_class.eq.false,is_class.is.null")
       .or("is_sensitive.eq.false,is_sensitive.is.null")
       .or(`portal_id.eq.${atlantaPortal.id},portal_id.is.null`);
 
-    const [nonFilmResult, filmResult] = await Promise.all([
-      baseFilters(supabase.from("events").select(EVENT_SELECT))
-        .neq("category", "film")
-        .order("start_date", { ascending: true })
-        .order("start_time", { ascending: true })
-        .limit(config.candidateLimit),
-      // Only fetch film events that AREN'T regular chain showtimes
-      // (special screenings at chains are fine, indie cinemas are great)
-      baseFilters(supabase.from("events").select(EVENT_SELECT))
-        .eq("category", "film")
-        .not("tags", "cs", "{showtime}")
-        .order("start_date", { ascending: true })
-        .order("start_time", { ascending: true })
-        .limit(20),
-    ]);
+    // For month: fetch candidates per-week-bucket to ensure temporal diversity.
+    // Without this, the 1000-row limit fills entirely with W0 events (1200+ exist)
+    // and W2+ events never enter the candidate pool.
+    // For today/week: single query is fine (7 days max, all fit in the limit).
+    let allEvents: TonightEvent[] = [];
 
-    if (nonFilmResult.error && filmResult.error) {
-      console.error("Failed to fetch tonight events:", nonFilmResult.error);
-      return NextResponse.json({ events: [], period }, {
-        headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120" }
-      });
+    if (period === "month") {
+      // Split 30-day range into weekly buckets, fetch top candidates from each
+      const PER_WEEK_LIMIT = Math.floor(config.candidateLimit / 5); // ~200 per week
+      const weekQueries: Promise<{ data: unknown[] | null }>[] = [];
+      for (let w = 0; w < 5; w++) {
+        const wStart = format(addDays(now, w * 7), "yyyy-MM-dd");
+        const wEnd = format(addDays(now, (w + 1) * 7 - 1), "yyyy-MM-dd");
+        weekQueries.push(
+          baseFilters(supabase.from("events").select(EVENT_SELECT))
+            .gte("start_date", wStart)
+            .lte("start_date", wEnd)
+            .neq("category", "film")
+            .not("image_url", "is", null)
+            .order("start_date", { ascending: true })
+            .order("start_time", { ascending: true })
+            .limit(PER_WEEK_LIMIT)
+        );
+      }
+      // Also fetch indie film sample
+      weekQueries.push(
+        baseFilters(supabase.from("events").select(EVENT_SELECT))
+          .eq("category", "film")
+          .not("image_url", "is", null)
+          .not("tags", "cs", "{showtime}")
+          .order("start_date", { ascending: true })
+          .order("start_time", { ascending: true })
+          .limit(50)
+      );
+
+      const weekResults = await Promise.all(weekQueries);
+      for (const result of weekResults) {
+        if (result.data) {
+          allEvents.push(...(result.data as unknown as TonightEvent[]));
+        }
+      }
+    } else {
+      // Today/week: single fetch is fine
+      const [nonFilmResult, filmResult] = await Promise.all([
+        baseFilters(supabase.from("events").select(EVENT_SELECT))
+          .neq("category", "film")
+          .not("image_url", "is", null)
+          .order("start_date", { ascending: true })
+          .order("start_time", { ascending: true })
+          .limit(config.candidateLimit),
+        // Only fetch film events that AREN'T regular chain showtimes
+        baseFilters(supabase.from("events").select(EVENT_SELECT))
+          .eq("category", "film")
+          .not("image_url", "is", null)
+          .not("tags", "cs", "{showtime}")
+          .order("start_date", { ascending: true })
+          .order("start_time", { ascending: true })
+          .limit(period === "today" ? 30 : 50),
+      ]);
+
+      if (nonFilmResult.error && filmResult.error) {
+        console.error("Failed to fetch tonight events:", nonFilmResult.error);
+        return NextResponse.json({ events: [], period }, {
+          headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120" }
+        });
+      }
+
+      allEvents = [
+        ...((nonFilmResult.data || []) as unknown as TonightEvent[]),
+        ...((filmResult.data || []) as unknown as TonightEvent[]),
+      ];
     }
 
-    const allEvents = [
-      ...((nonFilmResult.data || []) as unknown as TonightEvent[]),
-      ...((filmResult.data || []) as unknown as TonightEvent[]),
-    ];
+    // Pass B: For week/month, backfill with imageless events if the image pool is thin.
+    // This ensures we always have enough candidates to fill 16-20 slots.
+    if (period !== "today" && allEvents.length < config.candidateLimit) {
+      const imageEventIds = new Set(allEvents.map(e => e.id));
+      const backfillLimit = config.candidateLimit - allEvents.length;
+
+      const { data: backfillData } = await baseFilters(supabase.from("events").select(EVENT_SELECT))
+        .neq("category", "film")
+        .is("image_url", null)
+        .order("start_date", { ascending: true })
+        .order("start_time", { ascending: true })
+        .limit(backfillLimit);
+
+      if (backfillData) {
+        const backfillEvents = (backfillData as unknown as TonightEvent[]).filter(e => !imageEventIds.has(e.id));
+        allEvents = [...allEvents, ...backfillEvents];
+      }
+    }
+
+    // Filter out events from non-Atlanta cities (defense against portal_id IS NULL leakage)
+    const atlantaCities = new Set(["atlanta", "decatur", "marietta", "smyrna", "brookhaven", "sandy springs", "roswell", "alpharetta", "duluth", "kennesaw", "woodstock", "johns creek", "lawrenceville", "stone mountain", "east point", "college park", "avondale estates", "tucker", "doraville", "chamblee", "dunwoody", "peachtree city"]);
+    allEvents = allEvents.filter(event => {
+      if (!event.venue?.city) return true; // Allow events with no city (can't filter)
+      const venueCity = event.venue.city.trim().toLowerCase();
+      return atlantaCities.has(venueCity) || venueCity.includes("atlanta");
+    });
 
     // Filter out today's events that already happened (started > 2 hours ago)
     // Only applies to today's date — future dates always included
@@ -509,10 +746,30 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Score all events
+    // Image resolution: for events without their own image, try to resolve one.
+    // For shows (music/comedy), prioritize headliner artist image over venue.
+    // Chain: headliner artist -> series -> festival -> venue
+    for (const event of typedEvents) {
+      if (!event.image_url) {
+        // Find headliner artist image (best for shows)
+        const headlinerImage = event.event_artists
+          ?.sort((a, b) => (a.billing_order || 99) - (b.billing_order || 99))
+          .find(ea => ea.artist?.image_url)
+          ?.artist?.image_url;
+
+        event.image_url =
+          headlinerImage ||
+          event.series?.image_url ||
+          event.series?.festival?.image_url ||
+          event.venue?.image_url ||
+          null;
+      }
+    }
+
+    // Score all events (after image resolution so the image bonus is accurate)
     const scoredEvents: ScoredEvent[] = typedEvents.map(event => {
       const rsvps = rsvpCounts.get(event.id);
-      let score = calculateQualityScore(event, rsvpCounts, venueRecCounts, currentHour, period);
+      let score = calculateQualityScore(event, rsvpCounts, venueRecCounts, currentHour, period, curatedEventIds);
 
       // Bonus for today's events (only relevant for today period)
       if (period === "today" && event.start_date === today) {
@@ -527,12 +784,13 @@ export async function GET(request: NextRequest) {
     });
 
     // Filter out events with very negative scores (generic/low quality)
-    // Require images for highlights (first thing people see)
+    // Today requires images (hero carousel). Week/month allow imageless events
+    // as backfill — they rank lower since image resolution already ran.
     // Also dedupe by title+venue (some events appear multiple times)
     const seen = new Set<string>();
     const qualityEvents = scoredEvents.filter(e => {
       if (e.quality_score <= -10) return false;
-      if (!e.image_url) return false; // Require image for highlights
+      if (period === "today" && !e.image_url) return false;
 
       // Dedupe key: normalized title + venue
       const key = `${e.title.toLowerCase().trim()}|${e.venue?.name?.toLowerCase() || ""}`;
@@ -555,17 +813,78 @@ export async function GET(request: NextRequest) {
         .trim();
     };
 
-    // Two-pass diversity: first grab variety across hip categories, then fill
-    const venuesSeen = new Set<string>();
+    // Multi-pass diversity: first grab variety across hip categories, then fill
+    const venueCounts = new Map<string, number>();
     const selected: ScoredEvent[] = [];
     const selectedIds = new Set<number>();
     const categoryCounts = new Map<string, number>();
-    const seriesSeen = new Set<string>();
-    // Today keeps tight variety (max 2), week/month allow a bit more
-    const MAX_PER_CATEGORY = period === "today" ? 2 : 3;
+    const seriesCounts = new Map<string, number>();
+    const neighborhoodCounts = new Map<string, number>();
+    // Category caps — generous enough for music/comedy on a Saturday
+    const MAX_PER_CATEGORY = period === "today" ? 3 : period === "week" ? 5 : 7;
+    // Film gets a tighter cap — screenings are fine but shouldn't dominate the feed
+    const MAX_FILM = period === "today" ? 2 : period === "week" ? 2 : 3;
+    const MAX_PER_NEIGHBORHOOD = period === "today" ? 4 : period === "week" ? 6 : 8;
+    // Allow 2 events per venue for today, 3 for longer periods (sub-venues like Masquerade rooms)
+    const MAX_PER_VENUE = period === "today" ? 2 : 3;
+    // Series dedup: today=1 (don't show same series twice), week=2, month=3
+    // A great weekly series should appear on multiple dates in a 30-day view
+    const MAX_PER_SERIES = period === "today" ? 1 : period === "week" ? 2 : 3;
+
+    // Date spread: for week/month, cap events per date to encourage temporal diversity
+    const dateCounts = new Map<string, number>();
+    const MAX_PER_DATE = period === "today" ? 999 : period === "week" ? 3 : 2;
+    // Week-bucket spread: for month, also track per-week counts to ensure
+    // we showcase events from weeks 2-4, not just the upcoming few days
+    const weekBucketCounts = new Map<number, number>();
+    // Month: max 5 per week (20 events / ~4 weeks = 5 ideal). Tight cap forces
+    // temporal diversity — without it W0 grabs 10+ slots via Pass 3 relaxation.
+    const MAX_PER_WEEK_BUCKET = period === "month" ? 5 : 999;
+    const getWeekBucket = (dateStr: string) => {
+      const daysOut = Math.floor((new Date(dateStr).getTime() - new Date(today).getTime()) / 86400000);
+      return Math.floor(daysOut / 7);
+    };
+    const trackDate = (date: string) => {
+      dateCounts.set(date, (dateCounts.get(date) || 0) + 1);
+      if (period === "month") {
+        const wb = getWeekBucket(date);
+        weekBucketCounts.set(wb, (weekBucketCounts.get(wb) || 0) + 1);
+      }
+    };
+    const isDateFull = (date: string) => {
+      if ((dateCounts.get(date) || 0) >= MAX_PER_DATE) return true;
+      if (period === "month") {
+        const wb = getWeekBucket(date);
+        if ((weekBucketCounts.get(wb) || 0) >= MAX_PER_WEEK_BUCKET) return true;
+      }
+      return false;
+    };
+
+    // Diversity helpers
+    const trackNeighborhood = (event: ScoredEvent) => {
+      const hood = event.venue?.neighborhood;
+      if (hood) neighborhoodCounts.set(hood, (neighborhoodCounts.get(hood) || 0) + 1);
+    };
+    const isNeighborhoodFull = (event: ScoredEvent) => {
+      const hood = event.venue?.neighborhood;
+      return hood ? (neighborhoodCounts.get(hood) || 0) >= MAX_PER_NEIGHBORHOOD : false;
+    };
+    const trackVenue = (venueName: string) => {
+      if (venueName) venueCounts.set(venueName, (venueCounts.get(venueName) || 0) + 1);
+    };
+    const isVenueFull = (venueName: string) => {
+      return venueName ? (venueCounts.get(venueName) || 0) >= MAX_PER_VENUE : false;
+    };
+    const trackSeries = (seriesId: string) => {
+      seriesCounts.set(seriesId, (seriesCounts.get(seriesId) || 0) + 1);
+    };
+    const isSeriesFull = (seriesId: string | null | undefined) => {
+      if (!seriesId) return false;
+      return (seriesCounts.get(seriesId) || 0) >= MAX_PER_SERIES;
+    };
 
     // Pass 1: Pick top-scoring event from each hip category (ensures variety)
-    const MIN_FEATURED_SCORE = 20;
+    const MIN_FEATURED_SCORE = 10;
     const hipCategoriesSeen = new Set<string>();
     for (const event of qualityEvents) {
       const cat = event.category || "other";
@@ -573,70 +892,123 @@ export async function GET(request: NextRequest) {
 
       if (!HIP_CATEGORIES.includes(cat)) continue;
       if (hipCategoriesSeen.has(cat)) continue;
-      if (venueName && venuesSeen.has(venueName)) continue;
+      if (isVenueFull(venueName)) continue;
       if (event.quality_score < MIN_FEATURED_SCORE) continue;
-      // Series dedup: only one event per series (e.g. same film at different theaters)
-      if (event.series_id && seriesSeen.has(event.series_id)) continue;
+      if (isSeriesFull(event.series_id)) continue;
+      if (isNeighborhoodFull(event)) continue;
+      if (isDateFull(event.start_date)) continue;
 
       selected.push(event);
       selectedIds.add(event.id);
       hipCategoriesSeen.add(cat);
       categoryCounts.set(cat, (categoryCounts.get(cat) || 0) + 1);
-      if (venueName) venuesSeen.add(venueName);
-      if (event.series_id) seriesSeen.add(event.series_id);
+      trackVenue(venueName);
+      if (event.series_id) trackSeries(event.series_id);
+      trackNeighborhood(event);
+      trackDate(event.start_date);
 
       if (selected.length >= config.limit) break;
     }
 
+    // Pass 1b (month only): Reserve top 2 events from each future week.
+    // Without this, weeks 2-4 get zero representation because Pass 2 fills
+    // all slots with high-scoring nearby events. This ensures Lady Gaga,
+    // TWICE, and other marquee future events always appear.
+    if (period === "month" && selected.length < config.limit) {
+      const weekEventCounts = new Map<number, number>();
+      for (const e of selected) {
+        const wb = getWeekBucket(e.start_date);
+        weekEventCounts.set(wb, (weekEventCounts.get(wb) || 0) + 1);
+      }
+      const RESERVE_PER_WEEK = 2;
+      for (let w = 1; w <= 4; w++) {
+        const alreadyHave = weekEventCounts.get(w) || 0;
+        const needed = RESERVE_PER_WEEK - alreadyHave;
+        if (needed <= 0) continue;
+        let added = 0;
+        for (const e of qualityEvents) {
+          if (added >= needed) break;
+          if (selectedIds.has(e.id)) continue;
+          if (getWeekBucket(e.start_date) !== w) continue;
+          if (e.quality_score < MIN_FEATURED_SCORE) continue;
+
+          const cat = e.category || "other";
+          const venueName = normalizeVenueName(e.venue?.name || "");
+          selected.push(e);
+          selectedIds.add(e.id);
+          categoryCounts.set(cat, (categoryCounts.get(cat) || 0) + 1);
+          trackVenue(venueName);
+          if (e.series_id) trackSeries(e.series_id);
+          trackNeighborhood(e);
+          trackDate(e.start_date);
+          added++;
+        }
+        if (selected.length >= config.limit) break;
+      }
+    }
+
     // Pass 2: Fill remaining slots with highest-scoring events
-    // Enforce category diversity (max per category) and series/venue uniqueness
+    // Enforce category, neighborhood, date diversity and series/venue caps
     if (selected.length < config.limit) {
       for (const event of qualityEvents) {
         if (selectedIds.has(event.id)) continue;
         const cat = event.category || "other";
         const venueName = normalizeVenueName(event.venue?.name || "");
 
-        if (venueName && venuesSeen.has(venueName)) continue;
-        // Category cap: don't let any single category dominate
+        if (isVenueFull(venueName)) continue;
         if ((categoryCounts.get(cat) || 0) >= MAX_PER_CATEGORY) continue;
-        // Series dedup: skip if we already have an event from same series
-        if (event.series_id && seriesSeen.has(event.series_id)) continue;
+        if (cat === "film" && (categoryCounts.get("film") || 0) >= MAX_FILM) continue;
+        if (isSeriesFull(event.series_id)) continue;
+        if (isNeighborhoodFull(event)) continue;
+        if (isDateFull(event.start_date)) continue;
 
         selected.push(event);
         selectedIds.add(event.id);
         categoryCounts.set(cat, (categoryCounts.get(cat) || 0) + 1);
-        if (venueName) venuesSeen.add(venueName);
-        if (event.series_id) seriesSeen.add(event.series_id);
+        trackVenue(venueName);
+        if (event.series_id) trackSeries(event.series_id);
+        trackNeighborhood(event);
+        trackDate(event.start_date);
 
         if (selected.length >= config.limit) break;
       }
     }
 
-    // Pass 3: If still short, relax category cap (allow up to cap+2) but keep venue dedup
+    // Pass 3: If still short, relax category/neighborhood/series caps but keep date diversity
     if (selected.length < config.limit) {
       for (const event of qualityEvents) {
         if (selectedIds.has(event.id)) continue;
         const cat = event.category || "other";
         const venueName = normalizeVenueName(event.venue?.name || "");
 
-        if (venueName && venuesSeen.has(venueName)) continue;
-        if ((categoryCounts.get(cat) || 0) >= MAX_PER_CATEGORY + 2) continue;
-        if (event.series_id && seriesSeen.has(event.series_id)) continue;
+        if (isVenueFull(venueName)) continue;
+        if ((categoryCounts.get(cat) || 0) >= MAX_PER_CATEGORY + 3) continue;
+        if (cat === "film" && (categoryCounts.get("film") || 0) >= MAX_FILM + 1) continue;
+        // Relaxed date cap: allow 1 more per date, but keep week-bucket cap
+        if ((dateCounts.get(event.start_date) || 0) >= MAX_PER_DATE + 1) continue;
+        if (period === "month") {
+          const wb = getWeekBucket(event.start_date);
+          if ((weekBucketCounts.get(wb) || 0) >= MAX_PER_WEEK_BUCKET + 2) continue;
+        }
 
         selected.push(event);
         selectedIds.add(event.id);
         categoryCounts.set(cat, (categoryCounts.get(cat) || 0) + 1);
-        if (venueName) venuesSeen.add(venueName);
-        if (event.series_id) seriesSeen.add(event.series_id);
+        trackVenue(venueName);
+        if (event.series_id) trackSeries(event.series_id);
+        trackNeighborhood(event);
+        trackDate(event.start_date);
 
         if (selected.length >= config.limit) break;
       }
     }
 
-    // Strip internal scoring fields before returning
+    // Strip internal scoring fields, venue image_url, and event_artists before returning
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const result = selected.map(({ quality_score: _, rsvp_count, description: _d, venue_id: _v, tags: _t, ...event }) => ({
+    const result = selected.map(({ quality_score: _, rsvp_count, description: _d, venue_id: _v, tags: _t, event_artists: _ea, ...event }) => ({
       ...event,
+      // Strip venue.image_url (only used internally for image resolution)
+      venue: event.venue ? { name: event.venue.name, neighborhood: event.venue.neighborhood } : null,
       rsvp_count: rsvp_count > 0 ? rsvp_count : undefined,
     }));
 

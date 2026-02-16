@@ -109,6 +109,7 @@ const SHARED_FILTER_KEYS = [
   "vibes",
   "neighborhoods",
   "price",
+  "free",
   "mood",
 ] as const;
 

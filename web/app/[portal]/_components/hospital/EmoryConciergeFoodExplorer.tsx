@@ -6,7 +6,7 @@ import HospitalTrackedLink from "@/app/[portal]/_components/hospital/HospitalTra
 
 type ConciergeMomentKey = "breakfast" | "lunch" | "dinner" | "late_night";
 type ConciergePreferenceKey = "any" | "quick_grab" | "comfort" | "vegetarian" | "low_sodium" | "family_friendly";
-type ConciergeCategoryKey = "all" | "food" | "lodging" | "essentials" | "services";
+type ConciergeCategoryKey = "all" | "food" | "lodging" | "essentials" | "services" | "fitness" | "escapes";
 type ConciergeCategory = Exclude<ConciergeCategoryKey, "all">;
 
 export type ConciergeExplorerItem = {
@@ -55,6 +55,8 @@ const CATEGORY_OPTIONS: CategoryOption[] = [
   { id: "lodging", label: "Lodging" },
   { id: "essentials", label: "Essentials" },
   { id: "services", label: "Services" },
+  { id: "fitness", label: "Fitness" },
+  { id: "escapes", label: "Escapes" },
 ];
 
 const MOMENT_OPTIONS: MomentOption[] = [
@@ -72,6 +74,13 @@ const PREFERENCE_OPTIONS: PreferenceOption[] = [
   { id: "low_sodium", label: "Low-sodium", keywords: ["low sodium", "healthy", "wellness", "nutrition"] },
   { id: "family_friendly", label: "Family", keywords: ["family", "kids", "group", "quiet"] },
 ];
+
+function formatLabel(value: string): string {
+  return value
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
 
 function normalize(value: string | null | undefined): string {
   return (value || "").toLowerCase();
@@ -117,6 +126,7 @@ export default function EmoryConciergeFoodExplorer({
   const activeMomentOption = MOMENT_OPTIONS.find((option) => option.id === activeMoment) || MOMENT_OPTIONS[0];
   const activePreferenceOption = PREFERENCE_OPTIONS.find((option) => option.id === activePreference) || PREFERENCE_OPTIONS[0];
   const activeCategoryIsFood = activeCategory === "food";
+  const activeCategoryLabel = CATEGORY_OPTIONS.find((option) => option.id === activeCategory)?.label || "All";
 
   const filtered = useMemo(() => {
     const list = items.filter((item) => {
@@ -152,6 +162,8 @@ export default function EmoryConciergeFoodExplorer({
       lodging: items.filter((item) => item.category === "lodging").length,
       essentials: items.filter((item) => item.category === "essentials").length,
       services: items.filter((item) => item.category === "services").length,
+      fitness: items.filter((item) => item.category === "fitness").length,
+      escapes: items.filter((item) => item.category === "escapes").length,
     };
   }, [items]);
 
@@ -159,10 +171,13 @@ export default function EmoryConciergeFoodExplorer({
     <section className="rounded-xl border border-[var(--twilight)] bg-white p-3 sm:p-4">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h3 className="text-[1.2rem] sm:text-[1.35rem] leading-[1.02] text-[var(--cream)]">Live concierge explorer</h3>
-          <p className="mt-1 text-xs sm:text-sm text-[var(--muted)]">Explore food, lodging, essentials, and practical services around this campus.</p>
+          <h3 className="text-[1.2rem] sm:text-[1.35rem] leading-[1.02] text-[var(--cream)]">What's nearby</h3>
+          <p className="mt-1 text-xs sm:text-sm text-[var(--muted)]">
+            Showing <strong>{activeCategoryLabel.toLowerCase()}</strong> around this campus.
+            {activeCategoryIsFood ? ` ${activeMomentOption.label.toLowerCase()} · ${activePreferenceOption.label.toLowerCase()}.` : ""}
+          </p>
         </div>
-        <span className="emory-chip">{filtered.length} results</span>
+        <p className="text-xs text-[var(--muted)]">{filtered.length} results</p>
       </div>
 
       <div className="mt-3 flex flex-wrap gap-1.5">
@@ -188,38 +203,38 @@ export default function EmoryConciergeFoodExplorer({
       {activeCategoryIsFood && (
         <>
           <div className="mt-2 flex flex-wrap gap-1.5">
-        {MOMENT_OPTIONS.map((option) => {
-          const active = activeMoment === option.id;
-          return (
-            <button
-              key={option.id}
-              type="button"
-              onClick={() => setActiveMoment(option.id)}
-              className={`emory-chip !normal-case !tracking-normal !text-[11px] ${active ? "!bg-[#eef4ff] !border-[#c2d4f1] !text-[#143b83]" : ""}`}
-              aria-pressed={active}
-            >
-              {option.label}
-            </button>
-          );
-        })}
-      </div>
+            {MOMENT_OPTIONS.map((option) => {
+              const active = activeMoment === option.id;
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => setActiveMoment(option.id)}
+                  className={`emory-chip !normal-case !tracking-normal !text-[11px] ${active ? "!bg-[#eef4ff] !border-[#c2d4f1] !text-[#143b83]" : ""}`}
+                  aria-pressed={active}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
 
-      <div className="mt-2 flex flex-wrap gap-1.5">
-        {PREFERENCE_OPTIONS.map((option) => {
-          const active = activePreference === option.id;
-          return (
-            <button
-              key={option.id}
-              type="button"
-              onClick={() => setActivePreference(option.id)}
-              className={`emory-chip !normal-case !tracking-normal !text-[11px] ${active ? "!bg-[#f2f8eb] !border-[#bde2b7] !text-[#205634]" : ""}`}
-              aria-pressed={active}
-            >
-              {option.label}
-            </button>
-          );
-        })}
-      </div>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {PREFERENCE_OPTIONS.map((option) => {
+              const active = activePreference === option.id;
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => setActivePreference(option.id)}
+                  className={`emory-chip !normal-case !tracking-normal !text-[11px] ${active ? "!bg-[#f2f8eb] !border-[#bde2b7] !text-[#205634]" : ""}`}
+                  aria-pressed={active}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
         </>
       )}
 
@@ -233,21 +248,19 @@ export default function EmoryConciergeFoodExplorer({
                 className="h-36 w-full object-cover"
               />
             ) : (
-              <div className="flex h-36 w-full items-center justify-center bg-[#eef2f7] px-3 text-center text-xs text-[#6b7280]">
-                No partner photo available yet
-              </div>
+              <div className="h-36 w-full bg-gradient-to-br from-[#e8ecf2] to-[#d7dce6]" />
             )}
             <div className="p-3">
               <p className="text-[11px] uppercase tracking-[0.06em] text-[#6b7280]">
-                {item.category} · {(item.venueType || "service").replace(/_/g, " ")} · {item.distanceMiles.toFixed(1)} mi
+                {formatLabel(item.category)} · {formatLabel(item.venueType || "service")} · {item.distanceMiles.toFixed(1)} mi
               </p>
               <h4 className="mt-1 text-[1.05rem] leading-[1.02] text-[var(--cream)] font-semibold">{item.title}</h4>
               <p className="mt-1 text-xs text-[var(--muted)]">{item.summary}</p>
-              <div className="mt-1.5 flex flex-wrap gap-1.5">
-                <span className="emory-chip">{item.isOpenNow ? "Open now" : "Check hours"}</span>
-                {item.openLate && <span className="emory-chip">Open late</span>}
-                {item.neighborhood && <span className="emory-chip">{item.neighborhood}</span>}
-              </div>
+              <p className="mt-1 text-[11px] text-[var(--muted)]">
+                {item.isOpenNow ? "Open now" : "Check hours"}
+                {item.openLate ? " · Open late" : ""}
+                {item.neighborhood ? ` · ${item.neighborhood}` : ""}
+              </p>
               <div className="mt-2 flex flex-wrap gap-3">
                 <HospitalTrackedLink
                   href={item.mapsHref}

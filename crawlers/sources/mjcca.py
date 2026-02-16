@@ -25,6 +25,8 @@ from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeo
 
 from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
+from description_fetcher import fetch_description_from_url
+from utils import extract_images_from_page, enrich_event_record
 
 logger = logging.getLogger(__name__)
 
@@ -345,6 +347,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 page.wait_for_timeout(1500)
 
+            # Extract title-to-image map from page (uses alt text matching)
+            image_map = extract_images_from_page(page)
+            logger.info(f"Extracted {len(image_map)} images from page")
+
             # Get all event rows
             event_rows = page.query_selector_all('.events__row')
             logger.info(f"Found {len(event_rows)} events on calendar")
@@ -413,11 +419,26 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         events_updated += 1
                         continue
 
+                    # Fetch description from detail page
+                    description = None
+                    if event_url and event_url != CALENDAR_URL:
+                        description = fetch_description_from_url(event_url)
+                        if description:
+                            logger.debug(f"Fetched description for: {title}")
+
+                    # Try to match image from page's image map
+                    event_image = None
+                    title_lower = title.lower()
+                    for img_alt, img_url in image_map.items():
+                        if img_alt.lower() == title_lower or title_lower in img_alt.lower():
+                            event_image = img_url
+                            break
+
                     event_record = {
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": None,  # Could fetch from detail page if needed
+                        "description": description,
                         "start_date": start_date,
                         "start_time": start_time,
                         "end_date": start_date,  # Same day event
@@ -432,13 +453,17 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "is_free": False,  # Many require membership or fees
                         "source_url": event_url,
                         "ticket_url": event_url,
-                        "image_url": None,
+                        "image_url": event_image,
                         "raw_text": f"{title} - {date_text} - {time_text or 'No time'}",
                         "extraction_confidence": 0.90,  # Calendar is well-structured
                         "is_recurring": False,
                         "recurrence_rule": None,
                         "content_hash": content_hash,
                     }
+
+                    # Enrich from detail page if still missing image
+                    if not event_image and event_url and event_url != CALENDAR_URL:
+                        event_record = enrich_event_record(event_record, source_name="MJCCA")
 
                     try:
                         insert_event(event_record)

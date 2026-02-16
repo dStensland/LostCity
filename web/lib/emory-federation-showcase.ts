@@ -6,6 +6,7 @@ import {
   isCompetitorExcluded,
   resolveEmorySourcePolicy,
 } from "@/lib/emory-source-policy";
+import { resolveSupportSourcePolicy } from "@/lib/support-source-policy";
 import type { HospitalLocation } from "@/lib/hospitals";
 import { supabase } from "@/lib/supabase";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -507,7 +508,8 @@ export async function getEmoryFederationShowcase(args: {
 
   const scopedAccess = access.accessDetails.filter((source) => {
     if (source.accessType !== "global") return true;
-    return Boolean(resolveEmorySourcePolicy({ name: source.sourceName }));
+    if (resolveEmorySourcePolicy({ name: source.sourceName })) return true;
+    return Boolean(resolveSupportSourcePolicy({ name: source.sourceName }));
   });
   const selectedAccess = scopedAccess.length > 0 ? scopedAccess : access.accessDetails;
   const selectedSourceIds = selectedAccess.map((source) => source.sourceId);
@@ -563,11 +565,15 @@ export async function getEmoryFederationShowcase(args: {
   const rows = ((data || []) as EventPreviewRow[]).filter((event) => {
     const sourceName = safeText(event.source?.name, "");
     const sourceSlug = safeText(event.source?.slug, "");
-    const policy = resolveEmorySourcePolicy({
+    const emoryPolicy = resolveEmorySourcePolicy({
       slug: event.source?.slug,
       name: event.source?.name,
     });
-    const isPolicySource = Boolean(policy);
+    const supportPolicy = emoryPolicy ? null : resolveSupportSourcePolicy({
+      slug: event.source?.slug,
+      name: event.source?.name,
+    });
+    const isPolicySource = Boolean(emoryPolicy) || Boolean(supportPolicy);
     const isRelevant = isPolicySource || hasCommunitySignal(event);
 
     return (

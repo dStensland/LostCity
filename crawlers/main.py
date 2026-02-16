@@ -28,6 +28,11 @@ from db import (
     get_validation_stats,
     clear_venue_cache,
     deactivate_tba_events,
+    update_source_last_crawled,
+    update_expected_event_count,
+    get_sources_due_for_crawl,
+    get_sources_by_cadence,
+    detect_zero_event_sources,
 )
 from utils import setup_logging
 from circuit_breaker import should_skip_source, get_all_circuit_states
@@ -104,6 +109,9 @@ SOURCE_OVERRIDES = {
     "the-gathering-spot": "sources.gathering_spot",
     "the-maker-station": "sources.maker_station",
     "wild-heaven-beer-avondale": "sources.wild_heaven_beer",
+    # Support portal slug-to-filename mismatches
+    "good-samaritan-health-center": "sources.good_samaritan_health",
+    "red-cross-cpr-atlanta": "sources.red_cross_cpr",
 }
 
 
@@ -203,6 +211,13 @@ def run_source(slug: str, skip_circuit_breaker: bool = False) -> bool:
         )
         # Record success in health tracker
         health_record_success(health_run_id, found, new, updated)
+
+        # Update smart scheduling trackers
+        try:
+            update_source_last_crawled(source["id"])
+            update_expected_event_count(source["id"], found)
+        except Exception as e:
+            logger.debug(f"Smart scheduling update failed for {slug}: {e}")
 
         # Log summary with validation stats
         summary_parts = [f"{found} found, {new} new, {updated} updated"]
@@ -324,6 +339,211 @@ def demote_stale_festival_dates() -> int:
     return demoted
 
 
+def check_unannounced_festivals(soon_only: bool = False) -> dict:
+    """
+    Check unannounced festivals for newly posted dates.
+
+    Wraps check_festival_dates() from the existing module.
+    When not filtering to soon_only, does three passes:
+      1. soon_only=True  (festivals within 3 months of typical_month)
+      2. Remaining festivals (background sweep)
+      3. Promote existing pending rows if confidence improved
+    """
+    from check_festival_dates import check_festival_dates
+
+    if soon_only:
+        check_festival_dates(dry_run=False, soon_only=True)
+        # Also try promoting existing pending rows
+        check_festival_dates(dry_run=False, soon_only=True, promote_pending=True)
+    else:
+        # First pass: high-priority (soon)
+        check_festival_dates(dry_run=False, soon_only=True)
+        # Second pass: everything else
+        check_festival_dates(dry_run=False, soon_only=False)
+        # Also try promoting existing pending rows
+        check_festival_dates(dry_run=False, promote_pending=True)
+
+
+def get_festival_tier_summary() -> dict:
+    """
+    Query festival counts by computed tier and log a summary line.
+
+    Tiers:
+      T1 (Confirmed): announced_start is set and >= today
+      T2 (Pending):    pending_start set, no announced date
+      T3 (Unannounced): neither announced nor pending dates
+
+    Returns dict with {t1, t2, t3}.
+    """
+    from db import get_client
+    from datetime import date
+
+    client = get_client()
+    today_str = date.today().isoformat()
+
+    all_fests = (
+        client.table("festivals")
+        .select("id,announced_start,announced_end,pending_start")
+        .execute()
+    ).data or []
+
+    t1 = t2 = t3 = 0
+    for f in all_fests:
+        announced = f.get("announced_start")
+        if announced and announced >= today_str:
+            t1 += 1
+        elif f.get("pending_start"):
+            t2 += 1
+        else:
+            t3 += 1
+
+    return {"t1": t1, "t2": t2, "t3": t3}
+
+
+def run_post_crawl_tasks() -> None:
+    """Run all post-crawl pipeline tasks (filters, logos, cleanup, festivals, etc.)."""
+
+    # Refresh available filters for UI
+    logger.info("Refreshing available filters...")
+    if refresh_available_filters():
+        logger.info("Available filters refreshed successfully")
+    else:
+        logger.warning("Failed to refresh available filters")
+
+    # Fetch logos for any producers missing them
+    logger.info("Fetching logos for producers...")
+    try:
+        logo_results = fetch_logos()
+        logger.info(
+            f"Logo fetch complete: {logo_results['success']} new, "
+            f"{logo_results['failed']} failed, {logo_results['skipped']} skipped"
+        )
+    except Exception as e:
+        logger.warning(f"Logo fetch failed: {e}")
+
+    # Log health summary
+    try:
+        health = get_system_health_summary()
+        logger.info(
+            f"Health summary: {health['sources']['healthy']} healthy, "
+            f"{health['sources']['degraded']} degraded, "
+            f"{health['sources']['unhealthy']} unhealthy sources"
+        )
+    except Exception as e:
+        logger.debug(f"Could not get health summary: {e}")
+
+    # ===== POST-CRAWL TASKS =====
+
+    # 1. Clean up old events
+    logger.info("Running post-crawl cleanup...")
+    try:
+        cleanup_results = run_full_cleanup(days_to_keep=0, dry_run=False)
+        total_deleted = sum(r.get("deleted", 0) for r in cleanup_results.values())
+        music_quality = cleanup_results.get("music_venue_quality", {})
+        logger.info(
+            "Cleanup complete: %s events removed | music quality: canonical +%s/-%s, lineup +%s, desc +%s",
+            total_deleted,
+            music_quality.get("canonical_updates", 0),
+            music_quality.get("canonical_resets", 0),
+            music_quality.get("lineup_updates", 0),
+            music_quality.get("description_repairs", 0),
+        )
+    except Exception as e:
+        logger.warning(f"Cleanup failed: {e}")
+
+    # 2. Festival schedule extraction (structured parsing, no LLM)
+    logger.info("Extracting festival program sessions...")
+    try:
+        festival_stats = run_festival_schedules()
+        logger.info(
+            f"Festival schedules: {festival_stats['sessions_found']} found, "
+            f"{festival_stats['sessions_inserted']} new across "
+            f"{festival_stats['festivals_with_data']}/{festival_stats['festivals_processed']} festivals"
+        )
+    except Exception as e:
+        logger.warning(f"Festival schedule extraction failed: {e}")
+
+    # 2b. Demote stale festival dates (announced_start in the past)
+    logger.info("Demoting stale festival dates...")
+    try:
+        demoted_count = demote_stale_festival_dates()
+        if demoted_count > 0:
+            logger.info(f"Demoted {demoted_count} festivals with past announced dates")
+    except Exception as e:
+        logger.warning(f"Festival date demotion failed: {e}")
+
+    # 2c. Festival health check — backfill dates/titles, log warnings
+    logger.info("Running festival health check...")
+    try:
+        from festival_health import run_festival_health_check
+        fh_stats = run_festival_health_check()
+        backfilled = fh_stats.get("titles_backfilled", 0) + fh_stats.get("festival_dates_backfilled", 0)
+        if backfilled > 0:
+            logger.info(f"Festival health: backfilled {backfilled} series")
+    except Exception as e:
+        logger.warning(f"Festival health check failed: {e}")
+
+    # 2d. Check unannounced festivals for newly posted dates (soon only to keep fast)
+    logger.info("Checking unannounced festivals for date updates...")
+    try:
+        check_unannounced_festivals(soon_only=True)
+    except Exception as e:
+        logger.warning(f"Festival date check failed: {e}")
+
+    # 2e. Festival tier summary
+    try:
+        tiers = get_festival_tier_summary()
+        logger.info(
+            f"Festival tiers: {tiers['t1']} confirmed (T1) | "
+            f"{tiers['t2']} pending (T2) | {tiers['t3']} unannounced (T3)"
+        )
+    except Exception as e:
+        logger.warning(f"Festival tier summary failed: {e}")
+
+    # 3. Deactivate TBA events (missing start_time after enrichment)
+    logger.info("Deactivating TBA events (missing start_time)...")
+    try:
+        tba_count = deactivate_tba_events()
+        if tba_count > 0:
+            logger.info(f"Deactivated {tba_count} TBA events")
+    except Exception as e:
+        logger.warning(f"TBA deactivation failed: {e}")
+
+    # 4. Backfill tags for any events missing venue-type-based tags
+    logger.info("Running tag backfill...")
+    try:
+        from backfill_tags import backfill_tags
+        tag_stats = backfill_tags(dry_run=False, batch_size=200)
+        logger.info(f"Tag backfill: {tag_stats.get('updated', 0)} events updated")
+    except Exception as e:
+        logger.warning(f"Tag backfill failed: {e}")
+
+    # 5. Zero-event source detection
+    logger.info("Checking for zero-event source regressions...")
+    try:
+        deactivated_count, deactivated_slugs = detect_zero_event_sources()
+        if deactivated_count > 0:
+            logger.warning(f"Auto-deactivated {deactivated_count} sources: {', '.join(deactivated_slugs)}")
+    except Exception as e:
+        logger.warning(f"Zero-event detection failed: {e}")
+
+    # 6. Record daily analytics snapshot
+    logger.info("Recording analytics snapshot...")
+    try:
+        snapshot = record_daily_snapshot()
+        logger.info(f"Analytics: {snapshot.get('total_upcoming_events', 0)} upcoming events")
+    except Exception as e:
+        logger.warning(f"Analytics snapshot failed: {e}")
+
+    # 7. Generate HTML report
+    logger.info("Generating post-crawl report...")
+    try:
+        report_path = save_html_report()
+        logger.info(f"Report saved: {report_path}")
+    except Exception as e:
+        logger.warning(f"Report generation failed: {e}")
+
+
 def run_all_sources(parallel: bool = True, max_workers: int = MAX_WORKERS, adaptive: bool = True) -> dict[str, bool]:
     """
     Run crawlers for all active sources.
@@ -393,6 +613,19 @@ def run_all_sources(parallel: bool = True, max_workers: int = MAX_WORKERS, adapt
             slug = source["slug"]
             results[slug] = run_source(slug, skip_circuit_breaker=True)
 
+    # Retry failed sources sequentially
+    failed_slugs = [slug for slug, ok in results.items() if not ok]
+    if failed_slugs and parallel:
+        logger.info(
+            f"Retrying {len(failed_slugs)} failed sources sequentially..."
+        )
+        for slug in failed_slugs:
+            time.sleep(2)  # Cool-down between retries
+            ok = run_source(slug, skip_circuit_breaker=True)
+            results[slug] = ok
+            if ok:
+                logger.info(f"Retry succeeded: {slug}")
+
     # Summary
     success = sum(1 for v in results.values() if v)
     failed = len(results) - success
@@ -402,101 +635,121 @@ def run_all_sources(parallel: bool = True, max_workers: int = MAX_WORKERS, adapt
     )
     logger.info("Note: Per-source validation statistics are logged above for each crawler.")
 
-    # Refresh available filters for UI
-    logger.info("Refreshing available filters...")
-    if refresh_available_filters():
-        logger.info("Available filters refreshed successfully")
+    # Run all post-crawl pipeline tasks
+    run_post_crawl_tasks()
+
+    return results
+
+
+def _run_source_list(sources: list[dict], parallel: bool = True, max_workers: int = MAX_WORKERS) -> dict[str, bool]:
+    """Run a list of sources through the standard parallel/sequential pipeline with retries.
+
+    Shared logic used by run_all_sources, run_smart_crawl, and run_cadence_crawl.
+    """
+    results = {}
+
+    if parallel and len(sources) > 1:
+        logger.info(f"Using parallel execution with {max_workers} workers")
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_slug = {
+                executor.submit(run_source, source["slug"], True): source["slug"]
+                for source in sources
+            }
+            for future in as_completed(future_to_slug, timeout=TIMEOUT_SECONDS * len(sources)):
+                slug = future_to_slug[future]
+                try:
+                    results[slug] = future.result(timeout=TIMEOUT_SECONDS)
+                except Exception as e:
+                    logger.error(f"Parallel execution failed for {slug}: {e}")
+                    results[slug] = False
     else:
-        logger.warning("Failed to refresh available filters")
+        for source in sources:
+            slug = source["slug"]
+            results[slug] = run_source(slug, skip_circuit_breaker=True)
 
-    # Fetch logos for any producers missing them
-    logger.info("Fetching logos for producers...")
-    try:
-        logo_results = fetch_logos()
-        logger.info(
-            f"Logo fetch complete: {logo_results['success']} new, "
-            f"{logo_results['failed']} failed, {logo_results['skipped']} skipped"
-        )
-    except Exception as e:
-        logger.warning(f"Logo fetch failed: {e}")
+    # Retry failed sources sequentially
+    failed_slugs = [slug for slug, ok in results.items() if not ok]
+    if failed_slugs and parallel:
+        logger.info(f"Retrying {len(failed_slugs)} failed sources sequentially...")
+        for slug in failed_slugs:
+            time.sleep(2)
+            ok = run_source(slug, skip_circuit_breaker=True)
+            results[slug] = ok
+            if ok:
+                logger.info(f"Retry succeeded: {slug}")
 
-    # Log health summary
-    try:
-        health = get_system_health_summary()
-        logger.info(
-            f"Health summary: {health['sources']['healthy']} healthy, "
-            f"{health['sources']['degraded']} degraded, "
-            f"{health['sources']['unhealthy']} unhealthy sources"
-        )
-    except Exception as e:
-        logger.debug(f"Could not get health summary: {e}")
+    return results
 
-    # ===== POST-CRAWL TASKS =====
 
-    # 1. Clean up old events
-    logger.info("Running post-crawl cleanup...")
-    try:
-        cleanup_results = run_full_cleanup(days_to_keep=0, dry_run=False)
-        total_deleted = sum(r.get("deleted", 0) for r in cleanup_results.values())
-        logger.info(f"Cleanup complete: {total_deleted} events removed")
-    except Exception as e:
-        logger.warning(f"Cleanup failed: {e}")
+def run_smart_crawl(args) -> dict[str, bool]:
+    """Smart mode: only crawl sources due based on crawl_frequency."""
+    due_sources = get_sources_due_for_crawl()
 
-    # 2. Festival schedule extraction (structured parsing, no LLM)
-    logger.info("Extracting festival program sessions...")
-    try:
-        festival_stats = run_festival_schedules()
-        logger.info(
-            f"Festival schedules: {festival_stats['sessions_found']} found, "
-            f"{festival_stats['sessions_inserted']} new across "
-            f"{festival_stats['festivals_with_data']}/{festival_stats['festivals_processed']} festivals"
-        )
-    except Exception as e:
-        logger.warning(f"Festival schedule extraction failed: {e}")
+    # Count by cadence for logging
+    cadence_counts = {}
+    for s in due_sources:
+        freq = s.get("crawl_frequency") or "daily"
+        cadence_counts[freq] = cadence_counts.get(freq, 0) + 1
 
-    # 2b. Demote stale festival dates (announced_start in the past)
-    logger.info("Demoting stale festival dates...")
-    try:
-        demoted_count = demote_stale_festival_dates()
-        if demoted_count > 0:
-            logger.info(f"Demoted {demoted_count} festivals with past announced dates")
-    except Exception as e:
-        logger.warning(f"Festival date demotion failed: {e}")
+    cadence_summary = ", ".join(f"{c} {k}" for k, c in sorted(cadence_counts.items()))
+    logger.info(f"Smart mode: {len(due_sources)} sources due for crawl ({cadence_summary})")
 
-    # 3. Deactivate TBA events (missing start_time after enrichment)
-    logger.info("Deactivating TBA events (missing start_time)...")
-    try:
-        tba_count = deactivate_tba_events()
-        if tba_count > 0:
-            logger.info(f"Deactivated {tba_count} TBA events")
-    except Exception as e:
-        logger.warning(f"TBA deactivation failed: {e}")
+    if not due_sources:
+        logger.info("No sources due for crawl — exiting")
+        return {}
 
-    # 4. Backfill tags for any events missing venue-type-based tags
-    logger.info("Running tag backfill...")
-    try:
-        from backfill_tags import backfill_tags
-        tag_stats = backfill_tags(dry_run=False, batch_size=200)
-        logger.info(f"Tag backfill: {tag_stats.get('updated', 0)} events updated")
-    except Exception as e:
-        logger.warning(f"Tag backfill failed: {e}")
+    # Pre-filter circuit breakers
+    active_sources = []
+    for source in due_sources:
+        should_skip, reason = should_skip_source(source)
+        if should_skip:
+            logger.debug(f"Skipping {source['slug']}: circuit breaker ({reason})")
+        else:
+            active_sources.append(source)
 
-    # 5. Record daily analytics snapshot
-    logger.info("Recording analytics snapshot...")
-    try:
-        snapshot = record_daily_snapshot()
-        logger.info(f"Analytics: {snapshot.get('total_upcoming_events', 0)} upcoming events")
-    except Exception as e:
-        logger.warning(f"Analytics snapshot failed: {e}")
+    max_workers = args.workers if hasattr(args, 'workers') else MAX_WORKERS
+    parallel = not (hasattr(args, 'sequential') and args.sequential)
 
-    # 6. Generate HTML report
-    logger.info("Generating post-crawl report...")
-    try:
-        report_path = save_html_report()
-        logger.info(f"Report saved: {report_path}")
-    except Exception as e:
-        logger.warning(f"Report generation failed: {e}")
+    results = _run_source_list(active_sources, parallel=parallel, max_workers=max_workers)
 
+    # Summary
+    success = sum(1 for v in results.values() if v)
+    failed = len(results) - success
+    logger.info(f"Smart crawl complete: {success} succeeded, {failed} failed")
+
+    run_post_crawl_tasks()
+    return results
+
+
+def run_cadence_crawl(args) -> dict[str, bool]:
+    """Run all sources with a specific crawl_frequency cadence."""
+    sources = get_sources_by_cadence(args.cadence)
+    logger.info(f"Cadence mode: {len(sources)} sources with frequency '{args.cadence}'")
+
+    if not sources:
+        logger.info(f"No active sources with cadence '{args.cadence}' — exiting")
+        return {}
+
+    # Pre-filter circuit breakers
+    active_sources = []
+    for source in sources:
+        should_skip, reason = should_skip_source(source)
+        if should_skip:
+            logger.debug(f"Skipping {source['slug']}: circuit breaker ({reason})")
+        else:
+            active_sources.append(source)
+
+    max_workers = args.workers if hasattr(args, 'workers') else MAX_WORKERS
+    parallel = not (hasattr(args, 'sequential') and args.sequential)
+
+    results = _run_source_list(active_sources, parallel=parallel, max_workers=max_workers)
+
+    # Summary
+    success = sum(1 for v in results.values() if v)
+    failed = len(results) - success
+    logger.info(f"Cadence crawl complete: {success} succeeded, {failed} failed")
+
+    run_post_crawl_tasks()
     return results
 
 
@@ -621,6 +874,26 @@ def main():
         action="store_true",
         help="Show what cleanup would delete without actually deleting"
     )
+    parser.add_argument(
+        "--check-festivals",
+        action="store_true",
+        help="Check unannounced festivals for newly posted dates and exit"
+    )
+    parser.add_argument(
+        "--soon",
+        action="store_true",
+        help="With --check-festivals, only check festivals within 3 months"
+    )
+    parser.add_argument(
+        "--smart",
+        action="store_true",
+        help="Smart mode: only crawl sources due based on crawl_frequency"
+    )
+    parser.add_argument(
+        "--cadence",
+        choices=["daily", "twice_weekly", "weekly", "monthly"],
+        help="Force-run all sources with specific frequency"
+    )
 
     args = parser.parse_args()
 
@@ -643,6 +916,16 @@ def main():
     if args.report:
         report_path = save_html_report()
         print(f"Report generated: {report_path}")
+        return 0
+
+    # Check festival dates
+    if args.check_festivals:
+        check_unannounced_festivals(soon_only=args.soon)
+        tiers = get_festival_tier_summary()
+        print(
+            f"\nFestival tiers: {tiers['t1']} confirmed (T1) | "
+            f"{tiers['t2']} pending (T2) | {tiers['t3']} unannounced (T3)"
+        )
         return 0
 
     # Event cleanup
@@ -697,7 +980,19 @@ def main():
         success = run_source(args.source, skip_circuit_breaker=args.force)
         return 0 if success else 1
 
-    # All sources
+    # Smart mode: only crawl sources due based on cadence
+    if args.smart:
+        results = run_smart_crawl(args)
+        failed = sum(1 for v in results.values() if not v)
+        return 1 if failed > 0 else 0
+
+    # Cadence mode: run all sources with specific frequency
+    if args.cadence:
+        results = run_cadence_crawl(args)
+        failed = sum(1 for v in results.values() if not v)
+        return 1 if failed > 0 else 0
+
+    # All sources (default — existing behavior unchanged)
     results = run_all_sources(
         parallel=not args.sequential,
         max_workers=args.workers,

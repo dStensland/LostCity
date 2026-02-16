@@ -33,14 +33,14 @@ const HOLIDAYS: HolidayConfig[] = [
   {
     slug: "valentines-day",
     tag: "valentines",
-    title: "Valentine's Day",
+    title: "Valentine's Weekend",
     subtitle: "The heart has reasons that reason cannot know",
     gradient: "linear-gradient(135deg, #1a0a1e 0%, #2d0a2e 30%, #1e0a28 60%, #0f0a1a 100%)",
     accentColor: "#ff4da6",
     glowColor: "#ff4da6",
     icon: "/images/valentines-heart-neon.gif",
     showFrom: [2, 8],
-    showUntil: [2, 14],
+    showUntil: [2, 15],
     eventDate: [2026, 2, 14],
     iconBgGlow: true,
     iconGlowRing: true,
@@ -97,7 +97,7 @@ const HOLIDAYS: HolidayConfig[] = [
     gradient: "linear-gradient(135deg, #1a0505 0%, #0c0c0c 35%, #0c0c0c 65%, #051a05 100%)",
     accentColor: "#e53935",
     glowColor: "#43a047",
-    icon: "\u270A\uD83C\uDFFF",
+    icon: "/icons/black-history-fist.png",
     showFrom: [2, 1],
     showUntil: [2, 28],
     eventDate: [2026, 2, 1],
@@ -135,16 +135,7 @@ function isHolidayActive(h: HolidayConfig): boolean {
   const [untilM, untilD] = h.showUntil;
   const afterStart = month > fromM || (month === fromM && day >= fromD);
   const beforeEnd = month < untilM || (month === untilM && day <= untilD);
-  if (!afterStart || !beforeEnd) return false;
-
-  // Single-day holidays expire after their event date passes
-  if (!h.countdownOverride) {
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const eventDate = new Date(h.eventDate[0], h.eventDate[1] - 1, h.eventDate[2]);
-    if (eventDate < today) return false;
-  }
-
-  return true;
+  return afterStart && beforeEnd;
 }
 
 function computeCountdown(h: HolidayConfig): { countdown: string; daysUntil: number } {
@@ -157,7 +148,7 @@ function computeCountdown(h: HolidayConfig): { countdown: string; daysUntil: num
   if (h.countdownOverride) {
     countdown = h.countdownOverride;
   } else if (diff < 0) {
-    countdown = "IT'S OVER";
+    countdown = "THIS WEEKEND";
   } else if (diff === 0) {
     countdown = "TODAY";
   } else if (diff === 1) {
@@ -375,18 +366,22 @@ interface HolidayHeroProps {
   portalSlug: string;
   /** Which hero position (1 = nearest event, 2 = second nearest). Default 1. */
   position?: number;
+  /** Pre-fetched event count — skips internal fetch when provided. */
+  eventCount?: number | null;
 }
 
-export default function HolidayHero({ portalSlug, position = 1 }: HolidayHeroProps) {
-  const [eventCount, setEventCount] = useState<number | null>(null);
+export default function HolidayHero({ portalSlug, position = 1, eventCount: prefetchedCount }: HolidayHeroProps) {
+  const [fetchedCount, setFetchedCount] = useState<number | null>(null);
 
   // Get the holiday for this position, sorted by nearest event date
   const slugs = getActiveHeroSlugs();
   const targetSlug = slugs[position - 1] ?? null;
   const holiday = targetSlug ? getActiveHoliday(targetSlug) : null;
 
+  // Only fetch if no prefetched count was provided
+  const hasPrefetched = prefetchedCount !== undefined;
   useEffect(() => {
-    if (!holiday) return;
+    if (hasPrefetched || !holiday) return;
 
     async function fetchCount() {
       try {
@@ -398,16 +393,18 @@ export default function HolidayHero({ portalSlug, position = 1 }: HolidayHeroPro
           (s: { slug?: string }) => s.slug === holiday!.slug
         );
         if (section?.events) {
-          setEventCount(section.events.length);
+          setFetchedCount(section.events.length);
         }
       } catch {
         // Silently fail — hero still renders without count
       }
     }
     fetchCount();
-  }, [portalSlug, holiday]);
+  }, [portalSlug, holiday, hasPrefetched]);
 
-  if (!holiday || (!holiday.countdownOverride && holiday.daysUntil < 0)) return null;
+  const eventCount = hasPrefetched ? (prefetchedCount ?? null) : fetchedCount;
+
+  if (!holiday) return null;
 
   return (
     <Link

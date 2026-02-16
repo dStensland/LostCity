@@ -5,7 +5,7 @@ import { getCachedDomain, setCachedDomain } from "@/lib/domain-cache";
 import { normalizePortalSlug, resolvePortalSlugAlias } from "@/lib/portal-aliases";
 import crypto from "crypto";
 
-export type PortalVertical = "city" | "hotel" | "film" | "hospital" | "community" | "marketplace";
+export type PortalVertical = "city" | "hotel" | "film" | "hospital" | "community" | "marketplace" | "dog";
 
 /**
  * Get the portal vertical type (defaults to "city" if not set).

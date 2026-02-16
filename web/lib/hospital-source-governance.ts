@@ -1,4 +1,5 @@
 import { EMORY_COMPETITOR_EXCLUSIONS } from "@/lib/emory-source-policy";
+import type { EmoryCommunityCategory } from "@/lib/emory-community-categories";
 
 export type CommunityTrackKey = "prevention" | "food_support" | "community_wellness";
 
@@ -9,6 +10,7 @@ export type HospitalSourceGovernanceProfile = {
   competitorExclusions: readonly string[];
   minStoryScore: number;
   trackSourcePolicyIds: Record<CommunityTrackKey, string[]>;
+  categorySourceOverrides?: Partial<Record<EmoryCommunityCategory, string[]>>;
 };
 
 const EMORY_GOVERNANCE_PROFILE: HospitalSourceGovernanceProfile = {
@@ -28,6 +30,9 @@ const EMORY_GOVERNANCE_PROFILE: HospitalSourceGovernanceProfile = {
       "nami-georgia",
       "mha-georgia",
       "dekalb-library",
+      "alzheimers-association-georgia",
+      "good-samaritan-health",
+      "empowerline",
     ],
     food_support: [
       "atl-food-bank",
@@ -38,6 +43,7 @@ const EMORY_GOVERNANCE_PROFILE: HospitalSourceGovernanceProfile = {
       "giving-kitchen",
       "united-way-atlanta",
       "meals-on-wheels-atlanta",
+      "community-farmers-markets",
     ],
     community_wellness: [
       "atl-parks",
@@ -48,6 +54,8 @@ const EMORY_GOVERNANCE_PROFILE: HospitalSourceGovernanceProfile = {
       "hands-on-atlanta",
       "nami-georgia",
       "mha-georgia",
+      "medshare",
+      "empowerline",
     ],
   },
 };

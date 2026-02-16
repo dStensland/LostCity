@@ -7,6 +7,7 @@ export interface RelatedSectionProps {
   children: ReactNode;
   emptyMessage?: string;
   className?: string;
+  layout?: "cards" | "content";
 }
 
 export function RelatedSection({
@@ -15,6 +16,7 @@ export function RelatedSection({
   children,
   emptyMessage = "No items found",
   className = "",
+  layout = "cards",
 }: RelatedSectionProps) {
   const isEmpty = !children || (Array.isArray(children) && children.length === 0);
 
@@ -26,6 +28,8 @@ export function RelatedSection({
         <div className="py-8 text-center">
           <p className="text-sm text-[var(--muted)]">{emptyMessage}</p>
         </div>
+      ) : layout === "content" ? (
+        <div className="w-full">{children}</div>
       ) : (
         <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
           <div className="flex gap-4 sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:gap-4 snap-x snap-mandatory sm:snap-none">

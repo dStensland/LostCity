@@ -9,7 +9,6 @@ import {
   type HospitalLocation,
 } from "@/lib/hospitals";
 import type { HospitalAudienceMode } from "@/lib/hospital-modes";
-import { type EmoryPersonaKey } from "@/lib/emory-personas";
 import {
   EMORY_THEME_CSS,
   EMORY_THEME_SCOPE_CLASS,
@@ -21,13 +20,12 @@ import HospitalTrackedLink from "@/app/[portal]/_components/hospital/HospitalTra
 import type { CSSProperties } from "react";
 import { getEmoryFederationShowcase } from "@/lib/emory-federation-showcase";
 
-type FeedTab = "curated" | "foryou";
+type FeedTab = "curated" | "explore" | "foryou";
 
 type HospitalPortalExperienceProps = {
   portal: Portal;
   feedTab: FeedTab;
   mode: HospitalAudienceMode;
-  persona: EmoryPersonaKey;
 };
 
 type HospitalCardModel = {
@@ -116,7 +114,6 @@ export default async function HospitalPortalExperience({
   portal,
   feedTab,
   mode,
-  persona,
 }: HospitalPortalExperienceProps) {
   if (!isEmoryDemoPortal(portal.slug)) {
     return (
@@ -142,8 +139,8 @@ export default async function HospitalPortalExperience({
     mode,
   });
 
-  const communityHref = `/${portal.slug}?view=community&mode=${mode}&persona=${persona}`;
-  const directoryHref = `/${portal.slug}/hospitals?mode=${mode}&persona=${persona}`;
+  const communityHref = `/${portal.slug}?view=community`;
+  const directoryHref = `/${portal.slug}/hospitals`;
 
   const emergencyHref = primaryHospital?.emergency_phone
     ? `tel:${primaryHospital.emergency_phone}`
@@ -207,7 +204,7 @@ export default async function HospitalPortalExperience({
     { id: "emergency", label: "Emergency support", detail: "Immediate phone support", cta: "Call now", href: emergencyHref, external: emergencyHref.startsWith("http") },
     { id: "main-line", label: "Main hospital line", detail: "Call the front desk directly", cta: "Call desk", href: mainLineHref, external: false },
     { id: "wayfinding", label: "Wayfinding and parking", detail: "Navigate entrances and parking", cta: "Open map", href: wayfindingHref, external: /^https?:\/\//i.test(wayfindingHref) },
-    { id: "care", label: "Care and appointments", detail: "Manage visits and care actions", cta: "Manage care", href: careHref, external: /^https?:\/\//i.test(careHref) },
+    { id: "care", label: "Care and appointments", detail: "Manage visits and appointments", cta: "Manage care", href: careHref, external: /^https?:\/\//i.test(careHref) },
     { id: "billing", label: "Billing and insurance", detail: "Financial and coverage help", cta: "Get help", href: billingHref, external: /^https?:\/\//i.test(billingHref) },
     { id: "language", label: "Language and accessibility", detail: "Interpreter and accessibility support", cta: "Language help", href: languageHref, external: /^https?:\/\//i.test(languageHref) },
   ] as const;
@@ -220,12 +217,12 @@ export default async function HospitalPortalExperience({
         <section className="emory-panel p-4 sm:p-5">
           <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-4">
             <div>
-              <p className="emory-kicker">Hospital Hub</p>
-              <h1 className={`mt-2 text-[clamp(2.15rem,3.9vw,3.28rem)] leading-[0.93] text-[var(--cream)] ${hospitalDisplayFont.className}`}>
-                Care connected to Atlanta, one community at a time.
+              <p className="emory-kicker">Your Hospital Network</p>
+              <h1 className={`mt-2 text-[clamp(2.6rem,4.8vw,3.8rem)] leading-[0.93] text-[var(--cream)] ${hospitalDisplayFont.className}`}>
+                Everything you need, all in one place.
               </h1>
               <p className="mt-3 max-w-[52ch] text-sm sm:text-base text-[var(--muted)]">
-                One place to find care actions, nearby support, and active community resources.
+                Find your hospital, explore nearby options, and connect with community health resources.
               </p>
 
               <div className="mt-4 flex flex-wrap gap-2">
@@ -241,9 +238,9 @@ export default async function HospitalPortalExperience({
                     targetId: "find-nearby",
                     targetLabel: "Find what is nearby",
                   }}
-                  className="emory-primary-btn inline-flex items-center px-3 py-1.5 text-xs"
+                  className="emory-primary-btn inline-flex items-center"
                 >
-                  Find What Is Nearby
+                  Explore Nearby
                 </HospitalTrackedLink>
                 <HospitalTrackedLink
                   href={directoryHref}
@@ -257,7 +254,7 @@ export default async function HospitalPortalExperience({
                     targetLabel: "Manage My Care",
                     targetUrl: directoryHref,
                   }}
-                  className="emory-secondary-btn inline-flex items-center px-3 py-1.5 text-xs"
+                  className="emory-secondary-btn inline-flex items-center"
                 >
                   Manage My Care
                 </HospitalTrackedLink>
@@ -273,9 +270,9 @@ export default async function HospitalPortalExperience({
                     targetLabel: "Community Guide",
                     targetUrl: communityHref,
                   }}
-                  className="emory-secondary-btn inline-flex items-center px-3 py-1.5 text-xs"
+                  className="emory-secondary-btn inline-flex items-center"
                 >
-                  Community Guide
+                  Community Health
                 </HospitalTrackedLink>
               </div>
 
@@ -301,11 +298,11 @@ export default async function HospitalPortalExperience({
         </section>
 
         <section className="emory-panel p-4 sm:p-5">
-          <p className="emory-kicker">Always available support</p>
-          <h2 className={`mt-1 text-[clamp(1.55rem,2.8vw,2.12rem)] leading-[0.97] text-[var(--cream)] ${hospitalDisplayFont.className}`}>
-            Quick help when you need it
+          <p className="emory-kicker">Quick support</p>
+          <h2 className={`mt-1 text-[clamp(1.8rem,3.2vw,2.5rem)] leading-[0.97] text-[var(--cream)] ${hospitalDisplayFont.className}`}>
+            Help when you need it
           </h2>
-          <p className="mt-1 text-sm text-[var(--muted)]">The most common care actions, always available.</p>
+          <p className="mt-1 text-sm text-[var(--muted)]">Phone numbers, directions, and essential services.</p>
 
           <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
             {supportCards.map((item) => (
@@ -338,17 +335,17 @@ export default async function HospitalPortalExperience({
         <section className="emory-panel p-4 sm:p-5" id="choose-hospital">
           <div className="flex items-start justify-between gap-3 flex-wrap">
             <div>
-              <p className="emory-kicker">Choose your hospital</p>
-              <h2 className={`mt-1 text-[clamp(1.8rem,3.2vw,2.5rem)] leading-[0.96] text-[var(--cream)] ${hospitalDisplayFont.className}`}>
-                Choose a hospital to start
+              <p className="emory-kicker">Your hospitals</p>
+              <h2 className={`mt-1 text-[clamp(2rem,3.5vw,2.8rem)] leading-[0.96] text-[var(--cream)] ${hospitalDisplayFont.className}`}>
+                Select a campus
               </h2>
-              <p className="mt-1 text-sm text-[var(--muted)]">Each campus card opens a concierge view with food, lodging, services, and wayfinding.</p>
+              <p className="mt-1 text-sm text-[var(--muted)]">View nearby food, lodging, services, and directions for each campus.</p>
             </div>
           </div>
 
           <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
             {hospitalCards.map((card) => {
-              const conciergeHref = `/${portal.slug}/hospitals/${card.hospital.slug}?mode=${mode}&persona=${persona}`;
+              const conciergeHref = `/${portal.slug}/hospitals/${card.hospital.slug}`;
               const hospitalWayfindingHref = getHospitalWayfindingHref(card.hospital);
               return (
                 <article key={card.hospital.id} className="group overflow-hidden rounded-xl border border-[var(--twilight)] bg-white shadow-[0_5px_16px_rgba(12,28,58,0.08)]">
@@ -382,9 +379,9 @@ export default async function HospitalPortalExperience({
                           targetLabel: card.hospital.name,
                           targetUrl: conciergeHref,
                         }}
-                        className="emory-primary-btn inline-flex items-center px-3 py-1.5 text-xs"
+                        className="emory-primary-btn inline-flex items-center"
                       >
-                        Open Concierge
+                        Explore Campus
                       </HospitalTrackedLink>
                       <HospitalTrackedLink
                         href={hospitalWayfindingHref}
@@ -418,11 +415,11 @@ export default async function HospitalPortalExperience({
         <section className="emory-panel p-4 sm:p-5">
           <div className="flex items-start justify-between gap-3 flex-wrap">
             <div>
-              <p className="emory-kicker">Community hub preview</p>
-              <h2 className={`mt-1 text-[clamp(1.7rem,3vw,2.35rem)] leading-[0.96] text-[var(--cream)] ${hospitalDisplayFont.className}`}>
-                Active neighborhood health resources
+              <p className="emory-kicker">Community health</p>
+              <h2 className={`mt-1 text-[clamp(1.9rem,3.3vw,2.6rem)] leading-[0.96] text-[var(--cream)] ${hospitalDisplayFont.className}`}>
+                Health resources in your neighborhood
               </h2>
-              <p className="mt-1 text-sm text-[var(--muted)]">Open by topic to explore events, venues, and support groups around Atlanta.</p>
+              <p className="mt-1 text-sm text-[var(--muted)]">Events, programs, and support organizations across Atlanta.</p>
             </div>
             <HospitalTrackedLink
               href={communityHref}
@@ -507,6 +504,12 @@ export default async function HospitalPortalExperience({
             })}
           </div>
         </section>
+
+        <footer className="mt-2 text-center">
+          <p className="text-[10.5px] font-medium tracking-[0.04em] text-[#9ca3af]">
+            Emory Healthcare &middot; Guest Services: (404) 712-2000
+          </p>
+        </footer>
       </div>
     </>
   );

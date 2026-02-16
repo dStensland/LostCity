@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Map as MapboxMap, Marker, NavigationControl } from "react-map-gl";
 import type { MapRef } from "react-map-gl";
 import type {
@@ -33,6 +34,7 @@ type EmoryDiscoveryDeckProps = {
   emptyHref: string;
   quickFilters?: DiscoveryFilter[];
   contextParams?: Record<string, string | undefined>;
+  allowedViews?: DiscoveryView[];
 };
 
 const DEFAULT_FILTERS: DiscoveryFilter[] = [
@@ -43,17 +45,7 @@ const DEFAULT_FILTERS: DiscoveryFilter[] = [
   { id: "care", label: "Care support", keywords: ["clinic", "screening", "pharmacy", "support", "health"] },
 ];
 
-const TAB_LABELS: Record<DiscoveryTab, string> = {
-  events: "Events",
-  venues: "Venues",
-  organizations: "Orgs",
-};
-
-const VIEW_LABELS: Record<DiscoveryView, string> = {
-  list: "List",
-  map: "Map",
-  timeline: "Timeline",
-};
+// Note: TAB_LABELS and VIEW_LABELS now come from useTranslations("discovery")
 
 const FALLBACK_CARD_IMAGES: Record<DiscoveryItem["kind"], string> = {
   event: "https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=640&q=80",
@@ -133,6 +125,7 @@ function VenueMapExplorer({
   contextParams,
   onToggleSaved,
 }: VenueMapExplorerProps) {
+  const t = useTranslations("discovery");
   const mapRef = useRef<MapRef | null>(null);
   const [mounted, setMounted] = useState(false);
   const [mapReady, setMapReady] = useState(false);
@@ -266,14 +259,14 @@ function VenueMapExplorer({
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.15fr)_minmax(260px,0.85fr)] gap-2.5">
-      <div className="relative overflow-hidden rounded-md border border-[var(--twilight)] bg-[var(--surface-1)] min-h-[320px]">
+      <div className="relative overflow-hidden rounded-md border border-[var(--twilight)] bg-[var(--surface-1)] min-h-[320px]" aria-label="Interactive map showing venues and organizations">
         {!mounted ? (
           <div className="absolute inset-0 flex items-center justify-center">
-            <p className="text-xs text-[var(--muted)]">Loading map…</p>
+            <p className="text-xs text-[var(--muted)]">{t("loadingMap")}</p>
           </div>
         ) : points.length === 0 ? (
           <div className="absolute inset-0 flex items-center justify-center px-6 text-center">
-            <p className="text-sm text-[var(--muted)]">No geocoded venues in this filter yet. Try another filter or switch to list view.</p>
+            <p className="text-sm text-[var(--muted)]">{t("noGeocodedVenues")}</p>
           </div>
         ) : (
           <MapboxMap
@@ -353,12 +346,12 @@ function VenueMapExplorer({
             <p className="text-sm font-semibold text-[var(--cream)]">{selectedPoint.title}</p>
             <p className="text-xs text-[var(--muted)]">{selectedPoint.subtitle}</p>
             <div className="mt-1 flex flex-wrap gap-3 pointer-events-auto">
-              <Link href={appendContextParams(selectedPoint.detailHref, contextParams)} className="emory-link-btn">Open</Link>
+              <Link href={appendContextParams(selectedPoint.detailHref, contextParams)} className="emory-link-btn">{t("open")}</Link>
               {selectedPoint.mapsHref && (
-                <a href={selectedPoint.mapsHref} target="_blank" rel="noreferrer" className="emory-link-btn">Map</a>
+                <a href={selectedPoint.mapsHref} target="_blank" rel="noreferrer" className="emory-link-btn">{t("mapDirections")}</a>
               )}
               <button type="button" onClick={() => onToggleSaved(selectedPoint.key)} className="emory-link-btn">
-                {savedIds.includes(selectedPoint.key) ? "Saved" : "Save"}
+                {savedIds.includes(selectedPoint.key) ? t("saved") : t("save")}
               </button>
             </div>
           </div>
@@ -416,12 +409,12 @@ function VenueMapExplorer({
                 </button>
               </div>
               <div className="mt-1.5 flex flex-wrap gap-3">
-                <Link href={appendContextParams(item.detailHref, contextParams)} className="emory-link-btn">Open</Link>
+                <Link href={appendContextParams(item.detailHref, contextParams)} className="emory-link-btn">{t("open")}</Link>
                 {item.mapsHref && (
-                  <a href={item.mapsHref} target="_blank" rel="noreferrer" className="emory-link-btn">Map</a>
+                  <a href={item.mapsHref} target="_blank" rel="noreferrer" className="emory-link-btn">{t("mapDirections")}</a>
                 )}
                 <button type="button" onClick={() => onToggleSaved(item.key)} className="emory-link-btn">
-                  {savedIds.includes(item.key) ? "Saved" : "Save"}
+                  {savedIds.includes(item.key) ? t("saved") : t("save")}
                 </button>
               </div>
             </article>
@@ -443,11 +436,25 @@ export default function EmoryDiscoveryDeck({
   emptyHref,
   quickFilters = DEFAULT_FILTERS,
   contextParams,
+  allowedViews,
 }: EmoryDiscoveryDeckProps) {
+  const t = useTranslations("discovery");
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const keyPrefix = stateKey || "discovery";
+
+  const TAB_LABELS: Record<DiscoveryTab, string> = {
+    events: t("tabEvents"),
+    venues: t("tabVenues"),
+    organizations: t("tabOrgs"),
+  };
+
+  const VIEW_LABELS: Record<DiscoveryView, string> = {
+    list: t("viewList"),
+    map: t("viewMap"),
+    timeline: t("viewTimeline"),
+  };
 
   const tabParam = searchParams.get(`${keyPrefix}_tab`) as DiscoveryTab | null;
   const viewParam = searchParams.get(`${keyPrefix}_view`) as DiscoveryView | null;
@@ -586,16 +593,16 @@ export default function EmoryDiscoveryDeck({
             onClick={() => setIsPlanOpen((value) => !value)}
             className="emory-secondary-btn inline-flex items-center px-2.5 py-1.5 text-xs"
           >
-            My plan ({savedItems.length})
+            {t("myPlan")} ({savedItems.length})
           </button>
-          <span className="emory-chip">{activeCount} results</span>
+          <span className="emory-chip">{activeCount} {t("results")}</span>
         </div>
       </div>
 
       {isPlanOpen && (
         <div className="mt-2 rounded-md border border-[var(--twilight)] bg-[var(--surface-1)] p-2.5">
           {savedItems.length === 0 ? (
-            <p className="text-xs text-[var(--muted)]">Save items as you browse and they appear here.</p>
+            <p className="text-xs text-[var(--muted)]">{t("savePlanHint")}</p>
           ) : (
             <div className="space-y-1.5">
               {savedItems.map((item) => (
@@ -603,14 +610,14 @@ export default function EmoryDiscoveryDeck({
                   <div>
                     <p className="text-sm font-semibold text-[var(--cream)]">{item.title}</p>
                     <p className="text-xs text-[var(--muted)]">{item.subtitle}</p>
-                    <Link href={appendContextParams(item.href, contextParams)} className="emory-link-btn mt-0.5 inline-flex">Open</Link>
+                    <Link href={appendContextParams(item.href, contextParams)} className="emory-link-btn mt-0.5 inline-flex">{t("open")}</Link>
                   </div>
                   <button
                     type="button"
                     onClick={() => toggleSaved(item.id)}
                     className="emory-link-btn"
                   >
-                    Remove
+                    {t("remove")}
                   </button>
                 </div>
               ))}
@@ -637,8 +644,8 @@ export default function EmoryDiscoveryDeck({
         })}
       </div>
 
-      <div className="mt-2 flex flex-wrap items-center gap-1.5">
-        {(Object.keys(VIEW_LABELS) as DiscoveryView[]).map((view) => {
+      <div id="discovery-list-fallback" className="mt-2 flex flex-wrap items-center gap-1.5">
+        {(Object.keys(VIEW_LABELS) as DiscoveryView[]).filter((v) => !allowedViews || allowedViews.includes(v)).map((view) => {
           const disabled = (view === "timeline" && activeTab !== "events")
             || (view === "map" && activeTab !== "venues");
           const active = view === activeView;
@@ -680,7 +687,7 @@ export default function EmoryDiscoveryDeck({
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search events, venues, or organizations"
+            placeholder={t("searchPlaceholder")}
             className="w-full rounded-md border border-[var(--twilight)] bg-[var(--surface-1)] px-3 py-2 text-sm text-[var(--cream)] placeholder:text-[#6b7280] focus:outline-none focus:ring-2 focus:ring-[#bfd4f5]"
           />
         </label>
@@ -693,7 +700,7 @@ export default function EmoryDiscoveryDeck({
           >
             {allowedSortsForTab(activeTab).map((option) => (
               <option key={option} value={option}>
-                {option === "relevant" ? "Most relevant" : option === "soonest" ? "Soonest" : option === "closest" ? "Closest" : option === "active" ? "Most active" : "A-Z"}
+                {option === "relevant" ? t("sortRelevant") : option === "soonest" ? t("sortSoonest") : option === "closest" ? t("sortClosest") : option === "active" ? t("sortActive") : t("sortAlpha")}
               </option>
             ))}
           </select>
@@ -703,7 +710,7 @@ export default function EmoryDiscoveryDeck({
           onClick={resetControls}
           className="emory-secondary-btn inline-flex items-center justify-center px-3 py-2 text-xs"
         >
-          Reset
+          {t("reset")}
         </button>
       </div>
 
@@ -725,9 +732,9 @@ export default function EmoryDiscoveryDeck({
                       </div>
                     </div>
                     <div className="mt-1 flex flex-wrap gap-3">
-                      <Link href={appendContextParams(item.detailHref, contextParams)} className="emory-link-btn">View Details</Link>
+                      <Link href={appendContextParams(item.detailHref, contextParams)} className="emory-link-btn">{t("viewDetails")}</Link>
                       <button type="button" onClick={() => toggleSaved(item.key)} className="emory-link-btn">
-                        {savedIds.includes(item.key) ? "Saved" : "Save"}
+                        {savedIds.includes(item.key) ? t("saved") : t("save")}
                       </button>
                     </div>
                   </article>
@@ -740,6 +747,12 @@ export default function EmoryDiscoveryDeck({
 
       {activeView === "map" && activeTab === "venues" && (
         <div className="mt-3">
+          <a
+            href="#discovery-list-fallback"
+            className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-2 focus:left-2 focus:bg-white focus:px-3 focus:py-2 focus:rounded-md focus:shadow-lg focus:text-sm focus:font-semibold"
+          >
+            Skip map, switch to list view
+          </a>
           <VenueMapExplorer
             items={rankedVenues}
             savedIds={savedIds}
@@ -765,12 +778,12 @@ export default function EmoryDiscoveryDeck({
                   </div>
                 </div>
                 <div className="mt-1.5 flex flex-wrap gap-3">
-                  <Link href={appendContextParams(item.detailHref, contextParams)} className="emory-link-btn">Open</Link>
+                  <Link href={appendContextParams(item.detailHref, contextParams)} className="emory-link-btn">{t("open")}</Link>
                   {item.mapsHref && (
-                    <a href={item.mapsHref} target="_blank" rel="noreferrer" className="emory-link-btn">Map</a>
+                    <a href={item.mapsHref} target="_blank" rel="noreferrer" className="emory-link-btn">{t("mapDirections")}</a>
                   )}
                   <button type="button" onClick={() => toggleSaved(item.key)} className="emory-link-btn">
-                    {savedIds.includes(item.key) ? "Saved" : "Save"}
+                    {savedIds.includes(item.key) ? t("saved") : t("save")}
                   </button>
                 </div>
               </article>
@@ -781,7 +794,7 @@ export default function EmoryDiscoveryDeck({
 
       {activeCount > (activeView === "map" ? 9 : 8) && (
         <div className="mt-2 flex items-center justify-between gap-2">
-          <p className="text-xs text-[var(--muted)]">Showing the first {activeView === "map" ? 9 : 8} matches.</p>
+          <p className="text-xs text-[var(--muted)]">{t("showingFirst", { count: activeView === "map" ? 9 : 8 })}</p>
           <Link href={appendContextParams(emptyHref, contextParams)} className="emory-link-btn inline-flex">
             Open Full Listings
           </Link>
@@ -790,8 +803,8 @@ export default function EmoryDiscoveryDeck({
 
       {activeCount === 0 && (
         <div className="mt-3 rounded-md border border-dashed border-[var(--twilight)] bg-[var(--surface-1)] p-3">
-          <p className="text-sm text-[var(--muted)]">No matches yet. Try a different filter or reset controls.</p>
-          <Link href={appendContextParams(emptyHref, contextParams)} className="emory-link-btn mt-1 inline-flex">Open Full Listings</Link>
+          <p className="text-sm text-[var(--muted)]">{t("noMatches")}</p>
+          <Link href={appendContextParams(emptyHref, contextParams)} className="emory-link-btn mt-1 inline-flex">{t("openFullListings")}</Link>
         </div>
       )}
     </section>

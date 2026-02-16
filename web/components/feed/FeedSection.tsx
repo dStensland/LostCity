@@ -5,6 +5,26 @@ import Link from "next/link";
 import Image from "@/components/SmartImage";
 import { formatTime } from "@/lib/formats";
 import CategoryIcon, { getCategoryColor } from "../CategoryIcon";
+import {
+  MicrophoneStage,
+  Question,
+  Target,
+  Spade,
+  GridFour,
+  Headphones,
+  Crown,
+  Guitar,
+  CowboyHat,
+  Confetti,
+  BeerStein,
+  Tag,
+  Waveform,
+  Smiley,
+  DiscoBall,
+  MoonStars,
+} from "@phosphor-icons/react";
+import type { ComponentType } from "react";
+import type { IconProps } from "@phosphor-icons/react";
 import { usePortal } from "@/lib/portal-context";
 import { useScrollReveal } from "@/lib/hooks/useScrollReveal";
 import { FeaturedCarousel } from "./FeaturedCarousel";
@@ -20,6 +40,12 @@ import { groupEventsForDisplay, type DisplayItem } from "@/lib/event-grouping";
 import type { EventWithLocation } from "@/lib/search";
 import { getSmartDateLabel } from "@/lib/card-utils";
 import { GridEventCard, CompactEventCard, HeroEventCard, type FeedEventData } from "@/components/EventCard";
+
+/** Block javascript: and data: URLs from DB content to prevent XSS */
+function isSafeUrl(url: string): boolean {
+  const trimmed = url.trim().toLowerCase();
+  return trimmed.startsWith("https://") || trimmed.startsWith("http://") || trimmed.startsWith("mailto:") || trimmed.startsWith("tel:") || trimmed.startsWith("/");
+}
 
 // Types
 export type FeedEvent = {
@@ -42,6 +68,7 @@ export type FeedEvent = {
   interested_count?: number;
   recommendation_count?: number;
   is_trending?: boolean;
+  activity_type?: string;
   series_id?: string | null;
   series?: {
     id: string;
@@ -107,12 +134,18 @@ function getSeeAllUrl(section: FeedSectionData, portalSlug: string): string {
     params.set("categories", autoFilter.categories.join(","));
     hasFilters = true;
   }
+  // nightlife_mode sections link to the nightlife category in find view
+  if ((autoFilter as Record<string, unknown>)?.nightlife_mode) {
+    params.set("categories", "nightlife");
+    hasFilters = true;
+  }
   if (autoFilter?.tags?.length) {
     params.set("tags", autoFilter.tags.join(","));
     hasFilters = true;
   }
   if (autoFilter?.is_free) {
     params.set("price", "free");
+    params.set("free", "1");
     hasFilters = true;
   }
   if (autoFilter?.date_filter === "today") {
@@ -157,6 +190,8 @@ export default function FeedSection({ section, isFirst }: Props) {
         return <Announcement section={section} />;
       case "external_link":
         return <ExternalLink section={section} />;
+      case "nightlife_carousel":
+        return <NightlifeCarousel section={section} portalSlug={portal.slug} isFirst={isFirst} />;
       case "event_cards":
       case "event_carousel":
         return <EventCards section={section} portalSlug={portal.slug} />;
@@ -219,7 +254,7 @@ const THEMED_SECTION_ICONS: Record<string, { icon: React.ReactNode; color: strin
   "black-history-month": {
     color: "#e53935", // Pan-African red
     icon: (
-      <Image src="/icons/raised-fist.png" alt="" width={32} height={32} className="w-full h-full object-cover" />
+      <Image src="/icons/black-history-fist.png" alt="" width={32} height={32} className="w-full h-full object-cover" />
     ),
   },
   "mardi-gras": {
@@ -711,6 +746,9 @@ function CollapsibleEvents({ section, portalSlug }: { section: FeedSectionData; 
 // ============================================
 
 function EventList({ section, portalSlug }: { section: FeedSectionData; portalSlug: string }) {
+  const COLLAPSED_ITEM_LIMIT = 10;
+  const [isExpanded, setIsExpanded] = useState(false);
+
   if (section.events.length === 0) {
     return null;
   }
@@ -778,37 +816,93 @@ function EventList({ section, portalSlug }: { section: FeedSectionData; portalSl
     }
   };
 
-  // Group events into progressive buckets: Today, This Week, This Month
+  // Group events into time-of-day buckets for today, date buckets for future
   const now = new Date();
   const todayStr = now.toISOString().split("T")[0];
-  // End of week = next Sunday (or today if Sunday)
-  const dayOfWeek = now.getDay(); // 0=Sun
-  const daysUntilEndOfWeek = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
-  const endOfWeek = new Date(now);
-  endOfWeek.setDate(now.getDate() + daysUntilEndOfWeek);
-  const endOfWeekStr = endOfWeek.toISOString().split("T")[0];
 
+  // Split events into today vs future
   const todayEvents: FeedEvent[] = [];
-  const weekEvents: FeedEvent[] = [];
-  const monthEvents: FeedEvent[] = [];
-
+  const futureEvents: FeedEvent[] = [];
   for (const event of section.events) {
-    const d = event.start_date;
-    if (d === todayStr) {
+    if (event.start_date === todayStr) {
       todayEvents.push(event);
-    } else if (d <= endOfWeekStr) {
-      weekEvents.push(event);
     } else {
-      monthEvents.push(event);
+      futureEvents.push(event);
     }
   }
 
+  // Time-of-day bucket helper
+  const getTimeOfDayBucket = (startTime: string | null, isAllDay: boolean): { label: string; order: number } => {
+    if (isAllDay || !startTime) return { label: "All Day", order: 0 };
+    const hour = parseInt(startTime.split(":")[0]);
+    if (hour < 12) return { label: "Morning", order: 1 };
+    if (hour < 17) return { label: "Afternoon", order: 2 };
+    if (hour < 21) return { label: "Evening", order: 3 };
+    return { label: "Late Night", order: 4 };
+  };
+
   const buckets: { key: string; label: string; events: FeedEvent[] }[] = [];
-  if (todayEvents.length > 0) buckets.push({ key: "today", label: "Today", events: todayEvents });
-  if (weekEvents.length > 0) buckets.push({ key: "week", label: "Soon", events: weekEvents });
-  if (monthEvents.length > 0) buckets.push({ key: "month", label: "A Bit Later", events: monthEvents });
+
+  // Build time-of-day buckets for today's events
+  if (todayEvents.length > 0) {
+    const todBucketMap = new Map<string, { label: string; order: number; events: FeedEvent[] }>();
+    for (const event of todayEvents) {
+      const { label, order } = getTimeOfDayBucket(event.start_time, event.is_all_day);
+      if (!todBucketMap.has(label)) {
+        todBucketMap.set(label, { label, order, events: [] });
+      }
+      todBucketMap.get(label)!.events.push(event);
+    }
+    const sortedTodBuckets = Array.from(todBucketMap.values()).sort((a, b) => a.order - b.order);
+    for (const b of sortedTodBuckets) {
+      buckets.push({ key: `today-${b.label.toLowerCase().replace(/\s/g, "-")}`, label: b.label, events: b.events });
+    }
+  }
+
+  // Build date buckets for future events
+  if (futureEvents.length > 0) {
+    const dateBucketMap = new Map<string, FeedEvent[]>();
+    for (const event of futureEvents) {
+      if (!dateBucketMap.has(event.start_date)) {
+        dateBucketMap.set(event.start_date, []);
+      }
+      dateBucketMap.get(event.start_date)!.push(event);
+    }
+    const sortedDates = Array.from(dateBucketMap.entries()).sort(([a], [b]) => a.localeCompare(b));
+    for (const [date, events] of sortedDates) {
+      buckets.push({ key: `date-${date}`, label: getSmartDateLabel(date), events });
+    }
+  }
 
   const showBucketHeaders = buckets.length > 1;
+  const bucketDisplayGroups = buckets.map((bucket) => ({
+    ...bucket,
+    displayItems: groupEventsForDisplay(
+      bucket.events.map((event) => ({
+        ...event,
+        category_id: event.category,
+        subcategory_id: event.subcategory,
+      })) as unknown as EventWithLocation[],
+      { collapseFestivals: true, collapseFestivalPrograms: true }
+    ),
+  }));
+
+  const totalDisplayCount = bucketDisplayGroups.reduce((sum, bucket) => sum + bucket.displayItems.length, 0);
+  let remainingSlots = isExpanded ? Number.POSITIVE_INFINITY : COLLAPSED_ITEM_LIMIT;
+  const visibleBucketGroups = bucketDisplayGroups
+    .map((bucket) => {
+      const available = Number.isFinite(remainingSlots) ? Math.max(remainingSlots, 0) : bucket.displayItems.length;
+      const visibleItems = bucket.displayItems.slice(0, available);
+      if (Number.isFinite(remainingSlots)) {
+        remainingSlots = Math.max(remainingSlots - visibleItems.length, 0);
+      }
+      return { ...bucket, visibleItems };
+    })
+    .filter((bucket) => bucket.visibleItems.length > 0);
+
+  const visibleDisplayCount = visibleBucketGroups.reduce((sum, bucket) => sum + bucket.visibleItems.length, 0);
+  const hiddenDisplayCount = Math.max(totalDisplayCount - visibleDisplayCount, 0);
+  const canCollapseBack = isExpanded && totalDisplayCount > COLLAPSED_ITEM_LIMIT;
 
   return (
     <section className="mb-4 sm:mb-6">
@@ -816,7 +910,7 @@ function EventList({ section, portalSlug }: { section: FeedSectionData; portalSl
 
       {/* List grouped by progressive date buckets */}
       <div className="space-y-4">
-        {buckets.map((bucket) => (
+        {visibleBucketGroups.map((bucket) => (
           <div key={bucket.key}>
             {/* Bucket header */}
             {showBucketHeaders && (
@@ -832,22 +926,266 @@ function EventList({ section, portalSlug }: { section: FeedSectionData; portalSl
             )}
             {/* Events for this bucket */}
             <div className="space-y-2">
-              {groupEventsForDisplay(
-                bucket.events.map((event) => ({
-                  ...event,
-                  category_id: event.category,
-                  subcategory_id: event.subcategory,
-                })) as unknown as EventWithLocation[],
-                { collapseFestivals: true, collapseFestivalPrograms: true }
-              ).map((item, idx) => renderDisplayItem(item, idx, !showBucketHeaders))}
+              {bucket.visibleItems.map((item, idx) => renderDisplayItem(item, idx, !showBucketHeaders))}
             </div>
           </div>
         ))}
+
+        {(hiddenDisplayCount > 0 || canCollapseBack) && (
+          <div className="pt-1">
+            <button
+              type="button"
+              onClick={() => setIsExpanded((prev) => !prev)}
+              className="w-full rounded-xl border border-[var(--twilight)]/50 bg-[var(--night)]/55 px-4 py-3 text-left transition-all duration-200 hover:border-[var(--coral)]/45 hover:bg-[var(--night)]/75"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-[var(--muted)]">
+                    Section Density
+                  </p>
+                  <p className="text-sm text-[var(--cream)] font-medium">
+                    {hiddenDisplayCount > 0
+                      ? `Show ${hiddenDisplayCount} more`
+                      : "Show fewer items"}
+                  </p>
+                </div>
+                <span className="inline-flex h-8 min-w-8 items-center justify-center rounded-full border border-[var(--coral)]/40 px-2 font-mono text-xs text-[var(--coral)]">
+                  {hiddenDisplayCount > 0 ? `+${hiddenDisplayCount}` : "−"}
+                </span>
+              </div>
+            </button>
+          </div>
+        )}
       </div>
     </section>
   );
 }
 
+
+// ============================================
+// NIGHTLIFE CAROUSEL - Interactive activity type filter + event list
+// ============================================
+
+// Neon color overrides for activities that don't have a CATEGORY_CONFIG entry.
+// For activities with a matching category (comedy, music, dance, nightlife, gaming),
+// we use getCategoryColor() at render time instead.
+const NIGHTLIFE_ACTIVITIES: Record<string, { neonOverride?: string; icon: ComponentType<IconProps> }> = {
+  karaoke:      { neonOverride: "#FF6EB4", icon: MicrophoneStage },
+  trivia:       { neonOverride: "#F5A623", icon: Question },
+  bar_games:    { neonOverride: "#00D9A0", icon: Target },
+  poker:        { neonOverride: "#FF5A5A", icon: Spade },
+  bingo:        { neonOverride: "#C084FC", icon: GridFour },
+  dj:           { neonOverride: "#00D4E8", icon: Headphones },
+  drag:         { neonOverride: "#E855A0", icon: Crown },
+  latin_night:  { neonOverride: "#FF8C42", icon: Guitar },
+  line_dancing: { neonOverride: "#FFD93D", icon: CowboyHat },
+  party:        { neonOverride: "#818CF8", icon: Confetti },
+  pub_crawl:    { neonOverride: "#86EFAC", icon: BeerStein },
+  specials:     { neonOverride: "#38BDF8", icon: Tag },
+  live_music:   { icon: Waveform },          // uses getCategoryColor("music")
+  comedy:       { icon: Smiley },            // uses getCategoryColor("comedy")
+  dance:        { icon: DiscoBall },         // uses getCategoryColor("dance")
+  other:        { neonOverride: "#94A3B8", icon: MoonStars },
+};
+
+// Resolve neon color: prefer CATEGORY_CONFIG color, then activity override, then fallback
+const CATEGORY_COLOR_MAP: Record<string, string> = {
+  live_music: "music",
+  comedy: "comedy",
+  dance: "dance",
+};
+function getNeonColor(activityId: string): string {
+  const catKey = CATEGORY_COLOR_MAP[activityId];
+  if (catKey) {
+    const c = getCategoryColor(catKey);
+    if (c && c !== "#8B8B94") return c; // skip the "other" default gray
+  }
+  return NIGHTLIFE_ACTIVITIES[activityId]?.neonOverride || "#94A3B8";
+}
+
+function NightlifeCarousel({ section, portalSlug, isFirst }: { section: FeedSectionData; portalSlug: string; isFirst?: boolean }) {
+  const content = section.block_content as {
+    nightlife_categories?: Array<{ id: string; label: string; count: number }>;
+    total_events?: number;
+  } | null;
+
+  const categories = content?.nightlife_categories || [];
+  const totalEvents = content?.total_events || 0;
+  const [selectedActivity, setSelectedActivity] = useState<string | null>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const COLLAPSED_LIMIT = 8;
+
+  // Filter events by selected activity
+  const filteredEvents = useMemo(() => {
+    if (!selectedActivity) return section.events;
+    return section.events.filter((e) => (e as FeedEvent & { activity_type?: string }).activity_type === selectedActivity);
+  }, [section.events, selectedActivity]);
+
+  // Reset expansion when filter changes
+  useEffect(() => {
+    setIsExpanded(false);
+  }, [selectedActivity]);
+
+  // Compute visible events with collapse logic
+  const { visibleEvents, hiddenCount } = useMemo(() => {
+    if (isExpanded) {
+      return { visibleEvents: filteredEvents, hiddenCount: 0 };
+    }
+    const visible = filteredEvents.slice(0, COLLAPSED_LIMIT);
+    return { visibleEvents: visible, hiddenCount: Math.max(filteredEvents.length - COLLAPSED_LIMIT, 0) };
+  }, [filteredEvents, isExpanded]);
+
+  if (categories.length === 0) return null;
+
+  const handleCardClick = (catId: string) => {
+    setSelectedActivity(prev => prev === catId ? null : catId);
+  };
+
+  return (
+    <section className={`mb-6 sm:mb-10 ${isFirst ? "" : "pt-2"}`}>
+      {/* Neon header */}
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-3">
+          <h3
+            className="text-xl sm:text-2xl font-bold tracking-tight"
+            style={{
+              color: "#E855A0",
+              textShadow: "0 0 7px rgba(232,85,160,0.6), 0 0 20px rgba(232,85,160,0.25)",
+            }}
+          >
+            Going Out?
+          </h3>
+        </div>
+        <Link
+          href={`/${portalSlug}?view=find&type=events&categories=nightlife`}
+          className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-mono transition-all group"
+          style={{
+            color: "#E855A0",
+            textShadow: "0 0 8px rgba(232,85,160,0.4)",
+          }}
+        >
+          All {totalEvents}
+          <svg className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </Link>
+      </div>
+
+      {/* Horizontal scrolling neon cards — interactive filter */}
+      <div className="flex gap-3 overflow-x-auto py-2 -my-2 scrollbar-hide scroll-smooth -mx-4 px-4 sm:mx-0 sm:px-0">
+        {/* "All" card */}
+        <button
+          type="button"
+          onClick={() => setSelectedActivity(null)}
+          className="flex-shrink-0 w-[130px] sm:w-[150px] text-left"
+        >
+          <div
+            className="relative overflow-hidden rounded-xl p-3.5 h-[110px] sm:h-[120px] flex flex-col justify-between transition-all duration-200 hover:scale-[1.04]"
+            style={{
+              background: "var(--night, #0F0F14)",
+              border: `1px solid color-mix(in srgb, #E855A0 ${selectedActivity === null ? "60%" : "20%"}, transparent)`,
+              boxShadow: selectedActivity === null
+                ? "inset 0 0 24px color-mix(in srgb, #E855A0 12%, transparent), 0 0 16px color-mix(in srgb, #E855A0 25%, transparent)"
+                : "inset 0 0 20px color-mix(in srgb, #E855A0 4%, transparent)",
+              opacity: selectedActivity !== null ? 0.5 : 1,
+            }}
+          >
+            <div className="absolute -top-8 -right-8 w-24 h-24 rounded-full blur-2xl opacity-30 pointer-events-none" style={{ background: "#E855A0" }} />
+            <MoonStars size={28} weight="light" className="relative z-10 icon-neon" style={{ color: "#E855A0" }} />
+            <div className="relative z-10">
+              <div className="font-semibold text-[0.8rem] sm:text-sm leading-tight tracking-tight" style={{ color: "#E855A0", textShadow: "0 0 8px color-mix(in srgb, #E855A0 50%, transparent)" }}>
+                All
+              </div>
+              <div className="font-mono text-[0.6rem] text-[var(--muted)] mt-0.5">{totalEvents} tonight</div>
+            </div>
+          </div>
+        </button>
+
+        {categories.map((cat) => {
+          const activity = NIGHTLIFE_ACTIVITIES[cat.id] || NIGHTLIFE_ACTIVITIES.other;
+          const ActivityIcon = activity.icon;
+          const neon = getNeonColor(cat.id);
+          const isSelected = selectedActivity === cat.id;
+          const hasSomeSelection = selectedActivity !== null;
+          return (
+            <button
+              key={cat.id}
+              type="button"
+              onClick={() => handleCardClick(cat.id)}
+              className="flex-shrink-0 w-[130px] sm:w-[150px] text-left"
+            >
+              <div
+                className="relative overflow-hidden rounded-xl p-3.5 h-[110px] sm:h-[120px] flex flex-col justify-between transition-all duration-200 hover:scale-[1.04]"
+                style={{
+                  background: isSelected ? `color-mix(in srgb, ${neon} 8%, var(--night, #0F0F14))` : "var(--night, #0F0F14)",
+                  border: `1px solid color-mix(in srgb, ${neon} ${isSelected ? "60%" : "35%"}, transparent)`,
+                  boxShadow: isSelected
+                    ? `inset 0 0 24px color-mix(in srgb, ${neon} 12%, transparent), 0 0 16px color-mix(in srgb, ${neon} 25%, transparent)`
+                    : `inset 0 0 20px color-mix(in srgb, ${neon} 6%, transparent), 0 0 12px color-mix(in srgb, ${neon} 15%, transparent)`,
+                  opacity: hasSomeSelection && !isSelected ? 0.5 : 1,
+                }}
+              >
+                {/* Corner glow */}
+                <div className="absolute -top-8 -right-8 w-24 h-24 rounded-full blur-2xl opacity-30 pointer-events-none" style={{ background: neon }} />
+
+                {/* Phosphor icon with neon glow */}
+                <ActivityIcon size={28} weight="light" className="relative z-10 icon-neon" style={{ color: neon, filter: `drop-shadow(0 0 6px ${neon})` }} />
+
+                {/* Label + count */}
+                <div className="relative z-10">
+                  <div className="font-semibold text-[0.8rem] sm:text-sm leading-tight tracking-tight" style={{ color: neon, textShadow: `0 0 8px color-mix(in srgb, ${neon} 50%, transparent)` }}>
+                    {cat.label}
+                  </div>
+                  <div className="font-mono text-[0.6rem] text-[var(--muted)] mt-0.5">{cat.count} tonight</div>
+                </div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Filtered event list */}
+      <div className="mt-4 transition-opacity duration-150" style={{ opacity: filteredEvents.length > 0 ? 1 : 0.6 }}>
+        {filteredEvents.length === 0 ? (
+          <div className="text-center py-6">
+            <p className="font-mono text-sm text-[var(--muted)]">Nothing tonight in this category</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {visibleEvents.map((event, idx) => (
+              <CompactEventCard
+                key={event.id}
+                event={event as unknown as FeedEventData}
+                isAlternate={idx % 2 === 1}
+                showDate={false}
+                portalSlug={portalSlug}
+              />
+            ))}
+
+            {(hiddenCount > 0 || (isExpanded && filteredEvents.length > COLLAPSED_LIMIT)) && (
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={() => setIsExpanded(prev => !prev)}
+                  className="w-full rounded-xl border border-[var(--twilight)]/50 bg-[var(--night)]/55 px-4 py-3 text-left transition-all duration-200 hover:border-[var(--coral)]/45 hover:bg-[var(--night)]/75"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm text-[var(--cream)] font-medium">
+                      {hiddenCount > 0 ? `Show ${hiddenCount} more` : "Show fewer"}
+                    </p>
+                    <span className="inline-flex h-8 min-w-8 items-center justify-center rounded-full border border-[var(--coral)]/40 px-2 font-mono text-xs text-[var(--coral)]">
+                      {hiddenCount > 0 ? `+${hiddenCount}` : "\u2212"}
+                    </span>
+                  </div>
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
 
 // ============================================
 // CATEGORY GRID - Quick links to categories
@@ -876,7 +1214,7 @@ function CategoryGrid({ section, portalSlug, isFirst }: { section: FeedSectionDa
         {categories.map((cat) => (
           <Link
             key={cat.id}
-            href={`/${portalSlug}?categories=${cat.id}`}
+            href={`/${portalSlug}?view=find&type=events&categories=${cat.id}`}
             className="flex flex-col items-center gap-2 p-4 rounded-xl border border-[var(--twilight)] hover:border-[var(--coral)]/50 transition-all group min-h-[80px] relative bg-[var(--card-bg)]"
           >
             <CategoryIcon
@@ -1222,7 +1560,7 @@ function Announcement({ section }: { section: FeedSectionData }) {
             <p className="font-mono text-sm leading-relaxed announcement-body">
               {content.text}
             </p>
-            {content.cta_url && content.cta_text && (
+            {content.cta_url && content.cta_text && isSafeUrl(content.cta_url) && (
               <Link
                 href={content.cta_url}
                 data-accent
@@ -1252,7 +1590,7 @@ function ExternalLink({ section }: { section: FeedSectionData }) {
     cta_text?: string;
   } | null;
 
-  if (!content?.url) {
+  if (!content?.url || !isSafeUrl(content.url)) {
     return null;
   }
 

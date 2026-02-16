@@ -17,7 +17,8 @@ export async function GET(request: NextRequest, { params }: Props) {
   const supabase = await createClient();
   const { id } = await params;
   const { searchParams } = new URL(request.url);
-  const limit = parseInt(searchParams.get("limit") || "10");
+  const rawLimit = parseInt(searchParams.get("limit") || "10", 10);
+  const limit = Math.min(Math.max(isNaN(rawLimit) ? 10 : rawLimit, 1), 100);
   const portalIdParam = searchParams.get("portal_id");
 
   // Validate portal_id to prevent PostgREST filter injection

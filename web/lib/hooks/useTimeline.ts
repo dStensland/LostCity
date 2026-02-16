@@ -43,10 +43,12 @@ export function useTimeline(options: UseTimelineOptions = {}) {
       "search",
       "categories",
       "subcategories",
+      "genres",
       "tags",
       "vibes",
       "neighborhoods",
       "price",
+      "free",
       "date",
       "mood",
     ];

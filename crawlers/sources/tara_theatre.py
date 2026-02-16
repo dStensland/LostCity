@@ -115,7 +115,7 @@ def extract_movies_for_date(
     lines = [l.strip() for l in body_text.split("\n") if l.strip()]
 
     seen_movies = set()
-    matches = []  # List of (title, [times])
+    matches = []  # List of (title, [times], description)
 
     # Find movie titles by looking for duration pattern on next line
     # Title patterns: "Movie Name (2026)" or "Movie Name"
@@ -125,6 +125,8 @@ def extract_movies_for_date(
 
     current_movie = None
     current_times = []
+    current_desc_lines = []
+    seen_first_time = False
 
     skip_titles = [
         "NOW PLAYING", "COMING SOON", "THE TARA", "Plaza Theatre",
@@ -141,6 +143,7 @@ def extract_movies_for_date(
         # Check if this line is a time
         time_match = time_pattern.match(line)
         if time_match and current_movie:
+            seen_first_time = True
             hour = int(time_match.group(1).split(':')[0])
             minute = time_match.group(1).split(':')[1]
             period = time_match.group(2).upper()
@@ -160,7 +163,8 @@ def extract_movies_for_date(
             if duration_pattern.match(next_line):
                 # Save previous movie if we have one with times
                 if current_movie and current_times:
-                    matches.append((current_movie, current_times))
+                    desc = " ".join(current_desc_lines).strip() or None
+                    matches.append((current_movie, current_times, desc))
 
                 # Check if this looks like a valid movie title
                 if (len(line) >= 3 and
@@ -169,18 +173,31 @@ def extract_movies_for_date(
                     not re.match(r'^\d+$', line)):
                     current_movie = line
                     current_times = []
+                    current_desc_lines = []
+                    seen_first_time = False
                 else:
                     current_movie = None
                     current_times = []
+                    current_desc_lines = []
+                    seen_first_time = False
 
                 i += 1
                 continue
+
+        # Collect description lines between duration and first showtime
+        if current_movie and not seen_first_time:
+            if (not duration_pattern.match(line) and
+                'THEATRE' not in line.upper() and
+                len(line) > 20 and
+                '·' not in line):
+                current_desc_lines.append(line)
 
         i += 1
 
     # Don't forget the last movie
     if current_movie and current_times:
-        matches.append((current_movie, current_times))
+        desc = " ".join(current_desc_lines).strip() or None
+        matches.append((current_movie, current_times, desc))
 
     logger.info(f"Found {len(matches)} movies with showtimes for {date_str}")
 
@@ -188,7 +205,7 @@ def extract_movies_for_date(
     for m in matches[:3]:
         logger.debug(f"  Extracted: '{m[0][:40]}' | {m[1]}")
 
-    for title_part, times_list in matches:
+    for title_part, times_list, movie_desc in matches:
         title_part = title_part.strip()
 
         # Clean up title - remove common prefixes
@@ -255,7 +272,7 @@ def extract_movies_for_date(
                     "source_id": source_id,
                     "venue_id": venue_id,
                     "title": title_part,
-                    "description": None,
+                    "description": movie_desc,
                     "start_date": date_str,
                     "start_time": showtime,
                     "end_date": None,

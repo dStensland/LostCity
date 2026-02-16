@@ -4,7 +4,6 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "@/components/SmartImage";
 import { format, parseISO, isSameDay, isToday, isTomorrow, addDays, startOfDay } from "date-fns";
-import { formatTimeSplit } from "@/lib/formats";
 import { getEffectiveDate } from "@/lib/event-grouping";
 import { SPOT_TYPES, formatPriceLevel, getSpotTypeLabels, type SpotType } from "@/lib/spots-constants";
 import FollowButton from "@/components/FollowButton";
@@ -14,10 +13,19 @@ import FlagButton from "@/components/FlagButton";
 import LinkifyText from "@/components/LinkifyText";
 import CollapsibleSection, { CategoryIcons, CATEGORY_COLORS } from "@/components/CollapsibleSection";
 import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
+import { VenueEventCard } from "@/components/VenueEventsByDay";
 import HoursSection, { OpenStatusBadge } from "@/components/HoursSection";
 import { type HoursData } from "@/lib/hours";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
+import { isDogPortal, classifyDogContentType, DOG_CONTENT_COLORS } from "@/lib/dog-art";
+import { HIGHLIGHT_CONFIG, type VenueHighlight } from "@/lib/venue-highlights";
+import dynamic from "next/dynamic";
+
+const DogTagModal = dynamic(
+  () => import("@/app/[portal]/_components/dog/DogTagModal"),
+  { ssr: false }
+);
 
 type SpotData = {
   id: number;
@@ -48,9 +56,18 @@ type UpcomingEvent = {
   start_date: string;
   end_date?: string | null;
   start_time: string | null;
-  is_free: boolean;
+  is_free?: boolean;
   price_min: number | null;
   category: string | null;
+  artists?: {
+    name: string;
+    billing_order?: number | null;
+    is_headliner?: boolean;
+  }[];
+  lineup?: string | null;
+  going_count?: number;
+  interested_count?: number;
+  recommendation_count?: number;
 };
 
 type NearbyDestination = {
@@ -282,76 +299,14 @@ function VenueEventsSection({
             No events on this date
           </div>
         ) : (
-          selectedEvents.map((event) => {
-            const { time, period } = formatTimeSplit(event.start_time);
-            const categoryColor = event.category
-              ? getCategoryColor(event.category)
-              : null;
-            const accentColor = categoryColor || "var(--neon-magenta)";
-            const accentClass = createCssVarClass("--accent-color", accentColor, "accent");
-
-            return (
-              <React.Fragment key={event.id}>
-                <ScopedStyles css={accentClass?.css} />
-              <button
-                onClick={() => onEventClick(event.id)}
-                className={`block w-full text-left p-4 border border-[var(--twilight)] rounded-xl bg-[var(--dusk)] hover:border-[var(--coral)]/50 transition-colors group ${accentClass?.className ?? ""} ${
-                  categoryColor ? "border-l-[3px] border-l-[var(--accent-color)]" : ""
-                }`}
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      {event.category && (
-                        <span
-                          className="flex-shrink-0 inline-flex items-center justify-center w-5 h-5 rounded bg-accent-20"
-                        >
-                          <CategoryIcon
-                            type={event.category}
-                            size={12}
-                            glow="subtle"
-                          />
-                        </span>
-                      )}
-                      <h3 className="text-[var(--cream)] font-medium truncate group-hover:text-[var(--coral)] transition-colors">
-                        {event.title}
-                      </h3>
-                    </div>
-                    <div className="flex items-center gap-2 mt-1 text-sm text-[var(--muted)]">
-                      {event.start_time && (
-                        <span className="font-mono">
-                          {time} {period}
-                        </span>
-                      )}
-                      {event.is_free ? (
-                        <span className="px-1.5 py-0.5 rounded border bg-[var(--neon-green)]/15 text-[var(--neon-green)] border-[var(--neon-green)]/25 font-mono text-[0.55rem]">
-                          Free
-                        </span>
-                      ) : event.price_min ? (
-                        <span>${event.price_min}+</span>
-                      ) : null}
-                    </div>
-                  </div>
-                  <span className="text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0">
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 5l7 7-7 7"
-                      />
-                    </svg>
-                  </span>
-                </div>
-              </button>
-              </React.Fragment>
-            );
-          })
+          selectedEvents.map((event) => (
+            <VenueEventCard
+              key={event.id}
+              event={event}
+              onClick={() => onEventClick(event.id)}
+              compact={false}
+            />
+          ))
         )}
       </div>
     </div>
@@ -369,6 +324,9 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [isLowRes, setIsLowRes] = useState(false);
+  const [highlights, setHighlights] = useState<VenueHighlight[]>([]);
+  const [artifacts, setArtifacts] = useState<{id: number; name: string; slug: string | null; image_url: string | null; short_description: string | null}[]>([]);
+  const [showTagModal, setShowTagModal] = useState(false);
 
   useEffect(() => {
     async function fetchSpot() {
@@ -384,6 +342,8 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
         setSpot(data.spot);
         setUpcomingEvents(data.upcomingEvents || []);
         setNearbyDestinations(data.nearbyDestinations || null);
+        setHighlights(data.highlights || []);
+        setArtifacts(data.artifacts || []);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load spot");
       } finally {
@@ -435,6 +395,21 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
   const typeInfo = primaryType ? SPOT_TYPES[primaryType] : null;
   const priceDisplay = formatPriceLevel(spot.price_level);
   const showImage = spot.image_url && !imageError;
+  const isDog = isDogPortal(portalSlug);
+
+  // Dog-specific vibe highlights
+  const dogVibeLabels: Record<string, string> = {
+    "off-leash": "Off-Leash Area",
+    "pup-cup": "Pup Cup Available",
+    "dog-menu": "Dog Menu",
+    "treats-available": "Treats Available",
+    "dog-friendly": "Dog Friendly",
+    "water-bowls": "Water Bowls",
+    "fenced": "Fenced Area",
+  };
+  const dogHighlightVibes = isDog && spot.vibes
+    ? spot.vibes.filter((v) => v in dogVibeLabels)
+    : [];
 
   return (
     <div className="pt-6 pb-8">
@@ -548,6 +523,51 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
           )}
         </div>
 
+        {/* Dog-friendly highlights (dog portal only) */}
+        {isDog && dogHighlightVibes.length > 0 && (
+          <div className="mt-5 flex flex-wrap gap-2">
+            {dogHighlightVibes.map((vibe) => (
+              <span
+                key={vibe}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold"
+                style={{
+                  background: "rgba(255, 107, 53, 0.1)",
+                  color: "#FF6B35",
+                  border: "1px solid rgba(255, 107, 53, 0.25)",
+                }}
+              >
+                {vibe === "off-leash" && "🐕"}
+                {vibe === "pup-cup" && "🍦"}
+                {vibe === "dog-menu" && "🦴"}
+                {vibe === "treats-available" && "🍪"}
+                {vibe === "dog-friendly" && "🐾"}
+                {vibe === "water-bowls" && "💧"}
+                {vibe === "fenced" && "🏡"}
+                {" "}{dogVibeLabels[vibe]}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Tag this spot (dog portal only) */}
+        {isDog && (
+          <button
+            onClick={() => setShowTagModal(true)}
+            className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
+            style={{
+              background: "rgba(255, 107, 53, 0.08)",
+              color: "#FF6B35",
+              border: "1px solid rgba(255, 107, 53, 0.2)",
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+              <line x1="7" y1="7" x2="7.01" y2="7" />
+            </svg>
+            Tag this spot
+          </button>
+        )}
+
         {/* Hours */}
         {(spot.hours || spot.hours_display || spot.is_24_hours) && (
           <div className="mt-6 pt-6 border-t border-[var(--twilight)]">
@@ -571,6 +591,78 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
             <p className="text-[var(--soft)] whitespace-pre-wrap leading-relaxed">
               <LinkifyText text={spot.description} />
             </p>
+          </div>
+        )}
+
+        {/* While You're Here — venue highlights */}
+        {highlights.length > 0 && (
+          <div className="mt-6 pt-6 border-t border-[var(--twilight)]">
+            <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
+              While You&apos;re Here
+            </h2>
+            <div className="space-y-3">
+              {highlights.map((h) => {
+                const config = HIGHLIGHT_CONFIG[h.highlight_type];
+                const IconComp = config?.Icon;
+                return (
+                  <div key={h.id} className="flex items-start gap-3 p-3 rounded-lg border border-[var(--twilight)] bg-[var(--dusk)]">
+                    {IconComp && (
+                      <IconComp
+                        size={20}
+                        weight="light"
+                        className="flex-shrink-0 mt-0.5 icon-neon-subtle"
+                        style={{ color: config.color }}
+                      />
+                    )}
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-[var(--cream)]">{h.title}</span>
+                        <span className="text-[0.6rem] font-mono uppercase text-[var(--muted)]">
+                          {config?.label}
+                        </span>
+                      </div>
+                      {h.description && (
+                        <p className="text-sm text-[var(--soft)] mt-1 leading-relaxed">{h.description}</p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Artifacts housed at this venue */}
+        {artifacts.length > 0 && (
+          <div className="mt-6 pt-6 border-t border-[var(--twilight)]">
+            <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
+              Artifacts
+            </h2>
+            <div className="space-y-2">
+              {artifacts.map((artifact) => (
+                <button
+                  key={artifact.id}
+                  onClick={() => artifact.slug && handleSpotClick(artifact.slug)}
+                  className="block w-full text-left p-3 border border-[var(--twilight)] rounded-lg bg-[var(--dusk)] hover:border-[var(--coral)]/50 transition-colors group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 min-w-0">
+                      <span className="font-medium text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors">
+                        {artifact.name}
+                      </span>
+                      {artifact.short_description && (
+                        <p className="text-sm text-[var(--soft)] mt-0.5 line-clamp-1">
+                          {artifact.short_description}
+                        </p>
+                      )}
+                    </div>
+                    <svg className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
@@ -738,6 +830,141 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
           );
         })()
       )}
+
+      {/* Dog-Friendly Nearby (dog portal only) */}
+      {isDog && spot.neighborhood && (
+        <DogNearbySection
+          neighborhood={spot.neighborhood}
+          currentVenueId={spot.id}
+          onSpotClick={handleSpotClick}
+        />
+      )}
+
+      {/* Dog Tag Modal */}
+      {isDog && showTagModal && (
+        <DogTagModal
+          venueId={spot.id}
+          venueName={spot.name}
+          venueType={spot.spot_type}
+          existingVibes={spot.vibes}
+          onClose={() => setShowTagModal(false)}
+          onSuccess={(updatedVibes) => {
+            setSpot((prev) => prev ? { ...prev, vibes: updatedVibes } : prev);
+            setShowTagModal(false);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// Dog-friendly nearby spots section (only rendered in dog portal)
+function DogNearbySection({
+  neighborhood,
+  currentVenueId,
+  onSpotClick,
+}: {
+  neighborhood: string;
+  currentVenueId: number;
+  onSpotClick: (slug: string) => void;
+}) {
+  const [spots, setSpots] = useState<
+    { id: number; name: string; slug: string; venue_type: string | null; vibes: string[] | null; short_description: string | null }[]
+  >([]);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    async function fetchNearby() {
+      try {
+        const params = new URLSearchParams({
+          neighborhood,
+          vibes: "dog-friendly",
+        });
+        const res = await fetch(`/api/spots?${params}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const filtered = (data.spots || [])
+          .filter((s: { id: number }) => s.id !== currentVenueId)
+          .slice(0, 6);
+        setSpots(filtered);
+      } catch {
+        // Silently fail — this is an enhancement
+      } finally {
+        setLoaded(true);
+      }
+    }
+    fetchNearby();
+  }, [neighborhood, currentVenueId]);
+
+  if (!loaded || spots.length === 0) return null;
+
+  return (
+    <div className="mt-8">
+      <h2
+        className="text-lg font-bold mb-4"
+        style={{ color: "var(--cream, #292524)" }}
+      >
+        Dog-Friendly Nearby
+      </h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {spots.map((s) => {
+          const contentType = classifyDogContentType(s.venue_type, s.vibes, null, false);
+          const color = DOG_CONTENT_COLORS[contentType];
+          return (
+            <button
+              key={s.id}
+              onClick={() => onSpotClick(s.slug)}
+              className="flex items-start gap-3 p-3 rounded-xl border transition-colors text-left group"
+              style={{
+                background: "var(--dusk, #fff)",
+                borderColor: "var(--twilight, #FDE68A)",
+              }}
+            >
+              <div
+                className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 text-lg"
+                style={{ background: `${color}20` }}
+              >
+                {contentType === "parks" && "🌳"}
+                {contentType === "food" && "🍽️"}
+                {contentType === "services" && "🦴"}
+                {contentType === "trails" && "🥾"}
+                {contentType === "adoption" && "❤️"}
+                {contentType === "events" && "🐾"}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3
+                  className="font-semibold text-sm truncate transition-colors"
+                  style={{ color: "var(--cream, #292524)" }}
+                >
+                  {s.name}
+                </h3>
+                {s.short_description && (
+                  <p className="text-xs mt-0.5 line-clamp-1" style={{ color: "var(--muted, #78716C)" }}>
+                    {s.short_description}
+                  </p>
+                )}
+                {s.vibes && s.vibes.some((v) => v === "off-leash" || v === "pup-cup") && (
+                  <div className="flex gap-1.5 mt-1">
+                    {s.vibes.includes("off-leash") && (
+                      <span className="text-[0.6rem] font-semibold px-1.5 py-0.5 rounded" style={{ background: `${DOG_CONTENT_COLORS.parks}20`, color: DOG_CONTENT_COLORS.parks }}>
+                        Off-Leash
+                      </span>
+                    )}
+                    {s.vibes.includes("pup-cup") && (
+                      <span className="text-[0.6rem] font-semibold px-1.5 py-0.5 rounded" style={{ background: `${DOG_CONTENT_COLORS.food}20`, color: DOG_CONTENT_COLORS.food }}>
+                        Pup Cup
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+              <svg className="w-4 h-4 flex-shrink-0 mt-1 transition-colors" style={{ color: "var(--muted, #78716C)" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

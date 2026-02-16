@@ -17,6 +17,33 @@ from dataclasses import dataclass, field
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
+# Artist name blocklist — common non-artist words that MusicBrainz will
+# happily match to random artists (instruments, generic event terms, etc.)
+# ---------------------------------------------------------------------------
+_ARTIST_BLOCKLIST: set[str] = {
+    # Instruments
+    "piano", "violin", "cello", "guitar", "bass", "drums", "flute",
+    "oboe", "clarinet", "trumpet", "trombone", "saxophone", "harp",
+    "organ", "percussion", "viola", "recorder", "banjo", "mandolin",
+    "ukulele", "harmonica", "bagpipes", "sitar", "tabla", "didgeridoo",
+    # Ensemble types
+    "ensemble", "orchestra", "quartet", "trio", "duo", "choir",
+    "chorus", "band", "soloist", "conductor", "accompanist", "quintet",
+    "sextet", "octet", "symphony", "philharmonic",
+    # Event types
+    "recital", "concert", "performance", "show", "live", "festival",
+    "dancing", "singing", "lecture", "seminar", "workshop", "class",
+    "session", "meeting", "reception", "ceremony", "celebration",
+    "fundraiser", "gala", "luncheon", "brunch", "dinner",
+    # Academic / institutional
+    "faculty", "senior", "junior", "guest", "masters", "doctoral",
+    "graduate", "undergraduate", "department", "music",
+    # Status words
+    "free", "open", "closed", "cancelled", "postponed", "rescheduled",
+    "tba", "tbd", "various", "artist", "artists", "special guest", "student",
+}
+
+# ---------------------------------------------------------------------------
 # MusicBrainz rate limiting — max 1 request per second
 # ---------------------------------------------------------------------------
 _last_mb_request: float = 0.0
@@ -101,6 +128,14 @@ def extract_artist_from_title(title: str) -> Optional[str]:
     # Remove "POSTPONED", "CANCELLED", "RESCHEDULED" markers
     cleaned = re.sub(r'\b(POSTPONED|CANCELLED|CANCELED|RESCHEDULED)\b\s*[-:]*\s*', '', cleaned, flags=re.IGNORECASE)
 
+    # Strip blocklisted prefix before colon (academic pattern: "Student Recital: Christine Park, cello")
+    colon_match = re.match(r'^(.+?):\s+(.+)$', cleaned)
+    if colon_match:
+        prefix = colon_match.group(1).strip()
+        prefix_words = prefix.split()
+        if all(w.lower() in _ARTIST_BLOCKLIST for w in prefix_words):
+            cleaned = colon_match.group(2).strip()
+
     # Remove "Live at/in [Venue]" suffix
     cleaned = re.sub(r'\s+[Ll]ive\s+(?:at|in)\s+.*$', '', cleaned)
 
@@ -144,6 +179,20 @@ def extract_artist_from_title(title: str) -> Optional[str]:
     if len(cleaned) < 2 or cleaned.isdigit():
         return None
 
+    # Reject blocklisted words (instruments, generic terms, etc.)
+    if cleaned.lower() in _ARTIST_BLOCKLIST:
+        return None
+
+    # Reject multi-word results where every word is blocklisted
+    # (e.g., "Emory Collaborative Piano" — last word is instrument)
+    words = cleaned.split()
+    if len(words) > 1 and words[-1].lower() in _ARTIST_BLOCKLIST:
+        return None
+
+    # Reject single short generic words (< 4 chars) — likely not an artist name
+    if len(cleaned) < 4 and " " not in cleaned:
+        return None
+
     return cleaned
 
 
@@ -151,8 +200,43 @@ def extract_artist_from_title(title: str) -> Optional[str]:
 # MusicBrainz lookup
 # ---------------------------------------------------------------------------
 
-def _search_musicbrainz(name: str) -> tuple[Optional[str], Optional[str], Optional[str]]:
-    """Search MusicBrainz for an artist, return (mbid, wikidata_qid, spotify_id).
+def _mb_name_matches(query: str, result_name: str) -> bool:
+    """Check if a MusicBrainz result name reasonably matches our query.
+
+    Compares lowercased names. Accepts if either contains the other,
+    or if the first word matches (handles "Artist Name" vs "Artist Name Band").
+    """
+    q = query.lower().strip()
+    r = result_name.lower().strip()
+
+    # Exact match
+    if q == r:
+        return True
+
+    # One contains the other
+    if q in r or r in q:
+        return True
+
+    # First word matches (e.g. "Beyonce" vs "Beyoncé")
+    q_first = q.split()[0] if q else ""
+    r_first = r.split()[0] if r else ""
+    if len(q_first) >= 3 and q_first == r_first:
+        return True
+
+    # Strip accents/diacritics for comparison
+    import unicodedata
+    q_norm = unicodedata.normalize("NFD", q)
+    q_ascii = "".join(c for c in q_norm if unicodedata.category(c) != "Mn")
+    r_norm = unicodedata.normalize("NFD", r)
+    r_ascii = "".join(c for c in r_norm if unicodedata.category(c) != "Mn")
+    if q_ascii == r_ascii or q_ascii in r_ascii or r_ascii in q_ascii:
+        return True
+
+    return False
+
+
+def _search_musicbrainz(name: str) -> tuple[Optional[str], Optional[str], Optional[str], Optional[str]]:
+    """Search MusicBrainz for an artist, return (mbid, wikidata_qid, spotify_id, website).
 
     Makes 2 API calls: search + lookup with url-rels.
     """
@@ -167,21 +251,35 @@ def _search_musicbrainz(name: str) -> tuple[Optional[str], Optional[str], Option
         )
         if resp.status_code != 200:
             logger.debug(f"MusicBrainz search returned {resp.status_code} for '{name}'")
-            return None, None, None
+            return None, None, None, None
 
         data = resp.json()
         artists = data.get("artists", [])
         if not artists:
             logger.debug(f"No MusicBrainz results for '{name}'")
-            return None, None, None
+            return None, None, None, None
 
-        mbid = artists[0].get("id")
+        top = artists[0]
+        score = top.get("score", 0)
+        mb_name = top.get("name", "")
+
+        # Require high confidence score
+        if score < 80:
+            logger.debug(f"MusicBrainz score too low for '{name}': {score} ('{mb_name}')")
+            return None, None, None, None
+
+        # Fuzzy name check — the returned name should resemble our query
+        if not _mb_name_matches(name, mb_name):
+            logger.debug(f"MusicBrainz name mismatch for '{name}': got '{mb_name}' (score {score})")
+            return None, None, None, None
+
+        mbid = top.get("id")
         if not mbid:
-            return None, None, None
+            return None, None, None, None
 
     except Exception as e:
         logger.debug(f"MusicBrainz search error for '{name}': {e}")
-        return None, None, None
+        return None, None, None, None
 
     # Step 2: Lookup with URL relationships to get Wikidata / Spotify / website links
     _mb_rate_limit()
@@ -459,6 +557,81 @@ class SpotifyArtistData:
     genres: Optional[list[str]] = None
 
 
+def _normalize_artist_identity(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", (value or "").lower()).strip()
+
+
+def _search_spotify_artist_by_name(artist_name: str) -> tuple[Optional[str], SpotifyArtistData]:
+    """Search Spotify by artist name and return best strict match.
+
+    Used as a fallback when MusicBrainz cannot provide a Spotify ID.
+    """
+    result = SpotifyArtistData()
+    token = _get_spotify_token()
+    if not token:
+        return None, result
+
+    try:
+        resp = requests.get(
+            "https://api.spotify.com/v1/search",
+            params={"q": f'artist:"{artist_name}"', "type": "artist", "limit": 5},
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=10,
+        )
+        if resp.status_code == 429:
+            retry_after = resp.headers.get("Retry-After", "5")
+            logger.debug(f"Spotify search rate limited, retry after {retry_after}s")
+            return None, result
+        if resp.status_code != 200:
+            logger.debug(f"Spotify search returned {resp.status_code} for '{artist_name}'")
+            return None, result
+
+        items = (resp.json().get("artists") or {}).get("items") or []
+        if not items:
+            return None, result
+
+        query_norm = _normalize_artist_identity(artist_name)
+        best_item = None
+        best_score = -1
+
+        for item in items:
+            candidate_name = (item.get("name") or "").strip()
+            if not candidate_name:
+                continue
+            if not _mb_name_matches(artist_name, candidate_name):
+                continue
+
+            candidate_norm = _normalize_artist_identity(candidate_name)
+            popularity = int(item.get("popularity") or 0)
+            exact_bonus = 100 if candidate_norm == query_norm else 0
+            prefix_bonus = 30 if candidate_norm.startswith(query_norm) or query_norm.startswith(candidate_norm) else 0
+            score = exact_bonus + prefix_bonus + popularity
+
+            if score > best_score:
+                best_score = score
+                best_item = item
+
+        if not best_item:
+            return None, result
+
+        spotify_id = best_item.get("id")
+        if not spotify_id:
+            return None, result
+
+        images = best_item.get("images") or []
+        if images:
+            result.image_url = images[0].get("url")
+        genres = best_item.get("genres") or []
+        if genres:
+            result.genres = [g.lower() for g in genres]
+
+        return spotify_id, result
+
+    except Exception as e:
+        logger.debug(f"Spotify artist search error for '{artist_name}': {e}")
+        return None, result
+
+
 def _fetch_spotify_artist(spotify_id: str) -> SpotifyArtistData:
     """Fetch artist image and genres from Spotify.
 
@@ -544,34 +717,49 @@ def fetch_artist_info(artist_name: str) -> Optional[ArtistInfo]:
         # Step 1: MusicBrainz search + lookup
         mbid, wikidata_qid, spotify_id, website = _search_musicbrainz(artist_name)
 
-        if not mbid:
-            _artist_cache[cache_key] = None
-            return None
-
         image_url = None
         genres = None
         bio = None
+        commons_filename = None
 
         # Step 2: Wikidata — genres, image, and Wikipedia bio
-        if wikidata_qid:
+        if mbid and wikidata_qid:
             genres, commons_filename, bio = _fetch_wikidata_info(wikidata_qid)
 
             # Step 3: Resolve Commons thumbnail
             if commons_filename:
                 image_url = _resolve_commons_thumbnail(commons_filename)
 
-        # Step 4: Spotify — always fetch for genres; image as fallback
+        spotify_data = SpotifyArtistData()
+
+        # Step 4: Spotify — fetch by known ID, or fallback search by name.
         if spotify_id:
             spotify_data = _fetch_spotify_artist(spotify_id)
-            if not image_url and spotify_data.image_url:
-                image_url = spotify_data.image_url
-            # Merge Spotify genres with Wikidata genres (Spotify first — more specific)
-            if spotify_data.genres:
-                wikidata_genres = genres or []
-                # Spotify genres are micro-genres; dedupe against Wikidata's broader labels
-                merged = list(dict.fromkeys(spotify_data.genres + wikidata_genres))
-                genres = merged
-                logger.debug(f"Spotify genres for '{artist_name}': {spotify_data.genres}")
+        else:
+            # Fallback path catches artists not confidently matched in MusicBrainz.
+            fallback_spotify_id, fallback_data = _search_spotify_artist_by_name(artist_name)
+            if fallback_spotify_id:
+                spotify_id = fallback_spotify_id
+                spotify_data = fallback_data
+
+        if not mbid and not spotify_id:
+            _artist_cache[cache_key] = None
+            return None
+
+        if not image_url and spotify_data.image_url:
+            image_url = spotify_data.image_url
+
+        # Merge Spotify genres with Wikidata genres (Spotify first — more specific)
+        if spotify_data.genres:
+            wikidata_genres = genres or []
+            merged = list(dict.fromkeys(spotify_data.genres + wikidata_genres))
+            genres = merged
+            logger.debug(f"Spotify genres for '{artist_name}': {spotify_data.genres}")
+
+        # Step 5: Normalize all genres to our taxonomy (drops unknown labels)
+        if genres:
+            from genre_normalize import normalize_genres
+            genres = normalize_genres(genres) or None
 
         artist_info = ArtistInfo(
             name=artist_name,

@@ -74,6 +74,7 @@ FIELD_MASK = ",".join([
     "places.regularOpeningHours",
     "places.websiteUri",
     "places.priceLevel",
+    "places.nationalPhoneNumber",
 ])
 
 # Attribute → Vibe mapping
@@ -320,7 +321,7 @@ def get_venues(
 
     query = (
         client.table("venues")
-        .select("id, name, slug, city, lat, lng, vibes, hours, hours_display, menu_url, reservation_url, price_level, last_verified_at")
+        .select("id, name, slug, city, lat, lng, vibes, hours, hours_display, menu_url, reservation_url, price_level, phone, last_verified_at")
         .eq("active", True)
         .not_.is_("lat", "null")
         .not_.is_("lng", "null")
@@ -423,6 +424,13 @@ def enrich_venue(venue: dict, dry_run: bool = False) -> dict:
             updates["price_level"] = price_level
             result["price_level_added"] = price_level
 
+    # Phone: fill if missing
+    if not venue.get("phone"):
+        phone = google.get("nationalPhoneNumber")
+        if phone:
+            updates["phone"] = phone
+            result["phone_added"] = phone
+
     # Stamp last_verified_at on any venue that was successfully matched and updated
     if updates:
         updates["last_verified_at"] = datetime.utcnow().isoformat()
@@ -480,6 +488,7 @@ def main():
         "updated_vibes": 0,
         "updated_hours": 0,
         "updated_price": 0,
+        "updated_phone": 0,
         "skipped": 0,
     }
 
@@ -513,6 +522,10 @@ def main():
                 changes.append(f"price=${result['price_level_added']}")
                 stats["updated_price"] += 1
 
+            if result.get("phone_added"):
+                changes.append(f"phone:{result['phone_added']}")
+                stats["updated_phone"] += 1
+
             if changes:
                 logger.info(f"  ✓ {venue['name']}: {', '.join(changes)}")
             else:
@@ -529,6 +542,7 @@ def main():
     logger.info(f"  Updated vibes: {stats['updated_vibes']}")
     logger.info(f"  Updated hours: {stats['updated_hours']}")
     logger.info(f"  Updated price: {stats['updated_price']}")
+    logger.info(f"  Updated phone: {stats['updated_phone']}")
     logger.info(f"  Skipped:       {stats['skipped']}")
 
     if args.dry_run:

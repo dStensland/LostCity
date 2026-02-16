@@ -172,7 +172,7 @@ def categorize_event(event_data: dict, title: str) -> tuple[str, str, dict]:
 
     # Check for museum events
     if "Museum of Fine Art" in filter_tags:
-        return "art", "exhibition", VENUES["museum"]
+        return "museums", "exhibition", VENUES["museum"]
 
     # Check other filter tags
     if "Arts and Entertainment" in filter_tags:

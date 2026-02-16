@@ -56,7 +56,7 @@ export default function FeedSectionHeader({
       case "primary":
         return {
           titleClass: "section-header-primary text-2xl",
-          subtitleClass: "font-mono text-[0.75rem] text-[var(--muted)] mt-0.5",
+          subtitleClass: "font-mono text-[0.78rem] text-[var(--soft)] mt-0.5",
           containerClass: "mb-3 sm:mb-5 pb-2",
           iconSize: "w-6 h-6",
           defaultAccent: "var(--gold)",
@@ -65,7 +65,7 @@ export default function FeedSectionHeader({
       case "secondary":
         return {
           titleClass: "section-header-secondary text-xl",
-          subtitleClass: "font-mono text-[0.7rem] text-[var(--muted)] mt-0.5",
+          subtitleClass: "font-mono text-[0.72rem] text-[var(--soft)] mt-0.5",
           containerClass: "mb-2 sm:mb-4",
           iconSize: "w-5 h-5",
           defaultAccent: accentColor || "var(--coral)",
@@ -73,9 +73,9 @@ export default function FeedSectionHeader({
         };
       case "tertiary":
         return {
-          titleClass: "section-header-tertiary text-lg",
-          subtitleClass: "font-mono text-[0.6rem] text-[var(--muted)] mt-0.5 normal-case tracking-normal",
-          containerClass: "mb-2 sm:mb-3",
+          titleClass: "section-header-tertiary text-[1.02rem]",
+          subtitleClass: "font-mono text-[0.68rem] text-[var(--soft)] mt-0.5 normal-case tracking-normal",
+          containerClass: "mb-2.5 sm:mb-3.5",
           iconSize: "w-4 h-4",
           defaultAccent: "var(--muted)",
           showDefaultIcon: false,
@@ -87,7 +87,7 @@ export default function FeedSectionHeader({
   const effectiveAccent = accentColor || styles.defaultAccent;
   const accentClass = createCssVarClass("--section-accent", effectiveAccent, "section-accent");
   const titleColorClass = priority === "tertiary"
-    ? "text-[var(--soft)]"
+    ? "text-[var(--cream)]/90"
     : accentColor
     ? "text-[var(--section-accent)]"
     : "text-[var(--cream)]";
@@ -112,6 +112,12 @@ export default function FeedSectionHeader({
     >
       <ScopedStyles css={accentClass?.css} />
       <div className="flex items-center gap-3">
+        {priority === "tertiary" && (
+          <span
+            aria-hidden="true"
+            className="inline-flex h-6 w-1 rounded-full bg-[var(--section-accent)] shadow-[0_0_10px_var(--section-accent)]"
+          />
+        )}
         {/* Icon with glow (for primary and secondary) */}
         {displayIcon && priority !== "tertiary" && (
           <div

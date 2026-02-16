@@ -4,9 +4,10 @@ import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import ForYouView from "@/components/feed/ForYouView";
+import ExploreTrackList from "@/components/explore/ExploreTrackList";
 import Link from "next/link";
 
-type FeedTab = "curated" | "foryou";
+type FeedTab = "curated" | "explore" | "foryou";
 
 interface FeedShellProps {
   portalId: string;
@@ -17,6 +18,7 @@ interface FeedShellProps {
 
 const TABS: { key: FeedTab; label: string; authRequired: boolean }[] = [
   { key: "curated", label: "Discover", authRequired: false },
+  { key: "explore", label: "Explore", authRequired: false },
   { key: "foryou", label: "For You", authRequired: true },
 ];
 
@@ -154,6 +156,8 @@ function FeedShellInner({ portalId, portalSlug, activeTab, curatedContent }: Fee
       {/* Tab content */}
       {activeTab === "curated" && curatedContent}
 
+      {activeTab === "explore" && <ExploreTrackList />}
+
       {activeTab === "foryou" && renderProtectedContent(<ForYouView portalSlug={portalSlug} portalId={portalId} />, true)}
     </div>
   );
@@ -166,7 +170,7 @@ export default function FeedShell(props: FeedShellProps) {
         <div className="py-6 space-y-6">
           {/* Tab skeleton */}
           <div className="flex gap-1 p-1 bg-[var(--night)] rounded-lg">
-            {[1, 2].map((i) => (
+            {[1, 2, 3].map((i) => (
               <div key={i} className="flex-1 h-9 skeleton-shimmer rounded-md" />
             ))}
           </div>

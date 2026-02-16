@@ -87,7 +87,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 events_found += 1
                 start_date_str = current.strftime("%Y-%m-%d")
                 title = "Mixed Tape Sundays"
-                description = "Mixed Tape Sundays at Friends on Ponce. Throwback music and good vibes every Sunday."
+                description = "Mixed Tape Sundays DJ dance party at Friends on Ponce. Throwback music and good vibes every Sunday."
 
                 content_hash = generate_content_hash(title, "Friends on Ponce", start_date_str)
 

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState, useMemo, useCallback, type CSSProperties } from "react";
 import Link from "next/link";
-import CategoryIcon, { getCategoryColor, getCategoryLabel } from "./CategoryIcon";
+import CategoryIcon, { getCategoryColor } from "./CategoryIcon";
 import CategorySkeleton from "./CategorySkeleton";
 import LazyImage from "./LazyImage";
 import { OpenStatusBadge } from "./HoursSection";
@@ -41,9 +41,23 @@ type FilterState = {
   priceLevel: number[];
   venueTypes: string[];
   neighborhoods: string[];
+  vibes: string[];
   search: string;
   withEvents: boolean;
 };
+
+// Quick-access vibes for the filter bar — high-value discovery attributes
+const QUICK_VIBES = [
+  { value: "date-spot", label: "Date Spot", color: "#F472B6" },
+  { value: "rooftop", label: "Rooftop", color: "#38BDF8" },
+  { value: "late-night", label: "Late Night", color: "#A78BFA" },
+  { value: "craft-cocktails", label: "Cocktails", color: "#FBBF24" },
+  { value: "black-owned", label: "Black-Owned", color: "#34D399" },
+  { value: "live-music", label: "Live Music", color: "#F472B6" },
+  { value: "outdoor-seating", label: "Outdoor", color: "#86EFAC" },
+  { value: "dog-friendly", label: "Dog Friendly", color: "#FB923C" },
+  { value: "family-friendly", label: "Family", color: "#93C5FD" },
+] as const;
 
 // Spot type configuration with colors and labels
 const SPOT_TYPE_CONFIG: Record<string, { label: string; color: string }> = {
@@ -84,6 +98,13 @@ const SPOT_TYPE_CONFIG: Record<string, { label: string; color: string }> = {
   games: { label: "Game Venues", color: "#86EFAC" },
   eatertainment: { label: "Eatertainment", color: "#22D3EE" },
   attraction: { label: "Attractions", color: "#FBBF24" },
+  landmark: { label: "Landmarks", color: "#A78BFA" },
+  skyscraper: { label: "Skyscrapers", color: "#D4AF37" },
+  artifact: { label: "Artifacts", color: "#CD7F32" },
+  public_art: { label: "Public Art", color: "#C084FC" },
+  viewpoint: { label: "Viewpoints", color: "#38BDF8" },
+  trail: { label: "Trails", color: "#86EFAC" },
+  historic_site: { label: "Historic Sites", color: "#DDD6FE" },
   hotel: { label: "Hotels", color: "#FBBF24" },
   venue: { label: "Venues", color: "#94A3B8" },
   other: { label: "Other", color: "#64748B" },
@@ -97,6 +118,7 @@ const SPOT_TYPE_ORDER = [
   "organization", "community_center", "church",
   "arena", "sports_venue", "fitness_center",
   "park", "garden", "outdoor",
+  "landmark", "skyscraper", "artifact", "public_art", "viewpoint", "trail", "historic_site",
   "event_space", "convention_center", "games", "eatertainment", "attraction",
   "hotel", "venue", "other",
 ];
@@ -109,6 +131,7 @@ const QUICK_VENUE_TYPES = [
   { key: "arts", label: "Arts", types: ["theater", "gallery", "museum", "comedy_club"], color: "#A78BFA" },
   { key: "coffee", label: "Coffee", types: ["coffee_shop"], color: "#D4A574" },
   { key: "games", label: "Games", types: ["games", "eatertainment", "arcade"], color: "#86EFAC" },
+  { key: "sightseeing", label: "Sightseeing", types: ["landmark", "skyscraper", "artifact", "public_art", "viewpoint", "trail", "historic_site"], color: "#A78BFA" },
 ];
 
 interface Props {
@@ -126,7 +149,6 @@ function SpotCard({ spot, portalSlug }: { spot: Spot; portalSlug: string }) {
   const isFeatured = (spot.event_count ?? 0) >= FEATURED_EVENT_THRESHOLD;
   const categoryKey = spot.venue_type || "other";
   const accentColor = getCategoryColor(categoryKey);
-  const placeTypeLabel = getCategoryLabel(categoryKey);
 
   return (
     <Link
@@ -164,23 +186,12 @@ function SpotCard({ spot, portalSlug }: { spot: Spot; portalSlug: string }) {
                   <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/56 to-black/20 pointer-events-none" />
                 </>
               ) : null}
-              <div className="relative z-10 flex h-full flex-col items-start justify-center gap-1.5 pl-3 pr-2 py-3 sm:py-4">
-                <span className="font-mono text-[0.62rem] font-semibold leading-none uppercase tracking-[0.12em] text-[var(--accent-color)]">
-                  {placeTypeLabel}
-                </span>
-                <span className={`font-mono text-[0.66rem] leading-none uppercase tracking-[0.1em] ${hasImage ? "text-white/82" : "text-[var(--soft)]"}`}>
-                  {spot.neighborhood || "Atlanta"}
-                </span>
-              </div>
             </div>
 
             <div className="flex-1 min-w-0">
               <div className="sm:hidden flex items-center gap-2 mb-2">
                 <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-accent-20 border border-[var(--twilight)]/50">
                   <CategoryIcon type={spot.venue_type || "venue"} size={14} glow="subtle" />
-                </span>
-                <span className="font-mono text-[0.66rem] font-semibold uppercase tracking-[0.1em] text-[var(--accent-color)] truncate">
-                  {placeTypeLabel}
                 </span>
               </div>
 
@@ -430,7 +441,7 @@ function FilterDeck({
 
   const hasActiveFilters = filters.openNow || filters.priceLevel.length > 0 ||
     filters.venueTypes.length > 0 || filters.neighborhoods.length > 0 ||
-    filters.search || filters.withEvents;
+    filters.vibes.length > 0 || filters.search || filters.withEvents;
 
   return (
     <div className="space-y-3">
@@ -508,6 +519,34 @@ function FilterDeck({
           Events
         </button>
 
+        {/* Vibe Chips */}
+        {QUICK_VIBES.map((vibe) => {
+          const isActive = filters.vibes.includes(vibe.value);
+          return (
+            <button
+              key={vibe.value}
+              onClick={() => setFilters((f) => ({
+                ...f,
+                vibes: isActive
+                  ? f.vibes.filter((v) => v !== vibe.value)
+                  : [...f.vibes, vibe.value],
+              }))}
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-mono text-[0.65rem] font-medium transition-all active:scale-[0.98] whitespace-nowrap ${
+                isActive
+                  ? "text-[var(--cream)] border"
+                  : "bg-[var(--night)] text-[var(--muted)] border border-[var(--twilight)] hover:text-[var(--soft)]"
+              }`}
+              style={isActive ? {
+                backgroundColor: `${vibe.color}20`,
+                borderColor: `${vibe.color}50`,
+                color: vibe.color,
+              } : undefined}
+            >
+              {vibe.label}
+            </button>
+          );
+        })}
+
         {/* Search Input */}
         <div className="relative flex-1 min-w-[160px] max-w-xs">
           <input
@@ -535,7 +574,7 @@ function FilterDeck({
         {/* Clear all */}
         {hasActiveFilters && (
           <button
-            onClick={() => setFilters({ openNow: false, priceLevel: [], venueTypes: [], neighborhoods: [], search: "", withEvents: false })}
+            onClick={() => setFilters({ openNow: false, priceLevel: [], venueTypes: [], neighborhoods: [], vibes: [], search: "", withEvents: false })}
             className="font-mono text-[0.65rem] text-[var(--coral)] hover:text-[var(--rose)] transition-colors active:scale-95"
           >
             Clear
@@ -559,6 +598,7 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
     priceLevel: [],
     venueTypes: [],
     neighborhoods: [],
+    vibes: [],
     search: "",
     withEvents: false,
   });
@@ -596,9 +636,10 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
     if (filters.priceLevel.length > 0) params.set("price_level", filters.priceLevel.join(","));
     if (filters.venueTypes.length > 0) params.set("venue_type", filters.venueTypes.join(","));
     if (filters.neighborhoods.length > 0) params.set("neighborhood", filters.neighborhoods.join(","));
+    if (filters.vibes.length > 0) params.set("vibes", filters.vibes.join(","));
     if (debouncedSearch) params.set("q", debouncedSearch);
     return params;
-  }, [portalId, isExclusive, filters.openNow, filters.withEvents, filters.priceLevel, filters.venueTypes, filters.neighborhoods, debouncedSearch]);
+  }, [portalId, isExclusive, filters.openNow, filters.withEvents, filters.priceLevel, filters.venueTypes, filters.neighborhoods, filters.vibes, debouncedSearch]);
 
   useEffect(() => {
     async function fetchSpots() {
@@ -753,7 +794,7 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
           <p className="text-[var(--cream)] text-lg font-medium mb-1">No destinations found</p>
           <p className="text-[var(--muted)] text-sm mb-4">Try adjusting your filters</p>
           <button
-            onClick={() => setFilters({ openNow: false, priceLevel: [], venueTypes: [], neighborhoods: [], search: "", withEvents: false })}
+            onClick={() => setFilters({ openNow: false, priceLevel: [], venueTypes: [], neighborhoods: [], vibes: [], search: "", withEvents: false })}
             className="btn-primary btn-md"
           >
             Clear filters

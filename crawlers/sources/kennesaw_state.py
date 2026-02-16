@@ -144,7 +144,7 @@ def categorize_event(title: str, venue_name: str) -> tuple[str, str]:
 
     # Museum/Gallery
     if "museum" in venue_lower or "gallery" in venue_lower or "exhibition" in title_lower:
-        return "art", "exhibition"
+        return "museums", "exhibition"
 
     # Dance
     if any(word in title_lower for word in ["dance", "ballet", "choreograph"]):

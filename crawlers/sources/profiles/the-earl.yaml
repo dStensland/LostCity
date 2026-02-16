@@ -13,7 +13,6 @@ discovery:
   type: html
   urls:
   - https://badearl.com/show-calendar/
-  - https://badearl.com
   fetch:
     render_js: true
     wait_ms: 4000

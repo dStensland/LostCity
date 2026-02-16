@@ -10,6 +10,7 @@ export type Database = {
           description: string | null;
           start_date: string;
           start_time: string | null;
+          doors_time: string | null;
           end_date: string | null;
           end_time: string | null;
           is_all_day: boolean;
@@ -19,7 +20,12 @@ export type Database = {
           price_min: number | null;
           price_max: number | null;
           price_note: string | null;
+          age_policy: string | null;
+          ticket_status: string | null;
+          reentry_policy: string | null;
+          set_times_mentioned: boolean | null;
           is_free: boolean;
+          is_adult: boolean | null;
           source_url: string;
           ticket_url: string | null;
           image_url: string | null;

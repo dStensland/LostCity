@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useState, useCallback, useMemo } from "react";
+import { Fragment, memo, useState, useCallback, useMemo } from "react";
 import type { CSSProperties } from "react";
 import Link from "next/link";
 import type { Event } from "@/lib/supabase";
@@ -15,6 +15,7 @@ import ReasonBadge, { getTopReasons, type RecommendationReason } from "./ReasonB
 import type { Frequency, DayOfWeek } from "@/lib/recurrence";
 import RSVPButton, { type RSVPStatus } from "./RSVPButton";
 import AnimatedCount from "./AnimatedCount";
+import { useImageParallax } from "@/lib/hooks/useImageParallax";
 
 type EventCardEvent = Event & {
   is_live?: boolean;
@@ -78,6 +79,7 @@ export type FeedEventData = {
   interested_count?: number;
   recommendation_count?: number;
   is_trending?: boolean;
+  activity_type?: string;
   ticket_url?: string | null;
   source_url?: string | null;
   series_id?: string | null;
@@ -153,6 +155,8 @@ function EventCard({
   const railImageUrl = event.image_url ?? event.series?.image_url ?? undefined;
   const railBlurhash = event.blurhash || event.series?.blurhash || null;
   const hasRailImage = Boolean(railImageUrl);
+
+  const { containerRef: parallaxContainerRef, imageRef: parallaxImageRef } = useImageParallax();
 
   // Optimistic RSVP count adjustments — user's own RSVP immediately ticks the count
   const [countAdjust, setCountAdjust] = useState({ going: 0, interested: 0, recommendation: 0 });
@@ -293,25 +297,26 @@ function EventCard({
             <div className="flex gap-3 sm:gap-4">
             {/* Time cell - hidden on mobile (inlined instead), visible on desktop */}
             <div
+              ref={parallaxContainerRef}
               className={`hidden sm:flex flex-shrink-0 self-stretch relative w-[124px] -ml-3.5 sm:-ml-4 -my-3.5 sm:-my-4 overflow-hidden border-r border-[var(--twilight)]/60 ${
                 hasRailImage ? "list-rail-media" : "bg-[var(--night)]/44"
               }`}
               style={{ borderTopLeftRadius: "inherit", borderBottomLeftRadius: "inherit" }}
             >
               {railImageUrl && (
-                <>
+                <div ref={parallaxImageRef} className="absolute inset-0 transform-gpu will-change-transform">
                   <Image
                     src={railImageUrl}
                     alt={eventTitle}
                     fill
                     blurhash={railBlurhash}
                     sizes="124px"
-                    className="object-cover scale-[1.03] transform-gpu will-change-transform"
+                    className="object-cover"
                   />
                   <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/56 to-black/20 pointer-events-none" />
-                </>
+                </div>
               )}
-              <div className="relative z-10 flex h-full flex-col items-start justify-center gap-1.5 pl-3 pr-2 py-3 sm:py-4">
+              <div className="relative z-10 flex h-full flex-col items-start justify-center gap-1.5 pl-3 pr-2 py-3 sm:py-4 list-rail-caption">
                 <span className={`font-mono text-[0.62rem] font-semibold leading-none uppercase tracking-[0.12em] ${
                   dateInfo.isHighlight ? "text-[var(--accent-color)]" : hasRailImage ? "text-[var(--cream)]/85" : "text-[var(--muted)]"
                 }`}>
@@ -678,6 +683,64 @@ function FeedSocialProofBadge({
   );
 }
 
+type EventMetadataOptions = {
+  includeDate?: boolean;
+  includeTime?: boolean;
+  includeVenue?: boolean;
+  includeNeighborhood?: boolean;
+  includePrice?: boolean;
+};
+
+function getEventPriceLabel(event: FeedEventData): string | null {
+  if (event.is_free) return "Free";
+  if (event.price_min !== null && event.price_max !== null && event.price_max > event.price_min) {
+    return `$${event.price_min}-$${event.price_max}`;
+  }
+  if (event.price_min !== null) {
+    return `From $${event.price_min}`;
+  }
+  return null;
+}
+
+function getUnifiedMetadata(event: FeedEventData, options: EventMetadataOptions = {}): string[] {
+  const {
+    includeDate = true,
+    includeTime = true,
+    includeVenue = true,
+    includeNeighborhood = true,
+    includePrice = true,
+  } = options;
+
+  const parts: string[] = [];
+
+  if (includeDate) {
+    parts.push(getSmartDateLabel(event.start_date));
+  }
+
+  if (includeTime) {
+    if (event.is_all_day) {
+      parts.push("All Day");
+    } else if (event.start_time) {
+      parts.push(formatTime(event.start_time));
+    }
+  }
+
+  if (includeVenue && event.venue?.name) {
+    parts.push(event.venue.name);
+  }
+
+  if (includeNeighborhood && event.venue?.neighborhood) {
+    parts.push(event.venue.neighborhood);
+  }
+
+  if (includePrice) {
+    const priceLabel = getEventPriceLabel(event);
+    if (priceLabel) parts.push(priceLabel);
+  }
+
+  return parts;
+}
+
 // ============================================
 // GridEventCard - For grid/carousel layouts (FeedSection EventCards)
 // ============================================
@@ -694,6 +757,13 @@ export const GridEventCard = memo(function GridEventCard({ event, isCarousel, po
   const recommendationCount = event.recommendation_count || 0;
   const isPopular = goingCount >= 10;
   const eventStatus = getFeedEventStatus(event.start_date, event.start_time);
+  const gridMetadata = getUnifiedMetadata(event, {
+    includeDate: true,
+    includeTime: true,
+    includeVenue: true,
+    includeNeighborhood: true,
+    includePrice: true,
+  });
 
   return (
     <Link
@@ -706,17 +776,13 @@ export const GridEventCard = memo(function GridEventCard({ event, isCarousel, po
     >
       {/* Content */}
       <div className="flex-1 p-3">
-        {/* Category + Smart Date + Popular */}
+        {/* Category + Popular */}
         <div className="flex items-center gap-2 mb-1.5">
           {event.category && (
             <CategoryIcon type={event.category} size={12} />
           )}
-          <span className="font-mono text-[0.65rem] text-[var(--muted)]">
-            {getSmartDateLabel(event.start_date)}
-            {event.start_time && ` · ${formatTime(event.start_time)}`}
-          </span>
           {isPopular && (
-            <span className="ml-auto flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[var(--coral)] text-[var(--void)] text-[0.55rem] font-mono font-medium">
+            <span className="ml-auto flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[var(--coral)] text-[var(--void)] text-[0.56rem] font-mono font-medium">
               <TrendingIcon className="w-2.5 h-2.5" /> Popular
             </span>
           )}
@@ -727,25 +793,17 @@ export const GridEventCard = memo(function GridEventCard({ event, isCarousel, po
           {event.title}
         </h4>
 
-        {/* Venue */}
-        {event.venue && (
-          <p className="font-mono text-[0.6rem] text-[var(--muted)] mt-1.5 truncate">
-            {event.venue.name}
-            {event.venue.neighborhood && ` · ${event.venue.neighborhood}`}
+        {/* Metadata order: Date • Time • Venue • Neighborhood • Price */}
+        {gridMetadata.length > 0 && (
+          <p className="font-mono text-[0.67rem] text-[var(--soft)] mt-1.5 truncate">
+            {gridMetadata.join(" · ")}
           </p>
         )}
 
-        {/* Price/Free + Status badges */}
+        {/* Status + Social badges */}
         <div className="mt-2.5 flex items-center gap-2 flex-wrap">
           {eventStatus === "live" && <LiveBadge />}
           {eventStatus === "soon" && <SoonBadge />}
-          {event.is_free ? (
-            <FreeBadge />
-          ) : event.price_min !== null ? (
-            <span className="text-[0.6rem] font-mono text-[var(--muted)]">
-              From ${event.price_min}
-            </span>
-          ) : null}
           {goingCount > 0 && (
             <FeedSocialProofBadge count={goingCount} label="going" variant="compact" />
           )}
@@ -791,6 +849,46 @@ export const CompactEventCard = memo(function CompactEventCard({ event, isAltern
   const reflectionClass = getReflectionClass(event.category);
   const compactTimeLabel = event.is_all_day ? "All Day" : `${time}${period ? ` ${period}` : ""}`;
   const compactCategoryLabel = event.category ? getCategoryLabel(event.category as CategoryType) : null;
+  const compactPrice = getEventPriceLabel(event);
+  const compactMetadataParts: Array<{ key: string; value: string; className?: string }> = [];
+
+  if (showDate) {
+    compactMetadataParts.push({ key: "date", value: getSmartDateLabel(event.start_date) });
+  }
+  if (event.venue?.name) {
+    compactMetadataParts.push({ key: "venue", value: event.venue.name });
+  }
+  if (event.venue?.neighborhood) {
+    compactMetadataParts.push({ key: "neighborhood", value: event.venue.neighborhood });
+  }
+  if (compactPrice) {
+    compactMetadataParts.push({
+      key: "price",
+      value: compactPrice,
+      className: event.is_free ? "text-[var(--neon-green)] font-medium" : undefined,
+    });
+  }
+  if (goingCount > 0) {
+    compactMetadataParts.push({
+      key: "going",
+      value: `${formatCompactCount(goingCount)} going`,
+      className: "text-[var(--coral)] font-medium",
+    });
+  }
+  if (interestedCount > 0) {
+    compactMetadataParts.push({
+      key: "interested",
+      value: `${formatCompactCount(interestedCount)} maybe`,
+      className: "text-[var(--gold)] font-medium",
+    });
+  }
+  if (recommendationCount > 0) {
+    compactMetadataParts.push({
+      key: "recommended",
+      value: `${formatCompactCount(recommendationCount)} rec'd`,
+      className: "text-[var(--lavender)] font-medium",
+    });
+  }
 
   const hierarchyClass = isTrending ? "card-trending" : isPopular ? "card-popular" : "";
 
@@ -841,44 +939,13 @@ export const CompactEventCard = memo(function CompactEventCard({ event, isAltern
             )}
           </div>
 
-          <div className="mt-1 flex items-center gap-1.5 font-mono text-[0.62rem] text-[var(--muted)] min-w-0">
-            {showDate && (
-              <>
-                <span className="truncate">{getSmartDateLabel(event.start_date)}</span>
-                {event.venue && <span className="opacity-40">·</span>}
-              </>
-            )}
-            {event.venue?.name && <span className="truncate">{event.venue.name}</span>}
-            {event.is_free && (
-              <>
-                <span className="opacity-40">·</span>
-                <span className="text-[var(--neon-green)] font-medium">Free</span>
-              </>
-            )}
-            {!event.is_free && event.price_min !== null && (
-              <>
-                <span className="opacity-40">·</span>
-                <span className="truncate">From ${event.price_min}</span>
-              </>
-            )}
-            {goingCount > 0 && (
-              <>
-                <span className="opacity-40">·</span>
-                <span className="text-[var(--coral)] font-medium">{formatCompactCount(goingCount)} going</span>
-              </>
-            )}
-            {interestedCount > 0 && (
-              <>
-                <span className="opacity-40">·</span>
-                <span className="text-[var(--gold)] font-medium">{formatCompactCount(interestedCount)} maybe</span>
-              </>
-            )}
-            {recommendationCount > 0 && (
-              <>
-                <span className="opacity-40">·</span>
-                <span className="text-[var(--lavender)] font-medium">{formatCompactCount(recommendationCount)} rec&apos;d</span>
-              </>
-            )}
+          <div className="mt-1 flex items-center gap-1.5 font-mono text-[0.67rem] text-[var(--soft)] min-w-0">
+            {compactMetadataParts.map((part, idx) => (
+              <Fragment key={`${event.id}-${part.key}`}>
+                {idx > 0 && <span className="opacity-40">·</span>}
+                <span className={`truncate ${part.className ?? ""}`}>{part.value}</span>
+              </Fragment>
+            ))}
           </div>
         </Link>
 
@@ -921,6 +988,13 @@ export const HeroEventCard = memo(function HeroEventCard({ event, portalSlug, hi
   const goingCount = event.going_count || 0;
   const interestedCount = event.interested_count || 0;
   const recommendationCount = event.recommendation_count || 0;
+  const heroMetadata = getUnifiedMetadata(event, {
+    includeDate: true,
+    includeTime: true,
+    includeVenue: true,
+    includeNeighborhood: true,
+    includePrice: true,
+  });
 
   const hasImage = !hideImages && event.image_url;
   return (
@@ -975,21 +1049,14 @@ export const HeroEventCard = memo(function HeroEventCard({ event, portalSlug, hi
           {event.title}
         </h2>
 
-        {/* Meta with smart time */}
-        <div className="flex flex-wrap items-center gap-3 text-sm text-white/90 font-mono">
-          <span className="font-medium">{getSmartDateLabel(event.start_date)}</span>
-          {event.start_time && (
-            <>
-              <span className="opacity-40">·</span>
-              <span>{formatTime(event.start_time)}</span>
-            </>
-          )}
-          {event.venue && (
-            <>
-              <span className="opacity-40">·</span>
-              <span>{event.venue.name}</span>
-            </>
-          )}
+        {/* Metadata order: Date • Time • Venue • Neighborhood • Price */}
+        <div className="flex flex-wrap items-center gap-2 text-sm text-white/92 font-mono">
+          {heroMetadata.map((value, idx) => (
+            <Fragment key={`${event.id}-hero-meta-${idx}`}>
+              {idx > 0 && <span className="opacity-40">·</span>}
+              <span className={idx === 0 ? "font-medium" : ""}>{value}</span>
+            </Fragment>
+          ))}
         </div>
 
         {/* Editorial blurb */}
@@ -999,17 +1066,8 @@ export const HeroEventCard = memo(function HeroEventCard({ event, portalSlug, hi
           </p>
         )}
 
-        {/* Price/Free + Social Proof badges */}
+        {/* Social Proof badges */}
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          {event.is_free ? (
-            <span className="px-2.5 py-1 rounded-full bg-[var(--neon-green)] text-[var(--void)] text-xs font-mono font-medium">
-              FREE
-            </span>
-          ) : event.price_min !== null ? (
-            <span className="px-2.5 py-1 rounded-full bg-white/20 text-white text-xs font-mono">
-              From ${event.price_min}
-            </span>
-          ) : null}
           {goingCount > 0 && (
             <FeedSocialProofBadge count={goingCount} label="going" />
           )}
@@ -1042,11 +1100,16 @@ interface TrendingEventCardProps {
 }
 
 export const TrendingEventCard = memo(function TrendingEventCard({ event, portalSlug }: TrendingEventCardProps) {
-  const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
   const reflectionClass = getReflectionClass(event.category);
-  const smartDate = getSmartDateLabel(event.start_date);
   const goingCount = event.going_count || 0;
   const accentMode = event.category ? "category" : "trending";
+  const trendingMetadata = getUnifiedMetadata(event, {
+    includeDate: true,
+    includeTime: true,
+    includeVenue: true,
+    includeNeighborhood: true,
+    includePrice: true,
+  });
 
   return (
     <Link
@@ -1072,19 +1135,12 @@ export const TrendingEventCard = memo(function TrendingEventCard({ event, portal
             {event.title}
           </h3>
 
-          <div className="flex items-center gap-1.5 mt-1 text-[var(--muted)]">
+          <div className="flex items-center gap-1.5 mt-1 text-[var(--soft)]">
             <CategoryIcon type={event.category || "other"} size={12} />
-            <span className="font-mono text-[0.6rem]">
-              {smartDate} · {time}
-              {period && <span className="opacity-60">{period}</span>}
+            <span className="font-mono text-[0.67rem] truncate">
+              {trendingMetadata.join(" · ")}
             </span>
           </div>
-
-          {event.venue?.name && (
-            <p className="font-mono text-[0.6rem] text-[var(--muted)] truncate mt-0.5">
-              {event.venue.name}
-            </p>
-          )}
 
           {/* Trending stats */}
           <div className="flex items-center gap-1.5 mt-2 flex-wrap">

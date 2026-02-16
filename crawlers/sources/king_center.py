@@ -121,7 +121,7 @@ def determine_category(event_data: dict) -> tuple[str, Optional[str], list[str]]
         return "community", "talk", event_tags + ["educational"]
 
     if any(word in combined for word in ["exhibit", "exhibition", "gallery"]):
-        return "art", "exhibit", event_tags + ["museum"]
+        return "museums", "exhibit", event_tags + ["museum"]
 
     if any(word in combined for word in ["concert", "music", "performance"]):
         return "music", "concert", event_tags + ["live-music"]

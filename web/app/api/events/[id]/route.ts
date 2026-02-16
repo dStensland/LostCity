@@ -7,8 +7,34 @@ import { logger } from "@/lib/logger";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 import { DESTINATION_CATEGORIES } from "@/lib/spots";
 import { fetchSocialProofCounts } from "@/lib/search";
+import type { EventArtist } from "@/lib/artists-utils";
+import { buildDisplayDescription } from "@/lib/event-description";
 
 const NEARBY_RADIUS_MILES = 10;
+
+type RawEventArtist = {
+  id: number;
+  event_id: number;
+  name: string;
+  role: string | null;
+  billing_order: number | null;
+  is_headliner: boolean;
+  artists: {
+    id: string;
+    name: string;
+    slug: string;
+    discipline: string;
+    bio: string | null;
+    image_url: string | null;
+    genres: string[] | null;
+    hometown: string | null;
+    website: string | null;
+    spotify_id: string | null;
+    musicbrainz_id: string | null;
+    wikidata_id: string | null;
+    created_at: string;
+  } | null;
+};
 
 export async function GET(
   request: NextRequest,
@@ -23,6 +49,9 @@ export async function GET(
   if (isNaN(eventId)) {
     return Response.json({ error: "Invalid event ID" }, { status: 400 });
   }
+
+  const { searchParams } = new URL(request.url);
+  const portalId = searchParams.get("portal_id") || undefined;
 
   const supabase = await createClient();
 
@@ -80,9 +109,39 @@ export async function GET(
     return Response.json({ error: "Event not found" }, { status: 404 });
   }
 
+  const { data: eventArtistRows } = await supabase
+    .from("event_artists")
+    .select(`
+      id,
+      event_id,
+      name,
+      role,
+      billing_order,
+      is_headliner,
+      artists (
+        id, name, slug, discipline, bio, image_url, genres, hometown, website,
+        spotify_id, musicbrainz_id, wikidata_id, created_at
+      )
+    `)
+    .eq("event_id", eventId)
+    .order("billing_order", { ascending: true, nullsFirst: false })
+    .order("is_headliner", { ascending: false })
+    .order("name", { ascending: true });
+
+  const eventArtists: EventArtist[] = (eventArtistRows as RawEventArtist[] | null)?.map((row) => ({
+    id: row.id,
+    event_id: row.event_id,
+    name: row.name,
+    role: row.role,
+    billing_order: row.billing_order,
+    is_headliner: row.is_headliner,
+    artist: row.artists,
+  })) || [];
+
   // Cast to access properties
   const eventData = event as {
     venue_id?: number;
+    description?: string | null;
     venue?: {
       id: number;
       neighborhood?: string | null;
@@ -99,10 +158,10 @@ export async function GET(
   const today = getLocalDateString();
   const eventDate = new Date(eventData.start_date);
 
-  // Fetch related events at the same venue
+  // Fetch related events at the same venue (portal-scoped)
   let venueEvents: unknown[] = [];
   if (eventData.venue_id) {
-    const { data } = await supabase
+    let venueEventsQuery = supabase
       .from("events")
       .select(`
         id, title, start_date, end_date, start_time, end_time,
@@ -110,7 +169,14 @@ export async function GET(
       `)
       .eq("venue_id", eventData.venue_id)
       .neq("id", eventId)
-      .or(`start_date.gte.${today},end_date.gte.${today}`)
+      .is("canonical_event_id", null)
+      .or(`start_date.gte.${today},end_date.gte.${today}`);
+
+    if (portalId) {
+      venueEventsQuery = venueEventsQuery.or(`portal_id.eq.${portalId},portal_id.is.null`);
+    }
+
+    const { data } = await venueEventsQuery
       .order("start_date", { ascending: true })
       .limit(10);
 
@@ -123,8 +189,8 @@ export async function GET(
   const venueLng = eventData.venue?.lng;
 
   if (venueLat && venueLng) {
-    // Fetch all events on the same date
-    const { data: sameDateEvents } = await supabase
+    // Fetch all events on the same date (portal-scoped)
+    let sameDateQuery = supabase
       .from("events")
       .select(`
         id, title, start_date, start_time, end_time,
@@ -132,6 +198,13 @@ export async function GET(
       `)
       .eq("start_date", eventData.start_date)
       .neq("id", eventId)
+      .is("canonical_event_id", null);
+
+    if (portalId) {
+      sameDateQuery = sameDateQuery.or(`portal_id.eq.${portalId},portal_id.is.null`);
+    }
+
+    const { data: sameDateEvents } = await sameDateQuery
       .order("start_time", { ascending: true })
       .limit(20);
 
@@ -166,8 +239,8 @@ export async function GET(
       }).slice(0, 10);
     }
   } else {
-    // Fallback: no venue coordinates, just get same-date events
-    const { data: sameDateEvents } = await supabase
+    // Fallback: no venue coordinates, just get same-date events (portal-scoped)
+    let fallbackQuery = supabase
       .from("events")
       .select(`
         id, title, start_date, start_time, end_time,
@@ -175,6 +248,13 @@ export async function GET(
       `)
       .eq("start_date", eventData.start_date)
       .neq("id", eventId)
+      .is("canonical_event_id", null);
+
+    if (portalId) {
+      fallbackQuery = fallbackQuery.or(`portal_id.eq.${portalId},portal_id.is.null`);
+    }
+
+    const { data: sameDateEvents } = await fallbackQuery
       .order("start_time", { ascending: true })
       .limit(10);
 
@@ -382,7 +462,13 @@ export async function GET(
     event: {
       ...(event as Record<string, unknown>),
       is_live: isLive,
+      display_description: buildDisplayDescription(eventData.description || null, eventArtists, {
+        eventGenres: (eventData.genres as string[] | null | undefined) || null,
+        eventTags: (eventData.tags as string[] | null | undefined) || null,
+        eventCategory: (eventData.category as string | null | undefined) || null,
+      }),
     },
+    eventArtists,
     venueEvents,
     nearbyEvents,
     nearbyDestinations,

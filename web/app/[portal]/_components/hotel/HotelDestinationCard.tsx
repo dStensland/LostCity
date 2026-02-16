@@ -4,38 +4,9 @@ import Link from "next/link";
 import Image from "next/image";
 import { useMemo, useState } from "react";
 import { getProxiedImageSrc } from "@/lib/image-proxy";
+import type { Destination } from "@/lib/forth-types";
 
 const DEFAULT_DESTINATION_IMAGE = "https://forthatlanta.com/hubfs/Forth/Website/Images/Club/hero-banner-club-faq-desktop.jpg";
-
-type DestinationSpecial = {
-  title: string;
-  type: string;
-  price_note: string | null;
-  confidence?: "high" | "medium" | "low" | null;
-  last_verified_at?: string | null;
-  starts_in_minutes: number | null;
-  remaining_minutes: number | null;
-};
-
-type Destination = {
-  venue: {
-    slug: string | null;
-    name: string;
-    neighborhood: string | null;
-    venue_type: string | null;
-    image_url: string | null;
-    short_description?: string | null;
-  };
-  proximity_label: string;
-  proximity_tier: "walkable" | "close" | "destination";
-  special_state: "active_now" | "starting_soon" | "none";
-  top_special: DestinationSpecial | null;
-  next_event: {
-    title: string;
-    start_date: string;
-    start_time: string | null;
-  } | null;
-};
 
 type DaypartContext = "all" | "morning" | "day" | "evening" | "late_night";
 
@@ -126,7 +97,7 @@ export default function HotelDestinationCard({
   return (
     <Link
       href={href}
-      className={`group isolate block rounded-xl overflow-hidden bg-[var(--hotel-cream)] border transition-all duration-500 [clip-path:inset(0_round_0.75rem)] ${
+      className={`group isolate block rounded-xl overflow-hidden bg-[var(--hotel-cream)] border transition-all duration-500 [clip-path:inset(0_round_0.75rem)] hover:-translate-y-0.5 ${
         isLive
           ? "border-[var(--hotel-champagne)]/45 shadow-[var(--hotel-shadow-medium)] hover:shadow-[var(--hotel-shadow-strong)]"
           : "border-[var(--hotel-sand)] shadow-[var(--hotel-shadow-soft)] hover:shadow-[var(--hotel-shadow-medium)]"
@@ -160,18 +131,20 @@ export default function HotelDestinationCard({
       </div>
 
       <div className="p-5 space-y-2">
-        <div className="flex items-start justify-between gap-3">
-          <h3 className="font-display text-xl text-[var(--hotel-charcoal)] leading-tight">
-            {destination.venue.name}
-          </h3>
-          <span className="shrink-0 text-[11px] uppercase tracking-[0.14em] text-[var(--hotel-stone)]">
+        <h3 className="font-display text-xl text-[var(--hotel-charcoal)] leading-tight line-clamp-2">
+          {destination.venue.name}
+        </h3>
+
+        <div className="flex items-center gap-3 text-sm text-[var(--hotel-stone)]">
+          <span className="inline-flex items-center gap-1 shrink-0 rounded-full bg-[var(--hotel-ivory)] border border-[var(--hotel-sand)] px-2.5 py-0.5 text-xs font-body text-[var(--hotel-charcoal)]">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+            </svg>
             {destination.proximity_label}
           </span>
+          <span>{destination.venue.neighborhood || "Nearby"}{destination.venue.venue_type ? ` · ${destination.venue.venue_type.replace(/_/g, " ")}` : ""}</span>
         </div>
-
-        <p className="text-sm text-[var(--hotel-stone)]">
-          {destination.venue.neighborhood || "Nearby"}{destination.venue.venue_type ? ` · ${destination.venue.venue_type.replace(/_/g, " ")}` : ""}
-        </p>
 
         {destination.top_special ? (
           <div className="rounded-lg bg-[var(--hotel-ivory)] border border-[var(--hotel-sand)] px-3 py-2">

@@ -96,8 +96,12 @@ def enrich_artist(artist: dict) -> dict:
     """
     from db import get_client
 
-    # Skip if already enriched via MusicBrainz
-    if artist.get("musicbrainz_id"):
+    # Skip only when key enrichment fields are already populated.
+    needs_enrichment = any(
+        not artist.get(field)
+        for field in ("musicbrainz_id", "wikidata_id", "spotify_id", "image_url", "genres", "bio", "website")
+    )
+    if not needs_enrichment:
         return artist
 
     info = fetch_artist_info(artist["name"])
@@ -119,7 +123,6 @@ def enrich_artist(artist: dict) -> dict:
         updates["bio"] = info.bio
     if info.website and not artist.get("website"):
         updates["website"] = info.website
-
     if updates:
         from datetime import datetime, timezone
         updates["updated_at"] = datetime.now(timezone.utc).isoformat()

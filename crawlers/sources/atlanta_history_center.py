@@ -147,7 +147,7 @@ def determine_category(event_type: str, title: str, raw_text: str) -> tuple[str,
     if "gardens" in type_lower:
         return "community", "nature", tags + ["gardens", "outdoor"]
 
-    return "community", "museum", tags
+    return "museums", "museum", tags
 
 
 def crawl(source: dict) -> tuple[int, int, int]:

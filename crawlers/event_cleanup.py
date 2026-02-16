@@ -12,6 +12,7 @@ import argparse
 import logging
 from datetime import datetime, timedelta
 from db import get_client
+from scripts.fix_music_venue_quality import run_music_venue_quality_fix
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -217,7 +218,20 @@ def run_full_cleanup(days_to_keep: int = 0, dry_run: bool = True) -> dict:
         "past_events": cleanup_past_events(days_to_keep, dry_run),
         "duplicates": cleanup_duplicate_events(dry_run),
         "invalid": cleanup_invalid_events(dry_run),
+        "music_venue_quality": run_music_venue_quality_fix(
+            dry_run=dry_run,
+            verbose=False,
+        ),
     }
+
+    music_results = results["music_venue_quality"]
+    logger.info(
+        "Music venue quality: canonical +%s/-%s, lineup +%s, description repairs +%s",
+        music_results.get("canonical_updates", 0),
+        music_results.get("canonical_resets", 0),
+        music_results.get("lineup_updates", 0),
+        music_results.get("description_repairs", 0),
+    )
 
     total_deleted = sum(r.get("deleted", 0) for r in results.values())
     total_would_delete = sum(r.get("would_delete", 0) for r in results.values())

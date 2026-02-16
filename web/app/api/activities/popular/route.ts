@@ -65,7 +65,8 @@ export async function GET(request: NextRequest) {
       .lte("start_date", endDate)
       .is("canonical_event_id", null)
       .or(timeFilter)
-      .not("category", "is", null);
+      .not("category", "is", null)
+      .or("is_sensitive.eq.false,is_sensitive.is.null");
 
     if (portalId) {
       activityQuery = activityQuery.or(`portal_id.eq.${portalId},portal_id.is.null`);

@@ -177,7 +177,7 @@ def determine_category(title: str, content: str) -> tuple[str, Optional[str], li
 
     # Exhibitions and art presentations
     if any(w in title_lower for w in ["exhibition", "presentation", "gallery"]):
-        return "art", "exhibition", tags + ["art", "exhibition"]
+        return "museums", "exhibition", tags + ["art", "exhibition"]
 
     # Lectures and talks
     if any(w in title_lower for w in ["lecture", "talk", "conversation", "speaker"]):

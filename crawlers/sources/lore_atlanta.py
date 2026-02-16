@@ -44,7 +44,7 @@ WEEKLY_EVENTS = [
     {"weekday": 2, "title": "Trivia Night", "time": "20:00", "description": "Weekly trivia night at Lore Atlanta. Test your knowledge!"},
     {"weekday": 3, "title": "Drag Bingo", "time": "20:00", "description": "Weekly drag bingo at Lore Atlanta. Fun, prizes, and fabulous hosts!"},
     {"weekday": 4, "title": "The Other Show", "time": "21:00", "description": "Weekly drag and variety show at Lore Atlanta."},
-    {"weekday": 6, "title": "Tossed Salad", "time": "21:00", "description": "Weekly Sunday night show at Lore Atlanta."},
+    {"weekday": 6, "title": "Tossed Salad", "time": "21:00", "description": "Weekly Sunday night drag show at Lore Atlanta."},
 ]
 
 
