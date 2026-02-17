@@ -75,7 +75,7 @@ export default async function HospitalDirectoryPage({ params, searchParams }: Pr
 
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {hospital.neighborhood && <span className="emory-chip">{hospital.neighborhood}</span>}
-                    {hospital.phone && <span className="emory-chip">Main Desk</span>}
+                    {hospital.phone && <span className="emory-chip">{hospital.phone}</span>}
                   </div>
 
                   <div className="mt-3 flex flex-wrap gap-2">
@@ -117,9 +117,23 @@ export default async function HospitalDirectoryPage({ params, searchParams }: Pr
                     </HospitalTrackedLink>
 
                     {hospital.phone && (
-                      <a href={`tel:${hospital.phone}`} className="emory-link-btn inline-flex items-center">
+                      <HospitalTrackedLink
+                        href={`tel:${hospital.phone}`}
+                        tracking={{
+                          actionType: "resource_clicked",
+                          portalSlug: portal.slug,
+                          hospitalSlug: hospital.slug,
+                          modeContext: mode,
+                          sectionKey: "v3_directory_cards",
+                          targetKind: "phone_call",
+                          targetId: hospital.slug,
+                          targetLabel: hospital.short_name || hospital.name,
+                          targetUrl: `tel:${hospital.phone}`,
+                        }}
+                        className="emory-link-btn inline-flex items-center"
+                      >
                         Call Main Desk
-                      </a>
+                      </HospitalTrackedLink>
                     )}
                   </div>
                 </article>

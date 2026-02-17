@@ -139,7 +139,7 @@ function StoryCard({ story, portalSlug, mode, categoryKey }: StoryCardProps) {
                 href={detailHref}
                 className="text-xs font-semibold text-[var(--portal-accent)] hover:underline inline-flex items-center gap-1"
                 tracking={{
-                  actionType: "community_story_click",
+                  actionType: "resource_clicked",
                   portalSlug,
                   pageType: "community",
                   modeContext: mode,
@@ -158,7 +158,7 @@ function StoryCard({ story, portalSlug, mode, categoryKey }: StoryCardProps) {
               external
               className="text-xs font-semibold text-[var(--muted)] hover:text-[var(--portal-accent)] hover:underline inline-flex items-center gap-1"
               tracking={{
-                actionType: "community_story_click",
+                actionType: "resource_clicked",
                 portalSlug,
                 pageType: "community",
                 modeContext: mode,
@@ -203,7 +203,7 @@ function OrgCard({ org, portalSlug, mode }: OrgCardProps) {
           external
           className="text-xs font-semibold text-[var(--portal-accent)] hover:underline inline-flex items-center gap-1 mt-1"
           tracking={{
-            actionType: "community_org_click",
+            actionType: "resource_clicked",
             portalSlug,
             pageType: "community",
             modeContext: mode,

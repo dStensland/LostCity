@@ -383,9 +383,23 @@ export default async function HospitalLandingPage({ params, searchParams }: Prop
                   </HospitalTrackedLink>
 
                   {data.hospital.phone && (
-                    <a href={`tel:${data.hospital.phone}`} className="emory-secondary-btn inline-flex items-center">
+                    <HospitalTrackedLink
+                      href={`tel:${data.hospital.phone}`}
+                      tracking={{
+                        actionType: "resource_clicked",
+                        portalSlug: portal.slug,
+                        hospitalSlug: data.hospital.slug,
+                        modeContext: mode,
+                        sectionKey: "v8_hospital_hero",
+                        targetKind: "phone_call",
+                        targetId: data.hospital.slug,
+                        targetLabel: "Call main desk",
+                        targetUrl: `tel:${data.hospital.phone}`,
+                      }}
+                      className="emory-secondary-btn inline-flex items-center"
+                    >
                       Call main desk
-                    </a>
+                    </HospitalTrackedLink>
                   )}
 
                   <HospitalTrackedLink
@@ -487,7 +501,7 @@ export default async function HospitalLandingPage({ params, searchParams }: Prop
           </section>
 
           <section className="emory-panel p-4 sm:p-5" id="concierge-explorer">
-            <p className="emory-kicker">What's nearby</p>
+            <p className="emory-kicker">What&apos;s nearby</p>
             <h2 className={`mt-1 text-[clamp(1.9rem,3.3vw,2.6rem)] leading-[0.96] text-[var(--cream)] ${hospitalDisplayFont.className}`}>
               Find what you need around campus
             </h2>

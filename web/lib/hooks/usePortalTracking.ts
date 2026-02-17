@@ -4,6 +4,9 @@ import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { useSearchParams } from "next/navigation";
 import { PORTAL_CONTEXT_COOKIE } from "@/lib/auth-utils";
+import { HOSPITAL_MODE_VALUES } from "@/lib/analytics/portal-action-types";
+
+const HOSPITAL_MODE_SET = new Set(HOSPITAL_MODE_VALUES);
 
 /**
  * Tracks portal page views. Fires once per page navigation.
@@ -32,13 +35,15 @@ export function usePortalTracking(portalSlug: string) {
     const routeSegments = portalIndex >= 0 ? segments.slice(portalIndex + 1) : segments;
 
     // Determine page type from route and URL params.
-    let pageType = "feed";
+    let pageType: "feed" | "find" | "event" | "spot" | "series" | "community" | "hospital" = "feed";
     let entityId: number | undefined;
 
     if (routeSegments[0] === "events" && routeSegments[1]) {
       const routeEventId = parseInt(routeSegments[1], 10);
       pageType = "event";
       entityId = Number.isInteger(routeEventId) ? routeEventId : undefined;
+    } else if (routeSegments[0] === "hospitals") {
+      pageType = "hospital";
     } else if (routeSegments[0] === "spots") {
       pageType = "spot";
     } else if (routeSegments[0] === "series") {
@@ -65,6 +70,13 @@ export function usePortalTracking(portalSlug: string) {
       pageType = "find";
     } else if (view === "community") {
       pageType = "community";
+    }
+
+    const modeParam = searchParams.get("mode");
+    const hasHospitalMode = !!modeParam && HOSPITAL_MODE_SET.has(modeParam as (typeof HOSPITAL_MODE_VALUES)[number]);
+    const isHospitalVertical = document.querySelector('[data-vertical="hospital"]') !== null;
+    if (isHospitalVertical && (pageType === "feed" || (hasHospitalMode && pageType === "find"))) {
+      pageType = "hospital";
     }
 
     // Build a unique key for this navigation to avoid duplicate fires

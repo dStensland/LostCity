@@ -3,10 +3,29 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { checkBodySize, isValidEnum, sanitizeString, type AnySupabase } from "@/lib/api-utils";
 import { resolvePortalSlugAlias } from "@/lib/portal-aliases";
+import {
+  HOSPITAL_MODE_VALUES,
+  PORTAL_INTERACTION_ACTION_TYPES,
+  type PortalInteractionActionType,
+} from "@/lib/analytics/portal-action-types";
 
-const VALID_ACTION_TYPES = ["mode_selected", "wayfinding_opened", "resource_clicked"] as const;
+const VALID_ACTION_TYPES = PORTAL_INTERACTION_ACTION_TYPES;
 const VALID_PAGE_TYPES = ["feed", "find", "event", "spot", "series", "community", "hospital"] as const;
-const VALID_MODES = ["urgent", "treatment", "visitor", "staff"] as const;
+const VALID_MODES = HOSPITAL_MODE_VALUES;
+const LEGACY_ACTION_ALIASES: Record<string, PortalInteractionActionType> = {
+  community_story_click: "resource_clicked",
+  community_org_click: "resource_clicked",
+  phone_call_click: "resource_clicked",
+  itinerary_created: "resource_clicked",
+  itinerary_item_added: "resource_clicked",
+  itinerary_shared: "resource_clicked",
+  concierge_request_submitted: "resource_clicked",
+  preference_completed: "resource_clicked",
+  booking_click: "resource_clicked",
+  reservation_click: "resource_clicked",
+  ticket_click: "resource_clicked",
+  pdf_downloaded: "resource_clicked",
+};
 
 function optionalString(value: unknown, maxLength: number): string | null {
   if (typeof value !== "string") return null;
@@ -42,10 +61,12 @@ export async function POST(
     return new Response(null, { status: 400 });
   }
 
-  const actionType = body.action_type;
+  const rawActionType = typeof body.action_type === "string" ? body.action_type.trim() : "";
+  const actionType = (LEGACY_ACTION_ALIASES[rawActionType] || rawActionType) as unknown;
   if (!isValidEnum(actionType, VALID_ACTION_TYPES)) {
     return new Response(null, { status: 400 });
   }
+  const canonicalActionType = actionType as PortalInteractionActionType;
 
   const pageType = isValidEnum(body.page_type, VALID_PAGE_TYPES)
     ? body.page_type
@@ -55,7 +76,7 @@ export async function POST(
     ? body.mode_context
     : null;
 
-  if (actionType === "mode_selected" && !modeContext) {
+  if (canonicalActionType === "mode_selected" && !modeContext) {
     return new Response(null, { status: 400 });
   }
 
@@ -101,12 +122,16 @@ export async function POST(
 
   const rawMetadata = body.metadata;
   const metadata = rawMetadata && typeof rawMetadata === "object" && !Array.isArray(rawMetadata)
-    ? rawMetadata
+    ? rawMetadata as Record<string, unknown>
     : null;
+
+  const enrichedMetadata = rawActionType && rawActionType !== canonicalActionType
+    ? { ...(metadata || {}), original_action_type: rawActionType }
+    : metadata;
 
   const insertPayload = {
     portal_id: portalId,
-    action_type: actionType,
+    action_type: canonicalActionType,
     page_type: pageType,
     hospital_slug: hospitalSlug,
     mode_context: modeContext,
@@ -120,7 +145,7 @@ export async function POST(
     utm_medium: optionalString(body.utm_medium, 100),
     utm_campaign: optionalString(body.utm_campaign, 100),
     user_agent: request.headers.get("user-agent")?.slice(0, 500) || null,
-    metadata,
+    metadata: enrichedMetadata,
   };
 
   const { error: insertError } = await (supabase as unknown as AnySupabase)

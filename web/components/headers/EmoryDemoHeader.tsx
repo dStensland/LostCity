@@ -1,10 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { hospitalBodyFont } from "@/lib/hospital-art";
-import { DEFAULT_HOSPITAL_MODE } from "@/lib/hospital-modes";
+import {
+  DEFAULT_HOSPITAL_MODE,
+  type HospitalAudienceMode,
+} from "@/lib/hospital-modes";
+import { HOSPITAL_MODE_VALUES } from "@/lib/analytics/portal-action-types";
+import { trackPortalAction } from "@/lib/analytics/portal-action-tracker";
 import LanguageSelector from "@/components/LanguageSelector";
 
 type EmoryDemoHeaderProps = {
@@ -21,6 +26,11 @@ type NavItem = {
 
 const SEARCH_KEYS_TO_CLEAR = ["event", "spot", "series", "festival", "org"] as const;
 const DEFAULT_EMORY_CONCIERGE_HOSPITAL = "emory-university-hospital";
+const HOSPITAL_MODE_SET = new Set(HOSPITAL_MODE_VALUES);
+
+function isHospitalMode(value: string): value is HospitalAudienceMode {
+  return HOSPITAL_MODE_SET.has(value as HospitalAudienceMode);
+}
 
 function buildConciergeHref(portalSlug: string): string {
   return `/${portalSlug}/hospitals/${DEFAULT_EMORY_CONCIERGE_HOSPITAL}`;
@@ -43,6 +53,7 @@ export default function EmoryDemoHeader({ portalSlug }: EmoryDemoHeaderProps) {
   const router = useRouter();
   const pathname = usePathname() || "";
   const searchParams = useSearchParams();
+  const trackedModeSelectionRef = useRef<string | null>(null);
   const queryString = searchParams?.toString() || "";
   const queryParams = new URLSearchParams(queryString);
 
@@ -84,6 +95,26 @@ export default function EmoryDemoHeader({ portalSlug }: EmoryDemoHeaderProps) {
     if (cleanedQuery === currentQuery) return;
     router.replace(cleanedQuery ? `${pathname}?${cleanedQuery}` : pathname, { scroll: false });
   }, [cleanedQuery, pathname, queryString, router]);
+
+  useEffect(() => {
+    const paramsForTracking = new URLSearchParams(queryString);
+    const modeParam = paramsForTracking.get("mode");
+    if (!modeParam || !isHospitalMode(modeParam)) return;
+
+    const key = `${pathname}:${modeParam}`;
+    if (trackedModeSelectionRef.current === key) return;
+    trackedModeSelectionRef.current = key;
+
+    trackPortalAction(portalSlug, {
+      action_type: "mode_selected",
+      page_type: pathname.startsWith(`/${portalSlug}/hospitals`) ? "hospital" : "feed",
+      mode_context: modeParam,
+      section_key: "emory_header_mode",
+      target_kind: "mode",
+      target_id: modeParam,
+      target_label: modeParam,
+    });
+  }, [pathname, portalSlug, queryString]);
 
   return (
     <header className="sticky top-0 z-[130] bg-[#f8f8f8]/95 backdrop-blur supports-[backdrop-filter]:bg-[#f8f8f8]/85">

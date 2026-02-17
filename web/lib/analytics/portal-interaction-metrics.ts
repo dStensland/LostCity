@@ -1,24 +1,14 @@
 import type { AnySupabase } from "@/lib/api-utils";
+import {
+  PORTAL_INTERACTION_ACTION_TYPES,
+  type PortalInteractionActionType,
+} from "@/lib/analytics/portal-action-types";
 
 const PAGE_SIZE = 5000;
 
-export const PORTAL_INTERACTION_ACTIONS = [
-  "mode_selected",
-  "wayfinding_opened",
-  "resource_clicked",
-  "itinerary_created",
-  "itinerary_item_added",
-  "itinerary_shared",
-  "concierge_request_submitted",
-  "preference_completed",
-  "booking_click",
-  "reservation_click",
-  "ticket_click",
-  "phone_call_click",
-  "pdf_downloaded",
-] as const;
+export const PORTAL_INTERACTION_ACTIONS = PORTAL_INTERACTION_ACTION_TYPES;
 
-export type PortalInteractionAction = (typeof PORTAL_INTERACTION_ACTIONS)[number];
+export type PortalInteractionAction = PortalInteractionActionType;
 
 export type PortalInteractionRow = {
   portal_id: string;

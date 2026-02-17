@@ -4,7 +4,7 @@ import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-lim
 import { checkBodySize, sanitizeString, isValidEnum } from "@/lib/api-utils";
 import { resolvePortalSlugAlias } from "@/lib/portal-aliases";
 
-const VALID_PAGE_TYPES = ["feed", "find", "event", "spot", "series", "community"] as const;
+const VALID_PAGE_TYPES = ["feed", "find", "event", "spot", "series", "community", "hospital"] as const;
 
 // POST /api/portals/[slug]/track - Track a page view (anonymous, fire-and-forget)
 export async function POST(
@@ -85,7 +85,7 @@ export async function POST(
   }
 
   // Insert page view
-  await supabase.from("portal_page_views").insert({
+  const insertPayload = {
     portal_id: portalData.id,
     page_type: pageType,
     entity_id: entityId,
@@ -94,7 +94,26 @@ export async function POST(
     utm_medium: typeof body.utm_medium === "string" ? sanitizeString(body.utm_medium).slice(0, 100) : null,
     utm_campaign: typeof body.utm_campaign === "string" ? sanitizeString(body.utm_campaign).slice(0, 100) : null,
     user_agent: request.headers.get("user-agent")?.slice(0, 500) || null,
-  } as never);
+  } as const;
+
+  const { error: insertError } = await supabase
+    .from("portal_page_views")
+    .insert(insertPayload as never);
+
+  // Backward-compatible fallback for environments that haven't applied
+  // the page_type check expansion yet.
+  if (insertError && pageType === "hospital") {
+    const { error: fallbackError } = await supabase
+      .from("portal_page_views")
+      .insert({ ...insertPayload, page_type: "feed" } as never);
+    if (!fallbackError) {
+      return new Response(null, { status: 204 });
+    }
+  }
+
+  if (insertError) {
+    return new Response(null, { status: 500 });
+  }
 
   return new Response(null, { status: 204 });
 }

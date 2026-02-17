@@ -42,7 +42,7 @@ const HOSPITAL_CARD_IMAGE_BY_SLUG: Record<string, string> = {
   "emory-university-hospital": "https://images.unsplash.com/photo-1576765608535-5f04d1e3f289?auto=format&fit=crop&w=1200&q=80",
   "emory-saint-josephs-hospital": "https://images.unsplash.com/photo-1586773860418-d37222d8fce3?auto=format&fit=crop&w=1200&q=80",
   "emory-johns-creek-hospital": "https://images.unsplash.com/photo-1551076805-e1869033e561?auto=format&fit=crop&w=1200&q=80",
-  "emory-midtown-hospital": "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=1200&q=80",
+  "emory-university-hospital-midtown": "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=1200&q=80",
 };
 const HOSPITAL_CARD_FALLBACK_IMAGE = "https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=1200&q=80";
 const COMMUNITY_FALLBACK_IMAGE = "https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=900&q=80";
@@ -402,7 +402,23 @@ export default async function HospitalPortalExperience({
                         Directions
                       </HospitalTrackedLink>
                       {card.hospital.phone && (
-                        <a href={`tel:${card.hospital.phone}`} className="emory-link-btn">Call</a>
+                        <HospitalTrackedLink
+                          href={`tel:${card.hospital.phone}`}
+                          tracking={{
+                            actionType: "resource_clicked",
+                            portalSlug: portal.slug,
+                            hospitalSlug: card.hospital.slug,
+                            modeContext: mode,
+                            sectionKey: "v5_hub_hospital_cards",
+                            targetKind: "phone_call",
+                            targetId: card.hospital.slug,
+                            targetLabel: card.hospital.name,
+                            targetUrl: `tel:${card.hospital.phone}`,
+                          }}
+                          className="emory-link-btn"
+                        >
+                          Call
+                        </HospitalTrackedLink>
                       )}
                     </div>
                   </div>
