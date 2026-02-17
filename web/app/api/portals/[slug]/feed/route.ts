@@ -7,10 +7,42 @@ import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-lim
 import { errorResponse, isValidUUID } from "@/lib/api-utils";
 import { fetchSocialProofCounts } from "@/lib/search";
 import { normalizePortalSlug, resolvePortalSlugAlias } from "@/lib/portal-aliases";
-import { applyFederatedPortalScopeToQuery } from "@/lib/portal-scope";
+import { applyManifestFederatedScopeToQuery } from "@/lib/portal-scope";
+import { buildPortalManifest, shouldApplyCityFilter } from "@/lib/portal-manifest";
 
 // Cache feed for 5 minutes at CDN, allow stale for 1 hour while revalidating
 export const revalidate = 300;
+
+const FEED_CACHE_TTL_MS = 5 * 60 * 1000;
+const FEED_CACHE_MAX_ENTRIES = 100;
+const FEED_CACHE_CONTROL = "public, s-maxage=300, stale-while-revalidate=3600";
+
+const feedPayloadCache = new Map<string, { expiresAt: number; payload: unknown }>();
+
+function getCachedFeedPayload(cacheKey: string): unknown | null {
+  const entry = feedPayloadCache.get(cacheKey);
+  if (!entry) {
+    return null;
+  }
+  if (entry.expiresAt <= Date.now()) {
+    feedPayloadCache.delete(cacheKey);
+    return null;
+  }
+  return entry.payload;
+}
+
+function setCachedFeedPayload(cacheKey: string, payload: unknown): void {
+  if (feedPayloadCache.size >= FEED_CACHE_MAX_ENTRIES) {
+    const firstKey = feedPayloadCache.keys().next().value;
+    if (firstKey) {
+      feedPayloadCache.delete(firstKey);
+    }
+  }
+  feedPayloadCache.set(cacheKey, {
+    expiresAt: Date.now() + FEED_CACHE_TTL_MS,
+    payload,
+  });
+}
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -291,10 +323,30 @@ const NIGHTLIFE_ACTIVITY_LABELS: Record<string, string> = {
   other: "Nightlife",
 };
 
+const COMMUNITY_SECTION_HINT = /\b(get[-\s]?involved|volunteer|activism|civic|community\s+support|community\s+action)\b/i;
+
+function isCommunityActionSection(section: Pick<Section, "slug" | "title" | "auto_filter">): boolean {
+  const categories = section.auto_filter?.categories || [];
+  const subcategories = section.auto_filter?.subcategories || [];
+  const tags = section.auto_filter?.tags || [];
+
+  if (categories.some((category) => category === "community" || category === "activism")) {
+    return true;
+  }
+
+  if (subcategories.some((subcategory) => /\b(community|volunteer|activism|civic)\b/i.test(subcategory))) {
+    return true;
+  }
+
+  if (tags.some((tag) => /\b(volunteer|activism|community|civic)\b/i.test(tag))) {
+    return true;
+  }
+
+  return COMMUNITY_SECTION_HINT.test(`${section.slug} ${section.title}`);
+}
+
 // GET /api/portals/[slug]/feed - Get feed content for a portal
 export async function GET(request: NextRequest, { params }: Props) {
-  const supabase = await createClient();
-
   // Rate limit - use read limit since this is a common read endpoint
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
@@ -304,7 +356,20 @@ export async function GET(request: NextRequest, { params }: Props) {
   const canonicalSlug = resolvePortalSlugAlias(requestSlug);
   const { searchParams } = new URL(request.url);
   const sectionIds = searchParams.get("sections")?.split(",").filter(Boolean);
-  const defaultLimit = parseInt(searchParams.get("limit") || "5");
+  const parsedLimit = Number.parseInt(searchParams.get("limit") || "5", 10);
+  const defaultLimit = Number.isFinite(parsedLimit) ? Math.max(1, Math.min(parsedLimit, 50)) : 5;
+  const sectionKey = (sectionIds || []).slice().sort().join(",");
+  const cacheKey = `${canonicalSlug}|${defaultLimit}|${sectionKey}`;
+  const cachedPayload = getCachedFeedPayload(cacheKey);
+  if (cachedPayload) {
+    return NextResponse.json(cachedPayload, {
+      headers: {
+        "Cache-Control": FEED_CACHE_CONTROL,
+      },
+    });
+  }
+
+  const supabase = await createClient();
 
   // Get portal
   // Try with parent_portal_id first, fall back if column doesn't exist (older schemas)
@@ -359,7 +424,6 @@ export async function GET(request: NextRequest, { params }: Props) {
     return NextResponse.json({ error: "Invalid portal" }, { status: 400 });
   }
 
-  const isExclusivePortal = portal.portal_type === "business" && !portal.parent_portal_id;
   const feedSettings = (portal.settings?.feed || {}) as {
     feed_type?: string;
     featured_section_ids?: string[];
@@ -367,10 +431,8 @@ export async function GET(request: NextRequest, { params }: Props) {
     default_layout?: string;
   };
 
-  // Get federated source access for this portal
-  // This includes owned sources, global sources, and subscribed sources
-  const federationAccess = await getPortalSourceAccess(portal.id);
-  const hasSubscribedSources = federationAccess.sourceIds.length > 0;
+  // Fetch federation access in parallel with section lookup.
+  const federationAccessPromise = getPortalSourceAccess(portal.id);
 
   // Determine which sections to fetch
   let sectionsToFetch = sectionIds;
@@ -432,8 +494,9 @@ export async function GET(request: NextRequest, { params }: Props) {
     return true;
   });
 
-  // Collect all event IDs from curated sections
+  // Collect all curated and pinned event IDs from sections
   const eventIds = new Set<number>();
+  const pinnedEventIds = new Set<number>();
   for (const section of sections) {
     if (section.section_type === "curated" || section.section_type === "mixed") {
       for (const item of section.portal_section_items || []) {
@@ -442,61 +505,6 @@ export async function GET(request: NextRequest, { params }: Props) {
         }
       }
     }
-  }
-
-  // Fetch curated events
-  const eventMap = new Map<number, Event>();
-  if (eventIds.size > 0) {
-    const { data: eventsData } = await supabase
-      .from("events")
-      .select(`
-        id,
-        title,
-        start_date,
-        start_time,
-        end_date,
-        end_time,
-        is_all_day,
-        is_free,
-        price_min,
-        price_max,
-        category,
-        image_url,
-        description,
-        featured_blurb,
-        tags,
-        series_id,
-        series:series_id(
-          id,
-          slug,
-          title,
-          series_type,
-          image_url,
-          frequency,
-          day_of_week,
-          festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
-        ),
-        venue:venues(id, name, neighborhood, slug, venue_type)
-      `)
-      .in("id", Array.from(eventIds))
-      .or(`start_date.gte.${getLocalDateString()},end_date.gte.${getLocalDateString()}`)
-      .is("canonical_event_id", null)
-      .or("is_class.eq.false,is_class.is.null") // Only show canonical non-class events
-      .or("is_sensitive.eq.false,is_sensitive.is.null");
-
-    for (const event of (eventsData || []) as Event[]) {
-      eventMap.set(event.id, event);
-    }
-  }
-
-  // PERFORMANCE OPTIMIZATION: Batch all event fetching upfront
-  // Instead of N queries (one per section), we do 1-2 queries total
-
-  const today = getLocalDateString();
-
-  // Step 1: Collect all pinned event IDs from sections
-  const pinnedEventIds = new Set<number>();
-  for (const section of sections) {
     if (section.auto_filter?.event_ids?.length) {
       for (const id of section.auto_filter.event_ids) {
         pinnedEventIds.add(id);
@@ -504,11 +512,8 @@ export async function GET(request: NextRequest, { params }: Props) {
     }
   }
 
-  // Step 2: Fetch pinned events in one query
-  if (pinnedEventIds.size > 0) {
-    const { data: pinnedEvents } = await supabase
-      .from("events")
-      .select(`
+  const today = getLocalDateString();
+  const curatedEventSelect = `
         id,
         title,
         start_date,
@@ -536,15 +541,54 @@ export async function GET(request: NextRequest, { params }: Props) {
           festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
         ),
         venue:venues(id, name, neighborhood, slug, venue_type)
-      `)
+      `;
+
+  const curatedEventsPromise = eventIds.size > 0
+    ? supabase
+      .from("events")
+      .select(curatedEventSelect)
+      .in("id", Array.from(eventIds))
+      .or(`start_date.gte.${today},end_date.gte.${today}`)
+      .is("canonical_event_id", null)
+      .or("is_class.eq.false,is_class.is.null")
+      .or("is_sensitive.eq.false,is_sensitive.is.null")
+    : Promise.resolve({ data: [] as Event[] });
+
+  const pinnedEventsPromise = pinnedEventIds.size > 0
+    ? supabase
+      .from("events")
+      .select(curatedEventSelect)
       .in("id", Array.from(pinnedEventIds))
       .is("canonical_event_id", null)
-      .or("is_class.eq.false,is_class.is.null") // Only show canonical non-class events
-      .or("is_sensitive.eq.false,is_sensitive.is.null");
+      .or("is_class.eq.false,is_class.is.null")
+      .or("is_sensitive.eq.false,is_sensitive.is.null")
+    : Promise.resolve({ data: [] as Event[] });
 
-    for (const event of (pinnedEvents || []) as Event[]) {
-      eventMap.set(event.id, event);
-    }
+  const [{ data: curatedEvents }, { data: pinnedEvents }, federationAccess] = await Promise.all([
+    curatedEventsPromise,
+    pinnedEventsPromise,
+    federationAccessPromise,
+  ]);
+
+  const manifest = buildPortalManifest({
+    portalId: portal.id,
+    slug: portal.slug,
+    portalType: portal.portal_type,
+    parentPortalId: portal.parent_portal_id,
+    settings: portal.settings,
+    filters: portalFilters,
+    sourceIds: federationAccess.sourceIds,
+  });
+  const enforcePortalCityFilter = shouldApplyCityFilter(manifest);
+  const hasSubscribedSources = manifest.scope.allowFederatedSources;
+
+  // Merge curated + pinned event rows into a single lookup map
+  const eventMap = new Map<number, Event>();
+  for (const event of (curatedEvents || []) as Event[]) {
+    eventMap.set(event.id, event);
+  }
+  for (const event of (pinnedEvents || []) as Event[]) {
+    eventMap.set(event.id, event);
   }
 
   // Step 3: Determine if we need auto-filtered events and get widest date range needed
@@ -585,9 +629,11 @@ export async function GET(request: NextRequest, { params }: Props) {
 
     // Calculate max events needed
     // Per-section budget for each date bucket
-    const perBucketLimit = sectionsNeedingAutoEvents.reduce((sum, s) => {
+    const requestedPerBucket = sectionsNeedingAutoEvents.reduce((sum, s) => {
       return sum + ((s.max_items || feedSettings.items_per_section || defaultLimit) * 2);
     }, 0);
+    // Keep cold-load DB fanout bounded for large portals while preserving enough candidates.
+    const perBucketLimit = Math.max(40, Math.min(requestedPerBucket, 120));
 
     // Build a base query with shared filters, then run it per date bucket
     // so that busy days (100+ events) don't starve later dates
@@ -623,9 +669,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     `;
 
     const applyPortalFilter = (query: ReturnType<typeof supabase.from>) => {
-      return applyFederatedPortalScopeToQuery(query, {
-        portalId: portal.id,
-        portalExclusive: isExclusivePortal,
+      return applyManifestFederatedScopeToQuery(query, manifest, {
         sourceIds: hasSubscribedSources ? federationAccess.sourceIds : [],
         publicOnlyWhenNoPortal: true,
       });
@@ -680,7 +724,7 @@ export async function GET(request: NextRequest, { params }: Props) {
           }
         }
         // Filter out events from wrong cities (e.g. Nashville events leaking into Atlanta portals)
-        if (portalCities.length > 0 && event.venue?.city) {
+        if (enforcePortalCityFilter && portalCities.length > 0 && event.venue?.city) {
           const venueCity = event.venue.city.trim().toLowerCase();
           if (venueCity && !portalCities.some((pc) => {
             // Exact match or word-boundary match (handles "East Atlanta", "Atlanta, GA")
@@ -755,8 +799,8 @@ export async function GET(request: NextRequest, { params }: Props) {
       constrainedQuery = applyPortalFilter(constrainedQuery);
 
       const supplementalLimit = Math.min(
-        400,
-        Math.max(constrainedSourceIds.length * 40, constrainedVenueIds.length * 30, 80)
+        220,
+        Math.max(constrainedSourceIds.length * 30, constrainedVenueIds.length * 25, 80)
       );
 
       const { data: constrainedEvents } = await constrainedQuery
@@ -784,7 +828,7 @@ export async function GET(request: NextRequest, { params }: Props) {
       const { data: nightlifeEvents } = await nightlifeQuery
         .order("start_date", { ascending: true })
         .order("start_time", { ascending: true })
-        .limit(100);
+        .limit(80);
 
       addToPool((nightlifeEvents || []) as Event[]);
     }
@@ -1076,7 +1120,8 @@ export async function GET(request: NextRequest, { params }: Props) {
       .is("canonical_event_id", null)
       .or("is_class.eq.false,is_class.is.null")
       .or("is_sensitive.eq.false,is_sensitive.is.null")
-      .order("start_date", { ascending: true });
+      .order("start_date", { ascending: true })
+      .limit(Math.max(80, holidayTags.length * 60));
 
       // Group events by tag, filtering out wrong-city events
       if (allHolidayEvents) {
@@ -1116,7 +1161,9 @@ export async function GET(request: NextRequest, { params }: Props) {
     let fullFilteredPool: Event[] | null = null;
     // Nightlife carousel needs a larger pool for client-side filtering across activity types
     const isNightlifeSection = !!(section.auto_filter as Record<string, unknown>)?.nightlife_mode;
-    const limit = isNightlifeSection ? 50 : (section.max_items || feedSettings.items_per_section || defaultLimit);
+    const isCommunitySection = isCommunityActionSection(section);
+    const baseLimit = section.max_items || feedSettings.items_per_section || defaultLimit;
+    const limit = isNightlifeSection ? 50 : (isCommunitySection ? Math.max(baseLimit, 10) : baseLimit);
 
     // Non-event block types don't need events
     if (["category_grid", "announcement", "external_link", "countdown"].includes(section.block_type)) {
@@ -1393,7 +1440,12 @@ export async function GET(request: NextRequest, { params }: Props) {
     const collapsibleBlockTypes = ["event_cards", "event_carousel"];
     let finalBlockType = section.block_type;
     if (collapsibleBlockTypes.includes(section.block_type)) {
-      finalBlockType = events.length >= 8 ? "collapsible_events" : "event_list";
+      // Keep volunteer/community sections expanded and rich instead of a single compact jump card.
+      if (isCommunityActionSection(section)) {
+        finalBlockType = "event_cards";
+      } else {
+        finalBlockType = events.length >= 8 ? "collapsible_events" : "event_list";
+      }
     }
 
     return {
@@ -1422,7 +1474,8 @@ export async function GET(request: NextRequest, { params }: Props) {
   const holidayFeedSections = holidaySections.map((section) => {
     // Holiday sections get events by tag
     const tag = section.auto_filter?.tags?.[0];
-    const events = tag ? (holidayEventsByTag.get(tag) || []) : [];
+    const maxItems = section.max_items || 20;
+    const events = tag ? (holidayEventsByTag.get(tag) || []).slice(0, maxItems) : [];
 
     return {
       id: section.id,
@@ -1474,24 +1527,38 @@ export async function GET(request: NextRequest, { params }: Props) {
     }),
   }));
 
-  return NextResponse.json(
-    {
-      portal: {
-        slug: portal.slug,
-        name: portal.name,
-      },
-      feedSettings: {
-        feed_type: feedSettings.feed_type || "sections",
-        items_per_section: feedSettings.items_per_section || 5,
-        default_layout: feedSettings.default_layout || "list",
-      },
-      sections: sectionsWithCounts,
+  const responsePayload = {
+    portal: {
+      slug: portal.slug,
+      name: portal.name,
     },
-    {
-      headers: {
-        // Cache for 5 minutes on CDN, allow stale for 1 hour while revalidating
-        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=3600",
+    manifest: {
+      version: manifest.version,
+      vertical: manifest.vertical,
+      portal_type: manifest.portalType,
+      scope: {
+        portal_exclusive: manifest.scope.portalExclusive,
+        enforce_city_filter: manifest.scope.enforceCityFilter,
+        has_federated_sources: manifest.scope.allowFederatedSources,
       },
-    }
-  );
+      metadata: {
+        event_field_order: manifest.metadata.eventFieldOrder,
+        participant_model: manifest.metadata.participantModel,
+      },
+    },
+    feedSettings: {
+      feed_type: feedSettings.feed_type || "sections",
+      items_per_section: feedSettings.items_per_section || 5,
+      default_layout: feedSettings.default_layout || "list",
+    },
+    sections: sectionsWithCounts,
+  };
+
+  setCachedFeedPayload(cacheKey, responsePayload);
+
+  return NextResponse.json(responsePayload, {
+    headers: {
+      "Cache-Control": FEED_CACHE_CONTROL,
+    },
+  });
 }

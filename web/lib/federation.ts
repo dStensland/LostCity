@@ -61,6 +61,22 @@ export interface SourceWithOwnership {
   subscriberCount?: number;
 }
 
+const PORTAL_SOURCE_ACCESS_CACHE_TTL_MS = 5 * 60 * 1000;
+const PORTAL_SOURCE_ACCESS_CACHE_MAX_ENTRIES = 200;
+
+const portalSourceAccessCache = new Map<string, { expiresAt: number; value: PortalSourceAccess }>();
+
+function clonePortalSourceAccess(value: PortalSourceAccess): PortalSourceAccess {
+  return {
+    sourceIds: [...value.sourceIds],
+    categoryConstraints: new Map(value.categoryConstraints),
+    accessDetails: value.accessDetails.map((detail) => ({
+      ...detail,
+      accessibleCategories: detail.accessibleCategories ? [...detail.accessibleCategories] : null,
+    })),
+  };
+}
+
 // ============================================================================
 // QUERY FUNCTIONS
 // ============================================================================
@@ -70,6 +86,14 @@ export interface SourceWithOwnership {
  * This is the main function used by the search module.
  */
 export async function getPortalSourceAccess(portalId: string): Promise<PortalSourceAccess> {
+  const cached = portalSourceAccessCache.get(portalId);
+  if (cached && cached.expiresAt > Date.now()) {
+    return clonePortalSourceAccess(cached.value);
+  }
+  if (cached && cached.expiresAt <= Date.now()) {
+    portalSourceAccessCache.delete(portalId);
+  }
+
   // Type for the materialized view rows (not in generated types)
   type PortalSourceAccessRow = {
     source_id: number;
@@ -108,7 +132,18 @@ export async function getPortalSourceAccess(portalId: string): Promise<PortalSou
     });
   }
 
-  return { sourceIds, categoryConstraints, accessDetails };
+  const value = { sourceIds, categoryConstraints, accessDetails };
+  if (portalSourceAccessCache.size >= PORTAL_SOURCE_ACCESS_CACHE_MAX_ENTRIES) {
+    const firstKey = portalSourceAccessCache.keys().next().value;
+    if (firstKey) {
+      portalSourceAccessCache.delete(firstKey);
+    }
+  }
+  portalSourceAccessCache.set(portalId, {
+    expiresAt: Date.now() + PORTAL_SOURCE_ACCESS_CACHE_TTL_MS,
+    value: clonePortalSourceAccess(value),
+  });
+  return value;
 }
 
 /**

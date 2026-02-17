@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getDistanceMiles } from "@/lib/geo";
 import { getLocalDateString } from "@/lib/formats";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
@@ -18,6 +18,45 @@ const SUPPORT_SPLIT_RE =
   /\s+(?:w\/|with|feat\.?|ft\.?|featuring|support(?:ing)?|special guests?|openers?|opening)\s+/i;
 const NOISY_PREFIX_RE =
   /^(with|w\/|special guests?|support(?:ing)?|opening|openers?)\b/i;
+
+const SPOT_DETAIL_CACHE_TTL_MS = 2 * 60 * 1000;
+const SPOT_DETAIL_CACHE_MAX_ENTRIES = 200;
+const SPOT_DETAIL_CACHE_CONTROL = "public, s-maxage=120, stale-while-revalidate=600";
+
+type SpotCachePayload = {
+  spot: Record<string, unknown>;
+  upcomingEvents: Array<Record<string, unknown>>;
+  nearbyDestinations: Record<string, NearbyDestination[]>;
+  highlights: Array<Record<string, unknown>>;
+  artifacts: Array<Record<string, unknown>>;
+};
+
+const spotDetailPayloadCache = new Map<string, { expiresAt: number; payload: SpotCachePayload }>();
+
+function getCachedSpotDetailPayload(cacheKey: string): SpotCachePayload | null {
+  const entry = spotDetailPayloadCache.get(cacheKey);
+  if (!entry) {
+    return null;
+  }
+  if (entry.expiresAt <= Date.now()) {
+    spotDetailPayloadCache.delete(cacheKey);
+    return null;
+  }
+  return entry.payload;
+}
+
+function setCachedSpotDetailPayload(cacheKey: string, payload: SpotCachePayload): void {
+  if (spotDetailPayloadCache.size >= SPOT_DETAIL_CACHE_MAX_ENTRIES) {
+    const firstKey = spotDetailPayloadCache.keys().next().value;
+    if (firstKey) {
+      spotDetailPayloadCache.delete(firstKey);
+    }
+  }
+  spotDetailPayloadCache.set(cacheKey, {
+    expiresAt: Date.now() + SPOT_DETAIL_CACHE_TTL_MS,
+    payload,
+  });
+}
 
 type EventArtistRow = {
   event_id: number;
@@ -56,6 +95,14 @@ type NearbyDestination = {
   hours_display: string | null;
   is_24_hours: boolean | null;
   vibes: string[] | null;
+};
+
+type SpotRecord = {
+  id: number;
+  neighborhood?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  [key: string]: unknown;
 };
 
 const normalizeText = (value: string | null | undefined) =>
@@ -140,6 +187,82 @@ const dedupeBySlot = (
     .slice(0, 20);
 };
 
+async function fetchNearbyDestinations(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  spot: SpotRecord
+): Promise<Record<string, NearbyDestination[]>> {
+  const nearbyDestinations: Record<string, NearbyDestination[]> = {
+    food: [],
+    drinks: [],
+    nightlife: [],
+    caffeine: [],
+    fun: [],
+  };
+
+  const allDestinationTypes = Object.values(DESTINATION_CATEGORIES).flat();
+  const selectFields =
+    "id, name, slug, venue_type, neighborhood, lat, lng, image_url, short_description, hours, hours_display, is_24_hours, vibes";
+
+  let spots: NearbyDestination[] | null = null;
+
+  if (spot.neighborhood) {
+    const { data } = await supabase
+      .from("venues")
+      .select(selectFields)
+      .eq("neighborhood", spot.neighborhood)
+      .in("venue_type", allDestinationTypes)
+      .eq("active", true)
+      .neq("id", spot.id);
+    spots = (data || null) as NearbyDestination[] | null;
+  } else if (spot.lat && spot.lng) {
+    const { data } = await supabase
+      .from("venues")
+      .select(selectFields)
+      .in("venue_type", allDestinationTypes)
+      .eq("active", true)
+      .neq("id", spot.id)
+      .limit(50);
+    spots = (data || null) as NearbyDestination[] | null;
+  }
+
+  if (!spots) {
+    return nearbyDestinations;
+  }
+
+  for (const dest of spots) {
+    let distance: number | undefined;
+
+    if (dest.lat && dest.lng && spot.lat && spot.lng) {
+      distance = getDistanceMiles(spot.lat, spot.lng, dest.lat, dest.lng);
+      if (!spot.neighborhood && distance > 2) {
+        continue;
+      }
+    } else if (!spot.neighborhood) {
+      continue;
+    }
+
+    const venueType = dest.venue_type || "";
+    let category: string | null = null;
+    for (const [cat, types] of Object.entries(DESTINATION_CATEGORIES)) {
+      if (types.includes(venueType)) {
+        category = cat;
+        break;
+      }
+    }
+
+    if (category && nearbyDestinations[category]) {
+      nearbyDestinations[category].push({ ...dest, distance });
+    }
+  }
+
+  for (const category of Object.keys(nearbyDestinations)) {
+    nearbyDestinations[category].sort((a, b) => (a.distance || 999) - (b.distance || 999));
+    nearbyDestinations[category] = nearbyDestinations[category].slice(0, 10);
+  }
+
+  return nearbyDestinations;
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
@@ -150,7 +273,17 @@ export async function GET(
   const { slug } = await params;
 
   if (!slug) {
-    return Response.json({ error: "Invalid slug" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid slug" }, { status: 400 });
+  }
+
+  const cacheKey = slug.toLowerCase().trim();
+  const cachedPayload = getCachedSpotDetailPayload(cacheKey);
+  if (cachedPayload) {
+    return NextResponse.json(cachedPayload, {
+      headers: {
+        "Cache-Control": SPOT_DETAIL_CACHE_CONTROL,
+      },
+    });
   }
 
   const supabase = await createClient();
@@ -163,20 +296,26 @@ export async function GET(
     .maybeSingle();
 
   if (error || !spotData) {
-    return Response.json({ error: "Spot not found" }, { status: 404 });
+    return NextResponse.json({ error: "Spot not found" }, { status: 404 });
   }
 
-  // Cast to avoid TypeScript 'never' type issue
-  const spot = spotData as {
-    id: number;
-    neighborhood?: string | null;
-    lat?: number | null;
-    lng?: number | null;
-    [key: string]: unknown;
-  };
+  const spot = spotData as SpotRecord;
 
   // Get today's date for filtering upcoming events
   const today = getLocalDateString();
+
+  const nearbyDestinationsPromise = fetchNearbyDestinations(supabase, spot);
+  const highlightsPromise = supabase
+    .from("venue_highlights")
+    .select("id, highlight_type, title, description, image_url, sort_order")
+    .eq("venue_id", spot.id)
+    .order("sort_order", { ascending: true });
+  const artifactsPromise = supabase
+    .from("venues")
+    .select("id, name, slug, venue_type, image_url, short_description")
+    .eq("parent_venue_id", spot.id)
+    .eq("active", true)
+    .order("name", { ascending: true });
 
   // Fetch upcoming events at this venue (include ongoing multi-day events).
   // We over-fetch to allow post-query slot dedupe and quality ranking.
@@ -218,9 +357,21 @@ export async function GET(
 
   const dedupedRows = dedupeBySlot(eventRows, artistsByEventId);
   const upcomingEventIds = dedupedRows.map((event) => event.id);
-  const upcomingCounts = await fetchSocialProofCounts(upcomingEventIds);
+  const upcomingCountsPromise = fetchSocialProofCounts(upcomingEventIds);
 
-  const upcomingEventsWithCounts = dedupedRows.map((event) => {
+  const [
+    upcomingCounts,
+    nearbyDestinations,
+    { data: highlights },
+    { data: artifacts },
+  ] = await Promise.all([
+    upcomingCountsPromise,
+    nearbyDestinationsPromise,
+    highlightsPromise,
+    artifactsPromise,
+  ]);
+
+  const upcomingEventsWithCounts: Array<Record<string, unknown>> = dedupedRows.map((event) => {
     const counts = upcomingCounts.get(event.id);
     const artists = (artistsByEventId.get(event.id) || []).map((artist) => ({
       name: artist.name,
@@ -237,126 +388,19 @@ export async function GET(
     };
   });
 
-  // Fetch nearby destinations
-  const nearbyDestinations: Record<string, NearbyDestination[]> = {
-    food: [],
-    drinks: [],
-    nightlife: [],
-    caffeine: [],
-    fun: [],
-  };
-
-  const allDestinationTypes = Object.values(DESTINATION_CATEGORIES).flat();
-
-  // Filter by neighborhood if available
-  if (spot.neighborhood) {
-    const { data: spots } = await supabase
-      .from("venues")
-      .select("id, name, slug, venue_type, neighborhood, lat, lng, image_url, short_description, hours, hours_display, is_24_hours, vibes")
-      .eq("neighborhood", spot.neighborhood)
-      .in("venue_type", allDestinationTypes)
-      .eq("active", true)
-      .neq("id", spot.id);
-
-    if (spots) {
-      for (const s of spots) {
-        const dest = s as NearbyDestination;
-
-        // Calculate distance if we have coordinates (for sorting)
-        let distance: number | undefined;
-        if (dest.lat && dest.lng && spot.lat && spot.lng) {
-          distance = getDistanceMiles(spot.lat, spot.lng, dest.lat, dest.lng);
-        }
-
-        // Determine category
-        const venueType = dest.venue_type || "";
-        let category: string | null = null;
-
-        for (const [cat, types] of Object.entries(DESTINATION_CATEGORIES)) {
-          if (types.includes(venueType)) {
-            category = cat;
-            break;
-          }
-        }
-
-        if (category && nearbyDestinations[category]) {
-          nearbyDestinations[category].push({ ...dest, distance });
-        }
-      }
-
-      // Sort each category by distance and limit
-      for (const category of Object.keys(nearbyDestinations)) {
-        nearbyDestinations[category].sort((a, b) => (a.distance || 999) - (b.distance || 999));
-        nearbyDestinations[category] = nearbyDestinations[category].slice(0, 10);
-      }
-    }
-  } else if (spot.lat && spot.lng) {
-    // Fallback: distance-based if no neighborhood (within 2 miles)
-    const { data: spots } = await supabase
-      .from("venues")
-      .select("id, name, slug, venue_type, neighborhood, lat, lng, image_url, short_description, hours, hours_display, is_24_hours, vibes")
-      .in("venue_type", allDestinationTypes)
-      .eq("active", true)
-      .neq("id", spot.id)
-      .limit(50);
-
-    if (spots) {
-      for (const s of spots) {
-        const dest = s as NearbyDestination;
-
-        // Filter by distance (2 miles max when no neighborhood)
-        let distance: number | undefined;
-        if (dest.lat && dest.lng) {
-          distance = getDistanceMiles(spot.lat, spot.lng, dest.lat, dest.lng);
-          if (distance > 2) continue;
-        } else {
-          continue;
-        }
-
-        // Determine category
-        const venueType = dest.venue_type || "";
-        let category: string | null = null;
-
-        for (const [cat, types] of Object.entries(DESTINATION_CATEGORIES)) {
-          if (types.includes(venueType)) {
-            category = cat;
-            break;
-          }
-        }
-
-        if (category && nearbyDestinations[category]) {
-          nearbyDestinations[category].push({ ...dest, distance });
-        }
-      }
-
-      // Sort by distance and limit
-      for (const category of Object.keys(nearbyDestinations)) {
-        nearbyDestinations[category].sort((a, b) => (a.distance || 999) - (b.distance || 999));
-        nearbyDestinations[category] = nearbyDestinations[category].slice(0, 10);
-      }
-    }
-  }
-
-  // Fetch venue highlights
-  const { data: highlights } = await supabase
-    .from("venue_highlights")
-    .select("id, highlight_type, title, description, image_url, sort_order")
-    .eq("venue_id", spot.id)
-    .order("sort_order", { ascending: true });
-
-  // Fetch child artifacts housed at this venue
-  const { data: artifacts } = await supabase
-    .from("venues")
-    .select("id, name, slug, venue_type, image_url, short_description")
-    .eq("parent_venue_id", spot.id)
-    .eq("active", true)
-    .order("name", { ascending: true });
-
-  return Response.json({
-    spot: spotData,
+  const responsePayload: SpotCachePayload = {
+    spot: spotData as Record<string, unknown>,
     upcomingEvents: upcomingEventsWithCounts,
     nearbyDestinations,
-    highlights: highlights || [],
-    artifacts: artifacts || [],
+    highlights: ((highlights || []) as Array<Record<string, unknown>>),
+    artifacts: ((artifacts || []) as Array<Record<string, unknown>>),
+  };
+
+  setCachedSpotDetailPayload(cacheKey, responsePayload);
+
+  return NextResponse.json(responsePayload, {
+    headers: {
+      "Cache-Control": SPOT_DETAIL_CACHE_CONTROL,
+    },
   });
 }
