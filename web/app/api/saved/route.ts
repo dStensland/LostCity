@@ -3,7 +3,7 @@ import { parseIntParam, validationError, checkBodySize } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { ensureUserProfile } from "@/lib/user-utils";
 import { withOptionalAuth, withAuth } from "@/lib/api-middleware";
-import { resolvePortalId } from "@/lib/portal-resolution";
+import { resolvePortalAttributionForWrite } from "@/lib/portal-attribution";
 import { logger } from "@/lib/logger";
 
 /**
@@ -80,8 +80,13 @@ export const POST = withAuth(async (request, { user, serviceClient }) => {
     // Ensure profile exists
     await ensureUserProfile(user, serviceClient);
 
-    // Resolve portal context
-    const portalId = await resolvePortalId(request);
+    const attribution = await resolvePortalAttributionForWrite(request, {
+      endpoint: "/api/saved",
+      body,
+      requireWhenHinted: true,
+    });
+    if (attribution.response) return attribution.response;
+    const portalId = attribution.portalId;
 
     // Insert saved item
     const insertData: { user_id: string; event_id?: number; venue_id?: number; portal_id?: string } = {

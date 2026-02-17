@@ -22,7 +22,6 @@ export type FeedEvent = {
   description?: string | null;
   venue_name?: string | null;
   category?: string | null;
-  subcategory?: string | null;
   is_free?: boolean;
   price_min?: number | null;
   distance_km?: number | null;

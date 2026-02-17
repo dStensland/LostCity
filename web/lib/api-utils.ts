@@ -182,9 +182,25 @@ export function adminErrorResponse(
  */
 export function checkBodySize(request: Request, maxBytes = 10240): NextResponse | null {
   const contentLength = request.headers.get("content-length");
-  if (contentLength && parseInt(contentLength, 10) > maxBytes) {
-    // Note: Uses raw NextResponse since this is a pre-check before apiResponse is used
-    // The actual API handler will add versioning headers to their response
+  if (contentLength) {
+    const size = parseInt(contentLength, 10);
+    if (!Number.isNaN(size) && size > maxBytes) {
+      return NextResponse.json(
+        { error: "Request body too large" },
+        { status: 413 }
+      );
+    }
+  }
+  return null;
+}
+
+/**
+ * Validate actual payload size after parsing. Call after request.json().
+ * Defense-in-depth for cases where Content-Length header is missing or spoofed.
+ */
+export function checkParsedBodySize(body: unknown, maxBytes = 10240): NextResponse | null {
+  const serialized = JSON.stringify(body);
+  if (serialized && new TextEncoder().encode(serialized).length > maxBytes) {
     return NextResponse.json(
       { error: "Request body too large" },
       { status: 413 }

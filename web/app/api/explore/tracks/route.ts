@@ -153,6 +153,7 @@ export async function GET(request: NextRequest) {
         .gte("start_date", today)
         .lte("start_date", weekendEnd) // Only need through weekend for pills
         .is("canonical_event_id", null)
+        .is("portal_id", null)
         .or("is_class.eq.false,is_class.is.null")
         .or("is_sensitive.eq.false,is_sensitive.is.null")
         .order("start_date", { ascending: true })
@@ -178,6 +179,7 @@ export async function GET(request: NextRequest) {
         .in("venue_id", Array.from(allVenueIds))
         .gte("start_date", today)
         .is("canonical_event_id", null)
+        .is("portal_id", null)
         .or("is_class.eq.false,is_class.is.null")
         .or("is_sensitive.eq.false,is_sensitive.is.null");
 

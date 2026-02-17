@@ -14,6 +14,7 @@ interface LineupSectionProps {
   supportLabel?: string;
   fallbackImageUrl?: string | null;
   fallbackGenres?: string[] | null;
+  eventCategory?: string | null;
 }
 
 export default function LineupSection({
@@ -25,22 +26,28 @@ export default function LineupSection({
   supportLabel,
   fallbackImageUrl = null,
   fallbackGenres = null,
+  eventCategory = null,
 }: LineupSectionProps) {
   const [expanded, setExpanded] = useState(false);
 
   if (artists.length === 0) return null;
 
-  const labels = getLineupLabels(artists);
+  const labels = getLineupLabels(artists, { eventCategory });
   const resolvedTitle = title || labels.sectionTitle;
   const resolvedHeadliner = headlinerLabel || labels.headlinerLabel;
   const resolvedSupport = supportLabel || labels.supportLabel;
 
-  const headliners = artists.filter(
-    (a) => a.is_headliner || a.billing_order === 1
-  );
-  const support = artists.filter(
-    (a) => !a.is_headliner && a.billing_order !== 1
-  );
+  const isTiered = labels.grouping === "tiered";
+
+  const orderedArtists = [...artists].sort((a, b) => {
+    const aOrder = a.billing_order ?? Number.MAX_SAFE_INTEGER;
+    const bOrder = b.billing_order ?? Number.MAX_SAFE_INTEGER;
+    if (aOrder !== bOrder) return aOrder - bOrder;
+    return (a.artist?.name || a.name).localeCompare(b.artist?.name || b.name);
+  });
+
+  const headliners = orderedArtists.filter((a) => a.is_headliner || a.billing_order === 1);
+  const support = orderedArtists.filter((a) => !a.is_headliner && a.billing_order !== 1);
 
   const previewHeadliners = headliners.slice(0, maxDisplay);
   const previewSlotsLeft = Math.max(0, maxDisplay - previewHeadliners.length);
@@ -48,7 +55,11 @@ export default function LineupSection({
 
   const displayHeadliners = expanded ? headliners : previewHeadliners;
   const displaySupport = expanded ? support : previewSupport;
-  const displayCount = displayHeadliners.length + displaySupport.length;
+  const displayFlat = expanded ? orderedArtists : orderedArtists.slice(0, maxDisplay);
+  const displayCount = isTiered
+    ? displayHeadliners.length + displaySupport.length
+    : displayFlat.length;
+
   const hasMore = artists.length > displayCount;
   const canCollapse = expanded && artists.length > maxDisplay;
 
@@ -64,49 +75,70 @@ export default function LineupSection({
         </span>
       </h2>
 
-      {/* Headliners - larger, prominent display */}
-      {displayHeadliners.length > 0 && (
-        <>
-          <p className="text-[0.65rem] font-mono uppercase tracking-widest text-accent mb-3">
-            {resolvedHeadliner}
-          </p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-6 justify-items-center mb-6">
-            {displayHeadliners.map((artist) => (
-              <ArtistChip
-                key={artist.id}
-                artist={artist}
-                portalSlug={portalSlug}
-                variant="card"
-                fallbackImageUrl={fallbackImageUrl}
-                fallbackGenres={fallbackGenres}
-              />
-            ))}
-          </div>
-        </>
-      )}
-
-      {/* Supporting artists - compact grid */}
-      {displaySupport.length > 0 && (
+      {isTiered ? (
         <>
           {displayHeadliners.length > 0 && (
-            <div className="border-t border-[var(--twilight)] my-4" />
+            <>
+              <p className="text-[0.65rem] font-mono uppercase tracking-widest text-accent mb-3">
+                {resolvedHeadliner}
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-6 justify-items-center mb-6">
+                {displayHeadliners.map((artist) => (
+                  <ArtistChip
+                    key={artist.id}
+                    artist={artist}
+                    portalSlug={portalSlug}
+                    eventCategory={eventCategory}
+                    variant="card"
+                    fallbackImageUrl={fallbackImageUrl}
+                    fallbackGenres={fallbackGenres}
+                    emphasizeHeadliner
+                  />
+                ))}
+              </div>
+            </>
           )}
-          <p className="text-[0.65rem] font-mono uppercase tracking-widest text-[var(--muted)] mb-3">
-            {resolvedSupport}
-          </p>
-          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-4 justify-items-center">
-            {displaySupport.map((artist) => (
-              <ArtistChip
-                key={artist.id}
-                artist={artist}
-                portalSlug={portalSlug}
-                variant="card"
-                fallbackImageUrl={fallbackImageUrl}
-                fallbackGenres={fallbackGenres}
-              />
-            ))}
-          </div>
+
+          {displaySupport.length > 0 && (
+            <>
+              {displayHeadliners.length > 0 && (
+                <div className="border-t border-[var(--twilight)] my-4" />
+              )}
+              <p className="text-[0.65rem] font-mono uppercase tracking-widest text-[var(--muted)] mb-3">
+                {resolvedSupport}
+              </p>
+              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-4 justify-items-center">
+                {displaySupport.map((artist) => (
+                  <ArtistChip
+                    key={artist.id}
+                    artist={artist}
+                    portalSlug={portalSlug}
+                    eventCategory={eventCategory}
+                    variant="card"
+                    fallbackImageUrl={fallbackImageUrl}
+                    fallbackGenres={fallbackGenres}
+                    emphasizeHeadliner
+                  />
+                ))}
+              </div>
+            </>
+          )}
         </>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 justify-items-center">
+          {displayFlat.map((artist) => (
+            <ArtistChip
+              key={artist.id}
+              artist={artist}
+              portalSlug={portalSlug}
+              eventCategory={eventCategory}
+              variant="card"
+              fallbackImageUrl={fallbackImageUrl}
+              fallbackGenres={fallbackGenres}
+              emphasizeHeadliner={false}
+            />
+          ))}
+        </div>
       )}
 
       {/* Expand/collapse */}

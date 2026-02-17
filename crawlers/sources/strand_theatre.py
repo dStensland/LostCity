@@ -11,7 +11,7 @@ import logging
 from datetime import datetime, timedelta
 from typing import Optional
 
-from db import get_or_create_venue, insert_event, find_event_by_hash
+from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -296,9 +296,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
         hash_key = f"{title}|{start_date}|{start_time}" if start_time else f"{title}|{start_date}"
         content_hash = generate_content_hash(title, "Earl Smith Strand Theatre", hash_key)
 
-        if find_event_by_hash(content_hash):
-            events_updated += 1
-            continue
 
         tags = get_tags_for_event(event)
 
@@ -328,6 +325,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
             "recurrence_rule": None,
             "content_hash": content_hash,
         }
+
+        existing = find_event_by_hash(content_hash)
+        if existing:
+            smart_update_existing_event(existing, event_record)
+            events_updated += 1
+            continue
 
         try:
             insert_event(event_record)

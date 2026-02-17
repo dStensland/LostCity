@@ -16,9 +16,10 @@ interface AroundYouPillarProps {
   ambient: AmbientContext;
   portalSlug: string;
   portalName: string;
+  conciergePhone?: string;
 }
 
-export default function AroundYouPillar({ data, ambient, portalSlug, portalName }: AroundYouPillarProps) {
+export default function AroundYouPillar({ data, ambient, portalSlug, portalName, conciergePhone }: AroundYouPillarProps) {
   const tonightEvents = data.tonightEvents.slice(0, 8);
   const [activeInterests, setActiveInterests] = useState<string[]>([]);
 
@@ -44,6 +45,7 @@ export default function AroundYouPillar({ data, ambient, portalSlug, portalName 
         quickActions={ambient.quickActions}
         heroPhoto={ambient.heroPhoto}
         portalName={portalName}
+        conciergePhone={conciergePhone}
       />
 
       {/* Live specials */}

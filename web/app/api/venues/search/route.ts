@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
   const query = searchParams.get("q");
   const limit = Math.min(parseInt(searchParams.get("limit") || "10"), 20);
   const neighborhood = searchParams.get("neighborhood");
+  const city = searchParams.get("city");
 
   if (!query || !isValidString(query, 1, 100)) {
     return NextResponse.json({ error: "Query parameter 'q' is required" }, { status: 400 });
@@ -54,6 +55,11 @@ export async function GET(request: NextRequest) {
     )
     .order("name")
     .limit(limit);
+
+  // Filter by city if provided (portal isolation)
+  if (city && isValidString(city, 1, 50)) {
+    searchQuery = searchQuery.eq("city", city);
+  }
 
   // Filter by neighborhood if provided
   if (neighborhood && isValidString(neighborhood, 1, 50)) {

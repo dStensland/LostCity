@@ -3,7 +3,7 @@ import { parseIntParam, validationError, checkBodySize } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { ensureUserProfile } from "@/lib/user-utils";
 import { withAuth } from "@/lib/api-middleware";
-import { resolvePortalId } from "@/lib/portal-resolution";
+import { resolvePortalAttributionForWrite } from "@/lib/portal-attribution";
 import { logger } from "@/lib/logger";
 
 const VALID_STATUSES = ["going", "interested", "went"] as const;
@@ -45,8 +45,13 @@ export const POST = withAuth(async (request, { user, serviceClient }) => {
     // Ensure user has a profile (create if missing)
     await ensureUserProfile(user, serviceClient);
 
-    // Resolve portal context (non-blocking — null is OK)
-    const portalId = await resolvePortalId(request);
+    const attribution = await resolvePortalAttributionForWrite(request, {
+      endpoint: "/api/rsvp",
+      body,
+      requireWhenHinted: true,
+    });
+    if (attribution.response) return attribution.response;
+    const portalId = attribution.portalId;
 
     // Upsert the RSVP
     const { data, error } = await serviceClient

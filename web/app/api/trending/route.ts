@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { format, startOfDay, addDays } from "date-fns";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import { resolvePortalQueryContext } from "@/lib/portal-query-context";
+import { applyPortalScopeToQuery, filterByPortalCity } from "@/lib/portal-scope";
 
 export async function GET(request: NextRequest) {
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
@@ -13,10 +15,20 @@ export async function GET(request: NextRequest) {
     const weekFromNow = format(addDays(startOfDay(now), 7), "yyyy-MM-dd");
     const hours48Ago = new Date(now.getTime() - 48 * 60 * 60 * 1000).toISOString();
 
+    const { searchParams } = new URL(request.url);
+
     const supabase = await createClient();
+    const portalContext = await resolvePortalQueryContext(supabase, searchParams);
+    if (portalContext.hasPortalParamMismatch) {
+      return NextResponse.json(
+        { error: "portal and portal_id parameters must reference the same portal" },
+        { status: 400 }
+      );
+    }
+    const portalCity = portalContext.filters.city || "Atlanta";
 
     // Get upcoming events this week
-    const { data: events } = await supabase
+    let eventsQuery = supabase
       .from("events")
       .select(`
         id,
@@ -40,15 +52,22 @@ export async function GET(request: NextRequest) {
           day_of_week,
           festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
         ),
-        venue:venues(id, name, slug, neighborhood)
+        venue:venues(id, name, slug, neighborhood, city)
       `)
       .gte("start_date", today)
       .lte("start_date", weekFromNow)
       .eq("is_active", true)
       .is("canonical_event_id", null)
-      .is("portal_id", null)
       .order("start_date", { ascending: true })
-      .limit(200) as { data: Array<{
+      .limit(200);
+
+    eventsQuery = applyPortalScopeToQuery(eventsQuery, {
+      portalId: portalContext.portalId,
+      portalExclusive: false,
+      publicOnlyWhenNoPortal: true,
+    });
+
+    const { data: eventsRaw } = await eventsQuery as { data: Array<{
         id: number;
         title: string;
         start_date: string;
@@ -78,8 +97,12 @@ export async function GET(request: NextRequest) {
             neighborhood: string | null;
           } | null;
         } | null;
-        venue: { id: number; name: string; slug: string; neighborhood: string | null } | null;
+        venue: { id: number; name: string; slug: string; neighborhood: string | null; city?: string | null } | null;
       }> | null };
+
+    const events = filterByPortalCity(eventsRaw || [], portalCity, {
+      allowMissingCity: true,
+    });
 
     if (!events || events.length === 0) {
       return NextResponse.json({ events: [] }, {

@@ -15,7 +15,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash
+from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, extract_event_links, find_event_url
 
@@ -264,13 +264,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     # Generate content hash
                     content_hash = generate_content_hash(title, venue_name, start_date)
 
-                    # Check for existing event
-                    existing = find_event_by_hash(content_hash)
-                    if existing:
-                        events_updated += 1
-                        i += 1
-                        continue
-
                     # Determine category based on title and presenter
                     category = "music"
                     subcategory = "concert"
@@ -305,11 +298,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     description = ". ".join(description_parts) if description_parts else None
 
                     # Get specific event URL
-
-
                     event_url = find_event_url(title, event_links, EVENTS_URL)
-
-
 
                     event_record = {
                         "source_id": source_id,
@@ -337,6 +326,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "recurrence_rule": None,
                         "content_hash": content_hash,
                     }
+
+                    # Check for existing event
+                    existing = find_event_by_hash(content_hash)
+                    if existing:
+                        smart_update_existing_event(existing, event_record)
+                        events_updated += 1
+                        i += 1
+                        continue
 
                     try:
                         insert_event(event_record)

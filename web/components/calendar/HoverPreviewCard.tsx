@@ -17,7 +17,7 @@ interface CalendarEvent {
   price_min: number | null;
   price_max: number | null;
   category: string | null;
-  subcategory: string | null;
+  genres?: string[] | null;
   rsvp_status: "going" | "interested" | "went";
   venue: {
     name: string;
@@ -262,9 +262,9 @@ export default function HoverPreviewCard({
               {event.category}
             </span>
           )}
-          {event.subcategory && (
+          {event.genres?.[0] && (
             <span className="px-2 py-0.5 rounded-full bg-[var(--cosmic-blue)] font-mono text-[0.6rem] text-[var(--muted)]">
-              {event.subcategory}
+              {event.genres[0]}
             </span>
           )}
         </div>

@@ -1,0 +1,32 @@
+version: 1
+slug: atlanta-craft-club
+name: Atlanta Craft Club
+integration_method: playwright
+notes: >
+  Org (not a venue) that hosts craft workshops at various ATL venues.
+  Events on Luma with JSON-LD structured data. High extraction confidence.
+  Venues rotate: 142 Mangum St SW, Lore, BrewDog, Haven Yoga, etc.
+defaults:
+  category: art
+  subcategory: workshop
+  tags:
+    - craft-club
+    - workshop
+    - community
+discovery:
+  enabled: true
+  type: list
+  urls:
+    - https://luma.com/atlcraftclub
+  event_card: ".content-card, .card-wrapper"
+  fields:
+    title: "h3, .event-title"
+    date: ".attribute, .info-and-cover"
+    price: ".status-or-price"
+    detail_url: "a@href"
+detail:
+  enabled: true
+  use_jsonld: true
+  use_open_graph: true
+  use_heuristic: false
+  use_llm: false

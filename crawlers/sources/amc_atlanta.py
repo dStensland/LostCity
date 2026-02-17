@@ -141,7 +141,7 @@ class AMCAtlantaCrawler(ChainCinemaCrawler):
         seen_hashes: set[str],
     ) -> tuple[int, int, int]:
         """Override: navigate to each date URL directly (no tab clicking)."""
-        from db import insert_event, find_event_by_hash
+        from db import insert_event, find_event_by_hash, smart_update_existing_event
         from dedupe import generate_content_hash
 
         found = 0
@@ -188,10 +188,6 @@ class AMCAtlantaCrawler(ChainCinemaCrawler):
                     )
                     seen_hashes.add(content_hash)
 
-                    existing = find_event_by_hash(content_hash)
-                    if existing:
-                        updated += 1
-                        continue
 
                     event_record = {
                         "source_id": source_id,
@@ -219,6 +215,12 @@ class AMCAtlantaCrawler(ChainCinemaCrawler):
                         "recurrence_rule": None,
                         "content_hash": content_hash,
                     }
+
+                    existing = find_event_by_hash(content_hash)
+                    if existing:
+                        smart_update_existing_event(existing, event_record)
+                        updated += 1
+                        continue
 
                     series_hint = {
                         "series_type": "film",

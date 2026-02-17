@@ -26,6 +26,8 @@ const MIN_VENUE_QUALITY = 50;
 type TrackVenueRow = {
   id: number;
   editorial_blurb: string | null;
+  source_url: string | null;
+  source_label: string | null;
   is_featured: boolean;
   upvote_count: number;
   sort_order: number | null;
@@ -59,7 +61,6 @@ type EventRow = {
   start_time: string | null;
   end_time: string | null;
   category: string | null;
-  subcategory: string | null;
   is_free: boolean | null;
   price_min: number | null;
   price_max: number | null;
@@ -113,6 +114,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
       .select(`
         id,
         editorial_blurb,
+        source_url,
+        source_label,
         is_featured,
         upvote_count,
         sort_order,
@@ -190,11 +193,12 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     const { data: rawEvents } = await supabase
       .from("events")
-      .select("id, venue_id, title, start_date, start_time, end_time, category, subcategory, is_free, price_min, price_max")
+      .select("id, venue_id, title, start_date, start_time, end_time, category, is_free, price_min, price_max")
       .in("venue_id", venueIds)
       .gte("start_date", today)
       .lte("start_date", futureDateStr)
       .is("canonical_event_id", null)
+      .is("portal_id", null)
       .or("is_class.eq.false,is_class.is.null")
       .or("is_sensitive.eq.false,is_sensitive.is.null")
       .order("start_date", { ascending: true })
@@ -277,6 +281,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
       return {
         track_venue_id: tv.id,
         editorial_blurb: tv.editorial_blurb,
+        source_url: tv.source_url,
+        source_label: tv.source_label,
         is_featured: tv.is_featured,
         upvote_count: tv.upvote_count,
         venue: {
@@ -296,7 +302,6 @@ export async function GET(request: NextRequest, context: RouteContext) {
           start_time: ev.start_time,
           end_time: ev.end_time,
           category: ev.category,
-          subcategory: ev.subcategory,
           is_free: ev.is_free ?? false,
           price_min: ev.price_min,
           price_max: ev.price_max,

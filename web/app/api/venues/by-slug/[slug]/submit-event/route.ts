@@ -224,7 +224,7 @@ export async function POST(request: NextRequest, { params }: Props) {
     end_time: body.end_time || null,
     description: body.description ? sanitizeString(body.description) : null,
     category: body.category,
-    subcategory: body.genre || null,
+    genres: body.genre ? [body.genre] : [],
     ticket_url: body.ticket_url || null,
     image_url: body.image_url || null,
     is_free: body.is_free || false,

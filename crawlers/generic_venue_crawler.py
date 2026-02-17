@@ -379,7 +379,6 @@ def crawl_venue(
                 "end_time": event.end_time,
                 "is_all_day": event.is_all_day,
                 "category": event.category,
-                "subcategory": event.subcategory,
                 "tags": event.tags,
                 "price_min": event.price_min,
                 "price_max": event.price_max,

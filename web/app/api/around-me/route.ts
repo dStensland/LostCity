@@ -3,9 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 import { getNeighborhoodByName } from "@/config/neighborhoods";
 import { isSpotOpen, VENUE_TYPES_MAP, type VenueType, DESTINATION_CATEGORIES } from "@/lib/spots";
-import { getPortalBySlug } from "@/lib/portal";
-import { isValidUUID } from "@/lib/api-utils";
 import { logger } from "@/lib/logger";
+import { resolvePortalQueryContext } from "@/lib/portal-query-context";
+import { applyPortalScopeToQuery, filterByPortalCity, isVenueCityInScope } from "@/lib/portal-scope";
 
 export const dynamic = "force-dynamic";
 
@@ -114,6 +114,7 @@ type SpotRow = {
   hours: HoursData | null;
   vibes: string[] | null;
   image_url: string | null;
+  city: string | null;
 };
 
 type LiveEventRow = {
@@ -123,7 +124,6 @@ type LiveEventRow = {
   end_time: string | null;
   is_all_day: boolean;
   category: string | null;
-  subcategory: string | null;
   price_min: number | null;
   price_max: number | null;
   is_free: boolean;
@@ -134,6 +134,7 @@ type LiveEventRow = {
     name: string;
     slug: string;
     neighborhood: string | null;
+    city: string | null;
     lat: number | null;
     lng: number | null;
     venue_type: string | null;
@@ -183,7 +184,7 @@ export type AroundMeEvent = {
   end_time: string | null;
   is_all_day: boolean;
   category: string | null;
-  subcategory: string | null;
+  genres?: string[] | null;
   is_free: boolean;
   price_min: number | null;
   price_max: number | null;
@@ -212,17 +213,7 @@ export async function GET(request: NextRequest) {
   const radiusMiles = radiusParam ? parseFloat(radiusParam) : null;
   const category = searchParams.get("category"); // food, drinks, coffee, music, arts, fun
   const limit = parseInt(searchParams.get("limit") || "50", 10);
-  const portalSlug = searchParams.get("portal");
-
-  // Resolve portal ID for filtering
-  let portalId: string | null = null;
-  if (portalSlug) {
-    const portal = await getPortalBySlug(portalSlug);
-    // Validate the portal ID from the database is a UUID (defensive check)
-    if (portal?.id && isValidUUID(portal.id)) {
-      portalId = portal.id;
-    }
-  }
+  const portalExclusive = searchParams.get("portal_exclusive") === "true";
 
   // Determine center point
   let centerLat: number;
@@ -252,6 +243,14 @@ export async function GET(request: NextRequest) {
 
   try {
     const supabase = await createClient();
+    const portalContext = await resolvePortalQueryContext(supabase, searchParams);
+    if (portalContext.hasPortalParamMismatch) {
+      return NextResponse.json(
+        { error: "portal and portal_id parameters must reference the same portal" },
+        { status: 400 }
+      );
+    }
+    const portalCity = !portalExclusive ? portalContext.filters.city : undefined;
 
     // Get category filter if specified
     const categoryFilter = category ? CATEGORY_FILTERS[category] : null;
@@ -276,11 +275,18 @@ export async function GET(request: NextRequest) {
         hours_display,
         hours,
         vibes,
-        image_url
+        image_url,
+        city
       `)
       .eq("active", true)
       .not("lat", "is", null)
       .not("lng", "is", null);
+
+    spotsQuery = applyPortalScopeToQuery(spotsQuery, {
+      portalId: portalContext.portalId,
+      portalExclusive,
+      publicOnlyWhenNoPortal: true,
+    });
 
     // Filter by neighborhood if specified (exact match on neighborhood field)
     if (neighborhood && !usingGps) {
@@ -318,7 +324,6 @@ export async function GET(request: NextRequest) {
         end_time,
         is_all_day,
         category,
-        subcategory,
         price_min,
         price_max,
         is_free,
@@ -329,6 +334,7 @@ export async function GET(request: NextRequest) {
           name,
           slug,
           neighborhood,
+          city,
           lat,
           lng,
           venue_type
@@ -338,13 +344,11 @@ export async function GET(request: NextRequest) {
       .is("canonical_event_id", null)
       .gte("start_date", new Date().toISOString().split("T")[0]);
 
-    // Filter by portal to prevent cross-portal leakage
-    // Validate portalId before interpolation to prevent injection
-    if (portalId && isValidUUID(portalId)) {
-      eventsQuery = eventsQuery.or(`portal_id.eq.${portalId},portal_id.is.null`);
-    } else {
-      eventsQuery = eventsQuery.is("portal_id", null);
-    }
+    eventsQuery = applyPortalScopeToQuery(eventsQuery, {
+      portalId: portalContext.portalId,
+      portalExclusive,
+      publicOnlyWhenNoPortal: true,
+    });
 
     // Filter events by category if specified
     if (categoryFilter && categoryFilter.eventCategories.length > 0) {
@@ -369,8 +373,12 @@ export async function GET(request: NextRequest) {
       throw eventsResult.error;
     }
 
-    const spots = (spotsResult.data || []) as SpotRow[];
-    const events = (eventsResult.data || []) as LiveEventRow[];
+    const spots = ((spotsResult.data || []) as SpotRow[]).filter((spot) =>
+      isVenueCityInScope(spot.city, portalCity, { allowMissingCity: true })
+    );
+    const events = filterByPortalCity((eventsResult.data || []) as LiveEventRow[], portalCity, {
+      allowMissingCity: true,
+    });
 
     // Process spots - filter by open status and calculate distance
     const processedSpots: AroundMeItem[] = [];
@@ -474,7 +482,6 @@ export async function GET(request: NextRequest) {
           end_time: event.end_time,
           is_all_day: event.is_all_day,
           category: event.category,
-          subcategory: event.subcategory,
           is_free: event.is_free,
           price_min: event.price_min,
           price_max: event.price_max,

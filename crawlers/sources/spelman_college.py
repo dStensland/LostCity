@@ -11,7 +11,7 @@ from datetime import datetime
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash
+from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -320,10 +320,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 # Check for duplicates
                 content_hash = generate_content_hash(title, venue_data["name"], start_date)
-                existing = find_event_by_hash(content_hash)
-                if existing:
-                    events_updated += 1
-                    continue
 
                 # Extract additional info
                 description = event_data.get("description", "")
@@ -393,6 +389,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "content_hash": content_hash,
                 }
 
+                existing = find_event_by_hash(content_hash)
+                if existing:
+                    smart_update_existing_event(existing, event_record)
+                    events_updated += 1
+                    continue
+
                 insert_event(event_record)
                 events_new += 1
                 logger.debug(f"Inserted: {title} on {start_date}")
@@ -429,6 +431,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 content_hash = generate_content_hash(title, venue_data["name"], start_date)
                 existing = find_event_by_hash(content_hash)
                 if existing:
+                    smart_update_existing_event(existing, event_record)
                     events_updated += 1
                     continue
 

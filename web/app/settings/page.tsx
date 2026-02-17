@@ -1,192 +1,93 @@
-import Link from "next/link";
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import UnifiedHeader from "@/components/UnifiedHeader";
-import { createClient } from "@/lib/supabase/server";
-import { getUser } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
 import PageFooter from "@/components/PageFooter";
+import SettingsShell, { type SettingsTab } from "@/components/settings/SettingsShell";
+import { useAuth } from "@/lib/auth-context";
 
-export const metadata = {
-  title: "Settings | Lost City",
-  robots: {
-    index: false,
-    follow: false,
-  },
-};
+// Lazy-load panels
+const ProfilePanel = dynamic(() => import("@/components/settings/ProfilePanel"), {
+  loading: () => <PanelSkeleton />,
+});
+const PrivacyPanel = dynamic(() => import("@/components/settings/PrivacyPanel"), {
+  loading: () => <PanelSkeleton />,
+});
+const NotificationsPanel = dynamic(() => import("@/components/settings/NotificationsPanel"), {
+  loading: () => <PanelSkeleton />,
+});
+const PreferencesPanel = dynamic(() => import("@/components/settings/PreferencesPanel"), {
+  loading: () => <PanelSkeleton />,
+});
+const TasteProfilePanel = dynamic(() => import("@/components/settings/TasteProfilePanel"), {
+  loading: () => <PanelSkeleton />,
+});
+const AccountPanel = dynamic(() => import("@/components/settings/AccountPanel"), {
+  loading: () => <PanelSkeleton />,
+});
 
-export default async function SettingsPage() {
-  const user = await getUser();
-
-  if (!user) {
-    redirect("/auth/login?redirect=/settings");
-  }
-
-  const supabase = await createClient();
-
-  const [{ data: profileRow }, { data: privacyRow }] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("is_public")
-      .eq("id", user.id)
-      .maybeSingle(),
-    supabase
-      .from("user_preferences")
-      .select("cross_portal_recommendations, hide_adult_content")
-      .eq("user_id", user.id)
-      .maybeSingle(),
-  ]);
-
-  const isPublicProfile =
-    (profileRow as { is_public: boolean | null } | null)?.is_public ?? true;
-  const crossPortalRecommendations =
-    (
-      privacyRow as {
-        cross_portal_recommendations: boolean | null;
-        hide_adult_content: boolean | null;
-      } | null
-    )?.cross_portal_recommendations ?? true;
-  const hideAdultContent =
-    (
-      privacyRow as {
-        cross_portal_recommendations: boolean | null;
-        hide_adult_content: boolean | null;
-      } | null
-    )?.hide_adult_content ?? false;
-
+function PanelSkeleton() {
   return (
-    <div className="min-h-screen">
-      <UnifiedHeader />
-
-      {/* Main */}
-      <main className="max-w-2xl mx-auto px-4 py-8">
-        <h1 className="text-2xl font-semibold text-[var(--cream)] mb-8">
-          Settings
-        </h1>
-
-        <div className="space-y-8">
-          <section>
-            <h2 className="font-mono text-xs uppercase tracking-wider text-[var(--muted)] mb-3">
-              Identity and Privacy
-            </h2>
-            <div className="space-y-3">
-              <SettingsLinkCard
-                href="/settings/profile"
-                title="Profile Details"
-                description="Edit your display name, bio, location, and website."
-              />
-              <SettingsLinkCard
-                href="/settings/privacy"
-                title="Privacy Controls"
-                description="Manage profile visibility and recommendation privacy settings."
-              />
-              <div className="p-4 rounded-lg bg-[var(--night)] border border-[var(--twilight)]">
-                <p className="font-mono text-xs uppercase tracking-wider text-[var(--muted)] mb-2">
-                  Current Privacy State
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <span className="px-2.5 py-1 rounded-full bg-[var(--twilight)] text-[var(--soft)] font-mono text-xs">
-                    Profile: {isPublicProfile ? "Public" : "Private"}
-                  </span>
-                  <span className="px-2.5 py-1 rounded-full bg-[var(--twilight)] text-[var(--soft)] font-mono text-xs">
-                    Feed:{" "}
-                    {crossPortalRecommendations
-                      ? "Cross-portal"
-                      : "Current portal only"}
-                  </span>
-                  <span className="px-2.5 py-1 rounded-full bg-[var(--twilight)] text-[var(--soft)] font-mono text-xs">
-                    Mature content: {hideAdultContent ? "Hidden" : "Shown"}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <section>
-            <h2 className="font-mono text-xs uppercase tracking-wider text-[var(--muted)] mb-3">
-              Recommendations
-            </h2>
-            <div className="space-y-3">
-              <SettingsLinkCard
-                href="/settings/preferences"
-                title="Discovery Preferences"
-                description="Set categories, genres, needs, neighborhoods, price, and cross-portal feed behavior."
-              />
-              <SettingsLinkCard
-                href="/settings/taste-profile"
-                title="Taste Profile"
-                description="See what the system learned from your follows, RSVPs, and activity."
-              />
-            </div>
-          </section>
-
-          <section>
-            <h2 className="font-mono text-xs uppercase tracking-wider text-[var(--muted)] mb-3">
-              Notifications
-            </h2>
-            <div className="space-y-3">
-              <SettingsLinkCard
-                href="/settings/notifications"
-                title="Notification Preferences"
-                description="Choose which social, event, and system alerts you want."
-              />
-            </div>
-          </section>
-
-          <div className="p-4 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)]">
-            <h2 className="font-mono text-sm font-medium text-[var(--cream)]">
-              Account
-            </h2>
-            <p className="font-mono text-xs text-[var(--muted)] mt-1">
-              {user.email}
-            </p>
-            <p className="font-mono text-xs text-[var(--muted)] mt-1">
-              Member since {new Date(user.created_at).toLocaleDateString()}
-            </p>
-          </div>
-        </div>
-      </main>
-
-      <PageFooter />
+    <div className="animate-pulse space-y-4">
+      <div className="h-8 w-48 rounded bg-[var(--twilight)]" />
+      <div className="h-32 rounded-lg bg-[var(--twilight)]" />
+      <div className="h-32 rounded-lg bg-[var(--twilight)]" />
     </div>
   );
 }
 
-function SettingsLinkCard({
-  href,
-  title,
-  description,
-}: {
-  href: string;
-  title: string;
-  description: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="block p-4 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] hover:border-[var(--coral)] transition-colors"
-    >
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="font-mono text-sm font-medium text-[var(--cream)]">
-            {title}
-          </h3>
-          <p className="font-mono text-xs text-[var(--muted)] mt-1">
-            {description}
-          </p>
+function renderPanel(tab: SettingsTab) {
+  switch (tab) {
+    case "profile":
+      return <ProfilePanel />;
+    case "privacy":
+      return <PrivacyPanel />;
+    case "notifications":
+      return <NotificationsPanel />;
+    case "preferences":
+      return <PreferencesPanel />;
+    case "taste":
+      return <TasteProfilePanel />;
+    case "account":
+      return <AccountPanel />;
+    default:
+      return <ProfilePanel />;
+  }
+}
+
+export default function SettingsPage() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push("/auth/login?redirect=/settings");
+    }
+  }, [user, loading, router]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen">
+        <UnifiedHeader />
+        <div className="flex min-h-[calc(100vh-200px)]">
+          <div className="hidden md:block w-60 border-r border-[var(--twilight)] bg-[var(--night)]" />
+          <div className="flex-1 p-8">
+            <PanelSkeleton />
+          </div>
         </div>
-        <svg
-          className="w-5 h-5 text-[var(--muted)]"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M9 5l7 7-7 7"
-          />
-        </svg>
       </div>
-    </Link>
+    );
+  }
+
+  if (!user) return null;
+
+  return (
+    <div className="min-h-screen">
+      <UnifiedHeader />
+      <SettingsShell>{(activeTab) => renderPanel(activeTab)}</SettingsShell>
+      <PageFooter />
+    </div>
   );
 }

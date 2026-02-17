@@ -95,7 +95,7 @@ const ADVENTURES = [
 ] as const;
 
 const FILTERS: Record<string, string> = {
-  museums: "subcategories=learning.museum",
+  museums: "genres=museum",
   outdoor: "categories=outdoors",
   theater: "categories=theater",
   sports: "categories=sports",

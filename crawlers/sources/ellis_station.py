@@ -14,7 +14,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
-from db import get_or_create_venue, insert_event, find_event_by_hash
+from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -167,10 +167,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 start_date + (start_time or "")
                             )
 
-                            if find_event_by_hash(content_hash):
-                                events_updated += 1
-                                i += 1
-                                continue
 
                             description = "Learn how to make your own soy candle in an 8oz tin, create your custom scent, and choose crystals to add to the top. Includes wax melts. BYOB welcome with complimentary drinks provided."
                             image_url = f"{BASE_URL}/cdn/shop/files/crystaljarsandtins.jpg"
@@ -212,6 +208,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 "is_class": True,
                                 "class_category": "candle-making",
                             }
+
+                            existing = find_event_by_hash(content_hash)
+                            if existing:
+                                smart_update_existing_event(existing, event_record)
+                                events_updated += 1
+                                i += 1
+                                continue
 
                             # Build series hint for class enrichment
                             series_hint = {

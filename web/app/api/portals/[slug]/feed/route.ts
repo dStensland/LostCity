@@ -7,6 +7,7 @@ import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-lim
 import { errorResponse, isValidUUID } from "@/lib/api-utils";
 import { fetchSocialProofCounts } from "@/lib/search";
 import { normalizePortalSlug, resolvePortalSlugAlias } from "@/lib/portal-aliases";
+import { applyFederatedPortalScopeToQuery } from "@/lib/portal-scope";
 
 // Cache feed for 5 minutes at CDN, allow stale for 1 hour while revalidating
 export const revalidate = 300;
@@ -74,7 +75,8 @@ type Event = {
   price_min: number | null;
   price_max: number | null;
   category: string | null;
-  subcategory: string | null;
+  genres?: string[] | null;
+  subcategory?: string | null;
   image_url: string | null;
   description: string | null;
   featured_blurb: string | null;
@@ -202,7 +204,23 @@ function getDateRange(filter: string): { start: string; end: string } {
 
 // Classify a nightlife event into its activity type
 // Reusable across nightlife carousel counting + event stamping
-function classifyNightlifeActivity(event: { title: string; category: string | null; subcategory: string | null }): string {
+function classifyNightlifeActivity(event: { title: string; category: string | null; genres?: string[] | null; subcategory?: string | null }): string {
+  // Genre values that map directly to nightlife activity keys
+  const genreActivityMap: Record<string, string> = {
+    karaoke: "karaoke",
+    trivia: "trivia",
+    bar_games: "bar_games",
+    poker: "poker",
+    bingo: "bingo",
+    dj: "dj",
+    drag: "drag",
+    burlesque: "drag",         // Merged into drag
+    latin_night: "latin_night",
+    line_dancing: "line_dancing",
+    party: "party",
+    pub_crawl: "pub_crawl",
+    specials: "specials",
+  };
   const nightlifeSubcatMap: Record<string, string> = {
     "nightlife.karaoke": "karaoke",
     "nightlife.trivia": "trivia",
@@ -211,7 +229,7 @@ function classifyNightlifeActivity(event: { title: string; category: string | nu
     "nightlife.bingo": "bingo",
     "nightlife.dj": "dj",
     "nightlife.drag": "drag",
-    "nightlife.burlesque": "drag",         // Merged into drag
+    "nightlife.burlesque": "drag",
     "nightlife.latin_night": "latin_night",
     "nightlife.line_dancing": "line_dancing",
     "nightlife.party": "party",
@@ -231,17 +249,23 @@ function classifyNightlifeActivity(event: { title: string; category: string | nu
     [/pub.?crawl/i, "pub_crawl"],
   ];
 
-  // 1. Check subcategory first
+  // 1. Check genres first (preferred source)
+  if (event.genres?.length) {
+    for (const genre of event.genres) {
+      if (genreActivityMap[genre]) return genreActivityMap[genre];
+    }
+  }
+  // 2. Fallback: check legacy subcategory
   if (event.subcategory && nightlifeSubcatMap[event.subcategory]) {
     return nightlifeSubcatMap[event.subcategory];
   }
-  // 2. Infer from title
+  // 3. Infer from title
   for (const [pattern, key] of titlePatterns) {
     if (pattern.test(event.title)) {
       return key;
     }
   }
-  // 3. Fall back to cross-category mapping
+  // 4. Fall back to cross-category mapping
   if (event.category === "music") return "live_music";
   if (event.category === "comedy") return "comedy";
   if (event.category === "dance") return "dance";
@@ -266,12 +290,6 @@ const NIGHTLIFE_ACTIVITY_LABELS: Record<string, string> = {
   dance: "Dance",
   other: "Nightlife",
 };
-
-function excludeClassEvents(query: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
-  return query
-    .or("is_class.eq.false,is_class.is.null")
-    .or("is_sensitive.eq.false,is_sensitive.is.null");
-}
 
 // GET /api/portals/[slug]/feed - Get feed content for a portal
 export async function GET(request: NextRequest, { params }: Props) {
@@ -443,7 +461,6 @@ export async function GET(request: NextRequest, { params }: Props) {
         price_min,
         price_max,
         category,
-        subcategory,
         image_url,
         description,
         featured_blurb,
@@ -503,7 +520,6 @@ export async function GET(request: NextRequest, { params }: Props) {
         price_min,
         price_max,
         category,
-        subcategory,
         image_url,
         description,
         featured_blurb,
@@ -587,7 +603,6 @@ export async function GET(request: NextRequest, { params }: Props) {
         price_min,
         price_max,
         category,
-        subcategory,
         image_url,
         description,
         featured_blurb,
@@ -608,18 +623,12 @@ export async function GET(request: NextRequest, { params }: Props) {
     `;
 
     const applyPortalFilter = (query: ReturnType<typeof supabase.from>) => {
-      if (isExclusivePortal) {
-        if (hasSubscribedSources) {
-          const sourceIdList = federationAccess.sourceIds.join(",");
-          return query.or(`portal_id.eq.${portal.id},source_id.in.(${sourceIdList})`);
-        }
-        return query.eq("portal_id", portal.id);
-      }
-      if (hasSubscribedSources) {
-        const sourceIdList = federationAccess.sourceIds.join(",");
-        return query.or(`portal_id.eq.${portal.id},portal_id.is.null,source_id.in.(${sourceIdList})`);
-      }
-      return query.or(`portal_id.eq.${portal.id},portal_id.is.null`);
+      return applyFederatedPortalScopeToQuery(query, {
+        portalId: portal.id,
+        portalExclusive: isExclusivePortal,
+        sourceIds: hasSubscribedSources ? federationAccess.sourceIds : [],
+        publicOnlyWhenNoPortal: true,
+      });
     };
 
     // Date bucket boundaries
@@ -708,8 +717,7 @@ export async function GET(request: NextRequest, { params }: Props) {
           price_min,
           price_max,
           category,
-          subcategory,
-          image_url,
+            image_url,
           description,
           featured_blurb,
           tags,
@@ -744,21 +752,7 @@ export async function GET(request: NextRequest, { params }: Props) {
       }
 
       // Re-apply portal federation visibility guardrails
-      if (isExclusivePortal) {
-        if (hasSubscribedSources) {
-          const sourceIdList = federationAccess.sourceIds.join(",");
-          constrainedQuery = constrainedQuery.or(`portal_id.eq.${portal.id},source_id.in.(${sourceIdList})`);
-        } else {
-          constrainedQuery = constrainedQuery.eq("portal_id", portal.id);
-        }
-      } else {
-        if (hasSubscribedSources) {
-          const sourceIdList = federationAccess.sourceIds.join(",");
-          constrainedQuery = constrainedQuery.or(`portal_id.eq.${portal.id},portal_id.is.null,source_id.in.(${sourceIdList})`);
-        } else {
-          constrainedQuery = constrainedQuery.or(`portal_id.eq.${portal.id},portal_id.is.null`);
-        }
-      }
+      constrainedQuery = applyPortalFilter(constrainedQuery);
 
       const supplementalLimit = Math.min(
         400,
@@ -777,7 +771,6 @@ export async function GET(request: NextRequest, { params }: Props) {
     // that may be cut off by the per-bucket limit on busy days (events ordered by start_time)
     const hasNightlifeSection = sectionsNeedingAutoEvents.some(s => s.auto_filter?.nightlife_mode);
     if (hasNightlifeSection) {
-      const nightlifeVenueTypes = ["bar", "club", "nightclub", "lounge", "rooftop", "karaoke", "sports_bar", "brewery", "cocktail_bar", "wine_bar"];
       let nightlifeQuery = supabase
         .from("events")
         .select(eventSelect)
@@ -1060,8 +1053,7 @@ export async function GET(request: NextRequest, { params }: Props) {
           price_min,
           price_max,
           category,
-          subcategory,
-          image_url,
+            image_url,
           description,
           featured_blurb,
           tags,
@@ -1224,22 +1216,25 @@ export async function GET(request: NextRequest, { params }: Props) {
         filtered = filtered.filter(e => !e.category || !filter.exclude_categories!.includes(e.category));
       }
 
-      // Apply subcategory filter
-      // If event has a subcategory, it must match one of the selected subcategories
-      // If event has no subcategory, include it if its category matches the parent category
+      // Apply subcategory filter (uses genres[] with subcategory fallback)
       if (filter.subcategories?.length) {
-        // Extract parent categories from subcategory values (e.g., "music.live" -> "music")
+        // Convert dotted subcategory values to genre values (strip prefix)
+        const genreValues = filter.subcategories.map((sub) => {
+          const parts = sub.split(".");
+          return parts.length > 1 ? parts.slice(1).join(".") : sub;
+        });
+        // Extract parent categories for fallback
         const parentCategories = new Set(
           filter.subcategories.map((sub) => sub.split(".")[0])
         );
 
         filtered = filtered.filter(e => {
-          // If event has a subcategory, it must match exactly
-          if (e.subcategory) {
-            return filter.subcategories!.includes(e.subcategory);
-          }
-          // If event has no subcategory, include it if its category matches a parent category
-          return e.category && parentCategories.has(e.category);
+          // Check genres first (preferred)
+          if (e.genres?.some((g: string) => genreValues.includes(g))) return true;
+          // Fallback: check legacy subcategory
+          if (e.subcategory && filter.subcategories!.includes(e.subcategory)) return true;
+          // If no genre/subcategory match, include if category matches a parent
+          return e.category && parentCategories.has(e.category) && !e.genres?.length && !e.subcategory;
         });
       }
 

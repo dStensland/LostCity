@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { instantSearch } from "@/lib/unified-search";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
+import { createClient } from "@/lib/supabase/server";
+import { resolvePortalQueryContext } from "@/lib/portal-query-context";
 import {
   type SearchContext,
   rankResults,
@@ -34,8 +36,9 @@ function safeParseInt(
  * Query parameters:
  * - q: Search query (required, min 2 characters)
  * - limit: Maximum number of results per section (default: 6, max: 12)
- * - portal: Portal ID for scoped search
- * - portalSlug: Portal slug (for building URLs)
+ * - portal: Portal slug for scoped search (canonical)
+ * - portal_id: Portal UUID for scoped search
+ * - portalSlug: Optional portal slug override for URL generation
  * - viewMode: Current view mode (feed, find, community)
  * - findType: Current find type (events, classes, destinations)
  *
@@ -79,8 +82,23 @@ export async function GET(request: NextRequest) {
     }
 
     const limit = safeParseInt(searchParams.get("limit"), 6, 1, 12);
-    const portalId = searchParams.get("portal") || undefined;
-    const portalSlug = searchParams.get("portalSlug") || "atlanta";
+    const supabase = await createClient();
+    const portalContext = await resolvePortalQueryContext(supabase, searchParams);
+    if (portalContext.hasPortalParamMismatch) {
+      return NextResponse.json(
+        {
+          suggestions: [],
+          topResults: [],
+          quickActions: [],
+          groupedResults: {},
+          groupOrder: [],
+          error: "portal and portal_id parameters must reference the same portal",
+        },
+        { status: 400 }
+      );
+    }
+    const portalId = portalContext.portalId || undefined;
+    const portalSlug = portalContext.portalSlug || searchParams.get("portalSlug") || "atlanta";
     const viewMode = (searchParams.get("viewMode") as ViewMode) || "feed";
     const findType = (searchParams.get("findType") as FindType) || null;
 

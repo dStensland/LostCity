@@ -216,7 +216,7 @@ export default function HappeningNowPage() {
           end_time: event.end_time,
           is_all_day: event.is_all_day,
           category: event.category,
-          subcategory: event.subcategory,
+          genres: event.genres,
           is_free: event.is_free,
           is_live: true,
           ticket_url: event.ticket_url,

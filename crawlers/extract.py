@@ -88,7 +88,6 @@ Return valid JSON matching this schema:
         "neighborhood": string | null
       },
       "category": string,
-      "subcategory": string | null,
       "tags": string[],
       "price_min": number | null,
       "price_max": number | null,
@@ -149,7 +148,6 @@ class EventData(BaseModel):
     is_all_day: bool = False
     venue: VenueData
     category: str
-    subcategory: Optional[str] = None
     tags: list[str] = []
     price_min: Optional[float] = None
     price_max: Optional[float] = None

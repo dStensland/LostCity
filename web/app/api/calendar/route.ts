@@ -3,7 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, format } from "date-fns";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";
-import { parseIntParam, isValidUUID } from "@/lib/api-utils";
+import { parseIntParam } from "@/lib/api-utils";
+import { resolvePortalQueryContext } from "@/lib/portal-query-context";
+import { applyPortalScopeToQuery, filterByPortalCity } from "@/lib/portal-scope";
 
 /**
  * Calendar API - Optimized endpoint for calendar view
@@ -58,8 +60,16 @@ export async function GET(request: NextRequest) {
   const categories = searchParams.get("categories")?.split(",").filter(Boolean);
   const neighborhoods = searchParams.get("neighborhoods")?.split(",").filter(Boolean);
   const priceFilter = searchParams.get("price");
-  const portalId = searchParams.get("portal_id");
   const portalExclusive = searchParams.get("portal_exclusive") === "true";
+  const portalContext = await resolvePortalQueryContext(supabase, searchParams);
+  if (portalContext.hasPortalParamMismatch) {
+    return NextResponse.json(
+      { error: "portal and portal_id parameters must reference the same portal" },
+      { status: 400 }
+    );
+  }
+  const portalId = portalContext.portalId;
+  const portalCity = !portalExclusive ? portalContext.filters.city : undefined;
 
   // Type for calendar events (minimal fields)
   type CalendarEvent = {
@@ -72,7 +82,7 @@ export async function GET(request: NextRequest) {
     is_free: boolean;
     price_min: number | null;
     price_max: number | null;
-    venue: { name: string; neighborhood: string | null } | null;
+    venue: { name: string; neighborhood: string | null; city: string | null } | null;
   };
 
   // Helper to build base query with filters
@@ -91,7 +101,8 @@ export async function GET(request: NextRequest) {
         price_max,
         venue:venues!events_venue_id_fkey (
           name,
-          neighborhood
+          neighborhood,
+          city
         )
       `)
       .gte("start_date", startDate)
@@ -121,14 +132,11 @@ export async function GET(request: NextRequest) {
       query = query.gte("price_min", 75);
     }
 
-    // Apply portal filter - validate UUID before interpolation
-    if (portalId && isValidUUID(portalId)) {
-      if (portalExclusive) {
-        query = query.eq("portal_id", portalId);
-      } else {
-        query = query.or(`portal_id.eq.${portalId},portal_id.is.null`);
-      }
-    }
+    query = applyPortalScopeToQuery(query, {
+      portalId,
+      portalExclusive,
+      publicOnlyWhenNoPortal: true,
+    });
 
     return query;
   };
@@ -169,7 +177,9 @@ export async function GET(request: NextRequest) {
     if (page > 10) break;
   }
 
-  const events = allEvents;
+  const events = filterByPortalCity(allEvents, portalCity, {
+    allowMissingCity: true,
+  });
 
   // Group events by date
   const eventsByDate: Record<string, CalendarEvent[]> = {};

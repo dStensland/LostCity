@@ -1,12 +1,13 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
+import { resolvePortalAttributionForWrite } from "@/lib/portal-attribution";
 import { errorResponse } from "@/lib/api-utils";
 import { logger } from "@/lib/logger";
 
 type HideReason = "not_interested" | "seen_enough" | "wrong_category" | null;
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
@@ -28,12 +29,21 @@ export async function POST(request: Request) {
 
     const supabase = await createClient();
 
+    const attribution = await resolvePortalAttributionForWrite(request, {
+      endpoint: "/api/events/hide",
+      body,
+      requireWhenHinted: true,
+    });
+    if (attribution.response) return attribution.response;
+    const portalId = attribution.portalId;
+
     // Insert or update hidden event
     const { error } = await supabase.from("hidden_events").upsert(
       {
         user_id: user.id,
         event_id,
         reason: reason || null,
+        ...(portalId ? { portal_id: portalId } : {}),
       } as never,
       {
         onConflict: "user_id,event_id",

@@ -18,7 +18,7 @@ const NEON_GRADIENTS = [
 ];
 
 // Generate consistent color based on string (username/id)
-function getGradientForString(str: string): typeof NEON_GRADIENTS[0] {
+export function getGradientForString(str: string): typeof NEON_GRADIENTS[0] {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     hash = str.charCodeAt(i) + ((hash << 5) - hash);

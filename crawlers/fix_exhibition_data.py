@@ -26,7 +26,6 @@ def fix_serial_killer_exhibit():
     result = supabase.table("events").update({
         "is_recurring": False,
         "recurrence_rule": None,
-        "subcategory": "exhibition",
     }).eq("id", event_id).execute()
 
     if result.data:

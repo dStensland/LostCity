@@ -13,7 +13,7 @@ import httpx
 from datetime import datetime, timedelta
 from typing import Optional
 
-from db import get_or_create_venue, insert_event, find_event_by_hash
+from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -134,9 +134,6 @@ async def crawl(source: dict) -> tuple[int, int, int]:
                     )
 
                     # Check if event already exists
-                    if find_event_by_hash(content_hash):
-                        events_updated += 1
-                        continue
 
                     # Create event record
                     event_record = {
@@ -175,6 +172,12 @@ async def crawl(source: dict) -> tuple[int, int, int]:
                         "is_class": True,
                         "class_category": "crafts",
                     }
+
+                    existing = find_event_by_hash(content_hash)
+                    if existing:
+                        smart_update_existing_event(existing, event_record)
+                        events_updated += 1
+                        continue
 
                     # Build series hint for class enrichment
                     series_hint = {

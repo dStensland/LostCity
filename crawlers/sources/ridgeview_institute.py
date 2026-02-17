@@ -13,7 +13,7 @@ import logging
 from datetime import datetime, timedelta
 from typing import Optional
 
-from db import get_or_create_venue, insert_event, find_event_by_hash
+from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -244,6 +244,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 # Check if exists
                 existing = find_event_by_hash(event_record["content_hash"])
                 if existing:
+                    smart_update_existing_event(existing, event_record)
                     events_updated += 1
                     continue
 

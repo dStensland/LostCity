@@ -1,0 +1,36 @@
+version: 1
+slug: the-craftivist
+name: The Craftivist
+integration_method: playwright
+notes: >
+  Shopify store. Classes sold as products at /collections/knitting-classes-atlanta.
+  Free "Open Table" drop-in at /products/knit-togethers. Variants encode dates.
+defaults:
+  venue_name: The Craftivist
+  category: art
+  subcategory: workshop
+  tags:
+    - fiber-arts
+    - knitting
+    - crochet
+    - craft
+discovery:
+  enabled: true
+  type: list
+  urls:
+    - https://www.thecraftivist.com/collections/knitting-classes-atlanta
+  event_card: ".product-card, .grid-product, .collection-product"
+  fields:
+    title: ".product-card__title, .grid-product__title, h2, h3"
+    detail_url: "a[href*='/products/']@href"
+    price: ".product-card__price, .grid-product__price, .price"
+detail:
+  enabled: true
+  extra_urls:
+    - https://www.thecraftivist.com/products/knit-togethers
+  selectors:
+    description: ".product-single__description, .product-description"
+  use_jsonld: true
+  use_open_graph: true
+  use_heuristic: true
+  use_llm: false

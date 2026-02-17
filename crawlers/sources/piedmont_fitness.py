@@ -26,7 +26,7 @@ except ImportError:
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, get_portal_id_by_slug
+from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, get_portal_id_by_slug
 from dedupe import generate_content_hash
 from utils import extract_images_from_page
 
@@ -239,10 +239,6 @@ def crawl_pdf_schedule(pdf_url: str, venue_data: dict, source_id: int, portal_id
                                 class_name, venue_data["name"], start_date
                             )
 
-                            existing = find_event_by_hash(content_hash)
-                            if existing:
-                                events_updated += 1
-                                continue
 
                             cat_info = get_class_category(class_name)
                             base_tags = ["piedmont", "fitness", "class", venue_data.get("neighborhood", "").lower()]
@@ -285,6 +281,12 @@ def crawl_pdf_schedule(pdf_url: str, venue_data: dict, source_id: int, portal_id
                                 "recurrence_rule": f"WEEKLY;{day_name.upper()}",
                                 "content_hash": content_hash,
                             }
+
+                            existing = find_event_by_hash(content_hash)
+                            if existing:
+                                smart_update_existing_event(existing, event_record)
+                                events_updated += 1
+                                continue
 
                             try:
                                 insert_event(event_record, series_hint=series_hint)
@@ -440,6 +442,7 @@ def crawl_fayetteville_calendar(venue_data: dict, source_id: int, portal_id: Opt
 
                         existing = find_event_by_hash(content_hash)
                         if existing:
+                            smart_update_existing_event(existing, event_record)
                             events_updated += 1
                             i += 1
                             continue

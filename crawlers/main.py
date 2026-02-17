@@ -74,6 +74,7 @@ SOURCE_OVERRIDES = {
     "7-stages": "sources.seven_stages",
     
     # Multiple slugs mapping to single module
+    "mobilize-api": "sources.mobilize_api",  # New API aggregator
     "mobilize-dekalb-dems": "sources.mobilize",
     "mobilize-ga-dems": "sources.mobilize",
     "mobilize-indivisible-atl": "sources.mobilize",
@@ -102,6 +103,7 @@ SOURCE_OVERRIDES = {
     "illuminarium-atlanta": "sources.illuminarium",
     "le-colonial-atlanta": "sources.le_colonial",
     "ncg-cinemas-atlanta": "sources.ncg_atlanta",
+    "sandler-hudson-gallery": "sources.sandler_hudson",
     "silverspot-cinema-atlanta": "sources.silverspot_atlanta",
     "six-flags-over-georgia": "sources.six_flags",
     "skylounge-glenn-hotel": "sources.skylounge_glenn",

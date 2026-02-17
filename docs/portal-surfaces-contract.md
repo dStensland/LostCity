@@ -52,6 +52,13 @@ Allowed UX characteristics:
   - Say `Consumer Portal` (not just "portal")
   - Say `Admin Portal` (not just "dashboard" or "admin")
 
+### Portal Query Contract (Required)
+- `portal` is always a portal slug.
+- `portal_id` is always a portal UUID.
+- Consumer routes must not overload `portal` with UUID values.
+- If both are present, slug takes precedence and UUID must match the resolved portal.
+- Public/shared records (`portal_id IS NULL`) may only be included with explicit city guardrails.
+
 ## Acceptance Gate (Required in PRDs / plans)
 A change is not ready for implementation until it answers:
 1. Which surface is this for?

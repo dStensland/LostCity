@@ -1,33 +1,53 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import SearchOverlay from "./SearchOverlay";
 
-export default function HeaderSearchButton() {
+interface HeaderSearchButtonProps {
+  portalSlug?: string;
+}
+
+export default function HeaderSearchButton({ portalSlug }: HeaderSearchButtonProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const router = useRouter();
 
   // Global keyboard shortcut for ⌘K (Mac) or Ctrl+K (Windows/Linux)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
-        setIsSearchOpen(true);
+        if (portalSlug) {
+          router.push(`/${portalSlug}?view=find`);
+        } else {
+          setIsSearchOpen(true);
+        }
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [portalSlug, router]);
+
+  const handleClick = () => {
+    if (portalSlug) {
+      // Navigate to portal's find view
+      router.push(`/${portalSlug}?view=find`);
+    } else {
+      // Open search overlay (default behavior)
+      setIsSearchOpen(true);
+    }
+  };
 
   return (
     <>
       <button
-        onClick={() => setIsSearchOpen(true)}
-        className="flex items-center gap-2 p-2 sm:p-2.5 rounded-lg text-[var(--cream)] hover:text-[var(--neon-amber)] hover:bg-[var(--twilight)]/70 transition-colors active:scale-95 drop-shadow-strong"
+        onClick={handleClick}
+        className="flex items-center justify-center min-w-[44px] min-h-[44px] p-2.5 rounded-lg text-[var(--cream)] hover:text-[var(--neon-amber)] hover:bg-[var(--twilight)]/70 transition-colors active:scale-95 drop-shadow-strong"
         aria-label="Search"
       >
         <svg
-          className="w-4 h-4 sm:w-5 sm:h-5"
+          className="w-5 h-5"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -40,7 +60,7 @@ export default function HeaderSearchButton() {
           />
         </svg>
       </button>
-      <SearchOverlay isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
+      {!portalSlug && <SearchOverlay isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />}
     </>
   );
 }

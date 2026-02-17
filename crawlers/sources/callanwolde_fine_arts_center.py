@@ -17,7 +17,7 @@ from typing import Optional
 import requests
 from icalendar import Calendar
 
-from db import get_or_create_venue, insert_event, find_event_by_hash
+from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from description_fetcher import fetch_description_from_url
 from utils import enrich_event_record
@@ -279,9 +279,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     title, "Callanwolde Fine Arts Center", start_date
                 )
 
-                if find_event_by_hash(content_hash):
-                    events_updated += 1
-                    continue
 
                 category, subcategory, tags = determine_category_and_tags(
                     title, description, ical_categories
@@ -313,6 +310,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "recurrence_rule": None,
                     "content_hash": content_hash,
                 }
+
+                existing = find_event_by_hash(content_hash)
+                if existing:
+                    smart_update_existing_event(existing, event_record)
+                    events_updated += 1
+                    continue
 
                 # Enrich from detail page if missing image or description
                 if source_url and source_url != f"{BASE_URL}/events/":

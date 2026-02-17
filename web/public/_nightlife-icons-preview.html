@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nightlife Activity Icons Preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0F0F14; color: #E8E0D5; font-family: ui-monospace, 'Cascadia Code', 'Fira Mono', monospace; padding: 24px; }
+  h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 24px; color: #E855A0; text-shadow: 0 0 7px rgba(232,85,160,0.6), 0 0 20px rgba(232,85,160,0.25); }
+  .grid { display: flex; flex-wrap: wrap; gap: 12px; }
+  .card {
+    width: 150px; height: 120px; border-radius: 12px; padding: 14px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    position: relative; overflow: hidden; transition: transform 0.2s;
+  }
+  .card:hover { transform: scale(1.04); }
+  .card .glow {
+    position: absolute; top: -32px; right: -32px; width: 96px; height: 96px;
+    border-radius: 50%; filter: blur(24px); opacity: 0.3; pointer-events: none;
+  }
+  .card svg { position: relative; z-index: 1; }
+  .card .label { position: relative; z-index: 1; font-weight: 600; font-size: 0.85rem; line-height: 1.2; }
+  .card .sublabel { font-size: 0.6rem; color: #6B6B73; margin-top: 2px; }
+  .card .id-tag { position: absolute; top: 4px; right: 6px; font-size: 0.5rem; color: #6B6B73; z-index: 2; }
+</style>
+</head>
+<body>
+<h1>Going Out? — Phosphor Light Icons</h1>
+<div class="grid">
+    <div class="card" style="background:#0F0F14; border:1px solid #FF6EB455; box-shadow:inset 0 0 20px #FF6EB410, 0 0 12px #FF6EB426;">
+      <div class="glow" style="background:#FF6EB4"></div>
+      <span class="id-tag">karaoke</span>
+      <svg width="28" height="28" viewBox="0 0 256 256" fill="none" style="color:#FF6EB4; filter:drop-shadow(0 0 6px #FF6EB4)"><path d="M168,18A69.94,69.94,0,0,0,98.74,98l-70,95.46a13.92,13.92,0,0,0,1.39,18.17l14.3,14.3a13.93,13.93,0,0,0,18.17,1.39l95.46-70A70,70,0,1,0,168,18Zm58,70a57.65,57.65,0,0,1-13,36.52L131.49,43A57.95,57.95,0,0,1,226,88ZM55.5,217.59a2,2,0,0,1-2.6-.2L38.61,203.1a2,2,0,0,1-.2-2.6l64.22-87.56a70.32,70.32,0,0,0,40.44,40.43ZM110,88a57.73,57.73,0,0,1,13-36.52L204.53,133A58,58,0,0,1,110,88Zm-1.75,59.75a6,6,0,0,1,0,8.49l-8,8a6,6,0,1,1-8.49-8.49l8-8A6,6,0,0,1,108.26,147.74Z" fill="currentColor"/></svg>
+      <div>
+        <div class="label" style="color:#FF6EB4; text-shadow:0 0 8px #FF6EB480">Karaoke</div>
+        <div class="sublabel">12 tonight</div>
+      </div>
+    </div>
+    <div class="card" style="background:#0F0F14; border:1px solid #F5A62355; box-shadow:inset 0 0 20px #F5A62310, 0 0 12px #F5A62326;">
+      <div class="glow" style="background:#F5A623"></div>
+      <span class="id-tag">trivia</span>
+      <svg width="28" height="28" viewBox="0 0 256 256" fill="none" style="color:#F5A623; filter:drop-shadow(0 0 6px #F5A623)"><path d="M138,180a10,10,0,1,1-10-10A10,10,0,0,1,138,180ZM128,74c-21,0-38,15.25-38,34v4a6,6,0,0,0,12,0v-4c0-12.13,11.66-22,26-22s26,9.87,26,22-11.66,22-26,22a6,6,0,0,0-6,6v8a6,6,0,0,0,12,0v-2.42c18.11-2.58,32-16.66,32-33.58C166,89.25,149,74,128,74Zm102,54A102,102,0,1,1,128,26,102.12,102.12,0,0,1,230,128Zm-12,0a90,90,0,1,0-90,90A90.1,90.1,0,0,0,218,128Z" fill="currentColor"/></svg>
+      <div>
+        <div class="label" style="color:#F5A623; text-shadow:0 0 8px #F5A62380">Trivia</div>
+        <div class="sublabel">12 tonight</div>
+      </div>
+    </div>
+    <div class="card" style="background:#0F0F14; border:1px solid #00D9A055; box-shadow:inset 0 0 20px #00D9A010, 0 0 12px #00D9A026;">
+      <div class="glow" style="background:#00D9A0"></div>
+      <span class="id-tag">bar_games</span>
+      <svg width="28" height="28" viewBox="0 0 256 256" fill="none" style="color:#00D9A0; filter:drop-shadow(0 0 6px #00D9A0)"><path d="M220.06,84a102.06,102.06,0,1,1-24.31-32.27l24-24a6,6,0,0,1,8.48,8.49l-96,96a6,6,0,1,1-8.48-8.49l29.39-29.4a42,42,0,1,0,16.78,31.24,6,6,0,1,1,12-.68A54,54,0,1,1,161.7,85.83l25.54-25.55a89.91,89.91,0,1,0,22,28.93A6,6,0,1,1,220.06,84Z" fill="currentColor"/></svg>
+      <div>
+        <div class="label" style="color:#00D9A0; text-shadow:0 0 8px #00D9A080">Bar Games</div>
+        <div class="sublabel">12 tonight</div>
+      </div>
+    </div>
+    <div class="card" style="background:#0F0F14; border:1px solid #FF5A5A55; box-shadow:inset 0 0 20px #FF5A5A10, 0 0 12px #FF5A5A26;">
+      <div class="glow" style="background:#FF5A5A"></div>
+      <span class="id-tag">poker</span>
+      <svg width="28" height="28" viewBox="0 0 256 256" fill="none" style="color:#FF5A5A; filter:drop-shadow(0 0 6px #FF5A5A)"><path d="M179.84,51.39a284.14,284.14,0,0,0-49.16-32.76,6,6,0,0,0-5.36,0A284.14,284.14,0,0,0,76.16,51.39C42.88,79.13,26,107.59,26,136a54,54,0,0,0,75.24,49.65l-11,36.63A6,6,0,0,0,96,230h64a6,6,0,0,0,5.75-7.72l-11-36.63A54,54,0,0,0,230,136C230,107.59,213.12,79.13,179.84,51.39ZM176,178a42,42,0,0,1-27.6-10.34,6,6,0,0,0-9.69,6.24L151.94,218H104.06l13.23-44.1a6,6,0,0,0-9.69-6.24A42,42,0,0,1,38,136c0-53.73,74.77-97,90-105.22C143.24,39,218,82.2,218,136A42,42,0,0,1,176,178Z" fill="currentColor"/></svg>
+      <div>
+        <div class="label" style="color:#FF5A5A; text-shadow:0 0 8px #FF5A5A80">Poker</div>
+        <div class="sublabel">12 tonight</div>
+      </div>
+    </div>
+    <div class="card" style="background:#0F0F14; border:1px solid #C084FC55; box-shadow:inset 0 0 20px #C084FC10, 0 0 12px #C084FC26;">
+      <div class="glow" style="background:#C084FC"></div>
+      <span class="id-tag">bingo</span>
+      <svg width="28" height="28" viewBox="0 0 256 256" fill="none" style="color:#C084FC; filter:drop-shadow(0 0 6px #C084FC)"><path d="M200,42H56A14,14,0,0,0,42,56V200a14,14,0,0,0,14,14H200a14,14,0,0,0,14-14V56A14,14,0,0,0,200,42Zm2,14v66H134V54h66A2,2,0,0,1,202,56ZM56,54h66v68H54V56A2,2,0,0,1,56,54ZM54,200V134h68v68H56A2,2,0,0,1,54,200Zm146,2H134V134h68v66A2,2,0,0,1,200,202Z" fill="currentColor"/></svg>
+      <div>
+        <div class="label" style="color:#C084FC; text-shadow:0 0 8px #C084FC80">Bingo</div>
+        <div class="sublabel">12 tonight</div>
+      </div>
+    </div>
+    <div class="card" style="background:#0F0F14; border:1px solid #00D4E855; box-shadow:inset 0 0 20px #00D4E810, 0 0 12px #00D4E826;">
+      <div class="glow" style="background:#00D4E8"></div>
+      <span class="id-tag">dj</span>
+      <svg width="28" height="28" viewBox="0 0 256 256" fill="none" style="color:#00D4E8; filter:drop-shadow(0 0 6px #00D4E8)"><path d="M200.47,56.07A101.37,101.37,0,0,0,128.77,26H128A102,102,0,0,0,26,128v56a22,22,0,0,0,22,22H64a22,22,0,0,0,22-22V144a22,22,0,0,0-22-22H38.2A90.12,90.12,0,0,1,192,64.52,89.41,89.41,0,0,1,217.81,122H192a22,22,0,0,0-22,22v40a22,22,0,0,0,22,22h16a22,22,0,0,0,22-22V128A101.44,101.44,0,0,0,200.47,56.07ZM64,134a10,10,0,0,1,10,10v40a10,10,0,0,1-10,10H48a10,10,0,0,1-10-10V134Zm154,50a10,10,0,0,1-10,10H192a10,10,0,0,1-10-10V144a10,10,0,0,1,10-10h26Z" fill="currentColor"/></svg>
+      <div>
+        <div class="label" style="color:#00D4E8; text-shadow:0 0 8px #00D4E880">DJ Night</div>
+        <div class="sublabel">12 tonight</div>
+      </div>
+    </div>
+    <div class="card" style="background:#0F0F14; border:1px solid #E855A055; box-shadow:inset 0 0 20px #E855A010, 0 0 12px #E855A026;">
+      <div class="glow" style="background:#E855A0"></div>
+      <span class="id-tag">drag</span>
+      <svg width="28" height="28" viewBox="0 0 256 256" fill="none" style="color:#E855A0; filter:drop-shadow(0 0 6px #E855A0)"><path d="M246,80a26,26,0,1,0-46.6,15.84l-29.83,36.72-26-59.76a26,26,0,1,0-31.16,0l-26,59.76L56.6,95.84a26,26,0,1,0-22.36,10.09L49,194.3A14,14,0,0,0,62.78,206H193.22A14,14,0,0,0,207,194.3l14.73-88.37A26,26,0,0,0,246,80ZM128,38a14,14,0,1,1-14,14A14,14,0,0,1,128,38ZM22,80A14,14,0,1,1,36,94,14,14,0,0,1,22,80ZM195.2,192.33a2,2,0,0,1-2,1.67H62.78a2,2,0,0,1-2-1.67L46.08,104l1.22-.55,36,44.36A6,6,0,0,0,88,150a5.52,5.52,0,0,0,.81-.06,6,6,0,0,0,4.69-3.55l29.92-68.8a25.79,25.79,0,0,0,9.16,0l29.92,68.8a6,6,0,0,0,4.69,3.55,5.52,5.52,0,0,0,.81.06,6,6,0,0,0,4.66-2.22l36-44.36,1.22.55ZM220,94a14,14,0,1,1,14-14A14,14,0,0,1,220,94Z" fill="currentColor"/></svg>
+      <div>
+        <div class="label" style="color:#E855A0; text-shadow:0 0 8px #E855A080">Drag & Cabaret</div>
+        <div class="sublabel">12 tonight</div>
+      </div>
+    </div>
+    <div class="card" style="background:#0F0F14; border:1px solid #FF8C4255; box-shadow:inset 0 0 20px #FF8C4210, 0 0 12px #FF8C4226;">
+      <div class="glow" style="background:#FF8C42"></div>
+      <span class="id-tag">latin_night</span>
+      <svg width="28" height="28" viewBox="0 0 256 256" fill="none" style="color:#FF8C42; filter:drop-shadow(0 0 6px #FF8C42)"><path d="M248.24,47.76l-40-40a6,6,0,0,0-8.48,8.48L203.52,20,140.9,82.62C118.54,70.42,93.29,71,78.17,86.16a39.94,39.94,0,0,0-9,13.69A10.24,10.24,0,0,1,59.87,106c-14.06.48-26.27,5.5-35.3,14.53C13,132.18,8,149,10.72,167.79,13.32,186,22.78,204,37.37,218.63S70,242.68,88.21,245.28a70,70,0,0,0,9.88.72c14.79,0,27.81-5,37.35-14.57,9-9,14.05-21.23,14.53-35.3a10.24,10.24,0,0,1,6.18-9.35,39.94,39.94,0,0,0,13.69-8.95c15.12-15.12,15.74-40.37,3.54-62.73L236,52.48l3.76,3.76a6,6,0,0,0,8.48-8.48ZM161.36,169.35a28.06,28.06,0,0,1-9.63,6.27A22.22,22.22,0,0,0,138,195.72c-.37,11-4.18,20.39-11,27.22-8.89,8.89-22,12.61-37,10.46-15.65-2.23-31.29-10.49-44.06-23.25s-21-28.41-23.25-44.06c-2.15-15,1.57-28.16,10.46-37.05,6.83-6.84,16.25-10.65,27.22-11h0a22.21,22.21,0,0,0,20.1-13.76,28.12,28.12,0,0,1,6.27-9.62C92.52,88.77,100.57,86,109.44,86A52.74,52.74,0,0,1,132,91.49L109.4,114.12a30,30,0,1,0,32.48,32.48L164.52,124C172.63,140.82,172,158.68,161.36,169.35ZM151,105a73,73,0,0,1,7.17,8.34L139.5,132A30.18,30.18,0,0,0,124,116.5l18.62-18.62A72.16,72.16,0,0,1,151,105ZM112,126a18,18,0,0,1,18,18h0a18,18,0,1,1-18-18Zm47.44-29.44a83.19,83.19,0,0,0-8.28-7.23L176,64.48,191.52,80l-24.84,24.83A84.5,84.5,0,0,0,159.45,96.55Zm40.55-25L184.49,56,212,28.48,227.52,44ZM92.25,195.75a6,6,0,1,1-8.48,8.48l-32-32a6,6,0,0,1,8.48-8.48Z" fill="currentColor"/></svg>
+      <div>
+        <div class="label" style="color:#FF8C42; text-shadow:0 0 8px #FF8C4280">Latin Night</div>
+        <div class="sublabel">12 tonight</div>
+      </div>
+    </div>
+    <div class="card" style="background:#0F0F14; border:1px solid #FFD93D55; box-shadow:inset 0 0 20px #FFD93D10, 0 0 12px #FFD93D26;">
+      <div class="glow" style="background:#FFD93D"></div>
+      <span class="id-tag">line_dancing</span>
+      <svg width="28" height="28" viewBox="0 0 256 256" fill="none" style="color:#FFD93D; filter:drop-shadow(0 0 6px #FFD93D)"><path d="M216,122a6,6,0,0,0-5.09,2.82,176.66,176.66,0,0,1-16.69,22.65l-17.87-94a14,14,0,0,0-22.5-8.35l-.1.08L129.22,65.59a2,2,0,0,1-2.44,0L102.25,45.16l-.1-.08a14,14,0,0,0-22.5,8.34L61.77,147.49a178.33,178.33,0,0,1-16.68-22.67A6,6,0,0,0,40,122a38,38,0,0,0,0,76H216a38,38,0,0,0,0-76ZM91.44,55.65a2,2,0,0,1,3.18-1.22l24.54,20.43.09.08a13.93,13.93,0,0,0,17.5,0l.09-.08,24.54-20.43a2,2,0,0,1,3.18,1.23L178.69,130H77.31ZM40,186a26,26,0,0,1-3.17-51.81C54.5,161.44,73.53,177.05,89.62,186Zm88,0c-.34,0-26.71-.41-56-27.91L75,142H181L184,158.05a115.79,115.79,0,0,1-28.89,20.19C139.38,185.81,128.08,186,128,186Zm88,0H166.38c16.09-8.95,35.12-24.56,52.79-51.81A26,26,0,0,1,216,186Z" fill="currentColor"/></svg>
+      <div>
+        <div class="label" style="color:#FFD93D; text-shadow:0 0 8px #FFD93D80">Line Dancing</div>
+        <div class="sublabel">12 tonight</div>
+      </div>
+    </div>
+    <div class="card" style="background:#0F0F14; border:1px solid #818CF855; box-shadow:inset 0 0 20px #818CF810, 0 0 12px #818CF826;">
+      <div class="glow" style="background:#818CF8"></div>
+      <span class="id-tag">party</span>
+      <svg width="28" height="28" viewBox="0 0 256 256" fill="none" style="color:#818CF8; filter:drop-shadow(0 0 6px #818CF8)"><path d="M110.08,54a13.8,13.8,0,0,0-22.73,5.05L34.85,203.47A13.82,13.82,0,0,0,47.76,222a14,14,0,0,0,4.77-.85l144.38-52.5a13.8,13.8,0,0,0,5-22.73ZM48.43,209.87a1.79,1.79,0,0,1-2.3-2.3L61.31,165.8,90.2,194.68Zm54.21-19.71-36.8-36.81L80.51,113,143,175.49ZM194,156.07a1.74,1.74,0,0,1-1.14,1.3L155.44,171,85,100.55,98.63,63.19a1.72,1.72,0,0,1,1.3-1.14,1.58,1.58,0,0,1,.41,0,1.72,1.72,0,0,1,1.25.53l91.88,91.88A1.73,1.73,0,0,1,194,156.07ZM162,72a35.52,35.52,0,0,1,3.63-14.68C170.57,47.44,179.93,42,192,42c7.47,0,12.53-2.74,15.48-8.38A24.18,24.18,0,0,0,210,24,6,6,0,0,1,216,18h0a6,6,0,0,1,6,6c0,10.38-6.27,30-30,30-7.47,0-12.53,2.74-15.48,8.38A24,24,0,0,0,174,72a6,6,0,0,1-6,6h0A6,6,0,0,1,162,72ZM138,40V16a6,6,0,0,1,12,0V40a6,6,0,0,1-12,0Zm98.24,83.76a6,6,0,1,1-8.48,8.48l-16-16a6,6,0,0,1,8.48-8.48Zm5.66-46.07-24,8a6,6,0,1,1-3.8-11.38l24-8a6,6,0,0,1,3.8,11.38Z" fill="currentColor"/></svg>
+      <div>
+        <div class="label" style="color:#818CF8; text-shadow:0 0 8px #818CF880">Party</div>
+        <div class="sublabel">12 tonight</div>
+      </div>
+    </div>
+    <div class="card" style="background:#0F0F14; border:1px solid #86EFAC55; box-shadow:inset 0 0 20px #86EFAC10, 0 0 12px #86EFAC26;">
+      <div class="glow" style="background:#86EFAC"></div>
+      <span class="id-tag">pub_crawl</span>
+      <svg width="28" height="28" viewBox="0 0 256 256" fill="none" style="color:#86EFAC; filter:drop-shadow(0 0 6px #86EFAC)"><path d="M216,90H198V72a38,38,0,0,0-38-38H148.07C136.47,23.8,120.56,18,104,18,69.81,18,42,42.22,42,72V208a14,14,0,0,0,14,14H184a14,14,0,0,0,14-14V198h18a22,22,0,0,0,22-22V112A22,22,0,0,0,216,90ZM104,30c14.38,0,28.08,5.22,37.59,14.33A6,6,0,0,0,145.74,46H160a26,26,0,0,1,25.29,20H54.52C58,45.67,78.86,30,104,30Zm82,178a2,2,0,0,1-2,2H56a2,2,0,0,1-2-2V78H186Zm40-32a10,10,0,0,1-10,10H198V102h18a10,10,0,0,1,10,10ZM102,104v80a6,6,0,0,1-12,0V104a6,6,0,0,1,12,0Zm48,0v80a6,6,0,0,1-12,0V104a6,6,0,0,1,12,0Z" fill="currentColor"/></svg>
+      <div>
+        <div class="label" style="color:#86EFAC; text-shadow:0 0 8px #86EFAC80">Pub Crawl</div>
+        <div class="sublabel">12 tonight</div>
+      </div>
+    </div>
+    <div class="card" style="background:#0F0F14; border:1px solid #38BDF855; box-shadow:inset 0 0 20px #38BDF810, 0 0 12px #38BDF826;">
+      <div class="glow" style="background:#38BDF8"></div>
+      <span class="id-tag">specials</span>
+      <svg width="28" height="28" viewBox="0 0 256 256" fill="none" style="color:#38BDF8; filter:drop-shadow(0 0 6px #38BDF8)"><path d="M241.91,137.42,142.59,38.1a13.94,13.94,0,0,0-9.9-4.1H40a6,6,0,0,0-6,6v92.69a13.94,13.94,0,0,0,4.1,9.9l99.32,99.32a14,14,0,0,0,19.8,0l84.69-84.69A14,14,0,0,0,241.91,137.42Zm-8.49,11.31-84.69,84.69a2,2,0,0,1-2.83,0L46.59,134.1a2,2,0,0,1-.59-1.41V46h86.69a2,2,0,0,1,1.41.59l99.32,99.31A2,2,0,0,1,233.42,148.73ZM94,84A10,10,0,1,1,84,74,10,10,0,0,1,94,84Z" fill="currentColor"/></svg>
+      <div>
+        <div class="label" style="color:#38BDF8; text-shadow:0 0 8px #38BDF880">Specials</div>
+        <div class="sublabel">12 tonight</div>
+      </div>
+    </div>
+    <div class="card" style="background:#0F0F14; border:1px solid #F9A8D455; box-shadow:inset 0 0 20px #F9A8D410, 0 0 12px #F9A8D426;">
+      <div class="glow" style="background:#F9A8D4"></div>
+      <span class="id-tag">live_music</span>
+      <svg width="28" height="28" viewBox="0 0 256 256" fill="none" style="color:#F9A8D4; filter:drop-shadow(0 0 6px #F9A8D4)"><path d="M54,96v64a6,6,0,0,1-12,0V96a6,6,0,0,1,12,0ZM88,26a6,6,0,0,0-6,6V224a6,6,0,0,0,12,0V32A6,6,0,0,0,88,26Zm40,32a6,6,0,0,0-6,6V192a6,6,0,0,0,12,0V64A6,6,0,0,0,128,58Zm40,32a6,6,0,0,0-6,6v64a6,6,0,0,0,12,0V96A6,6,0,0,0,168,90Zm40-16a6,6,0,0,0-6,6v96a6,6,0,0,0,12,0V80A6,6,0,0,0,208,74Z" fill="currentColor"/></svg>
+      <div>
+        <div class="label" style="color:#F9A8D4; text-shadow:0 0 8px #F9A8D480">Live Music</div>
+        <div class="sublabel">12 tonight</div>
+      </div>
+    </div>
+    <div class="card" style="background:#0F0F14; border:1px solid #FCD34D55; box-shadow:inset 0 0 20px #FCD34D10, 0 0 12px #FCD34D26;">
+      <div class="glow" style="background:#FCD34D"></div>
+      <span class="id-tag">comedy</span>
+      <svg width="28" height="28" viewBox="0 0 256 256" fill="none" style="color:#FCD34D; filter:drop-shadow(0 0 6px #FCD34D)"><path d="M173.19,155c-9.92,17.16-26.39,27-45.19,27s-35.27-9.84-45.19-27a6,6,0,0,1,10.38-6c7.84,13.54,20.2,21,34.81,21s27-7.46,34.81-21a6,6,0,1,1,10.38,6ZM230,128A102,102,0,1,1,128,26,102.12,102.12,0,0,1,230,128Zm-12,0a90,90,0,1,0-90,90A90.1,90.1,0,0,0,218,128ZM92,118a10,10,0,1,0-10-10A10,10,0,0,0,92,118Zm72-20a10,10,0,1,0,10,10A10,10,0,0,0,164,98Z" fill="currentColor"/></svg>
+      <div>
+        <div class="label" style="color:#FCD34D; text-shadow:0 0 8px #FCD34D80">Freakin Clowns</div>
+        <div class="sublabel">12 tonight</div>
+      </div>
+    </div>
+    <div class="card" style="background:#0F0F14; border:1px solid #F9A8D455; box-shadow:inset 0 0 20px #F9A8D410, 0 0 12px #F9A8D426;">
+      <div class="glow" style="background:#F9A8D4"></div>
+      <span class="id-tag">dance</span>
+      <svg width="28" height="28" viewBox="0 0 256 256" fill="none" style="color:#F9A8D4; filter:drop-shadow(0 0 6px #F9A8D4)"><path d="M118,66.23V16a6,6,0,0,0-12,0V66.23a86,86,0,1,0,12,0ZM185.74,146H149.87c-1.3-32.59-13-54.15-22.36-66.35A74.15,74.15,0,0,1,185.74,146Zm-99.6,12h51.72c-1.63,37.69-18.33,58.46-25.86,66C104.46,216.45,87.77,195.67,86.14,158Zm0-12c1.63-37.69,18.33-58.46,25.86-66,7.54,7.51,24.23,28.29,25.86,66ZM96.49,79.65C87.11,91.85,75.43,113.41,74.13,146H38.26A74.15,74.15,0,0,1,96.49,79.65ZM38.26,158H74.13c1.3,32.59,13,54.15,22.36,66.35A74.15,74.15,0,0,1,38.26,158Zm89.25,66.35c9.38-12.2,21.06-33.76,22.36-66.35h35.87A74.15,74.15,0,0,1,127.51,224.35ZM254,88a6,6,0,0,1-6,6H238v10a6,6,0,0,1-12,0V94H216a6,6,0,0,1,0-12h10V72a6,6,0,0,1,12,0V82h10A6,6,0,0,1,254,88ZM208,46H190V64a6,6,0,0,1-12,0V46H160a6,6,0,0,1,0-12h18V16a6,6,0,0,1,12,0V34h18a6,6,0,0,1,0,12Z" fill="currentColor"/></svg>
+      <div>
+        <div class="label" style="color:#F9A8D4; text-shadow:0 0 8px #F9A8D480">Dance</div>
+        <div class="sublabel">12 tonight</div>
+      </div>
+    </div>
+    <div class="card" style="background:#0F0F14; border:1px solid #E879F955; box-shadow:inset 0 0 20px #E879F910, 0 0 12px #E879F926;">
+      <div class="glow" style="background:#E879F9"></div>
+      <span class="id-tag">other</span>
+      <svg width="28" height="28" viewBox="0 0 256 256" fill="none" style="color:#E879F9; filter:drop-shadow(0 0 6px #E879F9)"><path d="M238,96a6,6,0,0,1-6,6H214v18a6,6,0,0,1-12,0V102H184a6,6,0,0,1,0-12h18V72a6,6,0,0,1,12,0V90h18A6,6,0,0,1,238,96ZM144,54h10V64a6,6,0,0,0,12,0V54h10a6,6,0,0,0,0-12H166V32a6,6,0,0,0-12,0V42H144a6,6,0,0,0,0,12Zm71.25,100.28a6,6,0,0,1,1.07,6A94,94,0,1,1,95.76,39.68a6,6,0,0,1,7.94,6.79A90.11,90.11,0,0,0,192,154a90.9,90.9,0,0,0,17.53-1.7A6,6,0,0,1,215.25,154.28Zm-14.37,11.34q-4.42.38-8.88.38A102.12,102.12,0,0,1,90,64q0-4.45.38-8.88a82,82,0,1,0,110.5,110.5Z" fill="currentColor"/></svg>
+      <div>
+        <div class="label" style="color:#E879F9; text-shadow:0 0 8px #E879F980">Nightlife</div>
+        <div class="sublabel">12 tonight</div>
+      </div>
+    </div></div>
+</body>
+</html>

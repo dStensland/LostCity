@@ -6,7 +6,9 @@ import {
   getClientIdentifier,
 } from "@/lib/rate-limit";
 import { getLocalDateString } from "@/lib/formats";
-import { escapeSQLPattern, errorResponse, isValidUUID } from "@/lib/api-utils";
+import { escapeSQLPattern, errorResponse } from "@/lib/api-utils";
+import { resolvePortalQueryContext } from "@/lib/portal-query-context";
+import { applyPortalScopeToQuery, filterByPortalCity } from "@/lib/portal-scope";
 
 import { fetchSocialProofCounts } from "@/lib/search";
 import { format, startOfDay, addDays } from "date-fns";
@@ -68,7 +70,6 @@ export async function GET(request: Request) {
       parseInt(searchParams.get("limit") || "50", 10),
       150,
     );
-    const portalSlug = searchParams.get("portal");
 
     // New filter parameters
     const categories = searchParams
@@ -101,17 +102,10 @@ export async function GET(request: Request) {
       now.getTime() - 48 * 60 * 60 * 1000,
     ).toISOString();
 
-    // Get portal data, user preferences, and trending events in parallel (independent queries)
-    const [portalResult, prefsResult, trendingEventsResult] = await Promise.all(
+    // Get portal context, user preferences, and trending events in parallel (independent queries)
+    const [portalContext, prefsResult, trendingEventsResult] = await Promise.all(
       [
-        portalSlug
-          ? supabase
-              .from("portals")
-              .select("id, filters")
-              .eq("slug", portalSlug)
-              .eq("status", "active")
-              .maybeSingle()
-          : Promise.resolve({ data: null }),
+        resolvePortalQueryContext(supabase, searchParams),
         supabase
           .from("user_preferences")
           .select("*")
@@ -145,7 +139,7 @@ export async function GET(request: Request) {
           day_of_week,
           festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
         ),
-        venue:venues(id, name, slug, neighborhood, blurhash)
+        venue:venues(id, name, slug, neighborhood, blurhash, city)
       `,
           )
           .gte("start_date", todayForTrending)
@@ -158,17 +152,15 @@ export async function GET(request: Request) {
       ],
     );
 
-    let portalId: string | null = null;
-    let portalFilters: { categories?: string[]; neighborhoods?: string[] } = {};
-
-    const portalData = portalResult.data as {
-      id: string;
-      filters: typeof portalFilters;
-    } | null;
-    if (portalData && isValidUUID(portalData.id)) {
-      portalId = portalData.id;
-      portalFilters = portalData.filters || {};
+    if (portalContext.hasPortalParamMismatch) {
+      return NextResponse.json(
+        { error: "portal and portal_id parameters must reference the same portal" },
+        { status: 400 },
+      );
     }
+
+    const portalId = portalContext.portalId;
+    const portalFilters: { categories?: string[]; neighborhoods?: string[]; city?: string } = portalContext.filters;
 
     const prefsData = prefsResult.data;
 
@@ -341,7 +333,6 @@ export async function GET(request: Request) {
       price_min,
       price_max,
       category,
-      subcategory,
       genres,
       tags,
       image_url,
@@ -361,10 +352,11 @@ export async function GET(request: Request) {
         day_of_week,
         festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
       ),
-      venue:venues(id, name, neighborhood, slug, blurhash)
+      venue:venues(id, name, neighborhood, slug, blurhash, city)
     `,
       )
       .or(`start_date.gte.${startDateFilter},end_date.gte.${startDateFilter}`) // Include ongoing events (exhibitions with end_date)
+      .eq("is_active", true)
       .is("canonical_event_id", null) // Only show canonical events, not duplicates
       .or("is_class.eq.false,is_class.is.null")
       .or("is_sensitive.eq.false,is_sensitive.is.null")
@@ -379,23 +371,15 @@ export async function GET(request: Request) {
       query = query.lte("start_date", endDateFilter);
     }
 
-    // Apply portal filter if specified
-    if (portalId) {
-      if (shouldRestrictToPortal) {
-        // User disabled cross-portal recommendations: stay strictly in current portal.
-        query = query.eq("portal_id", portalId);
-      } else {
-        // Show portal-specific events + public events.
-        query = query.or(`portal_id.eq.${portalId},portal_id.is.null`);
-      }
+    query = applyPortalScopeToQuery(query, {
+      portalId,
+      portalExclusive: shouldRestrictToPortal,
+      publicOnlyWhenNoPortal: true,
+    });
 
-      // Apply portal category filters if specified (only if no explicit category filter)
-      if (portalFilters.categories?.length && !categories?.length) {
-        query = query.in("category", portalFilters.categories);
-      }
-    } else {
-      // No portal - only show public events
-      query = query.is("portal_id", null);
+    // Apply portal category filters if specified (only if no explicit category filter)
+    if (portalId && portalFilters.categories?.length && !categories?.length) {
+      query = query.in("category", portalFilters.categories);
     }
 
     // Apply explicit category filter
@@ -431,7 +415,6 @@ export async function GET(request: Request) {
     price_min,
     price_max,
     category,
-    subcategory,
     genres,
     tags,
     image_url,
@@ -451,7 +434,7 @@ export async function GET(request: Request) {
       day_of_week,
       festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
     ),
-    venue:venues(id, name, neighborhood, slug, blurhash)
+    venue:venues(id, name, neighborhood, slug, blurhash, city)
   `;
 
     // Build all queries, tracking which ones we're running
@@ -468,6 +451,7 @@ export async function GET(request: Request) {
         .select(eventSelect)
         .in("venue_id", followedVenueIds)
         .gte("start_date", today)
+        .eq("is_active", true)
         .is("canonical_event_id", null)
         .or("is_class.eq.false,is_class.is.null")
         .or("is_sensitive.eq.false,is_sensitive.is.null")
@@ -478,13 +462,11 @@ export async function GET(request: Request) {
         venueQuery = venueQuery.or("is_adult.eq.false,is_adult.is.null");
       }
 
-      if (portalId) {
-        venueQuery = shouldRestrictToPortal
-          ? venueQuery.eq("portal_id", portalId)
-          : venueQuery.or(`portal_id.eq.${portalId},portal_id.is.null`);
-      } else {
-        venueQuery = venueQuery.is("portal_id", null);
-      }
+      venueQuery = applyPortalScopeToQuery(venueQuery, {
+        portalId,
+        portalExclusive: shouldRestrictToPortal,
+        publicOnlyWhenNoPortal: true,
+      });
 
       queries.push(venueQuery);
       queryTypes.push("venue");
@@ -497,6 +479,7 @@ export async function GET(request: Request) {
         .select(eventSelect)
         .in("organization_id", followedOrganizationIds)
         .gte("start_date", today)
+        .eq("is_active", true)
         .is("canonical_event_id", null)
         .or("is_class.eq.false,is_class.is.null")
         .or("is_sensitive.eq.false,is_sensitive.is.null")
@@ -507,13 +490,11 @@ export async function GET(request: Request) {
         producerQuery = producerQuery.or("is_adult.eq.false,is_adult.is.null");
       }
 
-      if (portalId) {
-        producerQuery = shouldRestrictToPortal
-          ? producerQuery.eq("portal_id", portalId)
-          : producerQuery.or(`portal_id.eq.${portalId},portal_id.is.null`);
-      } else {
-        producerQuery = producerQuery.is("portal_id", null);
-      }
+      producerQuery = applyPortalScopeToQuery(producerQuery, {
+        portalId,
+        portalExclusive: shouldRestrictToPortal,
+        publicOnlyWhenNoPortal: true,
+      });
 
       queries.push(producerQuery);
       queryTypes.push("org");
@@ -526,6 +507,7 @@ export async function GET(request: Request) {
         .select(eventSelect)
         .in("source_id", producerSourceIds)
         .gte("start_date", today)
+        .eq("is_active", true)
         .is("canonical_event_id", null)
         .or("is_class.eq.false,is_class.is.null")
         .or("is_sensitive.eq.false,is_sensitive.is.null")
@@ -536,13 +518,11 @@ export async function GET(request: Request) {
         sourceQuery = sourceQuery.or("is_adult.eq.false,is_adult.is.null");
       }
 
-      if (portalId) {
-        sourceQuery = shouldRestrictToPortal
-          ? sourceQuery.eq("portal_id", portalId)
-          : sourceQuery.or(`portal_id.eq.${portalId},portal_id.is.null`);
-      } else {
-        sourceQuery = sourceQuery.is("portal_id", null);
-      }
+      sourceQuery = applyPortalScopeToQuery(sourceQuery, {
+        portalId,
+        portalExclusive: shouldRestrictToPortal,
+        publicOnlyWhenNoPortal: true,
+      });
 
       queries.push(sourceQuery);
       queryTypes.push("source");
@@ -558,6 +538,7 @@ export async function GET(request: Request) {
         .select(`${eventSelect}, venue!inner(neighborhood)`)
         .in("venue.neighborhood", favoriteNeighborhoods)
         .gte("start_date", today)
+        .eq("is_active", true)
         .is("canonical_event_id", null)
         .or("is_class.eq.false,is_class.is.null")
         .or("is_sensitive.eq.false,is_sensitive.is.null")
@@ -570,13 +551,11 @@ export async function GET(request: Request) {
         );
       }
 
-      if (portalId) {
-        neighborhoodQuery = shouldRestrictToPortal
-          ? neighborhoodQuery.eq("portal_id", portalId)
-          : neighborhoodQuery.or(`portal_id.eq.${portalId},portal_id.is.null`);
-      } else {
-        neighborhoodQuery = neighborhoodQuery.is("portal_id", null);
-      }
+      neighborhoodQuery = applyPortalScopeToQuery(neighborhoodQuery, {
+        portalId,
+        portalExclusive: shouldRestrictToPortal,
+        publicOnlyWhenNoPortal: true,
+      });
 
       queries.push(neighborhoodQuery);
       queryTypes.push("neighborhood");
@@ -589,6 +568,7 @@ export async function GET(request: Request) {
         .select(eventSelect)
         .in("category", favoriteCategories)
         .gte("start_date", today)
+        .eq("is_active", true)
         .is("canonical_event_id", null)
         .or("is_class.eq.false,is_class.is.null")
         .or("is_sensitive.eq.false,is_sensitive.is.null")
@@ -599,13 +579,11 @@ export async function GET(request: Request) {
         categoryQuery = categoryQuery.or("is_adult.eq.false,is_adult.is.null");
       }
 
-      if (portalId) {
-        categoryQuery = shouldRestrictToPortal
-          ? categoryQuery.eq("portal_id", portalId)
-          : categoryQuery.or(`portal_id.eq.${portalId},portal_id.is.null`);
-      } else {
-        categoryQuery = categoryQuery.is("portal_id", null);
-      }
+      categoryQuery = applyPortalScopeToQuery(categoryQuery, {
+        portalId,
+        portalExclusive: shouldRestrictToPortal,
+        publicOnlyWhenNoPortal: true,
+      });
 
       queries.push(categoryQuery);
       queryTypes.push("category");
@@ -762,7 +740,6 @@ export async function GET(request: Request) {
       price_min: number | null;
       price_max: number | null;
       category: string | null;
-      subcategory: string | null;
       genres: string[] | null;
       tags: string[] | null;
       image_url: string | null;
@@ -797,6 +774,7 @@ export async function GET(request: Request) {
         neighborhood: string | null;
         slug: string | null;
         blurhash: string | null;
+        city?: string | null;
       } | null;
       score?: number;
       reasons?: RecommendationReason[];
@@ -812,6 +790,11 @@ export async function GET(request: Request) {
 
     let events = (mergedEventsData || []) as EventResult[];
 
+    // Filter out cross-city events that leak via portal_id=NULL
+    events = filterByPortalCity(events, portalFilters.city, {
+      allowMissingCity: true,
+    });
+
     // Score and sort events by relevance
     events = events.map((event) => {
       let score = 0;
@@ -822,7 +805,6 @@ export async function GET(request: Request) {
       );
       const haystack = [
         event.title,
-        event.subcategory || "",
         ...(event.tags || []),
         ...eventGenres,
       ]
@@ -945,6 +927,11 @@ export async function GET(request: Request) {
         }
       }
 
+      // Quality boost: events with images are more engaging
+      if (event.image_url) {
+        score += 5;
+      }
+
       // Slight boost for events happening sooner
       const daysAway = Math.max(
         0,
@@ -1018,7 +1005,6 @@ export async function GET(request: Request) {
       events = events.filter((event) => {
         const haystack = [
           event.title,
-          event.subcategory || "",
           ...(event.tags || []),
           ...(event.genres || []),
         ]
@@ -1174,7 +1160,6 @@ export async function GET(request: Request) {
           return false;
         const haystack = [
           event.title,
-          event.subcategory || "",
           ...(event.tags || []),
           ...(event.genres || []),
         ]
@@ -1360,11 +1345,18 @@ export async function GET(request: Request) {
         name: string;
         slug: string;
         neighborhood: string | null;
+        city?: string | null;
       } | null;
     };
 
-    const trendingEventsData = (trendingEventsResult.data ||
+    const trendingEventsRaw = (trendingEventsResult.data ||
       []) as TrendingEventData[];
+    // Filter by city to prevent cross-city leakage, then by adult content preference
+    const trendingEventsData = filterByPortalCity(
+      trendingEventsRaw,
+      portalFilters.city || "Atlanta",
+      { allowMissingCity: true }
+    );
     const filteredTrendingEventsData = hideAdultContent
       ? trendingEventsData.filter((event) => event.is_adult !== true)
       : trendingEventsData;

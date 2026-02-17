@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { format, startOfDay, addDays } from "date-fns";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
-import { isValidUUID } from "@/lib/api-utils";
 import { logger } from "@/lib/logger";
+import { resolvePortalQueryContext } from "@/lib/portal-query-context";
+import { applyPortalScopeToQuery } from "@/lib/portal-scope";
 
 /**
  * GET /api/activities/popular
@@ -24,10 +25,14 @@ export async function GET(request: NextRequest) {
     const client = await createClient();
     const { searchParams } = new URL(request.url);
     const dateFilter = searchParams.get("date_filter") || "week";
-    const portalIdParam = searchParams.get("portal_id");
-
-    // Validate portal_id to prevent PostgREST filter injection
-    const portalId = portalIdParam && isValidUUID(portalIdParam) ? portalIdParam : null;
+    const portalExclusive = searchParams.get("portal_exclusive") === "true";
+    const portalContext = await resolvePortalQueryContext(client, searchParams);
+    if (portalContext.hasPortalParamMismatch) {
+      return NextResponse.json(
+        { counts: {}, error: "portal and portal_id parameters must reference the same portal" },
+        { status: 400 }
+      );
+    }
 
     // Get current date/time and calculate end date based on filter
     // Use date-fns format to get local date (not UTC from toISOString)
@@ -60,7 +65,7 @@ export async function GET(request: NextRequest) {
     // Query activity dimensions with same filters as search
     let activityQuery = client
       .from("events")
-      .select("category, subcategory, genres")
+      .select("category, genres")
       .gte("start_date", today)
       .lte("start_date", endDate)
       .is("canonical_event_id", null)
@@ -68,11 +73,11 @@ export async function GET(request: NextRequest) {
       .not("category", "is", null)
       .or("is_sensitive.eq.false,is_sensitive.is.null");
 
-    if (portalId) {
-      activityQuery = activityQuery.or(`portal_id.eq.${portalId},portal_id.is.null`);
-    } else {
-      activityQuery = activityQuery.is("portal_id", null);
-    }
+    activityQuery = applyPortalScopeToQuery(activityQuery, {
+      portalId: portalContext.portalId,
+      portalExclusive,
+      publicOnlyWhenNoPortal: true,
+    });
 
     const { data: activityRows, error: activityError } = await activityQuery;
 
@@ -82,15 +87,14 @@ export async function GET(request: NextRequest) {
 
     // Aggregate counts by category
     const counts: Record<string, number> = {};
-    // Aggregate counts by subcategory (e.g., "music.live": 30)
+    // Aggregate counts by genre (e.g., "music.rock": 30)
     const subcategory_counts: Record<string, number> = {};
 
-    // Count categories and subactivities.
-    // Subactivity keys are normalized to "category.genre" format.
+    // Count categories and subactivities from genres[].
+    // Keys are normalized to "category.genre" format for backwards compat.
     if (activityRows) {
       const typedActivityRows = activityRows as Array<{
         category: string | null;
-        subcategory: string | null;
         genres: string[] | null;
       }>;
       for (const row of typedActivityRows) {
@@ -101,15 +105,8 @@ export async function GET(request: NextRequest) {
             ? row.genres.filter((genre): genre is string => typeof genre === "string" && genre.length > 0)
             : [];
 
-          if (rowGenres.length > 0) {
-            for (const genre of rowGenres) {
-              const subactivityKey = `${row.category}.${genre}`;
-              subcategory_counts[subactivityKey] = (subcategory_counts[subactivityKey] || 0) + 1;
-            }
-          } else if (row.subcategory) {
-            const subactivityKey = row.subcategory.includes(".")
-              ? row.subcategory
-              : `${row.category}.${row.subcategory}`;
+          for (const genre of rowGenres) {
+            const subactivityKey = `${row.category}.${genre}`;
             subcategory_counts[subactivityKey] = (subcategory_counts[subactivityKey] || 0) + 1;
           }
         }

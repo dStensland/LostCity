@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useRef, useEffect, useCallback } from "react";
+import { Suspense, useRef, useEffect, useCallback, type ReactNode } from "react";
 import Link from "next/link";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import SimpleFilterBar from "@/components/SimpleFilterBar";
@@ -10,6 +10,8 @@ import {
   ActiveFiltersRow,
 } from "@/components/filters";
 import PersonalizedIndicator from "./PersonalizedIndicator";
+import FeedSectionHeader from "./FeedSectionHeader";
+import ForYouOnboarding from "./ForYouOnboarding";
 import EventCard from "@/components/EventCard";
 import { useForYouFilters } from "@/lib/hooks/useForYouFilters";
 import {
@@ -18,6 +20,45 @@ import {
   type FeedSection,
 } from "@/lib/hooks/useForYouEvents";
 import { convertFriendsGoing } from "@/lib/formats";
+import {
+  Sparkle,
+  CalendarDots,
+  UsersThree,
+  Compass,
+} from "@phosphor-icons/react/dist/ssr";
+
+// Per-section visual identity config
+const SECTION_CONFIG: Record<
+  FeedSection["id"],
+  {
+    priority: "primary" | "secondary" | "tertiary";
+    accentColor: string;
+    icon: ReactNode;
+    badge?: string;
+  }
+> = {
+  tonight_for_you: {
+    priority: "primary",
+    accentColor: "var(--coral)",
+    icon: <Sparkle size={24} weight="fill" />,
+    badge: "Tonight",
+  },
+  this_week_fits_your_taste: {
+    priority: "secondary",
+    accentColor: "var(--gold)",
+    icon: <CalendarDots size={20} weight="light" />,
+  },
+  from_places_people_you_follow: {
+    priority: "secondary",
+    accentColor: "var(--lavender)",
+    icon: <UsersThree size={20} weight="light" />,
+  },
+  explore_something_new: {
+    priority: "tertiary",
+    accentColor: "var(--neon-cyan)",
+    icon: <Compass size={16} weight="light" />,
+  },
+};
 
 interface ForYouViewProps {
   portalSlug: string;
@@ -52,16 +93,18 @@ function ForYouSectionBlock({
 }) {
   if (section.events.length === 0) return null;
 
+  const config = SECTION_CONFIG[section.id] ?? SECTION_CONFIG.explore_something_new;
+
   return (
     <section className="space-y-3">
-      <div className="px-1">
-        <h3 className="font-mono text-sm font-medium uppercase tracking-wide text-[var(--cream)]">
-          {section.title}
-        </h3>
-        <p className="text-xs text-[var(--muted)] mt-1">
-          {section.description}
-        </p>
-      </div>
+      <FeedSectionHeader
+        title={section.title}
+        subtitle={section.description}
+        priority={config.priority}
+        accentColor={config.accentColor}
+        icon={config.icon}
+        badge={config.badge}
+      />
       <div className="space-y-3">
         {section.events.map((event, index) => (
           <EventCard
@@ -168,66 +211,9 @@ function ForYouViewInner({ portalSlug }: ForYouViewProps) {
     );
   }
 
-  // No preferences and no events - prompt to set preferences
+  // No preferences and no events - inline onboarding
   if (!hasPreferences && events.length === 0) {
-    return (
-      <div className="space-y-6">
-        <div className="p-6 rounded-xl bg-gradient-to-br from-[var(--dusk)] to-[var(--night)] border border-[var(--twilight)] text-center">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-[var(--coral)]/20 via-[var(--neon-magenta)]/20 to-[var(--gold)]/20 flex items-center justify-center relative group cursor-default">
-            <svg
-              width="32"
-              height="32"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              className="text-[var(--coral)] icon-neon-pulse"
-            >
-              <path
-                d="M12 2v4M12 18v4M2 12h4M18 12h4"
-                strokeWidth={1.5}
-                strokeLinecap="round"
-                stroke="currentColor"
-              />
-              <path
-                d="M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"
-                strokeWidth={1.5}
-                strokeLinecap="round"
-                stroke="currentColor"
-                opacity={0.6}
-              />
-              <circle cx="12" cy="12" r="3" fill="currentColor" />
-            </svg>
-            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[var(--coral)]/10 to-[var(--gold)]/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-          </div>
-          <h3 className="font-serif text-lg text-[var(--cream)] mb-2">
-            Tell us what you&apos;re into
-          </h3>
-          <p className="text-sm text-[var(--muted)] mb-4 max-w-sm mx-auto">
-            Set your preferences to get personalized event recommendations based
-            on your interests, favorite neighborhoods, and more.
-          </p>
-          <Link
-            href="/settings/preferences"
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--coral)] text-[var(--void)] rounded-lg font-mono text-sm font-medium hover:bg-[var(--rose)] transition-colors"
-          >
-            Set Preferences
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M13 7l5 5m0 0l-5 5m5-5H6"
-              />
-            </svg>
-          </Link>
-        </div>
-      </div>
-    );
+    return <ForYouOnboarding onComplete={() => refresh()} />;
   }
 
   // Empty state with filters
@@ -309,15 +295,20 @@ function ForYouViewInner({ portalSlug }: ForYouViewProps) {
 
   const showSectionedFeed = !hasActiveFilters && sections.length > 0;
   if (showSectionedFeed) {
+    const visibleSections = sections.filter((s) => s.events.length > 0);
     return (
-      <div className="space-y-6">
-        {sections.map((section) => (
-          <ForYouSectionBlock
-            key={section.id}
-            section={section}
-            portalSlug={portalSlug}
-            getContextType={getContextType}
-          />
+      <div className="space-y-2">
+        {visibleSections.map((section, idx) => (
+          <div key={section.id}>
+            {idx > 0 && (
+              <div className="h-px bg-gradient-to-r from-transparent via-[var(--twilight)] to-transparent my-4" />
+            )}
+            <ForYouSectionBlock
+              section={section}
+              portalSlug={portalSlug}
+              getContextType={getContextType}
+            />
+          </div>
         ))}
       </div>
     );

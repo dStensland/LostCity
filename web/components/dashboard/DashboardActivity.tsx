@@ -8,6 +8,9 @@ import { FriendsActivity } from "@/components/community/FriendsActivity";
 import { FriendSuggestions } from "@/components/community/FriendSuggestions";
 import { useFriendRequests } from "@/lib/hooks/useFriendRequests";
 import { useFriendSuggestions } from "@/lib/hooks/useFriendSuggestions";
+import CrewThisWeekCard from "@/components/dashboard/CrewThisWeekCard";
+import InviteTrackingCard from "@/components/dashboard/InviteTrackingCard";
+import { PlansSection } from "@/components/plans/PlansSection";
 
 export default function DashboardActivity() {
   const { user } = useAuth();
@@ -31,6 +34,9 @@ export default function DashboardActivity() {
 
   return (
     <div className="space-y-6">
+      {/* 0. Crew This Week */}
+      <CrewThisWeekCard />
+
       {/* 1. Enhanced Search - Glass style */}
       <FriendSearch />
 
@@ -39,10 +45,16 @@ export default function DashboardActivity() {
         <FriendSuggestions suggestions={friendSuggestions} isLoading={suggestionsLoading} />
       )}
 
+      {/* 3. Invite Tracking */}
+      <InviteTrackingCard />
+
       {/* 4. Pending Friend Requests - Always visible when present */}
       <PendingRequests requests={pendingRequests} />
 
-      {/* 5. Activity Feed - Primary content */}
+      {/* 5. Plans */}
+      <PlansSection />
+
+      {/* 6. Activity Feed - Primary content */}
       <FriendsActivity />
     </div>
   );

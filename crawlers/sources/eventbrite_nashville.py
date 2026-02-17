@@ -14,7 +14,7 @@ from typing import Optional
 from playwright.sync_api import sync_playwright
 
 from config import get_config
-from db import get_or_create_venue, insert_event, find_event_by_hash, get_portal_id_by_slug
+from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, get_portal_id_by_slug
 from dedupe import generate_content_hash
 
 PORTAL_SLUG = "nashville"

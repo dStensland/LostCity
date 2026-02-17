@@ -74,7 +74,7 @@ export default function ExploreVenueCard({
       <Link
         href={`/${portalSlug}?spot=${venue.slug}`}
         className="block relative overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-inset"
-        style={{ height: 160 }}
+        style={{ height: 160, isolation: "isolate" }}
       >
         {venue.imageUrl ? (
           <Image
@@ -83,7 +83,7 @@ export default function ExploreVenueCard({
             fill
             sizes="(max-width: 768px) 100vw, 400px"
             className="object-cover transition-transform duration-500 group-hover:scale-105"
-            style={{ filter: "contrast(1.06) saturate(0.8)" }}
+            style={{ filter: "contrast(1.06) saturate(0.8)", willChange: "transform", backfaceVisibility: "hidden" }}
           />
         ) : (
           <div
@@ -131,7 +131,7 @@ export default function ExploreVenueCard({
         <div className="absolute top-2.5 right-2.5 z-[3] flex flex-col gap-1 items-end">
           {hasTonight && (
             <span
-              className="font-mono text-[8px] font-semibold px-2 py-[3px] rounded-md uppercase tracking-[0.03em] animate-pulse"
+              className="font-mono text-[9px] font-semibold px-2 py-[3px] rounded-md uppercase tracking-[0.03em] animate-pulse"
               style={{ background: "#E03A3E", color: "#fff" }}
             >
               Tonight
@@ -139,7 +139,7 @@ export default function ExploreVenueCard({
           )}
           {!hasTonight && eventCount > 0 && (
             <span
-              className="font-mono text-[8px] font-semibold px-2 py-[3px] rounded-md"
+              className="font-mono text-[9px] font-semibold px-2 py-[3px] rounded-md"
               style={{ background: "#C1D32F", color: "var(--void)" }}
             >
               {eventCount} this week
@@ -180,11 +180,23 @@ export default function ExploreVenueCard({
       {venue.editorialBlurb && (
         <div className="px-3.5 py-3" style={{ borderTop: events.length > 0 ? "1px solid rgba(255,255,255,0.03)" : "none" }}>
           <p
-            className="text-[12.5px] italic leading-[1.55] line-clamp-2"
+            className="text-[12.5px] italic leading-[1.55]"
             style={{ color: "var(--muted)" }}
           >
             {venue.editorialBlurb}
           </p>
+          {venue.sourceUrl && (
+            <a
+              href={venue.sourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[11px] font-mono mt-1 inline-block hover:underline"
+              style={{ color: accent }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {venue.sourceLabel || "Learn more"} &rarr;
+            </a>
+          )}
         </div>
       )}
 
@@ -253,10 +265,10 @@ function CompactVenueCard({
         border: "1px solid var(--twilight)",
       }}
     >
-      {/* Image — 1:1 for more visual impact */}
+      {/* Image — 4:3 on mobile, 1:1 on wider grids */}
       <div
-        className="relative overflow-hidden"
-        style={{ aspectRatio: "1/1" }}
+        className="relative overflow-hidden aspect-[4/3] sm:aspect-square"
+        style={{ isolation: "isolate" }}
       >
         {venue.imageUrl ? (
           <Image
@@ -265,7 +277,7 @@ function CompactVenueCard({
             fill
             sizes="(max-width: 640px) 50vw, 250px"
             className="object-cover transition-transform duration-500 group-hover:scale-105"
-            style={{ filter: "contrast(1.06) saturate(0.75)" }}
+            style={{ filter: "contrast(1.06) saturate(0.75)", willChange: "transform", backfaceVisibility: "hidden" }}
           />
         ) : (
           <div
@@ -287,7 +299,7 @@ function CompactVenueCard({
         <div className="absolute top-[6px] right-[6px] z-[3] flex flex-col gap-[3px] items-end">
           {hasTonight && (
             <span
-              className="font-mono text-[7px] font-semibold px-1.5 py-0.5 rounded uppercase animate-pulse"
+              className="font-mono text-[9px] font-semibold px-1.5 py-0.5 rounded uppercase animate-pulse"
               style={{ background: "#E03A3E", color: "#fff" }}
             >
               Tonight
@@ -295,7 +307,7 @@ function CompactVenueCard({
           )}
           {!hasTonight && eventCount > 0 && (
             <span
-              className="font-mono text-[7px] font-semibold px-1.5 py-0.5 rounded"
+              className="font-mono text-[9px] font-semibold px-1.5 py-0.5 rounded"
               style={{ background: "#C1D32F", color: "var(--void)" }}
             >
               {eventCount} this week
@@ -313,7 +325,7 @@ function CompactVenueCard({
             }}
           >
             <span
-              className="font-mono text-[8px] font-semibold flex-shrink-0"
+              className="font-mono text-[9px] font-semibold flex-shrink-0"
               style={{ color: nextEvent.isTonight ? "#E03A3E" : "#C1D32F" }}
             >
               {nextEvent.isTonight
@@ -345,11 +357,23 @@ function CompactVenueCard({
         )}
         {venue.editorialBlurb && (
           <p
-            className="text-[11.5px] leading-[1.45] line-clamp-2"
+            className="text-[11.5px] leading-[1.45] line-clamp-3"
             style={{ color: "var(--soft)" }}
           >
             {venue.editorialBlurb}
           </p>
+        )}
+        {venue.sourceUrl && (
+          <span
+            role="link"
+            tabIndex={0}
+            className="text-[10px] font-mono mt-0.5 inline-block cursor-pointer hover:underline"
+            style={{ color: accent }}
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.open(venue.sourceUrl!, '_blank', 'noopener,noreferrer'); }}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); window.open(venue.sourceUrl!, '_blank', 'noopener,noreferrer'); } }}
+          >
+            {venue.sourceLabel || "Learn more"} &rarr;
+          </span>
         )}
         {highlights.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-1.5">
@@ -359,7 +383,7 @@ function CompactVenueCard({
               return (
                 <span
                   key={h.id}
-                  className="inline-flex items-center gap-0.5 text-[8px] px-1.5 py-[2px] rounded"
+                  className="inline-flex items-center gap-0.5 text-[9px] px-1.5 py-[2px] rounded"
                   style={{
                     background: config ? `${config.color}10` : "rgba(255,255,255,0.04)",
                     color: config?.color ?? "var(--muted)",
@@ -456,9 +480,9 @@ function EventRow({
         </div>
       </div>
 
-      {/* Chevron — shows on hover */}
+      {/* Chevron — visible by default for touch, brighter on hover */}
       <svg
-        className="w-4 h-4 flex-shrink-0 mt-1 opacity-0 group-hover/row:opacity-60 transition-opacity"
+        className="w-4 h-4 flex-shrink-0 mt-1 opacity-30 group-hover/row:opacity-60 group-hover/row:translate-x-0.5 transition-all"
         style={{ color: "var(--soft)" }}
         fill="none"
         stroke="currentColor"

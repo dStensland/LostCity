@@ -25,6 +25,7 @@ import AddToCalendar from "@/components/AddToCalendar";
 import { EntityTagList } from "@/components/tags/EntityTagList";
 import { SaveToListButton } from "@/components/SaveToListButton";
 import { getEventArtists } from "@/lib/artists";
+import { getDisplayParticipants, getLineupLabels } from "@/lib/artists-utils";
 import LineupSection from "@/components/LineupSection";
 import {
   DetailHero,
@@ -209,9 +210,23 @@ function generateEventSchema(event: EventWithOrganization) {
 /** Enhance Schema.org event data with actual artist performers */
 function withPerformerSchema(
   eventSchema: Record<string, unknown>,
-  artists: Awaited<ReturnType<typeof getEventArtists>>
+  artists: Awaited<ReturnType<typeof getEventArtists>>,
+  category: string | null | undefined
 ): Record<string, unknown> {
   if (artists.length === 0) return eventSchema;
+
+  if (category === "sports") {
+    const competitors = artists.map((a) => ({
+      "@type": "SportsTeam",
+      name: a.artist?.name || a.name,
+      ...(a.artist?.image_url ? { image: a.artist.image_url } : {}),
+      ...(a.artist?.website ? { url: a.artist.website } : {}),
+    }));
+    return {
+      ...eventSchema,
+      competitor: competitors.length === 1 ? competitors[0] : competitors,
+    };
+  }
 
   const performers = artists.map((a) => ({
     "@type": a.artist?.discipline === "band" ? "MusicGroup" : "Person",
@@ -269,7 +284,15 @@ export default async function PortalEventPage({ params }: Props) {
     event.venue?.id ? getNearbySpots(event.venue.id) : Promise.resolve([]),
     getEventArtists(event.id),
   ]);
-  const displayDescription = buildDisplayDescription(event.description, eventArtists, {
+  const displayParticipants = getDisplayParticipants(eventArtists, {
+    eventTitle: event.title,
+    eventCategory: event.category,
+  });
+  const participantLabels = getLineupLabels(displayParticipants, {
+    eventCategory: event.category,
+  });
+  const displayDescription = buildDisplayDescription(event.description, displayParticipants, {
+    eventTitle: event.title,
     eventGenres: event.genres,
     eventTags: event.tags,
     eventCategory: event.category,
@@ -306,7 +329,7 @@ export default async function PortalEventPage({ params }: Props) {
       showSignals.hasSetTimesMention
   );
   const lineupGenreFallback = inferLineupGenreFallback(event.genres, event.tags, event.category);
-  const eventSchema = withPerformerSchema(generateEventSchema(event), eventArtists);
+  const eventSchema = withPerformerSchema(generateEventSchema(event), displayParticipants, event.category);
   if (displayDescription) {
     eventSchema.description = displayDescription;
   }
@@ -453,13 +476,16 @@ export default async function PortalEventPage({ params }: Props) {
             )}
 
             {/* Artists / Performers */}
-            {eventArtists.length > 0 && (
+            {displayParticipants.length > 0 && (
               <div className="mb-6">
                 <LineupSection
-                  artists={eventArtists}
+                  artists={displayParticipants}
                   portalSlug={activePortalSlug}
                   maxDisplay={12}
-                  title="Artists"
+                  title={participantLabels.sectionTitle}
+                  headlinerLabel={participantLabels.headlinerLabel}
+                  supportLabel={participantLabels.supportLabel}
+                  eventCategory={event.category}
                   fallbackImageUrl={event.image_url}
                   fallbackGenres={lineupGenreFallback}
                 />

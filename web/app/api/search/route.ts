@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { unifiedSearch, type SearchOptions } from "@/lib/unified-search";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
+import { createClient } from "@/lib/supabase/server";
+import { resolvePortalQueryContext } from "@/lib/portal-query-context";
 import { logger } from "@/lib/logger";
 
 // Helper to safely parse integers with validation
@@ -32,7 +34,9 @@ function safeParseInt(
  * - neighborhoods: Comma-separated list of neighborhood filters
  * - date: Date filter (today, tomorrow, weekend, week)
  * - free: If "true", only return free events
- * - portal: Portal ID for scoped search
+ * - portal: Portal slug for scoped search (canonical)
+ * - portal_id: Portal UUID for scoped search
+ * - city: Optional explicit city override for venue search
  *
  * Response:
  * {
@@ -88,6 +92,11 @@ export async function GET(request: NextRequest) {
       ? subcategoriesParam.split(",").filter(Boolean)
       : undefined;
 
+    const genresParam = searchParams.get("genres");
+    const genres = genresParam
+      ? genresParam.split(",").filter(Boolean)
+      : undefined;
+
     const tagsParam = searchParams.get("tags");
     const tags = tagsParam
       ? tagsParam.split(",").filter(Boolean)
@@ -107,7 +116,21 @@ export async function GET(request: NextRequest) {
 
     const isFree = searchParams.get("free") === "true" ? true : undefined;
 
-    const portalId = searchParams.get("portal") || undefined;
+    const supabase = await createClient();
+    const portalContext = await resolvePortalQueryContext(supabase, searchParams);
+    if (portalContext.hasPortalParamMismatch) {
+      return NextResponse.json(
+        {
+          results: [],
+          facets: [],
+          total: 0,
+          error: "portal and portal_id parameters must reference the same portal",
+        },
+        { status: 400 }
+      );
+    }
+    const portalId = portalContext.portalId || undefined;
+    const city = searchParams.get("city") || portalContext.filters.city || undefined;
 
     // Build search options
     const options: SearchOptions = {
@@ -117,11 +140,13 @@ export async function GET(request: NextRequest) {
       offset,
       categories,
       subcategories,
+      genres,
       tags,
       neighborhoods,
       dateFilter,
       isFree,
       portalId,
+      city,
     };
 
     // Perform search

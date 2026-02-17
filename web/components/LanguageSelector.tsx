@@ -49,11 +49,11 @@ export default function LanguageSelector({
     <div ref={ref} className={`relative ${className}`}>
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs hover:bg-white/10 transition-colors"
+        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs hover:bg-current/10 transition-colors"
         aria-label="Select language"
       >
         <span>{LOCALE_FLAGS[locale]}</span>
-        <span className="hidden sm:inline text-white/60">
+        <span className="hidden sm:inline opacity-60">
           {LOCALE_LABELS[locale]}
         </span>
         <svg
@@ -63,22 +63,22 @@ export default function LanguageSelector({
           fill="none"
           stroke="currentColor"
           strokeWidth="2"
-          className="text-white/40"
+          className="opacity-40"
         >
           <polyline points="6 9 12 15 18 9" />
         </svg>
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1 bg-[var(--bg-primary,#1a1a2e)] border border-white/10 rounded-lg shadow-xl overflow-hidden z-50 min-w-[140px]">
+        <div className="absolute right-0 top-full mt-1 bg-[var(--bg-primary,#fff)] border border-current/10 rounded-lg shadow-xl overflow-hidden z-50 min-w-[140px]">
           {SUPPORTED_LOCALES.map((l) => (
             <button
               key={l}
               onClick={() => handleSelect(l)}
               className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left transition-colors ${
                 locale === l
-                  ? "bg-white/10 text-white"
-                  : "text-white/60 hover:bg-white/5 hover:text-white"
+                  ? "bg-current/10"
+                  : "opacity-60 hover:bg-current/5 hover:opacity-100"
               }`}
             >
               <span>{LOCALE_FLAGS[l]}</span>

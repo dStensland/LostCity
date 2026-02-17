@@ -6,6 +6,7 @@ import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limi
 import { isValidUUID } from "@/lib/api-utils";
 import { isSpotOpen, DESTINATION_CATEGORIES } from "@/lib/spots";
 import { logger } from "@/lib/logger";
+import { applyPortalScopeToQuery, filterByPortalCity } from "@/lib/portal-scope";
 
 type RouteContext = {
   params: Promise<{ slug: string }>;
@@ -29,6 +30,18 @@ export async function GET(request: NextRequest, context: RouteContext) {
     if (!portal || !isValidUUID(portal.id)) {
       return NextResponse.json({ error: "Portal not found" }, { status: 404 });
     }
+    const portalCity =
+      portal.portal_type === "business"
+        ? undefined
+        : (
+            portal.filters &&
+            typeof portal.filters === "object" &&
+            !Array.isArray(portal.filters) &&
+            "city" in portal.filters &&
+            typeof (portal.filters as { city?: unknown }).city === "string"
+          )
+        ? (portal.filters as { city: string }).city
+        : undefined;
 
     // Get current time in local timezone
     const now = new Date();
@@ -55,21 +68,18 @@ export async function GET(request: NextRequest, context: RouteContext) {
         category,
         tags,
         image_url,
-        venue:venues(id, name, slug, neighborhood)
+        venue:venues(id, name, slug, neighborhood, city)
       `, { count: countOnly ? "exact" : undefined, head: countOnly })
       .eq("start_date", today)
       .eq("is_all_day", false)
       .not("start_time", "is", null)
       .lte("start_time", currentTimeStr);
 
-    // Filter by portal to prevent cross-portal leakage
-    // Business portals: show only their events
-    // City portals: show portal events + public (null portal_id) events
-    if (portal.portal_type === "business") {
-      query = query.eq("portal_id", portal.id);
-    } else {
-      query = query.or(`portal_id.eq.${portal.id},portal_id.is.null`);
-    }
+    query = applyPortalScopeToQuery(query, {
+      portalId: portal.id,
+      portalExclusive: portal.portal_type === "business",
+      publicOnlyWhenNoPortal: true,
+    });
 
     // Order by start time
     if (!countOnly) {
@@ -122,9 +132,16 @@ export async function GET(request: NextRequest, context: RouteContext) {
     interface EventRow {
       start_time: string | null;
       end_time: string | null;
+      tags?: string[] | null;
+      venue?: { city?: string | null } | null;
       [key: string]: unknown;
     }
-    const liveEvents = (data || []).filter((event: EventRow) => {
+    const scopedByCity = filterByPortalCity(
+      (data || []) as EventRow[],
+      portalCity,
+      { allowMissingCity: true }
+    );
+    const liveEvents = scopedByCity.filter((event: EventRow) => {
       if (!event.start_time) return false;
 
       // Parse start time
@@ -146,7 +163,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     // Filter regular showtimes from happening now
     const filteredEvents = liveEvents.filter(
-      (event: EventRow & { tags?: string[] | null }) => !event.tags?.includes("showtime")
+      (event: EventRow) => !event.tags?.includes("showtime")
     );
 
     return NextResponse.json(

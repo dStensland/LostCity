@@ -6,6 +6,7 @@ import { parseFloatParam, parseIntParam, validationError, isValidUUID } from "@/
 import { getLocalDateString } from "@/lib/formats";
 import { getProximityTier, getProximityLabel, getWalkingMinutes, haversineDistanceKm, type ProximityTier } from "@/lib/geo";
 import { logger } from "@/lib/logger";
+import { applyFederatedPortalScopeToQuery } from "@/lib/portal-scope";
 
 export const dynamic = "force-dynamic";
 
@@ -385,19 +386,12 @@ export async function GET(request: NextRequest, context: RouteContext) {
       .or("is_class.eq.false,is_class.is.null")
       .or("is_sensitive.eq.false,is_sensitive.is.null");
 
-    if (isExclusivePortal) {
-      if (hasSubscribedSources) {
-        const sourceIdList = federationAccess.sourceIds.join(",");
-        eventsQuery = eventsQuery.or(`portal_id.eq.${portal.id},source_id.in.(${sourceIdList})`);
-      } else {
-        eventsQuery = eventsQuery.eq("portal_id", portal.id);
-      }
-    } else if (hasSubscribedSources) {
-      const sourceIdList = federationAccess.sourceIds.join(",");
-      eventsQuery = eventsQuery.or(`portal_id.eq.${portal.id},portal_id.is.null,source_id.in.(${sourceIdList})`);
-    } else {
-      eventsQuery = eventsQuery.or(`portal_id.eq.${portal.id},portal_id.is.null`);
-    }
+    eventsQuery = applyFederatedPortalScopeToQuery(eventsQuery, {
+      portalId: portal.id,
+      portalExclusive: isExclusivePortal,
+      sourceIds: hasSubscribedSources ? federationAccess.sourceIds : [],
+      publicOnlyWhenNoPortal: true,
+    });
 
     const { data: eventsData } = await eventsQuery.order("start_date", { ascending: true }).order("start_time", { ascending: true }).limit(1000);
 

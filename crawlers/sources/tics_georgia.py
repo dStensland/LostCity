@@ -30,7 +30,7 @@ from datetime import datetime
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash
+from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from date_utils import parse_human_date
 

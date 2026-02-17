@@ -138,6 +138,7 @@ export default function ConciergeShell({
                 ambient={ambient}
                 portalSlug={portal.slug}
                 portalName={portal.name}
+                conciergePhone={config.conciergePhone}
               />
             </div>
           )}

@@ -6,7 +6,7 @@ Generates recurring weekly events for each market based on their schedules.
 import logging
 from datetime import datetime, timedelta
 
-from db import get_venue_by_slug, insert_event, find_event_by_hash
+from db import get_venue_by_slug, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -224,10 +224,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 event_data["title"], venue_name, event_data["start_date"]
             )
 
-            existing = find_event_by_hash(content_hash)
-            if existing:
-                events_updated += 1
-                continue
 
             event_record = {
                 "source_id": source_id,
@@ -263,6 +259,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 "recurrence_rule": "FREQ=WEEKLY",
                 "content_hash": content_hash,
             }
+
+            existing = find_event_by_hash(content_hash)
+            if existing:
+                smart_update_existing_event(existing, event_record)
+                events_updated += 1
+                continue
 
             # Build series_hint with description from market data
             day_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]

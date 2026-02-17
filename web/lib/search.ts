@@ -21,6 +21,7 @@ import { getMoodById, type MoodId } from "./moods";
 import { decodeCursor, generateNextCursor, type CursorData } from "./cursor";
 import { createLogger } from "./logger";
 import type { Frequency, DayOfWeek } from "./recurrence";
+import { applyPortalScopeToQuery } from "./portal-scope";
 
 const logger = createLogger("search");
 
@@ -673,16 +674,13 @@ export async function getFilteredEventsWithSearch(
     .or("start_time.not.is.null,is_all_day.eq.true")
     .is("canonical_event_id", null); // Only show canonical events, not duplicates
 
-  // Apply portal restriction filter
-  // All events must belong to a portal (enforced by database trigger)
-  if (filters.portal_id) {
-    if (filters.portal_exclusive) {
-      query = query.eq("portal_id", filters.portal_id);
-    } else {
-      query = query.or(`portal_id.eq.${filters.portal_id},portal_id.is.null`);
-    }
-  }
-  // Note: If no portal_id provided, no portal filtering is applied (admin/global view)
+  // Apply portal restriction filter.
+  // If no portal_id is provided, keep query unscoped for admin/global callers.
+  query = applyPortalScopeToQuery(query, {
+    portalId: filters.portal_id,
+    portalExclusive: filters.portal_exclusive,
+    publicOnlyWhenNoPortal: false,
+  });
 
   // Apply explicit source filtering if provided
   if (filters.source_ids && filters.source_ids.length > 0) {
@@ -799,14 +797,11 @@ export async function getFilteredEventsWithCursor(
     .or("start_time.not.is.null,is_all_day.eq.true")
     .is("canonical_event_id", null); // Only show canonical events, not duplicates
 
-  // Apply portal restriction filter - all events belong to a portal
-  if (filters.portal_id) {
-    if (filters.portal_exclusive) {
-      query = query.eq("portal_id", filters.portal_id);
-    } else {
-      query = query.or(`portal_id.eq.${filters.portal_id},portal_id.is.null`);
-    }
-  }
+  query = applyPortalScopeToQuery(query, {
+    portalId: filters.portal_id,
+    portalExclusive: filters.portal_exclusive,
+    publicOnlyWhenNoPortal: false,
+  });
 
   // Apply explicit source filtering if provided
   if (filters.source_ids && filters.source_ids.length > 0) {
@@ -965,14 +960,11 @@ export async function getEventsForMap(
     .not("venues.lng", "is", null)
     .is("canonical_event_id", null); // Only show canonical events, not duplicates
 
-  // Apply portal restriction filter - all events belong to a portal
-  if (filters.portal_id) {
-    if (filters.portal_exclusive) {
-      query = query.eq("portal_id", filters.portal_id);
-    } else {
-      query = query.or(`portal_id.eq.${filters.portal_id},portal_id.is.null`);
-    }
-  }
+  query = applyPortalScopeToQuery(query, {
+    portalId: filters.portal_id,
+    portalExclusive: filters.portal_exclusive,
+    publicOnlyWhenNoPortal: false,
+  });
 
   // Apply explicit source filtering if provided
   if (filters.source_ids && filters.source_ids.length > 0) {
@@ -1147,9 +1139,11 @@ export async function getSearchSuggestions(prefix: string, options?: { portalId?
     .select("title")
     .ilike("title", searchTerm)
     .or(`start_date.gte.${today},end_date.gte.${today}`);
-  if (options?.portalId) {
-    eventQuery = eventQuery.or(`portal_id.eq.${options.portalId},portal_id.is.null`);
-  }
+  eventQuery = applyPortalScopeToQuery(eventQuery, {
+    portalId: options?.portalId,
+    portalExclusive: false,
+    publicOnlyWhenNoPortal: false,
+  });
 
   // Build neighborhood query with optional city filter
   let neighborhoodQuery = supabase
@@ -1247,14 +1241,11 @@ async function getRollupStats(
     .lte("start_date", dateEnd)
     .is("canonical_event_id", null); // Only show canonical events, not duplicates
 
-  // Apply portal restriction filter
-  if (portalId) {
-    if (portalExclusive) {
-      query = query.eq("portal_id", portalId);
-    } else {
-      query = query.or(`portal_id.eq.${portalId},portal_id.is.null`);
-    }
-  }
+  query = applyPortalScopeToQuery(query, {
+    portalId,
+    portalExclusive,
+    publicOnlyWhenNoPortal: false,
+  });
 
   if (categoryId) {
     query = query.eq("category_id", categoryId);
@@ -1568,165 +1559,4 @@ export async function getAvailableFilters(): Promise<AvailableFilters> {
     tags,
     lastUpdated,
   };
-}
-
-// Get popular events this week based on RSVPs and recommendations
-export async function getPopularEvents(limit = 6): Promise<EventWithLocation[]> {
-  // Use date-fns format to get local date (not UTC from toISOString)
-  const now = new Date();
-  const today = format(startOfDay(now), "yyyy-MM-dd");
-  const weekFromNow = format(addDays(startOfDay(now), 7), "yyyy-MM-dd");
-
-  // Get upcoming events this week (use imported supabase client)
-  const { data: events } = await supabase
-    .from("events")
-    .select(`
-      *,
-      venue:venues(*),
-      source:sources(name, url)
-    `)
-    .or(`start_date.gte.${today},end_date.gte.${today}`)
-    .lte("start_date", weekFromNow)
-    .eq("is_active", true)
-    .order("start_date", { ascending: true })
-    .limit(200);
-
-  if (!events || events.length === 0) {
-    return [];
-  }
-
-  // Get social proof counts for all these events
-  const enrichedEvents = await enrichEventsWithSocialProof(events as EventWithLocation[]);
-
-  // Calculate popularity score and sort
-  const scoredEvents = enrichedEvents.map((event) => {
-    const goingCount = event.going_count || 0;
-    const interestedCount = event.interested_count || 0;
-    const recCount = event.recommendation_count || 0;
-    // Weight: going=3, interested=2, recommendations=2
-    const score = goingCount * 3 + interestedCount * 2 + recCount * 2;
-    return { event, score };
-  });
-
-  // Sort by score descending, filter to only events with engagement
-  const popularEvents = scoredEvents
-    .filter((e) => e.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, limit)
-    .map((e) => e.event);
-
-  return popularEvents;
-}
-
-/**
- * Get trending events - events with recent engagement velocity
- * Different from popular: focuses on *recent* activity, not total counts
- * Factors: RSVPs in last 48h, recommendations in last 48h, proximity to event
- */
-export async function getTrendingEvents(limit = 6): Promise<EventWithLocation[]> {
-  const serviceClient = createServiceClient();
-  const now = new Date();
-  // Use date-fns format to get local date (not UTC from toISOString)
-  const today = format(startOfDay(now), "yyyy-MM-dd");
-  const weekFromNow = format(addDays(startOfDay(now), 7), "yyyy-MM-dd");
-  const hours48Ago = new Date(now.getTime() - 48 * 60 * 60 * 1000).toISOString();
-
-  // Get upcoming events this week
-  const { data: events } = await serviceClient
-    .from("events")
-    .select(`
-      *,
-      venue:venues(*),
-      source:sources(name, url)
-    `)
-    .or(`start_date.gte.${today},end_date.gte.${today}`)
-    .lte("start_date", weekFromNow)
-    .eq("is_active", true)
-    .order("start_date", { ascending: true })
-    .limit(200);
-
-  if (!events || events.length === 0) {
-    return [];
-  }
-
-  // Cast to expected type
-  const typedEvents = events as unknown as EventWithLocation[];
-  const eventIds = typedEvents.map((e) => e.id);
-
-  // PERFORMANCE: Fetch recent activity in parallel instead of sequentially
-  const [recentRsvpsData, recentRecsData] = await Promise.all([
-    // Get recent RSVPs (last 48 hours) - this shows momentum
-    serviceClient
-      .from("event_rsvps")
-      .select("event_id, status, created_at")
-      .in("event_id", eventIds)
-      .eq("visibility", "public")
-      .gte("created_at", hours48Ago)
-      .limit(1000), // Limit to prevent unbounded queries
-
-    // Get recent recommendations (last 48 hours)
-    serviceClient
-      .from("recommendations")
-      .select("event_id, created_at")
-      .in("event_id", eventIds)
-      .eq("visibility", "public")
-      .gte("created_at", hours48Ago)
-      .limit(1000), // Limit to prevent unbounded queries
-  ]);
-
-  // Cast to expected types
-  const recentRsvps = (recentRsvpsData.data || []) as { event_id: number; status: string; created_at: string }[];
-  const recentRecs = (recentRecsData.data || []) as { event_id: number; created_at: string }[];
-
-  // Count recent activity per event
-  const recentActivity = new Map<number, { rsvps: number; recs: number; goingRecent: number }>();
-
-  for (const rsvp of recentRsvps) {
-    const current = recentActivity.get(rsvp.event_id) || { rsvps: 0, recs: 0, goingRecent: 0 };
-    current.rsvps++;
-    if (rsvp.status === "going") current.goingRecent++;
-    recentActivity.set(rsvp.event_id, current);
-  }
-
-  for (const rec of recentRecs) {
-    if (rec.event_id) {
-      const current = recentActivity.get(rec.event_id) || { rsvps: 0, recs: 0, goingRecent: 0 };
-      current.recs++;
-      recentActivity.set(rec.event_id, current);
-    }
-  }
-
-  // Also get total social proof for context
-  const enrichedEvents = await enrichEventsWithSocialProof(typedEvents);
-
-  // Calculate trending score
-  // Trending = recent velocity + bonus for events happening soon
-  const scoredEvents = enrichedEvents.map((event) => {
-    const recent = recentActivity.get(event.id) || { rsvps: 0, recs: 0, goingRecent: 0 };
-    const totalGoing = event.going_count || 0;
-
-    // Recent activity score (weighted heavily)
-    const recentScore = recent.goingRecent * 5 + recent.rsvps * 3 + recent.recs * 4;
-
-    // Proximity bonus: events happening sooner get a boost
-    const eventDate = new Date(event.start_date);
-    const daysUntil = Math.max(0, (eventDate.getTime() - now.getTime()) / (24 * 60 * 60 * 1000));
-    const proximityMultiplier = daysUntil <= 1 ? 1.5 : daysUntil <= 3 ? 1.2 : 1.0;
-
-    // Require some baseline engagement to be "trending"
-    const hasBaseline = totalGoing >= 3 || recentScore >= 5;
-
-    const trendingScore = hasBaseline ? recentScore * proximityMultiplier : 0;
-
-    return { event: { ...event, is_trending: trendingScore > 0 }, score: trendingScore };
-  });
-
-  // Sort by trending score, filter to only events with recent activity
-  const trendingEvents = scoredEvents
-    .filter((e) => e.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, limit)
-    .map((e) => e.event);
-
-  return trendingEvents;
 }

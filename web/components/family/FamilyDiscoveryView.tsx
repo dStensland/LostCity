@@ -32,12 +32,12 @@ const AGE_RANGES = [
 
 // Category grid for family activities
 type FamilyCategory =
-  | { id: string; emoji: string; label: string; subcategory: string; category?: never; tag?: never }
-  | { id: string; emoji: string; label: string; category: string; subcategory?: never; tag?: never }
-  | { id: string; emoji: string; label: string; tag: string; category?: never; subcategory?: never };
+  | { id: string; emoji: string; label: string; genre: string; category?: never; tag?: never }
+  | { id: string; emoji: string; label: string; category: string; genre?: never; tag?: never }
+  | { id: string; emoji: string; label: string; tag: string; category?: never; genre?: never };
 
 const FAMILY_CATEGORIES: readonly FamilyCategory[] = [
-  { id: "family.museums", emoji: "🏛️", label: "Museums", subcategory: "learning.museum" },
+  { id: "family.museums", emoji: "🏛️", label: "Museums", genre: "museum" },
   { id: "family.outdoor", emoji: "🌳", label: "Outdoor", category: "outdoors" },
   { id: "family.theater", emoji: "🎭", label: "Theater", category: "theater" },
   { id: "family.libraries", emoji: "📚", label: "Libraries", tag: "library" },
@@ -89,8 +89,8 @@ export function FamilyDiscoveryView({ portalId, portalSlug, portalExclusive }: F
     () => searchParams.get("categories")?.split(",").filter(Boolean) || [],
     [searchParams]
   );
-  const currentSubcategories = useMemo(
-    () => searchParams.get("subcategories")?.split(",").filter(Boolean) || [],
+  const currentGenres = useMemo(
+    () => searchParams.get("genres")?.split(",").filter(Boolean) || [],
     [searchParams]
   );
 
@@ -154,12 +154,12 @@ export function FamilyDiscoveryView({ portalId, portalSlug, portalExclusive }: F
           subcategories: null,
           tags: null,
         });
-      } else if ("subcategory" in cat && cat.subcategory) {
-        const newSubcats = currentSubcategories.includes(cat.subcategory)
-          ? currentSubcategories.filter((s) => s !== cat.subcategory)
-          : [cat.subcategory];
+      } else if ("genre" in cat && cat.genre) {
+        const newGenres = currentGenres.includes(cat.genre)
+          ? currentGenres.filter((g) => g !== cat.genre)
+          : [cat.genre];
         updateParams({
-          subcategories: newSubcats.length > 0 ? newSubcats.join(",") : null,
+          genres: newGenres.length > 0 ? newGenres.join(",") : null,
           categories: null,
           tags: null,
         });
@@ -174,7 +174,7 @@ export function FamilyDiscoveryView({ portalId, portalSlug, portalExclusive }: F
         });
       }
     },
-    [currentCategories, currentSubcategories, currentTags, updateParams]
+    [currentCategories, currentGenres, currentTags, updateParams]
   );
 
   // Curated collection handler
@@ -217,10 +217,10 @@ export function FamilyDiscoveryView({ portalId, portalSlug, portalExclusive }: F
     if (currentDate) params.set("date", currentDate);
     if (currentFree) params.set("free", "1");
     if (currentCategories.length > 0) params.set("categories", currentCategories.join(","));
-    if (currentSubcategories.length > 0) params.set("subcategories", currentSubcategories.join(","));
+    if (currentGenres.length > 0) params.set("genres", currentGenres.join(","));
 
     return params;
-  }, [portalId, portalExclusive, currentDate, currentFree, currentTags, currentCategories, currentSubcategories]);
+  }, [portalId, portalExclusive, currentDate, currentFree, currentTags, currentCategories, currentGenres]);
 
   // Fetch events with infinite scroll
   const {
@@ -262,7 +262,7 @@ export function FamilyDiscoveryView({ portalId, portalSlug, portalExclusive }: F
     return groups;
   }, [allEvents]);
 
-  const hasActiveFilters = !!(currentDate || currentFree || currentTags.length > 0 || currentCategories.length > 0 || currentSubcategories.length > 0);
+  const hasActiveFilters = !!(currentDate || currentFree || currentTags.length > 0 || currentCategories.length > 0 || currentGenres.length > 0);
 
   // Check if a quick filter is active
   const isQuickFilterActive = (filter: typeof QUICK_FILTERS[number]) => {
@@ -280,7 +280,7 @@ export function FamilyDiscoveryView({ portalId, portalSlug, portalExclusive }: F
   // Check if category is active
   const isCategoryActive = (cat: FamilyCategory) => {
     if ("category" in cat && cat.category) return currentCategories.includes(cat.category);
-    if ("subcategory" in cat && cat.subcategory) return currentSubcategories.includes(cat.subcategory);
+    if ("genre" in cat && cat.genre) return currentGenres.includes(cat.genre);
     if ("tag" in cat && cat.tag) return currentTags.includes(cat.tag);
     return false;
   };

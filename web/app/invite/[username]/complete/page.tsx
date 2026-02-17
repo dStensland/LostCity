@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Logo from "@/components/Logo";
+import Confetti from "@/components/ui/Confetti";
 import { useAuth } from "@/lib/auth-context";
 import { DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
 import PageFooter from "@/components/PageFooter";
@@ -150,20 +151,18 @@ export default function InviteCompletePage({ params }: Props) {
 
         {status === "accepted" && (
           <>
-            <div className="w-16 h-16 bg-[var(--coral)]/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg
-                className="w-8 h-8 text-[var(--coral)]"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-              </svg>
+            <Confetti isActive duration={3000} />
+            <div className="flex items-center justify-center -space-x-2 mb-4">
+              <div className="w-16 h-16 bg-gradient-to-br from-[var(--coral)] to-[var(--neon-magenta)] rounded-full flex items-center justify-center border-2 border-[var(--dusk)] shadow-lg shadow-[var(--coral)]/20">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+              <div className="w-16 h-16 bg-gradient-to-br from-[var(--neon-cyan)] to-[var(--coral)] rounded-full flex items-center justify-center border-2 border-[var(--dusk)] shadow-lg shadow-[var(--neon-cyan)]/20">
+                <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                </svg>
+              </div>
             </div>
             <h1 className="text-2xl font-bold text-[var(--cream)] mb-2">
               You&apos;re Friends!

@@ -50,12 +50,14 @@ export interface SearchOptions {
   limit?: number;
   offset?: number;
   categories?: string[];
-  subcategories?: string[]; // Filter by subcategory values (e.g., "nightlife.trivia")
+  subcategories?: string[]; // DEPRECATED: converted to genres internally
+  genres?: string[]; // Filter by genre values (e.g., "karaoke", "museum")
   tags?: string[]; // Filter by event tags (e.g., "outdoor", "21+")
   neighborhoods?: string[];
   dateFilter?: "today" | "tonight" | "tomorrow" | "weekend" | "week";
   isFree?: boolean;
   portalId?: string;
+  city?: string; // City filter for venue search (e.g., "Atlanta")
   // Enhanced options
   useIntentAnalysis?: boolean; // Enable query intent analysis for smarter results
   boostExactMatches?: boolean; // Apply extra boost for exact title matches
@@ -71,6 +73,19 @@ export interface UnifiedSearchResponse {
   facets: SearchFacet[];
   total: number;
   didYouMean?: string[];
+}
+
+/** Convert legacy subcategory values (e.g., "nightlife.karaoke") to genre values ("karaoke") and merge with explicit genres */
+function mergeSubcategoriesToGenres(subcategories?: string[], genres?: string[]): string[] | undefined {
+  const merged: string[] = [...(genres || [])];
+  if (subcategories?.length) {
+    for (const sub of subcategories) {
+      const parts = sub.split(".");
+      const genreValue = parts.length > 1 ? parts.slice(1).join(".") : sub;
+      if (!merged.includes(genreValue)) merged.push(genreValue);
+    }
+  }
+  return merged.length > 0 ? merged : undefined;
 }
 
 function dedupeByTypeAndId(results: SearchResult[]): SearchResult[] {
@@ -388,11 +403,13 @@ export async function unifiedSearch(
     offset = 0,
     categories,
     subcategories,
+    genres,
     tags,
     neighborhoods,
     dateFilter,
     isFree,
     portalId,
+    city,
     useIntentAnalysis = true,
     boostExactMatches = true,
   } = options;
@@ -413,6 +430,23 @@ export async function unifiedSearch(
 
   const client = createServiceClient();
 
+  // Resolve portal city for venue search scoping only when venue results are requested.
+  let resolvedCity = city;
+  if (types.includes("venue") && !resolvedCity && portalId) {
+    const { data: portalData } = await client
+      .from("portals")
+      .select("filters")
+      .eq("id", portalId)
+      .maybeSingle();
+    const pRow = portalData as { filters?: Record<string, unknown> | string | null } | null;
+    if (pRow?.filters) {
+      const pf = (typeof pRow.filters === "string"
+        ? JSON.parse(pRow.filters)
+        : pRow.filters) as { city?: string };
+      resolvedCity = pf.city || undefined;
+    }
+  }
+
   // Calculate per-type limit for balanced results
   const limitPerType = Math.ceil(limit / types.length);
 
@@ -427,7 +461,7 @@ export async function unifiedSearch(
         limit: limitPerType,
         offset,
         categories,
-        subcategories,
+        genres: mergeSubcategoriesToGenres(subcategories, genres),
         tags,
         neighborhoods,
         dateFilter: effectiveDateFilter,
@@ -444,6 +478,7 @@ export async function unifiedSearch(
         limit: limitPerType,
         offset,
         neighborhoods,
+        city: resolvedCity,
       })
     );
   }
@@ -735,7 +770,7 @@ async function searchEvents(
     limit: number;
     offset: number;
     categories?: string[];
-    subcategories?: string[];
+    genres?: string[];
     tags?: string[];
     neighborhoods?: string[];
     dateFilter?: "today" | "tomorrow" | "weekend" | "week";
@@ -753,7 +788,8 @@ async function searchEvents(
     p_date_filter: mapDateFilter(options.dateFilter),
     p_is_free: options.isFree ?? null,
     p_portal_id: options.portalId || null,
-    p_subcategories: options.subcategories || null,
+    p_subcategories: null, // deprecated, kept for backwards compat
+    p_genres: options.genres || null,
     p_tags: options.tags || null,
   });
 
@@ -793,6 +829,7 @@ async function searchVenues(
     neighborhoods?: string[];
     spotTypes?: string[];
     vibes?: string[];
+    city?: string;
   }
 ): Promise<SearchResult[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -803,6 +840,7 @@ async function searchVenues(
     p_neighborhoods: options.neighborhoods || null,
     p_spot_types: options.spotTypes || null,
     p_vibes: options.vibes || null,
+    p_city: options.city || null,
   });
 
   if (error) {
@@ -1080,6 +1118,7 @@ export async function searchEventsOnly(
     offset?: number;
     categories?: string[];
     subcategories?: string[];
+    genres?: string[];
     tags?: string[];
     neighborhoods?: string[];
     dateFilter?: "today" | "tomorrow" | "weekend" | "week";
@@ -1088,6 +1127,7 @@ export async function searchEventsOnly(
   } = {}
 ): Promise<EventSearchRow[]> {
   const client = createServiceClient();
+  const effectiveGenres = mergeSubcategoriesToGenres(options.subcategories, options.genres);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (client.rpc as any)("search_events_ranked", {
@@ -1099,8 +1139,9 @@ export async function searchEventsOnly(
     p_date_filter: mapDateFilter(options.dateFilter),
     p_is_free: options.isFree ?? null,
     p_portal_id: options.portalId || null,
-    p_subcategories: options.subcategories || null,
+    p_subcategories: null, // deprecated
     p_tags: options.tags || null,
+    p_genres: effectiveGenres || null,
   });
 
   if (error) {
@@ -1122,6 +1163,7 @@ export async function searchVenuesOnly(
     neighborhoods?: string[];
     spotTypes?: string[];
     vibes?: string[];
+    city?: string;
   } = {}
 ): Promise<VenueSearchRow[]> {
   const client = createServiceClient();
@@ -1134,6 +1176,7 @@ export async function searchVenuesOnly(
     p_neighborhoods: options.neighborhoods || null,
     p_spot_types: options.spotTypes || null,
     p_vibes: options.vibes || null,
+    p_city: options.city || null,
   });
 
   if (error) {

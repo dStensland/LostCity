@@ -8,6 +8,7 @@ import { useToast } from "@/components/Toast";
 import { FriendSearch } from "@/components/community/FriendSearch";
 import { EmailInput } from "./EmailInput";
 import { ContactMatchResults, type MatchedProfile } from "./ContactMatchResults";
+import UserAvatar from "@/components/UserAvatar";
 
 // Dynamic import QRCodeSVG to reduce initial bundle size
 const QRCodeSVG = dynamic(
@@ -186,26 +187,41 @@ export function FindFriendsContent() {
 
       {activeTab === "invite" && (
         <div className="space-y-6">
-          {/* QR Code */}
-          {inviteUrl && (
-            <div className="bg-[var(--dusk)] border border-[var(--twilight)] rounded-xl p-6">
-              <div className="flex justify-center mb-4">
-                <div className="bg-white p-4 rounded-xl">
-                  <QRCodeSVG
-                    value={inviteUrl}
-                    size={200}
-                    level="M"
-                    includeMargin={false}
-                  />
-                </div>
+          {/* Personal invite header */}
+          <div className="text-center py-4">
+            {profile && (
+              <div className="mb-4">
+                <UserAvatar
+                  src={profile.avatar_url ?? null}
+                  name={profile.display_name || profile.username || "You"}
+                  size="lg"
+                  glow
+                />
               </div>
-              <p className="text-center text-[var(--muted)] font-mono text-xs">
-                Scan to visit your invite link
-              </p>
+            )}
+            <h2 className="text-lg font-semibold text-[var(--cream)] mb-1">
+              {profile?.display_name || "Your"} personal invite
+            </h2>
+            <p className="font-mono text-sm text-[var(--muted)] max-w-xs mx-auto">
+              Atlanta&apos;s too good to explore alone. Share this link and your crew can find you here.
+            </p>
+          </div>
+
+          {/* QR Code — compact */}
+          {inviteUrl && (
+            <div className="flex justify-center">
+              <div className="bg-white p-3 rounded-xl shadow-lg">
+                <QRCodeSVG
+                  value={inviteUrl}
+                  size={160}
+                  level="M"
+                  includeMargin={false}
+                />
+              </div>
             </div>
           )}
 
-          {/* URL Display */}
+          {/* URL Display + Copy */}
           {inviteUrl && (
             <div className="bg-[var(--dusk)] border border-[var(--twilight)] rounded-xl p-4">
               <label className="block text-[var(--muted)] font-mono text-xs uppercase tracking-wider mb-2">
@@ -254,17 +270,31 @@ export function FindFriendsContent() {
                   Automatically add as friend
                 </span>
                 <span className="block text-[var(--muted)] font-mono text-xs mt-1">
-                  Skip the friend request - they&apos;ll be added when they join.
+                  Skip the friend request — they&apos;ll be added when they join.
                 </span>
               </div>
             </label>
           </div>
 
-          {/* Share button */}
+          {/* Share button — prominent */}
           {inviteUrl && (
             <button
-              onClick={handleCopy}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[var(--coral)] text-[var(--void)] rounded-xl font-mono text-sm font-medium hover:bg-[var(--rose)] transition-colors"
+              onClick={async () => {
+                if (navigator.share) {
+                  try {
+                    await navigator.share({
+                      title: "Join me on LostCity",
+                      text: "Check out events in Atlanta with me!",
+                      url: inviteUrl,
+                    });
+                  } catch {
+                    handleCopy();
+                  }
+                } else {
+                  handleCopy();
+                }
+              }}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3.5 bg-[var(--coral)] text-[var(--void)] rounded-xl font-mono text-sm font-medium hover:bg-[var(--rose)] transition-colors shadow-lg shadow-[var(--coral)]/20"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />

@@ -15,7 +15,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash
+from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, extract_event_links, find_event_url, enrich_event_record, parse_price
 
@@ -171,9 +171,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     events_found += 1
 
                     content_hash = generate_content_hash(title, "529", start_date)
-                    if find_event_by_hash(content_hash):
-                        events_updated += 1
-                        continue
 
                     # Build description
                     description = None
@@ -222,6 +219,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "recurrence_rule": None,
                         "content_hash": content_hash,
                     }
+
+                    existing = find_event_by_hash(content_hash)
+                    if existing:
+                        smart_update_existing_event(existing, event_record)
+                        events_updated += 1
+                        continue
 
                     try:
                         enrich_event_record(event_record, "529")

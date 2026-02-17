@@ -687,7 +687,6 @@ async function fetchFeedSectionsDirect(portal: Portal): Promise<FeedSection[]> {
         description: e.description,
         venue_name: e.venue?.name || null,
         category: e.category,
-        subcategory: e.subcategory,
         is_free: e.is_free,
         price_min: e.price_min,
         distance_km: null,

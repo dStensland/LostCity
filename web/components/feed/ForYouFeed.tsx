@@ -173,7 +173,6 @@ function buildDisplayItems(events: FeedEvent[]): DisplayItem[] {
     events.map((event) => ({
       ...event,
       category_id: event.category,
-      subcategory_id: event.subcategory,
     })) as unknown as EventWithLocation[],
     {
       collapseFestivals: true,

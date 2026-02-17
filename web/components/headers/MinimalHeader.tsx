@@ -96,7 +96,7 @@ export default function MinimalHeader({
 
         {/* Right: Search (optional) + User menu */}
         <div className="flex items-center gap-2 flex-shrink-0">
-          {headerConfig.show_search_in_header && <HeaderSearchButton />}
+          {headerConfig.show_search_in_header && <HeaderSearchButton portalSlug={portalSlug} />}
           <UserMenu />
         </div>
       </div>

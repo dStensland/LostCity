@@ -40,7 +40,6 @@ interface CalendarEvent {
   price_min: number | null;
   price_max: number | null;
   category: string | null;
-  subcategory: string | null;
   image_url: string | null;
   description: string | null;
   ticket_url: string | null;

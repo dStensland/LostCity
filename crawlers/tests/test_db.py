@@ -164,6 +164,37 @@ class TestInsertEvent:
         assert inserted_data["category"] == "community"
         assert "activism" in (inserted_data.get("genres") or [])
 
+    @patch("db.get_festival_source_hint", return_value=None)
+    @patch("db.get_venue_by_id_cached")
+    @patch("db.get_client")
+    def test_defaults_invalid_category_to_other(
+        self, mock_get_client, mock_get_venue, mock_festival_hint, sample_event_data
+    ):
+        """Should default invalid categories to 'other' instead of rejecting the event."""
+        client = MagicMock()
+        mock_get_client.return_value = client
+        mock_get_venue.return_value = {"vibes": []}
+
+        table = MagicMock()
+        client.table.return_value = table
+        table.insert.return_value = table
+        table.execute.return_value = MagicMock(data=[{"id": 888}])
+
+        from db import insert_event
+
+        event_data = dict(sample_event_data)
+        event_data["category"] = "invalid_garbage_category"
+        event_data["title"] = "Some Event"
+
+        event_id = insert_event(event_data)
+
+        # Event should be inserted, not rejected
+        assert event_id == 888
+
+        # Category should be defaulted to "other"
+        inserted_data = table.insert.call_args_list[0][0][0]
+        assert inserted_data["category"] == "other"
+
 
 class TestFindEventByHash:
     """Tests for find_event_by_hash function."""

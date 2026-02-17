@@ -18,11 +18,15 @@ export default function ActiveFilters() {
     () => searchParams.get("subcategories")?.split(",").filter(Boolean) || [],
     [searchParams]
   );
+  const genres = useMemo(
+    () => searchParams.get("genres")?.split(",").filter(Boolean) || [],
+    [searchParams]
+  );
   const isFree = searchParams.get("free") === "true";
   const dateFilter = searchParams.get("date");
   const venueId = searchParams.get("venue");
 
-  const hasFilters = search || categories.length > 0 || subcategories.length > 0 || isFree || dateFilter || venueId;
+  const hasFilters = search || categories.length > 0 || subcategories.length > 0 || genres.length > 0 || isFree || dateFilter || venueId;
 
   const removeFilter = useCallback(
     (key: string, value?: string) => {
@@ -44,6 +48,13 @@ export default function ActiveFilters() {
         } else {
           params.delete("subcategories");
         }
+      } else if (key === "genres" && value) {
+        const newGenres = genres.filter((g) => g !== value);
+        if (newGenres.length > 0) {
+          params.set("genres", newGenres.join(","));
+        } else {
+          params.delete("genres");
+        }
       } else {
         params.delete(key);
       }
@@ -52,7 +63,7 @@ export default function ActiveFilters() {
       const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
       router.push(newUrl, { scroll: false });
     },
-    [router, pathname, searchParams, categories, subcategories]
+    [router, pathname, searchParams, categories, subcategories, genres]
   );
 
   const clearAll = useCallback(() => {
@@ -120,6 +131,18 @@ export default function ActiveFilters() {
           className="active-filter-chip"
         >
           {getSubcategoryLabel(sub)}
+          <XIcon />
+        </button>
+      ))}
+
+      {genres.map((genre) => (
+        <button
+          key={genre}
+          type="button"
+          onClick={() => removeFilter("genres", genre)}
+          className="active-filter-chip"
+        >
+          {genre.replace(/_/g, " ")}
           <XIcon />
         </button>
       ))}

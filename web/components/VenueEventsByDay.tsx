@@ -73,7 +73,18 @@ const buildLineupSummary = (event: VenueEvent) => {
       .map((artist) => artist.name)
       .filter((name) => name && name !== headliner);
 
+    if (event.category === "sports" && sorted.length >= 2) {
+      const matchup = `${sorted[0].name} vs ${sorted[1].name}`;
+      if (normalizeLabel(matchup) !== normalizeLabel(event.title)) {
+        return matchup;
+      }
+      return null;
+    }
+
     if (supports.length > 0) {
+      if (event.category === "comedy") {
+        return `featuring ${supports.join(", ")}`;
+      }
       return `with ${supports.join(", ")}`;
     }
 

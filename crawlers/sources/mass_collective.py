@@ -17,7 +17,7 @@ from datetime import datetime
 from typing import Optional
 
 from config import get_config
-from db import get_or_create_venue, insert_event, find_event_by_hash
+from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -234,11 +234,6 @@ def process_event(event_data: dict, source_id: int, venue_id: int) -> Optional[d
         # Generate content hash
         content_hash = generate_content_hash(title, "MASS Collective", start_date)
 
-        # Check if already exists
-        existing = find_event_by_hash(content_hash)
-        if existing:
-            return {"status": "exists"}
-
         # Build price note
         price_note = None
         if is_free:
@@ -249,7 +244,7 @@ def process_event(event_data: dict, source_id: int, venue_id: int) -> Optional[d
             else:
                 price_note = f"${price_min:.0f}-${price_max:.0f}"
 
-        return {
+        event_record = {
             "source_id": source_id,
             "venue_id": venue_id,
             "title": title[:200],
@@ -275,6 +270,14 @@ def process_event(event_data: dict, source_id: int, venue_id: int) -> Optional[d
             "recurrence_rule": None,
             "content_hash": content_hash,
         }
+
+        # Check if already exists
+        existing = find_event_by_hash(content_hash)
+        if existing:
+            smart_update_existing_event(existing, event_record)
+            return {"status": "exists"}
+
+        return event_record
     except Exception as e:
         logger.error(f"Error processing event: {e}")
         return None

@@ -5,7 +5,6 @@ import {
   parseIntParam,
   parseFloatParam,
   isValidString,
-  isValidUUID,
 } from "@/lib/api-utils";
 import {
   applyRateLimit,
@@ -13,6 +12,8 @@ import {
   getClientIdentifier,
 } from "@/lib/rate-limit";
 import { enrichEventsWithSocialProof } from "@/lib/search";
+import { resolvePortalQueryContext } from "@/lib/portal-query-context";
+import { applyPortalScopeToQuery, filterByPortalCity } from "@/lib/portal-scope";
 
 const VALID_CLASS_CATEGORIES = [
   "painting",
@@ -53,14 +54,11 @@ export async function GET(request: NextRequest) {
   const priceMin = parseFloatParam(searchParams.get("price_min"));
   const priceMax = parseFloatParam(searchParams.get("price_max"));
   const skillLevel = searchParams.get("skill_level");
-  const portalIdParam = searchParams.get("portal_id");
+  const portalExclusive = searchParams.get("portal_exclusive") === "true";
   const neighborhood = searchParams.get("neighborhood");
   const sort = searchParams.get("sort") || "date";
   const limit = Math.min(parseIntParam(searchParams.get("limit"), 20) ?? 20, 50);
   const offset = parseIntParam(searchParams.get("offset"), 0) ?? 0;
-
-  // Validate portal_id to prevent PostgREST filter injection
-  const portalId = portalIdParam && isValidUUID(portalIdParam) ? portalIdParam : null;
 
   // Validate params
   if (classCategory && !VALID_CLASS_CATEGORIES.includes(classCategory as typeof VALID_CLASS_CATEGORIES[number])) {
@@ -71,6 +69,15 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = await createClient();
+  const portalContext = await resolvePortalQueryContext(supabase, searchParams);
+  if (portalContext.hasPortalParamMismatch) {
+    return NextResponse.json(
+      { error: "portal and portal_id parameters must reference the same portal" },
+      { status: 400 }
+    );
+  }
+  const portalId = portalContext.portalId;
+  const portalCity = !portalExclusive ? portalContext.filters.city : undefined;
   const today = new Date().toISOString().split("T")[0];
 
   const buildQuery = (includeFestival: boolean) => {
@@ -163,12 +170,11 @@ export async function GET(request: NextRequest) {
       query = query.eq("venues.neighborhood", neighborhood);
     }
 
-    // Portal filtering
-    if (portalId) {
-      query = query.or(`portal_id.eq.${portalId},portal_id.is.null`);
-    } else {
-      query = query.is("portal_id", null);
-    }
+    query = applyPortalScopeToQuery(query, {
+      portalId,
+      portalExclusive,
+      publicOnlyWhenNoPortal: true,
+    });
 
     // Sorting
     if (sort === "price") {
@@ -209,11 +215,16 @@ export async function GET(request: NextRequest) {
   const enrichedClasses = data
     ? await enrichEventsWithSocialProof(data as unknown as Parameters<typeof enrichEventsWithSocialProof>[0])
     : [];
+  const cityScopedClasses = filterByPortalCity(
+    enrichedClasses as Array<{ venue?: { city?: string | null } | null }>,
+    portalCity,
+    { allowMissingCity: true }
+  );
 
   return NextResponse.json(
     {
-      classes: enrichedClasses,
-      total: count ?? 0,
+      classes: cityScopedClasses,
+      total: portalCity ? cityScopedClasses.length : (count ?? 0),
       limit,
       offset,
     },

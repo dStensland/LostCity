@@ -167,11 +167,14 @@ export default function SearchBar() {
   const isInitialMount = useRef(true);
   const fetchIdRef = useRef(0);
 
-  // Derive portal slug from pathname
+  // Prefer portal slug from search context; fall back to URL path.
   const portalSlug = useMemo(() => {
+    if (searchContext?.portalSlug) {
+      return searchContext.portalSlug;
+    }
     const match = pathname.match(/^\/([^/]+)/);
     return match ? match[1] : "atlanta";
-  }, [pathname]);
+  }, [searchContext?.portalSlug, pathname]);
 
   // Build ranking context
   const rankingContext = useMemo<RankingContext>(() => ({
@@ -212,8 +215,9 @@ export default function SearchBar() {
         if (rankingContext.findType) {
           params.set("findType", rankingContext.findType);
         }
+        params.set("portal", portalSlug);
         if (rankingContext.portalId) {
-          params.set("portal", rankingContext.portalId);
+          params.set("portal_id", rankingContext.portalId);
         }
 
         const response = await fetch(`/api/search/instant?${params.toString()}`);

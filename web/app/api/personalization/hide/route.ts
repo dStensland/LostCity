@@ -3,6 +3,7 @@ import { getUser } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { errorResponse } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import { resolvePortalAttributionForWrite } from "@/lib/portal-attribution";
 
 // POST /api/personalization/hide - Hide an event from recommendations
 export async function POST(request: NextRequest) {
@@ -40,11 +41,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, message: "Already hidden" });
   }
 
+  const attribution = await resolvePortalAttributionForWrite(request, {
+    endpoint: "/api/personalization/hide",
+    body,
+    requireWhenHinted: true,
+  });
+  if (attribution.response) return attribution.response;
+  const portalId = attribution.portalId;
+
   // Hide the event
   const { error } = await supabase.from("hidden_events").insert({
     user_id: user.id,
     event_id: eventId,
     reason: reason || null,
+    ...(portalId ? { portal_id: portalId } : {}),
   } as never);
 
   if (error) {

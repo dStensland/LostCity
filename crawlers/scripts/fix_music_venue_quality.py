@@ -25,7 +25,7 @@ from urllib.parse import urlparse
 # Add crawlers/ to import path when run directly.
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from db import get_client, parse_lineup_from_title
+from db import get_client, parse_lineup_from_title, upsert_event_artists
 from description_fetcher import generate_synthetic_description
 
 
@@ -292,20 +292,8 @@ def normalize_existing_payload(rows: list[dict[str, Any]], headliner_name: str |
 
 
 def replace_event_artists(client: Any, event_id: int, payload: list[dict[str, Any]]) -> None:
-    client.table("event_artists").delete().eq("event_id", event_id).execute()
-    if not payload:
-        return
-    rows = [
-        {
-            "event_id": event_id,
-            "name": row["name"],
-            "role": row.get("role"),
-            "billing_order": row.get("billing_order"),
-            "is_headliner": bool(row.get("is_headliner")),
-        }
-        for row in payload
-    ]
-    client.table("event_artists").insert(rows).execute()
+    # Route through shared writer so one-off fixes can't bypass sanitization/canonical linking.
+    upsert_event_artists(event_id, payload, link_canonical=True)
 
 
 def run_music_venue_quality_fix(

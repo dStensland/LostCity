@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getUser } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import { resolvePortalAttributionForWrite } from "@/lib/portal-attribution";
 import { logger } from "@/lib/logger";
 
 // POST /api/personalization/feedback - Record user feedback on events
@@ -35,6 +36,14 @@ export async function POST(request: NextRequest) {
   // Use service client for mutations to avoid RLS issues
   const supabase = createServiceClient();
 
+  const attribution = await resolvePortalAttributionForWrite(request, {
+    endpoint: "/api/personalization/feedback",
+    body,
+    requireWhenHinted: true,
+  });
+  if (attribution.response) return attribution.response;
+  const portalId = attribution.portalId;
+
   // Update inferred preferences based on feedback
   const signalMultiplier = signal === "positive" ? 1 : -0.5;
 
@@ -45,7 +54,8 @@ export async function POST(request: NextRequest) {
       user.id,
       "category",
       category,
-      signalMultiplier
+      signalMultiplier,
+      portalId
     );
   }
 
@@ -56,7 +66,8 @@ export async function POST(request: NextRequest) {
       user.id,
       "venue",
       venueId.toString(),
-      signalMultiplier
+      signalMultiplier,
+      portalId
     );
   }
 
@@ -67,7 +78,8 @@ export async function POST(request: NextRequest) {
       user.id,
       "neighborhood",
       neighborhood,
-      signalMultiplier
+      signalMultiplier,
+      portalId
     );
   }
 
@@ -77,6 +89,7 @@ export async function POST(request: NextRequest) {
     activity_type: signal === "positive" ? "like" : "dislike",
     event_id: eventId,
     visibility: "private",
+    ...(portalId ? { portal_id: portalId } : {}),
     metadata: {
       signal,
       reason,
@@ -98,7 +111,8 @@ async function upsertInferredPreference(
   userId: string,
   signalType: string,
   signalValue: string,
-  scoreChange: number
+  scoreChange: number,
+  portalId: string | null = null
 ) {
   type InferredPref = { id: string; score: number; interaction_count: number };
 
@@ -141,6 +155,7 @@ async function upsertInferredPreference(
       signal_value: signalValue,
       score: scoreChange > 0 ? 1 : 0,
       interaction_count: 1,
+      ...(portalId ? { portal_id: portalId } : {}),
     } as never);
 
     if (insertError) {

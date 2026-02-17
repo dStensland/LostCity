@@ -2,7 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { NextRequest } from "next/server";
 import { getLocalDateString } from "@/lib/formats";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
-import { isValidUUID } from "@/lib/api-utils";
+import { resolvePortalQueryContext } from "@/lib/portal-query-context";
+import { applyPortalScopeToQuery, filterByPortalCity } from "@/lib/portal-scope";
 
 export async function GET(
   request: NextRequest,
@@ -12,14 +13,22 @@ export async function GET(
   if (rateLimitResult) return rateLimitResult;
 
   const { slug } = await params;
-  const portalIdParam = request.nextUrl.searchParams.get("portal_id");
-  const portalId = portalIdParam && isValidUUID(portalIdParam) ? portalIdParam : null;
+  const searchParams = request.nextUrl.searchParams;
+  const portalExclusive = searchParams.get("portal_exclusive") === "true";
 
   if (!slug) {
     return Response.json({ error: "Invalid slug" }, { status: 400 });
   }
 
   const supabase = await createClient();
+  const portalContext = await resolvePortalQueryContext(supabase, searchParams);
+  if (portalContext.hasPortalParamMismatch) {
+    return Response.json(
+      { error: "portal and portal_id parameters must reference the same portal" },
+      { status: 400 }
+    );
+  }
+  const portalCity = !portalExclusive ? portalContext.filters.city : undefined;
 
   const { data: festivalData, error } = await supabase
     .from("festivals")
@@ -70,20 +79,22 @@ export async function GET(
       start_time,
       end_time,
       series_id,
-      venue:venues(id, name, slug, neighborhood)
+      venue:venues(id, name, slug, neighborhood, city)
     `)
     .in("series_id", programIds)
     .gte("start_date", today)
     .order("start_date", { ascending: true })
     .order("start_time", { ascending: true });
 
-  if (portalId) {
-    eventsQuery = eventsQuery.or(`portal_id.eq.${portalId},portal_id.is.null`);
-  }
+  eventsQuery = applyPortalScopeToQuery(eventsQuery, {
+    portalId: portalContext.portalId,
+    portalExclusive,
+    publicOnlyWhenNoPortal: true,
+  });
 
   const { data: eventsData } = await eventsQuery;
 
-  const sessions = (eventsData || []) as {
+  const rawSessions = (eventsData || []) as {
     id: number;
     title: string;
     start_date: string;
@@ -95,8 +106,12 @@ export async function GET(
       name: string;
       slug: string;
       neighborhood: string | null;
+      city?: string | null;
     } | null;
   }[];
+  const sessions = filterByPortalCity(rawSessions, portalCity, {
+    allowMissingCity: true,
+  });
 
   const sessionsByProgram = new Map<string, typeof sessions>();
   sessions.forEach((session) => {

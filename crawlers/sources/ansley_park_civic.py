@@ -14,7 +14,7 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash
+from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -76,9 +76,6 @@ def create_monthly_meetings(source_id: int, venue_id: int) -> tuple[int, int]:
 
         content_hash = generate_content_hash(title, "Ansley Park", start_date)
 
-        if find_event_by_hash(content_hash):
-            events_updated += 1
-            continue
 
         event_record = {
             "source_id": source_id,
@@ -110,6 +107,12 @@ def create_monthly_meetings(source_id: int, venue_id: int) -> tuple[int, int]:
             "recurrence_rule": "FREQ=MONTHLY;BYDAY=3TH",
             "content_hash": content_hash,
         }
+
+        existing = find_event_by_hash(content_hash)
+        if existing:
+            smart_update_existing_event(existing, event_record)
+            events_updated += 1
+            continue
 
         try:
             insert_event(event_record)

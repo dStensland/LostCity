@@ -7656,7 +7656,7 @@ body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-
    Desktop: vibrant, let the photography breathe
    ============================================ */
 .explore-banner-img {
-  filter: brightness(0.5) saturate(0.85) contrast(1.1);
+  filter: brightness(0.6) saturate(0.9) contrast(1.1);
   transition: filter 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94),
               transform 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
@@ -7664,10 +7664,10 @@ body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-
 .explore-banner-gradient {
   background: linear-gradient(
     to top,
-    rgba(10, 10, 10, 0.97) 0%,
-    rgba(10, 10, 10, 0.85) 25%,
-    rgba(10, 10, 10, 0.45) 55%,
-    rgba(10, 10, 10, 0.1) 75%,
+    rgba(10, 10, 10, 0.92) 0%,
+    rgba(10, 10, 10, 0.75) 25%,
+    rgba(10, 10, 10, 0.35) 55%,
+    rgba(10, 10, 10, 0.08) 75%,
     transparent 100%
   );
 }
@@ -7691,7 +7691,7 @@ body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-
 
 /* Hover — images brighten, subtle zoom handled by component */
 .explore-track-banner:hover .explore-banner-img {
-  filter: brightness(0.6) saturate(0.95) contrast(1.08);
+  filter: brightness(0.7) saturate(0.95) contrast(1.08);
 }
 
 @media (min-width: 768px) {
@@ -7786,11 +7786,17 @@ body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-
 
 .venue-card-lift {
   transition: transform 0.3s ease, box-shadow 0.3s ease;
+  backface-visibility: hidden;
 }
 
 .venue-card-lift:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+}
+
+.venue-card-lift:active {
+  transform: scale(0.98);
+  transition-duration: 0.1s;
 }
 
 .explore-skeleton-text {
@@ -7802,6 +7808,26 @@ body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-
   );
   background-size: 200% 100%;
   animation: skeleton-shimmer-wave 1.8s ease-in-out infinite;
+}
+
+/* Detail hero image — brighter than mobile banner treatment */
+.explore-detail-hero-img {
+  filter: brightness(0.7) saturate(0.95) contrast(1.1);
+  transition: filter 0.8s ease-out;
+}
+@media (min-width: 768px) {
+  .explore-detail-hero-img {
+    filter: brightness(0.8) saturate(1.05) contrast(1.08);
+  }
+}
+
+/* Quote entrance — delayed fade */
+@keyframes quoteFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 0.8; transform: translateY(0); }
+}
+.explore-quote-enter {
+  animation: quoteFadeIn 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.4s both;
 }
 
 .logo-root[data-portal="atlanta-test"] {
@@ -7818,4 +7844,33 @@ body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-
 
 .logo-root[data-portal="atlanta-test-mood-3"] {
   --portal-color: #ffc56a;
+}
+
+/* Celebration toast animations */
+@keyframes celebration-toast {
+  0% { opacity: 0; transform: scale(0.8) translateY(20px); }
+  50% { transform: scale(1.05) translateY(-5px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes slide-right {
+  0% { transform: translateX(-10px); opacity: 0; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slide-left {
+  0% { transform: translateX(10px); opacity: 0; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+
+.animate-celebration-toast {
+  animation: celebration-toast 0.5s ease-out forwards;
+}
+
+.animate-slide-right {
+  animation: slide-right 0.4s ease-out 0.2s both;
+}
+
+.animate-slide-left {
+  animation: slide-left 0.4s ease-out 0.3s both;
 }

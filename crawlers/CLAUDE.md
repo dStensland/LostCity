@@ -58,7 +58,7 @@ python main.py --source marys-bar --verbose
 ## Key Database Operations (db.py)
 
 - `get_or_create_venue(venue_data)` — Finds by slug or name, creates if missing. Returns venue ID.
-- `insert_event(event_data)` — Inserts event with auto-tagging, poster fetching, genre inference.
+- `insert_event(event_data, series_hint=None)` — Inserts event with auto-tagging, poster fetching, genre inference. Pass `series_hint` dict to link into a series (see Series Grouping section).
 - `find_event_by_hash(content_hash)` — Dedup check before inserting.
 - `generate_content_hash(title, venue_name, date)` — From dedupe.py, creates MD5 hash.
 
@@ -134,6 +134,59 @@ Every crawler and import should produce data that meets our health targets. See 
 | `fetch_venue_photos_google.py` | Google Places photos for venues without websites |
 | `classify_venues.py` | Rules-based venue type classification and junk cleanup |
 | `data_health.py` | Run full health diagnostic across all entity types |
+
+## Series Grouping (Recurring Events)
+
+**When to use series:** Any time a source produces multiple events that are instances of the same recurring activity, group them into a series. This prevents feed spam (56 individual volunteer shifts → 8 series cards with "See all dates").
+
+### Identifying Series Candidates
+
+Look for these patterns when building or reviewing a crawler:
+- **Volunteer shifts** — Same shift type repeating daily/weekly (e.g., "Morning Warehouse Sort" every weekday)
+- **Recurring shows** — Weekly trivia, karaoke, open mic, DJ nights
+- **Class series** — Yoga, cooking, art classes that repeat on a schedule
+- **Festival programming** — Multiple events under one festival umbrella
+
+### Using `series_hint`
+
+Pass a `series_hint` dict to `insert_event()` to auto-link events into a series:
+
+```python
+series_hint = {
+    "series_type": "recurring_show",   # recurring_show, class_series, festival_program, film, other
+    "series_title": "Tuesday Trivia",  # Shared across all instances — this is the series name
+    "frequency": "weekly",             # daily, weekly, biweekly, monthly, irregular
+    "day_of_week": "tuesday",          # Optional — for weekly/biweekly series
+}
+
+insert_event(event_record, series_hint=series_hint)
+```
+
+### Series Types
+
+| Type | Use For |
+|------|---------|
+| `recurring_show` | Weekly/daily recurring events (trivia, karaoke, volunteer shifts, open mic) |
+| `class_series` | Classes and workshops that repeat (yoga, cooking, art) |
+| `festival_program` | Events under a festival umbrella (auto-detected by `get_festival_source_hint`) |
+| `film` | Film screenings (auto-linked by TMDB poster fetcher) |
+| `other` | Anything else that repeats |
+
+### Key Rules
+
+- **`series_title` must be the SAME across all instances.** "Tuesday Trivia" not "Tuesday Trivia - Feb 18" — the date is already on the event.
+- **Never use the event title as series_title for festival programs** — that creates one series per event. Use the festival/program name.
+- **Each unique shift/show at each unique venue = its own series.** "Morning Sort at East Point" and "Morning Sort at Marietta" are separate series.
+- **Set `is_recurring: True`** on the event record when it's part of a series with a predictable schedule.
+- **Auto-detection fallback:** If `is_recurring=True` but no `series_hint` is passed, `db.py` auto-creates a series using the event title. Explicit hints are better.
+
+### VolunteerHub Pattern
+
+Multiple nonprofits use VolunteerHub (`volunteerhub.com/internalapi/volunteerview/view/index`) for volunteer scheduling. When you see a VolunteerHub-powered calendar:
+
+1. Hit the API directly instead of scraping HTML
+2. Group repeating shifts into series by shift-type + location
+3. Each shift instance keeps its own VolunteerHub registration URL as `ticket_url`
 
 ## Source Activation
 

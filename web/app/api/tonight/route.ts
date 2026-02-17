@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { format, startOfDay, addDays, startOfWeek, startOfMonth } from "date-fns";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import { resolvePortalQueryContext } from "@/lib/portal-query-context";
+import { applyPortalScopeToQuery, filterByPortalCity } from "@/lib/portal-scope";
 
 type HighlightsPeriod = "today" | "week" | "month";
 
@@ -494,8 +496,16 @@ export async function GET(request: NextRequest) {
 
     const supabase = await createClient();
 
+    const portalContext = await resolvePortalQueryContext(supabase, request.nextUrl.searchParams);
+    if (portalContext.hasPortalParamMismatch) {
+      return NextResponse.json(
+        { error: "portal and portal_id parameters must reference the same portal" },
+        { status: 400 }
+      );
+    }
+
     // PERFORMANCE: Run portal lookup and curated picks fetch in parallel
-    const [curatedPicksResult, atlantaPortalResult] = await Promise.all([
+    const [curatedPicksResult, activePortalResult] = await Promise.all([
       // Check for curated picks first — if editor-curated picks exist for this period,
       // return those directly instead of running the scoring algorithm
       supabase
@@ -505,19 +515,20 @@ export async function GET(request: NextRequest) {
         .eq("period", period)
         .order("position", { ascending: true }),
 
-      // Get the main Atlanta portal ID
-      supabase
-        .from("portals")
-        .select("id")
-        .eq("slug", "atlanta")
-        .single<{ id: string }>()
+      portalContext.portalId
+        ? Promise.resolve({ data: { id: portalContext.portalId } })
+        : supabase
+            .from("portals")
+            .select("id")
+            .eq("slug", "atlanta")
+            .single<{ id: string }>()
     ]);
 
     const { data: curatedPicks } = curatedPicksResult;
-    const { data: atlantaPortal } = atlantaPortalResult;
+    const { data: activePortal } = activePortalResult;
 
-    if (!atlantaPortal) {
-      console.error("Atlanta portal not found");
+    if (!activePortal) {
+      console.error("Active portal not found");
       return NextResponse.json({ events: [], period }, { status: 500 });
     }
 
@@ -558,10 +569,15 @@ export async function GET(request: NextRequest) {
               cRsvpCounts.set(r.event_id, (cRsvpCounts.get(r.event_id) || 0) + 1);
             }
 
-            const result = sorted.map(({ description: _d, venue_id: _v, ...event }) => ({
-              ...event,
-              rsvp_count: (cRsvpCounts.get(event.id) || 0) > 0 ? cRsvpCounts.get(event.id) : undefined,
-            }));
+            const result = sorted.map(({ description: _d, venue_id: _v, ...event }) => {
+              void _d;
+              void _v;
+              return {
+                ...event,
+                rsvp_count:
+                  (cRsvpCounts.get(event.id) || 0) > 0 ? cRsvpCounts.get(event.id) : undefined,
+              };
+            });
 
             return NextResponse.json({ events: result, period }, { headers: cacheHeaders });
           }
@@ -578,13 +594,22 @@ export async function GET(request: NextRequest) {
     // 1. Non-film events (the diverse pool — music, comedy, art, etc.)
     // 2. Small indie film sample (chain cinemas excluded entirely — only arthouse/indie)
     // Without this split, film showtimes (~60% of all events) flood the candidate pool.
-    const baseFilters = (query: ReturnType<typeof supabase.from>) => query
-      .gte("start_date", startDate)
-      .lte("start_date", endDate)
-      .is("canonical_event_id", null)
-      .or("is_class.eq.false,is_class.is.null")
-      .or("is_sensitive.eq.false,is_sensitive.is.null")
-      .or(`portal_id.eq.${atlantaPortal.id},portal_id.is.null`);
+    const baseFilters = (query: ReturnType<typeof supabase.from>) => {
+      let scoped = query
+        .gte("start_date", startDate)
+        .lte("start_date", endDate)
+        .is("canonical_event_id", null)
+        .or("is_class.eq.false,is_class.is.null")
+        .or("is_sensitive.eq.false,is_sensitive.is.null");
+
+      scoped = applyPortalScopeToQuery(scoped, {
+        portalId: activePortal.id,
+        portalExclusive: false,
+        publicOnlyWhenNoPortal: true,
+      });
+
+      return scoped;
+    };
 
     // For month: fetch candidates per-week-bucket to ensure temporal diversity.
     // Without this, the 1000-row limit fills entirely with W0 events (1200+ exist)
@@ -678,13 +703,12 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Filter out events from non-Atlanta cities (defense against portal_id IS NULL leakage)
-    const atlantaCities = new Set(["atlanta", "decatur", "marietta", "smyrna", "brookhaven", "sandy springs", "roswell", "alpharetta", "duluth", "kennesaw", "woodstock", "johns creek", "lawrenceville", "stone mountain", "east point", "college park", "avondale estates", "tucker", "doraville", "chamblee", "dunwoody", "peachtree city"]);
-    allEvents = allEvents.filter(event => {
-      if (!event.venue?.city) return true; // Allow events with no city (can't filter)
-      const venueCity = event.venue.city.trim().toLowerCase();
-      return atlantaCities.has(venueCity) || venueCity.includes("atlanta");
-    });
+    // Filter out cross-city leakage when including portal_id IS NULL rows.
+    allEvents = filterByPortalCity(
+      allEvents,
+      portalContext.filters.city || "Atlanta",
+      { allowMissingCity: false }
+    );
 
     // Filter out today's events that already happened (started > 2 hours ago)
     // Only applies to today's date — future dates always included

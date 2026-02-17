@@ -11,15 +11,17 @@ import RecommendButton from "@/components/RecommendButton";
 import VenueTagList from "@/components/VenueTagList";
 import FlagButton from "@/components/FlagButton";
 import LinkifyText from "@/components/LinkifyText";
-import CollapsibleSection, { CategoryIcons, CATEGORY_COLORS } from "@/components/CollapsibleSection";
 import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
+import NearbySection from "@/components/NearbySection";
 import { VenueEventCard } from "@/components/VenueEventsByDay";
-import HoursSection, { OpenStatusBadge } from "@/components/HoursSection";
+import HoursSection from "@/components/HoursSection";
 import { type HoursData } from "@/lib/hours";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
 import { isDogPortal, classifyDogContentType, DOG_CONTENT_COLORS } from "@/lib/dog-art";
 import { HIGHLIGHT_CONFIG, type VenueHighlight } from "@/lib/venue-highlights";
+import DirectionsDropdown from "@/components/DirectionsDropdown";
+import GettingThereSection, { type WalkableNeighbor } from "@/components/GettingThereSection";
 import dynamic from "next/dynamic";
 
 const DogTagModal = dynamic(
@@ -48,6 +50,18 @@ type SpotData = {
   spot_type: string | null;
   spot_types: string[] | null;
   vibes: string[] | null;
+  // Transit fields
+  nearest_marta_station: string | null;
+  marta_walk_minutes: number | null;
+  marta_lines: string[] | null;
+  beltline_adjacent: boolean | null;
+  beltline_segment: string | null;
+  beltline_walk_minutes: number | null;
+  parking_type: string[] | null;
+  parking_free: boolean | null;
+  parking_note: string | null;
+  transit_score: number | null;
+  walkable_neighbor_count: number | null;
 };
 
 type UpcomingEvent = {
@@ -326,6 +340,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
   const [isLowRes, setIsLowRes] = useState(false);
   const [highlights, setHighlights] = useState<VenueHighlight[]>([]);
   const [artifacts, setArtifacts] = useState<{id: number; name: string; slug: string | null; image_url: string | null; short_description: string | null}[]>([]);
+  const [walkableNeighbors, setWalkableNeighbors] = useState<WalkableNeighbor[]>([]);
   const [showTagModal, setShowTagModal] = useState(false);
 
   useEffect(() => {
@@ -353,6 +368,24 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
 
     fetchSpot();
   }, [slug]);
+
+  // Fetch walkable neighbors when spot is loaded
+  useEffect(() => {
+    if (!spot || !spot.walkable_neighbor_count) return;
+
+    async function fetchWalkable() {
+      try {
+        const res = await fetch(`/api/spots/${slug}/walkable`);
+        if (!res.ok) return;
+        const data = await res.json();
+        setWalkableNeighbors(data.neighbors || []);
+      } catch {
+        // Enhancement — silent fail
+      }
+    }
+
+    fetchWalkable();
+  }, [spot, slug]);
 
   const navigateToDetail = (param: string, value: string | number) => {
     const params = new URLSearchParams(searchParams?.toString() || "");
@@ -690,12 +723,32 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
           <VenueTagList venueId={spot.id} />
         </div>
 
+        {/* Getting There — transit, parking, walkable neighbors */}
+        {(spot.nearest_marta_station || spot.beltline_adjacent || (spot.parking_type && spot.parking_type.length > 0) || spot.transit_score) && (
+          <div className="mt-6 pt-6 border-t border-[var(--twilight)]">
+            <GettingThereSection
+              transit={spot}
+              variant="expanded"
+              walkableNeighbors={walkableNeighbors}
+              onSpotClick={handleSpotClick}
+            />
+          </div>
+        )}
+
         {/* Location */}
         {spot.address && (
           <div className="mt-6 pt-6 border-t border-[var(--twilight)]">
-            <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
-              Location
-            </h2>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest">
+                Location
+              </h2>
+              <DirectionsDropdown
+                venueName={spot.name}
+                address={spot.address}
+                city={spot.city}
+                state={spot.state}
+              />
+            </div>
             <p className="text-[var(--soft)]">
               {spot.address}
               <br />
@@ -725,110 +778,10 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
 
       {/* Happening Around Here */}
       {nearbyDestinations && (
-        (() => {
-          const totalDestinations = Object.values(nearbyDestinations).flat().length;
-          if (totalDestinations === 0) return null;
-
-          const categories = [
-            { key: "food" as const, label: "Food" },
-            { key: "drinks" as const, label: "Drinks" },
-            { key: "nightlife" as const, label: "Nightlife" },
-            { key: "caffeine" as const, label: "Caffeine" },
-            { key: "fun" as const, label: "Fun" },
-          ];
-
-          return (
-            <div className="mt-8">
-              {/* Neon header */}
-              <div className="mb-6 relative">
-                <h2
-                  className="font-mono text-lg font-bold uppercase tracking-wider text-coral-strong"
-                >
-                  <span className="text-blur-soft">Happening Around Here</span>
-                </h2>
-                <div
-                  className="absolute inset-0 pointer-events-none coral-sweep"
-                />
-              </div>
-
-              <div className="space-y-3">
-                {categories.map(({ key, label }) => {
-                  const items = nearbyDestinations[key];
-                  if (!items || items.length === 0) return null;
-
-                  return (
-                    <CollapsibleSection
-                      key={key}
-                      title={label}
-                      count={items.length}
-                      icon={CategoryIcons[key]}
-                      accentColor={CATEGORY_COLORS[key]}
-                      defaultOpen={false}
-                    >
-                      <div className="space-y-2">
-                        {items.map((dest) => (
-                          <button
-                            key={dest.id}
-                            onClick={() => handleSpotClick(dest.slug)}
-                            className="block w-full text-left p-3 border border-[var(--twilight)] rounded-lg bg-[var(--dusk)] hover:border-[var(--coral)]/50 transition-colors group"
-                          >
-                            <div className="flex items-start gap-3">
-                              {/* Thumbnail */}
-                              {dest.image_url && (
-                                <div className="w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-[var(--twilight)]">
-                                  <Image
-                                    src={dest.image_url}
-                                    alt={dest.name}
-                                    width={56}
-                                    height={56}
-                                    className="w-full h-full object-cover"
-                                  />
-                                </div>
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <h4 className="text-[var(--cream)] font-medium truncate group-hover:text-[var(--coral)] transition-colors">
-                                    {dest.name}
-                                  </h4>
-                                  {(dest.hours || dest.is_24_hours) && (
-                                    <OpenStatusBadge
-                                      hours={dest.hours || null}
-                                      is24Hours={dest.is_24_hours || false}
-                                    />
-                                  )}
-                                </div>
-                                {dest.short_description && (
-                                  <p className="text-xs text-[var(--soft)] mt-0.5 line-clamp-1">
-                                    {dest.short_description}
-                                  </p>
-                                )}
-                                <div className="flex items-center gap-2 mt-1">
-                                  {dest.distance !== undefined && (
-                                    <span className="text-[0.65rem] text-[var(--muted)] font-mono">
-                                      {dest.distance < 0.1 ? "Nearby" : `${dest.distance.toFixed(1)} mi`}
-                                    </span>
-                                  )}
-                                  {dest.vibes && dest.vibes.length > 0 && (
-                                    <span className="text-[0.65rem] text-[var(--soft)]">
-                                      {dest.vibes.slice(0, 2).map(v => v.replace(/-/g, " ")).join(" · ")}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                              <svg className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                              </svg>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </CollapsibleSection>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })()
+        <NearbySection
+          nearbySpots={nearbyDestinations}
+          onSpotClick={handleSpotClick}
+        />
       )}
 
       {/* Dog-Friendly Nearby (dog portal only) */}

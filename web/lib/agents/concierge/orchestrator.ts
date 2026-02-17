@@ -129,7 +129,6 @@ function eventSearchBlob(event: FeedEvent): string {
   return [
     normalizeText(event.title || ""),
     normalizeText(event.category || ""),
-    normalizeText(event.subcategory || ""),
     normalizeText(eventVenueName(event)),
   ].join(" ");
 }

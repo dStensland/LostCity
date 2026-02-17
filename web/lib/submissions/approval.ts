@@ -58,7 +58,7 @@ export async function createEventFromSubmission(
       end_time: data.end_time || null,
       is_all_day: data.is_all_day || false,
       category: data.category || null,
-      subcategory: data.subcategory || null,
+      genres: data.genres || null,
       tags: data.tags || null,
       price_min: data.price_min || null,
       price_max: data.price_max || null,

@@ -23,7 +23,7 @@ from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from typing import Optional
 
-from db import get_or_create_venue, insert_event, find_event_by_hash
+from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)

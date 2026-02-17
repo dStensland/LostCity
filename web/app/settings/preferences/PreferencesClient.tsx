@@ -18,8 +18,12 @@ import {
   PREFERENCE_NEEDS_FAMILY,
   getGenreDisplayLabel,
 } from "@/lib/preferences";
+import { getNeighborhoodsByTier } from "@/config/neighborhoods";
 import { DEFAULT_PORTAL_SLUG } from "@/lib/constants";
 import PageFooter from "@/components/PageFooter";
+
+const neighborhoodsTier1 = getNeighborhoodsByTier(1);
+const neighborhoodsTier2 = getNeighborhoodsByTier(2);
 
 type PreferencesClientProps = {
   isWelcome: boolean;
@@ -39,6 +43,8 @@ type PreferencesClientProps = {
     portalName: string;
     viewCount: number;
   }[];
+  /** When true, skip UnifiedHeader/PageFooter wrapping (for embedding in settings shell) */
+  embedded?: boolean;
 };
 
 interface GenreOption {
@@ -53,6 +59,7 @@ export default function PreferencesClient({
   isWelcome,
   initialPreferences,
   portalActivity = [],
+  embedded = false,
 }: PreferencesClientProps) {
   const router = useRouter();
 
@@ -66,6 +73,12 @@ export default function PreferencesClient({
   const [needsDietary, setNeedsDietary] = useState<string[]>(initialPreferences.needsDietary);
   const [needsFamily, setNeedsFamily] = useState<string[]>(initialPreferences.needsFamily);
   const [crossPortalRecommendations, setCrossPortalRecommendations] = useState<boolean>(initialPreferences.crossPortalRecommendations);
+
+  const [needsExpanded, setNeedsExpanded] = useState(
+    initialPreferences.needsAccessibility.length > 0 ||
+    initialPreferences.needsDietary.length > 0 ||
+    initialPreferences.needsFamily.length > 0
+  );
 
   // Genre options fetched from API
   const [genresByCategory, setGenresByCategory] = useState<Record<string, GenreOption[]>>({});
@@ -214,11 +227,11 @@ export default function PreferencesClient({
   const hasNeeds = totalNeeds > 0;
 
   return (
-    <div className="min-h-screen">
+    <div className={embedded ? "" : "min-h-screen"}>
       <ScopedStyles css={scopedCss} />
-      <UnifiedHeader />
+      {!embedded && <UnifiedHeader />}
 
-      <main className="max-w-2xl mx-auto px-4 py-8">
+      <main className={embedded ? "" : "max-w-2xl mx-auto px-4 py-8"}>
         {/* Welcome banner */}
         {isWelcome && (
           <div className="mb-8 p-5 rounded-xl bg-gradient-to-br from-[var(--coral)]/15 to-[var(--rose)]/10 border border-[var(--coral)]/30 backdrop-blur-sm">
@@ -259,7 +272,7 @@ export default function PreferencesClient({
 
         <div className="space-y-6">
           {/* Categories Section */}
-          <section className="p-5 rounded-xl bg-[var(--dusk)]/50 border border-[var(--twilight)]">
+          <section className="p-5 rounded-xl bg-gradient-to-br from-[var(--dusk)]/70 to-[var(--night)]/50 border border-[var(--coral)]/20">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="font-sans text-base font-medium text-[var(--cream)] flex items-center gap-2">
@@ -280,7 +293,7 @@ export default function PreferencesClient({
                 </span>
               )}
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {PREFERENCE_CATEGORIES.map((cat) => {
                 const isActive = selectedCategories.includes(cat.value);
                 const accentClass = categoryAccentClasses[cat.value];
@@ -288,15 +301,15 @@ export default function PreferencesClient({
                   <button
                     key={cat.value}
                     onClick={() => toggleCategory(cat.value)}
-                    className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl font-mono text-sm transition-all duration-200 ${accentClass?.className ?? ""} ${
+                    className={`flex flex-col items-center gap-2 p-4 rounded-xl font-mono text-sm transition-all duration-200 ${accentClass?.className ?? ""} ${
                       isActive
-                        ? "bg-accent text-[var(--void)] font-medium border border-transparent"
+                        ? "bg-accent text-[var(--void)] font-medium border border-transparent scale-[1.02]"
                         : "bg-[var(--night)] text-[var(--muted)] hover:text-[var(--cream)] border border-[var(--twilight)] hover:border-[var(--soft)]/30"
                     }`}
                   >
                     <CategoryIcon
                       type={cat.value}
-                      size={18}
+                      size={28}
                       glow="none"
                       className={isActive ? "!text-[var(--void)]" : ""}
                     />
@@ -411,23 +424,55 @@ export default function PreferencesClient({
                 </span>
               )}
             </div>
-            <div className="flex flex-wrap gap-2">
-              {PREFERENCE_NEIGHBORHOODS.map((hood) => {
-                const isActive = selectedNeighborhoods.includes(hood);
-                return (
-                  <button
-                    key={hood}
-                    onClick={() => toggleNeighborhood(hood)}
-                    className={`px-3.5 py-2.5 rounded-xl font-mono text-sm transition-all duration-200 ${
-                      isActive
-                        ? "bg-[var(--gold)] text-[var(--void)] font-medium border border-transparent"
-                        : "bg-[var(--night)] text-[var(--muted)] hover:text-[var(--cream)] border border-[var(--twilight)] hover:border-[var(--soft)]/30"
-                    }`}
-                  >
-                    {hood}
-                  </button>
-                );
-              })}
+            <div className="space-y-4">
+              {/* Tier 1 — Popular Areas */}
+              <div>
+                <span className="font-mono text-xs text-[var(--soft)] uppercase tracking-wider mb-2 block">
+                  Popular Areas
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {neighborhoodsTier1.map((hood) => {
+                    const isActive = selectedNeighborhoods.includes(hood.name);
+                    return (
+                      <button
+                        key={hood.id}
+                        onClick={() => toggleNeighborhood(hood.name)}
+                        className={`px-3.5 py-2.5 rounded-xl font-mono text-sm transition-all duration-200 ${
+                          isActive
+                            ? "bg-[var(--gold)] text-[var(--void)] font-medium border border-transparent"
+                            : "bg-[var(--night)] text-[var(--muted)] hover:text-[var(--cream)] border border-[var(--twilight)] hover:border-[var(--soft)]/30"
+                        }`}
+                      >
+                        {hood.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              {/* Tier 2 — More Neighborhoods */}
+              <div>
+                <span className="font-mono text-xs text-[var(--soft)] uppercase tracking-wider mb-2 block">
+                  More Neighborhoods
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {neighborhoodsTier2.map((hood) => {
+                    const isActive = selectedNeighborhoods.includes(hood.name);
+                    return (
+                      <button
+                        key={hood.id}
+                        onClick={() => toggleNeighborhood(hood.name)}
+                        className={`px-3.5 py-2.5 rounded-xl font-mono text-sm transition-all duration-200 ${
+                          isActive
+                            ? "bg-[var(--gold)] text-[var(--void)] font-medium border border-transparent"
+                            : "bg-[var(--night)] text-[var(--muted)] hover:text-[var(--cream)] border border-[var(--twilight)] hover:border-[var(--soft)]/30"
+                        }`}
+                      >
+                        {hood.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </section>
 
@@ -519,9 +564,13 @@ export default function PreferencesClient({
             </div>
           </section>
 
-          {/* Needs Section */}
+          {/* Needs Section — Collapsible */}
           <section className="p-5 rounded-xl bg-[var(--dusk)]/50 border border-[var(--twilight)]">
-            <div className="flex items-center justify-between mb-4">
+            <button
+              type="button"
+              onClick={() => setNeedsExpanded((prev) => !prev)}
+              className="flex items-center justify-between w-full text-left"
+            >
               <div>
                 <h2 className="font-sans text-base font-medium text-[var(--cream)] flex items-center gap-2">
                   <span className="w-6 h-6 rounded-lg bg-[var(--neon-cyan)]/20 flex items-center justify-center">
@@ -535,89 +584,101 @@ export default function PreferencesClient({
                   Applied everywhere — every portal, every city
                 </p>
               </div>
-              {hasNeeds && (
-                <span className="font-mono text-xs text-[var(--soft)]">
-                  {totalNeeds} selected
-                </span>
-              )}
-            </div>
+              <div className="flex items-center gap-2">
+                {hasNeeds && (
+                  <span className="font-mono text-xs text-[var(--soft)]">
+                    {totalNeeds} selected
+                  </span>
+                )}
+                <svg
+                  className={`w-5 h-5 text-[var(--muted)] transition-transform duration-200 ${needsExpanded ? "rotate-180" : ""}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </button>
 
-            <div className="space-y-4">
-              {/* Accessibility */}
-              <div>
-                <span className="font-mono text-xs text-[var(--soft)] uppercase tracking-wider mb-2 block">
-                  Accessibility
-                </span>
-                <div className="flex flex-wrap gap-2">
-                  {PREFERENCE_NEEDS_ACCESSIBILITY.map((need) => {
-                    const isActive = needsAccessibility.includes(need.value);
-                    return (
-                      <button
-                        key={need.value}
-                        onClick={() => toggleNeed(setNeedsAccessibility, need.value)}
-                        className={`px-3.5 py-2 rounded-full font-mono text-sm transition-all duration-200 ${
-                          isActive
-                            ? "border-2 border-[var(--neon-cyan)] bg-[var(--neon-cyan)]/10 text-[var(--cream)] font-medium"
-                            : "border-2 border-[var(--twilight)] text-[var(--muted)] hover:border-[var(--neon-cyan)]/50 hover:text-[var(--cream)]"
-                        }`}
-                      >
-                        {need.label}
-                      </button>
-                    );
-                  })}
+            {needsExpanded && (
+              <div className="space-y-4 mt-4">
+                {/* Accessibility */}
+                <div>
+                  <span className="font-mono text-xs text-[var(--soft)] uppercase tracking-wider mb-2 block">
+                    Accessibility
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {PREFERENCE_NEEDS_ACCESSIBILITY.map((need) => {
+                      const isActive = needsAccessibility.includes(need.value);
+                      return (
+                        <button
+                          key={need.value}
+                          onClick={() => toggleNeed(setNeedsAccessibility, need.value)}
+                          className={`px-3.5 py-2 rounded-full font-mono text-sm transition-all duration-200 ${
+                            isActive
+                              ? "border-2 border-[var(--neon-cyan)] bg-[var(--neon-cyan)]/10 text-[var(--cream)] font-medium"
+                              : "border-2 border-[var(--twilight)] text-[var(--muted)] hover:border-[var(--neon-cyan)]/50 hover:text-[var(--cream)]"
+                          }`}
+                        >
+                          {need.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Dietary */}
+                <div>
+                  <span className="font-mono text-xs text-[var(--soft)] uppercase tracking-wider mb-2 block">
+                    Dietary
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {PREFERENCE_NEEDS_DIETARY.map((need) => {
+                      const isActive = needsDietary.includes(need.value);
+                      return (
+                        <button
+                          key={need.value}
+                          onClick={() => toggleNeed(setNeedsDietary, need.value)}
+                          className={`px-3.5 py-2 rounded-full font-mono text-sm transition-all duration-200 ${
+                            isActive
+                              ? "border-2 border-[var(--neon-cyan)] bg-[var(--neon-cyan)]/10 text-[var(--cream)] font-medium"
+                              : "border-2 border-[var(--twilight)] text-[var(--muted)] hover:border-[var(--neon-cyan)]/50 hover:text-[var(--cream)]"
+                          }`}
+                        >
+                          {need.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Family */}
+                <div>
+                  <span className="font-mono text-xs text-[var(--soft)] uppercase tracking-wider mb-2 block">
+                    Family
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {PREFERENCE_NEEDS_FAMILY.map((need) => {
+                      const isActive = needsFamily.includes(need.value);
+                      return (
+                        <button
+                          key={need.value}
+                          onClick={() => toggleNeed(setNeedsFamily, need.value)}
+                          className={`px-3.5 py-2 rounded-full font-mono text-sm transition-all duration-200 ${
+                            isActive
+                              ? "border-2 border-[var(--neon-cyan)] bg-[var(--neon-cyan)]/10 text-[var(--cream)] font-medium"
+                              : "border-2 border-[var(--twilight)] text-[var(--muted)] hover:border-[var(--neon-cyan)]/50 hover:text-[var(--cream)]"
+                          }`}
+                        >
+                          {need.label}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
-
-              {/* Dietary */}
-              <div>
-                <span className="font-mono text-xs text-[var(--soft)] uppercase tracking-wider mb-2 block">
-                  Dietary
-                </span>
-                <div className="flex flex-wrap gap-2">
-                  {PREFERENCE_NEEDS_DIETARY.map((need) => {
-                    const isActive = needsDietary.includes(need.value);
-                    return (
-                      <button
-                        key={need.value}
-                        onClick={() => toggleNeed(setNeedsDietary, need.value)}
-                        className={`px-3.5 py-2 rounded-full font-mono text-sm transition-all duration-200 ${
-                          isActive
-                            ? "border-2 border-[var(--neon-cyan)] bg-[var(--neon-cyan)]/10 text-[var(--cream)] font-medium"
-                            : "border-2 border-[var(--twilight)] text-[var(--muted)] hover:border-[var(--neon-cyan)]/50 hover:text-[var(--cream)]"
-                        }`}
-                      >
-                        {need.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Family */}
-              <div>
-                <span className="font-mono text-xs text-[var(--soft)] uppercase tracking-wider mb-2 block">
-                  Family
-                </span>
-                <div className="flex flex-wrap gap-2">
-                  {PREFERENCE_NEEDS_FAMILY.map((need) => {
-                    const isActive = needsFamily.includes(need.value);
-                    return (
-                      <button
-                        key={need.value}
-                        onClick={() => toggleNeed(setNeedsFamily, need.value)}
-                        className={`px-3.5 py-2 rounded-full font-mono text-sm transition-all duration-200 ${
-                          isActive
-                            ? "border-2 border-[var(--neon-cyan)] bg-[var(--neon-cyan)]/10 text-[var(--cream)] font-medium"
-                            : "border-2 border-[var(--twilight)] text-[var(--muted)] hover:border-[var(--neon-cyan)]/50 hover:text-[var(--cream)]"
-                        }`}
-                      >
-                        {need.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
+            )}
           </section>
 
           {/* Cross-Portal Activity & Privacy */}
@@ -744,7 +805,7 @@ export default function PreferencesClient({
         </div>
       </main>
 
-      <PageFooter />
+      {!embedded && <PageFooter />}
     </div>
   );
 }

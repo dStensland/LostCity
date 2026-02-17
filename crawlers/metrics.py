@@ -299,12 +299,10 @@ def calculate_event_quality(event: dict) -> dict:
     elif tag_count >= 1:
         score += 5
     
-    # Category (10 points - bonus for specificity)
+    # Category (10 points)
     max_score += 10
-    if event.get('subcategory'):
+    if event.get('category'):
         score += 10
-    elif event.get('category'):
-        score += 7
     
     # Extraction confidence (15 points)
     max_score += 15

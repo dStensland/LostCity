@@ -1,0 +1,62 @@
+================================================================================
+FESTIVAL & LARGE EVENT VENUES - QUICK REFERENCE
+================================================================================
+Generated: 2026-02-14
+
+MAJOR FESTIVAL GROUNDS
+----------------------
+305   Piedmont Park                         72 events   Midtown
+147   Centennial Olympic Park                0 events   Downtown
+306   Grant Park                             2 events   Grant Park
+308   Historic Fourth Ward Park              1 event    Old Fourth Ward
+931   Pullman Yards                         16 events   Kirkwood
+96    Atlantic Station                       6 events   Midtown
+
+AMPHITHEATERS & LARGE MUSIC VENUES
+-----------------------------------
+311   Chastain Park Amphitheatre            15 events   Chastain Park
+140   Coca-Cola Roxy                        34 events   Smyrna
+118   Tabernacle                            61 events   Downtown
+
+ARENAS & STADIUMS
+-----------------
+126   State Farm Arena                     129 events   Downtown
+108   Mercedes-Benz Stadium                 32 events   Downtown
+116   Gas South Arena                       96 events   Duluth
+103   Truist Park                           64 events   Smyrna
+106   McCamish Pavilion                     27 events   Midtown
+105   GSU Convocation Center                20 events   Downtown
+
+CONVENTION CENTERS
+------------------
+90    Georgia World Congress Center        188 events   Downtown
+545   AmericasMart Atlanta                   0 events   Downtown
+186   Atlanta Conv. Center @ AmericasMart    3 events   Downtown
+548   Cobb Convention Center-Atlanta         6 events   Cumberland
+
+SPECIAL EVENT SPACES
+--------------------
+100   Atlanta Botanical Garden              35 events   Midtown
+170   Atlanta BeltLine                      16 events   Inman Park
+540   Candler Park                          28 events   Candler Park
+
+================================================================================
+MISSING / NEEDS ATTENTION
+================================================================================
+- Lakewood Amphitheatre (Cellairis) - exists as ID 299 but wrong type/no events
+- Centennial Olympic Park - 0 events (should host festivals/concerts)
+
+TOP 10 BY EVENT COUNT
+=====================
+1. Georgia World Congress Center (90)     - 188 events
+2. State Farm Arena (126)                 - 129 events
+3. Gas South Arena (116)                  -  96 events
+4. Piedmont Park (305)                    -  72 events
+5. Truist Park (103)                      -  64 events
+6. Tabernacle (118)                       -  61 events
+7. Atlanta Botanical Garden (100)         -  35 events
+8. Coca-Cola Roxy (140)                   -  34 events
+9. Mercedes-Benz Stadium (108)            -  32 events
+10. Russ Chandler Stadium (625)           -  32 events
+
+================================================================================

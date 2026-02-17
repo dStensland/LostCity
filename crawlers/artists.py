@@ -150,11 +150,43 @@ def get_or_create_and_enrich(
 # Linking event_artists → artists
 # ---------------------------------------------------------------------------
 
-def resolve_and_link_event_artists(event_id: int) -> None:
+def _discipline_for_category(category: Optional[str]) -> str:
+    normalized = (category or "").strip().lower()
+    mapping = {
+        "music": "musician",
+        "nightlife": "musician",
+        "comedy": "comedian",
+        "theater": "actor",
+        "dance": "actor",
+        "film": "filmmaker",
+        "art": "visual_artist",
+        "learning": "speaker",
+        "words": "speaker",
+        "community": "speaker",
+    }
+    return mapping.get(normalized, "musician")
+
+
+def resolve_and_link_event_artists(event_id: int, category: Optional[str] = None) -> None:
     """For each event_artist row on *event_id*, get/create canonical artist and set artist_id FK."""
     from db import get_client
 
     client = get_client()
+    event_category = category
+    if event_category is None:
+        event_row = (
+            client.table("events")
+            .select("category")
+            .eq("id", event_id)
+            .maybe_single()
+            .execute()
+        ).data or {}
+        event_category = event_row.get("category")
+
+    if (event_category or "").strip().lower() == "sports":
+        return
+
+    discipline = _discipline_for_category(event_category)
     rows = (
         client.table("event_artists")
         .select("id, name, artist_id")
@@ -167,7 +199,7 @@ def resolve_and_link_event_artists(event_id: int) -> None:
             continue  # Already linked
 
         try:
-            artist = get_or_create_and_enrich(row["name"])
+            artist = get_or_create_and_enrich(row["name"], discipline=discipline)
             client.table("event_artists").update(
                 {"artist_id": artist["id"]}
             ).eq("id", row["id"]).execute()

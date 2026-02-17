@@ -5,6 +5,7 @@ import { getLocalDateString } from "@/lib/formats";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { isValidUUID } from "@/lib/api-utils";
 import { EXPLORE_CATEGORIES } from "@/lib/explore-constants";
+import { applyPortalScopeToQuery } from "@/lib/portal-scope";
 
 export const revalidate = 900; // 15 min
 
@@ -111,10 +112,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
       .or("is_class.eq.false,is_class.is.null")
       .or("is_sensitive.eq.false,is_sensitive.is.null");
 
-    // Scope to portal's events
-    if (isValidUUID(portal.id)) {
-      eventCountsQuery = eventCountsQuery.or(`portal_id.eq.${portal.id},portal_id.is.null`);
-    }
+    eventCountsQuery = applyPortalScopeToQuery(eventCountsQuery, {
+      portalId: portal.id,
+      portalExclusive: false,
+      publicOnlyWhenNoPortal: true,
+    });
 
     const { data: eventCounts } = await eventCountsQuery
       .order("start_date", { ascending: true })

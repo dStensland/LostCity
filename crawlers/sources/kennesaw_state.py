@@ -12,7 +12,7 @@ from typing import Optional
 from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash
+from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import enrich_event_record
 
@@ -282,10 +282,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                                         # Check for duplicates
                                         content_hash = generate_content_hash(title, venue_data["name"], start_date)
-                                        existing = find_event_by_hash(content_hash)
-                                        if existing:
-                                            events_updated += 1
-                                            continue
 
                                         # Categorize
                                         category, subcategory = categorize_event(title, venue_data["name"])
@@ -322,6 +318,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                             "content_hash": content_hash,
                                         }
 
+                                        existing = find_event_by_hash(content_hash)
+                                        if existing:
+                                            smart_update_existing_event(existing, event_record)
+                                            events_updated += 1
+                                            continue
+
                                         try:
                                             enrich_event_record(event_record, "Kennesaw State University Arts")
                                             insert_event(event_record)
@@ -340,6 +342,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                     content_hash = generate_content_hash(title, venue_data["name"], start_date)
                                     existing = find_event_by_hash(content_hash)
                                     if existing:
+                                        smart_update_existing_event(existing, event_record)
                                         events_updated += 1
                                         continue
 

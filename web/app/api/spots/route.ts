@@ -3,9 +3,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getLocalDateString } from "@/lib/formats";
 import { isOpenAt, type HoursData } from "@/lib/hours";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
-import { errorResponse, isValidUUID, parseFloatParam } from "@/lib/api-utils";
+import { errorResponse, parseFloatParam } from "@/lib/api-utils";
 import { haversineDistanceKm, getWalkingMinutes, getProximityTier, getProximityLabel } from "@/lib/geo";
 import { logger } from "@/lib/logger";
+import { resolvePortalQueryContext } from "@/lib/portal-query-context";
+import { applyPortalScopeToQuery } from "@/lib/portal-scope";
 
 export const dynamic = "force-dynamic";
 
@@ -15,12 +17,9 @@ export async function GET(request: NextRequest) {
 
   const supabase = await createClient();
   const { searchParams } = new URL(request.url);
-  const portalIdParam = searchParams.get("portal_id");
+  const isLegacyDefaultPortal = searchParams.get("portal_id") === "default";
   const isExclusive = searchParams.get("exclusive") === "true";
   const withEventsOnly = searchParams.get("with_events") === "true";
-
-  // Validate portal_id to prevent PostgREST filter injection
-  const portalId = portalIdParam && isValidUUID(portalIdParam) ? portalIdParam : null;
 
   // New filters
   const openNow = searchParams.get("open_now") === "true";
@@ -69,38 +68,21 @@ export async function GET(request: NextRequest) {
       venue_id: number;
     };
 
-    type PortalFilters = {
-      city?: string;
-      cities?: string[];
-    };
-
-    let portalCityFilter: string[] = [];
-    if (portalId && portalId !== "default") {
-      const { data: portalRow } = await supabase
-        .from("portals")
-        .select("filters")
-        .eq("id", portalId)
-        .maybeSingle();
-
-      const rawFilters = (portalRow as { filters?: PortalFilters | string | null } | null)?.filters;
-      let filters: PortalFilters = {};
-
-      if (typeof rawFilters === "string") {
-        try {
-          filters = JSON.parse(rawFilters) as PortalFilters;
-        } catch {
-          filters = {};
-        }
-      } else if (rawFilters && typeof rawFilters === "object") {
-        filters = rawFilters as PortalFilters;
-      }
-
-      const fromCities = Array.isArray(filters.cities) ? filters.cities : [];
-      const fromCity = filters.city ? [filters.city] : [];
-      portalCityFilter = Array.from(
-        new Set([...fromCities, ...fromCity].map((c) => c?.trim()).filter(Boolean) as string[])
+    const portalContext = await resolvePortalQueryContext(supabase, searchParams);
+    if (portalContext.hasPortalParamMismatch) {
+      return NextResponse.json(
+        { error: "portal and portal_id parameters must reference the same portal" },
+        { status: 400 }
       );
     }
+    const portalId = isLegacyDefaultPortal ? null : portalContext.portalId;
+    const portalCityFilter = Array.from(
+      new Set(
+        [...(portalContext.filters.cities || []), ...(portalContext.filters.city ? [portalContext.filters.city] : [])]
+          .map((c) => c.trim())
+          .filter(Boolean)
+      )
+    );
 
     // Fetch all active venues with enhanced data
     // Note: is_24_hours column may not exist in all environments
@@ -108,6 +90,12 @@ export async function GET(request: NextRequest) {
       .from("venues")
       .select("id, name, slug, address, neighborhood, venue_type, city, image_url, lat, lng, price_level, hours, hours_display, vibes, short_description, genres")
       .neq("active", false); // Exclude deactivated venues
+
+    query = applyPortalScopeToQuery(query, {
+      portalId,
+      portalExclusive: isExclusive,
+      publicOnlyWhenNoPortal: true,
+    });
 
     if (portalCityFilter.length > 0) {
       query = query.in("city", portalCityFilter);
@@ -160,14 +148,11 @@ export async function GET(request: NextRequest) {
       .gte("start_date", today)
       .not("venue_id", "is", null);
 
-    // Apply portal filter for event counts
-    if (isExclusive && portalId) {
-      eventsQuery = eventsQuery.eq("portal_id", portalId);
-    } else if (portalId === "default" || !portalId) {
-      eventsQuery = eventsQuery.is("portal_id", null);
-    } else {
-      eventsQuery = eventsQuery.or(`portal_id.eq.${portalId},portal_id.is.null`);
-    }
+    eventsQuery = applyPortalScopeToQuery(eventsQuery, {
+      portalId,
+      portalExclusive: isExclusive,
+      publicOnlyWhenNoPortal: true,
+    });
 
     const { data: events } = await eventsQuery.limit(10000);
 

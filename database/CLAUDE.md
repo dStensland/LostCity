@@ -64,7 +64,7 @@ Run `database/schema.sql` in Supabase SQL Editor to initialize tables.
 
 ### Crawler Architecture
 - Each source has a module in `crawlers/sources/` with a `crawl(source)` function
-- `main.py` orchestrates crawling via `SOURCE_MODULES` registry
+- `main.py` auto-discovers crawlers by matching source slugs to filenames (hyphens → underscores: `the-earl` → `sources/the_earl.py`). Edge cases use `SOURCE_OVERRIDES` in `main.py`.
 - Crawl logs track each run in `crawl_logs` table
 - Methods: HTML scraping (BeautifulSoup), JSON-LD parsing, Playwright for JS sites
 
@@ -89,8 +89,36 @@ Optional:
 - `TICKETMASTER_API_KEY` - For Ticketmaster source
 - `EVENTBRITE_API_KEY`, `MEETUP_API_KEY` - Reserved for API access
 
-## Adding a New Crawler
+## Adding a New Source
 
-1. Create `crawlers/sources/source_name.py` with `crawl(source)` function
-2. Add mapping to `SOURCE_MODULES` in `main.py`
-3. Add source record to `sources` table in database
+### Full flow (venue with crawlable events page)
+
+1. **Research** — Fetch the site, identify platform (Shopify, Wix, WordPress, etc.), find the events/classes URL, note the HTML structure
+2. **Migration** — Create `database/migrations/NNN_source_name.sql` with:
+   - Source INSERT (`sources` table): slug, name, url, source_type (`venue` or `organization`), crawl_frequency, is_active, integration_method
+   - Venue INSERT (`venues` table): name, slug, address, neighborhood, city, state, zip, lat, lng, venue_type, spot_type, website, phone, description, vibes
+3. **Crawler** — Create `crawlers/sources/source_slug.py` (underscores, matching the source slug with hyphens → underscores). Must export `crawl(source: dict) -> tuple[int, int, int]`. See `crawlers/CLAUDE.md` for the full pattern and required fields.
+4. **Profile** — Create `crawlers/sources/profiles/source-slug.yaml` with discovery URLs, selectors, and defaults
+5. **Test** — `python main.py --source source-slug`
+
+### Venue only (no crawlable events page)
+
+For venues where events are promoted via Instagram, Resy, or other non-scrapeable channels:
+
+1. **Migration** — Same as above, but set `is_active = false` and `integration_method = 'none'` on the source
+2. **No crawler file, no profile** — The venue record is the value. Events can be added manually or via future integrations.
+
+### Organization (hosts events at various venues)
+
+For orgs like community groups that host events at rotating locations:
+
+1. **Migration** — Source with `source_type = 'organization'`. No venue INSERT (events happen at other venues).
+2. **Crawler** — Set `venue_id = None` on events. Use `venue_name_hint` and `venue_address_hint` fields for downstream venue matching.
+3. **Profile** — Same as full flow.
+
+### Naming conventions
+
+- Source slug: `tio-luchos` (hyphens)
+- Crawler file: `tio_luchos.py` (underscores)
+- Profile file: `tio-luchos.yaml` (hyphens)
+- Migration file: `NNN_tio_luchos.sql` (sequential number + underscores)

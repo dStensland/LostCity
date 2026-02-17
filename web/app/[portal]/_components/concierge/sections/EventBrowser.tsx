@@ -48,9 +48,8 @@ export default function EventBrowser({
     if (!activeInterests || activeInterests.length === 0) return allEvents;
     return allEvents.filter((event) => {
       const cat = event.category?.toLowerCase() || "";
-      const subcat = event.subcategory?.toLowerCase() || "";
       return activeInterests.some(
-        (interest) => cat.includes(interest) || subcat.includes(interest)
+        (interest) => cat.includes(interest)
       );
     });
   }, [allEvents, activeInterests]);

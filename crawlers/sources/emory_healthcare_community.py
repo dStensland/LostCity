@@ -78,7 +78,7 @@ from datetime import datetime
 from typing import Optional
 from playwright.sync_api import sync_playwright, Response
 
-from db import get_or_create_venue, insert_event, find_event_by_hash
+from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -467,9 +467,6 @@ def crawl_group(page, group_key: str, group_name: str, source_id: int) -> tuple[
             events_found += 1
             content_hash = generate_content_hash(title, venue_data["name"], start_date)
 
-            if find_event_by_hash(content_hash):
-                events_updated += 1
-                continue
 
             # Check for recurring event linkage
             recurring_event_id = event_data.get("recurringEventId")
@@ -501,6 +498,12 @@ def crawl_group(page, group_key: str, group_name: str, source_id: int) -> tuple[
                 "recurrence_rule": None,  # Blackthorn handles recurrence server-side
                 "content_hash": content_hash,
             }
+
+            existing = find_event_by_hash(content_hash)
+            if existing:
+                smart_update_existing_event(existing, event_record)
+                events_updated += 1
+                continue
 
             try:
                 insert_event(event_record)

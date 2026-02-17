@@ -1,0 +1,91 @@
+MUSEUM & GALLERY CRAWLERS - QUICK REFERENCE
+============================================
+
+BUILD THESE CRAWLERS (Priority Order):
+--------------------------------------
+
+1. APEX Museum (ID: 216)
+   URL: https://www.apexmuseum.org/events-2026
+   Type: Events + Exhibitions
+   Platform: Squarespace
+   
+2. Hammonds House Museum (ID: 218)
+   URL: http://www.hammondshousemuseum.org/current-exhibit
+   Type: Exhibitions (also has /events)
+   Platform: Squarespace (likely)
+   
+3. Jimmy Carter Presidential Library (ID: 220)
+   URL: http://www.jimmycarterlibrary.gov/events
+   Type: Events
+   Platform: Custom CMS
+   
+4. Sandler Hudson Gallery (ID: 237)
+   URL: http://www.sandlerhudson.com/
+   Type: Exhibitions (crawl homepage for current show)
+   Note: Currently showing "This Is Not That: Peter Lynch" Feb 13-Mar 28, 2026
+   
+5. Clark Atlanta University Art Museum (ID: 304)
+   URL: https://www.cau.edu/about/cultural-contributions/clark-atlanta-university-art-museum/current-exhibitions
+   Type: Exhibitions
+   Platform: University CMS
+   
+6. The King Center (ID: 986)
+   URL: https://thekingcenter.org/events/
+   Type: Events
+   Platform: WordPress (likely)
+
+VERIFY BEFORE BUILDING:
+-----------------------
+
+- Millennium Gate Museum (ID: 4062)
+  https://www.thegatemuseum.org/exhibitions
+  Note: May be outdated, manually verify first
+  
+- African Diaspora Art Museum (ID: 2433)
+  https://www.adamatl.org/events
+  Note: Site says "temporarily closed", confirm status
+
+MANUAL CHECK NEEDED:
+--------------------
+
+- Whitespace Gallery (ID: 234) - JavaScript-heavy site
+- Marcia Wood Gallery (ID: 238) - Verify update frequency
+- Mason Fine Art (ID: 236) - Verify active status
+
+DO NOT BUILD:
+-------------
+
+- MOCA GA (ID: 586) - Closed
+- CDC Museum (ID: 3786) - Temporarily closed
+- Besharat Gallery (ID: 242) - No content
+- Get This Gallery (ID: 245) - DEFUNCT (domain for sale)
+- SCAD FASH (ID: 1247) - Access blocked (403)
+- Poem88 Gallery (ID: 435) - SSL error
+- Hathaway Contemporary (ID: 463) - Inactive/outdated
+- World of Coca-Cola (ID: 209) - Permanent attraction only
+- Trap Music Museum (ID: 4073) - Permanent attraction only
+- Margaret Mitchell House (ID: 224) - No exhibitions program
+- Rhodes Hall (ID: 4049) - Event venue only
+- Fernbank Science Center (ID: 225) - Check if duplicate of Fernbank Museum
+
+CRAWLER PATTERN NOTES:
+---------------------
+
+Museums/galleries typically need:
+- Exhibition title extraction
+- Date range parsing (exhibitions run for weeks/months)
+- Opening reception detection (one-time events)
+- Artist/curator names
+- Image extraction from exhibition pages
+- Description/artist statement extraction
+
+Most galleries have:
+- One current exhibition at a time
+- Opening receptions (separate one-time events)
+- Artist talks/workshops (events related to exhibitions)
+
+Strategy:
+- For exhibition pages: Extract as long-running events with start/end dates
+- For opening receptions: Extract as one-time events
+- Link events to exhibitions via description/title matching
+

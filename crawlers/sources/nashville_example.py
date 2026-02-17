@@ -17,7 +17,7 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash
+from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import slugify
 
@@ -85,9 +85,6 @@ def crawl_ryman_auditorium(source: dict) -> tuple[int, int, int]:
             # Generate content hash for deduplication
             content_hash = generate_content_hash(title, "Ryman Auditorium", start_date)
 
-            if find_event_by_hash(content_hash):
-                events_updated += 1
-                continue
 
             # Create event record
             event_record = {
@@ -116,6 +113,12 @@ def crawl_ryman_auditorium(source: dict) -> tuple[int, int, int]:
                 "recurrence_rule": None,
                 "content_hash": content_hash,
             }
+
+            existing = find_event_by_hash(content_hash)
+            if existing:
+                smart_update_existing_event(existing, event_record)
+                events_updated += 1
+                continue
 
             insert_event(event_record)
             events_new += 1
@@ -207,7 +210,9 @@ def create_honky_tonk_continuous_events(source: dict) -> tuple[int, int, int]:
                 event_date
             )
 
-            if find_event_by_hash(content_hash):
+            existing = find_event_by_hash(content_hash)
+            if existing:
+                smart_update_existing_event(existing, event_record)
                 events_updated += 1
                 continue
 
@@ -304,7 +309,9 @@ def crawl_nashville_scene_events(source: dict) -> tuple[int, int, int]:
             # Generate content hash
             content_hash = generate_content_hash(title, venue_name, start_date)
 
-            if find_event_by_hash(content_hash):
+            existing = find_event_by_hash(content_hash)
+            if existing:
+                smart_update_existing_event(existing, event_record)
                 events_updated += 1
                 continue
 
@@ -410,7 +417,9 @@ def crawl_bluebird_cafe(source: dict) -> tuple[int, int, int]:
 
             content_hash = generate_content_hash(title, "Bluebird Cafe", start_date)
 
-            if find_event_by_hash(content_hash):
+            existing = find_event_by_hash(content_hash)
+            if existing:
+                smart_update_existing_event(existing, event_record)
                 events_updated += 1
                 continue
 
@@ -509,7 +518,9 @@ def crawl_cma_fest(source: dict) -> tuple[int, int, int]:
                 start_date + start_time  # Include time to distinguish same day, different sets
             )
 
-            if find_event_by_hash(content_hash):
+            existing = find_event_by_hash(content_hash)
+            if existing:
+                smart_update_existing_event(existing, event_record)
                 events_updated += 1
                 continue
 

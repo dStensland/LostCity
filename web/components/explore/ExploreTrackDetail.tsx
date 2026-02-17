@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import Image from "@/components/SmartImage";
+import AnimatedCount from "@/components/AnimatedCount";
 import {
   EXPLORE_THEME,
   getTrackAccentColor,
@@ -37,6 +38,27 @@ interface ExploreTrackDetailProps {
   portalSlug: string;
 }
 
+// Neon-styled floating back button matching EventDetailView
+const NeonFloatingBackButton = ({ onBack }: { onBack: () => void }) => (
+  <button
+    onClick={onBack}
+    aria-label="Back to tracks"
+    className="group absolute top-4 left-4 flex items-center gap-2 px-3.5 py-2 rounded-full font-mono text-xs font-semibold tracking-wide uppercase transition-all duration-300 z-10 hover:scale-105 neon-back-btn"
+  >
+    <svg
+      className="w-4 h-4 transition-transform duration-300 group-hover:-translate-x-0.5 neon-back-icon"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+    </svg>
+    <span className="transition-all duration-300 group-hover:text-[var(--coral)] neon-back-text">
+      Back
+    </span>
+  </button>
+);
+
 export default function ExploreTrackDetail({
   slug,
   onBack,
@@ -48,9 +70,17 @@ export default function ExploreTrackDetail({
 
   const accent = getTrackAccentColor(slug);
   const category = getTrackCategory(slug);
+  const [showScrollTop, setShowScrollTop] = useState(false);
 
   useEffect(() => {
     window.scrollTo(0, 0);
+  }, []);
+
+  // Show "back to top" after scrolling past the hero
+  useEffect(() => {
+    const onScroll = () => setShowScrollTop(window.scrollY > 500);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   useEffect(() => {
@@ -86,6 +116,8 @@ export default function ExploreTrackDetail({
                     v.venue?.hero_image_url || v.venue?.image_url,
                   editorialBlurb:
                     v.editorial_blurb || v.venue?.explore_blurb,
+                  sourceUrl: v.source_url ?? null,
+                  sourceLabel: v.source_label ?? null,
                   upvoteCount: v.upvote_count ?? 0,
                   hasUpvoted: v.has_upvoted ?? false,
                   isFeatured: v.is_featured ?? false,
@@ -107,7 +139,6 @@ export default function ExploreTrackDetail({
                     startTime: ev.start_time,
                     endTime: ev.end_time,
                     category: ev.category,
-                    subcategory: ev.subcategory,
                     isFree: ev.is_free ?? false,
                     priceMin: ev.price_min,
                     priceMax: ev.price_max,
@@ -205,64 +236,77 @@ export default function ExploreTrackDetail({
     });
   };
 
-  if (isLoading) return <TrackDetailSkeleton />;
+  if (isLoading) return <TrackDetailSkeleton onBack={onBack} />;
 
   if (!track) {
     return (
       <div
-        className="py-16 text-center rounded-2xl"
-        style={{ background: "var(--void)" }}
+        className="rounded-2xl overflow-hidden relative"
+        style={{ background: "var(--void)", minHeight: 320 }}
       >
-        <p className="text-sm" style={{ color: "var(--muted)" }}>
-          Track not found
-        </p>
-        <button
-          onClick={onBack}
-          className="mt-4 text-xs font-mono underline"
-          style={{ color: EXPLORE_THEME.primary }}
-        >
-          Back to tracks
-        </button>
+        <NeonFloatingBackButton onBack={onBack} />
+        <div className="flex flex-col items-center justify-center h-full py-24">
+          <p className="text-sm" style={{ color: "var(--muted)" }}>
+            Track not found
+          </p>
+          <button
+            onClick={onBack}
+            className="mt-4 text-xs font-mono underline"
+            style={{ color: EXPLORE_THEME.primary }}
+          >
+            Back to tracks
+          </button>
+        </div>
       </div>
     );
   }
 
-  // Three-tier venue split: featured → with events → rest
+  // Three-tier venue split: featured -> with events -> rest
   const featured = filteredVenues.filter((v) => v.isFeatured);
   const happeningNow = filteredVenues.filter((v) => !v.isFeatured && (v.upcomingEvents?.length ?? 0) > 0);
   const morePlaces = filteredVenues.filter((v) => !v.isFeatured && (v.upcomingEvents?.length ?? 0) === 0);
 
-  const totalEventCount = track.activity.tonightCount + track.activity.weekendCount;
+  // Compute total events from venue data
+  const totalEvents = track.venues.reduce(
+    (sum, v) => sum + (v.upcomingEvents?.length ?? 0),
+    0
+  );
 
   return (
     <div
-      className="rounded-2xl overflow-hidden"
+      className="rounded-2xl overflow-hidden animate-page-enter"
       style={{ background: "var(--void)" }}
     >
       {/* ================================================================
           HERO — Cinematic, brighter, taller
+          Uses first featured venue image (not quote portrait)
           ================================================================ */}
       <div
         className="track-detail-hero relative overflow-hidden"
-        style={{ minHeight: 340 }}
+        style={{ height: "clamp(320px, 50vh, 480px)" }}
       >
-        {track.quotePortraitUrl ? (
-          <Image
-            src={track.quotePortraitUrl}
-            alt={track.quoteSource}
-            fill
-            sizes="(max-width: 768px) 100vw, 800px"
-            className="object-cover object-top"
-            style={{ filter: "brightness(0.5) saturate(0.7) contrast(1.15)" }}
-          />
-        ) : (
-          <div
-            className="absolute inset-0"
-            style={{
-              background: `linear-gradient(135deg, ${accent}30 0%, var(--void) 100%)`,
-            }}
-          />
-        )}
+        {(() => {
+          const heroVenue = track.venues.find((v) => v.isFeatured && v.imageUrl) || track.venues.find((v) => v.imageUrl);
+          const heroImage = heroVenue?.imageUrl;
+          return heroImage ? (
+            <Image
+              src={heroImage}
+              alt={track.name}
+              fill
+              sizes="(max-width: 768px) 100vw, 800px"
+              className="object-cover object-center explore-detail-hero-img"
+            />
+          ) : (
+            <div
+              className="absolute inset-0"
+              style={{ "--hero-accent": accent } as React.CSSProperties}
+            >
+              <div className="absolute inset-0 hero-fallback-ambient" />
+              <div className="absolute top-0 left-[10%] right-[10%] h-[2px] hero-fallback-topline" />
+              <div className="absolute inset-0 hero-fallback-scanlines opacity-[0.03]" />
+            </div>
+          );
+        })()}
         <div
           className="absolute inset-0"
           style={{
@@ -271,27 +315,23 @@ export default function ExploreTrackDetail({
           }}
         />
 
+        {/* Accent left-edge glow bar */}
+        <div
+          className="absolute left-0 top-0 bottom-0 w-[4px] z-[3]"
+          style={{
+            background: accent,
+            boxShadow: `0 0 16px ${accent}35, 0 0 6px ${accent}60`,
+          }}
+        />
+
+        {/* Back button — NeonBackButton pattern */}
+        <NeonFloatingBackButton onBack={onBack} />
+
         {/* Content */}
         <div className="relative z-[2] flex flex-col justify-end h-full p-5 md:p-7 pt-20">
-          {/* Back button — glassmorphism pill */}
-          <button
-            onClick={onBack}
-            className="absolute top-4 left-4 font-mono text-[11px] font-medium px-3 py-1.5 rounded-xl cursor-pointer transition-all flex items-center gap-1.5 hover:bg-[var(--dusk)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
-            style={{
-              color: "var(--soft)",
-              background: "rgba(15,15,20,0.8)",
-              backdropFilter: "blur(12px)",
-              WebkitBackdropFilter: "blur(12px)",
-              border: "1px solid var(--twilight)",
-            }}
-          >
-            <span>&larr;</span>
-            <span>All Tracks</span>
-          </button>
-
           {/* Category pill */}
           <div
-            className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] mb-2.5 inline-block px-2.5 py-1 rounded-md"
+            className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] mb-2.5 inline-block px-2.5 py-1 rounded-md animate-fade-in stagger-1"
             style={{
               background: "rgba(0,0,0,0.6)",
               border: `1px solid ${accent}`,
@@ -304,7 +344,7 @@ export default function ExploreTrackDetail({
 
           {/* Title */}
           <h1
-            className="explore-display-heading text-[38px] md:text-[52px] leading-[1.08] tracking-[-0.02em] mb-3"
+            className="explore-display-heading text-[38px] md:text-[52px] leading-[1.08] tracking-[-0.02em] mb-3 animate-fade-in stagger-2"
             style={{
               color: "var(--cream)",
               textShadow: `0 2px 16px rgba(0,0,0,0.8), 0 0 40px ${accent}15`,
@@ -316,19 +356,52 @@ export default function ExploreTrackDetail({
           {/* Description */}
           {track.description && (
             <p
-              className="text-[15px] leading-[1.6] max-w-[85%]"
+              className="text-[15px] leading-[1.6] max-w-[85%] animate-fade-in stagger-3"
               style={{ color: "var(--soft)" }}
             >
               {track.description}
             </p>
           )}
+
+          {/* Quote with portrait inset */}
+          {track.quote && (
+            <div className="mt-3 max-w-[85%] explore-quote-enter flex items-start gap-3">
+              {track.quotePortraitUrl && (
+                <div className="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 rounded-full overflow-hidden border-2" style={{ borderColor: `${accent}60` }}>
+                  <Image
+                    src={track.quotePortraitUrl}
+                    alt={track.quoteSource}
+                    width={48}
+                    height={48}
+                    className="object-cover w-full h-full"
+                  />
+                </div>
+              )}
+              <div>
+                <p
+                  className="text-[14px] italic leading-[1.55]"
+                  style={{ color: "var(--soft)", opacity: 0.8 }}
+                >
+                  &ldquo;{track.quote}&rdquo;
+                </p>
+                {track.quoteSource && (
+                  <p
+                    className="text-[12px] font-mono mt-1"
+                    style={{ color: accent }}
+                  >
+                    &mdash; {track.quoteSource}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
       {/* ================================================================
-          ACTIVITY SUMMARY BAR — Larger stats, glow, pulse
+          ACTIVITY SUMMARY BAR — Richer stats, animated counters
           ================================================================ */}
-      <ActivityBar activity={track.activity} />
+      <ActivityBar activity={track.activity} venues={track.venues} totalEvents={totalEvents} />
 
       {/* Filter Chips */}
       <FilterRow
@@ -341,7 +414,7 @@ export default function ExploreTrackDetail({
       {/* ================================================================
           VENUE LIST — 2-col grid for featured, compact grid below
           ================================================================ */}
-      <div className="px-4 lg:px-6 pb-6 pt-4">
+      <div key={activeFilter} className="px-4 lg:px-6 pb-6 pt-4 animate-fade-in">
         {/* Don't Miss — featured venues */}
         {featured.length > 0 && (
           <>
@@ -362,7 +435,7 @@ export default function ExploreTrackDetail({
                 <div
                   key={venue.id}
                   className="explore-track-enter"
-                  style={{ animationDelay: `${index * 50}ms` }}
+                  style={{ animationDelay: `${Math.min(index * 50, 300)}ms` }}
                 >
                   <ExploreVenueCard
                     venue={venue}
@@ -398,7 +471,7 @@ export default function ExploreTrackDetail({
                 <div
                   key={venue.id}
                   className="explore-track-enter"
-                  style={{ animationDelay: `${(featured.length + index) * 50}ms` }}
+                  style={{ animationDelay: `${Math.min(index * 50, 300)}ms` }}
                 >
                   <ExploreVenueCard
                     venue={venue}
@@ -433,7 +506,7 @@ export default function ExploreTrackDetail({
                 <div
                   key={venue.id}
                   className="explore-track-enter"
-                  style={{ animationDelay: `${(featured.length + happeningNow.length + index) * 50}ms` }}
+                  style={{ animationDelay: `${Math.min(index * 50, 400)}ms` }}
                 >
                   <ExploreVenueCard
                     venue={venue}
@@ -466,45 +539,54 @@ export default function ExploreTrackDetail({
             )}
           </div>
         )}
-
-        {/* See All row — accent border */}
-        {filteredVenues.length > 0 && (
-          <button
-            className="w-full flex items-center justify-center gap-2 mt-5 py-3.5 rounded-xl font-mono text-[11px] font-medium transition-all cursor-pointer hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
-            style={{
-              background: `${accent}08`,
-              border: `1.5px solid ${accent}30`,
-              color: accent,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = `${accent}15`;
-              e.currentTarget.style.borderColor = `${accent}50`;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = `${accent}08`;
-              e.currentTarget.style.borderColor = `${accent}30`;
-            }}
-          >
-            <span>View all {track.activity.venueCount} places</span>
-            {totalEventCount > 0 && (
-              <span style={{ color: "var(--muted)" }}>
-                &middot; {totalEventCount} events this week
-              </span>
-            )}
-            <span>&rarr;</span>
-          </button>
-        )}
       </div>
+
+      {/* Floating scroll-to-top for long tracks */}
+      {track.venues.length >= 15 && showScrollTop && (
+        <button
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          className="fixed bottom-6 right-6 z-50 flex items-center gap-1.5 px-3.5 py-2.5 rounded-full font-mono text-[10px] font-semibold uppercase tracking-wide transition-all duration-300 hover:scale-105"
+          style={{
+            background: "rgba(0,0,0,0.85)",
+            border: `1px solid ${accent}60`,
+            color: accent,
+            boxShadow: `0 4px 20px rgba(0,0,0,0.5), 0 0 12px ${accent}15`,
+            backdropFilter: "blur(12px)",
+          }}
+          aria-label="Scroll to top"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7" />
+          </svg>
+          Top
+        </button>
+      )}
     </div>
   );
 }
 
 // ============================================================================
-// Activity Summary Bar — Larger, glowing, with tonight pulse
+// Activity Summary Bar — Richer stats with animated counters
 // ============================================================================
 
-function ActivityBar({ activity }: { activity: TrackActivity }) {
+function ActivityBar({
+  activity,
+  venues,
+  totalEvents,
+}: {
+  activity: TrackActivity;
+  venues: ExploreTrackVenue[];
+  totalEvents: number;
+}) {
   const stats: { label: string; value: number; colorClass: string }[] = [];
+
+  // Always show Places
+  stats.push({ label: "Places", value: activity.venueCount, colorClass: "default" });
+
+  // Always show Events if any
+  if (totalEvents > 0) {
+    stats.push({ label: "Events", value: totalEvents, colorClass: "default" });
+  }
 
   if (activity.tonightCount > 0) {
     stats.push({ label: "Tonight", value: activity.tonightCount, colorClass: "tonight" });
@@ -515,7 +597,6 @@ function ActivityBar({ activity }: { activity: TrackActivity }) {
   if (activity.freeCount > 0) {
     stats.push({ label: "Free events", value: activity.freeCount, colorClass: "free" });
   }
-  stats.push({ label: "Places", value: activity.venueCount, colorClass: "default" });
 
   const valueColors: Record<string, string> = {
     tonight: "#E03A3E",
@@ -526,7 +607,7 @@ function ActivityBar({ activity }: { activity: TrackActivity }) {
 
   return (
     <div
-      className="flex border-b py-4 md:py-5"
+      className="flex border-b py-4 md:py-5 animate-content-reveal stagger-3"
       style={{
         borderColor: "var(--twilight)",
         background:
@@ -535,7 +616,7 @@ function ActivityBar({ activity }: { activity: TrackActivity }) {
     >
       {/* Screen reader summary */}
       <span className="sr-only">
-        Track activity: {activity.tonightCount} events tonight, {activity.weekendCount} this weekend, {activity.freeCount} free events, {activity.venueCount} total places
+        Track activity: {activity.venueCount} places, {totalEvents} events, {activity.tonightCount} tonight, {activity.weekendCount} this weekend, {activity.freeCount} free
       </span>
       {stats.map((stat, i) => (
         <div
@@ -549,30 +630,34 @@ function ActivityBar({ activity }: { activity: TrackActivity }) {
           }}
         >
           {stat.colorClass === "tonight" ? (
-            <div className="flex items-center justify-center gap-1.5 mb-1">
+            <div
+              className="flex items-center justify-center gap-1.5 mb-1"
+              style={{
+                color: valueColors[stat.colorClass],
+                textShadow: `0 0 12px ${valueColors[stat.colorClass]}30`,
+              }}
+            >
               <span
                 className="w-2 h-2 rounded-full animate-pulse"
                 style={{ background: valueColors.tonight }}
               />
-              <div
+              <AnimatedCount
+                value={stat.value}
                 className="text-2xl md:text-3xl font-black"
-                style={{
-                  color: valueColors[stat.colorClass],
-                  textShadow: `0 0 12px ${valueColors[stat.colorClass]}30`,
-                }}
-              >
-                {stat.value}
-              </div>
+              />
             </div>
           ) : (
             <div
-              className="text-2xl md:text-3xl font-black mb-1"
+              className="mb-1"
               style={{
                 color: valueColors[stat.colorClass],
                 textShadow: stat.colorClass !== "default" ? `0 0 12px ${valueColors[stat.colorClass]}30` : "none",
               }}
             >
-              {stat.value}
+              <AnimatedCount
+                value={stat.value}
+                className="text-2xl md:text-3xl font-black"
+              />
             </div>
           )}
           <div
@@ -650,10 +735,10 @@ function FilterRow({
 }
 
 // ============================================================================
-// Skeleton — matches new layout proportions
+// Skeleton — matches new layout proportions, with back button
 // ============================================================================
 
-function TrackDetailSkeleton() {
+function TrackDetailSkeleton({ onBack }: { onBack: () => void }) {
   return (
     <div
       className="rounded-2xl overflow-hidden"
@@ -661,9 +746,26 @@ function TrackDetailSkeleton() {
     >
       {/* Hero skeleton */}
       <div
-        className="skeleton-shimmer"
-        style={{ minHeight: 340, background: "var(--night)" }}
-      />
+        className="skeleton-shimmer relative"
+        style={{ height: "clamp(320px, 50vh, 480px)", background: "var(--night)" }}
+      >
+        <NeonFloatingBackButton onBack={onBack} />
+        {/* Text placeholder shapes */}
+        <div className="absolute bottom-0 left-0 right-0 p-5 md:p-7 space-y-2.5">
+          <div
+            className="h-5 w-20 rounded skeleton-shimmer"
+            style={{ background: "rgba(255,255,255,0.06)" }}
+          />
+          <div
+            className="h-12 w-3/5 rounded skeleton-shimmer"
+            style={{ background: "rgba(255,255,255,0.08)" }}
+          />
+          <div
+            className="h-4 w-4/5 rounded skeleton-shimmer"
+            style={{ background: "rgba(255,255,255,0.04)" }}
+          />
+        </div>
+      </div>
       {/* Activity bar skeleton */}
       <div
         className="flex border-b py-4"

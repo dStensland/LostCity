@@ -10,7 +10,7 @@ import re
 from bs4 import BeautifulSoup
 import requests
 
-from db import get_or_create_venue, insert_event, find_event_by_hash
+from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_image_url
 
@@ -170,10 +170,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 venue_id = get_or_create_venue(DEFAULT_VENUE)
 
             content_hash = generate_content_hash(title, "ArtsATL", start_date)
-            existing = find_event_by_hash(content_hash)
-            if existing:
-                events_updated += 1
-                continue
 
             category, subcategory, tags = determine_category(title)
 
@@ -204,6 +200,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 "content_hash": content_hash,
             }
 
+            existing = find_event_by_hash(content_hash)
+            if existing:
+                smart_update_existing_event(existing, event_record)
+                events_updated += 1
+                continue
+
             try:
                 insert_event(event_record)
                 events_new += 1
@@ -226,6 +228,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 content_hash = generate_content_hash(title, "ArtsATL", start_date)
                 existing = find_event_by_hash(content_hash)
                 if existing:
+                    smart_update_existing_event(existing, event_record)
                     events_updated += 1
                     continue
 

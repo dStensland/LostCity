@@ -5,14 +5,16 @@ import Image from "@/components/SmartImage";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
 import type { EventArtist } from "@/lib/artists-utils";
-import { getDisciplineColor } from "@/lib/artists-utils";
+import { getDisciplineColor, getParticipantWebsiteFallback } from "@/lib/artists-utils";
 
 interface ArtistChipProps {
   artist: EventArtist;
   portalSlug: string;
+  eventCategory?: string | null;
   variant?: "card" | "inline";
   fallbackImageUrl?: string | null;
   fallbackGenres?: string[] | null;
+  emphasizeHeadliner?: boolean;
 }
 
 function formatRoleLabel(role: string | null | undefined, isHeadliner: boolean): string | null {
@@ -57,15 +59,15 @@ function InitialsFallback({ name, discipline, size = "sm" }: { name: string; dis
   const textSize = size === "lg" ? "text-2xl" : "text-sm";
 
   const gradients: Record<string, [string, string]> = {
-    musician:      ["#b8256e", "#d94a8e"],
-    band:          ["#b8256e", "#d94a8e"],
-    dj:            ["#1a8a8a", "#2cbcbc"],
-    comedian:      ["#c28a1e", "#e0a832"],
-    author:        ["#8b6914", "#b8941e"],
-    speaker:       ["#8b6914", "#b8941e"],
+    musician: ["#b8256e", "#d94a8e"],
+    band: ["#b8256e", "#d94a8e"],
+    dj: ["#1a8a8a", "#2cbcbc"],
+    comedian: ["#c28a1e", "#e0a832"],
+    author: ["#8b6914", "#b8941e"],
+    speaker: ["#8b6914", "#b8941e"],
     visual_artist: ["#7b4fb8", "#9b6fd8"],
-    actor:         ["#b8445a", "#d8647a"],
-    filmmaker:     ["#1a8a8a", "#2cbcbc"],
+    actor: ["#b8445a", "#d8647a"],
+    filmmaker: ["#1a8a8a", "#2cbcbc"],
   };
 
   const [from, to] = gradients[discipline] || ["#6b5a7a", "#8b7a9a"];
@@ -86,9 +88,11 @@ function InitialsFallback({ name, discipline, size = "sm" }: { name: string; dis
 export default function ArtistChip({
   artist,
   portalSlug,
+  eventCategory = null,
   variant = "card",
   fallbackImageUrl = null,
   fallbackGenres = null,
+  emphasizeHeadliner = true,
 }: ArtistChipProps) {
   const linkedArtist = artist.artist;
   const displayName = linkedArtist?.name || artist.name;
@@ -99,11 +103,15 @@ export default function ArtistChip({
     : (fallbackGenres || []);
   const hometown = linkedArtist?.hometown || null;
   const slug = linkedArtist?.slug;
+  const websiteUrl = linkedArtist?.website || getParticipantWebsiteFallback(displayName, eventCategory);
   const accentColor = getDisciplineColor(discipline);
   const accentClass = createCssVarClass("--accent-color", accentColor, "artist");
 
-  const isHeadliner = artist.is_headliner || artist.billing_order === 1;
+  const isHeadliner = emphasizeHeadliner && (artist.is_headliner || artist.billing_order === 1);
   const roleLabel = formatRoleLabel(artist.role, isHeadliner);
+
+  const profileHref = slug ? `/${portalSlug}/artists/${slug}` : null;
+  const externalHref = !profileHref && websiteUrl ? websiteUrl : null;
 
   if (variant === "inline") {
     const content = (
@@ -135,11 +143,24 @@ export default function ArtistChip({
       </div>
     );
 
-    if (slug) {
+    if (profileHref) {
       return (
-        <Link href={`/${portalSlug}/artists/${slug}`} className="hover:bg-[var(--card-bg-hover)] rounded-lg px-2 transition-colors">
+        <Link href={profileHref} className="hover:bg-[var(--card-bg-hover)] rounded-lg px-2 transition-colors">
           {content}
         </Link>
+      );
+    }
+
+    if (externalHref) {
+      return (
+        <a
+          href={externalHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:bg-[var(--card-bg-hover)] rounded-lg px-2 transition-colors"
+        >
+          {content}
+        </a>
       );
     }
 
@@ -202,19 +223,41 @@ export default function ArtistChip({
           ))}
         </div>
       )}
+
+      {externalHref && (
+        <span className="text-[0.58rem] uppercase tracking-wide text-[var(--coral)]/85 font-mono">
+          Official Site
+        </span>
+      )}
     </div>
   );
 
-  if (slug) {
+  if (profileHref) {
     return (
       <>
         <ScopedStyles css={accentClass?.css} />
         <Link
-          href={`/${portalSlug}/artists/${slug}`}
+          href={profileHref}
           className={`group transition-transform hover:scale-105 ${accentClass?.className ?? ""}`}
         >
           {cardContent}
         </Link>
+      </>
+    );
+  }
+
+  if (externalHref) {
+    return (
+      <>
+        <ScopedStyles css={accentClass?.css} />
+        <a
+          href={externalHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`group transition-transform hover:scale-105 ${accentClass?.className ?? ""}`}
+        >
+          {cardContent}
+        </a>
       </>
     );
   }

@@ -63,20 +63,23 @@ export function inferLineupGenreFallback(
   const collected: string[] = [];
   const seen = new Set<string>();
 
-  const add = (value: string | null | undefined) => {
+  const addGenre = (value: string | null | undefined) => {
     const normalized = normalizeTag(value || "");
     if (!normalized) return;
-    const mapped = TAG_GENRE_MAP[normalized] || normalized;
+    const mapped = TAG_GENRE_MAP[normalized];
     if (!mapped || seen.has(mapped)) return;
     seen.add(mapped);
     collected.push(titleCase(mapped));
   };
 
+  // Event genres are already artistic genres — map them through
   for (const genre of eventGenres || []) {
-    add(genre);
+    addGenre(genre);
   }
+  // Only pull tags that match known artistic genres (skip event-descriptor
+  // tags like "live-music", "ticketed", "21+", "touring", etc.)
   for (const tag of eventTags || []) {
-    add(tag);
+    addGenre(tag);
   }
 
   if (collected.length === 0 && (category || "").toLowerCase() === "music") {

@@ -23,7 +23,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, get_portal_id_by_slug, remove_stale_source_events
+from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, get_portal_id_by_slug, remove_stale_source_events
 from dedupe import generate_content_hash
 
 PORTAL_SLUG = "nashville"
@@ -200,9 +200,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     content_hash = generate_content_hash(title, "Brooklyn Bowl Nashville", date_str)
                     seen_hashes.add(content_hash)
 
-                    if find_event_by_hash(content_hash):
-                        events_updated += 1
-                        continue
 
                     # Build description from tagline
                     tagline = event_data.get("tagline", "")
@@ -243,6 +240,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "recurrence_rule": None,
                         "content_hash": content_hash,
                     }
+
+                    existing = find_event_by_hash(content_hash)
+                    if existing:
+                        smart_update_existing_event(existing, event_record)
+                        events_updated += 1
+                        continue
 
                     insert_event(event_record)
                     events_new += 1

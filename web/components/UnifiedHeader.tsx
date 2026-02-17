@@ -7,6 +7,7 @@ import Image from "@/components/SmartImage";
 import Logo from "./Logo";
 import UserMenu from "./UserMenu";
 import HeaderSearchButton from "./HeaderSearchButton";
+import SavedEventsButton from "./SavedEventsButton";
 import { usePortalOptional, DEFAULT_PORTAL, DEFAULT_PORTAL_SLUG, DEFAULT_PORTAL_NAME } from "@/lib/portal-context";
 import { useAuth } from "@/lib/auth-context";
 import { useLogoUrl } from "@/lib/hooks/useDesignOverrides";
@@ -276,6 +277,7 @@ function UnifiedHeaderInner({
           {/* Right: Search, User menu, Mobile menu */}
           <div className="relative flex items-center gap-2 flex-shrink-0 ml-auto">
             <HeaderSearchButton />
+            <SavedEventsButton />
             <UserMenu />
 
             {/* Mobile hamburger menu */}

@@ -55,10 +55,10 @@ Anti-conflation check:
 | K: Admin Portal Onboarding Flow | Delivered (Paused) | 2026-02-10 | Demo |
 | L: API Route Test Coverage | Done (events route) | 2026-02-10 | Eng Health |
 | M: Community Needs Tags | Done | 2026-02-10 | Network |
-| N: Strict Portal Attribution Hardening | In Progress | 2026-02-11 | Foundation |
-| O: Atlanta Usage + Quality Proof | Planned | 2026-02-11 | Launch |
-| P: Demo Portfolio (FORTH + 2 verticals) | Planned | 2026-02-11 | Launch |
-| Q: Scale Guardrails (Isolation/Perf/Test) | Planned | 2026-02-11 | Foundation |
+| N: Strict Portal Attribution Hardening | Done | 2026-02-16 | Foundation |
+| O: Atlanta Usage + Quality Proof | Done | 2026-02-16 | Launch |
+| P: Demo Portfolio (FORTH + 2 verticals) | Done | 2026-02-16 | Launch |
+| Q: Scale Guardrails (Isolation/Perf/Test) | Done | 2026-02-16 | Foundation |
 | R: Public Developer API | Iceboxed (Post-Launch) | 2026-02-11 | Platform |
 
 ---

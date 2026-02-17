@@ -26,7 +26,6 @@ type FeaturedEvent = {
   price_min: number | null;
   price_max: number | null;
   category: string | null;
-  subcategory: string | null;
   image_url: string | null;
   description: string | null;
   featured_blurb?: string | null;
@@ -78,7 +77,6 @@ export function FeaturedCarousel({ events }: Props) {
         events.map((event) => ({
           ...event,
           category_id: event.category,
-          subcategory_id: event.subcategory,
         })) as unknown as EventWithLocation[],
         {
           collapseFestivals: true,

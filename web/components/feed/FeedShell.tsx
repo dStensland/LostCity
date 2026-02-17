@@ -170,7 +170,7 @@ export default function FeedShell(props: FeedShellProps) {
         <div className="py-6 space-y-6">
           {/* Tab skeleton */}
           <div className="flex gap-1 p-1 bg-[var(--night)] rounded-lg">
-            {[1, 2, 3].map((i) => (
+            {[1, 2, 3, 4].map((i) => (
               <div key={i} className="flex-1 h-9 skeleton-shimmer rounded-md" />
             ))}
           </div>

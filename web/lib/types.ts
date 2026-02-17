@@ -15,7 +15,6 @@ export type Database = {
           end_time: string | null;
           is_all_day: boolean;
           category: string | null;
-          subcategory: string | null;
           tags: string[] | null;
           price_min: number | null;
           price_max: number | null;
@@ -1018,6 +1017,7 @@ export interface EventSubmissionData {
   recurrence_notes?: string;
   category?: string;
   subcategory?: string;
+  genres?: string[];
   tags?: string[];
   price_min?: number;
   price_max?: number;

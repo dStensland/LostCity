@@ -1,0 +1,299 @@
+  warnings.warn(
+================================================================================
+FESTIVAL DATA DEEP DIVE DIAGNOSTIC
+================================================================================
+Analysis date: 2026-02-14
+
+Total festival series found: 315
+
+================================================================================
+1. DATE SANITY ISSUES
+================================================================================
+
+CRITICAL: Festivals with NULL start_date but have events (257)
+  ID 00da7f58-b30c-4ce4-8f9c-9f9798967db9: UNNAMED (festival_program)
+    Events: 1, Date range: 2026-03-28 to 2026-03-28
+
+  ID 0345d8e7-6a40-4575-8520-5affaf8fa7ab: UNNAMED (festival_program)
+    Events: 1, Date range: 2026-04-25 to 2026-04-25
+
+  ID 03cc8251-679b-4bd2-9044-3c206e59a16d: UNNAMED (festival_program)
+    Events: 1, Date range: 2026-08-16 to 2026-08-16
+
+  ID 03f43e76-1022-4d8b-a2e0-c52d4ca24d23: UNNAMED (festival_program)
+    Events: 1, Date range: 2026-03-01 to 2026-03-01
+
+  ID 04f33fd2-5737-4965-8f31-ec9d71f74ffe: UNNAMED (festival_program)
+    Events: 1, Date range: 2026-04-11 to 2026-04-11
+
+  ID 0598f1d2-7810-4a6e-8b2a-acebb805d0a9: UNNAMED (festival_program)
+    Events: 1, Date range: 2026-02-23 to 2026-02-23
+
+  ID 06a9f486-f7c4-49eb-ae88-bd097fd7110e: UNNAMED (festival_program)
+    Events: 1, Date range: 2026-10-01 to 2026-10-01
+
+  ID 07cfbd6c-c02d-472a-b513-e9144dee4c09: UNNAMED (festival_program)
+    Events: 1, Date range: 2026-05-27 to 2026-05-27
+
+  ID 08ac3e80-cf42-49fe-94cf-9500f3f18bff: UNNAMED (festival_program)
+    Events: 2, Date range: 2026-06-20 to 2026-06-20
+
+  ID 0903b461-0da5-42f6-a168-cae52ef840e3: UNNAMED (festival_program)
+    Events: 1, Date range: 2026-03-01 to 2026-03-01
+
+  ID 0a65c840-a259-47d9-9d2e-f71296a2e8f7: UNNAMED (festival_program)
+    Events: 1, Date range: 2026-08-16 to 2026-08-16
+
+  ID 0b5a1d08-137a-4e5e-b204-1b9c28fcbf12: UNNAMED (festival_program)
+    Events: 1, Date range: 2026-02-28 to 2026-02-28
+
+  ID 0bd0ae12-af6b-47db-90e3-7c15d7613dce: UNNAMED (festival_program)
+    Events: 1, Date range: 2026-08-12 to 2026-08-12
+
+  ID 0c5f1cb3-aaf0-4c2e-8168-5f71ace1ceef: UNNAMED (festival_program)
+    Events: 6, Date range: 2026-06-04 to 2026-06-06
+
+  ID 0c675dd6-419c-4bb2-b820-546b334fc866: UNNAMED (festival_program)
+    Events: 2, Date range: 2026-09-24 to 2026-09-24
+
+================================================================================
+2. DESCRIPTION QUALITY ISSUES
+================================================================================
+
+Festivals with NO description: 304
+  ID 00da7f58-b30c-4ce4-8f9c-9f9798967db9: UNNAMED (festival_program)
+  ID 0345d8e7-6a40-4575-8520-5affaf8fa7ab: UNNAMED (festival_program)
+  ID 03aaf2bb-f16d-44a3-a243-62b9c2497df3: UNNAMED (festival_program)
+  ID 03cc8251-679b-4bd2-9044-3c206e59a16d: UNNAMED (festival_program)
+  ID 03f43e76-1022-4d8b-a2e0-c52d4ca24d23: UNNAMED (festival_program)
+  ID 03fcbd3c-b0f3-4a8e-b0cd-dece33ed114d: UNNAMED (festival_program)
+  ID 04f33fd2-5737-4965-8f31-ec9d71f74ffe: UNNAMED (festival_program)
+  ID 0598f1d2-7810-4a6e-8b2a-acebb805d0a9: UNNAMED (festival_program)
+  ID 06a9f486-f7c4-49eb-ae88-bd097fd7110e: UNNAMED (festival_program)
+  ID 07cfbd6c-c02d-472a-b513-e9144dee4c09: UNNAMED (festival_program)
+  ID 08ac3e80-cf42-49fe-94cf-9500f3f18bff: UNNAMED (festival_program)
+  ID 0903b461-0da5-42f6-a168-cae52ef840e3: UNNAMED (festival_program)
+  ID 0a65c840-a259-47d9-9d2e-f71296a2e8f7: UNNAMED (festival_program)
+  ID 0b5a1d08-137a-4e5e-b204-1b9c28fcbf12: UNNAMED (festival_program)
+  ID 0bd0ae12-af6b-47db-90e3-7c15d7613dce: UNNAMED (festival_program)
+  ID 0c5f1cb3-aaf0-4c2e-8168-5f71ace1ceef: UNNAMED (festival_program)
+  ID 0c675dd6-419c-4bb2-b820-546b334fc866: UNNAMED (festival_program)
+  ID 0c88591a-bd97-429f-9531-de27b982e678: UNNAMED (festival_program)
+  ID 0e429754-fd2b-47bf-bed5-ca13cb05d92c: UNNAMED (festival_program)
+  ID 0ec98a65-4e58-435f-a797-27df8e24f016: UNNAMED (festival_program)
+
+Festivals with SHORT description (< 50 chars): 0
+MEDIUM: Descriptions with boilerplate text: 2
+  ID 1b034863-0aae-49a5-9995-046884bce09c: UNNAMED (festival_program)
+    Preview: Thanks for strutting! See you next year: September 26, 2026 get involved! Strut your bake 2PM at Farmers market Wing Toss 3pm at midway pub Leaf Blower Madness! Sign up now! 2025 Presenting Sponsor 20
+
+  ID c9cea6a1-ce33-4d21-99df-e419f7eb3a64: UNNAMED (festival_program)
+    Preview: The rum dessert bake-off will be back on Saturday, September 27, 2025! Sign up below! The bake-off was inspired by our longtime neighbor Katherine Carter, who baked a legendary dessert that brought he
+
+================================================================================
+3. EVENT LINKAGE ANOMALIES
+================================================================================
+
+Festivals with only 1 event: 210
+  ID 00da7f58-b30c-4ce4-8f9c-9f9798967db9: UNNAMED (festival_program)
+    Event: Street Car Takeover
+
+  ID 0345d8e7-6a40-4575-8520-5affaf8fa7ab: UNNAMED (festival_program)
+    Event: Atlanta Truck Invasion
+
+  ID 03cc8251-679b-4bd2-9044-3c206e59a16d: UNNAMED (festival_program)
+    Event: Jessie Lane
+
+  ID 03f43e76-1022-4d8b-a2e0-c52d4ca24d23: UNNAMED (festival_program)
+    Event: Panda Fest Atlanta
+
+  ID 04f33fd2-5737-4965-8f31-ec9d71f74ffe: UNNAMED (festival_program)
+    Event: Monster Jam
+
+  ID 0598f1d2-7810-4a6e-8b2a-acebb805d0a9: UNNAMED (festival_program)
+    Event: Work Session & Council Meeting
+
+  ID 06a9f486-f7c4-49eb-ae88-bd097fd7110e: UNNAMED (festival_program)
+    Event: Atlanta Fashion Week
+
+  ID 07cfbd6c-c02d-472a-b513-e9144dee4c09: UNNAMED (festival_program)
+    Event: 14th Annual Atlanta Fringe Festival
+
+  ID 0903b461-0da5-42f6-a168-cae52ef840e3: UNNAMED (festival_program)
+    Event: Broadcast of the 2/23/26 Council Meeting
+
+  ID 0a65c840-a259-47d9-9d2e-f71296a2e8f7: UNNAMED (festival_program)
+    Event: Mark Wills
+
+  ID 0b5a1d08-137a-4e5e-b204-1b9c28fcbf12: UNNAMED (festival_program)
+    Event: Book Fair - Saturday
+
+  ID 0bd0ae12-af6b-47db-90e3-7c15d7613dce: UNNAMED (festival_program)
+    Event: Render ATL 2026
+
+  ID 0c88591a-bd97-429f-9531-de27b982e678: UNNAMED (festival_program)
+    Event: Autotrader 400
+
+  ID 0ec98a65-4e58-435f-a797-27df8e24f016: UNNAMED (festival_program)
+    Event: Food That Rocks
+
+  ID 11e496ab-f737-4cf0-a2e8-8434f44e807f: UNNAMED (festival_program)
+    Event: Hired Hands
+
+  ID 12116711-6255-4634-9fff-15428f66c913: UNNAMED (festival_program)
+    Event: Magical Nights of Lights
+
+  ID 13a15bbf-d16f-4776-b1cd-4bd544b11087: UNNAMED (festival_program)
+    Event: Peachtree Chapter of BMW Club Autocross
+
+  ID 1487105f-7144-4595-ab61-1c46d57535b6: UNNAMED (festival_program)
+    Event: Valentines at Vintages!
+
+  ID 15966d64-f3d1-4fa8-8889-1f0a9ed23581: UNNAMED (festival_program)
+    Event: Round 24
+
+  ID 15bb2979-56f7-4716-b3e3-705a1309b951: UNNAMED (festival_program)
+    Event: Round 8
+
+CRITICAL: Festivals with events from multiple sources: 1
+  ID 908d2fac-b792-46ba-9bca-b83f57e61dc7: UNNAMED (festival_program)
+    2 events from 2 sources
+
+MEDIUM: Festivals with low event title similarity: 15
+  ID 0c5f1cb3-aaf0-4c2e-8168-5f71ace1ceef: UNNAMED (festival_program)
+    Avg similarity: 0.16
+    Sample events:
+      - Georgia Celebrates Quilts
+      - Georgia Celebrates Quilts Opening Ceremony
+      - Vendor Market
+
+  ID 163a5c38-1067-4231-a584-50490472cc3f: UNNAMED (festival_program)
+    Avg similarity: 0.19
+    Sample events:
+      - Yellow Daisy Festival
+      - Dinner Terrace Seat
+      - Children’s Entrepreneur Market
+
+  ID 168b95c9-ed98-4f12-8713-1d5de34f7739: UNNAMED (festival_program)
+    Avg similarity: 0.17
+    Sample events:
+      - Virginia-Highland Summerfest
+      - Virginia-Highland Summerfest
+      - Virginia-Highland Summerfest
+
+  ID 32abe10c-701c-4c4f-afd3-99a5060a1bd4: UNNAMED (festival_program)
+    Avg similarity: 0.16
+    Sample events:
+      - Show Floor(S) Open For Early Access For Vip Ticket Holders
+      - Vip Event
+      - Show Floor(S) Open For Early Access For Vip Ticket Holders
+
+  ID 3b272166-ad9a-4485-aaa4-c71eaf7b42e9: UNNAMED (festival_program)
+    Avg similarity: 0.09
+    Sample events:
+      - 2026 Orchid Show
+      - 2026 Orchid Show
+      - 2026 Orchid Show
+
+  ID 4f153c16-adfc-4bdd-a7a0-948996d97023: UNNAMED (festival_program)
+    Avg similarity: 0.16
+    Sample events:
+      - Dj Cru
+      - A Payne in the Making: Craft Cocktails with Von Payne Black
+      - Atlanta Drum Academy
+
+  ID 4fcb034b-a74c-4018-a5bc-1f61efb70c8c: UNNAMED (festival_program)
+    Avg similarity: 0.14
+    Sample events:
+      - Investing in the Future
+      - Crypto and Blockchain
+      - Real Estate Strategies
+
+  ID 505ae40e-5943-4c0b-aad4-dc61a0d30aac: UNNAMED (festival_program)
+    Avg similarity: 0.15
+    Sample events:
+      - Monster Sticker Hunt
+      - Monster Sticker Hunt
+      - Monster Sticker Hunt
+
+  ID 58d403e8-490f-46ca-892f-b2baf5983d61: UNNAMED (festival_program)
+    Avg similarity: 0.19
+    Sample events:
+      - Captive Audience Shorts #1
+      - Noseeums
+      - They’re All Gonna Laugh at You Horror Comedy Shorts #6
+
+  ID 5cdaee05-33c6-4d0f-84b9-d3942f983afa: UNNAMED (festival_program)
+    Avg similarity: 0.11
+    Sample events:
+      - Riverfest Arts & Crafts Festival
+      - Riverfest Arts & Crafts Festival
+      - Riverfest
+
+================================================================================
+4. DUPLICATE / NEAR-DUPLICATE FESTIVALS
+================================================================================
+
+================================================================================
+5. GHOST FESTIVALS
+================================================================================
+
+Ghost festivals (0 events, no future relevance): 58
+  ID 03aaf2bb-f16d-44a3-a243-62b9c2497df3: UNNAMED (festival_program)
+    Start: None
+
+  ID 03fcbd3c-b0f3-4a8e-b0cd-dece33ed114d: UNNAMED (festival_program)
+    Start: None
+
+  ID 0e429754-fd2b-47bf-bed5-ca13cb05d92c: UNNAMED (festival_program)
+    Start: None
+
+  ID 11177da6-7621-48f1-9dac-2021643187b7: UNNAMED (festival_program)
+    Start: None
+
+  ID 1581c203-fa54-436a-8462-f21d0d51bb1f: UNNAMED (festival_program)
+    Start: None
+
+  ID 175b0dfb-ebdc-4a39-beda-5315263cdf86: UNNAMED (festival_program)
+    Start: None
+
+  ID 1a084ac0-0aba-4936-aff7-d8223b34e845: UNNAMED (festival_program)
+    Start: None
+
+  ID 1bead3f2-ea84-4bcd-a03e-58f71c38b6d5: UNNAMED (festival_program)
+    Start: None
+
+  ID 1c41ffc3-f7f1-4cf0-8d8f-5bf2eb59fa9c: UNNAMED (festival_program)
+    Start: None
+
+  ID 1f0be0d4-71a9-4c38-ac9a-1ebe4e0ffe19: UNNAMED (festival_program)
+    Start: None
+
+  ID 2b108a5c-aaa2-4f00-9cb6-dd99cdd2c81e: UNNAMED (festival_program)
+    Start: None
+
+  ID 3356b3d8-b502-4324-9b6e-f2d73c42519a: UNNAMED (festival_program)
+    Start: None
+
+  ID 3419ab55-8470-44a7-9975-3da2bb2c50ac: UNNAMED (festival_program)
+    Start: None
+
+  ID 346134f7-bb57-42d4-b2fe-b58af51bed30: UNNAMED (festival_program)
+    Start: None
+
+  ID 3d617f49-023a-4b36-9d9c-289fdfef675b: UNNAMED (festival_program)
+    Start: None
+
+  ID 41a4ff03-a848-4dc8-8b5f-ed3954d6d3f8: UNNAMED (festival_program)
+    Start: None
+
+  ID 424e2a32-e548-4c4a-b298-bbb55d4780c8: UNNAMED (festival_program)
+    Start: None
+
+  ID 47b1b923-eb37-4027-8881-2b217d5813ac: UNNAMED (festival_program)
+    Start: None
+
+  ID 50988c3d-0bad-4b42-a707-73bd4507fed5: UNNAMED (festival_program)
+    Start: None
+
+  ID 512f27a0-6254-4c87-95ca-08e095d1ca5a: UNNAMED (festival_program)

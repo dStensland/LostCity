@@ -11,20 +11,19 @@ import DirectionsDropdown from "@/components/DirectionsDropdown";
 import EventQuickActions from "@/components/EventQuickActions";
 import VenueVibes from "@/components/VenueVibes";
 import LinkifyText from "@/components/LinkifyText";
-import { formatTime, formatTimeSplit, formatCompactCount, formatTimeRange } from "@/lib/formats";
+import { formatTime, formatTimeRange } from "@/lib/formats";
 import { format, parseISO } from "date-fns";
 import { EntityTagList } from "@/components/tags/EntityTagList";
 import FlagButton from "@/components/FlagButton";
 import { getSeriesTypeLabel, getSeriesTypeColor } from "@/lib/series-utils";
-import CollapsibleSection, { CategoryIcons } from "@/components/CollapsibleSection";
-import { formatCloseTime } from "@/lib/hours";
-import VenueEventsByDay from "@/components/VenueEventsByDay";
+import NearbySection from "@/components/NearbySection";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
 import { isDogPortal } from "@/lib/dog-art";
 import { usePortal } from "@/lib/portal-context";
-import type { EventArtist } from "@/lib/artists-utils";
+import { getDisplayParticipants, getLineupLabels, type EventArtist } from "@/lib/artists-utils";
 import LineupSection from "@/components/LineupSection";
+import GettingThereSection from "@/components/GettingThereSection";
 import { deriveShowSignals } from "@/lib/show-signals";
 import ShowSignalsPanel from "@/components/ShowSignalsPanel";
 import { inferLineupGenreFallback } from "@/lib/artist-fallbacks";
@@ -68,6 +67,14 @@ type EventData = {
     city: string;
     state: string;
     vibes: string[] | null;
+    nearest_marta_station?: string | null;
+    marta_walk_minutes?: number | null;
+    marta_lines?: string[] | null;
+    beltline_adjacent?: boolean | null;
+    beltline_segment?: string | null;
+    parking_type?: string[] | null;
+    parking_free?: boolean | null;
+    transit_score?: number | null;
   } | null;
   producer: {
     id: string;
@@ -173,7 +180,7 @@ function parseRecurrenceDays(rule: string | null | undefined): string[] {
 }
 
 function isExhibition(event: EventData): boolean {
-  return event.subcategory === "exhibition" || event.series?.series_type === "exhibition";
+  return event.genres?.includes("exhibition") || event.series?.series_type === "exhibition";
 }
 
 export default function EventDetailView({ eventId, portalSlug, onClose }: EventDetailViewProps) {
@@ -196,7 +203,6 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [isLowRes, setIsLowRes] = useState(false);
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     async function fetchEvent() {
@@ -248,10 +254,6 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
   const handleSpotClick = (slug: string) => navigateToDetail("spot", slug);
   const handleSeriesClick = (slug: string) => navigateToDetail("series", slug);
   const handleFestivalClick = (slug: string) => navigateToDetail("festival", slug);
-
-  const toggleSection = (key: string) => {
-    setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }));
-  };
 
   // Reusable neon back button with 48x48px minimum touch target
   const NeonBackButton = () => (
@@ -327,15 +329,6 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
       )
     : null;
 
-  // Count items for related sections
-  const hasVenueEvents = venueEvents.length > 0;
-  const hasNearbyEvents = nearbyEvents.length > 0;
-  const hasFood = nearbyDestinations.food.length > 0;
-  const hasDrinks = nearbyDestinations.drinks.length > 0;
-  const hasNightlife = nearbyDestinations.nightlife.length > 0;
-  const hasCaffeine = nearbyDestinations.caffeine.length > 0;
-  const hasFun = nearbyDestinations.fun.length > 0;
-  const hasRelatedContent = hasVenueEvents || hasNearbyEvents || hasFood || hasDrinks || hasNightlife || hasCaffeine || hasFun;
   const descriptionText = event.display_description || event.description;
   const lineupGenreFallback = inferLineupGenreFallback(event.genres, event.tags, event.category);
   const derivedSignals = deriveShowSignals({
@@ -369,7 +362,14 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
       showSignals.reentryPolicy ||
       showSignals.hasSetTimesMention
   );
-  const hasLineup = eventArtists.length > 0;
+  const displayParticipants = getDisplayParticipants(eventArtists, {
+    eventTitle: event.title,
+    eventCategory: event.category,
+  });
+  const participantLabels = getLineupLabels(displayParticipants, {
+    eventCategory: event.category,
+  });
+  const hasLineup = displayParticipants.length > 0;
   const hasAboutContent = Boolean(descriptionText) || hasLineup;
   const hasIntroContent = hasAboutContent || hasShowSignals;
 
@@ -568,10 +568,13 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
         {hasLineup && (
           <div className={`mb-5 ${descriptionText ? "pt-5 border-t border-[var(--twilight)]" : ""}`}>
             <LineupSection
-              artists={eventArtists}
+              artists={displayParticipants}
               portalSlug={portalSlug}
               maxDisplay={20}
-              title="Artists"
+              title={participantLabels.sectionTitle}
+              headlinerLabel={participantLabels.headlinerLabel}
+              supportLabel={participantLabels.supportLabel}
+              eventCategory={event.category}
               fallbackImageUrl={event.image_url}
               fallbackGenres={lineupGenreFallback}
             />
@@ -620,6 +623,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
               {event.venue.vibes && event.venue.vibes.length > 0 && (
                 <VenueVibes vibes={event.venue.vibes} className="mt-2" />
               )}
+              <GettingThereSection transit={event.venue} variant="compact" />
             </button>
 
           </div>
@@ -789,296 +793,15 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
         </div>
       </div>
 
-      {/* Related Sections - Neon styled */}
-      {hasRelatedContent && (
-        <div className="mt-8">
-          {/* Neon Sign Header - Blade Runner aesthetic */}
-          <div className="relative mb-8 py-4">
-            {/* Background glow wash */}
-            <div className="absolute inset-0 blur-2xl opacity-20 neon-coral-wash" />
-
-            {/* Neon tube lines */}
-            <div className="absolute left-0 right-0 top-0 h-px opacity-30 neon-coral-line" />
-            <div className="absolute left-0 right-0 bottom-0 h-px opacity-30 neon-coral-line" />
-
-            {/* Title container */}
-            <div className="relative flex justify-center">
-              <div className="relative">
-                {/* Outer glow layer */}
-                <h2
-                  className="absolute inset-0 font-bold text-lg sm:text-xl tracking-[0.2em] uppercase blur-md opacity-60 text-coral-glow-outer"
-                  aria-hidden="true"
-                >
-                  Happening Around Here
-                </h2>
-                {/* Mid glow layer */}
-                <h2
-                  className="absolute inset-0 font-bold text-lg sm:text-xl tracking-[0.2em] uppercase blur-sm opacity-80 text-coral-glow-outer"
-                  aria-hidden="true"
-                >
-                  Happening Around Here
-                </h2>
-                {/* Main text */}
-                <h2
-                  className="relative font-bold text-lg sm:text-xl tracking-[0.2em] uppercase text-coral-glow-main"
-                >
-                  Happening Around Here
-                </h2>
-              </div>
-            </div>
-
-          </div>
-
-          <div className="space-y-3">
-            {/* More at Venue */}
-            {hasVenueEvents && event.venue && (
-              <CollapsibleSection
-                title={event.venue.name}
-                count={venueEvents.length}
-                category="venue"
-                icon={CategoryIcons.venue}
-              >
-                <VenueEventsByDay
-                  events={venueEvents}
-                  onEventClick={handleEventClick}
-                  maxDates={5}
-                  compact={true}
-                />
-              </CollapsibleSection>
-            )}
-
-            {/* Other Events Nearby */}
-            {hasNearbyEvents && (
-              <CollapsibleSection
-                title="Nearby"
-                count={nearbyEvents.length}
-                category="events"
-                icon={CategoryIcons.events}
-                maxItems={5}
-                totalItems={nearbyEvents.length}
-                onSeeAll={() => toggleSection('events')}
-              >
-                <div className="space-y-2">
-                  {(expandedSections.events ? nearbyEvents : nearbyEvents.slice(0, 5)).map((relatedEvent) => (
-                    <button
-                      key={relatedEvent.id}
-                      onClick={() => handleEventClick(relatedEvent.id)}
-                      className="block w-full p-3 border border-[var(--twilight)] rounded-lg transition-colors group hover:border-[var(--coral)]/50 bg-[var(--void)] text-left"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <h3 className="text-[var(--cream)] text-sm font-medium truncate group-hover:text-[var(--coral)] transition-colors">
-                            {relatedEvent.title}
-                          </h3>
-                          <p className="text-xs text-[var(--muted)] mt-0.5">
-                            {relatedEvent.venue?.name || "Venue TBA"}
-                            {relatedEvent.start_time && ` · ${formatTimeSplit(relatedEvent.start_time).time}${formatTimeSplit(relatedEvent.start_time).period}`}
-                          </p>
-                          {((relatedEvent.going_count ?? 0) > 0 || (relatedEvent.interested_count ?? 0) > 0 || (relatedEvent.recommendation_count ?? 0) > 0) && (
-                            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                              {(relatedEvent.going_count ?? 0) > 0 && (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)]/20 font-mono text-[0.6rem] font-medium text-[var(--coral)]">
-                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                  </svg>
-                                  {formatCompactCount(relatedEvent.going_count ?? 0)} going
-                                </span>
-                              )}
-                              {(relatedEvent.interested_count ?? 0) > 0 && (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--gold)]/15 border border-[var(--gold)]/30 font-mono text-[0.6rem] font-medium text-[var(--gold)]">
-                                  {formatCompactCount(relatedEvent.interested_count ?? 0)} maybe
-                                </span>
-                              )}
-                              {(relatedEvent.recommendation_count ?? 0) > 0 && (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--lavender)]/15 border border-[var(--lavender)]/30 font-mono text-[0.6rem] font-medium text-[var(--lavender)]">
-                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                                  </svg>
-                                  {formatCompactCount(relatedEvent.recommendation_count ?? 0)} rec&apos;d
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                        <svg className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </CollapsibleSection>
-            )}
-
-            {/* Food */}
-            {hasFood && (
-              <CollapsibleSection
-                title="Nearby"
-                count={nearbyDestinations.food.length}
-                category="food"
-                icon={CategoryIcons.food}
-                maxItems={5}
-                totalItems={nearbyDestinations.food.length}
-                onSeeAll={() => toggleSection('food')}
-              >
-                <div className="grid grid-cols-2 gap-2">
-                  {(expandedSections.food ? nearbyDestinations.food : nearbyDestinations.food.slice(0, 5)).map((spot) => (
-                    <SpotCard
-                      key={spot.id}
-                      spot={spot}
-                      onClick={() => handleSpotClick(spot.slug)}
-                    />
-                  ))}
-                </div>
-              </CollapsibleSection>
-            )}
-
-            {/* Drinks */}
-            {hasDrinks && (
-              <CollapsibleSection
-                title="Nearby"
-                count={nearbyDestinations.drinks.length}
-                category="drinks"
-                icon={CategoryIcons.drinks}
-                maxItems={5}
-                totalItems={nearbyDestinations.drinks.length}
-                onSeeAll={() => toggleSection('drinks')}
-              >
-                <div className="grid grid-cols-2 gap-2">
-                  {(expandedSections.drinks ? nearbyDestinations.drinks : nearbyDestinations.drinks.slice(0, 5)).map((spot) => (
-                    <SpotCard
-                      key={spot.id}
-                      spot={spot}
-                      onClick={() => handleSpotClick(spot.slug)}
-                    />
-                  ))}
-                </div>
-              </CollapsibleSection>
-            )}
-
-            {/* Nightlife */}
-            {hasNightlife && (
-              <CollapsibleSection
-                title="Nearby"
-                count={nearbyDestinations.nightlife.length}
-                category="nightlife"
-                icon={CategoryIcons.nightlife}
-                maxItems={5}
-                totalItems={nearbyDestinations.nightlife.length}
-                onSeeAll={() => toggleSection('nightlife')}
-              >
-                <div className="grid grid-cols-2 gap-2">
-                  {(expandedSections.nightlife ? nearbyDestinations.nightlife : nearbyDestinations.nightlife.slice(0, 5)).map((spot) => (
-                    <SpotCard
-                      key={spot.id}
-                      spot={spot}
-                      onClick={() => handleSpotClick(spot.slug)}
-                    />
-                  ))}
-                </div>
-              </CollapsibleSection>
-            )}
-
-            {/* Caffeine */}
-            {hasCaffeine && (
-              <CollapsibleSection
-                title="Nearby"
-                count={nearbyDestinations.caffeine.length}
-                category="caffeine"
-                icon={CategoryIcons.caffeine}
-                maxItems={5}
-                totalItems={nearbyDestinations.caffeine.length}
-                onSeeAll={() => toggleSection('caffeine')}
-              >
-                <div className="grid grid-cols-2 gap-2">
-                  {(expandedSections.caffeine ? nearbyDestinations.caffeine : nearbyDestinations.caffeine.slice(0, 5)).map((spot) => (
-                    <SpotCard
-                      key={spot.id}
-                      spot={spot}
-                      onClick={() => handleSpotClick(spot.slug)}
-                    />
-                  ))}
-                </div>
-              </CollapsibleSection>
-            )}
-
-            {/* Fun */}
-            {hasFun && (
-              <CollapsibleSection
-                title="Nearby"
-                count={nearbyDestinations.fun.length}
-                category="fun"
-                icon={CategoryIcons.fun}
-                maxItems={5}
-                totalItems={nearbyDestinations.fun.length}
-                onSeeAll={() => toggleSection('fun')}
-              >
-                <div className="grid grid-cols-2 gap-2">
-                  {(expandedSections.fun ? nearbyDestinations.fun : nearbyDestinations.fun.slice(0, 5)).map((spot) => (
-                    <SpotCard
-                      key={spot.id}
-                      spot={spot}
-                      onClick={() => handleSpotClick(spot.slug)}
-                    />
-                  ))}
-                </div>
-              </CollapsibleSection>
-            )}
-          </div>
-        </div>
-      )}
+      {/* Happening Around Here */}
+      <NearbySection
+        nearbySpots={nearbyDestinations}
+        venueEvents={venueEvents}
+        nearbyEvents={nearbyEvents}
+        venueName={event.venue?.name}
+        onSpotClick={handleSpotClick}
+        onEventClick={handleEventClick}
+      />
     </div>
-  );
-}
-
-// Spot type labels
-const SPOT_TYPE_LABELS: Record<string, string> = {
-  restaurant: "Restaurant",
-  food_hall: "Food Hall",
-  cooking_school: "Cooking School",
-  bar: "Bar",
-  brewery: "Brewery",
-  distillery: "Distillery",
-  winery: "Winery",
-  rooftop: "Rooftop",
-  sports_bar: "Sports Bar",
-  club: "Club",
-  coffee_shop: "Coffee",
-  games: "Games",
-  eatertainment: "Eatertainment",
-  arcade: "Arcade",
-  karaoke: "Karaoke",
-};
-
-// Spot card component for destination categories
-function SpotCard({ spot, onClick }: { spot: NearbySpot; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className="group p-3 border border-[var(--twilight)] rounded-lg transition-colors hover:border-[var(--coral)]/50 bg-[var(--void)] text-left"
-    >
-      <div className="flex items-start gap-2">
-        <CategoryIcon
-          type={spot.spot_type || "restaurant"}
-          size={16}
-          className="mt-0.5 flex-shrink-0"
-        />
-        <div className="min-w-0 flex-1">
-          <h3 className="text-[var(--cream)] text-sm font-medium truncate group-hover:text-[var(--coral)] transition-colors">
-            {spot.name}
-          </h3>
-          <div className="flex items-center gap-1.5 mt-0.5">
-            <p className="text-[0.65rem] text-[var(--muted)] font-mono uppercase tracking-wider">
-              {SPOT_TYPE_LABELS[spot.spot_type || ""] || spot.spot_type}
-            </p>
-            {spot.closesAt && (
-              <span className="text-[0.6rem] text-[var(--neon-amber)] font-mono">
-                til {formatCloseTime(spot.closesAt)}
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-    </button>
   );
 }

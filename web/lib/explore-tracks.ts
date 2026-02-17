@@ -20,7 +20,6 @@ export type ExploreVenueEvent = {
   startTime: string | null;
   endTime: string | null;
   category: string | null;
-  subcategory: string | null;
   isFree: boolean;
   priceMin: number | null;
   priceMax: number | null;
@@ -39,8 +38,6 @@ export type ExploreTrack = {
   bannerImageUrl: string | null;
   sortOrder: number;
   venueCount: number;
-  tipCount: number;
-  contributorCount: number;
   previewVenues: ExploreTrackVenuePreview[];
   // Enriched activity data for Comp D2
   tonightCount: number;
@@ -78,6 +75,8 @@ export type ExploreTrackVenue = {
   neighborhood: string | null;
   imageUrl: string | null;
   editorialBlurb: string | null;
+  sourceUrl: string | null;
+  sourceLabel: string | null;
   upvoteCount: number;
   hasUpvoted: boolean;
   isFeatured: boolean;
@@ -163,6 +162,11 @@ export const TRACK_SLUGS = [
   "resurgens",
   "up-on-the-roof",
   "artefacts-of-the-lost-city",
+  "not-from-around-here",
+  "as-seen-on-tv",
+  "comedy-live",
+  "native-heritage",
+  "hell-of-an-engineer",
 ] as const;
 
 export type TrackSlug = (typeof TRACK_SLUGS)[number];
@@ -219,6 +223,11 @@ export const TRACK_ACCENT_COLORS: Record<string, string> = {
   "resurgens": "#D4AF37",               // Architectural gold — BoA Plaza spire
   "up-on-the-roof": "#38BDF8",          // Sky blue — rooftop views
   "artefacts-of-the-lost-city": "#FB923C",       // Warm orange — curiosities & artifacts
+  "not-from-around-here": "#E07C4F",             // Warm terracotta — global spice
+  "as-seen-on-tv": "#60A5FA",                    // Screen blue — TV/film locations
+  "comedy-live": "#FBBF24",                      // Spotlight gold — stage lights
+  "native-heritage": "#92400E",                  // Earth brown — ancient land
+  "hell-of-an-engineer": "#B89B5E",              // Old gold — GT colors
 } as const;
 
 export function getTrackAccentColor(slug: string): string {
@@ -243,11 +252,16 @@ export const TRACK_CATEGORIES: Record<string, string> = {
   "keep-swinging": "Sports & Game Day",
   "lifes-like-a-movie": "Family & Kids",
   "say-less": "Speakeasy & Cocktails",
-  "yallywood": "Stage & Screen",
+  "yallywood": "Cinema",
   "spelhouse-spirit": "HBCU Culture",
   "resurgens": "Skyline & Architecture",
   "up-on-the-roof": "Rooftop & Skyline Views",
   "artefacts-of-the-lost-city": "Artefacts & Curiosities",
+  "not-from-around-here": "International & Regional Eats",
+  "as-seen-on-tv": "Filming Locations",
+  "comedy-live": "Comedy & Live Performance",
+  "native-heritage": "Creek & Cherokee Heritage",
+  "hell-of-an-engineer": "Georgia Tech",
 } as const;
 
 export function getTrackCategory(slug: string): string {

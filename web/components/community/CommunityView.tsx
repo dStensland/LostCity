@@ -1,13 +1,13 @@
 "use client";
 
-import { Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import ListsView from "./ListsView";
+import BestOfCategoryGrid from "@/components/best-of/BestOfCategoryGrid";
 import PortalCommunityView from "@/components/PortalCommunityView";
 import DashboardActivity from "@/components/dashboard/DashboardActivity";
 
-type CommunityTab = "lists" | "groups" | "people";
+type CommunityTab = "bestof" | "groups" | "people";
 
 interface CommunityViewProps {
   portalId: string;
@@ -29,12 +29,12 @@ const TABS: { key: CommunityTab; label: string; icon: React.ReactNode; authRequi
     ),
   },
   {
-    key: "lists",
-    label: "Lists",
-    description: "Ranked by the people who go",
+    key: "bestof",
+    label: "Best Of",
+    description: "Community-ranked favorites",
     icon: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
       </svg>
     ),
   },
@@ -55,7 +55,36 @@ function CommunityViewInner({ portalId, portalSlug, portalName, activeTab }: Com
   const searchParams = useSearchParams();
   const { user } = useAuth();
 
+  // Track last viewed time for activity indicator
+  const [hasNewActivity, setHasNewActivity] = useState(false);
+
+  useEffect(() => {
+    const lastViewed = localStorage.getItem("lastActivityViewedAt");
+    if (!lastViewed) return;
+
+    // Check crew-this-week for latest activity (fetched by the card)
+    async function checkActivity() {
+      try {
+        const res = await fetch("/api/dashboard/crew-this-week");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.latestActivityAt && data.latestActivityAt > (lastViewed || "")) {
+          setHasNewActivity(true);
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+    checkActivity();
+  }, []);
+
   const handleTabChange = (tab: CommunityTab) => {
+    // Mark as viewed when Friends tab is clicked
+    if (tab === "people") {
+      setHasNewActivity(false);
+      localStorage.setItem("lastActivityViewedAt", new Date().toISOString());
+    }
+
     const params = new URLSearchParams(searchParams?.toString() || "");
     params.set("view", "community");
     if (tab === "people") {
@@ -84,7 +113,12 @@ function CommunityViewInner({ portalId, portalSlug, portalName, activeTab }: Com
                     : "text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/50"
                 }`}
               >
-                {tab.icon}
+                <span className="relative">
+                  {tab.icon}
+                  {tab.key === "people" && hasNewActivity && !isActive && (
+                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[var(--coral)] animate-pulse" />
+                  )}
+                </span>
                 <span className="hidden sm:inline">{tab.label}</span>
                 {isLocked && (
                   <span className="ml-1 px-1.5 py-0.5 rounded text-[0.55rem] bg-[var(--coral)]/20 text-[var(--coral)] font-semibold">
@@ -108,9 +142,9 @@ function CommunityViewInner({ portalId, portalSlug, portalName, activeTab }: Com
         </Suspense>
       )}
 
-      {activeTab === "lists" && (
-        <Suspense fallback={<ListsLoadingSkeleton />}>
-          <ListsView portalId={portalId} portalSlug={portalSlug} />
+      {activeTab === "bestof" && (
+        <Suspense fallback={<BestOfLoadingSkeleton />}>
+          <BestOfCategoryGrid />
         </Suspense>
       )}
 
@@ -150,20 +184,11 @@ function PeopleLoadingSkeleton() {
   );
 }
 
-function ListsLoadingSkeleton() {
+function BestOfLoadingSkeleton() {
   return (
-    <div className="space-y-4">
-      {[1, 2, 3, 4].map((i) => (
-        <div key={i} className="p-4 rounded-xl border border-[var(--twilight)] bg-[var(--card-bg)]">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-lg skeleton-shimmer" />
-            <div className="flex-1 space-y-2">
-              <div className="h-5 w-2/3 skeleton-shimmer rounded" />
-              <div className="h-4 w-1/2 skeleton-shimmer rounded" />
-              <div className="h-3 w-1/4 skeleton-shimmer rounded" />
-            </div>
-          </div>
-        </div>
+    <div className="grid grid-cols-2 gap-3">
+      {[1, 2, 3, 4, 5, 6].map((i) => (
+        <div key={i} className="h-36 skeleton-shimmer rounded-xl" />
       ))}
     </div>
   );
@@ -190,7 +215,7 @@ function GroupsLoadingSkeleton() {
 
 export default function CommunityView(props: CommunityViewProps) {
   return (
-    <Suspense fallback={<ListsLoadingSkeleton />}>
+    <Suspense fallback={<BestOfLoadingSkeleton />}>
       <CommunityViewInner {...props} />
     </Suspense>
   );

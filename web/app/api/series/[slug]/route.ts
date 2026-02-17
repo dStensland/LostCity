@@ -2,7 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { NextRequest } from "next/server";
 import { getLocalDateString } from "@/lib/formats";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
-import { isValidUUID } from "@/lib/api-utils";
+import { resolvePortalQueryContext } from "@/lib/portal-query-context";
+import { applyPortalScopeToQuery, filterByPortalCity } from "@/lib/portal-scope";
 
 export async function GET(
   request: NextRequest,
@@ -12,16 +13,22 @@ export async function GET(
   if (rateLimitResult) return rateLimitResult;
 
   const { slug } = await params;
-  const portalIdParam = request.nextUrl.searchParams.get("portal_id");
-
-  // Validate portal_id to prevent PostgREST filter injection
-  const portalId = portalIdParam && isValidUUID(portalIdParam) ? portalIdParam : null;
+  const searchParams = request.nextUrl.searchParams;
+  const portalExclusive = searchParams.get("portal_exclusive") === "true";
 
   if (!slug) {
     return Response.json({ error: "Invalid slug" }, { status: 400 });
   }
 
   const supabase = await createClient();
+  const portalContext = await resolvePortalQueryContext(supabase, searchParams);
+  if (portalContext.hasPortalParamMismatch) {
+    return Response.json(
+      { error: "portal and portal_id parameters must reference the same portal" },
+      { status: 400 }
+    );
+  }
+  const portalCity = !portalExclusive ? portalContext.filters.city : undefined;
 
   // Fetch series data
   const { data: seriesData, error } = await supabase
@@ -48,7 +55,7 @@ export async function GET(
     .from("events")
     .select(`
       id, title, start_date, start_time, ticket_url,
-      venue:venues(id, name, slug, neighborhood)
+      venue:venues(id, name, slug, neighborhood, city)
     `)
     .eq("series_id", series.id)
     .gte("start_date", today)
@@ -56,10 +63,11 @@ export async function GET(
     .order("start_time", { ascending: true })
     .limit(50);
 
-  // Filter by portal to prevent cross-portal leakage
-  if (portalId) {
-    eventsQuery = eventsQuery.or(`portal_id.eq.${portalId},portal_id.is.null`);
-  }
+  eventsQuery = applyPortalScopeToQuery(eventsQuery, {
+    portalId: portalContext.portalId,
+    portalExclusive,
+    publicOnlyWhenNoPortal: true,
+  });
 
   const { data: eventsData } = await eventsQuery;
 
@@ -70,15 +78,18 @@ export async function GET(
     start_date: string;
     start_time: string | null;
     ticket_url: string | null;
-    venue: {
-      id: number;
-      name: string;
-      slug: string;
-      neighborhood: string | null;
-    } | null;
+      venue: {
+        id: number;
+        name: string;
+        slug: string;
+        neighborhood: string | null;
+        city?: string | null;
+      } | null;
   };
 
-  const events = (eventsData || []) as EventWithVenue[];
+  const events = filterByPortalCity((eventsData || []) as EventWithVenue[], portalCity, {
+    allowMissingCity: true,
+  });
 
   // Group by venue
   const venueMap = new Map<number, {

@@ -20,7 +20,7 @@ from datetime import datetime
 from typing import Optional
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash
+from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -284,9 +284,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 )
 
                 # Check for existing event
-                if find_event_by_hash(content_hash):
-                    events_updated += 1
-                    continue
 
                 # Determine category
                 category, subcategory, tags = determine_category(title, content)
@@ -320,6 +317,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "recurrence_rule": None,
                     "content_hash": content_hash,
                 }
+
+                existing = find_event_by_hash(content_hash)
+                if existing:
+                    smart_update_existing_event(existing, event_record)
+                    events_updated += 1
+                    continue
 
                 insert_event(event_record)
                 events_new += 1

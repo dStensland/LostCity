@@ -269,7 +269,6 @@ def _parse_aeg_event(event: dict) -> dict[str, Any] | None:
         "ticket_url": ticket_url,
         "image_url": image_url,
         "category": "music",
-        "subcategory": "concert",
         "price_min": price_min,
         "price_max": price_max,
         "venue": venue_dict,

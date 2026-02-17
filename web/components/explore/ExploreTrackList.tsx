@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Image from "@/components/SmartImage";
 import { usePortal } from "@/lib/portal-context";
 import type { ExploreTrack, ExploreTrackFeaturedEvent, PillType } from "@/lib/explore-tracks";
@@ -17,6 +17,7 @@ export default function ExploreTrackList() {
   const [tracks, setTracks] = useState<ExploreTrack[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
+  const scrollPositionRef = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -35,8 +36,6 @@ export default function ExploreTrackList() {
         bannerImageUrl: t.banner_image_url ?? null,
         sortOrder: t.sort_order,
         venueCount: t.venue_count ?? 0,
-        tipCount: 0,
-        contributorCount: 0,
         tonightCount: t.tonight_count ?? 0,
         weekendCount: t.weekend_count ?? 0,
         freeCount: t.free_count ?? 0,
@@ -95,12 +94,15 @@ export default function ExploreTrackList() {
 
   // Browser back-nav: push history state when entering a track detail
   const handleSelectTrack = useCallback((slug: string) => {
+    scrollPositionRef.current = window.scrollY;
     setSelectedSlug(slug);
     history.pushState({ exploreTrack: slug }, "", undefined);
   }, []);
 
   const handleBack = useCallback(() => {
     setSelectedSlug(null);
+    const savedScroll = scrollPositionRef.current;
+    requestAnimationFrame(() => window.scrollTo(0, savedScroll));
   }, []);
 
   // Listen for browser back to return from track detail to list
@@ -117,14 +119,16 @@ export default function ExploreTrackList() {
   // Show track detail if one is selected
   if (selectedSlug) {
     return (
-      <ExploreTrackDetail
-        slug={selectedSlug}
-        onBack={() => {
-          handleBack();
-          history.back();
-        }}
-        portalSlug={portal.slug}
-      />
+      <div className="animate-page-enter">
+        <ExploreTrackDetail
+          slug={selectedSlug}
+          onBack={() => {
+            handleBack();
+            history.back();
+          }}
+          portalSlug={portal.slug}
+        />
+      </div>
     );
   }
 
@@ -225,7 +229,7 @@ export default function ExploreTrackList() {
                     <div
                       key={track.id}
                       className={`explore-track-enter ${isHero ? "lg:col-span-2" : ""}`}
-                      style={{ animationDelay: `${index * 90}ms` }}
+                      style={{ animationDelay: `${Math.min(index * 90, 450)}ms` }}
                     >
                       <TrackBanner
                         track={track}
@@ -251,10 +255,11 @@ export default function ExploreTrackList() {
 
 const TRACK_GROUPS = [
   { label: "Essential Atlanta", slugs: ["welcome-to-atlanta", "good-trouble", "the-south-got-something-to-say"] },
-  { label: "Eat & Drink", slugs: ["the-itis", "say-less", "up-on-the-roof"] },
+  { label: "Eat & Drink", slugs: ["the-itis", "not-from-around-here", "say-less", "up-on-the-roof"] },
   { label: "Outdoors & Active", slugs: ["city-in-a-forest", "keep-moving-forward", "keep-swinging"] },
-  { label: "Culture & Community", slugs: ["hard-in-da-paint", "a-beautiful-mosaic", "too-busy-to-hate", "spelhouse-spirit"] },
-  { label: "After Dark & Entertainment", slugs: ["the-midnight-train", "yallywood", "lifes-like-a-movie"] },
+  { label: "Culture & Community", slugs: ["hard-in-da-paint", "a-beautiful-mosaic", "too-busy-to-hate", "spelhouse-spirit", "native-heritage"] },
+  { label: "Stage & Screen", slugs: ["yallywood", "as-seen-on-tv", "comedy-live", "the-midnight-train", "lifes-like-a-movie"] },
+  { label: "Campus Life", slugs: ["hell-of-an-engineer"] },
   { label: "Only in Atlanta", slugs: ["artefacts-of-the-lost-city", "resurgens"] },
 ];
 
@@ -292,7 +297,7 @@ function TrackBanner({
         e.currentTarget.style.transform = "translateY(0) rotate(0deg)";
         e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.3)";
       }}
-      aria-label={`${track.name} — ${category} — ${track.venueCount} places`}
+      aria-label={`${track.name} — ${category}`}
     >
       {/* Background image — overflow-hidden clips image to rounded corners */}
       <div
@@ -329,42 +334,11 @@ function TrackBanner({
         }}
       />
 
-      {/* Activity pills — top-right on mobile (avoids text overlap), bottom-right on desktop */}
-      {pills.length > 0 && (
-        <div className="absolute top-[12px] right-[12px] md:top-auto md:bottom-[24px] md:right-[28px] z-[3] flex flex-col items-end gap-1.5 md:gap-2">
-          {pills.map((pill, i) => {
-            const colors = PILL_COLORS[pill.type];
-            return (
-              <span
-                key={i}
-                className={`explore-pill font-mono text-[9px] md:text-[10px] font-medium px-2.5 md:px-3 py-[4px] md:py-[5px] rounded-full whitespace-nowrap inline-flex items-center gap-1 transition-shadow duration-200${
-                  pill.type === "tonight" ? " explore-pill-tonight" : ""
-                }`}
-                style={{
-                  color: colors.text,
-                  background: colors.bg,
-                  border: `1px solid ${colors.border}`,
-                  backdropFilter: "blur(8px)",
-                }}
-              >
-                {pill.type === "tonight" && (
-                  <span
-                    className="inline-block w-[6px] h-[6px] rounded-full animate-pulse"
-                    style={{ background: colors.text }}
-                  />
-                )}
-                {pill.label}
-              </span>
-            );
-          })}
-        </div>
-      )}
-
       {/* Content — positioned over gradient */}
       <div className="absolute bottom-0 left-0 right-0 p-[16px_20px] md:p-[24px_32px] z-[2]">
         {/* Category label — dark bg for readability */}
         <div
-          className="explore-banner-text-sm font-mono text-[8px] md:text-[11px] font-bold uppercase tracking-[0.16em] mb-1.5 md:mb-2 inline-block px-2 py-[3px] rounded"
+          className="explore-banner-text-sm font-mono text-[10px] md:text-[11px] font-bold uppercase tracking-[0.14em] mb-1.5 md:mb-2 inline-block px-2 py-[3px] rounded"
           style={{
             color: accent,
             background: "rgba(0,0,0,0.5)",
@@ -395,13 +369,51 @@ function TrackBanner({
           </p>
         )}
 
-        {/* Venue count */}
-        <p
-          className="explore-banner-text-sm font-mono text-[9px] md:text-[10px] mt-1.5 md:mt-2"
-          style={{ color: "var(--muted)" }}
-        >
-          {track.venueCount} places
-        </p>
+        {/* Quote — editorial identity */}
+        {track.quote && !track.description && (
+          <p
+            className="explore-banner-text-sm text-[11px] md:text-[13px] italic leading-[1.5] md:max-w-[75%]"
+            style={{ color: "var(--soft)", opacity: 0.7 }}
+          >
+            &ldquo;{track.quote}&rdquo;
+            {track.quoteSource && (
+              <span className="not-italic font-mono text-[10px] ml-1.5" style={{ color: accent }}>
+                — {track.quoteSource}
+              </span>
+            )}
+          </p>
+        )}
+
+        {/* Activity pills — inline row at bottom */}
+        {pills.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5 mt-2 md:mt-2.5">
+            {pills.map((pill, i) => {
+              const colors = PILL_COLORS[pill.type];
+              return (
+                <span
+                  key={i}
+                  className={`explore-pill font-mono text-[9px] md:text-[10px] font-medium px-2.5 md:px-3 py-[4px] md:py-[5px] rounded-full whitespace-nowrap inline-flex items-center gap-1 transition-shadow duration-200${
+                    pill.type === "tonight" ? " explore-pill-tonight" : ""
+                  }`}
+                  style={{
+                    color: colors.text,
+                    background: colors.bg,
+                    border: `1px solid ${colors.border}`,
+                    backdropFilter: "blur(8px)",
+                  }}
+                >
+                  {pill.type === "tonight" && (
+                    <span
+                      className="inline-block w-[6px] h-[6px] rounded-full animate-pulse"
+                      style={{ background: colors.text }}
+                    />
+                  )}
+                  {pill.label}
+                </span>
+              );
+            })}
+          </div>
+        )}
       </div>
 
     </button>
@@ -489,14 +501,21 @@ const PREFERRED_BANNER_VENUES: Record<string, string[]> = {
   "keep-moving-forward": ["Historic Fourth Ward Park", "Krog Street Market", "Ponce City Market"],
   "the-itis": ["Twisted Soul Cookhouse & Pours", "Sweet Auburn Curb Market"],
   "hard-in-da-paint": ["Atlanta Contemporary", "Krog Street Tunnel", "Pullman Yards"],
-  "a-beautiful-mosaic": ["Buford Highway Farmers Market", "Shrine Cultural Center", "Blooms Emporium Chinatown"],
+  "a-beautiful-mosaic": ["Buford Highway Farmers Market", "Blooms Emporium Chinatown"],
   "too-busy-to-hate": ["Mary's", "Blake's on the Park", "Lips Atlanta"],
   "the-midnight-train": ["MJQ Concourse", "Arabia Mountain", "The Oddities Museum", "Westview Cemetery", "Clermont Lounge"],
   "keep-swinging": ["Mercedes-Benz Stadium", "Bobby Dodd Stadium", "Atlanta Motor Speedway"],
   "lifes-like-a-movie": ["Center for Puppetry Arts", "LEGOLAND Discovery Center Atlanta", "Fernbank Museum of Natural History"],
   "say-less": ["Red Phone Booth", "JoJo's Beloved", "Himitsu"],
-  "yallywood": ["Fox Theatre", "Plaza Theatre", "Dad's Garage Theatre"],
+  "yallywood": ["Fox Theatre", "Plaza Theatre"],
   "spelhouse-spirit": ["Paschal's", "Hammonds House Museum", "Busy Bee Cafe"],
+  "not-from-around-here": ["Buford Highway Farmers Market", "Antico Pizza Napoletana", "Chai Pani", "Desta Ethiopian Kitchen"],
+  "as-seen-on-tv": ["Trilith Studios", "Atlanta Marriott Marquis", "Porsche Experience Center"],
+  "comedy-live": ["The Punchline", "Dad's Garage Theatre", "Alliance Theatre"],
+  "native-heritage": ["Etowah Indian Mounds", "Ocmulgee Mounds"],
+  "hell-of-an-engineer": ["Bobby Dodd Stadium", "Tech Tower"],
+  "resurgens": ["Bank of America Plaza", "One Atlantic Center"],
+  "artefacts-of-the-lost-city": ["Crypt of Civilization", "The Big Chicken"],
 };
 
 function deduplicateBannerImages(
@@ -589,16 +608,16 @@ function TrackListSkeleton() {
                 <div
                   className="absolute left-0 top-0 bottom-0 w-[4px] md:w-[5px] rounded-l-[16px] explore-skeleton-text opacity-30"
                 />
-                {/* Pills — bottom right */}
-                <div className="absolute bottom-[16px] right-[16px] md:bottom-[24px] md:right-[28px] flex flex-col items-end gap-1.5">
-                  <div className="h-5 w-20 rounded-full explore-skeleton-text opacity-35" />
-                </div>
                 {/* Content — bottom left */}
                 <div className="absolute bottom-0 left-0 right-0 p-[16px_20px] md:p-[24px_32px] space-y-2.5">
                   <div className="h-2.5 w-20 rounded explore-skeleton-text opacity-40" />
                   <div className={`rounded explore-skeleton-text opacity-50 ${i === 0 ? "h-10 md:h-12 w-2/5" : "h-8 md:h-10 w-3/5"}`} />
                   <div className="h-3 w-4/5 rounded explore-skeleton-text opacity-25" />
-                  <div className="h-2 w-16 rounded explore-skeleton-text opacity-20 mt-1.5" />
+                  {/* Pills placeholder */}
+                  <div className="flex gap-1.5 mt-1.5">
+                    <div className="h-5 w-20 rounded-full explore-skeleton-text opacity-35" />
+                    <div className="h-5 w-16 rounded-full explore-skeleton-text opacity-25" />
+                  </div>
                 </div>
               </div>
             </div>

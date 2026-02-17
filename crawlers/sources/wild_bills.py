@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timedelta
 
-from db import get_or_create_venue, insert_event, find_event_by_hash
+from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -104,9 +104,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     title, VENUE_DATA["name"], start_date
                 )
 
-                if find_event_by_hash(content_hash):
-                    events_updated += 1
-                    continue
 
                 is_free = "free" in tags
                 price_note = "Free lessons, cover charge for dancing" if "lessons" in title.lower() else "Cover charge varies"
@@ -138,6 +135,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "recurrence_rule": f"FREQ=WEEKLY;BYDAY={['MO','TU','WE','TH','FR','SA','SU'][day_of_week]}",
                     "content_hash": content_hash,
                 }
+
+                existing = find_event_by_hash(content_hash)
+                if existing:
+                    smart_update_existing_event(existing, event_record)
+                    events_updated += 1
+                    continue
 
                 day_names = [
                     "Monday",

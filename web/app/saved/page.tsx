@@ -1,6 +1,11 @@
-import { redirect } from "next/navigation";
+import type { Metadata } from "next";
+import SavedPageClient from "./SavedPageClient";
 
-// Redirect /saved to /dashboard?tab=planning
+export const metadata: Metadata = {
+  title: "Your Stash - Lost City",
+  description: "Your saved events, RSVPs, and invites",
+};
+
 export default function SavedPage() {
-  redirect("/dashboard?tab=planning");
+  return <SavedPageClient />;
 }

@@ -62,7 +62,6 @@ class DetailConfig(BaseModel):
 
 class DefaultsConfig(BaseModel):
     category: Optional[str] = None
-    subcategory: Optional[str] = None
     tags: list[str] = Field(default_factory=list)
     venue_name: Optional[str] = None
 

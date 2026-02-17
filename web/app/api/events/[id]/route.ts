@@ -7,8 +7,10 @@ import { logger } from "@/lib/logger";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 import { DESTINATION_CATEGORIES } from "@/lib/spots";
 import { fetchSocialProofCounts } from "@/lib/search";
-import type { EventArtist } from "@/lib/artists-utils";
+import { getDisplayParticipants, type EventArtist } from "@/lib/artists-utils";
 import { buildDisplayDescription } from "@/lib/event-description";
+import { resolvePortalQueryContext } from "@/lib/portal-query-context";
+import { applyPortalScopeToQuery, filterByPortalCity } from "@/lib/portal-scope";
 
 const NEARBY_RADIUS_MILES = 10;
 
@@ -50,10 +52,17 @@ export async function GET(
     return Response.json({ error: "Invalid event ID" }, { status: 400 });
   }
 
-  const { searchParams } = new URL(request.url);
-  const portalId = searchParams.get("portal_id") || undefined;
-
   const supabase = await createClient();
+  const { searchParams } = new URL(request.url);
+  const portalExclusive = searchParams.get("portal_exclusive") === "true";
+  const portalContext = await resolvePortalQueryContext(supabase, searchParams);
+  if (portalContext.hasPortalParamMismatch) {
+    return Response.json(
+      { error: "portal and portal_id parameters must reference the same portal" },
+      { status: 400 }
+    );
+  }
+  const portalCity = !portalExclusive ? portalContext.filters.city : undefined;
 
   // Fetch event with venue, series, and producer
   let event: unknown | null = null;
@@ -61,7 +70,7 @@ export async function GET(
 
   const fullSelect = `
     *,
-    venue:venues(id, name, slug, address, neighborhood, city, state, vibes, description, lat, lng),
+    venue:venues(id, name, slug, address, neighborhood, city, state, vibes, description, lat, lng, nearest_marta_station, marta_walk_minutes, marta_lines, beltline_adjacent, beltline_segment, parking_type, parking_free, transit_score),
     series:series_id(
       id,
       title,
@@ -94,7 +103,7 @@ export async function GET(
         .from("events")
         .select(`
           *,
-          venue:venues(id, name, slug, address, neighborhood, city, state, vibes, description, lat, lng)
+          venue:venues(id, name, slug, address, neighborhood, city, state, vibes, description, lat, lng, nearest_marta_station, marta_walk_minutes, marta_lines, beltline_adjacent, beltline_segment, parking_type, parking_free, transit_score)
         `)
         .eq("id", eventId)
         .maybeSingle();
@@ -137,6 +146,10 @@ export async function GET(
     is_headliner: row.is_headliner,
     artist: row.artists,
   })) || [];
+  const displayParticipants = getDisplayParticipants(eventArtists, {
+    eventTitle: (event as { title?: string | null }).title || null,
+    eventCategory: (event as { category?: string | null }).category || null,
+  });
 
   // Cast to access properties
   const eventData = event as {
@@ -165,16 +178,18 @@ export async function GET(
       .from("events")
       .select(`
         id, title, start_date, end_date, start_time, end_time,
-        venue:venues(id, name, slug)
+        venue:venues(id, name, slug, city)
       `)
       .eq("venue_id", eventData.venue_id)
       .neq("id", eventId)
       .is("canonical_event_id", null)
       .or(`start_date.gte.${today},end_date.gte.${today}`);
 
-    if (portalId) {
-      venueEventsQuery = venueEventsQuery.or(`portal_id.eq.${portalId},portal_id.is.null`);
-    }
+    venueEventsQuery = applyPortalScopeToQuery(venueEventsQuery, {
+      portalId: portalContext.portalId,
+      portalExclusive,
+      publicOnlyWhenNoPortal: true,
+    });
 
     const { data } = await venueEventsQuery
       .order("start_date", { ascending: true })
@@ -194,15 +209,17 @@ export async function GET(
       .from("events")
       .select(`
         id, title, start_date, start_time, end_time,
-        venue:venues(id, name, slug, lat, lng)
+        venue:venues(id, name, slug, lat, lng, city)
       `)
       .eq("start_date", eventData.start_date)
       .neq("id", eventId)
       .is("canonical_event_id", null);
 
-    if (portalId) {
-      sameDateQuery = sameDateQuery.or(`portal_id.eq.${portalId},portal_id.is.null`);
-    }
+    sameDateQuery = applyPortalScopeToQuery(sameDateQuery, {
+      portalId: portalContext.portalId,
+      portalExclusive,
+      publicOnlyWhenNoPortal: true,
+    });
 
     const { data: sameDateEvents } = await sameDateQuery
       .order("start_time", { ascending: true })
@@ -244,15 +261,17 @@ export async function GET(
       .from("events")
       .select(`
         id, title, start_date, start_time, end_time,
-        venue:venues(id, name, slug)
+        venue:venues(id, name, slug, city)
       `)
       .eq("start_date", eventData.start_date)
       .neq("id", eventId)
       .is("canonical_event_id", null);
 
-    if (portalId) {
-      fallbackQuery = fallbackQuery.or(`portal_id.eq.${portalId},portal_id.is.null`);
-    }
+    fallbackQuery = applyPortalScopeToQuery(fallbackQuery, {
+      portalId: portalContext.portalId,
+      portalExclusive,
+      publicOnlyWhenNoPortal: true,
+    });
 
     const { data: sameDateEvents } = await fallbackQuery
       .order("start_time", { ascending: true })
@@ -260,6 +279,17 @@ export async function GET(
 
     nearbyEvents = sameDateEvents || [];
   }
+
+  venueEvents = filterByPortalCity(
+    venueEvents as Array<{ venue?: { city?: string | null } | null }>,
+    portalCity,
+    { allowMissingCity: true }
+  );
+  nearbyEvents = filterByPortalCity(
+    nearbyEvents as Array<{ venue?: { city?: string | null } | null }>,
+    portalCity,
+    { allowMissingCity: true }
+  );
 
   // Enrich related events with social proof counts
   const relatedEventIds = [
@@ -462,13 +492,14 @@ export async function GET(
     event: {
       ...(event as Record<string, unknown>),
       is_live: isLive,
-      display_description: buildDisplayDescription(eventData.description || null, eventArtists, {
+      display_description: buildDisplayDescription(eventData.description || null, displayParticipants, {
+        eventTitle: (eventData.title as string | null | undefined) || null,
         eventGenres: (eventData.genres as string[] | null | undefined) || null,
         eventTags: (eventData.tags as string[] | null | undefined) || null,
         eventCategory: (eventData.category as string | null | undefined) || null,
       }),
     },
-    eventArtists,
+    eventArtists: displayParticipants,
     venueEvents,
     nearbyEvents,
     nearbyDestinations,

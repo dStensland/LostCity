@@ -23,7 +23,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
-from db import get_or_create_venue, insert_event, find_event_by_hash
+from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from description_fetcher import fetch_description_from_url
 from utils import extract_images_from_page, enrich_event_record
@@ -415,9 +415,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         title, "Marcus Jewish Community Center of Atlanta", start_date
                     )
 
-                    if find_event_by_hash(content_hash):
-                        events_updated += 1
-                        continue
 
                     # Fetch description from detail page
                     description = None
@@ -460,6 +457,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "recurrence_rule": None,
                         "content_hash": content_hash,
                     }
+
+                    existing = find_event_by_hash(content_hash)
+                    if existing:
+                        smart_update_existing_event(existing, event_record)
+                        events_updated += 1
+                        continue
 
                     # Enrich from detail page if still missing image
                     if not event_image and event_url and event_url != CALENDAR_URL:

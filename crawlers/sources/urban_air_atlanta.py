@@ -14,7 +14,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
-from db import get_or_create_venue, insert_event, find_event_by_hash
+from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, normalize_time_format
 
@@ -254,10 +254,6 @@ def crawl_location(page, location: dict, source_id: int) -> tuple[int, int, int]
                     title, location["name"], start_date
                 )
 
-                if find_event_by_hash(content_hash):
-                    events_updated += 1
-                    i += 1
-                    continue
 
                 event_record = {
                     "source_id": source_id,
@@ -285,6 +281,13 @@ def crawl_location(page, location: dict, source_id: int) -> tuple[int, int, int]
                     "recurrence_rule": None,
                     "content_hash": content_hash,
                 }
+
+                existing = find_event_by_hash(content_hash)
+                if existing:
+                    smart_update_existing_event(existing, event_record)
+                    events_updated += 1
+                    i += 1
+                    continue
 
                 try:
                     insert_event(event_record)

@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getLocalDateString } from "@/lib/formats";
 import type { Festival } from "@/lib/festivals";
 import { logger } from "@/lib/logger";
+import { resolvePortalQueryContext } from "@/lib/portal-query-context";
 
 function safeParseInt(value: string | null, defaultValue: number, min = 1, max = 1000): number {
   if (!value) return defaultValue;
@@ -26,27 +27,17 @@ export async function GET(request: Request) {
     const priceMax = priceFilter?.max || undefined;
     const venueParam = searchParams.get("venue");
     const venueId = venueParam ? safeParseInt(venueParam, 0, 0, 999999) : undefined;
-    const portalId = searchParams.get("portal_id") || undefined;
-    const portalExclusive = searchParams.get("portal_exclusive") === "true";
-
     const supabase = await createClient();
-
-    // Resolve portal city for geographic scoping of NULL-portal events
-    let portalCity: string | undefined;
-    if (portalId && !portalExclusive) {
-      const { data: portalData } = await supabase
-        .from("portals")
-        .select("filters")
-        .eq("id", portalId)
-        .maybeSingle();
-      const portalFilters = portalData as { filters?: Record<string, unknown> | string | null } | null;
-      if (portalFilters?.filters) {
-        const pf = (typeof portalFilters.filters === "string"
-          ? JSON.parse(portalFilters.filters)
-          : portalFilters.filters) as { city?: string };
-        portalCity = pf.city || undefined;
-      }
+    const portalContext = await resolvePortalQueryContext(supabase, searchParams);
+    if (portalContext.hasPortalParamMismatch) {
+      return apiResponse(
+        { error: "portal and portal_id parameters must reference the same portal" },
+        { status: 400 }
+      );
     }
+    const portalId = portalContext.portalId || undefined;
+    const portalExclusive = searchParams.get("portal_exclusive") === "true";
+    const portalCity = !portalExclusive ? portalContext.filters.city : undefined;
 
     const filters: SearchFilters = {
       search: searchParams.get("search") || undefined,

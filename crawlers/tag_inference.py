@@ -743,22 +743,6 @@ def infer_is_class(
     if event_genres & class_genres:
         return True
 
-    # Subcategory match (legacy, kept for transition)
-    subcategory = event.get("subcategory") or ""
-    class_subcategories = {
-        "learning.workshop",
-        "learning.class",
-        "art.workshop",
-        "arts.workshop",
-        "art.class",
-        "food_drink.class",
-        "fitness.yoga",
-        "fitness.class",
-        "fitness.dance",
-    }
-    if subcategory in class_subcategories:
-        return True
-
     # Title/description pattern matching
     title = (event.get("title") or "").lower()
     desc = (event.get("description") or "").lower()
@@ -1141,16 +1125,8 @@ def infer_genres(
             (["performance art", "happening", "durational", "body art"], "performance"),
             (["art market", "maker fair", "craft fair", "handmade"], "market"),
         ]
-        for keywords, genre in art_patterns:
-            if any(kw in text for kw in keywords):
-                genres.add(genre)
-
-    elif category == "museums":
+        # Museum-specific patterns (merged from duplicate art block)
         museum_patterns: list[tuple[list[str], str]] = [
-            (
-                ["exhibition", "exhibit", "retrospective", "collection", "gallery show"],
-                "exhibition",
-            ),
             (
                 ["science", "stem", "planetarium", "observatory", "dinosaur", "fossil"],
                 "science",
@@ -1178,7 +1154,7 @@ def infer_genres(
             (["workshop", "hands-on", "craft", "make your own"], "workshop"),
             (["tour", "guided", "docent", "walkthrough"], "tour"),
         ]
-        for keywords, genre in museum_patterns:
+        for keywords, genre in art_patterns + museum_patterns:
             if any(kw in text for kw in keywords):
                 genres.add(genre)
 
@@ -1345,7 +1321,7 @@ def infer_genres(
             if any(kw in text for kw in keywords):
                 genres.add(genre)
 
-    elif category == "outdoor":
+    elif category == "outdoors":
         outdoor_patterns: list[tuple[list[str], str]] = [
             (["park", "picnic", "lawn", "green space"], "parks"),
             (["garden", "botanical", "plant", "bloom", "flower"], "garden"),
@@ -1440,192 +1416,3 @@ def infer_genres(
     return sorted(genres)
 
 
-def infer_subcategory(event: dict) -> str | None:
-    """
-    DEPRECATED: Subcategory has been migrated to genres[].
-    Use infer_genres() instead. This function is kept for reference only.
-
-    Infer subcategory from event title and description.
-    """
-    title = (event.get("title") or "").lower()
-    desc = (event.get("description") or "").lower()
-    category = event.get("category") or ""
-    text = f"{title} {desc}"
-
-    # Words subcategories
-    if category == "words":
-        if any(term in text for term in ["book club", "bookclub", "reading group"]):
-            return "words.bookclub"
-        if any(term in text for term in ["poetry", "poem", "spoken word"]):
-            return "words.poetry"
-        if any(term in text for term in ["storytelling", "story time", "storytime"]):
-            return "words.storytelling"
-        if any(
-            term in text
-            for term in ["writing workshop", "writers group", "creative writing"]
-        ):
-            return "words.workshop"
-        if any(
-            term in text for term in ["author", "signing", "in conversation", "reading"]
-        ):
-            return "words.lecture"
-        return "words.reading"  # Default for words
-
-    # Learning subcategories
-    if category == "learning":
-        if any(term in text for term in ["workshop", "hands-on", "hands on"]):
-            return "learning.workshop"
-        if any(term in text for term in ["class", "course", "lesson"]):
-            return "learning.class"
-        if any(term in text for term in ["lecture", "talk", "presentation", "speaker"]):
-            return "learning.lecture"
-        if any(term in text for term in ["seminar", "conference", "symposium"]):
-            return "learning.seminar"
-        return "learning.workshop"  # Default
-
-    # Fitness subcategories
-    if category == "fitness":
-        if any(term in text for term in ["yoga", "vinyasa", "hatha"]):
-            return "fitness.yoga"
-        if any(term in text for term in ["run", "5k", "10k", "marathon", "jog"]):
-            return "fitness.run"
-        if any(term in text for term in ["cycle", "cycling", "bike", "spin"]):
-            return "fitness.cycling"
-        if any(term in text for term in ["dance", "zumba", "barre"]):
-            return "fitness.dance"
-        if any(term in text for term in ["hike", "hiking", "trail", "walk"]):
-            return "fitness.hike"
-        if any(term in text for term in ["class", "workout", "bootcamp", "hiit"]):
-            return "fitness.class"
-        return "fitness.class"  # Default
-
-    # Music subcategories
-    if category == "music":
-        if any(term in text for term in ["open mic", "open-mic", "openmic"]):
-            return "music.openmic"
-        if any(
-            term in text
-            for term in ["symphony", "orchestra", "chamber", "philharmonic"]
-        ):
-            return "music.classical"
-        if any(term in text for term in ["jazz", "blues"]):
-            return "music.live.jazz"
-        if any(term in text for term in ["hip hop", "hip-hop", "rap", "r&b", "rnb"]):
-            return "music.live.hiphop"
-        if any(
-            term in text for term in ["electronic", "edm", "techno", "house", "dj set"]
-        ):
-            return "music.live.electronic"
-        if any(term in text for term in ["country", "folk", "bluegrass"]):
-            return "music.live.country"
-        if any(term in text for term in ["metal", "punk", "hardcore"]):
-            return "music.live.metal"
-        if any(term in text for term in ["rock", "indie", "alternative"]):
-            return "music.live.rock"
-        return "music.live"  # Default for concerts
-
-    # Comedy subcategories
-    if category == "comedy":
-        if any(term in text for term in ["open mic", "open-mic", "openmic"]):
-            return "comedy.openmic"
-        if any(term in text for term in ["improv", "improvisation"]):
-            return "comedy.improv"
-        return "comedy.standup"  # Default
-
-    # Theater subcategories
-    if category == "theater":
-        if any(term in text for term in ["musical", "broadway"]):
-            return "theater.musical"
-        if any(
-            term in text for term in ["ballet", "dance company", "dance performance"]
-        ):
-            return "theater.dance"
-        if any(term in text for term in ["opera"]):
-            return "theater.opera"
-        return "theater.play"  # Default
-
-    # Film subcategories
-    if category == "film":
-        if any(term in text for term in ["documentary", "doc"]):
-            return "film.documentary"
-        if any(term in text for term in ["festival", "film fest"]):
-            return "film.festival"
-        if any(term in text for term in ["classic", "repertory", "revival"]):
-            return "film.repertory"
-        return "film.new"  # Default
-
-    # Museums subcategories
-    if category == "museums":
-        if any(term in text for term in ["art museum", "fine art", "contemporary art", "modern art", "painting", "sculpture"]):
-            return "museums.art"
-        if any(term in text for term in ["history", "historic", "civil war", "civil rights", "heritage"]):
-            return "museums.history"
-        if any(term in text for term in ["science", "stem", "planetarium", "natural history", "dinosaur", "fossil"]):
-            return "museums.science"
-        if any(term in text for term in ["children", "kids", "youth", "imagine it"]):
-            return "museums.children"
-        if any(term in text for term in ["exhibition", "exhibit", "retrospective", "collection"]):
-            return "museums.exhibition"
-        if any(term in text for term in ["cultural", "culture", "indigenous", "diaspora"]):
-            return "museums.cultural"
-        return "museums.exhibition"  # Default
-
-    # Community subcategories
-    if category == "community":
-        if any(term in text for term in ["volunteer", "volunteering"]):
-            return "community.volunteer"
-        if any(term in text for term in ["meetup", "meet up", "gathering"]):
-            return "community.meetup"
-        if any(term in text for term in ["networking", "mixer", "professional"]):
-            return "community.networking"
-        if any(term in text for term in ["lgbtq", "pride", "queer", "gay"]):
-            return "community.lgbtq"
-        return None
-
-    # Nightlife subcategories
-    if category == "nightlife":
-        if any(term in text for term in ["trivia", "quiz"]):
-            return "nightlife.trivia"
-        if any(term in text for term in ["drag", "drag show", "drag brunch", "tossed salad"]):
-            return "nightlife.drag"
-        if any(term in text for term in ["karaoke", "sing-along", "noraebang"]):
-            return "nightlife.karaoke"
-        if any(term in text for term in ["poker", "texas hold", "holdem", "freeroll"]):
-            return "nightlife.poker"
-        if any(term in text for term in ["bingo", "drag bingo", "music bingo"]):
-            return "nightlife.bingo"
-        if any(term in text for term in ["board game", "darts", "shuffleboard", "cornhole", "bocce", "skee-ball", "ping pong", "pool tournament", "billiards"]):
-            return "nightlife.bar_games"
-        if any(term in text for term in ["pub crawl", "bar crawl", "brewery crawl"]):
-            return "nightlife.pub_crawl"
-        if any(term in text for term in ["happy hour", "drink special", "taco tuesday", "wing night", "crab night", "ladies night", "industry night", "half off", "half-price"]):
-            return "nightlife.specials"
-        if any(term in text for term in ["latin night", "salsa night", "bachata", "reggaeton", "noche latina"]):
-            return "nightlife.latin_night"
-        if any(term in text for term in ["line dancing", "line dance", "two-step", "honky tonk", "country night"]):
-            return "nightlife.line_dancing"
-        if any(term in text for term in ["party", "celebration", "bash"]):
-            return "nightlife.party"
-        if any(term in text for term in ["dj", "dance night", "dance party", "remix", "mixtape", "mixed tape"]):
-            return "nightlife.dj"
-        if any(term in text for term in ["burlesque"]):
-            return "nightlife.burlesque"
-        return "nightlife.dj"  # Default for club nights
-
-    # Meetup subcategories
-    if category == "meetup":
-        if any(term in text for term in ["tech", "developer", "coding", "programming"]):
-            return "meetup.tech"
-        if any(term in text for term in ["professional", "career", "business"]):
-            return "meetup.professional"
-        if any(term in text for term in ["outdoor", "hike", "nature"]):
-            return "meetup.outdoors"
-        if any(term in text for term in ["creative", "art", "craft"]):
-            return "meetup.creative"
-        if any(term in text for term in ["food", "dinner", "brunch"]):
-            return "meetup.food"
-        if any(term in text for term in ["parent", "mom", "dad", "family"]):
-            return "meetup.parents"
-        return "meetup.social"  # Default
-
-    return None

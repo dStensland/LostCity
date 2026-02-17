@@ -1,8 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
-import { getPortalBySlug } from "@/lib/portal";
-import { isValidUUID } from "@/lib/api-utils";
 import { logger } from "@/lib/logger";
+import { resolvePortalQueryContext } from "@/lib/portal-query-context";
+import { applyPortalScopeToQuery, filterByPortalCity } from "@/lib/portal-scope";
 
 type LiveEventRow = {
   id: number;
@@ -11,7 +11,6 @@ type LiveEventRow = {
   end_time: string | null;
   is_all_day: boolean;
   category: string | null;
-  subcategory: string | null;
   tags: string[] | null;
   price_min: number | null;
   price_max: number | null;
@@ -22,6 +21,7 @@ type LiveEventRow = {
     id: number;
     name: string;
     neighborhood: string | null;
+    city: string | null;
     lat: number | null;
     lng: number | null;
     venue_type: string | null;
@@ -35,19 +35,17 @@ export async function GET(request: Request) {
 
   try {
     const { searchParams } = new URL(request.url);
-    const portalSlug = searchParams.get("portal");
-    const portalIdParam = searchParams.get("portal_id");
-
-    // Resolve portal ID from slug or direct ID (validate to prevent injection)
-    let portalId: string | null = null;
-    if (portalIdParam && isValidUUID(portalIdParam)) {
-      portalId = portalIdParam;
-    } else if (portalSlug) {
-      const portal = await getPortalBySlug(portalSlug);
-      portalId = portal?.id || null;
-    }
+    const portalExclusive = searchParams.get("portal_exclusive") === "true";
 
     const supabase = await createClient();
+    const portalContext = await resolvePortalQueryContext(supabase, searchParams);
+    if (portalContext.hasPortalParamMismatch) {
+      return Response.json(
+        { error: "portal and portal_id parameters must reference the same portal", events: [], count: 0 },
+        { status: 400 }
+      );
+    }
+    const portalCity = !portalExclusive ? portalContext.filters.city : undefined;
 
     // Get all currently live events with venue info
     let query = supabase
@@ -59,7 +57,6 @@ export async function GET(request: Request) {
         end_time,
         is_all_day,
         category,
-        subcategory,
         tags,
         price_min,
         price_max,
@@ -70,6 +67,7 @@ export async function GET(request: Request) {
           id,
           name,
           neighborhood,
+          city,
           lat,
           lng,
           venue_type
@@ -79,12 +77,11 @@ export async function GET(request: Request) {
       .is("canonical_event_id", null) // Only show canonical events, not duplicates
       .order("start_time", { ascending: true });
 
-    // Filter by portal to prevent cross-portal leakage
-    if (portalId) {
-      query = query.or(`portal_id.eq.${portalId},portal_id.is.null`);
-    } else {
-      query = query.is("portal_id", null);
-    }
+    query = applyPortalScopeToQuery(query, {
+      portalId: portalContext.portalId,
+      portalExclusive,
+      publicOnlyWhenNoPortal: true,
+    });
 
     const { data, error } = await query;
 
@@ -92,10 +89,12 @@ export async function GET(request: Request) {
       throw error;
     }
 
-    const events = data as LiveEventRow[] | null;
+    const events = filterByPortalCity((data as LiveEventRow[] | null) || [], portalCity, {
+      allowMissingCity: true,
+    });
 
     // Get RSVP counts for live events
-    const eventIds = events?.map((e) => e.id) || [];
+    const eventIds = events.map((e) => e.id);
     let goingCounts: Record<number, number> = {};
 
     if (eventIds.length > 0) {
@@ -115,7 +114,7 @@ export async function GET(request: Request) {
     }
 
     // Filter regular showtimes from live events
-    const nonShowtimeEvents = (events || []).filter(
+    const nonShowtimeEvents = events.filter(
       (event) => !event.tags?.includes("showtime")
     );
 

@@ -3,7 +3,7 @@ import { checkBodySize, parseIntParam } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { ensureUserProfile } from "@/lib/user-utils";
 import { withOptionalAuth, withAuth } from "@/lib/api-middleware";
-import { resolvePortalId } from "@/lib/portal-resolution";
+import { resolvePortalAttributionForWrite } from "@/lib/portal-attribution";
 import { logger } from "@/lib/logger";
 
 export const GET = withOptionalAuth(async (request, { user, serviceClient }) => {
@@ -124,7 +124,13 @@ export const POST = withAuth(async (request, { user, serviceClient }) => {
       return NextResponse.json({ success: true, isFollowing: false });
     } else {
       // Follow
-      const portalId = await resolvePortalId(request);
+      const attribution = await resolvePortalAttributionForWrite(request, {
+        endpoint: "/api/follow",
+        body,
+        requireWhenHinted: true,
+      });
+      if (attribution.response) return attribution.response;
+      const portalId = attribution.portalId;
       const followData: Record<string, unknown> = {
         follower_id: user.id,
       };

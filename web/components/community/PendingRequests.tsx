@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import UserAvatar from "@/components/UserAvatar";
+import { CelebrationToast } from "@/components/ui/CelebrationToast";
 import { useToast } from "@/components/Toast";
 import { formatDistanceToNow } from "date-fns";
 import { useRealtimeFriendRequests } from "@/lib/hooks/useRealtimeFriendRequests";
@@ -39,6 +41,12 @@ export function PendingRequests({ requests }: PendingRequestsProps) {
 
   // Enable real-time updates
   useRealtimeFriendRequests();
+
+  const [celebrationFriend, setCelebrationFriend] = useState<{
+    name: string;
+    username: string;
+    avatar: string | null;
+  } | null>(null);
 
   const acceptMutation = useMutation({
     mutationFn: async (requestId: string) => {
@@ -83,8 +91,17 @@ export function PendingRequests({ requests }: PendingRequestsProps) {
 
       return { previousData };
     },
-    onSuccess: () => {
-      showToast("Friend request accepted!");
+    onSuccess: (_data, requestId) => {
+      const accepted = requests.find((r) => r.id === requestId);
+      if (accepted?.inviter) {
+        setCelebrationFriend({
+          name: accepted.inviter.display_name || accepted.inviter.username,
+          username: accepted.inviter.username,
+          avatar: accepted.inviter.avatar_url,
+        });
+      } else {
+        showToast("Friend request accepted!");
+      }
     },
     onError: (error, _variables, context) => {
       if (context?.previousData) {
@@ -167,73 +184,82 @@ export function PendingRequests({ requests }: PendingRequestsProps) {
   }
 
   return (
-    <section>
-      {/* Section header with urgency indicator */}
-      <div className="flex items-center gap-3 mb-4">
-        <div className="w-1 h-4 rounded-full bg-[var(--coral)] animate-pulse-slow" />
-        <h2
-          className="font-mono text-sm font-medium uppercase tracking-wider text-coral-glow"
-        >
-          Friend Requests ({requests.length})
-        </h2>
-        <div
-          className="flex-1 h-px divider-coral"
-        />
-      </div>
-      <div className="space-y-3">
-        {requests.map((request) => {
-          const otherUser = request.inviter;
-          if (!otherUser) return null;
+    <>
+      <section>
+        {/* Section header with urgency indicator */}
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-1 h-4 rounded-full bg-[var(--coral)] animate-pulse-slow" />
+          <h2
+            className="font-mono text-sm font-medium uppercase tracking-wider text-coral-glow"
+          >
+            Friend Requests ({requests.length})
+          </h2>
+          <div
+            className="flex-1 h-px divider-coral"
+          />
+        </div>
+        <div className="space-y-3">
+          {requests.map((request) => {
+            const otherUser = request.inviter;
+            if (!otherUser) return null;
 
-          return (
-            <div
-              key={request.id}
-              className="relative flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 p-4 glass border border-[var(--coral)]/30 rounded-lg"
-            >
-              {/* Subtle pulsing glow with coral/red accent */}
+            return (
               <div
-                className="absolute inset-0 rounded-lg opacity-20 animate-pulse-slow pointer-events-none blur-xl hover-glow-coral-red"
-              />
-              <Link href={`/profile/${otherUser.username}`} className="flex-shrink-0 relative z-10">
-                <UserAvatar
-                  src={otherUser.avatar_url}
-                  name={otherUser.display_name || otherUser.username}
-                  size="md"
-                  glow
+                key={request.id}
+                className="relative flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 p-4 glass border border-[var(--coral)]/30 rounded-lg"
+              >
+                {/* Subtle pulsing glow with coral/red accent */}
+                <div
+                  className="absolute inset-0 rounded-lg opacity-20 animate-pulse-slow pointer-events-none blur-xl hover-glow-coral-red"
                 />
-              </Link>
-
-              <div className="flex-1 min-w-0 w-full sm:w-auto relative z-10">
-                <Link
-                  href={`/profile/${otherUser.username}`}
-                  className="font-medium text-[var(--cream)] hover:text-[var(--coral)] transition-colors block truncate"
-                >
-                  {otherUser.display_name || `@${otherUser.username}`}
+                <Link href={`/profile/${otherUser.username}`} className="flex-shrink-0 relative z-10">
+                  <UserAvatar
+                    src={otherUser.avatar_url}
+                    name={otherUser.display_name || otherUser.username}
+                    size="md"
+                    glow
+                  />
                 </Link>
-                <p className="text-xs text-[var(--muted)] truncate">
-                  {formatDistanceToNow(new Date(request.created_at), { addSuffix: true })}
-                </p>
-              </div>
 
-              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto relative z-10">
-                <button
-                  onClick={() => handleAcceptRequest(request.id)}
-                  className="px-3 py-1.5 bg-[var(--neon-green)] text-[var(--void)] rounded-lg text-xs font-mono font-medium hover:brightness-110 transition-all min-h-[36px] w-full sm:w-auto shadow-lg shadow-[var(--neon-green)]/20"
-                >
-                  Accept
-                </button>
-                <button
-                  onClick={() => handleDeclineRequest(request.id)}
-                  className="px-3 py-1.5 glass border border-[var(--twilight)] text-[var(--muted)] rounded-lg text-xs font-mono font-medium hover:border-[var(--neon-red)] hover:text-[var(--neon-red)] transition-all min-h-[36px] w-full sm:w-auto"
-                >
-                  Decline
-                </button>
+                <div className="flex-1 min-w-0 w-full sm:w-auto relative z-10">
+                  <Link
+                    href={`/profile/${otherUser.username}`}
+                    className="font-medium text-[var(--cream)] hover:text-[var(--coral)] transition-colors block truncate"
+                  >
+                    {otherUser.display_name || `@${otherUser.username}`}
+                  </Link>
+                  <p className="text-xs text-[var(--muted)] truncate">
+                    {formatDistanceToNow(new Date(request.created_at), { addSuffix: true })}
+                  </p>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto relative z-10">
+                  <button
+                    onClick={() => handleAcceptRequest(request.id)}
+                    className="px-3 py-1.5 bg-[var(--neon-green)] text-[var(--void)] rounded-lg text-xs font-mono font-medium hover:brightness-110 transition-all min-h-[36px] w-full sm:w-auto shadow-lg shadow-[var(--neon-green)]/20"
+                  >
+                    Accept
+                  </button>
+                  <button
+                    onClick={() => handleDeclineRequest(request.id)}
+                    className="px-3 py-1.5 glass border border-[var(--twilight)] text-[var(--muted)] rounded-lg text-xs font-mono font-medium hover:border-[var(--neon-red)] hover:text-[var(--neon-red)] transition-all min-h-[36px] w-full sm:w-auto"
+                  >
+                    Decline
+                  </button>
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
-    </section>
+            );
+          })}
+        </div>
+      </section>
+      <CelebrationToast
+        isActive={celebrationFriend !== null}
+        friendName={celebrationFriend?.name ?? ""}
+        friendUsername={celebrationFriend?.username ?? ""}
+        friendAvatar={celebrationFriend?.avatar ?? null}
+        onDismiss={() => setCelebrationFriend(null)}
+      />
+    </>
   );
 }
 

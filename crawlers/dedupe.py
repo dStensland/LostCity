@@ -75,12 +75,15 @@ def normalize_text(text: str) -> str:
 def generate_content_hash(title: str, venue_name: str, date: str) -> str:
     """
     Generate a content hash for deduplication.
-    Hash is based on normalized title + venue + date.
+    Hash is based on ONLY: normalized title + normalized venue + date.
+    Does NOT include description or other varying fields.
     Uses special venue normalization that strips room suffixes from multi-room venues.
     """
-    # Use venue-specific normalization to handle multi-room venues
-    normalized_venue = normalize_venue_for_dedup(venue_name)
-    normalized = f"{normalize_text(title)}|{normalized_venue}|{date}"
+    # Use venue-specific normalization to handle multi-room venues, then apply text normalization
+    venue_after_room_strip = normalize_venue_for_dedup(venue_name)
+    normalized_venue = normalize_text(venue_after_room_strip)
+    normalized_title = normalize_text(title)
+    normalized = f"{normalized_title}|{normalized_venue}|{date}"
     return hashlib.md5(normalized.encode()).hexdigest()
 
 

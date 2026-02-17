@@ -524,7 +524,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
     const currentTypeFilter = activeTypeFilterRef.current;
 
     // Check cache first
-    const cacheKey = `${searchQuery}:${portal?.id || ""}:${currentTypeFilter || "all"}`;
+    const cacheKey = `${searchQuery}:${portal?.id || portal?.slug || ""}:${currentTypeFilter || "all"}`;
 
     // Clear cache if requested (e.g., when filter changes)
     if (clearCache) {
@@ -560,8 +560,11 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
       }
 
       // Scope to portal if available
+      if (portal?.slug) {
+        params.set("portal", portal.slug);
+      }
       if (portal?.id) {
-        params.set("portal", portal.id);
+        params.set("portal_id", portal.id);
       }
 
       const response = await fetch(`/api/search?${params.toString()}`, {
@@ -610,7 +613,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
         setIsLoading(false);
       }
     }
-  }, [portal?.id]);
+  }, [portal?.id, portal?.slug]);
 
   // Map result href to portal-aware path
   function mapToPortalPath(result: SearchResult, portalSlug?: string): string {

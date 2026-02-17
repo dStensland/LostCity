@@ -1,0 +1,110 @@
+================================================================================
+LOSTCITY PRODUCTION AUDIT - QUICK REFERENCE
+================================================================================
+Date: 2026-02-16
+Health Score: 90.4/100
+Status: READY WITH MINOR ISSUES
+
+CRITICAL BLOCKING ISSUES (Must fix before production)
+================================================================================
+
+1. VENUES MISSING COORDINATES (343 venues)
+   Impact: Can't show on maps
+   Fix: python3 venue_enrich.py --missing-coords-only
+   Time: 1-2 hours
+
+2. ALL CAPS SHORT TITLES (420 events)
+   Impact: Poor UX, bad SEO
+   Sources: the-eastern, the-masquerade, terminal-west
+   Fix: Add title normalization in db.py insert_event()
+   Time: 30 minutes
+
+3. DEAD SOURCES (194 sources, 35% of active)
+   Impact: Wastes crawler time
+   Fix: Set is_active=false for broken sources
+   Time: 1 hour manual review
+
+HIGH PRIORITY ISSUES (Fix before public launch)
+================================================================================
+
+4. MUSIC EVENTS WITHOUT GENRES (971 events, 38% of music)
+   Sources: ticketmaster (215), the-earl (87), eventbrite (64)
+   Fix: Run artist_images.py + enhance tag_inference.py
+   Time: 2-3 hours
+
+5. NULL DESCRIPTIONS (882 events, 4.8%)
+   Sources: ticketmaster (118), meetup (95), eventbrite (87)
+   Fix: Enable LLM extraction, add fallback descriptions
+   Time: 2 hours
+
+6. CROSS-MIDNIGHT TIME BUG (119 events)
+   Source: ten-atlanta (all 119 events)
+   Fix: Handle end_time < start_time in crawler
+   Time: 30 minutes
+
+MEDIUM PRIORITY ISSUES (Polish for UX)
+================================================================================
+
+7. DATE IN TITLE (105 events)
+   Sources: ebenezer-church, meetup, zoo-atlanta, schr
+   Fix: Add title cleaning regex in db.py
+   Time: 15 minutes
+
+8. TITLE = VENUE NAME (34 events)
+   Source: farmers-markets, freedom-farmers-market
+   Fix: Update crawlers to capture event name, not venue name
+   Time: 30 minutes
+
+9. NIGHTLIFE WITHOUT GENRES (159 events)
+   Fix: Add nightlife genre inference in tag_inference.py
+   Time: 1 hour
+
+10. SYNTHETIC DESCRIPTIONS (104 events)
+    Description: "Event at X."
+    Fix: Better fallback descriptions using venue+category
+    Time: 30 minutes
+
+PASS / LOW PRIORITY
+================================================================================
+✓ Duplicate Events: 0 found
+✓ Relationship Integrity: All foreign keys valid
+○ Duplicate Hashes: 21 (Masquerade venue variants - cosmetic)
+○ Category Distribution: 2 underdeveloped categories (dance, religious)
+
+QUICK FIXES TO RUN NOW
+================================================================================
+
+1. Title normalization in db.py (30 min):
+   - Strip date prefixes: r'^(January|February|...|December)\s+\d+:\s*'
+   - Normalize ALL CAPS short titles to title case
+   - Decode HTML entities: html.unescape()
+   - Reject title = venue name
+
+2. Fix ten-atlanta.py cross-midnight (15 min):
+   if end_time and start_time and end_time < start_time:
+       end_time = None
+
+3. Deactivate dead sources (1 hour):
+   UPDATE sources SET is_active = false WHERE slug IN (
+       'basement-atlanta', 'keep-atlanta-beautiful', 'vista-yoga',
+       'flux-projects', 'my-parents-basement', 'tongue-and-groove',
+       'cdc-museum', 'clark-atlanta-art-museum', ...
+   );
+
+VALIDATION AFTER FIXES
+================================================================================
+Re-run audit with: python3 production_audit.py
+Target: Health score > 95/100
+
+Metrics to check:
+- Venues missing coords: < 20 (currently 343)
+- Title issues: < 50 (currently 585)
+- Dead sources: < 20 (currently 194)
+- Music events without genres: < 200 (currently 971)
+
+DETAILED DOCS
+================================================================================
+Full Report: /Users/coach/Projects/LostCity/PRODUCTION_AUDIT_REPORT.md
+SQL Queries: /Users/coach/Projects/LostCity/PRODUCTION_AUDIT_QUERIES.sql
+This Summary: /Users/coach/Projects/LostCity/PRODUCTION_AUDIT_SUMMARY.txt
+

@@ -1,0 +1,221 @@
+/Users/coach/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+Starting image coverage audit...
+Run date: 2026-02-14 11:23:12
+HTTP Request: GET https://rtppvljfrkjtoxmaizea.supabase.co/rest/v1/events?select=id%2Csource_id%2Cimage_url%2Csources%28id%2Cname%29&start_date=gte.2026-02-14 "HTTP/2 200 OK"
+
+================================================================================
+IMAGE COVERAGE BY SOURCE (Upcoming Events Only)
+================================================================================
+Source Name                              |  Total |   With |   Miss |  Cov%
+--------------------------------------------------------------------------------
+Alcoholics Anonymous - Atlanta           |    745 |      0 |    745 |   0.0%
+Callanwolde Fine Arts Center             |    315 |      0 |    315 |   0.0%
+Narcotics Anonymous - Georgia            |    246 |      0 |    246 |   0.0%
+Marcus Jewish Community Center of Atlan  |    187 |      0 |    187 |   0.0%
+Emory Healthcare Community Events        |     58 |      0 |     58 |   0.0%
+Cook's Warehouse                         |     51 |      0 |     51 |   0.0%
+ATLVets (Advancing The Line)             |     48 |      0 |     48 |   0.0%
+Georgia World Congress Center            |     38 |      0 |     38 |   0.0%
+Piedmont Healthcare                      |     28 |      2 |     26 |   7.1%
+The Warrior Alliance                     |     20 |      0 |     20 |   0.0%
+Central Presbyterian Church              |     19 |      0 |     19 |   0.0%
+Meetup                                   |     23 |      4 |     19 |  17.4%
+Factory at Franklin                      |     26 |     12 |     14 |  46.2%
+Tabernacle                               |     30 |     16 |     14 |  53.3%
+GriefShare Atlanta                       |     13 |      0 |     13 |   0.0%
+DivorceCare Atlanta                      |     12 |      0 |     12 |   0.0%
+Zoo Atlanta                              |     18 |      6 |     12 |  33.3%
+The Bakery                               |     11 |      0 |     11 |   0.0%
+Drepung Loseling Monastery               |     11 |      0 |     11 |   0.0%
+Monster Energy AMA Supercross            |     11 |      0 |     11 |   0.0%
+Center for Puppetry Arts                 |     34 |     23 |     11 |  67.6%
+Emory Events                             |     59 |     48 |     11 |  81.4%
+City of Roswell                          |     10 |      0 |     10 |   0.0%
+Atlanta Jewish Film Festival             |      9 |      0 |      9 |   0.0%
+MudFire Pottery Studio                   |      9 |      0 |      9 |   0.0%
+Cathedral of St. Philip                  |     11 |      2 |      9 |  18.2%
+Atlanta Recurring Social Events          |     93 |     84 |      9 |  90.3%
+Trees Atlanta                            |      8 |      0 |      8 |   0.0%
+Concrete Jungle                          |      8 |      0 |      8 |   0.0%
+Pittsburgh Yards                         |      7 |      0 |      7 |   0.0%
+Piedmont Classes                         |      6 |      0 |      6 |   0.0%
+The Battery Atlanta                      |      6 |      0 |      6 |   0.0%
+Wild Heaven Beer                         |      6 |      0 |      6 |   0.0%
+Fox Theatre                              |      7 |      1 |      6 |  14.3%
+FanCons Georgia                          |     11 |      5 |      6 |  45.5%
+Fernbank Museum of Natural History       |     25 |     19 |      6 |  76.0%
+VETLANTA                                 |      5 |      0 |      5 |   0.0%
+National Center for Civil and Human Rig  |      6 |      1 |      5 |  16.7%
+City of Kennesaw                         |      6 |      1 |      5 |  16.7%
+Southern Center for Human Rights         |      6 |      1 |      5 |  16.7%
+Ponce City Market                        |      8 |      3 |      5 |  37.5%
+Atlanta Motor Speedway                   |     18 |     13 |      5 |  72.2%
+Pigs & Peaches BBQ Festival              |      6 |      2 |      4 |  33.3%
+Landmark Midtown Art Cinema              |     14 |     10 |      4 |  71.4%
+Freeroll Atlanta                         |     39 |     35 |      4 |  89.7%
+LifeLine Animal Project                  |      5 |      2 |      3 |  40.0%
+The Supermarket ATL                      |      5 |      2 |      3 |  40.0%
+Tara Theatre                             |      6 |      3 |      3 |  50.0%
+A Cappella Books                         |     11 |      8 |      3 |  72.7%
+Big Peach Running Co                     |     36 |     33 |      3 |  91.7%
+Lore Atlanta                             |     43 |     40 |      3 |  93.0%
+Georgia State Athletics                  |    120 |    117 |      3 |  97.5%
+Gwinnett Stripers                        |      5 |      3 |      2 |  60.0%
+Believe Music Hall                       |      6 |      4 |      2 |  66.7%
+Coca-Cola Roxy                           |      8 |      6 |      2 |  75.0%
+Franklin Theatre                         |     12 |     10 |      2 |  83.3%
+Atlanta Film Society                     |     16 |     14 |      2 |  87.5%
+Terminal West                            |     17 |     15 |      2 |  88.2%
+Big Shanty Festival                      |      5 |      4 |      1 |  80.0%
+Cobb Galleria Centre                     |      6 |      5 |      1 |  83.3%
+Station Inn                              |      7 |      6 |      1 |  85.7%
+Kat's Cafe                               |      8 |      7 |      1 |  87.5%
+Friends on Ponce                         |      8 |      7 |      1 |  87.5%
+Laughing Skull Lounge                    |      8 |      7 |      1 |  87.5%
+Spelman College                          |     10 |      9 |      1 |  90.0%
+Mary's                                   |     10 |      9 |      1 |  90.0%
+Boot Barn Hall at The Hall               |     11 |     10 |      1 |  90.9%
+Variety Playhouse                        |     12 |     11 |      1 |  91.7%
+Museum of Design Atlanta                 |     15 |     14 |      1 |  93.3%
+Plaza Theatre                            |     23 |     22 |      1 |  95.7%
+Eventbrite Nashville                     |     72 |     71 |      1 |  98.6%
+NASCAR at Atlanta Motor Speedway         |     18 |     18 |      0 | 100.0%
+Ticketmaster                             |    164 |    164 |      0 | 100.0%
+The Basement East                        |     24 |     24 |      0 | 100.0%
+Stone Mountain Park                      |     74 |     74 |      0 | 100.0%
+Dad's Garage                             |     20 |     20 |      0 | 100.0%
+Atlanta Cultural Affairs                 |      6 |      6 |      0 | 100.0%
+The Earl                                 |     17 |     17 |      0 | 100.0%
+Morehouse College                        |      5 |      5 |      0 | 100.0%
+The Masquerade                           |     82 |     82 |      0 | 100.0%
+Painting With a Twist                    |    243 |    243 |      0 | 100.0%
+Schermerhorn Symphony Center             |     42 |     42 |      0 | 100.0%
+Atlanta Botanical Garden                 |      8 |      8 |      0 | 100.0%
+Eventbrite                               |     42 |     42 |      0 | 100.0%
+Toylanta                                 |      9 |      9 |      0 | 100.0%
+The Eastern                              |     13 |     13 |      0 | 100.0%
+Exit/In                                  |     11 |     11 |      0 | 100.0%
+Kennesaw State University                |     14 |     14 |      0 | 100.0%
+LOVE Y'ALL Romance Book Festival         |     21 |     21 |      0 | 100.0%
+Atlanta-Fulton Public Library            |    188 |    188 |      0 | 100.0%
+Oakland Cemetery                         |     10 |     10 |      0 | 100.0%
+Ticketmaster Nashville                   |    100 |    100 |      0 | 100.0%
+Eddie's Attic                            |     10 |     10 |      0 | 100.0%
+Eyedrum                                  |      5 |      5 |      0 | 100.0%
+Atlanta History Center                   |     11 |     11 |      0 | 100.0%
+Georgia Tech Athletics                   |     41 |     41 |      0 | 100.0%
+College Park Main Street Association     |      9 |      9 |      0 | 100.0%
+Kai Lin Art                              |     10 |     10 |      0 | 100.0%
+Spivey Hall                              |      6 |      6 |      0 | 100.0%
+Kennesaw State Athletics                 |     22 |     22 |      0 | 100.0%
+City Springs                             |     28 |     28 |      0 | 100.0%
+HTTP Request: GET https://rtppvljfrkjtoxmaizea.supabase.co/rest/v1/events?select=id%2Cvenue_id%2Cvenues%28id%2Cname%2Cimage_url%29&start_date=gte.2026-02-14&image_url=is.null "HTTP/2 200 OK"
+Ryman Auditorium                         |      9 |      9 |      0 | 100.0%
+The Springs Cinema & Taphouse            |    194 |    194 |      0 | 100.0%
+Chattahoochee Riverkeeper                |      8 |      8 |      0 | 100.0%
+Ferst Center for the Arts                |     11 |     11 |      0 | 100.0%
+MJQ Concourse                            |     14 |     14 |      0 | 100.0%
+3rd & Lindsley                           |     71 |     71 |      0 | 100.0%
+Red Light Cafe                           |      7 |      7 |      0 | 100.0%
+7 Stages                                 |     10 |     10 |      0 | 100.0%
+Aisle 5                                  |     21 |     21 |      0 | 100.0%
+Round Trip Brewing                       |      8 |      8 |      0 | 100.0%
+The Maker Station                        |      7 |      7 |      0 | 100.0%
+Explore Newnan Coweta                    |      5 |      5 |      0 | 100.0%
+Bookish Atlanta                          |      6 |      6 |      0 | 100.0%
+Spruill Center for the Arts              |      5 |      5 |      0 | 100.0%
+Children's Museum of Atlanta             |     18 |     18 |      0 | 100.0%
+Southern Museum of Civil War and Locomo  |      5 |      5 |      0 | 100.0%
+Krog Street Market                       |      5 |      5 |      0 | 100.0%
+Georgia Celebrates Quilts                |      6 |      6 |      0 | 100.0%
+Cobb Energy Performing Arts Centre       |     29 |     29 |      0 | 100.0%
+Aurora Theatre                           |      5 |      5 |      0 | 100.0%
+Atlanta Horror Film Festival             |     28 |     28 |      0 | 100.0%
+Atlanta Underground Film Festival        |     29 |     29 |      0 | 100.0%
+Beer, Bourbon & BBQ Festival             |      8 |      8 |      0 | 100.0%
+Devnexus                                 |     36 |     36 |      0 | 100.0%
+Georgia Tech Arts                        |      7 |      7 |      0 | 100.0%
+Wrens Nest House Museum                  |      8 |      8 |      0 | 100.0%
+529                                      |     13 |     13 |      0 | 100.0%
+Atlanta Shortsfest                       |     17 |     17 |      0 | 100.0%
+================================================================================
+Total sources with 5+ upcoming events: 129
+
+================================================================================
+TOP IMAGELESS VENUES (venue has image — events can use venue.image_url)
+================================================================================
+Venue Name                                         |  Events
+--------------------------------------------------------------------------------
+Callanwolde Fine Arts Center                       |     606
+MJCCA                                              |     278
+Georgia World Congress Center                      |      59
+Central Presbyterian Church                        |      43
+Emory University                                   |      37
+================================================================================
+Total venues with image (can use as fallback): 5
+
+================================================================================
+TOP IMAGELESS VENUES (no venue image — need crawler or upload)
+================================================================================
+Venue Name                                         |  Events
+--------------------------------------------------------------------------------
+8111 Club                                          |     151
+Triangle Club                                      |     126
+H.O.W. Place                                       |     103
+N.A.B.A. Club                                      |      99
+NA Meeting Location                                |      78
+Emory Decatur Hospital                             |      77
+Highland Club                                      |      68
+Gwinnett Room                                      |      65
+Cook's Warehouse                                   |      65
+S.U.R Club                                         |      62
+Serenity House - Buford                            |      59
+Tara Club                                          |      55
+ATLVets                                            |      48
+Rebos Club                                         |      47
+Galano Club                                        |      46
+Clayton House                                      |      42
+Roswell United Methodist Church                    |      41
+80 Newnan Station                                  |      38
+Mercy Point Tabernacle of Praise                   |      37
+Sober on Church Street Recovery                    |      34
+365 Center Inc                                     |      32
+First United Methodist Church                      |      31
+H.A.L.T. Club                                      |      29
+Atlanta Biscayne Room                              |      28
+E.G.A.B.A. Club                                    |      28
+================================================================================
+Total venues without image (need enrichment): 25
+
+================================================================================
+SUMMARY STATISTICS
+================================================================================
+Total upcoming events analyzed: 4,655
+Events with images: 2,570 (55.2%)
+Events missing images: 2,085 (44.8%)
+
+Sources with <50% coverage: 39 of 129
+Sources with 0% coverage: 25 of 129
+
+Venues with image available for fallback: 5
+Venues needing image enrichment: 25
+================================================================================
+
+================================================================================
+RECOMMENDATIONS
+================================================================================
+1. Sources with <50% coverage: Add image extraction to crawler
+2. Venues with image + many imageless events: Update event insert to use venue fallback
+3. Venues without image: Run scrape_venue_images.py or fetch_venue_photos_google.py
+4. High-volume sources missing images: Prioritize OMDB/Spotify/API integrations
+
+PRIORITY FIXES:
+
+Top 5 sources by missing image count:
+  - Alcoholics Anonymous - Atlanta: 745 events (0.0% coverage)
+  - Callanwolde Fine Arts Center: 315 events (0.0% coverage)
+  - Narcotics Anonymous - Georgia: 246 events (0.0% coverage)
+  - Marcus Jewish Community Center of Atlanta: 187 events (0.0% coverage)
+  - Emory Healthcare Community Events: 58 events (0.0% coverage)
+================================================================================

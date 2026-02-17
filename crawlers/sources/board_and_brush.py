@@ -15,7 +15,7 @@ from typing import Optional
 import httpx
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash
+from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -259,10 +259,6 @@ def crawl_location(
             # Generate content hash for dedup
             content_hash = generate_content_hash(title, venue_name, event_date)
 
-            existing = find_event_by_hash(content_hash)
-            if existing:
-                events_updated += 1
-                continue
 
             # Build tags
             tags = [
@@ -303,6 +299,12 @@ def crawl_location(
                 "is_class": True,
                 "class_category": "woodworking",
             }
+
+            existing = find_event_by_hash(content_hash)
+            if existing:
+                smart_update_existing_event(existing, event_record)
+                events_updated += 1
+                continue
 
             # Build series hint for class enrichment
             series_hint = {

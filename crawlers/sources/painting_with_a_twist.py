@@ -14,7 +14,7 @@ from typing import Optional
 import httpx
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash
+from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from description_fetcher import fetch_description_from_url
 
@@ -292,10 +292,6 @@ def crawl_location(
             # Generate content hash for dedup
             content_hash = generate_content_hash(title, venue_name, start_date)
 
-            existing = find_event_by_hash(content_hash)
-            if existing:
-                events_updated += 1
-                continue
 
             # Fetch description from detail page (cap at 50 per location)
             description = None
@@ -346,6 +342,12 @@ def crawl_location(
                 "is_class": True,
                 "class_category": "painting",
             }
+
+            existing = find_event_by_hash(content_hash)
+            if existing:
+                smart_update_existing_event(existing, event_record)
+                events_updated += 1
+                continue
 
             try:
                 insert_event(event_record)

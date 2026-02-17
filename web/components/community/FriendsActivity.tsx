@@ -8,6 +8,8 @@ import { formatDistanceToNow, format, parseISO, isToday, isYesterday, isThisWeek
 import { useInfiniteActivities } from "@/lib/hooks/useInfiniteActivities";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
+import { FriendOnboarding } from "@/components/community/FriendOnboarding";
+import { ReactionBar } from "@/components/ui/ReactionBar";
 
 export type ActivityItem = {
   id: string;
@@ -233,49 +235,7 @@ function TimeSection({ title, activities, accentColor }: TimeSectionProps) {
 }
 
 function EmptyState() {
-  return (
-    <div className="relative py-12 text-center accent-coral">
-      <div className="absolute inset-0 pointer-events-none empty-state-bg" />
-      <div className="relative z-10">
-        <div className="mb-4 flex justify-center animate-stagger-1">
-          <div
-            className="relative flex items-center justify-center w-16 h-16 rounded-full empty-state-icon-bg empty-state-icon-emphasis"
-          >
-            <svg
-              className="w-8 h-8 text-[var(--coral)] animate-empty-icon-pulse"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-              />
-            </svg>
-          </div>
-        </div>
-        <h3 className="text-xl font-semibold text-[var(--cream)] mb-2 animate-stagger-2">
-          Your friends are suspiciously quiet.
-        </h3>
-        <p className="font-mono text-sm text-[var(--muted)] max-w-sm mx-auto animate-stagger-2">
-          Follow more people to see their activity here
-        </p>
-        <div className="mt-6 animate-stagger-4">
-          <Link
-            href="/community"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-mono text-sm font-medium transition-all hover:scale-105 empty-state-action"
-          >
-            Find Friends
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-            </svg>
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
+  return <FriendOnboarding />;
 }
 
 function LoadingSkeleton({ count = 5 }: { count?: number }) {
@@ -407,16 +367,31 @@ function GroupedEventCard({ group }: { group: GroupedActivity }) {
             </div>
           </div>
 
-          {/* Venue details */}
-          {event.venue && (
-            <p className="font-mono text-xs text-[var(--muted)] truncate">
-              {event.venue.name}
-            </p>
-          )}
+          {/* Venue details + Join them CTA */}
+          <div className="flex items-center gap-2 mt-0.5">
+            {event.venue && (
+              <p className="font-mono text-xs text-[var(--muted)] truncate">
+                {event.venue.name}
+              </p>
+            )}
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[var(--coral)]/15 text-[var(--coral)] font-mono text-[0.65rem] font-medium flex-shrink-0 group-hover:bg-[var(--coral)]/25 transition-colors">
+              Join them
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+            </span>
+          </div>
         </div>
 
       </div>
       </Link>
+      <div className="mt-1 ml-14 sm:ml-16">
+        <ReactionBar
+          targetType="rsvp"
+          targetId={event.id}
+          reactions={[]}
+        />
+      </div>
     </>
   );
 }
@@ -500,16 +475,31 @@ function ActivityCard({ activity }: { activity: ActivityItem }) {
               </h3>
             </div>
 
-            {/* Venue details */}
-            {activity.event.venue && (
-              <p className="font-mono text-xs text-[var(--muted)] truncate">
-                {activity.event.venue.name}
-              </p>
-            )}
+            {/* Venue details + Check it out CTA */}
+            <div className="flex items-center gap-2 mt-0.5">
+              {activity.event.venue && (
+                <p className="font-mono text-xs text-[var(--muted)] truncate">
+                  {activity.event.venue.name}
+                </p>
+              )}
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[var(--neon-magenta)]/15 text-[var(--neon-magenta)] font-mono text-[0.65rem] font-medium flex-shrink-0 group-hover:bg-[var(--neon-magenta)]/25 transition-colors">
+                Check it out
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+              </span>
+            </div>
           </div>
 
         </div>
         </Link>
+        <div className="mt-1 ml-14 sm:ml-16">
+          <ReactionBar
+            targetType={activity.activity_type}
+            targetId={activity.event.id}
+            reactions={[]}
+          />
+        </div>
       </>
     );
   }

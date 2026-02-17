@@ -13,7 +13,7 @@ from typing import Optional
 
 import requests
 
-from db import get_or_create_venue, insert_event, find_event_by_hash
+from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -183,9 +183,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             content_hash = generate_content_hash(title, "The Beehive ATL", start_date)
 
-            if find_event_by_hash(content_hash):
-                events_updated += 1
-                continue
 
             event_record = {
                 "source_id": source_id,
@@ -215,6 +212,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 "is_class": True,
                 "class_category": "craft",
             }
+
+            existing = find_event_by_hash(content_hash)
+            if existing:
+                smart_update_existing_event(existing, event_record)
+                events_updated += 1
+                continue
 
             # Build series hint for class enrichment
             series_hint = {

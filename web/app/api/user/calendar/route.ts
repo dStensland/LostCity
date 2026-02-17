@@ -18,7 +18,7 @@ export type UserCalendarEvent = {
   price_min: number | null;
   price_max: number | null;
   category: string | null;
-  subcategory: string | null;
+  genres: string[] | null;
   image_url: string | null;
   description: string | null;
   ticket_url: string | null;
@@ -81,7 +81,7 @@ export async function GET(request: Request) {
         price_min: number | null;
         price_max: number | null;
         category: string | null;
-        subcategory: string | null;
+        genres: string[] | null;
         image_url: string | null;
         description: string | null;
         ticket_url: string | null;
@@ -116,7 +116,7 @@ export async function GET(request: Request) {
           price_min,
           price_max,
           category,
-          subcategory,
+          genres,
           image_url,
           description,
           ticket_url,

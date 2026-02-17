@@ -7,11 +7,14 @@ import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/components/Toast";
 import { VISIBILITY_OPTIONS, DEFAULT_VISIBILITY, type Visibility } from "@/lib/visibility";
 import { PostRsvpNeedsPrompt } from "./PostRsvpNeedsPrompt";
+import { PostRsvpSharePrompt } from "./PostRsvpSharePrompt";
+import { CompanionPicker } from "./CompanionPicker";
 
 export type RSVPStatus = "going" | "interested" | "went" | null;
 
 type RSVPButtonProps = {
   eventId: number;
+  eventTitle?: string;
   venueId?: number;
   venueName?: string;
   venueType?: string | null;
@@ -30,6 +33,7 @@ const STATUS_CONFIG = {
 
 export default function RSVPButton({
   eventId,
+  eventTitle,
   venueId,
   venueName,
   venueType,
@@ -54,6 +58,8 @@ export default function RSVPButton({
   const [celebrationTone, setCelebrationTone] = useState<"coral" | "gold" | null>(null);
   const [menuPos, setMenuPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const [showNeedsPrompt, setShowNeedsPrompt] = useState(false);
+  const [showSharePrompt, setShowSharePrompt] = useState(false);
+  const [showCompanionPicker, setShowCompanionPicker] = useState(false);
   const actionInFlightRef = useRef(false);
   const loadingSafetyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const celebrationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -331,6 +337,9 @@ export default function RSVPButton({
       // Show needs prompt after first-time RSVP (going status only, with venue data)
       if (newStatus === "going" && previousStatus === null && venueId && venueName) {
         setTimeout(() => setShowNeedsPrompt(true), 800); // Delay to let RSVP animation complete
+      } else if (newStatus === "going" && previousStatus === null && !localStorage.getItem(`rsvp_share_dismissed_${eventId}`)) {
+        // Show share prompt if no needs prompt to show
+        setTimeout(() => setShowSharePrompt(true), 800);
       }
 
       // Notify parent of successful status change
@@ -544,6 +553,20 @@ export default function RSVPButton({
           {renderButtonContent()}
         </button>
 
+        {/* Going with... link */}
+        {status === "going" && variant !== "compact" && (
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setShowCompanionPicker(true);
+            }}
+            className="mt-1 font-mono text-[0.6rem] text-[var(--muted)] hover:text-[var(--coral)] transition-colors"
+          >
+            Going with...
+          </button>
+        )}
+
       {/* Dropdown Menu */}
       {menuOpen && typeof document !== "undefined" &&
         createPortal(
@@ -666,7 +689,30 @@ export default function RSVPButton({
           venueId={venueId}
           venueName={venueName}
           venueType={venueType || null}
-          onDismiss={() => setShowNeedsPrompt(false)}
+          onDismiss={() => {
+            setShowNeedsPrompt(false);
+            // Show share prompt after needs prompt closes
+            if (!localStorage.getItem(`rsvp_share_dismissed_${eventId}`)) {
+              setTimeout(() => setShowSharePrompt(true), 800);
+            }
+          }}
+        />
+      )}
+
+      {/* Post-RSVP share prompt */}
+      {showSharePrompt && eventTitle && (
+        <PostRsvpSharePrompt
+          eventId={eventId}
+          eventTitle={eventTitle}
+          onDismiss={() => setShowSharePrompt(false)}
+        />
+      )}
+
+      {/* Companion picker */}
+      {showCompanionPicker && (
+        <CompanionPicker
+          eventId={eventId}
+          onClose={() => setShowCompanionPicker(false)}
         />
       )}
     </>

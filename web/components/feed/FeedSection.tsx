@@ -479,7 +479,6 @@ function EventCards({ section, portalSlug }: { section: FeedSectionData; portalS
         section.events.map((event) => ({
           ...event,
           category_id: event.category,
-          subcategory_id: event.subcategory,
         })) as unknown as EventWithLocation[],
         {
           collapseFestivals: true,
@@ -881,7 +880,6 @@ function EventList({ section, portalSlug }: { section: FeedSectionData; portalSl
       bucket.events.map((event) => ({
         ...event,
         category_id: event.category,
-        subcategory_id: event.subcategory,
       })) as unknown as EventWithLocation[],
       { collapseFestivals: true, collapseFestivalPrograms: true }
     ),

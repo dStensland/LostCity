@@ -1,6 +1,8 @@
+import { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 import { checkBodySize } from "@/lib/api-utils";
+import { resolvePortalAttributionForWrite } from "@/lib/portal-attribution";
 import { logger } from "@/lib/logger";
 
 // Valid categories from search-constants.ts
@@ -10,17 +12,7 @@ const VALID_CATEGORIES = [
   "religious", "markets", "wellness", "gaming", "outdoors", "other"
 ];
 
-interface OnboardingCompleteRequest {
-  selectedCategories: string[];
-  selectedGenres?: Record<string, string[]>;
-  selectedNeeds?: {
-    accessibility: string[];
-    dietary: string[];
-    family: string[];
-  };
-}
-
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   const bodySizeResult = checkBodySize(request);
   if (bodySizeResult) return bodySizeResult;
 
@@ -72,6 +64,14 @@ export async function POST(request: Request) {
         }
       : { accessibility: [], dietary: [], family: [] };
 
+    const attribution = await resolvePortalAttributionForWrite(request, {
+      endpoint: "/api/onboarding/complete",
+      body,
+      requireWhenHinted: true,
+    });
+    if (attribution.response) return attribution.response;
+    const portalId = attribution.portalId;
+
     // Update user preferences with onboarding data
     const prefsData = {
       user_id: user.id,
@@ -101,7 +101,7 @@ export async function POST(request: Request) {
       logger.error("Preferences update error:", prefsError);
     }
 
-    // Build preference signal rows
+    // Build preference signal rows (with portal attribution)
     const preferenceRows = [
       ...selectedCategories.map((category: string) => ({
         user_id: user.id,
@@ -109,6 +109,7 @@ export async function POST(request: Request) {
         signal_value: category,
         score: 8,
         interaction_count: 1,
+        ...(portalId ? { portal_id: portalId } : {}),
       })),
       // Flatten genre selections into signal rows
       ...Object.entries(selectedGenres || {}).flatMap(([, genres]) =>
@@ -118,6 +119,7 @@ export async function POST(request: Request) {
           signal_value: genre,
           score: 8,
           interaction_count: 1,
+          ...(portalId ? { portal_id: portalId } : {}),
         }))
       ),
     ];

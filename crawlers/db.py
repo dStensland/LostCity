@@ -908,11 +908,8 @@ def validate_event(event_data: dict) -> Tuple[bool, Optional[str], list[str]]:
             _validation_stats.record_warning("invalid_price_max")
             event_data["price_max"] = None
 
-    # Category validity check (runs after normalize_category in insert_event)
-    category = event_data.get("category")
-    if category and category not in VALID_CATEGORIES:
-        _validation_stats.record_rejection("invalid_category")
-        return False, f"Invalid category: {category}", warnings
+    # Category validity check is now handled in insert_event() before validation
+    # to default to "other" instead of rejecting the entire event
 
     # ===== SANITIZATION (fix and insert) =====
 
@@ -1019,6 +1016,31 @@ def validate_event_title(title: str) -> bool:
         "buy now",
         "get tickets now",
         "reserve now",
+        "events",
+        "event",
+        "shows",
+        "calendar",  # Generic nav/UI element
+        "schedule",
+        "add to calendar",
+        "add to my calendar",
+        "support",
+        "donate",
+        "home",
+        "menu",
+        "gallery",
+        "news",
+        "blog",
+        "press",
+        "membership",
+        "shop",
+        "store",
+        "faq",
+        "info",
+        "details",
+        "view details",
+        "view event",
+        "more details",
+        "more information",
         # Concession/promo items scraped as events
         "view fullsize",
         "more details",
@@ -1054,22 +1076,61 @@ def validate_event_title(title: str) -> bool:
     ):
         return False
 
-    # Date-only titles ("Thursday, February 5")
+    # Date-only titles ("Thursday, February 5", "Thursday, February 5 - Monday, February 9, 2026")
     if re.match(
         r"^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),?\s+"
-        r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}$",
+        r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}",
         title,
         re.IGNORECASE,
     ):
         return False
 
-    # Month-label titles ("January Activities", "January 2026")
+    # Abbreviated day + date ("Fri, March 6th!", "Wed, Feb 18")
     if re.match(
-        r"^(January|February|March|April|May|June|July|August|September|October|November|December)\s+"
-        r"(Activities|Events|Calendar|Schedule|Programs|Classes|\d{4})$",
+        r"^(Mon|Tue|Wed|Thu|Fri|Sat|Sun),?\s+"
+        r"(January|February|March|April|May|June|July|August|September|October|November|December|"
+        r"Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d",
         title,
         re.IGNORECASE,
     ):
+        return False
+
+    # "Month DD" or "Month DD, YYYY" as entire title
+    if re.match(
+        r"^(January|February|March|April|May|June|July|August|September|October|November|December)\s+"
+        r"\d{1,2}(st|nd|rd|th)?,?\s*\d{0,4}\s*!?$",
+        title,
+        re.IGNORECASE,
+    ):
+        return False
+
+    # Month-label titles ("January Activities", "January 2026", "AUGUST  2026")
+    if re.match(
+        r"^(January|February|March|April|May|June|July|August|September|October|November|December)\s+"
+        r"(Activities|Events|Calendar|Schedule|Programs|Classes|\d{4})$",
+        title.strip(),
+        re.IGNORECASE,
+    ):
+        return False
+
+    # ISO date as title ("2026-02-18")
+    if re.match(r"^\d{4}-\d{2}-\d{2}$", title):
+        return False
+
+    # Calendar grid cell junk ("0 events16", "1 event28")
+    if re.match(r"^\d+\s*events?\d+$", title, re.IGNORECASE):
+        return False
+
+    # Day abbreviation + number ("Tue24", "Mon16", "Sat7")
+    if re.match(r"^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\d+$", title, re.IGNORECASE):
+        return False
+
+    # Phone numbers as titles ("404-888-4760")
+    if re.match(r"^[\d\-\(\)\.\s]{7,}$", title):
+        return False
+
+    # Numeric/date-only slash format ("2/20/2026")
+    if re.match(r"^\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4}$", title):
         return False
 
     # Titles starting with description-like patterns
@@ -1110,6 +1171,12 @@ _CATEGORY_NORMALIZATION_MAP: dict[str, str] = {
     "yoga": "fitness",
     "cooking": "learning",
     "class": "learning",
+    "outdoor": "outdoors",
+    "museums": "art",
+    "shopping": "community",
+    "education": "learning",
+    "sports_recreation": "sports",
+    "health": "wellness",
 }
 
 
@@ -1131,6 +1198,14 @@ def insert_event(
     # Normalize category to canonical taxonomy
     if event_data.get("category"):
         event_data["category"] = normalize_category(event_data["category"])
+
+        # Hard check: if category is still invalid after normalization, default to "other"
+        if event_data["category"] not in VALID_CATEGORIES:
+            logger.warning(
+                f"Invalid category '{event_data['category']}' for "
+                f"'{event_data.get('title', 'N/A')[:60]}' - defaulting to 'other'"
+            )
+            event_data["category"] = "other"
 
     # ===== VALIDATION LAYER =====
     # Validate event data before processing
@@ -1170,6 +1245,19 @@ def insert_event(
             raise  # Re-raise our own ValueError
         except Exception:
             pass  # Don't block insert on lookup failure
+
+    # Auto-generate content_hash if missing (defense-in-depth for dedup)
+    if not event_data.get("content_hash"):
+        from dedupe import generate_content_hash  # lazy import to avoid circular
+        venue_name_for_hash = ""
+        if venue_id:
+            venue_info = get_venue_by_id_cached(venue_id)
+            if venue_info and isinstance(venue_info, dict):
+                venue_name_for_hash = venue_info.get("name", "") or ""
+        event_data["content_hash"] = generate_content_hash(
+            title or "", venue_name_for_hash, event_data.get("start_date", "") or ""
+        )
+        logger.warning(f"Auto-generated missing content_hash for: {title[:60]}")
 
     # Remove producer_id if present (not a database column)
     if "producer_id" in event_data:
@@ -1500,7 +1588,38 @@ def parse_lineup_from_title(title: str) -> list[dict]:
     )
     from artist_images import extract_artist_from_title, _ARTIST_BLOCKLIST
 
+    def _normalize(value: Optional[str]) -> str:
+        return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9]+", " ", (value or "").lower())).strip()
+
+    def _title_has_descriptors(value: str) -> bool:
+        return bool(
+            re.search(
+                r"(?:\bwith\b|\bw/\b|\bfeat\.?\b|\bfeaturing\b|"
+                r"\bvs\.?\b|\bversus\b|:|\btour\b|\bnight\b|\bopen mic\b)",
+                value,
+                flags=re.IGNORECASE,
+            )
+        )
+
+    def _looks_like_boilerplate(value: str) -> bool:
+        return bool(
+            re.search(
+                r"(open mic|comedy night|home game|suite|suites|"
+                r"parking|ticket package|presented by)",
+                value,
+                flags=re.IGNORECASE,
+            )
+        )
+
     parsed_entries = dedupe_artist_entries(split_lineup_text_with_roles(title))
+
+    # If the parser only captured the full title, try a stronger headliner extraction pass.
+    if len(parsed_entries) == 1:
+        only_name = str(parsed_entries[0].get("name") or "").strip()
+        headliner = extract_artist_from_title(title)
+        if headliner and _normalize(headliner) and _normalize(headliner) != _normalize(only_name):
+            parsed_entries = [{"name": headliner, "role": "headliner"}]
+
     if not parsed_entries:
         # Fallback: single artist extraction (removes tour names, prefixes, etc.)
         headliner = extract_artist_from_title(title)
@@ -1512,6 +1631,9 @@ def parse_lineup_from_title(title: str) -> list[dict]:
 
     # Filter out blocklisted terms and single short words
     filtered_entries: list[dict] = []
+    normalized_title = _normalize(title)
+    has_title_descriptors = _title_has_descriptors(title)
+
     for entry in parsed_entries:
         name = str(entry.get("name") or "").strip()
         if not name:
@@ -1520,10 +1642,28 @@ def parse_lineup_from_title(title: str) -> list[dict]:
             continue
         if len(name) < 4 and " " not in name:
             continue
+        normalized_name = _normalize(name)
+        is_title_mirror = bool(
+            normalized_title
+            and normalized_name
+            and normalized_name == normalized_title
+        )
+        if is_title_mirror and (len(parsed_entries) > 1 or has_title_descriptors):
+            continue
+        if _looks_like_boilerplate(name) and (is_title_mirror or has_title_descriptors):
+            continue
         filtered_entries.append({"name": name, "role": entry.get("role")})
 
     if not filtered_entries:
-        return []
+        fallback = extract_artist_from_title(title)
+        if (
+            fallback
+            and fallback.lower() not in _ARTIST_BLOCKLIST
+            and not _looks_like_boilerplate(fallback)
+        ):
+            filtered_entries = [{"name": fallback, "role": "headliner"}]
+        else:
+            return []
 
     has_explicit_headliner = any(
         str(entry.get("role") or "").lower() == "headliner"
@@ -1553,20 +1693,93 @@ def parse_lineup_from_title(title: str) -> list[dict]:
     return result
 
 
-def update_event(event_id: int, event_data: dict) -> None:
-    """Update an existing event."""
-    client = get_client()
-    client.table("events").update(event_data).eq("id", event_id).execute()
+_PARTICIPANT_DESCRIPTOR_RE = re.compile(
+    r"(?:\bwith\b|\bw/\b|\bfeat\.?\b|\bfeaturing\b|\bvs\.?\b|\bversus\b|:|\btour\b|\bnight\b|\bopen mic\b)",
+    flags=re.IGNORECASE,
+)
+
+_PARTICIPANT_BOILERPLATE_RE = re.compile(
+    r"(open mic|comedy night|home game|suite|suites|parking|ticket package|item voucher|voucher|presented by)",
+    flags=re.IGNORECASE,
+)
 
 
-def upsert_event_artists(event_id: int, artists: list) -> None:
-    """Replace event artists for an event, preserving billing order."""
-    if not artists:
-        return
+def _normalize_participant_text(value: Optional[str]) -> str:
+    return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9]+", " ", (value or "").lower())).strip()
 
-    cleaned: list[dict] = []
+
+def _normalize_team_entity(value: Optional[str]) -> str:
+    normalized = _normalize_participant_text(value)
+    normalized = re.sub(r"\b(fc|sc|club|team|women|womens|men|mens|athletics)\b", " ", normalized)
+    return re.sub(r"\s+", " ", normalized).strip()
+
+
+def _title_has_participant_descriptors(value: str) -> bool:
+    return bool(_PARTICIPANT_DESCRIPTOR_RE.search(value or ""))
+
+
+def _looks_like_participant_boilerplate(value: str) -> bool:
+    return bool(_PARTICIPANT_BOILERPLATE_RE.search(value or ""))
+
+
+def _clean_team_name(value: str) -> str:
+    cleaned = re.sub(r"\s*\([^)]*\)\s*", " ", value or "")
+    cleaned = re.sub(
+        r"\s*(?:\||-|–|—)\s*(?:suite|suites|parking|vip|package|packages|tickets?).*$",
+        "",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+    cleaned = re.sub(
+        r"\s*(?:\||-|–|—)\s*(?:updated date|rescheduled|postponed|cancelled|canceled).*$",
+        "",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+    return " ".join(cleaned.split()).strip()
+
+
+def _parse_sports_teams_from_title(title: Optional[str]) -> list[str]:
+    raw = (title or "").strip()
+    if not raw:
+        return []
+
+    patterns = (
+        r"^(?P<a>.+?)\s+(?:vs\.?|v\.?|versus)\s+(?P<b>.+)$",
+        r"^(?P<a>.+?)\s+@\s+(?P<b>.+)$",
+        r"^(?P<a>.+?)\s+at\s+(?P<b>.+)$",
+    )
+
+    for pattern in patterns:
+        match = re.match(pattern, raw, flags=re.IGNORECASE)
+        if not match:
+            continue
+
+        team_a = _clean_team_name(match.group("a"))
+        team_b = _clean_team_name(match.group("b"))
+        if not team_a or not team_b:
+            continue
+        if _normalize_participant_text(team_a) == _normalize_participant_text(team_b):
+            continue
+        return [team_a, team_b]
+
+    return []
+
+
+def sanitize_event_artists(
+    event_title: Optional[str],
+    event_category: Optional[str],
+    artists: list,
+) -> list[dict]:
+    """Normalize and de-junk participant rows before inserting into event_artists."""
+    title = event_title or ""
+    category = (event_category or "").strip().lower()
+    title_norm = _normalize_participant_text(title)
+    has_descriptors = _title_has_participant_descriptors(title)
+
+    # Initial clean + dedupe by name.
+    raw_cleaned: list[dict] = []
     seen: set[str] = set()
-
     for idx, entry in enumerate(artists, start=1):
         if isinstance(entry, dict):
             name = entry.get("name")
@@ -1579,35 +1792,270 @@ def upsert_event_artists(event_id: int, artists: list) -> None:
             billing_order = idx
             is_headliner = None
 
-        if not name:
+        normalized_name = " ".join(str(name or "").split())
+        if not normalized_name:
             continue
 
-        normalized = " ".join(str(name).split())
-        if not normalized:
-            continue
-
-        key = normalized.lower()
+        key = normalized_name.lower()
         if key in seen:
             continue
         seen.add(key)
 
-        if is_headliner is None and role:
-            is_headliner = str(role).lower() == "headliner"
-
-        cleaned.append(
+        raw_cleaned.append(
             {
-                "name": normalized,
+                "name": normalized_name,
                 "role": role,
                 "billing_order": billing_order,
                 "is_headliner": is_headliner if is_headliner is not None else None,
             }
         )
 
-    if not cleaned:
+    if not raw_cleaned:
+        return []
+
+    raw_cleaned.sort(
+        key=lambda item: (
+            item.get("billing_order") if item.get("billing_order") is not None else 10_000,
+            _normalize_participant_text(item.get("name")),
+        )
+    )
+
+    filtered: list[dict] = []
+    for row in raw_cleaned:
+        name = row["name"]
+        name_norm = _normalize_participant_text(name)
+        if not name_norm:
+            continue
+
+        is_title_mirror = bool(title_norm and name_norm == title_norm)
+        has_alt_name_in_title = any(
+            _normalize_participant_text(other["name"]) not in ("", name_norm, title_norm)
+            and _normalize_participant_text(other["name"]) in title_norm
+            for other in raw_cleaned
+        )
+
+        if _looks_like_participant_boilerplate(name) and (
+            is_title_mirror or has_descriptors or category == "sports"
+        ):
+            continue
+
+        if is_title_mirror and (
+            has_descriptors or _looks_like_participant_boilerplate(name) or has_alt_name_in_title
+        ):
+            continue
+
+        if category == "sports" and re.search(
+            r"(home game|suites?|parking|ticket package|vip|presented by)",
+            name,
+            flags=re.IGNORECASE,
+        ):
+            continue
+
+        filtered.append(row)
+
+    if category == "sports":
+        parsed_teams = _parse_sports_teams_from_title(title)
+        parsed_team_norms = {_normalize_team_entity(team) for team in parsed_teams}
+        if parsed_team_norms:
+            filtered = [
+                row
+                for row in filtered
+                if _normalize_team_entity(row["name"]) in parsed_team_norms
+            ]
+        else:
+            filtered = [
+                row
+                for row in filtered
+                if _normalize_participant_text(row["name"]) != title_norm
+                and not _looks_like_participant_boilerplate(row["name"])
+            ]
+
+        existing = {_normalize_team_entity(row["name"]) for row in filtered}
+        for idx, team in enumerate(parsed_teams, start=1):
+            norm_team = _normalize_team_entity(team)
+            if not norm_team or norm_team in existing:
+                continue
+            existing.add(norm_team)
+            filtered.append(
+                {
+                    "name": team,
+                    "role": "home" if idx == 1 else "away",
+                    "billing_order": idx,
+                    "is_headliner": idx == 1,
+                }
+            )
+
+    if not filtered and category in {"music", "comedy"}:
+        filtered = parse_lineup_from_title(title)
+
+    if not filtered:
+        return []
+
+    # Reindex billing and ensure a lead participant.
+    result: list[dict] = []
+    has_explicit_headliner = any(
+        str(item.get("role") or "").lower() in {"headliner", "home"}
+        or bool(item.get("is_headliner"))
+        for item in filtered
+    )
+
+    filtered.sort(
+        key=lambda item: (
+            item.get("billing_order") if item.get("billing_order") is not None else 10_000,
+            _normalize_participant_text(item.get("name")),
+        )
+    )
+
+    for idx, item in enumerate(filtered, start=1):
+        role_value = str(item.get("role") or "").strip().lower()
+        if not role_value:
+            if category == "sports":
+                role_value = "home" if idx == 1 else "away"
+            else:
+                role_value = "headliner" if idx == 1 else "support"
+
+        is_headliner = item.get("is_headliner")
+        if is_headliner is None:
+            is_headliner = role_value in {"headliner", "home"}
+        if not has_explicit_headliner and idx == 1:
+            is_headliner = True
+            if category != "sports":
+                role_value = "headliner"
+
+        result.append(
+            {
+                "name": item["name"],
+                "role": role_value,
+                "billing_order": idx,
+                "is_headliner": bool(is_headliner),
+            }
+        )
+
+    return result
+
+
+def update_event(event_id: int, event_data: dict) -> None:
+    """Update an existing event."""
+    client = get_client()
+    client.table("events").update(event_data).eq("id", event_id).execute()
+
+
+def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
+    """Compare existing DB event with incoming crawler data and update if incoming is better.
+
+    Field-by-field merge strategy:
+    - Fill NULL fields with non-NULL incoming values
+    - Replace short/template descriptions with longer, richer ones
+    - Replace placeholder images with real ones
+    - Merge tags (union)
+    - Prefer more specific times, prices, URLs
+
+    Returns True if any fields were updated, False if no changes needed.
+    """
+    event_id = existing.get("id")
+    if not event_id:
+        return False
+
+    updates: dict = {}
+
+    # --- Description: prefer longer, non-template descriptions ---
+    existing_desc = existing.get("description") or ""
+    incoming_desc = incoming.get("description") or ""
+    if incoming_desc and len(incoming_desc) > len(existing_desc):
+        # Don't replace a real description with a template
+        if not re.match(
+            r"^(Event at |Live music at .+ featuring|Comedy show at |"
+            r"Theater performance at |Film screening at |Sporting event at |"
+            r"Arts event at |Food & drink event at |Fitness class at |"
+            r"Creative workshop at |Performance at |Show at |Paint and sip class at )",
+            incoming_desc,
+        ):
+            updates["description"] = incoming_desc
+
+    # --- Image: fill missing, or replace venue-fallback with event-specific ---
+    existing_img = existing.get("image_url") or ""
+    incoming_img = incoming.get("image_url") or ""
+    if incoming_img and not existing_img:
+        updates["image_url"] = incoming_img
+
+    # --- Times: fill missing ---
+    if incoming.get("start_time") and not existing.get("start_time"):
+        updates["start_time"] = incoming["start_time"]
+    if incoming.get("end_time") and not existing.get("end_time"):
+        updates["end_time"] = incoming["end_time"]
+    if incoming.get("end_date") and not existing.get("end_date"):
+        updates["end_date"] = incoming["end_date"]
+
+    # --- Price: fill missing ---
+    if incoming.get("price_min") is not None and existing.get("price_min") is None:
+        updates["price_min"] = incoming["price_min"]
+    if incoming.get("price_max") is not None and existing.get("price_max") is None:
+        updates["price_max"] = incoming["price_max"]
+    if incoming.get("price_note") and not existing.get("price_note"):
+        updates["price_note"] = incoming["price_note"]
+
+    # --- URLs: fill missing ---
+    if incoming.get("ticket_url") and not existing.get("ticket_url"):
+        updates["ticket_url"] = incoming["ticket_url"]
+    if incoming.get("source_url") and not existing.get("source_url"):
+        updates["source_url"] = incoming["source_url"]
+
+    # --- Tags: union merge ---
+    existing_tags = set(existing.get("tags") or [])
+    incoming_tags = set(incoming.get("tags") or [])
+    if incoming_tags and not incoming_tags.issubset(existing_tags):
+        updates["tags"] = list(existing_tags | incoming_tags)
+
+    # --- Title: prefer non-ALL-CAPS version of same title ---
+    existing_title = existing.get("title") or ""
+    incoming_title = incoming.get("title") or ""
+    if (
+        incoming_title
+        and existing_title.isupper()
+        and not incoming_title.isupper()
+        and incoming_title.lower() == existing_title.lower()
+    ):
+        updates["title"] = incoming_title
+
+    if not updates:
+        return False
+
+    try:
+        client = get_client()
+        client.table("events").update(updates).eq("id", event_id).execute()
+        updated_fields = list(updates.keys())
+        logger.info(
+            f"Smart-updated event {event_id}: {', '.join(updated_fields)} "
+            f"for '{existing_title[:50]}'"
+        )
+        return True
+    except Exception as e:
+        logger.error(f"Failed to smart-update event {event_id}: {e}")
+        return False
+
+
+def upsert_event_artists(event_id: int, artists: list, link_canonical: bool = True) -> None:
+    """Replace event artists for an event, preserving billing order."""
+    if not artists:
         return
 
     client = get_client()
+    event_row = (
+        client.table("events")
+        .select("title, category")
+        .eq("id", event_id)
+        .maybe_single()
+        .execute()
+    ).data or {}
+    event_title = event_row.get("title")
+    event_category = event_row.get("category")
+
+    cleaned = sanitize_event_artists(event_title, event_category, artists)
+
     client.table("event_artists").delete().eq("event_id", event_id).execute()
+
+    if not cleaned:
+        return
 
     payload = []
     for item in cleaned:
@@ -1623,13 +2071,14 @@ def upsert_event_artists(event_id: int, artists: list) -> None:
 
     client.table("event_artists").insert(payload).execute()
 
-    # Resolve canonical artist records and set artist_id FK
-    try:
-        from artists import resolve_and_link_event_artists
+    if link_canonical:
+        # Resolve canonical artist records and set artist_id FK
+        try:
+            from artists import resolve_and_link_event_artists
 
-        resolve_and_link_event_artists(event_id)
-    except Exception as e:
-        logger.debug(f"Artist resolution failed for event {event_id}: {e}")
+            resolve_and_link_event_artists(event_id, category=event_category)
+        except Exception as e:
+            logger.debug(f"Artist resolution failed for event {event_id}: {e}")
 
 
 def upsert_event_images(event_id: int, images: list) -> None:

@@ -1,5 +1,12 @@
 import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { isValidUUID } from "@/lib/api-utils";
+import { resolvePortalSlugAlias } from "@/lib/portal-aliases";
+import {
+  extractPortalFromRedirect,
+  PORTAL_CONTEXT_COOKIE,
+  isValidPortalSlug,
+} from "@/lib/auth-utils";
 
 /**
  * Extract portal slug from Referer header
@@ -11,10 +18,7 @@ export function extractPortalSlugFromReferer(request: NextRequest): string | nul
 
   try {
     const url = new URL(referer);
-    const pathSegments = url.pathname.split("/").filter(Boolean);
-
-    // First segment is the portal slug
-    return pathSegments[0] || null;
+    return extractPortalFromRedirect(url.pathname);
   } catch {
     return null;
   }
@@ -31,28 +35,88 @@ export function extractPortalSlugFromReferer(request: NextRequest): string | nul
  */
 export async function resolvePortalId(request: NextRequest): Promise<string | null> {
   let portalSlug: string | null = null;
+  let portalId: string | null = null;
 
-  // 1. Try to get portal_slug from request body
+  // 1. Try to get portal context from request body
   try {
     const body = await request.clone().json();
-    portalSlug = body.portal_slug || null;
+    if (typeof body?.portal_slug === "string" && body.portal_slug.trim()) {
+      portalSlug = body.portal_slug.trim();
+    }
+    if (typeof body?.portal_id === "string" && isValidUUID(body.portal_id)) {
+      portalId = body.portal_id;
+    }
   } catch {
     // No body or invalid JSON - continue
   }
 
-  // 2. Fall back to Referer header
+  // 2. Try explicit headers
+  if (!portalId) {
+    const headerPortalId = request.headers.get("x-portal-id");
+    if (headerPortalId && isValidUUID(headerPortalId)) {
+      portalId = headerPortalId;
+    }
+  }
+  if (!portalSlug) {
+    const headerPortalSlug = request.headers.get("x-portal-slug");
+    if (headerPortalSlug) {
+      portalSlug = headerPortalSlug.trim();
+    }
+  }
+
+  // 3. Try query parameters
+  try {
+    const url = new URL(request.url);
+    if (!portalId) {
+      const queryPortalId = url.searchParams.get("portal_id");
+      if (queryPortalId && isValidUUID(queryPortalId)) {
+        portalId = queryPortalId;
+      }
+    }
+    if (!portalSlug) {
+      const queryPortalSlug = url.searchParams.get("portal");
+      if (queryPortalSlug) {
+        portalSlug = queryPortalSlug.trim();
+      }
+    }
+  } catch {
+    // Invalid URL should not block fallback resolution
+  }
+
+  // 4. Fall back to Referer header
   if (!portalSlug) {
     portalSlug = extractPortalSlugFromReferer(request);
   }
 
-  // 3. If no slug found, return null
-  if (!portalSlug) return null;
+  // 5. Fall back to remembered portal cookie
+  if (!portalSlug) {
+    const cookieSlug = request.cookies.get(PORTAL_CONTEXT_COOKIE)?.value || null;
+    if (cookieSlug && isValidPortalSlug(cookieSlug)) {
+      portalSlug = cookieSlug;
+    }
+  }
 
-  // 4. Look up portal ID in database
+  // 6. Resolve by slug first (canonical contract), then by UUID
+  if (portalSlug) {
+    const canonicalSlug = resolvePortalSlugAlias(portalSlug);
+    const { data, error } = await supabase
+      .from("portals")
+      .select("id")
+      .eq("slug", canonicalSlug)
+      .eq("status", "active")
+      .maybeSingle();
+
+    if (!error && data) {
+      return (data as { id: string }).id;
+    }
+  }
+
+  if (!portalId) return null;
+
   const { data, error } = await supabase
     .from("portals")
     .select("id")
-    .eq("slug", portalSlug)
+    .eq("id", portalId)
     .eq("status", "active")
     .maybeSingle();
 

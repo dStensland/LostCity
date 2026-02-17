@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useCallback, useRef } from "react";
+import { useEffect, useCallback, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth-context";
@@ -49,6 +49,12 @@ export function useRealtimeFriendRequests() {
   const queryClient = useQueryClient();
   const supabase = createClient();
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
+  const [lastAcceptedFriend, setLastAcceptedFriend] = useState<{
+    username: string;
+    display_name: string | null;
+    avatar_url: string | null;
+  } | null>(null);
 
   // Get current pending count from cache
   const getCachedPendingCount = useCallback((): number => {
@@ -276,6 +282,49 @@ export function useRealtimeFriendRequests() {
       )
       .subscribe();
 
+    // Subscribe to friend request acceptances where current user is the inviter
+    const acceptChannel = supabase
+      .channel("friend-requests-accepted")
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "friend_requests",
+          filter: `inviter_id=eq.${user.id}`,
+        },
+        async (payload) => {
+          const updated = payload.new as {
+            id: string;
+            invitee_id: string;
+            status: string;
+          };
+
+          if (updated.status !== "accepted") return;
+
+          // Fetch the accepter's profile
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("username, display_name, avatar_url")
+            .eq("id", updated.invitee_id)
+            .maybeSingle();
+
+          if (profile) {
+            const typedProfile = profile as {
+              username: string;
+              display_name: string | null;
+              avatar_url: string | null;
+            };
+            setLastAcceptedFriend(typedProfile);
+          }
+
+          // Invalidate friendship and friend list queries
+          queryClient.invalidateQueries({ queryKey: ["friendship", updated.invitee_id] });
+          queryClient.invalidateQueries({ queryKey: ["friends"] });
+        }
+      )
+      .subscribe();
+
     channelRef.current = channel;
 
     // Cleanup on unmount
@@ -283,10 +332,13 @@ export function useRealtimeFriendRequests() {
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
       }
+      supabase.removeChannel(acceptChannel);
     };
   }, [user?.id, supabase, queryClient]);
 
   return {
     pendingCount: getCachedPendingCount(),
+    lastAcceptedFriend,
+    clearLastAcceptedFriend: () => setLastAcceptedFriend(null),
   };
 }
