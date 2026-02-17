@@ -4,6 +4,7 @@ Uses mocked Supabase client to avoid actual database calls.
 """
 
 from unittest.mock import patch, MagicMock
+from types import SimpleNamespace
 
 
 class TestGetOrCreateVenue:
@@ -77,6 +78,34 @@ class TestGetOrCreateVenue:
 
         assert venue_id == 123
         table.insert.assert_called_once_with(sample_venue_data)
+
+    @patch("db.get_client")
+    def test_dry_run_skips_new_venue_insert(self, mock_get_client, sample_venue_data):
+        """Should return a synthetic ID and skip insert in dry-run mode."""
+        client = MagicMock()
+        mock_get_client.return_value = client
+
+        table = MagicMock()
+        client.table.return_value = table
+        table.select.return_value = table
+        table.eq.return_value = table
+
+        # No existing venue found by slug or name.
+        table.execute.side_effect = [
+            MagicMock(data=[]),
+            MagicMock(data=[]),
+        ]
+
+        from db import get_or_create_venue, configure_write_mode
+
+        configure_write_mode(False, reason="test dry run")
+        try:
+            venue_id = get_or_create_venue(sample_venue_data)
+        finally:
+            configure_write_mode(True)
+
+        assert venue_id < 0
+        table.insert.assert_not_called()
 
 
 class TestInsertEvent:
@@ -195,6 +224,109 @@ class TestInsertEvent:
         inserted_data = table.insert.call_args_list[0][0][0]
         assert inserted_data["category"] == "other"
 
+    @patch("db.get_festival_source_hint", return_value=None)
+    @patch("db.events_support_film_identity_columns", return_value=True)
+    @patch("db.get_metadata_for_film_event")
+    @patch("db.get_venue_by_id_cached")
+    @patch("db.get_client")
+    def test_stores_film_identity_without_overwriting_event_title(
+        self,
+        mock_get_client,
+        mock_get_venue,
+        mock_get_film_metadata,
+        mock_film_cols,
+        mock_festival_hint,
+        sample_event_data,
+    ):
+        """Film identity should be stored in dedicated fields while title stays venue-provided."""
+        client = MagicMock()
+        mock_get_client.return_value = client
+        mock_get_venue.return_value = {"vibes": []}
+        mock_get_film_metadata.return_value = SimpleNamespace(
+            title="The NeverEnding Story",
+            poster_url="https://example.com/poster.jpg",
+            director="Wolfgang Petersen",
+            runtime_minutes=94,
+            year=1984,
+            rating="PG",
+            imdb_id="tt0088323",
+            genres=["adventure", "family"],
+            plot="A young boy discovers a magical world through a mysterious book.",
+        )
+
+        table = MagicMock()
+        client.table.return_value = table
+        table.insert.return_value = table
+        table.execute.return_value = MagicMock(data=[{"id": 901}])
+
+        from db import insert_event
+
+        event_data = dict(sample_event_data)
+        event_data["category"] = "film"
+        event_data["title"] = "The NeverEnding Story (40th Anniversary Screening)"
+        event_data["tags"] = ["showtime"]
+
+        event_id = insert_event(event_data)
+
+        assert event_id == 901
+        inserted_data = table.insert.call_args_list[0][0][0]
+        assert inserted_data["title"] == "The NeverEnding Story (40th Anniversary Screening)"
+        assert inserted_data["film_title"] == "The NeverEnding Story"
+        assert inserted_data["film_release_year"] == 1984
+        assert inserted_data["film_imdb_id"] == "tt0088323"
+        assert inserted_data["film_identity_source"] == "omdb"
+        assert inserted_data["film_external_genres"] == ["adventure", "family"]
+
+    @patch("db.get_festival_source_hint", return_value=None)
+    @patch("db.events_support_film_identity_columns", return_value=True)
+    @patch("db.get_metadata_for_film_event")
+    @patch("db.get_venue_by_id_cached")
+    @patch("db.get_client")
+    def test_uses_wikidata_source_for_film_identity_when_omdb_misses(
+        self,
+        mock_get_client,
+        mock_get_venue,
+        mock_get_film_metadata,
+        mock_film_cols,
+        mock_festival_hint,
+        sample_event_data,
+    ):
+        """Film identity source should reflect Wikidata fallback when it provides metadata."""
+        client = MagicMock()
+        mock_get_client.return_value = client
+        mock_get_venue.return_value = {"vibes": []}
+        mock_get_film_metadata.return_value = SimpleNamespace(
+            title="Fight Club",
+            poster_url=None,
+            director="David Fincher",
+            runtime_minutes=139,
+            year=1999,
+            rating=None,
+            imdb_id="tt0137523",
+            genres=["drama"],
+            plot=None,
+            source="wikidata",
+        )
+
+        table = MagicMock()
+        client.table.return_value = table
+        table.insert.return_value = table
+        table.execute.return_value = MagicMock(data=[{"id": 902}])
+
+        from db import insert_event
+
+        event_data = dict(sample_event_data)
+        event_data["category"] = "film"
+        event_data["title"] = "Fight Club (1999)"
+
+        event_id = insert_event(event_data)
+
+        assert event_id == 902
+        inserted_data = table.insert.call_args_list[0][0][0]
+        assert inserted_data["title"] == "Fight Club (1999)"
+        assert inserted_data["film_title"] == "Fight Club"
+        assert inserted_data["film_identity_source"] == "wikidata"
+
 
 class TestFindEventByHash:
     """Tests for find_event_by_hash function."""
@@ -312,6 +444,20 @@ class TestCrawlLog:
         assert insert_data["source_id"] == 1
         assert insert_data["status"] == "running"
         assert "started_at" in insert_data
+
+    @patch("db.get_client")
+    def test_create_crawl_log_dry_run_skips_insert(self, mock_get_client):
+        """Should return synthetic ID and avoid DB writes in dry-run mode."""
+        from db import create_crawl_log, configure_write_mode
+
+        configure_write_mode(False, reason="test dry run")
+        try:
+            log_id = create_crawl_log(source_id=1)
+        finally:
+            configure_write_mode(True)
+
+        assert log_id < 0
+        mock_get_client.assert_not_called()
 
     @patch("db.get_client")
     def test_update_crawl_log(self, mock_get_client):
