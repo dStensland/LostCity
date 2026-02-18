@@ -1,0 +1,1324 @@
+{
+  "generated_at": "2026-02-17T20:54:22.189Z",
+  "totals": {
+    "insufficient_rows": 42,
+    "crawler_candidates": 11,
+    "crawler_candidates_unique_venues": 11
+  },
+  "insufficient_rows": [
+    {
+      "track_slug": "the-midnight-train",
+      "track_name": "Roll for Initiative",
+      "venue_slug": "charlies-collectible-show",
+      "venue_name": "Charlies Collectible Show",
+      "insufficiency_score": 9,
+      "crawler_candidate": true,
+      "flags": [
+        "no_upcoming_events_14d",
+        "no_facts_or_landmarks",
+        "missing_editorial_blurb",
+        "missing_source_link",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_facts_or_landmarks",
+        "add_editorial_blurb",
+        "add_source",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 0,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": false
+    },
+    {
+      "track_slug": "comedy-live",
+      "track_name": "Comedy & Live Performance",
+      "venue_slug": "relapse-theatre",
+      "venue_name": "Relapse Theatre",
+      "insufficiency_score": 9,
+      "crawler_candidate": true,
+      "flags": [
+        "no_upcoming_events_14d",
+        "no_facts_or_landmarks",
+        "missing_editorial_blurb",
+        "missing_source_link",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_facts_or_landmarks",
+        "add_editorial_blurb",
+        "add_source",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 0,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": false
+    },
+    {
+      "track_slug": "keep-swinging",
+      "track_name": "Keep Swinging",
+      "venue_slug": "five-iron-golf",
+      "venue_name": "Five Iron Golf",
+      "insufficiency_score": 9,
+      "crawler_candidate": true,
+      "flags": [
+        "no_upcoming_events_14d",
+        "no_facts_or_landmarks",
+        "missing_editorial_blurb",
+        "missing_source_link",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_facts_or_landmarks",
+        "add_editorial_blurb",
+        "add_source",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 0,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": false
+    },
+    {
+      "track_slug": "spelhouse-spirit",
+      "track_name": "SpelHouse Spirit",
+      "venue_slug": "morris-brown-college",
+      "venue_name": "Morris Brown College",
+      "insufficiency_score": 9,
+      "crawler_candidate": true,
+      "flags": [
+        "no_upcoming_events_14d",
+        "no_facts_or_landmarks",
+        "missing_editorial_blurb",
+        "missing_source_link",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_facts_or_landmarks",
+        "add_editorial_blurb",
+        "add_source",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 0,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": false
+    },
+    {
+      "track_slug": "spelhouse-spirit",
+      "track_name": "SpelHouse Spirit",
+      "venue_slug": "wrens-nest-museum",
+      "venue_name": "Wren's Nest House Museum",
+      "insufficiency_score": 9,
+      "crawler_candidate": true,
+      "flags": [
+        "no_upcoming_events_14d",
+        "no_facts_or_landmarks",
+        "missing_editorial_blurb",
+        "missing_source_link",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_facts_or_landmarks",
+        "add_editorial_blurb",
+        "add_source",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 0,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": false
+    },
+    {
+      "track_slug": "say-less",
+      "track_name": "Say Less",
+      "venue_slug": "trader-vics",
+      "venue_name": "Trader Vic's",
+      "insufficiency_score": 8,
+      "crawler_candidate": false,
+      "flags": [
+        "no_upcoming_events_14d",
+        "no_facts_or_landmarks",
+        "missing_editorial_blurb",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_facts_or_landmarks",
+        "add_editorial_blurb",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 0,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": true
+    },
+    {
+      "track_slug": "say-less",
+      "track_name": "Say Less",
+      "venue_slug": "tiger-sun",
+      "venue_name": "Tiger Sun",
+      "insufficiency_score": 8,
+      "crawler_candidate": false,
+      "flags": [
+        "no_upcoming_events_14d",
+        "no_facts_or_landmarks",
+        "missing_editorial_blurb",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_facts_or_landmarks",
+        "add_editorial_blurb",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 0,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": true
+    },
+    {
+      "track_slug": "keep-swinging",
+      "track_name": "Keep Swinging",
+      "venue_slug": "college-football-hall-of-fame",
+      "venue_name": "College Football Hall of Fame",
+      "insufficiency_score": 8,
+      "crawler_candidate": false,
+      "flags": [
+        "no_upcoming_events_14d",
+        "no_facts_or_landmarks",
+        "missing_editorial_blurb",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_facts_or_landmarks",
+        "add_editorial_blurb",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 0,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": true
+    },
+    {
+      "track_slug": "yallywood",
+      "track_name": "Y'allywood",
+      "venue_slug": "trilith-live",
+      "venue_name": "Trilith LIVE",
+      "insufficiency_score": 8,
+      "crawler_candidate": false,
+      "flags": [
+        "no_upcoming_events_14d",
+        "no_facts_or_landmarks",
+        "missing_editorial_blurb",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_facts_or_landmarks",
+        "add_editorial_blurb",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 0,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": true
+    },
+    {
+      "track_slug": "keep-swinging",
+      "track_name": "Keep Swinging",
+      "venue_slug": "east-lake-golf-club",
+      "venue_name": "East Lake Golf Club",
+      "insufficiency_score": 8,
+      "crawler_candidate": false,
+      "flags": [
+        "no_upcoming_events_14d",
+        "no_facts_or_landmarks",
+        "missing_editorial_blurb",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_facts_or_landmarks",
+        "add_editorial_blurb",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 0,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": true
+    },
+    {
+      "track_slug": "lifes-like-a-movie",
+      "track_name": "Life's Like a Movie",
+      "venue_slug": "lego-discovery-center-atlanta",
+      "venue_name": "LEGO Discovery Center Atlanta",
+      "insufficiency_score": 8,
+      "crawler_candidate": false,
+      "flags": [
+        "no_upcoming_events_14d",
+        "no_facts_or_landmarks",
+        "missing_editorial_blurb",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_facts_or_landmarks",
+        "add_editorial_blurb",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 0,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": true
+    },
+    {
+      "track_slug": "the-itis",
+      "track_name": "What'll Ya Have?",
+      "venue_slug": "soul-vegetarian-2",
+      "venue_name": "Soul Vegetarian 2",
+      "insufficiency_score": 8,
+      "crawler_candidate": false,
+      "flags": [
+        "no_upcoming_events_14d",
+        "no_facts_or_landmarks",
+        "missing_editorial_blurb",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_facts_or_landmarks",
+        "add_editorial_blurb",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 0,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": true
+    },
+    {
+      "track_slug": "resurgens",
+      "track_name": "Resurgens",
+      "venue_slug": "signia-by-hilton-atlanta-georgia-world-congress-center",
+      "venue_name": "Signia by Hilton Atlanta Georgia World Congress Center",
+      "insufficiency_score": 8,
+      "crawler_candidate": false,
+      "flags": [
+        "no_upcoming_events_14d",
+        "no_facts_or_landmarks",
+        "missing_editorial_blurb",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_facts_or_landmarks",
+        "add_editorial_blurb",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 0,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": true
+    },
+    {
+      "track_slug": "the-midnight-train",
+      "track_name": "Roll for Initiative",
+      "venue_slug": "savage-pizza",
+      "venue_name": "Savage Pizza",
+      "insufficiency_score": 8,
+      "crawler_candidate": false,
+      "flags": [
+        "no_upcoming_events_14d",
+        "no_facts_or_landmarks",
+        "missing_editorial_blurb",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_facts_or_landmarks",
+        "add_editorial_blurb",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 0,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": true
+    },
+    {
+      "track_slug": "welcome-to-atlanta",
+      "track_name": "Welcome to Atlanta",
+      "venue_slug": "college-football-hall-of-fame",
+      "venue_name": "College Football Hall of Fame",
+      "insufficiency_score": 8,
+      "crawler_candidate": false,
+      "flags": [
+        "no_upcoming_events_14d",
+        "no_facts_or_landmarks",
+        "missing_editorial_blurb",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_facts_or_landmarks",
+        "add_editorial_blurb",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 0,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": true
+    },
+    {
+      "track_slug": "lifes-like-a-movie",
+      "track_name": "Life's Like a Movie",
+      "venue_slug": "college-football-hall-of-fame",
+      "venue_name": "College Football Hall of Fame",
+      "insufficiency_score": 8,
+      "crawler_candidate": false,
+      "flags": [
+        "no_upcoming_events_14d",
+        "no_facts_or_landmarks",
+        "missing_editorial_blurb",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_facts_or_landmarks",
+        "add_editorial_blurb",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 0,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": true
+    },
+    {
+      "track_slug": "hard-in-da-paint",
+      "track_name": "Hard in Da Paint",
+      "venue_slug": "zucot-gallery",
+      "venue_name": "ZuCot Gallery",
+      "insufficiency_score": 8,
+      "crawler_candidate": false,
+      "flags": [
+        "no_upcoming_events_14d",
+        "no_facts_or_landmarks",
+        "missing_editorial_blurb",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_facts_or_landmarks",
+        "add_editorial_blurb",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 0,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": true
+    },
+    {
+      "track_slug": "the-itis",
+      "track_name": "What'll Ya Have?",
+      "venue_slug": "colonnade-restaurant",
+      "venue_name": "Colonnade Restaurant",
+      "insufficiency_score": 8,
+      "crawler_candidate": false,
+      "flags": [
+        "no_upcoming_events_14d",
+        "no_facts_or_landmarks",
+        "missing_editorial_blurb",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_facts_or_landmarks",
+        "add_editorial_blurb",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 0,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": true
+    },
+    {
+      "track_slug": "hell-of-an-engineer",
+      "track_name": "Hell of an Engineer",
+      "venue_slug": "rocky-mountain-pizza-company",
+      "venue_name": "Rocky Mountain Pizza Company",
+      "insufficiency_score": 8,
+      "crawler_candidate": false,
+      "flags": [
+        "no_upcoming_events_14d",
+        "no_facts_or_landmarks",
+        "missing_editorial_blurb",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_facts_or_landmarks",
+        "add_editorial_blurb",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 0,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": true
+    },
+    {
+      "track_slug": "city-in-a-forest",
+      "track_name": "City in a Forest",
+      "venue_slug": "lullwater-preserve",
+      "venue_name": "Lullwater Preserve",
+      "insufficiency_score": 8,
+      "crawler_candidate": false,
+      "flags": [
+        "no_upcoming_events_14d",
+        "no_facts_or_landmarks",
+        "missing_editorial_blurb",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_facts_or_landmarks",
+        "add_editorial_blurb",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 0,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": true
+    },
+    {
+      "track_slug": "the-midnight-train",
+      "track_name": "Roll for Initiative",
+      "venue_slug": "schoolhouse-brewing",
+      "venue_name": "Schoolhouse Brewing",
+      "insufficiency_score": 8,
+      "crawler_candidate": false,
+      "flags": [
+        "no_upcoming_events_14d",
+        "no_facts_or_landmarks",
+        "missing_editorial_blurb",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_facts_or_landmarks",
+        "add_editorial_blurb",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 0,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": true
+    },
+    {
+      "track_slug": "hell-of-an-engineer",
+      "track_name": "Hell of an Engineer",
+      "venue_slug": "sublime-doughnuts",
+      "venue_name": "Sublime Doughnuts",
+      "insufficiency_score": 8,
+      "crawler_candidate": false,
+      "flags": [
+        "no_upcoming_events_14d",
+        "no_facts_or_landmarks",
+        "missing_editorial_blurb",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_facts_or_landmarks",
+        "add_editorial_blurb",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 0,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": true
+    },
+    {
+      "track_slug": "good-trouble",
+      "track_name": "Good Trouble",
+      "venue_slug": "auburn-avenue-research-library",
+      "venue_name": "Auburn Avenue Research Library",
+      "insufficiency_score": 8,
+      "crawler_candidate": false,
+      "flags": [
+        "no_upcoming_events_14d",
+        "no_facts_or_landmarks",
+        "missing_editorial_blurb",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_facts_or_landmarks",
+        "add_editorial_blurb",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 0,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": true
+    },
+    {
+      "track_slug": "resurgens",
+      "track_name": "Resurgens",
+      "venue_slug": "four-seasons-atlanta",
+      "venue_name": "Four Seasons Hotel Atlanta",
+      "insufficiency_score": 8,
+      "crawler_candidate": false,
+      "flags": [
+        "no_upcoming_events_14d",
+        "no_facts_or_landmarks",
+        "missing_editorial_blurb",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_facts_or_landmarks",
+        "add_editorial_blurb",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 0,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": true
+    },
+    {
+      "track_slug": "hell-of-an-engineer",
+      "track_name": "Hell of an Engineer",
+      "venue_slug": "college-football-hall-of-fame",
+      "venue_name": "College Football Hall of Fame",
+      "insufficiency_score": 8,
+      "crawler_candidate": false,
+      "flags": [
+        "no_upcoming_events_14d",
+        "no_facts_or_landmarks",
+        "missing_editorial_blurb",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_facts_or_landmarks",
+        "add_editorial_blurb",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 0,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": true
+    },
+    {
+      "track_slug": "resurgens",
+      "track_name": "Resurgens",
+      "venue_slug": "waldorf-astoria-atlanta-buckhead",
+      "venue_name": "Waldorf Astoria Atlanta Buckhead",
+      "insufficiency_score": 8,
+      "crawler_candidate": false,
+      "flags": [
+        "no_upcoming_events_14d",
+        "no_facts_or_landmarks",
+        "missing_editorial_blurb",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_facts_or_landmarks",
+        "add_editorial_blurb",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 0,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": true
+    },
+    {
+      "track_slug": "hard-in-da-paint",
+      "track_name": "Hard in Da Paint",
+      "venue_slug": "little-five-points",
+      "venue_name": "Little Five Points",
+      "insufficiency_score": 7,
+      "crawler_candidate": true,
+      "flags": [
+        "no_upcoming_events_14d",
+        "missing_editorial_blurb",
+        "missing_source_link",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_editorial_blurb",
+        "add_source",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 2,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": false
+    },
+    {
+      "track_slug": "hard-in-da-paint",
+      "track_name": "Hard in Da Paint",
+      "venue_slug": "day-and-night-projects",
+      "venue_name": "Day & Night Projects",
+      "insufficiency_score": 7,
+      "crawler_candidate": false,
+      "flags": [
+        "no_upcoming_events_14d",
+        "no_facts_or_landmarks",
+        "missing_editorial_blurb",
+        "missing_source_link"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_facts_or_landmarks",
+        "add_editorial_blurb",
+        "add_source"
+      ],
+      "events_14d": 0,
+      "highlights_count": 0,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": false
+    },
+    {
+      "track_slug": "a-beautiful-mosaic",
+      "track_name": "A Beautiful Mosaic",
+      "venue_slug": "treat-your-feet-doraville",
+      "venue_name": "Treat Your Feet Doraville",
+      "insufficiency_score": 7,
+      "crawler_candidate": false,
+      "flags": [
+        "no_upcoming_events_14d",
+        "no_facts_or_landmarks",
+        "missing_editorial_blurb",
+        "missing_source_link"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_facts_or_landmarks",
+        "add_editorial_blurb",
+        "add_source"
+      ],
+      "events_14d": 0,
+      "highlights_count": 0,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": false
+    },
+    {
+      "track_slug": "the-south-got-something-to-say",
+      "track_name": "The South Got Something to Say",
+      "venue_slug": "escobar-restaurant",
+      "venue_name": "Escobar Restaurant & Tapas",
+      "insufficiency_score": 7,
+      "crawler_candidate": false,
+      "flags": [
+        "no_upcoming_events_14d",
+        "no_facts_or_landmarks",
+        "missing_editorial_blurb",
+        "missing_source_link"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_facts_or_landmarks",
+        "add_editorial_blurb",
+        "add_source"
+      ],
+      "events_14d": 0,
+      "highlights_count": 0,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": false
+    },
+    {
+      "track_slug": "the-south-got-something-to-say",
+      "track_name": "The South Got Something to Say",
+      "venue_slug": "crates-atl",
+      "venue_name": "Crates ATL",
+      "insufficiency_score": 7,
+      "crawler_candidate": false,
+      "flags": [
+        "no_upcoming_events_14d",
+        "no_facts_or_landmarks",
+        "missing_editorial_blurb",
+        "missing_source_link"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_facts_or_landmarks",
+        "add_editorial_blurb",
+        "add_source"
+      ],
+      "events_14d": 0,
+      "highlights_count": 0,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": false
+    },
+    {
+      "track_slug": "hard-in-da-paint",
+      "track_name": "Hard in Da Paint",
+      "venue_slug": "underground-atlanta",
+      "venue_name": "Underground Atlanta",
+      "insufficiency_score": 7,
+      "crawler_candidate": true,
+      "flags": [
+        "no_upcoming_events_14d",
+        "missing_editorial_blurb",
+        "missing_source_link",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_editorial_blurb",
+        "add_source",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 4,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": false
+    },
+    {
+      "track_slug": "native-heritage",
+      "track_name": "Native Heritage",
+      "venue_slug": "kennesaw-mountain-national-battlefield-park",
+      "venue_name": "Kennesaw Mountain National Battlefield Park",
+      "insufficiency_score": 7,
+      "crawler_candidate": false,
+      "flags": [
+        "no_facts_or_landmarks",
+        "missing_editorial_blurb",
+        "missing_source_link",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "add_facts_or_landmarks",
+        "add_editorial_blurb",
+        "add_source",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 2,
+      "highlights_count": 0,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": false
+    },
+    {
+      "track_slug": "keep-moving-forward",
+      "track_name": "Keep Moving Forward",
+      "venue_slug": "boulevard-crossing-park",
+      "venue_name": "Boulevard Crossing Park",
+      "insufficiency_score": 7,
+      "crawler_candidate": false,
+      "flags": [
+        "no_upcoming_events_14d",
+        "no_facts_or_landmarks",
+        "missing_editorial_blurb",
+        "missing_source_link"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_facts_or_landmarks",
+        "add_editorial_blurb",
+        "add_source"
+      ],
+      "events_14d": 0,
+      "highlights_count": 0,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": false
+    },
+    {
+      "track_slug": "a-beautiful-mosaic",
+      "track_name": "A Beautiful Mosaic",
+      "venue_slug": "teso-life",
+      "venue_name": "Teso Life",
+      "insufficiency_score": 7,
+      "crawler_candidate": false,
+      "flags": [
+        "no_upcoming_events_14d",
+        "no_facts_or_landmarks",
+        "missing_editorial_blurb",
+        "missing_source_link"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_facts_or_landmarks",
+        "add_editorial_blurb",
+        "add_source"
+      ],
+      "events_14d": 0,
+      "highlights_count": 0,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": false
+    },
+    {
+      "track_slug": "the-itis",
+      "track_name": "What'll Ya Have?",
+      "venue_slug": "the-varsity",
+      "venue_name": "The Varsity",
+      "insufficiency_score": 6,
+      "crawler_candidate": false,
+      "flags": [
+        "no_upcoming_events_14d",
+        "missing_editorial_blurb",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_editorial_blurb",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 2,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": true
+    },
+    {
+      "track_slug": "a-beautiful-mosaic",
+      "track_name": "A Beautiful Mosaic",
+      "venue_slug": "baps-mandir-atlanta",
+      "venue_name": "BAPS Shri Swaminarayan Mandir",
+      "insufficiency_score": 6,
+      "crawler_candidate": false,
+      "flags": [
+        "no_upcoming_events_14d",
+        "no_facts_or_landmarks",
+        "missing_editorial_blurb"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_facts_or_landmarks",
+        "add_editorial_blurb"
+      ],
+      "events_14d": 0,
+      "highlights_count": 0,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": true
+    },
+    {
+      "track_slug": "hell-of-an-engineer",
+      "track_name": "Hell of an Engineer",
+      "venue_slug": "the-varsity",
+      "venue_name": "The Varsity",
+      "insufficiency_score": 6,
+      "crawler_candidate": false,
+      "flags": [
+        "no_upcoming_events_14d",
+        "missing_editorial_blurb",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_editorial_blurb",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 2,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": true
+    },
+    {
+      "track_slug": "city-in-a-forest",
+      "track_name": "City in a Forest",
+      "venue_slug": "cascade-springs-nature-preserve",
+      "venue_name": "Cascade Springs Nature Preserve",
+      "insufficiency_score": 6,
+      "crawler_candidate": false,
+      "flags": [
+        "no_upcoming_events_14d",
+        "missing_editorial_blurb",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_editorial_blurb",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 2,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": true
+    },
+    {
+      "track_slug": "as-seen-on-tv",
+      "track_name": "As Seen on TV",
+      "venue_slug": "starlight-drive-in",
+      "venue_name": "Starlight Drive-In Theatre",
+      "insufficiency_score": 6,
+      "crawler_candidate": false,
+      "flags": [
+        "no_upcoming_events_14d",
+        "missing_editorial_blurb",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_editorial_blurb",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 2,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": true
+    },
+    {
+      "track_slug": "hell-of-an-engineer",
+      "track_name": "Hell of an Engineer",
+      "venue_slug": "westin-peachtree-plaza",
+      "venue_name": "The Westin Peachtree Plaza",
+      "insufficiency_score": 6,
+      "crawler_candidate": false,
+      "flags": [
+        "no_upcoming_events_14d",
+        "missing_editorial_blurb",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_editorial_blurb",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 2,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": true
+    },
+    {
+      "track_slug": "welcome-to-atlanta",
+      "track_name": "Welcome to Atlanta",
+      "venue_slug": "the-varsity",
+      "venue_name": "The Varsity",
+      "insufficiency_score": 6,
+      "crawler_candidate": false,
+      "flags": [
+        "no_upcoming_events_14d",
+        "missing_editorial_blurb",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_editorial_blurb",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 2,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": true
+    }
+  ],
+  "crawler_candidates_unique_venues": [
+    {
+      "track_slug": "the-midnight-train",
+      "track_name": "Roll for Initiative",
+      "venue_slug": "charlies-collectible-show",
+      "venue_name": "Charlies Collectible Show",
+      "insufficiency_score": 9,
+      "flags": [
+        "no_upcoming_events_14d",
+        "no_facts_or_landmarks",
+        "missing_editorial_blurb",
+        "missing_source_link",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_facts_or_landmarks",
+        "add_editorial_blurb",
+        "add_source",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 0,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": false
+    },
+    {
+      "track_slug": "comedy-live",
+      "track_name": "Comedy & Live Performance",
+      "venue_slug": "relapse-theatre",
+      "venue_name": "Relapse Theatre",
+      "insufficiency_score": 9,
+      "flags": [
+        "no_upcoming_events_14d",
+        "no_facts_or_landmarks",
+        "missing_editorial_blurb",
+        "missing_source_link",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_facts_or_landmarks",
+        "add_editorial_blurb",
+        "add_source",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 0,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": false
+    },
+    {
+      "track_slug": "keep-swinging",
+      "track_name": "Keep Swinging",
+      "venue_slug": "five-iron-golf",
+      "venue_name": "Five Iron Golf",
+      "insufficiency_score": 9,
+      "flags": [
+        "no_upcoming_events_14d",
+        "no_facts_or_landmarks",
+        "missing_editorial_blurb",
+        "missing_source_link",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_facts_or_landmarks",
+        "add_editorial_blurb",
+        "add_source",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 0,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": false
+    },
+    {
+      "track_slug": "spelhouse-spirit",
+      "track_name": "SpelHouse Spirit",
+      "venue_slug": "morris-brown-college",
+      "venue_name": "Morris Brown College",
+      "insufficiency_score": 9,
+      "flags": [
+        "no_upcoming_events_14d",
+        "no_facts_or_landmarks",
+        "missing_editorial_blurb",
+        "missing_source_link",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_facts_or_landmarks",
+        "add_editorial_blurb",
+        "add_source",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 0,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": false
+    },
+    {
+      "track_slug": "spelhouse-spirit",
+      "track_name": "SpelHouse Spirit",
+      "venue_slug": "wrens-nest-museum",
+      "venue_name": "Wren's Nest House Museum",
+      "insufficiency_score": 9,
+      "flags": [
+        "no_upcoming_events_14d",
+        "no_facts_or_landmarks",
+        "missing_editorial_blurb",
+        "missing_source_link",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_facts_or_landmarks",
+        "add_editorial_blurb",
+        "add_source",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 0,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": false
+    },
+    {
+      "track_slug": "hard-in-da-paint",
+      "track_name": "Hard in Da Paint",
+      "venue_slug": "little-five-points",
+      "venue_name": "Little Five Points",
+      "insufficiency_score": 7,
+      "flags": [
+        "no_upcoming_events_14d",
+        "missing_editorial_blurb",
+        "missing_source_link",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_editorial_blurb",
+        "add_source",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 2,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": false
+    },
+    {
+      "track_slug": "hard-in-da-paint",
+      "track_name": "Hard in Da Paint",
+      "venue_slug": "underground-atlanta",
+      "venue_name": "Underground Atlanta",
+      "insufficiency_score": 7,
+      "flags": [
+        "no_upcoming_events_14d",
+        "missing_editorial_blurb",
+        "missing_source_link",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_editorial_blurb",
+        "add_source",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 4,
+      "has_working_image": true,
+      "has_editorial_blurb": false,
+      "has_source_url": false
+    },
+    {
+      "track_slug": "not-from-around-here",
+      "track_name": "Not From Around Here",
+      "venue_slug": "xian-gourmet-house",
+      "venue_name": "Xi'an Gourmet House",
+      "insufficiency_score": 5,
+      "flags": [
+        "no_upcoming_events_14d",
+        "missing_source_link",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_source",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 1,
+      "has_working_image": true,
+      "has_editorial_blurb": true,
+      "has_source_url": false
+    },
+    {
+      "track_slug": "not-from-around-here",
+      "track_name": "Not From Around Here",
+      "venue_slug": "el-rey-del-taco",
+      "venue_name": "El Rey del Taco",
+      "insufficiency_score": 5,
+      "flags": [
+        "no_upcoming_events_14d",
+        "missing_source_link",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_source",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 1,
+      "has_working_image": true,
+      "has_editorial_blurb": true,
+      "has_source_url": false
+    },
+    {
+      "track_slug": "not-from-around-here",
+      "track_name": "Not From Around Here",
+      "venue_slug": "lees-bakery",
+      "venue_name": "Lee's Bakery",
+      "insufficiency_score": 5,
+      "flags": [
+        "no_upcoming_events_14d",
+        "missing_source_link",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_source",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 1,
+      "has_working_image": true,
+      "has_editorial_blurb": true,
+      "has_source_url": false
+    },
+    {
+      "track_slug": "not-from-around-here",
+      "track_name": "Not From Around Here",
+      "venue_slug": "java-saga",
+      "venue_name": "Java Saga",
+      "insufficiency_score": 5,
+      "flags": [
+        "no_upcoming_events_14d",
+        "missing_source_link",
+        "missing_venue_description"
+      ],
+      "recommended_actions": [
+        "augment_with_active_event",
+        "add_source",
+        "enrich_venue_profile"
+      ],
+      "events_14d": 0,
+      "highlights_count": 1,
+      "has_working_image": true,
+      "has_editorial_blurb": true,
+      "has_source_url": false
+    }
+  ]
+}

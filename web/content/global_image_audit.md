@@ -1,0 +1,464 @@
+# Global Broken Image Audit
+
+Generated: 2026-02-17T21:02:30.470Z
+
+## Scope
+- Total image references: 26224
+- Unique URLs checked: 6369
+- Timeout per URL: 9000ms
+- Concurrency: 24
+
+## URL States
+- ok: 6181
+- broken: 154
+- uncertain: 1
+- error: 33
+- failing URLs total: 188
+
+## Source Breakdown
+- artists.image_url: failing 91/727 refs (12.52%), failing unique URLs 91/726
+- events.image_url: failing 59/11963 refs (0.49%), failing unique URLs 39/3984
+- events_deduplicated.image_url: failing 59/11103 refs (0.53%), failing unique URLs 39/3740
+- venues.image_url: failing 33/1887 refs (1.75%), failing unique URLs 29/1721
+- series.image_url: failing 18/325 refs (5.54%), failing unique URLs 14/251
+- explore_tracks.quote_portrait_url: failing 12/12 refs (100%), failing unique URLs 12/12
+- festivals.image_url: failing 8/206 refs (3.88%), failing unique URLs 8/182
+- explore_tracks.banner_image_url: failing 0/1 refs (0%), failing unique URLs 0/1
+
+## Top Failing URLs
+- [error] http://www.moesandjoes.com/img/log.png
+  - status: n/a, refs: 17
+  - venues.image_url -> 662
+  - events.image_url -> 17223
+  - events.image_url -> 17224
+  - events.image_url -> 59501
+  - events.image_url -> 56899
+  - events.image_url -> 59503
+- [error] //www.atlantamotorspeedway.com/images/f7f79172-b5bc-e547-5a1d1836509bf0fa_300x201.png
+  - status: n/a, refs: 12
+  - events.image_url -> 27796
+  - events.image_url -> 27806
+  - events.image_url -> 27815
+  - events.image_url -> 27802
+  - events.image_url -> 27812
+  - events.image_url -> 27816
+- [error] //www.atlantamotorspeedway.com/images/091f8ffd-c0f4-2156-2f6fe6862dfc527a_300x201.png
+  - status: n/a, refs: 8
+  - events.image_url -> 27803
+  - events.image_url -> 27809
+  - events.image_url -> 27811
+  - events.image_url -> 27813
+  - events_deduplicated.image_url -> 27803
+  - events_deduplicated.image_url -> 27809
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/Michelle_Buteau_Shades_of_Black_at_Julep_05-07-2007.jpg/500px-Michelle_Buteau_Shades_of_Black_at_Julep_05-07-2007.jpg
+  - status: 429, refs: 5
+  - events.image_url -> 28550
+  - events.image_url -> 55032
+  - events_deduplicated.image_url -> 28550
+  - events_deduplicated.image_url -> 55032
+  - artists.image_url -> 11aef419-cba9-43bf-8c85-beecde4a50b1
+- [broken] https://www.regmovies.com/_next/image?url=https%3A%2F%2Fregalcdn.azureedge.net%2FREG%2FSendHelp%2FHO00019988%2FTV_SmallPosterImage%2F20260106-111714111.jpg&w=256&q=75
+  - status: 403, refs: 5
+  - series.image_url -> bc588be9-eb04-492b-9e58-028f9ade17b2
+  - series.image_url -> 5888b956-145c-4274-a945-ecd102684994
+  - series.image_url -> c4eca007-e948-4dc6-8e3b-27c9af8e3c92
+  - series.image_url -> 886d41cb-9201-4afe-908a-fb7232a62b43
+  - series.image_url -> 5be33d74-29ec-44da-9b0f-ed7f7d63dcc8
+- [error] /next_static/icons/summary_square.png
+  - status: n/a, refs: 4
+  - venues.image_url -> 3712
+  - venues.image_url -> 3713
+  - venues.image_url -> 3714
+  - venues.image_url -> 3739
+- [error] //atlpenshow.com/cdn/shop/files/atlanta-pen-show_17cf1e08-5074-4536-a543-8c6634f08abc.jpg?v=1765565224
+  - status: n/a, refs: 4
+  - events.image_url -> 21719
+  - events.image_url -> 25235
+  - events_deduplicated.image_url -> 21719
+  - events_deduplicated.image_url -> 25235
+- [error] //www.atlantamotorspeedway.com/images/f7fe4c6e-f5d7-c6fc-1443156c6f496276_300x201.jpg
+  - status: n/a, refs: 4
+  - events.image_url -> 27782
+  - events.image_url -> 27805
+  - events_deduplicated.image_url -> 27782
+  - events_deduplicated.image_url -> 27805
+- [error] //img1.wsimg.com/isteam/ip/c8ecbeec-b16b-4c79-93e9-6f7316c168a9/Atlanta%20Shortsfest%20-%20the%20official%20Atlanta%20shor.png/:/
+  - status: n/a, refs: 4
+  - events.image_url -> 21728
+  - events.image_url -> 24089
+  - events_deduplicated.image_url -> 21728
+  - events_deduplicated.image_url -> 24089
+- [broken] https://espacespc.blob.core.windows.net/13313/event-image/2d9575d0-2e81-4f1c-98cb-1bb08734b9e8.jpg?sv=2025-01-05&st=2026-02-10T09%3A00%3A07Z&se=2026-02-11T09%3A00%3A07Z&sr=b&sp=r&sig=bjjLWt1Lq2nZuAh4bz8wUmuRhMCUt1TTzye%2B3pmmqcA%3D
+  - status: 403, refs: 4
+  - events.image_url -> 28258
+  - events.image_url -> 28265
+  - events_deduplicated.image_url -> 28258
+  - events_deduplicated.image_url -> 28265
+- [broken] https://lh3.googleusercontent.com/places/ANXAkqHi2lOMlp3GGeUSvR8X8nR3eLiEVsDTgP4g4sQzxlPdlbnMnFDguk_9MuH6rEPOdUjCZ59S3BhGOsgC8YkchT9gP0QRhb2GxOI=s4800-w480
+  - status: 403, refs: 3
+  - venues.image_url -> 185
+  - events.image_url -> 1264
+  - events_deduplicated.image_url -> 1264
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/Black_Label_Society_-_Wacken_Open_Air_2015-1807_%28cropped%29.jpg/500px-Black_Label_Society_-_Wacken_Open_Air_2015-1807_%28cropped%29.jpg
+  - status: 429, refs: 3
+  - events.image_url -> 28536
+  - events_deduplicated.image_url -> 28536
+  - artists.image_url -> 895b3336-6fd5-4380-8ddf-e56cb91f6404
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Bunnymen_2005-08-06.jpg/500px-Bunnymen_2005-08-06.jpg
+  - status: 429, refs: 3
+  - events.image_url -> 55035
+  - events_deduplicated.image_url -> 55035
+  - artists.image_url -> 0b0694c7-f48f-490d-b36d-fa246dd07d74
+- [broken] https://boston.broadway.com/wp-content/uploads/sites/2/2018/10/3301_Website_Redesign_FB_OG.jpg
+  - status: 403, refs: 2
+  - venues.image_url -> 1587
+  - venues.image_url -> 2310
+- [error] //www.echoparkspeedway.com/images/slammedenuff_300x201.png
+  - status: n/a, refs: 2
+  - events.image_url -> 27790
+  - events_deduplicated.image_url -> 27790
+- [error] //www.echoparkspeedway.com/images/046a2ee4-0a92-290c-18a1409f4a5c6327_300x201.png
+  - status: n/a, refs: 2
+  - events.image_url -> 27797
+  - events_deduplicated.image_url -> 27797
+- [error] //www.atlantamotorspeedway.com/images/f7ae122a-d597-b94b-f012283f98fe7609_300x201.png
+  - status: n/a, refs: 2
+  - events.image_url -> 27799
+  - events_deduplicated.image_url -> 27799
+- [error] //www.echoparkspeedway.com/images/download1_300x201.png
+  - status: n/a, refs: 2
+  - events.image_url -> 27800
+  - events_deduplicated.image_url -> 27800
+- [error] //www.echoparkspeedway.com/images/21a51e49-fc31-b73a-1d25c9111d33e06d_300x201.png
+  - status: n/a, refs: 2
+  - events.image_url -> 27808
+  - events_deduplicated.image_url -> 27808
+- [error] //img1.wsimg.com/isteam/ip/b4d6b0b5-acfe-4128-ad2f-dd8836bc788f/Rana%20(3)%20(2)%20(1).jpg/:/cr=t:0%25,l:0%25,w:100%25,h:100%25/rs=w:1209,h:1790
+  - status: n/a, refs: 2
+  - events.image_url -> 21722
+  - events_deduplicated.image_url -> 21722
+- [broken] https://blueridge.imgix.net/images/StPattys01-Copy.jpg?auto=compress%2Cformat&fit=max&position=50%2050&q=80&w=1200
+  - status: 403, refs: 2
+  - events.image_url -> 21743
+  - events_deduplicated.image_url -> 21743
+- [error] assets/images/premium-front-page-banner.gif
+  - status: n/a, refs: 2
+  - events.image_url -> 21769
+  - events_deduplicated.image_url -> 21769
+- [error] //www.echoparkspeedway.com/images/uploads/eps-autotrader-400_1_400x200.png
+  - status: n/a, refs: 2
+  - events.image_url -> 21907
+  - events_deduplicated.image_url -> 21907
+- [error] //www.echoparkspeedway.com/images/57b04223-e212-a2ff-8e7a6f3d1944c7c8_300x201.png
+  - status: n/a, refs: 2
+  - events.image_url -> 21908
+  - events_deduplicated.image_url -> 21908
+- [broken] https://espacespc.blob.core.windows.net/13313/event-image/203af6ba-569a-432a-9946-1b35100b23ab.png?sv=2025-01-05&st=2026-02-10T09%3A00%3A07Z&se=2026-02-11T09%3A00%3A07Z&sr=b&sp=r&sig=S6F72EEfd4mJumPmmMl9lpo%2BywQacvZT5typmVV0ZOU%3D
+  - status: 403, refs: 2
+  - events.image_url -> 28257
+  - events_deduplicated.image_url -> 28257
+- [broken] https://espacespc.blob.core.windows.net/13313/event-image/1b895fcb-43a9-4ade-b84f-7f0cb7b1bec0.png?sv=2025-01-05&st=2026-02-16T09%3A00%3A07Z&se=2026-02-17T09%3A00%3A07Z&sr=b&sp=r&sig=8NfmUyhDtL4oXpc4fP%2F8UeSY1k9i29593M6ZQXbU5L8%3D
+  - status: 403, refs: 2
+  - events.image_url -> 57044
+  - events_deduplicated.image_url -> 57044
+- [broken] https://espacespc.blob.core.windows.net/13313/event-image/ca1993e9-f5f6-428b-bbd6-2598cda381ea.png?sv=2025-01-05&st=2026-02-16T09%3A00%3A07Z&se=2026-02-17T09%3A00%3A07Z&sr=b&sp=r&sig=%2F1mkHziD5VOhBuF9N3bqTiaJIwXzMjyDkok40ecDnKQ%3D
+  - status: 403, refs: 2
+  - events.image_url -> 57045
+  - events_deduplicated.image_url -> 57045
+- [error] //img1.wsimg.com/isteam/ip/d125131a-3a5d-41d9-a603-90bb23f6dcde/2026%20banner%20Atlanta%20Horror%20Film%20Festival%20.png/:/
+  - status: n/a, refs: 2
+  - events.image_url -> 60539
+  - events_deduplicated.image_url -> 60539
+- [error] /sites/default/files/styles/event_image/public/2026-01/ig-post-cliterati-evelyn-berry-21926-charis.png?itok=xPdeVdFX
+  - status: n/a, refs: 2
+  - events.image_url -> 10727
+  - events_deduplicated.image_url -> 10727
+- [error] /sites/default/files/styles/event_image/public/2026-01/ig-post-inventory-sale-2025.png?itok=_ABPeDtz
+  - status: n/a, refs: 2
+  - events.image_url -> 10730
+  - events_deduplicated.image_url -> 10730
+- [broken] https://espacespc.blob.core.windows.net/13313/event-image/f4af884a-ac80-404a-b35e-29f94da848c7.png?sv=2025-01-05&st=2026-02-16T09%3A00%3A07Z&se=2026-02-17T09%3A00%3A07Z&sr=b&sp=r&sig=iLaqb02dVIZ7oB5RZCNPNwRpUU7KEnqhdJDu2yBX%2FKA%3D
+  - status: 403, refs: 2
+  - events.image_url -> 57048
+  - events_deduplicated.image_url -> 57048
+- [broken] https://espacespc.blob.core.windows.net/13313/event-image/2d9575d0-2e81-4f1c-98cb-1bb08734b9e8.jpg?sv=2025-01-05&st=2026-02-16T09%3A00%3A07Z&se=2026-02-17T09%3A00%3A07Z&sr=b&sp=r&sig=khGTETuwHoHlCq4kaT%2BfQKUU206xlpKXZ3twZvEHtJs%3D
+  - status: 403, refs: 2
+  - events.image_url -> 57053
+  - events_deduplicated.image_url -> 57053
+- [error] //www.atlantamotorspeedway.com/images/streetcartakeover_300x201.jpg
+  - status: n/a, refs: 2
+  - events.image_url -> 27792
+  - events_deduplicated.image_url -> 27792
+- [error] //www.atlantamotorspeedway.com/images/d25aba2d-f98c-d6d6-5b1607ff39e4bb2f_300x201.png
+  - status: n/a, refs: 2
+  - events.image_url -> 27789
+  - events_deduplicated.image_url -> 27789
+- [error] //www.atlantamotorspeedway.com/images/f7f0a9f5-cabc-7494-49510d4d5ff45fdb_300x201.png
+  - status: n/a, refs: 2
+  - events.image_url -> 27788
+  - events_deduplicated.image_url -> 27788
+- [error] https://volunteer.unitedwayatlanta.orghttps://s3.amazonaws.com/files.galaxydigital.com/4983/images/banner-small.jpg?updated=1744137736
+  - status: n/a, refs: 2
+  - events.image_url -> 21213
+  - events_deduplicated.image_url -> 21213
+- [broken] https://blueridge.imgix.net/images/20251025_Tri-State_ModelRailroad_Ride_the_Rails_festival_fullrights_AlysiaHargus_2025-11-03-180153_kabs.jpg?auto=compress%2Cformat&fit=max&position=50%2050&q=80&w=1200
+  - status: 403, refs: 2
+  - events.image_url -> 21744
+  - events_deduplicated.image_url -> 21744
+- [broken] https://film-cdn.moviexchange.com/api/cdn/release/c1b4c438-959a-40fd-885c-b1dc4556458d/media/Poster?width=500
+  - status: 400, refs: 2
+  - events.image_url -> 20865
+  - events_deduplicated.image_url -> 20865
+- [error] //d2sfpzmw5wlczb.cloudfront.net/images/2020/petit-1000.jpg
+  - status: n/a, refs: 2
+  - events.image_url -> 21906
+  - events_deduplicated.image_url -> 21906
+- [broken] https://film-cdn.moviexchange.com/api/cdn/release/14f621c0-89ce-4fec-8d78-bdb33e591040/media/Poster?width=500
+  - status: 400, refs: 2
+  - events.image_url -> 20860
+  - events_deduplicated.image_url -> 20860
+- [error] /_next/image?url=https%3A%2F%2Fs1.ticketm.net%2Fdam%2Fa%2F266%2F528a570e-dcf3-437c-b3f1-6a7342336266_TABLET_LANDSCAPE_3_2.jpg&w=1319&q=70
+  - status: n/a, refs: 2
+  - events.image_url -> 24053
+  - events_deduplicated.image_url -> 24053
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/7/73/The_Australian_Pink_Floyd_Show_-_Hamburg_2022_04.jpg/500px-The_Australian_Pink_Floyd_Show_-_Hamburg_2022_04.jpg
+  - status: 429, refs: 2
+  - events.image_url -> 49530
+  - events_deduplicated.image_url -> 49530
+- [error] http://dispatch.barnesandnoble.com/content/dam/ccr/homepage/daily/2026/01/30/2061_BB_PostHoliday_Stamps_12_26_25.jpg
+  - status: n/a, refs: 1
+  - venues.image_url -> 282
+- [error] https://thebettyatl.comhttps://d3ojpf34km1iny.cloudfront.net/ckhfe4t4a00mhzu3lev8fxpgk/attachments/ckhmeld8700wgcn3l16q3cjx0-betty-s-restaurant-2-02.0.48.2500.1308.full.jpg
+  - status: n/a, refs: 1
+  - venues.image_url -> 392
+- [broken] http://www.wildheavencraftbeers.com/img/test/661859bd581e3.jpg?id=1769895480
+  - status: 404, refs: 1
+  - venues.image_url -> 615
+- [broken] https://www.luckyexchange.com/wp-content/uploads/2020/10/gwen4lucky-1.png
+  - status: 403, refs: 1
+  - venues.image_url -> 2356
+- [broken] https://www.domaineatlanta.com/img.sedoparking.com/images/js_preloader.gif
+  - status: 441, refs: 1
+  - venues.image_url -> 579
+- [broken] https://jejusauna.com/cdn/shop/files/jeju_sauna_atlanta_ga_{width}x.jpg?v=1614733498
+  - status: 404, refs: 1
+  - venues.image_url -> 1722
+- [broken] http://www.thegardenclubatlanta.com/img/test/66291e488a66c.jpg?id=1770504327
+  - status: 404, refs: 1
+  - venues.image_url -> 2063
+- [broken] http://greenbrierdistillery.com/cdn/shop/files/NBW_Trio_{width}x.jpg?v=1738013713
+  - status: 404, refs: 1
+  - venues.image_url -> 1643
+- [broken] https://lh3.googleusercontent.com/sitesv/APaQ0SThZ7TduW8o2Th1UCqlfmjNYbu_fYPEyO6FTbWk9TTxBr4Gx1UaGZOD9nwaBARuFLD51xIxwUmW8cteTsXERSqi_XCCQsj7c8vd3eUPyQMBPVKkLkRCK_BhtTG4lM-sqn0-qIdl8H_QD59iIbmeov56dW3oWPhdjec=w16383
+  - status: 403, refs: 1
+  - venues.image_url -> 3519
+- [broken] https://ellisstation.com/cdn/shop/files/1000015767_{width}x.jpg?v=1755881384
+  - status: 404, refs: 1
+  - venues.image_url -> 1835
+- [error] https://www.emoryhealthcare.org/-/media/Project/EH/Emory/ui/images/heroes/emory-midtown-hero-black.jpg?h=350&iar=0&w=1760&hash=7D63C36886EE4C22DF4D659F10CEBC5B
+  - status: n/a, refs: 1
+  - venues.image_url -> 1959
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/d/dc/Cotton_States_and_International_Exposition_of_1895.png/889px-Cotton_States_and_International_Exposition_of_1895.png
+  - status: 429, refs: 1
+  - venues.image_url -> 4113
+- [broken] https://lh3.googleusercontent.com/sitesv/APaQ0ST3YUviM5gcF8DNxal3rPh1flVXoFsy_ZMrI4aleY0ZXjWTURNBQW78JP6iR7HA026bZrbjFIdlI769oUTNb_UQmrvJigBKiidyFkBe9wdwSj-qlqSSZh946irjQV1A7lbCN31Tsv5p2uSV1Nss31Zx4C3-N_yXmQwBv25DMh7SEaKeJYNP5-KnHLA=w16383
+  - status: 403, refs: 1
+  - venues.image_url -> 2050
+- [broken] https://c-p.rmcdn1.net/674f26f6daecda79cb25d0ba/5157616/Screenshot-b421bc3e-aaaf-4ff5-9ba3-3f13097b1d54_1024.jpg
+  - status: 404, refs: 1
+  - venues.image_url -> 1221
+- [broken] https://l.cdn-fileserver.com/bping.php?wsip=170762626&gdpr=0&vgd_l2type=dmola&vi=1770696811309017682&hvsid=00001770696811509022853698569635&vgd_asn=16591&vgd_rpth=%2Fola&vgd_cdv=O2734&vgd_setup=c21&vgd_wlstp=0&crid=126431565&ugd=4&cc=US&requrl=https%3A%2F%2Fbillsfleamarket.com&wshp=0&vgd_tsce=L1136&vgd_cage=5&vgd_oresf=one&prid=8PR11258V&lf=6&sc=GA&lper=100&ssld=%7B%22QQNN%22%3A%22Pb%22%2C%22QQN75%22%3A%2217j1z71%22%2C%22QQ8E%22%3A%22%22%2C%22QQQN%22%3A%22ZK%22%7D&mspa=0&r=1770696811511&vgd_oreqf=one&cid=8CUHL418T&vgd_len=539&vgd_end=1
+  - status: 404, refs: 1
+  - venues.image_url -> 2353
+- [broken] https://l.cdn-fileserver.com/bping.php?gdpr=0&mspa=0&wshp=0&vgd_cdv=O2734&sc=GA&lper=100&wsip=170763074&vgd_tsce=L1133&vgd_oreqf=one&vgd_setup=c21&vgd_wlstp=0&ssld=%7B%22QQNN%22%3A%22Pb%22%2C%22QQN75%22%3A%2217j1z71%22%2C%22QQ8E%22%3A%22%22%2C%22QQQN%22%3A%22ZK%22%7D&prid=8PR11258V&cid=8CU91RC8E&ugd=4&lf=6&vgd_rpth=%2Fola&vgd_cage=3&vgd_oresf=one&vi=1770504638997769496&vgd_asn=16591&r=1770504638461&vgd_l2type=dmola&crid=556378831&hvsid=00001770504638459022853698568360&cc=US&requrl=http%3A%2F%2Fatlantaironworks.com&vgd_len=539&vgd_end=1
+  - status: 404, refs: 1
+  - venues.image_url -> 325
+- [broken] https://tuckerbrewing.com/images/Tucker_Lager.jpeg
+  - status: 404, refs: 1
+  - venues.image_url -> 1143
+- [broken] https://cdn.saffire.com/images.ashx?t=ig&rid=GeorgiaHorsePark&i=sanggar_lestari_cbf_2025(1).jpg&cb=b9fdcf14
+  - status: 404, refs: 1
+  - venues.image_url -> 2188
+- [broken] https://dev.virtualearth.net/REST/v1/Imagery/Map/Road/33.480056,-84.440831/15?mapSize=1100,280&pp=33.480056,-84.440831;80&key=AlQlm703AOjXupd61-r_rUYNNucuXtsV-oH9A6hNh4qeIm44AzZppjnD7ZpgCbqx
+  - status: 401, refs: 1
+  - venues.image_url -> 2021
+- [error] https://www.hillstone.com/images/homepage/filet.jpg
+  - status: n/a, refs: 1
+  - venues.image_url -> 494
+- [error] https://stage.startertemplatecloud.com/e10/wp-content/uploads/sites/5/2021/01/ico_02.png
+  - status: n/a, refs: 1
+  - venues.image_url -> 2214
+- [error] http://209.35.52.172/~autrey/nature-heritage-preserve/wp-content/themes/nature-one/images/slides/slider1.jpg
+  - status: n/a, refs: 1
+  - venues.image_url -> 2210
+- [broken] https://cdn.saffire.com/images.ashx?t=ig&rid=VanAndelArena&i=NoImageImage.jpg
+  - status: 404, refs: 1
+  - venues.image_url -> 136
+- [error] /assets/static/logo-MM9Zp3w8.png
+  - status: n/a, refs: 1
+  - venues.image_url -> 3224
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/Fox_Theatre_%28Atlanta%29.jpg/1200px-Fox_Theatre_%28Atlanta%29.jpg
+  - status: 404, refs: 1
+  - venues.image_url -> 369
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Silvi_Vrait_1989.jpg/500px-Silvi_Vrait_1989.jpg
+  - status: 429, refs: 1
+  - artists.image_url -> c8ada168-a99a-4d61-9695-3b4f74811e1c
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/Nordic_Choir_Press_Release_Photo.jpg/500px-Nordic_Choir_Press_Release_Photo.jpg
+  - status: 429, refs: 1
+  - artists.image_url -> fb52a80e-0fd1-48ba-b689-ecd5d35e6758
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Julie_Murphy_%28singer%29_%28cropped%29.jpg/500px-Julie_Murphy_%28singer%29_%28cropped%29.jpg
+  - status: 429, refs: 1
+  - artists.image_url -> 8331a8a4-018a-48a8-b274-ce14680787bd
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Ami_aspelund2.jpg/500px-Ami_aspelund2.jpg
+  - status: 429, refs: 1
+  - artists.image_url -> 0ec80955-5587-4db1-a9a6-1e0bf65d7247
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Pat_Alger_and_Artie_Traum%2C_musicians%2C_onstage_at_Norwich%2C_U.K.%2C_1978.jpg/500px-Pat_Alger_and_Artie_Traum%2C_musicians%2C_onstage_at_Norwich%2C_U.K.%2C_1978.jpg
+  - status: 429, refs: 1
+  - artists.image_url -> b20d3eb9-90fe-4ae2-810f-2e4c783b0631
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/Jim_Collins.jpg/500px-Jim_Collins.jpg
+  - status: 429, refs: 1
+  - artists.image_url -> 6350bd91-a0e3-4992-b087-516ac63d5c8a
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/Adeem_the_Artist_2023.jpg/500px-Adeem_the_Artist_2023.jpg
+  - status: 429, refs: 1
+  - artists.image_url -> ab9963e2-13f8-4643-a016-5340ee2ff9ac
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/6/68/Shawn_Mullins.JPG/500px-Shawn_Mullins.JPG
+  - status: 429, refs: 1
+  - artists.image_url -> fe7f0563-3c73-4cb6-bd53-5cd6602e46c9
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/7/76/Jeffrey_Steele_by_Gage_Skidmore.jpg/500px-Jeffrey_Steele_by_Gage_Skidmore.jpg
+  - status: 429, refs: 1
+  - artists.image_url -> 3f37deee-77de-4f7a-899a-4f2d6f491bfa
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/Caroline_jones_2019_1.jpg/500px-Caroline_jones_2019_1.jpg
+  - status: 429, refs: 1
+  - artists.image_url -> 13467815-54c3-4678-a055-956ac65c228f
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/LadyAntebellumAwardsApr10_cropped_charles.jpg/500px-LadyAntebellumAwardsApr10_cropped_charles.jpg
+  - status: 429, refs: 1
+  - artists.image_url -> 6937227a-3da1-45e6-809a-e7320a1ea7cd
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/f/f5/Outline_In_Color.jpg/500px-Outline_In_Color.jpg
+  - status: 429, refs: 1
+  - artists.image_url -> 7c2b238f-a20a-4c2f-8637-9d7fd270a4a5
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/Portrait_photoshoot_at_Worldcon_75%2C_Helsinki%2C_before_the_Hugo_Awards_%E2%80%93_clipping.jpg/500px-Portrait_photoshoot_at_Worldcon_75%2C_Helsinki%2C_before_the_Hugo_Awards_%E2%80%93_clipping.jpg
+  - status: 429, refs: 1
+  - artists.image_url -> 5f6237a5-aae3-4430-be65-1a4df8e0b15c
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/PA_Sports_-_Pressefoto_2024_-_1.jpeg/500px-PA_Sports_-_Pressefoto_2024_-_1.jpeg
+  - status: 429, refs: 1
+  - artists.image_url -> ecc91fe2-9f66-4947-8a98-56a93288e7e9
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Melt_Festival_2013_-_Simian_Mobile_Disco-2.jpg/500px-Melt_Festival_2013_-_Simian_Mobile_Disco-2.jpg
+  - status: 429, refs: 1
+  - artists.image_url -> 07760081-fc75-4a61-bb4f-b32e838ab7b8
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/ALIM0963.JPG/500px-ALIM0963.JPG
+  - status: 429, refs: 1
+  - artists.image_url -> ceae946c-499f-498d-beee-78ef8d5abea3
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Bartees_Strange_leaping_onstage%2C_2021-10-02.jpg/500px-Bartees_Strange_leaping_onstage%2C_2021-10-02.jpg
+  - status: 429, refs: 1
+  - artists.image_url -> 7e63478f-db4e-4fff-8364-ecc94e32ce22
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/c/c4/Reese_Wynans_with_Joe_Bonamassa.jpg/500px-Reese_Wynans_with_Joe_Bonamassa.jpg
+  - status: 429, refs: 1
+  - artists.image_url -> d05785d8-2cf3-4563-b2d6-94ff3ed0830c
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/Ray_Wylie_Hubbard.jpg/500px-Ray_Wylie_Hubbard.jpg
+  - status: 429, refs: 1
+  - artists.image_url -> ebeee110-172c-4ac7-846b-1a58fa7496d4
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/Ashanti_Shequoiya_Douglas%2C_2023_%28cropped%29.jpg/500px-Ashanti_Shequoiya_Douglas%2C_2023_%28cropped%29.jpg
+  - status: 429, refs: 1
+  - artists.image_url -> f7a816f5-e611-4e5d-8864-9ba5dbc18077
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/SteveMackeyinItaly.jpeg/500px-SteveMackeyinItaly.jpeg
+  - status: 429, refs: 1
+  - artists.image_url -> ca8fe134-7720-4a5f-a15b-602a6492bb6d
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/0/07/Dommin666.jpg/500px-Dommin666.jpg
+  - status: 429, refs: 1
+  - artists.image_url -> 2722c03d-6e5d-4109-ac5e-28401d245f00
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/2/2d/K._Michelle.png/500px-K._Michelle.png
+  - status: 429, refs: 1
+  - artists.image_url -> 175f920e-1a55-41cd-b3e0-9b61d4e490a2
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/2008-11-15_%D0%AD%D0%BD%D0%B4%D1%80%D1%8E_%D0%9B%D0%BB%D0%BE%D0%B9%D0%B4_%D0%A3%D1%8D%D0%B1%D0%B1%D0%B5%D1%80.jpeg/500px-2008-11-15_%D0%AD%D0%BD%D0%B4%D1%80%D1%8E_%D0%9B%D0%BB%D0%BE%D0%B9%D0%B4_%D0%A3%D1%8D%D0%B1%D0%B1%D0%B5%D1%80.jpeg
+  - status: 429, refs: 1
+  - artists.image_url -> e6faea81-041d-4327-97e7-cebee0736779
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/George_Sluppick.jpg/500px-George_Sluppick.jpg
+  - status: 429, refs: 1
+  - artists.image_url -> 50d62517-b166-4472-aecb-0d17edba53c5
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/1/16/Gary_Talley.jpg/500px-Gary_Talley.jpg
+  - status: 429, refs: 1
+  - artists.image_url -> 8b8002af-ba47-4c0b-beb6-2a996547887d
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/f/f4/Sziget_festival_2009_-_Brujeria.jpg/500px-Sziget_festival_2009_-_Brujeria.jpg
+  - status: 429, refs: 1
+  - artists.image_url -> ddeb9101-aaf9-4e98-9443-be4d920c6c55
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/b/bb/KristinAndreassen_nyc.jpg/500px-KristinAndreassen_nyc.jpg
+  - status: 429, refs: 1
+  - artists.image_url -> 35ff7b5b-4fa9-4df7-9337-b4668c20a7c3
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/Diana_Ross_%281982%29.jpg/500px-Diana_Ross_%281982%29.jpg
+  - status: 429, refs: 1
+  - artists.image_url -> 7e0acf34-5ab7-468c-b609-faf9c3c71310
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/Kelsey_Waldon_performing_at_Grimey%27s_record_store..png/500px-Kelsey_Waldon_performing_at_Grimey%27s_record_store..png
+  - status: 429, refs: 1
+  - artists.image_url -> 0af493c1-051e-431a-9367-1699b02f5a86
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Francoise_hardy_1964.jpg/500px-Francoise_hardy_1964.jpg
+  - status: 429, refs: 1
+  - artists.image_url -> f426d4c0-dda5-49aa-a465-a83ad5d9f3d5
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Adrienne_Young_Little_Sadie_Little_Grill_Harrisonburg_VA_June_2008.jpg/500px-Adrienne_Young_Little_Sadie_Little_Grill_Harrisonburg_VA_June_2008.jpg
+  - status: 429, refs: 1
+  - artists.image_url -> 770436a5-b885-405f-a0b0-d376e6321d12
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/THATH_sunset.jpg/500px-THATH_sunset.jpg
+  - status: 429, refs: 1
+  - artists.image_url -> cebd3c7b-7b76-4d4f-a5c3-a0bf291d24d4
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/d/d7/Senses_fail_islington.jpg/500px-Senses_fail_islington.jpg
+  - status: 429, refs: 1
+  - artists.image_url -> 4b79ce9e-453d-419a-9bb6-99a4284c7d73
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/Red_steagall_2007.jpg/500px-Red_steagall_2007.jpg
+  - status: 429, refs: 1
+  - artists.image_url -> be287fa5-edd9-4528-834a-0c82aad0403e
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/7/72/Lindsay_Ell_at_Olympic_Plaza_in_2010.jpg/500px-Lindsay_Ell_at_Olympic_Plaza_in_2010.jpg
+  - status: 429, refs: 1
+  - artists.image_url -> e1348293-71dc-49f4-8e74-b002ca0c4447
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/2/29/Katie_Pruitt_performing_%28cropped%29.jpg/500px-Katie_Pruitt_performing_%28cropped%29.jpg
+  - status: 429, refs: 1
+  - artists.image_url -> d7cf030a-333a-4212-9644-abaae762231d
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/4/42/Billy_Dean_in_1998_by_Jim_Williams.jpg/500px-Billy_Dean_in_1998_by_Jim_Williams.jpg
+  - status: 429, refs: 1
+  - artists.image_url -> d0f85643-8691-4fec-8caf-ad1c63489820
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/0/0a/Kirlian_Camera_Kasematten-Festival_2016_06.jpg/500px-Kirlian_Camera_Kasematten-Festival_2016_06.jpg
+  - status: 429, refs: 1
+  - artists.image_url -> 871d7ee9-53fc-4673-9993-b60a1be2f3d7
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/9/9c/Katatonia_p%C3%A5_Grammisgalan_2013.jpg/500px-Katatonia_p%C3%A5_Grammisgalan_2013.jpg
+  - status: 429, refs: 1
+  - artists.image_url -> 86f2427e-3667-4400-9a66-31957e337720
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Roger_clyne.jpg/500px-Roger_clyne.jpg
+  - status: 429, refs: 1
+  - artists.image_url -> 7b55619b-0b15-46ae-b19f-e124daee1b61
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/d/d8/Natalie_Jane_%40_El_Rey_04_10_2024_%2853836373948%29.jpg/500px-Natalie_Jane_%40_El_Rey_04_10_2024_%2853836373948%29.jpg
+  - status: 429, refs: 1
+  - artists.image_url -> fc90913c-6ee1-4aab-866f-a892cbd67faa
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/Obscura_Hellfest_2010_%283%29.jpg/500px-Obscura_Hellfest_2010_%283%29.jpg
+  - status: 429, refs: 1
+  - artists.image_url -> 3e0bfb8f-b81c-4e31-b56d-59103e221f39
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/BenKwellerACL2006.jpg/500px-BenKwellerACL2006.jpg
+  - status: 429, refs: 1
+  - artists.image_url -> 4616a3dd-2701-46ec-b967-229706a1ebdc
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/Porno_Mafia-Tour_Lichterfelde.jpg/500px-Porno_Mafia-Tour_Lichterfelde.jpg
+  - status: 429, refs: 1
+  - artists.image_url -> 534dce93-f1ab-4e28-b668-ffdd9db4f98f
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/7/70/TenilleTownes2023.jpg/500px-TenilleTownes2023.jpg
+  - status: 429, refs: 1
+  - artists.image_url -> 478a9b15-7c08-4e31-906d-4c5c5564a580
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Flying-Lotus.jpg/500px-Flying-Lotus.jpg
+  - status: 429, refs: 1
+  - artists.image_url -> 86a1afd3-98e7-4a41-b4e5-7abd4923ada2
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/9/99/Tim_O_Brien.jpg/500px-Tim_O_Brien.jpg
+  - status: 429, refs: 1
+  - artists.image_url -> f43f57b9-b846-4219-b696-3e544c68ae1a
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/d/d6/BENEE_%2850117380403%29_%28cropped%29.jpg/500px-BENEE_%2850117380403%29_%28cropped%29.jpg
+  - status: 429, refs: 1
+  - artists.image_url -> faed5d4a-3548-4101-95ac-0182a5bf57d9
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/d/d1/The_Menzingers_Full_Force_2023_14.jpg/500px-The_Menzingers_Full_Force_2023_14.jpg
+  - status: 429, refs: 1
+  - artists.image_url -> 49d91513-34e8-4874-b2df-4536f8012bfd
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Against_Me%21_Rock_am_Ring_2014_%2850%29.JPG/500px-Against_Me%21_Rock_am_Ring_2014_%2850%29.JPG
+  - status: 429, refs: 1
+  - artists.image_url -> 4cef2dcc-752f-4d95-a1ad-c5ca93087e94
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Together_Pangea_image.png/500px-Together_Pangea_image.png
+  - status: 429, refs: 1
+  - artists.image_url -> cf2771a4-994a-4114-a74b-60ec93f50bce
+- [broken] https://upload.wikimedia.org/wikipedia/commons/thumb/3/32/Unprocessed_-_Reload_Festival_2024_17.jpg/500px-Unprocessed_-_Reload_Festival_2024_17.jpg
+  - status: 429, refs: 1
+  - artists.image_url -> c6ca26c9-4698-415b-8036-fe19c71e25d9
+
+JSON report: `content/global_image_audit.json`
+Broken-only JSON: `content/global_broken_image_urls.json`

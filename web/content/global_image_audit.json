@@ -1,0 +1,3216 @@
+{
+  "generated_at": "2026-02-17T21:02:30.470Z",
+  "scope": {
+    "total_references": 26224,
+    "unique_urls": 6369,
+    "checked_concurrency": 24,
+    "timeout_ms": 9000
+  },
+  "url_states": {
+    "ok": 6181,
+    "broken": 154,
+    "uncertain": 1,
+    "error": 33,
+    "missing": 0
+  },
+  "failing_urls_count": 188,
+  "source_breakdown": [
+    {
+      "source_table": "artists",
+      "source_column": "image_url",
+      "total_refs": 727,
+      "unique_urls": 726,
+      "failing_refs": 91,
+      "failing_unique_urls": 91,
+      "failing_ref_pct": 12.52,
+      "states": {
+        "ok": 636,
+        "broken": 91,
+        "uncertain": 0,
+        "error": 0,
+        "missing": 0
+      }
+    },
+    {
+      "source_table": "events",
+      "source_column": "image_url",
+      "total_refs": 11963,
+      "unique_urls": 3984,
+      "failing_refs": 59,
+      "failing_unique_urls": 39,
+      "failing_ref_pct": 0.49,
+      "states": {
+        "ok": 11904,
+        "broken": 17,
+        "uncertain": 0,
+        "error": 42,
+        "missing": 0
+      }
+    },
+    {
+      "source_table": "events_deduplicated",
+      "source_column": "image_url",
+      "total_refs": 11103,
+      "unique_urls": 3740,
+      "failing_refs": 59,
+      "failing_unique_urls": 39,
+      "failing_ref_pct": 0.53,
+      "states": {
+        "ok": 11044,
+        "broken": 17,
+        "uncertain": 0,
+        "error": 42,
+        "missing": 0
+      }
+    },
+    {
+      "source_table": "venues",
+      "source_column": "image_url",
+      "total_refs": 1887,
+      "unique_urls": 1721,
+      "failing_refs": 33,
+      "failing_unique_urls": 29,
+      "failing_ref_pct": 1.75,
+      "states": {
+        "ok": 1854,
+        "broken": 21,
+        "uncertain": 0,
+        "error": 12,
+        "missing": 0
+      }
+    },
+    {
+      "source_table": "series",
+      "source_column": "image_url",
+      "total_refs": 325,
+      "unique_urls": 251,
+      "failing_refs": 18,
+      "failing_unique_urls": 14,
+      "failing_ref_pct": 5.54,
+      "states": {
+        "ok": 307,
+        "broken": 18,
+        "uncertain": 0,
+        "error": 0,
+        "missing": 0
+      }
+    },
+    {
+      "source_table": "explore_tracks",
+      "source_column": "quote_portrait_url",
+      "total_refs": 12,
+      "unique_urls": 12,
+      "failing_refs": 12,
+      "failing_unique_urls": 12,
+      "failing_ref_pct": 100,
+      "states": {
+        "ok": 0,
+        "broken": 12,
+        "uncertain": 0,
+        "error": 0,
+        "missing": 0
+      }
+    },
+    {
+      "source_table": "festivals",
+      "source_column": "image_url",
+      "total_refs": 206,
+      "unique_urls": 182,
+      "failing_refs": 8,
+      "failing_unique_urls": 8,
+      "failing_ref_pct": 3.88,
+      "states": {
+        "ok": 198,
+        "broken": 6,
+        "uncertain": 1,
+        "error": 1,
+        "missing": 0
+      }
+    },
+    {
+      "source_table": "explore_tracks",
+      "source_column": "banner_image_url",
+      "total_refs": 1,
+      "unique_urls": 1,
+      "failing_refs": 0,
+      "failing_unique_urls": 0,
+      "failing_ref_pct": 0,
+      "states": {
+        "ok": 1,
+        "broken": 0,
+        "uncertain": 0,
+        "error": 0,
+        "missing": 0
+      }
+    }
+  ],
+  "failing_urls": [
+    {
+      "url": "http://www.moesandjoes.com/img/log.png",
+      "state": "error",
+      "status_code": null,
+      "note": "TimeoutError",
+      "references": [
+        {
+          "source_table": "venues",
+          "source_column": "image_url",
+          "record_id": "662"
+        },
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "17223"
+        },
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "17224"
+        },
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "59501"
+        },
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "56899"
+        },
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "59503"
+        },
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "56897"
+        },
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "5267"
+        },
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "5268"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "17223"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "17224"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "59501"
+        }
+      ],
+      "reference_count": 17
+    },
+    {
+      "url": "//www.atlantamotorspeedway.com/images/f7f79172-b5bc-e547-5a1d1836509bf0fa_300x201.png",
+      "state": "error",
+      "status_code": null,
+      "note": "TypeError",
+      "references": [
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "27796"
+        },
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "27806"
+        },
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "27815"
+        },
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "27802"
+        },
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "27812"
+        },
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "27816"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "27796"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "27806"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "27815"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "27802"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "27812"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "27816"
+        }
+      ],
+      "reference_count": 12
+    },
+    {
+      "url": "//www.atlantamotorspeedway.com/images/091f8ffd-c0f4-2156-2f6fe6862dfc527a_300x201.png",
+      "state": "error",
+      "status_code": null,
+      "note": "TypeError",
+      "references": [
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "27803"
+        },
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "27809"
+        },
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "27811"
+        },
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "27813"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "27803"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "27809"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "27811"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "27813"
+        }
+      ],
+      "reference_count": 8
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/Michelle_Buteau_Shades_of_Black_at_Julep_05-07-2007.jpg/500px-Michelle_Buteau_Shades_of_Black_at_Julep_05-07-2007.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "28550"
+        },
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "55032"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "28550"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "55032"
+        },
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "11aef419-cba9-43bf-8c85-beecde4a50b1"
+        }
+      ],
+      "reference_count": 5
+    },
+    {
+      "url": "https://www.regmovies.com/_next/image?url=https%3A%2F%2Fregalcdn.azureedge.net%2FREG%2FSendHelp%2FHO00019988%2FTV_SmallPosterImage%2F20260106-111714111.jpg&w=256&q=75",
+      "state": "broken",
+      "status_code": 403,
+      "note": "get_client_error",
+      "references": [
+        {
+          "source_table": "series",
+          "source_column": "image_url",
+          "record_id": "bc588be9-eb04-492b-9e58-028f9ade17b2"
+        },
+        {
+          "source_table": "series",
+          "source_column": "image_url",
+          "record_id": "5888b956-145c-4274-a945-ecd102684994"
+        },
+        {
+          "source_table": "series",
+          "source_column": "image_url",
+          "record_id": "c4eca007-e948-4dc6-8e3b-27c9af8e3c92"
+        },
+        {
+          "source_table": "series",
+          "source_column": "image_url",
+          "record_id": "886d41cb-9201-4afe-908a-fb7232a62b43"
+        },
+        {
+          "source_table": "series",
+          "source_column": "image_url",
+          "record_id": "5be33d74-29ec-44da-9b0f-ed7f7d63dcc8"
+        }
+      ],
+      "reference_count": 5
+    },
+    {
+      "url": "/next_static/icons/summary_square.png",
+      "state": "error",
+      "status_code": null,
+      "note": "TypeError",
+      "references": [
+        {
+          "source_table": "venues",
+          "source_column": "image_url",
+          "record_id": "3712"
+        },
+        {
+          "source_table": "venues",
+          "source_column": "image_url",
+          "record_id": "3713"
+        },
+        {
+          "source_table": "venues",
+          "source_column": "image_url",
+          "record_id": "3714"
+        },
+        {
+          "source_table": "venues",
+          "source_column": "image_url",
+          "record_id": "3739"
+        }
+      ],
+      "reference_count": 4
+    },
+    {
+      "url": "//atlpenshow.com/cdn/shop/files/atlanta-pen-show_17cf1e08-5074-4536-a543-8c6634f08abc.jpg?v=1765565224",
+      "state": "error",
+      "status_code": null,
+      "note": "TypeError",
+      "references": [
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "21719"
+        },
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "25235"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "21719"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "25235"
+        }
+      ],
+      "reference_count": 4
+    },
+    {
+      "url": "//www.atlantamotorspeedway.com/images/f7fe4c6e-f5d7-c6fc-1443156c6f496276_300x201.jpg",
+      "state": "error",
+      "status_code": null,
+      "note": "TypeError",
+      "references": [
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "27782"
+        },
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "27805"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "27782"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "27805"
+        }
+      ],
+      "reference_count": 4
+    },
+    {
+      "url": "//img1.wsimg.com/isteam/ip/c8ecbeec-b16b-4c79-93e9-6f7316c168a9/Atlanta%20Shortsfest%20-%20the%20official%20Atlanta%20shor.png/:/",
+      "state": "error",
+      "status_code": null,
+      "note": "TypeError",
+      "references": [
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "21728"
+        },
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "24089"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "21728"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "24089"
+        }
+      ],
+      "reference_count": 4
+    },
+    {
+      "url": "https://espacespc.blob.core.windows.net/13313/event-image/2d9575d0-2e81-4f1c-98cb-1bb08734b9e8.jpg?sv=2025-01-05&st=2026-02-10T09%3A00%3A07Z&se=2026-02-11T09%3A00%3A07Z&sr=b&sp=r&sig=bjjLWt1Lq2nZuAh4bz8wUmuRhMCUt1TTzye%2B3pmmqcA%3D",
+      "state": "broken",
+      "status_code": 403,
+      "note": "get_client_error",
+      "references": [
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "28258"
+        },
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "28265"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "28258"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "28265"
+        }
+      ],
+      "reference_count": 4
+    },
+    {
+      "url": "https://lh3.googleusercontent.com/places/ANXAkqHi2lOMlp3GGeUSvR8X8nR3eLiEVsDTgP4g4sQzxlPdlbnMnFDguk_9MuH6rEPOdUjCZ59S3BhGOsgC8YkchT9gP0QRhb2GxOI=s4800-w480",
+      "state": "broken",
+      "status_code": 403,
+      "note": "get_client_error",
+      "references": [
+        {
+          "source_table": "venues",
+          "source_column": "image_url",
+          "record_id": "185"
+        },
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "1264"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "1264"
+        }
+      ],
+      "reference_count": 3
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/Black_Label_Society_-_Wacken_Open_Air_2015-1807_%28cropped%29.jpg/500px-Black_Label_Society_-_Wacken_Open_Air_2015-1807_%28cropped%29.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "28536"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "28536"
+        },
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "895b3336-6fd5-4380-8ddf-e56cb91f6404"
+        }
+      ],
+      "reference_count": 3
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Bunnymen_2005-08-06.jpg/500px-Bunnymen_2005-08-06.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "55035"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "55035"
+        },
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "0b0694c7-f48f-490d-b36d-fa246dd07d74"
+        }
+      ],
+      "reference_count": 3
+    },
+    {
+      "url": "https://boston.broadway.com/wp-content/uploads/sites/2/2018/10/3301_Website_Redesign_FB_OG.jpg",
+      "state": "broken",
+      "status_code": 403,
+      "note": "get_client_error",
+      "references": [
+        {
+          "source_table": "venues",
+          "source_column": "image_url",
+          "record_id": "1587"
+        },
+        {
+          "source_table": "venues",
+          "source_column": "image_url",
+          "record_id": "2310"
+        }
+      ],
+      "reference_count": 2
+    },
+    {
+      "url": "//www.echoparkspeedway.com/images/slammedenuff_300x201.png",
+      "state": "error",
+      "status_code": null,
+      "note": "TypeError",
+      "references": [
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "27790"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "27790"
+        }
+      ],
+      "reference_count": 2
+    },
+    {
+      "url": "//www.echoparkspeedway.com/images/046a2ee4-0a92-290c-18a1409f4a5c6327_300x201.png",
+      "state": "error",
+      "status_code": null,
+      "note": "TypeError",
+      "references": [
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "27797"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "27797"
+        }
+      ],
+      "reference_count": 2
+    },
+    {
+      "url": "//www.atlantamotorspeedway.com/images/f7ae122a-d597-b94b-f012283f98fe7609_300x201.png",
+      "state": "error",
+      "status_code": null,
+      "note": "TypeError",
+      "references": [
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "27799"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "27799"
+        }
+      ],
+      "reference_count": 2
+    },
+    {
+      "url": "//www.echoparkspeedway.com/images/download1_300x201.png",
+      "state": "error",
+      "status_code": null,
+      "note": "TypeError",
+      "references": [
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "27800"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "27800"
+        }
+      ],
+      "reference_count": 2
+    },
+    {
+      "url": "//www.echoparkspeedway.com/images/21a51e49-fc31-b73a-1d25c9111d33e06d_300x201.png",
+      "state": "error",
+      "status_code": null,
+      "note": "TypeError",
+      "references": [
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "27808"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "27808"
+        }
+      ],
+      "reference_count": 2
+    },
+    {
+      "url": "//img1.wsimg.com/isteam/ip/b4d6b0b5-acfe-4128-ad2f-dd8836bc788f/Rana%20(3)%20(2)%20(1).jpg/:/cr=t:0%25,l:0%25,w:100%25,h:100%25/rs=w:1209,h:1790",
+      "state": "error",
+      "status_code": null,
+      "note": "TypeError",
+      "references": [
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "21722"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "21722"
+        }
+      ],
+      "reference_count": 2
+    },
+    {
+      "url": "https://blueridge.imgix.net/images/StPattys01-Copy.jpg?auto=compress%2Cformat&fit=max&position=50%2050&q=80&w=1200",
+      "state": "broken",
+      "status_code": 403,
+      "note": "get_client_error",
+      "references": [
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "21743"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "21743"
+        }
+      ],
+      "reference_count": 2
+    },
+    {
+      "url": "assets/images/premium-front-page-banner.gif",
+      "state": "error",
+      "status_code": null,
+      "note": "TypeError",
+      "references": [
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "21769"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "21769"
+        }
+      ],
+      "reference_count": 2
+    },
+    {
+      "url": "//www.echoparkspeedway.com/images/uploads/eps-autotrader-400_1_400x200.png",
+      "state": "error",
+      "status_code": null,
+      "note": "TypeError",
+      "references": [
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "21907"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "21907"
+        }
+      ],
+      "reference_count": 2
+    },
+    {
+      "url": "//www.echoparkspeedway.com/images/57b04223-e212-a2ff-8e7a6f3d1944c7c8_300x201.png",
+      "state": "error",
+      "status_code": null,
+      "note": "TypeError",
+      "references": [
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "21908"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "21908"
+        }
+      ],
+      "reference_count": 2
+    },
+    {
+      "url": "https://espacespc.blob.core.windows.net/13313/event-image/203af6ba-569a-432a-9946-1b35100b23ab.png?sv=2025-01-05&st=2026-02-10T09%3A00%3A07Z&se=2026-02-11T09%3A00%3A07Z&sr=b&sp=r&sig=S6F72EEfd4mJumPmmMl9lpo%2BywQacvZT5typmVV0ZOU%3D",
+      "state": "broken",
+      "status_code": 403,
+      "note": "get_client_error",
+      "references": [
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "28257"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "28257"
+        }
+      ],
+      "reference_count": 2
+    },
+    {
+      "url": "https://espacespc.blob.core.windows.net/13313/event-image/1b895fcb-43a9-4ade-b84f-7f0cb7b1bec0.png?sv=2025-01-05&st=2026-02-16T09%3A00%3A07Z&se=2026-02-17T09%3A00%3A07Z&sr=b&sp=r&sig=8NfmUyhDtL4oXpc4fP%2F8UeSY1k9i29593M6ZQXbU5L8%3D",
+      "state": "broken",
+      "status_code": 403,
+      "note": "get_client_error",
+      "references": [
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "57044"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "57044"
+        }
+      ],
+      "reference_count": 2
+    },
+    {
+      "url": "https://espacespc.blob.core.windows.net/13313/event-image/ca1993e9-f5f6-428b-bbd6-2598cda381ea.png?sv=2025-01-05&st=2026-02-16T09%3A00%3A07Z&se=2026-02-17T09%3A00%3A07Z&sr=b&sp=r&sig=%2F1mkHziD5VOhBuF9N3bqTiaJIwXzMjyDkok40ecDnKQ%3D",
+      "state": "broken",
+      "status_code": 403,
+      "note": "get_client_error",
+      "references": [
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "57045"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "57045"
+        }
+      ],
+      "reference_count": 2
+    },
+    {
+      "url": "//img1.wsimg.com/isteam/ip/d125131a-3a5d-41d9-a603-90bb23f6dcde/2026%20banner%20Atlanta%20Horror%20Film%20Festival%20.png/:/",
+      "state": "error",
+      "status_code": null,
+      "note": "TypeError",
+      "references": [
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "60539"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "60539"
+        }
+      ],
+      "reference_count": 2
+    },
+    {
+      "url": "/sites/default/files/styles/event_image/public/2026-01/ig-post-cliterati-evelyn-berry-21926-charis.png?itok=xPdeVdFX",
+      "state": "error",
+      "status_code": null,
+      "note": "TypeError",
+      "references": [
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "10727"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "10727"
+        }
+      ],
+      "reference_count": 2
+    },
+    {
+      "url": "/sites/default/files/styles/event_image/public/2026-01/ig-post-inventory-sale-2025.png?itok=_ABPeDtz",
+      "state": "error",
+      "status_code": null,
+      "note": "TypeError",
+      "references": [
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "10730"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "10730"
+        }
+      ],
+      "reference_count": 2
+    },
+    {
+      "url": "https://espacespc.blob.core.windows.net/13313/event-image/f4af884a-ac80-404a-b35e-29f94da848c7.png?sv=2025-01-05&st=2026-02-16T09%3A00%3A07Z&se=2026-02-17T09%3A00%3A07Z&sr=b&sp=r&sig=iLaqb02dVIZ7oB5RZCNPNwRpUU7KEnqhdJDu2yBX%2FKA%3D",
+      "state": "broken",
+      "status_code": 403,
+      "note": "get_client_error",
+      "references": [
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "57048"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "57048"
+        }
+      ],
+      "reference_count": 2
+    },
+    {
+      "url": "https://espacespc.blob.core.windows.net/13313/event-image/2d9575d0-2e81-4f1c-98cb-1bb08734b9e8.jpg?sv=2025-01-05&st=2026-02-16T09%3A00%3A07Z&se=2026-02-17T09%3A00%3A07Z&sr=b&sp=r&sig=khGTETuwHoHlCq4kaT%2BfQKUU206xlpKXZ3twZvEHtJs%3D",
+      "state": "broken",
+      "status_code": 403,
+      "note": "get_client_error",
+      "references": [
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "57053"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "57053"
+        }
+      ],
+      "reference_count": 2
+    },
+    {
+      "url": "//www.atlantamotorspeedway.com/images/streetcartakeover_300x201.jpg",
+      "state": "error",
+      "status_code": null,
+      "note": "TypeError",
+      "references": [
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "27792"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "27792"
+        }
+      ],
+      "reference_count": 2
+    },
+    {
+      "url": "//www.atlantamotorspeedway.com/images/d25aba2d-f98c-d6d6-5b1607ff39e4bb2f_300x201.png",
+      "state": "error",
+      "status_code": null,
+      "note": "TypeError",
+      "references": [
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "27789"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "27789"
+        }
+      ],
+      "reference_count": 2
+    },
+    {
+      "url": "//www.atlantamotorspeedway.com/images/f7f0a9f5-cabc-7494-49510d4d5ff45fdb_300x201.png",
+      "state": "error",
+      "status_code": null,
+      "note": "TypeError",
+      "references": [
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "27788"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "27788"
+        }
+      ],
+      "reference_count": 2
+    },
+    {
+      "url": "https://volunteer.unitedwayatlanta.orghttps://s3.amazonaws.com/files.galaxydigital.com/4983/images/banner-small.jpg?updated=1744137736",
+      "state": "error",
+      "status_code": null,
+      "note": "TypeError",
+      "references": [
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "21213"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "21213"
+        }
+      ],
+      "reference_count": 2
+    },
+    {
+      "url": "https://blueridge.imgix.net/images/20251025_Tri-State_ModelRailroad_Ride_the_Rails_festival_fullrights_AlysiaHargus_2025-11-03-180153_kabs.jpg?auto=compress%2Cformat&fit=max&position=50%2050&q=80&w=1200",
+      "state": "broken",
+      "status_code": 403,
+      "note": "get_client_error",
+      "references": [
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "21744"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "21744"
+        }
+      ],
+      "reference_count": 2
+    },
+    {
+      "url": "https://film-cdn.moviexchange.com/api/cdn/release/c1b4c438-959a-40fd-885c-b1dc4556458d/media/Poster?width=500",
+      "state": "broken",
+      "status_code": 400,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "20865"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "20865"
+        }
+      ],
+      "reference_count": 2
+    },
+    {
+      "url": "//d2sfpzmw5wlczb.cloudfront.net/images/2020/petit-1000.jpg",
+      "state": "error",
+      "status_code": null,
+      "note": "TypeError",
+      "references": [
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "21906"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "21906"
+        }
+      ],
+      "reference_count": 2
+    },
+    {
+      "url": "https://film-cdn.moviexchange.com/api/cdn/release/14f621c0-89ce-4fec-8d78-bdb33e591040/media/Poster?width=500",
+      "state": "broken",
+      "status_code": 400,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "20860"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "20860"
+        }
+      ],
+      "reference_count": 2
+    },
+    {
+      "url": "/_next/image?url=https%3A%2F%2Fs1.ticketm.net%2Fdam%2Fa%2F266%2F528a570e-dcf3-437c-b3f1-6a7342336266_TABLET_LANDSCAPE_3_2.jpg&w=1319&q=70",
+      "state": "error",
+      "status_code": null,
+      "note": "TypeError",
+      "references": [
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "24053"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "24053"
+        }
+      ],
+      "reference_count": 2
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/73/The_Australian_Pink_Floyd_Show_-_Hamburg_2022_04.jpg/500px-The_Australian_Pink_Floyd_Show_-_Hamburg_2022_04.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "events",
+          "source_column": "image_url",
+          "record_id": "49530"
+        },
+        {
+          "source_table": "events_deduplicated",
+          "source_column": "image_url",
+          "record_id": "49530"
+        }
+      ],
+      "reference_count": 2
+    },
+    {
+      "url": "http://dispatch.barnesandnoble.com/content/dam/ccr/homepage/daily/2026/01/30/2061_BB_PostHoliday_Stamps_12_26_25.jpg",
+      "state": "error",
+      "status_code": null,
+      "note": "TimeoutError",
+      "references": [
+        {
+          "source_table": "venues",
+          "source_column": "image_url",
+          "record_id": "282"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://thebettyatl.comhttps://d3ojpf34km1iny.cloudfront.net/ckhfe4t4a00mhzu3lev8fxpgk/attachments/ckhmeld8700wgcn3l16q3cjx0-betty-s-restaurant-2-02.0.48.2500.1308.full.jpg",
+      "state": "error",
+      "status_code": null,
+      "note": "TypeError",
+      "references": [
+        {
+          "source_table": "venues",
+          "source_column": "image_url",
+          "record_id": "392"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "http://www.wildheavencraftbeers.com/img/test/661859bd581e3.jpg?id=1769895480",
+      "state": "broken",
+      "status_code": 404,
+      "note": "get_client_error",
+      "references": [
+        {
+          "source_table": "venues",
+          "source_column": "image_url",
+          "record_id": "615"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://www.luckyexchange.com/wp-content/uploads/2020/10/gwen4lucky-1.png",
+      "state": "broken",
+      "status_code": 403,
+      "note": "get_client_error",
+      "references": [
+        {
+          "source_table": "venues",
+          "source_column": "image_url",
+          "record_id": "2356"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://www.domaineatlanta.com/img.sedoparking.com/images/js_preloader.gif",
+      "state": "broken",
+      "status_code": 441,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "venues",
+          "source_column": "image_url",
+          "record_id": "579"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://jejusauna.com/cdn/shop/files/jeju_sauna_atlanta_ga_{width}x.jpg?v=1614733498",
+      "state": "broken",
+      "status_code": 404,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "venues",
+          "source_column": "image_url",
+          "record_id": "1722"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "http://www.thegardenclubatlanta.com/img/test/66291e488a66c.jpg?id=1770504327",
+      "state": "broken",
+      "status_code": 404,
+      "note": "get_client_error",
+      "references": [
+        {
+          "source_table": "venues",
+          "source_column": "image_url",
+          "record_id": "2063"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "http://greenbrierdistillery.com/cdn/shop/files/NBW_Trio_{width}x.jpg?v=1738013713",
+      "state": "broken",
+      "status_code": 404,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "venues",
+          "source_column": "image_url",
+          "record_id": "1643"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://lh3.googleusercontent.com/sitesv/APaQ0SThZ7TduW8o2Th1UCqlfmjNYbu_fYPEyO6FTbWk9TTxBr4Gx1UaGZOD9nwaBARuFLD51xIxwUmW8cteTsXERSqi_XCCQsj7c8vd3eUPyQMBPVKkLkRCK_BhtTG4lM-sqn0-qIdl8H_QD59iIbmeov56dW3oWPhdjec=w16383",
+      "state": "broken",
+      "status_code": 403,
+      "note": "get_client_error",
+      "references": [
+        {
+          "source_table": "venues",
+          "source_column": "image_url",
+          "record_id": "3519"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://ellisstation.com/cdn/shop/files/1000015767_{width}x.jpg?v=1755881384",
+      "state": "broken",
+      "status_code": 404,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "venues",
+          "source_column": "image_url",
+          "record_id": "1835"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://www.emoryhealthcare.org/-/media/Project/EH/Emory/ui/images/heroes/emory-midtown-hero-black.jpg?h=350&iar=0&w=1760&hash=7D63C36886EE4C22DF4D659F10CEBC5B",
+      "state": "error",
+      "status_code": null,
+      "note": "TimeoutError",
+      "references": [
+        {
+          "source_table": "venues",
+          "source_column": "image_url",
+          "record_id": "1959"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dc/Cotton_States_and_International_Exposition_of_1895.png/889px-Cotton_States_and_International_Exposition_of_1895.png",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "venues",
+          "source_column": "image_url",
+          "record_id": "4113"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://lh3.googleusercontent.com/sitesv/APaQ0ST3YUviM5gcF8DNxal3rPh1flVXoFsy_ZMrI4aleY0ZXjWTURNBQW78JP6iR7HA026bZrbjFIdlI769oUTNb_UQmrvJigBKiidyFkBe9wdwSj-qlqSSZh946irjQV1A7lbCN31Tsv5p2uSV1Nss31Zx4C3-N_yXmQwBv25DMh7SEaKeJYNP5-KnHLA=w16383",
+      "state": "broken",
+      "status_code": 403,
+      "note": "get_client_error",
+      "references": [
+        {
+          "source_table": "venues",
+          "source_column": "image_url",
+          "record_id": "2050"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://c-p.rmcdn1.net/674f26f6daecda79cb25d0ba/5157616/Screenshot-b421bc3e-aaaf-4ff5-9ba3-3f13097b1d54_1024.jpg",
+      "state": "broken",
+      "status_code": 404,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "venues",
+          "source_column": "image_url",
+          "record_id": "1221"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://l.cdn-fileserver.com/bping.php?wsip=170762626&gdpr=0&vgd_l2type=dmola&vi=1770696811309017682&hvsid=00001770696811509022853698569635&vgd_asn=16591&vgd_rpth=%2Fola&vgd_cdv=O2734&vgd_setup=c21&vgd_wlstp=0&crid=126431565&ugd=4&cc=US&requrl=https%3A%2F%2Fbillsfleamarket.com&wshp=0&vgd_tsce=L1136&vgd_cage=5&vgd_oresf=one&prid=8PR11258V&lf=6&sc=GA&lper=100&ssld=%7B%22QQNN%22%3A%22Pb%22%2C%22QQN75%22%3A%2217j1z71%22%2C%22QQ8E%22%3A%22%22%2C%22QQQN%22%3A%22ZK%22%7D&mspa=0&r=1770696811511&vgd_oreqf=one&cid=8CUHL418T&vgd_len=539&vgd_end=1",
+      "state": "broken",
+      "status_code": 404,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "venues",
+          "source_column": "image_url",
+          "record_id": "2353"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://l.cdn-fileserver.com/bping.php?gdpr=0&mspa=0&wshp=0&vgd_cdv=O2734&sc=GA&lper=100&wsip=170763074&vgd_tsce=L1133&vgd_oreqf=one&vgd_setup=c21&vgd_wlstp=0&ssld=%7B%22QQNN%22%3A%22Pb%22%2C%22QQN75%22%3A%2217j1z71%22%2C%22QQ8E%22%3A%22%22%2C%22QQQN%22%3A%22ZK%22%7D&prid=8PR11258V&cid=8CU91RC8E&ugd=4&lf=6&vgd_rpth=%2Fola&vgd_cage=3&vgd_oresf=one&vi=1770504638997769496&vgd_asn=16591&r=1770504638461&vgd_l2type=dmola&crid=556378831&hvsid=00001770504638459022853698568360&cc=US&requrl=http%3A%2F%2Fatlantaironworks.com&vgd_len=539&vgd_end=1",
+      "state": "broken",
+      "status_code": 404,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "venues",
+          "source_column": "image_url",
+          "record_id": "325"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://tuckerbrewing.com/images/Tucker_Lager.jpeg",
+      "state": "broken",
+      "status_code": 404,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "venues",
+          "source_column": "image_url",
+          "record_id": "1143"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://cdn.saffire.com/images.ashx?t=ig&rid=GeorgiaHorsePark&i=sanggar_lestari_cbf_2025(1).jpg&cb=b9fdcf14",
+      "state": "broken",
+      "status_code": 404,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "venues",
+          "source_column": "image_url",
+          "record_id": "2188"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://dev.virtualearth.net/REST/v1/Imagery/Map/Road/33.480056,-84.440831/15?mapSize=1100,280&pp=33.480056,-84.440831;80&key=AlQlm703AOjXupd61-r_rUYNNucuXtsV-oH9A6hNh4qeIm44AzZppjnD7ZpgCbqx",
+      "state": "broken",
+      "status_code": 401,
+      "note": "get_client_error",
+      "references": [
+        {
+          "source_table": "venues",
+          "source_column": "image_url",
+          "record_id": "2021"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://www.hillstone.com/images/homepage/filet.jpg",
+      "state": "error",
+      "status_code": null,
+      "note": "TypeError",
+      "references": [
+        {
+          "source_table": "venues",
+          "source_column": "image_url",
+          "record_id": "494"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://stage.startertemplatecloud.com/e10/wp-content/uploads/sites/5/2021/01/ico_02.png",
+      "state": "error",
+      "status_code": null,
+      "note": "TypeError",
+      "references": [
+        {
+          "source_table": "venues",
+          "source_column": "image_url",
+          "record_id": "2214"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "http://209.35.52.172/~autrey/nature-heritage-preserve/wp-content/themes/nature-one/images/slides/slider1.jpg",
+      "state": "error",
+      "status_code": null,
+      "note": "TimeoutError",
+      "references": [
+        {
+          "source_table": "venues",
+          "source_column": "image_url",
+          "record_id": "2210"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://cdn.saffire.com/images.ashx?t=ig&rid=VanAndelArena&i=NoImageImage.jpg",
+      "state": "broken",
+      "status_code": 404,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "venues",
+          "source_column": "image_url",
+          "record_id": "136"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "/assets/static/logo-MM9Zp3w8.png",
+      "state": "error",
+      "status_code": null,
+      "note": "TypeError",
+      "references": [
+        {
+          "source_table": "venues",
+          "source_column": "image_url",
+          "record_id": "3224"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/Fox_Theatre_%28Atlanta%29.jpg/1200px-Fox_Theatre_%28Atlanta%29.jpg",
+      "state": "broken",
+      "status_code": 404,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "venues",
+          "source_column": "image_url",
+          "record_id": "369"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Silvi_Vrait_1989.jpg/500px-Silvi_Vrait_1989.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "c8ada168-a99a-4d61-9695-3b4f74811e1c"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/Nordic_Choir_Press_Release_Photo.jpg/500px-Nordic_Choir_Press_Release_Photo.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "fb52a80e-0fd1-48ba-b689-ecd5d35e6758"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Julie_Murphy_%28singer%29_%28cropped%29.jpg/500px-Julie_Murphy_%28singer%29_%28cropped%29.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "8331a8a4-018a-48a8-b274-ce14680787bd"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Ami_aspelund2.jpg/500px-Ami_aspelund2.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "0ec80955-5587-4db1-a9a6-1e0bf65d7247"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Pat_Alger_and_Artie_Traum%2C_musicians%2C_onstage_at_Norwich%2C_U.K.%2C_1978.jpg/500px-Pat_Alger_and_Artie_Traum%2C_musicians%2C_onstage_at_Norwich%2C_U.K.%2C_1978.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "b20d3eb9-90fe-4ae2-810f-2e4c783b0631"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/Jim_Collins.jpg/500px-Jim_Collins.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "6350bd91-a0e3-4992-b087-516ac63d5c8a"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/Adeem_the_Artist_2023.jpg/500px-Adeem_the_Artist_2023.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "ab9963e2-13f8-4643-a016-5340ee2ff9ac"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/68/Shawn_Mullins.JPG/500px-Shawn_Mullins.JPG",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "fe7f0563-3c73-4cb6-bd53-5cd6602e46c9"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/76/Jeffrey_Steele_by_Gage_Skidmore.jpg/500px-Jeffrey_Steele_by_Gage_Skidmore.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "3f37deee-77de-4f7a-899a-4f2d6f491bfa"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/Caroline_jones_2019_1.jpg/500px-Caroline_jones_2019_1.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "13467815-54c3-4678-a055-956ac65c228f"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/LadyAntebellumAwardsApr10_cropped_charles.jpg/500px-LadyAntebellumAwardsApr10_cropped_charles.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "6937227a-3da1-45e6-809a-e7320a1ea7cd"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f5/Outline_In_Color.jpg/500px-Outline_In_Color.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "7c2b238f-a20a-4c2f-8637-9d7fd270a4a5"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/Portrait_photoshoot_at_Worldcon_75%2C_Helsinki%2C_before_the_Hugo_Awards_%E2%80%93_clipping.jpg/500px-Portrait_photoshoot_at_Worldcon_75%2C_Helsinki%2C_before_the_Hugo_Awards_%E2%80%93_clipping.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "5f6237a5-aae3-4430-be65-1a4df8e0b15c"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/PA_Sports_-_Pressefoto_2024_-_1.jpeg/500px-PA_Sports_-_Pressefoto_2024_-_1.jpeg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "ecc91fe2-9f66-4947-8a98-56a93288e7e9"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Melt_Festival_2013_-_Simian_Mobile_Disco-2.jpg/500px-Melt_Festival_2013_-_Simian_Mobile_Disco-2.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "07760081-fc75-4a61-bb4f-b32e838ab7b8"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/ALIM0963.JPG/500px-ALIM0963.JPG",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "ceae946c-499f-498d-beee-78ef8d5abea3"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Bartees_Strange_leaping_onstage%2C_2021-10-02.jpg/500px-Bartees_Strange_leaping_onstage%2C_2021-10-02.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "7e63478f-db4e-4fff-8364-ecc94e32ce22"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c4/Reese_Wynans_with_Joe_Bonamassa.jpg/500px-Reese_Wynans_with_Joe_Bonamassa.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "d05785d8-2cf3-4563-b2d6-94ff3ed0830c"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/Ray_Wylie_Hubbard.jpg/500px-Ray_Wylie_Hubbard.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "ebeee110-172c-4ac7-846b-1a58fa7496d4"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/Ashanti_Shequoiya_Douglas%2C_2023_%28cropped%29.jpg/500px-Ashanti_Shequoiya_Douglas%2C_2023_%28cropped%29.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "f7a816f5-e611-4e5d-8864-9ba5dbc18077"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/SteveMackeyinItaly.jpeg/500px-SteveMackeyinItaly.jpeg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "ca8fe134-7720-4a5f-a15b-602a6492bb6d"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/07/Dommin666.jpg/500px-Dommin666.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "2722c03d-6e5d-4109-ac5e-28401d245f00"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2d/K._Michelle.png/500px-K._Michelle.png",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "175f920e-1a55-41cd-b3e0-9b61d4e490a2"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/2008-11-15_%D0%AD%D0%BD%D0%B4%D1%80%D1%8E_%D0%9B%D0%BB%D0%BE%D0%B9%D0%B4_%D0%A3%D1%8D%D0%B1%D0%B1%D0%B5%D1%80.jpeg/500px-2008-11-15_%D0%AD%D0%BD%D0%B4%D1%80%D1%8E_%D0%9B%D0%BB%D0%BE%D0%B9%D0%B4_%D0%A3%D1%8D%D0%B1%D0%B1%D0%B5%D1%80.jpeg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "e6faea81-041d-4327-97e7-cebee0736779"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/George_Sluppick.jpg/500px-George_Sluppick.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "50d62517-b166-4472-aecb-0d17edba53c5"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/16/Gary_Talley.jpg/500px-Gary_Talley.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "8b8002af-ba47-4c0b-beb6-2a996547887d"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f4/Sziget_festival_2009_-_Brujeria.jpg/500px-Sziget_festival_2009_-_Brujeria.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "ddeb9101-aaf9-4e98-9443-be4d920c6c55"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bb/KristinAndreassen_nyc.jpg/500px-KristinAndreassen_nyc.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "35ff7b5b-4fa9-4df7-9337-b4668c20a7c3"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/Diana_Ross_%281982%29.jpg/500px-Diana_Ross_%281982%29.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "7e0acf34-5ab7-468c-b609-faf9c3c71310"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/Kelsey_Waldon_performing_at_Grimey%27s_record_store..png/500px-Kelsey_Waldon_performing_at_Grimey%27s_record_store..png",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "0af493c1-051e-431a-9367-1699b02f5a86"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Francoise_hardy_1964.jpg/500px-Francoise_hardy_1964.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "f426d4c0-dda5-49aa-a465-a83ad5d9f3d5"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Adrienne_Young_Little_Sadie_Little_Grill_Harrisonburg_VA_June_2008.jpg/500px-Adrienne_Young_Little_Sadie_Little_Grill_Harrisonburg_VA_June_2008.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "770436a5-b885-405f-a0b0-d376e6321d12"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/THATH_sunset.jpg/500px-THATH_sunset.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "cebd3c7b-7b76-4d4f-a5c3-a0bf291d24d4"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d7/Senses_fail_islington.jpg/500px-Senses_fail_islington.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "4b79ce9e-453d-419a-9bb6-99a4284c7d73"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/Red_steagall_2007.jpg/500px-Red_steagall_2007.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "be287fa5-edd9-4528-834a-0c82aad0403e"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/72/Lindsay_Ell_at_Olympic_Plaza_in_2010.jpg/500px-Lindsay_Ell_at_Olympic_Plaza_in_2010.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "e1348293-71dc-49f4-8e74-b002ca0c4447"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/29/Katie_Pruitt_performing_%28cropped%29.jpg/500px-Katie_Pruitt_performing_%28cropped%29.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "d7cf030a-333a-4212-9644-abaae762231d"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/42/Billy_Dean_in_1998_by_Jim_Williams.jpg/500px-Billy_Dean_in_1998_by_Jim_Williams.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "d0f85643-8691-4fec-8caf-ad1c63489820"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0a/Kirlian_Camera_Kasematten-Festival_2016_06.jpg/500px-Kirlian_Camera_Kasematten-Festival_2016_06.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "871d7ee9-53fc-4673-9993-b60a1be2f3d7"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9c/Katatonia_p%C3%A5_Grammisgalan_2013.jpg/500px-Katatonia_p%C3%A5_Grammisgalan_2013.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "86f2427e-3667-4400-9a66-31957e337720"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Roger_clyne.jpg/500px-Roger_clyne.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "7b55619b-0b15-46ae-b19f-e124daee1b61"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d8/Natalie_Jane_%40_El_Rey_04_10_2024_%2853836373948%29.jpg/500px-Natalie_Jane_%40_El_Rey_04_10_2024_%2853836373948%29.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "fc90913c-6ee1-4aab-866f-a892cbd67faa"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/Obscura_Hellfest_2010_%283%29.jpg/500px-Obscura_Hellfest_2010_%283%29.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "3e0bfb8f-b81c-4e31-b56d-59103e221f39"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/BenKwellerACL2006.jpg/500px-BenKwellerACL2006.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "4616a3dd-2701-46ec-b967-229706a1ebdc"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/Porno_Mafia-Tour_Lichterfelde.jpg/500px-Porno_Mafia-Tour_Lichterfelde.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "534dce93-f1ab-4e28-b668-ffdd9db4f98f"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/70/TenilleTownes2023.jpg/500px-TenilleTownes2023.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "478a9b15-7c08-4e31-906d-4c5c5564a580"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Flying-Lotus.jpg/500px-Flying-Lotus.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "86a1afd3-98e7-4a41-b4e5-7abd4923ada2"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/99/Tim_O_Brien.jpg/500px-Tim_O_Brien.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "f43f57b9-b846-4219-b696-3e544c68ae1a"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d6/BENEE_%2850117380403%29_%28cropped%29.jpg/500px-BENEE_%2850117380403%29_%28cropped%29.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "faed5d4a-3548-4101-95ac-0182a5bf57d9"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d1/The_Menzingers_Full_Force_2023_14.jpg/500px-The_Menzingers_Full_Force_2023_14.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "49d91513-34e8-4874-b2df-4536f8012bfd"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Against_Me%21_Rock_am_Ring_2014_%2850%29.JPG/500px-Against_Me%21_Rock_am_Ring_2014_%2850%29.JPG",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "4cef2dcc-752f-4d95-a1ad-c5ca93087e94"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Together_Pangea_image.png/500px-Together_Pangea_image.png",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "cf2771a4-994a-4114-a74b-60ec93f50bce"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/32/Unprocessed_-_Reload_Festival_2024_17.jpg/500px-Unprocessed_-_Reload_Festival_2024_17.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "c6ca26c9-4698-415b-8036-fe19c71e25d9"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/Blackberry_Smoke_in_2012.jpg/500px-Blackberry_Smoke_in_2012.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "26b8012f-b053-45c4-8e39-29e34ff95f4d"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f1/Rich_Chigga.png/500px-Rich_Chigga.png",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "33fc3da9-a8a4-473f-b578-ed6a294df409"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/17/T_Graham_Brown.jpg/500px-T_Graham_Brown.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "dc204ddc-8ae0-4e93-92ee-35dbc9f1aaad"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Billy_Strings.jpeg/500px-Billy_Strings.jpeg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "aee03a1c-d8e0-4749-b369-cac59556e4a8"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Alinabronsky.jpg/500px-Alinabronsky.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "a400f854-281b-4f37-af09-da1ea29e26e6"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d7/Langhorne_Slim%2C_Brooklyn.jpg/500px-Langhorne_Slim%2C_Brooklyn.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "2f93f563-5de0-4b90-b639-e5acd69df145"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/ZMF_%282014%29_Jimmie_Vaughan_and_Band_jm13059.jpg/500px-ZMF_%282014%29_Jimmie_Vaughan_and_Band_jm13059.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "d8cb0c62-984c-4c60-ac12-4ed6ece0747c"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/07/Lee_Greenwood.jpg/500px-Lee_Greenwood.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "56c66eba-7cfc-41a1-8ebc-3b2652a76e6d"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cf/Hailey_Whitters_%282014%3B_2%29_%28cropped%29.jpg/500px-Hailey_Whitters_%282014%3B_2%29_%28cropped%29.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "0dc97248-29aa-462c-937a-7cd8b674bf79"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/Rissi-Palmer_2008-10-11_AdamBielawski.jpg/500px-Rissi-Palmer_2008-10-11_AdamBielawski.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "32592b79-e6bf-46fe-b967-286b83c4ad8e"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/be/TheWarAndTreaty_20210812.jpg/500px-TheWarAndTreaty_20210812.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "6b7ae167-09a9-4445-b282-3af6cee30dc1"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/70/Voxtrot_2006.jpg/500px-Voxtrot_2006.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "70c3b80f-19e3-4d77-922c-e1593794f902"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Adultperiod.jpg/500px-Adultperiod.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "c3bf8131-bc67-422f-b64b-35ab4cfe4e3f"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Pink_Martini_-_Festival_du_Bout_du_Monde_2014_-_042.jpg/500px-Pink_Martini_-_Festival_du_Bout_du_Monde_2014_-_042.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "2fe0da2b-8431-48e4-86d9-66d6ee072cba"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Big_and_Rich_1.jpg/500px-Big_and_Rich_1.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "b56c0b13-41d2-4807-bccf-85399bbad494"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Andrew_Paul_Albert.jpg/500px-Andrew_Paul_Albert.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "07b23d2f-39e1-419c-b187-afeb2eaf4be2"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Devin_the_Dude_in_Pearland%2C_TX_July_2010_001.jpg/500px-Devin_the_Dude_in_Pearland%2C_TX_July_2010_001.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "bdda17eb-6fca-40c3-a038-ba0e201c870c"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/16/Fanclub1967DavidJonathan3.jpg/500px-Fanclub1967DavidJonathan3.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "d52bcd7b-ad49-497e-b7bd-f03c3b574cb6"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/99/Josh_Phillips_at_Freising_2014.jpg/500px-Josh_Phillips_at_Freising_2014.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "ec8b2e1c-cb43-4d37-ba06-82591e608538"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/23/Maggie_Rose_at_the_Grand_Ole_Opry%2C_Nashville%2C_Tennessee%2C_23_February_2013.JPG/500px-Maggie_Rose_at_the_Grand_Ole_Opry%2C_Nashville%2C_Tennessee%2C_23_February_2013.JPG",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "f8d68be6-d5e6-4fc2-8339-dbcc9a5525c8"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/Courtney_Marie_Andrews_01_04_2017_-2_%2832127958476%29.jpg/500px-Courtney_Marie_Andrews_01_04_2017_-2_%2832127958476%29.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "0ebcccd6-0fca-4f7e-95cd-62669e741b7a"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Taylor_Hollingsworth.jpg/500px-Taylor_Hollingsworth.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "a8f21b92-a95d-4ddc-bb92-0fd017618231"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Weedeater_live_at_thefunhouse_2008.jpg/500px-Weedeater_live_at_thefunhouse_2008.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "e1fe8f59-af22-423f-8b30-336b265315de"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Boys_like_girls_2009.jpg/500px-Boys_like_girls_2009.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "b5cbc9e2-41ad-426d-821a-1627168334be"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fe/Mac_DeMarco_2019_%2848210650642%29_%28cropped%29.jpg/500px-Mac_DeMarco_2019_%2848210650642%29_%28cropped%29.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "3f0cb7f0-d2aa-48e8-bb8b-b16bdb4ed6a6"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/Josh_Wink_2007-05-13_DSCF4134.jpg/500px-Josh_Wink_2007-05-13_DSCF4134.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "a765aff6-895c-4af4-848e-213737fff911"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/SXSW_2019_-_Illuminati_Hotties_%2840412770613%29.jpg/500px-SXSW_2019_-_Illuminati_Hotties_%2840412770613%29.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "c95f6f02-489a-4078-bc51-67aba2b68cbc"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c0/Toddedwardstogether2012_%28cropped%29.jpg/500px-Toddedwardstogether2012_%28cropped%29.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "c020022d-8186-49ba-991a-7e6d3e6f2d36"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/01/David_Phelps_%28cropped%29.jpg/500px-David_Phelps_%28cropped%29.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "d3d56c05-a70a-4711-9c71-046674db3d1f"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/34/Dodie_Clark2.jpg/500px-Dodie_Clark2.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "911a9fb9-668c-4638-845d-dd74bb6fe699"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/DJ_Delicious.jpg/500px-DJ_Delicious.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "691e8d14-ce0b-4965-ad13-0b96d154d0ac"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cc/Cece_Winans_%28cropped%29.jpg/500px-Cece_Winans_%28cropped%29.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "5a8ac256-b738-4b8f-88f5-5f496445f3ba"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ad/Dailey_%26_Vincent_2013.jpg/500px-Dailey_%26_Vincent_2013.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "01a4e1a4-fda7-4b3b-a3b3-3f18c4136370"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/Steep_Canyon_Rangers_2013.jpg/500px-Steep_Canyon_Rangers_2013.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "93df0e38-227a-4693-ac37-c28e88ab1039"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0a/Gvb.jpg/500px-Gvb.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "artists",
+          "source_column": "image_url",
+          "record_id": "ecbeab03-1386-4244-a6bf-37593e8bbbba"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://rangerstop.com/gallery_gen/772fb7f946e84334afc5c21302c72760_1080x1697_0x0_1080x1728_crop.jpg?ts=1707975302",
+      "state": "error",
+      "status_code": null,
+      "note": "TypeError",
+      "references": [
+        {
+          "source_table": "festivals",
+          "source_column": "image_url",
+          "record_id": "rangerstop-pop-con"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://repticon.com/wp-content/uploads/2021/03/fb-icon.svg",
+      "state": "broken",
+      "status_code": 403,
+      "note": "get_client_error",
+      "references": [
+        {
+          "source_table": "festivals",
+          "source_column": "image_url",
+          "record_id": "repticon-atlanta"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://www.smyrnacity.com/DefaultContent/Default/_gfx/spacer.gif",
+      "state": "broken",
+      "status_code": 404,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "festivals",
+          "source_column": "image_url",
+          "record_id": "smyrna-jonquil-festival"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://bidagent.xad.com/conv/276450?ts={TIMESTAMP}",
+      "state": "broken",
+      "status_code": 404,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "festivals",
+          "source_column": "image_url",
+          "record_id": "original-sewing-quilt-expo"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://cdn.saffire.com/images.ashx?t=ig&rid=GwinnettCountyFair&i=footer-logo.png",
+      "state": "broken",
+      "status_code": 404,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "festivals",
+          "source_column": "image_url",
+          "record_id": "gwinnett-county-fair"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://www.cityofmiltonga.us/DefaultContent/Default/_gfx/spacer.gif",
+      "state": "broken",
+      "status_code": 404,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "festivals",
+          "source_column": "image_url",
+          "record_id": "milton-hometown-jubilee"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://onemusicfest.com/wp-content/uploads/elementor/thumbs/main-menu-clouds-r42ogrjwfxp94zv8q4wcjxnvm1uddip97ajqme4zjm.png",
+      "state": "uncertain",
+      "status_code": 502,
+      "note": "head_non_ok",
+      "references": [
+        {
+          "source_table": "festivals",
+          "source_column": "image_url",
+          "record_id": "one-musicfest"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://tasteofalpharettaga.com/wp-content/uploads/sites/28/2019/03/menu-icon.svg",
+      "state": "broken",
+      "status_code": 404,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "festivals",
+          "source_column": "image_url",
+          "record_id": "taste-of-alpharetta"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://d2snwnmzyr8jue.cloudfront.net/69850e916724c63d00f0d58b",
+      "state": "broken",
+      "status_code": 404,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "series",
+          "source_column": "image_url",
+          "record_id": "84fab61c-7e87-457d-b2a9-f1db1aced957"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://d2snwnmzyr8jue.cloudfront.net/66f84a0c1297e1e102c50474",
+      "state": "broken",
+      "status_code": 404,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "series",
+          "source_column": "image_url",
+          "record_id": "d3177ef0-a997-40ac-962b-c57edaae3be6"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://d2snwnmzyr8jue.cloudfront.net/695eadaaa0dcc142c97938ef",
+      "state": "broken",
+      "status_code": 404,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "series",
+          "source_column": "image_url",
+          "record_id": "7401283c-dc8b-4eaf-b64c-5dd3c2b44cda"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://d2snwnmzyr8jue.cloudfront.net/698602257d180d0d4832c1f5",
+      "state": "broken",
+      "status_code": 404,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "series",
+          "source_column": "image_url",
+          "record_id": "604c0964-d2c4-4fa1-96da-303c497b4b1d"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://m.media-amazon.com/images/M/MV5BZmQ4NTY0MzMtNjkwNi00OTYwLTgyZmYtZDBmNzg1MDQ3NjQzXkEyXkFqcGdeQXVyNzI4MDMyMTU@._V1_SX300.jpg",
+      "state": "broken",
+      "status_code": 404,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "series",
+          "source_column": "image_url",
+          "record_id": "2b8e34db-17d6-4972-a4e4-c0722dbad5f2"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://www.regmovies.com/_next/image?url=https%3A%2F%2Fregalcdn.azureedge.net%2FREG%2F28YearsLaterTheBoneTemple%2FHO00019578%2FTV_SmallPosterImage%2F20251203-093809933.jpg&w=256&q=75",
+      "state": "broken",
+      "status_code": 403,
+      "note": "get_client_error",
+      "references": [
+        {
+          "source_table": "series",
+          "source_column": "image_url",
+          "record_id": "df3e9475-b51a-4c0e-864c-b88922fcba71"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://www.regmovies.com/_next/image?url=https%3A%2F%2Fregalcdn.azureedge.net%2FREG%2FAvatarFireandAsh%2FHO00018086%2FTV_SmallPosterImage%2F20250925-092255016.jpg&w=256&q=75",
+      "state": "broken",
+      "status_code": 403,
+      "note": "get_client_error",
+      "references": [
+        {
+          "source_table": "series",
+          "source_column": "image_url",
+          "record_id": "9b577aaf-131b-400f-806e-c7fce9aa7483"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://www.regmovies.com/_next/image?url=https%3A%2F%2Fregalcdn.azureedge.net%2FREG%2FWhistle%2FHO00020600%2FTV_SmallPosterImage%2F20260203-132853847.jpg&w=256&q=75",
+      "state": "broken",
+      "status_code": 403,
+      "note": "get_client_error",
+      "references": [
+        {
+          "source_table": "series",
+          "source_column": "image_url",
+          "record_id": "38b3aa8a-b9dd-4205-9138-526b927b1d33"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://d2snwnmzyr8jue.cloudfront.net/6983b8a7377f55c8ec17d586",
+      "state": "broken",
+      "status_code": 404,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "series",
+          "source_column": "image_url",
+          "record_id": "6d42ac50-3143-4232-8ddf-ebc3bb64c8ae"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://m.media-amazon.com/images/M/MV5BNjdmY2MwNTYtZTM1Ny00NWEyLWFhYzUtMDI3NGMwMDhjZTc0XkEyXkFqcGdeQXVyMjQxMDQ0ODI@._V1_SX300.jpg",
+      "state": "broken",
+      "status_code": 404,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "series",
+          "source_column": "image_url",
+          "record_id": "0a9645c4-3d7a-452e-a2b1-17e04802418b"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://d2snwnmzyr8jue.cloudfront.net/6987d8788d5e2d09335dce0a",
+      "state": "broken",
+      "status_code": 404,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "series",
+          "source_column": "image_url",
+          "record_id": "b3fe14ed-aeb5-42f9-bfa7-85cda70ab3c6"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://d2snwnmzyr8jue.cloudfront.net/6983b64e1e64afd01e593016",
+      "state": "broken",
+      "status_code": 404,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "series",
+          "source_column": "image_url",
+          "record_id": "27f958b5-c113-49a0-9684-085c1e5a382e"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://www.metalsomelivebandkaraoke.com/wp-content/uploads/2023/08/metalsome-logo.png",
+      "state": "broken",
+      "status_code": 404,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "series",
+          "source_column": "image_url",
+          "record_id": "0c59db86-8639-4fbb-b8d1-f1f900c3dbf8"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/20/John_Lewis_official_portrait_2003.jpg/200px-John_Lewis_official_portrait_2003.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "explore_tracks",
+          "source_column": "quote_portrait_url",
+          "record_id": "86673311-92c8-4c0f-908f-3c4c54c1ec2c"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/33/Aaron_McGruder_2002_%28cropped%29.png/200px-Aaron_McGruder_2002_%28cropped%29.png",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "explore_tracks",
+          "source_column": "quote_portrait_url",
+          "record_id": "2b806016-83c0-4726-a4ff-c06c8217decc"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Hank_Aaron_%281954%29_%28cropped%29.jpg/200px-Hank_Aaron_%281954%29_%28cropped%29.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "explore_tracks",
+          "source_column": "quote_portrait_url",
+          "record_id": "591dc7dd-f6ee-49bb-8381-5fa4329447f1"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/81/Gladys_Knight_%281969%29.jpg/200px-Gladys_Knight_%281969%29.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "explore_tracks",
+          "source_column": "quote_portrait_url",
+          "record_id": "4209a846-2fd7-4b1e-8a2d-ad14dc638ec2"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Martin_Luther_King%2C_Jr..jpg/200px-Martin_Luther_King%2C_Jr..jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "explore_tracks",
+          "source_column": "quote_portrait_url",
+          "record_id": "069ab40d-88db-441e-a0e1-bb21d83678a4"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/08/Waka_Flocka_2016.png/200px-Waka_Flocka_2016.png",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "explore_tracks",
+          "source_column": "quote_portrait_url",
+          "record_id": "5601c078-2327-48fc-800f-87c03b1cc363"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/JimmyCarterPortrait2.jpg/200px-JimmyCarterPortrait2.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "explore_tracks",
+          "source_column": "quote_portrait_url",
+          "record_id": "773457ae-e687-410d-a0d1-caaad0dcc570"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Jim_Henson_%281989%29_headshot_%28cropped%29.jpg/200px-Jim_Henson_%281989%29_headshot_%28cropped%29.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "explore_tracks",
+          "source_column": "quote_portrait_url",
+          "record_id": "c74fe2af-37a6-447c-97e8-7b71b7d18c13"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a6/Fort_Wainwright_hosts_first_summer_concert_in_two_years_%281%29_%28cropped%29.jpg/200px-Fort_Wainwright_hosts_first_summer_concert_in_two_years_%281%29_%28cropped%29.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "explore_tracks",
+          "source_column": "quote_portrait_url",
+          "record_id": "ea637b45-175e-4cfc-8939-ffabc4794f3d"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/William_B._Hartsfield_1961.jpg/200px-William_B._Hartsfield_1961.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "explore_tracks",
+          "source_column": "quote_portrait_url",
+          "record_id": "b24458eb-9c41-46a6-8626-ea406b951393"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f0/The_Drifters_1957.JPG/200px-The_Drifters_1957.JPG",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "explore_tracks",
+          "source_column": "quote_portrait_url",
+          "record_id": "b4159110-d9bf-437f-9acf-ea800d119bf1"
+        }
+      ],
+      "reference_count": 1
+    },
+    {
+      "url": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Andre_3000_New_York_2014_by_Shankbone.jpg/200px-Andre_3000_New_York_2014_by_Shankbone.jpg",
+      "state": "broken",
+      "status_code": 429,
+      "note": "head_client_error",
+      "references": [
+        {
+          "source_table": "explore_tracks",
+          "source_column": "quote_portrait_url",
+          "record_id": "7e093778-4e6c-4815-a351-7248a6279c34"
+        }
+      ],
+      "reference_count": 1
+    }
+  ]
+}

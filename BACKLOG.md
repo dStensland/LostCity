@@ -29,6 +29,12 @@ Active initiatives, reprioritized for launch proof and sales readiness.
 - [ ] Enforce field coverage targets for events and venues (time, description, image, geo, tags).
 - [ ] Add quality gates for demo-critical sources used in Atlanta + FORTH experiences.
 
+### 0.3 Crawler Staging Validation Pipeline
+- [ ] Provision and verify staging crawler credentials (`STAGING_SUPABASE_URL`, `STAGING_SUPABASE_SERVICE_KEY`) in runtime env.
+- [ ] Run full staging dry-run crawl and capture health baseline (`--db-target staging --dry-run` + health/quality snapshots).
+- [ ] Add pre-prod validation checklist: crawl success rate threshold, error-type review, and top-source diff checks.
+- [ ] Define promotion gate from staging to production runs and document rollback path for bad crawls.
+
 ---
 
 ## Tier 1: Launch Proof (Atlanta + Demos)
