@@ -29,6 +29,7 @@ export type CommunityCategoryDefinition = {
   iconName: string;
   sensitivity: CategorySensitivity;
   trackKeys: SupportTrackKey[];
+  highlightOrgIds: string[];
   storyKeywordHints: string[];
   fallbackStories: FallbackStory[];
 };
@@ -41,6 +42,7 @@ export const COMMUNITY_CATEGORIES: CommunityCategoryDefinition[] = [
     iconName: "Heart",
     sensitivity: "public",
     trackKeys: ["public_health", "community_wellness"],
+    highlightOrgIds: ["ymca-atlanta", "good-samaritan-health-center", "beltline-fitness"],
     storyKeywordHints: [
       "clinic",
       "screening",
@@ -79,6 +81,7 @@ export const COMMUNITY_CATEGORIES: CommunityCategoryDefinition[] = [
     iconName: "Carrot",
     sensitivity: "public",
     trackKeys: ["food_support"],
+    highlightOrgIds: ["atlanta-community-food-bank", "open-hand-atlanta", "community-farmers-markets"],
     storyKeywordHints: [
       "food",
       "meal",
@@ -124,6 +127,7 @@ export const COMMUNITY_CATEGORIES: CommunityCategoryDefinition[] = [
       "veterans",
       "senior_services",
     ],
+    highlightOrgIds: ["nami-georgia", "cancer-support-community-atlanta", "shepherd-center"],
     storyKeywordHints: [
       "support group",
       "peer",
@@ -160,6 +164,7 @@ export const COMMUNITY_CATEGORIES: CommunityCategoryDefinition[] = [
     iconName: "Baby",
     sensitivity: "public",
     trackKeys: ["pediatric_family", "pediatric_health", "womens_health"],
+    highlightOrgIds: ["choa-community-events", "healthy-mothers-ga", "camp-twin-lakes"],
     storyKeywordHints: [
       "family",
       "child",
@@ -206,6 +211,7 @@ export const COMMUNITY_CATEGORIES: CommunityCategoryDefinition[] = [
       "adult_education",
       "patient_financial",
     ],
+    highlightOrgIds: ["atlanta-legal-aid", "worksource-atlanta", "irc-atlanta"],
     storyKeywordHints: [
       "housing",
       "job",
@@ -245,6 +251,7 @@ export const COMMUNITY_CATEGORIES: CommunityCategoryDefinition[] = [
     iconName: "ShieldCheck",
     sensitivity: "opt_in",
     trackKeys: ["substance_recovery", "crisis_safety"],
+    highlightOrgIds: ["ga-council-recovery", "ga-harm-reduction", "padv"],
     storyKeywordHints: [
       "recovery",
       "addiction",
@@ -288,6 +295,7 @@ export const COMMUNITY_CATEGORIES: CommunityCategoryDefinition[] = [
       "transplant",
       "hospital_community",
     ],
+    highlightOrgIds: ["piedmont-healthcare", "georgia-transplant-foundation", "american-lung-georgia"],
     storyKeywordHints: [
       "respiratory",
       "lung",

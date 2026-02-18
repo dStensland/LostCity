@@ -1,14 +1,14 @@
 # Content Health Assessment - 2026-02-18
 
 ## Scope
-- Generated at: 2026-02-18T01:56:27.730502+00:00
+- Generated at: 2026-02-18T02:09:12.118852+00:00
 - Future window: 2026-02-18 to 2026-03-20
 - Window days: 30
 
 ## Core Counts
-- Future events (total): **18,843**
-- Future events (visible canonical): **17,744**
-- Active sources: **468**
+- Future events (total): **18,880**
+- Future events (visible canonical): **17,781**
+- Active sources: **471**
 - Venues: **4,053**
 
 ## Duplicate Integrity
@@ -32,8 +32,8 @@
 - `holiday_hours`: 6
 
 ### Genres
-- Future events with genres: **8,905 / 18,843** (**47.3%**)
-- Music+film with genres: **2,543 / 3,003** (**84.7%**)
+- Future events with genres: **8,905 / 18,880** (**47.2%**)
+- Music+film with genres: **2,543 / 3,040** (**83.7%**)
 - Venues with genres: **283 / 4,053** (**7.0%**)
 
 ### Walkability / Mobility
@@ -63,8 +63,8 @@
 - Future visible events on inactive venues: **141**
 
 ## Crawl Freshness (Last 24h)
-- Runs: **1,028** across **468** sources
-- Status counts: `{'success': 833, 'error': 136, 'running': 59}`
+- Runs: **1,031** across **471** sources
+- Status counts: `{'success': 833, 'error': 136, 'running': 62}`
 - Throughput: found **36,898**, new **5,388**, updated **27,427**
 - Top erroring sources:
   - `atlanta-city-events` (6)

@@ -3,7 +3,7 @@ import type { HospitalAudienceMode } from "@/lib/hospital-modes";
 import { getPortalHospitalLocations } from "@/lib/hospitals";
 import { getEmoryCommunityHubDigest } from "@/lib/emory-community-category-feed";
 import { getEmoryFederationShowcase } from "@/lib/emory-federation-showcase";
-import { getSupportPolicyCounts, getSourcesByTrack } from "@/lib/support-source-policy";
+import { getSupportPolicyCounts, getSourcesByTrack, SUPPORT_SOURCE_POLICY_ITEMS } from "@/lib/support-source-policy";
 import { COMMUNITY_CATEGORIES } from "@/lib/emory-community-categories";
 import {
   EMORY_THEME_CSS,

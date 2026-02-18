@@ -27,6 +27,19 @@ python main.py "${ARGS[@]}" >> "$LOG_FILE" 2>&1
 EXIT_CODE=$?
 echo "Crawl finished at $(date) with exit code $EXIT_CODE" >> "$LOG_FILE"
 
+# Run formal content health audit (read-only) after crawl.
+# Set RUN_CONTENT_HEALTH_AUDIT=0 to skip.
+RUN_CONTENT_HEALTH_AUDIT="${RUN_CONTENT_HEALTH_AUDIT:-1}"
+if [[ "$RUN_CONTENT_HEALTH_AUDIT" == "1" ]]; then
+  AUDIT_AS_OF="${CONTENT_HEALTH_AS_OF:-$(date +%F)}"
+  echo "Starting content health audit for ${AUDIT_AS_OF} at $(date)" >> "$LOG_FILE"
+  python scripts/content_health_audit.py --as-of "$AUDIT_AS_OF" >> "$LOG_FILE" 2>&1
+  AUDIT_EXIT_CODE=$?
+  echo "Content health audit finished at $(date) with exit code $AUDIT_EXIT_CODE" >> "$LOG_FILE"
+else
+  echo "Skipping content health audit (RUN_CONTENT_HEALTH_AUDIT=${RUN_CONTENT_HEALTH_AUDIT})" >> "$LOG_FILE"
+fi
+
 # Keep only last 14 days of logs
 find "$LOG_DIR" -name "crawl_*.log" -mtime +14 -delete
 

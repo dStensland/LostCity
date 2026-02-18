@@ -298,15 +298,14 @@ function CuratedPageIndex({ portalSlug, loading }: { portalSlug: string; loading
                     metadata: { source: "desktop_collapsed_button" },
                   });
                 }}
-                className="group relative h-12 w-12 rounded-full border border-[var(--twilight)]/65 bg-[var(--night)]/90 text-[var(--soft)] shadow-[0_10px_24px_rgba(0,0,0,0.42)] transition-all hover:border-[var(--coral)]/60 hover:text-[var(--cream)] hover:shadow-[0_12px_26px_rgba(0,0,0,0.46)]"
+                className="group h-11 w-11 rounded-full border border-[var(--coral)]/45 bg-[linear-gradient(145deg,rgba(16,20,36,0.96),rgba(11,14,26,0.96))] text-[var(--cream)] shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_0_18px_rgba(255,107,122,0.24),0_10px_20px_rgba(0,0,0,0.5)] transition-all hover:border-[var(--neon-cyan)]/60 hover:shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_0_20px_rgba(37,205,255,0.26),0_12px_22px_rgba(0,0,0,0.55)]"
                 aria-label="Expand page index"
               >
                 <span className="sr-only">Expand page index</span>
-                <span className="absolute inset-[3px] rounded-full border border-[var(--twilight)]/45" />
                 <span className="inline-flex flex-col items-center justify-center gap-[3px]">
                   <span className="h-[2px] w-4 rounded-full bg-current" />
-                  <span className="h-[2px] w-3 rounded-full bg-current/85" />
-                  <span className="h-[2px] w-2 rounded-full bg-current/70" />
+                  <span className="h-[2px] w-4 rounded-full bg-current/80" />
+                  <span className="h-[2px] w-4 rounded-full bg-current/60" />
                 </span>
               </button>
             </div>
@@ -405,14 +404,14 @@ function CuratedPageIndex({ portalSlug, loading }: { portalSlug: string; loading
             target_label: "Open page index",
           });
         }}
-        className="sm:hidden fixed bottom-20 right-4 z-[10000] h-12 w-12 rounded-full border border-[var(--twilight)]/65 bg-[var(--night)]/90 text-[var(--soft)] shadow-[0_10px_24px_rgba(0,0,0,0.42)] transition-all hover:border-[var(--coral)]/60 hover:text-[var(--cream)]"
+        className="sm:hidden fixed bottom-20 right-4 z-[10000] h-11 w-11 rounded-full border border-[var(--coral)]/45 bg-[linear-gradient(145deg,rgba(16,20,36,0.96),rgba(11,14,26,0.96))] text-[var(--cream)] shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_0_16px_rgba(255,107,122,0.22),0_10px_20px_rgba(0,0,0,0.48)] transition-all hover:border-[var(--neon-cyan)]/60 hover:shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_0_20px_rgba(37,205,255,0.24),0_12px_22px_rgba(0,0,0,0.52)]"
         aria-label="Open page index"
       >
         <span className="sr-only">Open page index</span>
         <span className="inline-flex flex-col items-center justify-center gap-[3px]">
           <span className="h-[2px] w-4 rounded-full bg-current" />
-          <span className="h-[2px] w-3 rounded-full bg-current/85" />
-          <span className="h-[2px] w-2 rounded-full bg-current/70" />
+          <span className="h-[2px] w-4 rounded-full bg-current/80" />
+          <span className="h-[2px] w-4 rounded-full bg-current/60" />
         </span>
       </button>
 

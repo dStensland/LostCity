@@ -1,0 +1,318 @@
+{
+  "generatedAt": "2026-02-18T01:02:19.178Z",
+  "baseUrl": "http://localhost:3000",
+  "runs": [
+    {
+      "viewport": "desktop",
+      "route": "/atlanta",
+      "name": "feed",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "pageErrors": [],
+      "failedRequests": [
+        "POST http://localhost:3000/api/portals/atlanta/track :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/tonight?period=today :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/activities/popular?date_filter=week&portal_id=74c2f211-ee11-453d-8386-ac2861705695 :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/trending :: net::ERR_ABORTED"
+      ],
+      "httpIssues": [],
+      "screenshots": [
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/ui-sweep-2026-02-17/desktop_feed_top.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/ui-sweep-2026-02-17/desktop_feed_scroll_1.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/ui-sweep-2026-02-17/desktop_feed_scroll_2.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/ui-sweep-2026-02-17/desktop_feed_scroll_3.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/ui-sweep-2026-02-17/desktop_feed_scroll_4.png"
+      ],
+      "perf": {
+        "domComplete": 1479,
+        "loadEventEnd": 1479.0999999046326,
+        "fcp": 212,
+        "lcp": 1756,
+        "cls": 2.028583829365079
+      },
+      "tocCandidates": []
+    },
+    {
+      "viewport": "desktop",
+      "route": "/atlanta?view=find",
+      "name": "feed_find",
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+      ],
+      "consoleWarnings": [],
+      "pageErrors": [],
+      "failedRequests": [
+        "GET https://www.trumba.com/i/DgAo4Lv5xUONyC4ySijwi5SY.png :: net::ERR_ABORTED",
+        "GET https://images.squarespace-cdn.com/content/v1/62e113831445fc09ed01234c/1749134172019-U3OJJHGHM54E527UKXKX/TuesdayNightTrivia_EventSize.png :: net::ERR_ABORTED",
+        "GET https://images.squarespace-cdn.com/content/v1/615f6b962cfd357c51d9fc5a/334377b3-8cd4-41d4-8e11-534f85cb21d3/ATG+IG+squ.png :: net::ERR_ABORTED",
+        "POST http://localhost:3000/api/portals/atlanta/track :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/timeline?portal_id=74c2f211-ee11-453d-8386-ac2861705695 :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/timeline?portal_id=74c2f211-ee11-453d-8386-ac2861705695 :: net::ERR_ABORTED"
+      ],
+      "httpIssues": [
+        "403 http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fwww.eagleeyebooks.com%2Fsites%2Fdefault%2Ffiles%2Fstyles%2Flarge%2Fpublic%2F2026-01%2Folivia-headshot-final-1000px.jpg%3Fitok%3DX-h1k2UQ"
+      ],
+      "screenshots": [
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/ui-sweep-2026-02-17/desktop_feed_find_top.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/ui-sweep-2026-02-17/desktop_feed_find_scroll_1.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/ui-sweep-2026-02-17/desktop_feed_find_scroll_2.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/ui-sweep-2026-02-17/desktop_feed_find_scroll_3.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/ui-sweep-2026-02-17/desktop_feed_find_scroll_4.png"
+      ],
+      "perf": {
+        "domComplete": 650.3999999761581,
+        "loadEventEnd": 650.3999999761581,
+        "fcp": 168,
+        "lcp": 888,
+        "cls": 1.029100529100529
+      },
+      "tocCandidates": []
+    },
+    {
+      "viewport": "desktop",
+      "route": "/atlanta?view=community",
+      "name": "feed_community",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "pageErrors": [],
+      "failedRequests": [
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fall.web.img.acsta.net%2Fr_2500_x%2Fimg%2F3b%2F14%2F3b142ed3448264897eac93464e8a14e9.jpg :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Flh3.googleusercontent.com%2Fplace-photos%2FAL8-SNGwwv1qeHBLhwkiF2739jxF_4AUJYf2lEg_BCLjjq-zNkWTSQKieeU14xg8szIN8c9gi-96wAvHlWm761lvnp13zMh7YD3oLaw_8ZqLXjCfoADdZ0vPFJGWwbKak3EUr47ogTFf0SvUnbhV1g%3Ds4800-w800 :: net::ERR_ABORTED",
+        "GET http://localhost:3000/_next/image?url=https%3A%2F%2Fimg.evbuc.com%2Fhttps%253A%252F%252Fcdn.evbuc.com%252Fimages%252F1175890458%252F2058240489713%252F1%252Foriginal.20260126-220655%3Fauto%3Dformat%252Ccompress%26q%3D75%26sharp%3D10%26s%3Dd2e880bb3b4ea6e47331ea7a4ac9c887&w=128&q=75 :: net::ERR_ABORTED",
+        "POST http://localhost:3000/api/portals/atlanta/track :: net::ERR_ABORTED"
+      ],
+      "httpIssues": [],
+      "screenshots": [
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/ui-sweep-2026-02-17/desktop_feed_community_top.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/ui-sweep-2026-02-17/desktop_feed_community_scroll_1.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/ui-sweep-2026-02-17/desktop_feed_community_scroll_2.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/ui-sweep-2026-02-17/desktop_feed_community_scroll_3.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/ui-sweep-2026-02-17/desktop_feed_community_scroll_4.png"
+      ],
+      "perf": {
+        "domComplete": 479.7999999523163,
+        "loadEventEnd": 479.7999999523163,
+        "fcp": 324,
+        "lcp": 724,
+        "cls": 0
+      },
+      "tocCandidates": []
+    },
+    {
+      "viewport": "desktop",
+      "route": "/auth/login",
+      "name": "auth_login",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "pageErrors": [],
+      "failedRequests": [],
+      "httpIssues": [],
+      "screenshots": [
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/ui-sweep-2026-02-17/desktop_auth_login_top.png"
+      ],
+      "perf": {
+        "domComplete": 925.7000000476837,
+        "loadEventEnd": 925.7000000476837,
+        "fcp": 200,
+        "lcp": 0,
+        "cls": 0
+      },
+      "tocCandidates": []
+    },
+    {
+      "viewport": "desktop",
+      "route": "/onboarding?preview=1",
+      "name": "onboarding_preview_categories",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "pageErrors": [],
+      "failedRequests": [
+        "GET http://localhost:3000/api/filters :: net::ERR_ABORTED"
+      ],
+      "httpIssues": [],
+      "screenshots": [
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/ui-sweep-2026-02-17/desktop_onboarding_preview_categories_top.png"
+      ],
+      "perf": {
+        "domComplete": 193.39999997615814,
+        "loadEventEnd": 193.39999997615814,
+        "fcp": 124,
+        "lcp": 416,
+        "cls": 0
+      },
+      "tocCandidates": []
+    },
+    {
+      "viewport": "desktop",
+      "route": "/onboarding?preview=1&step=genres&categories=music,food_drink,comedy",
+      "name": "onboarding_preview_genres",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "pageErrors": [],
+      "failedRequests": [],
+      "httpIssues": [],
+      "screenshots": [
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/ui-sweep-2026-02-17/desktop_onboarding_preview_genres_top.png"
+      ],
+      "perf": {
+        "domComplete": 121.5,
+        "loadEventEnd": 121.60000002384186,
+        "fcp": 96,
+        "lcp": 1252,
+        "cls": 0
+      },
+      "tocCandidates": []
+    },
+    {
+      "viewport": "mobile",
+      "route": "/atlanta",
+      "name": "feed",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "pageErrors": [],
+      "failedRequests": [
+        "POST http://localhost:3000/api/portals/atlanta/track :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/activities/popular?date_filter=week&portal_id=74c2f211-ee11-453d-8386-ac2861705695 :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/trending :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/tonight?period=today :: net::ERR_ABORTED"
+      ],
+      "httpIssues": [],
+      "screenshots": [
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/ui-sweep-2026-02-17/mobile_feed_top.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/ui-sweep-2026-02-17/mobile_feed_scroll_1.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/ui-sweep-2026-02-17/mobile_feed_scroll_2.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/ui-sweep-2026-02-17/mobile_feed_scroll_3.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/ui-sweep-2026-02-17/mobile_feed_scroll_4.png"
+      ],
+      "perf": {
+        "domComplete": 826.2000000476837,
+        "loadEventEnd": 826.2999999523163,
+        "fcp": 104,
+        "lcp": 3608,
+        "cls": 0.6537609896815686
+      },
+      "tocCandidates": []
+    },
+    {
+      "viewport": "mobile",
+      "route": "/atlanta?view=find",
+      "name": "feed_find",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "pageErrors": [],
+      "failedRequests": [
+        "GET http://localhost:3000/api/timeline?portal_id=74c2f211-ee11-453d-8386-ac2861705695 :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/timeline?portal_id=74c2f211-ee11-453d-8386-ac2861705695 :: net::ERR_ABORTED",
+        "POST http://localhost:3000/api/portals/atlanta/track :: net::ERR_ABORTED"
+      ],
+      "httpIssues": [],
+      "screenshots": [
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/ui-sweep-2026-02-17/mobile_feed_find_top.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/ui-sweep-2026-02-17/mobile_feed_find_scroll_1.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/ui-sweep-2026-02-17/mobile_feed_find_scroll_2.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/ui-sweep-2026-02-17/mobile_feed_find_scroll_3.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/ui-sweep-2026-02-17/mobile_feed_find_scroll_4.png"
+      ],
+      "perf": {
+        "domComplete": 284.39999997615814,
+        "loadEventEnd": 285.10000002384186,
+        "fcp": 100,
+        "lcp": 472,
+        "cls": 0.02528076483008464
+      },
+      "tocCandidates": []
+    },
+    {
+      "viewport": "mobile",
+      "route": "/atlanta?view=community",
+      "name": "feed_community",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "pageErrors": [],
+      "failedRequests": [
+        "POST http://localhost:3000/api/portals/atlanta/track :: net::ERR_ABORTED"
+      ],
+      "httpIssues": [],
+      "screenshots": [
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/ui-sweep-2026-02-17/mobile_feed_community_top.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/ui-sweep-2026-02-17/mobile_feed_community_scroll_1.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/ui-sweep-2026-02-17/mobile_feed_community_scroll_2.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/ui-sweep-2026-02-17/mobile_feed_community_scroll_3.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/ui-sweep-2026-02-17/mobile_feed_community_scroll_4.png"
+      ],
+      "perf": {
+        "domComplete": 1170.5999999046326,
+        "loadEventEnd": 1170.5999999046326,
+        "fcp": 208,
+        "lcp": 1420,
+        "cls": 0
+      },
+      "tocCandidates": []
+    },
+    {
+      "viewport": "mobile",
+      "route": "/auth/login",
+      "name": "auth_login",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "pageErrors": [],
+      "failedRequests": [],
+      "httpIssues": [],
+      "screenshots": [
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/ui-sweep-2026-02-17/mobile_auth_login_top.png"
+      ],
+      "perf": {
+        "domComplete": 107.70000004768372,
+        "loadEventEnd": 107.70000004768372,
+        "fcp": 68,
+        "lcp": 0,
+        "cls": 0
+      },
+      "tocCandidates": []
+    },
+    {
+      "viewport": "mobile",
+      "route": "/onboarding?preview=1",
+      "name": "onboarding_preview_categories",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "pageErrors": [],
+      "failedRequests": [
+        "GET http://localhost:3000/api/filters :: net::ERR_ABORTED"
+      ],
+      "httpIssues": [],
+      "screenshots": [
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/ui-sweep-2026-02-17/mobile_onboarding_preview_categories_top.png"
+      ],
+      "perf": {
+        "domComplete": 160.39999997615814,
+        "loadEventEnd": 160.39999997615814,
+        "fcp": 132,
+        "lcp": 352,
+        "cls": 0
+      },
+      "tocCandidates": []
+    },
+    {
+      "viewport": "mobile",
+      "route": "/onboarding?preview=1&step=genres&categories=music,food_drink,comedy",
+      "name": "onboarding_preview_genres",
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "pageErrors": [],
+      "failedRequests": [],
+      "httpIssues": [],
+      "screenshots": [
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/ui-sweep-2026-02-17/mobile_onboarding_preview_genres_top.png"
+      ],
+      "perf": {
+        "domComplete": 258.60000002384186,
+        "loadEventEnd": 258.60000002384186,
+        "fcp": 52,
+        "lcp": 292,
+        "cls": 0
+      },
+      "tocCandidates": []
+    }
+  ]
+}
