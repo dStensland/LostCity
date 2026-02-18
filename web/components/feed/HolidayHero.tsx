@@ -83,7 +83,7 @@ const HOLIDAYS: HolidayConfig[] = [
     gradient: "linear-gradient(135deg, #1a0505 0%, #350a0a 30%, #2a0808 60%, #1a0303 100%)",
     accentColor: "#ff4444",
     glowColor: "#cc0000",
-    icon: "\uD83C\uDFEE",
+    icon: "/icons/fire-horse.png",
     showFrom: [2, 18],
     showUntil: [2, 22],
     eventDate: [2026, 2, 17],
