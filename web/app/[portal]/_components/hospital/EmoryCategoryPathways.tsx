@@ -32,23 +32,22 @@ type PathwayCard = {
 
 type Props = {
   cards: PathwayCard[];
-  portalSlug: string;
 };
 
 export default function EmoryCategoryPathways({ cards }: Props) {
   return (
     <section className="px-4 sm:px-5">
       <h2 className="text-sm font-semibold text-[var(--muted)] uppercase tracking-wider mb-3">
-        Find what you need
+        Explore by category
       </h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="flex gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory pb-2 sm:grid sm:grid-cols-2 sm:overflow-visible sm:snap-none sm:pb-0 lg:grid-cols-3">
         {cards.map((card) => {
           const Icon = ICON_MAP[card.iconName];
           return (
             <a
               key={card.key}
               href={card.filterHref}
-              className="emory-category-card block no-underline"
+              className="emory-category-card block no-underline shrink-0 snap-start w-[260px] sm:w-auto"
             >
               <div className="flex items-start gap-3">
                 {Icon && (
@@ -67,13 +66,17 @@ export default function EmoryCategoryPathways({ cards }: Props) {
                   </p>
                   <div className="flex items-center gap-2 mt-2 flex-wrap">
                     <span className="inline-flex items-center rounded-full bg-[var(--portal-accent)]/10 px-2 py-0.5 text-xs font-medium text-[var(--portal-accent)]">
-                      {card.orgCount} orgs
+                      {card.orgCount} organizations
                     </span>
-                    {card.highlightOrgs.length > 0 && (
+                    {card.highlightOrgs.length > 0 ? (
                       <span className="text-xs text-[var(--muted)] truncate">
                         {card.highlightOrgs.join(", ")}
                       </span>
-                    )}
+                    ) : card.orgCount > 0 ? (
+                      <span className="text-xs italic text-[var(--muted)]">
+                        Confidential resources available
+                      </span>
+                    ) : null}
                   </div>
                   <span className="inline-block mt-2 text-xs font-medium text-[var(--portal-accent)]">
                     Explore &rarr;

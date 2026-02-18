@@ -116,6 +116,9 @@ export default async function EmoryCommunityExperience({
     ...categoryFilters,
   ];
 
+  // Build ID → name lookup for curated highlight orgs
+  const orgNameById = new Map(SUPPORT_SOURCE_POLICY_ITEMS.map((item) => [item.id, item.name]));
+
   // Build pathway cards from digest categories
   const pathwayCards = hubDigest.categories.map((cat) => {
     const catDef = COMMUNITY_CATEGORIES.find((c) => c.key === cat.key);
@@ -130,7 +133,13 @@ export default async function EmoryCommunityExperience({
       }
     }
 
-    const highlightOrgs = allOrgs.slice(0, 3).map((o) => o.name);
+    // Privacy gate: opt-in categories never expose org names
+    const highlightOrgs =
+      catDef?.sensitivity === "opt_in"
+        ? []
+        : (catDef?.highlightOrgIds ?? [])
+            .map((id) => orgNameById.get(id))
+            .filter((name): name is string => Boolean(name));
 
     return {
       key: cat.key,
@@ -186,7 +195,6 @@ export default async function EmoryCommunityExperience({
 
           <EmoryCategoryPathways
             cards={pathwayCards}
-            portalSlug={portal.slug}
           />
 
         <section id="discovery-deck" className="emory-panel p-4 sm:p-5">
