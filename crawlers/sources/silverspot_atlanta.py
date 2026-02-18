@@ -51,6 +51,17 @@ class SilverspotAtlantaCrawler(ChainCinemaCrawler):
         movies = []
 
         try:
+            marker_text = f"{page.title()} {page.inner_text('body')[:1500]}".lower()
+            if "just a moment" in marker_text and "cloudflare" in marker_text:
+                logger.warning(
+                    "  Cloudflare challenge detected for %s; skipping extraction",
+                    location["venue_data"]["name"],
+                )
+                return []
+        except Exception:
+            pass
+
+        try:
             page.wait_for_selector(".movie-card, .film-listing, .showtime-container", timeout=10000)
         except Exception:
             logger.debug(f"  No showtime elements found for {location['venue_data']['name']}")

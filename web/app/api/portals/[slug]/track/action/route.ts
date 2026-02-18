@@ -97,11 +97,11 @@ export async function POST(
     .from("portals")
     .select("id")
     .eq("slug", canonicalSlug)
-    .eq("status", "active")
     .maybeSingle();
 
   if (!portal) {
-    return new Response(null, { status: 404 });
+    // Interaction tracking is non-blocking; return success to avoid client-side error noise.
+    return new Response(null, { status: 204 });
   }
 
   const portalId = (portal as { id: string }).id;

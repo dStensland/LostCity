@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
 import { PortalHeader } from "@/components/headers";
@@ -14,8 +14,12 @@ export default async function FilmShowtimesPage({ params }: Props) {
   const { portal: slug } = await params;
   const portal = await getCachedPortalBySlug(slug);
 
-  if (!portal || getPortalVertical(portal) !== "film") {
+  if (!portal) {
     notFound();
+  }
+
+  if (getPortalVertical(portal) !== "film") {
+    redirect(`/${portal.slug}?view=find&type=events`);
   }
 
   return (

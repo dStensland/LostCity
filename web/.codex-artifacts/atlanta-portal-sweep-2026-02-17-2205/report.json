@@ -1,0 +1,511 @@
+{
+  "generatedAt": "2026-02-18T03:07:07.885Z",
+  "baseUrl": "http://localhost:3000",
+  "routes": [
+    "/atlanta",
+    "/atlanta?view=find",
+    "/atlanta?view=community",
+    "/atlanta/happening-now",
+    "/atlanta/festivals",
+    "/atlanta/showtimes",
+    "/atlanta/calendar",
+    "/atlanta/community-hub",
+    "/atlanta/parks",
+    "/atlanta/services",
+    "/atlanta/venues",
+    "/atlanta/partners"
+  ],
+  "runs": [
+    {
+      "route": "/atlanta",
+      "viewport": "desktop",
+      "title": "Atlanta Events | Lost City",
+      "finalUrl": "http://localhost:3000/atlanta",
+      "perf": {
+        "cls": 0,
+        "lcp": 1732,
+        "fcp": 1456,
+        "domComplete": 2148.7999999523163,
+        "loadEventEnd": 2149.2999999523163
+      },
+      "loadError": null,
+      "consoleErrors": [],
+      "failedRequests": [
+        "POST http://localhost:3000/api/portals/atlanta/track :: net::ERR_ABORTED"
+      ],
+      "statusLikeIssues": [],
+      "screenshot": ".codex-artifacts/atlanta-portal-sweep-2026-02-17-2205/desktop_atlanta_top.png"
+    },
+    {
+      "route": "/atlanta?view=find",
+      "viewport": "desktop",
+      "title": "Atlanta Events | Lost City",
+      "finalUrl": "http://localhost:3000/atlanta?view=find",
+      "perf": {
+        "cls": 0,
+        "lcp": 2100,
+        "fcp": 2100,
+        "domComplete": 2799.7000000476837,
+        "loadEventEnd": 2800
+      },
+      "loadError": null,
+      "consoleErrors": [],
+      "failedRequests": [
+        "POST http://localhost:3000/api/portals/atlanta/track :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/timeline?portal_id=74c2f211-ee11-453d-8386-ac2861705695 :: net::ERR_ABORTED"
+      ],
+      "statusLikeIssues": [],
+      "screenshot": ".codex-artifacts/atlanta-portal-sweep-2026-02-17-2205/desktop_atlanta_view_find_top.png"
+    },
+    {
+      "route": "/atlanta?view=community",
+      "viewport": "desktop",
+      "title": "Atlanta Events | Lost City",
+      "finalUrl": "http://localhost:3000/atlanta?view=community",
+      "perf": {
+        "cls": 0,
+        "lcp": 2956,
+        "fcp": 2956,
+        "domComplete": 3431.600000023842,
+        "loadEventEnd": 3431.7999999523163
+      },
+      "loadError": null,
+      "consoleErrors": [],
+      "failedRequests": [
+        "POST http://localhost:3000/api/portals/atlanta/track :: net::ERR_ABORTED"
+      ],
+      "statusLikeIssues": [],
+      "screenshot": ".codex-artifacts/atlanta-portal-sweep-2026-02-17-2205/desktop_atlanta_view_community_top.png"
+    },
+    {
+      "route": "/atlanta/happening-now",
+      "viewport": "desktop",
+      "title": "Atlanta Events | Lost City",
+      "finalUrl": "http://localhost:3000/atlanta/happening-now",
+      "perf": {
+        "cls": 0.00015931833526234567,
+        "lcp": 4364,
+        "fcp": 4252,
+        "domComplete": 0,
+        "loadEventEnd": 0
+      },
+      "loadError": null,
+      "consoleErrors": [],
+      "failedRequests": [],
+      "statusLikeIssues": [],
+      "screenshot": ".codex-artifacts/atlanta-portal-sweep-2026-02-17-2205/desktop_atlanta_happening_now_top.png"
+    },
+    {
+      "route": "/atlanta/festivals",
+      "viewport": "desktop",
+      "title": "Festivals | Atlanta",
+      "finalUrl": "http://localhost:3000/atlanta/festivals",
+      "perf": {
+        "cls": 0,
+        "lcp": 10704,
+        "fcp": 6200,
+        "domComplete": 13119.299999952316,
+        "loadEventEnd": 13120.399999976158
+      },
+      "loadError": null,
+      "consoleErrors": [],
+      "failedRequests": [
+        "POST http://localhost:3000/api/portals/atlanta/track :: net::ERR_ABORTED"
+      ],
+      "statusLikeIssues": [],
+      "screenshot": ".codex-artifacts/atlanta-portal-sweep-2026-02-17-2205/desktop_atlanta_festivals_top.png"
+    },
+    {
+      "route": "/atlanta/showtimes",
+      "viewport": "desktop",
+      "title": "",
+      "finalUrl": "http://localhost:3000/atlanta?view=find&type=events",
+      "perf": {
+        "cls": 0,
+        "lcp": 0,
+        "fcp": 0,
+        "domComplete": 0,
+        "loadEventEnd": 0
+      },
+      "loadError": null,
+      "consoleErrors": [],
+      "failedRequests": [
+        "POST http://localhost:3000/api/portals/atlanta/track :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/timeline?type=events&portal_id=74c2f211-ee11-453d-8386-ac2861705695 :: net::ERR_ABORTED"
+      ],
+      "statusLikeIssues": [],
+      "screenshot": ".codex-artifacts/atlanta-portal-sweep-2026-02-17-2205/desktop_atlanta_showtimes_top.png"
+    },
+    {
+      "route": "/atlanta/calendar",
+      "viewport": "desktop",
+      "title": "",
+      "finalUrl": "http://localhost:3000/atlanta?view=find&type=events&display=calendar",
+      "perf": {
+        "cls": 0,
+        "lcp": 0,
+        "fcp": 0,
+        "domComplete": 0,
+        "loadEventEnd": 0
+      },
+      "loadError": null,
+      "consoleErrors": [],
+      "failedRequests": [
+        "POST http://localhost:3000/api/portals/atlanta/track :: net::ERR_ABORTED"
+      ],
+      "statusLikeIssues": [],
+      "screenshot": ".codex-artifacts/atlanta-portal-sweep-2026-02-17-2205/desktop_atlanta_calendar_top.png"
+    },
+    {
+      "route": "/atlanta/community-hub",
+      "viewport": "desktop",
+      "title": "",
+      "finalUrl": "http://localhost:3000/atlanta?view=community",
+      "perf": {
+        "cls": 0,
+        "lcp": 0,
+        "fcp": 0,
+        "domComplete": 0,
+        "loadEventEnd": 0
+      },
+      "loadError": null,
+      "consoleErrors": [],
+      "failedRequests": [
+        "POST http://localhost:3000/api/portals/atlanta/track :: net::ERR_ABORTED"
+      ],
+      "statusLikeIssues": [],
+      "screenshot": ".codex-artifacts/atlanta-portal-sweep-2026-02-17-2205/desktop_atlanta_community_hub_top.png"
+    },
+    {
+      "route": "/atlanta/parks",
+      "viewport": "desktop",
+      "title": "",
+      "finalUrl": "http://localhost:3000/atlanta?view=find&type=destinations",
+      "perf": {
+        "cls": 0,
+        "lcp": 0,
+        "fcp": 0,
+        "domComplete": 0,
+        "loadEventEnd": 0
+      },
+      "loadError": null,
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ],
+      "failedRequests": [
+        "GET http://localhost:3000/_next/static/chunks/%5Broot-of-the-server%5D__c15e1d2f._.css :: net::ERR_ABORTED",
+        "POST http://localhost:3000/api/portals/atlanta/track :: net::ERR_ABORTED"
+      ],
+      "statusLikeIssues": [
+        "404 http://localhost:3000/api/portals/atlanta/track",
+        "404 http://localhost:3000/atlanta?view=find&type=destinations"
+      ],
+      "screenshot": ".codex-artifacts/atlanta-portal-sweep-2026-02-17-2205/desktop_atlanta_parks_top.png"
+    },
+    {
+      "route": "/atlanta/services",
+      "viewport": "desktop",
+      "title": "",
+      "finalUrl": "http://localhost:3000/atlanta?view=find&type=destinations",
+      "perf": {
+        "cls": 0,
+        "lcp": 0,
+        "fcp": 0,
+        "domComplete": 0,
+        "loadEventEnd": 0
+      },
+      "loadError": null,
+      "consoleErrors": [],
+      "failedRequests": [
+        "POST http://localhost:3000/api/portals/atlanta/track :: net::ERR_ABORTED"
+      ],
+      "statusLikeIssues": [],
+      "screenshot": ".codex-artifacts/atlanta-portal-sweep-2026-02-17-2205/desktop_atlanta_services_top.png"
+    },
+    {
+      "route": "/atlanta/venues",
+      "viewport": "desktop",
+      "title": "",
+      "finalUrl": "http://localhost:3000/atlanta?view=find&type=destinations",
+      "perf": {
+        "cls": 0,
+        "lcp": 0,
+        "fcp": 0,
+        "domComplete": 0,
+        "loadEventEnd": 0
+      },
+      "loadError": null,
+      "consoleErrors": [],
+      "failedRequests": [
+        "POST http://localhost:3000/api/portals/atlanta/track :: net::ERR_ABORTED"
+      ],
+      "statusLikeIssues": [],
+      "screenshot": ".codex-artifacts/atlanta-portal-sweep-2026-02-17-2205/desktop_atlanta_venues_top.png"
+    },
+    {
+      "route": "/atlanta/partners",
+      "viewport": "desktop",
+      "title": "",
+      "finalUrl": "http://localhost:3000/atlanta?view=community",
+      "perf": {
+        "cls": 0,
+        "lcp": 0,
+        "fcp": 0,
+        "domComplete": 0,
+        "loadEventEnd": 0
+      },
+      "loadError": null,
+      "consoleErrors": [],
+      "failedRequests": [
+        "POST http://localhost:3000/api/portals/atlanta/track :: net::ERR_ABORTED"
+      ],
+      "statusLikeIssues": [],
+      "screenshot": ".codex-artifacts/atlanta-portal-sweep-2026-02-17-2205/desktop_atlanta_partners_top.png"
+    },
+    {
+      "route": "/atlanta",
+      "viewport": "mobile",
+      "title": "Atlanta Events | Lost City",
+      "finalUrl": "http://localhost:3000/atlanta",
+      "perf": {
+        "cls": 0.002360833510129489,
+        "lcp": 2404,
+        "fcp": 2272,
+        "domComplete": 0,
+        "loadEventEnd": 0
+      },
+      "loadError": null,
+      "consoleErrors": [],
+      "failedRequests": [
+        "POST http://localhost:3000/api/portals/atlanta/track :: net::ERR_ABORTED"
+      ],
+      "statusLikeIssues": [],
+      "screenshot": ".codex-artifacts/atlanta-portal-sweep-2026-02-17-2205/mobile_atlanta_top.png"
+    },
+    {
+      "route": "/atlanta?view=find",
+      "viewport": "mobile",
+      "title": "Atlanta Events | Lost City",
+      "finalUrl": "http://localhost:3000/atlanta?view=find",
+      "perf": {
+        "cls": 0,
+        "lcp": 2500,
+        "fcp": 2032,
+        "domComplete": 0,
+        "loadEventEnd": 0
+      },
+      "loadError": null,
+      "consoleErrors": [],
+      "failedRequests": [],
+      "statusLikeIssues": [],
+      "screenshot": ".codex-artifacts/atlanta-portal-sweep-2026-02-17-2205/mobile_atlanta_view_find_top.png"
+    },
+    {
+      "route": "/atlanta?view=community",
+      "viewport": "mobile",
+      "title": "Atlanta Events | Lost City",
+      "finalUrl": "http://localhost:3000/atlanta?view=community",
+      "perf": {
+        "cls": 0,
+        "lcp": 1788,
+        "fcp": 1692,
+        "domComplete": 2553.5,
+        "loadEventEnd": 2553.7999999523163
+      },
+      "loadError": null,
+      "consoleErrors": [],
+      "failedRequests": [
+        "POST http://localhost:3000/api/portals/atlanta/track :: net::ERR_ABORTED"
+      ],
+      "statusLikeIssues": [],
+      "screenshot": ".codex-artifacts/atlanta-portal-sweep-2026-02-17-2205/mobile_atlanta_view_community_top.png"
+    },
+    {
+      "route": "/atlanta/happening-now",
+      "viewport": "mobile",
+      "title": "Atlanta Events | Lost City",
+      "finalUrl": "http://localhost:3000/atlanta/happening-now",
+      "perf": {
+        "cls": 0,
+        "lcp": 1764,
+        "fcp": 1684,
+        "domComplete": 2169.399999976158,
+        "loadEventEnd": 2169.399999976158
+      },
+      "loadError": null,
+      "consoleErrors": [],
+      "failedRequests": [],
+      "statusLikeIssues": [],
+      "screenshot": ".codex-artifacts/atlanta-portal-sweep-2026-02-17-2205/mobile_atlanta_happening_now_top.png"
+    },
+    {
+      "route": "/atlanta/festivals",
+      "viewport": "mobile",
+      "title": "Festivals | Atlanta",
+      "finalUrl": "http://localhost:3000/atlanta/festivals",
+      "perf": {
+        "cls": 0,
+        "lcp": 4280,
+        "fcp": 3224,
+        "domComplete": 3937,
+        "loadEventEnd": 3937.2999999523163
+      },
+      "loadError": null,
+      "consoleErrors": [],
+      "failedRequests": [
+        "POST http://localhost:3000/api/portals/atlanta/track :: net::ERR_ABORTED"
+      ],
+      "statusLikeIssues": [],
+      "screenshot": ".codex-artifacts/atlanta-portal-sweep-2026-02-17-2205/mobile_atlanta_festivals_top.png"
+    },
+    {
+      "route": "/atlanta/showtimes",
+      "viewport": "mobile",
+      "title": "Atlanta Events | Lost City",
+      "finalUrl": "http://localhost:3000/atlanta?view=find&type=events",
+      "perf": {
+        "cls": 0.002360833510129489,
+        "lcp": 744,
+        "fcp": 712,
+        "domComplete": 911.1999999284744,
+        "loadEventEnd": 911.2999999523163
+      },
+      "loadError": null,
+      "consoleErrors": [],
+      "failedRequests": [
+        "POST http://localhost:3000/api/portals/atlanta/track :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/timeline?type=events&portal_id=74c2f211-ee11-453d-8386-ac2861705695 :: net::ERR_ABORTED",
+        "POST http://localhost:3000/api/portals/atlanta/track :: net::ERR_ABORTED",
+        "GET http://localhost:3000/atlanta?view=find&type=events&date=today&_rsc=c72en :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/timeline?type=events&portal_id=74c2f211-ee11-453d-8386-ac2861705695 :: net::ERR_ABORTED"
+      ],
+      "statusLikeIssues": [],
+      "screenshot": ".codex-artifacts/atlanta-portal-sweep-2026-02-17-2205/mobile_atlanta_showtimes_top.png"
+    },
+    {
+      "route": "/atlanta/calendar",
+      "viewport": "mobile",
+      "title": "Atlanta Events | Lost City",
+      "finalUrl": "http://localhost:3000/atlanta?view=find&type=events&display=calendar",
+      "perf": {
+        "cls": 0.002360833510129489,
+        "lcp": 0,
+        "fcp": 768,
+        "domComplete": 0,
+        "loadEventEnd": 0
+      },
+      "loadError": null,
+      "consoleErrors": [],
+      "failedRequests": [
+        "POST http://localhost:3000/api/portals/atlanta/track :: net::ERR_ABORTED",
+        "POST http://localhost:3000/api/portals/atlanta/track :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/calendar?month=2&year=2026&portal_id=74c2f211-ee11-453d-8386-ac2861705695 :: net::ERR_ABORTED"
+      ],
+      "statusLikeIssues": [],
+      "screenshot": ".codex-artifacts/atlanta-portal-sweep-2026-02-17-2205/mobile_atlanta_calendar_top.png"
+    },
+    {
+      "route": "/atlanta/community-hub",
+      "viewport": "mobile",
+      "title": "Atlanta Events | Lost City",
+      "finalUrl": "http://localhost:3000/atlanta?view=community",
+      "perf": {
+        "cls": 0,
+        "lcp": 796,
+        "fcp": 796,
+        "domComplete": 753.1000000238419,
+        "loadEventEnd": 753.2000000476837
+      },
+      "loadError": null,
+      "consoleErrors": [],
+      "failedRequests": [
+        "POST http://localhost:3000/api/portals/atlanta/track :: net::ERR_ABORTED",
+        "POST http://localhost:3000/api/portals/atlanta/track :: net::ERR_ABORTED"
+      ],
+      "statusLikeIssues": [],
+      "screenshot": ".codex-artifacts/atlanta-portal-sweep-2026-02-17-2205/mobile_atlanta_community_hub_top.png"
+    },
+    {
+      "route": "/atlanta/parks",
+      "viewport": "mobile",
+      "title": "Atlanta Events | Lost City",
+      "finalUrl": "http://localhost:3000/atlanta?view=find&type=destinations",
+      "perf": {
+        "cls": 0,
+        "lcp": 0,
+        "fcp": 512,
+        "domComplete": 0,
+        "loadEventEnd": 0
+      },
+      "loadError": null,
+      "consoleErrors": [],
+      "failedRequests": [
+        "POST http://localhost:3000/api/portals/atlanta/track :: net::ERR_ABORTED"
+      ],
+      "statusLikeIssues": [],
+      "screenshot": ".codex-artifacts/atlanta-portal-sweep-2026-02-17-2205/mobile_atlanta_parks_top.png"
+    },
+    {
+      "route": "/atlanta/services",
+      "viewport": "mobile",
+      "title": "Atlanta Events | Lost City",
+      "finalUrl": "http://localhost:3000/atlanta?view=find&type=destinations",
+      "perf": {
+        "cls": 0.002360833510129489,
+        "lcp": 760,
+        "fcp": 712,
+        "domComplete": 885,
+        "loadEventEnd": 885.2000000476837
+      },
+      "loadError": null,
+      "consoleErrors": [],
+      "failedRequests": [
+        "POST http://localhost:3000/api/portals/atlanta/track :: net::ERR_ABORTED"
+      ],
+      "statusLikeIssues": [],
+      "screenshot": ".codex-artifacts/atlanta-portal-sweep-2026-02-17-2205/mobile_atlanta_services_top.png"
+    },
+    {
+      "route": "/atlanta/venues",
+      "viewport": "mobile",
+      "title": "",
+      "finalUrl": "http://localhost:3000/atlanta?view=find&type=destinations",
+      "perf": {
+        "cls": 0,
+        "lcp": 0,
+        "fcp": 340,
+        "domComplete": 0,
+        "loadEventEnd": 0
+      },
+      "loadError": null,
+      "consoleErrors": [],
+      "failedRequests": [
+        "POST http://localhost:3000/api/portals/atlanta/track :: net::ERR_ABORTED"
+      ],
+      "statusLikeIssues": [],
+      "screenshot": ".codex-artifacts/atlanta-portal-sweep-2026-02-17-2205/mobile_atlanta_venues_top.png"
+    },
+    {
+      "route": "/atlanta/partners",
+      "viewport": "mobile",
+      "title": "Atlanta Events | Lost City",
+      "finalUrl": "http://localhost:3000/atlanta?view=community",
+      "perf": {
+        "cls": 0,
+        "lcp": 1080,
+        "fcp": 1064,
+        "domComplete": 1015.2000000476837,
+        "loadEventEnd": 1015.3000000715256
+      },
+      "loadError": null,
+      "consoleErrors": [],
+      "failedRequests": [
+        "POST http://localhost:3000/api/portals/atlanta/track :: net::ERR_ABORTED",
+        "POST http://localhost:3000/api/portals/atlanta/track :: net::ERR_ABORTED"
+      ],
+      "statusLikeIssues": [],
+      "screenshot": ".codex-artifacts/atlanta-portal-sweep-2026-02-17-2205/mobile_atlanta_partners_top.png"
+    }
+  ]
+}

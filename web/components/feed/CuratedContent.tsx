@@ -298,11 +298,11 @@ function CuratedPageIndex({ portalSlug, loading }: { portalSlug: string; loading
                     metadata: { source: "desktop_collapsed_button" },
                   });
                 }}
-                className="group h-11 w-11 rounded-full border border-[var(--coral)]/45 bg-[linear-gradient(145deg,rgba(16,20,36,0.96),rgba(11,14,26,0.96))] text-[var(--cream)] shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_0_18px_rgba(255,107,122,0.24),0_10px_20px_rgba(0,0,0,0.5)] transition-all hover:border-[var(--neon-cyan)]/60 hover:shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_0_20px_rgba(37,205,255,0.26),0_12px_22px_rgba(0,0,0,0.55)]"
+                className="group flex h-11 w-11 items-center justify-center rounded-full border border-[var(--coral)]/45 bg-[linear-gradient(145deg,rgba(16,20,36,0.96),rgba(11,14,26,0.96))] text-[var(--cream)] shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_0_18px_rgba(255,107,122,0.24),0_10px_20px_rgba(0,0,0,0.5)] transition-all hover:border-[var(--neon-cyan)]/60 hover:shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_0_20px_rgba(37,205,255,0.26),0_12px_22px_rgba(0,0,0,0.55)]"
                 aria-label="Expand page index"
               >
                 <span className="sr-only">Expand page index</span>
-                <span className="inline-flex flex-col items-center justify-center gap-[3px]">
+                <span className="inline-flex flex-col items-center justify-center gap-[3px] leading-none">
                   <span className="h-[2px] w-4 rounded-full bg-current" />
                   <span className="h-[2px] w-4 rounded-full bg-current/80" />
                   <span className="h-[2px] w-4 rounded-full bg-current/60" />
@@ -404,11 +404,11 @@ function CuratedPageIndex({ portalSlug, loading }: { portalSlug: string; loading
             target_label: "Open page index",
           });
         }}
-        className="sm:hidden fixed bottom-20 right-4 z-[10000] h-11 w-11 rounded-full border border-[var(--coral)]/45 bg-[linear-gradient(145deg,rgba(16,20,36,0.96),rgba(11,14,26,0.96))] text-[var(--cream)] shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_0_16px_rgba(255,107,122,0.22),0_10px_20px_rgba(0,0,0,0.48)] transition-all hover:border-[var(--neon-cyan)]/60 hover:shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_0_20px_rgba(37,205,255,0.24),0_12px_22px_rgba(0,0,0,0.52)]"
+        className="sm:hidden fixed bottom-20 right-4 z-[10000] flex h-11 w-11 items-center justify-center rounded-full border border-[var(--coral)]/45 bg-[linear-gradient(145deg,rgba(16,20,36,0.96),rgba(11,14,26,0.96))] text-[var(--cream)] shadow-[0_0_0_1px_rgba(255,255,255,0.08),0_0_16px_rgba(255,107,122,0.22),0_10px_20px_rgba(0,0,0,0.48)] transition-all hover:border-[var(--neon-cyan)]/60 hover:shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_0_20px_rgba(37,205,255,0.24),0_12px_22px_rgba(0,0,0,0.52)]"
         aria-label="Open page index"
       >
         <span className="sr-only">Open page index</span>
-        <span className="inline-flex flex-col items-center justify-center gap-[3px]">
+        <span className="inline-flex flex-col items-center justify-center gap-[3px] leading-none">
           <span className="h-[2px] w-4 rounded-full bg-current" />
           <span className="h-[2px] w-4 rounded-full bg-current/80" />
           <span className="h-[2px] w-4 rounded-full bg-current/60" />
@@ -530,27 +530,27 @@ export default function CuratedContent({ portalSlug }: CuratedContentProps) {
     <>
       <div className="space-y-6">
         {/* Above-fold: Happening Now CTA - Priority load */}
-        <section id={CURATED_HAPPENING_NOW_ID} data-index-label="Happening Now" className="scroll-mt-28">
+        <section id={CURATED_HAPPENING_NOW_ID} data-index-label="Happening Now" className="scroll-mt-28 min-h-[96px]">
           <SectionErrorBoundary>
-            <Suspense fallback={<DelayedFallback><HappeningNowCtaSkeleton /></DelayedFallback>}>
+            <Suspense fallback={<HappeningNowCtaSkeleton />}>
               <HappeningNowCTA portalSlug={portalSlug} />
             </Suspense>
           </SectionErrorBoundary>
         </section>
 
         {/* Holiday hero: nearest event date gets top position */}
-        <section id={CURATED_SEASONAL_SPOTLIGHT_ID} data-index-label="Seasonal Spotlight" className="scroll-mt-28">
+        <section id={CURATED_SEASONAL_SPOTLIGHT_ID} data-index-label="Seasonal Spotlight" className="scroll-mt-28 min-h-[320px]">
           <SectionErrorBoundary>
-            <Suspense fallback={<DelayedFallback><HolidayHeroSkeleton /></DelayedFallback>}>
+            <Suspense fallback={<HolidayHeroSkeleton />}>
               <HolidayHero portalSlug={portalSlug} eventCount={getEventCount(1)} />
             </Suspense>
           </SectionErrorBoundary>
         </section>
 
         {/* Above-fold: Tonight's Picks - Critical content */}
-        <section id={CURATED_TONIGHT_PICKS_ID} data-index-label="Tonight Picks" className="scroll-mt-28">
+        <section id={CURATED_TONIGHT_PICKS_ID} data-index-label="Tonight Picks" className="scroll-mt-28 min-h-[440px]">
           <SectionErrorBoundary>
-            <Suspense fallback={<DelayedFallback><TonightsPicksSkeleton /></DelayedFallback>}>
+            <Suspense fallback={<TonightsPicksSkeleton />}>
               <HighlightsPicks portalSlug={portalSlug} />
             </Suspense>
           </SectionErrorBoundary>
@@ -559,16 +559,16 @@ export default function CuratedContent({ portalSlug }: CuratedContentProps) {
         <div className="pt-4 border-t border-[var(--twilight)]/40" />
 
         {/* Festival moments: takeover hero + imminent festivals */}
-        <section id={CURATED_FESTIVALS_ID} data-index-label="Festivals & Conventions" className="scroll-mt-28">
+        <section id={CURATED_FESTIVALS_ID} data-index-label="Festivals & Conventions" className="scroll-mt-28 min-h-[260px]">
           <SectionErrorBoundary>
-            <Suspense fallback={<DelayedFallback><MomentsSectionSkeleton /></DelayedFallback>}>
+            <Suspense fallback={<MomentsSectionSkeleton />}>
               <MomentsSection portalSlug={portalSlug} prefetchedData={moments} />
             </Suspense>
           </SectionErrorBoundary>
         </section>
 
         {/* Second holiday hero (below festivals) */}
-        <section id={CURATED_SECOND_SPOTLIGHT_ID} data-index-label="Special Times" className="scroll-mt-28">
+        <section id={CURATED_SECOND_SPOTLIGHT_ID} data-index-label="Special Times" className="scroll-mt-28 min-h-[280px]">
           <SectionErrorBoundary>
             <Suspense fallback={<DelayedFallback><HolidayHeroSkeleton /></DelayedFallback>}>
               <HolidayHero portalSlug={portalSlug} position={2} eventCount={getEventCount(2)} />
@@ -577,7 +577,7 @@ export default function CuratedContent({ portalSlug }: CuratedContentProps) {
         </section>
 
         {/* Above-fold: Trending Now - High priority */}
-        <section id={CURATED_TRENDING_ID} data-index-label="Trending Now" className="scroll-mt-28">
+        <section id={CURATED_TRENDING_ID} data-index-label="Trending Now" className="scroll-mt-28 min-h-[170px]">
           <SectionErrorBoundary>
             <Suspense fallback={<DelayedFallback><TrendingNowSkeleton /></DelayedFallback>}>
               <TrendingNow portalSlug={portalSlug} />

@@ -3,7 +3,7 @@ Crawler for Cinemark Atlanta-area locations.
 
 Navigates to cinemark.com showtime pages for each location,
 extracts movie titles and showtimes using Playwright.
-2 locations: Tinseltown Duluth, Movies 10 Kennesaw.
+Currently active location: Tinseltown Fayetteville 17 and XD.
 """
 
 from __future__ import annotations
@@ -25,35 +25,19 @@ class CinemarkAtlantaCrawler(ChainCinemaCrawler):
     LOCATIONS = [
         {
             "venue_data": {
-                "name": "Cinemark Tinseltown Duluth",
-                "slug": "cinemark-tinseltown-duluth",
-                "address": "2925 Buford Hwy",
-                "neighborhood": "Duluth",
-                "city": "Duluth",
+                "name": "Cinemark Tinseltown Fayetteville 17 and XD",
+                "slug": "cinemark-tinseltown-fayetteville",
+                "address": "134 Pavilion Pkwy",
+                "neighborhood": "Fayetteville",
+                "city": "Fayetteville",
                 "state": "GA",
-                "zip": "30096",
+                "zip": "30214",
                 "venue_type": "cinema",
-                "website": "https://www.cinemark.com/theatres/ga-duluth/cinemark-tinseltown-usa-and-imax",
-                "lat": 34.0009,
-                "lng": -84.1422,
+                "website": "https://www.cinemark.com/theatres/ga-fayetteville/cinemark-tinseltown-fayetteville-17-and-xd",
+                "lat": 33.4469,
+                "lng": -84.4588,
             },
-            "url_slug": "ga-duluth/cinemark-tinseltown-usa-and-imax",
-        },
-        {
-            "venue_data": {
-                "name": "Cinemark Movies 10 Kennesaw",
-                "slug": "cinemark-movies-10-kennesaw",
-                "address": "2795 Town Center Dr NW",
-                "neighborhood": "Kennesaw",
-                "city": "Kennesaw",
-                "state": "GA",
-                "zip": "30144",
-                "venue_type": "cinema",
-                "website": "https://www.cinemark.com/theatres/ga-kennesaw/cinemark-movies-10",
-                "lat": 34.0138,
-                "lng": -84.6137,
-            },
-            "url_slug": "ga-kennesaw/cinemark-movies-10",
+            "url_slug": "ga-fayetteville/cinemark-tinseltown-fayetteville-17-and-xd",
         },
     ]
 
@@ -66,19 +50,23 @@ class CinemarkAtlantaCrawler(ChainCinemaCrawler):
         """Extract movies and showtimes from Cinemark showtime page."""
         movies = []
 
+        if "Error / 3105" in page.content():
+            logger.debug(f"  Cinemark page returned 3105 for {location['venue_data']['name']}")
+            return []
+
         try:
-            page.wait_for_selector(".movie-showtimes, .showtime-container, .MovieFlexContainer", timeout=10000)
+            page.wait_for_selector(".showtimeMovieBlock, .showtime-link", timeout=10000)
         except Exception:
             logger.debug(f"  No showtime elements found for {location['venue_data']['name']}")
             return self._extract_from_text(page)
 
-        containers = page.query_selector_all(".movie-showtimes, .MovieFlexContainer, [class*='MovieShowtimes']")
+        containers = page.query_selector_all(".showtimeMovieBlock")
         if not containers:
             return self._extract_from_text(page)
 
         for container in containers:
             try:
-                title_el = container.query_selector("h3, h2, .movie-name, [class*='MovieTitle']")
+                title_el = container.query_selector(".movieBlockHeader h3, .movie-title a, h3")
                 if not title_el:
                     continue
                 title = title_el.inner_text().strip()
@@ -86,7 +74,7 @@ class CinemarkAtlantaCrawler(ChainCinemaCrawler):
                     continue
                 title = " ".join(title.split())
 
-                time_buttons = container.query_selector_all("button[class*='showtime'], .showtime-btn, a[class*='Showtime']")
+                time_buttons = container.query_selector_all("a.showtime-link, .showtime a")
                 times = []
                 for btn in time_buttons:
                     try:
@@ -100,8 +88,17 @@ class CinemarkAtlantaCrawler(ChainCinemaCrawler):
                 if not times:
                     continue
 
-                img_el = container.query_selector("img")
-                image_url = img_el.get_attribute("src") if img_el else None
+                img_el = container.query_selector("img[alt*='Poster'], img")
+                image_url = None
+                if img_el:
+                    image_url = (
+                        img_el.get_attribute("src")
+                        or img_el.get_attribute("data-src")
+                        or img_el.get_attribute("srcset")
+                        or img_el.get_attribute("data-srcset")
+                    )
+                    if image_url and "," in image_url:
+                        image_url = image_url.split(",")[0].strip().split(" ")[0]
 
                 movies.append({"title": title, "times": times, "image_url": image_url})
 

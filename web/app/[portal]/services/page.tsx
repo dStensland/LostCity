@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import { getCachedPortalBySlug, getPortalVertical } from "@/lib/portal";
 import { isDogPortal } from "@/lib/dog-art";
@@ -27,7 +27,9 @@ export default async function DogServicesPage({
   if (!portal) notFound();
 
   const vertical = getPortalVertical(portal);
-  if (vertical !== "dog" && !isDogPortal(portal.slug)) notFound();
+  if (vertical !== "dog" && !isDogPortal(portal.slug)) {
+    redirect(`/${portal.slug}?view=find&type=destinations`);
+  }
 
   const venues = await getDogServices(sp.type);
 

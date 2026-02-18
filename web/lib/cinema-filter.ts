@@ -7,7 +7,7 @@ type VenueLike =
   | undefined;
 
 const INDIE_CINEMA_PATTERNS = [
-  /\bplaza\b/i,
+  /\bplaza theatre\b/i,
   /\btara\b/i,
   /\bstarlight\b/i,
   /\blandmark\b/i,

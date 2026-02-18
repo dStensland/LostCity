@@ -33,7 +33,7 @@ class NCGAtlantaCrawler(ChainCinemaCrawler):
                 "state": "GA",
                 "zip": "30101",
                 "venue_type": "cinema",
-                "website": "https://www.ncgmovies.com/acworth",
+                "website": "https://www.ncgmovies.com/movie-theater/acworth",
                 "lat": 34.0649,
                 "lng": -84.6671,
             },
@@ -44,33 +44,42 @@ class NCGAtlantaCrawler(ChainCinemaCrawler):
     def get_showtime_url(self, location: dict, date: datetime) -> str:
         date_str = date.strftime("%Y-%m-%d")
         slug = location["url_slug"]
-        return f"https://www.ncgmovies.com/{slug}?date={date_str}"
+        return f"https://www.ncgmovies.com/movie-theater/{slug}?date={date_str}"
 
     def extract_showtimes(self, page: Page, location: dict, target_date: datetime) -> list[dict]:
         """Extract movies and showtimes from NCG showtime page."""
         movies = []
 
         try:
-            page.wait_for_selector(".movie-card, .showtime, .film-listing", timeout=10000)
+            page.wait_for_selector(".nowPlaying__item, .button--showtime", timeout=10000)
         except Exception:
             logger.debug(f"  No showtime elements found for {location['venue_data']['name']}")
             return self._extract_from_text(page)
 
-        containers = page.query_selector_all(".movie-card, .film-listing, [class*='movie']")
+        containers = page.query_selector_all(".nowPlaying__item")
         if not containers:
             return self._extract_from_text(page)
 
         for container in containers:
             try:
-                title_el = container.query_selector("h3, h2, .movie-title, .film-name")
-                if not title_el:
-                    continue
-                title = title_el.inner_text().strip()
+                title = ""
+                title_el = container.query_selector(".nowPlaying__movieTitle, h3")
+                if title_el:
+                    title = title_el.inner_text().strip()
+                    if not title:
+                        title = (title_el.get_attribute("title") or "").strip()
+
+                if not title:
+                    img_for_title = container.query_selector("img.nowPlaying__img, img")
+                    alt = (img_for_title.get_attribute("alt") if img_for_title else None) or ""
+                    if alt:
+                        title = alt.replace(" Movie Poster", "").strip()
+
                 if not title or len(title) < 2:
                     continue
                 title = " ".join(title.split())
 
-                time_elements = container.query_selector_all("button, .showtime, a[class*='time'], .time-btn")
+                time_elements = container.query_selector_all("a.button--showtime")
                 times = []
                 for el in time_elements:
                     try:
@@ -84,8 +93,17 @@ class NCGAtlantaCrawler(ChainCinemaCrawler):
                 if not times:
                     continue
 
-                img_el = container.query_selector("img")
-                image_url = img_el.get_attribute("src") if img_el else None
+                img_el = container.query_selector("img.nowPlaying__img, img")
+                image_url = None
+                if img_el:
+                    image_url = (
+                        img_el.get_attribute("data-src")
+                        or img_el.get_attribute("src")
+                        or img_el.get_attribute("data-srcset")
+                        or img_el.get_attribute("srcset")
+                    )
+                    if image_url and "," in image_url:
+                        image_url = image_url.split(",")[0].strip().split(" ")[0]
 
                 movies.append({"title": title, "times": times, "image_url": image_url})
 
