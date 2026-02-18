@@ -1,0 +1,35 @@
+/Users/coach/Projects/LostCity/crawlers/venv/lib/python3.9/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+INFO:__main__:DB target=production | writes=disabled
+
+============================================================
+CRAWLER HEALTH REPORT
+============================================================
+
+Today's Crawls:
+  Total: 7
+  Successful: 7 (100.0%)
+  Failed: 0
+  Events Found: 3745
+
+Source Health Distribution:
+  🟢 Healthy (80-100): 721
+  🟡 Degraded (50-79): 24
+  🔴 Unhealthy (<50): 8
+  Total tracked: 753
+
+Recommended workers: 4
+
+⚠️  Sources with 3+ consecutive failures:
+  lifeline-animal-project: 14 failures, score=0, last_error=parse
+  atlanta-city-events: 11 failures, score=0, last_error=unknown
+  vista-yoga: 9 failures, score=0, last_error=unknown
+  atlanta-ballet: 6 failures, score=10, last_error=unknown
+  hawks-bars: 5 failures, score=25, last_error=unknown
+  publix-aprons: 4 failures, score=65, last_error=timeout
+  scad-atlanta: 4 failures, score=15, last_error=auth
+  third-and-lindsley: 3 failures, score=55, last_error=unknown
+  spaceman-rooftop: 3 failures, score=85, last_error=network
+  buried-alive: 3 failures, score=55, last_error=unknown
+
+============================================================

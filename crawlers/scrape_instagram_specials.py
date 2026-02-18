@@ -43,7 +43,7 @@ from dotenv import load_dotenv
 load_dotenv(env_path)
 
 sys.path.insert(0, str(Path(__file__).parent))
-from db import get_client, insert_event, find_event_by_hash
+from db import get_client, insert_event, find_event_by_hash, get_portal_id_by_slug
 from dedupe import generate_content_hash
 from llm_client import generate_text, generate_text_with_images
 
@@ -86,6 +86,7 @@ _browser = None
 
 # Instagram source ID — lazily fetched
 _ig_source_id = None
+_atlanta_portal_id = None
 
 # Chrome cookies for authenticated IG access
 _ig_cookies = None
@@ -162,11 +163,13 @@ def _close_browser():
 
 def _get_or_create_ig_source() -> int:
     """Get or create a source record for Instagram caption scraping."""
-    global _ig_source_id
+    global _ig_source_id, _atlanta_portal_id
     if _ig_source_id is not None:
         return _ig_source_id
 
     client = get_client()
+    if _atlanta_portal_id is None:
+        _atlanta_portal_id = get_portal_id_by_slug("atlanta")
 
     # Check if it already exists
     result = (
@@ -177,6 +180,8 @@ def _get_or_create_ig_source() -> int:
     )
     if result.data:
         _ig_source_id = result.data[0]["id"]
+        if _atlanta_portal_id:
+            client.table("sources").update({"owner_portal_id": _atlanta_portal_id}).eq("id", _ig_source_id).execute()
         return _ig_source_id
 
     # Create it
@@ -187,6 +192,7 @@ def _get_or_create_ig_source() -> int:
         "integration_method": "playwright",
         "source_type": "social_media",
         "is_active": True,
+        "owner_portal_id": _atlanta_portal_id,
     }
     result = client.table("sources").insert(row).execute()
     _ig_source_id = result.data[0]["id"]

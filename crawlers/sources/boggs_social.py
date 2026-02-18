@@ -16,7 +16,12 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    get_or_create_venue,
+    insert_event,
+    find_existing_event_for_insert,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
 from utils import parse_price
 
@@ -209,7 +214,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "content_hash": content_hash,
                         }
 
-                        existing = find_event_by_hash(content_hash)
+                        existing = find_existing_event_for_insert(event_record)
                         if existing:
                             smart_update_existing_event(existing, event_record)
                             events_updated += 1

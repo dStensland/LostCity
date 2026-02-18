@@ -14,7 +14,16 @@ cd "$SCRIPT_DIR"
 source venv/bin/activate
 
 echo "Starting crawl at $(date)" >> "$LOG_FILE"
-python main.py >> "$LOG_FILE" 2>&1
+
+DB_TARGET="${CRAWLER_DB_TARGET:-production}"
+ARGS=(--db-target "$DB_TARGET")
+
+# Scheduled production runs must opt in explicitly.
+if [[ "$DB_TARGET" == "production" ]]; then
+  ARGS+=(--allow-production-writes)
+fi
+
+python main.py "${ARGS[@]}" >> "$LOG_FILE" 2>&1
 EXIT_CODE=$?
 echo "Crawl finished at $(date) with exit code $EXIT_CODE" >> "$LOG_FILE"
 

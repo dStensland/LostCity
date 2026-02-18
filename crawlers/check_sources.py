@@ -29,7 +29,7 @@ SOURCE_MODULES = [
     # Food Halls & Markets
     "ponce-city-market", "krog-street-market", "sweet-auburn-market",
     # Breweries & Distilleries
-    "sweetwater", "orpheus-brewing", "three-taverns", "pontoon-brewing", "asw-distillery",
+    "sweetwater", "three-taverns", "pontoon-brewing", "asw-distillery",
     # Sports & Entertainment
     "truist-park", "live-at-battery", "atlanta-motor-speedway",
     # Tech & Community

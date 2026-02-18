@@ -37,6 +37,8 @@ VENUE_DATA = {
     "website": BASE_URL,
 }
 
+ORPHEUS_PERMANENTLY_CLOSED = True
+
 
 def parse_time(time_text: str) -> Optional[str]:
     """Parse time from '7:00 PM' format."""
@@ -54,6 +56,12 @@ def parse_time(time_text: str) -> Optional[str]:
 
 def crawl(source: dict) -> tuple[int, int, int]:
     """Crawl Orpheus Brewing events using Playwright."""
+    if ORPHEUS_PERMANENTLY_CLOSED:
+        logger.warning(
+            "Skipping Orpheus Brewing crawler: venue is permanently closed."
+        )
+        return 0, 0, 0
+
     source_id = source["id"]
     events_found = 0
     events_new = 0

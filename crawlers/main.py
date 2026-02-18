@@ -33,7 +33,11 @@ from db import (
     get_sources_due_for_crawl,
     get_sources_by_cadence,
     detect_zero_event_sources,
+    configure_write_mode,
+    writes_enabled,
+    reset_client,
 )
+from config import set_database_target, get_config
 from utils import setup_logging
 from circuit_breaker import should_skip_source, get_all_circuit_states
 from fetch_logos import fetch_logos
@@ -47,16 +51,20 @@ from crawler_health import (
     get_system_health_summary,
     print_health_report,
 )
-from data_quality import print_quality_report, get_cinema_quality_report
+from data_quality import print_quality_report
 from post_crawl_report import save_report as save_html_report
 from event_cleanup import run_full_cleanup
 from analytics import record_daily_snapshot, print_analytics_report
+from closed_venues import CLOSED_SOURCE_SLUGS
 
 logger = logging.getLogger(__name__)
 
 # Parallel execution settings
 MAX_WORKERS = 2  # Number of concurrent crawlers (reduced to avoid macOS socket limits)
 TIMEOUT_SECONDS = 300  # 5 minute timeout per source
+
+# Permanently closed sources that should never run, even if re-activated in DB.
+BLOCKED_SOURCE_SLUGS = set(CLOSED_SOURCE_SLUGS)
 
 
 # SOURCE_OVERRIDES: Explicit slug-to-module mappings for exceptional cases
@@ -165,6 +173,12 @@ def run_source(slug: str, skip_circuit_breaker: bool = False) -> bool:
 
     if not source:
         logger.error(f"Source not found: {slug}")
+        return False
+
+    if slug in BLOCKED_SOURCE_SLUGS:
+        logger.warning(
+            "Source is permanently blocked from crawling: %s", slug
+        )
         return False
 
     if not source["is_active"]:
@@ -341,7 +355,7 @@ def demote_stale_festival_dates() -> int:
     return demoted
 
 
-def check_unannounced_festivals(soon_only: bool = False) -> dict:
+def check_unannounced_festivals(soon_only: bool = False, dry_run: bool = False) -> dict:
     """
     Check unannounced festivals for newly posted dates.
 
@@ -354,16 +368,18 @@ def check_unannounced_festivals(soon_only: bool = False) -> dict:
     from check_festival_dates import check_festival_dates
 
     if soon_only:
-        check_festival_dates(dry_run=False, soon_only=True)
+        check_festival_dates(dry_run=dry_run, soon_only=True)
         # Also try promoting existing pending rows
-        check_festival_dates(dry_run=False, soon_only=True, promote_pending=True)
+        check_festival_dates(
+            dry_run=dry_run, soon_only=True, promote_pending=True
+        )
     else:
         # First pass: high-priority (soon)
-        check_festival_dates(dry_run=False, soon_only=True)
+        check_festival_dates(dry_run=dry_run, soon_only=True)
         # Second pass: everything else
-        check_festival_dates(dry_run=False, soon_only=False)
+        check_festival_dates(dry_run=dry_run, soon_only=False)
         # Also try promoting existing pending rows
-        check_festival_dates(dry_run=False, promote_pending=True)
+        check_festival_dates(dry_run=dry_run, promote_pending=True)
 
 
 def get_festival_tier_summary() -> dict:
@@ -404,6 +420,9 @@ def get_festival_tier_summary() -> dict:
 
 def run_post_crawl_tasks() -> None:
     """Run all post-crawl pipeline tasks (filters, logos, cleanup, festivals, etc.)."""
+    if not writes_enabled():
+        logger.info("Write mode disabled; skipping post-crawl tasks.")
+        return
 
     # Refresh available filters for UI
     logger.info("Refreshing available filters...")
@@ -796,6 +815,9 @@ def get_source_modules() -> dict[str, str]:
 def main():
     """Main entry point."""
     setup_logging()
+    default_db_target = os.getenv("CRAWLER_DB_TARGET", "production").strip().lower()
+    if default_db_target not in {"staging", "production"}:
+        default_db_target = "production"
 
     parser = argparse.ArgumentParser(
         description="Lost City Event Crawler",
@@ -814,6 +836,19 @@ def main():
         "--dry-run", "-n",
         action="store_true",
         help="Fetch and extract but don't save to database"
+    )
+    parser.add_argument(
+        "--db-target",
+        choices=["staging", "production"],
+        default=default_db_target,
+        help="Database target environment (default: CRAWLER_DB_TARGET or production)"
+    )
+    parser.add_argument(
+        "--allow-production-writes",
+        "--allow-prod-writes",
+        action="store_true",
+        dest="allow_production_writes",
+        help="Required to perform write operations against production DB target"
     )
     parser.add_argument(
         "--sequential",
@@ -899,6 +934,55 @@ def main():
 
     args = parser.parse_args()
 
+    # Apply DB target before any queries execute.
+    set_database_target(args.db_target)
+    reset_client()
+    cfg = get_config()
+    missing_credentials = cfg.database.missing_active_credentials()
+    if missing_credentials:
+        parser.error(
+            f"Missing DB credentials for target '{cfg.database.active_target}': "
+            f"{', '.join(missing_credentials)}"
+        )
+
+    read_only_command = any(
+        [
+            args.health,
+            args.quality,
+            args.quality_all,
+            args.analytics,
+            args.report,
+            args.circuit_status,
+            args.list,
+            args.cleanup_dry_run,
+        ]
+    )
+    should_write = (not args.dry_run) and (not read_only_command)
+
+    if should_write and cfg.database.active_target == "production":
+        allow_from_env = os.getenv("CRAWLER_ALLOW_PRODUCTION_WRITES", "").strip().lower() in (
+            "1",
+            "true",
+            "yes",
+            "on",
+        )
+        if not (args.allow_production_writes or allow_from_env):
+            parser.error(
+                "Refusing production writes without --allow-production-writes "
+                "(or CRAWLER_ALLOW_PRODUCTION_WRITES=1). "
+                "Use --db-target staging for safe validation."
+            )
+
+    configure_write_mode(
+        should_write,
+        reason="dry-run/read-only mode" if not should_write else "",
+    )
+    logger.info(
+        "DB target=%s | writes=%s",
+        cfg.database.active_target,
+        "enabled" if should_write else "disabled",
+    )
+
     # Health report
     if args.health:
         print_health_report()
@@ -922,7 +1006,7 @@ def main():
 
     # Check festival dates
     if args.check_festivals:
-        check_unannounced_festivals(soon_only=args.soon)
+        check_unannounced_festivals(soon_only=args.soon, dry_run=args.dry_run)
         tiers = get_festival_tier_summary()
         print(
             f"\nFestival tiers: {tiers['t1']} confirmed (T1) | "
@@ -932,7 +1016,7 @@ def main():
 
     # Event cleanup
     if args.cleanup or args.cleanup_dry_run:
-        dry_run = args.cleanup_dry_run
+        dry_run = args.cleanup_dry_run or args.dry_run
         results = run_full_cleanup(days_to_keep=0, dry_run=dry_run)
         if dry_run:
             total_would_delete = sum(r.get("would_delete", 0) for r in results.values())

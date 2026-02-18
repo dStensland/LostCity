@@ -418,6 +418,69 @@ class TestFindEventsByDateAndVenue:
         assert results == []
 
 
+class TestSmartUpdateExistingEvent:
+    """Tests for smart_update_existing_event function."""
+
+    @patch("db.get_source_info")
+    @patch("db.get_client")
+    def test_backfills_portal_from_source_owner(self, mock_get_client, mock_get_source_info):
+        """Should fill missing portal_id from source owner on smart update."""
+        client = MagicMock()
+        mock_get_client.return_value = client
+        mock_get_source_info.return_value = {"owner_portal_id": "portal-123"}
+
+        table = MagicMock()
+        client.table.return_value = table
+        table.update.return_value = table
+        table.eq.return_value = table
+        table.execute.return_value = MagicMock(data=[{"id": 1}])
+
+        from db import smart_update_existing_event
+
+        existing = {
+            "id": 1,
+            "title": "Existing Event",
+            "description": "Existing",
+            "portal_id": None,
+        }
+        incoming = {
+            "source_id": 99,
+            "description": "Existing description with a bit more detail",
+        }
+
+        updated = smart_update_existing_event(existing, incoming)
+
+        assert updated is True
+        updates = table.update.call_args[0][0]
+        assert updates["portal_id"] == "portal-123"
+
+    @patch("db.get_client")
+    def test_keeps_existing_portal_unchanged(self, mock_get_client):
+        """Should not overwrite existing portal_id when already set."""
+        client = MagicMock()
+        mock_get_client.return_value = client
+
+        table = MagicMock()
+        client.table.return_value = table
+        table.update.return_value = table
+        table.eq.return_value = table
+        table.execute.return_value = MagicMock(data=[{"id": 1}])
+
+        from db import smart_update_existing_event
+
+        existing = {
+            "id": 1,
+            "title": "Existing Event",
+            "description": "Detailed description",
+            "portal_id": "portal-existing",
+        }
+        incoming = {"source_id": 99}
+
+        updated = smart_update_existing_event(existing, incoming)
+        assert updated is False
+        table.update.assert_not_called()
+
+
 class TestCrawlLog:
     """Tests for crawl log functions."""
 
@@ -512,3 +575,79 @@ class TestCrawlLog:
         update_data = table.update.call_args[0][0]
         assert update_data["status"] == "failed"
         assert update_data["error_message"] == "Connection timeout"
+
+
+class TestCrossSourceCanonicalSelection:
+    """Tests for cross-source canonical ranking."""
+
+    def test_source_priority_penalizes_inactive_sources(self):
+        """Inactive sources should always rank lower than active peers."""
+        from db import _source_priority_for_dedupe
+
+        active = _source_priority_for_dedupe("blakes-on-park", True)
+        inactive = _source_priority_for_dedupe("blakes-on-park", False)
+
+        assert active < inactive
+
+    @patch("db.get_source_info")
+    @patch("db.get_client")
+    def test_prefers_active_source_for_cross_source_canonical(
+        self, mock_get_client, mock_get_source_info
+    ):
+        """Canonical selector should prefer active source rows over inactive rows."""
+        client = MagicMock()
+        mock_get_client.return_value = client
+
+        table = MagicMock()
+        client.table.return_value = table
+        table.select.return_value = table
+        table.eq.return_value = table
+        table.neq.return_value = table
+        table.is_.return_value = table
+        table.execute.return_value = MagicMock(
+            data=[
+                {
+                    "id": 901,
+                    "title": "Bocce League at The Painted Duck",
+                    "source_id": 1001,
+                    "canonical_event_id": None,
+                    "created_at": "2026-02-17T10:00:00+00:00",
+                    "description": "Long detailed description",
+                    "image_url": "https://example.com/img.jpg",
+                    "ticket_url": "https://example.com/tickets",
+                },
+                {
+                    "id": 902,
+                    "title": "Bocce League at The Painted Duck",
+                    "source_id": 1002,
+                    "canonical_event_id": None,
+                    "created_at": "2026-02-17T09:00:00+00:00",
+                    "description": "Long detailed description",
+                    "image_url": "https://example.com/img.jpg",
+                    "ticket_url": "https://example.com/tickets",
+                },
+            ]
+        )
+
+        def source_lookup(source_id):
+            if source_id == 1001:
+                return {"slug": "blakes-on-the-park", "is_active": False}
+            if source_id == 1002:
+                return {"slug": "blakes-on-park", "is_active": True}
+            return None
+
+        mock_get_source_info.side_effect = source_lookup
+
+        from db import find_cross_source_canonical_for_insert
+
+        canonical_id = find_cross_source_canonical_for_insert(
+            {
+                "source_id": 2000,
+                "venue_id": 333,
+                "start_date": "2026-02-18",
+                "start_time": "19:00",
+                "title": "Bocce League at The Painted Duck",
+            }
+        )
+
+        assert canonical_id == 902

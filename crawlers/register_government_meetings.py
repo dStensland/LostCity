@@ -14,6 +14,11 @@ from config import get_config
 config = get_config()
 supabase = create_client(config.database.supabase_url, config.database.supabase_service_key)
 
+portal_result = supabase.table("portals").select("id").eq("slug", "atlanta").limit(1).execute()
+ATLANTA_PORTAL_ID = portal_result.data[0]["id"] if portal_result.data else None
+if ATLANTA_PORTAL_ID is None:
+    raise RuntimeError("Atlanta portal not found; cannot register government sources with owner_portal_id.")
+
 
 def register_source(slug: str, name: str, url: str):
     """Register a source in the database."""
@@ -27,6 +32,7 @@ def register_source(slug: str, name: str, url: str):
         supabase.table("sources").update({
             "is_active": True,
             "url": url,
+            "owner_portal_id": ATLANTA_PORTAL_ID,
         }).eq("slug", slug).execute()
 
         print(f"  → Updated source to active")
@@ -39,7 +45,7 @@ def register_source(slug: str, name: str, url: str):
         "url": url,
         "is_active": True,
         "source_type": "government",
-        "owner_portal_id": None,  # Not portal-specific
+        "owner_portal_id": ATLANTA_PORTAL_ID,
     }
 
     result = supabase.table("sources").insert(source_data).execute()

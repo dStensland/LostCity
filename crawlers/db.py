@@ -17,15 +17,29 @@ from config import get_config
 from tags import VALID_CATEGORIES, VALID_VENUE_TYPES, VALID_VIBES
 from tag_inference import infer_tags, infer_is_class, infer_is_support_group, infer_genres
 from genre_normalize import normalize_genres
-from description_fetcher import generate_synthetic_description
 from series import get_or_create_series, update_series_metadata
-from posters import get_metadata_for_film_event
+from posters import get_metadata_for_film_event, extract_film_info
 from artist_images import get_info_for_music_event
 from date_utils import MAX_FUTURE_DAYS_DEFAULT
 from show_signals import derive_show_signals
+from closed_venues import (
+    CLOSED_VENUE_NOTE,
+    CLOSED_VENUE_SLUGS,
+    CLOSED_VENUE_NAMES_NORMALIZED,
+)
 
 logger = logging.getLogger(__name__)
 
+_AGGREGATOR_SOURCE_PREFIXES = (
+    "ticketmaster",
+    "eventbrite",
+    "mobilize",
+)
+_AGGREGATOR_SOURCE_SLUGS = {
+    "atlanta-recurring-social",
+    "instagram-captions",
+    "creative-loafing",
+}
 
 # ===== TITLE CASE HELPER =====
 # Python's .title() breaks on apostrophes: "JOHN'S" -> "John'S" (wrong)
@@ -132,6 +146,48 @@ _SOURCE_CACHE: dict[int, dict] = {}
 _VENUE_CACHE: dict[int, dict] = {}
 _BLURHASH_EXECUTOR = ThreadPoolExecutor(max_workers=2, thread_name_prefix="blurhash")
 _EVENTS_HAS_SHOW_SIGNAL_COLUMNS: Optional[bool] = None
+_EVENTS_HAS_FILM_IDENTITY_COLUMNS: Optional[bool] = None
+_VENUES_HAS_LOCATION_DESIGNATOR: Optional[bool] = None
+_WRITES_ENABLED = True
+_WRITE_SKIP_REASON = ""
+_TEMP_ID_COUNTER = 0
+_TEMP_ID_LOCK = threading.Lock()
+
+
+def configure_write_mode(enable_writes: bool, reason: str = "") -> None:
+    """Configure runtime write mode for crawler operations."""
+    global _WRITES_ENABLED, _WRITE_SKIP_REASON
+    _WRITES_ENABLED = enable_writes
+    _WRITE_SKIP_REASON = reason.strip()
+
+
+def writes_enabled() -> bool:
+    """Return True when DB writes are allowed for this process."""
+    return _WRITES_ENABLED
+
+
+def _next_temp_id() -> int:
+    """Return a negative synthetic ID for dry-run inserts."""
+    global _TEMP_ID_COUNTER
+    with _TEMP_ID_LOCK:
+        _TEMP_ID_COUNTER -= 1
+        return _TEMP_ID_COUNTER
+
+
+def _log_write_skip(operation: str) -> None:
+    """Emit a consistent log line when a DB write is skipped."""
+    suffix = f" ({_WRITE_SKIP_REASON})" if _WRITE_SKIP_REASON else ""
+    logger.info(f"[DRY RUN] Skipping DB write: {operation}{suffix}")
+
+
+def reset_client() -> None:
+    """Reset cached DB client and per-process caches."""
+    global _client, _EVENTS_HAS_SHOW_SIGNAL_COLUMNS, _EVENTS_HAS_FILM_IDENTITY_COLUMNS
+    _client = None
+    _EVENTS_HAS_SHOW_SIGNAL_COLUMNS = None
+    _EVENTS_HAS_FILM_IDENTITY_COLUMNS = None
+    _SOURCE_CACHE.clear()
+    _VENUE_CACHE.clear()
 
 
 def retry_on_network_error(max_retries: int = 3, base_delay: float = 0.5):
@@ -193,7 +249,67 @@ VIRTUAL_VENUE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "venue_type": "virtual",
+    "location_designator": "virtual",
 }
+
+
+def infer_location_designator(venue_data: dict) -> str:
+    """Infer location designator for venue-level rendering/quality logic."""
+    slug = (venue_data.get("slug") or "").strip().lower()
+    name = _normalize_venue_name(venue_data.get("name"))
+    venue_type = (venue_data.get("venue_type") or "").strip().lower()
+
+    if (
+        venue_type == "virtual"
+        or slug == VIRTUAL_VENUE_SLUG
+        or "online / virtual" in name
+        or "virtual event" in name
+    ):
+        return "virtual"
+
+    if (
+        slug.startswith("aa-")
+        or slug.startswith("na-")
+        or "anonymous" in name
+        or "recovery" in name
+        or "alcoholics anonymous" in name
+        or "narcotics anonymous" in name
+    ):
+        return "recovery_meeting"
+
+    if (
+        slug == "community-location"
+        or slug.startswith("this-event-s-address-is-private")
+        or name.startswith("community location")
+        or "address is private" in name
+        or "private location" in name
+        or "sign up for more details" in name
+    ):
+        return "private_after_signup"
+
+    return "standard"
+
+
+def venues_support_location_designator() -> bool:
+    """Detect whether venues.location_designator exists."""
+    global _VENUES_HAS_LOCATION_DESIGNATOR
+    if _VENUES_HAS_LOCATION_DESIGNATOR is not None:
+        return _VENUES_HAS_LOCATION_DESIGNATOR
+
+    client = get_client()
+    try:
+        client.table("venues").select("location_designator").limit(1).execute()
+        _VENUES_HAS_LOCATION_DESIGNATOR = True
+    except Exception as e:
+        error_str = str(e).lower()
+        if "does not exist" in error_str and "location_designator" in error_str:
+            _VENUES_HAS_LOCATION_DESIGNATOR = False
+            logger.warning(
+                "venues.location_designator missing; run migration 227_venue_location_designator.sql"
+            )
+        else:
+            raise
+    return bool(_VENUES_HAS_LOCATION_DESIGNATOR)
 
 
 def get_or_create_virtual_venue() -> int:
@@ -204,7 +320,13 @@ def get_or_create_virtual_venue() -> int:
     )
     if result.data:
         return result.data[0]["id"]
-    result = client.table("venues").insert(VIRTUAL_VENUE_DATA).execute()
+    if not writes_enabled():
+        _log_write_skip(f"insert venues slug={VIRTUAL_VENUE_SLUG}")
+        return _next_temp_id()
+    payload = dict(VIRTUAL_VENUE_DATA)
+    if not venues_support_location_designator():
+        payload.pop("location_designator", None)
+    result = client.table("venues").insert(payload).execute()
     return result.data[0]["id"]
 
 
@@ -213,8 +335,15 @@ def get_client() -> Client:
     global _client
     if _client is None:
         cfg = get_config()
+        missing_credentials = cfg.database.missing_active_credentials()
+        if missing_credentials:
+            missing_display = ", ".join(missing_credentials)
+            raise RuntimeError(
+                f"Missing DB credentials for target '{cfg.database.active_target}': {missing_display}"
+            )
         _client = create_client(
-            cfg.database.supabase_url, cfg.database.supabase_service_key
+            cfg.database.active_supabase_url,
+            cfg.database.active_supabase_service_key,
         )
     return _client
 
@@ -257,6 +386,44 @@ def events_support_show_signal_columns() -> bool:
     return bool(_EVENTS_HAS_SHOW_SIGNAL_COLUMNS)
 
 
+def events_support_film_identity_columns() -> bool:
+    """
+    Detect whether dedicated film identity columns exist on events.
+
+    Keeps crawler writes backward compatible before SQL migration is applied.
+    """
+    global _EVENTS_HAS_FILM_IDENTITY_COLUMNS
+    if _EVENTS_HAS_FILM_IDENTITY_COLUMNS is not None:
+        return _EVENTS_HAS_FILM_IDENTITY_COLUMNS
+
+    client = get_client()
+    try:
+        (
+            client.table("events")
+            .select("film_title,film_release_year,film_imdb_id,film_external_genres,film_identity_source")
+            .limit(1)
+            .execute()
+        )
+        _EVENTS_HAS_FILM_IDENTITY_COLUMNS = True
+    except Exception as e:
+        error_str = str(e).lower()
+        if "does not exist" in error_str and (
+            "film_title" in error_str
+            or "film_release_year" in error_str
+            or "film_imdb_id" in error_str
+            or "film_external_genres" in error_str
+            or "film_identity_source" in error_str
+        ):
+            _EVENTS_HAS_FILM_IDENTITY_COLUMNS = False
+            logger.warning(
+                "events table missing film identity columns; run migration 225_film_identity_fields.sql"
+            )
+        else:
+            raise
+
+    return bool(_EVENTS_HAS_FILM_IDENTITY_COLUMNS)
+
+
 def get_source_info(source_id: int) -> Optional[dict]:
     """Fetch source info with caching."""
     if source_id in _SOURCE_CACHE:
@@ -266,7 +433,7 @@ def get_source_info(source_id: int) -> Optional[dict]:
     try:
         result = (
             client.table("sources")
-            .select("id, slug, name, url, owner_portal_id, producer_id, is_sensitive")
+            .select("id, slug, name, url, owner_portal_id, producer_id, is_sensitive, is_active")
             .eq("id", source_id)
             .execute()
         )
@@ -275,18 +442,27 @@ def get_source_info(source_id: int) -> Optional[dict]:
             # Backward-compatible fallback for environments where producer_id isn't present.
             result = (
                 client.table("sources")
-                .select("id, slug, name, url, owner_portal_id, is_sensitive")
+                .select("id, slug, name, url, owner_portal_id, is_sensitive, is_active")
                 .eq("id", source_id)
                 .execute()
             )
         except Exception:
-            # Backward-compatible fallback for environments where is_sensitive isn't present.
-            result = (
-                client.table("sources")
-                .select("id, slug, name, url, owner_portal_id")
-                .eq("id", source_id)
-                .execute()
-            )
+            try:
+                # Backward-compatible fallback for environments where is_sensitive isn't present.
+                result = (
+                    client.table("sources")
+                    .select("id, slug, name, url, owner_portal_id, is_active")
+                    .eq("id", source_id)
+                    .execute()
+                )
+            except Exception:
+                # Last-resort fallback for very old schemas where is_active isn't present.
+                result = (
+                    client.table("sources")
+                    .select("id, slug, name, url, owner_portal_id")
+                    .eq("id", source_id)
+                    .execute()
+                )
     if result.data:
         _SOURCE_CACHE[source_id] = result.data[0]
         return result.data[0]
@@ -526,6 +702,8 @@ def get_producer_id_for_source(source_id: int) -> Optional[str]:
 
 def _compute_and_save_event_blurhash(event_id: int, image_url: str) -> None:
     """Best-effort async blurhash generation for newly inserted events."""
+    if not writes_enabled():
+        return
     try:
         from backfill_blurhash import (
             compute_blurhash,
@@ -592,10 +770,110 @@ def _fetch_venue_description(url: str) -> Optional[str]:
     return None
 
 
+def _normalize_venue_name(value: Optional[str]) -> str:
+    return re.sub(r"\s+", " ", (value or "").strip().lower())
+
+
+def _is_permanently_closed_venue(venue_data: dict) -> bool:
+    slug = (venue_data.get("slug") or "").strip().lower()
+    name = _normalize_venue_name(venue_data.get("name"))
+    return (
+        slug in CLOSED_VENUE_SLUGS
+        or name in CLOSED_VENUE_NAMES_NORMALIZED
+    )
+
+
+def _with_closed_note(description: Optional[str]) -> str:
+    text = (description or "").strip()
+    if not text:
+        return CLOSED_VENUE_NOTE
+    lower = text.lower()
+    if "do not reactivate via crawler" in lower:
+        return text
+    if "permanently closed" in lower:
+        needs_period = not text.endswith((".", "!", "?"))
+        suffix = "Do not reactivate via crawler."
+        return f"{text}. {suffix}" if needs_period else f"{text} {suffix}"
+    needs_period = not text.endswith((".", "!", "?"))
+    return (
+        f"{text}. {CLOSED_VENUE_NOTE}"
+        if needs_period
+        else f"{text} {CLOSED_VENUE_NOTE}"
+    )
+
+
+def _lock_closed_venue_record(client: Client, venue_id: int, existing: dict) -> None:
+    """Ensure a permanently-closed venue remains inactive."""
+    update_data = {}
+    if existing.get("active") is not False:
+        update_data["active"] = False
+    next_description = _with_closed_note(existing.get("description"))
+    if next_description != (existing.get("description") or "").strip():
+        update_data["description"] = next_description
+
+    if not update_data:
+        return
+
+    if not writes_enabled():
+        _log_write_skip(f"update venues id={venue_id} set closed lock")
+        return
+
+    client.table("venues").update(update_data).eq("id", venue_id).execute()
+
+
 @retry_on_network_error(max_retries=3, base_delay=0.5)
 def get_or_create_venue(venue_data: dict) -> int:
     """Get existing venue or create new one. Returns venue ID."""
     client = get_client()
+
+    if _is_permanently_closed_venue(venue_data):
+        slug = venue_data.get("slug")
+        name = venue_data.get("name")
+        logger.info(
+            "Closed venue guard: keeping '%s' inactive",
+            slug or name or "unknown",
+        )
+
+        existing = None
+        if slug:
+            res = (
+                client.table("venues")
+                .select("id, active, description")
+                .eq("slug", slug)
+                .limit(1)
+                .execute()
+            )
+            if res.data:
+                existing = res.data[0]
+
+        if not existing and name:
+            res = (
+                client.table("venues")
+                .select("id, active, description")
+                .eq("name", name)
+                .limit(1)
+                .execute()
+            )
+            if res.data:
+                existing = res.data[0]
+
+        if existing:
+            _lock_closed_venue_record(client, existing["id"], existing)
+            return existing["id"]
+
+        blocked_venue_data = dict(venue_data)
+        blocked_venue_data["active"] = False
+        blocked_venue_data["description"] = _with_closed_note(
+            blocked_venue_data.get("description")
+        )
+
+        if not writes_enabled():
+            _log_write_skip(
+                f"insert venues name={blocked_venue_data.get('name', 'unknown')} (closed guard)"
+            )
+            return _next_temp_id()
+        result = client.table("venues").insert(blocked_venue_data).execute()
+        return result.data[0]["id"]
 
     # Try to find by slug first
     slug = venue_data.get("slug")
@@ -694,7 +972,15 @@ def get_or_create_venue(venue_data: dict) -> int:
             )
         venue_data["vibes"] = valid or None
 
+    if venues_support_location_designator():
+        venue_data.setdefault("location_designator", infer_location_designator(venue_data))
+
     # Create new venue
+    if not writes_enabled():
+        _log_write_skip(
+            f"insert venues name={venue_data.get('name', 'unknown')}"
+        )
+        return _next_temp_id()
     result = client.table("venues").insert(venue_data).execute()
     return result.data[0]["id"]
 
@@ -1307,11 +1593,37 @@ def insert_event(
     # Auto-fetch movie metadata (poster, director, runtime, etc.) for film events
     film_metadata = None
     if event_data.get("category") == "film":
+        parsed_film_title, parsed_film_year = extract_film_info(event_data.get("title", ""))
+        if events_support_film_identity_columns():
+            if parsed_film_title and not event_data.get("film_title"):
+                event_data["film_title"] = parsed_film_title
+                event_data["film_identity_source"] = "title_parse"
+            if parsed_film_year and not event_data.get("film_release_year"):
+                try:
+                    event_data["film_release_year"] = int(parsed_film_year)
+                except (TypeError, ValueError):
+                    pass
+
         film_metadata = get_metadata_for_film_event(
             event_data.get("title", ""), event_data.get("image_url")
         )
-        if film_metadata and not event_data.get("image_url"):
-            event_data["image_url"] = film_metadata.poster_url
+        if film_metadata:
+            metadata_source = getattr(film_metadata, "source", None) or "omdb"
+            if not event_data.get("image_url"):
+                event_data["image_url"] = film_metadata.poster_url
+            if events_support_film_identity_columns():
+                if film_metadata.title:
+                    event_data["film_title"] = film_metadata.title
+                if film_metadata.year:
+                    event_data["film_release_year"] = film_metadata.year
+                if film_metadata.imdb_id:
+                    event_data["film_imdb_id"] = film_metadata.imdb_id
+                if film_metadata.genres:
+                    event_data["film_external_genres"] = film_metadata.genres
+                event_data["film_identity_source"] = metadata_source
+            # Keep event title exactly as venue provided, but use matched movie genres for tagging/filtering.
+            if film_metadata.genres and not genres:
+                genres = film_metadata.genres
 
     # Auto-fetch artist image, genres, and bio for music events
     music_info = None
@@ -1452,7 +1764,7 @@ def insert_event(
                 series_hint[key] = value
 
     # Process series association if hint provided — but only if no series_id already set
-    if series_hint and not event_data.get("series_id"):
+    if series_hint and not event_data.get("series_id") and writes_enabled():
         # Inject inferred genres into series_hint so new series get genres at creation
         if genres and not series_hint.get("genres"):
             series_hint["genres"] = genres
@@ -1560,6 +1872,25 @@ def insert_event(
     # Pop transient and deprecated fields before DB insert
     parsed_artists_for_insert = event_data.pop("_parsed_artists", None)
     event_data.pop("subcategory", None)  # DEPRECATED: migrated to genres[]
+
+    # Final defense-in-depth dedupe before insert:
+    # - checks current + legacy content_hash variants
+    # - falls back to natural key (source+venue+title+date+time)
+    existing = find_existing_event_for_insert(event_data)
+    if existing:
+        smart_update_existing_event(existing, event_data)
+        return existing["id"]
+
+    # Cross-source duplicate suppression: keep one visible canonical row per venue/time/title.
+    cross_source_canonical_id = find_cross_source_canonical_for_insert(event_data)
+    if cross_source_canonical_id:
+        event_data["canonical_event_id"] = cross_source_canonical_id
+
+    if not writes_enabled():
+        _log_write_skip(
+            f"insert events title={event_data.get('title', 'untitled')[:60]}"
+        )
+        return _next_temp_id()
 
     result = client.table("events").insert(event_data).execute()
     event_id = result.data[0]["id"]
@@ -1936,6 +2267,9 @@ def sanitize_event_artists(
 
 def update_event(event_id: int, event_data: dict) -> None:
     """Update an existing event."""
+    if not writes_enabled():
+        _log_write_skip(f"update events id={event_id}")
+        return
     client = get_client()
     client.table("events").update(event_data).eq("id", event_id).execute()
 
@@ -2000,6 +2334,29 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
     if incoming.get("source_url") and not existing.get("source_url"):
         updates["source_url"] = incoming["source_url"]
 
+    # --- Portal: fill missing from incoming or source ownership ---
+    if not existing.get("portal_id"):
+        incoming_portal_id = incoming.get("portal_id")
+        if not incoming_portal_id and incoming.get("source_id"):
+            source_info = get_source_info(incoming["source_id"])
+            if source_info:
+                incoming_portal_id = source_info.get("owner_portal_id")
+        if incoming_portal_id:
+            updates["portal_id"] = incoming_portal_id
+
+    # --- Film identity: preserve venue title, enrich canonical movie identity separately ---
+    if events_support_film_identity_columns() and existing.get("category") == "film":
+        if incoming.get("film_title") and not existing.get("film_title"):
+            updates["film_title"] = incoming["film_title"]
+        if incoming.get("film_release_year") and not existing.get("film_release_year"):
+            updates["film_release_year"] = incoming["film_release_year"]
+        if incoming.get("film_imdb_id") and not existing.get("film_imdb_id"):
+            updates["film_imdb_id"] = incoming["film_imdb_id"]
+        if incoming.get("film_external_genres") and not existing.get("film_external_genres"):
+            updates["film_external_genres"] = incoming["film_external_genres"]
+        if incoming.get("film_identity_source") and not existing.get("film_identity_source"):
+            updates["film_identity_source"] = incoming["film_identity_source"]
+
     # --- Tags: union merge ---
     existing_tags = set(existing.get("tags") or [])
     incoming_tags = set(incoming.get("tags") or [])
@@ -2020,6 +2377,10 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
     if not updates:
         return False
 
+    if not writes_enabled():
+        _log_write_skip(f"update events id={event_id} (smart update)")
+        return True
+
     try:
         client = get_client()
         client.table("events").update(updates).eq("id", event_id).execute()
@@ -2037,6 +2398,9 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
 def upsert_event_artists(event_id: int, artists: list, link_canonical: bool = True) -> None:
     """Replace event artists for an event, preserving billing order."""
     if not artists:
+        return
+    if not writes_enabled():
+        _log_write_skip(f"upsert event_artists event_id={event_id}")
         return
 
     client = get_client()
@@ -2084,6 +2448,9 @@ def upsert_event_artists(event_id: int, artists: list, link_canonical: bool = Tr
 def upsert_event_images(event_id: int, images: list) -> None:
     """Upsert images for an event."""
     if not images:
+        return
+    if not writes_enabled():
+        _log_write_skip(f"upsert event_images event_id={event_id}")
         return
 
     payload = []
@@ -2139,6 +2506,9 @@ def upsert_event_images(event_id: int, images: list) -> None:
 def upsert_event_links(event_id: int, links: list) -> None:
     """Upsert links for an event (ticketing, organizer, etc.)."""
     if not links:
+        return
+    if not writes_enabled():
+        _log_write_skip(f"upsert event_links event_id={event_id}")
         return
 
     payload = []
@@ -2206,6 +2576,10 @@ def update_event_extraction_metadata(
     if not update_data:
         return
 
+    if not writes_enabled():
+        _log_write_skip(f"update events id={event_id} (extraction metadata)")
+        return
+
     client = get_client()
     client.table("events").update(update_data).eq("id", event_id).execute()
 
@@ -2261,6 +2635,10 @@ def _filter_users_with_event_updates(user_ids: list[str]) -> list[str]:
 
 def create_event_update_notifications(event_id: int, message: str) -> int:
     """Create in-app notifications for users with RSVPs or saved items."""
+    if not writes_enabled():
+        _log_write_skip(f"insert notifications event_id={event_id}")
+        return 0
+
     client = get_client()
 
     # RSVP users (going/interested)
@@ -2395,6 +2773,207 @@ def find_event_by_hash(content_hash: str) -> Optional[dict]:
     return None
 
 
+def _normalize_title_for_natural_key(title: Optional[str]) -> str:
+    """Normalize title for exact-ish natural-key dedupe checks."""
+    from dedupe import normalize_text  # lazy import avoids circular at module load
+    return normalize_text(title or "")
+
+
+@retry_on_network_error(max_retries=3, base_delay=0.5)
+def find_existing_event_by_natural_key(event_data: dict) -> Optional[dict]:
+    """
+    Find a likely duplicate event by natural key when hash lookup misses.
+
+    Key shape:
+    - source_id
+    - venue_id
+    - start_date
+    - start_time (or both NULL)
+    - normalized title equality
+    """
+    source_id = event_data.get("source_id")
+    venue_id = event_data.get("venue_id")
+    start_date = event_data.get("start_date")
+    title = event_data.get("title")
+
+    if not source_id or not venue_id or not start_date or not title:
+        return None
+
+    incoming_start_time = event_data.get("start_time")
+    incoming_title_norm = _normalize_title_for_natural_key(title)
+    if not incoming_title_norm:
+        return None
+
+    client = get_client()
+    query = (
+        client.table("events")
+        .select("*")
+        .eq("source_id", source_id)
+        .eq("venue_id", venue_id)
+        .eq("start_date", start_date)
+    )
+
+    if incoming_start_time:
+        query = query.eq("start_time", incoming_start_time)
+    else:
+        query = query.is_("start_time", "null")
+
+    result = query.execute()
+    candidates = result.data or []
+
+    for candidate in candidates:
+        if _normalize_title_for_natural_key(candidate.get("title")) == incoming_title_norm:
+            return candidate
+
+    return None
+
+
+def find_existing_event_for_insert(event_data: dict) -> Optional[dict]:
+    """
+    Dedupe guard for insert_event.
+
+    1) Hash candidates (current + legacy)
+    2) Natural key fallback
+    """
+    title = event_data.get("title")
+    venue_name = ""
+    if event_data.get("venue_id"):
+        venue_info = get_venue_by_id_cached(event_data["venue_id"])
+        if venue_info and isinstance(venue_info, dict):
+            venue_name = venue_info.get("name", "") or ""
+    start_date = event_data.get("start_date")
+
+    try:
+        from dedupe import generate_content_hash_candidates  # lazy import
+        hash_candidates = generate_content_hash_candidates(title or "", venue_name, start_date)
+    except Exception:
+        hash_candidates = [event_data.get("content_hash")] if event_data.get("content_hash") else []
+
+    for content_hash in hash_candidates:
+        existing = find_event_by_hash(content_hash)
+        if existing:
+            # Move canonical row to current hash to avoid stale-hash churn.
+            if event_data.get("content_hash") and existing.get("content_hash") != event_data.get("content_hash"):
+                update_event(existing["id"], {"content_hash": event_data["content_hash"]})
+                existing["content_hash"] = event_data["content_hash"]
+            return existing
+
+    # Fallback when hash style changed or source provided malformed date while hashing.
+    existing = find_existing_event_by_natural_key(event_data)
+    if existing and event_data.get("content_hash") and existing.get("content_hash") != event_data.get("content_hash"):
+        update_event(existing["id"], {"content_hash": event_data["content_hash"]})
+        existing["content_hash"] = event_data["content_hash"]
+    return existing
+
+
+def _source_priority_for_dedupe(
+    source_slug: Optional[str], is_active: Optional[bool] = None
+) -> int:
+    """Lower is better (preferred canonical source)."""
+    slug = (source_slug or "").strip().lower()
+    inactive_penalty = 500 if is_active is False else 0
+    if not slug:
+        return 200 + inactive_penalty
+    if slug.endswith("-test"):
+        return 300 + inactive_penalty
+    if slug in _AGGREGATOR_SOURCE_SLUGS:
+        return 230 + inactive_penalty
+    if slug.startswith(_AGGREGATOR_SOURCE_PREFIXES):
+        return 220 + inactive_penalty
+    return 100 + inactive_penalty
+
+
+def _candidate_quality_score(event_row: dict) -> tuple[int, int, int]:
+    """
+    Rank candidate quality for canonical selection.
+    Higher tuple is better:
+    - richer description
+    - has image
+    - has ticket URL
+    """
+    desc_len = len((event_row.get("description") or "").strip())
+    has_image = 1 if event_row.get("image_url") else 0
+    has_ticket = 1 if event_row.get("ticket_url") else 0
+    return (desc_len, has_image, has_ticket)
+
+
+@retry_on_network_error(max_retries=3, base_delay=0.5)
+def find_cross_source_canonical_for_insert(event_data: dict) -> Optional[int]:
+    """
+    Find canonical event ID for cross-source duplicate suppression.
+
+    We only consider same venue/date/time + normalized title equality, but different source.
+    """
+    source_id = event_data.get("source_id")
+    venue_id = event_data.get("venue_id")
+    start_date = event_data.get("start_date")
+    start_time = event_data.get("start_time")
+    title = event_data.get("title")
+
+    if not source_id or not venue_id or not start_date or not title:
+        return None
+
+    incoming_title_norm = _normalize_title_for_natural_key(title)
+    if not incoming_title_norm:
+        return None
+
+    client = get_client()
+    query = (
+        client.table("events")
+        .select("id,title,source_id,canonical_event_id,created_at,description,image_url,ticket_url")
+        .eq("venue_id", venue_id)
+        .eq("start_date", start_date)
+        .neq("source_id", source_id)
+    )
+    if start_time:
+        query = query.eq("start_time", start_time)
+    else:
+        query = query.is_("start_time", "null")
+
+    result = query.execute()
+    candidates = [
+        row
+        for row in (result.data or [])
+        if _normalize_title_for_natural_key(row.get("title")) == incoming_title_norm
+    ]
+    if not candidates:
+        return None
+
+    resolved: list[dict] = []
+    for row in candidates:
+        canonical_id = row.get("canonical_event_id")
+        if canonical_id:
+            canonical = (
+                client.table("events")
+                .select("id,source_id,created_at,description,image_url,ticket_url")
+                .eq("id", canonical_id)
+                .maybe_single()
+                .execute()
+            ).data
+            if canonical:
+                resolved.append(canonical)
+                continue
+        resolved.append(row)
+
+    unique_by_id = {row["id"]: row for row in resolved if row.get("id")}
+    candidates = list(unique_by_id.values())
+    if not candidates:
+        return None
+
+    def _sort_key(row: dict):
+        s = get_source_info(row.get("source_id")) or {}
+        source_priority = _source_priority_for_dedupe(
+            s.get("slug"), s.get("is_active")
+        )
+        quality = _candidate_quality_score(row)
+        created = row.get("created_at") or ""
+        # Lower source_priority is better; higher quality is better; older created_at wins ties.
+        return (source_priority, -quality[0], -quality[1], -quality[2], created)
+
+    canonical = sorted(candidates, key=_sort_key)[0]
+    return canonical.get("id")
+
+
 @retry_on_network_error()
 def remove_stale_source_events(source_id: int, current_hashes: set[str]) -> int:
     """Remove future events from a source that weren't seen in the current crawl.
@@ -2431,6 +3010,10 @@ def remove_stale_source_events(source_id: int, current_hashes: set[str]) -> int:
 
     if not stale_ids:
         return 0
+
+    if not writes_enabled():
+        _log_write_skip(f"delete stale events source_id={source_id} count={len(stale_ids)}")
+        return len(stale_ids)
 
     # Clear canonical references pointing to stale events
     for stale_id in stale_ids:
@@ -2524,6 +3107,10 @@ def find_events_by_date_and_venue_family(date: str, venue_id: int) -> list[dict]
 
 def create_crawl_log(source_id: int) -> int:
     """Create a new crawl log entry. Returns log ID."""
+    if not writes_enabled():
+        _log_write_skip(f"insert crawl_logs source_id={source_id}")
+        return _next_temp_id()
+
     client = get_client()
     result = (
         client.table("crawl_logs")
@@ -2554,6 +3141,9 @@ def get_all_events(limit: int = 1000, offset: int = 0) -> list[dict]:
 
 def update_event_tags(event_id: int, tags: list[str]) -> None:
     """Update only the tags field of an event."""
+    if not writes_enabled():
+        _log_write_skip(f"update events id={event_id} (tags)")
+        return
     client = get_client()
     client.table("events").update({"tags": tags}).eq("id", event_id).execute()
 
@@ -2568,6 +3158,10 @@ def update_crawl_log(
     error_message: Optional[str] = None,
 ) -> None:
     """Update crawl log with results."""
+    if not writes_enabled():
+        _log_write_skip(f"update crawl_logs id={log_id}")
+        return
+
     client = get_client()
 
     # Build update data
@@ -2594,6 +3188,10 @@ def refresh_available_filters() -> bool:
     Call this after each crawl run to update filter availability.
     Returns True on success, False on error.
     """
+    if not writes_enabled():
+        _log_write_skip("rpc refresh_available_filters")
+        return True
+
     client = get_client()
     try:
         # Call the PostgreSQL function that refreshes filters
@@ -2618,6 +3216,10 @@ def update_source_health_tags(
     Returns:
         True on success, False on error
     """
+    if not writes_enabled():
+        _log_write_skip(f"update sources id={source_id} (health tags)")
+        return True
+
     client = get_client()
     try:
         update_data = {"health_tags": health_tags}
@@ -2693,6 +3295,10 @@ def deactivate_tba_events() -> int:
 
 def update_source_last_crawled(source_id: int) -> None:
     """Set last_crawled_at = NOW() for a source after successful crawl."""
+    if not writes_enabled():
+        _log_write_skip(f"update sources id={source_id} (last_crawled_at)")
+        return
+
     client = get_client()
     client.table("sources").update(
         {"last_crawled_at": datetime.utcnow().isoformat()}
@@ -2705,6 +3311,10 @@ def update_expected_event_count(source_id: int, events_found: int) -> None:
     Uses exponential moving average: new = 0.7 * old + 0.3 * current.
     If old is NULL, sets directly.
     """
+    if not writes_enabled():
+        _log_write_skip(f"update sources id={source_id} (expected_event_count)")
+        return
+
     client = get_client()
     result = (
         client.table("sources")
@@ -2833,6 +3443,13 @@ def detect_zero_event_sources() -> tuple[int, list[str]]:
             existing_tags = source.get("health_tags") or []
             if "zero-events-deactivated" not in existing_tags:
                 existing_tags.append("zero-events-deactivated")
+
+            if not writes_enabled():
+                _log_write_skip(
+                    f"update sources id={source['id']} (auto-deactivate zero-events)"
+                )
+                deactivated_slugs.append(source["slug"])
+                continue
 
             client.table("sources").update({
                 "is_active": False,

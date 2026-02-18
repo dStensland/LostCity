@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Optional
 from tags import INHERITABLE_VIBES, VIBE_TO_TAG, ALL_TAGS, GENRE_TO_TAGS
-from genre_normalize import normalize_genres, VALID_GENRES
+from genre_normalize import normalize_genres, normalize_genre, genres_for_category, VALID_GENRES
 
 
 def infer_tags(
@@ -792,7 +792,28 @@ def infer_genres(
     title = (event.get("title") or "").lower()
     desc = (event.get("description") or "").lower()
     category = (event.get("category") or "").lower()
+    category_key = "outdoor" if category == "outdoors" else category
     text = f"{title} {desc}"
+
+    # Infer from tags when we have sparse title/description payloads.
+    # Keep this category-scoped to avoid cross-domain genre bleed.
+    allowed_genres = genres_for_category(category_key)
+    tag_overrides = {
+        ("fitness", "running"): "run",
+        ("fitness", "race"): "run",
+        ("fitness", "athletics"): "run",
+        ("fitness", "cardio"): "run",
+    }
+    for raw_tag in event.get("tags") or []:
+        if not isinstance(raw_tag, str):
+            continue
+        tag_value = raw_tag.strip().lower()
+        from_tag = tag_overrides.get((category_key, tag_value)) or normalize_genre(tag_value)
+        if not from_tag:
+            continue
+        if allowed_genres and from_tag not in allowed_genres:
+            continue
+        genres.add(from_tag)
 
     # --- Category-specific genre inference ---
 
@@ -825,6 +846,7 @@ def infer_genres(
                 ["electronic", "edm", "techno", "trance", "dnb", "dubstep", "synth"],
                 "electronic",
             ),
+            (["dj ", " dj ", "dj set", "deejay", "turntablist"], "electronic"),
             (["pop ", "top 40", "chart"], "pop"),
             (["soul", "funk", "motown", "disco", "groove", "boogie"], "soul"),
             (
@@ -972,7 +994,10 @@ def infer_genres(
     elif category == "fitness":
         fitness_patterns: list[tuple[list[str], str]] = [
             (["yoga", "vinyasa", "hot yoga", "yin", "asana", "namaste"], "yoga"),
-            (["run club", "group run", "trail run", "pace group", "runners"], "run"),
+            (
+                ["run club", "group run", "trail run", "pace group", "runners", "5k", "10k", "half-marathon", "half marathon", "fun run"],
+                "run",
+            ),
             (["spin", "cycling", "bike ride", "peloton", "criterium"], "cycling"),
             (
                 ["dance class", "salsa", "bachata", "swing dance", "two-step", "zumba"],
@@ -1368,10 +1393,10 @@ def infer_genres(
     # --- Fallback: infer from venue vibes/type when no genres found ---
     if not genres and (venue_vibes or venue_type):
         vibe_genre_map = {
-            "paint-and-sip": "painting",
-            "painting": "painting",
-            "pottery": "pottery",
-            "crafts": "crafts",
+            "paint-and-sip": "craft",
+            "painting": "craft",
+            "pottery": "craft",
+            "crafts": "craft",
             "karaoke": "karaoke",
             "trivia": "trivia",
             "drag": "drag",
@@ -1380,32 +1405,32 @@ def infer_genres(
             "comedy": "stand-up",
             "jazz": "jazz",
             "blues": "blues",
-            "dj": "electronic",
-            "latin-dance": "latin",
-            "salsa": "latin",
+            "dj": "dj",
+            "latin-dance": "latin-night",
+            "salsa": "latin-night",
             "hip-hop": "hip-hop",
             "country": "country",
-            "board-games": "board-games",
-            "arcade": "arcade",
+            "board-games": "game-night",
+            "arcade": "game-night",
             "yoga": "yoga",
-            "fitness": "fitness",
+            "fitness": "crossfit",
             "meditation": "meditation",
-            "wine": "wine-tasting",
-            "wine-tasting": "wine-tasting",
-            "beer-tasting": "beer-tasting",
-            "craft-beer": "beer-tasting",
+            "wine": "wine",
+            "wine-tasting": "wine",
+            "beer-tasting": "beer",
+            "craft-beer": "beer",
             "cocktails": "cocktails",
         }
         type_genre_map = {
             "comedy_club": "stand-up",
-            "gallery": "visual-art",
-            "brewery": "beer-tasting",
-            "winery": "wine-tasting",
+            "gallery": "exhibition",
+            "brewery": "beer",
+            "winery": "wine",
             "distillery": "cocktails",
             "yoga_studio": "yoga",
-            "fitness_center": "fitness",
-            "record_store": "vinyl",
-            "bookstore": "book-club",
+            "fitness_center": "crossfit",
+            "record_store": "indie",
+            "bookstore": "reading",
         }
         for vibe in (venue_vibes or []):
             if vibe in vibe_genre_map:
@@ -1414,5 +1439,3 @@ def infer_genres(
             genres.add(type_genre_map[venue_type])
 
     return sorted(genres)
-
-
