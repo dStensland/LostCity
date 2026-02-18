@@ -40,12 +40,12 @@ except Exception:
     CLOSED_VENUE_SLUGS = set()
 
 
-INDIE_THEATER_SLUGS = [
-    "plaza-theatre",
-    "tara-theatre",
-    "landmark-midtown",
-    "starlight-drive-in-theatre",
-]
+INDIE_THEATER_SLUG_ALIASES: dict[str, list[str]] = {
+    "plaza-theatre": ["plaza-theatre"],
+    "tara-theatre": ["tara-theatre"],
+    "landmark-midtown-art-cinema": ["landmark-midtown-art-cinema", "landmark-midtown"],
+    "starlight-drive-in": ["starlight-drive-in", "starlight-drive-in-theatre"],
+}
 
 HISTORY_KEYWORDS = (
     "historic",
@@ -381,21 +381,22 @@ def build_metrics(scope: DateScope) -> dict[str, Any]:
     )
 
     # Indie theater showtime coverage.
+    indie_aliases = sorted({alias for aliases in INDIE_THEATER_SLUG_ALIASES.values() for alias in aliases})
     indie_venues = (
         client.table("venues")
         .select("id,slug,name")
-        .in_("slug", INDIE_THEATER_SLUGS)
+        .in_("slug", indie_aliases)
         .execute()
         .data
         or []
     )
     venue_by_slug = {row.get("slug"): row for row in indie_venues}
     indie_showtimes: dict[str, dict[str, Any]] = {}
-    for slug in INDIE_THEATER_SLUGS:
-        venue = venue_by_slug.get(slug)
+    for canonical_slug, aliases in INDIE_THEATER_SLUG_ALIASES.items():
+        venue = next((venue_by_slug.get(alias) for alias in aliases if venue_by_slug.get(alias)), None)
         if not venue:
-            indie_showtimes[slug] = {
-                "venue_name": slug,
+            indie_showtimes[canonical_slug] = {
+                "venue_name": canonical_slug,
                 "events_next_window": 0,
                 "with_start_time": 0,
                 "without_start_time": 0,
@@ -420,8 +421,8 @@ def build_metrics(scope: DateScope) -> dict[str, Any]:
         without_time = total - with_time
         tomorrow_events = sum(1 for row in venue_events if row.get("start_date") == tomorrow)
 
-        indie_showtimes[slug] = {
-            "venue_name": venue.get("name") or slug,
+        indie_showtimes[canonical_slug] = {
+            "venue_name": venue.get("name") or canonical_slug,
             "events_next_window": total,
             "with_start_time": with_time,
             "without_start_time": without_time,

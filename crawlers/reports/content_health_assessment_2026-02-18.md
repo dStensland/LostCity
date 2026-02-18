@@ -1,7 +1,7 @@
 # Content Health Assessment - 2026-02-18
 
 ## Scope
-- Generated at: 2026-02-18T01:52:01.993724+00:00
+- Generated at: 2026-02-18T01:56:27.730502+00:00
 - Future window: 2026-02-18 to 2026-03-20
 - Window days: 30
 
@@ -54,8 +54,8 @@
 ## Indie Showtime Coverage
 - Plaza Theatre: **45/60** with times (75.0%), tomorrow events: 9
 - Tara Theatre: **61/61** with times (100.0%), tomorrow events: 13
-- `landmark-midtown`: venue record not found
-- `starlight-drive-in-theatre`: venue record not found
+- Landmark Midtown Art Cinema: **13/16** with times (81.2%), tomorrow events: 6
+- Starlight Drive-In Theatre: **24/24** with times (100.0%), tomorrow events: 6
 
 ## Closed Venue Leakage
 - Closed registry venues matched: **9**

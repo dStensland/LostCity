@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-02-18T01:52:01.993724+00:00",
+  "generated_at": "2026-02-18T01:56:27.730502+00:00",
   "scope": {
     "future_start_date": "2026-02-18",
     "next_window_end_date": "2026-03-20",
@@ -132,23 +132,21 @@
       "time_coverage_pct": 100.0,
       "tomorrow_events": 13
     },
-    "landmark-midtown": {
-      "venue_name": "landmark-midtown",
-      "events_next_window": 0,
-      "with_start_time": 0,
-      "without_start_time": 0,
-      "time_coverage_pct": 0.0,
-      "tomorrow_events": 0,
-      "missing_venue": true
+    "landmark-midtown-art-cinema": {
+      "venue_name": "Landmark Midtown Art Cinema",
+      "events_next_window": 16,
+      "with_start_time": 13,
+      "without_start_time": 3,
+      "time_coverage_pct": 81.2,
+      "tomorrow_events": 6
     },
-    "starlight-drive-in-theatre": {
-      "venue_name": "starlight-drive-in-theatre",
-      "events_next_window": 0,
-      "with_start_time": 0,
+    "starlight-drive-in": {
+      "venue_name": "Starlight Drive-In Theatre",
+      "events_next_window": 24,
+      "with_start_time": 24,
       "without_start_time": 0,
-      "time_coverage_pct": 0.0,
-      "tomorrow_events": 0,
-      "missing_venue": true
+      "time_coverage_pct": 100.0,
+      "tomorrow_events": 6
     }
   }
 }
