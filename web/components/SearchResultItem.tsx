@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { SearchResult } from "@/lib/unified-search";
 import { formatCompactCount } from "@/lib/formats";
+import { buildSearchResultHref } from "@/lib/search-navigation";
 
 interface SearchResultItemProps {
   result: SearchResult;
@@ -22,7 +23,7 @@ export default function SearchResultItem({
   compact = false,
 }: SearchResultItemProps) {
   const config = getTypeConfig(result.type);
-  const href = getPortalAwareHref(result, portalSlug);
+  const href = buildSearchResultHref(result, { portalSlug });
   const hoverBorderClass = config.iconClass.includes("magenta")
     ? "hover:border-l-[var(--neon-magenta)]"
     : config.iconClass.includes("coral")
@@ -391,33 +392,6 @@ function getBadgeClasses(result: SearchResult): string {
   }
 
   return "bg-[var(--dusk)] text-[var(--soft)] border border-[var(--twilight)]";
-}
-
-// Build portal-aware href
-function getPortalAwareHref(result: SearchResult, portalSlug?: string): string {
-  if (!portalSlug) return result.href;
-
-  // Map based on type - use ?param=value format for in-page detail views
-  if (result.type === "event") {
-    return `/${portalSlug}?event=${result.id}`;
-  } else if (result.type === "venue") {
-    const slug = result.href.split("/").pop();
-    return `/${portalSlug}?spot=${slug}`;
-  } else if (result.type === "organizer") {
-    const slug = result.href.split("/").pop();
-    return `/${portalSlug}?org=${slug}`;
-  } else if (result.type === "series") {
-    const slug = result.href.split("/").pop();
-    return `/${portalSlug}?series=${slug}`;
-  } else if (result.type === "festival") {
-    const slug = result.href.split("/").pop();
-    return `/${portalSlug}/festivals/${slug}`;
-  } else if (result.type === "list") {
-    // Lists stay as full path
-    return result.href;
-  }
-
-  return result.href;
 }
 
 /**

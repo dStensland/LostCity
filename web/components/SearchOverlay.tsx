@@ -1,17 +1,13 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, Fragment, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { usePortalOptional, DEFAULT_PORTAL } from "@/lib/portal-context";
 import type { SearchResult, SearchFacet } from "@/lib/unified-search";
 import SearchResultItem, { SearchResultSection, TypeIcon } from "./SearchResultItem";
 import { getRecentSearches, addRecentSearch, clearRecentSearches } from "@/lib/searchHistory";
-import { POPULAR_ACTIVITIES, getActivityColor } from "./ActivityChip";
-import CategoryIcon from "./CategoryIcon";
-import ScopedStyles from "@/components/ScopedStyles";
-import { createCssVarClass } from "@/lib/css-utils";
-import { formatTimeSplit } from "@/lib/formats";
+import { buildSearchResultHref } from "@/lib/search-navigation";
 
 interface SearchOverlayProps {
   isOpen: boolean;
@@ -41,24 +37,6 @@ const SEARCH_PLACEHOLDERS = [
 ];
 
 type TypeFilter = "event" | "venue" | "organizer" | "series" | "list" | null;
-
-type TrendingEvent = {
-  id: number;
-  title: string;
-  start_date: string;
-  start_time: string | null;
-  is_all_day: boolean;
-  category: string | null;
-};
-
-type TonightEvent = {
-  id: number;
-  title: string;
-  start_date: string;
-  start_time: string | null;
-  is_all_day: boolean;
-  category: string | null;
-};
 
 // Custom hook for debounced value
 function useDebounce<T>(value: T, delay: number): T {
@@ -170,10 +148,6 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [selectedResultIndex, setSelectedResultIndex] = useState(-1);
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
-  const [trending, setTrending] = useState<TrendingEvent[]>([]);
-  const [trendingLoading, setTrendingLoading] = useState(false);
-  const [tonight, setTonight] = useState<TonightEvent[]>([]);
-  const [tonightLoading, setTonightLoading] = useState(false);
   const [activeQuickAction, setActiveQuickAction] = useState<QuickActionId | null>(null);
   const [quickResults, setQuickResults] = useState<SearchResult[]>([]);
   const [quickResultsLoading, setQuickResultsLoading] = useState(false);
@@ -272,62 +246,6 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
     }
   }, [query, activeQuickAction]);
 
-  // Load trending events for empty state
-  useEffect(() => {
-    if (!isOpen) return;
-    if (query.trim().length > 0) return;
-    if (trending.length > 0) return;
-
-    let cancelled = false;
-    setTrendingLoading(true);
-
-    fetch("/api/trending")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (cancelled) return;
-        const events = (data?.events || []).slice(0, 3) as TrendingEvent[];
-        setTrending(events);
-      })
-      .catch(() => {
-        if (!cancelled) setTrending([]);
-      })
-      .finally(() => {
-        if (!cancelled) setTrendingLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen, query, trending.length]);
-
-  // Load tonight's picks for empty state
-  useEffect(() => {
-    if (!isOpen) return;
-    if (query.trim().length > 0) return;
-    if (tonight.length > 0) return;
-
-    let cancelled = false;
-    setTonightLoading(true);
-
-    fetch("/api/tonight")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (cancelled) return;
-        const events = (data?.events || []).slice(0, 2) as TonightEvent[];
-        setTonight(events);
-      })
-      .catch(() => {
-        if (!cancelled) setTonight([]);
-      })
-      .finally(() => {
-        if (!cancelled) setTonightLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen, query, tonight.length]);
-
   // Handler for clicking on a result (add to recent searches and close)
   const handleResultClick = useCallback(() => {
     // Add to recent searches
@@ -338,8 +256,6 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
   }, [query, onClose]);
 
   const router = useRouter();
-
-  const basePath = portal?.slug ? `/${portal.slug}` : "";
 
   const navigateToHref = useCallback(
     (href: string) => {
@@ -477,7 +393,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
           if (query.trim()) {
             addRecentSearch(query.trim());
           }
-          navigateToHref(mapToPortalPath(selectedResult, portal?.slug));
+          navigateToHref(buildSearchResultHref(selectedResult, { portalSlug: portal?.slug }));
         }
       }
     };
@@ -615,26 +531,6 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
     }
   }, [portal?.id, portal?.slug]);
 
-  // Map result href to portal-aware path
-  function mapToPortalPath(result: SearchResult, portalSlug?: string): string {
-    if (!portalSlug) return result.href;
-
-    // Map based on type - use ?param=value format for in-page detail views
-    if (result.type === "event") {
-      return `/${portalSlug}?event=${result.id}`;
-    } else if (result.type === "venue") {
-      const slug = result.href.split("/").pop();
-      return `/${portalSlug}?spot=${slug}`;
-    } else if (result.type === "organizer") {
-      const slug = result.href.split("/").pop();
-      return `/${portalSlug}?org=${slug}`;
-    } else if (result.type === "series") {
-      const slug = result.href.split("/").pop();
-      return `/${portalSlug}?series=${slug}`;
-    }
-    return result.href;
-  }
-
   // Trigger search when debounced query changes
   useEffect(() => {
     search(debouncedQuery);
@@ -673,17 +569,6 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
   const handleRetry = () => {
     setError(null);
     search(debouncedQuery);
-  };
-
-  const handleActivityClick = (activity: typeof POPULAR_ACTIVITIES[number]) => {
-    // Build URL for the activity filter
-    const params = new URLSearchParams();
-    params.set("view", "find");
-    params.set("type", "events");
-    params.set("categories", activity.value);
-
-    onClose();
-    router.push(`${basePath}?${params.toString()}`);
   };
 
   const [mounted, setMounted] = useState(false);
@@ -1104,131 +989,6 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                     </div>
                   )}
 
-                  {/* Browse by Activity */}
-                  <div className="animate-fade-up">
-                    <h3 className="text-xs font-mono font-semibold text-[var(--soft)] uppercase tracking-wider mb-3 flex items-center gap-2">
-                      <svg className="w-3.5 h-3.5 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
-                      </svg>
-                      Browse by Activity
-                    </h3>
-                    <div className="flex overflow-x-auto gap-2 pb-1 scrollbar-hide">
-                      {POPULAR_ACTIVITIES.map((activity) => {
-                        const color = getActivityColor(activity.iconType);
-                        const accent = createCssVarClass("--accent-color", color, "accent");
-                        return (
-                          <Fragment key={activity.value}>
-                            <ScopedStyles css={accent?.css} />
-                            <button
-                              onClick={() => handleActivityClick(activity)}
-                              data-accent
-                              className={`flex items-center gap-1.5 px-3 py-2 rounded-full bg-[var(--twilight)] text-[var(--soft)] hover:text-[var(--cream)] border transition-colors text-sm whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)] accent-chip ${accent?.className ?? ""}`}
-                            >
-                              <CategoryIcon type={activity.iconType} size={14} className="text-accent" />
-                              <span>{activity.label}</span>
-                            </button>
-                          </Fragment>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Tonight's Picks */}
-                  {(tonightLoading || tonight.length > 0) && (
-                    <div className="animate-fade-up">
-                      <h3 className="text-xs font-mono font-semibold text-[var(--soft)] uppercase tracking-wider mb-3 flex items-center gap-2">
-                        <svg className="w-3.5 h-3.5 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2C12 2 6 8 6 14C6 18 8.5 21 12 21C15.5 21 18 18 18 14C18 8 12 2 12 2Z" />
-                        </svg>
-                        Tonight&apos;s Picks
-                      </h3>
-                      {tonightLoading ? (
-                        <div className="space-y-2">
-                          {[1, 2].map((i) => (
-                            <div key={i} className="h-10 rounded-lg skeleton-shimmer" />
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          {tonight.map((event) => {
-                            const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
-                            const categoryKey = event.category || "other";
-                            const href = portal?.slug ? `/${portal.slug}?event=${event.id}` : `/events/${event.id}`;
-                            return (
-                              <button
-                                key={event.id}
-                                onClick={() => {
-                                  navigateToHref(href);
-                                }}
-                                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-[var(--twilight)]/60 hover:bg-[var(--twilight)] transition-colors text-left border border-transparent hover:border-[var(--neon-amber)]/40 shadow-[0_0_0_1px_rgba(255,255,255,0.04)]"
-                              >
-                                <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-[var(--twilight)]/70">
-                                  <CategoryIcon type={categoryKey} size={14} />
-                                </span>
-                                <div className="min-w-0 flex-1">
-                                  <p className="text-sm text-[var(--cream)] truncate">{event.title}</p>
-                                  <p className="text-[0.65rem] font-mono text-[var(--muted)]">
-                                    {time}
-                                    {period && <span className="opacity-70"> {period}</span>}
-                                  </p>
-                                </div>
-                                <span className="text-[0.65rem] font-mono text-[var(--neon-amber)]">Tonight</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Trending Now */}
-                  {(trendingLoading || trending.length > 0) && (
-                    <div className="animate-fade-up">
-                      <h3 className="text-xs font-mono font-semibold text-[var(--soft)] uppercase tracking-wider mb-3 flex items-center gap-2">
-                        <svg className="w-3.5 h-3.5 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                        </svg>
-                        Trending Now
-                      </h3>
-                      {trendingLoading ? (
-                        <div className="space-y-2">
-                          {[1, 2, 3].map((i) => (
-                            <div key={i} className="h-10 rounded-lg skeleton-shimmer" />
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          {trending.map((event) => {
-                            const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
-                            const categoryKey = event.category || "other";
-                            const href = portal?.slug ? `/${portal.slug}?event=${event.id}` : `/events/${event.id}`;
-                            return (
-                              <button
-                                key={event.id}
-                                onClick={() => {
-                                  navigateToHref(href);
-                                }}
-                                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg bg-[var(--twilight)]/50 hover:bg-[var(--twilight)] transition-colors text-left"
-                              >
-                                <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-[var(--twilight)]/70">
-                                  <CategoryIcon type={categoryKey} size={14} />
-                                </span>
-                                <div className="min-w-0 flex-1">
-                                  <p className="text-sm text-[var(--cream)] truncate">{event.title}</p>
-                                  <p className="text-[0.65rem] font-mono text-[var(--muted)]">
-                                    {time}
-                                    {period && <span className="opacity-70"> {period}</span>}
-                                  </p>
-                                </div>
-                                <span className="text-[0.65rem] font-mono text-[var(--coral)]">View</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
                   {/* Popular Searches */}
                   <div className="animate-fade-up">
                     <h3 className="text-xs font-mono font-semibold text-[var(--soft)] uppercase tracking-wider mb-3 flex items-center gap-2">
@@ -1248,13 +1008,6 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                         </button>
                       ))}
                     </div>
-                  </div>
-
-                  {/* Search Tips */}
-                  <div className="pt-2 border-t border-[var(--twilight)]">
-                    <p className="text-xs text-[var(--soft)]">
-                      Try &quot;tonight&quot;, &quot;this weekend&quot;, or a venue name
-                    </p>
                   </div>
                 </div>
               )}

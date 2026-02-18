@@ -14,6 +14,7 @@ import {
   type SearchContext as RankingContext,
 } from "@/lib/search-ranking";
 import { type SearchResult } from "@/lib/unified-search";
+import { buildSearchResultHref } from "@/lib/search-navigation";
 import { SuggestionGroup, QuickActionsList } from "./search";
 import { TypeIcon } from "./SearchResultItem";
 
@@ -331,45 +332,7 @@ export default function SearchBar() {
       setShowDropdown(false);
       setSelectedIndex(-1);
       setQuery("");
-
-      // Build URL based on result type
-      // Use simple modal pattern: /{portal}?{type}={id or slug}
-      const slug = result.href?.split("/").pop();
-      let url: string;
-
-      switch (result.type) {
-        case "event":
-          url = `/${portalSlug}?event=${result.id}`;
-          break;
-        case "venue":
-          url = `/${portalSlug}?spot=${slug || result.id}`;
-          break;
-        case "organizer":
-          url = `/${portalSlug}?org=${slug || result.id}`;
-          break;
-        case "series":
-          url = `/${portalSlug}?series=${slug || result.id}`;
-          break;
-        case "list":
-          // Lists go to their own page
-          url = result.href || `/list/${slug || result.id}`;
-          break;
-        case "festival":
-          url = `/${portalSlug}/festivals/${slug || result.id}`;
-          break;
-        case "neighborhood":
-          // Apply as filter
-          url = `/${portalSlug}?view=find&type=events&neighborhoods=${encodeURIComponent(result.title)}`;
-          break;
-        case "category":
-          // Apply as filter
-          url = `/${portalSlug}?view=find&type=events&categories=${encodeURIComponent(result.title)}`;
-          break;
-        default:
-          // Fallback to href or portal home
-          url = result.href || `/${portalSlug}`;
-      }
-
+      const url = buildSearchResultHref(result, { portalSlug });
       router.push(url, { scroll: false });
       inputRef.current?.blur();
     },
