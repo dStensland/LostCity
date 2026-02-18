@@ -15,6 +15,9 @@ type TrackRow = {
   description: string | null;
   sort_order: number;
   is_active: boolean;
+  accent_color: string | null;
+  category: string | null;
+  group_name: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -192,7 +195,6 @@ export async function GET(request: NextRequest) {
     }
 
     // Build per-track activity aggregates
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const trackVenueNameMap = new Map<number, string>(); // venueId → name for featured event
     for (const td of trackData) {
       for (const tv of td.trackVenues) {

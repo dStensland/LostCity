@@ -1,4 +1,3 @@
-import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 import { ITP_NEIGHBORHOODS, getNeighborhoodsByTier } from "@/config/neighborhoods";
 import { PLACE_CATEGORIES } from "@/config/categories";
@@ -10,12 +9,11 @@ import {
 import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { timingSafeEqual } from "crypto";
 import { logger } from "@/lib/logger";
+import { createServiceClient } from "@/lib/supabase/service";
+import { checkBodySize, checkParsedBodySize } from "@/lib/api-utils";
 
 function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  return createServiceClient();
 }
 
 // This endpoint requires PLACES_REFRESH_API_KEY to be set
@@ -24,7 +22,18 @@ export async function POST(req: NextRequest) {
   const rateLimitResult = await applyRateLimit(req, RATE_LIMITS.standard);
   if (rateLimitResult) return rateLimitResult;
 
-  const supabase = getSupabase();
+  let supabase: ReturnType<typeof createServiceClient>;
+  try {
+    supabase = getSupabase();
+  } catch (error) {
+    logger.error("Places refresh unavailable: missing service key", error);
+    return NextResponse.json({ error: "Service unavailable" }, { status: 503 });
+  }
+
+  // Limit payload size (endpoint only expects a small filter object)
+  const bodySizeError = checkBodySize(req, 10 * 1024);
+  if (bodySizeError) return bodySizeError;
+
   // Check for API key - must be configured and must match
   const authHeader = req.headers.get("authorization");
   const expectedKey = process.env.PLACES_REFRESH_API_KEY;
@@ -55,11 +64,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await req.json().catch(() => ({}));
+  const body = await req.json().catch(() => ({} as Record<string, unknown>));
+  const parsedBodySizeError = checkParsedBodySize(body, 10 * 1024);
+  if (parsedBodySizeError) return parsedBodySizeError;
+
   const tier = body.tier as 1 | 2 | 3 | undefined;
   const categoryId = body.category as string | undefined;
   const neighborhoodId = body.neighborhood as string | undefined;
   const dryRun = body.dryRun === true;
+
+  if (tier !== undefined && ![1, 2, 3].includes(tier)) {
+    return NextResponse.json({ error: "Invalid tier" }, { status: 400 });
+  }
+
+  if (categoryId !== undefined && !PLACE_CATEGORIES.some((c) => c.id === categoryId)) {
+    return NextResponse.json({ error: "Invalid category" }, { status: 400 });
+  }
+
+  if (neighborhoodId !== undefined && !ITP_NEIGHBORHOODS.some((n) => n.id === neighborhoodId)) {
+    return NextResponse.json({ error: "Invalid neighborhood" }, { status: 400 });
+  }
 
   // Filter neighborhoods
   const neighborhoods = tier
@@ -107,7 +131,7 @@ export async function POST(req: NextRequest) {
           dbPlace.final_score = dbPlace.google_score;
 
           if (!dryRun) {
-            const { error } = await supabase.from("places").upsert(dbPlace, {
+            const { error } = await supabase.from("places").upsert(dbPlace as never, {
               onConflict: "google_place_id",
               ignoreDuplicates: false,
             });

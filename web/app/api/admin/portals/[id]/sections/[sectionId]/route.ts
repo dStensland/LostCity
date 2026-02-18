@@ -34,10 +34,15 @@ export async function GET(
       )
     `)
     .eq("id", sectionId)
+    .eq("portal_id", portalId)
     .maybeSingle();
 
   if (error) {
     return adminErrorResponse(error, "GET /api/admin/portals/[id]/sections/[sectionId]");
+  }
+
+  if (!section) {
+    return NextResponse.json({ error: "Section not found" }, { status: 404 });
   }
 
   return NextResponse.json({ section });
@@ -75,11 +80,16 @@ export async function PATCH(
     .from("portal_sections")
     .update(updates)
     .eq("id", sectionId)
+    .eq("portal_id", portalId)
     .select()
     .maybeSingle();
 
   if (error) {
     return adminErrorResponse(error, "GET /api/admin/portals/[id]/sections/[sectionId]");
+  }
+
+  if (!section) {
+    return NextResponse.json({ error: "Section not found" }, { status: 404 });
   }
 
   return NextResponse.json({ section });
@@ -102,13 +112,20 @@ export async function DELETE(
   const supabase = createServiceClient();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
+  const { data: deletedSection, error } = await (supabase as any)
     .from("portal_sections")
     .delete()
-    .eq("id", sectionId);
+    .eq("id", sectionId)
+    .eq("portal_id", portalId)
+    .select("id")
+    .maybeSingle();
 
   if (error) {
     return adminErrorResponse(error, "GET /api/admin/portals/[id]/sections/[sectionId]");
+  }
+
+  if (!deletedSection) {
+    return NextResponse.json({ error: "Section not found" }, { status: 404 });
   }
 
   return NextResponse.json({ success: true });

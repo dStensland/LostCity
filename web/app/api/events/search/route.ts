@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
       start_date,
       end_date,
       is_all_day,
-      venue:venues(id, name, neighborhood, city),
+      venue:venues(id, name, neighborhood, city, location_designator),
       organization:organizations(id, name)
     `
     )
@@ -93,6 +93,12 @@ export async function GET(request: NextRequest) {
       name: string;
       neighborhood: string | null;
       city?: string | null;
+      location_designator?:
+        | "standard"
+        | "private_after_signup"
+        | "virtual"
+        | "recovery_meeting"
+        | null;
     } | null;
     organization: {
       id: string;

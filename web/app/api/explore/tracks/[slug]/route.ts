@@ -19,6 +19,9 @@ type TrackRow = {
   description: string | null;
   sort_order: number;
   is_active: boolean;
+  accent_color: string | null;
+  category: string | null;
+  group_name: string | null;
 };
 
 const MIN_VENUE_QUALITY = 50;
@@ -74,6 +77,30 @@ type HighlightRow = {
   description: string | null;
   sort_order: number;
 };
+
+const normalizeHighlightText = (value: string | null | undefined) =>
+  (value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+function dedupeTrackHighlights(rows: HighlightRow[]): HighlightRow[] {
+  const seen = new Set<string>();
+  const deduped: HighlightRow[] = [];
+
+  for (const row of rows) {
+    const normalizedTitle = normalizeHighlightText(row.title);
+    const normalizedDescription = normalizeHighlightText(row.description);
+    const fingerprint = `${row.venue_id}|${normalizedTitle}|${normalizedDescription}`;
+
+    if (seen.has(fingerprint)) continue;
+    seen.add(fingerprint);
+    deduped.push(row);
+  }
+
+  return deduped;
+}
 
 /**
  * GET /api/explore/tracks/[slug]
@@ -226,16 +253,16 @@ export async function GET(request: NextRequest, context: RouteContext) {
       .in("venue_id", venueIds)
       .order("sort_order", { ascending: true });
 
-    const allHighlights = rawHighlights as unknown as HighlightRow[] | null;
+    const allHighlights = dedupeTrackHighlights(
+      (rawHighlights as unknown as HighlightRow[] | null) || []
+    );
 
     // Group highlights by venue
     const highlightsByVenue = new Map<number, HighlightRow[]>();
-    if (allHighlights) {
-      for (const h of allHighlights) {
-        const list = highlightsByVenue.get(h.venue_id) ?? [];
-        list.push(h);
-        highlightsByVenue.set(h.venue_id, list);
-      }
+    for (const h of allHighlights) {
+      const list = highlightsByVenue.get(h.venue_id) ?? [];
+      list.push(h);
+      highlightsByVenue.set(h.venue_id, list);
     }
 
     // Track-level aggregates

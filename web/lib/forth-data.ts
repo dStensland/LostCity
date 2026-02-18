@@ -11,7 +11,6 @@ import type {
   ForthFeedData,
   ForthPropertyData,
   FeedSection,
-  FeedEvent,
   Destination,
   SpecialsMeta,
   DayPart,
@@ -28,7 +27,6 @@ import {
   haversineDistanceKm,
   getProximityTier,
   getProximityLabel,
-  getWalkingMinutes,
   type ProximityTier,
 } from "./geo";
 import { addDays, startOfDay, nextFriday, nextSunday, isFriday, isSaturday, isSunday } from "date-fns";
@@ -552,7 +550,6 @@ async function fetchFeedSectionsDirect(portal: Portal): Promise<FeedSection[]> {
     const today = getLocalDateString();
     const maxDate = getLocalDateString(addDays(new Date(), 14));
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let eventsQuery = supabase
       .from("events")
       .select(EVENT_SELECT)
@@ -763,7 +760,6 @@ async function fetchDestinationsDirect(portal: Portal): Promise<{
       .in("venue_id", venueIds)
       .eq("is_active", true),
     (() => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let q = supabase
         .from("events")
         .select("id, title, start_date, start_time, venue_id, source_id, category")
@@ -869,11 +865,19 @@ async function fetchDestinationsDirect(portal: Portal): Promise<{
     .sort((a, b) => b._score !== a._score ? b._score - a._score : a.distance_km - b.distance_km);
 
   // Split into all destinations and live-only
-  const destinations: Destination[] = allDestinations.slice(0, 120).map(({ _score: _, ...rest }) => rest);
+  const destinations: Destination[] = allDestinations.slice(0, 120).map((destination) => {
+    const { _score: score, ...rest } = destination;
+    void score;
+    return rest;
+  });
   const liveDestinations: Destination[] = allDestinations
     .filter((d) => d.special_state === "active_now")
     .slice(0, 36)
-    .map(({ _score: _, ...rest }) => rest);
+    .map((destination) => {
+      const { _score: score, ...rest } = destination;
+      void score;
+      return rest;
+    });
 
   const specialsMeta: SpecialsMeta = {
     total: destinations.length,

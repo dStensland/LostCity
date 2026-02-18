@@ -52,6 +52,7 @@ export async function GET(request: NextRequest) {
       address: string | null;
       neighborhood: string | null;
       venue_type: string | null;
+      location_designator: "standard" | "private_after_signup" | "virtual" | "recovery_meeting" | null;
       city: string;
       image_url: string | null;
       lat: number | null;
@@ -88,15 +89,10 @@ export async function GET(request: NextRequest) {
     // Note: is_24_hours column may not exist in all environments
     let query = supabase
       .from("venues")
-      .select("id, name, slug, address, neighborhood, venue_type, city, image_url, lat, lng, price_level, hours, hours_display, vibes, short_description, genres")
+      .select("id, name, slug, address, neighborhood, venue_type, location_designator, city, image_url, lat, lng, price_level, hours, hours_display, vibes, short_description, genres")
       .neq("active", false); // Exclude deactivated venues
 
-    query = applyPortalScopeToQuery(query, {
-      portalId,
-      portalExclusive: isExclusive,
-      publicOnlyWhenNoPortal: true,
-    });
-
+    // Note: venues table has no portal_id column, so we scope by city instead
     if (portalCityFilter.length > 0) {
       query = query.in("city", portalCityFilter);
     }
@@ -180,6 +176,7 @@ export async function GET(request: NextRequest) {
         address: venue.address,
         neighborhood: venue.neighborhood,
         venue_type: venue.venue_type,
+        location_designator: venue.location_designator || "standard",
         image_url: venue.image_url,
         event_count: eventCounts.get(venue.id) || 0,
         price_level: venue.price_level,

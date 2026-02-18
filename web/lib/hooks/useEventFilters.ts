@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { useCallback, useMemo, useEffect } from "react";
+import { useCallback, useMemo, useEffect, useRef } from "react";
 
 /**
  * Filter state parsed from URL
@@ -138,6 +138,7 @@ export function useEventFilters(options?: {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
+  const hasAppliedDefaultsRef = useRef(false);
 
   // Parse current filters from URL
   const filters = useMemo((): EventFilters => {
@@ -158,6 +159,8 @@ export function useEventFilters(options?: {
   // Apply smart defaults on initial load (if enabled and no filters are set)
   useEffect(() => {
     if (!options?.enableSmartDefaults) return;
+    if (hasAppliedDefaultsRef.current) return;
+    hasAppliedDefaultsRef.current = true;
 
     const hasAnyFilters = !!(
       filters.search ||
@@ -207,7 +210,15 @@ export function useEventFilters(options?: {
       const queryString = params.toString();
       router.replace(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false });
     }
-  }, []); // Only run on mount
+  }, [
+    filters,
+    options?.enablePersistence,
+    options?.enableSmartDefaults,
+    options?.portalVertical,
+    pathname,
+    router,
+    searchParams,
+  ]);
 
   // Check if any filters are active (excluding view)
   const hasActiveFilters = useMemo(() => {
@@ -316,7 +327,7 @@ export function useEventFilters(options?: {
     if (hasFiltersToSave) {
       saveFilters(filters);
     }
-  }, [filters.categories, filters.genres, filters.neighborhoods, options?.enablePersistence]);
+  }, [filters, options?.enablePersistence]);
 
   // Switch view while preserving shared filters
   const switchView = useCallback(

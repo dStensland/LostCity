@@ -152,7 +152,7 @@ export async function GET(request: NextRequest) {
     const currentTime = getCurrentTimeString();
 
     // Filter and enrich specials
-    let results: SpecialResult[] = [];
+    const results: SpecialResult[] = [];
 
     for (const special of specials as SpecialRow[]) {
       const venue = venueMap.get(special.venue_id);

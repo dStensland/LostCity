@@ -24,7 +24,7 @@ export async function GET(request: Request) {
     // Parse price filter - same logic as page.tsx
     const priceParam = searchParams.get("price");
     const priceFilter = PRICE_FILTERS.find(p => p.value === priceParam);
-    const isFree = priceParam === "free" || undefined;
+    const isFree = priceParam === "free" || searchParams.get("free") === "1" || searchParams.get("free") === "true" || undefined;
     const priceMax = priceFilter?.max || undefined;
 
     // Parse venue_id with validation

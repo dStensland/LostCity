@@ -1,3 +1,5 @@
+import type { PortalManifest } from "@/lib/portal-manifest";
+
 type PortalScopedQuery<T> = {
   eq: (column: string, value: string) => T;
   or: (filters: string) => T;
@@ -118,6 +120,37 @@ export function applyFederatedPortalScopeToQuery<T>(
   }
 
   return query;
+}
+
+type ManifestScopeOverrides = {
+  sourceIds?: number[];
+  sourceColumn?: string;
+  publicOnlyWhenNoPortal?: boolean;
+};
+
+export function getFederatedScopeOptionsFromManifest(
+  manifest: Pick<PortalManifest, "portalId" | "scope">,
+  overrides: ManifestScopeOverrides = {}
+): FederatedPortalScopeOptions {
+  return {
+    portalId: manifest.portalId,
+    portalExclusive: manifest.scope.portalExclusive,
+    publicOnlyWhenNoPortal:
+      overrides.publicOnlyWhenNoPortal ?? manifest.scope.publicOnlyWhenNoPortal,
+    sourceIds: overrides.sourceIds ?? manifest.scope.sourceIds,
+    sourceColumn: overrides.sourceColumn ?? manifest.scope.sourceColumn,
+  };
+}
+
+export function applyManifestFederatedScopeToQuery<T>(
+  query: T,
+  manifest: Pick<PortalManifest, "portalId" | "scope">,
+  overrides: ManifestScopeOverrides = {}
+): T {
+  return applyFederatedPortalScopeToQuery(
+    query,
+    getFederatedScopeOptionsFromManifest(manifest, overrides)
+  );
 }
 
 type FederatedScopeRow = {

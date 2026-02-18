@@ -100,7 +100,15 @@ export function shouldProxyImage(src: ImageProps["src"]): src is string {
 }
 
 export function buildProxiedImageSrc(src: string): string {
-  return `/api/image-proxy?url=${encodeURIComponent(src)}`;
+  try {
+    const normalized = new URL(src);
+    if (normalized.protocol === "http:") {
+      normalized.protocol = "https:";
+    }
+    return `/api/image-proxy?url=${encodeURIComponent(normalized.toString())}`;
+  } catch {
+    return `/api/image-proxy?url=${encodeURIComponent(src)}`;
+  }
 }
 
 /**

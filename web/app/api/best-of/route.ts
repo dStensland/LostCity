@@ -114,7 +114,8 @@ export async function GET(request: NextRequest) {
         supabase
           .from("venues")
           .select("id, name, image_url, hero_image_url, neighborhood")
-          .in("id", venueIdArr),
+          .in("id", venueIdArr)
+          .eq("active", true),
         supabase
           .from("best_of_venue_scores")
           .select("venue_id, algorithm_score")
@@ -132,7 +133,8 @@ export async function GET(request: NextRequest) {
     // Build top-3 previews per category (sorted by score DESC)
     const result = rows.map((c) => {
       const nominatedIds = nominationsByCategory.get(c.id) ?? [];
-      const scored = nominatedIds
+      const activeNominatedIds = nominatedIds.filter((vid) => venueMap.has(vid));
+      const scored = activeNominatedIds
         .map((vid) => ({ vid, score: scoreMap.get(vid) ?? 0 }))
         .sort((a, b) => b.score - a.score)
         .slice(0, 3);
@@ -159,7 +161,7 @@ export async function GET(request: NextRequest) {
         icon: c.icon,
         sortOrder: c.sort_order,
         voteCount: voteCounts.get(c.id) ?? 0,
-        nominationCount: nominatedIds.length,
+        nominationCount: activeNominatedIds.length,
         topVenues,
       };
     });

@@ -8,7 +8,14 @@ import {
 import { getLocalDateString } from "@/lib/formats";
 import { escapeSQLPattern, errorResponse } from "@/lib/api-utils";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
-import { applyPortalScopeToQuery, filterByPortalCity } from "@/lib/portal-scope";
+import {
+  applyPortalScopeToQuery,
+  filterByPortalCity,
+} from "@/lib/portal-scope";
+import {
+  isChainCinemaVenue,
+  isRegularShowtimeEvent,
+} from "@/lib/cinema-filter";
 
 import { fetchSocialProofCounts } from "@/lib/search";
 import { format, startOfDay, addDays } from "date-fns";
@@ -103,8 +110,8 @@ export async function GET(request: Request) {
     ).toISOString();
 
     // Get portal context, user preferences, and trending events in parallel (independent queries)
-    const [portalContext, prefsResult, trendingEventsResult] = await Promise.all(
-      [
+    const [portalContext, prefsResult, trendingEventsResult] =
+      await Promise.all([
         resolvePortalQueryContext(supabase, searchParams),
         supabase
           .from("user_preferences")
@@ -139,7 +146,7 @@ export async function GET(request: Request) {
           day_of_week,
           festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
         ),
-        venue:venues(id, name, slug, neighborhood, blurhash, city)
+        venue:venues(id, name, slug, neighborhood, location_designator, blurhash, city)
       `,
           )
           .gte("start_date", todayForTrending)
@@ -149,18 +156,24 @@ export async function GET(request: Request) {
           .is("portal_id", null)
           .order("start_date", { ascending: true })
           .limit(200),
-      ],
-    );
+      ]);
 
     if (portalContext.hasPortalParamMismatch) {
       return NextResponse.json(
-        { error: "portal and portal_id parameters must reference the same portal" },
+        {
+          error:
+            "portal and portal_id parameters must reference the same portal",
+        },
         { status: 400 },
       );
     }
 
     const portalId = portalContext.portalId;
-    const portalFilters: { categories?: string[]; neighborhoods?: string[]; city?: string } = portalContext.filters;
+    const portalFilters: {
+      categories?: string[];
+      neighborhoods?: string[];
+      city?: string;
+    } = portalContext.filters;
 
     const prefsData = prefsResult.data;
 
@@ -352,7 +365,7 @@ export async function GET(request: Request) {
         day_of_week,
         festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
       ),
-      venue:venues(id, name, neighborhood, slug, blurhash, city)
+      venue:venues(id, name, neighborhood, slug, location_designator, blurhash, city)
     `,
       )
       .or(`start_date.gte.${startDateFilter},end_date.gte.${startDateFilter}`) // Include ongoing events (exhibitions with end_date)
@@ -434,7 +447,7 @@ export async function GET(request: Request) {
       day_of_week,
       festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
     ),
-    venue:venues(id, name, neighborhood, slug, blurhash, city)
+    venue:venues(id, name, neighborhood, slug, location_designator, blurhash, city)
   `;
 
     // Build all queries, tracking which ones we're running
@@ -803,11 +816,7 @@ export async function GET(request: Request) {
       const eventGenres = (event.genres || []).map((genre) =>
         genre.toLowerCase(),
       );
-      const haystack = [
-        event.title,
-        ...(event.tags || []),
-        ...eventGenres,
-      ]
+      const haystack = [event.title, ...(event.tags || []), ...eventGenres]
         .join(" ")
         .toLowerCase();
 
@@ -984,13 +993,14 @@ export async function GET(request: Request) {
       });
     }
 
-    // Filter regular showtimes from curated feed (they belong in the showtimes rollup)
-    // Followed venues bypass the filter so users see showtimes from theaters they follow
+    // Filter only chain-cinema regular showtimes from curated feed.
+    // Indie theaters (Plaza/Tara/Landmark/Starlight, etc.) are intentionally kept.
+    // Followed venues always bypass suppression.
     events = events.filter((event) => {
-      if (!event.tags?.includes("showtime")) return true;
+      if (!isRegularShowtimeEvent(event.tags)) return true;
       if (event.venue?.id && followedVenueIds.includes(event.venue.id))
         return true;
-      return false;
+      return !isChainCinemaVenue(event.venue);
     });
 
     // When personalized mode is ON, filter to only events from followed entities
@@ -1355,7 +1365,7 @@ export async function GET(request: Request) {
     const trendingEventsData = filterByPortalCity(
       trendingEventsRaw,
       portalFilters.city || "Atlanta",
-      { allowMissingCity: true }
+      { allowMissingCity: true },
     );
     const filteredTrendingEventsData = hideAdultContent
       ? trendingEventsData.filter((event) => event.is_adult !== true)

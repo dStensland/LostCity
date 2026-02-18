@@ -79,18 +79,6 @@ export function createClient() {
   const globalClient = getGlobalClient();
   if (globalClient) return globalClient;
 
-  if (process.env.NODE_ENV === "development") {
-    const globalScope = globalThis as typeof globalThis & {
-      __lostcity_supabase_client_creations__?: number;
-    };
-    globalScope.__lostcity_supabase_client_creations__ =
-      (globalScope.__lostcity_supabase_client_creations__ ?? 0) + 1;
-    console.warn(
-      `[Supabase] createBrowserClient #${globalScope.__lostcity_supabase_client_creations__}`,
-      new Error("Supabase client created").stack
-    );
-  }
-
   const client = createBrowserClient<Database>(supabaseUrl, supabaseKey);
   setGlobalClient(client);
   return client;

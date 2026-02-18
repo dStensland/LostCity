@@ -1,14 +1,33 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
-import { addDays, startOfDay, nextFriday, nextSunday, isFriday, isSaturday, isSunday } from "date-fns";
+import {
+  addDays,
+  startOfDay,
+  nextFriday,
+  nextSunday,
+  isFriday,
+  isSaturday,
+  isSunday,
+} from "date-fns";
 import { getLocalDateString } from "@/lib/formats";
 import { getPortalSourceAccess } from "@/lib/federation";
-import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import {
+  applyRateLimit,
+  RATE_LIMITS,
+  getClientIdentifier,
+} from "@/lib/rate-limit";
 import { errorResponse, isValidUUID } from "@/lib/api-utils";
 import { fetchSocialProofCounts } from "@/lib/search";
-import { normalizePortalSlug, resolvePortalSlugAlias } from "@/lib/portal-aliases";
+import {
+  normalizePortalSlug,
+  resolvePortalSlugAlias,
+} from "@/lib/portal-aliases";
 import { applyManifestFederatedScopeToQuery } from "@/lib/portal-scope";
-import { buildPortalManifest, shouldApplyCityFilter } from "@/lib/portal-manifest";
+import {
+  buildPortalManifest,
+  shouldApplyCityFilter,
+} from "@/lib/portal-manifest";
+import { shouldSuppressChainShowtime } from "@/lib/cinema-filter";
 
 // Cache feed for 5 minutes at CDN, allow stale for 1 hour while revalidating
 export const revalidate = 300;
@@ -17,7 +36,10 @@ const FEED_CACHE_TTL_MS = 5 * 60 * 1000;
 const FEED_CACHE_MAX_ENTRIES = 100;
 const FEED_CACHE_CONTROL = "public, s-maxage=300, stale-while-revalidate=3600";
 
-const feedPayloadCache = new Map<string, { expiresAt: number; payload: unknown }>();
+const feedPayloadCache = new Map<
+  string,
+  { expiresAt: number; payload: unknown }
+>();
 
 function getCachedFeedPayload(cacheKey: string): unknown | null {
   const entry = feedPayloadCache.get(cacheKey);
@@ -85,7 +107,12 @@ type AutoFilter = {
   tags?: string[];
   is_free?: boolean;
   price_max?: number;
-  date_filter?: "today" | "tomorrow" | "this_weekend" | "next_7_days" | "next_30_days";
+  date_filter?:
+    | "today"
+    | "tomorrow"
+    | "this_weekend"
+    | "next_7_days"
+    | "next_30_days";
   sort_by?: "date" | "popularity" | "trending" | "random";
   source_ids?: number[];
   venue_ids?: number[];
@@ -142,6 +169,12 @@ type Event = {
     neighborhood: string | null;
     slug: string | null;
     venue_type: string | null;
+    location_designator:
+      | "standard"
+      | "private_after_signup"
+      | "virtual"
+      | "recovery_meeting"
+      | null;
     city: string | null;
   } | null;
 };
@@ -151,7 +184,9 @@ function isSectionVisible(section: Section): boolean {
   const now = new Date();
   const today = getLocalDateString();
   const currentTime = now.toTimeString().slice(0, 5); // HH:MM
-  const currentDay = now.toLocaleDateString("en-US", { weekday: "long" }).toLowerCase();
+  const currentDay = now
+    .toLocaleDateString("en-US", { weekday: "long" })
+    .toLowerCase();
 
   // Check date range
   if (section.schedule_start && today < section.schedule_start) {
@@ -236,7 +271,12 @@ function getDateRange(filter: string): { start: string; end: string } {
 
 // Classify a nightlife event into its activity type
 // Reusable across nightlife carousel counting + event stamping
-function classifyNightlifeActivity(event: { title: string; category: string | null; genres?: string[] | null; subcategory?: string | null }): string {
+function classifyNightlifeActivity(event: {
+  title: string;
+  category: string | null;
+  genres?: string[] | null;
+  subcategory?: string | null;
+}): string {
   // Genre values that map directly to nightlife activity keys
   const genreActivityMap: Record<string, string> = {
     karaoke: "karaoke",
@@ -246,7 +286,7 @@ function classifyNightlifeActivity(event: { title: string; category: string | nu
     bingo: "bingo",
     dj: "dj",
     drag: "drag",
-    burlesque: "drag",         // Merged into drag
+    burlesque: "drag", // Merged into drag
     latin_night: "latin_night",
     line_dancing: "line_dancing",
     party: "party",
@@ -277,7 +317,10 @@ function classifyNightlifeActivity(event: { title: string; category: string | nu
     [/salsa|bachata|latin|reggaeton/i, "latin_night"],
     [/drag\b|cabaret|burlesque/i, "drag"],
     [/\bdj\b|dance.?party|club.?night/i, "dj"],
-    [/bocce|skee.?ball|curling|darts|shuffleboard|bowling|arcade|bar.?game/i, "bar_games"],
+    [
+      /bocce|skee.?ball|curling|darts|shuffleboard|bowling|arcade|bar.?game/i,
+      "bar_games",
+    ],
     [/pub.?crawl/i, "pub_crawl"],
   ];
 
@@ -323,22 +366,35 @@ const NIGHTLIFE_ACTIVITY_LABELS: Record<string, string> = {
   other: "Nightlife",
 };
 
-const COMMUNITY_SECTION_HINT = /\b(get[-\s]?involved|volunteer|activism|civic|community\s+support|community\s+action)\b/i;
+const COMMUNITY_SECTION_HINT =
+  /\b(get[-\s]?involved|volunteer|activism|civic|community\s+support|community\s+action)\b/i;
 
-function isCommunityActionSection(section: Pick<Section, "slug" | "title" | "auto_filter">): boolean {
+function isCommunityActionSection(
+  section: Pick<Section, "slug" | "title" | "auto_filter">,
+): boolean {
   const categories = section.auto_filter?.categories || [];
   const subcategories = section.auto_filter?.subcategories || [];
   const tags = section.auto_filter?.tags || [];
 
-  if (categories.some((category) => category === "community" || category === "activism")) {
+  if (
+    categories.some(
+      (category) => category === "community" || category === "activism",
+    )
+  ) {
     return true;
   }
 
-  if (subcategories.some((subcategory) => /\b(community|volunteer|activism|civic)\b/i.test(subcategory))) {
+  if (
+    subcategories.some((subcategory) =>
+      /\b(community|volunteer|activism|civic)\b/i.test(subcategory),
+    )
+  ) {
     return true;
   }
 
-  if (tags.some((tag) => /\b(volunteer|activism|community|civic)\b/i.test(tag))) {
+  if (
+    tags.some((tag) => /\b(volunteer|activism|community|civic)\b/i.test(tag))
+  ) {
     return true;
   }
 
@@ -348,7 +404,11 @@ function isCommunityActionSection(section: Pick<Section, "slug" | "title" | "aut
 // GET /api/portals/[slug]/feed - Get feed content for a portal
 export async function GET(request: NextRequest, { params }: Props) {
   // Rate limit - use read limit since this is a common read endpoint
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
+  const rateLimitResult = await applyRateLimit(
+    request,
+    RATE_LIMITS.read,
+    getClientIdentifier(request),
+  );
   if (rateLimitResult) return rateLimitResult;
 
   const { slug } = await params;
@@ -357,7 +417,9 @@ export async function GET(request: NextRequest, { params }: Props) {
   const { searchParams } = new URL(request.url);
   const sectionIds = searchParams.get("sections")?.split(",").filter(Boolean);
   const parsedLimit = Number.parseInt(searchParams.get("limit") || "5", 10);
-  const defaultLimit = Number.isFinite(parsedLimit) ? Math.max(1, Math.min(parsedLimit, 50)) : 5;
+  const defaultLimit = Number.isFinite(parsedLimit)
+    ? Math.max(1, Math.min(parsedLimit, 50))
+    : 5;
   const sectionKey = (sectionIds || []).slice().sort().join(",");
   const cacheKey = `${canonicalSlug}|${defaultLimit}|${sectionKey}`;
   const cachedPayload = getCachedFeedPayload(cacheKey);
@@ -389,7 +451,15 @@ export async function GET(request: NextRequest, { params }: Props) {
       .maybeSingle();
   }
 
-  const portalData = portalResult.data as { id: string; slug: string; name: string; portal_type: string; parent_portal_id?: string | null; settings: Record<string, unknown>; filters?: Record<string, unknown> | string | null } | null;
+  const portalData = portalResult.data as {
+    id: string;
+    slug: string;
+    name: string;
+    portal_type: string;
+    parent_portal_id?: string | null;
+    settings: Record<string, unknown>;
+    filters?: Record<string, unknown> | string | null;
+  } | null;
 
   if (portalResult.error || !portalData) {
     return NextResponse.json({ error: "Portal not found" }, { status: 404 });
@@ -399,16 +469,28 @@ export async function GET(request: NextRequest, { params }: Props) {
   let portalFilters: { city?: string; cities?: string[] } = {};
   if (portalData.filters) {
     if (typeof portalData.filters === "string") {
-      try { portalFilters = JSON.parse(portalData.filters); } catch { /* ignore */ }
+      try {
+        portalFilters = JSON.parse(portalData.filters);
+      } catch {
+        /* ignore */
+      }
     } else {
-      portalFilters = portalData.filters as { city?: string; cities?: string[] };
+      portalFilters = portalData.filters as {
+        city?: string;
+        cities?: string[];
+      };
     }
   }
-  const portalCities = Array.from(new Set(
-    [...(portalFilters.cities || []), ...(portalFilters.city ? [portalFilters.city] : [])]
-      .map((c) => c?.trim().toLowerCase())
-      .filter(Boolean) as string[]
-  ));
+  const portalCities = Array.from(
+    new Set(
+      [
+        ...(portalFilters.cities || []),
+        ...(portalFilters.city ? [portalFilters.city] : []),
+      ]
+        .map((c) => c?.trim().toLowerCase())
+        .filter(Boolean) as string[],
+    ),
+  );
 
   const portal = {
     id: portalData.id,
@@ -443,7 +525,8 @@ export async function GET(request: NextRequest, { params }: Props) {
   // Fetch sections with their items
   let sectionsQuery = supabase
     .from("portal_sections")
-    .select(`
+    .select(
+      `
       id,
       title,
       slug,
@@ -464,7 +547,8 @@ export async function GET(request: NextRequest, { params }: Props) {
       show_before_time,
       style,
       portal_section_items(id, entity_type, entity_id, display_order)
-    `)
+    `,
+    )
     .eq("portal_id", portal.id)
     .eq("is_visible", true)
     .order("display_order", { ascending: true });
@@ -486,8 +570,15 @@ export async function GET(request: NextRequest, { params }: Props) {
     if (!isSectionVisible(section)) return false;
 
     // Health-vertical sections belong only on hospital portals, not city feeds.
-    const hospitalOnlySections = ["outdoor-wellness", "food-access-support", "public-health-resources"];
-    if (hospitalOnlySections.includes(section.slug) && portal.portal_type !== "hospital") {
+    const hospitalOnlySections = [
+      "outdoor-wellness",
+      "food-access-support",
+      "public-health-resources",
+    ];
+    if (
+      hospitalOnlySections.includes(section.slug) &&
+      portal.portal_type !== "hospital"
+    ) {
       return false;
     }
 
@@ -498,7 +589,10 @@ export async function GET(request: NextRequest, { params }: Props) {
   const eventIds = new Set<number>();
   const pinnedEventIds = new Set<number>();
   for (const section of sections) {
-    if (section.section_type === "curated" || section.section_type === "mixed") {
+    if (
+      section.section_type === "curated" ||
+      section.section_type === "mixed"
+    ) {
       for (const item of section.portal_section_items || []) {
         if (item.entity_type === "event") {
           eventIds.add(item.entity_id);
@@ -540,35 +634,38 @@ export async function GET(request: NextRequest, { params }: Props) {
           day_of_week,
           festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
         ),
-        venue:venues(id, name, neighborhood, slug, venue_type)
+        venue:venues(id, name, neighborhood, slug, venue_type, location_designator)
       `;
 
-  const curatedEventsPromise = eventIds.size > 0
-    ? supabase
-      .from("events")
-      .select(curatedEventSelect)
-      .in("id", Array.from(eventIds))
-      .or(`start_date.gte.${today},end_date.gte.${today}`)
-      .is("canonical_event_id", null)
-      .or("is_class.eq.false,is_class.is.null")
-      .or("is_sensitive.eq.false,is_sensitive.is.null")
-    : Promise.resolve({ data: [] as Event[] });
+  const curatedEventsPromise =
+    eventIds.size > 0
+      ? supabase
+          .from("events")
+          .select(curatedEventSelect)
+          .in("id", Array.from(eventIds))
+          .or(`start_date.gte.${today},end_date.gte.${today}`)
+          .is("canonical_event_id", null)
+          .or("is_class.eq.false,is_class.is.null")
+          .or("is_sensitive.eq.false,is_sensitive.is.null")
+      : Promise.resolve({ data: [] as Event[] });
 
-  const pinnedEventsPromise = pinnedEventIds.size > 0
-    ? supabase
-      .from("events")
-      .select(curatedEventSelect)
-      .in("id", Array.from(pinnedEventIds))
-      .is("canonical_event_id", null)
-      .or("is_class.eq.false,is_class.is.null")
-      .or("is_sensitive.eq.false,is_sensitive.is.null")
-    : Promise.resolve({ data: [] as Event[] });
+  const pinnedEventsPromise =
+    pinnedEventIds.size > 0
+      ? supabase
+          .from("events")
+          .select(curatedEventSelect)
+          .in("id", Array.from(pinnedEventIds))
+          .is("canonical_event_id", null)
+          .or("is_class.eq.false,is_class.is.null")
+          .or("is_sensitive.eq.false,is_sensitive.is.null")
+      : Promise.resolve({ data: [] as Event[] });
 
-  const [{ data: curatedEvents }, { data: pinnedEvents }, federationAccess] = await Promise.all([
-    curatedEventsPromise,
-    pinnedEventsPromise,
-    federationAccessPromise,
-  ]);
+  const [{ data: curatedEvents }, { data: pinnedEvents }, federationAccess] =
+    await Promise.all([
+      curatedEventsPromise,
+      pinnedEventsPromise,
+      federationAccessPromise,
+    ]);
 
   const manifest = buildPortalManifest({
     portalId: portal.id,
@@ -593,10 +690,13 @@ export async function GET(request: NextRequest, { params }: Props) {
 
   // Step 3: Determine if we need auto-filtered events and get widest date range needed
   const sectionsNeedingAutoEvents = sections.filter(
-    s => (s.section_type === "auto" || s.section_type === "mixed") &&
-         s.auto_filter &&
-         !s.auto_filter.event_ids?.length &&
-         !["category_grid", "announcement", "external_link", "countdown"].includes(s.block_type)
+    (s) =>
+      (s.section_type === "auto" || s.section_type === "mixed") &&
+      s.auto_filter &&
+      !s.auto_filter.event_ids?.length &&
+      !["category_grid", "announcement", "external_link", "countdown"].includes(
+        s.block_type,
+      ),
   );
 
   // Build master event pool for auto sections
@@ -607,13 +707,17 @@ export async function GET(request: NextRequest, { params }: Props) {
     // Track explicit constraints so we can merge a targeted supplement query.
     const constrainedSourceIds = Array.from(
       new Set(
-        sectionsNeedingAutoEvents.flatMap(section => section.auto_filter?.source_ids || [])
-      )
+        sectionsNeedingAutoEvents.flatMap(
+          (section) => section.auto_filter?.source_ids || [],
+        ),
+      ),
     );
     const constrainedVenueIds = Array.from(
       new Set(
-        sectionsNeedingAutoEvents.flatMap(section => section.auto_filter?.venue_ids || [])
-      )
+        sectionsNeedingAutoEvents.flatMap(
+          (section) => section.auto_filter?.venue_ids || [],
+        ),
+      ),
     );
 
     // Find the widest date range needed across all sections
@@ -630,7 +734,10 @@ export async function GET(request: NextRequest, { params }: Props) {
     // Calculate max events needed
     // Per-section budget for each date bucket
     const requestedPerBucket = sectionsNeedingAutoEvents.reduce((sum, s) => {
-      return sum + ((s.max_items || feedSettings.items_per_section || defaultLimit) * 2);
+      return (
+        sum +
+        (s.max_items || feedSettings.items_per_section || defaultLimit) * 2
+      );
     }, 0);
     // Keep cold-load DB fanout bounded for large portals while preserving enough candidates.
     const perBucketLimit = Math.max(40, Math.min(requestedPerBucket, 120));
@@ -665,7 +772,7 @@ export async function GET(request: NextRequest, { params }: Props) {
           festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
         ),
         source_id,
-        venue:venues(id, name, neighborhood, slug, venue_type, city)
+        venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city)
     `;
 
     const applyPortalFilter = (query: ReturnType<typeof supabase.from>) => {
@@ -686,7 +793,11 @@ export async function GET(request: NextRequest, { params }: Props) {
     const tomorrowStr = getLocalDateString(tomorrowDate);
 
     // Run 3 queries in parallel: today, rest of week, rest of month
-    const buildBucketQuery = (startDate: string, endDate: string, limit: number) => {
+    const buildBucketQuery = (
+      startDate: string,
+      endDate: string,
+      limit: number,
+    ) => {
       let q = supabase
         .from("events")
         .select(eventSelect)
@@ -710,29 +821,48 @@ export async function GET(request: NextRequest, { params }: Props) {
       buildBucketQuery(
         getLocalDateString(new Date(endOfWeekDate.getTime() + 86400000)),
         maxEndDate,
-        perBucketLimit
+        perBucketLimit,
       ),
     ]);
 
     // Merge all buckets into the pool
     const addToPool = (events: Event[]) => {
       for (const event of events) {
-        if (event.source_id && federationAccess.categoryConstraints.has(event.source_id)) {
-          const allowedCategories = federationAccess.categoryConstraints.get(event.source_id);
-          if (allowedCategories !== null && allowedCategories !== undefined && event.category && !allowedCategories.includes(event.category)) {
+        if (
+          event.source_id &&
+          federationAccess.categoryConstraints.has(event.source_id)
+        ) {
+          const allowedCategories = federationAccess.categoryConstraints.get(
+            event.source_id,
+          );
+          if (
+            allowedCategories !== null &&
+            allowedCategories !== undefined &&
+            event.category &&
+            !allowedCategories.includes(event.category)
+          ) {
             continue;
           }
         }
         // Filter out events from wrong cities (e.g. Nashville events leaking into Atlanta portals)
-        if (enforcePortalCityFilter && portalCities.length > 0 && event.venue?.city) {
+        if (
+          enforcePortalCityFilter &&
+          portalCities.length > 0 &&
+          event.venue?.city
+        ) {
           const venueCity = event.venue.city.trim().toLowerCase();
-          if (venueCity && !portalCities.some((pc) => {
-            // Exact match or word-boundary match (handles "East Atlanta", "Atlanta, GA")
-            if (venueCity === pc) return true;
-            // Check if the portal city appears as a whole word in the venue city
-            const regex = new RegExp(`\\b${pc.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`);
-            return regex.test(venueCity);
-          })) {
+          if (
+            venueCity &&
+            !portalCities.some((pc) => {
+              // Exact match or word-boundary match (handles "East Atlanta", "Atlanta, GA")
+              if (venueCity === pc) return true;
+              // Check if the portal city appears as a whole word in the venue city
+              const regex = new RegExp(
+                `\\b${pc.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`,
+              );
+              return regex.test(venueCity);
+            })
+          ) {
             continue;
           }
         }
@@ -749,7 +879,8 @@ export async function GET(request: NextRequest, { params }: Props) {
     if (constrainedSourceIds.length > 0 || constrainedVenueIds.length > 0) {
       let constrainedQuery = supabase
         .from("events")
-        .select(`
+        .select(
+          `
           id,
           title,
           start_date,
@@ -777,8 +908,9 @@ export async function GET(request: NextRequest, { params }: Props) {
             festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
           ),
           source_id,
-          venue:venues(id, name, neighborhood, slug, venue_type)
-        `)
+          venue:venues(id, name, neighborhood, slug, venue_type, location_designator)
+        `,
+        )
         .or(`start_date.gte.${today},end_date.gte.${today}`) // Include ongoing events (exhibitions)
         .lte("start_date", maxEndDate)
         .is("canonical_event_id", null)
@@ -787,10 +919,13 @@ export async function GET(request: NextRequest, { params }: Props) {
 
       if (constrainedSourceIds.length > 0 && constrainedVenueIds.length > 0) {
         constrainedQuery = constrainedQuery.or(
-          `source_id.in.(${constrainedSourceIds.join(",")}),venue_id.in.(${constrainedVenueIds.join(",")})`
+          `source_id.in.(${constrainedSourceIds.join(",")}),venue_id.in.(${constrainedVenueIds.join(",")})`,
         );
       } else if (constrainedSourceIds.length > 0) {
-        constrainedQuery = constrainedQuery.in("source_id", constrainedSourceIds);
+        constrainedQuery = constrainedQuery.in(
+          "source_id",
+          constrainedSourceIds,
+        );
       } else if (constrainedVenueIds.length > 0) {
         constrainedQuery = constrainedQuery.in("venue_id", constrainedVenueIds);
       }
@@ -800,7 +935,11 @@ export async function GET(request: NextRequest, { params }: Props) {
 
       const supplementalLimit = Math.min(
         220,
-        Math.max(constrainedSourceIds.length * 30, constrainedVenueIds.length * 25, 80)
+        Math.max(
+          constrainedSourceIds.length * 30,
+          constrainedVenueIds.length * 25,
+          80,
+        ),
       );
 
       const { data: constrainedEvents } = await constrainedQuery
@@ -813,7 +952,9 @@ export async function GET(request: NextRequest, { params }: Props) {
 
     // Supplemental query: nightlife_mode sections need nightlife + late-night events
     // that may be cut off by the per-bucket limit on busy days (events ordered by start_time)
-    const hasNightlifeSection = sectionsNeedingAutoEvents.some(s => s.auto_filter?.nightlife_mode);
+    const hasNightlifeSection = sectionsNeedingAutoEvents.some(
+      (s) => s.auto_filter?.nightlife_mode,
+    );
     if (hasNightlifeSection) {
       let nightlifeQuery = supabase
         .from("events")
@@ -833,17 +974,19 @@ export async function GET(request: NextRequest, { params }: Props) {
       addToPool((nightlifeEvents || []) as Event[]);
     }
 
-    // Filter regular showtimes from the auto event pool
-    // Showtimes belong in the dedicated showtimes rollup, not curated feeds
+    // Suppress chain-cinema regular showtimes from auto sections.
+    // Keep indie theater showtimes so dedicated film/theater sections still work.
     for (const [eventId, event] of autoEventPool) {
-      if (event.tags?.includes("showtime")) {
+      if (shouldSuppressChainShowtime(event.tags, event.venue)) {
         autoEventPool.delete(eventId);
       }
     }
   }
 
   // Step 4: Check if any section needs popularity sorting - batch fetch RSVP counts
-  const needsPopularitySort = sectionsNeedingAutoEvents.some(s => s.auto_filter?.sort_by === "popularity");
+  const needsPopularitySort = sectionsNeedingAutoEvents.some(
+    (s) => s.auto_filter?.sort_by === "popularity",
+  );
   const rsvpCounts: Record<number, number> = {};
 
   if (needsPopularitySort && autoEventPool.size > 0) {
@@ -906,7 +1049,10 @@ export async function GET(request: NextRequest, { params }: Props) {
     }
 
     // Valentine's Day section (Jan 20 - Feb 14)
-    if ((currentMonth === 1 && currentDay >= 20) || (currentMonth === 2 && currentDay <= 14)) {
+    if (
+      (currentMonth === 1 && currentDay >= 20) ||
+      (currentMonth === 2 && currentDay <= 14)
+    ) {
       holidaySections.push({
         id: `valentines-${currentYear}`,
         title: "Valentine's Day",
@@ -1076,16 +1222,19 @@ export async function GET(request: NextRequest, { params }: Props) {
   if (holidaySections.length > 0) {
     // Collect all unique tags from holiday sections
     const holidayTags = holidaySections
-      .map(section => section.auto_filter?.tags?.[0])
+      .map((section) => section.auto_filter?.tags?.[0])
       .filter((tag): tag is string => tag !== undefined);
 
     if (holidayTags.length > 0) {
       // Fetch all holiday events in a single query using OR conditions
-      const tagConditions = holidayTags.map(tag => `tags.cs.{${tag}}`).join(",");
+      const tagConditions = holidayTags
+        .map((tag) => `tags.cs.{${tag}}`)
+        .join(",");
 
       const { data: allHolidayEvents } = await supabase
         .from("events")
-        .select(`
+        .select(
+          `
           id,
           title,
           start_date,
@@ -1112,28 +1261,36 @@ export async function GET(request: NextRequest, { params }: Props) {
             day_of_week,
             festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
           ),
-          venue:venues(id, name, neighborhood, slug, venue_type, city)
-      `)
-      .or(tagConditions)
-      .gte("start_date", today)
-      .lte("start_date", getLocalDateString(addDays(new Date(), 30)))
-      .is("canonical_event_id", null)
-      .or("is_class.eq.false,is_class.is.null")
-      .or("is_sensitive.eq.false,is_sensitive.is.null")
-      .order("start_date", { ascending: true })
-      .limit(Math.max(80, holidayTags.length * 60));
+          venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city)
+      `,
+        )
+        .or(tagConditions)
+        .gte("start_date", today)
+        .lte("start_date", getLocalDateString(addDays(new Date(), 30)))
+        .is("canonical_event_id", null)
+        .or("is_class.eq.false,is_class.is.null")
+        .or("is_sensitive.eq.false,is_sensitive.is.null")
+        .order("start_date", { ascending: true })
+        .limit(Math.max(80, holidayTags.length * 60));
 
       // Group events by tag, filtering out wrong-city events
       if (allHolidayEvents) {
-        for (const event of allHolidayEvents as (Event & { tags?: string[] })[]) {
+        for (const event of allHolidayEvents as (Event & {
+          tags?: string[];
+        })[]) {
           // Filter out events from wrong cities
           if (portalCities.length > 0 && event.venue?.city) {
             const venueCity = event.venue.city.trim().toLowerCase();
-            if (venueCity && !portalCities.some((pc) => {
-              if (venueCity === pc) return true;
-              const regex = new RegExp(`\\b${pc.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`);
-              return regex.test(venueCity);
-            })) {
+            if (
+              venueCity &&
+              !portalCities.some((pc) => {
+                if (venueCity === pc) return true;
+                const regex = new RegExp(
+                  `\\b${pc.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`,
+                );
+                return regex.test(venueCity);
+              })
+            ) {
               continue;
             }
           }
@@ -1156,326 +1313,440 @@ export async function GET(request: NextRequest, { params }: Props) {
   }
 
   // Step 6: Build sections synchronously using pre-fetched data
-  const feedSections = sections.map((section) => {
-    let events: Event[] = [];
-    let fullFilteredPool: Event[] | null = null;
-    // Nightlife carousel needs a larger pool for client-side filtering across activity types
-    const isNightlifeSection = !!(section.auto_filter as Record<string, unknown>)?.nightlife_mode;
-    const isCommunitySection = isCommunityActionSection(section);
-    const baseLimit = section.max_items || feedSettings.items_per_section || defaultLimit;
-    const limit = isNightlifeSection ? 50 : (isCommunitySection ? Math.max(baseLimit, 10) : baseLimit);
+  const feedSections = sections
+    .map((section) => {
+      let events: Event[] = [];
+      let fullFilteredPool: Event[] | null = null;
+      // Nightlife carousel needs a larger pool for client-side filtering across activity types
+      const isNightlifeSection = !!(
+        section.auto_filter as Record<string, unknown>
+      )?.nightlife_mode;
+      const isCommunitySection = isCommunityActionSection(section);
+      const baseLimit =
+        section.max_items || feedSettings.items_per_section || defaultLimit;
+      const limit = isNightlifeSection
+        ? 50
+        : isCommunitySection
+          ? Math.max(baseLimit, 10)
+          : baseLimit;
 
-    // Non-event block types don't need events
-    if (["category_grid", "announcement", "external_link", "countdown"].includes(section.block_type)) {
+      // Non-event block types don't need events
+      if (
+        [
+          "category_grid",
+          "announcement",
+          "external_link",
+          "countdown",
+        ].includes(section.block_type)
+      ) {
+        return {
+          id: section.id,
+          title: section.title,
+          slug: section.slug,
+          description: section.description,
+          section_type: section.section_type,
+          block_type: section.block_type,
+          layout: section.layout,
+          items_per_row: section.items_per_row,
+          style: section.style,
+          block_content: section.block_content,
+          auto_filter: section.auto_filter,
+          events: [],
+        };
+      }
+
+      // Check for pinned event_ids first (works for any section type)
+      if (section.auto_filter?.event_ids?.length) {
+        events = section.auto_filter.event_ids
+          .map((id) => eventMap.get(id))
+          .filter((e): e is Event => e !== undefined);
+      } else if (section.section_type === "curated") {
+        // Get events from curated items
+        const items = (section.portal_section_items || [])
+          .filter((item) => item.entity_type === "event")
+          .sort((a, b) => a.display_order - b.display_order);
+
+        events = items
+          .map((item) => eventMap.get(item.entity_id))
+          .filter((e): e is Event => e !== undefined)
+          .slice(0, limit);
+      } else if (
+        (section.section_type === "auto" || section.section_type === "mixed") &&
+        section.auto_filter
+      ) {
+        // Filter from pre-fetched pool instead of making new query
+        const filter = section.auto_filter;
+
+        // Start with all pool events
+        let filtered = Array.from(autoEventPool.values());
+
+        // Apply date filter
+        if (filter.date_filter) {
+          const { start, end } = getDateRange(filter.date_filter);
+          filtered = filtered.filter(
+            (e) => e.start_date >= start && e.start_date <= end,
+          );
+        }
+
+        // Apply category filter
+        if (filter.categories?.length) {
+          filtered = filtered.filter(
+            (e) => e.category && filter.categories!.includes(e.category),
+          );
+        }
+
+        // Apply nightlife_mode compound filter
+        // Includes: all nightlife events + music/comedy/dance/gaming at nightlife venues or starting after 7pm
+        if (filter.nightlife_mode) {
+          const nightlifeVenueTypes = new Set([
+            "bar",
+            "club",
+            "nightclub",
+            "lounge",
+            "rooftop",
+            "karaoke",
+            "sports_bar",
+            "brewery",
+            "cocktail_bar",
+            "wine_bar",
+          ]);
+          const nightlifeAdjacentCategories = new Set([
+            "music",
+            "comedy",
+            "dance",
+            "gaming",
+          ]);
+          filtered = filtered.filter((e) => {
+            // Always include events with nightlife category
+            if (e.category === "nightlife") return true;
+            // Include adjacent categories at nightlife venues or after 7pm
+            if (e.category && nightlifeAdjacentCategories.has(e.category)) {
+              const atNightlifeVenue =
+                e.venue?.venue_type &&
+                nightlifeVenueTypes.has(e.venue.venue_type);
+              const startsAfter7pm = e.start_time && e.start_time >= "19:00";
+              return atNightlifeVenue || startsAfter7pm;
+            }
+            return false;
+          });
+        }
+
+        // Restrict to specific source IDs (strict portal attribution)
+        if (filter.source_ids?.length) {
+          const sourceSet = new Set(filter.source_ids);
+          filtered = filtered.filter(
+            (e) =>
+              e.source_id !== null &&
+              e.source_id !== undefined &&
+              sourceSet.has(e.source_id),
+          );
+        }
+
+        // Restrict to specific venue IDs
+        if (filter.venue_ids?.length) {
+          const venueSet = new Set(filter.venue_ids);
+          filtered = filtered.filter(
+            (e) =>
+              e.venue?.id !== null &&
+              e.venue?.id !== undefined &&
+              venueSet.has(e.venue.id),
+          );
+        }
+
+        // Restrict to specific neighborhoods
+        if (filter.neighborhoods?.length) {
+          const neighborhoods = new Set(
+            filter.neighborhoods.map((n) => n.toLowerCase()),
+          );
+          filtered = filtered.filter(
+            (e) =>
+              e.venue?.neighborhood &&
+              neighborhoods.has(e.venue.neighborhood.toLowerCase()),
+          );
+        }
+
+        // Match events that include at least one requested tag
+        if (filter.tags?.length) {
+          const tagSet = new Set(filter.tags);
+          filtered = filtered.filter(
+            (e) =>
+              Array.isArray(e.tags) && e.tags.some((tag) => tagSet.has(tag)),
+          );
+        }
+
+        // Exclude categories
+        if (filter.exclude_categories?.length) {
+          filtered = filtered.filter(
+            (e) =>
+              !e.category || !filter.exclude_categories!.includes(e.category),
+          );
+        }
+
+        // Apply subcategory filter (uses genres[] with subcategory fallback)
+        if (filter.subcategories?.length) {
+          // Convert dotted subcategory values to genre values (strip prefix)
+          const genreValues = filter.subcategories.map((sub) => {
+            const parts = sub.split(".");
+            return parts.length > 1 ? parts.slice(1).join(".") : sub;
+          });
+          // Extract parent categories for fallback
+          const parentCategories = new Set(
+            filter.subcategories.map((sub) => sub.split(".")[0]),
+          );
+
+          filtered = filtered.filter((e) => {
+            // Check genres first (preferred)
+            if (e.genres?.some((g: string) => genreValues.includes(g)))
+              return true;
+            // Fallback: check legacy subcategory
+            if (e.subcategory && filter.subcategories!.includes(e.subcategory))
+              return true;
+            // If no genre/subcategory match, include if category matches a parent
+            return (
+              e.category &&
+              parentCategories.has(e.category) &&
+              !e.genres?.length &&
+              !e.subcategory
+            );
+          });
+        }
+
+        // Apply free filter
+        if (filter.is_free) {
+          filtered = filtered.filter((e) => e.is_free);
+        }
+
+        // Apply price max filter
+        if (filter.price_max !== undefined) {
+          filtered = filtered.filter(
+            (e) =>
+              e.is_free ||
+              (e.price_min !== null && e.price_min <= filter.price_max!),
+          );
+        }
+
+        // Apply exclusions
+        if (filter.exclude_ids?.length) {
+          const excludeSet = new Set(filter.exclude_ids);
+          filtered = filtered.filter((e) => !excludeSet.has(e.id));
+        }
+
+        // For nightlife_mode, prioritize actual nightlife-category events over adjacent categories
+        // so the limited pool captures diverse activity types (karaoke, trivia, DJ) instead of
+        // being filled entirely by early-starting music/comedy events
+        if (filter.nightlife_mode) {
+          filtered.sort((a, b) => {
+            const aNightlife = a.category === "nightlife" ? 0 : 1;
+            const bNightlife = b.category === "nightlife" ? 0 : 1;
+            if (aNightlife !== bNightlife) return aNightlife - bNightlife;
+            // Within same priority, sort by start_time
+            return (a.start_time || "23:59").localeCompare(
+              b.start_time || "23:59",
+            );
+          });
+        }
+
+        // Save full filtered pool before slicing (used by nightlife carousel for category counts)
+        fullFilteredPool = filter.nightlife_mode ? [...filtered] : null;
+
+        // Apply sorting
+        switch (filter.sort_by) {
+          case "popularity":
+            filtered = filtered.map((e) => ({
+              ...e,
+              going_count: rsvpCounts[e.id] || 0,
+            }));
+            filtered.sort(
+              (a, b) => (b.going_count || 0) - (a.going_count || 0),
+            );
+            break;
+          case "trending":
+            // For now, same as date sort
+            filtered.sort((a, b) => a.start_date.localeCompare(b.start_date));
+            break;
+          case "random":
+            filtered = filtered.sort(() => Math.random() - 0.5);
+            break;
+          default:
+            // Already sorted by date from query
+            break;
+        }
+
+        // Distribute events across progressive date buckets (today / this week / later)
+        // so one busy day doesn't monopolize the entire section
+        if (limit >= 8 && filtered.length > limit) {
+          const todayStr = getLocalDateString();
+          const dayOfWeek = new Date().getDay();
+          const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
+          const endOfWeekDate = new Date();
+          endOfWeekDate.setDate(endOfWeekDate.getDate() + daysUntilSunday);
+          const endOfWeekStr = getLocalDateString(endOfWeekDate);
+
+          const todayPool = filtered.filter((e) => e.start_date === todayStr);
+          const weekPool = filtered.filter(
+            (e) => e.start_date > todayStr && e.start_date <= endOfWeekStr,
+          );
+          const laterPool = filtered.filter((e) => e.start_date > endOfWeekStr);
+
+          // Budget: today gets half, week and later split the rest
+          const todayBudget = Math.min(todayPool.length, Math.ceil(limit / 2));
+          const remaining = limit - todayBudget;
+          const weekBudget = Math.min(
+            weekPool.length,
+            Math.ceil(remaining / 2),
+          );
+          const laterBudget = Math.min(
+            laterPool.length,
+            remaining - weekBudget,
+          );
+
+          // Fill any unused budget from other buckets
+          let result = [
+            ...todayPool.slice(0, todayBudget),
+            ...weekPool.slice(0, weekBudget),
+            ...laterPool.slice(0, laterBudget),
+          ];
+
+          // If we have room left, backfill from whichever buckets have more
+          if (result.length < limit) {
+            const used = new Set(result.map((e) => e.id));
+            const backfill = filtered.filter((e) => !used.has(e.id));
+            result = [...result, ...backfill.slice(0, limit - result.length)];
+          }
+
+          events = result;
+        } else {
+          events = filtered.slice(0, limit);
+        }
+
+        // For mixed sections, also add curated items at the top
+        if (section.section_type === "mixed") {
+          const curatedItems = (section.portal_section_items || [])
+            .filter((item) => item.entity_type === "event")
+            .sort((a, b) => a.display_order - b.display_order);
+
+          const curatedEvents = curatedItems
+            .map((item) => eventMap.get(item.entity_id))
+            .filter((e): e is Event => e !== undefined);
+
+          // Merge: curated first, then auto (avoiding duplicates)
+          const curatedIds = new Set(curatedEvents.map((e) => e.id));
+          const autoEventsFiltered = events.filter(
+            (e) => !curatedIds.has(e.id),
+          );
+          events = [...curatedEvents, ...autoEventsFiltered].slice(0, limit);
+        }
+      }
+
+      // Nightlife carousel: compute category breakdown from FULL filtered pool
+      // (not the sliced events array) so counts reflect all available nightlife events
+      const isNightlifeCarousel = !!(
+        section.auto_filter as Record<string, unknown>
+      )?.nightlife_mode;
+      if (isNightlifeCarousel && events.length > 0) {
+        // Use the full pool captured before slicing, or fall back to events
+        const poolForCounts =
+          fullFilteredPool && fullFilteredPool.length > 0
+            ? fullFilteredPool
+            : events;
+        // Group events into nightlife activity types for the carousel
+        const activityCounts = new Map<
+          string,
+          { count: number; label: string }
+        >();
+
+        for (const event of poolForCounts) {
+          const actKey = classifyNightlifeActivity(event);
+          const existing = activityCounts.get(actKey) || {
+            count: 0,
+            label: NIGHTLIFE_ACTIVITY_LABELS[actKey] || actKey,
+          };
+          existing.count++;
+          activityCounts.set(actKey, existing);
+        }
+
+        // Sort by count descending, filter out "other" unless it's the only one
+        const categories = Array.from(activityCounts.entries())
+          .map(([id, { count, label }]) => ({ id, label, count }))
+          .filter((c) => c.id !== "other" || activityCounts.size === 1)
+          .sort((a, b) => b.count - a.count);
+
+        // Stamp each event with its activity_type for client-side filtering
+        const stampedEvents = events.map((e) => ({
+          ...e,
+          activity_type: classifyNightlifeActivity(e),
+        }));
+
+        return {
+          id: section.id,
+          title: section.title,
+          slug: section.slug,
+          description: section.description,
+          section_type: section.section_type,
+          block_type: "nightlife_carousel",
+          layout: section.layout,
+          items_per_row: section.items_per_row,
+          style: section.style,
+          block_content: {
+            nightlife_categories: categories,
+            total_events: poolForCounts.length,
+          },
+          auto_filter: section.auto_filter,
+          events: stampedEvents,
+        };
+      }
+
+      // Only convert to collapsible if section has many events (8+)
+      // Sections with fewer events render as event_list for direct visibility
+      const collapsibleBlockTypes = ["event_cards", "event_carousel"];
+      let finalBlockType = section.block_type;
+      if (collapsibleBlockTypes.includes(section.block_type)) {
+        // Keep volunteer/community sections expanded and rich instead of a single compact jump card.
+        if (isCommunityActionSection(section)) {
+          finalBlockType = "event_cards";
+        } else {
+          finalBlockType =
+            events.length >= 8 ? "collapsible_events" : "event_list";
+        }
+      }
+
       return {
         id: section.id,
         title: section.title,
         slug: section.slug,
         description: section.description,
         section_type: section.section_type,
-        block_type: section.block_type,
+        block_type: finalBlockType,
         layout: section.layout,
         items_per_row: section.items_per_row,
         style: section.style,
         block_content: section.block_content,
         auto_filter: section.auto_filter,
-        events: [],
+        events,
       };
-    }
-
-    // Check for pinned event_ids first (works for any section type)
-    if (section.auto_filter?.event_ids?.length) {
-      events = section.auto_filter.event_ids
-        .map(id => eventMap.get(id))
-        .filter((e): e is Event => e !== undefined);
-    } else if (section.section_type === "curated") {
-      // Get events from curated items
-      const items = (section.portal_section_items || [])
-        .filter((item) => item.entity_type === "event")
-        .sort((a, b) => a.display_order - b.display_order);
-
-      events = items
-        .map((item) => eventMap.get(item.entity_id))
-        .filter((e): e is Event => e !== undefined)
-        .slice(0, limit);
-    } else if ((section.section_type === "auto" || section.section_type === "mixed") && section.auto_filter) {
-      // Filter from pre-fetched pool instead of making new query
-      const filter = section.auto_filter;
-
-      // Start with all pool events
-      let filtered = Array.from(autoEventPool.values());
-
-      // Apply date filter
-      if (filter.date_filter) {
-        const { start, end } = getDateRange(filter.date_filter);
-        filtered = filtered.filter(e => e.start_date >= start && e.start_date <= end);
-      }
-
-      // Apply category filter
-      if (filter.categories?.length) {
-        filtered = filtered.filter(e => e.category && filter.categories!.includes(e.category));
-      }
-
-      // Apply nightlife_mode compound filter
-      // Includes: all nightlife events + music/comedy/dance/gaming at nightlife venues or starting after 7pm
-      if (filter.nightlife_mode) {
-        const nightlifeVenueTypes = new Set(["bar", "club", "nightclub", "lounge", "rooftop", "karaoke", "sports_bar", "brewery", "cocktail_bar", "wine_bar"]);
-        const nightlifeAdjacentCategories = new Set(["music", "comedy", "dance", "gaming"]);
-        filtered = filtered.filter(e => {
-          // Always include events with nightlife category
-          if (e.category === "nightlife") return true;
-          // Include adjacent categories at nightlife venues or after 7pm
-          if (e.category && nightlifeAdjacentCategories.has(e.category)) {
-            const atNightlifeVenue = e.venue?.venue_type && nightlifeVenueTypes.has(e.venue.venue_type);
-            const startsAfter7pm = e.start_time && e.start_time >= "19:00";
-            return atNightlifeVenue || startsAfter7pm;
-          }
-          return false;
-        });
-      }
-
-      // Restrict to specific source IDs (strict portal attribution)
-      if (filter.source_ids?.length) {
-        const sourceSet = new Set(filter.source_ids);
-        filtered = filtered.filter(e => e.source_id !== null && e.source_id !== undefined && sourceSet.has(e.source_id));
-      }
-
-      // Restrict to specific venue IDs
-      if (filter.venue_ids?.length) {
-        const venueSet = new Set(filter.venue_ids);
-        filtered = filtered.filter(e => e.venue?.id !== null && e.venue?.id !== undefined && venueSet.has(e.venue.id));
-      }
-
-      // Restrict to specific neighborhoods
-      if (filter.neighborhoods?.length) {
-        const neighborhoods = new Set(filter.neighborhoods.map(n => n.toLowerCase()));
-        filtered = filtered.filter(e => e.venue?.neighborhood && neighborhoods.has(e.venue.neighborhood.toLowerCase()));
-      }
-
-      // Match events that include at least one requested tag
-      if (filter.tags?.length) {
-        const tagSet = new Set(filter.tags);
-        filtered = filtered.filter(e => Array.isArray(e.tags) && e.tags.some(tag => tagSet.has(tag)));
-      }
-
-      // Exclude categories
-      if (filter.exclude_categories?.length) {
-        filtered = filtered.filter(e => !e.category || !filter.exclude_categories!.includes(e.category));
-      }
-
-      // Apply subcategory filter (uses genres[] with subcategory fallback)
-      if (filter.subcategories?.length) {
-        // Convert dotted subcategory values to genre values (strip prefix)
-        const genreValues = filter.subcategories.map((sub) => {
-          const parts = sub.split(".");
-          return parts.length > 1 ? parts.slice(1).join(".") : sub;
-        });
-        // Extract parent categories for fallback
-        const parentCategories = new Set(
-          filter.subcategories.map((sub) => sub.split(".")[0])
-        );
-
-        filtered = filtered.filter(e => {
-          // Check genres first (preferred)
-          if (e.genres?.some((g: string) => genreValues.includes(g))) return true;
-          // Fallback: check legacy subcategory
-          if (e.subcategory && filter.subcategories!.includes(e.subcategory)) return true;
-          // If no genre/subcategory match, include if category matches a parent
-          return e.category && parentCategories.has(e.category) && !e.genres?.length && !e.subcategory;
-        });
-      }
-
-      // Apply free filter
-      if (filter.is_free) {
-        filtered = filtered.filter(e => e.is_free);
-      }
-
-      // Apply price max filter
-      if (filter.price_max !== undefined) {
-        filtered = filtered.filter(e => e.is_free || (e.price_min !== null && e.price_min <= filter.price_max!));
-      }
-
-      // Apply exclusions
-      if (filter.exclude_ids?.length) {
-        const excludeSet = new Set(filter.exclude_ids);
-        filtered = filtered.filter(e => !excludeSet.has(e.id));
-      }
-
-      // For nightlife_mode, prioritize actual nightlife-category events over adjacent categories
-      // so the limited pool captures diverse activity types (karaoke, trivia, DJ) instead of
-      // being filled entirely by early-starting music/comedy events
-      if (filter.nightlife_mode) {
-        filtered.sort((a, b) => {
-          const aNightlife = a.category === "nightlife" ? 0 : 1;
-          const bNightlife = b.category === "nightlife" ? 0 : 1;
-          if (aNightlife !== bNightlife) return aNightlife - bNightlife;
-          // Within same priority, sort by start_time
-          return (a.start_time || "23:59").localeCompare(b.start_time || "23:59");
-        });
-      }
-
-      // Save full filtered pool before slicing (used by nightlife carousel for category counts)
-      fullFilteredPool = filter.nightlife_mode ? [...filtered] : null;
-
-      // Apply sorting
-      switch (filter.sort_by) {
-        case "popularity":
-          filtered = filtered.map(e => ({ ...e, going_count: rsvpCounts[e.id] || 0 }));
-          filtered.sort((a, b) => (b.going_count || 0) - (a.going_count || 0));
-          break;
-        case "trending":
-          // For now, same as date sort
-          filtered.sort((a, b) => a.start_date.localeCompare(b.start_date));
-          break;
-        case "random":
-          filtered = filtered.sort(() => Math.random() - 0.5);
-          break;
-        default:
-          // Already sorted by date from query
-          break;
-      }
-
-      // Distribute events across progressive date buckets (today / this week / later)
-      // so one busy day doesn't monopolize the entire section
-      if (limit >= 8 && filtered.length > limit) {
-        const todayStr = getLocalDateString();
-        const dayOfWeek = new Date().getDay();
-        const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
-        const endOfWeekDate = new Date();
-        endOfWeekDate.setDate(endOfWeekDate.getDate() + daysUntilSunday);
-        const endOfWeekStr = getLocalDateString(endOfWeekDate);
-
-        const todayPool = filtered.filter(e => e.start_date === todayStr);
-        const weekPool = filtered.filter(e => e.start_date > todayStr && e.start_date <= endOfWeekStr);
-        const laterPool = filtered.filter(e => e.start_date > endOfWeekStr);
-
-        // Budget: today gets half, week and later split the rest
-        const todayBudget = Math.min(todayPool.length, Math.ceil(limit / 2));
-        const remaining = limit - todayBudget;
-        const weekBudget = Math.min(weekPool.length, Math.ceil(remaining / 2));
-        const laterBudget = Math.min(laterPool.length, remaining - weekBudget);
-
-        // Fill any unused budget from other buckets
-        let result = [
-          ...todayPool.slice(0, todayBudget),
-          ...weekPool.slice(0, weekBudget),
-          ...laterPool.slice(0, laterBudget),
-        ];
-
-        // If we have room left, backfill from whichever buckets have more
-        if (result.length < limit) {
-          const used = new Set(result.map(e => e.id));
-          const backfill = filtered.filter(e => !used.has(e.id));
-          result = [...result, ...backfill.slice(0, limit - result.length)];
-        }
-
-        events = result;
-      } else {
-        events = filtered.slice(0, limit);
-      }
-
-      // For mixed sections, also add curated items at the top
-      if (section.section_type === "mixed") {
-        const curatedItems = (section.portal_section_items || [])
-          .filter((item) => item.entity_type === "event")
-          .sort((a, b) => a.display_order - b.display_order);
-
-        const curatedEvents = curatedItems
-          .map((item) => eventMap.get(item.entity_id))
-          .filter((e): e is Event => e !== undefined);
-
-        // Merge: curated first, then auto (avoiding duplicates)
-        const curatedIds = new Set(curatedEvents.map((e) => e.id));
-        const autoEventsFiltered = events.filter((e) => !curatedIds.has(e.id));
-        events = [...curatedEvents, ...autoEventsFiltered].slice(0, limit);
-      }
-    }
-
-    // Nightlife carousel: compute category breakdown from FULL filtered pool
-    // (not the sliced events array) so counts reflect all available nightlife events
-    const isNightlifeCarousel = !!(section.auto_filter as Record<string, unknown>)?.nightlife_mode;
-    if (isNightlifeCarousel && events.length > 0) {
-      // Use the full pool captured before slicing, or fall back to events
-      const poolForCounts = fullFilteredPool && fullFilteredPool.length > 0 ? fullFilteredPool : events;
-      // Group events into nightlife activity types for the carousel
-      const activityCounts = new Map<string, { count: number; label: string }>();
-
-      for (const event of poolForCounts) {
-        const actKey = classifyNightlifeActivity(event);
-        const existing = activityCounts.get(actKey) || { count: 0, label: NIGHTLIFE_ACTIVITY_LABELS[actKey] || actKey };
-        existing.count++;
-        activityCounts.set(actKey, existing);
-      }
-
-      // Sort by count descending, filter out "other" unless it's the only one
-      const categories = Array.from(activityCounts.entries())
-        .map(([id, { count, label }]) => ({ id, label, count }))
-        .filter(c => c.id !== "other" || activityCounts.size === 1)
-        .sort((a, b) => b.count - a.count);
-
-      // Stamp each event with its activity_type for client-side filtering
-      const stampedEvents = events.map(e => ({
-        ...e,
-        activity_type: classifyNightlifeActivity(e),
-      }));
-
-      return {
-        id: section.id,
-        title: section.title,
-        slug: section.slug,
-        description: section.description,
-        section_type: section.section_type,
-        block_type: "nightlife_carousel",
-        layout: section.layout,
-        items_per_row: section.items_per_row,
-        style: section.style,
-        block_content: { nightlife_categories: categories, total_events: poolForCounts.length },
-        auto_filter: section.auto_filter,
-        events: stampedEvents,
-      };
-    }
-
-    // Only convert to collapsible if section has many events (8+)
-    // Sections with fewer events render as event_list for direct visibility
-    const collapsibleBlockTypes = ["event_cards", "event_carousel"];
-    let finalBlockType = section.block_type;
-    if (collapsibleBlockTypes.includes(section.block_type)) {
-      // Keep volunteer/community sections expanded and rich instead of a single compact jump card.
-      if (isCommunityActionSection(section)) {
-        finalBlockType = "event_cards";
-      } else {
-        finalBlockType = events.length >= 8 ? "collapsible_events" : "event_list";
-      }
-    }
-
-    return {
-      id: section.id,
-      title: section.title,
-      slug: section.slug,
-      description: section.description,
-      section_type: section.section_type,
-      block_type: finalBlockType,
-      layout: section.layout,
-      items_per_row: section.items_per_row,
-      style: section.style,
-      block_content: section.block_content,
-      auto_filter: section.auto_filter,
-      events,
-    };
-  })
-  // Filter out event sections with fewer than 2 events (not worth a section header)
-  .filter(section => {
-    const nonEventTypes = ["category_grid", "announcement", "external_link", "countdown", "venue_list", "nightlife_carousel"];
-    if (nonEventTypes.includes(section.block_type)) return true;
-    return section.events.length >= 2;
-  });
+    })
+    // Filter out event sections with fewer than 2 events (not worth a section header)
+    .filter((section) => {
+      const nonEventTypes = [
+        "category_grid",
+        "announcement",
+        "external_link",
+        "countdown",
+        "venue_list",
+        "nightlife_carousel",
+      ];
+      if (nonEventTypes.includes(section.block_type)) return true;
+      return section.events.length >= 2;
+    });
 
   // Step 7: Build holiday sections using the same pattern
   const holidayFeedSections = holidaySections.map((section) => {
     // Holiday sections get events by tag
     const tag = section.auto_filter?.tags?.[0];
     const maxItems = section.max_items || 20;
-    const events = tag ? (holidayEventsByTag.get(tag) || []).slice(0, maxItems) : [];
+    const events = tag
+      ? (holidayEventsByTag.get(tag) || []).slice(0, maxItems)
+      : [];
 
     return {
       id: section.id,
@@ -1495,22 +1766,23 @@ export async function GET(request: NextRequest, { params }: Props) {
 
   // Sort holiday sections by display_order and combine with regular sections
   const sortedHolidaySections = holidayFeedSections
-    .filter(s => s.events.length > 0)
+    .filter((s) => s.events.length > 0)
     .sort((a, b) => {
-      const orderA = holidaySections.find(h => h.id === a.id)?.display_order ?? 0;
-      const orderB = holidaySections.find(h => h.id === b.id)?.display_order ?? 0;
+      const orderA =
+        holidaySections.find((h) => h.id === a.id)?.display_order ?? 0;
+      const orderB =
+        holidaySections.find((h) => h.id === b.id)?.display_order ?? 0;
       return orderA - orderB;
     });
 
-  const finalSections = [
-    ...sortedHolidaySections,
-    ...feedSections
-  ];
+  const finalSections = [...sortedHolidaySections, ...feedSections];
 
   const allEventIds = Array.from(
     new Set(
-      finalSections.flatMap((section) => section.events.map((event: Event) => event.id))
-    )
+      finalSections.flatMap((section) =>
+        section.events.map((event: Event) => event.id),
+      ),
+    ),
   );
   const socialCounts = await fetchSocialProofCounts(allEventIds);
 

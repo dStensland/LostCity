@@ -105,6 +105,12 @@ export type Venue = {
   neighborhood: string | null;
   city: string;
   state: string;
+  location_designator?:
+    | "standard"
+    | "private_after_signup"
+    | "virtual"
+    | "recovery_meeting"
+    | null;
   vibes?: string[] | null;
   description?: string | null;
   venue_type?: string | null;
@@ -134,7 +140,7 @@ export async function getEventById(id: number): Promise<EventWithProducer | null
     .select(
       `
       *,
-      venue:venues(id, name, slug, address, neighborhood, city, state, vibes, description, venue_type),
+      venue:venues(id, name, slug, address, neighborhood, city, state, location_designator, vibes, description, venue_type),
       organization:organizations(id, name, slug, org_type, website, instagram, logo_url, description),
       series:series_id(
         id,
@@ -177,7 +183,7 @@ export async function getRelatedEvents(
             .select(
               `
               *,
-              venue:venues(id, name, slug, address, neighborhood, city, state)
+              venue:venues(id, name, slug, address, neighborhood, city, state, location_designator)
             `
             )
             .eq("venue_id", venueId)
@@ -200,7 +206,7 @@ export async function getRelatedEvents(
         .select(
           `
           *,
-          venue:venues(id, name, slug, address, neighborhood, city, state)
+          venue:venues(id, name, slug, address, neighborhood, city, state, location_designator)
         `
         )
         .eq("start_date", event.start_date)

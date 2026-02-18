@@ -89,6 +89,12 @@ export type EventWithLocation = Event & {
     typical_price_min: number | null;
     typical_price_max: number | null;
     venue_type?: string | null;
+    location_designator?:
+      | "standard"
+      | "private_after_signup"
+      | "virtual"
+      | "recovery_meeting"
+      | null;
     vibes?: string[] | null;
     description?: string | null;
   } | null;
@@ -656,7 +662,7 @@ export async function getFilteredEventsWithSearch(
     .select(
       `
       *,
-      venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max, venue_type, blurhash),
+      venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max, venue_type, location_designator, blurhash),
       category_data:categories(typical_price_min, typical_price_max),
       series:series(id, slug, title, series_type, image_url, frequency, day_of_week, festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood))
     `,
@@ -785,7 +791,7 @@ export async function getFilteredEventsWithCursor(
     .select(
       `
       *,
-      venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max, venue_type, blurhash),
+      venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max, venue_type, location_designator, blurhash),
       category_data:categories(typical_price_min, typical_price_max),
       series:series(id, slug, title, series_type, image_url, frequency, day_of_week, festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood))
     `
@@ -1072,7 +1078,7 @@ export async function getVenuesWithEvents(): Promise<VenueWithCount[]> {
 
   const { data: events, error } = await supabase
     .from("events")
-    .select("venue_id, venue:venues(id, name, neighborhood)")
+    .select("venue_id, venue:venues(id, name, neighborhood, location_designator)")
     .or(`start_date.gte.${today},end_date.gte.${today}`)
     // Hide TBA events (no start_time, not all-day)
     .or("start_time.not.is.null,is_all_day.eq.true")
@@ -1352,7 +1358,7 @@ export async function getFilteredEventsWithRollups(
       .select(
         `
         *,
-        venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max, venue_type)
+        venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max, venue_type, location_designator)
       `
       )
       .eq("venue_id", vr.venueId)

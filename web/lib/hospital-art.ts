@@ -22,6 +22,11 @@ export const EMORY_THEME_SCOPE_CLASS = "emory-brand-native";
 export const EMORY_THEME_CSS = `
   @import url("https://use.typekit.net/usv3fbs.css");
 
+  /* NOTE: Variable names are inverted from the LostCity dark theme.
+     In the dark theme --cream = light off-white, --ink = dark text.
+     Here in the light Emory theme, --cream = dark text (#111827),
+     --ink = near-black (#1a1a1a), so existing component classes
+     (text-[var(--cream)]) render correctly on a white background. */
   .${EMORY_THEME_SCOPE_CLASS} {
     --cream: #111827;
     --ink: #1a1a1a;
@@ -330,4 +335,71 @@ export const EMORY_THEME_CSS = `
     background: var(--surface-1);
     padding: 0.75rem;
   }
+
+  /* ── Body background ── */
+  .${EMORY_THEME_SCOPE_CLASS} {
+    --body-bg: #f2f5fa;
+  }
 `;
+
+// ── Shared hospital card images ──
+
+export const HOSPITAL_CARD_IMAGE_BY_SLUG: Record<string, string> = {
+  "emory-university-hospital": "https://images.unsplash.com/photo-1576765608535-5f04d1e3f289?auto=format&fit=crop&w=1200&q=80",
+  "emory-saint-josephs-hospital": "https://images.unsplash.com/photo-1586773860418-d37222d8fce3?auto=format&fit=crop&w=1200&q=80",
+  "emory-johns-creek-hospital": "https://images.unsplash.com/photo-1551076805-e1869033e561?auto=format&fit=crop&w=1200&q=80",
+  "emory-university-hospital-midtown": "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=1200&q=80",
+};
+
+export const HOSPITAL_CARD_FALLBACK_IMAGE = "https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=1200&q=80";
+
+// ── Event fallback images by category ──
+
+const EVENT_FALLBACK_IMAGES: Record<string, string> = {
+  food: "https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=640&q=80",
+  nutrition: "https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=640&q=80",
+  fitness: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?auto=format&fit=crop&w=640&q=80",
+  wellness: "https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?auto=format&fit=crop&w=640&q=80",
+  support: "https://images.unsplash.com/photo-1515169067868-5387ec356754?auto=format&fit=crop&w=640&q=80",
+  screening: "https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=640&q=80",
+  health: "https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=640&q=80",
+  volunteer: "https://images.unsplash.com/photo-1559027615-cd4628902d4a?auto=format&fit=crop&w=640&q=80",
+  community: "https://images.unsplash.com/photo-1559027615-cd4628902d4a?auto=format&fit=crop&w=640&q=80",
+  family: "https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=640&q=80",
+  children: "https://images.unsplash.com/photo-1511895426328-dc8714191300?auto=format&fit=crop&w=640&q=80",
+};
+
+const EVENT_GENERIC_FALLBACK = "https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=640&q=80";
+
+const KEYWORD_PATTERNS: [RegExp, string][] = [
+  [/\b(food|meal|nutrition|pantry|kitchen|cooking|eat|diet)\b/i, "food"],
+  [/\b(fitness|walk|yoga|movement|exercise|run|gym|stretch)\b/i, "fitness"],
+  [/\b(support|group|peer|caregiver|recovery|grief|circle)\b/i, "support"],
+  [/\b(screening|clinic|vaccine|immuniz|blood pressure|checkup|testing)\b/i, "screening"],
+  [/\b(volunteer|community service|give back|helping|hands on)\b/i, "volunteer"],
+  [/\b(family|child|kid|parent|baby|maternal|prenatal|pediatric|youth)\b/i, "family"],
+  [/\b(wellness|mindful|mental|meditation|self-care|stress)\b/i, "wellness"],
+];
+
+/**
+ * Returns an appropriate fallback image URL based on event category and title keywords.
+ * Avoids showing yoga photos for food events, etc.
+ */
+export function getEventFallbackImage(category: string | null, title: string | null): string {
+  // Try category first
+  if (category) {
+    const normalizedCategory = category.toLowerCase().replace(/[^a-z]+/g, "_");
+    const directMatch = EVENT_FALLBACK_IMAGES[normalizedCategory];
+    if (directMatch) return directMatch;
+  }
+
+  // Try keyword matching on title + category
+  const searchable = [category, title].filter(Boolean).join(" ");
+  for (const [pattern, key] of KEYWORD_PATTERNS) {
+    if (pattern.test(searchable)) {
+      return EVENT_FALLBACK_IMAGES[key] || EVENT_GENERIC_FALLBACK;
+    }
+  }
+
+  return EVENT_GENERIC_FALLBACK;
+}

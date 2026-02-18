@@ -84,6 +84,7 @@ type NearbyDestination = {
   name: string;
   slug: string;
   venue_type: string | null;
+  location_designator: "standard" | "private_after_signup" | "virtual" | "recovery_meeting" | null;
   neighborhood: string | null;
   lat: number | null;
   lng: number | null;
@@ -105,12 +106,38 @@ type SpotRecord = {
   [key: string]: unknown;
 };
 
+type VenueHighlightRow = {
+  id: number;
+  highlight_type: string;
+  title: string;
+  description: string | null;
+  image_url: string | null;
+  sort_order: number;
+};
+
 const normalizeText = (value: string | null | undefined) =>
   (value || "")
     .toLowerCase()
     .replace(/[^a-z0-9\s]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+
+function dedupeVenueHighlights(rows: VenueHighlightRow[]): VenueHighlightRow[] {
+  const seen = new Set<string>();
+  const deduped: VenueHighlightRow[] = [];
+
+  for (const row of rows) {
+    const normalizedTitle = normalizeText(row.title);
+    const normalizedDescription = normalizeText(row.description);
+    const fingerprint = `${normalizedTitle}|${normalizedDescription}`;
+
+    if (seen.has(fingerprint)) continue;
+    seen.add(fingerprint);
+    deduped.push(row);
+  }
+
+  return deduped;
+}
 
 const extractHeadlinerFromTitle = (title: string) => {
   const firstChunk = title.split(SUPPORT_SPLIT_RE)[0] || title;
@@ -201,7 +228,7 @@ async function fetchNearbyDestinations(
 
   const allDestinationTypes = Object.values(DESTINATION_CATEGORIES).flat();
   const selectFields =
-    "id, name, slug, venue_type, neighborhood, lat, lng, image_url, short_description, hours, hours_display, is_24_hours, vibes";
+    "id, name, slug, venue_type, location_designator, neighborhood, lat, lng, image_url, short_description, hours, hours_display, is_24_hours, vibes";
 
   let spots: NearbyDestination[] | null = null;
 
@@ -392,7 +419,9 @@ export async function GET(
     spot: spotData as Record<string, unknown>,
     upcomingEvents: upcomingEventsWithCounts,
     nearbyDestinations,
-    highlights: ((highlights || []) as Array<Record<string, unknown>>),
+    highlights: dedupeVenueHighlights(
+      (highlights as VenueHighlightRow[] | null) || []
+    ) as unknown as Array<Record<string, unknown>>,
     artifacts: ((artifacts || []) as Array<Record<string, unknown>>),
   };
 

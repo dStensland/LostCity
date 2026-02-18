@@ -1,13 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import {
+  applyRateLimit,
+  RATE_LIMITS,
+  getClientIdentifier,
+} from "@/lib/rate-limit";
 import { getLocalDateString } from "@/lib/formats";
+import { isChainCinemaVenue } from "@/lib/cinema-filter";
 
 // Cache 5 min public, 10 min stale-while-revalidate
 export const revalidate = 300;
 
-type ShowtimeVenue = { id: number; name: string; slug: string; neighborhood: string | null };
-type ShowtimeSeries = { id: string; title: string; image_url: string | null };
+type ShowtimeVenue = {
+  id: number;
+  name: string;
+  slug: string;
+  neighborhood: string | null;
+};
+type ShowtimeSeries = {
+  id: string;
+  slug: string;
+  title: string;
+  image_url: string | null;
+};
 type ShowtimeEvent = {
   id: number;
   title: string;
@@ -21,7 +36,9 @@ type ShowtimeEvent = {
 
 /** Normalize title for fuzzy matching (strip year/format suffixes) */
 function normalizeFilmTitle(title: string): string {
-  return title.toLowerCase().trim()
+  return title
+    .toLowerCase()
+    .trim()
     .replace(/\s*\(\d{4}\)\s*$/, "")
     .replace(/\s*\(digital\)\s*$/i, "")
     .replace(/\s*\(35mm\)\s*$/i, "")
@@ -35,14 +52,18 @@ function buildFilmMap(events: ShowtimeEvent[]) {
     {
       title: string;
       series_id: string | null;
+      series_slug: string | null;
       image_url: string | null;
-      theaters: Map<number, {
-        venue_id: number;
-        venue_name: string;
-        venue_slug: string;
-        neighborhood: string | null;
-        times: string[];
-      }>;
+      theaters: Map<
+        number,
+        {
+          venue_id: number;
+          venue_name: string;
+          venue_slug: string;
+          neighborhood: string | null;
+          times: string[];
+        }
+      >;
     }
   >();
 
@@ -59,6 +80,7 @@ function buildFilmMap(events: ShowtimeEvent[]) {
       film = {
         title: series?.title || event.title,
         series_id: event.series_id,
+        series_slug: series?.slug || null,
         image_url: series?.image_url || event.image_url,
         theaters: new Map(),
       };
@@ -128,6 +150,7 @@ function toFilmsResponse(filmMap: ReturnType<typeof buildFilmMap>) {
     .map((film) => ({
       title: film.title,
       series_id: film.series_id,
+      series_slug: film.series_slug,
       image_url: film.image_url,
       theaters: Array.from(film.theaters.values()).map((theater) => ({
         venue_id: theater.venue_id,
@@ -137,23 +160,30 @@ function toFilmsResponse(filmMap: ReturnType<typeof buildFilmMap>) {
         times: theater.times.sort(),
       })),
     }))
-    .sort((a, b) => b.theaters.length - a.theaters.length || a.title.localeCompare(b.title));
+    .sort(
+      (a, b) =>
+        b.theaters.length - a.theaters.length || a.title.localeCompare(b.title),
+    );
 }
 
 /** Convert film map to by-theater response array */
 function toTheatersResponse(filmMap: ReturnType<typeof buildFilmMap>) {
-  const theaterMap = new Map<number, {
-    venue_id: number;
-    venue_name: string;
-    venue_slug: string;
-    neighborhood: string | null;
-    films: {
-      title: string;
-      series_id: string | null;
-      image_url: string | null;
-      times: string[];
-    }[];
-  }>();
+  const theaterMap = new Map<
+    number,
+    {
+      venue_id: number;
+      venue_name: string;
+      venue_slug: string;
+      neighborhood: string | null;
+      films: {
+        title: string;
+        series_id: string | null;
+        series_slug: string | null;
+        image_url: string | null;
+        times: string[];
+      }[];
+    }
+  >();
 
   for (const film of filmMap.values()) {
     for (const [venueId, theater] of film.theaters) {
@@ -171,6 +201,7 @@ function toTheatersResponse(filmMap: ReturnType<typeof buildFilmMap>) {
       theaterEntry.films.push({
         title: film.title,
         series_id: film.series_id,
+        series_slug: film.series_slug,
         image_url: film.image_url,
         times: theater.times.sort(),
       });
@@ -183,14 +214,18 @@ function toTheatersResponse(filmMap: ReturnType<typeof buildFilmMap>) {
       ...t,
       films: t.films.sort((a, b) => a.title.localeCompare(b.title)),
     }))
-    .sort((a, b) => b.films.length - a.films.length || a.venue_name.localeCompare(b.venue_name));
+    .sort(
+      (a, b) =>
+        b.films.length - a.films.length ||
+        a.venue_name.localeCompare(b.venue_name),
+    );
 }
 
 export async function GET(request: NextRequest) {
   const rateLimitResult = await applyRateLimit(
     request,
     RATE_LIMITS.read,
-    getClientIdentifier(request)
+    getClientIdentifier(request),
   );
   if (rateLimitResult) return rateLimitResult;
 
@@ -202,11 +237,12 @@ export async function GET(request: NextRequest) {
   const theaterFilter = searchParams.get("theater"); // venue slug filter
   const special = searchParams.get("special") === "true";
   const includeMeta = searchParams.get("meta") === "true";
+  const includeChains = searchParams.get("include_chains") === "true";
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     return NextResponse.json(
       { error: "Invalid date format. Use YYYY-MM-DD." },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -214,7 +250,8 @@ export async function GET(request: NextRequest) {
   // We fetch broadly and split in code to avoid PostgREST join-filter limitations.
   const { data: events, error } = await supabase
     .from("events")
-    .select(`
+    .select(
+      `
       id,
       title,
       start_time,
@@ -229,10 +266,12 @@ export async function GET(request: NextRequest) {
       ),
       series:series!events_series_id_fkey(
         id,
+        slug,
         title,
         image_url
       )
-    `)
+    `,
+    )
     .eq("start_date", date)
     .eq("category", "film")
     .not("start_time", "is", null)
@@ -242,18 +281,21 @@ export async function GET(request: NextRequest) {
   if (error) {
     return NextResponse.json(
       { error: "Failed to fetch showtimes" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 
   const typedEvents = (events as unknown as ShowtimeEvent[] | null) || [];
+  const venueFilteredEvents = includeChains
+    ? typedEvents
+    : typedEvents.filter((event) => !isChainCinemaVenue(event.venue));
 
   // Split into regular showtimes vs special screenings
-  const regularEvents = typedEvents.filter((e) =>
-    (e.tags || []).includes("showtime")
+  const regularEvents = venueFilteredEvents.filter((e) =>
+    (e.tags || []).includes("showtime"),
   );
-  const specialEvents = typedEvents.filter((e) =>
-    !(e.tags || []).includes("showtime")
+  const specialEvents = venueFilteredEvents.filter(
+    (e) => !(e.tags || []).includes("showtime"),
   );
 
   // Choose which events to display based on special flag
@@ -262,7 +304,7 @@ export async function GET(request: NextRequest) {
   // Apply theater filter in code
   if (theaterFilter) {
     displayEvents = displayEvents.filter(
-      (e) => e.venue?.slug === theaterFilter
+      (e) => e.venue?.slug === theaterFilter,
     );
   }
 
@@ -283,36 +325,83 @@ export async function GET(request: NextRequest) {
     // Get available dates with showtime-tagged film events.
     // Use client-sent date as lower bound to avoid UTC timezone mismatch on Vercel.
     // Explicit limit to avoid PostgREST default of 1000 truncating dates.
-    const { data: dateRows } = await supabase
-      .from("events")
-      .select("start_date")
-      .eq("category", "film")
-      .contains("tags", ["showtime"])
-      .gte("start_date", date)
-      .not("start_time", "is", null)
-      .order("start_date", { ascending: true })
-      .limit(5000);
+    let availableDates: string[] = [];
+    if (includeChains) {
+      const { data: dateRows } = await supabase
+        .from("events")
+        .select("start_date")
+        .eq("category", "film")
+        .contains("tags", ["showtime"])
+        .gte("start_date", date)
+        .not("start_time", "is", null)
+        .order("start_date", { ascending: true })
+        .limit(5000);
 
-    const availableDates = [
-      ...new Set(
-        ((dateRows as unknown as { start_date: string }[] | null) || []).map(
-          (r) => r.start_date
+      availableDates = [
+        ...new Set(
+          ((dateRows as unknown as { start_date: string }[] | null) || []).map(
+            (r) => r.start_date,
+          ),
+        ),
+      ];
+    } else {
+      const { data: dateRows } = await supabase
+        .from("events")
+        .select(
+          `
+          start_date,
+          venue:venues!events_venue_id_fkey(
+            name,
+            slug
+          )
+        `,
         )
-      ),
-    ];
+        .eq("category", "film")
+        .contains("tags", ["showtime"])
+        .gte("start_date", date)
+        .not("start_time", "is", null)
+        .order("start_date", { ascending: true })
+        .limit(5000);
+
+      const filteredRows = (
+        (dateRows as unknown as
+          | { start_date: string; venue: ShowtimeVenue | null }[]
+          | null) || []
+      ).filter((row) => !isChainCinemaVenue(row.venue));
+
+      availableDates = [...new Set(filteredRows.map((row) => row.start_date))];
+    }
 
     // Derive theaters and films from ALL regular events (not just filtered)
     const allFilmMap = buildFilmMap(regularEvents);
 
-    const theaterSet = new Map<number, { venue_id: number; venue_name: string; venue_slug: string; neighborhood: string | null }>();
-    const filmSet = new Map<string, { title: string; series_id: string | null; image_url: string | null }>();
+    const theaterSet = new Map<
+      number,
+      {
+        venue_id: number;
+        venue_name: string;
+        venue_slug: string;
+        neighborhood: string | null;
+      }
+    >();
+    const filmSet = new Map<
+      string,
+      {
+        title: string;
+        series_id: string | null;
+        series_slug: string | null;
+        image_url: string | null;
+      }
+    >();
 
     for (const film of allFilmMap.values()) {
-      const filmKey = film.series_id || `title:${normalizeFilmTitle(film.title)}`;
+      const filmKey =
+        film.series_id || `title:${normalizeFilmTitle(film.title)}`;
       if (!filmSet.has(filmKey)) {
         filmSet.set(filmKey, {
           title: film.title,
           series_id: film.series_id,
+          series_slug: film.series_slug,
           image_url: film.image_url,
         });
       }
@@ -331,10 +420,10 @@ export async function GET(request: NextRequest) {
     result.meta = {
       available_dates: availableDates,
       available_theaters: Array.from(theaterSet.values()).sort((a, b) =>
-        a.venue_name.localeCompare(b.venue_name)
+        a.venue_name.localeCompare(b.venue_name),
       ),
       available_films: Array.from(filmSet.values()).sort((a, b) =>
-        a.title.localeCompare(b.title)
+        a.title.localeCompare(b.title),
       ),
     };
   }
@@ -342,7 +431,7 @@ export async function GET(request: NextRequest) {
   const response = NextResponse.json(result);
   response.headers.set(
     "Cache-Control",
-    "public, s-maxage=300, stale-while-revalidate=600"
+    "public, s-maxage=300, stale-while-revalidate=600",
   );
   return response;
 }

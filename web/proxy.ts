@@ -187,6 +187,9 @@ export async function proxy(request: NextRequest) {
   const isProtectedPath = protectedPaths.some((path) =>
     request.nextUrl.pathname.startsWith(path)
   );
+  const isOnboardingPreview =
+    request.nextUrl.pathname === "/onboarding" &&
+    request.nextUrl.searchParams.get("preview") === "1";
 
   // Only call getUser() when auth cookies are present or path requires auth.
   // For anonymous visitors (no sb-* cookies on non-protected paths), skip the
@@ -227,7 +230,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // Redirect to login if accessing protected route without auth
-  if (isProtectedPath && !user) {
+  if (isProtectedPath && !user && !isOnboardingPreview) {
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";
     url.searchParams.set("redirect", request.nextUrl.pathname);

@@ -52,6 +52,7 @@ export type Database = {
           lat: number | null;
           lng: number | null;
           venue_type: string | null;
+          location_designator: "standard" | "private_after_signup" | "virtual" | "recovery_meeting";
           website: string | null;
           aliases: string[] | null;
           created_at: string;

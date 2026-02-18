@@ -1294,6 +1294,50 @@ export function getSourcesByTrack(track: SupportTrackKey): SupportSourcePolicyIt
   return SUPPORT_SOURCE_POLICY_ITEMS.filter((item) => item.track === track);
 }
 
+export function getSupportPolicyCounts(): {
+  totalOrganizations: number;
+  totalTracks: number;
+  trackCounts: Record<SupportTrackKey, number>;
+} {
+  const trackCounts = {} as Record<SupportTrackKey, number>;
+  for (const item of SUPPORT_SOURCE_POLICY_ITEMS) {
+    trackCounts[item.track] = (trackCounts[item.track] || 0) + 1;
+  }
+  return {
+    totalOrganizations: SUPPORT_SOURCE_POLICY_ITEMS.length,
+    totalTracks: Object.keys(trackCounts).length,
+    trackCounts,
+  };
+}
+
+/** High-profile organizations suitable for a "Trusted Partners" rail display */
+export function getTrustedPartnerOrgs(limit = 12): SupportSourcePolicyItem[] {
+  const priorityIds = [
+    "cdc",
+    "ymca-atlanta",
+    "atlanta-community-food-bank",
+    "nami-georgia",
+    "cancer-support-community-atlanta",
+    "planned-parenthood-se",
+    "united-way-atlanta",
+    "hands-on-atlanta",
+    "choa-community-events",
+    "va-atlanta",
+    "grady-health",
+    "shepherd-center",
+    "winship-cancer-institute",
+    "mercy-care",
+  ];
+  const byId = new Map(SUPPORT_SOURCE_POLICY_ITEMS.map((item) => [item.id, item]));
+  const result: SupportSourcePolicyItem[] = [];
+  for (const id of priorityIds) {
+    const item = byId.get(id);
+    if (item) result.push(item);
+    if (result.length >= limit) break;
+  }
+  return result;
+}
+
 const SUPPORT_POLICY_ALIASES: Record<string, string[]> = {
   cdc: ["cdc", "centers for disease control"],
   "ga-dph": ["georgia dph", "georgia department of public health"],

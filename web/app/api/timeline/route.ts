@@ -7,6 +7,7 @@ import { getLocalDateString } from "@/lib/formats";
 import type { Festival } from "@/lib/festivals";
 import { logger } from "@/lib/logger";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
+import { filterByPortalCity } from "@/lib/portal-scope";
 
 function safeParseInt(value: string | null, defaultValue: number, min = 1, max = 1000): number {
   if (!value) return defaultValue;
@@ -53,7 +54,6 @@ export async function GET(request: Request) {
       mood: (searchParams.get("mood") as MoodId) || undefined,
       portal_id: portalId,
       portal_exclusive: portalExclusive,
-      city: portalCity,
       exclude_classes: true,
     };
 
@@ -133,8 +133,11 @@ export async function GET(request: Request) {
 
     const { events: rawEvents, nextCursor, hasMore } = eventsResult;
 
+    // Filter events by portal city (in-memory, avoids header overflow from venue ID pre-fetching)
+    const cityFilteredEvents = filterByPortalCity(rawEvents, portalCity, { allowMissingCity: true });
+
     // Enrich events with social proof in parallel with festival processing
-    const events = await enrichEventsWithSocialProof(rawEvents);
+    const events = await enrichEventsWithSocialProof(cityFilteredEvents);
 
     let festivals: Festival[] = [];
     let festivalError: { message: string } | null = null;

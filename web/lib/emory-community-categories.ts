@@ -1,6 +1,6 @@
 import { addDays } from "date-fns";
 import type { HospitalAudienceMode } from "@/lib/hospital-modes";
-import type { SupportTrackKey, SupportSourcePolicyItem } from "@/lib/support-source-policy";
+import type { SupportTrackKey } from "@/lib/support-source-policy";
 import { getSourcesByTrack } from "@/lib/support-source-policy";
 
 export type EmoryCommunityCategory =

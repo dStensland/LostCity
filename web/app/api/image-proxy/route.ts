@@ -140,15 +140,61 @@ export async function GET(request: NextRequest) {
   const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
   let upstream: Response;
+  let currentTarget = target;
+  let redirects = 0;
   try {
-    upstream = await fetch(target.toString(), {
-      signal: controller.signal,
-      redirect: "manual",
-      headers: {
-        "User-Agent": "LostCityImageProxy/1.0",
-        Accept: "image/*",
-      },
-    });
+    while (true) {
+      upstream = await fetch(currentTarget.toString(), {
+        signal: controller.signal,
+        redirect: "manual",
+        headers: {
+          "User-Agent": "LostCityImageProxy/1.0",
+          Accept: "image/*",
+        },
+      });
+
+      if (upstream.status < 300 || upstream.status >= 400) {
+        break;
+      }
+
+      const location = upstream.headers.get("location");
+      if (!location || redirects >= 3) {
+        return NextResponse.json({ error: "Redirects are not allowed" }, { status: 403 });
+      }
+
+      let nextTarget: URL;
+      try {
+        nextTarget = new URL(location, currentTarget);
+      } catch {
+        return NextResponse.json({ error: "Invalid redirect target" }, { status: 403 });
+      }
+
+      if (nextTarget.username || nextTarget.password) {
+        return NextResponse.json({ error: "Credentials not allowed in URL" }, { status: 400 });
+      }
+
+      if (nextTarget.protocol !== "http:" && nextTarget.protocol !== "https:") {
+        return NextResponse.json({ error: "Invalid URL protocol" }, { status: 400 });
+      }
+
+      const redirectPort = nextTarget.port
+        ? Number(nextTarget.port)
+        : nextTarget.protocol === "https:"
+          ? 443
+          : 80;
+      if (!Number.isFinite(redirectPort) || (redirectPort !== 80 && redirectPort !== 443)) {
+        return NextResponse.json({ error: "Invalid URL port" }, { status: 400 });
+      }
+
+      try {
+        await assertPublicHostname(nextTarget.hostname);
+      } catch {
+        return NextResponse.json({ error: "Blocked URL" }, { status: 403 });
+      }
+
+      currentTarget = nextTarget;
+      redirects += 1;
+    }
   } catch {
     clearTimeout(timeout);
     return NextResponse.json({ error: "Failed to fetch image" }, { status: 502 });
@@ -157,9 +203,6 @@ export async function GET(request: NextRequest) {
   }
 
   if (!upstream.ok) {
-    if (upstream.status >= 300 && upstream.status < 400) {
-      return NextResponse.json({ error: "Redirects are not allowed" }, { status: 403 });
-    }
     return NextResponse.json({ error: "Upstream error" }, { status: 502 });
   }
 

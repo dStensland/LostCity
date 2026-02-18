@@ -3254,6 +3254,7 @@ export type Database = {
           last_verified_at: string | null
           lat: number | null
           lng: number | null
+          location_designator: string
           menu_url: string | null
           name: string
           neighborhood: string | null
@@ -3299,6 +3300,7 @@ export type Database = {
           last_verified_at?: string | null
           lat?: number | null
           lng?: number | null
+          location_designator?: string
           menu_url?: string | null
           name: string
           neighborhood?: string | null
@@ -3344,6 +3346,7 @@ export type Database = {
           last_verified_at?: string | null
           lat?: number | null
           lng?: number | null
+          location_designator?: string
           menu_url?: string | null
           name?: string
           neighborhood?: string | null

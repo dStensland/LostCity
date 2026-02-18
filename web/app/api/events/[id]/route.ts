@@ -70,7 +70,7 @@ export async function GET(
 
   const fullSelect = `
     *,
-    venue:venues(id, name, slug, address, neighborhood, city, state, vibes, description, lat, lng, nearest_marta_station, marta_walk_minutes, marta_lines, beltline_adjacent, beltline_segment, parking_type, parking_free, transit_score),
+    venue:venues(id, name, slug, address, neighborhood, city, state, location_designator, vibes, description, lat, lng, nearest_marta_station, marta_walk_minutes, marta_lines, beltline_adjacent, beltline_segment, parking_type, parking_free, transit_score),
     series:series_id(
       id,
       title,
@@ -103,7 +103,7 @@ export async function GET(
         .from("events")
         .select(`
           *,
-          venue:venues(id, name, slug, address, neighborhood, city, state, vibes, description, lat, lng, nearest_marta_station, marta_walk_minutes, marta_lines, beltline_adjacent, beltline_segment, parking_type, parking_free, transit_score)
+          venue:venues(id, name, slug, address, neighborhood, city, state, location_designator, vibes, description, lat, lng, nearest_marta_station, marta_walk_minutes, marta_lines, beltline_adjacent, beltline_segment, parking_type, parking_free, transit_score)
         `)
         .eq("id", eventId)
         .maybeSingle();
@@ -178,7 +178,7 @@ export async function GET(
       .from("events")
       .select(`
         id, title, start_date, end_date, start_time, end_time,
-        venue:venues(id, name, slug, city)
+        venue:venues(id, name, slug, city, location_designator)
       `)
       .eq("venue_id", eventData.venue_id)
       .neq("id", eventId)
@@ -209,7 +209,7 @@ export async function GET(
       .from("events")
       .select(`
         id, title, start_date, start_time, end_time,
-        venue:venues(id, name, slug, lat, lng, city)
+        venue:venues(id, name, slug, lat, lng, city, location_designator)
       `)
       .eq("start_date", eventData.start_date)
       .neq("id", eventId)
@@ -261,7 +261,7 @@ export async function GET(
       .from("events")
       .select(`
         id, title, start_date, start_time, end_time,
-        venue:venues(id, name, slug, city)
+        venue:venues(id, name, slug, city, location_designator)
       `)
       .eq("start_date", eventData.start_date)
       .neq("id", eventId)
