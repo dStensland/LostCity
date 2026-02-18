@@ -172,12 +172,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     title, location["name"], event_date
                 )
 
-                # Check if event already exists
-                if find_event_by_hash(content_hash):
-                    events_updated += 1
-                    logger.debug(f"Event already exists: {title} at {location['name']} on {event_date}")
-                    continue
-
                 # Build series_hint
                 series_hint = {
                     "series_type": "class_series",
@@ -223,6 +217,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "recurrence_rule": "First Saturday of each month",
                     "content_hash": content_hash,
                 }
+
+                existing = find_event_by_hash(content_hash)
+                if existing:
+                    smart_update_existing_event(existing, event_record)
+                    events_updated += 1
+                    logger.debug(f"Event updated: {title} at {location['name']} on {event_date}")
+                    continue
 
                 try:
                     insert_event(event_record, series_hint=series_hint)

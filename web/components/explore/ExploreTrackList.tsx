@@ -234,6 +234,15 @@ export default function ExploreTrackList() {
             </>
           )}
         </p>
+        <p
+          className="text-sm md:text-[15px] mt-3 pl-4 leading-relaxed"
+          style={{ color: "var(--muted)" }}
+        >
+          Hey y&apos;all - this&apos;ll eventually be a section where users can submit their own
+          curations and upvote the ones from others they like. I got busy doing other things,
+          but will revisit eventually. In the meantime, these are some sample lists me and the
+          robots put together. Enjoy!
+        </p>
       </div>
 
       {/* Grouped cinematic banners — groups derived from DB group_name */}

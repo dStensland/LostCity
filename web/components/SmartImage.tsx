@@ -10,6 +10,18 @@ interface SmartImageProps extends Omit<ImageProps, "placeholder" | "blurDataURL"
   blurhash?: string | null;
 }
 
+const UNOPTIMIZED_IMAGE_HOSTS = new Set([
+  "lh3.googleusercontent.com",
+]);
+
+function shouldDisableOptimizerForHost(src: string): boolean {
+  try {
+    return UNOPTIMIZED_IMAGE_HOSTS.has(new URL(src).hostname);
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Decode a blurhash string into a data URL for use as a placeholder.
  *
@@ -36,7 +48,12 @@ export default function SmartImage(props: SmartImageProps) {
   const resolvedSrc = getProxiedImageSrc(src);
   const needsUnoptimizedProxy =
     typeof resolvedSrc === "string" && resolvedSrc.startsWith("/api/image-proxy?url=");
-  const unoptimized = unoptimizedProp ?? needsUnoptimizedProxy;
+  const needsUnoptimizedHost =
+    typeof resolvedSrc === "string" && shouldDisableOptimizerForHost(resolvedSrc);
+  const unoptimized =
+    unoptimizedProp !== undefined
+      ? unoptimizedProp
+      : needsUnoptimizedProxy || needsUnoptimizedHost;
 
   // Decode blurhash to data URL if provided
   const blurDataURL = useMemo(() => {

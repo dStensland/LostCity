@@ -68,11 +68,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
         title, "Loews Atlanta Hotel", start_date.strftime("%Y-%m-%d")
     )
 
-    if find_event_by_hash(content_hash):
-        events_updated = 1
-        logger.info(f"Atlanta Food & Wine Festival {year} already exists")
-        return events_found, events_new, events_updated
-
     event_record = {
         "source_id": source_id,
         "venue_id": venue_id,
@@ -99,6 +94,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
         "recurrence_rule": "FREQ=YEARLY;BYMONTH=5",
         "content_hash": content_hash,
     }
+
+    existing = find_event_by_hash(content_hash)
+    if existing:
+        smart_update_existing_event(existing, event_record)
+        events_updated = 1
+        logger.info(f"Atlanta Food & Wine Festival {year} updated")
+        return events_found, events_new, events_updated
 
     try:
         insert_event(event_record)

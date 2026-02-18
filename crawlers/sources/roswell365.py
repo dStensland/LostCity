@@ -417,11 +417,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     event_data["start_date"]
                 )
 
-                if find_event_by_hash(content_hash):
-                    events_updated += 1
-                    logger.debug(f"Event already exists: {event_data['title']}")
-                    continue
-
                 # Prepare event record
                 event_record = {
                     "source_id": source_id,
@@ -448,6 +443,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "recurrence_rule": None,
                     "content_hash": content_hash,
                 }
+
+                existing = find_event_by_hash(content_hash)
+                if existing:
+                    smart_update_existing_event(existing, event_record)
+                    events_updated += 1
+                    logger.debug(f"Event updated: {event_data['title']}")
+                    continue
 
                 try:
                     insert_event(event_record)

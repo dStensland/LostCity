@@ -1,6 +1,6 @@
 # Explore Tracks Content Audit
 
-Generated: 2026-02-18T06:19:01.028Z
+Generated: 2026-02-18T15:31:32.695Z
 
 ## Scope
 - Active tracks: 23
@@ -17,7 +17,7 @@ Generated: 2026-02-18T06:19:01.028Z
 - Crawler candidates: 12
 - Unique crawler venue candidates: 12
 - Image health: ok=375, broken=0, uncertain=0, error=0
-- Image quality: ok=363, bad=0, unknown=12
+- Image quality: ok=366, bad=0, unknown=9
 
 ## Augmentation Buckets
 - augment_with_active_event: 447
@@ -41,7 +41,7 @@ Generated: 2026-02-18T06:19:01.028Z
 ## 1. Welcome to Atlanta (`welcome-to-atlanta`)
 
 - Venues: 20
-- Coverage: reachable images 100%, good visual images 95%, events 0%, facts/landmarks 95%, blurbs 90%, sources 100%
+- Coverage: reachable images 100%, good visual images 100%, events 0%, facts/landmarks 95%, blurbs 90%, sources 100%
 - Insufficient rows: 2
 - Crawler candidates: 0
 - Needs augmentation: active events 20, facts/landmarks 1, both 1
@@ -70,7 +70,7 @@ Generated: 2026-02-18T06:19:01.028Z
 ## 3. Good Trouble (`good-trouble`)
 
 - Venues: 17
-- Coverage: reachable images 100%, good visual images 88.2%, events 0%, facts/landmarks 94.1%, blurbs 94.1%, sources 88.2%
+- Coverage: reachable images 100%, good visual images 100%, events 0%, facts/landmarks 94.1%, blurbs 94.1%, sources 88.2%
 - Insufficient rows: 1
 - Crawler candidates: 0
 - Needs augmentation: active events 17, facts/landmarks 1, both 1
@@ -87,7 +87,7 @@ Generated: 2026-02-18T06:19:01.028Z
 ## 4. The South Got Something to Say (`the-south-got-something-to-say`)
 
 - Venues: 19
-- Coverage: reachable images 100%, good visual images 100%, events 0%, facts/landmarks 78.9%, blurbs 89.5%, sources 68.4%
+- Coverage: reachable images 100%, good visual images 94.7%, events 0%, facts/landmarks 78.9%, blurbs 89.5%, sources 68.4%
 - Insufficient rows: 2
 - Crawler candidates: 0
 - Needs augmentation: active events 19, facts/landmarks 4, both 4
@@ -157,7 +157,7 @@ Generated: 2026-02-18T06:19:01.028Z
 ## 8. Hard in Da Paint (`hard-in-da-paint`)
 
 - Venues: 18
-- Coverage: reachable images 100%, good visual images 94.4%, events 0%, facts/landmarks 88.9%, blurbs 77.8%, sources 55.6%
+- Coverage: reachable images 100%, good visual images 100%, events 0%, facts/landmarks 88.9%, blurbs 77.8%, sources 55.6%
 - Insufficient rows: 4
 - Crawler candidates: 2
 - Needs augmentation: active events 18, facts/landmarks 2, both 2
@@ -195,7 +195,7 @@ Generated: 2026-02-18T06:19:01.028Z
 ## 10. Too Busy for Haters (`too-busy-to-hate`)
 
 - Venues: 15
-- Coverage: reachable images 100%, good visual images 93.3%, events 0%, facts/landmarks 100%, blurbs 100%, sources 86.7%
+- Coverage: reachable images 100%, good visual images 100%, events 0%, facts/landmarks 100%, blurbs 100%, sources 86.7%
 - Insufficient rows: 0
 - Crawler candidates: 0
 - Needs augmentation: active events 15, facts/landmarks 0, both 0
@@ -208,7 +208,7 @@ Generated: 2026-02-18T06:19:01.028Z
 ## 11. Roll for Initiative (`the-midnight-train`)
 
 - Venues: 14
-- Coverage: reachable images 100%, good visual images 92.9%, events 0%, facts/landmarks 71.4%, blurbs 78.6%, sources 64.3%
+- Coverage: reachable images 100%, good visual images 100%, events 0%, facts/landmarks 71.4%, blurbs 78.6%, sources 64.3%
 - Insufficient rows: 3
 - Crawler candidates: 1
 - Needs augmentation: active events 14, facts/landmarks 4, both 4
@@ -282,7 +282,7 @@ Generated: 2026-02-18T06:19:01.028Z
 ## 15. Y'allywood (`yallywood`)
 
 - Venues: 6
-- Coverage: reachable images 100%, good visual images 100%, events 0%, facts/landmarks 83.3%, blurbs 83.3%, sources 100%
+- Coverage: reachable images 100%, good visual images 83.3%, events 0%, facts/landmarks 83.3%, blurbs 83.3%, sources 100%
 - Insufficient rows: 1
 - Crawler candidates: 0
 - Needs augmentation: active events 6, facts/landmarks 1, both 1
@@ -298,7 +298,7 @@ Generated: 2026-02-18T06:19:01.028Z
 ## 16. SpelHouse Spirit (`spelhouse-spirit`)
 
 - Venues: 18
-- Coverage: reachable images 100%, good visual images 100%, events 0%, facts/landmarks 88.9%, blurbs 88.9%, sources 55.6%
+- Coverage: reachable images 100%, good visual images 94.4%, events 0%, facts/landmarks 88.9%, blurbs 88.9%, sources 55.6%
 - Insufficient rows: 2
 - Crawler candidates: 2
 - Needs augmentation: active events 18, facts/landmarks 2, both 2
@@ -316,7 +316,7 @@ Generated: 2026-02-18T06:19:01.028Z
 ## 17. Resurgens (`resurgens`)
 
 - Venues: 30
-- Coverage: reachable images 100%, good visual images 93.3%, events 0%, facts/landmarks 90%, blurbs 90%, sources 46.7%
+- Coverage: reachable images 100%, good visual images 90%, events 0%, facts/landmarks 90%, blurbs 90%, sources 46.7%
 - Insufficient rows: 3
 - Crawler candidates: 0
 - Needs augmentation: active events 30, facts/landmarks 3, both 3
@@ -335,7 +335,7 @@ Generated: 2026-02-18T06:19:01.028Z
 ## 18. Up on the Roof (`up-on-the-roof`)
 
 - Venues: 22
-- Coverage: reachable images 100%, good visual images 95.5%, events 0%, facts/landmarks 100%, blurbs 100%, sources 95.5%
+- Coverage: reachable images 100%, good visual images 100%, events 0%, facts/landmarks 100%, blurbs 100%, sources 95.5%
 - Insufficient rows: 0
 - Crawler candidates: 0
 - Needs augmentation: active events 22, facts/landmarks 0, both 0
@@ -361,7 +361,7 @@ Generated: 2026-02-18T06:19:01.028Z
 ## 21. As Seen on TV (`as-seen-on-tv`)
 
 - Venues: 20
-- Coverage: reachable images 100%, good visual images 95%, events 0%, facts/landmarks 100%, blurbs 95%, sources 30%
+- Coverage: reachable images 100%, good visual images 100%, events 0%, facts/landmarks 100%, blurbs 95%, sources 30%
 - Insufficient rows: 1
 - Crawler candidates: 0
 - Needs augmentation: active events 20, facts/landmarks 0, both 0
@@ -411,7 +411,7 @@ Generated: 2026-02-18T06:19:01.028Z
 ## 24. Hell of an Engineer (`hell-of-an-engineer`)
 
 - Venues: 17
-- Coverage: reachable images 100%, good visual images 100%, events 0%, facts/landmarks 82.4%, blurbs 70.6%, sources 52.9%
+- Coverage: reachable images 100%, good visual images 94.1%, events 0%, facts/landmarks 82.4%, blurbs 70.6%, sources 52.9%
 - Insufficient rows: 5
 - Crawler candidates: 0
 - Needs augmentation: active events 17, facts/landmarks 3, both 3

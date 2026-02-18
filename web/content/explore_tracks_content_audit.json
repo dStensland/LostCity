@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-02-18T06:19:01.028Z",
+  "generated_at": "2026-02-18T15:31:32.695Z",
   "window": {
     "events_from": "2026-02-18",
     "events_to": "2026-03-04",
@@ -28,13 +28,13 @@
       "missing": 0
     },
     "image_quality_health": {
-      "ok": 363,
+      "ok": 366,
       "bad": 0,
-      "unknown": 12,
+      "unknown": 9,
       "missing": 0,
       "reason_counts": {
-        "low_detail_entropy": 19,
-        "TimeoutError": 12
+        "TimeoutError": 9,
+        "low_detail_entropy": 18
       }
     }
   },
@@ -58,7 +58,7 @@
       "totals": {
         "venues": 20,
         "with_working_image": 20,
-        "with_good_quality_image": 19,
+        "with_good_quality_image": 20,
         "with_events_14d": 0,
         "with_facts_landmarks": 19,
         "with_editorial_blurb": 18,
@@ -72,7 +72,7 @@
       },
       "coverage_pct": {
         "working_image": 100,
-        "good_image_quality": 95,
+        "good_image_quality": 100,
         "events_14d": 0,
         "facts_landmarks": 95,
         "editorial_blurb": 90,
@@ -191,7 +191,7 @@
       "totals": {
         "venues": 17,
         "with_working_image": 17,
-        "with_good_quality_image": 15,
+        "with_good_quality_image": 17,
         "with_events_14d": 0,
         "with_facts_landmarks": 16,
         "with_editorial_blurb": 16,
@@ -205,7 +205,7 @@
       },
       "coverage_pct": {
         "working_image": 100,
-        "good_image_quality": 88.2,
+        "good_image_quality": 100,
         "events_14d": 0,
         "facts_landmarks": 94.1,
         "editorial_blurb": 94.1,
@@ -267,7 +267,7 @@
       "totals": {
         "venues": 19,
         "with_working_image": 19,
-        "with_good_quality_image": 19,
+        "with_good_quality_image": 18,
         "with_events_14d": 0,
         "with_facts_landmarks": 15,
         "with_editorial_blurb": 17,
@@ -281,7 +281,7 @@
       },
       "coverage_pct": {
         "working_image": 100,
-        "good_image_quality": 100,
+        "good_image_quality": 94.7,
         "events_14d": 0,
         "facts_landmarks": 78.9,
         "editorial_blurb": 89.5,
@@ -635,7 +635,7 @@
       "totals": {
         "venues": 18,
         "with_working_image": 18,
-        "with_good_quality_image": 17,
+        "with_good_quality_image": 18,
         "with_events_14d": 0,
         "with_facts_landmarks": 16,
         "with_editorial_blurb": 14,
@@ -649,7 +649,7 @@
       },
       "coverage_pct": {
         "working_image": 100,
-        "good_image_quality": 94.4,
+        "good_image_quality": 100,
         "events_14d": 0,
         "facts_landmarks": 88.9,
         "editorial_blurb": 77.8,
@@ -876,7 +876,7 @@
       "totals": {
         "venues": 15,
         "with_working_image": 15,
-        "with_good_quality_image": 14,
+        "with_good_quality_image": 15,
         "with_events_14d": 0,
         "with_facts_landmarks": 15,
         "with_editorial_blurb": 15,
@@ -890,7 +890,7 @@
       },
       "coverage_pct": {
         "working_image": 100,
-        "good_image_quality": 93.3,
+        "good_image_quality": 100,
         "events_14d": 0,
         "facts_landmarks": 100,
         "editorial_blurb": 100,
@@ -924,7 +924,7 @@
       "totals": {
         "venues": 14,
         "with_working_image": 14,
-        "with_good_quality_image": 13,
+        "with_good_quality_image": 14,
         "with_events_14d": 0,
         "with_facts_landmarks": 10,
         "with_editorial_blurb": 11,
@@ -938,7 +938,7 @@
       },
       "coverage_pct": {
         "working_image": 100,
-        "good_image_quality": 92.9,
+        "good_image_quality": 100,
         "events_14d": 0,
         "facts_landmarks": 71.4,
         "editorial_blurb": 78.6,
@@ -1346,7 +1346,7 @@
       "totals": {
         "venues": 6,
         "with_working_image": 6,
-        "with_good_quality_image": 6,
+        "with_good_quality_image": 5,
         "with_events_14d": 0,
         "with_facts_landmarks": 5,
         "with_editorial_blurb": 5,
@@ -1360,7 +1360,7 @@
       },
       "coverage_pct": {
         "working_image": 100,
-        "good_image_quality": 100,
+        "good_image_quality": 83.3,
         "events_14d": 0,
         "facts_landmarks": 83.3,
         "editorial_blurb": 83.3,
@@ -1418,7 +1418,7 @@
       "totals": {
         "venues": 18,
         "with_working_image": 18,
-        "with_good_quality_image": 18,
+        "with_good_quality_image": 17,
         "with_events_14d": 0,
         "with_facts_landmarks": 16,
         "with_editorial_blurb": 16,
@@ -1432,7 +1432,7 @@
       },
       "coverage_pct": {
         "working_image": 100,
-        "good_image_quality": 100,
+        "good_image_quality": 94.4,
         "events_14d": 0,
         "facts_landmarks": 88.9,
         "editorial_blurb": 88.9,
@@ -1517,7 +1517,7 @@
       "totals": {
         "venues": 30,
         "with_working_image": 30,
-        "with_good_quality_image": 28,
+        "with_good_quality_image": 27,
         "with_events_14d": 0,
         "with_facts_landmarks": 27,
         "with_editorial_blurb": 27,
@@ -1531,7 +1531,7 @@
       },
       "coverage_pct": {
         "working_image": 100,
-        "good_image_quality": 93.3,
+        "good_image_quality": 90,
         "events_14d": 0,
         "facts_landmarks": 90,
         "editorial_blurb": 90,
@@ -1631,7 +1631,7 @@
       "totals": {
         "venues": 22,
         "with_working_image": 22,
-        "with_good_quality_image": 21,
+        "with_good_quality_image": 22,
         "with_events_14d": 0,
         "with_facts_landmarks": 22,
         "with_editorial_blurb": 22,
@@ -1645,7 +1645,7 @@
       },
       "coverage_pct": {
         "working_image": 100,
-        "good_image_quality": 95.5,
+        "good_image_quality": 100,
         "events_14d": 0,
         "facts_landmarks": 100,
         "editorial_blurb": 100,
@@ -1727,7 +1727,7 @@
       "totals": {
         "venues": 20,
         "with_working_image": 20,
-        "with_good_quality_image": 19,
+        "with_good_quality_image": 20,
         "with_events_14d": 0,
         "with_facts_landmarks": 20,
         "with_editorial_blurb": 19,
@@ -1741,7 +1741,7 @@
       },
       "coverage_pct": {
         "working_image": 100,
-        "good_image_quality": 95,
+        "good_image_quality": 100,
         "events_14d": 0,
         "facts_landmarks": 100,
         "editorial_blurb": 95,
@@ -1953,7 +1953,7 @@
       "totals": {
         "venues": 17,
         "with_working_image": 17,
-        "with_good_quality_image": 17,
+        "with_good_quality_image": 16,
         "with_events_14d": 0,
         "with_facts_landmarks": 14,
         "with_editorial_blurb": 12,
@@ -1967,7 +1967,7 @@
       },
       "coverage_pct": {
         "working_image": 100,
-        "good_image_quality": 100,
+        "good_image_quality": 94.1,
         "events_14d": 0,
         "facts_landmarks": 82.4,
         "editorial_blurb": 70.6,
@@ -3062,19 +3062,12 @@
         "hero_quality_state": null,
         "hero_quality_reasons": [],
         "hero_quality_metrics": null,
-        "image_quality_state": "ok",
-        "image_quality_reasons": [],
-        "image_quality_metrics": {
-          "width": 8638,
-          "height": 6479,
-          "aspect_ratio": 1.333,
-          "entropy": 4.662,
-          "edge_strength": 11.278,
-          "saturation_mean": 0.31,
-          "brightness_mean": 109.7,
-          "unique_color_ratio": 0.127
-        },
-        "has_good_quality_image": true,
+        "image_quality_state": "unknown",
+        "image_quality_reasons": [
+          "TimeoutError"
+        ],
+        "image_quality_metrics": null,
+        "has_good_quality_image": false,
         "has_bad_image_quality": false
       },
       "content": {
@@ -8634,21 +8627,12 @@
         "hero_quality_state": null,
         "hero_quality_reasons": [],
         "hero_quality_metrics": null,
-        "image_quality_state": "ok",
+        "image_quality_state": "unknown",
         "image_quality_reasons": [
-          "low_detail_entropy"
+          "TimeoutError"
         ],
-        "image_quality_metrics": {
-          "width": 1600,
-          "height": 995,
-          "aspect_ratio": 1.608,
-          "entropy": 2.831,
-          "edge_strength": 7.427,
-          "saturation_mean": 0.105,
-          "brightness_mean": 27.4,
-          "unique_color_ratio": 0.053
-        },
-        "has_good_quality_image": true,
+        "image_quality_metrics": null,
+        "has_good_quality_image": false,
         "has_bad_image_quality": false
       },
       "content": {
@@ -9155,19 +9139,12 @@
         "hero_quality_state": null,
         "hero_quality_reasons": [],
         "hero_quality_metrics": null,
-        "image_quality_state": "ok",
-        "image_quality_reasons": [],
-        "image_quality_metrics": {
-          "width": 1280,
-          "height": 1927,
-          "aspect_ratio": 0.664,
-          "entropy": 4.5,
-          "edge_strength": 7.778,
-          "saturation_mean": 0.208,
-          "brightness_mean": 101.8,
-          "unique_color_ratio": 0.086
-        },
-        "has_good_quality_image": true,
+        "image_quality_state": "unknown",
+        "image_quality_reasons": [
+          "TimeoutError"
+        ],
+        "image_quality_metrics": null,
+        "has_good_quality_image": false,
         "has_bad_image_quality": false
       },
       "content": {
@@ -9597,19 +9574,12 @@
         "hero_quality_state": null,
         "hero_quality_reasons": [],
         "hero_quality_metrics": null,
-        "image_quality_state": "ok",
-        "image_quality_reasons": [],
-        "image_quality_metrics": {
-          "width": 1200,
-          "height": 800,
-          "aspect_ratio": 1.5,
-          "entropy": 4.837,
-          "edge_strength": 18.104,
-          "saturation_mean": 0.14,
-          "brightness_mean": 100.3,
-          "unique_color_ratio": 0.076
-        },
-        "has_good_quality_image": true,
+        "image_quality_state": "unknown",
+        "image_quality_reasons": [
+          "TimeoutError"
+        ],
+        "image_quality_metrics": null,
+        "has_good_quality_image": false,
         "has_bad_image_quality": false
       },
       "content": {
@@ -9666,31 +9636,17 @@
         "image_status": "ok",
         "image_status_code": 200,
         "has_working_image": true,
-        "hero_quality_state": "ok",
-        "hero_quality_reasons": [],
-        "hero_quality_metrics": {
-          "width": 1200,
-          "height": 898,
-          "aspect_ratio": 1.336,
-          "entropy": 3.829,
-          "edge_strength": 15.623,
-          "saturation_mean": 0.431,
-          "brightness_mean": 57.1,
-          "unique_color_ratio": 0.299
-        },
-        "image_quality_state": "ok",
-        "image_quality_reasons": [],
-        "image_quality_metrics": {
-          "width": 1200,
-          "height": 898,
-          "aspect_ratio": 1.336,
-          "entropy": 3.829,
-          "edge_strength": 15.623,
-          "saturation_mean": 0.431,
-          "brightness_mean": 57.1,
-          "unique_color_ratio": 0.299
-        },
-        "has_good_quality_image": true,
+        "hero_quality_state": "unknown",
+        "hero_quality_reasons": [
+          "TimeoutError"
+        ],
+        "hero_quality_metrics": null,
+        "image_quality_state": "unknown",
+        "image_quality_reasons": [
+          "TimeoutError"
+        ],
+        "image_quality_metrics": null,
+        "has_good_quality_image": false,
         "has_bad_image_quality": false
       },
       "content": {
@@ -9972,19 +9928,12 @@
         "hero_quality_state": null,
         "hero_quality_reasons": [],
         "hero_quality_metrics": null,
-        "image_quality_state": "ok",
-        "image_quality_reasons": [],
-        "image_quality_metrics": {
-          "width": 800,
-          "height": 600,
-          "aspect_ratio": 1.333,
-          "entropy": 4.174,
-          "edge_strength": 11.218,
-          "saturation_mean": 0.168,
-          "brightness_mean": 132.2,
-          "unique_color_ratio": 0.127
-        },
-        "has_good_quality_image": true,
+        "image_quality_state": "unknown",
+        "image_quality_reasons": [
+          "TimeoutError"
+        ],
+        "image_quality_metrics": null,
+        "has_good_quality_image": false,
         "has_bad_image_quality": false
       },
       "content": {
@@ -10191,19 +10140,12 @@
         "hero_quality_state": null,
         "hero_quality_reasons": [],
         "hero_quality_metrics": null,
-        "image_quality_state": "ok",
-        "image_quality_reasons": [],
-        "image_quality_metrics": {
-          "width": 800,
-          "height": 600,
-          "aspect_ratio": 1.333,
-          "entropy": 4.6,
-          "edge_strength": 12.971,
-          "saturation_mean": 0.274,
-          "brightness_mean": 82.1,
-          "unique_color_ratio": 0.15
-        },
-        "has_good_quality_image": true,
+        "image_quality_state": "unknown",
+        "image_quality_reasons": [
+          "TimeoutError"
+        ],
+        "image_quality_metrics": null,
+        "has_good_quality_image": false,
         "has_bad_image_quality": false
       },
       "content": {
@@ -10701,27 +10643,36 @@
         "approved_tips_count": 0
       },
       "media": {
-        "hero_image_url": null,
-        "image_url": "http://www.fernbank.edu/assets/images/fsc-meta.jpg",
-        "hero_status": null,
-        "hero_status_code": null,
+        "hero_image_url": "https://lh3.googleusercontent.com/place-photos/AL8-SNGKnrBNqHcQONENxMjPogrdewKmx0W7LE59q2sg7enFHVDumNUSIq77zRgv8ElcAEo6LybZ29Zp6ZDzn28zLrJQjtCwRdOtqelGdMiN6FAU6zMYfmtVUoC7AHKHXF0UmMxgt6tUCc-eIfR2gg=s4800-w1200",
+        "image_url": "https://lh3.googleusercontent.com/place-photos/AL8-SNGKnrBNqHcQONENxMjPogrdewKmx0W7LE59q2sg7enFHVDumNUSIq77zRgv8ElcAEo6LybZ29Zp6ZDzn28zLrJQjtCwRdOtqelGdMiN6FAU6zMYfmtVUoC7AHKHXF0UmMxgt6tUCc-eIfR2gg=s4800-w1200",
+        "hero_status": "ok",
+        "hero_status_code": 200,
         "image_status": "ok",
         "image_status_code": 200,
         "has_working_image": true,
-        "hero_quality_state": null,
+        "hero_quality_state": "ok",
         "hero_quality_reasons": [],
-        "hero_quality_metrics": null,
+        "hero_quality_metrics": {
+          "width": 1200,
+          "height": 904,
+          "aspect_ratio": 1.327,
+          "entropy": 4.422,
+          "edge_strength": 15.24,
+          "saturation_mean": 0.275,
+          "brightness_mean": 77.3,
+          "unique_color_ratio": 0.148
+        },
         "image_quality_state": "ok",
         "image_quality_reasons": [],
         "image_quality_metrics": {
-          "width": 1632,
-          "height": 894,
-          "aspect_ratio": 1.826,
-          "entropy": 4.208,
-          "edge_strength": 10.913,
-          "saturation_mean": 0.923,
-          "brightness_mean": 72.9,
-          "unique_color_ratio": 0.123
+          "width": 1200,
+          "height": 904,
+          "aspect_ratio": 1.327,
+          "entropy": 4.422,
+          "edge_strength": 15.24,
+          "saturation_mean": 0.275,
+          "brightness_mean": 77.3,
+          "unique_color_ratio": 0.148
         },
         "has_good_quality_image": true,
         "has_bad_image_quality": false
@@ -12373,17 +12324,31 @@
         "image_status": "ok",
         "image_status_code": 200,
         "has_working_image": true,
-        "hero_quality_state": "unknown",
-        "hero_quality_reasons": [
-          "TimeoutError"
-        ],
-        "hero_quality_metrics": null,
-        "image_quality_state": "unknown",
-        "image_quality_reasons": [
-          "TimeoutError"
-        ],
-        "image_quality_metrics": null,
-        "has_good_quality_image": false,
+        "hero_quality_state": "ok",
+        "hero_quality_reasons": [],
+        "hero_quality_metrics": {
+          "width": 1200,
+          "height": 1600,
+          "aspect_ratio": 0.75,
+          "entropy": 4.538,
+          "edge_strength": 16.813,
+          "saturation_mean": 0.264,
+          "brightness_mean": 109.1,
+          "unique_color_ratio": 0.172
+        },
+        "image_quality_state": "ok",
+        "image_quality_reasons": [],
+        "image_quality_metrics": {
+          "width": 1200,
+          "height": 1600,
+          "aspect_ratio": 0.75,
+          "entropy": 4.538,
+          "edge_strength": 16.813,
+          "saturation_mean": 0.264,
+          "brightness_mean": 109.1,
+          "unique_color_ratio": 0.172
+        },
+        "has_good_quality_image": true,
         "has_bad_image_quality": false
       },
       "content": {
@@ -12526,17 +12491,31 @@
         "image_status": "ok",
         "image_status_code": 200,
         "has_working_image": true,
-        "hero_quality_state": "unknown",
-        "hero_quality_reasons": [
-          "TimeoutError"
-        ],
-        "hero_quality_metrics": null,
-        "image_quality_state": "unknown",
-        "image_quality_reasons": [
-          "TimeoutError"
-        ],
-        "image_quality_metrics": null,
-        "has_good_quality_image": false,
+        "hero_quality_state": "ok",
+        "hero_quality_reasons": [],
+        "hero_quality_metrics": {
+          "width": 1200,
+          "height": 1600,
+          "aspect_ratio": 0.75,
+          "entropy": 4.566,
+          "edge_strength": 21.56,
+          "saturation_mean": 0.319,
+          "brightness_mean": 105.3,
+          "unique_color_ratio": 0.217
+        },
+        "image_quality_state": "ok",
+        "image_quality_reasons": [],
+        "image_quality_metrics": {
+          "width": 1200,
+          "height": 1600,
+          "aspect_ratio": 0.75,
+          "entropy": 4.566,
+          "edge_strength": 21.56,
+          "saturation_mean": 0.319,
+          "brightness_mean": 105.3,
+          "unique_color_ratio": 0.217
+        },
+        "has_good_quality_image": true,
         "has_bad_image_quality": false
       },
       "content": {
@@ -13127,17 +13106,31 @@
         "image_status": "ok",
         "image_status_code": 200,
         "has_working_image": true,
-        "hero_quality_state": "unknown",
-        "hero_quality_reasons": [
-          "TimeoutError"
-        ],
-        "hero_quality_metrics": null,
-        "image_quality_state": "unknown",
-        "image_quality_reasons": [
-          "TimeoutError"
-        ],
-        "image_quality_metrics": null,
-        "has_good_quality_image": false,
+        "hero_quality_state": "ok",
+        "hero_quality_reasons": [],
+        "hero_quality_metrics": {
+          "width": 1200,
+          "height": 900,
+          "aspect_ratio": 1.333,
+          "entropy": 4.304,
+          "edge_strength": 10.448,
+          "saturation_mean": 0.359,
+          "brightness_mean": 123.5,
+          "unique_color_ratio": 0.213
+        },
+        "image_quality_state": "ok",
+        "image_quality_reasons": [],
+        "image_quality_metrics": {
+          "width": 1200,
+          "height": 900,
+          "aspect_ratio": 1.333,
+          "entropy": 4.304,
+          "edge_strength": 10.448,
+          "saturation_mean": 0.359,
+          "brightness_mean": 123.5,
+          "unique_color_ratio": 0.213
+        },
+        "has_good_quality_image": true,
         "has_bad_image_quality": false
       },
       "content": {
@@ -13187,8 +13180,8 @@
         "approved_tips_count": 0
       },
       "media": {
-        "hero_image_url": "https://www.dynamiceldorado.com/uploads/b/1965d4d0-160b-11ea-9454-eb8a8d99c8dc/image-178.jpg",
-        "image_url": "https://www.dynamiceldorado.com/uploads/b/1965d4d0-160b-11ea-9454-eb8a8d99c8dc/image-178.jpg",
+        "hero_image_url": "https://lh3.googleusercontent.com/places/ANXAkqFbV-yzYuf4QNljISWC3a1KXL3-7TwCOVVZUgGHw1TP371nl45uCV_NlNGkkS2NuPXCvI-wxB1HQYn7R_EOdFBOQ82xZz5B1YY=s4800-w1200",
+        "image_url": "https://lh3.googleusercontent.com/places/ANXAkqFbV-yzYuf4QNljISWC3a1KXL3-7TwCOVVZUgGHw1TP371nl45uCV_NlNGkkS2NuPXCvI-wxB1HQYn7R_EOdFBOQ82xZz5B1YY=s4800-w1200",
         "hero_status": "ok",
         "hero_status_code": 200,
         "image_status": "ok",
@@ -13197,26 +13190,26 @@
         "hero_quality_state": "ok",
         "hero_quality_reasons": [],
         "hero_quality_metrics": {
-          "width": 4745,
-          "height": 3389,
-          "aspect_ratio": 1.4,
-          "entropy": 3.461,
-          "edge_strength": 10.358,
-          "saturation_mean": 0.707,
-          "brightness_mean": 34.9,
-          "unique_color_ratio": 0.191
+          "width": 1200,
+          "height": 900,
+          "aspect_ratio": 1.333,
+          "entropy": 4.17,
+          "edge_strength": 9.311,
+          "saturation_mean": 0.301,
+          "brightness_mean": 66,
+          "unique_color_ratio": 0.178
         },
         "image_quality_state": "ok",
         "image_quality_reasons": [],
         "image_quality_metrics": {
-          "width": 4745,
-          "height": 3389,
-          "aspect_ratio": 1.4,
-          "entropy": 3.461,
-          "edge_strength": 10.358,
-          "saturation_mean": 0.707,
-          "brightness_mean": 34.9,
-          "unique_color_ratio": 0.191
+          "width": 1200,
+          "height": 900,
+          "aspect_ratio": 1.333,
+          "entropy": 4.17,
+          "edge_strength": 9.311,
+          "saturation_mean": 0.301,
+          "brightness_mean": 66,
+          "unique_color_ratio": 0.178
         },
         "has_good_quality_image": true,
         "has_bad_image_quality": false
@@ -17254,12 +17247,19 @@
         "hero_quality_state": null,
         "hero_quality_reasons": [],
         "hero_quality_metrics": null,
-        "image_quality_state": "unknown",
-        "image_quality_reasons": [
-          "TimeoutError"
-        ],
-        "image_quality_metrics": null,
-        "has_good_quality_image": false,
+        "image_quality_state": "ok",
+        "image_quality_reasons": [],
+        "image_quality_metrics": {
+          "width": 800,
+          "height": 599,
+          "aspect_ratio": 1.336,
+          "entropy": 4.664,
+          "edge_strength": 18.863,
+          "saturation_mean": 0.223,
+          "brightness_mean": 112,
+          "unique_color_ratio": 0.131
+        },
+        "has_good_quality_image": true,
         "has_bad_image_quality": false
       },
       "content": {
@@ -17394,17 +17394,31 @@
         "image_status": "ok",
         "image_status_code": 200,
         "has_working_image": true,
-        "hero_quality_state": "unknown",
-        "hero_quality_reasons": [
-          "TimeoutError"
-        ],
-        "hero_quality_metrics": null,
-        "image_quality_state": "unknown",
-        "image_quality_reasons": [
-          "TimeoutError"
-        ],
-        "image_quality_metrics": null,
-        "has_good_quality_image": false,
+        "hero_quality_state": "ok",
+        "hero_quality_reasons": [],
+        "hero_quality_metrics": {
+          "width": 1200,
+          "height": 900,
+          "aspect_ratio": 1.333,
+          "entropy": 4.346,
+          "edge_strength": 8.348,
+          "saturation_mean": 0.424,
+          "brightness_mean": 77.4,
+          "unique_color_ratio": 0.148
+        },
+        "image_quality_state": "ok",
+        "image_quality_reasons": [],
+        "image_quality_metrics": {
+          "width": 1200,
+          "height": 900,
+          "aspect_ratio": 1.333,
+          "entropy": 4.346,
+          "edge_strength": 8.348,
+          "saturation_mean": 0.424,
+          "brightness_mean": 77.4,
+          "unique_color_ratio": 0.148
+        },
+        "has_good_quality_image": true,
         "has_bad_image_quality": false
       },
       "content": {
@@ -18361,17 +18375,31 @@
         "image_status": "ok",
         "image_status_code": 200,
         "has_working_image": true,
-        "hero_quality_state": "unknown",
-        "hero_quality_reasons": [
-          "TimeoutError"
-        ],
-        "hero_quality_metrics": null,
-        "image_quality_state": "unknown",
-        "image_quality_reasons": [
-          "TimeoutError"
-        ],
-        "image_quality_metrics": null,
-        "has_good_quality_image": false,
+        "hero_quality_state": "ok",
+        "hero_quality_reasons": [],
+        "hero_quality_metrics": {
+          "width": 1200,
+          "height": 1600,
+          "aspect_ratio": 0.75,
+          "entropy": 4.612,
+          "edge_strength": 13.253,
+          "saturation_mean": 0.516,
+          "brightness_mean": 108.5,
+          "unique_color_ratio": 0.203
+        },
+        "image_quality_state": "ok",
+        "image_quality_reasons": [],
+        "image_quality_metrics": {
+          "width": 1200,
+          "height": 1600,
+          "aspect_ratio": 0.75,
+          "entropy": 4.612,
+          "edge_strength": 13.253,
+          "saturation_mean": 0.516,
+          "brightness_mean": 108.5,
+          "unique_color_ratio": 0.203
+        },
+        "has_good_quality_image": true,
         "has_bad_image_quality": false
       },
       "content": {
@@ -24299,17 +24327,31 @@
         "image_status": "ok",
         "image_status_code": 200,
         "has_working_image": true,
-        "hero_quality_state": "unknown",
-        "hero_quality_reasons": [
-          "TimeoutError"
-        ],
-        "hero_quality_metrics": null,
-        "image_quality_state": "unknown",
-        "image_quality_reasons": [
-          "TimeoutError"
-        ],
-        "image_quality_metrics": null,
-        "has_good_quality_image": false,
+        "hero_quality_state": "ok",
+        "hero_quality_reasons": [],
+        "hero_quality_metrics": {
+          "width": 1200,
+          "height": 1593,
+          "aspect_ratio": 0.753,
+          "entropy": 4.321,
+          "edge_strength": 16.956,
+          "saturation_mean": 0.298,
+          "brightness_mean": 100.7,
+          "unique_color_ratio": 0.193
+        },
+        "image_quality_state": "ok",
+        "image_quality_reasons": [],
+        "image_quality_metrics": {
+          "width": 1200,
+          "height": 1593,
+          "aspect_ratio": 0.753,
+          "entropy": 4.321,
+          "edge_strength": 16.956,
+          "saturation_mean": 0.298,
+          "brightness_mean": 100.7,
+          "unique_color_ratio": 0.193
+        },
+        "has_good_quality_image": true,
         "has_bad_image_quality": false
       },
       "content": {
@@ -24579,8 +24621,8 @@
         "approved_tips_count": 0
       },
       "media": {
-        "hero_image_url": "https://lh3.googleusercontent.com/place-photos/AL8-SNHopbHHeA_S1xWPQYGPXXhhhiYz9ODuBItxMTjPuGmXqxKvKlIgmY4TMmPJlXtsDPziHKIzx3pqbZK-vei9hoi8keXhFsDF5ejy9lpeezs2YzhlUvZRGSKPFDGvK1D7ULhaHglB1jPp5tKCUA=s4800-w1200",
-        "image_url": "https://lh3.googleusercontent.com/place-photos/AL8-SNHopbHHeA_S1xWPQYGPXXhhhiYz9ODuBItxMTjPuGmXqxKvKlIgmY4TMmPJlXtsDPziHKIzx3pqbZK-vei9hoi8keXhFsDF5ejy9lpeezs2YzhlUvZRGSKPFDGvK1D7ULhaHglB1jPp5tKCUA=s4800-w1200",
+        "hero_image_url": "https://lh3.googleusercontent.com/places/ANXAkqFqltmICpxW6R0gAx6IBiT1Ruds9ClnDJJuUs48YwNwOjq4x4oR3B3-a4qkWmB7E1rsSeYtV-D3lBJkFZOG2MJ8u_t__QV8jiA=s4800-w1200",
+        "image_url": "https://lh3.googleusercontent.com/places/ANXAkqFqltmICpxW6R0gAx6IBiT1Ruds9ClnDJJuUs48YwNwOjq4x4oR3B3-a4qkWmB7E1rsSeYtV-D3lBJkFZOG2MJ8u_t__QV8jiA=s4800-w1200",
         "hero_status": "ok",
         "hero_status_code": 200,
         "image_status": "ok",
@@ -24590,25 +24632,25 @@
         "hero_quality_reasons": [],
         "hero_quality_metrics": {
           "width": 1200,
-          "height": 1600,
-          "aspect_ratio": 0.75,
-          "entropy": 4.578,
-          "edge_strength": 14.083,
-          "saturation_mean": 0.269,
-          "brightness_mean": 86.5,
-          "unique_color_ratio": 0.25
+          "height": 1200,
+          "aspect_ratio": 1,
+          "entropy": 4.813,
+          "edge_strength": 29.215,
+          "saturation_mean": 0.474,
+          "brightness_mean": 97.2,
+          "unique_color_ratio": 0.484
         },
         "image_quality_state": "ok",
         "image_quality_reasons": [],
         "image_quality_metrics": {
           "width": 1200,
-          "height": 1600,
-          "aspect_ratio": 0.75,
-          "entropy": 4.578,
-          "edge_strength": 14.083,
-          "saturation_mean": 0.269,
-          "brightness_mean": 86.5,
-          "unique_color_ratio": 0.25
+          "height": 1200,
+          "aspect_ratio": 1,
+          "entropy": 4.813,
+          "edge_strength": 29.215,
+          "saturation_mean": 0.474,
+          "brightness_mean": 97.2,
+          "unique_color_ratio": 0.484
         },
         "has_good_quality_image": true,
         "has_bad_image_quality": false
@@ -26164,12 +26206,19 @@
         "hero_quality_state": null,
         "hero_quality_reasons": [],
         "hero_quality_metrics": null,
-        "image_quality_state": "unknown",
-        "image_quality_reasons": [
-          "TimeoutError"
-        ],
-        "image_quality_metrics": null,
-        "has_good_quality_image": false,
+        "image_quality_state": "ok",
+        "image_quality_reasons": [],
+        "image_quality_metrics": {
+          "width": 800,
+          "height": 1067,
+          "aspect_ratio": 0.75,
+          "entropy": 4.47,
+          "edge_strength": 17.249,
+          "saturation_mean": 0.278,
+          "brightness_mean": 159.8,
+          "unique_color_ratio": 0.139
+        },
+        "has_good_quality_image": true,
         "has_bad_image_quality": false
       },
       "content": {
@@ -28024,19 +28073,12 @@
         "hero_quality_state": null,
         "hero_quality_reasons": [],
         "hero_quality_metrics": null,
-        "image_quality_state": "ok",
-        "image_quality_reasons": [],
-        "image_quality_metrics": {
-          "width": 1280,
-          "height": 1927,
-          "aspect_ratio": 0.664,
-          "entropy": 4.5,
-          "edge_strength": 7.778,
-          "saturation_mean": 0.208,
-          "brightness_mean": 101.8,
-          "unique_color_ratio": 0.086
-        },
-        "has_good_quality_image": true,
+        "image_quality_state": "unknown",
+        "image_quality_reasons": [
+          "TimeoutError"
+        ],
+        "image_quality_metrics": null,
+        "has_good_quality_image": false,
         "has_bad_image_quality": false
       },
       "content": {
@@ -28694,27 +28736,36 @@
         "approved_tips_count": 0
       },
       "media": {
-        "hero_image_url": null,
-        "image_url": "http://starbar.net/wp-content/uploads/2023/01/sexy-woman-2021-08-26-15-47-16-utc-1-600x400.jpg",
-        "hero_status": null,
-        "hero_status_code": null,
+        "hero_image_url": "https://lh3.googleusercontent.com/place-photos/AL8-SNFHjcdePCY7Uw5jet5TJQF5YpNlq6bvnvTBjj4RDh8PIMI06dZ7dIzxkZcEYKnz4OR5-FYV_0e_pJRH4IvaDvI8Wg0jBfE6sZxEhIPHGFKNgaWyqP7r63qOpU1fFAQijmo2Pl3rHsMsyE0OnGU=s4800-w1200",
+        "image_url": "https://lh3.googleusercontent.com/place-photos/AL8-SNFHjcdePCY7Uw5jet5TJQF5YpNlq6bvnvTBjj4RDh8PIMI06dZ7dIzxkZcEYKnz4OR5-FYV_0e_pJRH4IvaDvI8Wg0jBfE6sZxEhIPHGFKNgaWyqP7r63qOpU1fFAQijmo2Pl3rHsMsyE0OnGU=s4800-w1200",
+        "hero_status": "ok",
+        "hero_status_code": 200,
         "image_status": "ok",
         "image_status_code": 200,
         "has_working_image": true,
-        "hero_quality_state": null,
+        "hero_quality_state": "ok",
         "hero_quality_reasons": [],
-        "hero_quality_metrics": null,
+        "hero_quality_metrics": {
+          "width": 1200,
+          "height": 675,
+          "aspect_ratio": 1.778,
+          "entropy": 3.567,
+          "edge_strength": 9.498,
+          "saturation_mean": 0.604,
+          "brightness_mean": 37.7,
+          "unique_color_ratio": 0.4
+        },
         "image_quality_state": "ok",
         "image_quality_reasons": [],
         "image_quality_metrics": {
-          "width": 600,
-          "height": 400,
-          "aspect_ratio": 1.5,
-          "entropy": 4.01,
-          "edge_strength": 11.839,
-          "saturation_mean": 0.392,
-          "brightness_mean": 74.5,
-          "unique_color_ratio": 0.168
+          "width": 1200,
+          "height": 675,
+          "aspect_ratio": 1.778,
+          "entropy": 3.567,
+          "edge_strength": 9.498,
+          "saturation_mean": 0.604,
+          "brightness_mean": 37.7,
+          "unique_color_ratio": 0.4
         },
         "has_good_quality_image": true,
         "has_bad_image_quality": false
@@ -28773,17 +28824,31 @@
         "image_status": "ok",
         "image_status_code": 200,
         "has_working_image": true,
-        "hero_quality_state": "unknown",
-        "hero_quality_reasons": [
-          "TimeoutError"
-        ],
-        "hero_quality_metrics": null,
-        "image_quality_state": "unknown",
-        "image_quality_reasons": [
-          "TimeoutError"
-        ],
-        "image_quality_metrics": null,
-        "has_good_quality_image": false,
+        "hero_quality_state": "ok",
+        "hero_quality_reasons": [],
+        "hero_quality_metrics": {
+          "width": 1171,
+          "height": 1560,
+          "aspect_ratio": 0.751,
+          "entropy": 4.279,
+          "edge_strength": 19.851,
+          "saturation_mean": 0.476,
+          "brightness_mean": 78.5,
+          "unique_color_ratio": 0.227
+        },
+        "image_quality_state": "ok",
+        "image_quality_reasons": [],
+        "image_quality_metrics": {
+          "width": 1171,
+          "height": 1560,
+          "aspect_ratio": 0.751,
+          "entropy": 4.279,
+          "edge_strength": 19.851,
+          "saturation_mean": 0.476,
+          "brightness_mean": 78.5,
+          "unique_color_ratio": 0.227
+        },
+        "has_good_quality_image": true,
         "has_bad_image_quality": false
       },
       "content": {
@@ -28835,8 +28900,8 @@
         "approved_tips_count": 0
       },
       "media": {
-        "hero_image_url": "https://lh3.googleusercontent.com/place-photos/AL8-SNE_uwIHOb4Oc2YbuY7V4_oHLMUd8062TnV8N0O69fr2OfItXZobXIYZHjdN6ahSLpFcch3nBnz2PohySeHoRfYEAAtINQNamNjsFN-dgmiC8l7zyKZ52bxu6FH2m4KuSSLedcZCcUsz0rK_iVI=s4800-w1200",
-        "image_url": "https://lh3.googleusercontent.com/place-photos/AL8-SNE_uwIHOb4Oc2YbuY7V4_oHLMUd8062TnV8N0O69fr2OfItXZobXIYZHjdN6ahSLpFcch3nBnz2PohySeHoRfYEAAtINQNamNjsFN-dgmiC8l7zyKZ52bxu6FH2m4KuSSLedcZCcUsz0rK_iVI=s4800-w1200",
+        "hero_image_url": "https://lh3.googleusercontent.com/places/ANXAkqHV5FLBrwlRwD8cyGEriugvviX-YW1So7UrEQKqBKeHc156NGdLxDDCb9MaDjkpZ-wDCHQm-e8E4hAtAX05VX69HbSuMltSdws=s4800-w1200",
+        "image_url": "https://lh3.googleusercontent.com/places/ANXAkqHV5FLBrwlRwD8cyGEriugvviX-YW1So7UrEQKqBKeHc156NGdLxDDCb9MaDjkpZ-wDCHQm-e8E4hAtAX05VX69HbSuMltSdws=s4800-w1200",
         "hero_status": "ok",
         "hero_status_code": 200,
         "image_status": "ok",
@@ -28846,25 +28911,25 @@
         "hero_quality_reasons": [],
         "hero_quality_metrics": {
           "width": 1200,
-          "height": 900,
-          "aspect_ratio": 1.333,
-          "entropy": 4.711,
-          "edge_strength": 16.859,
-          "saturation_mean": 0.419,
-          "brightness_mean": 115,
-          "unique_color_ratio": 0.287
+          "height": 801,
+          "aspect_ratio": 1.498,
+          "entropy": 4.392,
+          "edge_strength": 18.037,
+          "saturation_mean": 0.513,
+          "brightness_mean": 130.7,
+          "unique_color_ratio": 0.16
         },
         "image_quality_state": "ok",
         "image_quality_reasons": [],
         "image_quality_metrics": {
           "width": 1200,
-          "height": 900,
-          "aspect_ratio": 1.333,
-          "entropy": 4.711,
-          "edge_strength": 16.859,
-          "saturation_mean": 0.419,
-          "brightness_mean": 115,
-          "unique_color_ratio": 0.287
+          "height": 801,
+          "aspect_ratio": 1.498,
+          "entropy": 4.392,
+          "edge_strength": 18.037,
+          "saturation_mean": 0.513,
+          "brightness_mean": 130.7,
+          "unique_color_ratio": 0.16
         },
         "has_good_quality_image": true,
         "has_bad_image_quality": false
@@ -29594,17 +29659,31 @@
         "image_status": "ok",
         "image_status_code": 200,
         "has_working_image": true,
-        "hero_quality_state": "unknown",
-        "hero_quality_reasons": [
-          "TimeoutError"
-        ],
-        "hero_quality_metrics": null,
-        "image_quality_state": "unknown",
-        "image_quality_reasons": [
-          "TimeoutError"
-        ],
-        "image_quality_metrics": null,
-        "has_good_quality_image": false,
+        "hero_quality_state": "ok",
+        "hero_quality_reasons": [],
+        "hero_quality_metrics": {
+          "width": 1200,
+          "height": 1593,
+          "aspect_ratio": 0.753,
+          "entropy": 4.321,
+          "edge_strength": 16.956,
+          "saturation_mean": 0.298,
+          "brightness_mean": 100.7,
+          "unique_color_ratio": 0.193
+        },
+        "image_quality_state": "ok",
+        "image_quality_reasons": [],
+        "image_quality_metrics": {
+          "width": 1200,
+          "height": 1593,
+          "aspect_ratio": 0.753,
+          "entropy": 4.321,
+          "edge_strength": 16.956,
+          "saturation_mean": 0.298,
+          "brightness_mean": 100.7,
+          "unique_color_ratio": 0.193
+        },
+        "has_good_quality_image": true,
         "has_bad_image_quality": false
       },
       "content": {
@@ -30775,27 +30854,36 @@
         "approved_tips_count": 0
       },
       "media": {
-        "hero_image_url": null,
-        "image_url": "https://lh3.googleusercontent.com/place-photos/AL8-SNEYyi0uv3F5j6lu_WNYGmi2B-2Ko16RN1Hldwnb4hQ-lMFKWJqxGzBnHzDQ7WJbwb-O7LtVwOhQP79r1XMeWdJ-J_4nyiSb-Oz7xndVldeCVM4LRMNOjwkDZOlulHji7x1LM39677trVyE-2A=s4800-w800",
-        "hero_status": null,
-        "hero_status_code": null,
+        "hero_image_url": "https://lh3.googleusercontent.com/place-photos/AL8-SNGF_56ppeIndZibrajU9aZjrYmJbdV1FphX7UHqKZ52jhQ-UGK3QZsIJy_Xd1QYSFTAY5GFOBFB89Ap1czFFlePOVQY2aYoVK73EbcUXE1_K-dLUqiUZG5S_4oNDyY2gejwhnPt6MBDWals_A=s4800-w1200",
+        "image_url": "https://lh3.googleusercontent.com/place-photos/AL8-SNGF_56ppeIndZibrajU9aZjrYmJbdV1FphX7UHqKZ52jhQ-UGK3QZsIJy_Xd1QYSFTAY5GFOBFB89Ap1czFFlePOVQY2aYoVK73EbcUXE1_K-dLUqiUZG5S_4oNDyY2gejwhnPt6MBDWals_A=s4800-w1200",
+        "hero_status": "ok",
+        "hero_status_code": 200,
         "image_status": "ok",
         "image_status_code": 200,
         "has_working_image": true,
-        "hero_quality_state": null,
+        "hero_quality_state": "ok",
         "hero_quality_reasons": [],
-        "hero_quality_metrics": null,
+        "hero_quality_metrics": {
+          "width": 1200,
+          "height": 1600,
+          "aspect_ratio": 0.75,
+          "entropy": 4.437,
+          "edge_strength": 14.275,
+          "saturation_mean": 0.772,
+          "brightness_mean": 115.8,
+          "unique_color_ratio": 0.102
+        },
         "image_quality_state": "ok",
         "image_quality_reasons": [],
         "image_quality_metrics": {
-          "width": 800,
-          "height": 1067,
+          "width": 1200,
+          "height": 1600,
           "aspect_ratio": 0.75,
-          "entropy": 4.435,
-          "edge_strength": 13.947,
-          "saturation_mean": 0.77,
-          "brightness_mean": 116.1,
-          "unique_color_ratio": 0.1
+          "entropy": 4.437,
+          "edge_strength": 14.275,
+          "saturation_mean": 0.772,
+          "brightness_mean": 115.8,
+          "unique_color_ratio": 0.102
         },
         "has_good_quality_image": true,
         "has_bad_image_quality": false
@@ -30854,17 +30942,31 @@
         "image_status": "ok",
         "image_status_code": 200,
         "has_working_image": true,
-        "hero_quality_state": "unknown",
-        "hero_quality_reasons": [
-          "TimeoutError"
-        ],
-        "hero_quality_metrics": null,
-        "image_quality_state": "unknown",
-        "image_quality_reasons": [
-          "TimeoutError"
-        ],
-        "image_quality_metrics": null,
-        "has_good_quality_image": false,
+        "hero_quality_state": "ok",
+        "hero_quality_reasons": [],
+        "hero_quality_metrics": {
+          "width": 1200,
+          "height": 1600,
+          "aspect_ratio": 0.75,
+          "entropy": 4.532,
+          "edge_strength": 22.297,
+          "saturation_mean": 0.146,
+          "brightness_mean": 102.4,
+          "unique_color_ratio": 0.113
+        },
+        "image_quality_state": "ok",
+        "image_quality_reasons": [],
+        "image_quality_metrics": {
+          "width": 1200,
+          "height": 1600,
+          "aspect_ratio": 0.75,
+          "entropy": 4.532,
+          "edge_strength": 22.297,
+          "saturation_mean": 0.146,
+          "brightness_mean": 102.4,
+          "unique_color_ratio": 0.113
+        },
+        "has_good_quality_image": true,
         "has_bad_image_quality": false
       },
       "content": {
@@ -31362,12 +31464,19 @@
         "hero_quality_state": null,
         "hero_quality_reasons": [],
         "hero_quality_metrics": null,
-        "image_quality_state": "unknown",
-        "image_quality_reasons": [
-          "TimeoutError"
-        ],
-        "image_quality_metrics": null,
-        "has_good_quality_image": false,
+        "image_quality_state": "ok",
+        "image_quality_reasons": [],
+        "image_quality_metrics": {
+          "width": 1944,
+          "height": 2592,
+          "aspect_ratio": 0.75,
+          "entropy": 4.486,
+          "edge_strength": 11.865,
+          "saturation_mean": 0.185,
+          "brightness_mean": 132.3,
+          "unique_color_ratio": 0.121
+        },
+        "has_good_quality_image": true,
         "has_bad_image_quality": false
       },
       "content": {
@@ -34933,31 +35042,17 @@
         "image_status": "ok",
         "image_status_code": 200,
         "has_working_image": true,
-        "hero_quality_state": "ok",
-        "hero_quality_reasons": [],
-        "hero_quality_metrics": {
-          "width": 600,
-          "height": 400,
-          "aspect_ratio": 1.5,
-          "entropy": 4.839,
-          "edge_strength": 17.891,
-          "saturation_mean": 0.324,
-          "brightness_mean": 121.7,
-          "unique_color_ratio": 0.203
-        },
-        "image_quality_state": "ok",
-        "image_quality_reasons": [],
-        "image_quality_metrics": {
-          "width": 600,
-          "height": 400,
-          "aspect_ratio": 1.5,
-          "entropy": 4.839,
-          "edge_strength": 17.891,
-          "saturation_mean": 0.324,
-          "brightness_mean": 121.7,
-          "unique_color_ratio": 0.203
-        },
-        "has_good_quality_image": true,
+        "hero_quality_state": "unknown",
+        "hero_quality_reasons": [
+          "TimeoutError"
+        ],
+        "hero_quality_metrics": null,
+        "image_quality_state": "unknown",
+        "image_quality_reasons": [
+          "TimeoutError"
+        ],
+        "image_quality_metrics": null,
+        "has_good_quality_image": false,
         "has_bad_image_quality": false
       },
       "content": {

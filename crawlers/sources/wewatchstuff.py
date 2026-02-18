@@ -15,7 +15,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash
+from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import find_event_url
 
@@ -251,12 +251,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     # Generate content hash
                     content_hash = generate_content_hash(title, SCREENING_VENUE_DATA["name"], start_date)
 
-                    # Check if exists
-                    if find_event_by_hash(content_hash):
-                        events_updated += 1
-                        logger.debug(f"Event already exists: {title}")
-                        continue
-
                     # Fetch movie poster
                     poster_url = fetch_movie_poster(film_title, film_year)
                     if poster_url:
@@ -295,6 +289,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "recurrence_rule": None,
                         "content_hash": content_hash,
                     }
+
+                    existing = find_event_by_hash(content_hash)
+                    if existing:
+                        smart_update_existing_event(existing, event_record)
+                        events_updated += 1
+                        logger.debug(f"Event updated: {title}")
+                        continue
 
                     try:
                         insert_event(event_record)

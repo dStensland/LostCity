@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-02-18T06:19:01.028Z",
+  "generated_at": "2026-02-18T15:31:32.695Z",
   "totals": {
     "insufficient_rows": 42,
     "crawler_candidates": 12,
@@ -1150,9 +1150,11 @@
       "events_14d": 0,
       "highlights_count": 2,
       "has_working_image": true,
-      "has_good_quality_image": true,
+      "has_good_quality_image": false,
       "has_bad_image_quality": false,
-      "image_quality_reasons": [],
+      "image_quality_reasons": [
+        "TimeoutError"
+      ],
       "has_editorial_blurb": false,
       "has_source_url": true
     },

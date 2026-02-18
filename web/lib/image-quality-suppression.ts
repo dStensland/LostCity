@@ -21,9 +21,7 @@ type EventLike = {
 };
 
 const payload = insufficientFlags as InsufficientFlagsPayload;
-const MANUAL_BAD_IMAGE_VENUES = new Set<string>([
-  "sister-louisas-church",
-]);
+const MANUAL_BAD_IMAGE_VENUES = new Set<string>();
 
 const LOW_QUALITY_VENUE_SLUGS = (() => {
   const slugs = new Set<string>();
