@@ -530,7 +530,11 @@ export default function CuratedContent({ portalSlug }: CuratedContentProps) {
     <>
       <div className="space-y-6">
         {/* Above-fold: Happening Now CTA - Priority load */}
-        <section id={CURATED_HAPPENING_NOW_ID} data-index-label="Happening Now" className="scroll-mt-28 min-h-[96px]">
+        <section
+          id={CURATED_HAPPENING_NOW_ID}
+          data-index-label="Happening Now"
+          className={`scroll-mt-28 ${loading ? "min-h-[96px]" : ""}`}
+        >
           <SectionErrorBoundary>
             <Suspense fallback={<HappeningNowCtaSkeleton />}>
               <HappeningNowCTA portalSlug={portalSlug} />
@@ -539,7 +543,11 @@ export default function CuratedContent({ portalSlug }: CuratedContentProps) {
         </section>
 
         {/* Holiday hero: nearest event date gets top position */}
-        <section id={CURATED_SEASONAL_SPOTLIGHT_ID} data-index-label="Seasonal Spotlight" className="scroll-mt-28 min-h-[320px]">
+        <section
+          id={CURATED_SEASONAL_SPOTLIGHT_ID}
+          data-index-label="Seasonal Spotlight"
+          className={`scroll-mt-28 ${loading ? "min-h-[320px]" : ""}`}
+        >
           <SectionErrorBoundary>
             <Suspense fallback={<HolidayHeroSkeleton />}>
               <HolidayHero portalSlug={portalSlug} eventCount={getEventCount(1)} />
@@ -559,7 +567,11 @@ export default function CuratedContent({ portalSlug }: CuratedContentProps) {
         <div className="pt-4 border-t border-[var(--twilight)]/40" />
 
         {/* Festival moments: takeover hero + imminent festivals */}
-        <section id={CURATED_FESTIVALS_ID} data-index-label="Festivals" className="scroll-mt-28 min-h-[260px]">
+        <section
+          id={CURATED_FESTIVALS_ID}
+          data-index-label="Festivals"
+          className={`scroll-mt-28 ${loading ? "min-h-[260px]" : ""}`}
+        >
           <SectionErrorBoundary>
             <Suspense fallback={<MomentsSectionSkeleton />}>
               <MomentsSection portalSlug={portalSlug} prefetchedData={moments} />
@@ -568,7 +580,11 @@ export default function CuratedContent({ portalSlug }: CuratedContentProps) {
         </section>
 
         {/* Second holiday hero (below festivals) */}
-        <section id={CURATED_SECOND_SPOTLIGHT_ID} data-index-label="Special Times" className="scroll-mt-28 min-h-[280px]">
+        <section
+          id={CURATED_SECOND_SPOTLIGHT_ID}
+          data-index-label="Special Times"
+          className={`scroll-mt-28 ${loading ? "min-h-[280px]" : ""}`}
+        >
           <SectionErrorBoundary>
             <Suspense fallback={<DelayedFallback><HolidayHeroSkeleton /></DelayedFallback>}>
               <HolidayHero portalSlug={portalSlug} position={2} eventCount={getEventCount(2)} />
@@ -577,7 +593,11 @@ export default function CuratedContent({ portalSlug }: CuratedContentProps) {
         </section>
 
         {/* Above-fold: Trending Now - High priority */}
-        <section id={CURATED_TRENDING_ID} data-index-label="Trending Now" className="scroll-mt-28 min-h-[170px]">
+        <section
+          id={CURATED_TRENDING_ID}
+          data-index-label="Trending Now"
+          className={`scroll-mt-28 ${loading ? "min-h-[170px]" : ""}`}
+        >
           <SectionErrorBoundary>
             <Suspense fallback={<DelayedFallback><TrendingNowSkeleton /></DelayedFallback>}>
               <TrendingNow portalSlug={portalSlug} />
