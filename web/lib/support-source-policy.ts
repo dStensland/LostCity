@@ -1507,7 +1507,7 @@ const SUPPORT_POLICY_ALIASES: Record<string, string[]> = {
   "aids-walk-atlanta": ["aids walk atlanta", "aids walk"],
   // ── hospital_community ──
   "piedmont-healthcare": ["piedmont healthcare"],
-  "piedmonthealthcare-events": ["piedmont healthcare events"],
+  "piedmonthealthcare-events": ["piedmont healthcare events", "piedmont healthcare nc"],
   "piedmont-classes": ["piedmont classes"],
   "piedmont-heart-conferences": ["piedmont heart conferences"],
   "piedmont-womens-heart": ["piedmont womens heart", "piedmont women's heart"],
@@ -1516,7 +1516,11 @@ const SUPPORT_POLICY_ALIASES: Record<string, string[]> = {
   "piedmont-foundation": ["piedmont foundation events", "piedmont foundation"],
   "piedmont-auxiliary": ["piedmont auxiliary", "piedmont hospital auxiliary"],
   "piedmont-athens": ["piedmont athens spiritual care"],
-  "piedmont-cme": ["piedmont cme", "piedmont continuing education"],
+  "piedmont-cme": [
+    "piedmont cme",
+    "piedmont continuing education",
+    "piedmont healthcare cme",
+  ],
   "wellstar-community-events": ["wellstar health system", "wellstar community", "wellstar"],
   "northside-hospital-community": ["northside hospital community", "northside hospital classes"],
   "adventhealth-georgia": ["adventhealth georgia", "adventhealth gordon"],
@@ -1539,6 +1543,31 @@ function getMatchTerms(item: SupportSourcePolicyItem): string[] {
     .filter(Boolean);
 }
 
+function findBestPolicyMatch(value: string): SupportSourcePolicyItem | null {
+  let best: { item: SupportSourcePolicyItem; score: number; termLength: number } | null = null;
+
+  for (const item of SUPPORT_SOURCE_POLICY_ITEMS) {
+    const terms = getMatchTerms(item);
+    for (const term of terms) {
+      const isExact = value === term;
+      const isContains = !isExact && value.includes(term);
+      if (!isExact && !isContains) continue;
+
+      const score = isExact ? 2 : 1;
+      const termLength = term.length;
+      if (
+        !best ||
+        score > best.score ||
+        (score === best.score && termLength > best.termLength)
+      ) {
+        best = { item, score, termLength };
+      }
+    }
+  }
+
+  return best?.item ?? null;
+}
+
 export function resolveSupportSourcePolicy(args: {
   slug?: string | null;
   name?: string | null;
@@ -1547,18 +1576,14 @@ export function resolveSupportSourcePolicy(args: {
   const name = normalizePolicyText(args.name);
   if (!slug && !name) return null;
 
-  for (const item of SUPPORT_SOURCE_POLICY_ITEMS) {
-    const terms = getMatchTerms(item);
-    if (slug && terms.some((term) => slug === term || slug.includes(term))) {
-      return item;
-    }
+  if (slug) {
+    const slugMatch = findBestPolicyMatch(slug);
+    if (slugMatch) return slugMatch;
   }
 
-  for (const item of SUPPORT_SOURCE_POLICY_ITEMS) {
-    const terms = getMatchTerms(item);
-    if (name && terms.some((term) => name === term || name.includes(term))) {
-      return item;
-    }
+  if (name) {
+    const nameMatch = findBestPolicyMatch(name);
+    if (nameMatch) return nameMatch;
   }
 
   return null;
