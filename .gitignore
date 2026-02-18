@@ -69,11 +69,13 @@ crawlers/tmp/
 web/tmp/
 crawl_assessment*.txt
 crawlers/crawl_assessment*.txt
+output/playwright/
 
 # Generated reports (timestamped, regenerated frequently)
 crawlers/reports/*.html
 crawlers/reports/crawl_report_*.html
 crawlers/reports/latest.html
+crawlers/reports/image_repair_pass_*.json
 
 # Exported data files
 crawlers/*.csv

@@ -1021,11 +1021,11 @@ export async function GET(request: NextRequest, { params }: Props) {
   const currentMonth = currentDate.getMonth() + 1; // 1-12
   const currentDay = currentDate.getDate();
 
-  // Add holiday sections starting late January through early March
+  // Add holiday sections starting late January through end of March
   const showHolidaySections =
     (currentMonth === 1 && currentDay >= 20) || // Late January
     currentMonth === 2 || // All of February
-    (currentMonth === 3 && currentDay <= 5); // Early March for Mardi Gras
+    currentMonth === 3; // All of March (Ramadan, Holi, WHM, St. Patrick's)
 
   if (showHolidaySections) {
     // Friday the 13th section (Feb 10-13)
@@ -1224,6 +1224,147 @@ export async function GET(request: NextRequest, { params }: Props) {
         style: {
           accent_color: "#e53935", // Pan-African red
           icon: "raised-fist",
+        },
+        portal_section_items: [],
+      });
+    }
+
+    // Ramadan section (Feb 18 - Mar 19, 2026)
+    if (
+      (currentMonth === 2 && currentDay >= 18) ||
+      (currentMonth === 3 && currentDay <= 19)
+    ) {
+      holidaySections.push({
+        id: `ramadan-${currentYear}`,
+        title: "Ramadan",
+        slug: "ramadan",
+        description: "Iftars, community meals & reflection",
+        section_type: "auto",
+        block_type: "collapsible_events",
+        layout: "grid",
+        items_per_row: 2,
+        max_items: 20,
+        auto_filter: {
+          tags: ["ramadan"],
+          date_filter: "next_30_days",
+          sort_by: "date",
+        },
+        block_content: null,
+        display_order: -9,
+        is_visible: true,
+        schedule_start: null,
+        schedule_end: null,
+        show_on_days: null,
+        show_after_time: null,
+        show_before_time: null,
+        style: {
+          accent_color: "#c5a028", // Gold
+          icon: "crescent-moon",
+        },
+        portal_section_items: [],
+      });
+    }
+
+    // Holi section (Feb 28 - Mar 5)
+    if (
+      (currentMonth === 2 && currentDay >= 28) ||
+      (currentMonth === 3 && currentDay <= 5)
+    ) {
+      holidaySections.push({
+        id: `holi-${currentYear}`,
+        title: "Holi",
+        slug: "holi",
+        description: "Festival of Colors",
+        section_type: "auto",
+        block_type: "collapsible_events",
+        layout: "grid",
+        items_per_row: 2,
+        max_items: 20,
+        auto_filter: {
+          tags: ["holi"],
+          date_filter: "next_7_days",
+          sort_by: "date",
+        },
+        block_content: null,
+        display_order: -10,
+        is_visible: true,
+        schedule_start: null,
+        schedule_end: null,
+        show_on_days: null,
+        show_after_time: null,
+        show_before_time: null,
+        style: {
+          accent_color: "#e040fb", // Vibrant magenta
+          icon: "paint-palette",
+        },
+        portal_section_items: [],
+      });
+    }
+
+    // Women's History Month section (Feb 25 - Mar 31)
+    if (
+      (currentMonth === 2 && currentDay >= 25) ||
+      currentMonth === 3
+    ) {
+      holidaySections.push({
+        id: `womens-history-month-${currentYear}`,
+        title: "Women's History Month",
+        slug: "womens-history-month",
+        description: "Celebrating the women shaping Atlanta",
+        section_type: "auto",
+        block_type: "collapsible_events",
+        layout: "grid",
+        items_per_row: 2,
+        max_items: 20,
+        auto_filter: {
+          tags: ["womens-history-month"],
+          date_filter: "next_30_days",
+          sort_by: "date",
+        },
+        block_content: null,
+        display_order: -11,
+        is_visible: true,
+        schedule_start: null,
+        schedule_end: null,
+        show_on_days: null,
+        show_after_time: null,
+        show_before_time: null,
+        style: {
+          accent_color: "#ab47bc", // Purple
+          icon: "purple-heart",
+        },
+        portal_section_items: [],
+      });
+    }
+
+    // St. Patrick's Day section (Mar 10 - Mar 17)
+    if (currentMonth === 3 && currentDay >= 10 && currentDay <= 17) {
+      holidaySections.push({
+        id: `st-patricks-day-${currentYear}`,
+        title: "St. Patrick's Day",
+        slug: "st-patricks-day",
+        description: "Parade, pubs & plenty of green",
+        section_type: "auto",
+        block_type: "collapsible_events",
+        layout: "grid",
+        items_per_row: 2,
+        max_items: 20,
+        auto_filter: {
+          tags: ["st-patricks-day"],
+          date_filter: "next_7_days",
+          sort_by: "date",
+        },
+        block_content: null,
+        display_order: -12,
+        is_visible: true,
+        schedule_start: null,
+        schedule_end: null,
+        show_on_days: null,
+        show_after_time: null,
+        show_before_time: null,
+        style: {
+          accent_color: "#4caf50", // Shamrock green
+          icon: "shamrock",
         },
         portal_section_items: [],
       });

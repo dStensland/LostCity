@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import Image from "@/components/SmartImage";
 import { usePortal } from "@/lib/portal-context";
 import type { ExploreTrack, ExploreTrackFeaturedEvent, PillType } from "@/lib/explore-tracks";
@@ -14,9 +15,12 @@ import ExploreTrackDetail from "./ExploreTrackDetail";
 
 export default function ExploreTrackList() {
   const { portal } = usePortal();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [tracks, setTracks] = useState<ExploreTrack[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
+  const trackParam = searchParams?.get("track") ?? null;
+  const [selectedSlug, setSelectedSlug] = useState<string | null>(trackParam);
   const scrollPositionRef = useRef(0);
 
   useEffect(() => {
@@ -94,29 +98,28 @@ export default function ExploreTrackList() {
     return () => { cancelled = true; };
   }, []);
 
-  // Browser back-nav: push history state when entering a track detail
+  // Sync selectedSlug when URL track param changes (e.g. direct navigation)
+  useEffect(() => {
+    setSelectedSlug(trackParam);
+  }, [trackParam]);
+
+  // Browser back-nav: push URL with track param when entering a track detail
   const handleSelectTrack = useCallback((slug: string) => {
     scrollPositionRef.current = window.scrollY;
     setSelectedSlug(slug);
-    history.pushState({ exploreTrack: slug }, "", undefined);
-  }, []);
+    const params = new URLSearchParams(searchParams?.toString() || "");
+    params.set("track", slug);
+    router.push(`/${portal.slug}?${params.toString()}`, { scroll: false });
+  }, [searchParams, portal.slug, router]);
 
   const handleBack = useCallback(() => {
     setSelectedSlug(null);
+    const params = new URLSearchParams(searchParams?.toString() || "");
+    params.delete("track");
+    router.push(`/${portal.slug}?${params.toString()}`, { scroll: false });
     const savedScroll = scrollPositionRef.current;
     requestAnimationFrame(() => window.scrollTo(0, savedScroll));
-  }, []);
-
-  // Listen for browser back to return from track detail to list
-  useEffect(() => {
-    const onPopState = () => {
-      if (selectedSlug) {
-        setSelectedSlug(null);
-      }
-    };
-    window.addEventListener("popstate", onPopState);
-    return () => window.removeEventListener("popstate", onPopState);
-  }, [selectedSlug]);
+  }, [searchParams, portal.slug, router]);
 
   // Build groups from DB group_name — tracks arrive sorted by sort_order,
   // so group insertion order = order of first track in each group
@@ -150,10 +153,7 @@ export default function ExploreTrackList() {
       <div className="animate-page-enter">
         <ExploreTrackDetail
           slug={selectedSlug}
-          onBack={() => {
-            handleBack();
-            history.back();
-          }}
+          onBack={handleBack}
           portalSlug={portal.slug}
           accentColor={selectedTrack?.accentColor}
           category={selectedTrack?.category}
