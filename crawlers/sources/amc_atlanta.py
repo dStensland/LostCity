@@ -182,11 +182,14 @@ class AMCAtlantaCrawler(ChainCinemaCrawler):
                 image_url = movie.get("image_url")
 
                 for start_time in times:
-                    found += 1
                     content_hash = generate_content_hash(
                         title, venue_name, f"{date_str}|{start_time}"
                     )
+                    # Skip duplicate rows for the same title/time seen in this run.
+                    if content_hash in seen_hashes:
+                        continue
                     seen_hashes.add(content_hash)
+                    found += 1
 
 
                     event_record = {

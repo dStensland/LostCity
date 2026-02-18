@@ -433,10 +433,6 @@ export default function HighlightsPicks({ portalSlug }: { portalSlug?: string } 
     return () => { cancelled = true; };
   }, [period]);
 
-  if (loading && period === "today") {
-    return null; // Parent Suspense will show skeleton on initial load
-  }
-
   const { title, subtitle } = getSectionHeader(period);
   const heroCategory = events[0]?.category || "other";
 
@@ -462,8 +458,13 @@ export default function HighlightsPicks({ portalSlug }: { portalSlug?: string } 
         />
 
         {loading ? (
-          <div className="flex items-center justify-center py-16">
-            <div className="w-6 h-6 border-2 border-[var(--neon-amber)]/30 border-t-[var(--neon-amber)] rounded-full animate-spin" />
+          <div className="space-y-3 pb-2">
+            <div className="rounded-[1.35rem] h-[320px] sm:h-[360px] skeleton-shimmer border border-[var(--twilight)]/35" />
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="rounded-xl h-32 skeleton-shimmer border border-[var(--twilight)]/30" style={{ animationDelay: `${i * 50}ms` }} />
+              ))}
+            </div>
           </div>
         ) : events.length === 0 ? (
           <div className="text-center py-8 text-[var(--muted)] text-sm font-mono">

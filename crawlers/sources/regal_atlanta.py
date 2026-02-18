@@ -213,11 +213,14 @@ class RegalAtlantaCrawler(ChainCinemaCrawler):
                     continue
                 times_added.add(time_str)
 
-                found += 1
                 content_hash = generate_content_hash(
                     title, venue_name, f"{date_str}|{time_str}"
                 )
+                # Skip duplicate rows for the same title/time seen in this run.
+                if content_hash in seen_hashes:
+                    continue
                 seen_hashes.add(content_hash)
+                found += 1
 
 
                 event_record = {
