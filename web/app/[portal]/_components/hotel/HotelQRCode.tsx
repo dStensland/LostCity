@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @next/next/no-img-element */
 
 /**
  * HotelQRCode - Simple QR code display for in-room tablets

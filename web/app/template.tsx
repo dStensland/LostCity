@@ -1,4 +1,7 @@
+"use client";
+
 import { ReactNode } from "react";
+import { usePathname } from "next/navigation";
 
 /**
  * Template component for page transitions.
@@ -7,8 +10,10 @@ import { ReactNode } from "react";
  * Server component - CSS animation doesn't need client-side JS.
  */
 export default function Template({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+
   return (
-    <div className="animate-page-enter">
+    <div key={pathname} className="animate-page-enter">
       {children}
     </div>
   );

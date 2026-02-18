@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import Image from "@/components/SmartImage";
 import { usePortal } from "@/lib/portal-context";
 import type { ExploreTrack, ExploreTrackFeaturedEvent, PillType } from "@/lib/explore-tracks";
 import {
   EXPLORE_THEME,
   PILL_COLORS,
-  getTrackAccentColor,
-  getTrackCategory,
+  DEFAULT_ACCENT_COLOR,
+  DEFAULT_CATEGORY,
 } from "@/lib/explore-tracks";
 import ExploreTrackDetail from "./ExploreTrackDetail";
 
@@ -48,7 +48,9 @@ export default function ExploreTrackList() {
               isFree: t.featured_event.is_free,
             }
           : null,
-        accentColor: getTrackAccentColor(t.slug),
+        accentColor: t.accent_color ?? DEFAULT_ACCENT_COLOR,
+        category: t.category ?? DEFAULT_CATEGORY,
+        groupName: t.group_name ?? null,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         previewVenues: (t.preview_venues || []).map((pv: any) => ({
           id: pv.venue?.id ?? 0,
@@ -116,8 +118,34 @@ export default function ExploreTrackList() {
     return () => window.removeEventListener("popstate", onPopState);
   }, [selectedSlug]);
 
+  // Build groups from DB group_name — tracks arrive sorted by sort_order,
+  // so group insertion order = order of first track in each group
+  const trackGroups = useMemo(() => {
+    const groupMap = new Map<string, ExploreTrack[]>();
+    for (const track of tracks) {
+      if (!track.groupName) continue;
+      const list = groupMap.get(track.groupName) ?? [];
+      list.push(track);
+      groupMap.set(track.groupName, list);
+    }
+    return Array.from(groupMap.entries()).map(([label, groupTracks]) => ({
+      label,
+      tracks: groupTracks,
+    }));
+  }, [tracks]);
+
+  // Deduplicate banner images across tracks so no two banners share the same photo
+  const bannerImages = useMemo(() => deduplicateBannerImages(tracks), [tracks]);
+
+  // Calculate total tonight count for header
+  const totalTonightCount = useMemo(
+    () => tracks.reduce((sum, t) => sum + t.tonightCount, 0),
+    [tracks]
+  );
+
   // Show track detail if one is selected
   if (selectedSlug) {
+    const selectedTrack = tracks.find((t) => t.slug === selectedSlug);
     return (
       <div className="animate-page-enter">
         <ExploreTrackDetail
@@ -127,6 +155,8 @@ export default function ExploreTrackList() {
             history.back();
           }}
           portalSlug={portal.slug}
+          accentColor={selectedTrack?.accentColor}
+          category={selectedTrack?.category}
         />
       </div>
     );
@@ -163,19 +193,22 @@ export default function ExploreTrackList() {
     );
   }
 
-  // Deduplicate banner images across tracks so no two banners share the same photo
-  const bannerImages = deduplicateBannerImages(tracks);
-
-  // Calculate total tonight count for header
-  const totalTonightCount = tracks.reduce((sum, t) => sum + t.tonightCount, 0);
-
   return (
     <div
-      className="rounded-2xl overflow-hidden"
+      className="rounded-2xl overflow-hidden relative"
       style={{ background: "var(--void)" }}
     >
+      <div
+        className="pointer-events-none absolute -top-24 -left-20 w-72 h-72 rounded-full blur-3xl opacity-25"
+        style={{ background: "radial-gradient(circle, color-mix(in srgb, var(--coral) 35%, transparent) 0%, transparent 70%)" }}
+      />
+      <div
+        className="pointer-events-none absolute top-40 -right-28 w-80 h-80 rounded-full blur-3xl opacity-20"
+        style={{ background: "radial-gradient(circle, color-mix(in srgb, var(--neon-cyan) 30%, transparent) 0%, transparent 75%)" }}
+      />
+
       {/* Header — editorial serif with accent bar */}
-      <div className="px-5 md:px-7 pt-6 md:pt-8 pb-4 md:pb-5 relative">
+      <div className="px-5 md:px-7 pt-6 md:pt-8 pb-5 md:pb-6 relative">
         <div
           className="absolute left-0 top-6 md:top-8 w-[4px] h-9 md:h-11 rounded-r"
           style={{ background: EXPLORE_THEME.primary }}
@@ -188,7 +221,7 @@ export default function ExploreTrackList() {
           Explore Atlanta
         </h2>
         <p
-          className="text-[11px] md:text-xs font-mono mt-1.5 pl-4"
+          className="text-xs md:text-[13px] font-mono mt-1.5 pl-4"
           style={{ color: "var(--muted)" }}
         >
           {tracks.length} {tracks.length === 1 ? "track" : "tracks"}
@@ -203,39 +236,39 @@ export default function ExploreTrackList() {
         </p>
       </div>
 
-      {/* Grouped cinematic banners */}
-      <div className="px-4 lg:px-6 pb-5 lg:pb-7 space-y-6">
-        {TRACK_GROUPS.map((group) => {
-          const groupTracks = group.slugs
-            .map((s) => tracks.find((t) => t.slug === s))
-            .filter(Boolean) as ExploreTrack[];
-          if (groupTracks.length === 0) return null;
-
-          // First track in "Essential Atlanta" gets hero treatment
-          const isEssentialGroup = group.label === "Essential Atlanta";
+      {/* Grouped cinematic banners — groups derived from DB group_name */}
+      <div className="px-4 lg:px-6 pb-5 lg:pb-7 space-y-8 lg:space-y-10">
+        {trackGroups.map((group, groupIdx) => {
+          // First group's first track gets hero treatment
+          const isFirstGroup = groupIdx === 0;
 
           return (
             <div key={group.label}>
               <p
-                className="font-mono text-[10px] font-bold uppercase tracking-[0.14em] mb-3 pl-1"
+                className="font-mono text-[11px] md:text-xs font-bold uppercase tracking-[0.14em] mb-3.5 pl-1"
                 style={{ color: "var(--muted)" }}
               >
                 {group.label}
               </p>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-5">
-                {groupTracks.map((track, index) => {
-                  const isHero = isEssentialGroup && index === 0;
+                {group.tracks.map((track, index) => {
+                  const isHero = isFirstGroup && index === 0;
+                  const emphasis: "hero" | "feature" | "standard" = isHero
+                    ? "hero"
+                    : index === 0
+                      ? "feature"
+                      : "standard";
                   return (
                     <div
                       key={track.id}
-                      className={`explore-track-enter ${isHero ? "lg:col-span-2" : ""}`}
+                      className={`explore-track-enter ${emphasis !== "standard" ? "lg:col-span-2" : ""}`}
                       style={{ animationDelay: `${Math.min(index * 90, 450)}ms` }}
                     >
                       <TrackBanner
                         track={track}
                         bannerImage={track.bannerImageUrl || bannerImages.get(track.slug) || null}
                         onSelect={() => handleSelectTrack(track.slug)}
-                        isHero={isHero}
+                        emphasis={emphasis}
                       />
                     </div>
                   );
@@ -250,20 +283,6 @@ export default function ExploreTrackList() {
 }
 
 // ============================================================================
-// Track Groups — navigable sections for 15 banners
-// ============================================================================
-
-const TRACK_GROUPS = [
-  { label: "Essential Atlanta", slugs: ["welcome-to-atlanta", "good-trouble", "the-south-got-something-to-say"] },
-  { label: "Eat & Drink", slugs: ["the-itis", "not-from-around-here", "say-less", "up-on-the-roof"] },
-  { label: "Outdoors & Active", slugs: ["city-in-a-forest", "keep-moving-forward", "keep-swinging"] },
-  { label: "Culture & Community", slugs: ["hard-in-da-paint", "a-beautiful-mosaic", "too-busy-to-hate", "spelhouse-spirit", "native-heritage"] },
-  { label: "Stage & Screen", slugs: ["yallywood", "as-seen-on-tv", "comedy-live", "the-midnight-train", "lifes-like-a-movie"] },
-  { label: "Campus Life", slugs: ["hell-of-an-engineer"] },
-  { label: "Only in Atlanta", slugs: ["artefacts-of-the-lost-city", "resurgens"] },
-];
-
-// ============================================================================
 // Track Banner — Cinematic editorial card
 // ============================================================================
 
@@ -271,44 +290,50 @@ function TrackBanner({
   track,
   bannerImage,
   onSelect,
-  isHero,
+  emphasis,
 }: {
   track: ExploreTrack;
   bannerImage: string | null;
   onSelect: () => void;
-  isHero: boolean;
+  emphasis: "hero" | "feature" | "standard";
 }) {
   const accent = track.accentColor;
-  const category = getTrackCategory(track.slug);
+  const category = track.category;
   const pills = buildActivityPills(track);
+  const isHero = emphasis === "hero";
+  const isFeature = emphasis === "feature";
 
   return (
     <button
       onClick={onSelect}
-      className="explore-track-banner relative w-full rounded-[16px] text-left group focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 transition-all duration-500 ease-out"
+      className="explore-track-banner relative w-full rounded-[16px] text-left group focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cream)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)] transition-[transform,box-shadow] duration-500 ease-out motion-safe:hover:-translate-y-1 motion-safe:hover:-rotate-[0.2deg]"
       style={{
         boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.transform = "translateY(-4px) rotate(-0.2deg)";
-        e.currentTarget.style.boxShadow = `0 16px 40px ${accent}15, 0 8px 16px rgba(0,0,0,0.4)`;
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = "translateY(0) rotate(0deg)";
-        e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.3)";
       }}
       aria-label={`${track.name} — ${category}`}
     >
       {/* Background image — overflow-hidden clips image to rounded corners */}
       <div
-        className={`relative overflow-hidden rounded-[16px] ${isHero ? "aspect-[2/1] lg:aspect-[2.4/1]" : "aspect-[2/1] lg:aspect-[1.5/1]"}`}
+        className={`relative overflow-hidden rounded-[16px] ${
+          isHero
+            ? "aspect-[2/1] lg:aspect-[2.4/1]"
+            : isFeature
+              ? "aspect-[2/1] lg:aspect-[2/1]"
+              : "aspect-[2/1] lg:aspect-[1.5/1]"
+        }`}
       >
         {bannerImage ? (
           <Image
             src={bannerImage}
             alt=""
             fill
-            sizes={isHero ? "(max-width: 1024px) 100vw, 900px" : "(max-width: 768px) 100vw, 600px"}
+            sizes={
+              isHero
+                ? "(max-width: 1024px) 100vw, 960px"
+                : isFeature
+                  ? "(max-width: 1024px) 100vw, 820px"
+                  : "(max-width: 768px) 100vw, 600px"
+            }
             className="object-cover transition-transform duration-700 ease-out group-hover:scale-110 explore-banner-img"
           />
         ) : (
@@ -324,6 +349,12 @@ function TrackBanner({
       {/* Gradient overlay — OUTSIDE overflow-hidden so it backs text descenders fully */}
       <div className="absolute inset-0 rounded-[16px] z-[1] explore-banner-gradient" />
 
+      {/* Hover glow — CSS-only to avoid JS style mutation */}
+      <div
+        className="absolute inset-0 rounded-[16px] z-[2] pointer-events-none opacity-0 transition-opacity duration-500 motion-safe:group-hover:opacity-100"
+        style={{ boxShadow: `0 16px 40px ${accent}18, 0 8px 16px rgba(0,0,0,0.4)` }}
+      />
+
       {/* Accent left border with glow */}
       <div
         className="absolute left-0 top-0 bottom-0 w-[4px] md:w-[5px] z-[5]"
@@ -334,11 +365,36 @@ function TrackBanner({
         }}
       />
 
+      {(track.tonightCount > 0 || track.weekendCount > 0) && (
+        <div className="absolute top-3 right-3 z-[5] flex items-center gap-1.5">
+          {track.tonightCount > 0 ? (
+            <span
+              className="font-mono text-[10px] font-semibold px-2.5 py-1 rounded-full uppercase tracking-[0.06em] inline-flex items-center gap-1"
+              style={{
+                background: "rgba(224,58,62,0.92)",
+                color: "#fff",
+                boxShadow: "0 0 14px rgba(224,58,62,0.35)",
+              }}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+              Live
+            </span>
+          ) : (
+            <span
+              className="font-mono text-[10px] font-semibold px-2.5 py-1 rounded-full"
+              style={{ background: "rgba(193,211,47,0.9)", color: "var(--void)" }}
+            >
+              Active this week
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Content — positioned over gradient */}
-      <div className="absolute bottom-0 left-0 right-0 p-[16px_20px] md:p-[24px_32px] z-[2]">
+      <div className="absolute bottom-0 left-0 right-0 p-[16px_20px] md:p-[24px_32px] z-[4]">
         {/* Category label — dark bg for readability */}
         <div
-          className="explore-banner-text-sm font-mono text-[10px] md:text-[11px] font-bold uppercase tracking-[0.14em] mb-1.5 md:mb-2 inline-block px-2 py-[3px] rounded"
+          className="explore-banner-text-sm font-mono text-[11px] md:text-xs font-bold uppercase tracking-[0.14em] mb-1.5 md:mb-2 inline-block px-2 py-[3px] rounded"
           style={{
             color: accent,
             background: "rgba(0,0,0,0.5)",
@@ -352,7 +408,9 @@ function TrackBanner({
           className={`explore-banner-text explore-display-heading leading-[1.35] tracking-[-0.02em] mb-1 ${
             isHero
               ? "text-[26px] md:text-[42px]"
-              : "text-[24px] md:text-[34px]"
+              : isFeature
+                ? "text-[24px] md:text-[36px]"
+                : "text-[22px] md:text-[30px]"
           }`}
           style={{ color: "var(--cream)" }}
         >
@@ -362,8 +420,10 @@ function TrackBanner({
         {/* Description */}
         {track.description && (
           <p
-            className="explore-banner-text-sm text-[11px] md:text-[14px] font-light leading-[1.5] md:leading-[1.6] md:max-w-[75%]"
-            style={{ color: "var(--soft)" }}
+            className={`explore-banner-text-sm text-xs md:text-[15px] font-light leading-[1.55] md:leading-[1.65] ${
+              isHero ? "md:max-w-[75%]" : isFeature ? "md:max-w-[78%]" : "md:max-w-[82%]"
+            }`}
+            style={{ color: "var(--cream)", opacity: 0.86 }}
           >
             {track.description}
           </p>
@@ -372,12 +432,14 @@ function TrackBanner({
         {/* Quote — editorial identity */}
         {track.quote && !track.description && (
           <p
-            className="explore-banner-text-sm text-[11px] md:text-[13px] italic leading-[1.5] md:max-w-[75%]"
-            style={{ color: "var(--soft)", opacity: 0.7 }}
+            className={`explore-banner-text-sm text-xs md:text-[14px] italic leading-[1.55] ${
+              isHero ? "md:max-w-[75%]" : isFeature ? "md:max-w-[78%]" : "md:max-w-[82%]"
+            }`}
+            style={{ color: "var(--cream)", opacity: 0.78 }}
           >
             &ldquo;{track.quote}&rdquo;
             {track.quoteSource && (
-              <span className="not-italic font-mono text-[10px] ml-1.5" style={{ color: accent }}>
+              <span className="not-italic font-mono text-[11px] ml-1.5" style={{ color: accent }}>
                 — {track.quoteSource}
               </span>
             )}
@@ -392,7 +454,7 @@ function TrackBanner({
               return (
                 <span
                   key={i}
-                  className={`explore-pill font-mono text-[9px] md:text-[10px] font-medium px-2.5 md:px-3 py-[4px] md:py-[5px] rounded-full whitespace-nowrap inline-flex items-center gap-1 transition-shadow duration-200${
+                  className={`explore-pill font-mono text-[10px] md:text-[11px] font-medium px-2.5 md:px-3 py-[4px] md:py-[5px] rounded-full whitespace-nowrap inline-flex items-center gap-1 transition-shadow duration-200${
                     pill.type === "tonight" ? " explore-pill-tonight" : ""
                   }`}
                   style={{
@@ -404,7 +466,7 @@ function TrackBanner({
                 >
                   {pill.type === "tonight" && (
                     <span
-                      className="inline-block w-[6px] h-[6px] rounded-full animate-pulse"
+                      className="inline-block w-[7px] h-[7px] rounded-full animate-pulse"
                       style={{ background: colors.text }}
                     />
                   )}
@@ -515,7 +577,7 @@ const PREFERRED_BANNER_VENUES: Record<string, string[]> = {
   "native-heritage": ["Etowah Indian Mounds", "Ocmulgee Mounds"],
   "hell-of-an-engineer": ["Bobby Dodd Stadium", "Tech Tower"],
   "resurgens": ["Bank of America Plaza", "One Atlantic Center"],
-  "artefacts-of-the-lost-city": ["Crypt of Civilization", "The Big Chicken"],
+  "artefacts-of-the-lost-city": ["Willie B Statue", "Crypt of Civilization", "The Big Chicken"],
 };
 
 function deduplicateBannerImages(

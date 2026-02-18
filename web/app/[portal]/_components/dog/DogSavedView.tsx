@@ -250,7 +250,6 @@ export default function DogSavedView({ portalSlug }: { portalSlug: string }) {
               item.event ? (
                 <SavedEventRow
                   key={item.id}
-                  savedId={item.id}
                   event={item.event}
                   portalSlug={portalSlug}
                   onUnsave={fetchSaved}
@@ -273,7 +272,6 @@ export default function DogSavedView({ portalSlug }: { portalSlug: string }) {
             item.venue ? (
               <SavedVenueRow
                 key={item.id}
-                savedId={item.id}
                 venue={item.venue}
                 portalSlug={portalSlug}
                 onUnsave={fetchSaved}
@@ -330,12 +328,10 @@ function TabButton({
 /* ------------------------------------------------------------------ */
 
 function SavedEventRow({
-  savedId,
   event,
   portalSlug,
   onUnsave,
 }: {
-  savedId: number;
   event: NonNullable<SavedEvent["event"]>;
   portalSlug: string;
   onUnsave: () => void;
@@ -402,7 +398,7 @@ function SavedEventRow({
       </Link>
 
       {/* Unsave button */}
-      <UnsaveButton savedId={savedId} eventId={event.id} onUnsave={onUnsave} />
+      <UnsaveButton eventId={event.id} onUnsave={onUnsave} />
     </div>
   );
 }
@@ -412,12 +408,10 @@ function SavedEventRow({
 /* ------------------------------------------------------------------ */
 
 function SavedVenueRow({
-  savedId,
   venue,
   portalSlug,
   onUnsave,
 }: {
-  savedId: number;
   venue: NonNullable<SavedVenue["venue"]>;
   portalSlug: string;
   onUnsave: () => void;
@@ -474,7 +468,7 @@ function SavedVenueRow({
       </Link>
 
       {/* Unsave button */}
-      <UnsaveButton savedId={savedId} venueId={venue.id} onUnsave={onUnsave} />
+      <UnsaveButton venueId={venue.id} onUnsave={onUnsave} />
     </div>
   );
 }
@@ -484,12 +478,10 @@ function SavedVenueRow({
 /* ------------------------------------------------------------------ */
 
 function UnsaveButton({
-  savedId,
   eventId,
   venueId,
   onUnsave,
 }: {
-  savedId: number;
   eventId?: number;
   venueId?: number;
   onUnsave: () => void;

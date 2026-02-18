@@ -70,7 +70,7 @@ export function NeedsTagList({
     fetchTags();
   }, [entityType, entityId, tagGroups]);
 
-  const handleVoteChange = (tagSlug: string) => {
+  const handleVoteChange = () => {
     // Optimistically refetch tags after vote
     const refetchTags = async () => {
       try {
@@ -153,8 +153,8 @@ export function NeedsTagList({
                   confirmCount={tag.confirm_count}
                   denyCount={tag.deny_count}
                   userVote={tag.user_vote}
-                  onVoteChange={() => handleVoteChange(tag.tag_slug)}
-                />
+                onVoteChange={handleVoteChange}
+              />
               ))}
           </div>
         </div>

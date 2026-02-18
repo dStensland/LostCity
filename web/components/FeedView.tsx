@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { usePortal } from "@/lib/portal-context";
@@ -21,9 +21,31 @@ import FestivalDebugPanel from "@/components/FestivalDebugPanel";
 interface FeedViewProps {
   /** Pre-fetched sections — skips internal fetch when provided. */
   prefetchedSections?: FeedSectionData[];
+  /** Disable local index UI when a page-level index is rendered upstream. */
+  enableSectionIndex?: boolean;
 }
 
-export default function FeedView({ prefetchedSections }: FeedViewProps = {}) {
+type FeedIndexEntry = {
+  id: string;
+  label: string;
+  requiresExpansion: boolean;
+};
+
+const HOLIDAY_INDEX_ANCHOR_ID = "feed-section-holidays";
+
+function sanitizeAnchorSegment(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "section";
+}
+
+function getSectionAnchorId(section: FeedSectionData, order: number): string {
+  const base = sanitizeAnchorSegment(section.slug || section.title);
+  return `feed-section-${order + 1}-${base}`;
+}
+
+export default function FeedView({ prefetchedSections, enableSectionIndex = true }: FeedViewProps = {}) {
   const { portal } = usePortal();
   const searchParams = useSearchParams();
   const showFestivalDebug = searchParams?.get("debug") === "festivals";
@@ -33,6 +55,9 @@ export default function FeedView({ prefetchedSections }: FeedViewProps = {}) {
   const [loading, setLoading] = useState(!prefetchedSections);
   const [error, setError] = useState<string | null>(null);
   const [showAllSections, setShowAllSections] = useState(false);
+  const [isIndexCollapsed, setIsIndexCollapsed] = useState(false);
+  const [activeAnchorId, setActiveAnchorId] = useState<string | null>(null);
+  const [isMobileIndexOpen, setIsMobileIndexOpen] = useState(false);
 
   const hasPrefetched = prefetchedSections !== undefined;
 
@@ -82,6 +107,109 @@ export default function FeedView({ prefetchedSections }: FeedViewProps = {}) {
   useEffect(() => {
     setShowAllSections(false);
   }, [sections.length]);
+
+  // Separate holiday sections from regular sections
+  // Exclude any holidays that have hero treatment in HolidayHero to avoid duplication
+  const heroSlugs = getActiveHeroSlugs();
+  const holidaySections = sections.filter(
+    s => THEMED_SLUGS.includes(s.slug) && !heroSlugs.includes(s.slug)
+  );
+  const regularSections = sections.filter(s => !THEMED_SLUGS.includes(s.slug));
+  const regularSectionOrder = useMemo(
+    () => new Map(regularSections.map((section, index) => [section.id, index])),
+    [regularSections]
+  );
+  const visibleRegularSections = showAllSections
+    ? regularSections
+    : regularSections.slice(0, INITIAL_VISIBLE_SECTIONS);
+  const hiddenSectionCount = Math.max(regularSections.length - visibleRegularSections.length, 0);
+  const canToggleSectionDensity = regularSections.length > INITIAL_VISIBLE_SECTIONS;
+  const sectionIndex = useMemo<FeedIndexEntry[]>(() => {
+    if (!enableSectionIndex) return [];
+
+    const entries: FeedIndexEntry[] = [];
+
+    if (holidaySections.length > 0) {
+      entries.push({
+        id: HOLIDAY_INDEX_ANCHOR_ID,
+        label: "Holidays & Special Times",
+        requiresExpansion: false,
+      });
+    }
+
+    regularSections.forEach((section, index) => {
+      entries.push({
+        id: getSectionAnchorId(section, index),
+        label: section.title,
+        requiresExpansion: !showAllSections && index >= INITIAL_VISIBLE_SECTIONS,
+      });
+    });
+
+    return entries;
+  }, [enableSectionIndex, holidaySections.length, regularSections, showAllSections]);
+  const showIndexRail = enableSectionIndex && sectionIndex.length >= 4;
+
+  const jumpToSection = useCallback((entry: FeedIndexEntry) => {
+    const scrollToAnchor = () => {
+      const target = document.getElementById(entry.id);
+      if (!target) return;
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+      setActiveAnchorId(entry.id);
+    };
+
+    if (entry.requiresExpansion) {
+      setShowAllSections(true);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(scrollToAnchor);
+      });
+      return;
+    }
+
+    scrollToAnchor();
+  }, []);
+
+  useEffect(() => {
+    if (!enableSectionIndex) return;
+
+    if (sectionIndex.length === 0) {
+      setActiveAnchorId(null);
+      return;
+    }
+
+    const anchors = sectionIndex
+      .map((entry) => document.getElementById(entry.id))
+      .filter((el): el is HTMLElement => !!el);
+
+    if (anchors.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => Math.abs(a.boundingClientRect.top) - Math.abs(b.boundingClientRect.top));
+        if (visible[0]?.target?.id) {
+          setActiveAnchorId(visible[0].target.id);
+        }
+      },
+      {
+        rootMargin: "-20% 0px -65% 0px",
+        threshold: [0, 0.15, 0.35, 0.6],
+      }
+    );
+
+    anchors.forEach((anchor) => observer.observe(anchor));
+    if (anchors[0]) {
+      setActiveAnchorId((prev) => prev ?? anchors[0].id);
+    }
+
+    return () => observer.disconnect();
+  }, [enableSectionIndex, sectionIndex, showAllSections]);
+
+  useEffect(() => {
+    if (!showIndexRail) {
+      setIsMobileIndexOpen(false);
+    }
+  }, [showIndexRail]);
 
   // Loading state — matches actual feed layout (holiday grid + compact sections)
   if (loading) {
@@ -166,57 +294,186 @@ export default function FeedView({ prefetchedSections }: FeedViewProps = {}) {
     );
   }
 
-  // Separate holiday sections from regular sections
-  // Exclude any holidays that have hero treatment in HolidayHero to avoid duplication
-  const heroSlugs = getActiveHeroSlugs();
-  const holidaySections = sections.filter(
-    s => THEMED_SLUGS.includes(s.slug) && !heroSlugs.includes(s.slug)
-  );
-  const regularSections = sections.filter(s => !THEMED_SLUGS.includes(s.slug));
-  const visibleRegularSections = showAllSections
-    ? regularSections
-    : regularSections.slice(0, INITIAL_VISIBLE_SECTIONS);
-  const hiddenSectionCount = Math.max(regularSections.length - visibleRegularSections.length, 0);
-  const canToggleSectionDensity = regularSections.length > INITIAL_VISIBLE_SECTIONS;
-
   return (
-    <div>
-      {showFestivalDebug && <FestivalDebugPanel portalSlug={portal.slug} />}
+    <div className={showIndexRail ? "lg:grid lg:grid-cols-[minmax(0,1fr)_240px] lg:gap-6" : ""}>
+      <div className="min-w-0">
+        {showFestivalDebug && <FestivalDebugPanel portalSlug={portal.slug} />}
 
-      {/* Holiday cards - 2-column grid */}
-      <HolidayGrid sections={holidaySections} portalSlug={portal.slug} />
+        {/* Holiday cards - 2-column grid */}
+        <section
+          id={HOLIDAY_INDEX_ANCHOR_ID}
+          data-feed-anchor="true"
+          data-index-label="Holidays & Special Times"
+          className={holidaySections.length > 0 ? "scroll-mt-28" : ""}
+        >
+          <HolidayGrid sections={holidaySections} portalSlug={portal.slug} />
+        </section>
 
-      {/* Regular feed sections */}
-      {visibleRegularSections.map((section, index) => (
-        <div key={section.id}>
-          <FeedSection section={section} isFirst={index === 0} />
-        </div>
-      ))}
+        {/* Regular feed sections */}
+        {visibleRegularSections.map((section, index) => {
+          const sectionOrder = regularSectionOrder.get(section.id) ?? index;
+          const anchorId = getSectionAnchorId(section, sectionOrder);
+          return (
+            <section
+              key={section.id}
+              id={anchorId}
+              data-feed-anchor="true"
+              data-index-label={section.title}
+              className="scroll-mt-28"
+            >
+              <FeedSection section={section} isFirst={sectionOrder === 0} />
+            </section>
+          );
+        })}
 
-      {canToggleSectionDensity && (
-        <div className="pt-3 pb-1">
+        {canToggleSectionDensity && (
+          <div className="pt-3 pb-1">
+            <button
+              type="button"
+              onClick={() => setShowAllSections((prev) => !prev)}
+              className="w-full rounded-xl border border-[var(--twilight)]/50 bg-[var(--night)]/55 px-4 py-3 text-left transition-all duration-200 hover:border-[var(--coral)]/45 hover:bg-[var(--night)]/75 hover:shadow-[0_12px_32px_rgba(0,0,0,0.3)]"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-[var(--muted)]">
+                    Continue Browsing
+                  </p>
+                  <p className="text-sm text-[var(--cream)] font-medium">
+                    {showAllSections
+                      ? "Show fewer sections"
+                      : `Show ${hiddenSectionCount} more ${hiddenSectionCount === 1 ? "section" : "sections"}`}
+                  </p>
+                </div>
+                <span className="inline-flex h-8 min-w-8 items-center justify-center rounded-full border border-[var(--coral)]/40 px-2 font-mono text-xs text-[var(--coral)]">
+                  {showAllSections ? "−" : `+${hiddenSectionCount}`}
+                </span>
+              </div>
+            </button>
+          </div>
+        )}
+      </div>
+
+      {showIndexRail && (
+        <aside className="hidden lg:block">
+          <div className="sticky top-[7.25rem] rounded-xl border border-[var(--twilight)]/40 bg-[var(--night)]/75 backdrop-blur-sm">
+            <button
+              type="button"
+              onClick={() => setIsIndexCollapsed((prev) => !prev)}
+              className="w-full px-3 py-2.5 border-b border-[var(--twilight)]/35 flex items-center justify-between text-left hover:bg-[var(--twilight)]/15 transition-colors"
+              aria-expanded={!isIndexCollapsed}
+              aria-controls="feed-section-index"
+            >
+              <div>
+                <p className="font-mono text-[0.6rem] uppercase tracking-[0.2em] text-[var(--muted)]">Section Index</p>
+                <p className="text-xs text-[var(--cream)]">{sectionIndex.length} anchors</p>
+              </div>
+              <span className="text-[var(--muted)] text-sm">{isIndexCollapsed ? "+" : "−"}</span>
+            </button>
+
+            {!isIndexCollapsed && (
+              <nav id="feed-section-index" className="max-h-[65vh] overflow-y-auto p-2">
+                <ul className="space-y-1">
+                  {sectionIndex.map((entry, index) => {
+                    const isActive = activeAnchorId === entry.id;
+                    return (
+                      <li key={entry.id}>
+                        <button
+                          type="button"
+                          onClick={() => jumpToSection(entry)}
+                          className={`w-full px-2.5 py-2 rounded-lg text-left transition-colors flex items-center justify-between gap-2 ${
+                            isActive
+                              ? "bg-[var(--twilight)]/70 text-[var(--cream)] border border-[var(--coral)]/40"
+                              : "text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/30 border border-transparent"
+                          }`}
+                        >
+                          <span className="truncate text-[11px]">
+                            {index + 1}. {entry.label}
+                          </span>
+                          {entry.requiresExpansion && (
+                            <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-[var(--twilight)]/50 text-[var(--soft)]">
+                              more
+                            </span>
+                          )}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </nav>
+            )}
+          </div>
+        </aside>
+      )}
+
+      {showIndexRail && (
+        <>
           <button
             type="button"
-            onClick={() => setShowAllSections((prev) => !prev)}
-            className="w-full rounded-xl border border-[var(--twilight)]/50 bg-[var(--night)]/55 px-4 py-3 text-left transition-all duration-200 hover:border-[var(--coral)]/45 hover:bg-[var(--night)]/75 hover:shadow-[0_12px_32px_rgba(0,0,0,0.3)]"
+            onClick={() => setIsMobileIndexOpen(true)}
+            className="lg:hidden fixed bottom-20 right-4 z-40 rounded-full border border-[var(--coral)]/45 bg-[var(--night)]/90 backdrop-blur-sm px-3.5 py-2.5 text-xs font-mono text-[var(--cream)] shadow-[0_10px_30px_rgba(0,0,0,0.35)]"
           >
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-[var(--muted)]">
-                  Continue Browsing
-                </p>
-                <p className="text-sm text-[var(--cream)] font-medium">
-                  {showAllSections
-                    ? "Show fewer sections"
-                    : `Show ${hiddenSectionCount} more ${hiddenSectionCount === 1 ? "section" : "sections"}`}
-                </p>
-              </div>
-              <span className="inline-flex h-8 min-w-8 items-center justify-center rounded-full border border-[var(--coral)]/40 px-2 font-mono text-xs text-[var(--coral)]">
-                {showAllSections ? "−" : `+${hiddenSectionCount}`}
-              </span>
-            </div>
+            Index
           </button>
-        </div>
+
+          {isMobileIndexOpen && (
+            <div className="lg:hidden fixed inset-0 z-50">
+              <button
+                type="button"
+                onClick={() => setIsMobileIndexOpen(false)}
+                className="absolute inset-0 bg-black/55 backdrop-blur-[1px]"
+                aria-label="Close section index"
+              />
+              <div className="absolute inset-x-0 bottom-0 rounded-t-2xl border-t border-[var(--twilight)]/45 bg-[var(--night)] p-3 pb-5 max-h-[70vh] overflow-hidden">
+                <div className="flex items-center justify-between px-1 pb-2">
+                  <div>
+                    <p className="font-mono text-[0.6rem] uppercase tracking-[0.2em] text-[var(--muted)]">Section Index</p>
+                    <p className="text-xs text-[var(--cream)]">{sectionIndex.length} anchors</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsMobileIndexOpen(false)}
+                    className="h-8 w-8 rounded-full border border-[var(--twilight)]/45 text-[var(--muted)] hover:text-[var(--cream)]"
+                    aria-label="Close"
+                  >
+                    ×
+                  </button>
+                </div>
+                <nav className="overflow-y-auto max-h-[58vh] pr-1">
+                  <ul className="space-y-1">
+                    {sectionIndex.map((entry, index) => {
+                      const isActive = activeAnchorId === entry.id;
+                      return (
+                        <li key={`mobile-${entry.id}`}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              jumpToSection(entry);
+                              setIsMobileIndexOpen(false);
+                            }}
+                            className={`w-full px-2.5 py-2 rounded-lg text-left transition-colors flex items-center justify-between gap-2 ${
+                              isActive
+                                ? "bg-[var(--twilight)]/70 text-[var(--cream)] border border-[var(--coral)]/40"
+                                : "text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/30 border border-transparent"
+                            }`}
+                          >
+                            <span className="truncate text-[11px]">
+                              {index + 1}. {entry.label}
+                            </span>
+                            {entry.requiresExpansion && (
+                              <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-[var(--twilight)]/50 text-[var(--soft)]">
+                                more
+                              </span>
+                            )}
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </nav>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

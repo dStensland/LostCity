@@ -14,6 +14,7 @@ import { ActiveFiltersRow } from "@/components/filters";
 import AddNewChooser from "@/components/find/AddNewChooser";
 import { getNeighborhoodByName, NEIGHBORHOOD_NAMES } from "@/config/neighborhoods";
 import { useMapEvents } from "@/lib/hooks/useMapEvents";
+import { useMapSpots } from "@/lib/hooks/useMapSpots";
 import { useViewportFilter } from "@/lib/hooks/useViewportFilter";
 import MapListDrawer from "@/components/map/MapListDrawer";
 import MapBottomSheet from "@/components/map/MapBottomSheet";
@@ -26,6 +27,20 @@ type ListDensity = "comfortable" | "compact";
 const MAP_DESKTOP_HEIGHT = "clamp(460px, calc(100dvh - 290px), 900px)";
 const MAP_MOBILE_HEIGHT = "clamp(340px, calc(100dvh - 250px - env(safe-area-inset-bottom, 0px)), 700px)";
 const DESTINATIONS_MAP_HEIGHT = "clamp(420px, calc(100dvh - 280px), 860px)";
+const SHOWTIMES_EXCLUDED_FILTER_KEYS = [
+  "search",
+  "categories",
+  "subcategories",
+  "genres",
+  "tags",
+  "vibes",
+  "neighborhoods",
+  "price",
+  "free",
+  "mood",
+  "display",
+  "density",
+] as const;
 
 interface FindViewProps {
   portalId: string;
@@ -121,6 +136,17 @@ function FindViewInner({
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const pathname = `/${portalSlug}`;
 
+  const stripShowtimesExcludedParams = useCallback((params: URLSearchParams): boolean => {
+    let mutated = false;
+    for (const key of SHOWTIMES_EXCLUDED_FILTER_KEYS) {
+      if (params.has(key)) {
+        params.delete(key);
+        mutated = true;
+      }
+    }
+    return mutated;
+  }, []);
+
   // Location selector state (map-specific)
   type LocationMode = "all" | "nearby" | string; // string = neighborhood name
   const [locationMode, setLocationMode] = useState<LocationMode>("all");
@@ -203,6 +229,11 @@ function FindViewInner({
   const isNearbyMode = locationMode === "nearby" && !!userLocation;
   const isNeighborhoodMode = !!mapCenterPoint;
   const shouldFitAll = !isNearbyMode && !isNeighborhoodMode;
+  const locationSelectorValue = useMemo(() => {
+    if (locationMode === "nearby") return "nearby";
+    const hoods = neighborhoodFilter.split(",").filter(Boolean);
+    return hoods.length === 1 ? hoods[0] : "all";
+  }, [locationMode, neighborhoodFilter]);
 
   // ─── Drawer state for map modes ───────────────────────────────────────────
   const isMapMode = displayMode === "map" && (findType === "events" || findType === "destinations");
@@ -213,11 +244,16 @@ function FindViewInner({
     portalExclusive,
     enabled: isMapMode && findType === "events",
   });
+  const { spots: mapSpots, isFetching: mapSpotsFetching } = useMapSpots({
+    portalId,
+    portalExclusive,
+    enabled: isMapMode && findType === "destinations",
+  });
 
   // Viewport filter for drawer
   const { eventsInView, spotsInView, handleBoundsChange } = useViewportFilter({
-    events: isMapMode ? mapEvents : [],
-    spots: [],
+    events: isMapMode && findType === "events" ? mapEvents : [],
+    spots: isMapMode && findType === "destinations" ? mapSpots : [],
   });
   const mapInViewCount = eventsInView.length + spotsInView.length;
   const mapTotalCount = mapEvents.length;
@@ -239,8 +275,20 @@ function FindViewInner({
     params.set("type", type);
     // Reset display mode when changing type
     params.delete("display");
+    params.delete("density");
+    if (type === "showtimes") {
+      stripShowtimesExcludedParams(params);
+    }
     router.push(`/${portalSlug}?${params.toString()}`);
   };
+
+  useEffect(() => {
+    if (findType !== "showtimes") return;
+    const params = new URLSearchParams(searchParams?.toString() || "");
+    const mutated = stripShowtimesExcludedParams(params);
+    if (!mutated) return;
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }, [findType, pathname, router, searchParams, stripShowtimesExcludedParams]);
 
   const availableDisplayModes: DisplayMode[] = useMemo(() => {
     if (findType === "events") return ["list", "calendar", "map"];
@@ -546,7 +594,7 @@ function FindViewInner({
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
                   <select
-                    value={locationMode}
+                    value={locationSelectorValue}
                     onChange={(e) => handleLocationChange(e.target.value)}
                     className="min-w-[176px] max-w-[240px] h-9 px-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-xs focus:outline-none focus:border-[var(--coral)] transition-colors appearance-none cursor-pointer select-chevron-md"
                   >
@@ -672,33 +720,46 @@ function FindViewInner({
         <>
           <div className="relative z-0 -mx-4 mb-3 border border-[var(--twilight)]/85 bg-[var(--void)]/65 shadow-[0_18px_40px_rgba(0,0,0,0.28)] xl:mx-0 overflow-hidden">
             <div className="px-3 py-2.5 border-b border-[var(--twilight)]/75 bg-gradient-to-b from-[var(--night)]/95 to-[var(--void)]/84 backdrop-blur-md">
-              <div className="flex items-center gap-2">
-                <svg className="w-4 h-4 text-[var(--muted)] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                <select
-                  value={locationMode}
-                  onChange={(e) => handleLocationChange(e.target.value)}
-                  className="flex-1 max-w-[240px] h-9 px-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-xs focus:outline-none focus:border-[var(--coral)] transition-colors appearance-none cursor-pointer select-chevron-md"
-                >
-                  <option value="all">All Atlanta</option>
-                  <option value="nearby">{locationLoading ? "Locating..." : userLocation ? "Nearby" : "Use my location"}</option>
-                  <optgroup label="Neighborhoods">
-                    {NEIGHBORHOOD_NAMES.map((hood) => (
-                      <option key={hood} value={hood}>{hood}</option>
-                    ))}
-                  </optgroup>
-                </select>
-                {locationLoading && (
-                  <div className="w-4 h-4 rounded-full border-2 border-[var(--coral)] border-t-transparent animate-spin flex-shrink-0" />
-                )}
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <svg className="w-4 h-4 text-[var(--muted)] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <select
+                    value={locationSelectorValue}
+                    onChange={(e) => handleLocationChange(e.target.value)}
+                    className="min-w-[176px] max-w-[240px] h-9 px-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-xs focus:outline-none focus:border-[var(--coral)] transition-colors appearance-none cursor-pointer select-chevron-md"
+                  >
+                    <option value="all">All Atlanta</option>
+                    <option value="nearby">{locationLoading ? "Locating..." : userLocation ? "Nearby" : "Use my location"}</option>
+                    <optgroup label="Neighborhoods">
+                      {NEIGHBORHOOD_NAMES.map((hood) => (
+                        <option key={hood} value={hood}>{hood}</option>
+                      ))}
+                    </optgroup>
+                  </select>
+                  {locationLoading && (
+                    <div className="w-4 h-4 rounded-full border-2 border-[var(--coral)] border-t-transparent animate-spin flex-shrink-0" />
+                  )}
+                </div>
+                <div className="flex items-center gap-2 ml-auto">
+                  {mapSpotsFetching && (
+                    <div className="w-3 h-3 rounded-full border-2 border-[var(--coral)] border-t-transparent animate-spin" />
+                  )}
+                  <span className="font-mono text-[11px] text-[var(--soft)] whitespace-nowrap">
+                    <span className="text-[var(--cream)] font-semibold">{spotsInView.length}</span> shown
+                    <span className="text-[var(--muted)]"> / {mapSpots.length} total</span>
+                  </span>
+                </div>
               </div>
             </div>
             <div style={{ height: DESTINATIONS_MAP_HEIGHT }}>
               <MapViewWrapper
                 portalId={portalId}
                 portalExclusive={portalExclusive}
+                spots={mapSpots}
+                isFetching={mapSpotsFetching}
                 userLocation={isNearbyMode ? userLocation : undefined}
                 viewRadius={isNearbyMode ? 1 : undefined}
                 centerPoint={mapCenterPoint}

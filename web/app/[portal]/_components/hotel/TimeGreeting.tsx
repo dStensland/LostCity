@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { format } from "date-fns";
 
 /**
@@ -12,12 +12,11 @@ interface TimeGreetingProps {
 }
 
 export default function TimeGreeting({ subtitle }: TimeGreetingProps = {}) {
-  const [mounted, setMounted] = useState(false);
-
-  // Prevent hydration mismatch by only rendering time-based content on client
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
 
   if (!mounted) {
     // Server-side fallback

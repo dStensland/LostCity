@@ -3,11 +3,27 @@
 import { useEffect, useState } from "react";
 import HotelFeed from "./HotelFeed";
 import type { Portal } from "@/lib/portal-context";
-import type { FeedSection } from "./HotelFeed";
+import type { FeedSection, HotelFeedEvent } from "./HotelFeed";
 
 interface HotelFeedClientProps {
   portal: Portal;
 }
+
+type ApiFeedEvent = HotelFeedEvent & {
+  venue?: { name?: string | null } | null;
+};
+
+type ApiFeedSection = {
+  title: string;
+  description?: string;
+  slug?: string;
+  layout?: string;
+  events?: ApiFeedEvent[];
+};
+
+type ApiFeedResponse = {
+  sections?: ApiFeedSection[];
+};
 
 /**
  * Client-side wrapper for HotelFeed that fetches data from the portal feed API.
@@ -21,17 +37,17 @@ export default function HotelFeedClient({ portal }: HotelFeedClientProps) {
     async function fetchData() {
       try {
         const response = await fetch(`/api/portals/${portal.slug}/feed`);
-        const data = await response.json();
+        const data = (await response.json()) as ApiFeedResponse;
 
         if (data.sections) {
           const normalized: FeedSection[] = data.sections
-            .filter((s: any) => s.events?.length > 0)
-            .map((section: any) => ({
+            .filter((section) => (section.events?.length || 0) > 0)
+            .map((section) => ({
               title: section.title,
               description: section.description,
               slug: section.slug,
               layout: section.layout,
-              events: section.events.map((event: any) => ({
+              events: (section.events || []).map((event) => ({
                 ...event,
                 venue_name: event.venue?.name || event.venue_name || null,
               })),

@@ -1297,9 +1297,9 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Smooth scrolling for better UX */
+/* Keep global scrolling deterministic; opt-in smooth scroll per component. */
 html {
-  scroll-behavior: smooth;
+  scroll-behavior: auto;
   background-color: #09090B;
 }
 

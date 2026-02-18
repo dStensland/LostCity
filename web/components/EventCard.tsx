@@ -5,24 +5,56 @@ import type { CSSProperties } from "react";
 import Link from "next/link";
 import type { Event } from "@/lib/supabase";
 import { AvatarStack } from "./UserAvatar";
-import { decodeHtmlEntities, formatTimeSplit, formatSmartDate, formatPriceDetailed, formatCompactCount, formatTime, formatExhibitionDate } from "@/lib/formats";
-import CategoryIcon, { getCategoryColor, getCategoryLabel, CATEGORY_CONFIG, type CategoryType } from "./CategoryIcon";
-import { getReflectionClass, isTicketingUrl, getLinkOutLabel, getSmartDateLabel, getFeedEventStatus } from "@/lib/card-utils";
+import {
+  decodeHtmlEntities,
+  formatTimeSplit,
+  formatSmartDate,
+  formatPriceDetailed,
+  formatCompactCount,
+  formatTime,
+  formatExhibitionDate,
+} from "@/lib/formats";
+import CategoryIcon, {
+  getCategoryColor,
+  getCategoryLabel,
+  CATEGORY_CONFIG,
+  type CategoryType,
+} from "./CategoryIcon";
+import {
+  getReflectionClass,
+  isTicketingUrl,
+  getLinkOutLabel,
+  getSmartDateLabel,
+  getFeedEventStatus,
+} from "@/lib/card-utils";
 import { LiveBadge, SoonBadge, FreeBadge } from "./Badge";
 import Image from "@/components/SmartImage";
 import SeriesBadge from "./SeriesBadge";
-import ReasonBadge, { getTopReasons, type RecommendationReason } from "./ReasonBadge";
+import ReasonBadge, {
+  getTopReasons,
+  type RecommendationReason,
+} from "./ReasonBadge";
 import type { Frequency, DayOfWeek } from "@/lib/recurrence";
 import RSVPButton, { type RSVPStatus } from "./RSVPButton";
 import AnimatedCount from "./AnimatedCount";
 import { useImageParallax } from "@/lib/hooks/useImageParallax";
 
+type LocationDesignator =
+  | "standard"
+  | "private_after_signup"
+  | "virtual"
+  | "recovery_meeting"
+  | null
+  | undefined;
+
 type EventCardEvent = Event & {
   is_live?: boolean;
-  venue?: Event["venue"] & {
-    typical_price_min?: number | null;
-    typical_price_max?: number | null;
-  } | null;
+  venue?:
+    | (Event["venue"] & {
+        typical_price_min?: number | null;
+        typical_price_max?: number | null;
+      })
+    | null;
   category_data?: {
     typical_price_min: number | null;
     typical_price_max: number | null;
@@ -99,6 +131,7 @@ export type FeedEventData = {
     neighborhood: string | null;
     slug?: string | null;
     blurhash?: string | null;
+    location_designator?: LocationDesignator;
   } | null;
 };
 
@@ -134,7 +167,8 @@ function EventCard({
     if (event.end_date) {
       const start = new Date(event.start_date + "T00:00:00");
       const end = new Date(event.end_date + "T00:00:00");
-      const durationDays = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
+      const durationDays =
+        (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
       if (durationDays > 7) {
         return formatExhibitionDate(event.start_date, event.end_date);
       }
@@ -143,43 +177,66 @@ function EventCard({
   })();
   const isLive = event.is_live || false;
   // Only apply stagger animation to first 10 initial items, not infinite scroll items
-  const staggerClass = !skipAnimation && index < 10 ? `stagger-${index + 1}` : "";
+  const staggerClass =
+    !skipAnimation && index < 10 ? `stagger-${index + 1}` : "";
   const animationClass = skipAnimation ? "" : "animate-card-emerge";
-  const accentColor = event.category ? getCategoryColor(event.category) : "var(--neon-magenta)";
+  const accentColor = event.category
+    ? getCategoryColor(event.category)
+    : "var(--neon-magenta)";
   const reflectionClass = getReflectionClass(event.category);
   const price = formatPriceDetailed(event);
   const eventTitle = decodeHtmlEntities(event.title);
-  const venueName = event.venue?.name ? decodeHtmlEntities(event.venue.name) : null;
-  const venueNeighborhood = event.venue?.neighborhood ? decodeHtmlEntities(event.venue.neighborhood) : null;
-  const instructorName = event.instructor ? decodeHtmlEntities(event.instructor) : null;
+  const venueName = event.venue?.name
+    ? decodeHtmlEntities(event.venue.name)
+    : null;
+  const venueNeighborhood = event.venue?.neighborhood
+    ? decodeHtmlEntities(event.venue.neighborhood)
+    : null;
+  const locationLabel = getLocationDesignatorLabel(
+    event.venue?.location_designator,
+  );
+  const instructorName = event.instructor
+    ? decodeHtmlEntities(event.instructor)
+    : null;
   const railImageUrl = event.image_url ?? event.series?.image_url ?? undefined;
   const railBlurhash = event.blurhash || event.series?.blurhash || null;
   const hasRailImage = Boolean(railImageUrl);
 
-  const { containerRef: parallaxContainerRef, imageRef: parallaxImageRef } = useImageParallax();
+  const { containerRef: parallaxContainerRef, imageRef: parallaxImageRef } =
+    useImageParallax();
 
   // Optimistic RSVP count adjustments — user's own RSVP immediately ticks the count
-  const [countAdjust, setCountAdjust] = useState({ going: 0, interested: 0, recommendation: 0 });
+  const [countAdjust, setCountAdjust] = useState({
+    going: 0,
+    interested: 0,
+    recommendation: 0,
+  });
 
-  const handleRSVPChange = useCallback((newStatus: RSVPStatus, prevStatus: RSVPStatus) => {
-    setCountAdjust((prev) => {
-      const next = { ...prev };
-      // Remove contribution from previous status
-      if (prevStatus === "going") next.going -= 1;
-      else if (prevStatus === "interested") next.interested -= 1;
-      else if (prevStatus === "went") next.recommendation -= 1;
-      // Add contribution from new status
-      if (newStatus === "going") next.going += 1;
-      else if (newStatus === "interested") next.interested += 1;
-      else if (newStatus === "went") next.recommendation += 1;
-      return next;
-    });
-  }, []);
+  const handleRSVPChange = useCallback(
+    (newStatus: RSVPStatus, prevStatus: RSVPStatus) => {
+      setCountAdjust((prev) => {
+        const next = { ...prev };
+        // Remove contribution from previous status
+        if (prevStatus === "going") next.going -= 1;
+        else if (prevStatus === "interested") next.interested -= 1;
+        else if (prevStatus === "went") next.recommendation -= 1;
+        // Add contribution from new status
+        if (newStatus === "going") next.going += 1;
+        else if (newStatus === "interested") next.interested += 1;
+        else if (newStatus === "went") next.recommendation += 1;
+        return next;
+      });
+    },
+    [],
+  );
 
   const goingCount = (event.going_count ?? 0) + countAdjust.going;
-  const interestedCount = (event.interested_count ?? 0) + countAdjust.interested;
-  const recommendationCount = (event.recommendation_count ?? 0) + countAdjust.recommendation;
-  const hasSocialProof = goingCount > 0 || interestedCount > 0 || recommendationCount > 0;
+  const interestedCount =
+    (event.interested_count ?? 0) + countAdjust.interested;
+  const recommendationCount =
+    (event.recommendation_count ?? 0) + countAdjust.recommendation;
+  const hasSocialProof =
+    goingCount > 0 || interestedCount > 0 || recommendationCount > 0;
 
   // Build detail href - use portal context to show detail modal
   const eventHref = useMemo(() => {
@@ -193,9 +250,14 @@ function EventCard({
     hasTicketUrl: Boolean(event.ticket_url),
     isExternal: isExternalLinkOut,
   });
-  const isTicketLinkOut = Boolean(event.ticket_url) || isTicketingUrl(event.source_url);
-  const compactTimeLabel = event.is_all_day ? "All Day" : `${time}${period ? ` ${period}` : ""}`;
-  const compactCategoryLabel = event.category ? getCategoryLabel(event.category as CategoryType) : null;
+  const isTicketLinkOut =
+    Boolean(event.ticket_url) || isTicketingUrl(event.source_url);
+  const compactTimeLabel = event.is_all_day
+    ? "All Day"
+    : `${time}${period ? ` ${period}` : ""}`;
+  const compactCategoryLabel = event.category
+    ? getCategoryLabel(event.category as CategoryType)
+    : null;
 
   if (density === "compact") {
     return (
@@ -209,38 +271,77 @@ function EventCard({
         style={
           {
             "--accent-color": accentColor,
-            "--cta-border": "color-mix(in srgb, var(--accent-color) 70%, transparent)",
-            "--cta-glow": "color-mix(in srgb, var(--accent-color) 35%, transparent)",
+            "--cta-border":
+              "color-mix(in srgb, var(--accent-color) 70%, transparent)",
+            "--cta-glow":
+              "color-mix(in srgb, var(--accent-color) 35%, transparent)",
             background:
               "linear-gradient(180deg, color-mix(in srgb, var(--night) 84%, transparent), color-mix(in srgb, var(--dusk) 72%, transparent))",
           } as CSSProperties
         }
       >
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-2.5">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-2.5 sm:px-3 py-2.5">
           <Link
             href={eventHref}
             scroll={false}
             data-row-primary-link="true"
             className="min-w-0"
           >
-            <div className="flex items-center gap-2.5 min-w-0">
-              <span className="flex-shrink-0 font-mono text-[0.72rem] font-semibold uppercase tracking-[0.1em] text-[var(--accent-color)] min-w-[76px] sm:min-w-[82px]">
-                {compactTimeLabel}
-              </span>
-              <span className="truncate text-[0.94rem] sm:text-[0.98rem] font-medium text-[var(--cream)] group-hover:text-[var(--accent-color)] transition-colors">
+            <div className="min-w-0 space-y-1.5 sm:space-y-1">
+              <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                <span className="flex-shrink-0 font-mono text-[0.7rem] sm:text-[0.72rem] font-semibold uppercase tracking-[0.1em] text-[var(--accent-color)] min-w-[68px] sm:min-w-[82px]">
+                  {compactTimeLabel}
+                </span>
+                {compactCategoryLabel && (
+                  <span className="ml-auto inline-block max-w-[84px] sm:max-w-[120px] truncate flex-shrink-0 font-mono text-[0.58rem] sm:text-[0.62rem] font-medium uppercase tracking-[0.1em] text-[var(--muted)]">
+                    {compactCategoryLabel}
+                  </span>
+                )}
+              </div>
+              <span className="block text-[0.98rem] sm:text-[0.98rem] font-medium leading-[1.2] line-clamp-2 sm:line-clamp-1 text-[var(--cream)] group-hover:text-[var(--accent-color)] transition-colors">
                 {eventTitle}
               </span>
-              {compactCategoryLabel && (
-                <span className="inline-block max-w-[84px] sm:max-w-[120px] truncate flex-shrink-0 font-mono text-[0.62rem] font-medium uppercase tracking-[0.08em] text-[var(--muted)]">
-                  {compactCategoryLabel}
-                </span>
-              )}
+              <div className="flex items-center gap-1.5 min-w-0 font-mono text-[0.72rem] leading-[1.2] sm:text-[0.67rem] text-[var(--soft)]">
+                {venueName ? (
+                  <>
+                    <span className="truncate max-w-[62%]" title={venueName}>
+                      {venueName}
+                    </span>
+                    {venueNeighborhood && (
+                      <>
+                        <span className="opacity-40">·</span>
+                        <span
+                          className="truncate text-[var(--muted)]"
+                          title={venueNeighborhood}
+                        >
+                          {venueNeighborhood}
+                        </span>
+                      </>
+                    )}
+                    {locationLabel && (
+                      <>
+                        <span className="opacity-40">·</span>
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded border border-[var(--twilight)]/70 bg-[var(--twilight)]/40 text-[0.62rem] uppercase tracking-[0.08em] text-[var(--soft)]">
+                          {locationLabel}
+                        </span>
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <span className="truncate">{dateInfo.label}</span>
+                )}
+              </div>
             </div>
           </Link>
 
           <div className="flex items-center gap-1.5">
             <div data-row-save-action="true">
-              <RSVPButton eventId={event.id} variant="compact" onRSVPChange={handleRSVPChange} className="list-save-trigger" />
+              <RSVPButton
+                eventId={event.id}
+                variant="compact"
+                onRSVPChange={handleRSVPChange}
+                className="list-save-trigger"
+              />
             </div>
             {isExternalLinkOut && (
               <a
@@ -252,13 +353,38 @@ function EventCard({
                 className="hidden sm:inline-flex w-9 h-9 items-center justify-center rounded-lg border border-[var(--twilight)]/75 bg-[var(--dusk)]/72 text-[var(--muted)] hover:text-[var(--cream)] hover:border-[var(--cta-border,rgba(255,107,122,0.7))] hover:shadow-[0_0_14px_var(--cta-glow,rgba(255,107,122,0.2))] transition-all"
               >
                 {isTicketLinkOut ? (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"
+                    />
                   </svg>
                 ) : (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 3h7v7m0-7L10 14" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10v8a1 1 0 001 1h8" />
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M14 3h7v7m0-7L10 14"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 10v8a1 1 0 001 1h8"
+                    />
                   </svg>
                 )}
               </a>
@@ -280,31 +406,39 @@ function EventCard({
       style={
         {
           "--accent-color": accentColor,
-          "--cta-border": "color-mix(in srgb, var(--accent-color) 70%, transparent)",
-          "--cta-glow": "color-mix(in srgb, var(--accent-color) 35%, transparent)",
+          "--cta-border":
+            "color-mix(in srgb, var(--accent-color) 70%, transparent)",
+          "--cta-glow":
+            "color-mix(in srgb, var(--accent-color) 35%, transparent)",
           background:
             "linear-gradient(180deg, color-mix(in srgb, var(--night) 84%, transparent), color-mix(in srgb, var(--dusk) 72%, transparent))",
         } as CSSProperties
       }
     >
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2 sm:gap-3">
-          <Link
-            href={eventHref}
-            scroll={false}
-            data-row-primary-link="true"
-            className="block min-w-0 p-3.5 sm:p-4"
-          >
-            <div className="flex gap-3 sm:gap-4">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2 sm:gap-3">
+        <Link
+          href={eventHref}
+          scroll={false}
+          data-row-primary-link="true"
+          className="block min-w-0 p-3.5 sm:p-4"
+        >
+          <div className="flex gap-3 sm:gap-4">
             {/* Time cell - hidden on mobile (inlined instead), visible on desktop */}
             <div
               ref={parallaxContainerRef}
               className={`hidden sm:flex flex-shrink-0 self-stretch relative w-[124px] -ml-3.5 sm:-ml-4 -my-3.5 sm:-my-4 overflow-hidden border-r border-[var(--twilight)]/60 ${
                 hasRailImage ? "list-rail-media" : "bg-[var(--night)]/44"
               }`}
-              style={{ borderTopLeftRadius: "inherit", borderBottomLeftRadius: "inherit" }}
+              style={{
+                borderTopLeftRadius: "inherit",
+                borderBottomLeftRadius: "inherit",
+              }}
             >
               {railImageUrl && (
-                <div ref={parallaxImageRef} className="absolute inset-0 transform-gpu will-change-transform">
+                <div
+                  ref={parallaxImageRef}
+                  className="absolute inset-0 transform-gpu will-change-transform"
+                >
                   <Image
                     src={railImageUrl}
                     alt={eventTitle}
@@ -317,22 +451,36 @@ function EventCard({
                 </div>
               )}
               <div className="relative z-10 flex h-full flex-col items-start justify-center gap-1.5 pl-3 pr-2 py-3 sm:py-4 list-rail-caption">
-                <span className={`font-mono text-[0.62rem] font-semibold leading-none uppercase tracking-[0.12em] ${
-                  dateInfo.isHighlight ? "text-[var(--accent-color)]" : hasRailImage ? "text-[var(--cream)]/85" : "text-[var(--muted)]"
-                }`}>
+                <span
+                  className={`font-mono text-[0.62rem] font-semibold leading-none uppercase tracking-[0.12em] ${
+                    dateInfo.isHighlight
+                      ? "text-[var(--accent-color)]"
+                      : hasRailImage
+                        ? "text-[var(--cream)]/85"
+                        : "text-[var(--muted)]"
+                  }`}
+                >
                   {dateInfo.label}
                 </span>
                 {event.is_all_day ? (
-                  <span className={`font-mono text-[0.62rem] font-semibold leading-none uppercase tracking-[0.12em] ${hasRailImage ? "text-white/82" : "text-[var(--soft)]"}`}>
+                  <span
+                    className={`font-mono text-[0.62rem] font-semibold leading-none uppercase tracking-[0.12em] ${hasRailImage ? "text-white/82" : "text-[var(--soft)]"}`}
+                  >
                     All Day
                   </span>
                 ) : (
                   <>
-                    <span className={`font-mono text-[1.42rem] font-bold leading-none tabular-nums ${hasRailImage ? "text-white" : "text-[var(--cream)]"}`}>
+                    <span
+                      className={`font-mono text-[1.42rem] font-bold leading-none tabular-nums ${hasRailImage ? "text-white" : "text-[var(--cream)]"}`}
+                    >
                       {time}
                     </span>
                     {period && (
-                      <span className={`font-mono text-[0.58rem] font-medium uppercase tracking-[0.12em] ${hasRailImage ? "text-white/78" : "text-[var(--soft)]"}`}>{period}</span>
+                      <span
+                        className={`font-mono text-[0.58rem] font-medium uppercase tracking-[0.12em] ${hasRailImage ? "text-white/78" : "text-[var(--soft)]"}`}
+                      >
+                        {period}
+                      </span>
                     )}
                   </>
                 )}
@@ -346,21 +494,35 @@ function EventCard({
                 {/* Top row: inline time + category + live badge */}
                 <div className="flex items-center gap-2 mb-2">
                   {/* Inline time badge — replaces the hidden time column on mobile */}
-                  <span className={`inline-flex items-baseline gap-1 font-mono text-[0.98rem] font-bold leading-none ${
-                    dateInfo.isHighlight ? "text-[var(--accent-color)]" : "text-[var(--cream)]"
-                  }`}>
+                  <span
+                    className={`inline-flex items-baseline gap-1 font-mono text-[0.98rem] font-bold leading-none ${
+                      dateInfo.isHighlight
+                        ? "text-[var(--accent-color)]"
+                        : "text-[var(--cream)]"
+                    }`}
+                  >
                     {event.is_all_day ? (
-                      <span className="text-[0.62rem] font-semibold text-[var(--soft)] uppercase tracking-[0.12em]">All Day</span>
+                      <span className="text-[0.62rem] font-semibold text-[var(--soft)] uppercase tracking-[0.12em]">
+                        All Day
+                      </span>
                     ) : (
                       <>
                         {time}
-                        {period && <span className="text-[0.58rem] font-medium text-[var(--soft)] uppercase tracking-[0.1em]">{period}</span>}
+                        {period && (
+                          <span className="text-[0.58rem] font-medium text-[var(--soft)] uppercase tracking-[0.1em]">
+                            {period}
+                          </span>
+                        )}
                       </>
                     )}
                   </span>
                   {event.category && (
                     <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-accent-20 border border-[var(--twilight)]/50">
-                      <CategoryIcon type={event.category} size={16} glow="subtle" />
+                      <CategoryIcon
+                        type={event.category}
+                        size={16}
+                        glow="subtle"
+                      />
                     </span>
                   )}
                   {isLive && (
@@ -369,7 +531,9 @@ function EventCard({
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--neon-red)] opacity-40" />
                         <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[var(--neon-red)]" />
                       </span>
-                      <span className="font-mono text-[0.55rem] font-medium text-[var(--neon-red)] uppercase tracking-wide">Live</span>
+                      <span className="font-mono text-[0.55rem] font-medium text-[var(--neon-red)] uppercase tracking-wide">
+                        Live
+                      </span>
                     </span>
                   )}
                 </div>
@@ -383,12 +547,14 @@ function EventCard({
               <div className="hidden sm:flex items-center gap-2.5 mb-1">
                 {event.category && (
                   <span className="flex-shrink-0 inline-flex items-center justify-center w-9 h-9 rounded-lg bg-accent-20 border border-[var(--twilight)]/55">
-                    <CategoryIcon type={event.category} size={18} glow="subtle" />
+                    <CategoryIcon
+                      type={event.category}
+                      size={18}
+                      glow="subtle"
+                    />
                   </span>
                 )}
-                <span
-                  className="text-[var(--text-primary)] font-semibold text-[1.3rem] transition-colors line-clamp-1 group-hover:text-[var(--accent-color)] leading-tight"
-                >
+                <span className="text-[var(--text-primary)] font-semibold text-[1.3rem] transition-colors line-clamp-1 group-hover:text-[var(--accent-color)] leading-tight">
                   {eventTitle}
                 </span>
                 {isLive && (
@@ -397,7 +563,9 @@ function EventCard({
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--neon-red)] opacity-40" />
                       <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--neon-red)]" />
                     </span>
-                    <span className="font-mono text-[0.55rem] font-medium text-[var(--neon-red)] uppercase tracking-wide">Live</span>
+                    <span className="font-mono text-[0.55rem] font-medium text-[var(--neon-red)] uppercase tracking-wide">
+                      Live
+                    </span>
                   </span>
                 )}
               </div>
@@ -407,11 +575,29 @@ function EventCard({
               <div className="flex items-center gap-1.5 text-sm text-[var(--text-secondary)] mt-1.5 leading-relaxed flex-wrap">
                 {venueName && (
                   <>
-                    <span className="truncate max-w-[70%] sm:max-w-[45%] font-medium text-[var(--text-base)]" title={venueName}>{venueName}</span>
+                    <span
+                      className="truncate max-w-[70%] sm:max-w-[45%] font-medium text-[var(--text-base)]"
+                      title={venueName}
+                    >
+                      {venueName}
+                    </span>
                     {venueNeighborhood && (
                       <>
                         <span className="opacity-40">·</span>
-                        <span className="truncate text-[var(--text-tertiary)]" title={venueNeighborhood}>{venueNeighborhood}</span>
+                        <span
+                          className="truncate text-[var(--text-tertiary)]"
+                          title={venueNeighborhood}
+                        >
+                          {venueNeighborhood}
+                        </span>
+                      </>
+                    )}
+                    {locationLabel && (
+                      <>
+                        <span className="opacity-40">·</span>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full font-mono text-[0.62rem] uppercase tracking-[0.08em] bg-[var(--twilight)]/55 text-[var(--soft)] border border-[var(--twilight)]/75">
+                          {locationLabel}
+                        </span>
                       </>
                     )}
                   </>
@@ -421,19 +607,23 @@ function EventCard({
                   <>
                     <span className="opacity-40">·</span>
                     {price.isFree ? (
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full font-mono text-[0.65rem] font-semibold ${
-                        price.isEstimate
-                          ? "bg-[var(--neon-green)]/15 text-[var(--neon-green)] border border-[var(--neon-green)]/25"
-                          : "bg-[var(--neon-green)]/25 text-[var(--neon-green)] border border-[var(--neon-green)]/40 shadow-[0_0_8px_var(--neon-green)/15]"
-                      }`}>
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full font-mono text-[0.65rem] font-semibold ${
+                          price.isEstimate
+                            ? "bg-[var(--neon-green)]/15 text-[var(--neon-green)] border border-[var(--neon-green)]/25"
+                            : "bg-[var(--neon-green)]/25 text-[var(--neon-green)] border border-[var(--neon-green)]/40 shadow-[0_0_8px_var(--neon-green)/15]"
+                        }`}
+                      >
                         {price.text}
                       </span>
                     ) : (
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full font-mono text-[0.65rem] font-medium ${
-                        price.isEstimate
-                          ? "bg-[var(--twilight)]/50 text-[var(--muted)]"
-                          : "bg-[var(--twilight)] text-[var(--cream)] border border-[var(--twilight)]"
-                      }`}>
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full font-mono text-[0.65rem] font-medium ${
+                          price.isEstimate
+                            ? "bg-[var(--twilight)]/50 text-[var(--muted)]"
+                            : "bg-[var(--twilight)] text-[var(--cream)] border border-[var(--twilight)]"
+                        }`}
+                      >
                         {price.text}
                       </span>
                     )}
@@ -464,7 +654,10 @@ function EventCard({
                 {instructorName && (
                   <span className="hidden sm:contents">
                     <span className="opacity-40">·</span>
-                    <span className="truncate text-[var(--muted)] text-xs" title={instructorName}>
+                    <span
+                      className="truncate text-[var(--muted)] text-xs"
+                      title={instructorName}
+                    >
                       w/ {instructorName}
                     </span>
                   </span>
@@ -486,15 +679,32 @@ function EventCard({
                   {getTopReasons(
                     reasons.filter((r) => {
                       // Filter out redundant badges based on section context
-                      if (contextType === "venue" && r.type === "followed_venue") return false;
-                      if (contextType === "producer" && r.type === "followed_organization") return false;
-                      if (contextType === "interests" && r.type === "category") return false;
-                      if (contextType === "neighborhood" && r.type === "neighborhood") return false;
+                      if (
+                        contextType === "venue" &&
+                        r.type === "followed_venue"
+                      )
+                        return false;
+                      if (
+                        contextType === "producer" &&
+                        r.type === "followed_organization"
+                      )
+                        return false;
+                      if (contextType === "interests" && r.type === "category")
+                        return false;
+                      if (
+                        contextType === "neighborhood" &&
+                        r.type === "neighborhood"
+                      )
+                        return false;
                       return true;
                     }),
-                    2
+                    2,
                   ).map((reason, idx) => (
-                    <ReasonBadge key={`${reason.type}-${idx}`} reason={reason} size="sm" />
+                    <ReasonBadge
+                      key={`${reason.type}-${idx}`}
+                      reason={reason}
+                      size="sm"
+                    />
                   ))}
                 </div>
               )}
@@ -518,12 +728,18 @@ function EventCard({
                       <span className="font-mono text-xs font-medium text-[var(--coral)]">
                         {friendsGoing.length === 1 ? (
                           <>
-                            {friendsGoing[0].user.display_name || friendsGoing[0].user.username}
-                            {" "}{friendsGoing[0].status === "going" ? "is in" : "is interested"}
+                            {friendsGoing[0].user.display_name ||
+                              friendsGoing[0].user.username}{" "}
+                            {friendsGoing[0].status === "going"
+                              ? "is in"
+                              : "is interested"}
                           </>
                         ) : (
                           <>
-                            {friendsGoing.length} friends {friendsGoing.some(f => f.status === "going") ? "are in" : "interested"}
+                            {friendsGoing.length} friends{" "}
+                            {friendsGoing.some((f) => f.status === "going")
+                              ? "are in"
+                              : "interested"}
                           </>
                         )}
                       </span>
@@ -531,108 +747,227 @@ function EventCard({
                   )}
 
                   {/* Mobile: collapsed social proof — single summary pill */}
-                  {hasSocialProof && (() => {
-                    const counts = [
-                      { type: "going" as const, count: goingCount, label: "going", color: "coral" },
-                      { type: "interested" as const, count: interestedCount, label: "maybe", color: "gold" },
-                      { type: "recommended" as const, count: recommendationCount, label: "rec'd", color: "lavender" },
-                    ];
-                    const dominant = counts.reduce((a, b) => (b.count > a.count ? b : a));
-                    const totalCount = goingCount + interestedCount + recommendationCount;
-                    if (totalCount <= 0) return null;
-                    return (
-                      <span className={`sm:hidden inline-flex items-center gap-1 px-2 py-0.5 rounded-lg font-mono text-xs font-medium ${
-                        dominant.color === "coral"
-                          ? "bg-[var(--coral)]/10 border border-[var(--coral)]/20 text-[var(--coral)]"
-                          : dominant.color === "gold"
-                            ? "bg-[var(--gold)]/15 border border-[var(--gold)]/30 text-[var(--gold)]"
-                            : "bg-[var(--lavender)]/15 border border-[var(--lavender)]/30 text-[var(--lavender)]"
-                      }`}>
-                        {dominant.type === "going" && (
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                        )}
-                        {dominant.type === "recommended" && (
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                          </svg>
-                        )}
-                        {formatCompactCount(totalCount)} {dominant.label}
-                      </span>
-                    );
-                  })()}
+                  {hasSocialProof &&
+                    (() => {
+                      const counts = [
+                        {
+                          type: "going" as const,
+                          count: goingCount,
+                          label: "going",
+                          color: "coral",
+                        },
+                        {
+                          type: "interested" as const,
+                          count: interestedCount,
+                          label: "maybe",
+                          color: "gold",
+                        },
+                        {
+                          type: "recommended" as const,
+                          count: recommendationCount,
+                          label: "rec'd",
+                          color: "lavender",
+                        },
+                      ];
+                      const dominant = counts.reduce((a, b) =>
+                        b.count > a.count ? b : a,
+                      );
+                      const totalCount =
+                        goingCount + interestedCount + recommendationCount;
+                      if (totalCount <= 0) return null;
+                      return (
+                        <span
+                          className={`sm:hidden inline-flex items-center gap-1 px-2 py-0.5 rounded-lg font-mono text-xs font-medium ${
+                            dominant.color === "coral"
+                              ? "bg-[var(--coral)]/10 border border-[var(--coral)]/20 text-[var(--coral)]"
+                              : dominant.color === "gold"
+                                ? "bg-[var(--gold)]/15 border border-[var(--gold)]/30 text-[var(--gold)]"
+                                : "bg-[var(--lavender)]/15 border border-[var(--lavender)]/30 text-[var(--lavender)]"
+                          }`}
+                        >
+                          {dominant.type === "going" && (
+                            <svg
+                              className="w-3 h-3"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M5 13l4 4L19 7"
+                              />
+                            </svg>
+                          )}
+                          {dominant.type === "recommended" && (
+                            <svg
+                              className="w-3 h-3"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+                              />
+                            </svg>
+                          )}
+                          {formatCompactCount(totalCount)} {dominant.label}
+                        </span>
+                      );
+                    })()}
 
                   {/* Desktop: separate pills */}
                   <span className="hidden sm:contents">
                     {/* Going count — coral pill */}
-                    {goingCount > 0 && (friendsGoing.length === 0 || goingCount > friendsGoing.length) && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)]/20 font-mono text-xs font-medium text-[var(--coral)]">
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                        <AnimatedCount value={goingCount} format={formatCompactCount} /> going
-                      </span>
-                    )}
+                    {goingCount > 0 &&
+                      (friendsGoing.length === 0 ||
+                        goingCount > friendsGoing.length) && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)]/20 font-mono text-xs font-medium text-[var(--coral)]">
+                          <svg
+                            className="w-3.5 h-3.5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                          <AnimatedCount
+                            value={goingCount}
+                            format={formatCompactCount}
+                          />{" "}
+                          going
+                        </span>
+                      )}
 
                     {/* Interested count — gold pill matching "Maybe" state */}
                     {interestedCount > 0 && (
                       <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[var(--gold)]/15 border border-[var(--gold)]/30 font-mono text-xs font-medium text-[var(--gold)]">
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.957" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                        <svg
+                          className="w-3.5 h-3.5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.957"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"
+                          />
                         </svg>
-                        <AnimatedCount value={interestedCount} format={formatCompactCount} /> maybe
+                        <AnimatedCount
+                          value={interestedCount}
+                          format={formatCompactCount}
+                        />{" "}
+                        maybe
                       </span>
                     )}
 
                     {/* Recommendations — lavender pill */}
                     {recommendationCount > 0 && (
                       <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[var(--lavender)]/15 border border-[var(--lavender)]/30 font-mono text-xs font-medium text-[var(--lavender)]">
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                        <svg
+                          className="w-3.5 h-3.5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+                          />
                         </svg>
-                        <AnimatedCount value={recommendationCount} format={formatCompactCount} /> rec&apos;d
+                        <AnimatedCount
+                          value={recommendationCount}
+                          format={formatCompactCount}
+                        />{" "}
+                        rec&apos;d
                       </span>
                     )}
                   </span>
                 </div>
               )}
             </div>
+          </div>
+        </Link>
 
+        <div className="flex flex-col items-end gap-2 pt-3 pr-3 pb-3 sm:pt-4 sm:pr-4 sm:pb-4 flex-shrink-0">
+          <div className="flex items-start gap-1.5 sm:gap-2">
+            <div data-row-save-action="true">
+              <RSVPButton
+                eventId={event.id}
+                variant="compact"
+                onRSVPChange={handleRSVPChange}
+                className="list-save-trigger"
+              />
             </div>
-          </Link>
-
-          <div className="flex flex-col items-end gap-2 pt-3 pr-3 pb-3 sm:pt-4 sm:pr-4 sm:pb-4 flex-shrink-0">
-            <div className="flex items-start gap-1.5 sm:gap-2">
-              <div data-row-save-action="true">
-                <RSVPButton eventId={event.id} variant="compact" onRSVPChange={handleRSVPChange} className="list-save-trigger" />
-              </div>
-              {isExternalLinkOut && (
-                <a
-                  href={linkOutUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={linkOutLabel}
-                  data-row-open-action="true"
-                  style={{ touchAction: "manipulation" }}
-                  className="hidden sm:inline-flex w-10 h-10 items-center justify-center rounded-xl border border-[var(--twilight)]/75 bg-[var(--dusk)]/72 text-[var(--muted)] backdrop-blur-[2px] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.02)] hover:text-[var(--cream)] hover:border-[var(--cta-border,rgba(255,107,122,0.7))] hover:shadow-[0_0_18px_var(--cta-glow,rgba(255,107,122,0.25))] transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)]"
-                >
-                  {isTicketLinkOut ? (
-                    <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-                    </svg>
-                  ) : (
-                    <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 3h7v7m0-7L10 14" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10v8a1 1 0 001 1h8" />
-                    </svg>
-                  )}
-                </a>
-              )}
-            </div>
+            {isExternalLinkOut && (
+              <a
+                href={linkOutUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={linkOutLabel}
+                data-row-open-action="true"
+                style={{ touchAction: "manipulation" }}
+                className="hidden sm:inline-flex w-10 h-10 items-center justify-center rounded-xl border border-[var(--twilight)]/75 bg-[var(--dusk)]/72 text-[var(--muted)] backdrop-blur-[2px] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.02)] hover:text-[var(--cream)] hover:border-[var(--cta-border,rgba(255,107,122,0.7))] hover:shadow-[0_0_18px_var(--cta-glow,rgba(255,107,122,0.25))] transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)]"
+              >
+                {isTicketLinkOut ? (
+                  <svg
+                    className="w-4.5 h-4.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"
+                    />
+                  </svg>
+                ) : (
+                  <svg
+                    className="w-4.5 h-4.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M14 3h7v7m0-7L10 14"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 10v8a1 1 0 001 1h8"
+                    />
+                  </svg>
+                )}
+              </a>
+            )}
           </div>
         </div>
+      </div>
     </div>
   );
 }
@@ -665,8 +1000,18 @@ function FeedSocialProofBadge({
   if (variant === "compact") {
     return (
       <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)]/20 font-mono text-[0.6rem] font-medium text-[var(--coral)]">
-        <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+        <svg
+          className="w-2.5 h-2.5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M5 13l4 4L19 7"
+          />
         </svg>
         {count} {label}
       </span>
@@ -675,8 +1020,18 @@ function FeedSocialProofBadge({
 
   return (
     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)]/20 font-mono text-xs font-medium text-[var(--coral)]">
-      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+      <svg
+        className="w-3 h-3"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M5 13l4 4L19 7"
+        />
       </svg>
       {count} {label}
     </span>
@@ -691,9 +1046,23 @@ type EventMetadataOptions = {
   includePrice?: boolean;
 };
 
+function getLocationDesignatorLabel(
+  designator: LocationDesignator,
+): string | null {
+  if (!designator || designator === "standard") return null;
+  if (designator === "private_after_signup") return "Location After RSVP";
+  if (designator === "virtual") return "Virtual";
+  if (designator === "recovery_meeting") return "Recovery Meeting";
+  return null;
+}
+
 function getEventPriceLabel(event: FeedEventData): string | null {
   if (event.is_free) return "Free";
-  if (event.price_min !== null && event.price_max !== null && event.price_max > event.price_min) {
+  if (
+    event.price_min !== null &&
+    event.price_max !== null &&
+    event.price_max > event.price_min
+  ) {
     return `$${event.price_min}-$${event.price_max}`;
   }
   if (event.price_min !== null) {
@@ -702,7 +1071,10 @@ function getEventPriceLabel(event: FeedEventData): string | null {
   return null;
 }
 
-function getUnifiedMetadata(event: FeedEventData, options: EventMetadataOptions = {}): string[] {
+function getUnifiedMetadata(
+  event: FeedEventData,
+  options: EventMetadataOptions = {},
+): string[] {
   const {
     includeDate = true,
     includeTime = true,
@@ -733,6 +1105,13 @@ function getUnifiedMetadata(event: FeedEventData, options: EventMetadataOptions 
     parts.push(event.venue.neighborhood);
   }
 
+  const locationLabel = getLocationDesignatorLabel(
+    event.venue?.location_designator,
+  );
+  if (locationLabel) {
+    parts.push(locationLabel);
+  }
+
   if (includePrice) {
     const priceLabel = getEventPriceLabel(event);
     if (priceLabel) parts.push(priceLabel);
@@ -751,7 +1130,11 @@ interface GridEventCardProps {
   portalSlug?: string;
 }
 
-export const GridEventCard = memo(function GridEventCard({ event, isCarousel, portalSlug }: GridEventCardProps) {
+export const GridEventCard = memo(function GridEventCard({
+  event,
+  isCarousel,
+  portalSlug,
+}: GridEventCardProps) {
   const goingCount = event.going_count || 0;
   const interestedCount = event.interested_count || 0;
   const recommendationCount = event.recommendation_count || 0;
@@ -767,7 +1150,9 @@ export const GridEventCard = memo(function GridEventCard({ event, isCarousel, po
 
   return (
     <Link
-      href={portalSlug ? `/${portalSlug}?event=${event.id}` : `/events/${event.id}`}
+      href={
+        portalSlug ? `/${portalSlug}?event=${event.id}` : `/events/${event.id}`
+      }
       data-category={event.category || "other"}
       data-accent="category"
       className={`group flex flex-col rounded-xl overflow-hidden border transition-all hover:border-[var(--coral)]/30 coral-glow-hover ${
@@ -778,9 +1163,7 @@ export const GridEventCard = memo(function GridEventCard({ event, isCarousel, po
       <div className="flex-1 p-3">
         {/* Category + Popular */}
         <div className="flex items-center gap-2 mb-1.5">
-          {event.category && (
-            <CategoryIcon type={event.category} size={12} />
-          )}
+          {event.category && <CategoryIcon type={event.category} size={12} />}
           {isPopular && (
             <span className="ml-auto flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[var(--coral)] text-[var(--void)] text-[0.56rem] font-mono font-medium">
               <TrendingIcon className="w-2.5 h-2.5" /> Popular
@@ -805,7 +1188,11 @@ export const GridEventCard = memo(function GridEventCard({ event, isCarousel, po
           {eventStatus === "live" && <LiveBadge />}
           {eventStatus === "soon" && <SoonBadge />}
           {goingCount > 0 && (
-            <FeedSocialProofBadge count={goingCount} label="going" variant="compact" />
+            <FeedSocialProofBadge
+              count={goingCount}
+              label="going"
+              variant="compact"
+            />
           )}
           {interestedCount > 0 && (
             <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-[var(--gold)]/15 border border-[var(--gold)]/30 font-mono text-[0.6rem] font-medium text-[var(--gold)]">
@@ -814,8 +1201,18 @@ export const GridEventCard = memo(function GridEventCard({ event, isCarousel, po
           )}
           {recommendationCount > 0 && (
             <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-[var(--lavender)]/15 border border-[var(--lavender)]/30 font-mono text-[0.6rem] font-medium text-[var(--lavender)]">
-              <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+              <svg
+                className="w-2.5 h-2.5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+                />
               </svg>
               {recommendationCount} rec&apos;d
             </span>
@@ -837,7 +1234,12 @@ interface CompactEventCardProps {
   portalSlug?: string;
 }
 
-export const CompactEventCard = memo(function CompactEventCard({ event, isAlternate, showDate = true, portalSlug }: CompactEventCardProps) {
+export const CompactEventCard = memo(function CompactEventCard({
+  event,
+  isAlternate,
+  showDate = true,
+  portalSlug,
+}: CompactEventCardProps) {
   const goingCount = event.going_count || 0;
   const interestedCount = event.interested_count || 0;
   const recommendationCount = event.recommendation_count || 0;
@@ -845,52 +1247,97 @@ export const CompactEventCard = memo(function CompactEventCard({ event, isAltern
   const isTrending = event.is_trending || false;
   const eventStatus = getFeedEventStatus(event.start_date, event.start_time);
   const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
-  const accentColor = event.category ? getCategoryColor(event.category) : "var(--neon-magenta)";
+  const accentColor = event.category
+    ? getCategoryColor(event.category)
+    : "var(--neon-magenta)";
   const reflectionClass = getReflectionClass(event.category);
-  const compactTimeLabel = event.is_all_day ? "All Day" : `${time}${period ? ` ${period}` : ""}`;
-  const compactCategoryLabel = event.category ? getCategoryLabel(event.category as CategoryType) : null;
+  const compactTimeLabel = event.is_all_day
+    ? "All Day"
+    : `${time}${period ? ` ${period}` : ""}`;
+  const compactCategoryLabel = event.category
+    ? getCategoryLabel(event.category as CategoryType)
+    : null;
   const compactPrice = getEventPriceLabel(event);
-  const compactMetadataParts: Array<{ key: string; value: string; className?: string }> = [];
+  const compactPrimaryMetadataParts: Array<{
+    key: string;
+    value: string;
+    className?: string;
+  }> = [];
+  const compactSecondaryMetadataParts: Array<{
+    key: string;
+    value: string;
+    className?: string;
+  }> = [];
 
-  if (showDate) {
-    compactMetadataParts.push({ key: "date", value: getSmartDateLabel(event.start_date) });
-  }
   if (event.venue?.name) {
-    compactMetadataParts.push({ key: "venue", value: event.venue.name });
+    compactPrimaryMetadataParts.push({ key: "venue", value: event.venue.name });
   }
   if (event.venue?.neighborhood) {
-    compactMetadataParts.push({ key: "neighborhood", value: event.venue.neighborhood });
+    compactPrimaryMetadataParts.push({
+      key: "neighborhood",
+      value: event.venue.neighborhood,
+    });
+  }
+  const compactLocationLabel = getLocationDesignatorLabel(
+    event.venue?.location_designator,
+  );
+  if (compactLocationLabel) {
+    compactPrimaryMetadataParts.push({
+      key: "location-designator",
+      value: compactLocationLabel,
+      className: "text-[var(--soft)]",
+    });
+  }
+  if (showDate) {
+    compactSecondaryMetadataParts.push({
+      key: "date",
+      value: getSmartDateLabel(event.start_date),
+    });
   }
   if (compactPrice) {
-    compactMetadataParts.push({
+    compactSecondaryMetadataParts.push({
       key: "price",
       value: compactPrice,
-      className: event.is_free ? "text-[var(--neon-green)] font-medium" : undefined,
+      className: event.is_free
+        ? "text-[var(--neon-green)] font-medium"
+        : undefined,
     });
   }
   if (goingCount > 0) {
-    compactMetadataParts.push({
+    compactSecondaryMetadataParts.push({
       key: "going",
       value: `${formatCompactCount(goingCount)} going`,
       className: "text-[var(--coral)] font-medium",
     });
   }
   if (interestedCount > 0) {
-    compactMetadataParts.push({
+    compactSecondaryMetadataParts.push({
       key: "interested",
       value: `${formatCompactCount(interestedCount)} maybe`,
       className: "text-[var(--gold)] font-medium",
     });
   }
   if (recommendationCount > 0) {
-    compactMetadataParts.push({
+    compactSecondaryMetadataParts.push({
       key: "recommended",
       value: `${formatCompactCount(recommendationCount)} rec'd`,
       className: "text-[var(--lavender)] font-medium",
     });
   }
+  const compactMobileMetadataParts =
+    compactPrimaryMetadataParts.length > 0
+      ? compactPrimaryMetadataParts
+      : compactSecondaryMetadataParts.slice(0, 2);
+  const compactDesktopMetadataParts = [
+    ...compactPrimaryMetadataParts,
+    ...compactSecondaryMetadataParts,
+  ];
 
-  const hierarchyClass = isTrending ? "card-trending" : isPopular ? "card-popular" : "";
+  const hierarchyClass = isTrending
+    ? "card-trending"
+    : isPopular
+      ? "card-popular"
+      : "";
 
   return (
     <div
@@ -902,48 +1349,67 @@ export const CompactEventCard = memo(function CompactEventCard({ event, isAltern
       style={
         {
           "--accent-color": accentColor,
-          "--cta-border": "color-mix(in srgb, var(--accent-color) 70%, transparent)",
-          "--cta-glow": "color-mix(in srgb, var(--accent-color) 35%, transparent)",
-          background:
-            isAlternate
-              ? "linear-gradient(180deg, color-mix(in srgb, var(--night) 80%, transparent), color-mix(in srgb, var(--dusk) 68%, transparent))"
-              : "linear-gradient(180deg, color-mix(in srgb, var(--night) 84%, transparent), color-mix(in srgb, var(--dusk) 72%, transparent))",
+          "--cta-border":
+            "color-mix(in srgb, var(--accent-color) 70%, transparent)",
+          "--cta-glow":
+            "color-mix(in srgb, var(--accent-color) 35%, transparent)",
+          background: isAlternate
+            ? "linear-gradient(180deg, color-mix(in srgb, var(--night) 80%, transparent), color-mix(in srgb, var(--dusk) 68%, transparent))"
+            : "linear-gradient(180deg, color-mix(in srgb, var(--night) 84%, transparent), color-mix(in srgb, var(--dusk) 72%, transparent))",
         } as CSSProperties
       }
     >
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 py-2.5">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-2.5 sm:px-3 py-2.5">
         <Link
-          href={portalSlug ? `/${portalSlug}?event=${event.id}` : `/events/${event.id}`}
+          href={
+            portalSlug
+              ? `/${portalSlug}?event=${event.id}`
+              : `/events/${event.id}`
+          }
           scroll={false}
           data-row-primary-link="true"
           data-category={event.category || "other"}
           data-accent={event.category ? "category" : ""}
           className="min-w-0"
         >
-          <div className="flex items-center gap-2.5 min-w-0">
-            <span className="flex-shrink-0 font-mono text-[0.72rem] font-semibold uppercase tracking-[0.1em] text-[var(--accent-color)] min-w-[76px] sm:min-w-[82px]">
-              {compactTimeLabel}
-            </span>
-            <span className="truncate text-[0.94rem] sm:text-[0.98rem] font-medium text-[var(--cream)] group-hover:text-[var(--accent-color)] transition-colors">
+          <div className="min-w-0 space-y-1.5 sm:space-y-1">
+            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+              <span className="flex-shrink-0 font-mono text-[0.7rem] sm:text-[0.72rem] font-semibold uppercase tracking-[0.1em] text-[var(--accent-color)] min-w-[68px] sm:min-w-[82px]">
+                {compactTimeLabel}
+              </span>
+              {compactCategoryLabel && (
+                <span className="ml-auto inline-block max-w-[88px] sm:max-w-[140px] truncate flex-shrink-0 font-mono text-[0.58rem] sm:text-[0.62rem] font-medium uppercase tracking-[0.1em] text-[var(--muted)]">
+                  {compactCategoryLabel}
+                </span>
+              )}
+              {isPopular && (
+                <span className="flex-shrink-0 text-[var(--coral)]">
+                  <TrendingIcon className="w-3 h-3" />
+                </span>
+              )}
+            </div>
+            <h4 className="text-[0.98rem] sm:text-[0.98rem] font-medium leading-[1.2] line-clamp-2 sm:line-clamp-1 text-[var(--cream)] group-hover:text-[var(--accent-color)] transition-colors">
               {event.title}
-            </span>
-            {compactCategoryLabel && (
-              <span className="inline-block max-w-[92px] sm:max-w-[140px] truncate flex-shrink-0 font-mono text-[0.62rem] font-medium uppercase tracking-[0.08em] text-[var(--muted)]">
-                {compactCategoryLabel}
-              </span>
-            )}
-            {isPopular && (
-              <span className="flex-shrink-0 text-[var(--coral)]">
-                <TrendingIcon className="w-3 h-3" />
-              </span>
-            )}
+            </h4>
           </div>
 
-          <div className="mt-1 flex items-center gap-1.5 font-mono text-[0.67rem] text-[var(--soft)] min-w-0">
-            {compactMetadataParts.map((part, idx) => (
-              <Fragment key={`${event.id}-${part.key}`}>
+          <div className="mt-1 sm:hidden flex items-center gap-1.5 font-mono text-[0.72rem] leading-[1.2] text-[var(--soft)] min-w-0">
+            {compactMobileMetadataParts.map((part, idx) => (
+              <Fragment key={`${event.id}-mobile-${part.key}`}>
                 {idx > 0 && <span className="opacity-40">·</span>}
-                <span className={`truncate ${part.className ?? ""}`}>{part.value}</span>
+                <span className={`truncate ${part.className ?? ""}`}>
+                  {part.value}
+                </span>
+              </Fragment>
+            ))}
+          </div>
+          <div className="mt-1 hidden sm:flex items-center gap-1.5 font-mono text-[0.67rem] text-[var(--soft)] min-w-0">
+            {compactDesktopMetadataParts.map((part, idx) => (
+              <Fragment key={`${event.id}-desktop-${part.key}`}>
+                {idx > 0 && <span className="opacity-40">·</span>}
+                <span className={`truncate ${part.className ?? ""}`}>
+                  {part.value}
+                </span>
               </Fragment>
             ))}
           </div>
@@ -951,7 +1417,11 @@ export const CompactEventCard = memo(function CompactEventCard({ event, isAltern
 
         <div className="flex items-center gap-1.5">
           <div data-row-save-action="true">
-            <RSVPButton eventId={event.id} variant="compact" className="list-save-trigger" />
+            <RSVPButton
+              eventId={event.id}
+              variant="compact"
+              className="list-save-trigger"
+            />
           </div>
           <div className="flex items-center gap-1.5">
             {eventStatus === "live" && <LiveBadge />}
@@ -965,7 +1435,12 @@ export const CompactEventCard = memo(function CompactEventCard({ event, isAltern
             viewBox="0 0 24 24"
             aria-hidden="true"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 5l7 7-7 7"
+            />
           </svg>
         </div>
       </div>
@@ -984,7 +1459,12 @@ interface HeroEventCardProps {
   editorialBlurb?: string | null;
 }
 
-export const HeroEventCard = memo(function HeroEventCard({ event, portalSlug, hideImages, editorialBlurb }: HeroEventCardProps) {
+export const HeroEventCard = memo(function HeroEventCard({
+  event,
+  portalSlug,
+  hideImages,
+  editorialBlurb,
+}: HeroEventCardProps) {
   const goingCount = event.going_count || 0;
   const interestedCount = event.interested_count || 0;
   const recommendationCount = event.recommendation_count || 0;
@@ -1038,8 +1518,14 @@ export const HeroEventCard = memo(function HeroEventCard({ event, portalSlug, hi
               data-accent="category"
               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono font-medium bg-accent text-[var(--void)]"
             >
-              <CategoryIcon type={event.category} size={12} className="!text-[var(--void)]" glow="none" />
-              {CATEGORY_CONFIG[event.category as CategoryType]?.label || event.category}
+              <CategoryIcon
+                type={event.category}
+                size={12}
+                className="!text-[var(--void)]"
+                glow="none"
+              />
+              {CATEGORY_CONFIG[event.category as CategoryType]?.label ||
+                event.category}
             </span>
           )}
         </div>
@@ -1078,8 +1564,18 @@ export const HeroEventCard = memo(function HeroEventCard({ event, portalSlug, hi
           )}
           {recommendationCount > 0 && (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--lavender)]/15 border border-[var(--lavender)]/30 font-mono text-xs font-medium text-[var(--lavender)]">
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+              <svg
+                className="w-3 h-3"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+                />
               </svg>
               {recommendationCount} rec&apos;d
             </span>
@@ -1099,7 +1595,10 @@ interface TrendingEventCardProps {
   portalSlug?: string;
 }
 
-export const TrendingEventCard = memo(function TrendingEventCard({ event, portalSlug }: TrendingEventCardProps) {
+export const TrendingEventCard = memo(function TrendingEventCard({
+  event,
+  portalSlug,
+}: TrendingEventCardProps) {
   const reflectionClass = getReflectionClass(event.category);
   const goingCount = event.going_count || 0;
   const accentMode = event.category ? "category" : "trending";
@@ -1113,7 +1612,9 @@ export const TrendingEventCard = memo(function TrendingEventCard({ event, portal
 
   return (
     <Link
-      href={portalSlug ? `/${portalSlug}?event=${event.id}` : `/events/${event.id}`}
+      href={
+        portalSlug ? `/${portalSlug}?event=${event.id}` : `/events/${event.id}`
+      }
       scroll={false}
       data-category={event.category || undefined}
       data-accent={accentMode}
@@ -1123,8 +1624,18 @@ export const TrendingEventCard = memo(function TrendingEventCard({ event, portal
         {/* Trending indicator */}
         <div className="flex-shrink-0 w-10 flex flex-col items-center justify-center">
           <div className="w-8 h-8 rounded-full bg-[var(--neon-magenta)]/20 flex items-center justify-center">
-            <svg className="w-4 h-4 text-[var(--neon-magenta)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+            <svg
+              className="w-4 h-4 text-[var(--neon-magenta)]"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+              />
             </svg>
           </div>
         </div>
@@ -1146,8 +1657,18 @@ export const TrendingEventCard = memo(function TrendingEventCard({ event, portal
           <div className="flex items-center gap-1.5 mt-2 flex-wrap">
             {goingCount > 0 && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)]/20 font-mono text-[0.6rem] font-medium text-[var(--coral)]">
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                <svg
+                  className="w-3 h-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
                 </svg>
                 {goingCount} going
               </span>

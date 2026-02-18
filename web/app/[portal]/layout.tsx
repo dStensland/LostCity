@@ -85,6 +85,32 @@ export default async function PortalLayout({ children, params }: Props) {
     <PortalProvider portal={portal}>
       <PortalTheme portal={portal} />
       <PortalThemeClient portal={portal} />
+      {isEmoryDemo && (
+        <style>{`
+          html, body { background-color: #f2f5fa !important; }
+          body::before { opacity: 0 !important; }
+          body::after { opacity: 0 !important; }
+          .ambient-glow { opacity: 0 !important; }
+          .rain-overlay { display: none !important; }
+          .cursor-glow { display: none !important; }
+
+          [data-vertical="hospital"] .animate-page-enter,
+          [data-vertical="hospital"] .animate-glitch-flicker,
+          [data-vertical="hospital"] .animate-flicker,
+          [data-vertical="hospital"] .animate-flicker-fast,
+          [data-vertical="hospital"] .animate-coral-shimmer,
+          [data-vertical="hospital"] .animate-coral-scan,
+          [data-vertical="hospital"] .animate-coral-pulse,
+          [data-vertical="hospital"] .animate-happening-now-pulse,
+          [data-vertical="hospital"] .animate-pulse-glow {
+            animation: none !important;
+          }
+
+          [data-vertical="hospital"] [class*="animate-"] {
+            animation: none !important;
+          }
+        `}</style>
+      )}
       {isMarketplace && (
         <style>{`
           body::before { opacity: 0 !important; }

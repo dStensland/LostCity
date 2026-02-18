@@ -41,6 +41,7 @@ export function TagVoteChip({
 
   const isConfirmed = userVote === "confirm";
   const totalConfirms = confirmCount;
+  const totalVotes = totalConfirms + denyCount;
 
   const handleClick = async () => {
     // Require auth for voting
@@ -116,7 +117,7 @@ export function TagVoteChip({
         ${isVoting ? "opacity-50 cursor-wait" : "cursor-pointer hover:scale-105"}
         disabled:cursor-not-allowed disabled:opacity-50
       `}
-      aria-label={`${isConfirmed ? "Remove vote from" : "Confirm"} ${tagLabel}`}
+      aria-label={`${isConfirmed ? "Remove vote from" : "Confirm"} ${tagLabel} (${totalVotes} votes)`}
       aria-pressed={isConfirmed}
     >
       {/* Checkmark icon when confirmed */}

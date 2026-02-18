@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @next/next/no-img-element */
 
 import { useMemo, useState } from "react";
 import type { HospitalAudienceMode } from "@/lib/hospital-modes";
@@ -171,7 +172,7 @@ export default function EmoryConciergeFoodExplorer({
     <section className="rounded-xl border border-[var(--twilight)] bg-white p-3 sm:p-4">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h3 className="text-[1.2rem] sm:text-[1.35rem] leading-[1.02] text-[var(--cream)]">What's nearby</h3>
+          <h3 className="text-[1.2rem] sm:text-[1.35rem] leading-[1.02] text-[var(--cream)]">What&apos;s nearby</h3>
           <p className="mt-1 text-xs sm:text-sm text-[var(--muted)]">
             Showing <strong>{activeCategoryLabel.toLowerCase()}</strong> around this campus.
             {activeCategoryIsFood ? ` ${activeMomentOption.label.toLowerCase()} · ${activePreferenceOption.label.toLowerCase()}.` : ""}

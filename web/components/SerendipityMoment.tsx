@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { formatTimeSplit } from "@/lib/formats";
-import { format, parseISO, isToday, isTomorrow } from "date-fns";
 import CategoryIcon from "./CategoryIcon";
 import { getSmartDateLabel } from "@/lib/card-utils";
 

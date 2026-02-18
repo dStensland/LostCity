@@ -2,14 +2,13 @@
 
 import Link from "next/link";
 import Image from "@/components/SmartImage";
-import { EXPLORE_THEME } from "@/lib/explore-tracks";
+import { EXPLORE_THEME, isUncertainArtefactImageSlug } from "@/lib/explore-tracks";
 import type { ExploreTrackVenue, ExploreVenueEvent } from "@/lib/explore-tracks";
 import { HIGHLIGHT_CONFIG, type HighlightType } from "@/lib/venue-highlights";
 
 interface ExploreVenueCardProps {
   venue: ExploreTrackVenue;
   portalSlug: string;
-  onUpvote: () => void;
   accent?: string;
   variant?: "featured" | "compact";
   highlight?: boolean;
@@ -18,7 +17,6 @@ interface ExploreVenueCardProps {
 export default function ExploreVenueCard({
   venue,
   portalSlug,
-  onUpvote,
   accent = EXPLORE_THEME.primary,
   variant = "compact",
   highlight = false,
@@ -28,7 +26,9 @@ export default function ExploreVenueCard({
   const tonightEvents = events.filter((e) => e.isTonight);
   const hasTonight = tonightEvents.length > 0;
   const eventCount = events.length;
+  const nextEvent = events[0] ?? null;
   const highlights = venue.highlights ?? [];
+  const imageUncertain = isUncertainArtefactImageSlug(venue.slug);
 
   const tags = buildVenueTags(venue);
 
@@ -41,6 +41,7 @@ export default function ExploreVenueCard({
         events={events}
         hasTonight={hasTonight}
         eventCount={eventCount}
+        imageUncertain={imageUncertain}
       />
     );
   }
@@ -68,6 +69,11 @@ export default function ExploreVenueCard({
             : highlight
               ? `2px solid ${accent}`
               : undefined,
+        boxShadow: hasTonight
+          ? "0 10px 24px rgba(224,58,62,0.2)"
+          : eventCount > 0
+            ? "0 8px 22px rgba(193,211,47,0.14)"
+            : "0 6px 16px rgba(0,0,0,0.26)",
       }}
     >
       {/* Image — 160px fixed height, venue name overlaid */}
@@ -127,6 +133,25 @@ export default function ExploreVenueCard({
           )}
         </div>
 
+        {nextEvent && (
+          <div className="absolute top-2.5 left-2.5 z-[3]">
+            <span
+              className="font-mono text-[9px] font-semibold px-2 py-[3px] rounded-md"
+              style={{
+                background: "rgba(0,0,0,0.7)",
+                color: hasTonight ? "#E03A3E" : "#C1D32F",
+                border: `1px solid ${hasTonight ? "rgba(224,58,62,0.45)" : "rgba(193,211,47,0.35)"}`,
+              }}
+            >
+              {hasTonight
+                ? "Now"
+                : nextEvent.startDate
+                  ? `${formatShortDay(nextEvent.startDate)}${nextEvent.startTime ? ` ${formatTime(nextEvent.startTime)}` : ""}`
+                  : "Upcoming"}
+            </span>
+          </div>
+        )}
+
         {/* Badges — top right */}
         <div className="absolute top-2.5 right-2.5 z-[3] flex flex-col gap-1 items-end">
           {hasTonight && (
@@ -143,6 +168,16 @@ export default function ExploreVenueCard({
               style={{ background: "#C1D32F", color: "var(--void)" }}
             >
               {eventCount} this week
+            </span>
+          )}
+          {imageUncertain && (
+            <span
+              className="font-mono text-[10px] font-semibold px-2 py-[3px] rounded-md"
+              style={{ background: "#22C55E", color: "#052e16" }}
+              title="Image needs manual verification"
+              aria-label="Image needs manual verification"
+            >
+              ?
             </span>
           )}
         </div>
@@ -244,6 +279,7 @@ function CompactVenueCard({
   events,
   hasTonight,
   eventCount,
+  imageUncertain,
 }: {
   venue: ExploreTrackVenue;
   portalSlug: string;
@@ -251,6 +287,7 @@ function CompactVenueCard({
   events: ExploreVenueEvent[];
   hasTonight: boolean;
   eventCount: number;
+  imageUncertain: boolean;
 }) {
   const nextEvent = events[0] ?? null;
   const highlights = venue.highlights ?? [];
@@ -313,7 +350,32 @@ function CompactVenueCard({
               {eventCount} this week
             </span>
           )}
+          {imageUncertain && (
+            <span
+              className="font-mono text-[10px] font-semibold px-1.5 py-0.5 rounded"
+              style={{ background: "#22C55E", color: "#052e16" }}
+              title="Image needs manual verification"
+              aria-label="Image needs manual verification"
+            >
+              ?
+            </span>
+          )}
         </div>
+
+        {nextEvent && (
+          <div className="absolute top-[6px] left-[6px] z-[3]">
+            <span
+              className="font-mono text-[8px] font-semibold px-1.5 py-0.5 rounded"
+              style={{
+                background: "rgba(0,0,0,0.62)",
+                color: hasTonight ? "#E03A3E" : "#C1D32F",
+                border: `1px solid ${hasTonight ? "rgba(224,58,62,0.45)" : "rgba(193,211,47,0.35)"}`,
+              }}
+            >
+              {hasTonight ? "Now" : "Next up"}
+            </span>
+          </div>
+        )}
 
         {/* Next event overlay on image */}
         {nextEvent && (

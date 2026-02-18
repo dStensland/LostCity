@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 
 const BOARD_TOKEN = "a061ee84-f6bf-3a78-bab6-f28a78ebc912";
@@ -14,12 +14,13 @@ declare global {
 export default function CannyWidget() {
   const [open, setOpen] = useState(false);
   const [sdkReady, setSdkReady] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
   const rendered = useRef(false);
   const scriptLoading = useRef(false);
-
-  // Wait for client mount before using createPortal
-  useEffect(() => setMounted(true), []);
 
   // Load Canny SDK only when user opens the panel
   const loadCannySdk = useCallback(() => {

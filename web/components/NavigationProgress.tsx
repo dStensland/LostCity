@@ -45,35 +45,72 @@ export default function NavigationProgress() {
   // Handle click interception for navigation start
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      const link = target.closest("a");
+      // Ignore modified clicks and prevented/default browser behaviors.
+      if (
+        e.defaultPrevented ||
+        e.button !== 0 ||
+        e.metaKey ||
+        e.ctrlKey ||
+        e.shiftKey ||
+        e.altKey
+      ) {
+        return;
+      }
+
+      const target = e.target as HTMLElement | null;
+      const link = target?.closest("a");
 
       if (link) {
-        const href = link.getAttribute("href");
-        // Only trigger for internal navigation links
-        if (href && href.startsWith("/") && !href.startsWith("//")) {
-          const currentUrl = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
-          if (href !== currentUrl && href !== pathname) {
-            // Start progress
-            if (timeoutRef.current) clearTimeout(timeoutRef.current);
-            setIsNavigating(true);
-            setProgress(0);
-
-            // Clear any existing intervals
-            if (intervalRef.current) clearInterval(intervalRef.current);
-
-            // Animate progress from 0 to ~90%
-            let currentProgress = 0;
-            intervalRef.current = setInterval(() => {
-              currentProgress += Math.random() * 15 + 5;
-              if (currentProgress >= 90) {
-                currentProgress = 90;
-                if (intervalRef.current) clearInterval(intervalRef.current);
-              }
-              setProgress(currentProgress);
-            }, 150);
-          }
+        if (
+          link.target === "_blank" ||
+          link.hasAttribute("download") ||
+          link.dataset.noProgress === "true"
+        ) {
+          return;
         }
+
+        const hrefAttr = link.getAttribute("href");
+        if (!hrefAttr || hrefAttr.startsWith("#") || hrefAttr.startsWith("mailto:") || hrefAttr.startsWith("tel:")) {
+          return;
+        }
+
+        const hrefUrl = new URL(hrefAttr, window.location.href);
+        if (hrefUrl.origin !== window.location.origin) return;
+
+        const currentUrl = new URL(window.location.href);
+
+        // Ignore hash-only changes in the current document.
+        if (
+          hrefUrl.pathname === currentUrl.pathname &&
+          hrefUrl.search === currentUrl.search &&
+          hrefUrl.hash !== currentUrl.hash
+        ) {
+          return;
+        }
+
+        const nextPath = `${hrefUrl.pathname}${hrefUrl.search}`;
+        const currentPath = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
+
+        if (nextPath === currentPath || nextPath === pathname) return;
+
+        // Start progress
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        setIsNavigating(true);
+        setProgress(0);
+
+        // Clear any existing intervals
+        if (intervalRef.current) clearInterval(intervalRef.current);
+
+        // Animate progress from 0 to ~90%
+        let currentProgress = 0;
+        intervalRef.current = setInterval(() => {
+          currentProgress += Math.random() * 15 + 5;
+          if (currentProgress >= 90) {
+            currentProgress = 90;
+            if (intervalRef.current) clearInterval(intervalRef.current);
+          }
+          setProgress(currentProgress);
+        }, 150);
       }
     };
 

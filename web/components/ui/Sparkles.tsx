@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 interface SparklesProps {
@@ -40,42 +40,55 @@ function generateSparkles(): Sparkle[] {
  * Portaled to body and centered on originRef.
  */
 export default function Sparkles({ isActive, duration = 700, originRef }: SparklesProps) {
-  const [state, setState] = useState<{
-    visible: boolean;
+  const [burst, setBurst] = useState<{
     sparkles: Sparkle[];
     origin: { x: number; y: number };
-  }>({ visible: false, sparkles: [], origin: { x: 0, y: 0 } });
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  } | null>(null);
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (hideTimerRef.current) {
+      clearTimeout(hideTimerRef.current);
+      hideTimerRef.current = null;
+    }
+
     if (!isActive) {
-      setState({ visible: false, sparkles: [], origin: { x: 0, y: 0 } });
-      return;
+      const raf = requestAnimationFrame(() => setBurst(null));
+      return () => cancelAnimationFrame(raf);
     }
 
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
-    let originX = window.innerWidth / 2;
-    let originY = window.innerHeight / 2;
-    if (originRef?.current) {
-      const rect = originRef.current.getBoundingClientRect();
-      originX = rect.left + rect.width / 2;
-      originY = rect.top + rect.height / 2;
-    }
+    const raf = requestAnimationFrame(() => {
+      let originX = window.innerWidth / 2;
+      let originY = window.innerHeight / 2;
+      if (originRef?.current) {
+        const rect = originRef.current.getBoundingClientRect();
+        originX = rect.left + rect.width / 2;
+        originY = rect.top + rect.height / 2;
+      }
 
-    const sparkles = generateSparkles();
-    setState({ visible: true, sparkles, origin: { x: originX, y: originY } });
+      setBurst({
+        sparkles: generateSparkles(),
+        origin: { x: originX, y: originY },
+      });
 
-    timerRef.current = setTimeout(() => {
-      setState({ visible: false, sparkles: [], origin: { x: 0, y: 0 } });
-    }, duration);
+      hideTimerRef.current = setTimeout(() => {
+        setBurst(null);
+      }, duration);
+    });
 
     return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
+      cancelAnimationFrame(raf);
+      if (hideTimerRef.current) {
+        clearTimeout(hideTimerRef.current);
+        hideTimerRef.current = null;
+      }
     };
   }, [isActive, duration, originRef]);
 
-  if (!state.visible || state.sparkles.length === 0) return null;
+  if (!burst || burst.sparkles.length === 0) return null;
   if (typeof document === "undefined") return null;
 
   const content = (
@@ -84,16 +97,16 @@ export default function Sparkles({ isActive, duration = 700, originRef }: Sparkl
       <div
         className="absolute w-8 h-8 rounded-full"
         style={{
-          left: state.origin.x,
-          top: state.origin.y,
+          left: burst.origin.x,
+          top: burst.origin.y,
           background: "radial-gradient(circle, var(--gold) 0%, transparent 70%)",
-          animation: "sparkle-flash 350ms ease-out forwards",
+          animation: `sparkle-flash ${Math.min(duration, 500)}ms ease-out forwards`,
         }}
       />
 
       {/* Star sparkles bursting outward */}
-      {state.sparkles.map((s) => (
-        <SparkleParticle key={s.id} sparkle={s} origin={state.origin} />
+      {burst.sparkles.map((s) => (
+        <SparkleParticle key={s.id} sparkle={s} origin={burst.origin} />
       ))}
     </div>
   );

@@ -1,7 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { PREFERENCE_CATEGORIES, getGenreDisplayLabel } from "@/lib/preferences";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
+import {
+  PREFERENCE_CATEGORIES,
+  PREFERENCE_NEEDS_ACCESSIBILITY,
+  PREFERENCE_NEEDS_DIETARY,
+  PREFERENCE_NEEDS_FAMILY,
+  getGenreDisplayLabel,
+} from "@/lib/preferences";
 
 const DEFAULT_CATEGORIES = ["music", "food_drink", "nightlife", "comedy", "art"];
 const MAX_GENRES_PER_CATEGORY = 8;
@@ -16,36 +23,117 @@ interface GenrePickerProps {
   onComplete: (genres: Record<string, string[]>, needs: { accessibility: string[]; dietary: string[]; family: string[] }) => void;
   onSkip: () => void;
   selectedCategories: string[];
+  portalCategoryFilter?: string[];
 }
 
-export function GenrePicker({ onComplete, onSkip, selectedCategories }: GenrePickerProps) {
+type AvailableFilterCategory = {
+  value: string;
+  label: string;
+  count: number;
+};
+
+export function GenrePicker({
+  onComplete,
+  onSkip,
+  selectedCategories,
+  portalCategoryFilter,
+}: GenrePickerProps) {
   const [selectedGenres, setSelectedGenres] = useState<Record<string, string[]>>({});
   const [genresByCategory, setGenresByCategory] = useState<Record<string, GenreOption[]>>({});
   const [loading, setLoading] = useState(true);
+  const [fallbackCategories, setFallbackCategories] = useState<string[]>([]);
   const [selectedNeeds, setSelectedNeeds] = useState<{
     accessibility: string[];
     dietary: string[];
     family: string[];
   }>({ accessibility: [], dietary: [], family: [] });
 
-  const categoriesToFetch =
-    selectedCategories.length > 0 ? selectedCategories : DEFAULT_CATEGORIES;
+  const categoriesToFetch = useMemo(() => {
+    if (selectedCategories.length > 0) return selectedCategories;
+    if (fallbackCategories.length > 0) return fallbackCategories;
+    return DEFAULT_CATEGORIES;
+  }, [fallbackCategories, selectedCategories]);
 
   useEffect(() => {
+    let cancelled = false;
+    if (selectedCategories.length > 0) return;
+
+    async function loadFallbackCategories() {
+      try {
+        const res = await fetch("/api/filters");
+        if (!res.ok) throw new Error("Failed to fetch filters");
+        const data = await res.json();
+        if (cancelled) return;
+
+        const categories = Array.isArray(data?.categories)
+          ? data.categories.filter(
+              (category: unknown): category is AvailableFilterCategory =>
+                !!category &&
+                typeof category === "object" &&
+                typeof (category as AvailableFilterCategory).value === "string" &&
+                typeof (category as AvailableFilterCategory).count === "number"
+            )
+          : [];
+
+        const ordered = categories
+          .slice()
+          .sort(
+            (a: AvailableFilterCategory, b: AvailableFilterCategory) =>
+              b.count - a.count
+          )
+          .map((category: AvailableFilterCategory) => category.value);
+
+        const limited = (portalCategoryFilter?.length
+          ? ordered.filter((category: string) =>
+              portalCategoryFilter.includes(category)
+            )
+          : ordered).slice(0, 8);
+
+        setFallbackCategories(limited.length > 0 ? limited : DEFAULT_CATEGORIES);
+      } catch (error) {
+        if (!cancelled) {
+          console.error("Failed to load fallback categories for onboarding", error);
+          setFallbackCategories(
+            portalCategoryFilter?.length
+              ? portalCategoryFilter.slice(0, 8)
+              : DEFAULT_CATEGORIES
+          );
+        }
+      }
+    }
+
+    loadFallbackCategories();
+    return () => {
+      cancelled = true;
+    };
+  }, [portalCategoryFilter, selectedCategories.length]);
+
+  useEffect(() => {
+    let cancelled = false;
     async function fetchGenres() {
+      setLoading(true);
       try {
         const res = await fetch(`/api/genres?categories=${categoriesToFetch.join(",")}`);
         const data = await res.json();
-        setGenresByCategory(data.genres || {});
+        if (!cancelled) {
+          setGenresByCategory(data.genres || {});
+        }
       } catch (err) {
-        console.error("Failed to fetch genres:", err);
+        if (!cancelled) {
+          console.error("Failed to fetch genres:", err);
+          setGenresByCategory({});
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     }
     fetchGenres();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [categoriesToFetch]);
 
   const toggleGenre = (category: string, genre: string) => {
     setSelectedGenres((prev) => {
@@ -54,8 +142,9 @@ export function GenrePicker({ onComplete, onSkip, selectedCategories }: GenrePic
         ? current.filter((g) => g !== genre)
         : [...current, genre];
       if (updated.length === 0) {
-        const { [category]: _, ...rest } = prev;
-        return rest;
+        const next = { ...prev };
+        delete next[category];
+        return next;
       }
       return { ...prev, [category]: updated };
     });
@@ -72,9 +161,35 @@ export function GenrePicker({ onComplete, onSkip, selectedCategories }: GenrePic
   };
 
   const totalSelected = Object.values(selectedGenres).reduce((sum, g) => sum + g.length, 0);
+  const totalNeedsSelected =
+    selectedNeeds.accessibility.length +
+    selectedNeeds.dietary.length +
+    selectedNeeds.family.length;
 
   const handleFinish = () => {
     onComplete(selectedGenres, selectedNeeds);
+  };
+
+  const getCategoryAccent = (category: string) =>
+    getCategoryColor(category === "museums" ? "museum" : category);
+
+  const hexToRgba = (hex: string, alpha: number) => {
+    const cleaned = hex.replace("#", "").trim();
+    const normalized =
+      cleaned.length === 3
+        ? cleaned
+            .split("")
+            .map((char) => char + char)
+            .join("")
+        : cleaned;
+    const int = Number.parseInt(normalized, 16);
+    if (!Number.isFinite(int) || normalized.length !== 6) {
+      return `rgba(255,107,122,${alpha})`;
+    }
+    const r = (int >> 16) & 255;
+    const g = (int >> 8) & 255;
+    const b = int & 255;
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   };
 
   // Get category config (emoji, label) from PREFERENCE_CATEGORIES
@@ -95,20 +210,23 @@ export function GenrePicker({ onComplete, onSkip, selectedCategories }: GenrePic
   );
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-120px)] px-4 py-8">
-      <div className="w-full max-w-lg animate-fadeIn">
+    <div className="px-4 py-8 sm:px-6">
+      <div className="mx-auto w-full max-w-4xl animate-fadeIn">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-2xl sm:text-3xl font-semibold text-[var(--cream)] mb-2">
+        <div className="mb-8 text-center">
+          <p className="mb-2 font-mono text-[0.65rem] uppercase tracking-[0.24em] text-[var(--soft)]">
+            Step 2 · Refine The Signal
+          </p>
+          <h1 className="mb-2 text-2xl font-semibold text-[var(--cream)] sm:text-3xl">
             Dial it in
           </h1>
-          <p className="text-[var(--soft)] text-sm">
-            Pick as many as you want — you can always change these later
+          <p className="text-sm text-[var(--soft)]">
+            Select sub-genres and needs to make recommendations sharper.
           </p>
         </div>
 
         {/* Genre sections */}
-        <div className="max-h-[50vh] overflow-y-auto space-y-6 mb-8 pr-1">
+        <div className="mb-8 max-h-[50vh] space-y-4 overflow-y-auto pr-1">
           {loading ? (
             // Skeleton loading state
             <>
@@ -131,14 +249,15 @@ export function GenrePicker({ onComplete, onSkip, selectedCategories }: GenrePic
             visibleCategories.map((category) => {
               const info = getCategoryInfo(category);
               const genres = getDisplayGenres(category);
+              const accentColor = getCategoryAccent(category);
               if (genres.length === 0) return null;
 
               return (
                 <div key={category}>
                   {/* Category header */}
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-base">{info?.emoji}</span>
-                    <span className="font-mono text-xs text-[var(--soft)] uppercase tracking-wider">
+                  <div className="mb-3 flex items-center gap-2">
+                    <CategoryIcon type={category} size={15} glow="subtle" />
+                    <span className="font-mono text-xs uppercase tracking-wider text-[var(--soft)]">
                       {info?.label || category}
                     </span>
                   </div>
@@ -147,15 +266,26 @@ export function GenrePicker({ onComplete, onSkip, selectedCategories }: GenrePic
                   <div className="flex flex-wrap gap-2">
                     {genres.map((g) => {
                       const isSelected = (selectedGenres[category] || []).includes(g.genre);
+                      const selectedStyle: CSSProperties = isSelected
+                        ? {
+                            borderColor: accentColor,
+                            background: `linear-gradient(145deg, ${hexToRgba(accentColor, 0.2)}, rgba(21,28,44,0.78))`,
+                            boxShadow: `0 0 12px ${hexToRgba(accentColor, 0.22)}`,
+                            "--genre-accent": accentColor,
+                          } as CSSProperties
+                        : ({
+                            "--genre-accent": accentColor,
+                          } as CSSProperties);
                       return (
                         <button
                           key={g.genre}
                           onClick={() => toggleGenre(category, g.genre)}
-                          className={`px-4 py-2 rounded-full border-2 font-mono text-sm transition-all ${
+                          className={`rounded-full border px-3 py-1.5 font-mono text-xs transition-all sm:text-sm ${
                             isSelected
-                              ? "border-[var(--coral)] bg-[var(--coral)]/10 text-[var(--cream)] animate-genre-select"
-                              : "border-[var(--twilight)] text-[var(--soft)] hover:border-[var(--coral)]/50 hover:text-[var(--cream)] hover:scale-105"
+                              ? "text-[var(--cream)]"
+                              : "border-[var(--twilight)] text-[var(--soft)] hover:border-[var(--genre-accent)] hover:text-[var(--cream)]"
                           }`}
+                          style={selectedStyle}
                         >
                           {getGenreDisplayLabel(g.genre)}
                         </button>
@@ -170,52 +300,88 @@ export function GenrePicker({ onComplete, onSkip, selectedCategories }: GenrePic
 
         {/* Needs section - compact toggles at bottom */}
         {!loading && (
-          <div className="border-t border-[var(--twilight)] pt-6 mt-6">
-            <div className="mb-3">
-              <p className="font-mono text-xs text-[var(--soft)] uppercase tracking-wider">
+          <div className="mb-8 rounded-2xl border border-[var(--twilight)]/45 bg-[var(--night)]/55 p-4 sm:p-5">
+            <div className="mb-4">
+              <p className="font-mono text-xs uppercase tracking-wider text-[var(--soft)]">
                 Anything we should know?
               </p>
-              <p className="text-xs text-[var(--muted)] mt-1">
+              <p className="mt-1 text-xs text-[var(--muted)]">
                 Help us show you accessible, inclusive spots
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              {/* Wheelchair access */}
-              <button
-                onClick={() => toggleNeed("accessibility", "wheelchair")}
-                className={`px-3 py-1.5 rounded-full border font-mono text-xs transition-all ${
-                  selectedNeeds.accessibility.includes("wheelchair")
-                    ? "border-[var(--neon-cyan)] bg-[var(--neon-cyan)]/10 text-[var(--cream)]"
-                    : "border-[var(--twilight)] text-[var(--soft)] hover:border-[var(--neon-cyan)]/50"
-                }`}
-              >
-                ♿ Wheelchair access
-              </button>
+            <div className="space-y-4">
+              <div>
+                <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.16em] text-[var(--muted)]">
+                  Accessibility
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {PREFERENCE_NEEDS_ACCESSIBILITY.map((need) => {
+                    const isSelected = selectedNeeds.accessibility.includes(need.value);
+                    return (
+                      <button
+                        key={need.value}
+                        onClick={() => toggleNeed("accessibility", need.value)}
+                        className={`rounded-full border px-3 py-1.5 font-mono text-xs transition-all ${
+                          isSelected
+                            ? "border-[var(--neon-cyan)] bg-[var(--neon-cyan)]/10 text-[var(--cream)]"
+                            : "border-[var(--twilight)] text-[var(--soft)] hover:border-[var(--neon-cyan)]/45"
+                        }`}
+                      >
+                        {need.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
-              {/* Dietary */}
-              <button
-                onClick={() => toggleNeed("dietary", "vegan")}
-                className={`px-3 py-1.5 rounded-full border font-mono text-xs transition-all ${
-                  selectedNeeds.dietary.includes("vegan")
-                    ? "border-[var(--neon-cyan)] bg-[var(--neon-cyan)]/10 text-[var(--cream)]"
-                    : "border-[var(--twilight)] text-[var(--soft)] hover:border-[var(--neon-cyan)]/50"
-                }`}
-              >
-                🌱 Vegan options
-              </button>
+              <div>
+                <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.16em] text-[var(--muted)]">
+                  Dietary
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {PREFERENCE_NEEDS_DIETARY.map((need) => {
+                    const isSelected = selectedNeeds.dietary.includes(need.value);
+                    return (
+                      <button
+                        key={need.value}
+                        onClick={() => toggleNeed("dietary", need.value)}
+                        className={`rounded-full border px-3 py-1.5 font-mono text-xs transition-all ${
+                          isSelected
+                            ? "border-[var(--neon-cyan)] bg-[var(--neon-cyan)]/10 text-[var(--cream)]"
+                            : "border-[var(--twilight)] text-[var(--soft)] hover:border-[var(--neon-cyan)]/45"
+                        }`}
+                      >
+                        {need.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
-              {/* Family */}
-              <button
-                onClick={() => toggleNeed("family", "kid-friendly")}
-                className={`px-3 py-1.5 rounded-full border font-mono text-xs transition-all ${
-                  selectedNeeds.family.includes("kid-friendly")
-                    ? "border-[var(--neon-cyan)] bg-[var(--neon-cyan)]/10 text-[var(--cream)]"
-                    : "border-[var(--twilight)] text-[var(--soft)] hover:border-[var(--neon-cyan)]/50"
-                }`}
-              >
-                👨‍👩‍👧 Family-friendly
-              </button>
+              <div>
+                <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.16em] text-[var(--muted)]">
+                  Family
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {PREFERENCE_NEEDS_FAMILY.map((need) => {
+                    const isSelected = selectedNeeds.family.includes(need.value);
+                    return (
+                      <button
+                        key={need.value}
+                        onClick={() => toggleNeed("family", need.value)}
+                        className={`rounded-full border px-3 py-1.5 font-mono text-xs transition-all ${
+                          isSelected
+                            ? "border-[var(--neon-cyan)] bg-[var(--neon-cyan)]/10 text-[var(--cream)]"
+                            : "border-[var(--twilight)] text-[var(--soft)] hover:border-[var(--neon-cyan)]/45"
+                        }`}
+                      >
+                        {need.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -224,20 +390,24 @@ export function GenrePicker({ onComplete, onSkip, selectedCategories }: GenrePic
         <div className="space-y-3">
           <button
             onClick={handleFinish}
-            className={`w-full py-3 px-6 rounded-xl font-mono text-sm transition-all ${
-              totalSelected > 0
+            className={`w-full rounded-xl px-6 py-3 font-mono text-sm transition-all ${
+              totalSelected > 0 || totalNeedsSelected > 0
                 ? "bg-[var(--coral)] text-[var(--void)] hover:bg-[var(--rose)] hover:scale-105"
                 : "bg-[var(--twilight)] text-[var(--cream)] hover:bg-[var(--twilight)]/80"
             }`}
           >
-            {totalSelected > 0 ? `Let's go! (${totalSelected})` : "Let's go!"}
+            {totalSelected > 0
+              ? `Let’s go (${totalSelected} picks)`
+              : totalNeedsSelected > 0
+              ? `Let’s go (${totalNeedsSelected} needs)`
+              : "Let’s go"}
           </button>
 
           <button
             onClick={onSkip}
-            className="w-full py-3 text-center font-mono text-sm text-[var(--soft)] hover:text-[var(--cream)] transition-colors"
+            className="w-full py-3 text-center font-mono text-sm text-[var(--soft)] transition-colors hover:text-[var(--cream)]"
           >
-            Just show me everything
+            Skip and show everything
           </button>
         </div>
       </div>

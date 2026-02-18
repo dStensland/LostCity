@@ -642,7 +642,7 @@ export default async function FilmPortalExperience({ portal }: FilmPortalExperie
         <header className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <p className="text-[0.62rem] uppercase tracking-[0.18em] text-[#95a8cb]">Now Showing</p>
-            <h2 className="mt-1 font-[var(--font-film-editorial)] text-3xl text-[#f7f8fd]">Tonight at Atlanta&apos;s indie screens</h2>
+            <h2 className="mt-1 font-[var(--font-film-editorial)] text-3xl text-[#f7f8fd]">Tonight across Atlanta screens</h2>
             <p className="mt-1 text-sm text-[#b8c8e4]">A quick look at what&apos;s on now. Full schedules live on dedicated pages.</p>
           </div>
           <Link href={`/${portal.slug}/showtimes`} className="inline-flex items-center gap-1 text-xs uppercase tracking-[0.14em] text-[#c9d9ff] hover:text-[#e1eaff]">
@@ -653,8 +653,8 @@ export default async function FilmPortalExperience({ portal }: FilmPortalExperie
 
         <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
           <article className="rounded-3xl border border-[#26324a] bg-[#0a111f] p-4 sm:p-5">
-            <p className="mb-2 text-[0.62rem] uppercase tracking-[0.16em] text-[#8ea4c8]">Indie theater preview</p>
-            <FilmShowtimeBoard portalSlug={portal.slug} mode="by-theater" compact hideHeader hideDateRail indieOnly />
+            <p className="mb-2 text-[0.62rem] uppercase tracking-[0.16em] text-[#8ea4c8]">Citywide theater preview</p>
+            <FilmShowtimeBoard portalSlug={portal.slug} mode="by-theater" compact hideHeader hideDateRail />
           </article>
 
           <aside className="space-y-3">

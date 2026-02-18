@@ -28,7 +28,6 @@ export default function ItineraryBuilder({
     deleteItinerary,
     addItem,
     removeItem,
-    reorderItems,
     getShareUrl,
   } = useItinerary(portal.id, portal.slug);
 

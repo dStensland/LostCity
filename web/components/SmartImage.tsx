@@ -32,8 +32,11 @@ function blurhashToDataUrl(hash: string, width = 32, height = 32): string {
 }
 
 export default function SmartImage(props: SmartImageProps) {
-  const { src, alt = "", blurhash, ...rest } = props;
+  const { src, alt = "", blurhash, unoptimized: unoptimizedProp, ...rest } = props;
   const resolvedSrc = getProxiedImageSrc(src);
+  const needsUnoptimizedProxy =
+    typeof resolvedSrc === "string" && resolvedSrc.startsWith("/api/image-proxy?url=");
+  const unoptimized = unoptimizedProp ?? needsUnoptimizedProxy;
 
   // Decode blurhash to data URL if provided
   const blurDataURL = useMemo(() => {
@@ -52,6 +55,7 @@ export default function SmartImage(props: SmartImageProps) {
       <Image
         src={resolvedSrc}
         alt={alt}
+        unoptimized={unoptimized}
         placeholder="blur"
         blurDataURL={blurDataURL}
         {...rest}
@@ -59,5 +63,5 @@ export default function SmartImage(props: SmartImageProps) {
     );
   }
 
-  return <Image src={resolvedSrc} alt={alt} {...rest} />;
+  return <Image src={resolvedSrc} alt={alt} unoptimized={unoptimized} {...rest} />;
 }

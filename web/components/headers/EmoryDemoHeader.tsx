@@ -38,6 +38,7 @@ function buildConciergeHref(portalSlug: string): string {
 
 function getActiveNav(pathname: string, searchParams: URLSearchParams, portalSlug: string): NavKey {
   if (pathname.startsWith(`/${portalSlug}/hospitals`)) return "concierge";
+  if (pathname.startsWith(`/${portalSlug}/community-hub`)) return "community_hub";
 
   const view = searchParams.get("view");
   if (view === "community") return "community_hub";
@@ -58,7 +59,7 @@ export default function EmoryDemoHeader({ portalSlug }: EmoryDemoHeaderProps) {
   const queryParams = new URLSearchParams(queryString);
 
   const hospitalHubHref = `/${portalSlug}`;
-  const communityHref = `/${portalSlug}?view=community`;
+  const communityHref = `/${portalSlug}/community-hub`;
   const hospitalsHref = `/${portalSlug}/hospitals`;
   const conciergeHref = buildConciergeHref(portalSlug);
 

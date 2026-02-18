@@ -40,17 +40,11 @@ export default function ConciergeShell({
   const [activePillar, setActivePillar] = useState<Pillar>(
     initialPillar || config.defaultPillar
   );
-  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingDismissed, setOnboardingDismissed] = useState(false);
   const { needsOnboarding, completeOnboarding } = usePortalPreferences(portal.id, portal.slug);
   const logoUrl = portal.branding?.logo_url as string | null | undefined;
   const cityName = portal.filters?.city || undefined;
-
-  // Show onboarding for first-time visitors
-  useEffect(() => {
-    if (needsOnboarding && !config.skipOnboarding) {
-      setShowOnboarding(true);
-    }
-  }, [needsOnboarding, config.skipOnboarding]);
+  const showOnboarding = needsOnboarding && !config.skipOnboarding && !onboardingDismissed;
 
   // Sync pillar to URL
   useEffect(() => {
@@ -82,7 +76,7 @@ export default function ConciergeShell({
   const handleOnboardingComplete = useCallback(
     (prefs: PortalPreferences) => {
       completeOnboarding(prefs);
-      setShowOnboarding(false);
+      setOnboardingDismissed(true);
     },
     [completeOnboarding]
   );
@@ -125,7 +119,6 @@ export default function ConciergeShell({
             <div role="tabpanel" id="pillar-panel-services">
               <ServicesPillar
                 data={pillarData.services}
-                portalSlug={portal.slug}
                 portalName={portal.name}
               />
             </div>
@@ -165,7 +158,7 @@ export default function ConciergeShell({
         <PortalOnboarding
           portalName={portal.name}
           onComplete={handleOnboardingComplete}
-          onDismiss={() => setShowOnboarding(false)}
+          onDismiss={() => setOnboardingDismissed(true)}
         />
       )}
     </div>

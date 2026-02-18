@@ -19,29 +19,21 @@ export function CelebrationToast({
   friendAvatar,
   onDismiss,
 }: CelebrationToastProps) {
-  const [show, setShow] = useState(false);
-  const [reducedMotion, setReducedMotion] = useState(false);
-
-  useEffect(() => {
-    setReducedMotion(
+  const [reducedMotion] = useState(
+    () =>
+      typeof window !== "undefined" &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    );
-  }, []);
+  );
 
   useEffect(() => {
-    if (!isActive) {
-      setShow(false);
-      return;
-    }
-    setShow(true);
+    if (!isActive) return;
     const timer = setTimeout(() => {
-      setShow(false);
       onDismiss();
     }, 4000);
     return () => clearTimeout(timer);
   }, [isActive, onDismiss]);
 
-  if (!show) return null;
+  if (!isActive) return null;
 
   return (
     <>
@@ -89,10 +81,7 @@ export function CelebrationToast({
           </p>
 
           <button
-            onClick={() => {
-              setShow(false);
-              onDismiss();
-            }}
+            onClick={onDismiss}
             className="mt-4 px-4 py-2 bg-[var(--coral)] text-[var(--void)] rounded-lg font-mono text-sm font-medium hover:bg-[var(--rose)] transition-colors"
           >
             Awesome!

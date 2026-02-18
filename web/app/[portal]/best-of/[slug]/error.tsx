@@ -7,6 +7,8 @@ export default function BestOfLeaderboardError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  void error;
+
   return (
     <div className="min-h-[50vh] flex items-center justify-center">
       <div className="text-center max-w-sm">

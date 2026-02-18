@@ -13,8 +13,12 @@ import {
   hospitalBodyFont,
   hospitalDisplayFont,
   isEmoryDemoPortal,
+  HOSPITAL_CARD_IMAGE_BY_SLUG,
+  HOSPITAL_CARD_FALLBACK_IMAGE,
 } from "@/lib/hospital-art";
 import HospitalTrackedLink from "@/app/[portal]/_components/hospital/HospitalTrackedLink";
+import EmoryMobileBottomNav from "@/app/[portal]/_components/hospital/EmoryMobileBottomNav";
+import { Suspense } from "react";
 
 type Props = {
   params: Promise<{ portal: string }>;
@@ -32,7 +36,7 @@ export default async function HospitalDirectoryPage({ params, searchParams }: Pr
 
   const mode = normalizeHospitalMode(searchParamsData.mode);
   const hospitals = await getPortalHospitalLocations(portal.id);
-  const communityHref = `/${portal.slug}?view=community`;
+  const communityHref = `/${portal.slug}/community-hub`;
 
   return (
     <div className={`min-h-screen ${isEmoryBrand ? "bg-[#f2f5fa] text-[#002f6c]" : ""}`}>
@@ -66,8 +70,12 @@ export default async function HospitalDirectoryPage({ params, searchParams }: Pr
             {hospitals.map((hospital) => {
               const conciergeHref = `/${portal.slug}/hospitals/${hospital.slug}`;
               const wayfindingHref = getHospitalWayfindingHref(hospital);
+              const cardImage = HOSPITAL_CARD_IMAGE_BY_SLUG[hospital.slug] || HOSPITAL_CARD_FALLBACK_IMAGE;
               return (
-                <article key={hospital.id} className="emory-panel p-4 sm:p-5">
+                <article key={hospital.id} className="emory-panel overflow-hidden">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={cardImage} alt={hospital.short_name || hospital.name} className="h-44 w-full object-cover" />
+                  <div className="p-4 sm:p-5">
                   <h2 className={`text-[1.55rem] leading-[0.98] text-[var(--cream)] ${hospitalDisplayFont.className}`}>
                     {hospital.short_name || hospital.name}
                   </h2>
@@ -136,6 +144,7 @@ export default async function HospitalDirectoryPage({ params, searchParams }: Pr
                       </HospitalTrackedLink>
                     )}
                   </div>
+                  </div>
                 </article>
               );
             })}
@@ -165,6 +174,14 @@ export default async function HospitalDirectoryPage({ params, searchParams }: Pr
           </section>
         </div>
       </main>
+      {isEmoryBrand && (
+        <>
+          <Suspense fallback={null}>
+            <EmoryMobileBottomNav portalSlug={portal.slug} />
+          </Suspense>
+          <div className="lg:hidden h-16" />
+        </>
+      )}
     </div>
   );
 }

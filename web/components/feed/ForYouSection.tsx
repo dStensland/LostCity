@@ -61,7 +61,7 @@ export async function ForYouSection({ portalSlug }: { portalSlug: string }) {
     .from("events")
     .select(`
       *,
-      venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max, venue_type, vibes)
+      venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max, venue_type, location_designator, vibes)
     `)
     .gte("start_date", today)
     .is("canonical_event_id", null)

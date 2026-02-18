@@ -18,6 +18,7 @@ type FilmVenue = {
 type FilmItem = {
   title: string;
   series_id: string | null;
+  series_slug: string | null;
   image_url: string | null;
   theaters: FilmVenue[];
 };
@@ -25,6 +26,7 @@ type FilmItem = {
 type TheaterFilm = {
   title: string;
   series_id: string | null;
+  series_slug: string | null;
   image_url: string | null;
   times: string[];
 };
@@ -122,6 +124,7 @@ export default function FilmShowtimeBoard({
     setLoading(true);
 
     const params = new URLSearchParams({ mode, meta: "true" });
+    params.set("include_chains", "true");
     if (date) params.set("date", date);
 
     try {
@@ -278,6 +281,7 @@ export default function FilmShowtimeBoard({
           <div className="grid gap-3 sm:grid-cols-2">
             {visibleFilms.map((film, index) => {
               const firstVenue = film.theaters[0];
+              const hasMultipleVenues = film.theaters.length > 1;
               return (
                 <article key={film.series_id || film.title} className="rounded-xl border border-[#30405f] bg-[#10182b] p-3">
                   <div className="flex gap-3">
@@ -308,6 +312,19 @@ export default function FilmShowtimeBoard({
                         <Clock size={11} />
                         {(firstVenue?.times || []).slice(0, 3).map(formatTimeLabel).join(" • ") || "Times pending"}
                       </p>
+                      {hasMultipleVenues && (
+                        <p className="mt-1 text-[0.66rem] uppercase tracking-[0.12em] text-[#9fb0cf]">
+                          {film.theaters.length} venues today
+                        </p>
+                      )}
+                      {hasMultipleVenues && film.series_slug && (
+                        <Link
+                          href={`/${portalSlug}/series/${film.series_slug}`}
+                          className="mt-2 inline-flex text-[0.66rem] uppercase tracking-[0.12em] text-[#c9d9ff] hover:text-[#e1eaff]"
+                        >
+                          Open series page
+                        </Link>
+                      )}
                     </div>
                   </div>
                 </article>
@@ -336,7 +353,13 @@ export default function FilmShowtimeBoard({
               <div className="mt-2 space-y-1.5">
                 {venue.films.slice(0, compact ? 2 : 4).map((film) => (
                   <p key={`${venue.venue_id}-${film.title}`} className="text-[0.72rem] text-[#d7e1f6]">
-                    <span className="font-medium">{film.title}</span>
+                    {film.series_slug ? (
+                      <Link href={`/${portalSlug}/series/${film.series_slug}`} className="font-medium hover:text-[#eef3ff]">
+                        {film.title}
+                      </Link>
+                    ) : (
+                      <span className="font-medium">{film.title}</span>
+                    )}
                     <span className="text-[#9fb0cf]"> • {film.times.slice(0, 3).map(formatTimeLabel).join(" • ") || "Times pending"}</span>
                   </p>
                 ))}

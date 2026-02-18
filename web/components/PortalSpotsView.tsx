@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState, useMemo, useCallback, type CSSProperties } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import CategoryIcon, { getCategoryColor } from "./CategoryIcon";
 import CategorySkeleton from "./CategorySkeleton";
 import LazyImage from "./LazyImage";
@@ -22,6 +23,7 @@ type Spot = {
   address: string | null;
   neighborhood: string | null;
   venue_type: string | null;
+  location_designator?: "standard" | "private_after_signup" | "virtual" | "recovery_meeting" | null;
   image_url?: string | null;
   event_count?: number;
   price_level?: number | null;
@@ -45,6 +47,37 @@ type FilterState = {
   search: string;
   withEvents: boolean;
 };
+
+const DEFAULT_FILTERS: FilterState = {
+  openNow: false,
+  priceLevel: [],
+  venueTypes: [],
+  neighborhoods: [],
+  vibes: [],
+  search: "",
+  withEvents: false,
+};
+
+function parseFilterStateFromQuery(query: string): FilterState {
+  const params = new URLSearchParams(query);
+  const splitCsv = (value: string | null) =>
+    value
+      ?.split(",")
+      .map((part) => part.trim())
+      .filter(Boolean) || [];
+
+  return {
+    openNow: params.get("open_now") === "true",
+    priceLevel: splitCsv(params.get("price_level"))
+      .map((value) => Number(value))
+      .filter((value) => Number.isFinite(value)),
+    venueTypes: splitCsv(params.get("venue_type")),
+    neighborhoods: splitCsv(params.get("neighborhoods") || params.get("neighborhood")),
+    vibes: splitCsv(params.get("vibes")),
+    search: params.get("search") || "",
+    withEvents: params.get("with_events") === "true",
+  };
+}
 
 // Quick-access vibes for the filter bar — high-value discovery attributes
 const QUICK_VIBES = [
@@ -141,6 +174,11 @@ interface Props {
 }
 
 const FEATURED_EVENT_THRESHOLD = 5;
+const LOCATION_DESIGNATOR_LABELS: Record<string, string> = {
+  private_after_signup: "Location after RSVP",
+  virtual: "Virtual",
+  recovery_meeting: "Recovery meeting location",
+};
 
 // Spot card component
 function SpotCard({ spot, portalSlug }: { spot: Spot; portalSlug: string }) {
@@ -149,6 +187,8 @@ function SpotCard({ spot, portalSlug }: { spot: Spot; portalSlug: string }) {
   const isFeatured = (spot.event_count ?? 0) >= FEATURED_EVENT_THRESHOLD;
   const categoryKey = spot.venue_type || "other";
   const accentColor = getCategoryColor(categoryKey);
+  const locationDesignator = spot.location_designator || "standard";
+  const locationLabel = LOCATION_DESIGNATOR_LABELS[locationDesignator];
 
   return (
     <Link
@@ -210,6 +250,11 @@ function SpotCard({ spot, portalSlug }: { spot: Spot; portalSlug: string }) {
                 {isFeatured && (
                   <span className="inline-flex flex-shrink-0 px-1.5 py-0.5 rounded font-mono text-[0.5rem] font-medium uppercase bg-accent-25 text-accent border border-accent-40">
                     Hot
+                  </span>
+                )}
+                {locationLabel && (
+                  <span className="inline-flex flex-shrink-0 px-1.5 py-0.5 rounded font-mono text-[0.5rem] font-medium uppercase bg-[var(--twilight)]/65 text-[var(--soft)] border border-[var(--twilight)]">
+                    {locationLabel}
                   </span>
                 )}
               </div>
@@ -574,7 +619,7 @@ function FilterDeck({
         {/* Clear all */}
         {hasActiveFilters && (
           <button
-            onClick={() => setFilters({ openNow: false, priceLevel: [], venueTypes: [], neighborhoods: [], vibes: [], search: "", withEvents: false })}
+            onClick={() => setFilters(DEFAULT_FILTERS)}
             className="font-mono text-[0.65rem] text-[var(--coral)] hover:text-[var(--rose)] transition-colors active:scale-95"
           >
             Clear
@@ -586,22 +631,20 @@ function FilterDeck({
 }
 
 export default function PortalSpotsView({ portalId, portalSlug, isExclusive = false }: Props) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialFilters = useMemo(
+    () => parseFilterStateFromQuery(searchParams?.toString() || ""),
+    [searchParams]
+  );
   const [spots, setSpots] = useState<Spot[]>([]);
   const [loading, setLoading] = useState(true);
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState(initialFilters.search);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [sortBy, setSortBy] = useState<SortOption>("category");
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(["music_venue", "bar", "restaurant"]));
   const [meta, setMeta] = useState<{ openCount: number; neighborhoods: string[] }>({ openCount: 0, neighborhoods: [] });
-  const [filters, setFilters] = useState<FilterState>({
-    openNow: false,
-    priceLevel: [],
-    venueTypes: [],
-    neighborhoods: [],
-    vibes: [],
-    search: "",
-    withEvents: false,
-  });
+  const [filters, setFilters] = useState<FilterState>(initialFilters);
 
   const toggleCategory = (category: string) => {
     setExpandedCategories(prev => {
@@ -662,6 +705,41 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
 
     fetchSpots();
   }, [buildQueryParams]);
+
+  // Share destinations list filters with map mode via URL params.
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams?.toString() || "");
+    const setOrDelete = (key: string, value: string | null) => {
+      if (value && value.length > 0) params.set(key, value);
+      else params.delete(key);
+    };
+
+    setOrDelete("open_now", filters.openNow ? "true" : null);
+    setOrDelete("with_events", filters.withEvents ? "true" : null);
+    setOrDelete("price_level", filters.priceLevel.length > 0 ? filters.priceLevel.join(",") : null);
+    setOrDelete("venue_type", filters.venueTypes.length > 0 ? filters.venueTypes.join(",") : null);
+    setOrDelete("neighborhoods", filters.neighborhoods.length > 0 ? filters.neighborhoods.join(",") : null);
+    params.delete("neighborhood");
+    setOrDelete("vibes", filters.vibes.length > 0 ? filters.vibes.join(",") : null);
+    setOrDelete("search", debouncedSearch || null);
+
+    const next = params.toString();
+    const current = searchParams?.toString() || "";
+    if (next !== current) {
+      router.replace(`/${portalSlug}?${next}`, { scroll: false });
+    }
+  }, [
+    debouncedSearch,
+    filters.neighborhoods,
+    filters.openNow,
+    filters.priceLevel,
+    filters.venueTypes,
+    filters.vibes,
+    filters.withEvents,
+    portalSlug,
+    router,
+    searchParams,
+  ]);
 
   // Sort spots
   const sortedSpots = useMemo(() => {
@@ -794,7 +872,7 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
           <p className="text-[var(--cream)] text-lg font-medium mb-1">No destinations found</p>
           <p className="text-[var(--muted)] text-sm mb-4">Try adjusting your filters</p>
           <button
-            onClick={() => setFilters({ openNow: false, priceLevel: [], venueTypes: [], neighborhoods: [], vibes: [], search: "", withEvents: false })}
+            onClick={() => setFilters(DEFAULT_FILTERS)}
             className="btn-primary btn-md"
           >
             Clear filters

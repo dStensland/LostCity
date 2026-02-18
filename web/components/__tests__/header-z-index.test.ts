@@ -127,4 +127,15 @@ describe("Header z-index stacking", () => {
     expect(dropdownZ, "NotificationDropdown must have a z-index class").toBeDefined();
     expect(parseZ(dropdownZ!.className)).toBeGreaterThanOrEqual(200);
   });
+
+  it("StandardHeader action container must not use inline stacking-context styles", () => {
+    const source = readComponent("headers/StandardHeader.tsx");
+    const actionContainer = source.match(/<div[^>]*className="[^"]*portal-feed-actions[^"]*"[^>]*>/s);
+
+    expect(actionContainer, "Could not find portal-feed-actions container in StandardHeader").toBeTruthy();
+    expect(
+      actionContainer![0],
+      "portal-feed-actions must not set filter/transform/backdropFilter/perspective because it traps dropdown z-index"
+    ).not.toMatch(/\bstyle=\{\{[^}]*\b(filter|transform|backdropFilter|perspective)\b/i);
+  });
 });

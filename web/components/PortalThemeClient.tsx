@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect } from "react";
 import type { Portal, PortalBranding } from "@/lib/portal-context";
 import { applyPreset } from "@/lib/apply-preset";
 
 interface PortalThemeClientProps {
   portal: Portal;
 }
+
+const useIsomorphicLayoutEffect =
+  typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 export default function PortalThemeClient({ portal }: PortalThemeClientProps) {
   const branding = portal.branding || {};
@@ -80,7 +83,7 @@ export default function PortalThemeClient({ portal }: PortalThemeClientProps) {
   ]);
 
   // Set data attributes on body element for component style targeting
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     const body = document.body;
 
     // Set card style

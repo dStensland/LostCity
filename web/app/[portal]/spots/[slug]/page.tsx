@@ -138,12 +138,6 @@ export default async function PortalSpotPage({ params }: Props) {
   const spotTypeColor = getSpotTypeColor(spot.venue_type);
   const spotTypeAccentClass = createCssVarClass("--accent-color", spotTypeColor, "spot-type");
   const priceDisplay = formatPriceLevel(spot.price_level);
-  const claimHref = `/claim?${new URLSearchParams({
-    type: "venue",
-    id: spot.id.toString(),
-    name: spot.name,
-    return: `/${activePortalSlug}/spots/${spot.slug}`,
-  }).toString()}`;
 
   // Generate Schema.org LocalBusiness JSON-LD
   const schema = {

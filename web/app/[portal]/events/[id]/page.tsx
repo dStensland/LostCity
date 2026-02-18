@@ -101,7 +101,25 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 type EventWithOrganization = NonNullable<Awaited<ReturnType<typeof getEventById>>>;
 
+function getLocationDesignatorLabel(
+  designator:
+    | "standard"
+    | "private_after_signup"
+    | "virtual"
+    | "recovery_meeting"
+    | null
+    | undefined
+): string | null {
+  if (!designator || designator === "standard") return null;
+  if (designator === "private_after_signup") return "Location after RSVP";
+  if (designator === "virtual") return "Virtual event";
+  if (designator === "recovery_meeting") return "Recovery meeting";
+  return null;
+}
+
 function generateEventSchema(event: EventWithOrganization) {
+  const locationDesignator = event.venue?.location_designator || "standard";
+  const isVirtualLocation = locationDesignator === "virtual";
   const startDateTime = event.start_time
     ? `${event.start_date}T${event.start_time}:00`
     : event.start_date;
@@ -112,7 +130,9 @@ function generateEventSchema(event: EventWithOrganization) {
     name: event.title,
     startDate: startDateTime,
     eventStatus: "https://schema.org/EventScheduled",
-    eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+    eventAttendanceMode: isVirtualLocation
+      ? "https://schema.org/OnlineEventAttendanceMode"
+      : "https://schema.org/OfflineEventAttendanceMode",
   };
 
   // End date (Google wants this)
@@ -137,13 +157,26 @@ function generateEventSchema(event: EventWithOrganization) {
     schema.image = [event.image_url];
   }
 
-  if (event.venue) {
+  if (isVirtualLocation) {
+    const virtualUrl = event.ticket_url || event.source_url;
+    schema.location = virtualUrl
+      ? {
+          "@type": "VirtualLocation",
+          url: virtualUrl,
+        }
+      : {
+          "@type": "VirtualLocation",
+          name: "Online event",
+        };
+  } else if (event.venue) {
     schema.location = {
       "@type": "Place",
       name: event.venue.name,
       address: {
         "@type": "PostalAddress",
-        streetAddress: event.venue.address,
+        ...(locationDesignator === "private_after_signup"
+          ? {}
+          : { streetAddress: event.venue.address }),
         addressLocality: event.venue.city,
         addressRegion: event.venue.state,
         addressCountry: "US",
@@ -367,6 +400,11 @@ export default async function PortalEventPage({ params }: Props) {
           return `${time} ${period}`;
         })()
       : "Time TBA";
+  const locationDesignator = event.venue?.location_designator || "standard";
+  const locationDesignatorLabel = getLocationDesignatorLabel(locationDesignator);
+  const isVirtualLocation = locationDesignator === "virtual";
+  const isPrivateLocation = locationDesignator === "private_after_signup";
+  const showLocationSection = Boolean(event.venue);
 
   return (
     <>
@@ -500,18 +538,29 @@ export default async function PortalEventPage({ params }: Props) {
             )}
 
             {/* Location */}
-            {event.venue && event.venue.address && (
+            {showLocationSection && event.venue && (
               <>
                 <SectionHeader title="Location" />
                 <div className="mb-6">
-                  <div className="flex items-center justify-between mb-3">
-                    <DirectionsDropdown
-                      venueName={event.venue.name}
-                      address={event.venue.address}
-                      city={event.venue.city}
-                      state={event.venue.state}
-                    />
-                  </div>
+                  {locationDesignatorLabel && (
+                    <span className="inline-flex mb-3 items-center px-2.5 py-1 rounded-full border border-[var(--twilight)] bg-[var(--twilight)]/45 font-mono text-[0.62rem] uppercase tracking-[0.1em] text-[var(--soft)]">
+                      {locationDesignatorLabel}
+                    </span>
+                  )}
+
+                  {!isVirtualLocation &&
+                    !isPrivateLocation &&
+                    event.venue.address && (
+                      <div className="flex items-center justify-between mb-3">
+                        <DirectionsDropdown
+                          venueName={event.venue.name}
+                          address={event.venue.address}
+                          city={event.venue.city}
+                          state={event.venue.state}
+                        />
+                      </div>
+                    )}
+
                   <Link
                     href={`/${activePortalSlug}?venue=${event.venue.slug}`}
                     scroll={false}
@@ -526,16 +575,41 @@ export default async function PortalEventPage({ params }: Props) {
                       </svg>
                       <br />
                       <span className="text-sm text-[var(--muted)]">
-                        {event.venue.address} · {event.venue.city}, {event.venue.state}
+                        {isVirtualLocation
+                          ? "Online event"
+                          : isPrivateLocation
+                            ? `Exact location shared after RSVP${event.venue.city ? ` · ${event.venue.city}, ${event.venue.state}` : ""}`
+                            : event.venue.address
+                              ? `${event.venue.address} · ${event.venue.city}, ${event.venue.state}`
+                              : `${event.venue.city}, ${event.venue.state}`}
                       </span>
                     </p>
 
                     <VenueVibes vibes={event.venue.vibes} className="mt-3" />
                   </Link>
 
-                  <div className="mt-3">
-                    <VenueTagList venueId={event.venue.id} />
-                  </div>
+                  {isVirtualLocation && (event.ticket_url || event.source_url) && (
+                    <div className="mt-3">
+                      <a
+                        href={event.ticket_url || event.source_url || "#"}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-[var(--twilight)] bg-[var(--dusk)]/70 text-[var(--cream)] text-sm hover:border-[var(--soft)] transition-colors"
+                      >
+                        Open join link
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 3h7v7m0-7L10 14" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10v8a1 1 0 001 1h8" />
+                        </svg>
+                      </a>
+                    </div>
+                  )}
+
+                  {!isVirtualLocation && !isPrivateLocation && (
+                    <div className="mt-3">
+                      <VenueTagList venueId={event.venue.id} />
+                    </div>
+                  )}
                 </div>
               </>
             )}

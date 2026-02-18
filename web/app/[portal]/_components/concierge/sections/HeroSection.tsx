@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @next/next/no-img-element */
 
 import type { QuickAction } from "@/lib/concierge/concierge-types";
 import { getProxiedImageSrc } from "@/lib/image-proxy";

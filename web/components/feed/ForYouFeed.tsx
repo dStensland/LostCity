@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useMemo, useCallback, type CSSProperties } from "react";
+import { useState, useMemo, type CSSProperties } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import EventCard from "@/components/EventCard";
-import { getLocalDateString, convertFriendsGoing, type FriendGoing } from "@/lib/formats";
+import { getLocalDateString, convertFriendsGoing } from "@/lib/formats";
 import type { FeedEvent } from "@/lib/hooks/useForYouEvents";
 import SeriesCard from "@/components/SeriesCard";
 import FestivalCard from "@/components/FestivalCard";
@@ -431,10 +431,13 @@ export default function ForYouFeed({ portalSlug }: ForYouFeedProps) {
     enabled: !feedData?.preferences, // Only run if feed doesn't include preferences
   });
 
-  const events = feedData?.events || [];
+  const events = useMemo(() => feedData?.events ?? [], [feedData?.events]);
   const hasPreferences = feedData?.hasPreferences || false;
   // Use consolidated trending or fallback to standalone
-  const trendingEvents = feedData?.trending || trendingFallbackData?.events || [];
+  const trendingEvents = useMemo(
+    () => feedData?.trending ?? trendingFallbackData?.events ?? [],
+    [feedData?.trending, trendingFallbackData?.events]
+  );
   // Use consolidated preferences or fallback to standalone
   const preferences = feedData?.preferences || preferencesFallbackData;
   const loading = feedLoading;

@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import FeedShell from "@/components/feed/FeedShell";
 import CuratedContent from "@/components/feed/CuratedContent";
 import type { Portal } from "@/lib/portal-context";
@@ -15,10 +16,14 @@ import {
   hospitalBodyFont,
   hospitalDisplayFont,
   isEmoryDemoPortal,
+  HOSPITAL_CARD_IMAGE_BY_SLUG,
+  HOSPITAL_CARD_FALLBACK_IMAGE,
+  getEventFallbackImage,
 } from "@/lib/hospital-art";
 import HospitalTrackedLink from "@/app/[portal]/_components/hospital/HospitalTrackedLink";
 import type { CSSProperties } from "react";
 import { getEmoryFederationShowcase } from "@/lib/emory-federation-showcase";
+import { getSupportPolicyCounts } from "@/lib/support-source-policy";
 
 type FeedTab = "curated" | "explore" | "foryou";
 
@@ -38,19 +43,6 @@ type HospitalCardModel = {
 };
 
 const HERO_IMAGE = "https://images.unsplash.com/photo-1505751172876-fa1923c5c528?auto=format&fit=crop&w=1400&q=80";
-const HOSPITAL_CARD_IMAGE_BY_SLUG: Record<string, string> = {
-  "emory-university-hospital": "https://images.unsplash.com/photo-1576765608535-5f04d1e3f289?auto=format&fit=crop&w=1200&q=80",
-  "emory-saint-josephs-hospital": "https://images.unsplash.com/photo-1586773860418-d37222d8fce3?auto=format&fit=crop&w=1200&q=80",
-  "emory-johns-creek-hospital": "https://images.unsplash.com/photo-1551076805-e1869033e561?auto=format&fit=crop&w=1200&q=80",
-  "emory-university-hospital-midtown": "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=1200&q=80",
-};
-const HOSPITAL_CARD_FALLBACK_IMAGE = "https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=1200&q=80";
-const COMMUNITY_FALLBACK_IMAGE = "https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=900&q=80";
-const COMMUNITY_FALLBACK_IMAGES = [
-  "https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=900&q=80",
-  "https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=900&q=80",
-  "https://images.unsplash.com/photo-1515169067868-5387ec356754?auto=format&fit=crop&w=900&q=80",
-];
 
 function appendQueryParams(href: string, entries: Record<string, string>): string {
   const [path, query = ""] = href.split("?");
@@ -139,7 +131,9 @@ export default async function HospitalPortalExperience({
     mode,
   });
 
-  const communityHref = `/${portal.slug}?view=community`;
+  const supportCounts = getSupportPolicyCounts();
+
+  const communityHref = `/${portal.slug}/community-hub`;
   const directoryHref = `/${portal.slug}/hospitals`;
 
   const emergencyHref = primaryHospital?.emergency_phone
@@ -153,11 +147,14 @@ export default async function HospitalPortalExperience({
   const billingHref = resourceHref(primaryHospital, directoryHref, ["billing_url", "insurance_url", "financial_help_url"]);
   const languageHref = resourceHref(primaryHospital, directoryHref, ["language_support_url", "accessibility_url", "interpreter_url"]);
 
+  const foodSupportOrgCount = supportCounts.trackCounts.food_support || 0;
+
   const categoryCards = [
     {
       id: "support-groups",
-      label: "Support groups and orgs",
-      count: showcase.counts.organizations,
+      label: "Community organizations",
+      count: supportCounts.totalOrganizations,
+      countLabel: `${supportCounts.totalOrganizations}+ organizations`,
       href: appendQueryParams(communityHref, {
         community_hub_tab: "organizations",
         community_hub_filter: "community_support",
@@ -169,6 +166,7 @@ export default async function HospitalPortalExperience({
       id: "health-events",
       label: "Health events this week",
       count: showcase.counts.events,
+      countLabel: null,
       href: appendQueryParams(communityHref, {
         community_hub_tab: "events",
         community_hub_filter: "all",
@@ -180,6 +178,7 @@ export default async function HospitalPortalExperience({
       id: "fitness",
       label: "Fitness and movement",
       count: Math.max(1, Math.floor(showcase.counts.events * 0.28)),
+      countLabel: null,
       href: appendQueryParams(communityHref, {
         community_hub_tab: "events",
         community_hub_filter: "fitness",
@@ -190,7 +189,8 @@ export default async function HospitalPortalExperience({
     {
       id: "healthy-eating",
       label: "Healthy eating resources",
-      count: Math.max(1, Math.floor(showcase.counts.venues * 0.45)),
+      count: foodSupportOrgCount,
+      countLabel: `${foodSupportOrgCount} organizations`,
       href: appendQueryParams(communityHref, {
         community_hub_tab: "venues",
         community_hub_filter: "healthy_eating",
@@ -213,7 +213,8 @@ export default async function HospitalPortalExperience({
     <>
       <style>{EMORY_THEME_CSS}</style>
 
-      <div className={`${hospitalBodyFont.className} ${EMORY_THEME_SCOPE_CLASS} py-6 space-y-5`}>
+      <div className={`${hospitalBodyFont.className} ${EMORY_THEME_SCOPE_CLASS} py-6 pb-20 lg:pb-6 space-y-5`}>
+        {/* 1. Hero */}
         <section className="emory-panel p-4 sm:p-5">
           <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-4">
             <div>
@@ -278,8 +279,7 @@ export default async function HospitalPortalExperience({
 
               <div className="mt-3 flex flex-wrap gap-1.5">
                 <span className="emory-chip">{showcase.counts.events} health events this week</span>
-                <span className="emory-chip">{showcase.counts.organizations} support groups and orgs</span>
-                <span className="emory-chip">{showcase.counts.venues} nearby options</span>
+                <span className="emory-chip">{supportCounts.totalOrganizations}+ community organizations</span>
               </div>
             </div>
 
@@ -287,7 +287,7 @@ export default async function HospitalPortalExperience({
               className="emory-photo-hero min-h-[240px] sm:min-h-[290px]"
               style={{ "--hero-image": `url("${HERO_IMAGE}")` } as CSSProperties}
             >
-                  <div className="absolute inset-x-2 bottom-2 z-[2] rounded-md bg-[#002f6c]/88 px-2.5 py-2 text-white text-[11px] leading-tight">
+                  <div className="absolute inset-x-2 bottom-2 z-[2] rounded-md bg-[#002f6c]/88 px-2.5 py-2 text-white text-[13px] sm:text-sm leading-tight">
                 <div className="flex items-center justify-between gap-2">
                   <strong>Today at {primaryHospital?.name || "Emory Healthcare"}</strong>
                   <span className="text-white/90">Care, directions, and local support in one place.</span>
@@ -297,42 +297,8 @@ export default async function HospitalPortalExperience({
           </div>
         </section>
 
-        <section className="emory-panel p-4 sm:p-5">
-          <p className="emory-kicker">Quick support</p>
-          <h2 className={`mt-1 text-[clamp(1.8rem,3.2vw,2.5rem)] leading-[0.97] text-[var(--cream)] ${hospitalDisplayFont.className}`}>
-            Help when you need it
-          </h2>
-          <p className="mt-1 text-sm text-[var(--muted)]">Phone numbers, directions, and essential services.</p>
-
-          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-            {supportCards.map((item) => (
-              <article key={item.id} className="rounded-xl border border-[var(--twilight)] bg-gradient-to-b from-white to-[#f9fbfe] px-3 py-3">
-                <p className="text-sm font-semibold text-[var(--cream)]">{item.label}</p>
-                <p className="mt-0.5 text-xs text-[var(--muted)]">{item.detail}</p>
-                <HospitalTrackedLink
-                  href={item.href}
-                  external={item.external}
-                  tracking={{
-                    actionType: "resource_clicked",
-                    portalSlug: portal.slug,
-                    hospitalSlug: primaryHospital?.slug,
-                    modeContext: mode,
-                    sectionKey: "v5_hub_support",
-                    targetKind: "always_available_support",
-                    targetId: item.id,
-                    targetLabel: item.label,
-                    targetUrl: item.href,
-                  }}
-                  className="mt-2 inline-flex items-center rounded-md border border-[#c7d3e8] bg-white px-2 py-1 text-[11px] font-semibold text-[#143b83] hover:bg-[#f3f7ff]"
-                >
-                  {item.cta}
-                </HospitalTrackedLink>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="emory-panel p-4 sm:p-5" id="choose-hospital">
+        {/* 2. Hospital Campuses */}
+        <section className="emory-panel p-4 sm:p-5 scroll-mt-20" id="choose-hospital">
           <div className="flex items-start justify-between gap-3 flex-wrap">
             <div>
               <p className="emory-kicker">Your hospitals</p>
@@ -428,15 +394,10 @@ export default async function HospitalPortalExperience({
           </div>
         </section>
 
+        {/* 3. Community Health Preview (elevated from position 5) */}
         <section className="emory-panel p-4 sm:p-5">
-          <div className="flex items-start justify-between gap-3 flex-wrap">
-            <div>
-              <p className="emory-kicker">Community health</p>
-              <h2 className={`mt-1 text-[clamp(1.9rem,3.3vw,2.6rem)] leading-[0.96] text-[var(--cream)] ${hospitalDisplayFont.className}`}>
-                Health resources in your neighborhood
-              </h2>
-              <p className="mt-1 text-sm text-[var(--muted)]">Events, programs, and support organizations across Atlanta.</p>
-            </div>
+          <div>
+            <p className="emory-kicker">Community health</p>
             <HospitalTrackedLink
               href={communityHref}
               tracking={{
@@ -446,13 +407,19 @@ export default async function HospitalPortalExperience({
                 sectionKey: "v5_hub_community_preview",
                 targetKind: "community_hub",
                 targetId: "explore-all",
-                targetLabel: "Explore all",
+                targetLabel: "Health resources in your neighborhood",
                 targetUrl: communityHref,
               }}
-              className="emory-link-btn"
+              className="block mt-1 hover:opacity-80 transition-opacity"
             >
-              Explore all
+              <h2 className={`text-[clamp(1.9rem,3.3vw,2.6rem)] leading-[0.96] text-[var(--cream)] ${hospitalDisplayFont.className}`}>
+                Health resources in your neighborhood
+              </h2>
             </HospitalTrackedLink>
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              Events, programs, and support organizations across Atlanta.
+              Including CDC, YMCA, Atlanta Community Food Bank, and {supportCounts.totalOrganizations}+ organizations.
+            </p>
           </div>
 
           <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2.5">
@@ -461,7 +428,7 @@ export default async function HospitalPortalExperience({
                 <p className="text-[11px] font-bold uppercase tracking-[0.06em] text-[#6b7280]">Active this week</p>
                 <p className="mt-1 text-sm font-semibold text-[var(--cream)]">{category.label}</p>
                 <p className="mt-0.5 text-xs text-[var(--muted)]">{category.detail}</p>
-                <p className="mt-2 text-2xl font-semibold text-[#143b83]">{category.count}</p>
+                <p className="mt-2 text-2xl font-semibold text-[#143b83]">{category.countLabel || category.count}</p>
                 <HospitalTrackedLink
                   href={category.href}
                   tracking={{
@@ -483,9 +450,9 @@ export default async function HospitalPortalExperience({
           </div>
 
           <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-            {showcase.events.slice(0, 3).map((event, index) => {
+            {showcase.events.slice(0, 3).map((event) => {
               const eventHref = event.detailHref || communityHref;
-              const eventImage = event.imageUrl || COMMUNITY_FALLBACK_IMAGES[index % COMMUNITY_FALLBACK_IMAGES.length] || COMMUNITY_FALLBACK_IMAGE;
+              const eventImage = event.imageUrl || getEventFallbackImage(event.category, event.title);
               return (
                 <HospitalTrackedLink
                   key={event.id}
@@ -521,6 +488,43 @@ export default async function HospitalPortalExperience({
           </div>
         </section>
 
+        {/* 4. Quick Support (moved down from position 2) */}
+        <section className="emory-panel p-4 sm:p-5">
+          <p className="emory-kicker">Quick support</p>
+          <h2 className={`mt-1 text-[clamp(1.8rem,3.2vw,2.5rem)] leading-[0.97] text-[var(--cream)] ${hospitalDisplayFont.className}`}>
+            Help when you need it
+          </h2>
+          <p className="mt-1 text-sm text-[var(--muted)]">Phone numbers, directions, and essential services.</p>
+
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+            {supportCards.map((item) => (
+              <article key={item.id} className="rounded-xl border border-[var(--twilight)] bg-gradient-to-b from-white to-[#f9fbfe] px-3 py-3">
+                <p className="text-sm font-semibold text-[var(--cream)]">{item.label}</p>
+                <p className="mt-0.5 text-xs text-[var(--muted)]">{item.detail}</p>
+                <HospitalTrackedLink
+                  href={item.href}
+                  external={item.external}
+                  tracking={{
+                    actionType: "resource_clicked",
+                    portalSlug: portal.slug,
+                    hospitalSlug: primaryHospital?.slug,
+                    modeContext: mode,
+                    sectionKey: "v5_hub_support",
+                    targetKind: "always_available_support",
+                    targetId: item.id,
+                    targetLabel: item.label,
+                    targetUrl: item.href,
+                  }}
+                  className="mt-2 inline-flex items-center rounded-md border border-[#c7d3e8] bg-white px-2 py-1 text-[11px] font-semibold text-[#143b83] hover:bg-[#f3f7ff]"
+                >
+                  {item.cta}
+                </HospitalTrackedLink>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        {/* 5. Footer */}
         <footer className="mt-2 text-center">
           <p className="text-[10.5px] font-medium tracking-[0.04em] text-[#9ca3af]">
             Emory Healthcare &middot; Guest Services: (404) 712-2000

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import BestOfCategoryGrid from "@/components/best-of/BestOfCategoryGrid";
@@ -136,87 +136,21 @@ function CommunityViewInner({ portalId, portalSlug, portalName, activeTab }: Com
       </div>
 
       {/* Tab content */}
-      {activeTab === "people" && (
-        <Suspense fallback={<PeopleLoadingSkeleton />}>
-          <DashboardActivity />
-        </Suspense>
-      )}
+      {activeTab === "people" && <DashboardActivity />}
 
-      {activeTab === "bestof" && (
-        <Suspense fallback={<BestOfLoadingSkeleton />}>
-          <BestOfCategoryGrid />
-        </Suspense>
-      )}
+      {activeTab === "bestof" && <BestOfCategoryGrid />}
 
       {activeTab === "groups" && (
-        <Suspense fallback={<GroupsLoadingSkeleton />}>
-          <PortalCommunityView
-            portalId={portalId}
-            portalSlug={portalSlug}
-            portalName={portalName}
-          />
-        </Suspense>
+        <PortalCommunityView
+          portalId={portalId}
+          portalSlug={portalSlug}
+          portalName={portalName}
+        />
       )}
-    </div>
-  );
-}
-
-function PeopleLoadingSkeleton() {
-  return (
-    <div className="space-y-6">
-      {/* Search skeleton */}
-      <div className="h-12 skeleton-shimmer rounded-xl" />
-      {/* Activity skeleton */}
-      <div className="space-y-3">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="p-4 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 skeleton-shimmer rounded-full" />
-              <div className="flex-1 space-y-2">
-                <div className="h-4 skeleton-shimmer rounded w-3/4" />
-                <div className="h-3 skeleton-shimmer rounded w-1/2" />
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function BestOfLoadingSkeleton() {
-  return (
-    <div className="grid grid-cols-2 gap-3">
-      {[1, 2, 3, 4, 5, 6].map((i) => (
-        <div key={i} className="h-36 skeleton-shimmer rounded-xl" />
-      ))}
-    </div>
-  );
-}
-
-function GroupsLoadingSkeleton() {
-  return (
-    <div className="space-y-4">
-      {[1, 2, 3, 4, 5].map((i) => (
-        <div key={i} className="p-5 rounded-xl border border-[var(--twilight)] bg-[var(--card-bg)]">
-          <div className="flex items-start gap-4">
-            <div className="w-[72px] h-[72px] rounded-xl skeleton-shimmer" />
-            <div className="flex-1 min-w-0 space-y-2">
-              <div className="h-5 w-2/3 skeleton-shimmer rounded" />
-              <div className="h-4 w-24 skeleton-shimmer rounded" />
-              <div className="h-8 w-36 skeleton-shimmer rounded-lg" />
-            </div>
-          </div>
-        </div>
-      ))}
     </div>
   );
 }
 
 export default function CommunityView(props: CommunityViewProps) {
-  return (
-    <Suspense fallback={<BestOfLoadingSkeleton />}>
-      <CommunityViewInner {...props} />
-    </Suspense>
-  );
+  return <CommunityViewInner {...props} />;
 }

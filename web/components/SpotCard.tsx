@@ -144,7 +144,7 @@ function SpotCard({ spot, index = 0, showDistance, portalSlug, tags }: Props) {
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3l2.7 5.5L21 9.2l-4.5 4.3L17.6 20 12 17l-5.6 3 1.1-6.5L3 9.2l6.3-.7L12 3z" />
                 </svg>
-                {formatCompactCount(recommendationCount)} rec'd
+                {formatCompactCount(recommendationCount)} rec&apos;d
               </span>
             )}
           </div>

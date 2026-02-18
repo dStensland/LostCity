@@ -1,6 +1,6 @@
 "use client";
 
-import UnifiedHeader from "@/components/UnifiedHeader";
+import { PortalHeader } from "@/components/headers";
 import Skeleton from "@/components/Skeleton";
 import { useParams } from "next/navigation";
 import { usePortalOptional } from "@/lib/portal-context";
@@ -27,7 +27,7 @@ export default function PortalLoading() {
 
   return (
     <div data-skeleton-route="portal-root" data-skeleton-vertical="city" className="min-h-screen">
-      <UnifiedHeader portalSlug={portalSlug} />
+      <PortalHeader portalSlug={portalSlug} portalName={portal?.name || "Lost City"} />
 
       <main className="max-w-3xl mx-auto px-4 pb-16">
         {/* Tonight's Picks skeleton */}

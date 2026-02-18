@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @next/next/no-img-element */
 
 import type { SignatureVenue, ForthAmenity } from "@/lib/concierge/concierge-types";
 import HotelSection from "../../hotel/HotelSection";
@@ -8,11 +9,10 @@ import { getProxiedImageSrc } from "@/lib/image-proxy";
 interface PropertyPreviewProps {
   signatureVenues: SignatureVenue[];
   amenities: ForthAmenity[];
-  portalSlug: string;
   portalName: string;
 }
 
-export default function PropertyPreview({ signatureVenues, amenities, portalSlug, portalName }: PropertyPreviewProps) {
+export default function PropertyPreview({ signatureVenues, amenities, portalName }: PropertyPreviewProps) {
   return (
     <HotelSection
       id="property"

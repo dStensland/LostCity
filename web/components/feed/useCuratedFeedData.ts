@@ -60,8 +60,13 @@ export function useCuratedFeedData(portalSlug: string): CuratedFeedData {
 
   useEffect(() => {
     const controller = new AbortController();
-    load(controller.signal);
-    return () => controller.abort();
+    const timeoutId = setTimeout(() => {
+      void load(controller.signal);
+    }, 0);
+    return () => {
+      clearTimeout(timeoutId);
+      controller.abort();
+    };
   }, [load]);
 
   const reload = useCallback(() => {

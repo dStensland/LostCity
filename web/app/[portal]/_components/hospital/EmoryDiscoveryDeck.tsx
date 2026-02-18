@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @next/next/no-img-element */
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -16,12 +17,12 @@ import {
   buildDiscoveryItems,
   groupEventItemsByDay,
   rankDiscoveryItems,
-  type DiscoveryItem,
   type DiscoveryFilter,
   type DiscoverySort,
   type DiscoveryTab,
   type DiscoveryView,
 } from "@/lib/emory-discovery";
+import { getEventFallbackImage } from "@/lib/hospital-art";
 
 type EmoryDiscoveryDeckProps = {
   stateKey?: string;
@@ -47,11 +48,11 @@ const DEFAULT_FILTERS: DiscoveryFilter[] = [
 
 // Note: TAB_LABELS and VIEW_LABELS now come from useTranslations("discovery")
 
-const FALLBACK_CARD_IMAGES: Record<DiscoveryItem["kind"], string> = {
-  event: "https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=640&q=80",
-  venue: "https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=640&q=80",
-  organization: "https://images.unsplash.com/photo-1515169067868-5387ec356754?auto=format&fit=crop&w=640&q=80",
-};
+function getFallbackImage(item: { kind: string; title: string; subtitle: string }): string {
+  if (item.kind === "event") return getEventFallbackImage(null, item.title);
+  if (item.kind === "venue") return getEventFallbackImage(null, item.title);
+  return getEventFallbackImage("community", item.title);
+}
 
 function appendContextParams(
   href: string,
@@ -362,7 +363,7 @@ function VenueMapExplorer({
         {limitedItems.map((item) => {
           const hasCoordinates = item.lat !== null && item.lng !== null;
           const isSelected = selectedKey === item.key;
-          const thumb = item.imageUrl || FALLBACK_CARD_IMAGES[item.kind];
+          const thumb = item.imageUrl || getFallbackImage(item);
           return (
             <article
               key={item.key}
@@ -708,7 +709,7 @@ export default function EmoryDiscoveryDeck({
         <button
           type="button"
           onClick={resetControls}
-          className="emory-secondary-btn inline-flex items-center justify-center px-3 py-2 text-xs"
+          className="emory-secondary-btn inline-flex items-center justify-center px-2.5 py-1.5 text-[11px] sm:px-3 sm:py-2 sm:text-xs"
         >
           {t("reset")}
         </button>
@@ -724,7 +725,7 @@ export default function EmoryDiscoveryDeck({
                   <article key={item.key} className="rounded border border-[var(--twilight)] bg-white px-2.5 py-2">
                     <div className="flex items-start gap-2.5">
                       <div className="h-12 w-14 overflow-hidden rounded border border-[var(--twilight)] shrink-0">
-                        <img src={item.imageUrl || FALLBACK_CARD_IMAGES[item.kind]} alt={item.title} className="h-full w-full object-cover" />
+                        <img src={item.imageUrl || getFallbackImage(item)} alt={item.title} className="h-full w-full object-cover" />
                       </div>
                       <div>
                         <p className="text-sm font-semibold text-[var(--cream)]">{item.title}</p>
@@ -765,7 +766,7 @@ export default function EmoryDiscoveryDeck({
       {activeView !== "timeline" && !(activeView === "map" && activeTab === "venues") && (
         <div className="mt-3 space-y-2">
           {activeItems.slice(0, activeView === "map" ? 9 : 8).map((item) => {
-            const thumb = item.imageUrl || FALLBACK_CARD_IMAGES[item.kind];
+            const thumb = item.imageUrl || getFallbackImage(item);
             return (
               <article key={item.key} className="rounded-md border border-[var(--twilight)] bg-white px-3 py-2.5">
                 <div className="flex items-start gap-3">

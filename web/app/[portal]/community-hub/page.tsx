@@ -2,15 +2,21 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "@phosphor-icons/react/dist/ssr";
-import { PortalHeader } from "@/components/headers";
+import { EmoryDemoHeader, PortalHeader } from "@/components/headers";
 import { createClient } from "@/lib/supabase/server";
 import { getLocalDateString } from "@/lib/formats";
 import { getProxiedImageSrc } from "@/lib/image-proxy";
 import { getCachedPortalBySlug, getPortalVertical } from "@/lib/portal";
+import { isEmoryDemoPortal } from "@/lib/hospital-art";
+import { normalizeHospitalMode } from "@/lib/hospital-modes";
+import EmoryCommunityExperience from "../_components/hospital/EmoryCommunityExperience";
+import EmoryMobileBottomNav from "../_components/hospital/EmoryMobileBottomNav";
+import { Suspense } from "react";
 import FilmPortalNav from "../_components/film/FilmPortalNav";
 
 type Props = {
   params: Promise<{ portal: string }>;
+  searchParams?: Promise<{ mode?: string; support?: string }>;
 };
 
 type RawOrganizationRow = {
@@ -233,11 +239,40 @@ async function getFilmCommunityData() {
   return { groups, upcomingMeetups };
 }
 
-export default async function FilmCommunityHubPage({ params }: Props) {
+export default async function CommunityHubPage({ params, searchParams }: Props) {
   const { portal: slug } = await params;
+  const searchParamsData = searchParams ? await searchParams : {};
   const portal = await getCachedPortalBySlug(slug);
 
-  if (!portal || getPortalVertical(portal) !== "film") {
+  if (!portal) notFound();
+
+  const vertical = getPortalVertical(portal);
+  const isEmoryPortal = isEmoryDemoPortal(portal.slug);
+  const isHospital = vertical === "hospital" || isEmoryPortal;
+
+  if (isHospital && isEmoryPortal) {
+    const hospitalMode = normalizeHospitalMode(searchParamsData.mode);
+    return (
+      <div className="min-h-screen bg-[#f2f5fa] text-[#002f6c]">
+        <EmoryDemoHeader portalSlug={portal.slug} />
+        <main className="max-w-6xl mx-auto px-4 pb-20">
+          <Suspense fallback={null}>
+            <EmoryCommunityExperience
+              portal={portal}
+              mode={hospitalMode}
+              includeSupportSensitive={searchParamsData.support === "1"}
+            />
+          </Suspense>
+        </main>
+        <Suspense fallback={null}>
+          <EmoryMobileBottomNav portalSlug={portal.slug} />
+        </Suspense>
+        <div className="lg:hidden h-16" />
+      </div>
+    );
+  }
+
+  if (vertical !== "film") {
     notFound();
   }
 

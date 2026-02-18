@@ -20,6 +20,7 @@ import {
   type FeedSection,
 } from "@/lib/hooks/useForYouEvents";
 import { convertFriendsGoing } from "@/lib/formats";
+import { useAuth } from "@/lib/auth-context";
 import {
   Sparkle,
   CalendarDots,
@@ -127,6 +128,7 @@ function ForYouViewInner({ portalSlug }: ForYouViewProps) {
   const loaderRef = useRef<HTMLDivElement>(null);
   const parentRef = useRef<HTMLDivElement>(null);
   const { hasActiveFilters } = useForYouFilters();
+  const { user } = useAuth();
 
   const {
     events,
@@ -141,6 +143,7 @@ function ForYouViewInner({ portalSlug }: ForYouViewProps) {
   } = useForYouEvents({ portalSlug });
 
   // Virtualize the event list for performance
+  // eslint-disable-next-line react-hooks/incompatible-library
   const virtualizer = useVirtualizer({
     count: events.length,
     getScrollElement: () => parentRef.current,
@@ -212,6 +215,38 @@ function ForYouViewInner({ portalSlug }: ForYouViewProps) {
   }
 
   // No preferences and no events - inline onboarding
+  if (!user && events.length === 0) {
+    return (
+      <div className="p-6 rounded-xl bg-[var(--dusk)] border border-[var(--twilight)] text-center">
+        <h3 className="font-serif text-lg text-[var(--cream)] mb-2">
+          Sign in for your personalized feed
+        </h3>
+        <p className="text-sm text-[var(--muted)] mb-4">
+          We&apos;ll tailor picks based on your follows, neighborhoods, and interests.
+        </p>
+        <Link
+          href={`/${portalSlug}?view=find&type=events`}
+          className="inline-flex items-center gap-2 text-[var(--coral)] font-mono text-sm hover:text-[var(--rose)] transition-colors"
+        >
+          Browse all events
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M13 7l5 5m0 0l-5 5m5-5H6"
+            />
+          </svg>
+        </Link>
+      </div>
+    );
+  }
+
   if (!hasPreferences && events.length === 0) {
     return <ForYouOnboarding onComplete={() => refresh()} />;
   }
@@ -314,6 +349,62 @@ function ForYouViewInner({ portalSlug }: ForYouViewProps) {
     );
   }
 
+  const virtualItems = virtualizer.getVirtualItems();
+  const shouldUseVirtualizedList = events.length > 40 && virtualItems.length > 0;
+
+  if (!shouldUseVirtualizedList) {
+    return (
+      <div className="space-y-3">
+        {events.map((event, index) => (
+          <EventCard
+            key={event.id}
+            event={event}
+            index={index}
+            portalSlug={portalSlug}
+            friendsGoing={convertFriendsGoing(event.friends_going)}
+            reasons={event.reasons}
+            contextType={getContextType(event)}
+            skipAnimation
+          />
+        ))}
+
+        <div ref={loaderRef} className="py-4">
+          {isFetchingNextPage && (
+            <div className="flex justify-center">
+              <div className="flex items-center gap-2 text-[var(--muted)] font-mono text-xs">
+                <svg
+                  className="w-4 h-4 animate-spin"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
+                </svg>
+                Loading more...
+              </div>
+            </div>
+          )}
+          {!hasMore && events.length > 10 && (
+            <div className="text-center text-[var(--muted)] font-mono text-xs py-2">
+              You&apos;ve reached the end
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div ref={parentRef} className="space-y-0">
       {/* Virtualized event list */}
@@ -324,7 +415,7 @@ function ForYouViewInner({ portalSlug }: ForYouViewProps) {
           position: "relative",
         }}
       >
-        {virtualizer.getVirtualItems().map((virtualItem) => {
+        {virtualItems.map((virtualItem) => {
           const event = events[virtualItem.index];
           return (
             <div

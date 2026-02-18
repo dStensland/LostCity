@@ -58,6 +58,7 @@ export default function MapListDrawer({
   const useVirtual = totalCount > VIRTUALIZE_THRESHOLD;
 
   // Virtual list
+  // eslint-disable-next-line react-hooks/incompatible-library
   const virtualizer = useVirtualizer({
     count: useVirtual ? flatItems.length : 0,
     getScrollElement: () => scrollRef.current,

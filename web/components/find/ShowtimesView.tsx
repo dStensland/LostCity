@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 import { formatTimeSplit } from "@/lib/formats";
 import CategoryIcon from "@/components/CategoryIcon";
 
@@ -22,6 +23,7 @@ interface Theater {
 interface Film {
   title: string;
   series_id: string | null;
+  series_slug: string | null;
   image_url: string | null;
   theaters: Theater[];
 }
@@ -34,6 +36,7 @@ interface TheaterGroup {
   films: {
     title: string;
     series_id: string | null;
+    series_slug: string | null;
     image_url: string | null;
     times: string[];
   }[];
@@ -42,7 +45,25 @@ interface TheaterGroup {
 interface ShowtimesMeta {
   available_dates: string[];
   available_theaters: { venue_id: number; venue_name: string; venue_slug: string; neighborhood: string | null }[];
-  available_films: { title: string; series_id: string | null; image_url: string | null }[];
+  available_films: { title: string; series_id: string | null; series_slug: string | null; image_url: string | null }[];
+}
+
+function toLocalIsoDate(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function resolveDateParam(raw: string | null): string | null {
+  if (!raw) return null;
+  const value = raw.trim().toLowerCase();
+  if (!value) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  if (value === "today") return toLocalIsoDate(new Date());
+  if (value === "tomorrow") {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return toLocalIsoDate(tomorrow);
+  }
+  return null;
 }
 
 function formatDatePill(dateStr: string): string {
@@ -195,6 +216,10 @@ function MultiTheaterCard({ film, portalSlug }: { film: Film; portalSlug: string
   const [isOpen, setIsOpen] = useState(false);
   const theaterCount = film.theaters.length;
   const totalShowtimes = film.theaters.reduce((sum, t) => sum + t.times.length, 0);
+  const seriesHref =
+    film.series_slug && theaterCount > 1
+      ? `/${portalSlug}/series/${film.series_slug}`
+      : null;
 
   return (
     <div className="rounded-xl border border-[var(--coral)]/25 bg-[var(--night)]/45 overflow-hidden">
@@ -229,6 +254,16 @@ function MultiTheaterCard({ film, portalSlug }: { film: Film; portalSlug: string
           {film.theaters.map((theater) => (
             <TheaterRow key={theater.venue_id} theater={theater} portalSlug={portalSlug} />
           ))}
+          {seriesHref && (
+            <div className="pt-1">
+              <Link
+                href={seriesHref}
+                className="font-mono text-[0.64rem] uppercase tracking-[0.08em] text-[var(--coral)] hover:text-[var(--gold)] transition-colors"
+              >
+                Open series page for all locations
+              </Link>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -308,9 +343,18 @@ function TheaterAccordionCard({ theater, portalSlug }: { theater: TheaterGroup; 
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <h4 className="font-semibold text-[0.82rem] text-[var(--cream)] leading-snug line-clamp-1">
-                  {film.title}
-                </h4>
+                {film.series_slug ? (
+                  <Link
+                    href={`/${portalSlug}/series/${film.series_slug}`}
+                    className="font-semibold text-[0.82rem] text-[var(--cream)] leading-snug line-clamp-1 hover:text-[var(--coral)] transition-colors"
+                  >
+                    {film.title}
+                  </Link>
+                ) : (
+                  <h4 className="font-semibold text-[0.82rem] text-[var(--cream)] leading-snug line-clamp-1">
+                    {film.title}
+                  </h4>
+                )}
                 <div className="mt-1.5">
                   <TimeChips times={film.times} />
                 </div>
@@ -349,6 +393,13 @@ function ShowtimesSkeleton() {
 // --------------- Main component ---------------
 
 export default function ShowtimesView({ portalSlug }: ShowtimesViewProps) {
+  const searchParams = useSearchParams();
+  const requestedDateParam = searchParams?.get("date") ?? null;
+  const requestedDate = useMemo(
+    () => resolveDateParam(requestedDateParam),
+    [requestedDateParam],
+  );
+
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [viewMode, setViewMode] = useState<"by-movie" | "by-theater">("by-movie");
   const [showSpecial, setShowSpecial] = useState(false);
@@ -366,30 +417,40 @@ export default function ShowtimesView({ portalSlug }: ShowtimesViewProps) {
     async function fetchMeta() {
       setMetaLoading(true);
       try {
-        const today = new Date();
-        const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-        const res = await fetch(`/api/showtimes?date=${dateStr}&meta=true`);
+        const dateStr = requestedDate || toLocalIsoDate(new Date());
+        const params = new URLSearchParams({
+          date: dateStr,
+          meta: "true",
+          include_chains: "true",
+        });
+        const res = await fetch(`/api/showtimes?${params.toString()}`);
         if (!res.ok) return;
         const data = await res.json();
         setMeta(data.meta || null);
         setFilms(data.films || []);
         // Set initial date from meta if available
         if (data.meta?.available_dates?.length > 0) {
-          setSelectedDate(data.meta.available_dates[0]);
+          if (
+            requestedDate &&
+            data.meta.available_dates.includes(requestedDate)
+          ) {
+            setSelectedDate(requestedDate);
+          } else {
+            setSelectedDate(data.meta.available_dates[0]);
+          }
         } else {
           setSelectedDate(dateStr);
         }
       } catch {
         // fail silently
-        const today = new Date();
-        setSelectedDate(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`);
+        setSelectedDate(requestedDate || toLocalIsoDate(new Date()));
       } finally {
         setMetaLoading(false);
         setLoading(false);
       }
     }
     fetchMeta();
-  }, []);
+  }, [requestedDate]);
 
   // Fetch showtimes when date, view mode, or special flag changes
   const fetchShowtimes = useCallback(async (date: string, mode: string, special: boolean) => {
@@ -398,6 +459,7 @@ export default function ShowtimesView({ portalSlug }: ShowtimesViewProps) {
     try {
       const params = new URLSearchParams({ date, mode: mode === "by-movie" ? "by-film" : "by-theater" });
       if (special) params.set("special", "true");
+      params.set("include_chains", "true");
       const res = await fetch(`/api/showtimes?${params}`);
       if (!res.ok) return;
       const data = await res.json();

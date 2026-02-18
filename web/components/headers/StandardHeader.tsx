@@ -352,7 +352,7 @@ export default function StandardHeader({
           )}
 
           {/* Right: Search, User menu, Mobile menu */}
-          <div className="portal-feed-actions flex items-center gap-1.5 sm:gap-2 flex-shrink-0 ml-auto" style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.9)) drop-shadow(0 0 6px rgba(0,0,0,0.5))" }}>
+          <div className="portal-feed-actions flex items-center gap-1.5 sm:gap-2 flex-shrink-0 ml-auto">
             {headerConfig.show_search_in_header !== false && <HeaderSearchButton />}
             <UserMenu />
 

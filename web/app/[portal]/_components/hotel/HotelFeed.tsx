@@ -5,12 +5,26 @@ import HotelEventCard from "./HotelEventCard";
 import HotelHeader from "./HotelHeader";
 import type { Portal } from "@/lib/portal-context";
 
+export interface HotelFeedEvent {
+  id: string | number;
+  title: string;
+  start_date: string;
+  start_time?: string | null;
+  image_url?: string | null;
+  description?: string | null;
+  venue_name?: string | null;
+  category?: string | null;
+  is_free?: boolean;
+  price_min?: number | null;
+  distance_km?: number | null;
+}
+
 export interface FeedSection {
   title: string;
   description?: string;
   slug?: string;
   layout?: string;
-  events: any[];
+  events: HotelFeedEvent[];
 }
 
 interface HotelFeedProps {
@@ -53,7 +67,7 @@ export default function HotelFeed({ portal, sections }: HotelFeedProps) {
             >
               {useCompact ? (
                 <div className="space-y-4 hotel-grid">
-                  {section.events.slice(0, maxItems).map((event: any) => (
+                  {section.events.slice(0, maxItems).map((event) => (
                     <HotelEventCard
                       key={event.id}
                       event={event}
@@ -64,7 +78,7 @@ export default function HotelFeed({ portal, sections }: HotelFeedProps) {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-10 hotel-grid">
-                  {section.events.slice(0, maxItems).map((event: any) => (
+                  {section.events.slice(0, maxItems).map((event) => (
                     <HotelEventCard
                       key={event.id}
                       event={event}

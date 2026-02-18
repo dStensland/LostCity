@@ -735,6 +735,7 @@ export default function MapView({
               slug={selectedSpot.slug}
               name={selectedSpot.name}
               venueType={selectedSpot.venue_type}
+              locationDesignator={selectedSpot.location_designator}
               address={selectedSpot.address}
               neighborhood={selectedSpot.neighborhood}
               portalSlug={portal.slug}
@@ -752,7 +753,7 @@ export default function MapView({
         />
       )}
 
-      {isFetching && mappableEvents.length > 0 && (
+      {isFetching && markerCount > 0 && (
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10">
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--dusk)]/90 backdrop-blur-sm border border-[var(--twilight)] shadow-[0_10px_26px_rgba(0,0,0,0.4)]">
             <div className="w-3 h-3 rounded-full border-2 border-[var(--coral)] border-t-transparent animate-spin" />

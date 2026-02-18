@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import { format } from "date-fns";
 import { getProxiedImageSrc } from "@/lib/image-proxy";

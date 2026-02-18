@@ -35,7 +35,7 @@ export default function ScrollReset() {
 
   useEffect(() => {
     if (prevRef.current && prevRef.current !== navKey) {
-      window.scrollTo(0, 0);
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
     }
     prevRef.current = navKey;
   }, [navKey]);

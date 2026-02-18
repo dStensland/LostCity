@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import { notFound } from "next/navigation";
 import { AmbientBackground } from "@/components/ambient";
 import { EmoryDemoHeader, PortalHeader } from "@/components/headers";
@@ -18,6 +19,7 @@ import {
   hospitalBodyFont,
   hospitalDisplayFont,
   isEmoryDemoPortal,
+  getEventFallbackImage,
 } from "@/lib/hospital-art";
 import HospitalTrackedLink from "@/app/[portal]/_components/hospital/HospitalTrackedLink";
 import type { CSSProperties } from "react";
@@ -29,6 +31,8 @@ import EmoryConciergeFoodExplorer, {
   type ConciergeExplorerItem,
 } from "@/app/[portal]/_components/hospital/EmoryConciergeFoodExplorer";
 import { getDistanceMiles } from "@/lib/geo";
+import EmoryMobileBottomNav from "@/app/[portal]/_components/hospital/EmoryMobileBottomNav";
+import { Suspense } from "react";
 
 type Props = {
   params: Promise<{ portal: string; hospital: string }>;
@@ -122,6 +126,12 @@ function buildFallbackCampusResources(hospitalName: string): HospitalService[] {
   ];
 }
 
+const IRRELEVANT_VENUE_PATTERN = /\b(home depot|lowe's|autozone|auto ?parts|o'reilly|advance auto|car wash|self storage|storage unit|gas station|shell|chevron|bp|exxon|racetrac|qt|quicktrip|tire|muffler|jiffy lube|u-haul)\b/i;
+
+function isIrrelevantVenue(venue: Pick<HospitalNearbyVenue, "venue_type" | "name">): boolean {
+  return IRRELEVANT_VENUE_PATTERN.test(normalize(venue.name));
+}
+
 function isMealExcluded(venue: Pick<HospitalNearbyVenue, "venue_type" | "name">): boolean {
   const type = normalize(venue.venue_type);
   const name = normalize(venue.name);
@@ -171,6 +181,7 @@ function buildConciergeExplorerItems(args: {
 
   const ingestNearby = (bucket: NearbyBucket, rows: HospitalNearbyVenue[]) => {
     for (const row of rows) {
+      if (isIrrelevantVenue(row)) continue;
       if (bucket === "food" && isMealExcluded(row)) continue;
 
       const key = String(row.id);
@@ -329,7 +340,7 @@ export default async function HospitalLandingPage({ params, searchParams }: Prop
   const wayfindingHref = getHospitalWayfindingHref(data.hospital);
   const bookVisitHref = getHospitalBookVisitHref(data.hospital);
   const hospitalDirectoryHref = `/${portal.slug}/hospitals`;
-  const communityHubHref = `/${portal.slug}?view=community`;
+  const communityHubHref = `/${portal.slug}/community-hub`;
   const hospitalHeroImage = getHospitalHeroImage(data.hospital.slug);
 
   const campusResources = (data.services.length > 0
@@ -549,11 +560,7 @@ export default async function HospitalLandingPage({ params, searchParams }: Prop
               <div className="mt-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
                 {nearbyEventCards.map((eventCard) => (
                   <article key={eventCard.id} className="rounded-lg border border-[var(--twilight)] bg-white overflow-hidden">
-                    {eventCard.imageUrl ? (
-                      <img src={eventCard.imageUrl} alt={eventCard.title} className="h-32 w-full object-cover" />
-                    ) : (
-                      <div className="h-32 w-full bg-gradient-to-br from-[#e8ecf2] to-[#d7dce6]" />
-                    )}
+                    <img src={eventCard.imageUrl || getEventFallbackImage(null, eventCard.title)} alt={eventCard.title} className="h-32 w-full object-cover" />
                     <div className="p-3">
                       <p className="text-[11px] uppercase tracking-[0.06em] text-[#6b7280]">Event</p>
                       <h3 className="mt-0.5 text-[1rem] leading-[1.08] text-[var(--cream)] font-semibold">{eventCard.title}</h3>
@@ -612,6 +619,14 @@ export default async function HospitalLandingPage({ params, searchParams }: Prop
           </section>
         </div>
       </main>
+      {isEmoryBrand && (
+        <>
+          <Suspense fallback={null}>
+            <EmoryMobileBottomNav portalSlug={portal.slug} />
+          </Suspense>
+          <div className="lg:hidden h-16" />
+        </>
+      )}
     </div>
   );
 }

@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Image from "@/components/SmartImage";
 import AnimatedCount from "@/components/AnimatedCount";
 import {
   EXPLORE_THEME,
-  getTrackAccentColor,
-  getTrackCategory,
+  DEFAULT_ACCENT_COLOR,
+  DEFAULT_CATEGORY,
 } from "@/lib/explore-tracks";
 import type { ExploreTrackVenue } from "@/lib/explore-tracks";
 import ExploreVenueCard from "./ExploreVenueCard";
@@ -26,6 +26,8 @@ type TrackData = {
   quoteSource: string;
   quotePortraitUrl: string | null;
   description: string | null;
+  accentColor: string | null;
+  category: string | null;
   venues: ExploreTrackVenue[];
   activity: TrackActivity;
 };
@@ -36,7 +38,75 @@ interface ExploreTrackDetailProps {
   slug: string;
   onBack: () => void;
   portalSlug: string;
+  accentColor?: string;
+  category?: string;
 }
+
+type TrackVisualProfile = {
+  heroHeight: string;
+  heroShade: string;
+  heroTexture: string;
+  shellSurface: string;
+  activeSurface: string;
+  featuredSurface: string;
+  moreSurface: string;
+  featuredCols: "md:grid-cols-1" | "md:grid-cols-2";
+  moreGridCols: "lg:grid-cols-3" | "lg:grid-cols-4";
+};
+
+const TRACK_VISUAL_PROFILES: TrackVisualProfile[] = [
+  {
+    heroHeight: "clamp(320px, 50vh, 500px)",
+    heroShade:
+      "linear-gradient(to top, rgba(9,9,11,0.94) 0%, rgba(9,9,11,0.7) 42%, rgba(9,9,11,0.2) 78%, transparent 100%)",
+    heroTexture:
+      "repeating-linear-gradient(120deg, rgba(255,255,255,0.02) 0 1px, transparent 1px 20px)",
+    shellSurface:
+      "linear-gradient(150deg, rgba(16,18,26,0.88), rgba(9,9,11,0.95))",
+    activeSurface:
+      "linear-gradient(145deg, rgba(224,58,62,0.1), rgba(12,12,16,0.93) 56%, rgba(9,9,11,0.95))",
+    featuredSurface:
+      "linear-gradient(145deg, rgba(28,30,42,0.8), rgba(11,11,16,0.94))",
+    moreSurface:
+      "linear-gradient(145deg, rgba(20,21,31,0.76), rgba(9,9,11,0.94))",
+    featuredCols: "md:grid-cols-2",
+    moreGridCols: "lg:grid-cols-3",
+  },
+  {
+    heroHeight: "clamp(320px, 48vh, 460px)",
+    heroShade:
+      "linear-gradient(to top, rgba(9,9,11,0.96) 0%, rgba(9,9,11,0.72) 36%, rgba(9,9,11,0.25) 72%, transparent 100%)",
+    heroTexture:
+      "radial-gradient(circle at 18% 15%, rgba(255,255,255,0.05) 0%, transparent 38%), repeating-linear-gradient(90deg, rgba(255,255,255,0.015) 0 1px, transparent 1px 18px)",
+    shellSurface:
+      "linear-gradient(150deg, rgba(20,22,30,0.88), rgba(9,9,11,0.95))",
+    activeSurface:
+      "linear-gradient(145deg, rgba(193,211,47,0.11), rgba(13,14,18,0.93) 55%, rgba(9,9,11,0.95))",
+    featuredSurface:
+      "linear-gradient(145deg, rgba(26,27,35,0.79), rgba(10,11,16,0.94))",
+    moreSurface:
+      "linear-gradient(150deg, rgba(18,20,26,0.78), rgba(9,9,11,0.93))",
+    featuredCols: "md:grid-cols-1",
+    moreGridCols: "lg:grid-cols-4",
+  },
+  {
+    heroHeight: "clamp(320px, 52vh, 520px)",
+    heroShade:
+      "linear-gradient(to top, rgba(9,9,11,0.95) 0%, rgba(9,9,11,0.72) 40%, rgba(9,9,11,0.25) 74%, transparent 100%)",
+    heroTexture:
+      "repeating-radial-gradient(circle at 84% 18%, rgba(255,255,255,0.03) 0 1px, transparent 1px 14px)",
+    shellSurface:
+      "linear-gradient(150deg, rgba(19,22,25,0.86), rgba(9,9,11,0.95))",
+    activeSurface:
+      "linear-gradient(140deg, rgba(52,211,153,0.1), rgba(12,13,17,0.93) 58%, rgba(9,9,11,0.95))",
+    featuredSurface:
+      "linear-gradient(140deg, rgba(24,27,31,0.76), rgba(10,11,14,0.94))",
+    moreSurface:
+      "linear-gradient(145deg, rgba(17,20,24,0.76), rgba(9,9,11,0.93))",
+    featuredCols: "md:grid-cols-2",
+    moreGridCols: "lg:grid-cols-3",
+  },
+];
 
 // Neon-styled floating back button matching EventDetailView
 const NeonFloatingBackButton = ({ onBack }: { onBack: () => void }) => (
@@ -63,14 +133,21 @@ export default function ExploreTrackDetail({
   slug,
   onBack,
   portalSlug,
+  accentColor: accentColorProp,
+  category: categoryProp,
 }: ExploreTrackDetailProps) {
   const [track, setTrack] = useState<TrackData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
 
-  const accent = getTrackAccentColor(slug);
-  const category = getTrackCategory(slug);
+  // Use prop from parent list, fall back to DB value from detail API, then default
+  const accent = accentColorProp ?? track?.accentColor ?? DEFAULT_ACCENT_COLOR;
+  const category = categoryProp ?? track?.category ?? DEFAULT_CATEGORY;
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const visualProfile = useMemo(
+    () => getTrackVisualProfile(track?.slug ?? slug),
+    [track?.slug, slug]
+  );
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -104,6 +181,8 @@ export default function ExploreTrackDetail({
               quoteSource: t.quote_source,
               quotePortraitUrl: t.quote_portrait_url,
               description: t.description,
+              accentColor: t.accent_color ?? null,
+              category: t.category ?? null,
               venues: (json.venues || []).map(
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 (v: any) => ({
@@ -177,64 +256,21 @@ export default function ExploreTrackDetail({
       return true;
     });
   }, [track, activeFilter]);
-
-  const handleUpvote = useCallback(
-    async (trackVenueId: string) => {
-      if (!track) return;
-      setTrack((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          venues: prev.venues.map((v) =>
-            v.id === trackVenueId
-              ? {
-                  ...v,
-                  hasUpvoted: !v.hasUpvoted,
-                  upvoteCount: v.hasUpvoted
-                    ? v.upvoteCount - 1
-                    : v.upvoteCount + 1,
-                }
-              : v
-          ),
-        };
-      });
-
-      try {
-        const res = await fetch("/api/explore/upvote", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            entityType: "track_venue",
-            entityId: trackVenueId,
-          }),
-        });
-        if (!res.ok) rollbackUpvote(trackVenueId);
-      } catch {
-        rollbackUpvote(trackVenueId);
-      }
-    },
-    [track]
-  );
-
-  const rollbackUpvote = (trackVenueId: string) => {
-    setTrack((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        venues: prev.venues.map((v) =>
-          v.id === trackVenueId
-            ? {
-                ...v,
-                hasUpvoted: !v.hasUpvoted,
-                upvoteCount: v.hasUpvoted
-                  ? v.upvoteCount - 1
-                  : v.upvoteCount + 1,
-              }
-            : v
-        ),
-      };
+  const nextEvent = useMemo(() => {
+    if (!track) return null;
+    const allEvents = track.venues.flatMap((venue) =>
+      (venue.upcomingEvents ?? []).map((event) => ({
+        ...event,
+        venueName: venue.name,
+      }))
+    );
+    allEvents.sort((a, b) => {
+      const aKey = `${a.startDate}T${a.startTime ?? "23:59:59"}`;
+      const bKey = `${b.startDate}T${b.startTime ?? "23:59:59"}`;
+      return aKey.localeCompare(bKey);
     });
-  };
+    return allEvents[0] ?? null;
+  }, [track]);
 
   if (isLoading) return <TrackDetailSkeleton onBack={onBack} />;
 
@@ -274,16 +310,21 @@ export default function ExploreTrackDetail({
 
   return (
     <div
-      className="rounded-2xl overflow-hidden animate-page-enter"
+      className="rounded-2xl overflow-hidden animate-page-enter relative"
       style={{ background: "var(--void)" }}
     >
+      <div
+        className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-[34rem] h-[34rem] rounded-full blur-3xl opacity-12"
+        style={{ background: `radial-gradient(circle, color-mix(in srgb, ${accent} 28%, transparent) 0%, transparent 72%)` }}
+      />
+
       {/* ================================================================
           HERO — Cinematic, brighter, taller
           Uses first featured venue image (not quote portrait)
           ================================================================ */}
       <div
         className="track-detail-hero relative overflow-hidden"
-        style={{ height: "clamp(320px, 50vh, 480px)" }}
+        style={{ height: visualProfile.heroHeight }}
       >
         {(() => {
           const heroVenue = track.venues.find((v) => v.isFeatured && v.imageUrl) || track.venues.find((v) => v.imageUrl);
@@ -310,8 +351,7 @@ export default function ExploreTrackDetail({
         <div
           className="absolute inset-0"
           style={{
-            background:
-              "linear-gradient(to top, var(--void) 0%, rgba(9,9,11,0.85) 30%, rgba(9,9,11,0.4) 70%, transparent 100%)",
+            background: `${visualProfile.heroTexture}, ${visualProfile.heroShade}`,
           }}
         />
 
@@ -401,7 +441,7 @@ export default function ExploreTrackDetail({
       {/* ================================================================
           ACTIVITY SUMMARY BAR — Richer stats, animated counters
           ================================================================ */}
-      <ActivityBar activity={track.activity} venues={track.venues} totalEvents={totalEvents} />
+      <ActivityBar activity={track.activity} totalEvents={totalEvents} />
 
       {/* Filter Chips */}
       <FilterRow
@@ -411,62 +451,62 @@ export default function ExploreTrackDetail({
         activity={track.activity}
       />
 
+      {(track.activity.tonightCount > 0 || totalEvents > 0) && (
+        <div className="px-4 lg:px-6 pt-3">
+          <div
+            className="rounded-xl border p-3.5 md:p-4"
+            style={{
+              background: `${visualProfile.shellSurface}, ${visualProfile.activeSurface}`,
+              borderColor: `${accent}33`,
+            }}
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              <LiveFact
+                label="Tonight"
+                value={track.activity.tonightCount > 0 ? String(track.activity.tonightCount) : "None"}
+                detail={track.activity.tonightCount > 0 ? "Events live now" : "No events tonight"}
+                accent={track.activity.tonightCount > 0 ? "#E03A3E" : accent}
+              />
+              <LiveFact
+                label="Next up"
+                value={nextEvent ? nextEvent.title : "Curated track"}
+                detail={nextEvent ? `${formatShortDay(nextEvent.startDate)}${nextEvent.startTime ? ` ${formatTime(nextEvent.startTime)}` : ""} · ${nextEvent.venueName}` : "No upcoming events"}
+                accent={accent}
+              />
+              <LiveFact
+                label="Free"
+                value={track.activity.freeCount > 0 ? String(track.activity.freeCount) : "0"}
+                detail={track.activity.freeCount > 0 ? "Free events this week" : "No free events listed"}
+                accent="#34D399"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ================================================================
           VENUE LIST — 2-col grid for featured, compact grid below
           ================================================================ */}
       <div key={activeFilter} className="px-4 lg:px-6 pb-6 pt-4 animate-fade-in">
-        {/* Don't Miss — featured venues */}
-        {featured.length > 0 && (
-          <>
+        {/* Happening This Week — non-featured with events */}
+        {happeningNow.length > 0 && (
+          <div
+            className="rounded-xl p-3 md:p-4"
+            style={getSectionCardStyle(visualProfile, "active", accent)}
+          >
             <div className="flex items-center gap-2 py-2 mb-3">
               <div
                 className="h-[2px] w-8 rounded-full"
-                style={{ background: accent }}
+                style={{ background: "#E03A3E" }}
               />
               <p
                 className="font-mono text-[10px] font-semibold uppercase tracking-[0.1em]"
-                style={{ color: accent }}
+                style={{ color: "#E03A3E" }}
               >
-                Don&apos;t miss
+                Active this week · {happeningNow.length}
               </p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {featured.map((venue, index) => (
-                <div
-                  key={venue.id}
-                  className="explore-track-enter"
-                  style={{ animationDelay: `${Math.min(index * 50, 300)}ms` }}
-                >
-                  <ExploreVenueCard
-                    venue={venue}
-                    portalSlug={portalSlug}
-                    onUpvote={() => handleUpvote(venue.id)}
-                    accent={accent}
-                    variant="featured"
-                    highlight
-                  />
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-
-        {/* Happening This Week — non-featured with events */}
-        {happeningNow.length > 0 && (
-          <>
-            <div className="flex items-center gap-2 py-2 mb-3 mt-4">
-              <div
-                className="h-[2px] w-8 rounded-full"
-                style={{ background: accent }}
-              />
-              <p
-                className="font-mono text-[10px] font-semibold uppercase tracking-[0.1em]"
-                style={{ color: accent }}
-              >
-                Happening this week
-              </p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className={`grid grid-cols-1 ${visualProfile.featuredCols} gap-3`}>
               {happeningNow.map((venue, index) => (
                 <div
                   key={venue.id}
@@ -476,20 +516,60 @@ export default function ExploreTrackDetail({
                   <ExploreVenueCard
                     venue={venue}
                     portalSlug={portalSlug}
-                    onUpvote={() => handleUpvote(venue.id)}
                     accent={accent}
                     variant="featured"
                   />
                 </div>
               ))}
             </div>
-          </>
+          </div>
+        )}
+
+        {/* Don't Miss — featured venues */}
+        {featured.length > 0 && (
+          <div
+            className={`rounded-xl p-3 md:p-4 ${happeningNow.length > 0 ? "mt-4" : ""}`}
+            style={getSectionCardStyle(visualProfile, "featured", accent)}
+          >
+            <div className="flex items-center gap-2 py-2 mb-3">
+              <div
+                className="h-[2px] w-8 rounded-full"
+                style={{ background: accent }}
+              />
+              <p
+                className="font-mono text-[10px] font-semibold uppercase tracking-[0.1em]"
+                style={{ color: accent }}
+              >
+                Don&apos;t miss · {featured.length}
+              </p>
+            </div>
+            <div className={`grid grid-cols-1 ${visualProfile.featuredCols} gap-3`}>
+              {featured.map((venue, index) => (
+                <div
+                  key={venue.id}
+                  className="explore-track-enter"
+                  style={{ animationDelay: `${Math.min(index * 50, 300)}ms` }}
+                >
+                  <ExploreVenueCard
+                    venue={venue}
+                    portalSlug={portalSlug}
+                    accent={accent}
+                    variant="featured"
+                    highlight
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
         )}
 
         {/* More Places — compact grid */}
         {morePlaces.length > 0 && (
-          <>
-            <div className="flex items-center gap-2 py-2 mb-3 mt-4">
+          <div
+            className="rounded-xl p-3 md:p-4 mt-4"
+            style={getSectionCardStyle(visualProfile, "more", accent)}
+          >
+            <div className="flex items-center gap-2 py-2 mb-3">
               <div
                 className="h-[2px] w-6 rounded-full"
                 style={{ background: "var(--twilight)" }}
@@ -501,7 +581,7 @@ export default function ExploreTrackDetail({
                 {(featured.length + happeningNow.length) > 0 ? `More ${category.toLowerCase()} spots` : "All places"}
               </p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className={`grid grid-cols-1 sm:grid-cols-2 ${visualProfile.moreGridCols} gap-3`}>
               {morePlaces.map((venue, index) => (
                 <div
                   key={venue.id}
@@ -511,14 +591,13 @@ export default function ExploreTrackDetail({
                   <ExploreVenueCard
                     venue={venue}
                     portalSlug={portalSlug}
-                    onUpvote={() => handleUpvote(venue.id)}
                     accent={accent}
                     variant="compact"
                   />
                 </div>
               ))}
             </div>
-          </>
+          </div>
         )}
 
         {filteredVenues.length === 0 && (
@@ -565,17 +644,98 @@ export default function ExploreTrackDetail({
   );
 }
 
+function getTrackVisualProfile(slug: string): TrackVisualProfile {
+  const hash = Array.from(slug).reduce(
+    (acc, ch) => acc + ch.charCodeAt(0),
+    0
+  );
+  return TRACK_VISUAL_PROFILES[hash % TRACK_VISUAL_PROFILES.length];
+}
+
+function getSectionCardStyle(
+  profile: TrackVisualProfile,
+  section: "active" | "featured" | "more",
+  accent: string
+) {
+  const background =
+    section === "active"
+      ? profile.activeSurface
+      : section === "featured"
+        ? profile.featuredSurface
+        : profile.moreSurface;
+
+  return {
+    background: `${profile.shellSurface}, ${background}`,
+    border: `1px solid ${section === "active" ? "rgba(224,58,62,0.28)" : `${accent}26`}`,
+    boxShadow: "0 10px 26px rgba(0,0,0,0.28)",
+  };
+}
+
+function LiveFact({
+  label,
+  value,
+  detail,
+  accent,
+}: {
+  label: string;
+  value: string;
+  detail: string;
+  accent: string;
+}) {
+  return (
+    <div
+      className="rounded-lg px-3 py-2.5 border"
+      style={{
+        background: "linear-gradient(140deg, rgba(255,255,255,0.03), rgba(0,0,0,0.16))",
+        borderColor: `${accent}44`,
+      }}
+    >
+      <p
+        className="font-mono text-[9px] uppercase tracking-[0.1em]"
+        style={{ color: "var(--muted)" }}
+      >
+        {label}
+      </p>
+      <p
+        className="text-[12.5px] font-semibold mt-1 line-clamp-1"
+        style={{ color: "var(--cream)" }}
+      >
+        {value}
+      </p>
+      <p
+        className="text-[10.5px] mt-0.5 line-clamp-1"
+        style={{ color: "var(--soft)" }}
+      >
+        {detail}
+      </p>
+    </div>
+  );
+}
+
+function formatShortDay(dateStr: string): string {
+  const date = new Date(`${dateStr}T12:00:00`);
+  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  return days[date.getDay()];
+}
+
+function formatTime(timeStr: string): string {
+  const parts = timeStr.split(":");
+  const hours = Number(parts[0] ?? 0);
+  const minutes = Number(parts[1] ?? 0);
+  const ampm = hours >= 12 ? "pm" : "am";
+  const hour12 = hours % 12 === 0 ? 12 : hours % 12;
+  return minutes > 0 ? `${hour12}:${parts[1]}${ampm}` : `${hour12}${ampm}`;
+}
+
 // ============================================================================
 // Activity Summary Bar — Richer stats with animated counters
 // ============================================================================
 
 function ActivityBar({
   activity,
-  venues,
   totalEvents,
 }: {
   activity: TrackActivity;
-  venues: ExploreTrackVenue[];
   totalEvents: number;
 }) {
   const stats: { label: string; value: number; colorClass: string }[] = [];
