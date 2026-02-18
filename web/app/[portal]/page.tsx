@@ -359,31 +359,35 @@ export default async function PortalPage({ params, searchParams }: Props) {
                   )}
 
                   {!isEmoryNativeHospital && viewMode === "find" && (
-                    <FindView
-                      portalId={portal.id}
-                      portalSlug={portal.slug}
-                      portalExclusive={isExclusive}
-                      findType={findType}
-                      displayMode={findDisplay}
-                      hasActiveFilters={hasActiveFilters}
-                    />
+                    <div data-skeleton-route="find-view" className="contents">
+                      <FindView
+                        portalId={portal.id}
+                        portalSlug={portal.slug}
+                        portalExclusive={isExclusive}
+                        findType={findType}
+                        displayMode={findDisplay}
+                        hasActiveFilters={hasActiveFilters}
+                      />
+                    </div>
                   )}
 
                   {viewMode === "community" && (
-                    isEmoryNativeHospital ? (
-                      <EmoryCommunityExperience
-                        portal={portal}
-                        mode={hospitalMode}
-                        includeSupportSensitive={searchParamsData.support === "1"}
-                      />
-                    ) : (
-                      <CommunityView
-                        portalId={portal.id}
-                        portalSlug={portal.slug}
-                        portalName={portal.name}
-                        activeTab={communityTab}
-                      />
-                    )
+                    <div data-skeleton-route="community-view" className="contents">
+                      {isEmoryNativeHospital ? (
+                        <EmoryCommunityExperience
+                          portal={portal}
+                          mode={hospitalMode}
+                          includeSupportSensitive={searchParamsData.support === "1"}
+                        />
+                      ) : (
+                        <CommunityView
+                          portalId={portal.id}
+                          portalSlug={portal.slug}
+                          portalName={portal.name}
+                          activeTab={communityTab}
+                        />
+                      )}
+                    </div>
                   )}
                 </>
               );

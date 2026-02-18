@@ -3,7 +3,8 @@ import type { HospitalAudienceMode } from "@/lib/hospital-modes";
 import { getPortalHospitalLocations } from "@/lib/hospitals";
 import { getEmoryCommunityHubDigest } from "@/lib/emory-community-category-feed";
 import { getEmoryFederationShowcase } from "@/lib/emory-federation-showcase";
-import { getSupportPolicyCounts } from "@/lib/support-source-policy";
+import { getSupportPolicyCounts, getSourcesByTrack } from "@/lib/support-source-policy";
+import { COMMUNITY_CATEGORIES } from "@/lib/emory-community-categories";
 import {
   EMORY_THEME_CSS,
   EMORY_THEME_SCOPE_CLASS,
@@ -14,6 +15,7 @@ import { I18nProvider } from "@/lib/i18n/I18nProvider";
 import EmoryCommunityHero from "@/app/[portal]/_components/hospital/EmoryCommunityHero";
 import EmoryCommunityFooter from "@/app/[portal]/_components/hospital/EmoryCommunityFooter";
 import EmoryDiscoveryDeck from "@/app/[portal]/_components/hospital/EmoryDiscoveryDeck";
+import EmoryCategoryPathways from "@/app/[portal]/_components/hospital/EmoryCategoryPathways";
 
 type EmoryCommunityExperienceProps = {
   portal: Portal;
@@ -114,6 +116,33 @@ export default async function EmoryCommunityExperience({
     ...categoryFilters,
   ];
 
+  // Build pathway cards from digest categories
+  const pathwayCards = hubDigest.categories.map((cat) => {
+    const catDef = COMMUNITY_CATEGORIES.find((c) => c.key === cat.key);
+    const trackKeys = catDef?.trackKeys || [];
+
+    const allOrgs: { name: string; focus: string }[] = [];
+    for (const track of trackKeys) {
+      for (const org of getSourcesByTrack(track)) {
+        if (!allOrgs.some((o) => o.name === org.name)) {
+          allOrgs.push({ name: org.name, focus: org.focus });
+        }
+      }
+    }
+
+    const highlightOrgs = allOrgs.slice(0, 3).map((o) => o.name);
+
+    return {
+      key: cat.key,
+      title: communityMessages[`category_${cat.key}`] || cat.title,
+      blurb: cat.blurb,
+      iconName: cat.iconName,
+      orgCount: allOrgs.length,
+      highlightOrgs,
+      filterHref: `/${portal.slug}/community-hub?community_hub_filter=${cat.key}#discovery-deck`,
+    };
+  });
+
   // Merge always-available orgs from all categories into showcase organizations (deduplicate by name)
   const showcaseOrgNames = new Set(showcase.organizations.map((o) => o.name));
   const mergedOrganizations = [...showcase.organizations];
@@ -155,7 +184,12 @@ export default async function EmoryCommunityExperience({
             }}
           />
 
-        <section className="emory-panel p-4 sm:p-5">
+          <EmoryCategoryPathways
+            cards={pathwayCards}
+            portalSlug={portal.slug}
+          />
+
+        <section id="discovery-deck" className="emory-panel p-4 sm:p-5">
           <EmoryDiscoveryDeck
             stateKey="community_hub"
             title={communityMessages.browseTitle || "Browse programs and resources"}

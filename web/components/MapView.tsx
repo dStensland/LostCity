@@ -182,6 +182,7 @@ export default function MapView({
   const mapRef = useRef<MapRef>(null);
 
   const [mounted, setMounted] = useState(false);
+  const [mapSupported, setMapSupported] = useState(true);
   const [mapReady, setMapReady] = useState(false);
   const [viewTick, setViewTick] = useState(0);
   const [localUserLocation, setLocalUserLocation] = useState<{ lat: number; lng: number } | null>(userLocation || null);
@@ -190,9 +191,27 @@ export default function MapView({
   const [initialFitDone, setInitialFitDone] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
     setMounted(true);
     // @ts-expect-error - Dynamic CSS import
     import("mapbox-gl/dist/mapbox-gl.css");
+    void import("mapbox-gl")
+      .then((mod) => {
+        if (cancelled) return;
+        const candidate = (mod as { default?: { supported?: (opts?: unknown) => boolean }; supported?: (opts?: unknown) => boolean });
+        const supported =
+          candidate?.supported ?? candidate?.default?.supported;
+        if (typeof supported === "function" && !supported({ failIfMajorPerformanceCaveat: false })) {
+          setMapSupported(false);
+        }
+      })
+      .catch(() => {
+        // Keep default; onError handler below will catch runtime failures.
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -570,7 +589,7 @@ export default function MapView({
   const selectedEventCoords = selectedEvent ? getEventCoordinates(selectedEvent) : null;
   const selectedSpotCoords = selectedSpot ? getSpotCoordinates(selectedSpot) : null;
 
-  if (!mounted) {
+  if (!mounted || !mapSupported) {
     return (
       <div className="w-full h-full bg-[var(--night)] border border-[var(--twilight)] relative overflow-hidden">
         <div className="absolute inset-0 opacity-[0.04] map-grid-lines" />
@@ -578,7 +597,9 @@ export default function MapView({
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="flex items-center gap-3 px-4 py-2.5 rounded-lg bg-[var(--dusk)]/80 backdrop-blur-sm border border-[var(--twilight)]">
             <div className="w-4 h-4 rounded-full border-2 border-[var(--coral)] border-t-transparent animate-spin" />
-            <span className="text-[var(--muted)] font-mono text-xs">Loading map</span>
+            <span className="text-[var(--muted)] font-mono text-xs">
+              {mounted ? "Map unavailable on this device" : "Loading map"}
+            </span>
           </div>
         </div>
       </div>
@@ -593,6 +614,12 @@ export default function MapView({
         initialViewState={initialViewState}
         mapStyle={mapStyle}
         onLoad={handleMapLoad}
+        onError={(event) => {
+          const message = String((event as { error?: { message?: string } })?.error?.message || "").toLowerCase();
+          if (message.includes("not supported")) {
+            setMapSupported(false);
+          }
+        }}
         onClick={handleMapClick}
         onMoveEnd={() => {
           emitBounds();

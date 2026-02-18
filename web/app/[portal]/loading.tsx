@@ -2,16 +2,44 @@
 
 import { PortalHeader } from "@/components/headers";
 import Skeleton from "@/components/Skeleton";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { usePortalOptional } from "@/lib/portal-context";
 import { resolveSkeletonVertical } from "@/lib/skeleton-contract";
 
 export default function PortalLoading() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const portalSlug = (params?.portal as string) || "atlanta";
   const portalContext = usePortalOptional();
   const portal = portalContext?.portal;
   const inferredVertical = resolveSkeletonVertical(portal, portalSlug);
+  const viewParam = searchParams?.get("view");
+  const hasFindSignals = Boolean(
+    searchParams?.get("type") ||
+      searchParams?.get("display") ||
+      searchParams?.get("search") ||
+      searchParams?.get("categories") ||
+      searchParams?.get("subcategories") ||
+      searchParams?.get("genres") ||
+      searchParams?.get("tags") ||
+      searchParams?.get("vibes") ||
+      searchParams?.get("neighborhoods") ||
+      searchParams?.get("price") ||
+      searchParams?.get("free") ||
+      searchParams?.get("date") ||
+      searchParams?.get("mood")
+  );
+  const viewMode: "feed" | "find" | "community" =
+    viewParam === "community"
+      ? "community"
+      : viewParam === "find" ||
+          viewParam === "events" ||
+          viewParam === "spots" ||
+          viewParam === "map" ||
+          viewParam === "calendar" ||
+          hasFindSignals
+        ? "find"
+        : "feed";
 
   if (inferredVertical === "hotel") {
     return <HotelPortalLoading portalName={portal?.name || "Hotel"} />;
@@ -25,9 +53,21 @@ export default function PortalLoading() {
     return <FilmPortalLoading />;
   }
 
+  if (viewMode === "find") {
+    return <CityFindPortalLoading portalSlug={portalSlug} portalName={portal?.name || "Lost City"} />;
+  }
+
+  if (viewMode === "community") {
+    return <CityCommunityPortalLoading portalSlug={portalSlug} portalName={portal?.name || "Lost City"} />;
+  }
+
+  return <CityFeedPortalLoading portalSlug={portalSlug} portalName={portal?.name || "Lost City"} />;
+}
+
+function CityFeedPortalLoading({ portalSlug, portalName }: { portalSlug: string; portalName: string }) {
   return (
     <div data-skeleton-route="portal-root" data-skeleton-vertical="city" className="min-h-screen">
-      <PortalHeader portalSlug={portalSlug} portalName={portal?.name || "Lost City"} />
+      <PortalHeader portalSlug={portalSlug} portalName={portalName} />
 
       <main className="max-w-3xl mx-auto px-4 pb-16">
         {/* Tonight's Picks skeleton */}
@@ -136,6 +176,83 @@ export default function PortalLoading() {
                 <Skeleton key={j} className="rounded-xl h-52" delay={`${j * 0.1 + 1.6}s`} />
               ))}
             </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function CityFindPortalLoading({ portalSlug, portalName }: { portalSlug: string; portalName: string }) {
+  return (
+    <div data-skeleton-route="portal-root" data-skeleton-vertical="city" className="min-h-screen">
+      <PortalHeader portalSlug={portalSlug} portalName={portalName} />
+      <main className="max-w-5xl mx-auto px-4 pb-20">
+        <div className="py-3 space-y-3">
+          <section className="rounded-2xl border border-[var(--twilight)]/80 bg-gradient-to-b from-[var(--night)]/94 to-[var(--void)]/86 shadow-[0_14px_30px_rgba(0,0,0,0.24)] p-3 sm:p-4">
+            <div className="flex items-center gap-2 mb-3">
+              {[0, 1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-9 w-24 rounded-lg" delay={`${i * 0.05}s`} />
+              ))}
+            </div>
+            <Skeleton className="h-11 w-full rounded-xl mb-3" />
+            <div className="flex gap-2 mb-3">
+              {[0, 1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-8 w-20 rounded-full" delay={`${i * 0.05 + 0.2}s`} />
+              ))}
+            </div>
+            <Skeleton className="h-8 w-24 rounded-full" />
+          </section>
+
+          <div className="space-y-3">
+            {[0, 1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="rounded-2xl border border-[var(--twilight)]/70 bg-[var(--dusk)]/75 p-4">
+                <Skeleton className="h-4 w-20 rounded mb-2" delay={`${i * 0.05 + 0.35}s`} />
+                <Skeleton className="h-6 w-[70%] rounded mb-2" delay={`${i * 0.05 + 0.4}s`} />
+                <Skeleton className="h-4 w-[55%] rounded" delay={`${i * 0.05 + 0.45}s`} />
+              </div>
+            ))}
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function CityCommunityPortalLoading({ portalSlug, portalName }: { portalSlug: string; portalName: string }) {
+  return (
+    <div data-skeleton-route="portal-root" data-skeleton-vertical="city" className="min-h-screen">
+      <PortalHeader portalSlug={portalSlug} portalName={portalName} />
+      <main className="max-w-5xl mx-auto px-4 pb-20">
+        <div className="py-4 space-y-4">
+          <div className="flex gap-2 p-1 rounded-xl border border-[var(--twilight)]/70 bg-[var(--void)]/70">
+            {[0, 1, 2].map((i) => (
+              <Skeleton key={i} className="h-9 flex-1 rounded-lg" delay={`${i * 0.05}s`} />
+            ))}
+          </div>
+
+          <section className="rounded-2xl border border-[var(--twilight)]/70 bg-[var(--night)]/75 p-6">
+            <div className="flex flex-col items-center text-center">
+              <Skeleton className="h-14 w-14 rounded-2xl mb-4" />
+              <Skeleton className="h-8 w-64 rounded mb-3" />
+              <Skeleton className="h-4 w-[80%] max-w-lg rounded mb-1" delay="0.05s" />
+              <Skeleton className="h-4 w-[68%] max-w-md rounded mb-5" delay="0.1s" />
+              <Skeleton className="h-11 w-52 rounded-xl" delay="0.15s" />
+            </div>
+          </section>
+
+          <div className="space-y-2.5 opacity-70">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="rounded-xl border border-[var(--twilight)]/50 bg-[var(--dusk)]/70 p-3">
+                <div className="flex items-start gap-3">
+                  <Skeleton className="h-9 w-9 rounded-full" delay={`${i * 0.05 + 0.2}s`} />
+                  <div className="flex-1">
+                    <Skeleton className="h-4 w-1/2 rounded mb-2" delay={`${i * 0.05 + 0.25}s`} />
+                    <Skeleton className="h-3 w-3/4 rounded" delay={`${i * 0.05 + 0.3}s`} />
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </main>
