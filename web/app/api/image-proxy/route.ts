@@ -14,7 +14,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { lookup } from "dns/promises";
 import { isIP } from "net";
-import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import {
+  applyDailyQuota,
+  applyRateLimit,
+  RATE_LIMITS,
+  getClientIdentifier,
+} from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -114,8 +119,38 @@ export async function GET(request: NextRequest) {
   if (identifier === "unknown") {
     identifier = `proxy:${target.hostname}`;
   }
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, identifier);
-  if (rateLimitResult) return rateLimitResult;
+
+  const clientRateLimitResult = await applyRateLimit(
+    request,
+    RATE_LIMITS.proxy,
+    identifier,
+    {
+      bucket: "image-proxy:client",
+      logContext: "image-proxy",
+    }
+  );
+  if (clientRateLimitResult) return clientRateLimitResult;
+
+  const hostRateLimitResult = await applyRateLimit(
+    request,
+    RATE_LIMITS.proxy,
+    `host:${target.hostname}`,
+    {
+      bucket: `image-proxy:host:${target.hostname.toLowerCase()}`,
+      logContext: "image-proxy",
+    }
+  );
+  if (hostRateLimitResult) return hostRateLimitResult;
+
+  const dailyLimit = Number.parseInt(
+    process.env.RATE_LIMIT_IMAGE_PROXY_DAILY_LIMIT || "500",
+    10
+  );
+  const dailyQuotaResult = await applyDailyQuota(request, dailyLimit, identifier, {
+    bucket: "image-proxy:client",
+    logContext: "image-proxy",
+  });
+  if (dailyQuotaResult) return dailyQuotaResult;
 
   if (target.username || target.password) {
     return NextResponse.json({ error: "Credentials not allowed in URL" }, { status: 400 });

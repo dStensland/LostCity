@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUser } from "@/lib/supabase/server";
-import { applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import { applyDailyQuota, applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";
 import OpenAI from "openai";
 import { getLocalDateString } from "@/lib/formats";
@@ -25,13 +25,30 @@ Return valid JSON only, no markdown formatting or code fences.`;
 
 // POST /api/extract/event-from-image — Extract event data from a poster image
 export async function POST(request: NextRequest) {
+  if (process.env.ENABLE_EVENT_IMAGE_EXTRACTION === "false") {
+    return NextResponse.json({ error: "Feature temporarily disabled" }, { status: 503 });
+  }
+
   const user = await getUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, user.id);
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.aiExtract, user.id, {
+    bucket: "extract:event-from-image",
+    logContext: "extract:event-from-image",
+  });
   if (rateLimitResult) return rateLimitResult;
+
+  const dailyLimit = Number.parseInt(
+    process.env.RATE_LIMIT_EXTRACT_DAILY_LIMIT || "40",
+    10
+  );
+  const dailyQuotaResult = await applyDailyQuota(request, dailyLimit, user.id, {
+    bucket: "extract:event-from-image",
+    logContext: "extract:event-from-image",
+  });
+  if (dailyQuotaResult) return dailyQuotaResult;
 
   let body: { image_url: string };
   try {

@@ -66,8 +66,12 @@ export async function GET(request: Request) {
   // Rate limit: expensive endpoint (7+ queries per request)
   const rateLimitResult = await applyRateLimit(
     request,
-    RATE_LIMITS.expensive,
+    RATE_LIMITS.feed,
     getClientIdentifier(request),
+    {
+      bucket: "feed:global",
+      logContext: "feed:global",
+    }
   );
   if (rateLimitResult) return rateLimitResult;
 

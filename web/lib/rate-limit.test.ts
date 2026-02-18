@@ -1,5 +1,7 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterAll, vi } from "vitest";
 import {
+  applyRateLimit,
+  applyDailyQuota,
   checkRateLimit,
   getClientIdentifier,
   RATE_LIMITS,
@@ -16,15 +18,23 @@ vi.mock("@upstash/redis", () => ({
 }));
 
 describe("rate-limit", () => {
+  const originalNodeEnv = process.env.NODE_ENV;
+
   beforeEach(() => {
     // Clear environment to ensure in-memory fallback
     delete process.env.UPSTASH_REDIS_REST_URL;
     delete process.env.UPSTASH_REDIS_REST_TOKEN;
+    delete process.env.REQUIRE_DISTRIBUTED_RATE_LIMIT;
+    process.env.NODE_ENV = "test";
+  });
+
+  afterAll(() => {
+    process.env.NODE_ENV = originalNodeEnv;
   });
 
   describe("RATE_LIMITS", () => {
     it("has correct configuration for standard endpoints", () => {
-      expect(RATE_LIMITS.standard).toEqual({ limit: 100, windowSec: 60 });
+      expect(RATE_LIMITS.standard).toEqual({ limit: 80, windowSec: 60 });
     });
 
     it("has correct configuration for auth endpoints", () => {
@@ -32,15 +42,22 @@ describe("rate-limit", () => {
     });
 
     it("has correct configuration for write endpoints", () => {
-      expect(RATE_LIMITS.write).toEqual({ limit: 30, windowSec: 60 });
+      expect(RATE_LIMITS.write).toEqual({ limit: 20, windowSec: 60 });
     });
 
     it("has correct configuration for expensive endpoints", () => {
-      expect(RATE_LIMITS.expensive).toEqual({ limit: 30, windowSec: 60 });
+      expect(RATE_LIMITS.expensive).toEqual({ limit: 20, windowSec: 60 });
     });
 
     it("has correct configuration for search endpoints", () => {
-      expect(RATE_LIMITS.search).toEqual({ limit: 60, windowSec: 60 });
+      expect(RATE_LIMITS.search).toEqual({ limit: 45, windowSec: 60 });
+    });
+
+    it("has strict defaults for high-cost endpoints", () => {
+      expect(RATE_LIMITS.feed).toEqual({ limit: 40, windowSec: 60 });
+      expect(RATE_LIMITS.proxy).toEqual({ limit: 50, windowSec: 60 });
+      expect(RATE_LIMITS.aiExtract).toEqual({ limit: 6, windowSec: 60 });
+      expect(RATE_LIMITS.invites).toEqual({ limit: 3, windowSec: 60 });
     });
   });
 
@@ -54,6 +71,7 @@ describe("rate-limit", () => {
       expect(result.success).toBe(true);
       expect(result.limit).toBe(5);
       expect(result.remaining).toBe(4);
+      expect(result.source).toBe("memory");
     });
 
     it("decrements remaining count on each request", async () => {
@@ -83,6 +101,7 @@ describe("rate-limit", () => {
 
       expect(result.success).toBe(false);
       expect(result.remaining).toBe(0);
+      expect(result.source).toBe("memory");
     });
 
     it("tracks different identifiers separately", async () => {
@@ -101,6 +120,26 @@ describe("rate-limit", () => {
       // Second request for user 1 should be blocked
       const result3 = await checkRateLimit(id1, config, "test");
       expect(result3.success).toBe(false);
+    });
+  });
+
+  describe("production distributed enforcement", () => {
+    it("fails closed in production when Upstash is not configured", async () => {
+      process.env.NODE_ENV = "production";
+      const result = await checkRateLimit("prod-user", RATE_LIMITS.standard, "prod_test");
+
+      expect(result.success).toBe(false);
+      expect(result.source).toBe("unavailable");
+      expect(result.reason).toBe("distributed_rate_limiter_required");
+    });
+
+    it("can be explicitly disabled for emergency fallback", async () => {
+      process.env.NODE_ENV = "production";
+      process.env.REQUIRE_DISTRIBUTED_RATE_LIMIT = "false";
+      const result = await checkRateLimit("prod-user-override", RATE_LIMITS.standard, "prod_override");
+
+      expect(result.success).toBe(true);
+      expect(result.source).toBe("memory");
     });
   });
 
@@ -212,6 +251,44 @@ describe("rate-limit", () => {
 
       expect(body.error).toBe("Too many requests");
       expect(body.retryAfter).toBeDefined();
+      expect(body.reason).toBeNull();
+    });
+  });
+
+  describe("applyRateLimit helpers", () => {
+    it("applies custom bucket keys for endpoint-scoped limits", async () => {
+      const request = new Request("https://example.com");
+      const identifier = `bucketed-${Date.now()}-${Math.random()}`;
+
+      const allowed = await applyRateLimit(request, { limit: 1, windowSec: 60 }, identifier, {
+        bucket: "endpoint:a",
+      });
+      expect(allowed).toBeNull();
+
+      const blocked = await applyRateLimit(request, { limit: 1, windowSec: 60 }, identifier, {
+        bucket: "endpoint:a",
+      });
+      expect(blocked?.status).toBe(429);
+
+      // Different bucket should not be affected
+      const allowedDifferentBucket = await applyRateLimit(
+        request,
+        { limit: 1, windowSec: 60 },
+        identifier,
+        { bucket: "endpoint:b" }
+      );
+      expect(allowedDifferentBucket).toBeNull();
+    });
+
+    it("supports daily quota helper", async () => {
+      const request = new Request("https://example.com");
+      const identifier = `daily-${Date.now()}-${Math.random()}`;
+
+      const first = await applyDailyQuota(request, 1, identifier, { bucket: "test-daily" });
+      expect(first).toBeNull();
+
+      const second = await applyDailyQuota(request, 1, identifier, { bucket: "test-daily" });
+      expect(second?.status).toBe(429);
     });
   });
 });

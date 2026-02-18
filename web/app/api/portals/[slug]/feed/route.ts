@@ -403,11 +403,15 @@ function isCommunityActionSection(
 
 // GET /api/portals/[slug]/feed - Get feed content for a portal
 export async function GET(request: NextRequest, { params }: Props) {
-  // Rate limit - use read limit since this is a common read endpoint
+  // Rate limit - feed endpoints are high fanout and should use tighter controls.
   const rateLimitResult = await applyRateLimit(
     request,
-    RATE_LIMITS.read,
+    RATE_LIMITS.feed,
     getClientIdentifier(request),
+    {
+      bucket: "feed:portal",
+      logContext: "feed:portal",
+    }
   );
   if (rateLimitResult) return rateLimitResult;
 

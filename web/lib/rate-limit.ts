@@ -20,6 +20,15 @@ import { Redis } from "@upstash/redis";
 let redis: Redis | null = null;
 let upstashRateLimiters: Map<string, Ratelimit> | null = null;
 
+const DISTRIBUTED_BACKEND_RETRY_AFTER_SEC = 60;
+
+function requiresDistributedRateLimit(): boolean {
+  if (process.env.REQUIRE_DISTRIBUTED_RATE_LIMIT === "false") {
+    return false;
+  }
+  return process.env.NODE_ENV === "production";
+}
+
 // Initialize Redis connection if environment variables are set
 function getRedis(): Redis | null {
   if (redis) return redis;
@@ -103,29 +112,43 @@ export type RateLimitResult = {
   limit: number;
   remaining: number;
   resetTime: number;
+  source: "upstash" | "memory" | "unavailable";
+  reason?: "distributed_rate_limiter_required" | "distributed_rate_limiter_error";
 };
 
 /**
  * Standard rate limit configurations for different endpoint types.
  */
 export const RATE_LIMITS = {
-  // General API endpoints - 100 requests per minute
-  standard: { limit: 100, windowSec: 60 } as RateLimitConfig,
+  // General API endpoints - 80 requests per minute
+  standard: { limit: 80, windowSec: 60 } as RateLimitConfig,
 
-  // Read-heavy endpoints (events, search) - 200 requests per minute
-  read: { limit: 200, windowSec: 60 } as RateLimitConfig,
+  // Read-heavy endpoints (events, search) - 120 requests per minute
+  read: { limit: 120, windowSec: 60 } as RateLimitConfig,
 
-  // Write endpoints (RSVP, follow) - 30 requests per minute
-  write: { limit: 30, windowSec: 60 } as RateLimitConfig,
+  // Write endpoints (RSVP, follow) - 20 requests per minute
+  write: { limit: 20, windowSec: 60 } as RateLimitConfig,
 
   // Auth-related endpoints - 10 requests per minute (prevent brute force)
   auth: { limit: 10, windowSec: 60 } as RateLimitConfig,
 
-  // Expensive endpoints (feed, trending) - 30 requests per minute
-  expensive: { limit: 30, windowSec: 60 } as RateLimitConfig,
+  // Expensive endpoints (feed, trending) - 20 requests per minute
+  expensive: { limit: 20, windowSec: 60 } as RateLimitConfig,
 
-  // Search endpoints - 60 requests per minute
-  search: { limit: 60, windowSec: 60 } as RateLimitConfig,
+  // Search endpoints - 45 requests per minute
+  search: { limit: 45, windowSec: 60 } as RateLimitConfig,
+
+  // Feed endpoints can be noisy under bot traffic
+  feed: { limit: 40, windowSec: 60 } as RateLimitConfig,
+
+  // Image proxy can be used for bandwidth abuse
+  proxy: { limit: 50, windowSec: 60 } as RateLimitConfig,
+
+  // OpenAI-backed image extraction should be tightly controlled
+  aiExtract: { limit: 6, windowSec: 60 } as RateLimitConfig,
+
+  // Outbound email sends
+  invites: { limit: 3, windowSec: 60 } as RateLimitConfig,
 } as const;
 
 // ============================================================================
@@ -157,15 +180,41 @@ export async function checkRateLimit(
         limit: result.limit,
         remaining: result.remaining,
         resetTime: result.reset,
+        source: "upstash",
       };
     } catch (error) {
-      // Log error but don't fail - fall back to in-memory
+      // Fail closed in production unless explicitly overridden.
+      if (requiresDistributedRateLimit()) {
+        console.error("Upstash rate limit error in production:", error);
+        return {
+          success: false,
+          limit: config.limit,
+          remaining: 0,
+          resetTime: Date.now() + DISTRIBUTED_BACKEND_RETRY_AFTER_SEC * 1000,
+          source: "unavailable",
+          reason: "distributed_rate_limiter_error",
+        };
+      }
+
+      // In non-production, falling back is acceptable for local development.
       console.warn("Upstash rate limit error, falling back to in-memory:", error);
+      return checkRateLimitInMemory(identifier, config, configKey);
     }
   }
 
+  if (requiresDistributedRateLimit()) {
+    return {
+      success: false,
+      limit: config.limit,
+      remaining: 0,
+      resetTime: Date.now() + DISTRIBUTED_BACKEND_RETRY_AFTER_SEC * 1000,
+      source: "unavailable",
+      reason: "distributed_rate_limiter_required",
+    };
+  }
+
   // Fall back to in-memory
-  return checkRateLimitInMemory(identifier, config);
+  return checkRateLimitInMemory(identifier, config, configKey);
 }
 
 /**
@@ -173,13 +222,14 @@ export async function checkRateLimit(
  */
 function checkRateLimitInMemory(
   identifier: string,
-  config: RateLimitConfig
+  config: RateLimitConfig,
+  scopeKey: string = "default"
 ): RateLimitResult {
   cleanupExpiredEntries();
 
   const now = Date.now();
   const windowMs = config.windowSec * 1000;
-  const key = `${config.limit}_${config.windowSec}:${identifier}`;
+  const key = `${scopeKey}:${config.limit}_${config.windowSec}:${identifier}`;
 
   const entry = rateLimitStore.get(key);
 
@@ -196,6 +246,7 @@ function checkRateLimitInMemory(
       limit: config.limit,
       remaining: config.limit - 1,
       resetTime: newEntry.resetTime,
+      source: "memory",
     };
   }
 
@@ -206,6 +257,7 @@ function checkRateLimitInMemory(
       limit: config.limit,
       remaining: 0,
       resetTime: entry.resetTime,
+      source: "memory",
     };
   }
 
@@ -217,6 +269,7 @@ function checkRateLimitInMemory(
     limit: config.limit,
     remaining: config.limit - entry.count,
     resetTime: entry.resetTime,
+    source: "memory",
   };
 }
 
@@ -249,20 +302,25 @@ export function getClientIdentifier(request: Request): string {
  * Create rate limit error response with proper headers.
  */
 export function rateLimitResponse(result: RateLimitResult): Response {
-  const retryAfter = Math.ceil((result.resetTime - Date.now()) / 1000);
+  const retryAfter = Math.max(1, Math.ceil((result.resetTime - Date.now()) / 1000));
+  const isBackendUnavailable = result.source === "unavailable";
 
   return new Response(
     JSON.stringify({
-      error: "Too many requests",
+      error: isBackendUnavailable
+        ? "Rate limiting backend unavailable"
+        : "Too many requests",
       retryAfter,
+      reason: result.reason || null,
     }),
     {
-      status: 429,
+      status: isBackendUnavailable ? 503 : 429,
       headers: {
         "Content-Type": "application/json",
         "X-RateLimit-Limit": result.limit.toString(),
         "X-RateLimit-Remaining": "0",
         "X-RateLimit-Reset": result.resetTime.toString(),
+        "X-RateLimit-Source": result.source,
         "Retry-After": retryAfter.toString(),
       },
     }
@@ -286,18 +344,59 @@ export function rateLimitResponse(result: RateLimitResult): Response {
 export async function applyRateLimit(
   request: Request,
   config: RateLimitConfig,
-  identifier?: string
+  identifier?: string,
+  options?: {
+    bucket?: string;
+    logContext?: string;
+  }
 ): Promise<Response | null> {
   const id = identifier || getClientIdentifier(request);
 
-  // Derive config key from the config values
-  const configKey = `${config.limit}_${config.windowSec}`;
+  // Derive config key from the config values unless a custom endpoint bucket is provided.
+  const configKey = options?.bucket || `${config.limit}_${config.windowSec}`;
 
   const result = await checkRateLimit(id, config, configKey);
 
   if (!result.success) {
+    console.warn("Rate limit blocked request", {
+      context: options?.logContext || "api",
+      bucket: configKey,
+      identifier: id,
+      source: result.source,
+      reason: result.reason || "limit_exceeded",
+      limit: config.limit,
+      windowSec: config.windowSec,
+    });
     return rateLimitResponse(result);
   }
 
   return null;
+}
+
+/**
+ * Optional daily quota helper for costly endpoints.
+ * Uses UTC calendar day buckets to cap usage beyond burst/minute limits.
+ */
+export async function applyDailyQuota(
+  request: Request,
+  dailyLimit: number,
+  identifier?: string,
+  options?: {
+    bucket?: string;
+    logContext?: string;
+  }
+): Promise<Response | null> {
+  if (!Number.isFinite(dailyLimit) || dailyLimit <= 0) {
+    return null;
+  }
+
+  const day = new Date().toISOString().slice(0, 10); // UTC day bucket
+  const bucketBase = options?.bucket || "daily";
+  const bucket = `daily:${bucketBase}:${day}`;
+  return applyRateLimit(
+    request,
+    { limit: dailyLimit, windowSec: 24 * 60 * 60 },
+    identifier,
+    { bucket, logContext: options?.logContext || bucketBase }
+  );
 }
