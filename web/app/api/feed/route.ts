@@ -66,6 +66,15 @@ function createCursor(score: number, id: number, date: string): string {
   return Buffer.from(`${score}|${id}|${date}`).toString("base64");
 }
 
+function normalizeStringList(values: unknown): string[] {
+  if (!Array.isArray(values)) return [];
+  return values.filter((value): value is string => typeof value === "string");
+}
+
+function normalizeLowercaseStringList(values: unknown): string[] {
+  return normalizeStringList(values).map((value) => value.toLowerCase());
+}
+
 export async function GET(request: Request) {
   // Rate limit: expensive endpoint (7+ queries per request)
   const rateLimitResult = await applyRateLimit(
@@ -199,22 +208,20 @@ export async function GET(request: Request) {
     };
 
     const prefs = prefsData as UserPrefs | null;
-    const favoriteNeighborhoods = prefs?.favorite_neighborhoods || [];
-    const favoriteCategories = prefs?.favorite_categories || [];
+    const favoriteNeighborhoods = normalizeStringList(
+      prefs?.favorite_neighborhoods,
+    );
+    const favoriteCategories = normalizeStringList(prefs?.favorite_categories);
     const favoriteGenres = Object.values(prefs?.favorite_genres || {})
       .flat()
       .filter((genre): genre is string => typeof genre === "string")
       .map((genre) => genre.toLowerCase());
     const favoriteGenreSet = new Set(favoriteGenres);
-    const needsAccessibility = (prefs?.needs_accessibility || []).map((need) =>
-      need.toLowerCase(),
+    const needsAccessibility = normalizeLowercaseStringList(
+      prefs?.needs_accessibility,
     );
-    const needsDietary = (prefs?.needs_dietary || []).map((need) =>
-      need.toLowerCase(),
-    );
-    const needsFamily = (prefs?.needs_family || []).map((need) =>
-      need.toLowerCase(),
-    );
+    const needsDietary = normalizeLowercaseStringList(prefs?.needs_dietary);
+    const needsFamily = normalizeLowercaseStringList(prefs?.needs_family);
     const hideAdultContent = prefs?.hide_adult_content ?? false;
     const crossPortalRecommendations =
       prefs?.cross_portal_recommendations ?? true;
@@ -823,9 +830,7 @@ export async function GET(request: Request) {
       let score = 0;
       const reasons: RecommendationReason[] = [];
       const tasteMatches: string[] = [];
-      const eventGenres = (event.genres || []).map((genre) =>
-        genre.toLowerCase(),
-      );
+      const eventGenres = normalizeLowercaseStringList(event.genres);
       const haystack = [event.title, ...(event.tags || []), ...eventGenres]
         .join(" ")
         .toLowerCase();
@@ -1048,8 +1053,10 @@ export async function GET(request: Request) {
           return true;
         // Keep events matching favorite genres
         if (
-          event.genres?.some((genre) =>
-            favoriteGenreSet.has(genre.toLowerCase()),
+          event.genres?.some(
+            (genre) =>
+              typeof genre === "string" &&
+              favoriteGenreSet.has(genre.toLowerCase()),
           )
         )
           return true;
@@ -1164,8 +1171,10 @@ export async function GET(request: Request) {
       const matchesTaste = (event: EventResult) =>
         Boolean(
           (event.category && favoriteCategories.includes(event.category)) ||
-          event.genres?.some((genre) =>
-            favoriteGenreSet.has(genre.toLowerCase()),
+          event.genres?.some(
+            (genre) =>
+              typeof genre === "string" &&
+              favoriteGenreSet.has(genre.toLowerCase()),
           ) ||
           (event.venue?.neighborhood &&
             favoriteNeighborhoods.includes(event.venue.neighborhood)),

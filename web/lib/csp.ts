@@ -18,6 +18,10 @@ const STATIC_SCRIPT_SRC_BASE = [
 ].join(" ");
 
 const STATIC_STYLE_SRC_BASE = ["'self'", "https://fonts.googleapis.com"].join(" ");
+const STATIC_STYLE_HASHES = [
+  // Known inline style emitted by runtime/UI code in production.
+  "'sha256-PNJlsW+jqvAz1lyjKfN+0MMv4obmsu3nXUGkFS5rlqo='",
+].join(" ");
 const STATIC_FONT_SRC = ["'self'", "data:", "https://fonts.gstatic.com"].join(" ");
 
 // img-src: Allow any HTTPS image. We pull event/venue images from 500+ domains
@@ -56,15 +60,18 @@ export function buildCsp(nonce: string, options: CspOptions = {}): string {
   // Style nonces still work because Next.js does add nonces to <style> tags.
   const scriptSrc = `script-src ${STATIC_SCRIPT_SRC_BASE} 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`;
 
-  // In development, toolchains/devtools inject <style> tags without a nonce.
-  // A nonce + 'unsafe-inline' still blocks them (unsafe-inline is ignored when nonce exists),
-  // so we switch to an inline-friendly policy only in dev.
-  const styleSrc = isDev
-    ? `style-src ${STATIC_STYLE_SRC_BASE} 'unsafe-inline'`
-    : `style-src ${STATIC_STYLE_SRC_BASE} 'nonce-${nonce}'${allowInlineStyles ? " 'unsafe-inline'" : ""}`;
-  const styleSrcElem = isDev
-    ? `style-src-elem ${STATIC_STYLE_SRC_BASE} 'unsafe-inline'`
-    : `style-src-elem ${STATIC_STYLE_SRC_BASE} 'nonce-${nonce}'${allowInlineStyles ? " 'unsafe-inline'" : ""}`;
+  // In development (and for report-only troubleshooting), allow inline style tags.
+  // If a nonce is present, browsers ignore 'unsafe-inline' for style-src directives.
+  // So when inline styles are allowed, omit nonce and use an inline-friendly policy.
+  const staticStyleSources = [STATIC_STYLE_SRC_BASE, STATIC_STYLE_HASHES]
+    .filter(Boolean)
+    .join(" ");
+  const styleSrc = isDev || allowInlineStyles
+    ? `style-src ${staticStyleSources} 'unsafe-inline'`
+    : `style-src ${staticStyleSources} 'nonce-${nonce}'`;
+  const styleSrcElem = isDev || allowInlineStyles
+    ? `style-src-elem ${staticStyleSources} 'unsafe-inline'`
+    : `style-src-elem ${staticStyleSources} 'nonce-${nonce}'`;
   // Always allow inline style attributes — React components use style={{ }} extensively
   // (Mapbox, skeletons, progress bars, dynamic layouts). style-src-attr doesn't enable
   // script execution, so 'unsafe-inline' here has minimal security impact.
