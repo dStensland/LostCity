@@ -33,7 +33,6 @@ import {
 import type { ComponentType } from "react";
 import type { IconProps } from "@phosphor-icons/react";
 import { usePortal } from "@/lib/portal-context";
-import { useScrollReveal } from "@/lib/hooks/useScrollReveal";
 import { FeaturedCarousel } from "./FeaturedCarousel";
 import LinkifyText from "../LinkifyText";
 import FeedSectionHeader, { type SectionPriority } from "./FeedSectionHeader";
@@ -258,10 +257,6 @@ function getSeeAllUrl(section: FeedSectionData, portalSlug: string): string {
 
 export default function FeedSection({ section, isFirst }: Props) {
   const { portal } = usePortal();
-  const { ref, isVisible } = useScrollReveal<HTMLDivElement>({
-    threshold: 0.05,
-    rootMargin: "0px 0px -20px 0px",
-  });
 
   // Hide images can be configured per-portal via settings.feed.hide_images
   const hideImages = portal.settings?.feed?.hide_images === true;
@@ -367,13 +362,7 @@ export default function FeedSection({ section, isFirst }: Props) {
   }
 
   return (
-    <div
-      ref={ref}
-      onClickCapture={handleSectionClickCapture}
-      className={`transition-all duration-500 ease-out ${
-        isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
-      }`}
-    >
+    <div onClickCapture={handleSectionClickCapture}>
       {renderContent()}
     </div>
   );
