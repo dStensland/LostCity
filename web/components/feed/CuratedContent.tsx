@@ -32,8 +32,8 @@ type CuratedIndexEntry = {
 const CURATED_BASE_ENTRIES: CuratedIndexEntry[] = [
   { id: CURATED_HAPPENING_NOW_ID, label: "Happening Now" },
   { id: CURATED_SEASONAL_SPOTLIGHT_ID, label: "Seasonal Spotlight" },
-  { id: CURATED_TONIGHT_PICKS_ID, label: "Tonight Picks" },
-  { id: CURATED_FESTIVALS_ID, label: "Festivals & Conventions" },
+  { id: CURATED_TONIGHT_PICKS_ID, label: "Highlights" },
+  { id: CURATED_FESTIVALS_ID, label: "Festivals" },
   { id: CURATED_SECOND_SPOTLIGHT_ID, label: "Special Times" },
   { id: CURATED_TRENDING_ID, label: "Trending Now" },
   { id: CURATED_MAIN_FEED_ID, label: "Main Feed" },
@@ -135,14 +135,14 @@ function CuratedPageIndex({ portalSlug, loading }: { portalSlug: string; loading
       const fromAnyUnused = pickAnyUnused();
       return { id: fromAnyUnused ?? preferredId, label };
     };
+    const pinEntry = (label: string, id: string): CuratedIndexEntry => {
+      used.add(id);
+      return { id, label };
+    };
 
     return [
-      pickEntry(
-        "Highlights",
-        CURATED_TONIGHT_PICKS_ID,
-        ["highlight", "tonight", "pick", "featured"],
-        [CURATED_HAPPENING_NOW_ID, CURATED_TRENDING_ID]
-      ),
+      pinEntry("Highlights", CURATED_TONIGHT_PICKS_ID),
+      pinEntry("Festivals", CURATED_FESTIVALS_ID),
       pickEntry(
         "Holidays",
         CURATED_SEASONAL_SPOTLIGHT_ID,
@@ -174,10 +174,10 @@ function CuratedPageIndex({ portalSlug, loading }: { portalSlug: string; loading
         [CURATED_TONIGHT_PICKS_ID]
       ),
       pickEntry(
-        "Get Active",
+        "Get Involved",
         CURATED_MAIN_FEED_ID,
-        ["active", "fitness", "sports", "run", "hike", "outdoor", "yoga", "wellness"],
-        [CURATED_BROWSE_ACTIVITY_ID]
+        ["volunteer", "activism", "community", "mutual aid", "civic", "organize"],
+        [CURATED_FESTIVALS_ID]
       ),
       pickEntry(
         "More Categories",
@@ -547,8 +547,8 @@ export default function CuratedContent({ portalSlug }: CuratedContentProps) {
           </SectionErrorBoundary>
         </section>
 
-        {/* Above-fold: Tonight's Picks - Critical content */}
-        <section id={CURATED_TONIGHT_PICKS_ID} data-index-label="Tonight Picks" className="scroll-mt-28 min-h-[440px]">
+        {/* Above-fold: Highlights carousel (today / week / month) */}
+        <section id={CURATED_TONIGHT_PICKS_ID} data-index-label="Highlights" className="scroll-mt-28">
           <SectionErrorBoundary>
             <Suspense fallback={<TonightsPicksSkeleton />}>
               <HighlightsPicks portalSlug={portalSlug} />
@@ -559,7 +559,7 @@ export default function CuratedContent({ portalSlug }: CuratedContentProps) {
         <div className="pt-4 border-t border-[var(--twilight)]/40" />
 
         {/* Festival moments: takeover hero + imminent festivals */}
-        <section id={CURATED_FESTIVALS_ID} data-index-label="Festivals & Conventions" className="scroll-mt-28 min-h-[260px]">
+        <section id={CURATED_FESTIVALS_ID} data-index-label="Festivals" className="scroll-mt-28 min-h-[260px]">
           <SectionErrorBoundary>
             <Suspense fallback={<MomentsSectionSkeleton />}>
               <MomentsSection portalSlug={portalSlug} prefetchedData={moments} />

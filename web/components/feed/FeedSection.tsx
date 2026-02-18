@@ -639,6 +639,9 @@ function SectionHeader({
 }) {
   const eventCount = section.events.length;
   const seeAllUrl = getSeeAllUrl(section, portalSlug);
+  const displayTitle = /get active/i.test(section.title)
+    ? "Get Involved"
+    : section.title;
 
   // Build description with context
   let contextDescription = section.description;
@@ -650,7 +653,7 @@ function SectionHeader({
   const themedConfig = THEMED_SECTION_ICONS[section.slug];
   const sectionStyle = section.style as { accent_color?: string } | null;
   const isCommunitySection = isCommunityActionSection(section);
-  const isGetInvolvedSection = /get involved/i.test(section.title);
+  const isGetInvolvedSection = /get involved|get active/i.test(section.title);
   if (isCommunitySection && isGetInvolvedSection) {
     contextDescription = "Get Involved";
   }
@@ -674,7 +677,7 @@ function SectionHeader({
 
   return (
     <FeedSectionHeader
-      title={section.title}
+      title={displayTitle}
       subtitle={contextDescription || undefined}
       priority={priority}
       accentColor={accentColor}
@@ -901,7 +904,7 @@ function EventCards({
           <div className="mb-2">
             <div className="h-[2px] rounded-full bg-[linear-gradient(to_right,var(--community-accent),transparent)]" />
             <p className="font-mono mt-1.5 text-[0.6rem] uppercase tracking-[0.2em] text-[var(--soft)]">
-              Civic Picks
+              Get Involved
             </p>
           </div>
         </>
