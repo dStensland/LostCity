@@ -124,22 +124,22 @@ describe("rate-limit", () => {
   });
 
   describe("production distributed enforcement", () => {
-    it("fails closed in production when Upstash is not configured", async () => {
+    it("falls back to memory in production when distributed mode is not enabled", async () => {
       process.env.NODE_ENV = "production";
       const result = await checkRateLimit("prod-user", RATE_LIMITS.standard, "prod_test");
+
+      expect(result.success).toBe(true);
+      expect(result.source).toBe("memory");
+    });
+
+    it("fails closed when distributed mode is explicitly required", async () => {
+      process.env.NODE_ENV = "production";
+      process.env.REQUIRE_DISTRIBUTED_RATE_LIMIT = "true";
+      const result = await checkRateLimit("prod-user-enforced", RATE_LIMITS.standard, "prod_enforced");
 
       expect(result.success).toBe(false);
       expect(result.source).toBe("unavailable");
       expect(result.reason).toBe("distributed_rate_limiter_required");
-    });
-
-    it("can be explicitly disabled for emergency fallback", async () => {
-      process.env.NODE_ENV = "production";
-      process.env.REQUIRE_DISTRIBUTED_RATE_LIMIT = "false";
-      const result = await checkRateLimit("prod-user-override", RATE_LIMITS.standard, "prod_override");
-
-      expect(result.success).toBe(true);
-      expect(result.source).toBe("memory");
     });
   });
 

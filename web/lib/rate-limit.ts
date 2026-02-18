@@ -23,10 +23,7 @@ let upstashRateLimiters: Map<string, Ratelimit> | null = null;
 const DISTRIBUTED_BACKEND_RETRY_AFTER_SEC = 60;
 
 function requiresDistributedRateLimit(): boolean {
-  if (process.env.REQUIRE_DISTRIBUTED_RATE_LIMIT === "false") {
-    return false;
-  }
-  return process.env.NODE_ENV === "production";
+  return process.env.REQUIRE_DISTRIBUTED_RATE_LIMIT === "true";
 }
 
 // Initialize Redis connection if environment variables are set
