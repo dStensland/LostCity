@@ -66,6 +66,12 @@ class ChainCinemaCrawler:
     CHAIN_TAG: str = ""
     LOCATIONS: list[dict] = []
     DAYS_AHEAD: int = 7
+    # Mark the run as degraded when no events are found and repeated page loads fail.
+    DEGRADED_ZERO_RESULT_MIN_LOAD_FAILURES: int = 2
+    # Optional: location slug -> probe days before skipping the rest of the window
+    # when no showtimes are found. This lets low-yield/dead locations recover while
+    # avoiding full 7-day scans on every run.
+    ZERO_YIELD_PROBE_DAYS_BY_LOCATION: dict[str, int] = {}
 
     @abstractmethod
     def get_showtime_url(self, location: dict, date: datetime) -> str:
@@ -81,12 +87,26 @@ class ChainCinemaCrawler:
         """
         raise NotImplementedError
 
+    def get_probe_days_for_location(self, location: dict) -> Optional[int]:
+        """Return probe-day override for a location slug, if configured."""
+        venue_data = location.get("venue_data") or {}
+        slug = (
+            venue_data.get("slug")
+            or location.get("slug")
+            or location.get("url_slug")
+        )
+        if not slug:
+            return None
+        return self.ZERO_YIELD_PROBE_DAYS_BY_LOCATION.get(slug)
+
     def crawl(self, source: dict) -> tuple[int, int, int]:
         """Crawl all locations for this chain. Returns (found, new, updated)."""
         source_id = source["id"]
         total_found = 0
         total_new = 0
         total_updated = 0
+        total_load_failures = 0
+        load_failures_by_venue: dict[str, int] = {}
         seen_hashes: set[str] = set()
 
         try:
@@ -106,12 +126,15 @@ class ChainCinemaCrawler:
 
                     page = context.new_page()
                     try:
-                        found, new, updated = self._crawl_location(
+                        found, new, updated, load_failures = self._crawl_location(
                             page, location, source_id, venue_id, venue_name, seen_hashes
                         )
                         total_found += found
                         total_new += new
                         total_updated += updated
+                        total_load_failures += load_failures
+                        if load_failures:
+                            load_failures_by_venue[venue_name] = load_failures
                     except Exception as e:
                         logger.error(f"Failed to crawl {venue_name}: {e}")
                     finally:
@@ -124,6 +147,20 @@ class ChainCinemaCrawler:
                 stale_removed = remove_stale_source_events(source_id, seen_hashes)
                 if stale_removed:
                     logger.info(f"Removed {stale_removed} stale showtimes no longer on schedule")
+
+            if (
+                total_found == 0
+                and total_load_failures >= self.DEGRADED_ZERO_RESULT_MIN_LOAD_FAILURES
+            ):
+                venue_summary = ", ".join(
+                    f"{venue}({count})"
+                    for venue, count in sorted(load_failures_by_venue.items())
+                )
+                raise RuntimeError(
+                    f"{self.CHAIN_NAME} crawl degraded: 0 events found with "
+                    f"{total_load_failures} page load failures"
+                    + (f" [{venue_summary}]" if venue_summary else "")
+                )
 
             logger.info(
                 f"{self.CHAIN_NAME} crawl complete: {total_found} found, {total_new} new, {total_updated} updated"
@@ -143,15 +180,25 @@ class ChainCinemaCrawler:
         venue_id: int,
         venue_name: str,
         seen_hashes: set[str],
-    ) -> tuple[int, int, int]:
+    ) -> tuple[int, int, int, int]:
         """Crawl one location across multiple dates."""
         found = 0
         new = 0
         updated = 0
+        load_failures = 0
+        probe_days = self.get_probe_days_for_location(location)
 
         today = datetime.now().date()
 
         for day_offset in range(self.DAYS_AHEAD):
+            if probe_days and day_offset >= probe_days and found == 0:
+                logger.info(
+                    "  %s: no showtimes in first %s day(s); skipping remaining days",
+                    venue_name,
+                    probe_days,
+                )
+                break
+
             target_date = today + timedelta(days=day_offset)
             target_dt = datetime.combine(target_date, datetime.min.time())
             date_str = target_date.strftime("%Y-%m-%d")
@@ -167,6 +214,12 @@ class ChainCinemaCrawler:
 
                 if not movies:
                     logger.debug(f"  No showtimes for {venue_name} on {date_str}")
+                    if getattr(self, "_abort_remaining_dates", False):
+                        logger.warning(
+                            "  Aborting remaining dates for %s due to hard block",
+                            venue_name,
+                        )
+                        break
                     continue
 
                 for movie in movies:
@@ -234,6 +287,7 @@ class ChainCinemaCrawler:
 
             except Exception as e:
                 logger.warning(f"  Failed to load {url}: {e}")
+                load_failures += 1
                 continue
 
-        return found, new, updated
+        return found, new, updated, load_failures

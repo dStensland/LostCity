@@ -2,6 +2,7 @@ import { addDays } from "date-fns";
 import type { HospitalAudienceMode } from "@/lib/hospital-modes";
 import type { SupportTrackKey } from "@/lib/support-source-policy";
 import { getSourcesByTrack } from "@/lib/support-source-policy";
+import { getHospitalProfile } from "@/lib/emory-hospital-profiles";
 
 export type EmoryCommunityCategory =
   | "stay_well"
@@ -372,14 +373,27 @@ export { MODE_CATEGORY_PRIORITY };
 
 export function getOrderedCategories(
   mode: HospitalAudienceMode,
-  includeSensitive: boolean
+  includeSensitive: boolean,
+  hospitalSlug?: string | null
 ): CommunityCategoryDefinition[] {
   const preferredOrder = MODE_CATEGORY_PRIORITY[mode] || MODE_CATEGORY_PRIORITY.visitor;
   const categoryByKey = new Map(COMMUNITY_CATEGORIES.map((cat) => [cat.key, cat] as const));
+  const totalCategories = preferredOrder.length;
+  const profile = hospitalSlug ? getHospitalProfile(hospitalSlug) : null;
 
-  const ordered = preferredOrder
-    .map((key) => categoryByKey.get(key))
-    .filter((cat): cat is CommunityCategoryDefinition => Boolean(cat));
+  const scored = preferredOrder
+    .map((key, index) => {
+      const cat = categoryByKey.get(key);
+      if (!cat) return null;
+      const baseScore = totalCategories - index;
+      const boost = profile?.categoryBoosts[key] ?? 0;
+      return { cat, score: baseScore + boost };
+    })
+    .filter((entry): entry is { cat: CommunityCategoryDefinition; score: number } => entry !== null);
+
+  scored.sort((a, b) => b.score - a.score);
+
+  const ordered = scored.map((entry) => entry.cat);
 
   if (!includeSensitive) {
     return ordered.filter((cat) => cat.sensitivity === "public");

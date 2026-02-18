@@ -26,6 +26,10 @@ TIME_RE = re.compile(r"^(\d{1,2}:\d{2})\s*(am|pm)$", re.IGNORECASE)
 class AMCAtlantaCrawler(ChainCinemaCrawler):
     CHAIN_NAME = "AMC Theatres"
     CHAIN_TAG = "amc"
+    ZERO_YIELD_PROBE_DAYS_BY_LOCATION = {
+        "amc-southlake-pavilion": 2,
+        "amc-mansell-crossing": 2,
+    }
     LOCATIONS = [
         {
             "venue_data": {
@@ -147,9 +151,18 @@ class AMCAtlantaCrawler(ChainCinemaCrawler):
         found = 0
         new = 0
         updated = 0
+        probe_days = self.get_probe_days_for_location(location)
         today = datetime.now().date()
 
         for day_offset in range(self.DAYS_AHEAD):
+            if probe_days and day_offset >= probe_days and found == 0:
+                logger.info(
+                    "  %s: no showtimes in first %s day(s); skipping remaining days",
+                    venue_name,
+                    probe_days,
+                )
+                break
+
             target_date = today + timedelta(days=day_offset)
             target_dt = datetime.combine(target_date, datetime.min.time())
             date_str = target_date.strftime("%Y-%m-%d")

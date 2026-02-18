@@ -5,6 +5,7 @@ import { getEmoryCommunityHubDigest } from "@/lib/emory-community-category-feed"
 import { getEmoryFederationShowcase } from "@/lib/emory-federation-showcase";
 import { getSupportPolicyCounts, getSourcesByTrack, SUPPORT_SOURCE_POLICY_ITEMS } from "@/lib/support-source-policy";
 import { COMMUNITY_CATEGORIES } from "@/lib/emory-community-categories";
+import { getHospitalProfile } from "@/lib/emory-hospital-profiles";
 import {
   EMORY_THEME_CSS,
   EMORY_THEME_SCOPE_CLASS,
@@ -21,12 +22,14 @@ type EmoryCommunityExperienceProps = {
   portal: Portal;
   mode: HospitalAudienceMode;
   includeSupportSensitive?: boolean;
+  hospitalSlug?: string | null;
 };
 
 export default async function EmoryCommunityExperience({
   portal,
   mode,
   includeSupportSensitive = false,
+  hospitalSlug = null,
 }: EmoryCommunityExperienceProps) {
   const hospitals = await getPortalHospitalLocations(portal.id);
   const primaryHospital = hospitals[0] || null;
@@ -38,6 +41,7 @@ export default async function EmoryCommunityExperience({
         portalSlug: portal.slug,
         mode,
         includeSensitive: includeSupportSensitive,
+        hospitalSlug,
       }),
       getEmoryFederationShowcase({
         portalId: portal.id,
@@ -118,6 +122,7 @@ export default async function EmoryCommunityExperience({
 
   // Build ID → name lookup for curated highlight orgs
   const orgNameById = new Map(SUPPORT_SOURCE_POLICY_ITEMS.map((item) => [item.id, item.name]));
+  const hospitalProfile = getHospitalProfile(hospitalSlug);
 
   // Build pathway cards from digest categories
   const pathwayCards = hubDigest.categories.map((cat) => {
@@ -133,11 +138,15 @@ export default async function EmoryCommunityExperience({
       }
     }
 
+    // Hospital-specific highlight overrides take precedence over global defaults
+    const overrideIds = hospitalProfile?.highlightOrgOverrides[cat.key];
+    const effectiveHighlightIds = overrideIds ?? catDef?.highlightOrgIds ?? [];
+
     // Privacy gate: opt-in categories never expose org names
     const highlightOrgs =
       catDef?.sensitivity === "opt_in"
         ? []
-        : (catDef?.highlightOrgIds ?? [])
+        : effectiveHighlightIds
             .map((id) => orgNameById.get(id))
             .filter((name): name is string => Boolean(name));
 

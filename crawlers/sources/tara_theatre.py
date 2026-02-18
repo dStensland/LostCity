@@ -257,52 +257,54 @@ def extract_movies_for_date(
             if seen_hashes is not None:
                 seen_hashes.add(content_hash)
 
+            # Try to find image with title normalization
+            clean_title = re.sub(r'\s*\(\d{4}\)\s*$', '', title_part)  # Remove year
+            clean_title = re.sub(r'\s*\(Digital\)\s*$', '', clean_title, flags=re.IGNORECASE)
+            movie_image = find_image_for_movie(title_part, image_map)
+            if not movie_image:
+                movie_image = find_image_for_movie(clean_title, image_map)
+
+            event_record = {
+                "source_id": source_id,
+                "venue_id": venue_id,
+                "title": title_part,
+                "description": movie_desc,
+                "start_date": date_str,
+                "start_time": showtime,
+                "end_date": None,
+                "end_time": None,
+                "is_all_day": False,
+                "category": "film",
+                "subcategory": "cinema",
+                "tags": ["film", "cinema", "arthouse", "showtime", "tara-theatre"],
+                "price_min": None,
+                "price_max": None,
+                "price_note": None,
+                "is_free": False,
+                "source_url": HOME_URL,
+                "ticket_url": None,
+                "image_url": movie_image,
+                "raw_text": None,
+                "extraction_confidence": 0.90,
+                "is_recurring": False,
+                "recurrence_rule": None,
+                "content_hash": content_hash,
+            }
+
             existing = find_event_by_hash(content_hash)
             if existing:
+                smart_update_existing_event(existing, event_record)
                 events_updated += 1
-            else:
-                # Try to find image with title normalization
-                clean_title = re.sub(r'\s*\(\d{4}\)\s*$', '', title_part)  # Remove year
-                clean_title = re.sub(r'\s*\(Digital\)\s*$', '', clean_title, flags=re.IGNORECASE)
-                movie_image = find_image_for_movie(title_part, image_map)
-                if not movie_image:
-                    movie_image = find_image_for_movie(clean_title, image_map)
+                continue
 
-                event_record = {
-                    "source_id": source_id,
-                    "venue_id": venue_id,
-                    "title": title_part,
-                    "description": movie_desc,
-                    "start_date": date_str,
-                    "start_time": showtime,
-                    "end_date": None,
-                    "end_time": None,
-                    "is_all_day": False,
-                    "category": "film",
-                    "subcategory": "cinema",
-                    "tags": ["film", "cinema", "arthouse", "showtime", "tara-theatre"],
-                    "price_min": None,
-                    "price_max": None,
-                    "price_note": None,
-                    "is_free": False,
-                    "source_url": HOME_URL,
-                    "ticket_url": None,
-                    "image_url": movie_image,
-                    "raw_text": None,
-                    "extraction_confidence": 0.90,
-                    "is_recurring": False,
-                    "recurrence_rule": None,
-                    "content_hash": content_hash,
-                }
-
-                try:
-                    insert_event(event_record)
-                    events_new += 1
-                    logger.info(
-                        f"Added: {title_part} on {date_str} at {showtime}"
-                    )
-                except Exception as e:
-                    logger.error(f"Failed to insert: {title_part}: {e}")
+            try:
+                insert_event(event_record)
+                events_new += 1
+                logger.info(
+                    f"Added: {title_part} on {date_str} at {showtime}"
+                )
+            except Exception as e:
+                logger.error(f"Failed to insert: {title_part}: {e}")
     return events_found, events_new, events_updated
 
 
@@ -440,50 +442,52 @@ def extract_upcoming_movies(
             movie_title, "Tara Theatre", "coming-soon"
         )
 
+        # Use date 30 days from now as placeholder
+        placeholder_date = (datetime.now() + timedelta(days=30)).strftime(
+            "%Y-%m-%d"
+        )
+
+        movie_image = find_image_for_movie(movie_title, image_map or {})
+
+        event_record = {
+            "source_id": source_id,
+            "venue_id": venue_id,
+            "title": movie_title,
+            "description": "Coming Soon",
+            "start_date": placeholder_date,
+            "start_time": None,
+            "end_date": None,
+            "end_time": None,
+            "is_all_day": True,
+            "category": "film",
+            "subcategory": "cinema",
+            "tags": ["film", "cinema", "arthouse", "tara-theatre", "coming-soon"],
+            "price_min": None,
+            "price_max": None,
+            "price_note": None,
+            "is_free": False,
+            "source_url": source_url,
+            "ticket_url": None,
+            "image_url": movie_image,
+            "raw_text": None,
+            "extraction_confidence": 0.75,
+            "is_recurring": False,
+            "recurrence_rule": None,
+            "content_hash": content_hash,
+        }
+
         existing = find_event_by_hash(content_hash)
         if existing:
+            smart_update_existing_event(existing, event_record)
             events_updated += 1
-        else:
-            # Use date 30 days from now as placeholder
-            placeholder_date = (datetime.now() + timedelta(days=30)).strftime(
-                "%Y-%m-%d"
-            )
+            continue
 
-            movie_image = find_image_for_movie(movie_title, image_map or {})
-
-            event_record = {
-                "source_id": source_id,
-                "venue_id": venue_id,
-                "title": movie_title,
-                "description": "Coming Soon",
-                "start_date": placeholder_date,
-                "start_time": None,
-                "end_date": None,
-                "end_time": None,
-                "is_all_day": True,
-                "category": "film",
-                "subcategory": "cinema",
-                "tags": ["film", "cinema", "arthouse", "tara-theatre", "coming-soon"],
-                "price_min": None,
-                "price_max": None,
-                "price_note": None,
-                "is_free": False,
-                "source_url": source_url,
-                "ticket_url": None,
-                "image_url": movie_image,
-                "raw_text": None,
-                "extraction_confidence": 0.75,
-                "is_recurring": False,
-                "recurrence_rule": None,
-                "content_hash": content_hash,
-            }
-
-            try:
-                insert_event(event_record)
-                events_new += 1
-                logger.info(f"Added coming soon: {movie_title}")
-            except Exception as e:
-                logger.error(f"Failed to insert coming soon: {movie_title}: {e}")
+        try:
+            insert_event(event_record)
+            events_new += 1
+            logger.info(f"Added coming soon: {movie_title}")
+        except Exception as e:
+            logger.error(f"Failed to insert coming soon: {movie_title}: {e}")
 
     return events_found, events_new, events_updated
 

@@ -215,53 +215,55 @@ def extract_movies_for_date(
                 movie["title"], "Landmark Midtown Art Cinema", date_str
             )
 
+            event_record = {
+                "source_id": source_id,
+                "venue_id": venue_id,
+                "title": movie["title"],
+                "description": description,
+                "start_date": date_str,
+                "start_time": earliest_time,
+                "end_date": None,
+                "end_time": None,
+                "is_all_day": False,
+                "category": "film",
+                "subcategory": "cinema",
+                "tags": ["film", "cinema", "arthouse", "showtime", "landmark"],
+                "price_min": None,
+                "price_max": None,
+                "price_note": None,
+                "is_free": False,
+                "source_url": SHOWTIMES_URL,
+                "ticket_url": None,
+                # Case-insensitive image lookup
+                "image_url": next(
+                    (url for title, url in (image_map or {}).items()
+                        if title.lower() == movie["title"].lower()),
+                    None
+                ),
+                "raw_text": None,
+                "extraction_confidence": 0.90,
+                "is_recurring": False,
+                "recurrence_rule": None,
+                "content_hash": content_hash,
+            }
+
             existing = find_event_by_hash(content_hash)
             if existing:
+                smart_update_existing_event(existing, event_record)
                 events_updated += 1
-            else:
-                event_record = {
-                    "source_id": source_id,
-                    "venue_id": venue_id,
-                    "title": movie["title"],
-                    "description": description,
-                    "start_date": date_str,
-                    "start_time": earliest_time,
-                    "end_date": None,
-                    "end_time": None,
-                    "is_all_day": False,
-                    "category": "film",
-                    "subcategory": "cinema",
-                    "tags": ["film", "cinema", "arthouse", "showtime", "landmark"],
-                    "price_min": None,
-                    "price_max": None,
-                    "price_note": None,
-                    "is_free": False,
-                    "source_url": SHOWTIMES_URL,
-                    "ticket_url": None,
-                    # Case-insensitive image lookup
-                    "image_url": next(
-                        (url for title, url in (image_map or {}).items()
-                         if title.lower() == movie["title"].lower()),
-                        None
-                    ),
-                    "raw_text": None,
-                    "extraction_confidence": 0.90,
-                    "is_recurring": False,
-                    "recurrence_rule": None,
-                    "content_hash": content_hash,
-                }
+                continue
 
-                series_hint = {
-                    "series_type": "film",
-                    "series_title": movie["title"],
-                }
+            series_hint = {
+                "series_type": "film",
+                "series_title": movie["title"],
+            }
 
-                try:
-                    insert_event(event_record, series_hint=series_hint)
-                    events_new += 1
-                    logger.info(f"Added: {movie['title']} on {date_str} ({len(showtimes)} showtimes)")
-                except Exception as e:
-                    logger.error(f"Failed to insert: {movie['title']}: {e}")
+            try:
+                insert_event(event_record, series_hint=series_hint)
+                events_new += 1
+                logger.info(f"Added: {movie['title']} on {date_str} ({len(showtimes)} showtimes)")
+            except Exception as e:
+                logger.error(f"Failed to insert: {movie['title']}: {e}")
 
     except Exception as e:
         logger.error(f"Error extracting movies: {e}")

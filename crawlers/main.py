@@ -15,7 +15,7 @@ import os
 import random
 import sys
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FuturesTimeoutError
 from importlib import import_module
 
 from db import (
@@ -61,10 +61,33 @@ logger = logging.getLogger(__name__)
 
 # Parallel execution settings
 MAX_WORKERS = 2  # Number of concurrent crawlers (reduced to avoid macOS socket limits)
-TIMEOUT_SECONDS = 300  # 5 minute timeout per source
+DEFAULT_TIMEOUT_SECONDS = 300  # 5 minute timeout per source
+CHAIN_TIMEOUT_SECONDS = 1800  # 30 minute timeout for chain cinema sources
+
+# Chain cinema crawlers are high-volume and need a larger timeout budget.
+CHAIN_CINEMA_TIMEOUT_SLUGS = {
+    "amc-atlanta",
+    "regal-atlanta",
+    "cinemark-atlanta",
+    "ncg-cinemas-atlanta",
+    "silverspot-cinema-atlanta",
+    "studio-movie-grill-atlanta",
+}
 
 # Permanently closed sources that should never run, even if re-activated in DB.
 BLOCKED_SOURCE_SLUGS = set(CLOSED_SOURCE_SLUGS)
+
+
+def get_source_timeout_seconds(slug: str) -> int:
+    """Return timeout budget for a source slug."""
+    if slug in CHAIN_CINEMA_TIMEOUT_SLUGS:
+        return CHAIN_TIMEOUT_SECONDS
+    return DEFAULT_TIMEOUT_SECONDS
+
+
+def get_batch_timeout_seconds(slugs: list[str]) -> int:
+    """Total timeout budget for a parallel source batch."""
+    return sum(get_source_timeout_seconds(slug) for slug in slugs)
 
 
 # SOURCE_OVERRIDES: Explicit slug-to-module mappings for exceptional cases
@@ -613,6 +636,8 @@ def run_all_sources(parallel: bool = True, max_workers: int = MAX_WORKERS, adapt
     if parallel and len(active_sources) > 1:
         # Parallel execution
         logger.info(f"Using parallel execution with {max_workers} workers")
+        batch_slugs = [source["slug"] for source in active_sources]
+        batch_timeout = get_batch_timeout_seconds(batch_slugs)
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             # Submit all tasks
             future_to_slug = {
@@ -621,13 +646,32 @@ def run_all_sources(parallel: bool = True, max_workers: int = MAX_WORKERS, adapt
             }
 
             # Collect results as they complete
-            for future in as_completed(future_to_slug, timeout=TIMEOUT_SECONDS * len(active_sources)):
-                slug = future_to_slug[future]
-                try:
-                    results[slug] = future.result(timeout=TIMEOUT_SECONDS)
-                except Exception as e:
-                    logger.error(f"Parallel execution failed for {slug}: {e}")
-                    results[slug] = False
+            try:
+                for future in as_completed(future_to_slug, timeout=batch_timeout):
+                    slug = future_to_slug[future]
+                    try:
+                        results[slug] = future.result()
+                    except Exception as e:
+                        logger.error(f"Parallel execution failed for {slug}: {e}")
+                        results[slug] = False
+            except FuturesTimeoutError:
+                logger.error(
+                    "Parallel crawl batch exceeded timeout budget (%ss). "
+                    "Marking unfinished sources as failed.",
+                    batch_timeout,
+                )
+                for future, slug in future_to_slug.items():
+                    if slug in results:
+                        continue
+                    if future.done():
+                        try:
+                            results[slug] = future.result()
+                        except Exception as e:
+                            logger.error(f"Parallel execution failed for {slug}: {e}")
+                            results[slug] = False
+                    else:
+                        future.cancel()
+                        results[slug] = False
     else:
         # Sequential execution
         for source in active_sources:
@@ -671,18 +715,39 @@ def _run_source_list(sources: list[dict], parallel: bool = True, max_workers: in
 
     if parallel and len(sources) > 1:
         logger.info(f"Using parallel execution with {max_workers} workers")
+        batch_slugs = [source["slug"] for source in sources]
+        batch_timeout = get_batch_timeout_seconds(batch_slugs)
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             future_to_slug = {
                 executor.submit(run_source, source["slug"], True): source["slug"]
                 for source in sources
             }
-            for future in as_completed(future_to_slug, timeout=TIMEOUT_SECONDS * len(sources)):
-                slug = future_to_slug[future]
-                try:
-                    results[slug] = future.result(timeout=TIMEOUT_SECONDS)
-                except Exception as e:
-                    logger.error(f"Parallel execution failed for {slug}: {e}")
-                    results[slug] = False
+            try:
+                for future in as_completed(future_to_slug, timeout=batch_timeout):
+                    slug = future_to_slug[future]
+                    try:
+                        results[slug] = future.result()
+                    except Exception as e:
+                        logger.error(f"Parallel execution failed for {slug}: {e}")
+                        results[slug] = False
+            except FuturesTimeoutError:
+                logger.error(
+                    "Parallel source list exceeded timeout budget (%ss). "
+                    "Marking unfinished sources as failed.",
+                    batch_timeout,
+                )
+                for future, slug in future_to_slug.items():
+                    if slug in results:
+                        continue
+                    if future.done():
+                        try:
+                            results[slug] = future.result()
+                        except Exception as e:
+                            logger.error(f"Parallel execution failed for {slug}: {e}")
+                            results[slug] = False
+                    else:
+                        future.cancel()
+                        results[slug] = False
     else:
         for source in sources:
             slug = source["slug"]

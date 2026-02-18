@@ -43,6 +43,7 @@ export default function EventQuickActions({ event, isLive, className = "" }: Eve
     ? `${format(dateObj, "MMM d")} – ${format(parseISO(event.end_date), "MMM d")}`
     : format(dateObj, "EEE, MMM d");
   const isActuallyTicketed = isTicketingUrl(event.ticket_url);
+  const sourceLooksTicketed = isTicketingUrl(event.source_url);
 
   // Format time
   const timeDisplay = event.is_all_day
@@ -139,9 +140,13 @@ export default function EventQuickActions({ event, isLive, className = "" }: Eve
             className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-[var(--coral)] text-[var(--void)] text-base font-semibold rounded-lg hover:bg-[var(--rose)] transition-all shadow-[0_0_20px_rgba(255,107,122,0.3)] hover:shadow-[0_0_30px_rgba(255,107,122,0.5)]"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              {sourceLooksTicketed || !event.is_free ? (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              )}
             </svg>
-            {event.is_free ? "RSVP Free" : "Learn More"}
+            {event.is_free ? "RSVP Free" : "Get Tickets"}
           </a>
         ) : (
           <RSVPButton

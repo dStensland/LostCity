@@ -28,6 +28,10 @@ import {
   shouldApplyCityFilter,
 } from "@/lib/portal-manifest";
 import { shouldSuppressChainShowtime } from "@/lib/cinema-filter";
+import {
+  suppressEventImageIfVenueFlagged,
+  suppressEventImagesIfVenueFlagged,
+} from "@/lib/image-quality-suppression";
 
 // Cache feed for 5 minutes at CDN, allow stale for 1 hour while revalidating
 export const revalidate = 300;
@@ -685,10 +689,14 @@ export async function GET(request: NextRequest, { params }: Props) {
 
   // Merge curated + pinned event rows into a single lookup map
   const eventMap = new Map<number, Event>();
-  for (const event of (curatedEvents || []) as Event[]) {
+  for (const event of suppressEventImagesIfVenueFlagged(
+    (curatedEvents || []) as Event[],
+  )) {
     eventMap.set(event.id, event);
   }
-  for (const event of (pinnedEvents || []) as Event[]) {
+  for (const event of suppressEventImagesIfVenueFlagged(
+    (pinnedEvents || []) as Event[],
+  )) {
     eventMap.set(event.id, event);
   }
 
@@ -831,7 +839,8 @@ export async function GET(request: NextRequest, { params }: Props) {
 
     // Merge all buckets into the pool
     const addToPool = (events: Event[]) => {
-      for (const event of events) {
+      for (const rawEvent of events) {
+        const event = suppressEventImageIfVenueFlagged(rawEvent);
         if (
           event.source_id &&
           federationAccess.categoryConstraints.has(event.source_id)
@@ -1279,12 +1288,18 @@ export async function GET(request: NextRequest, { params }: Props) {
 
       // Group events by tag, filtering out wrong-city events
       if (allHolidayEvents) {
-        for (const event of allHolidayEvents as (Event & {
+        const holidayEvents = suppressEventImagesIfVenueFlagged(
+          allHolidayEvents as (Event & {
+            tags?: string[];
+          })[],
+        );
+        for (const event of holidayEvents) {
+          const typedEvent = event as Event & {
           tags?: string[];
-        })[]) {
+          };
           // Filter out events from wrong cities
-          if (portalCities.length > 0 && event.venue?.city) {
-            const venueCity = event.venue.city.trim().toLowerCase();
+          if (portalCities.length > 0 && typedEvent.venue?.city) {
+            const venueCity = typedEvent.venue.city.trim().toLowerCase();
             if (
               venueCity &&
               !portalCities.some((pc) => {
@@ -1300,15 +1315,15 @@ export async function GET(request: NextRequest, { params }: Props) {
           }
 
           // Store in eventMap
-          eventMap.set(event.id, event);
+          eventMap.set(typedEvent.id, typedEvent);
 
           // Assign to appropriate tag buckets
           for (const tag of holidayTags) {
-            if (event.tags?.includes(tag)) {
+            if (typedEvent.tags?.includes(tag)) {
               if (!holidayEventsByTag.has(tag)) {
                 holidayEventsByTag.set(tag, []);
               }
-              holidayEventsByTag.get(tag)!.push(event);
+              holidayEventsByTag.get(tag)!.push(typedEvent);
             }
           }
         }

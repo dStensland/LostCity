@@ -14,10 +14,11 @@ import EmoryCommunityExperience from "../_components/hospital/EmoryCommunityExpe
 import EmoryMobileBottomNav from "../_components/hospital/EmoryMobileBottomNav";
 import { Suspense } from "react";
 import FilmPortalNav from "../_components/film/FilmPortalNav";
+import MyHospitalApplier from "../_components/hospital/MyHospitalApplier";
 
 type Props = {
   params: Promise<{ portal: string }>;
-  searchParams?: Promise<{ mode?: string; support?: string }>;
+  searchParams?: Promise<{ mode?: string; support?: string; hospital?: string }>;
 };
 
 type RawOrganizationRow = {
@@ -257,11 +258,15 @@ export default async function CommunityHubPage({ params, searchParams }: Props) 
       <div className="min-h-screen bg-[#f2f5fa] text-[#002f6c]">
         <EmoryDemoHeader portalSlug={portal.slug} />
         <main className="max-w-6xl mx-auto px-4 pb-20">
+          <Suspense fallback={null}>
+            <MyHospitalApplier portalId={portal.id} />
+          </Suspense>
           <Suspense fallback={<EmoryCommunityExperienceSkeleton />}>
             <EmoryCommunityExperience
               portal={portal}
               mode={hospitalMode}
               includeSupportSensitive={searchParamsData.support === "1"}
+              hospitalSlug={searchParamsData.hospital || null}
             />
           </Suspense>
         </main>

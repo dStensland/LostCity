@@ -15,8 +15,10 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timedelta
 from typing import Optional
+from urllib.parse import urlparse
 
 from db import (
+    get_client,
     get_or_create_venue,
     insert_event,
     find_existing_event_for_insert,
@@ -985,9 +987,130 @@ def get_next_weekday(start_date: datetime, weekday: int) -> datetime:
     return start_date + timedelta(days=days_ahead)
 
 
+def _normalize_domain(url: Optional[str]) -> Optional[str]:
+    """Normalize URL domains so different source URLs can be compared reliably."""
+    if not url:
+        return None
+    candidate = url.strip()
+    if not candidate:
+        return None
+    if "://" not in candidate:
+        candidate = f"https://{candidate}"
+    try:
+        netloc = urlparse(candidate).netloc.lower()
+    except Exception:
+        return None
+    if not netloc:
+        return None
+    if netloc.startswith("www."):
+        netloc = netloc[4:]
+    return netloc
+
+
+def _normalize_slug(slug: Optional[str]) -> str:
+    return (slug or "").strip().lower().replace("_", "-")
+
+
+def _slugs_related(a: Optional[str], b: Optional[str]) -> bool:
+    sa = _normalize_slug(a)
+    sb = _normalize_slug(b)
+    if not sa or not sb:
+        return False
+    return sa == sb or sa.startswith(sb) or sb.startswith(sa)
+
+
+def _compute_venue_suppressions(source_slug: str) -> dict[str, str]:
+    """
+    Determine recurring venue templates to skip because another dedicated source is active.
+
+    This prevents overlapping recurring templates (e.g. Laughing Skull/Boggs/Smith's)
+    from creating visible duplicates when direct venue crawlers are already running.
+    """
+    suppressions: dict[str, str] = {}
+
+    try:
+        client = get_client()
+        active_sources = (
+            client.table("sources")
+            .select("slug,url,is_active")
+            .eq("is_active", True)
+            .execute()
+            .data
+            or []
+        )
+    except Exception as exc:
+        logger.warning(f"Could not load active sources for recurring suppression check: {exc}")
+        return suppressions
+
+    # Exclude this source from overlap checks.
+    candidate_sources = [s for s in active_sources if _normalize_slug(s.get("slug")) != _normalize_slug(source_slug)]
+
+    for venue_key, venue in VENUES.items():
+        venue_slug = venue.get("slug")
+        venue_domain = _normalize_domain(venue.get("website"))
+        for source in candidate_sources:
+            source_slug_candidate = source.get("slug")
+            source_domain = _normalize_domain(source.get("url"))
+
+            if venue_domain and source_domain and venue_domain == source_domain:
+                suppressions[venue_key] = f"active source '{source_slug_candidate}' shares domain '{source_domain}'"
+                break
+
+            if _slugs_related(venue_slug, source_slug_candidate) or _slugs_related(venue_key, source_slug_candidate):
+                suppressions[venue_key] = f"active source '{source_slug_candidate}' slug-overlaps venue slug '{venue_slug}'"
+                break
+
+    return suppressions
+
+
+def _remove_suppressed_future_events(
+    source_id: int,
+    suppressions: dict[str, str],
+    today_date: str,
+    venue_ids: dict[str, int],
+) -> int:
+    """
+    Remove future recurring-social events for venues we now suppress.
+
+    This keeps previously inserted recurring templates from lingering in feeds
+    after a dedicated source is identified for that venue.
+    """
+    if not suppressions:
+        return 0
+
+    client = get_client()
+    removed = 0
+
+    for venue_key in suppressions.keys():
+        venue_data = VENUES.get(venue_key)
+        if not venue_data:
+            continue
+        if venue_key not in venue_ids:
+            venue_ids[venue_key] = get_or_create_venue(venue_data)
+        venue_id = venue_ids[venue_key]
+
+        try:
+            result = (
+                client.table("events")
+                .delete(count="exact")
+                .eq("source_id", source_id)
+                .eq("venue_id", venue_id)
+                .gte("start_date", today_date)
+                .execute()
+            )
+            removed += int(result.count or 0)
+        except Exception as exc:
+            logger.warning(
+                f"Failed to remove suppressed recurring events for venue '{venue_key}' (id={venue_id}): {exc}"
+            )
+
+    return removed
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
     """Generate recurring weekly events for all configured venues."""
     source_id = source["id"]
+    source_slug = source.get("slug", "")
     events_found = 0
     events_new = 0
     events_updated = 0
@@ -1000,12 +1123,34 @@ def crawl(source: dict) -> tuple[int, int, int]:
     # Cache venue IDs
     venue_ids = {}
 
+    suppressions = _compute_venue_suppressions(source_slug)
+    if suppressions:
+        logger.info(
+            f"Recurring suppression active for {len(suppressions)} venue(s) with dedicated sources: "
+            + ", ".join(sorted(suppressions.keys()))
+        )
+        removed = _remove_suppressed_future_events(
+            source_id=source_id,
+            suppressions=suppressions,
+            today_date=today.strftime("%Y-%m-%d"),
+            venue_ids=venue_ids,
+        )
+        if removed:
+            logger.info(f"Removed {removed} suppressed recurring future event(s)")
+
     for event_template in WEEKLY_EVENTS:
         venue_key = event_template["venue_key"]
         venue_data = VENUES.get(venue_key)
 
         if not venue_data:
             logger.warning(f"Unknown venue key: {venue_key}")
+            continue
+
+        if venue_key in suppressions:
+            logger.debug(
+                f"Skipping recurring template for venue '{venue_key}' ({event_template['title']}): "
+                f"{suppressions[venue_key]}"
+            )
             continue
 
         # Get or cache venue ID

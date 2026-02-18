@@ -171,13 +171,14 @@ const getCachedDigest = cache(
   async (
     portalSlug: string,
     mode: HospitalAudienceMode,
-    includeSensitive: boolean
+    includeSensitive: boolean,
+    hospitalSlug?: string | null
   ): Promise<EmoryCommunityHubDigest> => {
     const governanceProfile = getHospitalSourceGovernanceProfile(portalSlug);
     const client = getReadClient();
     const supportPortalId = await getSupportPortalId(client);
     const sources = await getSupportSources(client, supportPortalId, governanceProfile.competitorExclusions);
-    const orderedCategories = getOrderedCategories(mode, includeSensitive);
+    const orderedCategories = getOrderedCategories(mode, includeSensitive, hospitalSlug);
 
     // Build category metadata and org lists without per-category story queries.
     // Stories are no longer consumed — the Discovery Deck gets its events from
@@ -224,6 +225,7 @@ export async function getEmoryCommunityHubDigest(args: {
   portalSlug: string;
   mode: HospitalAudienceMode;
   includeSensitive?: boolean;
+  hospitalSlug?: string | null;
 }): Promise<EmoryCommunityHubDigest> {
-  return getCachedDigest(args.portalSlug, args.mode, args.includeSensitive ?? false);
+  return getCachedDigest(args.portalSlug, args.mode, args.includeSensitive ?? false, args.hospitalSlug);
 }

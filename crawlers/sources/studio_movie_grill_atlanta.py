@@ -1,9 +1,9 @@
 """
 Crawler for Studio Movie Grill Atlanta-area location.
 
-Navigates to studiomoviegrill.com showtime page for Holcomb Bridge,
+Navigates to studiomoviegrill.com location showtime pages,
 extracts movie titles and showtimes using Playwright.
-1 location: Holcomb Bridge (Roswell).
+1 location: North Point (Alpharetta).
 """
 
 from __future__ import annotations
@@ -25,55 +25,108 @@ class StudioMovieGrillAtlantaCrawler(ChainCinemaCrawler):
     LOCATIONS = [
         {
             "venue_data": {
-                "name": "Studio Movie Grill Holcomb Bridge",
+                "name": "Studio Movie Grill North Point",
                 "slug": "studio-movie-grill-holcomb-bridge",
-                "address": "2880 Holcomb Bridge Rd",
-                "neighborhood": "Roswell",
-                "city": "Roswell",
+                "address": "7730 North Point Pkwy",
+                "neighborhood": "North Point",
+                "city": "Alpharetta",
                 "state": "GA",
-                "zip": "30076",
+                "zip": "30022",
                 "venue_type": "cinema",
-                "website": "https://www.studiomoviegrill.com/location/holcomb-bridge",
-                "lat": 34.0181,
-                "lng": -84.3225,
+                "website": "https://www.studiomoviegrill.com/locations/georgia/north-point",
+                "lat": 34.0475,
+                "lng": -84.2941,
             },
-            "url_slug": "holcomb-bridge",
+            "url_slug": "georgia/north-point",
         },
     ]
 
+    def __init__(self) -> None:
+        self._cloudflare_blocked = False
+        self._path_not_found = False
+        self._abort_remaining_dates = False
+
+    def crawl(self, source: dict) -> tuple[int, int, int]:
+        self._cloudflare_blocked = False
+        self._path_not_found = False
+        self._abort_remaining_dates = False
+        found, new, updated = super().crawl(source)
+        if self._cloudflare_blocked and found == 0:
+            raise RuntimeError(
+                "Cloudflare challenge blocked Studio Movie Grill showtime pages for this run"
+            )
+        if self._path_not_found and found == 0:
+            raise RuntimeError(
+                "Studio Movie Grill location page returned not found for this run"
+            )
+        return found, new, updated
+
     def get_showtime_url(self, location: dict, date: datetime) -> str:
-        date_str = date.strftime("%Y-%m-%d")
         slug = location["url_slug"]
-        return f"https://www.studiomoviegrill.com/location/{slug}?date={date_str}"
+        # SMG publishes showtimes on date-specific location paths:
+        # /locations/georgia/north-point/YYYY/M/D
+        return (
+            f"https://www.studiomoviegrill.com/locations/{slug}/"
+            f"{date.year}/{date.month}/{date.day}"
+        )
 
     def extract_showtimes(self, page: Page, location: dict, target_date: datetime) -> list[dict]:
         """Extract movies and showtimes from SMG showtime page."""
         movies = []
 
+        title_text = ""
+        body_text = ""
+        html_text = ""
         try:
-            marker_text = f"{page.title()} {page.inner_text('body')[:1500]}".lower()
-            if "just a moment" in marker_text and "cloudflare" in marker_text:
-                logger.warning(
-                    "  Cloudflare challenge detected for %s; skipping extraction",
-                    location["venue_data"]["name"],
-                )
-                return []
+            title_text = page.title().strip().lower()
+        except Exception:
+            pass
+        try:
+            body_text = page.inner_text("body")[:2000].lower()
+        except Exception:
+            pass
+        try:
+            html_text = page.content()[:40000].lower()
         except Exception:
             pass
 
+        marker_text = f"{title_text} {body_text} {html_text}"
+        if (
+            "just a moment" in marker_text
+            or "security verification" in marker_text
+            or "performance and security by cloudflare" in marker_text
+            or "cf-browser-verification" in marker_text
+            or "/cdn-cgi/challenge-platform/" in marker_text
+        ):
+            self._cloudflare_blocked = True
+            self._abort_remaining_dates = True
+            logger.warning(
+                "  Cloudflare challenge detected for %s; skipping extraction",
+                location["venue_data"]["name"],
+            )
+            return []
+        if "oops. the page you request was not found" in marker_text:
+            self._path_not_found = True
+            self._abort_remaining_dates = True
+            logger.warning(
+                "  Studio Movie Grill location path not found for %s",
+                location["venue_data"]["name"],
+            )
+            return []
+
         try:
-            page.wait_for_selector(".movie-card, .showtime, .film-card", timeout=10000)
+            page.wait_for_selector(".with-info.with-times, .movie-title", timeout=10000)
         except Exception:
             logger.debug(f"  No showtime elements found for {location['venue_data']['name']}")
             return self._extract_from_text(page)
 
-        containers = page.query_selector_all(".movie-card, .film-card, [class*='movie']")
+        containers = page.query_selector_all(".with-info.with-times")
         if not containers:
             return self._extract_from_text(page)
 
         for container in containers:
             try:
-                title_el = container.query_selector("h3, h2, .movie-title, .film-title")
+                title_el = container.query_selector(".movie-title, h3, h2")
                 if not title_el:
                     continue
                 title = title_el.inner_text().strip()
@@ -81,21 +134,12 @@ class StudioMovieGrillAtlantaCrawler(ChainCinemaCrawler):
                     continue
                 title = " ".join(title.split())
 
-                time_elements = container.query_selector_all("button, .showtime, a[class*='time']")
-                times = []
-                for el in time_elements:
-                    try:
-                        text = el.inner_text().strip()
-                        parsed = parse_time(text)
-                        if parsed and parsed not in times:
-                            times.append(parsed)
-                    except Exception:
-                        continue
+                times = self._extract_times_from_container(container, target_date)
 
                 if not times:
                     continue
 
-                img_el = container.query_selector("img")
+                img_el = container.query_selector("img.movie-poster, img")
                 image_url = img_el.get_attribute("src") if img_el else None
 
                 movies.append({"title": title, "times": times, "image_url": image_url})
@@ -105,6 +149,46 @@ class StudioMovieGrillAtlantaCrawler(ChainCinemaCrawler):
                 continue
 
         return movies
+
+    def _extract_times_from_container(self, container, target_date: datetime) -> list[str]:
+        """Extract showtimes from ticket links and compact time text."""
+        times: list[str] = []
+
+        # Preferred: date/time encoded in ticket URL path.
+        ticket_links = container.query_selector_all("a[href*='/ticketing/start/']")
+        for link in ticket_links:
+            href = (link.get_attribute("href") or "").strip()
+            match = re.search(
+                r"/(20\d{2})/(\d{1,2})/(\d{1,2})/(\d{1,2})/(\d{2})/(am|pm)",
+                href,
+                re.IGNORECASE,
+            )
+            if not match:
+                continue
+            year, month, day, hour, minute, meridiem = match.groups()
+            if (
+                int(year) != target_date.year
+                or int(month) != target_date.month
+                or int(day) != target_date.day
+            ):
+                continue
+            parsed = parse_time(f"{int(hour)}:{minute} {meridiem.upper()}")
+            if parsed and parsed not in times:
+                times.append(parsed)
+
+        # Fallback: compact "3:30 P 7:00 P" style times in text.
+        if not times:
+            time_text = ""
+            time_el = container.query_selector(".movie-times")
+            if time_el:
+                time_text = time_el.inner_text().strip()
+            if time_text:
+                for hm, meridiem in re.findall(r"(\d{1,2}:\d{2})\s*([AP])\b", time_text, re.IGNORECASE):
+                    parsed = parse_time(f"{hm} {meridiem.upper()}M")
+                    if parsed and parsed not in times:
+                        times.append(parsed)
+
+        return times
 
     def _extract_from_text(self, page: Page) -> list[dict]:
         """Fallback text-based extraction."""

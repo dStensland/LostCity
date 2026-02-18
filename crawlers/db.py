@@ -1473,6 +1473,7 @@ def normalize_category(category):
     return _CATEGORY_NORMALIZATION_MAP.get(category, category)
 
 
+@retry_on_network_error(max_retries=4, base_delay=0.5)
 def insert_event(
     event_data: dict, series_hint: dict = None, genres: list = None
 ) -> int:
@@ -1892,7 +1893,7 @@ def insert_event(
         )
         return _next_temp_id()
 
-    result = client.table("events").insert(event_data).execute()
+    result = _insert_event_record(client, event_data)
     event_id = result.data[0]["id"]
 
     # Generate blurhash in background to avoid slowing crawl throughput.
@@ -1906,6 +1907,12 @@ def insert_event(
             logger.debug(f"Auto event_artists failed for event {event_id}: {e}")
 
     return event_id
+
+
+@retry_on_network_error(max_retries=4, base_delay=0.5)
+def _insert_event_record(client: Client, event_data: dict):
+    """Insert event row with retries for transient socket/network errors."""
+    return client.table("events").insert(event_data).execute()
 
 
 def parse_lineup_from_title(title: str) -> list[dict]:
@@ -2271,7 +2278,13 @@ def update_event(event_id: int, event_data: dict) -> None:
         _log_write_skip(f"update events id={event_id}")
         return
     client = get_client()
-    client.table("events").update(event_data).eq("id", event_id).execute()
+    _update_event_record(client, event_id, event_data)
+
+
+@retry_on_network_error(max_retries=4, base_delay=0.5)
+def _update_event_record(client: Client, event_id: int, event_data: dict):
+    """Update event row with retries for transient socket/network errors."""
+    return client.table("events").update(event_data).eq("id", event_id).execute()
 
 
 def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
@@ -2383,7 +2396,7 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
 
     try:
         client = get_client()
-        client.table("events").update(updates).eq("id", event_id).execute()
+        _update_event_record(client, event_id, updates)
         updated_fields = list(updates.keys())
         logger.info(
             f"Smart-updated event {event_id}: {', '.join(updated_fields)} "
@@ -3175,6 +3188,9 @@ def update_crawl_log(
 
     if error_message:
         update_data["error_message"] = error_message
+    elif status != "error":
+        # Clear stale error text when a run completes successfully/cancelled without a new error.
+        update_data["error_message"] = None
 
     # events_rejected column guaranteed by migration 20260215000000
     update_data["events_rejected"] = events_rejected

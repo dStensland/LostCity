@@ -21,9 +21,11 @@ import {
   getEventFallbackImage,
 } from "@/lib/hospital-art";
 import HospitalTrackedLink from "@/app/[portal]/_components/hospital/HospitalTrackedLink";
+import ContinueToHospitalBanner from "@/app/[portal]/_components/hospital/ContinueToHospitalBanner";
 import type { CSSProperties } from "react";
 import { getEmoryFederationShowcase } from "@/lib/emory-federation-showcase";
 import { getSupportPolicyCounts } from "@/lib/support-source-policy";
+import { Suspense } from "react";
 
 type FeedTab = "curated" | "explore" | "foryou";
 
@@ -214,6 +216,11 @@ export default async function HospitalPortalExperience({
       <style>{EMORY_THEME_CSS}</style>
 
       <div className={`${hospitalBodyFont.className} ${EMORY_THEME_SCOPE_CLASS} py-6 pb-20 lg:pb-6 space-y-5`}>
+        {/* Continue to Hospital Banner (Feature 7) */}
+        <Suspense fallback={null}>
+          <ContinueToHospitalBanner portalSlug={portal.slug} portalId={portal.id} />
+        </Suspense>
+
         {/* 1. Hero */}
         <section className="emory-panel p-4 sm:p-5">
           <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-4">

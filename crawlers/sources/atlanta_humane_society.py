@@ -200,11 +200,7 @@ def process_event(event_data: dict, source_id: int, venue_id: int) -> Optional[d
         # Content hash for dedup
         content_hash = generate_content_hash(title, "Atlanta Humane Society", start_date)
 
-        # Check if already exists
-        if find_event_by_hash(content_hash):
-            return {"status": "exists"}
-
-        return {
+        event_record = {
             "source_id": source_id,
             "venue_id": venue_id,
             "title": title[:500],
@@ -230,6 +226,13 @@ def process_event(event_data: dict, source_id: int, venue_id: int) -> Optional[d
             "recurrence_rule": None,
             "content_hash": content_hash,
         }
+
+        existing = find_event_by_hash(content_hash)
+        if existing:
+            smart_update_existing_event(existing, event_record)
+            return {"status": "exists"}
+
+        return event_record
     except Exception as e:
         logger.error(f"Error processing event: {e}")
         return None

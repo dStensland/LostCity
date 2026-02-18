@@ -6,6 +6,7 @@ import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-lim
 import { isValidUUID } from "@/lib/api-utils";
 import { EXPLORE_CATEGORIES } from "@/lib/explore-constants";
 import { applyPortalScopeToQuery } from "@/lib/portal-scope";
+import { suppressVenueImagesIfFlagged } from "@/lib/image-quality-suppression";
 
 export const revalidate = 900; // 15 min
 
@@ -142,18 +143,19 @@ export async function GET(request: NextRequest, context: RouteContext) {
     // Enrich venues with event data
     const enrichedVenues = venueRows.map((v) => {
       const eventData = venueEventData.get(v.id);
+      const sanitizedVenue = suppressVenueImagesIfFlagged(v);
       return {
-        id: v.id,
-        name: v.name,
-        slug: v.slug,
-        neighborhood: v.neighborhood,
-        venue_type: v.venue_type,
-        short_description: v.short_description,
-        explore_category: v.explore_category,
-        explore_featured: v.explore_featured ?? false,
-        explore_blurb: v.explore_blurb,
-        hero_image_url: v.hero_image_url,
-        image_url: v.image_url,
+        id: sanitizedVenue.id,
+        name: sanitizedVenue.name,
+        slug: sanitizedVenue.slug,
+        neighborhood: sanitizedVenue.neighborhood,
+        venue_type: sanitizedVenue.venue_type,
+        short_description: sanitizedVenue.short_description,
+        explore_category: sanitizedVenue.explore_category,
+        explore_featured: sanitizedVenue.explore_featured ?? false,
+        explore_blurb: sanitizedVenue.explore_blurb,
+        hero_image_url: sanitizedVenue.hero_image_url,
+        image_url: sanitizedVenue.image_url,
         upcoming_event_count: eventData?.count ?? 0,
         next_event_title: eventData?.nextTitle ?? null,
         next_event_date: eventData?.nextDate ?? null,

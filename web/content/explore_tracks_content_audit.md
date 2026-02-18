@@ -1,25 +1,26 @@
 # Explore Tracks Content Audit
 
-Generated: 2026-02-17T20:54:22.189Z
+Generated: 2026-02-18T06:19:01.028Z
 
 ## Scope
 - Active tracks: 23
 - Approved track-venue rows: 447
 - Unique venues: 377
-- Event window: 2026-02-17 to 2026-03-03 (14 days)
+- Event window: 2026-02-18 to 2026-03-04 (14 days)
 
 ## Global Health
-- Upcoming events (track-linked): 26
-- Venues with upcoming events: 9
+- Upcoming events (track-linked): 0
+- Venues with upcoming events: 0
 - Venues with highlights (facts/landmarks): 417
 - Venues with approved tips: 0
 - Insufficient rows (score >= 6): 42
-- Crawler candidates: 11
-- Unique crawler venue candidates: 11
-- Image health: ok=377, broken=0, uncertain=0, error=0
+- Crawler candidates: 12
+- Unique crawler venue candidates: 12
+- Image health: ok=375, broken=0, uncertain=0, error=0
+- Image quality: ok=363, bad=0, unknown=12
 
 ## Augmentation Buckets
-- augment_with_active_event: 436
+- augment_with_active_event: 447
 - add_source: 151
 - enrich_venue_profile: 49
 - add_editorial_blurb: 42
@@ -40,12 +41,13 @@ Generated: 2026-02-17T20:54:22.189Z
 ## 1. Welcome to Atlanta (`welcome-to-atlanta`)
 
 - Venues: 20
-- Coverage: images 100%, events 5%, facts/landmarks 95%, blurbs 90%, sources 100%
+- Coverage: reachable images 100%, good visual images 95%, events 0%, facts/landmarks 95%, blurbs 90%, sources 100%
 - Insufficient rows: 2
 - Crawler candidates: 0
-- Needs augmentation: active events 19, facts/landmarks 1, both 1
+- Needs augmentation: active events 20, facts/landmarks 1, both 1
+- Needs image replacement: 0
 - Top issue mix:
-  - no_upcoming_events_14d: 19
+  - no_upcoming_events_14d: 20
   - missing_editorial_blurb: 2
   - missing_venue_description: 2
   - no_facts_or_landmarks: 1
@@ -56,10 +58,11 @@ Generated: 2026-02-17T20:54:22.189Z
 ## 2. Artefacts of the Lost City (`artefacts-of-the-lost-city`)
 
 - Venues: 50
-- Coverage: images 100%, events 0%, facts/landmarks 100%, blurbs 100%, sources 76%
+- Coverage: reachable images 100%, good visual images 96%, events 0%, facts/landmarks 100%, blurbs 100%, sources 76%
 - Insufficient rows: 0
 - Crawler candidates: 0
 - Needs augmentation: active events 50, facts/landmarks 0, both 0
+- Needs image replacement: 0
 - Top issue mix:
   - no_upcoming_events_14d: 50
   - missing_source_link: 12
@@ -67,12 +70,13 @@ Generated: 2026-02-17T20:54:22.189Z
 ## 3. Good Trouble (`good-trouble`)
 
 - Venues: 17
-- Coverage: images 100%, events 5.9%, facts/landmarks 94.1%, blurbs 94.1%, sources 88.2%
+- Coverage: reachable images 100%, good visual images 88.2%, events 0%, facts/landmarks 94.1%, blurbs 94.1%, sources 88.2%
 - Insufficient rows: 1
 - Crawler candidates: 0
-- Needs augmentation: active events 16, facts/landmarks 1, both 1
+- Needs augmentation: active events 17, facts/landmarks 1, both 1
+- Needs image replacement: 0
 - Top issue mix:
-  - no_upcoming_events_14d: 16
+  - no_upcoming_events_14d: 17
   - missing_source_link: 2
   - no_facts_or_landmarks: 1
   - missing_editorial_blurb: 1
@@ -83,12 +87,13 @@ Generated: 2026-02-17T20:54:22.189Z
 ## 4. The South Got Something to Say (`the-south-got-something-to-say`)
 
 - Venues: 19
-- Coverage: images 100%, events 5.3%, facts/landmarks 78.9%, blurbs 89.5%, sources 68.4%
+- Coverage: reachable images 100%, good visual images 100%, events 0%, facts/landmarks 78.9%, blurbs 89.5%, sources 68.4%
 - Insufficient rows: 2
 - Crawler candidates: 0
-- Needs augmentation: active events 18, facts/landmarks 4, both 4
+- Needs augmentation: active events 19, facts/landmarks 4, both 4
+- Needs image replacement: 0
 - Top issue mix:
-  - no_upcoming_events_14d: 18
+  - no_upcoming_events_14d: 19
   - missing_source_link: 6
   - no_facts_or_landmarks: 4
   - missing_editorial_blurb: 2
@@ -99,10 +104,11 @@ Generated: 2026-02-17T20:54:22.189Z
 ## 5. Keep Moving Forward (`keep-moving-forward`)
 
 - Venues: 15
-- Coverage: images 100%, events 0%, facts/landmarks 86.7%, blurbs 93.3%, sources 46.7%
+- Coverage: reachable images 100%, good visual images 100%, events 0%, facts/landmarks 86.7%, blurbs 93.3%, sources 46.7%
 - Insufficient rows: 1
 - Crawler candidates: 0
 - Needs augmentation: active events 15, facts/landmarks 2, both 2
+- Needs image replacement: 0
 - Top issue mix:
   - no_upcoming_events_14d: 15
   - missing_source_link: 8
@@ -114,10 +120,11 @@ Generated: 2026-02-17T20:54:22.189Z
 ## 6. What'll Ya Have? (`the-itis`)
 
 - Venues: 22
-- Coverage: images 100%, events 0%, facts/landmarks 86.4%, blurbs 86.4%, sources 90.9%
+- Coverage: reachable images 100%, good visual images 100%, events 0%, facts/landmarks 86.4%, blurbs 86.4%, sources 90.9%
 - Insufficient rows: 3
 - Crawler candidates: 0
 - Needs augmentation: active events 22, facts/landmarks 3, both 3
+- Needs image replacement: 0
 - Top issue mix:
   - no_upcoming_events_14d: 22
   - missing_editorial_blurb: 3
@@ -132,12 +139,13 @@ Generated: 2026-02-17T20:54:22.189Z
 ## 7. City in a Forest (`city-in-a-forest`)
 
 - Venues: 14
-- Coverage: images 100%, events 7.1%, facts/landmarks 92.9%, blurbs 85.7%, sources 50%
+- Coverage: reachable images 100%, good visual images 100%, events 0%, facts/landmarks 92.9%, blurbs 85.7%, sources 50%
 - Insufficient rows: 2
 - Crawler candidates: 0
-- Needs augmentation: active events 13, facts/landmarks 1, both 1
+- Needs augmentation: active events 14, facts/landmarks 1, both 1
+- Needs image replacement: 0
 - Top issue mix:
-  - no_upcoming_events_14d: 13
+  - no_upcoming_events_14d: 14
   - missing_source_link: 7
   - missing_editorial_blurb: 2
   - missing_venue_description: 2
@@ -149,12 +157,13 @@ Generated: 2026-02-17T20:54:22.189Z
 ## 8. Hard in Da Paint (`hard-in-da-paint`)
 
 - Venues: 18
-- Coverage: images 100%, events 5.6%, facts/landmarks 88.9%, blurbs 77.8%, sources 55.6%
+- Coverage: reachable images 100%, good visual images 94.4%, events 0%, facts/landmarks 88.9%, blurbs 77.8%, sources 55.6%
 - Insufficient rows: 4
 - Crawler candidates: 2
-- Needs augmentation: active events 17, facts/landmarks 2, both 2
+- Needs augmentation: active events 18, facts/landmarks 2, both 2
+- Needs image replacement: 0
 - Top issue mix:
-  - no_upcoming_events_14d: 17
+  - no_upcoming_events_14d: 18
   - missing_source_link: 8
   - missing_editorial_blurb: 4
   - missing_venue_description: 3
@@ -168,12 +177,13 @@ Generated: 2026-02-17T20:54:22.189Z
 ## 9. A Beautiful Mosaic (`a-beautiful-mosaic`)
 
 - Venues: 18
-- Coverage: images 100%, events 5.6%, facts/landmarks 72.2%, blurbs 83.3%, sources 27.8%
+- Coverage: reachable images 100%, good visual images 100%, events 0%, facts/landmarks 72.2%, blurbs 83.3%, sources 27.8%
 - Insufficient rows: 3
 - Crawler candidates: 0
-- Needs augmentation: active events 17, facts/landmarks 5, both 5
+- Needs augmentation: active events 18, facts/landmarks 5, both 5
+- Needs image replacement: 0
 - Top issue mix:
-  - no_upcoming_events_14d: 17
+  - no_upcoming_events_14d: 18
   - missing_source_link: 13
   - no_facts_or_landmarks: 5
   - missing_editorial_blurb: 3
@@ -185,22 +195,24 @@ Generated: 2026-02-17T20:54:22.189Z
 ## 10. Too Busy for Haters (`too-busy-to-hate`)
 
 - Venues: 15
-- Coverage: images 100%, events 6.7%, facts/landmarks 100%, blurbs 100%, sources 86.7%
+- Coverage: reachable images 100%, good visual images 93.3%, events 0%, facts/landmarks 100%, blurbs 100%, sources 86.7%
 - Insufficient rows: 0
 - Crawler candidates: 0
-- Needs augmentation: active events 14, facts/landmarks 0, both 0
+- Needs augmentation: active events 15, facts/landmarks 0, both 0
+- Needs image replacement: 0
 - Top issue mix:
-  - no_upcoming_events_14d: 14
+  - no_upcoming_events_14d: 15
   - missing_source_link: 2
   - missing_venue_description: 2
 
 ## 11. Roll for Initiative (`the-midnight-train`)
 
 - Venues: 14
-- Coverage: images 100%, events 0%, facts/landmarks 71.4%, blurbs 78.6%, sources 64.3%
+- Coverage: reachable images 100%, good visual images 92.9%, events 0%, facts/landmarks 71.4%, blurbs 78.6%, sources 64.3%
 - Insufficient rows: 3
 - Crawler candidates: 1
 - Needs augmentation: active events 14, facts/landmarks 4, both 4
+- Needs image replacement: 0
 - Top issue mix:
   - no_upcoming_events_14d: 14
   - missing_source_link: 5
@@ -215,10 +227,11 @@ Generated: 2026-02-17T20:54:22.189Z
 ## 12. Keep Swinging (`keep-swinging`)
 
 - Venues: 16
-- Coverage: images 100%, events 0%, facts/landmarks 81.3%, blurbs 81.3%, sources 75%
+- Coverage: reachable images 100%, good visual images 100%, events 0%, facts/landmarks 81.3%, blurbs 81.3%, sources 75%
 - Insufficient rows: 3
 - Crawler candidates: 1
 - Needs augmentation: active events 16, facts/landmarks 3, both 3
+- Needs image replacement: 0
 - Top issue mix:
   - no_upcoming_events_14d: 16
   - missing_source_link: 4
@@ -233,10 +246,11 @@ Generated: 2026-02-17T20:54:22.189Z
 ## 13. Life's Like a Movie (`lifes-like-a-movie`)
 
 - Venues: 18
-- Coverage: images 100%, events 0%, facts/landmarks 88.9%, blurbs 88.9%, sources 83.3%
+- Coverage: reachable images 100%, good visual images 100%, events 0%, facts/landmarks 88.9%, blurbs 88.9%, sources 83.3%
 - Insufficient rows: 2
 - Crawler candidates: 0
 - Needs augmentation: active events 18, facts/landmarks 2, both 2
+- Needs image replacement: 0
 - Top issue mix:
   - no_upcoming_events_14d: 18
   - missing_source_link: 3
@@ -250,10 +264,11 @@ Generated: 2026-02-17T20:54:22.189Z
 ## 14. Say Less (`say-less`)
 
 - Venues: 18
-- Coverage: images 100%, events 0%, facts/landmarks 88.9%, blurbs 88.9%, sources 55.6%
+- Coverage: reachable images 100%, good visual images 94.4%, events 0%, facts/landmarks 88.9%, blurbs 88.9%, sources 55.6%
 - Insufficient rows: 2
 - Crawler candidates: 0
 - Needs augmentation: active events 18, facts/landmarks 2, both 2
+- Needs image replacement: 0
 - Top issue mix:
   - no_upcoming_events_14d: 18
   - missing_source_link: 8
@@ -267,10 +282,11 @@ Generated: 2026-02-17T20:54:22.189Z
 ## 15. Y'allywood (`yallywood`)
 
 - Venues: 6
-- Coverage: images 100%, events 0%, facts/landmarks 83.3%, blurbs 83.3%, sources 100%
+- Coverage: reachable images 100%, good visual images 100%, events 0%, facts/landmarks 83.3%, blurbs 83.3%, sources 100%
 - Insufficient rows: 1
 - Crawler candidates: 0
 - Needs augmentation: active events 6, facts/landmarks 1, both 1
+- Needs image replacement: 0
 - Top issue mix:
   - no_upcoming_events_14d: 6
   - missing_venue_description: 2
@@ -282,10 +298,11 @@ Generated: 2026-02-17T20:54:22.189Z
 ## 16. SpelHouse Spirit (`spelhouse-spirit`)
 
 - Venues: 18
-- Coverage: images 100%, events 0%, facts/landmarks 88.9%, blurbs 88.9%, sources 55.6%
+- Coverage: reachable images 100%, good visual images 100%, events 0%, facts/landmarks 88.9%, blurbs 88.9%, sources 55.6%
 - Insufficient rows: 2
 - Crawler candidates: 2
 - Needs augmentation: active events 18, facts/landmarks 2, both 2
+- Needs image replacement: 0
 - Top issue mix:
   - no_upcoming_events_14d: 18
   - missing_source_link: 8
@@ -299,10 +316,11 @@ Generated: 2026-02-17T20:54:22.189Z
 ## 17. Resurgens (`resurgens`)
 
 - Venues: 30
-- Coverage: images 100%, events 0%, facts/landmarks 90%, blurbs 90%, sources 46.7%
+- Coverage: reachable images 100%, good visual images 93.3%, events 0%, facts/landmarks 90%, blurbs 90%, sources 46.7%
 - Insufficient rows: 3
 - Crawler candidates: 0
 - Needs augmentation: active events 30, facts/landmarks 3, both 3
+- Needs image replacement: 0
 - Top issue mix:
   - no_upcoming_events_14d: 30
   - missing_source_link: 16
@@ -317,10 +335,11 @@ Generated: 2026-02-17T20:54:22.189Z
 ## 18. Up on the Roof (`up-on-the-roof`)
 
 - Venues: 22
-- Coverage: images 100%, events 0%, facts/landmarks 100%, blurbs 100%, sources 95.5%
+- Coverage: reachable images 100%, good visual images 95.5%, events 0%, facts/landmarks 100%, blurbs 100%, sources 95.5%
 - Insufficient rows: 0
 - Crawler candidates: 0
 - Needs augmentation: active events 22, facts/landmarks 0, both 0
+- Needs image replacement: 0
 - Top issue mix:
   - no_upcoming_events_14d: 22
   - missing_venue_description: 2
@@ -329,24 +348,26 @@ Generated: 2026-02-17T20:54:22.189Z
 ## 20. Not From Around Here (`not-from-around-here`)
 
 - Venues: 28
-- Coverage: images 100%, events 3.6%, facts/landmarks 100%, blurbs 100%, sources 53.6%
+- Coverage: reachable images 100%, good visual images 100%, events 0%, facts/landmarks 100%, blurbs 100%, sources 53.6%
 - Insufficient rows: 0
 - Crawler candidates: 4
-- Needs augmentation: active events 27, facts/landmarks 0, both 0
+- Needs augmentation: active events 28, facts/landmarks 0, both 0
+- Needs image replacement: 0
 - Top issue mix:
-  - no_upcoming_events_14d: 27
+  - no_upcoming_events_14d: 28
   - missing_source_link: 13
   - missing_venue_description: 7
 
 ## 21. As Seen on TV (`as-seen-on-tv`)
 
 - Venues: 20
-- Coverage: images 100%, events 5%, facts/landmarks 100%, blurbs 95%, sources 30%
+- Coverage: reachable images 100%, good visual images 95%, events 0%, facts/landmarks 100%, blurbs 95%, sources 30%
 - Insufficient rows: 1
 - Crawler candidates: 0
-- Needs augmentation: active events 19, facts/landmarks 0, both 0
+- Needs augmentation: active events 20, facts/landmarks 0, both 0
+- Needs image replacement: 0
 - Top issue mix:
-  - no_upcoming_events_14d: 19
+  - no_upcoming_events_14d: 20
   - missing_source_link: 14
   - missing_editorial_blurb: 1
   - missing_venue_description: 1
@@ -356,12 +377,13 @@ Generated: 2026-02-17T20:54:22.189Z
 ## 22. Comedy & Live Performance (`comedy-live`)
 
 - Venues: 18
-- Coverage: images 100%, events 5.6%, facts/landmarks 94.4%, blurbs 94.4%, sources 88.9%
+- Coverage: reachable images 100%, good visual images 100%, events 0%, facts/landmarks 94.4%, blurbs 94.4%, sources 88.9%
 - Insufficient rows: 1
 - Crawler candidates: 1
-- Needs augmentation: active events 17, facts/landmarks 1, both 1
+- Needs augmentation: active events 18, facts/landmarks 1, both 1
+- Needs image replacement: 0
 - Top issue mix:
-  - no_upcoming_events_14d: 17
+  - no_upcoming_events_14d: 18
   - missing_source_link: 2
   - no_facts_or_landmarks: 1
   - missing_editorial_blurb: 1
@@ -372,26 +394,28 @@ Generated: 2026-02-17T20:54:22.189Z
 ## 23. Native Heritage (`native-heritage`)
 
 - Venues: 14
-- Coverage: images 100%, events 7.1%, facts/landmarks 92.9%, blurbs 92.9%, sources 35.7%
+- Coverage: reachable images 100%, good visual images 100%, events 0%, facts/landmarks 92.9%, blurbs 92.9%, sources 35.7%
 - Insufficient rows: 1
-- Crawler candidates: 0
-- Needs augmentation: active events 13, facts/landmarks 1, both 0
+- Crawler candidates: 1
+- Needs augmentation: active events 14, facts/landmarks 1, both 1
+- Needs image replacement: 0
 - Top issue mix:
-  - no_upcoming_events_14d: 13
+  - no_upcoming_events_14d: 14
   - missing_source_link: 9
   - no_facts_or_landmarks: 1
   - missing_editorial_blurb: 1
   - missing_venue_description: 1
 - Highest-risk venues:
-  - Kennesaw Mountain National Battlefield Park (`kennesaw-mountain-national-battlefield-park`) score=7 crawler=false flags=no_facts_or_landmarks, missing_editorial_blurb, missing_source_link, missing_venue_description
+  - Kennesaw Mountain National Battlefield Park (`kennesaw-mountain-national-battlefield-park`) score=9 crawler=true flags=no_upcoming_events_14d, no_facts_or_landmarks, missing_editorial_blurb, missing_source_link, missing_venue_description
 
 ## 24. Hell of an Engineer (`hell-of-an-engineer`)
 
 - Venues: 17
-- Coverage: images 100%, events 0%, facts/landmarks 82.4%, blurbs 70.6%, sources 52.9%
+- Coverage: reachable images 100%, good visual images 100%, events 0%, facts/landmarks 82.4%, blurbs 70.6%, sources 52.9%
 - Insufficient rows: 5
 - Crawler candidates: 0
 - Needs augmentation: active events 17, facts/landmarks 3, both 3
+- Needs image replacement: 0
 - Top issue mix:
   - no_upcoming_events_14d: 17
   - missing_source_link: 8
@@ -408,6 +432,7 @@ Generated: 2026-02-17T20:54:22.189Z
 ## Crawler Candidate List
 - Roll for Initiative -> Charlies Collectible Show (`charlies-collectible-show`), score=9, flags=no_upcoming_events_14d, no_facts_or_landmarks, missing_editorial_blurb, missing_source_link, missing_venue_description
 - Comedy & Live Performance -> Relapse Theatre (`relapse-theatre`), score=9, flags=no_upcoming_events_14d, no_facts_or_landmarks, missing_editorial_blurb, missing_source_link, missing_venue_description
+- Native Heritage -> Kennesaw Mountain National Battlefield Park (`kennesaw-mountain-national-battlefield-park`), score=9, flags=no_upcoming_events_14d, no_facts_or_landmarks, missing_editorial_blurb, missing_source_link, missing_venue_description
 - Keep Swinging -> Five Iron Golf (`five-iron-golf`), score=9, flags=no_upcoming_events_14d, no_facts_or_landmarks, missing_editorial_blurb, missing_source_link, missing_venue_description
 - SpelHouse Spirit -> Morris Brown College (`morris-brown-college`), score=9, flags=no_upcoming_events_14d, no_facts_or_landmarks, missing_editorial_blurb, missing_source_link, missing_venue_description
 - SpelHouse Spirit -> Wren's Nest House Museum (`wrens-nest-museum`), score=9, flags=no_upcoming_events_14d, no_facts_or_landmarks, missing_editorial_blurb, missing_source_link, missing_venue_description

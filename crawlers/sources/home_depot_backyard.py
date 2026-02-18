@@ -332,6 +332,21 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         title, "The Home Depot Backyard", start_date
                     )
 
+                    source_url_lower = (source_url or "").lower()
+                    has_ticket_signal = source_url and any(
+                        token in source_url_lower
+                        for token in (
+                            "eventbrite",
+                            "ticket",
+                            "ticketmaster",
+                            "axs",
+                            "dice.fm",
+                            "seetickets",
+                            "showclix",
+                            "tix",
+                        )
+                    )
+
                     # Build event record
                     event_record = {
                         "source_id": source_id,
@@ -351,7 +366,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "price_note": price_note,
                         "is_free": is_free,
                         "source_url": source_url,
-                        "ticket_url": source_url if "eventbrite" in source_url.lower() else None,
+                        "ticket_url": source_url if has_ticket_signal else None,
                         "image_url": image_url,
                         "raw_text": f"{title} - {start_date_str}",
                         "extraction_confidence": 0.9,

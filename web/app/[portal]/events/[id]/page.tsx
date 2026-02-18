@@ -13,6 +13,7 @@ import { format, parseISO } from "date-fns";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { isTicketingUrl } from "@/lib/card-utils";
 import DirectionsDropdown from "@/components/DirectionsDropdown";
 import VenueVibes from "@/components/VenueVibes";
 import LinkifyText from "@/components/LinkifyText";
@@ -44,6 +45,10 @@ import { buildDisplayDescription } from "@/lib/event-description";
 import { deriveShowSignals } from "@/lib/show-signals";
 import ShowSignalsPanel from "@/components/ShowSignalsPanel";
 import { inferLineupGenreFallback } from "@/lib/artist-fallbacks";
+import {
+  suppressEventImageIfVenueFlagged,
+  suppressEventImagesIfVenueFlagged,
+} from "@/lib/image-quality-suppression";
 
 export const revalidate = 60;
 
@@ -51,8 +56,11 @@ type Props = {
   params: Promise<{ portal: string; id: string }>;
 };
 
-// Cache getEventById to prevent duplicate queries in generateMetadata and page component
-const getCachedEventById = cache(getEventById);
+// Cache event fetch + image suppression to avoid duplicate work in metadata + page render.
+const getCachedEventById = cache(async (id: number) => {
+  const event = await getEventById(id);
+  return event ? suppressEventImageIfVenueFlagged(event) : null;
+});
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id, portal: portalSlug } = await params;
@@ -317,6 +325,8 @@ export default async function PortalEventPage({ params }: Props) {
     event.venue?.id ? getNearbySpots(event.venue.id) : Promise.resolve([]),
     getEventArtists(event.id),
   ]);
+  const sanitizedVenueEvents = suppressEventImagesIfVenueFlagged(venueEvents);
+  const sanitizedSameDateEvents = suppressEventImagesIfVenueFlagged(sameDateEvents);
   const displayParticipants = getDisplayParticipants(eventArtists, {
     eventTitle: event.title,
     eventCategory: event.category,
@@ -405,6 +415,18 @@ export default async function PortalEventPage({ params }: Props) {
   const isVirtualLocation = locationDesignator === "virtual";
   const isPrivateLocation = locationDesignator === "private_after_signup";
   const showLocationSection = Boolean(event.venue);
+  const ticketUrl = event.ticket_url?.trim() || null;
+  const sourceUrl = event.source_url?.trim() || null;
+  const primaryCtaHref = ticketUrl || sourceUrl;
+  const primaryCtaIsTicketIntent =
+    Boolean(ticketUrl) || isTicketingUrl(sourceUrl) || Boolean(sourceUrl && !event.is_free);
+  const primaryCtaLabel = isLive
+    ? "Join Now"
+    : event.is_free
+      ? "RSVP Free"
+      : primaryCtaHref
+        ? "Get Tickets"
+        : null;
 
   return (
     <>
@@ -804,14 +826,14 @@ export default async function PortalEventPage({ params }: Props) {
           )}
 
           {/* More at Venue */}
-          {venueEvents.length > 0 && event.venue && (
+          {sanitizedVenueEvents.length > 0 && event.venue && (
             <RelatedSection
               title={`More at ${event.venue.name}`}
-              count={venueEvents.length}
+              count={sanitizedVenueEvents.length}
               layout="content"
             >
               <VenueEventsByDay
-                events={venueEvents}
+                events={sanitizedVenueEvents}
                 portalSlug={activePortalSlug}
                 maxDates={5}
                 compact={true}
@@ -820,12 +842,12 @@ export default async function PortalEventPage({ params }: Props) {
           )}
 
           {/* Same Night */}
-          {sameDateEvents.length > 0 && (
+          {sanitizedSameDateEvents.length > 0 && (
             <RelatedSection
               title="That same night"
-              count={sameDateEvents.length}
+              count={sanitizedSameDateEvents.length}
             >
-              {sameDateEvents.map((relatedEvent) => {
+              {sanitizedSameDateEvents.map((relatedEvent) => {
                 const eventColor = relatedEvent.category ? getCategoryColor(relatedEvent.category) : "var(--coral)";
                 const subtitle = [
                   relatedEvent.venue?.name || "Venue TBA",
@@ -880,13 +902,17 @@ export default async function PortalEventPage({ params }: Props) {
           </>
         }
         primaryAction={
-          event.ticket_url
+          primaryCtaHref && primaryCtaLabel
             ? {
-                label: isLive ? "Join Now" : "Get Tickets",
-                href: event.ticket_url,
-                icon: (
+                label: primaryCtaLabel,
+                href: primaryCtaHref,
+                icon: primaryCtaIsTicketIntent ? (
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                   </svg>
                 ),
               }

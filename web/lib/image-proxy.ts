@@ -22,6 +22,8 @@ const KNOWN_IMAGE_HOSTS = new Set([
   "image.tmdb.org",
   "upload.wikimedia.org",
   "user-images.githubusercontent.com",
+  // Google Places photos
+  "lh3.googleusercontent.com",
   // Atlanta venue/org sites
   "www.aso.org",
   "admin.paintingwithatwist.com",
@@ -112,6 +114,33 @@ export function buildProxiedImageSrc(src: string): string {
 }
 
 /**
+ * Google Places photo URLs often include very large size directives (e.g. `=s4800-w1200`)
+ * that are slow to fetch. Normalize to a web-friendly size for faster first paint.
+ */
+function normalizeGooglePlacesPhotoUrl(src: string): string {
+  try {
+    const parsed = new URL(src);
+    if (parsed.hostname !== "lh3.googleusercontent.com") return src;
+
+    const isPlacesPhotoPath =
+      parsed.pathname.startsWith("/place-photos/") ||
+      parsed.pathname.startsWith("/places/");
+    if (!isPlacesPhotoPath) return src;
+
+    const TARGET_SUFFIX = "w1200-h900-k-no";
+    // Replace existing size directive at end of path or append one if absent.
+    if (parsed.pathname.includes("=")) {
+      parsed.pathname = parsed.pathname.replace(/=[^/=?#]+$/, `=${TARGET_SUFFIX}`);
+    } else {
+      parsed.pathname = `${parsed.pathname}=${TARGET_SUFFIX}`;
+    }
+    return parsed.toString();
+  } catch {
+    return src;
+  }
+}
+
+/**
  * Returns the optimal image source URL.
  * - Known safe hosts (in next.config.ts remotePatterns): returned as-is for direct optimization
  * - Unknown hosts: proxied through /api/image-proxy for SSRF protection
@@ -120,12 +149,13 @@ export function buildProxiedImageSrc(src: string): string {
  */
 export function getProxiedImageSrc(src: ImageProps["src"]): ImageProps["src"] {
   if (!shouldProxyImage(src)) return src;
+  const normalizedSrc = normalizeGooglePlacesPhotoUrl(src);
 
   // Bypass proxy for known safe hosts - they're already in next.config.ts remotePatterns
-  if (isKnownImageHost(src)) {
-    return src;
+  if (isKnownImageHost(normalizedSrc)) {
+    return normalizedSrc;
   }
 
   // Unknown hosts go through proxy for SSRF protection
-  return buildProxiedImageSrc(src);
+  return buildProxiedImageSrc(normalizedSrc);
 }

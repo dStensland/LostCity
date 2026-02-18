@@ -13,6 +13,8 @@ from __future__ import annotations
 
 import logging
 import re
+import random
+import time
 from datetime import datetime, timedelta
 
 from playwright.sync_api import Page
@@ -26,6 +28,12 @@ class RegalAtlantaCrawler(ChainCinemaCrawler):
     CHAIN_NAME = "Regal Cinemas"
     CHAIN_TAG = "regal"
     DAYS_AHEAD = 7
+    ZERO_YIELD_PROBE_DAYS_BY_LOCATION = {
+        "regal-hollywood-north-i85": 2,
+        "regal-avalon": 2,
+    }
+    API_RATE_LIMIT_MAX_RETRIES = 3
+    API_RATE_LIMIT_BASE_DELAY_SECONDS = 2.0
     LOCATIONS = [
         {
             "venue_data": {
@@ -126,33 +134,72 @@ class RegalAtlantaCrawler(ChainCinemaCrawler):
         return slug[-4:]
 
     def _fetch_showtimes_api(self, page: Page, cinema_id: str, date: datetime) -> list[dict]:
-        """Fetch showtimes from Regal's internal API via the page context."""
+        """Fetch showtimes from Regal's internal API with timeout and 429 retries."""
         date_str = date.strftime("%m-%d-%Y")
         api_url = f"/api/getShowtimes?theatres={cinema_id}&date={date_str}&hoCode=&ignoreCache=false&moviesOnly=false"
 
-        try:
-            result = page.evaluate(f"""async () => {{
-                const controller = new AbortController();
-                const timeout = setTimeout(() => controller.abort(), 15000);
-                try {{
-                    const resp = await fetch("{api_url}", {{ signal: controller.signal }});
-                    clearTimeout(timeout);
-                    if (!resp.ok) return {{ error: resp.status }};
-                    return await resp.json();
-                }} catch (e) {{
-                    clearTimeout(timeout);
-                    return {{ error: e.message }};
-                }}
-            }}""")
-        except Exception as e:
-            logger.warning(f"  page.evaluate failed for cinema {cinema_id} on {date_str}: {e}")
-            return []
+        full_url = f"https://www.regmovies.com{api_url}"
+        result = None
+        for attempt in range(1, self.API_RATE_LIMIT_MAX_RETRIES + 1):
+            try:
+                resp = page.context.request.get(
+                    full_url,
+                    timeout=20000,
+                    headers={
+                        "accept": "application/json, text/plain, */*",
+                        "referer": "https://www.regmovies.com/",
+                    },
+                )
+            except Exception as e:
+                logger.warning(
+                    f"  Request failed for cinema {cinema_id} on {date_str} "
+                    f"(attempt {attempt}/{self.API_RATE_LIMIT_MAX_RETRIES}): {e}"
+                )
+                if attempt >= self.API_RATE_LIMIT_MAX_RETRIES:
+                    return []
+                delay_s = self.API_RATE_LIMIT_BASE_DELAY_SECONDS * (2 ** (attempt - 1))
+                delay_s += random.uniform(0.1, 0.6)
+                time.sleep(delay_s)
+                continue
 
-        if not result or isinstance(result, str):
-            return []
+            if resp.status == 429:
+                retry_after_raw = resp.headers.get("retry-after")
+                retry_after_s = None
+                if retry_after_raw:
+                    try:
+                        retry_after_s = float(retry_after_raw)
+                    except (TypeError, ValueError):
+                        retry_after_s = None
 
-        if "error" in result:
-            logger.warning(f"  API error for cinema {cinema_id} on {date_str}: {result['error']}")
+                if attempt >= self.API_RATE_LIMIT_MAX_RETRIES:
+                    logger.warning(
+                        f"  API HTTP 429 for cinema {cinema_id} on {date_str} "
+                        f"after {attempt} attempts"
+                    )
+                    return []
+
+                backoff_s = self.API_RATE_LIMIT_BASE_DELAY_SECONDS * (2 ** (attempt - 1))
+                delay_s = max(backoff_s, retry_after_s or 0.0) + random.uniform(0.1, 0.6)
+                logger.warning(
+                    f"  API HTTP 429 for cinema {cinema_id} on {date_str}; "
+                    f"retrying in {delay_s:.1f}s "
+                    f"(attempt {attempt + 1}/{self.API_RATE_LIMIT_MAX_RETRIES})"
+                )
+                time.sleep(delay_s)
+                continue
+
+            if not resp.ok:
+                logger.warning(f"  API HTTP {resp.status} for cinema {cinema_id} on {date_str}")
+                return []
+
+            try:
+                result = resp.json()
+            except Exception as e:
+                logger.warning(f"  API JSON parse failed for cinema {cinema_id} on {date_str}: {e}")
+                return []
+            break
+
+        if result is None:
             return []
 
         # Response structure: { shows: [{ Film: [...], AdvertiseShowDate: "..." }] }
@@ -283,6 +330,7 @@ class RegalAtlantaCrawler(ChainCinemaCrawler):
         found = 0
         new = 0
         updated = 0
+        probe_days = self.get_probe_days_for_location(location)
         today = datetime.now().date()
         cinema_id = self._get_cinema_id(location)
 
@@ -309,6 +357,14 @@ class RegalAtlantaCrawler(ChainCinemaCrawler):
 
         # Fetch showtimes for each date via API
         for day_offset in range(self.DAYS_AHEAD):
+            if probe_days and day_offset >= probe_days and found == 0:
+                logger.info(
+                    "  %s: no showtimes in first %s day(s); skipping remaining days",
+                    venue_name,
+                    probe_days,
+                )
+                break
+
             target_date = today + timedelta(days=day_offset)
             target_dt = datetime.combine(target_date, datetime.min.time())
             date_str = target_date.strftime("%Y-%m-%d")

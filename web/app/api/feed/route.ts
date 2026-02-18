@@ -16,6 +16,10 @@ import {
   isChainCinemaVenue,
   isRegularShowtimeEvent,
 } from "@/lib/cinema-filter";
+import {
+  suppressEventImageIfVenueFlagged,
+  suppressEventImagesIfVenueFlagged,
+} from "@/lib/image-quality-suppression";
 
 import { fetchSocialProofCounts } from "@/lib/search";
 import { format, startOfDay, addDays } from "date-fns";
@@ -805,7 +809,9 @@ export async function GET(request: Request) {
       recommendation_count?: number;
     };
 
-    let events = (mergedEventsData || []) as EventResult[];
+    let events = suppressEventImagesIfVenueFlagged(
+      (mergedEventsData || []) as EventResult[],
+    );
 
     // Filter out cross-city events that leak via portal_id=NULL
     events = filterByPortalCity(events, portalFilters.city, {
@@ -1363,8 +1369,9 @@ export async function GET(request: Request) {
       } | null;
     };
 
-    const trendingEventsRaw = (trendingEventsResult.data ||
-      []) as TrendingEventData[];
+    const trendingEventsRaw = suppressEventImagesIfVenueFlagged(
+      (trendingEventsResult.data || []) as TrendingEventData[],
+    );
     // Filter by city to prevent cross-city leakage, then by adult content preference
     const trendingEventsData = filterByPortalCity(
       trendingEventsRaw,
@@ -1416,7 +1423,7 @@ export async function GET(request: Request) {
 
       // Score events based on recent activity + total interest
       const scored = filteredTrendingEventsData.map((event) => ({
-        ...event,
+        ...suppressEventImageIfVenueFlagged(event),
         score:
           (recentRsvpCounts[event.id] || 0) * 3 +
           (totalGoingCounts[event.id] || 0),

@@ -1,6 +1,6 @@
 # Explore Tracks Action Queue
 
-Generated: 2026-02-17T20:54:22.189Z
+Generated: 2026-02-18T06:19:01.028Z
 
 ## P0 - Image Repairs
 - None detected.
@@ -8,6 +8,7 @@ Generated: 2026-02-17T20:54:22.189Z
 ## P1 - Crawler/Research Candidates (Unique Venues)
 - Charlies Collectible Show (`charlies-collectible-show`) via Roll for Initiative - score=9, flags=no_upcoming_events_14d, no_facts_or_landmarks, missing_editorial_blurb, missing_source_link, missing_venue_description
 - Relapse Theatre (`relapse-theatre`) via Comedy & Live Performance - score=9, flags=no_upcoming_events_14d, no_facts_or_landmarks, missing_editorial_blurb, missing_source_link, missing_venue_description
+- Kennesaw Mountain National Battlefield Park (`kennesaw-mountain-national-battlefield-park`) via Native Heritage - score=9, flags=no_upcoming_events_14d, no_facts_or_landmarks, missing_editorial_blurb, missing_source_link, missing_venue_description
 - Five Iron Golf (`five-iron-golf`) via Keep Swinging - score=9, flags=no_upcoming_events_14d, no_facts_or_landmarks, missing_editorial_blurb, missing_source_link, missing_venue_description
 - Morris Brown College (`morris-brown-college`) via SpelHouse Spirit - score=9, flags=no_upcoming_events_14d, no_facts_or_landmarks, missing_editorial_blurb, missing_source_link, missing_venue_description
 - Wren's Nest House Museum (`wrens-nest-museum`) via SpelHouse Spirit - score=9, flags=no_upcoming_events_14d, no_facts_or_landmarks, missing_editorial_blurb, missing_source_link, missing_venue_description
@@ -23,16 +24,16 @@ Generated: 2026-02-17T20:54:22.189Z
 ### Active Event Augmentation
 - 2. Artefacts of the Lost City (`artefacts-of-the-lost-city`): 50/50 need event signal
 - 17. Resurgens (`resurgens`): 30/30 need event signal
-- 20. Not From Around Here (`not-from-around-here`): 27/28 need event signal
+- 20. Not From Around Here (`not-from-around-here`): 28/28 need event signal
 - 6. What'll Ya Have? (`the-itis`): 22/22 need event signal
 - 18. Up on the Roof (`up-on-the-roof`): 22/22 need event signal
-- 1. Welcome to Atlanta (`welcome-to-atlanta`): 19/20 need event signal
-- 21. As Seen on TV (`as-seen-on-tv`): 19/20 need event signal
-- 4. The South Got Something to Say (`the-south-got-something-to-say`): 18/19 need event signal
+- 1. Welcome to Atlanta (`welcome-to-atlanta`): 20/20 need event signal
+- 21. As Seen on TV (`as-seen-on-tv`): 20/20 need event signal
+- 4. The South Got Something to Say (`the-south-got-something-to-say`): 19/19 need event signal
+- 8. Hard in Da Paint (`hard-in-da-paint`): 18/18 need event signal
+- 9. A Beautiful Mosaic (`a-beautiful-mosaic`): 18/18 need event signal
 - 13. Life's Like a Movie (`lifes-like-a-movie`): 18/18 need event signal
 - 14. Say Less (`say-less`): 18/18 need event signal
-- 16. SpelHouse Spirit (`spelhouse-spirit`): 18/18 need event signal
-- 8. Hard in Da Paint (`hard-in-da-paint`): 17/18 need event signal
 
 ### Facts/Landmarks Augmentation
 - 9. A Beautiful Mosaic (`a-beautiful-mosaic`): 5/18 need facts/landmarks

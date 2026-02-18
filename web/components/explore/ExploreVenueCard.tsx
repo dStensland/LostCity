@@ -82,7 +82,16 @@ export default function ExploreVenueCard({
         className="block relative overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-inset"
         style={{ height: 160, isolation: "isolate" }}
       >
-        {venue.imageUrl ? (
+        <div
+          className="absolute inset-0 flex items-center justify-center"
+          style={{
+            background:
+              "linear-gradient(145deg, color-mix(in srgb, var(--night) 88%, transparent), color-mix(in srgb, var(--dusk) 70%, transparent))",
+          }}
+        >
+          <span className="text-3xl opacity-20">📍</span>
+        </div>
+        {venue.imageUrl && (
           <Image
             src={venue.imageUrl}
             alt={venue.name}
@@ -91,13 +100,6 @@ export default function ExploreVenueCard({
             className="object-cover transition-transform duration-500 group-hover:scale-105"
             style={{ filter: "contrast(1.06) saturate(0.8)", willChange: "transform", backfaceVisibility: "hidden" }}
           />
-        ) : (
-          <div
-            className="absolute inset-0 flex items-center justify-center"
-            style={{ background: "var(--night)" }}
-          >
-            <span className="text-3xl opacity-20">📍</span>
-          </div>
         )}
         <div
           className="absolute inset-0"
@@ -307,7 +309,16 @@ function CompactVenueCard({
         className="relative overflow-hidden aspect-[4/3] sm:aspect-square"
         style={{ isolation: "isolate" }}
       >
-        {venue.imageUrl ? (
+        <div
+          className="absolute inset-0 flex items-center justify-center"
+          style={{
+            background:
+              "linear-gradient(145deg, color-mix(in srgb, var(--night) 88%, transparent), color-mix(in srgb, var(--dusk) 70%, transparent))",
+          }}
+        >
+          <span className="text-xl opacity-15">📍</span>
+        </div>
+        {venue.imageUrl && (
           <Image
             src={venue.imageUrl}
             alt={venue.name}
@@ -316,13 +327,6 @@ function CompactVenueCard({
             className="object-cover transition-transform duration-500 group-hover:scale-105"
             style={{ filter: "contrast(1.06) saturate(0.75)", willChange: "transform", backfaceVisibility: "hidden" }}
           />
-        ) : (
-          <div
-            className="absolute inset-0 flex items-center justify-center"
-            style={{ background: "var(--night)" }}
-          >
-            <span className="text-xl opacity-15">📍</span>
-          </div>
         )}
         <div
           className="absolute inset-0"

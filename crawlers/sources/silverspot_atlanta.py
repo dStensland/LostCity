@@ -41,6 +41,20 @@ class SilverspotAtlantaCrawler(ChainCinemaCrawler):
         },
     ]
 
+    def __init__(self) -> None:
+        self._cloudflare_blocked = False
+        self._abort_remaining_dates = False
+
+    def crawl(self, source: dict) -> tuple[int, int, int]:
+        self._cloudflare_blocked = False
+        self._abort_remaining_dates = False
+        found, new, updated = super().crawl(source)
+        if self._cloudflare_blocked and found == 0:
+            raise RuntimeError(
+                "Cloudflare challenge blocked Silverspot showtime pages for this run"
+            )
+        return found, new, updated
+
     def get_showtime_url(self, location: dict, date: datetime) -> str:
         date_str = date.strftime("%Y-%m-%d")
         slug = location["url_slug"]
@@ -50,16 +64,37 @@ class SilverspotAtlantaCrawler(ChainCinemaCrawler):
         """Extract movies and showtimes from Silverspot showtime page."""
         movies = []
 
+        title_text = ""
+        body_text = ""
+        html_text = ""
         try:
-            marker_text = f"{page.title()} {page.inner_text('body')[:1500]}".lower()
-            if "just a moment" in marker_text and "cloudflare" in marker_text:
-                logger.warning(
-                    "  Cloudflare challenge detected for %s; skipping extraction",
-                    location["venue_data"]["name"],
-                )
-                return []
+            title_text = page.title().strip().lower()
         except Exception:
             pass
+        try:
+            body_text = page.inner_text("body")[:2000].lower()
+        except Exception:
+            pass
+        try:
+            html_text = page.content()[:40000].lower()
+        except Exception:
+            pass
+
+        marker_text = f"{title_text} {body_text} {html_text}"
+        if (
+            "just a moment" in marker_text
+            or "security verification" in marker_text
+            or "performance and security by cloudflare" in marker_text
+            or "cf-browser-verification" in marker_text
+            or "/cdn-cgi/challenge-platform/" in marker_text
+        ):
+            self._cloudflare_blocked = True
+            self._abort_remaining_dates = True
+            logger.warning(
+                "  Cloudflare challenge detected for %s; skipping extraction",
+                location["venue_data"]["name"],
+            )
+            return []
 
         try:
             page.wait_for_selector(".movie-card, .film-listing, .showtime-container", timeout=10000)

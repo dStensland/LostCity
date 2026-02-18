@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { getLocalDateString } from "@/lib/formats";
+import { suppressVenueImagesIfFlagged } from "@/lib/image-quality-suppression";
 
 export const revalidate = 900; // 15 min
 
@@ -249,7 +250,7 @@ export async function GET(request: NextRequest) {
           editorial_blurb: tv.editorial_blurb,
           is_featured: tv.is_featured,
           upvote_count: tv.upvote_count,
-          venue: tv.venues,
+          venue: tv.venues ? suppressVenueImagesIfFlagged(tv.venues) : null,
           upcoming_event_count: tv.venues?.id ? (eventCountsByVenue.get(tv.venues.id) ?? 0) : 0,
         })),
       };

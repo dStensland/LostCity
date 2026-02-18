@@ -3,6 +3,7 @@ import { mkdir, writeFile } from "fs/promises";
 import { readFileSync } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import sharp from "sharp";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -16,6 +17,8 @@ const OUTPUT_QUEUE_MD = path.join(OUTPUT_DIR, "explore_tracks_action_queue.md");
 const LOOKAHEAD_DAYS = 14;
 const IMAGE_TIMEOUT_MS = 9000;
 const IMAGE_CHECK_CONCURRENCY = 14;
+const IMAGE_ANALYSIS_CONCURRENCY = 8;
+const IMAGE_MAX_BYTES = 8 * 1024 * 1024;
 
 function readEnv(envPath) {
   const raw = readFileSync(envPath, "utf8");
@@ -116,9 +119,206 @@ async function checkImageUrl(url) {
   }
 }
 
+async function fetchImageBuffer(url) {
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      redirect: "follow",
+      signal: AbortSignal.timeout(IMAGE_TIMEOUT_MS),
+    });
+
+    if (!response.ok) {
+      return { ok: false, reason: `http_${response.status}` };
+    }
+
+    const contentType = (response.headers.get("content-type") || "").toLowerCase();
+    if (!contentType.startsWith("image/")) {
+      return { ok: false, reason: "non_image_content_type" };
+    }
+
+    const lengthHeader = response.headers.get("content-length");
+    const length = Number(lengthHeader || "0");
+    if (Number.isFinite(length) && length > IMAGE_MAX_BYTES) {
+      return { ok: false, reason: "image_too_large" };
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const byteLength = arrayBuffer.byteLength;
+    if (byteLength <= 0) {
+      return { ok: false, reason: "empty_image_body" };
+    }
+    if (byteLength > IMAGE_MAX_BYTES) {
+      return { ok: false, reason: "image_too_large" };
+    }
+
+    return { ok: true, buffer: Buffer.from(arrayBuffer) };
+  } catch (error) {
+    return { ok: false, reason: String(error?.name || "fetch_error") };
+  }
+}
+
+async function computeVisualQualityMetrics(buffer) {
+  const metadata = await sharp(buffer, { failOn: "none" }).metadata();
+  const width = Number(metadata.width || 0);
+  const height = Number(metadata.height || 0);
+  if (!width || !height) {
+    return null;
+  }
+
+  const { data, info } = await sharp(buffer, { failOn: "none" })
+    .rotate()
+    .toColourspace("srgb")
+    .removeAlpha()
+    .resize(96, 96, { fit: "inside", withoutEnlargement: true })
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  const sampleWidth = info.width;
+  const sampleHeight = info.height;
+  const channels = info.channels;
+  if (!sampleWidth || !sampleHeight || channels < 3) {
+    return null;
+  }
+
+  const lumaValues = new Float32Array(sampleWidth * sampleHeight);
+  const hist = new Array(32).fill(0);
+  const colorBuckets = new Set();
+  let satSum = 0;
+  let lumaSum = 0;
+
+  for (let y = 0; y < sampleHeight; y += 1) {
+    for (let x = 0; x < sampleWidth; x += 1) {
+      const pos = y * sampleWidth + x;
+      const idx = pos * channels;
+      const r = data[idx];
+      const g = data[idx + 1];
+      const b = data[idx + 2];
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      const sat = max === 0 ? 0 : (max - min) / max;
+      const luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      const bin = Math.max(0, Math.min(31, Math.floor((luma / 256) * 32)));
+      hist[bin] += 1;
+      lumaValues[pos] = luma;
+      satSum += sat;
+      lumaSum += luma;
+      colorBuckets.add(`${r >> 5}-${g >> 5}-${b >> 5}`);
+    }
+  }
+
+  let edgeSum = 0;
+  let edgeCount = 0;
+  for (let y = 0; y < sampleHeight; y += 1) {
+    for (let x = 0; x < sampleWidth; x += 1) {
+      const pos = y * sampleWidth + x;
+      const v = lumaValues[pos];
+      if (x + 1 < sampleWidth) {
+        edgeSum += Math.abs(v - lumaValues[pos + 1]);
+        edgeCount += 1;
+      }
+      if (y + 1 < sampleHeight) {
+        edgeSum += Math.abs(v - lumaValues[pos + sampleWidth]);
+        edgeCount += 1;
+      }
+    }
+  }
+
+  const pixelCount = sampleWidth * sampleHeight;
+  const edgeStrength = edgeCount > 0 ? edgeSum / edgeCount : 0;
+  const saturationMean = pixelCount > 0 ? satSum / pixelCount : 0;
+  const brightnessMean = pixelCount > 0 ? lumaSum / pixelCount : 0;
+
+  let entropy = 0;
+  for (const count of hist) {
+    if (!count) continue;
+    const p = count / pixelCount;
+    entropy -= p * Math.log2(p);
+  }
+
+  const aspectRatio = width / Math.max(height, 1);
+  const uniqueColorRatio = colorBuckets.size / 512;
+
+  return {
+    width,
+    height,
+    aspect_ratio: Number(aspectRatio.toFixed(3)),
+    entropy: Number(entropy.toFixed(3)),
+    edge_strength: Number(edgeStrength.toFixed(3)),
+    saturation_mean: Number(saturationMean.toFixed(3)),
+    brightness_mean: Number(brightnessMean.toFixed(1)),
+    unique_color_ratio: Number(uniqueColorRatio.toFixed(3)),
+  };
+}
+
+async function analyzeImageQuality(url) {
+  if (!isTruthyText(url)) {
+    return {
+      state: "missing",
+      reasons: ["empty_url"],
+      metrics: null,
+    };
+  }
+
+  const fetched = await fetchImageBuffer(url);
+  if (!fetched.ok) {
+    return {
+      state: "unknown",
+      reasons: [fetched.reason],
+      metrics: null,
+    };
+  }
+
+  try {
+    const metrics = await computeVisualQualityMetrics(fetched.buffer);
+    if (!metrics) {
+      return {
+        state: "unknown",
+        reasons: ["metadata_unavailable"],
+        metrics: null,
+      };
+    }
+
+    const reasons = [];
+    const critical = [];
+
+    if (metrics.width < 480 || metrics.height < 320) {
+      reasons.push("low_resolution");
+      critical.push("low_resolution");
+    }
+    if (metrics.edge_strength < 7) {
+      reasons.push("blurry_or_soft");
+      critical.push("blurry_or_soft");
+    }
+    if (metrics.aspect_ratio > 2.8 || metrics.aspect_ratio < 0.33) {
+      reasons.push("extreme_aspect_ratio");
+      critical.push("extreme_aspect_ratio");
+    }
+    if (metrics.unique_color_ratio < 0.02 && metrics.entropy < 4.2) {
+      reasons.push("likely_logo_or_flat_graphic");
+      critical.push("likely_logo_or_flat_graphic");
+    } else if (metrics.entropy < 3.2) {
+      reasons.push("low_detail_entropy");
+    }
+
+    const state = critical.length > 0 || reasons.length >= 2 ? "bad" : "ok";
+    return {
+      state,
+      reasons,
+      metrics,
+    };
+  } catch (error) {
+    return {
+      state: "unknown",
+      reasons: [String(error?.name || "analysis_error")],
+      metrics: null,
+    };
+  }
+}
+
 function buildVenueFlags({
   hasAnyImage,
   hasWorkingImage,
+  hasBadImageQuality,
   hasEvents,
   hasHighlights,
   hasBlurb,
@@ -134,6 +334,9 @@ function buildVenueFlags({
   } else if (!hasWorkingImage) {
     flags.push("broken_or_unreachable_image");
     actions.push("replace_or_verify_image");
+  } else if (hasBadImageQuality) {
+    flags.push("low_quality_image");
+    actions.push("replace_with_photographic_image");
   }
 
   if (!hasEvents) {
@@ -163,6 +366,7 @@ function buildVenueFlags({
 function computeRiskScore({
   hasAnyImage,
   hasWorkingImage,
+  hasBadImageQuality,
   hasEvents,
   hasHighlights,
   hasBlurb,
@@ -172,6 +376,7 @@ function computeRiskScore({
   let score = 0;
   if (!hasAnyImage) score += 4;
   else if (!hasWorkingImage) score += 3;
+  else if (hasBadImageQuality) score += 2;
   if (!hasEvents) score += 2;
   if (!hasHighlights) score += 2;
   if (!hasBlurb) score += 2;
@@ -180,9 +385,10 @@ function computeRiskScore({
   return score;
 }
 
-function determineCrawlerNeed({ score, hasAnyImage, hasWorkingImage, hasEvents, hasHighlights, hasSource, hasDescription, hasWebsite }) {
+function determineCrawlerNeed({ score, hasAnyImage, hasWorkingImage, hasBadImageQuality, hasEvents, hasHighlights, hasSource, hasDescription, hasWebsite }) {
   if (!hasAnyImage && !hasEvents && !hasHighlights) return true;
   if (!hasWorkingImage && !hasEvents && !hasHighlights) return true;
+  if (hasBadImageQuality && !hasEvents && !hasHighlights) return true;
   if (!hasSource && !hasDescription && !hasEvents) return true;
   if (score >= 9 && !hasWebsite) return true;
   return false;
@@ -296,6 +502,20 @@ async function main() {
   });
   const imageStatusByUrl = new Map(checked.map((entry) => [entry.url, entry]));
 
+  const urlsForQualityAnalysis = checked
+    .filter((entry) => entry.state === "ok")
+    .map((entry) => entry.url);
+  console.log(`Analyzing visual quality for ${urlsForQualityAnalysis.length} reachable images...`);
+  const analyzedQuality = await mapLimit(
+    urlsForQualityAnalysis,
+    IMAGE_ANALYSIS_CONCURRENCY,
+    async (url) => {
+      const quality = await analyzeImageQuality(url);
+      return { url, ...quality };
+    }
+  );
+  const imageQualityByUrl = new Map(analyzedQuality.map((entry) => [entry.url, entry]));
+
   const trackById = new Map(tracks.map((track) => [track.id, track]));
   const venueAudits = [];
 
@@ -306,8 +526,14 @@ async function main() {
 
     const heroImageStatus = isTruthyText(venue.hero_image_url) ? imageStatusByUrl.get(venue.hero_image_url) : null;
     const imageStatus = isTruthyText(venue.image_url) ? imageStatusByUrl.get(venue.image_url) : null;
+    const heroImageQuality = isTruthyText(venue.hero_image_url)
+      ? imageQualityByUrl.get(venue.hero_image_url)
+      : null;
+    const imageQuality = isTruthyText(venue.image_url) ? imageQualityByUrl.get(venue.image_url) : null;
     const hasAnyImage = Boolean(isTruthyText(venue.hero_image_url) || isTruthyText(venue.image_url));
     const hasWorkingImage = [heroImageStatus, imageStatus].some((status) => status?.state === "ok");
+    const hasGoodQualityImage = [heroImageQuality, imageQuality].some((quality) => quality?.state === "ok");
+    const hasBadImageQuality = [heroImageQuality, imageQuality].some((quality) => quality?.state === "bad");
 
     const venueEvents = eventsByVenue.get(venue.id) ?? [];
     const venueHighlights = highlightsByVenue.get(venue.id) ?? [];
@@ -322,6 +548,7 @@ async function main() {
     const { flags, actions } = buildVenueFlags({
       hasAnyImage,
       hasWorkingImage,
+      hasBadImageQuality,
       hasEvents,
       hasHighlights,
       hasBlurb,
@@ -332,6 +559,7 @@ async function main() {
     const score = computeRiskScore({
       hasAnyImage,
       hasWorkingImage,
+      hasBadImageQuality,
       hasEvents,
       hasHighlights,
       hasBlurb,
@@ -343,6 +571,7 @@ async function main() {
       score,
       hasAnyImage,
       hasWorkingImage,
+      hasBadImageQuality,
       hasEvents,
       hasHighlights,
       hasSource,
@@ -388,6 +617,14 @@ async function main() {
         image_status: imageStatus?.state ?? null,
         image_status_code: imageStatus?.httpStatus ?? null,
         has_working_image: hasWorkingImage,
+        hero_quality_state: heroImageQuality?.state ?? null,
+        hero_quality_reasons: heroImageQuality?.reasons ?? [],
+        hero_quality_metrics: heroImageQuality?.metrics ?? null,
+        image_quality_state: imageQuality?.state ?? null,
+        image_quality_reasons: imageQuality?.reasons ?? [],
+        image_quality_metrics: imageQuality?.metrics ?? null,
+        has_good_quality_image: hasGoodQualityImage,
+        has_bad_image_quality: hasBadImageQuality,
       },
       content: {
         has_editorial_blurb: hasBlurb,
@@ -414,12 +651,14 @@ async function main() {
     const totals = {
       venues: rows.length,
       with_working_image: rows.filter((row) => row.media.has_working_image).length,
+      with_good_quality_image: rows.filter((row) => row.media.has_good_quality_image).length,
       with_events_14d: rows.filter((row) => row.signals.events_14d > 0).length,
       with_facts_landmarks: rows.filter((row) => row.signals.highlights_count > 0).length,
       with_editorial_blurb: rows.filter((row) => row.content.has_editorial_blurb).length,
       with_source_url: rows.filter((row) => row.content.has_source_url).length,
       insufficient: rows.filter((row) => row.insufficiency_score >= 6).length,
       crawler_candidates: rows.filter((row) => row.crawler_candidate).length,
+      needs_image_replacement: rows.filter((row) => row.flags.includes("low_quality_image")).length,
       needs_active_event: rows.filter((row) => row.flags.includes("no_upcoming_events_14d")).length,
       needs_facts_landmarks: rows.filter((row) => row.flags.includes("no_facts_or_landmarks")).length,
       needs_both_event_and_facts: rows.filter(
@@ -448,6 +687,7 @@ async function main() {
       totals,
       coverage_pct: {
         working_image: toPct(totals.with_working_image, totals.venues),
+        good_image_quality: toPct(totals.with_good_quality_image, totals.venues),
         events_14d: toPct(totals.with_events_14d, totals.venues),
         facts_landmarks: toPct(totals.with_facts_landmarks, totals.venues),
         editorial_blurb: toPct(totals.with_editorial_blurb, totals.venues),
@@ -485,6 +725,8 @@ async function main() {
       events_14d: row.signals.events_14d,
       highlights_count: row.signals.highlights_count,
       has_working_image: row.media.has_working_image,
+      has_good_quality_image: row.media.has_good_quality_image,
+      has_bad_image_quality: row.media.has_bad_image_quality,
       has_editorial_blurb: row.content.has_editorial_blurb,
       has_source_url: row.content.has_source_url,
     }));
@@ -516,6 +758,17 @@ async function main() {
     { ok: 0, broken: 0, uncertain: 0, error: 0, missing: 0 }
   );
 
+  const imageQualityHealth = analyzedQuality.reduce(
+    (acc, item) => {
+      acc[item.state] = (acc[item.state] ?? 0) + 1;
+      for (const reason of item.reasons || []) {
+        acc.reason_counts[reason] = (acc.reason_counts[reason] ?? 0) + 1;
+      }
+      return acc;
+    },
+    { ok: 0, bad: 0, unknown: 0, missing: 0, reason_counts: {} }
+  );
+
   const audit = {
     generated_at: new Date().toISOString(),
     window: {
@@ -540,6 +793,7 @@ async function main() {
       crawler_candidates_unique_venues: uniqueCrawlerCandidates.length,
       insufficient_rows: venueAudits.filter((row) => row.insufficiency_score >= 6).length,
       image_health: imageHealth,
+      image_quality_health: imageQualityHealth,
     },
     action_buckets: actionBuckets,
     track_summaries: trackSummaries,
@@ -574,6 +828,12 @@ async function main() {
       events_14d: row.signals.events_14d,
       highlights_count: row.signals.highlights_count,
       has_working_image: row.media.has_working_image,
+      has_good_quality_image: row.media.has_good_quality_image,
+      has_bad_image_quality: row.media.has_bad_image_quality,
+      image_quality_reasons: [
+        ...(row.media.hero_quality_reasons || []),
+        ...(row.media.image_quality_reasons || []),
+      ],
       has_editorial_blurb: row.content.has_editorial_blurb,
       has_source_url: row.content.has_source_url,
     })),
@@ -603,6 +863,9 @@ async function main() {
   md.push(
     `- Image health: ok=${imageHealth.ok}, broken=${imageHealth.broken}, uncertain=${imageHealth.uncertain}, error=${imageHealth.error}`
   );
+  md.push(
+    `- Image quality: ok=${imageQualityHealth.ok}, bad=${imageQualityHealth.bad}, unknown=${imageQualityHealth.unknown}`
+  );
   md.push("");
 
   md.push("## Augmentation Buckets");
@@ -628,13 +891,14 @@ async function main() {
     md.push("");
     md.push(`- Venues: ${summary.totals.venues}`);
     md.push(
-      `- Coverage: images ${summary.coverage_pct.working_image}%, events ${summary.coverage_pct.events_14d}%, facts/landmarks ${summary.coverage_pct.facts_landmarks}%, blurbs ${summary.coverage_pct.editorial_blurb}%, sources ${summary.coverage_pct.source_url}%`
+      `- Coverage: reachable images ${summary.coverage_pct.working_image}%, good visual images ${summary.coverage_pct.good_image_quality}%, events ${summary.coverage_pct.events_14d}%, facts/landmarks ${summary.coverage_pct.facts_landmarks}%, blurbs ${summary.coverage_pct.editorial_blurb}%, sources ${summary.coverage_pct.source_url}%`
     );
     md.push(`- Insufficient rows: ${summary.totals.insufficient}`);
     md.push(`- Crawler candidates: ${summary.totals.crawler_candidates}`);
     md.push(
       `- Needs augmentation: active events ${summary.totals.needs_active_event}, facts/landmarks ${summary.totals.needs_facts_landmarks}, both ${summary.totals.needs_both_event_and_facts}`
     );
+    md.push(`- Needs image replacement: ${summary.totals.needs_image_replacement}`);
 
     if (summary.top_issues.length) {
       md.push("- Top issue mix:");
@@ -666,7 +930,12 @@ async function main() {
   await writeFile(OUTPUT_MD, md.join("\n"), "utf8");
 
   const imageFixRows = venueAudits
-    .filter((row) => row.flags.includes("broken_or_unreachable_image") || row.flags.includes("missing_image"))
+    .filter(
+      (row) =>
+        row.flags.includes("broken_or_unreachable_image") ||
+        row.flags.includes("missing_image") ||
+        row.flags.includes("low_quality_image")
+    )
     .sort((a, b) => b.insufficiency_score - a.insufficiency_score);
 
   const noEventTracks = [...trackSummaries]
