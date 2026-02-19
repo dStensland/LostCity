@@ -386,8 +386,8 @@ function CategoryDropdown({
   category,
   onSelect,
 }: {
-  category: string;
-  onSelect: (key: string) => void;
+  category: ClassCategoryKey;
+  onSelect: (key: ClassCategoryKey) => void;
 }) {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -959,7 +959,12 @@ export default function ClassesView({
             <CategoryDropdown category={category} onSelect={setCategory} />
             <select
               value={dateWindow}
-              onChange={(event) => setDateWindow(event.target.value)}
+              onChange={(event) => {
+                const nextValue = event.target.value;
+                if (isClassDateWindowKey(nextValue)) {
+                  setDateWindow(nextValue);
+                }
+              }}
               className="h-9 px-3 rounded-lg bg-[var(--night)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-xs focus:outline-none focus:border-[var(--coral)]/50 transition-colors appearance-none cursor-pointer select-chevron-md min-w-[112px]"
               aria-label="Class date window"
             >
@@ -971,7 +976,12 @@ export default function ClassesView({
             </select>
             <select
               value={skillLevel}
-              onChange={(event) => setSkillLevel(event.target.value)}
+              onChange={(event) => {
+                const nextValue = event.target.value;
+                if (isClassSkillKey(nextValue)) {
+                  setSkillLevel(nextValue);
+                }
+              }}
               className="h-9 px-3 rounded-lg bg-[var(--night)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-xs focus:outline-none focus:border-[var(--coral)]/50 transition-colors appearance-none cursor-pointer select-chevron-md min-w-[122px]"
               aria-label="Class skill level"
             >
