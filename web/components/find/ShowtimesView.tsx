@@ -6,6 +6,10 @@ import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { formatTimeSplit } from "@/lib/formats";
 import CategoryIcon from "@/components/CategoryIcon";
+import {
+  createFindFilterSnapshot,
+  trackFindZeroResults,
+} from "@/lib/analytics/find-tracking";
 
 interface ShowtimesViewProps {
   portalId: string;
@@ -411,6 +415,7 @@ export default function ShowtimesView({ portalSlug }: ShowtimesViewProps) {
   const [meta, setMeta] = useState<ShowtimesMeta | null>(null);
   const [loading, setLoading] = useState(true);
   const [metaLoading, setMetaLoading] = useState(true);
+  const zeroResultsSignatureRef = useRef<string | null>(null);
 
   const dateScrollRef = useRef<HTMLDivElement>(null);
 
@@ -521,9 +526,50 @@ export default function ShowtimesView({ portalSlug }: ShowtimesViewProps) {
   const filmCount = viewMode === "by-theater"
     ? new Set(theaters.flatMap((t) => t.films.map((f) => f.series_id || f.title))).size
     : films.length;
+  const showtimesFilterSnapshot = useMemo(
+    () =>
+      createFindFilterSnapshot(
+        {
+          date: requestedDateParam ? selectedDate : undefined,
+          theater: selectedTheaterSlug || undefined,
+        },
+        "showtimes"
+      ),
+    [requestedDateParam, selectedDate, selectedTheaterSlug]
+  );
   const selectedTheaterName = selectedTheaterSlug
     ? meta?.available_theaters?.find((theater) => theater.venue_slug === selectedTheaterSlug)?.venue_name
     : null;
+  const currentResultCount = viewMode === "by-theater" ? theaters.length : films.length;
+
+  useEffect(() => {
+    if (!portalSlug || loading || metaLoading) return;
+    if (currentResultCount > 0) {
+      zeroResultsSignatureRef.current = null;
+      return;
+    }
+    if (showtimesFilterSnapshot.activeCount === 0) return;
+    const zeroKey = `${showtimesFilterSnapshot.signature}|mode:${viewMode}|special:${showSpecial ? "1" : "0"}`;
+    if (zeroResultsSignatureRef.current === zeroKey) return;
+
+    trackFindZeroResults({
+      portalSlug,
+      findType: "showtimes",
+      displayMode: "list",
+      surface: viewMode === "by-theater" ? "showtimes_theater" : "showtimes_film",
+      snapshot: showtimesFilterSnapshot,
+      resultCount: currentResultCount,
+    });
+    zeroResultsSignatureRef.current = zeroKey;
+  }, [
+    currentResultCount,
+    loading,
+    metaLoading,
+    portalSlug,
+    showSpecial,
+    showtimesFilterSnapshot,
+    viewMode,
+  ]);
 
   return (
     <div>

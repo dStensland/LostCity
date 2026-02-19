@@ -11,6 +11,10 @@ import { useTimeline } from "@/lib/hooks/useTimeline";
 import { useEventFilters } from "@/lib/hooks/useEventFilters";
 import { useFriendsGoing } from "@/lib/hooks/use-friends-going";
 import type { EventWithLocation } from "@/lib/search";
+import {
+  createFindFilterSnapshot,
+  trackFindZeroResults,
+} from "@/lib/analytics/find-tracking";
 
 // Max events to display (prevent memory issues)
 const MAX_EVENTS = 500;
@@ -97,6 +101,20 @@ export default function EventList({
   }, [filters]);
 
   const hasReachedMax = events.length >= MAX_EVENTS;
+  const zeroResultsSignatureRef = useRef<string | null>(null);
+
+  const eventsFilterSnapshot = useMemo(() => createFindFilterSnapshot({
+    search: filters.search,
+    categories: filters.categories,
+    tags: filters.tags,
+    genres: filters.genres,
+    vibes: filters.vibes,
+    neighborhoods: filters.neighborhoods,
+    price: filters.price,
+    free: filters.price === "free" ? "1" : undefined,
+    date: filters.date,
+    mood: filters.mood,
+  }, "events"), [filters]);
 
   useEffect(() => {
     const initial = hasActiveFilters ? 60 : INITIAL_VISIBLE_EVENTS;
@@ -104,6 +122,36 @@ export default function EventList({
     setVisibleCount(initial);
     setHasUserExpanded(false);
   }, [filtersResetKey, hasActiveFilters]);
+
+  useEffect(() => {
+    if (!portalSlug || isLoading || isRefetching) return;
+
+    if (!hasActiveFilters || events.length > 0) {
+      if (events.length > 0) zeroResultsSignatureRef.current = null;
+      return;
+    }
+
+    if (zeroResultsSignatureRef.current === eventsFilterSnapshot.signature) {
+      return;
+    }
+
+    trackFindZeroResults({
+      portalSlug,
+      findType: "events",
+      displayMode: "list",
+      surface: "event_list",
+      snapshot: eventsFilterSnapshot,
+      resultCount: events.length,
+    });
+    zeroResultsSignatureRef.current = eventsFilterSnapshot.signature;
+  }, [
+    events.length,
+    eventsFilterSnapshot,
+    hasActiveFilters,
+    isLoading,
+    isRefetching,
+    portalSlug,
+  ]);
 
   // IntersectionObserver for infinite scroll
   useEffect(() => {

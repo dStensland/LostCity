@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState, useRef, useMemo, useCallback } from "react";
+import { Suspense, useEffect, useState, useRef, useMemo, useCallback, type MouseEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import FindFilterBar from "@/components/find/FindFilterBar";
 import EventList from "@/components/EventList";
@@ -24,6 +24,14 @@ import {
   SHOWTIMES_EXCLUDED_FILTER_KEYS,
   type FindType,
 } from "@/lib/find-filter-schema";
+import {
+  createFindFilterSnapshot,
+  diffFindFilterKeys,
+  resolveFindDetailTarget,
+  trackFindDetailAfterFilter,
+  trackFindFilterChange,
+  type FindFilterSnapshot,
+} from "@/lib/analytics/find-tracking";
 
 type DisplayMode = "list" | "map" | "calendar";
 type ListDensity = "comfortable" | "compact";
@@ -268,6 +276,13 @@ function FindViewInner({
   const [eventSearch, setEventSearch] = useState(searchParams?.get("search") || "");
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const pathname = `/${portalSlug}`;
+  const previousFilterSnapshotByTypeRef = useRef<Partial<Record<FindType, FindFilterSnapshot>>>({});
+  const lastFilterChangeAtByTypeRef = useRef<Partial<Record<FindType, number>>>({});
+
+  const activeFilterSnapshot = useMemo(
+    () => createFindFilterSnapshot(searchParams, findType),
+    [findType, searchParams]
+  );
 
   const resetFindFiltersForTypeChange = useCallback((params: URLSearchParams): boolean => {
     let mutated = false;
@@ -466,6 +481,61 @@ function FindViewInner({
   }, [displayMode, findType, portalSlug, router, searchParams]);
 
   useEffect(() => {
+    const previousSnapshot = previousFilterSnapshotByTypeRef.current[findType];
+    if (!previousSnapshot) {
+      previousFilterSnapshotByTypeRef.current[findType] = activeFilterSnapshot;
+      return;
+    }
+
+    if (previousSnapshot.signature === activeFilterSnapshot.signature) {
+      return;
+    }
+
+    const changedKeys = diffFindFilterKeys(previousSnapshot, activeFilterSnapshot);
+    previousFilterSnapshotByTypeRef.current[findType] = activeFilterSnapshot;
+
+    if (changedKeys.length === 0) return;
+
+    lastFilterChangeAtByTypeRef.current[findType] = Date.now();
+    trackFindFilterChange({
+      portalSlug,
+      findType,
+      displayMode,
+      snapshot: activeFilterSnapshot,
+      changedKeys,
+    });
+  }, [activeFilterSnapshot, displayMode, findType, portalSlug]);
+
+  const handleFindClickCapture = useCallback((event: MouseEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement | null;
+    if (!target) return;
+
+    const anchor = target.closest("a[href]") as HTMLAnchorElement | null;
+    if (!anchor) return;
+
+    const href = anchor.getAttribute("href");
+    if (!href) return;
+
+    const detailTarget = resolveFindDetailTarget(href, portalSlug);
+    if (!detailTarget) return;
+
+    const lastChangedAt = lastFilterChangeAtByTypeRef.current[findType];
+    if (!lastChangedAt) return;
+
+    const snapshot = createFindFilterSnapshot(searchParams, findType);
+    if (snapshot.activeCount === 0) return;
+
+    trackFindDetailAfterFilter({
+      portalSlug,
+      findType,
+      displayMode,
+      snapshot,
+      detailTarget,
+      latencyMs: Date.now() - lastChangedAt,
+    });
+  }, [displayMode, findType, portalSlug, searchParams]);
+
+  useEffect(() => {
     const root = viewRootRef.current;
     if (!root) return;
 
@@ -504,7 +574,7 @@ function FindViewInner({
   }, []);
 
   return (
-    <div ref={viewRootRef} className="py-3 space-y-3">
+    <div ref={viewRootRef} className="py-3 space-y-3" onClickCapture={handleFindClickCapture}>
       <section className="relative z-40 rounded-2xl border border-[var(--twilight)]/80 bg-gradient-to-b from-[var(--night)]/94 to-[var(--void)]/86 shadow-[0_14px_30px_rgba(0,0,0,0.24)] backdrop-blur-md p-3 sm:p-4">
         {/* Type selector tabs */}
         <div className="flex items-center justify-between gap-3">

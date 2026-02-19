@@ -12,6 +12,10 @@ import { formatPriceLevel } from "@/lib/spots-constants";
 import { ITP_NEIGHBORHOODS } from "@/config/neighborhoods";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
+import {
+  createFindFilterSnapshot,
+  trackFindZeroResults,
+} from "@/lib/analytics/find-tracking";
 
 // ITP neighborhood names for quick filter
 const ITP_NEIGHBORHOOD_NAMES = ITP_NEIGHBORHOODS.map(n => n.name);
@@ -645,6 +649,32 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(["music_venue", "bar", "restaurant"]));
   const [meta, setMeta] = useState<{ openCount: number; neighborhoods: string[] }>({ openCount: 0, neighborhoods: [] });
   const [filters, setFilters] = useState<FilterState>(initialFilters);
+  const zeroResultsSignatureRef = useRef<string | null>(null);
+
+  const destinationFilterSnapshot = useMemo(
+    () =>
+      createFindFilterSnapshot(
+        {
+          search: debouncedSearch,
+          open_now: filters.openNow ? "true" : undefined,
+          with_events: filters.withEvents ? "true" : undefined,
+          price_level: filters.priceLevel,
+          venue_type: filters.venueTypes,
+          neighborhoods: filters.neighborhoods,
+          vibes: filters.vibes,
+        },
+        "destinations"
+      ),
+    [
+      debouncedSearch,
+      filters.neighborhoods,
+      filters.openNow,
+      filters.priceLevel,
+      filters.venueTypes,
+      filters.vibes,
+      filters.withEvents,
+    ]
+  );
 
   const toggleCategory = (category: string) => {
     setExpandedCategories(prev => {
@@ -705,6 +735,26 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
 
     fetchSpots();
   }, [buildQueryParams]);
+
+  useEffect(() => {
+    if (!portalSlug || loading) return;
+    if (spots.length > 0) {
+      zeroResultsSignatureRef.current = null;
+      return;
+    }
+    if (destinationFilterSnapshot.activeCount === 0) return;
+    if (zeroResultsSignatureRef.current === destinationFilterSnapshot.signature) return;
+
+    trackFindZeroResults({
+      portalSlug,
+      findType: "destinations",
+      displayMode: "list",
+      surface: "destinations_list",
+      snapshot: destinationFilterSnapshot,
+      resultCount: spots.length,
+    });
+    zeroResultsSignatureRef.current = destinationFilterSnapshot.signature;
+  }, [destinationFilterSnapshot, loading, portalSlug, spots.length]);
 
   // Share destinations list filters with map mode via URL params.
   useEffect(() => {

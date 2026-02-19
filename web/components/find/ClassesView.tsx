@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, type CSSProperties } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo, type CSSProperties } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { Event } from "@/lib/supabase";
@@ -11,6 +11,10 @@ import SeriesCard, { type SeriesInfo, type SeriesVenueGroup } from "@/components
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
 import { getReflectionClass } from "@/lib/card-utils";
+import {
+  createFindFilterSnapshot,
+  trackFindZeroResults,
+} from "@/lib/analytics/find-tracking";
 
 interface ClassesViewProps {
   portalId: string;
@@ -769,6 +773,7 @@ export default function ClassesView({
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const hasLoadedRef = useRef(false);
   const requestIdRef = useRef(0);
+  const zeroResultsSignatureRef = useRef<string | null>(null);
 
   // Keep local control state synced with URL changes (back/forward navigation).
   useEffect(() => {
@@ -886,6 +891,38 @@ export default function ClassesView({
 
   // Group classes by day and venue
   const dayGroups = groupClassesByDayAndVenue(classes);
+  const classFilterSnapshot = useMemo(
+    () =>
+      createFindFilterSnapshot(
+        {
+          class_category: category !== "all" ? category : undefined,
+          class_date: dateWindow !== "upcoming" ? dateWindow : undefined,
+          class_skill: skillLevel !== "all" ? skillLevel : undefined,
+        },
+        "classes"
+      ),
+    [category, dateWindow, skillLevel]
+  );
+
+  useEffect(() => {
+    if (!portalSlug || loading) return;
+    if (classes.length > 0) {
+      zeroResultsSignatureRef.current = null;
+      return;
+    }
+    if (classFilterSnapshot.activeCount === 0) return;
+    if (zeroResultsSignatureRef.current === classFilterSnapshot.signature) return;
+
+    trackFindZeroResults({
+      portalSlug,
+      findType: "classes",
+      displayMode: "list",
+      surface: "classes_list",
+      snapshot: classFilterSnapshot,
+      resultCount: classes.length,
+    });
+    zeroResultsSignatureRef.current = classFilterSnapshot.signature;
+  }, [classFilterSnapshot, classes.length, loading, portalSlug]);
 
   return (
     <div>
