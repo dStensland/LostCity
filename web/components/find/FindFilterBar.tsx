@@ -124,7 +124,7 @@ export default function FindFilterBar({ variant = "full", portalId, portalExclus
       }
     }
 
-    const optionOrder = CATEGORIES.map((category) => category.value);
+    const optionOrder: string[] = CATEGORIES.map((category) => category.value);
     return Array.from(byValue.values()).sort((a, b) => {
       const aIdx = optionOrder.indexOf(a.value);
       const bIdx = optionOrder.indexOf(b.value);
