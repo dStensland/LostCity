@@ -78,6 +78,7 @@ const PERIOD_CONFIG: Record<HighlightsPeriod, { limit: number; candidateLimit: n
 
 const TONIGHT_RESPONSE_CACHE_MAX_ENTRIES = 120;
 const TONIGHT_CACHE_NAMESPACE = "api:tonight";
+const TONIGHT_IN_FLIGHT_LOADS = new Map<string, Promise<Response>>();
 
 async function getCachedTonightResponse(
   key: string
@@ -651,6 +652,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(cachedPayload, { headers: cacheHeaders });
     }
 
+    const existingTonightLoad = TONIGHT_IN_FLIGHT_LOADS.get(cacheKey);
+    if (existingTonightLoad) {
+      return existingTonightLoad;
+    }
+
+    const tonightLoadPromise = (async (): Promise<Response> => {
     const supabase = await createClient();
 
     const portalContext = await resolvePortalQueryContext(supabase, request.nextUrl.searchParams);
@@ -1262,6 +1269,17 @@ export async function GET(request: NextRequest) {
     const payload = { events: result, period };
     await setCachedTonightResponse(cacheKey, payload, cacheTtlMs);
     return NextResponse.json(payload, { headers: cacheHeaders });
+    })();
+
+    TONIGHT_IN_FLIGHT_LOADS.set(cacheKey, tonightLoadPromise);
+    try {
+      return await tonightLoadPromise;
+    } finally {
+      const currentTonightLoad = TONIGHT_IN_FLIGHT_LOADS.get(cacheKey);
+      if (currentTonightLoad === tonightLoadPromise) {
+        TONIGHT_IN_FLIGHT_LOADS.delete(cacheKey);
+      }
+    }
   } catch (error) {
     console.error("Error in tonight API:", error);
     return NextResponse.json({ events: [], period: "today" }, { status: 500 });

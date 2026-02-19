@@ -5,10 +5,11 @@ import { parseFloatParam, validationError } from "@/lib/api-utils";
 import { haversineDistanceKm, getProximityTier, getWalkingMinutes, getProximityLabel } from "@/lib/geo";
 import type { ProximityTier } from "@/lib/geo";
 import { logger } from "@/lib/logger";
-import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
+import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
 
 export const dynamic = "force-dynamic";
 const SPECIALS_CACHE_TTL_MS = 60 * 1000;
+const SPECIALS_CACHE_MAX_ENTRIES = 250;
 const SPECIALS_CACHE_NAMESPACE = "api:specials";
 const SPECIALS_CACHE_CONTROL = "public, s-maxage=60, stale-while-revalidate=180";
 
@@ -106,7 +107,6 @@ export async function GET(request: NextRequest) {
   const tierFilter = searchParams.get("tier") as ProximityTier | null;
   const roundedLat = Number(lat.toFixed(3));
   const roundedLng = Number(lng.toFixed(3));
-  const cacheBucket = Math.floor(Date.now() / SPECIALS_CACHE_TTL_MS);
   const cacheKey = [
     roundedLat,
     roundedLng,
@@ -114,45 +114,40 @@ export async function GET(request: NextRequest) {
     activeNow ? "active" : "all",
     typeFilter?.join(",") || "all-types",
     tierFilter || "all-tiers",
-    cacheBucket,
   ].join("|");
 
   try {
-    const cachedPayload = await getSharedCacheJson<{
+    const payload = await getOrSetSharedCacheJson<{
       specials: SpecialResult[];
       meta: Record<string, unknown>;
-    }>(SPECIALS_CACHE_NAMESPACE, cacheKey);
-    if (cachedPayload) {
-      return NextResponse.json(cachedPayload, {
-        headers: {
-          "Cache-Control": SPECIALS_CACHE_CONTROL,
-        },
-      });
-    }
+    }>(
+      SPECIALS_CACHE_NAMESPACE,
+      cacheKey,
+      SPECIALS_CACHE_TTL_MS,
+      async () => {
+        const supabase = await createClient();
 
-    const supabase = await createClient();
+        // Fetch nearby venues first, then hydrate specials for only relevant venues.
+        const radius = radiusKm ?? 5;
+        const latDelta = radius / 111;
+        const lngDelta =
+          radius / (111 * Math.max(Math.cos((lat * Math.PI) / 180), 0.01));
+        const { data: venues, error: venuesError } = await supabase
+          .from("venues")
+          .select("id, name, slug, address, neighborhood, venue_type, lat, lng, image_url, short_description")
+          .neq("active", false)
+          .not("lat", "is", null)
+          .not("lng", "is", null)
+          .gte("lat", lat - latDelta)
+          .lte("lat", lat + latDelta)
+          .gte("lng", lng - lngDelta)
+          .lte("lng", lng + lngDelta)
+          .limit(2000);
 
-    // Fetch nearby venues first, then hydrate specials for only relevant venues.
-    const radius = radiusKm ?? 5;
-    const latDelta = radius / 111;
-    const lngDelta =
-      radius / (111 * Math.max(Math.cos((lat * Math.PI) / 180), 0.01));
-    const { data: venues, error: venuesError } = await supabase
-      .from("venues")
-      .select("id, name, slug, address, neighborhood, venue_type, lat, lng, image_url, short_description")
-      .neq("active", false)
-      .not("lat", "is", null)
-      .not("lng", "is", null)
-      .gte("lat", lat - latDelta)
-      .lte("lat", lat + latDelta)
-      .gte("lng", lng - lngDelta)
-      .lte("lng", lng + lngDelta)
-      .limit(2000);
-
-    if (venuesError) {
-      logger.error("Specials API - fetch venues error:", venuesError);
-      return NextResponse.json({ specials: [], error: "Failed to fetch venues" }, { status: 500 });
-    }
+        if (venuesError) {
+          logger.error("Specials API - fetch venues error:", venuesError);
+          throw venuesError;
+        }
 
     // Build venue lookup with distance info
     const venueMap = new Map<number, VenueRow & { distance_km: number }>();
@@ -164,30 +159,18 @@ export async function GET(request: NextRequest) {
         venueMap.set(venue.id, { ...venue, distance_km: distKm });
       }
     }
-    if (venueMap.size === 0) {
-      const emptyPayload = {
-        specials: [] as SpecialResult[],
-        meta: {
-          total: 0,
-          tiers: { walkable: 0, close: 0, destination: 0 },
-          center: { lat, lng },
-          radius_km: radiusKm,
-          active_now: activeNow,
-        },
-      };
-      await setSharedCacheJson(
-        SPECIALS_CACHE_NAMESPACE,
-        cacheKey,
-        emptyPayload,
-        SPECIALS_CACHE_TTL_MS,
-        { maxEntries: 250 }
-      );
-      return NextResponse.json(emptyPayload, {
-        headers: {
-          "Cache-Control": SPECIALS_CACHE_CONTROL,
-        },
-      });
-    }
+        if (venueMap.size === 0) {
+          return {
+            specials: [] as SpecialResult[],
+            meta: {
+              total: 0,
+              tiers: { walkable: 0, close: 0, destination: 0 },
+              center: { lat, lng },
+              radius_km: radiusKm,
+              active_now: activeNow,
+            },
+          };
+        }
 
     const venueIds = Array.from(venueMap.keys());
     const { data: specials, error: specialsError } = await supabase
@@ -197,35 +180,23 @@ export async function GET(request: NextRequest) {
       .in("venue_id", venueIds)
       .limit(4000);
 
-    if (specialsError) {
-      logger.error("Specials API - fetch specials error:", specialsError);
-      return NextResponse.json({ specials: [], error: "Failed to fetch specials" }, { status: 500 });
-    }
+        if (specialsError) {
+          logger.error("Specials API - fetch specials error:", specialsError);
+          throw specialsError;
+        }
 
-    if (!specials || specials.length === 0) {
-      const emptyPayload = {
-        specials: [] as SpecialResult[],
-        meta: {
-          total: 0,
-          tiers: { walkable: 0, close: 0, destination: 0 },
-          center: { lat, lng },
-          radius_km: radiusKm,
-          active_now: activeNow,
-        },
-      };
-      await setSharedCacheJson(
-        SPECIALS_CACHE_NAMESPACE,
-        cacheKey,
-        emptyPayload,
-        SPECIALS_CACHE_TTL_MS,
-        { maxEntries: 250 }
-      );
-      return NextResponse.json(emptyPayload, {
-        headers: {
-          "Cache-Control": SPECIALS_CACHE_CONTROL,
-        },
-      });
-    }
+        if (!specials || specials.length === 0) {
+          return {
+            specials: [] as SpecialResult[],
+            meta: {
+              total: 0,
+              tiers: { walkable: 0, close: 0, destination: 0 },
+              center: { lat, lng },
+              radius_km: radiusKm,
+              active_now: activeNow,
+            },
+          };
+        }
 
     // Current time context for filtering
     const today = new Date().toISOString().split("T")[0];
@@ -311,32 +282,25 @@ export async function GET(request: NextRequest) {
       tierCounts[r.proximity_tier]++;
     }
 
-    const payload = {
-      specials: results,
-      meta: {
-        total: results.length,
-        tiers: tierCounts,
-        center: { lat, lng },
-        radius_km: radiusKm,
-        active_now: activeNow,
+        return {
+          specials: results,
+          meta: {
+            total: results.length,
+            tiers: tierCounts,
+            center: { lat, lng },
+            radius_km: radiusKm,
+            active_now: activeNow,
+          },
+        };
       },
-    };
-    await setSharedCacheJson(
-      SPECIALS_CACHE_NAMESPACE,
-      cacheKey,
-      payload,
-      SPECIALS_CACHE_TTL_MS,
-      { maxEntries: 250 }
+      { maxEntries: SPECIALS_CACHE_MAX_ENTRIES }
     );
 
-    return NextResponse.json(
-      payload,
-      {
-        headers: {
-          "Cache-Control": SPECIALS_CACHE_CONTROL,
-        },
-      }
-    );
+    return NextResponse.json(payload, {
+      headers: {
+        "Cache-Control": SPECIALS_CACHE_CONTROL,
+      },
+    });
   } catch (error) {
     logger.error("Specials API error:", error);
     return NextResponse.json({ specials: [], error: "Failed to fetch specials" }, { status: 500 });

@@ -47,6 +47,7 @@ type FeedSectionId =
 const FEED_RESPONSE_CACHE_TTL_MS = 30 * 1000;
 const FEED_RESPONSE_CACHE_MAX_ENTRIES = 200;
 const FEED_RESPONSE_CACHE_NAMESPACE = "api:feed";
+const FEED_RESPONSE_IN_FLIGHT_LOADS = new Map<string, Promise<Response>>();
 
 async function getCachedFeedResponse(
   key: string
@@ -154,6 +155,12 @@ export async function GET(request: Request) {
       });
     }
 
+    const existingFeedLoad = FEED_RESPONSE_IN_FLIGHT_LOADS.get(cacheKey);
+    if (existingFeedLoad) {
+      return existingFeedLoad;
+    }
+
+    const feedLoadPromise = (async (): Promise<Response> => {
     const supabase = await createClient();
 
     // Calculate date range for trending events
@@ -1533,6 +1540,17 @@ export async function GET(request: Request) {
     return NextResponse.json(payload, {
       headers: responseHeaders,
     });
+    })();
+
+    FEED_RESPONSE_IN_FLIGHT_LOADS.set(cacheKey, feedLoadPromise);
+    try {
+      return await feedLoadPromise;
+    } finally {
+      const currentFeedLoad = FEED_RESPONSE_IN_FLIGHT_LOADS.get(cacheKey);
+      if (currentFeedLoad === feedLoadPromise) {
+        FEED_RESPONSE_IN_FLIGHT_LOADS.delete(cacheKey);
+      }
+    }
   } catch (err) {
     return errorResponse(err, "GET /api/feed");
   }

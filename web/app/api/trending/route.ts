@@ -4,9 +4,10 @@ import { format, startOfDay, addDays } from "date-fns";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
 import { applyPortalScopeToQuery, filterByPortalCity } from "@/lib/portal-scope";
-import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
+import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
 
 const TRENDING_CACHE_TTL_MS = 60 * 1000;
+const TRENDING_CACHE_MAX_ENTRIES = 200;
 const TRENDING_CACHE_NAMESPACE = "api:trending";
 const TRENDING_CACHE_CONTROL = "public, s-maxage=60, stale-while-revalidate=300";
 
@@ -30,29 +31,21 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
     }
-    const cacheBucket = Math.floor(now.getTime() / TRENDING_CACHE_TTL_MS);
     const cacheKey = [
       portalContext.portalId || "no-portal",
       portalContext.filters.city || "all-cities",
-      cacheBucket,
     ].join("|");
-    const cachedPayload = await getSharedCacheJson<{ events: unknown[] }>(
+    const payload = await getOrSetSharedCacheJson<{ events: unknown[] }>(
       TRENDING_CACHE_NAMESPACE,
-      cacheKey
-    );
-    if (cachedPayload) {
-      return NextResponse.json(cachedPayload, {
-        headers: {
-          "Cache-Control": TRENDING_CACHE_CONTROL,
-        },
-      });
-    }
-    const portalCity = portalContext.filters.city || "Atlanta";
+      cacheKey,
+      TRENDING_CACHE_TTL_MS,
+      async () => {
+        const portalCity = portalContext.filters.city || "Atlanta";
 
-    // Get upcoming events this week
-    let eventsQuery = supabase
-      .from("events")
-      .select(`
+        // Get upcoming events this week
+        let eventsQuery = supabase
+          .from("events")
+          .select(`
         id,
         title,
         start_date,
@@ -76,85 +69,73 @@ export async function GET(request: NextRequest) {
         ),
         venue:venues(id, name, slug, neighborhood, city, location_designator)
       `)
-      .gte("start_date", today)
-      .lte("start_date", weekFromNow)
-      .eq("is_active", true)
-      .is("canonical_event_id", null)
-      .order("start_date", { ascending: true })
-      .limit(120);
+          .gte("start_date", today)
+          .lte("start_date", weekFromNow)
+          .eq("is_active", true)
+          .is("canonical_event_id", null)
+          .order("start_date", { ascending: true })
+          .limit(120);
 
-    eventsQuery = applyPortalScopeToQuery(eventsQuery, {
-      portalId: portalContext.portalId,
-      portalExclusive: false,
-      publicOnlyWhenNoPortal: true,
-    });
+        eventsQuery = applyPortalScopeToQuery(eventsQuery, {
+          portalId: portalContext.portalId,
+          portalExclusive: false,
+          publicOnlyWhenNoPortal: true,
+        });
 
-    const { data: eventsRaw } = await eventsQuery as { data: Array<{
-        id: number;
-        title: string;
-        start_date: string;
-        start_time: string | null;
-        end_date: string | null;
-        end_time: string | null;
-        is_all_day: boolean;
-        is_free: boolean;
-        category: string | null;
-        image_url: string | null;
-        series_id?: string | null;
-        series?: {
-          id: string;
-          slug: string;
-          title: string;
-          series_type: string;
-          image_url: string | null;
-          frequency: string | null;
-          day_of_week: string | null;
-          festival?: {
-            id: string;
-            slug: string;
-            name: string;
+        const { data: eventsRaw } = await eventsQuery as { data: Array<{
+            id: number;
+            title: string;
+            start_date: string;
+            start_time: string | null;
+            end_date: string | null;
+            end_time: string | null;
+            is_all_day: boolean;
+            is_free: boolean;
+            category: string | null;
             image_url: string | null;
-            festival_type?: string | null;
-            location: string | null;
-            neighborhood: string | null;
-          } | null;
-        } | null;
-        venue: {
-          id: number;
-          name: string;
-          slug: string;
-          neighborhood: string | null;
-          city?: string | null;
-          location_designator?:
-            | "standard"
-            | "private_after_signup"
-            | "virtual"
-            | "recovery_meeting"
-            | null;
-        } | null;
-      }> | null };
+            series_id?: string | null;
+            series?: {
+              id: string;
+              slug: string;
+              title: string;
+              series_type: string;
+              image_url: string | null;
+              frequency: string | null;
+              day_of_week: string | null;
+              festival?: {
+                id: string;
+                slug: string;
+                name: string;
+                image_url: string | null;
+                festival_type?: string | null;
+                location: string | null;
+                neighborhood: string | null;
+              } | null;
+            } | null;
+            venue: {
+              id: number;
+              name: string;
+              slug: string;
+              neighborhood: string | null;
+              city?: string | null;
+              location_designator?:
+                | "standard"
+                | "private_after_signup"
+                | "virtual"
+                | "recovery_meeting"
+                | null;
+            } | null;
+          }> | null };
 
-    const events = filterByPortalCity(eventsRaw || [], portalCity, {
-      allowMissingCity: true,
-    });
+        const events = filterByPortalCity(eventsRaw || [], portalCity, {
+          allowMissingCity: true,
+        });
 
-    if (!events || events.length === 0) {
-      const emptyPayload = { events: [] };
-      await setSharedCacheJson(
-        TRENDING_CACHE_NAMESPACE,
-        cacheKey,
-        emptyPayload,
-        TRENDING_CACHE_TTL_MS,
-        { maxEntries: 200 }
-      );
-      return NextResponse.json(emptyPayload, {
-        headers: {
-          "Cache-Control": TRENDING_CACHE_CONTROL
+        if (!events || events.length === 0) {
+          return { events: [] };
         }
-      });
-    }
 
-    const eventIds = events.map((e) => e.id);
+        const eventIds = events.map((e) => e.id);
 
     const recentRsvpsPromise = supabase
       .from("event_rsvps")
@@ -197,13 +178,9 @@ export async function GET(request: NextRequest) {
     scored.sort((a, b) => b.score - a.score);
     const trending = scored.slice(0, 6);
 
-    const payload = { events: trending };
-    await setSharedCacheJson(
-      TRENDING_CACHE_NAMESPACE,
-      cacheKey,
-      payload,
-      TRENDING_CACHE_TTL_MS,
-      { maxEntries: 200 }
+        return { events: trending };
+      },
+      { maxEntries: TRENDING_CACHE_MAX_ENTRIES }
     );
 
     return NextResponse.json(payload, {

@@ -14,7 +14,7 @@ import {
 import { enrichEventsWithSocialProof } from "@/lib/search";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
 import { applyPortalScopeToQuery, filterByPortalCity } from "@/lib/portal-scope";
-import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
+import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
 
 const VALID_CLASS_CATEGORIES = [
   "painting",
@@ -38,6 +38,7 @@ const VALID_SKILL_LEVELS = [
 ] as const;
 
 const CLASSES_CACHE_TTL_MS = 90 * 1000;
+const CLASSES_CACHE_MAX_ENTRIES = 300;
 const CLASSES_CACHE_NAMESPACE = "api:classes";
 const CLASSES_CACHE_CONTROL = "public, s-maxage=90, stale-while-revalidate=180";
 
@@ -84,27 +85,12 @@ export async function GET(request: NextRequest) {
   const portalId = portalContext.portalId;
   const portalCity = !portalExclusive ? portalContext.filters.city : undefined;
   const today = new Date().toISOString().split("T")[0];
-  const cacheBucket = Math.floor(Date.now() / CLASSES_CACHE_TTL_MS);
   const cacheKey = [
     portalId || "no-portal",
     portalCity || "all-cities",
     portalExclusive ? "exclusive" : "shared",
     searchParams.toString(),
-    cacheBucket,
   ].join("|");
-  const cachedPayload = await getSharedCacheJson<{
-    classes: unknown[];
-    total: number;
-    limit: number;
-    offset: number;
-  }>(CLASSES_CACHE_NAMESPACE, cacheKey);
-  if (cachedPayload) {
-    return NextResponse.json(cachedPayload, {
-      headers: {
-        "Cache-Control": CLASSES_CACHE_CONTROL,
-      },
-    });
-  }
 
   const buildQuery = (includeFestival: boolean) => {
     const seriesSelect = includeFestival
@@ -219,51 +205,64 @@ export async function GET(request: NextRequest) {
     return query;
   };
 
-  let { data, error, count } = await buildQuery(true);
-  if (error && error.message?.includes("relationship between 'series' and 'festivals'")) {
-    ({ data, error, count } = await buildQuery(false));
-  }
+  try {
+    const payload = await getOrSetSharedCacheJson<{
+      classes: unknown[];
+      total: number;
+      limit: number;
+      offset: number;
+    }>(
+      CLASSES_CACHE_NAMESPACE,
+      cacheKey,
+      CLASSES_CACHE_TTL_MS,
+      async () => {
+        let { data, error, count } = await buildQuery(true);
+        if (error && error.message?.includes("relationship between 'series' and 'festivals'")) {
+          ({ data, error, count } = await buildQuery(false));
+        }
 
-  if (error) {
+        if (error) {
+          throw error;
+        }
+
+        const enrichedClasses = data
+          ? await enrichEventsWithSocialProof(
+              data as unknown as Parameters<typeof enrichEventsWithSocialProof>[0]
+            )
+          : [];
+        const cityScopedClasses = filterByPortalCity(
+          enrichedClasses as Array<{ venue?: { city?: string | null } | null }>,
+          portalCity,
+          { allowMissingCity: true }
+        );
+
+        return {
+          classes: cityScopedClasses,
+          total: portalCity ? cityScopedClasses.length : (count ?? 0),
+          limit,
+          offset,
+        };
+      },
+      { maxEntries: CLASSES_CACHE_MAX_ENTRIES }
+    );
+
+    return NextResponse.json(payload, {
+      headers: {
+        "Cache-Control": CLASSES_CACHE_CONTROL,
+      },
+    });
+  } catch (error) {
+    const maybeError = error as { message?: string; details?: string; hint?: string };
     if (process.env.NODE_ENV === "development") {
       return NextResponse.json(
         {
-          error: error.message,
-          details: error.details,
-          hint: error.hint,
+          error: maybeError?.message ?? "Failed to load classes",
+          details: maybeError?.details,
+          hint: maybeError?.hint,
         },
         { status: 500 }
       );
     }
     return errorResponse(error, "classes list");
   }
-
-  const enrichedClasses = data
-    ? await enrichEventsWithSocialProof(data as unknown as Parameters<typeof enrichEventsWithSocialProof>[0])
-    : [];
-  const cityScopedClasses = filterByPortalCity(
-    enrichedClasses as Array<{ venue?: { city?: string | null } | null }>,
-    portalCity,
-    { allowMissingCity: true }
-  );
-
-  const payload = {
-    classes: cityScopedClasses,
-    total: portalCity ? cityScopedClasses.length : (count ?? 0),
-    limit,
-    offset,
-  };
-  await setSharedCacheJson(
-    CLASSES_CACHE_NAMESPACE,
-    cacheKey,
-    payload,
-    CLASSES_CACHE_TTL_MS,
-    { maxEntries: 300 }
-  );
-
-  return NextResponse.json(payload, {
-    headers: {
-      "Cache-Control": CLASSES_CACHE_CONTROL,
-    },
-  });
 }

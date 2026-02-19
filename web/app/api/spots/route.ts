@@ -8,7 +8,7 @@ import { haversineDistanceKm, getWalkingMinutes, getProximityTier, getProximityL
 import { logger } from "@/lib/logger";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
 import { applyPortalScopeToQuery } from "@/lib/portal-scope";
-import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
+import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
 
 export const dynamic = "force-dynamic";
 
@@ -16,23 +16,11 @@ const SPOTS_CACHE_TTL_MS = 60 * 1000;
 const SPOTS_CACHE_MAX_ENTRIES = 160;
 const SPOTS_CACHE_NAMESPACE = "api:spots";
 
-async function getCachedSpotsPayload(
-  key: string
-): Promise<Record<string, unknown> | null> {
-  return getSharedCacheJson<Record<string, unknown>>(SPOTS_CACHE_NAMESPACE, key);
-}
-
-async function setCachedSpotsPayload(
-  key: string,
-  payload: Record<string, unknown>
-): Promise<void> {
-  await setSharedCacheJson(
-    SPOTS_CACHE_NAMESPACE,
-    key,
-    payload,
-    SPOTS_CACHE_TTL_MS,
-    { maxEntries: SPOTS_CACHE_MAX_ENTRIES }
-  );
+function buildStableSearchParamsKey(searchParams: URLSearchParams): string {
+  return Array.from(searchParams.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+    .join("&");
 }
 
 export async function GET(request: NextRequest) {
@@ -71,15 +59,7 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const cacheKey = `${searchParams.toString()}|${Math.floor(Date.now() / SPOTS_CACHE_TTL_MS)}`;
-  const cachedPayload = await getCachedSpotsPayload(cacheKey);
-  if (cachedPayload) {
-    return NextResponse.json(cachedPayload, {
-      headers: {
-        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
-      },
-    });
-  }
+  const cacheKey = buildStableSearchParamsKey(searchParams);
 
   const today = getLocalDateString();
   const eventsWindowEndDate = new Date();
@@ -87,6 +67,11 @@ export async function GET(request: NextRequest) {
   const eventsWindowEnd = getLocalDateString(eventsWindowEndDate);
 
   try {
+    const payload = await getOrSetSharedCacheJson<Record<string, unknown>>(
+      SPOTS_CACHE_NAMESPACE,
+      cacheKey,
+      SPOTS_CACHE_TTL_MS,
+      async () => {
     type VenueRow = {
       id: number;
       name: string;
@@ -362,24 +347,23 @@ export async function GET(request: NextRequest) {
     const allNeighborhoods = [...new Set((venues as VenueRow[]).map(v => v.neighborhood).filter(Boolean))] as string[];
     const openCount = spots.filter(s => s.is_open).length;
 
-    const payload = {
-      spots,
-      meta: {
-        total: spots.length,
-        openCount,
-        neighborhoods: allNeighborhoods.sort(),
-      }
-    };
-    await setCachedSpotsPayload(cacheKey, payload);
-
-    return NextResponse.json(
-      payload,
-      {
-        headers: {
-          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
-        },
-      }
+        return {
+          spots,
+          meta: {
+            total: spots.length,
+            openCount,
+            neighborhoods: allNeighborhoods.sort(),
+          }
+        };
+      },
+      { maxEntries: SPOTS_CACHE_MAX_ENTRIES }
     );
+
+    return NextResponse.json(payload, {
+      headers: {
+        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
+      },
+    });
   } catch (error) {
     logger.error("Spots API error:", error);
     return NextResponse.json({ spots: [], error: "Failed to fetch spots" }, { status: 500 });
