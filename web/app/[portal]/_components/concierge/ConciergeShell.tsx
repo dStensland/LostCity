@@ -128,6 +128,7 @@ export default function ConciergeShell({
             <div role="tabpanel" id="pillar-panel-around">
               <AroundYouPillar
                 data={pillarData.around}
+                portalId={portal.id}
                 ambient={ambient}
                 portalSlug={portal.slug}
                 portalName={portal.name}
@@ -141,6 +142,7 @@ export default function ConciergeShell({
               <PlannerPillar
                 data={pillarData.planner}
                 portal={portal}
+                conciergePhone={config.conciergePhone}
               />
             </div>
           )}

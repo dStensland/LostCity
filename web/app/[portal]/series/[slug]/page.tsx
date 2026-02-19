@@ -13,6 +13,7 @@ import {
   formatGenre,
   groupSeriesEventsByVenue,
 } from "@/lib/series";
+import { buildFilmCapsule } from "@/lib/film-capsule";
 import { getRelatedSeries } from "@/lib/series-related";
 import {
   DetailHero,
@@ -364,6 +365,11 @@ export default async function PortalSeriesPage({ params }: Props) {
                   <span>{formatRuntime(series.runtime_minutes)}</span>
                 )}
               </div>
+            )}
+            {series.series_type === "film" && buildFilmCapsule(series) && (
+              <p className="text-xs italic text-[var(--muted)] mt-2">
+                {buildFilmCapsule(series)}
+              </p>
             )}
           </DetailHero>
 

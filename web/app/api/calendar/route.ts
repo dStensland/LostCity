@@ -82,7 +82,9 @@ export async function GET(request: NextRequest) {
     is_free: boolean;
     price_min: number | null;
     price_max: number | null;
+    genres?: string[] | null;
     venue: { name: string; neighborhood: string | null; city: string | null } | null;
+    series: { genres: string[] | null } | null;
   };
 
   // Helper to build base query with filters
@@ -103,6 +105,9 @@ export async function GET(request: NextRequest) {
           name,
           neighborhood,
           city
+        ),
+        series:series!events_series_id_fkey (
+          genres
         )
       `)
       .gte("start_date", startDate)
@@ -181,11 +186,21 @@ export async function GET(request: NextRequest) {
     allowMissingCity: true,
   });
 
+  // Flatten genres from series into top-level event field
+  const eventsWithGenres = events.map((event) => {
+    const { series, ...rest } = event;
+    return {
+      ...rest,
+      genres: series?.genres || null,
+    };
+  });
+
   // Group events by date
-  const eventsByDate: Record<string, CalendarEvent[]> = {};
+  type EventWithGenres = Omit<CalendarEvent, "series"> & { genres: string[] | null };
+  const eventsByDate: Record<string, EventWithGenres[]> = {};
   const categoryCounts: Record<string, number> = {};
 
-  events.forEach((event) => {
+  eventsWithGenres.forEach((event) => {
     const dateKey = event.start_date;
     if (!eventsByDate[dateKey]) {
       eventsByDate[dateKey] = [];
@@ -199,7 +214,7 @@ export async function GET(request: NextRequest) {
   });
 
   // Calculate summary stats
-  const totalEvents = events?.length || 0;
+  const totalEvents = eventsWithGenres.length;
   const daysWithEvents = Object.keys(eventsByDate).length;
 
   return NextResponse.json({

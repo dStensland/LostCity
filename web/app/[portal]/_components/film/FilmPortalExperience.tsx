@@ -14,6 +14,9 @@ import { getProxiedImageSrc } from "@/lib/image-proxy";
 import { getPortalSourceAccess } from "@/lib/federation";
 import FilmPortalNav from "./FilmPortalNav";
 import FilmShowtimeBoard from "./FilmShowtimeBoard";
+import FilmForYouSection from "./FilmForYouSection";
+import FilmWatchlist from "./FilmWatchlist";
+import FilmWeekendPlanner from "./FilmWeekendPlanner";
 
 type FilmPortalExperienceProps = {
   portal: Portal;
@@ -168,6 +171,187 @@ function isIndieVenueName(name: string | null | undefined): boolean {
   if (!name) return false;
   const normalized = name.toLowerCase();
   return INDIE_THEATER_KEYWORDS.some((keyword) => normalized.includes(keyword));
+}
+
+type OpeningFilm = {
+  series_id: string;
+  title: string;
+  slug: string;
+  image_url: string | null;
+  genres: string[];
+  opening_date: string;
+  venue_count: number;
+};
+
+type LastChanceFilm = {
+  series_id: string;
+  title: string;
+  slug: string;
+  image_url: string | null;
+  genres: string[];
+  last_date: string;
+  venue_count: number;
+};
+
+async function getOpeningThisWeek(): Promise<OpeningFilm[]> {
+  const supabase = await createClient();
+  const today = getLocalDateString();
+  const weekEnd = new Date();
+  weekEnd.setDate(weekEnd.getDate() + 7);
+  const weekEndStr = getLocalDateString(weekEnd);
+
+  const { data } = await supabase
+    .from("events")
+    .select(`
+      id,
+      start_date,
+      series_id,
+      venue:venues!events_venue_id_fkey(id, name),
+      series:series!events_series_id_fkey(id, slug, title, image_url, genres)
+    `)
+    .eq("category", "film")
+    .not("series_id", "is", null)
+    .gte("start_date", today)
+    .lte("start_date", weekEndStr)
+    .or("is_sensitive.eq.false,is_sensitive.is.null")
+    .order("start_date", { ascending: true })
+    .limit(500);
+
+  if (!data) return [];
+
+  type OpeningRow = {
+    id: number;
+    start_date: string;
+    series_id: string | null;
+    venue: { id: number; name: string } | null;
+    series: { id: string; slug: string; title: string; image_url: string | null; genres: string[] | null } | null;
+  };
+
+  const rows = data as unknown as OpeningRow[];
+
+  // Group by series, find MIN date + distinct venue count
+  const seriesMap = new Map<string, { minDate: string; venues: Set<number>; series: OpeningRow["series"] }>();
+  for (const row of rows) {
+    if (!row.series_id || !row.series) continue;
+    const existing = seriesMap.get(row.series_id);
+    if (!existing) {
+      seriesMap.set(row.series_id, {
+        minDate: row.start_date,
+        venues: new Set(row.venue?.id ? [row.venue.id] : []),
+        series: row.series,
+      });
+    } else {
+      if (row.start_date < existing.minDate) existing.minDate = row.start_date;
+      if (row.venue?.id) existing.venues.add(row.venue.id);
+    }
+  }
+
+  // Also check if any earlier events exist for this series (if so, it's not "opening")
+  const results: OpeningFilm[] = [];
+  for (const [seriesId, entry] of seriesMap) {
+    // Check if there are any events before today for this series
+    const { count } = await supabase
+      .from("events")
+      .select("id", { count: "exact", head: true })
+      .eq("series_id", seriesId)
+      .lt("start_date", today);
+
+    if ((count ?? 0) > 0) continue; // Not opening — had earlier screenings
+
+    if (entry.series) {
+      results.push({
+        series_id: seriesId,
+        title: entry.series.title,
+        slug: entry.series.slug,
+        image_url: entry.series.image_url,
+        genres: entry.series.genres || [],
+        opening_date: entry.minDate,
+        venue_count: entry.venues.size,
+      });
+    }
+  }
+
+  return results.sort((a, b) => a.opening_date.localeCompare(b.opening_date)).slice(0, 8);
+}
+
+async function getLastChance(): Promise<LastChanceFilm[]> {
+  const supabase = await createClient();
+  const today = getLocalDateString();
+  const weekEnd = new Date();
+  weekEnd.setDate(weekEnd.getDate() + 7);
+  const weekEndStr = getLocalDateString(weekEnd);
+
+  const { data } = await supabase
+    .from("events")
+    .select(`
+      id,
+      start_date,
+      series_id,
+      venue:venues!events_venue_id_fkey(id, name),
+      series:series!events_series_id_fkey(id, slug, title, image_url, genres)
+    `)
+    .eq("category", "film")
+    .not("series_id", "is", null)
+    .gte("start_date", today)
+    .lte("start_date", weekEndStr)
+    .or("is_sensitive.eq.false,is_sensitive.is.null")
+    .order("start_date", { ascending: true })
+    .limit(500);
+
+  if (!data) return [];
+
+  type LastChanceRow = {
+    id: number;
+    start_date: string;
+    series_id: string | null;
+    venue: { id: number; name: string } | null;
+    series: { id: string; slug: string; title: string; image_url: string | null; genres: string[] | null } | null;
+  };
+
+  const rows = data as unknown as LastChanceRow[];
+
+  // Group by series, find MAX date + distinct venue count
+  const seriesMap = new Map<string, { maxDate: string; venues: Set<number>; series: LastChanceRow["series"] }>();
+  for (const row of rows) {
+    if (!row.series_id || !row.series) continue;
+    const existing = seriesMap.get(row.series_id);
+    if (!existing) {
+      seriesMap.set(row.series_id, {
+        maxDate: row.start_date,
+        venues: new Set(row.venue?.id ? [row.venue.id] : []),
+        series: row.series,
+      });
+    } else {
+      if (row.start_date > existing.maxDate) existing.maxDate = row.start_date;
+      if (row.venue?.id) existing.venues.add(row.venue.id);
+    }
+  }
+
+  // Check if any future events exist after the week window (if so, it's not "last chance")
+  const results: LastChanceFilm[] = [];
+  for (const [seriesId, entry] of seriesMap) {
+    const { count } = await supabase
+      .from("events")
+      .select("id", { count: "exact", head: true })
+      .eq("series_id", seriesId)
+      .gt("start_date", weekEndStr);
+
+    if ((count ?? 0) > 0) continue; // Not last chance — has future screenings
+
+    if (entry.series) {
+      results.push({
+        series_id: seriesId,
+        title: entry.series.title,
+        slug: entry.series.slug,
+        image_url: entry.series.image_url,
+        genres: entry.series.genres || [],
+        last_date: entry.maxDate,
+        venue_count: entry.venues.size,
+      });
+    }
+  }
+
+  return results.sort((a, b) => a.last_date.localeCompare(b.last_date)).slice(0, 8);
 }
 
 function getVenuePriority(name: string): number {
@@ -506,11 +690,13 @@ function buildVenuePulse(events: UpcomingFilmEvent[], limit = 4): VenuePulseCard
 export default async function FilmPortalExperience({ portal }: FilmPortalExperienceProps) {
   const today = getLocalDateString();
 
-  const [festivals, events, communityGroups, networkEvents] = await Promise.all([
+  const [festivals, events, communityGroups, networkEvents, openingFilms, lastChanceFilms] = await Promise.all([
     getAllFestivals(portal.id),
     getUpcomingFilmEvents(72),
     getFilmCommunityGroups(4),
     getNetworkFilmEvents(portal.id, 90),
+    getOpeningThisWeek(),
+    getLastChance(),
   ]);
 
   const upcomingFestivals = festivals
@@ -638,6 +824,88 @@ export default async function FilmPortalExperience({ portal }: FilmPortalExperie
         ) : null}
       </section>
 
+      {openingFilms.length > 0 && (
+        <section className="space-y-4">
+          <header>
+            <p className="text-[0.62rem] uppercase tracking-[0.18em] text-[#95a8cb]">Opening This Week</p>
+            <h2 className="mt-1 font-[var(--font-film-editorial)] text-3xl text-[#f7f8fd]">New to Atlanta screens</h2>
+          </header>
+          <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2">
+            {openingFilms.map((film) => (
+              <Link
+                key={film.series_id}
+                href={`/${portal.slug}/series/${film.slug}`}
+                className="group relative h-64 w-44 shrink-0 snap-start overflow-hidden rounded-2xl border border-[#2f3a56] bg-[#0c1322]"
+              >
+                {film.image_url ? (
+                  <Image
+                    src={getProxiedImageSrc(film.image_url)}
+                    alt={film.title}
+                    fill
+                    unoptimized
+                    className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                    sizes="176px"
+                  />
+                ) : (
+                  <div className="h-full w-full bg-gradient-to-br from-slate-300/85 to-slate-500/85" />
+                )}
+                <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(4,8,16,0.05)_0%,rgba(4,8,16,0.48)_46%,rgba(4,8,16,0.92)_100%)]" />
+                <div className="relative flex h-full flex-col justify-end p-3">
+                  <span className="mb-1 inline-flex w-fit rounded-full border border-[#4ade8066] bg-[#4ade801f] px-2 py-0.5 text-[0.52rem] uppercase tracking-[0.16em] text-[#a7f3d0]">
+                    Opens {formatShortDate(film.opening_date).split(",")[0]}
+                  </span>
+                  <h3 className="line-clamp-2 text-sm font-semibold text-[#f6f8ff]">{film.title}</h3>
+                  {film.venue_count > 1 && (
+                    <p className="mt-0.5 text-[0.62rem] text-[#c0d0ea]">{film.venue_count} venues</p>
+                  )}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {lastChanceFilms.length > 0 && (
+        <section className="space-y-4">
+          <header>
+            <p className="text-[0.62rem] uppercase tracking-[0.18em] text-[#95a8cb]">Last Chance</p>
+            <h2 className="mt-1 font-[var(--font-film-editorial)] text-3xl text-[#f7f8fd]">Closing soon</h2>
+          </header>
+          <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2">
+            {lastChanceFilms.map((film) => (
+              <Link
+                key={film.series_id}
+                href={`/${portal.slug}/series/${film.slug}`}
+                className="group relative h-64 w-44 shrink-0 snap-start overflow-hidden rounded-2xl border border-[#2f3a56] bg-[#0c1322]"
+              >
+                {film.image_url ? (
+                  <Image
+                    src={getProxiedImageSrc(film.image_url)}
+                    alt={film.title}
+                    fill
+                    unoptimized
+                    className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                    sizes="176px"
+                  />
+                ) : (
+                  <div className="h-full w-full bg-gradient-to-br from-slate-300/85 to-slate-500/85" />
+                )}
+                <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(4,8,16,0.05)_0%,rgba(4,8,16,0.48)_46%,rgba(4,8,16,0.92)_100%)]" />
+                <div className="relative flex h-full flex-col justify-end p-3">
+                  <span className="mb-1 inline-flex w-fit rounded-full border border-[#f59e0b66] bg-[#f59e0b1f] px-2 py-0.5 text-[0.52rem] uppercase tracking-[0.16em] text-[#fcd34d]">
+                    Last showing {formatShortDate(film.last_date).split(",")[0]}
+                  </span>
+                  <h3 className="line-clamp-2 text-sm font-semibold text-[#f6f8ff]">{film.title}</h3>
+                  {film.venue_count > 1 && (
+                    <p className="mt-0.5 text-[0.62rem] text-[#c0d0ea]">{film.venue_count} venues</p>
+                  )}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
       <section className="space-y-4">
         <header className="flex flex-wrap items-end justify-between gap-3">
           <div>
@@ -654,7 +922,7 @@ export default async function FilmPortalExperience({ portal }: FilmPortalExperie
         <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
           <article className="rounded-3xl border border-[#26324a] bg-[#0a111f] p-4 sm:p-5">
             <p className="mb-2 text-[0.62rem] uppercase tracking-[0.16em] text-[#8ea4c8]">Citywide theater preview</p>
-            <FilmShowtimeBoard portalSlug={portal.slug} mode="by-theater" compact hideHeader hideDateRail />
+            <FilmShowtimeBoard portalSlug={portal.slug} mode="by-theater" compact hideHeader hideDateRail hideGenreFilter />
           </article>
 
           <aside className="space-y-3">
@@ -700,6 +968,12 @@ export default async function FilmPortalExperience({ portal }: FilmPortalExperie
           </aside>
         </div>
       </section>
+
+      <FilmForYouSection portalSlug={portal.slug} />
+
+      <FilmWatchlist portalSlug={portal.slug} />
+
+      <FilmWeekendPlanner portalSlug={portal.slug} />
 
       <section className="space-y-4">
         <header className="flex flex-wrap items-end justify-between gap-3">
@@ -755,6 +1029,42 @@ export default async function FilmPortalExperience({ portal }: FilmPortalExperie
             </div>
           )}
         </div>
+      </section>
+
+      <section className="space-y-4">
+        <header>
+          <p className="text-[0.62rem] uppercase tracking-[0.18em] text-[#95a8cb]">Atlanta Film Scene</p>
+          <h2 className="mt-1 font-[var(--font-film-editorial)] text-3xl text-[#f7f8fd]">Explore the scene</h2>
+        </header>
+        <Link
+          href={`/${portal.slug}?view=feed&tab=explore`}
+          className="group relative block overflow-hidden rounded-2xl border border-[#2a334a] bg-[#0d1424] hover:border-[#445a85]"
+        >
+          <div className="relative h-40">
+            <Image
+              src={getProxiedImageSrc(FALLBACK_PHOTOS[1])}
+              alt="Atlanta Film Scene"
+              fill
+              unoptimized
+              className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+              sizes="100vw"
+            />
+            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,11,19,0.06)_0%,rgba(7,11,19,0.82)_100%)]" />
+          </div>
+          <div className="relative p-4">
+            <span className="mb-2 inline-flex rounded-full border border-[#8ea9ec66] bg-[#8ea9ec1f] px-2 py-0.5 text-[0.58rem] uppercase tracking-[0.16em] text-[#d9e5ff]">
+              Yallywood
+            </span>
+            <h3 className="mt-1 text-lg font-semibold text-[#f6f8ff]">Explore curated tracks</h3>
+            <p className="mt-1 text-xs text-[#b9c8e5]">
+              Indie circuits, film festival calendars, drive-in date nights, and more curated paths through Atlanta&apos;s film world.
+            </p>
+            <span className="mt-3 inline-flex items-center gap-1 text-[0.66rem] uppercase tracking-[0.14em] text-[#c9d9ff] group-hover:text-[#e1eaff]">
+              Explore tracks
+              <ArrowRight size={11} />
+            </span>
+          </div>
+        </Link>
       </section>
 
       <section className="space-y-4">

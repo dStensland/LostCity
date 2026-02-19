@@ -1,19 +1,17 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 
-import type { QuickAction } from "@/lib/concierge/concierge-types";
 import { getProxiedImageSrc } from "@/lib/image-proxy";
 import { phoneHref } from "@/lib/forth-types";
 
 interface HeroSectionProps {
   greeting: { title: string; subtitle: string };
-  quickActions: QuickAction[];
   heroPhoto: string;
   portalName: string;
   conciergePhone?: string;
 }
 
-export default function HeroSection({ greeting, quickActions, heroPhoto, portalName, conciergePhone }: HeroSectionProps) {
+export default function HeroSection({ greeting, heroPhoto, portalName, conciergePhone }: HeroSectionProps) {
   const proxiedPhoto = getProxiedImageSrc(heroPhoto);
   const imgSrc = typeof proxiedPhoto === "string" ? proxiedPhoto : heroPhoto;
 
@@ -44,20 +42,6 @@ export default function HeroSection({ greeting, quickActions, heroPhoto, portalN
               Ask Concierge
             </a>
           )}
-          {quickActions.map((action) => (
-            <button
-              key={action.label}
-              type="button"
-              aria-label={`Jump to ${action.label} section`}
-              onClick={() => {
-                const target = document.getElementById(action.sectionId);
-                target?.scrollIntoView({ behavior: "smooth", block: "start" });
-              }}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/15 backdrop-blur-sm text-sm font-body text-white hover:bg-white/25 active:bg-white/30 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-white/50"
-            >
-              {action.label}
-            </button>
-          ))}
         </div>
       </div>
     </section>

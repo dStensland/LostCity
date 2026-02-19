@@ -40,6 +40,22 @@ const CATEGORY_PRIORITY = [
   "food_drink", "sports", "fitness", "community", "family", "other"
 ];
 
+// Genre-specific colors for film events
+const FILM_GENRE_COLORS: Record<string, string> = {
+  horror: "#ef4444",
+  comedy: "#facc15",
+  drama: "#818cf8",
+  documentary: "#6ee7b7",
+  thriller: "#f97316",
+  "sci-fi": "#22d3ee",
+  action: "#f87171",
+  animation: "#c084fc",
+  romance: "#fb7185",
+  classic: "#d4d4d8",
+  foreign: "#a78bfa",
+  indie: "#34d399",
+};
+
 // Build a full 6-week grid for stable date math; UI can render a trimmed subset.
 const CALENDAR_ROWS = 6;
 const CALENDAR_DAYS = CALENDAR_ROWS * 7;
@@ -281,6 +297,21 @@ export default function CalendarView({
     return CATEGORY_PRIORITY.filter((c) => categories.has(c)).slice(0, 3);
   }, []);
 
+  // Get film genre color for a day's film events
+  const getFilmGenreColor = useCallback((dayEvents: CalendarEvent[]): string | null => {
+    for (const event of dayEvents) {
+      if (event.category === "film" && event.genres) {
+        for (const genre of event.genres) {
+          const normalized = genre.toLowerCase();
+          if (FILM_GENRE_COLORS[normalized]) {
+            return FILM_GENRE_COLORS[normalized];
+          }
+        }
+      }
+    }
+    return null;
+  }, []);
+
   // Calculate event density for heat map effect
   const maxEventsInDay = useMemo(() => {
     let max = 0;
@@ -470,12 +501,16 @@ export default function CalendarView({
                         </span>
 
                         <div className="absolute bottom-1.5 left-1.5 flex items-center gap-1">
-                          {topCategory && (
-                            <span
-                              data-category={topCategory}
-                              className="w-1.5 h-1.5 rounded-full bg-[var(--category-color,var(--muted))]"
-                            />
-                          )}
+                          {topCategory && (() => {
+                            const filmGenreColor = topCategory === "film" ? getFilmGenreColor(day.events) : null;
+                            return (
+                              <span
+                                data-category={topCategory}
+                                className="w-1.5 h-1.5 rounded-full bg-[var(--category-color,var(--muted))]"
+                                style={filmGenreColor ? { backgroundColor: filmGenreColor } : undefined}
+                              />
+                            );
+                          })()}
                           {categories.length > 1 && (
                             <span className="font-mono text-[0.52rem] text-[var(--muted)]/90">
                               +{categories.length - 1}

@@ -75,7 +75,7 @@ export function getQuickActions(dayPart: DayPart): QuickAction[] {
       return [
         { label: "Coffee nearby", icon: "coffee", sectionId: "nearby" },
         { label: "Today's events", icon: "calendar", sectionId: "tonight" },
-        { label: "Spa booking", icon: "spa", sectionId: "property" },
+        { label: "Plan your day", icon: "spa", sectionId: "plan" },
       ];
     case "afternoon":
       return [
@@ -85,14 +85,14 @@ export function getQuickActions(dayPart: DayPart): QuickAction[] {
       ];
     case "evening":
       return [
-        { label: "Dinner reservations", icon: "utensils", sectionId: "property" },
+        { label: "Dinner reservations", icon: "utensils", sectionId: "tonight" },
         { label: "Live tonight", icon: "music", sectionId: "tonight" },
-        { label: "Rooftop drinks", icon: "glass", sectionId: "property" },
+        { label: "Rooftop drinks", icon: "glass", sectionId: "nearby" },
       ];
     case "late_night":
       return [
         { label: "Late-night bites", icon: "utensils", sectionId: "nearby" },
-        { label: "Bars open now", icon: "glass", sectionId: "specials" },
+        { label: "Bars open now", icon: "glass", sectionId: "nearby" },
         { label: "Nightcap spots", icon: "moon", sectionId: "nearby" },
       ];
   }

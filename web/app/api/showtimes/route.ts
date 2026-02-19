@@ -37,6 +37,9 @@ type ShowtimeSeries = {
   slug: string;
   title: string;
   image_url: string | null;
+  genres: string[] | null;
+  director: string | null;
+  year: number | null;
 };
 type ShowtimeEvent = {
   id: number;
@@ -69,6 +72,9 @@ function buildFilmMap(events: ShowtimeEvent[]) {
       series_id: string | null;
       series_slug: string | null;
       image_url: string | null;
+      genres: string[];
+      director: string | null;
+      year: number | null;
       theaters: Map<
         number,
         {
@@ -97,6 +103,9 @@ function buildFilmMap(events: ShowtimeEvent[]) {
         series_id: event.series_id,
         series_slug: series?.slug || null,
         image_url: series?.image_url || event.image_url,
+        genres: series?.genres || [],
+        director: series?.director || null,
+        year: series?.year || null,
         theaters: new Map(),
       };
       filmMap.set(groupKey, film);
@@ -167,6 +176,9 @@ function toFilmsResponse(filmMap: ReturnType<typeof buildFilmMap>) {
       series_id: film.series_id,
       series_slug: film.series_slug,
       image_url: film.image_url,
+      genres: film.genres,
+      director: film.director,
+      year: film.year,
       theaters: Array.from(film.theaters.values()).map((theater) => ({
         venue_id: theater.venue_id,
         venue_name: theater.venue_name,
@@ -195,6 +207,9 @@ function toTheatersResponse(filmMap: ReturnType<typeof buildFilmMap>) {
         series_id: string | null;
         series_slug: string | null;
         image_url: string | null;
+        genres: string[];
+        director: string | null;
+        year: number | null;
         times: string[];
       }[];
     }
@@ -218,6 +233,9 @@ function toTheatersResponse(filmMap: ReturnType<typeof buildFilmMap>) {
         series_id: film.series_id,
         series_slug: film.series_slug,
         image_url: film.image_url,
+        genres: film.genres,
+        director: film.director,
+        year: film.year,
         times: theater.times.sort(),
       });
     }
@@ -296,7 +314,10 @@ export async function GET(request: NextRequest) {
         id,
         slug,
         title,
-        image_url
+        image_url,
+        genres,
+        director,
+        year
       )
     `,
         )
