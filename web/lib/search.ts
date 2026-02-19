@@ -1506,19 +1506,25 @@ type AvailableFiltersOptions = {
   portalExclusive?: boolean;
 };
 
-const STATIC_CATEGORY_LABELS = new Map(CATEGORIES.map((category) => [category.value, category.label]));
-const STATIC_CATEGORY_ORDER = new Map(CATEGORIES.map((category, index) => [category.value, index]));
-const STATIC_SUBCATEGORY_LABELS = new Map(
+const STATIC_CATEGORY_LABELS = new Map<string, string>(
+  CATEGORIES.map((category) => [category.value, category.label]),
+);
+const STATIC_CATEGORY_ORDER = new Map<string, number>(
+  CATEGORIES.map((category, index) => [category.value, index]),
+);
+const STATIC_SUBCATEGORY_LABELS = new Map<string, string>(
   Object.values(SUBCATEGORIES)
     .flat()
-    .map((subcategory) => [subcategory.value, subcategory.label])
+    .map((subcategory) => [subcategory.value, subcategory.label]),
 );
-const STATIC_SUBCATEGORY_ORDER = new Map(
+const STATIC_SUBCATEGORY_ORDER = new Map<string, number>(
   Object.values(SUBCATEGORIES)
     .flat()
-    .map((subcategory, index) => [subcategory.value, index])
+    .map((subcategory, index) => [subcategory.value, index]),
 );
-const STATIC_TAG_LABELS = new Map(ALL_TAGS.map((tag) => [tag.value, tag.label]));
+const STATIC_TAG_LABELS = new Map<string, string>(
+  ALL_TAGS.map((tag) => [tag.value, tag.label]),
+);
 
 async function computePortalScopedAvailableFilters(
   options: Required<AvailableFiltersOptions>
