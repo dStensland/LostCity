@@ -11,8 +11,12 @@ import { getDisplayParticipants, type EventArtist } from "@/lib/artists-utils";
 import { buildDisplayDescription } from "@/lib/event-description";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
 import { applyPortalScopeToQuery, filterByPortalCity } from "@/lib/portal-scope";
+import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
 
 const NEARBY_RADIUS_MILES = 10;
+const EVENT_DETAIL_CACHE_TTL_MS = 60 * 1000;
+const EVENT_DETAIL_CACHE_NAMESPACE = "api:event-detail";
+const EVENT_DETAIL_CACHE_CONTROL = "public, s-maxage=60, stale-while-revalidate=120";
 
 type RawEventArtist = {
   id: number;
@@ -63,6 +67,25 @@ export async function GET(
     );
   }
   const portalCity = !portalExclusive ? portalContext.filters.city : undefined;
+  const cacheBucket = Math.floor(Date.now() / EVENT_DETAIL_CACHE_TTL_MS);
+  const cacheKey = [
+    eventId,
+    portalContext.portalId || "no-portal",
+    portalCity || "all-cities",
+    portalExclusive ? "exclusive" : "shared",
+    cacheBucket,
+  ].join("|");
+  const cachedPayload = await getSharedCacheJson<Record<string, unknown>>(
+    EVENT_DETAIL_CACHE_NAMESPACE,
+    cacheKey
+  );
+  if (cachedPayload) {
+    return Response.json(cachedPayload, {
+      headers: {
+        "Cache-Control": EVENT_DETAIL_CACHE_CONTROL,
+      },
+    });
+  }
 
   // Fetch event with venue, series, and producer
   let event: unknown | null = null;
@@ -488,7 +511,7 @@ export async function GET(
     isLive = now >= eventStart && now <= eventEnd;
   }
 
-  return Response.json({
+  const payload = {
     event: {
       ...(event as Record<string, unknown>),
       is_live: isLive,
@@ -503,5 +526,18 @@ export async function GET(
     venueEvents,
     nearbyEvents,
     nearbyDestinations,
+  };
+  await setSharedCacheJson(
+    EVENT_DETAIL_CACHE_NAMESPACE,
+    cacheKey,
+    payload,
+    EVENT_DETAIL_CACHE_TTL_MS,
+    { maxEntries: 600 }
+  );
+
+  return Response.json(payload, {
+    headers: {
+      "Cache-Control": EVENT_DETAIL_CACHE_CONTROL,
+    },
   });
 }

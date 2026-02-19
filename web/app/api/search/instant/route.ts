@@ -12,6 +12,7 @@ import {
 } from "@/lib/search-ranking";
 import type { ViewMode, FindType } from "@/lib/search-context";
 import { logger } from "@/lib/logger";
+import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
 
 // Helper to safely parse integers with validation
 function safeParseInt(
@@ -24,6 +25,32 @@ function safeParseInt(
   const parsed = parseInt(value, 10);
   if (isNaN(parsed)) return defaultValue;
   return Math.min(Math.max(parsed, min), max);
+}
+
+const INSTANT_SEARCH_CACHE_TTL_MS = 30 * 1000;
+const INSTANT_SEARCH_CACHE_MAX_ENTRIES = 200;
+const INSTANT_SEARCH_CACHE_NAMESPACE = "api:search-instant";
+
+async function getCachedInstantSearchPayload(
+  key: string,
+): Promise<Record<string, unknown> | null> {
+  return getSharedCacheJson<Record<string, unknown>>(
+    INSTANT_SEARCH_CACHE_NAMESPACE,
+    key
+  );
+}
+
+async function setCachedInstantSearchPayload(
+  key: string,
+  payload: Record<string, unknown>,
+): Promise<void> {
+  await setSharedCacheJson(
+    INSTANT_SEARCH_CACHE_NAMESPACE,
+    key,
+    payload,
+    INSTANT_SEARCH_CACHE_TTL_MS,
+    { maxEntries: INSTANT_SEARCH_CACHE_MAX_ENTRIES }
+  );
 }
 
 /**
@@ -101,6 +128,25 @@ export async function GET(request: NextRequest) {
     const portalSlug = portalContext.portalSlug || searchParams.get("portalSlug") || "atlanta";
     const viewMode = (searchParams.get("viewMode") as ViewMode) || "feed";
     const findType = (searchParams.get("findType") as FindType) || null;
+    const includeOrganizers = searchParams.get("include_organizers") === "true";
+
+    const cacheKey = [
+      query.trim().toLowerCase(),
+      String(limit),
+      portalId || "",
+      portalSlug,
+      viewMode,
+      findType || "",
+      includeOrganizers ? "with-organizers" : "core-only",
+    ].join("|");
+    const cached = await getCachedInstantSearchPayload(cacheKey);
+    if (cached) {
+      return NextResponse.json(cached, {
+        headers: {
+          "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
+        },
+      });
+    }
 
     // Build search context
     const context: SearchContext = {
@@ -111,9 +157,19 @@ export async function GET(request: NextRequest) {
     };
 
     // Perform instant search
+    const trimmedQuery = query.trim();
+    const instantTypes: ("event" | "venue" | "organizer")[] = includeOrganizers
+      ? trimmedQuery.length >= 4
+        ? ["event", "venue", "organizer"]
+        : ["event", "venue"]
+      : ["event", "venue"];
     const result = await instantSearch(query, {
       portalId,
-      limit: limit * 2, // Get more results for grouping
+      limit: Math.min(limit * 2, limit + 4), // Keep autocomplete lean
+      types: instantTypes,
+      includeSocialProof: false,
+      includeFacets: false,
+      includeDidYouMean: false,
     });
 
     // Apply context-aware ranking
@@ -139,6 +195,8 @@ export async function GET(request: NextRequest) {
       facets,
       intent: result.intent,
     };
+
+    await setCachedInstantSearchPayload(cacheKey, response);
 
     // Return with aggressive caching for fast autocomplete
     return NextResponse.json(response, {

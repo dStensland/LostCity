@@ -21,6 +21,10 @@ let redis: Redis | null = null;
 let upstashRateLimiters: Map<string, Ratelimit> | null = null;
 
 const DISTRIBUTED_BACKEND_RETRY_AFTER_SEC = 60;
+const UPSTASH_RATE_LIMIT_TIMEOUT_MS = Number.parseInt(
+  process.env.UPSTASH_RATE_LIMIT_TIMEOUT_MS || "250",
+  10
+);
 
 function requiresDistributedRateLimit(): boolean {
   return process.env.REQUIRE_DISTRIBUTED_RATE_LIMIT === "true";
@@ -63,6 +67,28 @@ function getUpstashRateLimiter(configKey: string, config: RateLimitConfig): Rate
   }
 
   return upstashRateLimiters.get(configKey) || null;
+}
+
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  label: string
+): Promise<T> {
+  let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timeoutHandle = setTimeout(() => {
+          reject(new Error(`${label} timed out after ${timeoutMs}ms`));
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeoutHandle) {
+      clearTimeout(timeoutHandle);
+    }
+  }
 }
 
 // ============================================================================
@@ -171,7 +197,11 @@ export async function checkRateLimit(
 
   if (upstashLimiter) {
     try {
-      const result = await upstashLimiter.limit(identifier);
+      const result = await withTimeout(
+        upstashLimiter.limit(identifier),
+        UPSTASH_RATE_LIMIT_TIMEOUT_MS,
+        "Upstash rate limit check"
+      );
       return {
         success: result.success,
         limit: result.limit,

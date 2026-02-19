@@ -20,6 +20,7 @@ import {
   suppressEventImageIfVenueFlagged,
   suppressEventImagesIfVenueFlagged,
 } from "@/lib/image-quality-suppression";
+import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
 
 import { fetchSocialProofCounts } from "@/lib/search";
 import { format, startOfDay, addDays } from "date-fns";
@@ -42,6 +43,32 @@ type FeedSectionId =
   | "this_week_fits_your_taste"
   | "from_places_people_you_follow"
   | "explore_something_new";
+
+const FEED_RESPONSE_CACHE_TTL_MS = 30 * 1000;
+const FEED_RESPONSE_CACHE_MAX_ENTRIES = 200;
+const FEED_RESPONSE_CACHE_NAMESPACE = "api:feed";
+
+async function getCachedFeedResponse(
+  key: string
+): Promise<Record<string, unknown> | null> {
+  return getSharedCacheJson<Record<string, unknown>>(
+    FEED_RESPONSE_CACHE_NAMESPACE,
+    key
+  );
+}
+
+async function setCachedFeedResponse(
+  key: string,
+  payload: Record<string, unknown>
+): Promise<void> {
+  await setSharedCacheJson(
+    FEED_RESPONSE_CACHE_NAMESPACE,
+    key,
+    payload,
+    FEED_RESPONSE_CACHE_TTL_MS,
+    { maxEntries: FEED_RESPONSE_CACHE_MAX_ENTRIES }
+  );
+}
 
 // Helper to parse cursor for pagination
 function parseCursor(
@@ -114,6 +141,17 @@ export async function GET(request: Request) {
     const user = await getUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const responseHeaders = {
+      // Private cache for user-specific content
+      "Cache-Control": "private, max-age=60, stale-while-revalidate=120",
+    };
+    const cacheKey = `${user.id}|${searchParams.toString()}|${Math.floor(Date.now() / FEED_RESPONSE_CACHE_TTL_MS)}`;
+    const cachedResponse = await getCachedFeedResponse(cacheKey);
+    if (cachedResponse) {
+      return NextResponse.json(cachedResponse, {
+        headers: responseHeaders,
+      });
     }
 
     const supabase = await createClient();
@@ -1472,32 +1510,29 @@ export async function GET(request: Request) {
         };
 
     // Return results with cursor pagination, trending, and preferences
-    return NextResponse.json(
-      {
-        events: pageEventsWithCounts,
-        sections: parsedCursor ? [] : sectionsWithCounts,
-        trending: trendingEvents,
-        preferences: preferencesResponse,
-        cursor: nextCursor,
-        hasMore,
-        hasPreferences: !!(
-          favoriteCategories.length ||
-          favoriteNeighborhoods.length ||
-          favoriteGenres.length ||
-          prefs?.favorite_vibes?.length ||
-          needsAccessibility.length ||
-          needsDietary.length ||
-          needsFamily.length
-        ),
-        personalization,
-      },
-      {
-        headers: {
-          // Private cache for user-specific content
-          "Cache-Control": "private, max-age=60, stale-while-revalidate=120",
-        },
-      },
-    );
+    const payload = {
+      events: pageEventsWithCounts,
+      sections: parsedCursor ? [] : sectionsWithCounts,
+      trending: trendingEvents,
+      preferences: preferencesResponse,
+      cursor: nextCursor,
+      hasMore,
+      hasPreferences: !!(
+        favoriteCategories.length ||
+        favoriteNeighborhoods.length ||
+        favoriteGenres.length ||
+        prefs?.favorite_vibes?.length ||
+        needsAccessibility.length ||
+        needsDietary.length ||
+        needsFamily.length
+      ),
+      personalization,
+    };
+    await setCachedFeedResponse(cacheKey, payload);
+
+    return NextResponse.json(payload, {
+      headers: responseHeaders,
+    });
   } catch (err) {
     return errorResponse(err, "GET /api/feed");
   }

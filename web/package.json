@@ -13,7 +13,12 @@
     "test:coverage": "vitest run --coverage",
     "seed": "tsx scripts/seed-staging.ts",
     "seed:clear": "tsx scripts/seed-staging.ts --clear",
-    "seed:emory-venues": "tsx scripts/backfill-emory-nearby-venues.ts"
+    "seed:emory-venues": "tsx scripts/backfill-emory-nearby-venues.ts",
+    "perf:audit": "tsx scripts/perf-audit.ts",
+    "perf:prewarm": "tsx scripts/prewarm-cache.ts",
+    "perf:check": "npm run perf:prewarm && PERF_MAX_COLD_MS=1500 PERF_MAX_WARM_MS=500 PERF_REQUIRE_2XX=true tsx scripts/perf-audit.ts",
+    "perf:check:strict": "npm run perf:prewarm && PERF_MAX_COLD_MS=1200 PERF_MAX_WARM_MS=350 PERF_REQUIRE_2XX=true tsx scripts/perf-audit.ts",
+    "perf:local": "bash scripts/perf-local.sh"
   },
   "dependencies": {
     "@google/genai": "^1.39.0",

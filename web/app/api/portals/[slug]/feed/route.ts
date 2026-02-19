@@ -32,42 +32,33 @@ import {
   suppressEventImageIfVenueFlagged,
   suppressEventImagesIfVenueFlagged,
 } from "@/lib/image-quality-suppression";
+import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
 
 // Cache feed for 5 minutes at CDN, allow stale for 1 hour while revalidating
 export const revalidate = 300;
 
 const FEED_CACHE_TTL_MS = 5 * 60 * 1000;
-const FEED_CACHE_MAX_ENTRIES = 100;
+const FEED_CACHE_MAX_ENTRIES = 200;
 const FEED_CACHE_CONTROL = "public, s-maxage=300, stale-while-revalidate=3600";
+const FEED_CACHE_NAMESPACE = "api:portal-feed";
+const HOLIDAY_EVENTS_CACHE_TTL_MS = 12 * 60 * 60 * 1000;
+const HOLIDAY_EVENTS_CACHE_NAMESPACE = "api:portal-feed:holidays";
 
-const feedPayloadCache = new Map<
-  string,
-  { expiresAt: number; payload: unknown }
->();
-
-function getCachedFeedPayload(cacheKey: string): unknown | null {
-  const entry = feedPayloadCache.get(cacheKey);
-  if (!entry) {
-    return null;
-  }
-  if (entry.expiresAt <= Date.now()) {
-    feedPayloadCache.delete(cacheKey);
-    return null;
-  }
-  return entry.payload;
+async function getCachedFeedPayload(cacheKey: string): Promise<unknown | null> {
+  return getSharedCacheJson<unknown>(FEED_CACHE_NAMESPACE, cacheKey);
 }
 
-function setCachedFeedPayload(cacheKey: string, payload: unknown): void {
-  if (feedPayloadCache.size >= FEED_CACHE_MAX_ENTRIES) {
-    const firstKey = feedPayloadCache.keys().next().value;
-    if (firstKey) {
-      feedPayloadCache.delete(firstKey);
-    }
-  }
-  feedPayloadCache.set(cacheKey, {
-    expiresAt: Date.now() + FEED_CACHE_TTL_MS,
+async function setCachedFeedPayload(
+  cacheKey: string,
+  payload: unknown,
+): Promise<void> {
+  await setSharedCacheJson(
+    FEED_CACHE_NAMESPACE,
+    cacheKey,
     payload,
-  });
+    FEED_CACHE_TTL_MS,
+    { maxEntries: FEED_CACHE_MAX_ENTRIES },
+  );
 }
 
 type Props = {
@@ -430,7 +421,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     : 5;
   const sectionKey = (sectionIds || []).slice().sort().join(",");
   const cacheKey = `${canonicalSlug}|${defaultLimit}|${sectionKey}`;
-  const cachedPayload = getCachedFeedPayload(cacheKey);
+  const cachedPayload = await getCachedFeedPayload(cacheKey);
   if (cachedPayload) {
     return NextResponse.json(cachedPayload, {
       headers: {
@@ -1375,72 +1366,76 @@ export async function GET(request: NextRequest, { params }: Props) {
   const holidayEventsByTag = new Map<string, Event[]>();
   if (holidaySections.length > 0) {
     // Collect all unique tags from holiday sections
-    const holidayTags = holidaySections
+    const holidayTags = Array.from(new Set(holidaySections
       .map((section) => section.auto_filter?.tags?.[0])
-      .filter((tag): tag is string => tag !== undefined);
+      .filter((tag): tag is string => tag !== undefined)));
 
     if (holidayTags.length > 0) {
-      // Fetch all holiday events in a single query using OR conditions
-      const tagConditions = holidayTags
-        .map((tag) => `tags.cs.{${tag}}`)
-        .join(",");
+      const holidayTagKey = holidayTags.slice().sort().join(",");
+      const holidayCityKey = portalCities.length > 0 ? portalCities.join(",") : "all";
+      const holidayCacheKey = `${portal.id}|${today}|${holidayCityKey}|${holidayTagKey}`;
+      const holidaySectionCapacity = holidaySections.reduce((sum, section) => {
+        const maxItems = Math.max(1, Math.min(section.max_items || 20, 24));
+        return sum + maxItems;
+      }, 0);
+      const holidayFetchLimit = Math.min(
+        240,
+        Math.max(80, holidayTags.length * 18, Math.ceil(holidaySectionCapacity * 1.8)),
+      );
+      let holidayEvents = await getSharedCacheJson<
+        (Event & { tags?: string[] })[]
+      >(HOLIDAY_EVENTS_CACHE_NAMESPACE, holidayCacheKey);
 
-      const { data: allHolidayEvents } = await supabase
-        .from("events")
-        .select(
-          `
-          id,
-          title,
-          start_date,
-          start_time,
-          end_date,
-          end_time,
-          is_all_day,
-          is_free,
-          price_min,
-          price_max,
-          category,
-            image_url,
-          description,
-          featured_blurb,
-          tags,
-          series_id,
-          series:series_id(
+      if (!holidayEvents) {
+        const { data: allHolidayEvents } = await supabase
+          .from("events")
+          .select(
+            `
             id,
-            slug,
             title,
-            series_type,
-            image_url,
-            frequency,
-            day_of_week,
-            festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
-          ),
-          venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city)
-      `,
-        )
-        .or(tagConditions)
-        .gte("start_date", today)
-        .lte("start_date", getLocalDateString(addDays(new Date(), 30)))
-        .is("canonical_event_id", null)
-        .or("is_class.eq.false,is_class.is.null")
-        .or("is_sensitive.eq.false,is_sensitive.is.null")
-        .order("start_date", { ascending: true })
-        .limit(Math.max(80, holidayTags.length * 60));
+            start_date,
+            start_time,
+            end_date,
+            end_time,
+            is_all_day,
+            is_free,
+            price_min,
+            price_max,
+            category,
+              image_url,
+            description,
+            featured_blurb,
+            tags,
+            series_id,
+            series:series_id(
+              id,
+              slug,
+              title,
+              series_type,
+              image_url,
+              frequency,
+              day_of_week,
+              festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
+            ),
+            venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city)
+        `,
+          )
+          .overlaps("tags", holidayTags)
+          .gte("start_date", today)
+          .lte("start_date", getLocalDateString(addDays(new Date(), 30)))
+          .is("canonical_event_id", null)
+          .or("is_class.eq.false,is_class.is.null")
+          .or("is_sensitive.eq.false,is_sensitive.is.null")
+          .order("start_date", { ascending: true })
+          .limit(holidayFetchLimit);
 
-      // Group events by tag, filtering out wrong-city events
-      if (allHolidayEvents) {
-        const holidayEvents = suppressEventImagesIfVenueFlagged(
-          allHolidayEvents as (Event & {
-            tags?: string[];
-          })[],
+        const cityFilteredHolidayEvents: (Event & { tags?: string[] })[] = [];
+        const suppressedHolidayEvents = suppressEventImagesIfVenueFlagged(
+          allHolidayEvents as (Event & { tags?: string[] })[] || [],
         );
-        for (const event of holidayEvents) {
-          const typedEvent = event as Event & {
-          tags?: string[];
-          };
-          // Filter out events from wrong cities
-          if (portalCities.length > 0 && typedEvent.venue?.city) {
-            const venueCity = typedEvent.venue.city.trim().toLowerCase();
+        for (const event of suppressedHolidayEvents) {
+          if (portalCities.length > 0 && event.venue?.city) {
+            const venueCity = event.venue.city.trim().toLowerCase();
             if (
               venueCity &&
               !portalCities.some((pc) => {
@@ -1454,18 +1449,28 @@ export async function GET(request: NextRequest, { params }: Props) {
               continue;
             }
           }
+          cityFilteredHolidayEvents.push(event);
+        }
 
-          // Store in eventMap
-          eventMap.set(typedEvent.id, typedEvent);
+        holidayEvents = cityFilteredHolidayEvents;
+        await setSharedCacheJson(
+          HOLIDAY_EVENTS_CACHE_NAMESPACE,
+          holidayCacheKey,
+          holidayEvents,
+          HOLIDAY_EVENTS_CACHE_TTL_MS,
+          { maxEntries: 80 },
+        );
+      }
 
-          // Assign to appropriate tag buckets
-          for (const tag of holidayTags) {
-            if (typedEvent.tags?.includes(tag)) {
-              if (!holidayEventsByTag.has(tag)) {
-                holidayEventsByTag.set(tag, []);
-              }
-              holidayEventsByTag.get(tag)!.push(typedEvent);
+      for (const typedEvent of holidayEvents) {
+        eventMap.set(typedEvent.id, typedEvent);
+
+        for (const tag of holidayTags) {
+          if (typedEvent.tags?.includes(tag)) {
+            if (!holidayEventsByTag.has(tag)) {
+              holidayEventsByTag.set(tag, []);
             }
+            holidayEventsByTag.get(tag)!.push(typedEvent);
           }
         }
       }
@@ -1986,7 +1991,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     sections: sectionsWithCounts,
   };
 
-  setCachedFeedPayload(cacheKey, responsePayload);
+  await setCachedFeedPayload(cacheKey, responsePayload);
 
   return NextResponse.json(responsePayload, {
     headers: {

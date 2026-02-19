@@ -6,8 +6,35 @@ import { isSpotOpen, VENUE_TYPES_MAP, type VenueType, DESTINATION_CATEGORIES } f
 import { logger } from "@/lib/logger";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
 import { applyPortalScopeToQuery, filterByPortalCity, isVenueCityInScope } from "@/lib/portal-scope";
+import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
 
 export const dynamic = "force-dynamic";
+
+const AROUND_ME_CACHE_TTL_MS = 30 * 1000;
+const AROUND_ME_CACHE_MAX_ENTRIES = 180;
+const AROUND_ME_CACHE_NAMESPACE = "api:around-me";
+
+async function getCachedAroundMePayload(
+  key: string,
+): Promise<Record<string, unknown> | null> {
+  return getSharedCacheJson<Record<string, unknown>>(
+    AROUND_ME_CACHE_NAMESPACE,
+    key
+  );
+}
+
+async function setCachedAroundMePayload(
+  key: string,
+  payload: Record<string, unknown>
+): Promise<void> {
+  await setSharedCacheJson(
+    AROUND_ME_CACHE_NAMESPACE,
+    key,
+    payload,
+    AROUND_ME_CACHE_TTL_MS,
+    { maxEntries: AROUND_ME_CACHE_MAX_ENTRIES }
+  );
+}
 
 // Haversine formula to calculate distance between two points in miles
 function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -209,10 +236,18 @@ export async function GET(request: NextRequest) {
   const lngParam = searchParams.get("lng");
   const neighborhood = searchParams.get("neighborhood");
   const radiusParam = searchParams.get("radius");
-  // If no radius specified, don't filter by distance (show all)
-  const radiusMiles = radiusParam ? parseFloat(radiusParam) : null;
+  const hasGpsParams = Boolean(latParam && lngParam);
+  // GPS mode defaults to a practical neighborhood radius when omitted.
+  const radiusMiles = radiusParam
+    ? parseFloat(radiusParam)
+    : hasGpsParams
+      ? 8
+      : null;
   const category = searchParams.get("category"); // food, drinks, coffee, music, arts, fun
-  const limit = parseInt(searchParams.get("limit") || "50", 10);
+  const requestedLimit = parseInt(searchParams.get("limit") || "50", 10);
+  const limit = Number.isFinite(requestedLimit)
+    ? Math.max(1, Math.min(requestedLimit, 120))
+    : 50;
   const portalExclusive = searchParams.get("portal_exclusive") === "true";
 
   // Determine center point
@@ -239,6 +274,16 @@ export async function GET(request: NextRequest) {
     // Default to Atlanta center (Ponce City Market area)
     centerLat = 33.772;
     centerLng = -84.365;
+  }
+
+  const cacheKey = `${request.nextUrl.searchParams.toString()}|${Math.floor(Date.now() / AROUND_ME_CACHE_TTL_MS)}`;
+  const cachedPayload = await getCachedAroundMePayload(cacheKey);
+  if (cachedPayload) {
+    return NextResponse.json(cachedPayload, {
+      headers: {
+        "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
+      },
+    });
   }
 
   try {
@@ -282,11 +327,8 @@ export async function GET(request: NextRequest) {
       .not("lat", "is", null)
       .not("lng", "is", null);
 
-    spotsQuery = applyPortalScopeToQuery(spotsQuery, {
-      portalId: portalContext.portalId,
-      portalExclusive,
-      publicOnlyWhenNoPortal: true,
-    });
+    // Venues do not have portal_id; scope venues by city after fetch.
+    // Portal scoping stays on events (below) where portal_id exists.
 
     // Filter by neighborhood if specified (exact match on neighborhood field)
     if (neighborhood && !usingGps) {
@@ -313,6 +355,20 @@ export async function GET(request: NextRequest) {
         spotsQuery = spotsQuery.or(typeFilters);
       }
     }
+
+    const spotCandidateLimit = radiusMiles !== null
+      ? Math.max(180, Math.min(900, limit * 8))
+      : Math.max(260, Math.min(1200, limit * 10));
+    if (radiusMiles !== null) {
+      const latDelta = radiusMiles / 69;
+      const lngDelta = radiusMiles / (Math.max(Math.cos((centerLat * Math.PI) / 180), 0.2) * 69);
+      spotsQuery = spotsQuery
+        .gte("lat", centerLat - latDelta)
+        .lte("lat", centerLat + latDelta)
+        .gte("lng", centerLng - lngDelta)
+        .lte("lng", centerLng + lngDelta);
+    }
+    spotsQuery = spotsQuery.limit(spotCandidateLimit);
 
     // Fetch live events
     let eventsQuery = supabase
@@ -354,6 +410,12 @@ export async function GET(request: NextRequest) {
     if (categoryFilter && categoryFilter.eventCategories.length > 0) {
       eventsQuery = eventsQuery.in("category", categoryFilter.eventCategories);
     }
+    const eventCandidateLimit = radiusMiles !== null
+      ? Math.max(140, Math.min(700, limit * 6))
+      : Math.max(220, Math.min(900, limit * 8));
+    eventsQuery = eventsQuery
+      .order("start_time", { ascending: true })
+      .limit(eventCandidateLimit);
 
     // Note: neighborhood filtering for events is done post-fetch since it's on the joined venue
 
@@ -500,18 +562,26 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Batch fetch venue tags to prevent N+1 queries (fixes critical perf issue)
-    const spotIds = processedSpots.map((s) => s.id);
-    if (spotIds.length > 0) {
+    // Merge and sort by distance
+    const allItems = [...processedSpots, ...processedEvents];
+    allItems.sort((a, b) => a.distance - b.distance);
+
+    // Apply limit
+    const limitedItems = allItems.slice(0, limit);
+
+    // Batch fetch tags only for returned spot cards.
+    const returnedSpotIds = limitedItems
+      .filter((item): item is AroundMeItem & { type: "spot" } => item.type === "spot")
+      .map((item) => item.id);
+    if (returnedSpotIds.length > 0) {
       type TagRow = { venue_id: number; tag_id: string; tag_label: string; tag_group: string; score: number };
       const { data: tagData } = await supabase
         .from("venue_tag_summary")
         .select("venue_id, tag_id, tag_label, tag_group, score")
-        .in("venue_id", spotIds)
+        .in("venue_id", returnedSpotIds)
         .gte("score", 2)
         .order("score", { ascending: false });
 
-      // Group tags by venue_id (limit 3 per venue)
       const tagsByVenue = new Map<number, VenueTagData[]>();
       for (const tag of (tagData || []) as TagRow[]) {
         const existing = tagsByVenue.get(tag.venue_id) || [];
@@ -526,35 +596,31 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // Attach tags to spots
-      for (const spot of processedSpots) {
-        const spotData = spot.data as AroundMeSpot;
-        spotData.tags = tagsByVenue.get(spot.id) || [];
+      for (const item of limitedItems) {
+        if (item.type !== "spot") continue;
+        const spotData = item.data as AroundMeSpot;
+        spotData.tags = tagsByVenue.get(item.id) || [];
       }
     }
 
-    // Merge and sort by distance
-    const allItems = [...processedSpots, ...processedEvents];
-    allItems.sort((a, b) => a.distance - b.distance);
-
-    // Apply limit
-    const limitedItems = allItems.slice(0, limit);
+    const payload = {
+      items: limitedItems,
+      counts: {
+        spots: processedSpots.length,
+        events: processedEvents.length,
+        total: allItems.length,
+      },
+      center: {
+        lat: centerLat,
+        lng: centerLng,
+        usingGps,
+        neighborhood: neighborhood || null,
+      },
+    };
+    await setCachedAroundMePayload(cacheKey, payload);
 
     return NextResponse.json(
-      {
-        items: limitedItems,
-        counts: {
-          spots: processedSpots.length,
-          events: processedEvents.length,
-          total: allItems.length,
-        },
-        center: {
-          lat: centerLat,
-          lng: centerLng,
-          usingGps,
-          neighborhood: neighborhood || null,
-        },
-      },
+      payload,
       {
         headers: {
           "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",

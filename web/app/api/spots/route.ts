@@ -8,8 +8,32 @@ import { haversineDistanceKm, getWalkingMinutes, getProximityTier, getProximityL
 import { logger } from "@/lib/logger";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
 import { applyPortalScopeToQuery } from "@/lib/portal-scope";
+import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
 
 export const dynamic = "force-dynamic";
+
+const SPOTS_CACHE_TTL_MS = 60 * 1000;
+const SPOTS_CACHE_MAX_ENTRIES = 160;
+const SPOTS_CACHE_NAMESPACE = "api:spots";
+
+async function getCachedSpotsPayload(
+  key: string
+): Promise<Record<string, unknown> | null> {
+  return getSharedCacheJson<Record<string, unknown>>(SPOTS_CACHE_NAMESPACE, key);
+}
+
+async function setCachedSpotsPayload(
+  key: string,
+  payload: Record<string, unknown>
+): Promise<void> {
+  await setSharedCacheJson(
+    SPOTS_CACHE_NAMESPACE,
+    key,
+    payload,
+    SPOTS_CACHE_TTL_MS,
+    { maxEntries: SPOTS_CACHE_MAX_ENTRIES }
+  );
+}
 
 export async function GET(request: NextRequest) {
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
@@ -33,6 +57,11 @@ export async function GET(request: NextRequest) {
   const centerLng = parseFloatParam(searchParams.get("center_lng"));
   const radiusKm = parseFloatParam(searchParams.get("radius_km"));
   const sortBy = searchParams.get("sort"); // distance | special_relevance | hybrid
+  const includeHours = searchParams.get("include_hours") === "true";
+  const responseLimitRaw = Number.parseInt(searchParams.get("limit") || "300", 10);
+  const responseLimit = Number.isFinite(responseLimitRaw)
+    ? Math.max(1, Math.min(responseLimitRaw, 600))
+    : 300;
 
   const hasCenter = centerLat !== null && centerLng !== null;
 
@@ -42,7 +71,20 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  const cacheKey = `${searchParams.toString()}|${Math.floor(Date.now() / SPOTS_CACHE_TTL_MS)}`;
+  const cachedPayload = await getCachedSpotsPayload(cacheKey);
+  if (cachedPayload) {
+    return NextResponse.json(cachedPayload, {
+      headers: {
+        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
+      },
+    });
+  }
+
   const today = getLocalDateString();
+  const eventsWindowEndDate = new Date();
+  eventsWindowEndDate.setDate(eventsWindowEndDate.getDate() + 45);
+  const eventsWindowEnd = getLocalDateString(eventsWindowEndDate);
 
   try {
     type VenueRow = {
@@ -125,7 +167,11 @@ export async function GET(request: NextRequest) {
       query = query.overlaps("genres", genres);
     }
 
-    query = query.order("name").limit(5000);
+    const venueCandidateLimit = Math.max(
+      350,
+      Math.min(2200, responseLimit * 4),
+    );
+    query = query.order("name").limit(venueCandidateLimit);
 
     const { data: venues, error: venuesError } = await query;
 
@@ -142,6 +188,7 @@ export async function GET(request: NextRequest) {
       .from("events")
       .select("venue_id")
       .gte("start_date", today)
+      .lte("start_date", eventsWindowEnd)
       .not("venue_id", "is", null);
 
     eventsQuery = applyPortalScopeToQuery(eventsQuery, {
@@ -150,7 +197,11 @@ export async function GET(request: NextRequest) {
       publicOnlyWhenNoPortal: true,
     });
 
-    const { data: events } = await eventsQuery.limit(10000);
+    const eventCandidateLimit = Math.max(
+      400,
+      Math.min(3500, responseLimit * 5),
+    );
+    const { data: events } = await eventsQuery.limit(eventCandidateLimit);
 
     // Count events per venue
     const eventCounts = new Map<number, number>();
@@ -168,8 +219,7 @@ export async function GET(request: NextRequest) {
       const distanceKm = hasCenter && venue.lat !== null && venue.lng !== null
         ? haversineDistanceKm(centerLat!, centerLng!, venue.lat, venue.lng)
         : null;
-
-      return {
+      const baseSpot = {
         id: venue.id,
         name: venue.name,
         slug: venue.slug,
@@ -182,7 +232,6 @@ export async function GET(request: NextRequest) {
         price_level: venue.price_level,
         lat: venue.lat,
         lng: venue.lng,
-        hours: venue.hours,
         hours_display: venue.hours_display,
         is_24_hours: false,
         vibes: venue.vibes,
@@ -195,45 +244,10 @@ export async function GET(request: NextRequest) {
         proximity_tier: distanceKm !== null ? getProximityTier(distanceKm) : null,
         proximity_label: distanceKm !== null ? getProximityLabel(distanceKm) : null,
       };
+      return includeHours
+        ? { ...baseSpot, hours: venue.hours }
+        : baseSpot;
     });
-
-    // Fetch social proof counts (followers + recommendations)
-    const venueIds = spots.map((spot) => spot.id);
-    const followerCounts = new Map<number, number>();
-    const recommendationCounts = new Map<number, number>();
-
-    if (venueIds.length > 0) {
-      const [{ data: followsData }, { data: recData }] = await Promise.all([
-        supabase
-          .from("follows")
-          .select("followed_venue_id")
-          .in("followed_venue_id", venueIds)
-          .not("followed_venue_id", "is", null),
-        supabase
-          .from("recommendations")
-          .select("venue_id")
-          .in("venue_id", venueIds)
-          .eq("visibility", "public"),
-      ]);
-
-      for (const row of (followsData || []) as { followed_venue_id: number | null }[]) {
-        if (row.followed_venue_id) {
-          followerCounts.set(
-            row.followed_venue_id,
-            (followerCounts.get(row.followed_venue_id) || 0) + 1
-          );
-        }
-      }
-
-      for (const row of (recData || []) as { venue_id: number | null }[]) {
-        if (row.venue_id) {
-          recommendationCounts.set(
-            row.venue_id,
-            (recommendationCounts.get(row.venue_id) || 0) + 1
-          );
-        }
-      }
-    }
 
     // Filter to only venues with events if requested
     if (withEventsOnly) {
@@ -264,12 +278,6 @@ export async function GET(request: NextRequest) {
     }
 
     // Sort: venues with events first (by count), then alphabetically
-    spots = spots.map((spot) => ({
-      ...spot,
-      follower_count: followerCounts.get(spot.id) || 0,
-      recommendation_count: recommendationCounts.get(spot.id) || 0,
-    }));
-
     if (hasCenter && sortBy === "distance") {
       spots.sort((a, b) => {
         if (a.distance_km === null && b.distance_km === null) return a.name.localeCompare(b.name);
@@ -304,19 +312,68 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // Bound response size before social proof fanout queries.
+    spots = spots.slice(0, responseLimit);
+
+    // Fetch social proof counts (followers + recommendations) for returned venues only.
+    const venueIds = spots.map((spot) => spot.id);
+    const followerCounts = new Map<number, number>();
+    const recommendationCounts = new Map<number, number>();
+    if (venueIds.length > 0) {
+      const [{ data: followsData }, { data: recData }] = await Promise.all([
+        supabase
+          .from("follows")
+          .select("followed_venue_id")
+          .in("followed_venue_id", venueIds)
+          .not("followed_venue_id", "is", null),
+        supabase
+          .from("recommendations")
+          .select("venue_id")
+          .in("venue_id", venueIds)
+          .eq("visibility", "public"),
+      ]);
+
+      for (const row of (followsData || []) as { followed_venue_id: number | null }[]) {
+        if (row.followed_venue_id) {
+          followerCounts.set(
+            row.followed_venue_id,
+            (followerCounts.get(row.followed_venue_id) || 0) + 1,
+          );
+        }
+      }
+
+      for (const row of (recData || []) as { venue_id: number | null }[]) {
+        if (row.venue_id) {
+          recommendationCounts.set(
+            row.venue_id,
+            (recommendationCounts.get(row.venue_id) || 0) + 1,
+          );
+        }
+      }
+    }
+
+    spots = spots.map((spot) => ({
+      ...spot,
+      follower_count: followerCounts.get(spot.id) || 0,
+      recommendation_count: recommendationCounts.get(spot.id) || 0,
+    }));
+
     // Compute metadata for filter UI (from full unfiltered data)
     const allNeighborhoods = [...new Set((venues as VenueRow[]).map(v => v.neighborhood).filter(Boolean))] as string[];
     const openCount = spots.filter(s => s.is_open).length;
 
+    const payload = {
+      spots,
+      meta: {
+        total: spots.length,
+        openCount,
+        neighborhoods: allNeighborhoods.sort(),
+      }
+    };
+    await setCachedSpotsPayload(cacheKey, payload);
+
     return NextResponse.json(
-      {
-        spots,
-        meta: {
-          total: spots.length,
-          openCount,
-          neighborhoods: allNeighborhoods.sort(),
-        }
-      },
+      payload,
       {
         headers: {
           "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",

@@ -61,6 +61,9 @@ export interface SearchOptions {
   // Enhanced options
   useIntentAnalysis?: boolean; // Enable query intent analysis for smarter results
   boostExactMatches?: boolean; // Apply extra boost for exact title matches
+  includeFacets?: boolean; // Include facet aggregation (extra DB query)
+  includeDidYouMean?: boolean; // Include spelling suggestions (extra DB query)
+  includeSocialProof?: boolean; // Include social proof fanout queries
 }
 
 export interface SearchFacet {
@@ -249,6 +252,9 @@ const SCORING = {
   },
 } as const;
 
+const PORTAL_CITY_CACHE_TTL_MS = 5 * 60 * 1000;
+const portalCityCache = new Map<string, { city: string | undefined; expiresAt: number }>();
+
 // ============================================
 // Helper Functions
 // ============================================
@@ -368,6 +374,12 @@ function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function isMissingRpcFunctionError(error: { message?: string } | null | undefined): boolean {
+  if (!error?.message) return false;
+  const message = error.message.toLowerCase();
+  return message.includes("function") && message.includes("does not exist");
+}
+
 /**
  * Apply type priority boost based on intent analysis
  */
@@ -412,6 +424,9 @@ export async function unifiedSearch(
     city,
     useIntentAnalysis = true,
     boostExactMatches = true,
+    includeFacets = true,
+    includeDidYouMean = true,
+    includeSocialProof = true,
   } = options;
 
   const trimmedQuery = query.trim();
@@ -433,17 +448,28 @@ export async function unifiedSearch(
   // Resolve portal city for venue search scoping only when venue results are requested.
   let resolvedCity = city;
   if (types.includes("venue") && !resolvedCity && portalId) {
-    const { data: portalData } = await client
-      .from("portals")
-      .select("filters")
-      .eq("id", portalId)
-      .maybeSingle();
-    const pRow = portalData as { filters?: Record<string, unknown> | string | null } | null;
-    if (pRow?.filters) {
-      const pf = (typeof pRow.filters === "string"
-        ? JSON.parse(pRow.filters)
-        : pRow.filters) as { city?: string };
-      resolvedCity = pf.city || undefined;
+    const cachedCity = portalCityCache.get(portalId);
+    if (cachedCity && cachedCity.expiresAt > Date.now()) {
+      resolvedCity = cachedCity.city;
+    } else {
+      const { data: portalData } = await client
+        .from("portals")
+        .select("filters")
+        .eq("id", portalId)
+        .maybeSingle();
+      const pRow = portalData as {
+        filters?: Record<string, unknown> | string | null;
+      } | null;
+      if (pRow?.filters) {
+        const pf = (typeof pRow.filters === "string"
+          ? JSON.parse(pRow.filters)
+          : pRow.filters) as { city?: string };
+        resolvedCity = pf.city || undefined;
+      }
+      portalCityCache.set(portalId, {
+        city: resolvedCity,
+        expiresAt: Date.now() + PORTAL_CITY_CACHE_TTL_MS,
+      });
     }
   }
 
@@ -530,8 +556,12 @@ export async function unifiedSearch(
   // Execute searches, facets, and spelling suggestions in parallel
   const [searchResultsArrays, facets, didYouMean] = await Promise.all([
     Promise.all(searchPromises),
-    getSearchFacets(client, effectiveQuery, portalId),
-    getSpellingSuggestions(client, effectiveQuery),
+    includeFacets
+      ? getSearchFacets(client, effectiveQuery, portalId)
+      : Promise.resolve([]),
+    includeDidYouMean
+      ? getSpellingSuggestions(client, effectiveQuery)
+      : Promise.resolve([]),
   ]);
 
   // Combine all results
@@ -562,24 +592,32 @@ export async function unifiedSearch(
   // Sort by enhanced score
   allResults.sort((a, b) => b.score - a.score);
 
-  // Add social proof metadata for search cards
-  const eventIds = allResults
-    .filter((result) => result.type === "event")
-    .map((result) => Number(result.id))
-    .filter((id) => !Number.isNaN(id));
-  const venueIds = allResults
-    .filter((result) => result.type === "venue")
-    .map((result) => Number(result.id))
-    .filter((id) => !Number.isNaN(id));
-  const organizerIds = allResults
-    .filter((result) => result.type === "organizer")
-    .map((result) => String(result.id));
-  const seriesIds = allResults
-    .filter((result) => result.type === "series")
-    .map((result) => String(result.id));
+  if (includeSocialProof) {
+    // Add social proof metadata for search cards
+    const eventIds = allResults
+      .filter((result) => result.type === "event")
+      .map((result) => Number(result.id))
+      .filter((id) => !Number.isNaN(id));
+    const venueIds = allResults
+      .filter((result) => result.type === "venue")
+      .map((result) => Number(result.id))
+      .filter((id) => !Number.isNaN(id));
+    const organizerIds = allResults
+      .filter((result) => result.type === "organizer")
+      .map((result) => String(result.id));
+    const seriesIds = allResults
+      .filter((result) => result.type === "series")
+      .map((result) => String(result.id));
 
-  const [eventCounts, venueFollowData, venueRecData, organizerFollowData, organizerRecData, organizerLegacyRecData, seriesEvents] =
-    await Promise.all([
+    const [
+      eventCounts,
+      venueFollowData,
+      venueRecData,
+      organizerFollowData,
+      organizerRecData,
+      organizerLegacyRecData,
+      seriesEvents,
+    ] = await Promise.all([
       fetchSocialProofCounts(eventIds),
       venueIds.length > 0
         ? client
@@ -625,138 +663,157 @@ export async function unifiedSearch(
         : Promise.resolve({ data: null }),
     ]);
 
-  const venueFollowerCounts = new Map<number, number>();
-  for (const row of (venueFollowData?.data || []) as { followed_venue_id: number | null }[]) {
-    if (row.followed_venue_id) {
-      venueFollowerCounts.set(
-        row.followed_venue_id,
-        (venueFollowerCounts.get(row.followed_venue_id) || 0) + 1
-      );
+    const venueFollowerCounts = new Map<number, number>();
+    for (const row of (venueFollowData?.data || []) as {
+      followed_venue_id: number | null;
+    }[]) {
+      if (row.followed_venue_id) {
+        venueFollowerCounts.set(
+          row.followed_venue_id,
+          (venueFollowerCounts.get(row.followed_venue_id) || 0) + 1,
+        );
+      }
     }
-  }
 
-  const venueRecommendationCounts = new Map<number, number>();
-  for (const row of (venueRecData?.data || []) as { venue_id: number | null }[]) {
-    if (row.venue_id) {
-      venueRecommendationCounts.set(
-        row.venue_id,
-        (venueRecommendationCounts.get(row.venue_id) || 0) + 1
-      );
+    const venueRecommendationCounts = new Map<number, number>();
+    for (const row of (venueRecData?.data || []) as {
+      venue_id: number | null;
+    }[]) {
+      if (row.venue_id) {
+        venueRecommendationCounts.set(
+          row.venue_id,
+          (venueRecommendationCounts.get(row.venue_id) || 0) + 1,
+        );
+      }
     }
-  }
 
-  const organizerFollowerCounts = new Map<string, number>();
-  for (const row of (organizerFollowData?.data || []) as { followed_organization_id: string | null }[]) {
-    if (row.followed_organization_id) {
-      organizerFollowerCounts.set(
-        row.followed_organization_id,
-        (organizerFollowerCounts.get(row.followed_organization_id) || 0) + 1
-      );
+    const organizerFollowerCounts = new Map<string, number>();
+    for (const row of (organizerFollowData?.data || []) as {
+      followed_organization_id: string | null;
+    }[]) {
+      if (row.followed_organization_id) {
+        organizerFollowerCounts.set(
+          row.followed_organization_id,
+          (organizerFollowerCounts.get(row.followed_organization_id) || 0) + 1,
+        );
+      }
     }
-  }
 
-  const organizerRecommendationCounts = new Map<string, number>();
-  for (const row of (organizerRecData?.data || []) as { organization_id: string | null }[]) {
-    if (row.organization_id) {
-      organizerRecommendationCounts.set(
-        row.organization_id,
-        (organizerRecommendationCounts.get(row.organization_id) || 0) + 1
-      );
+    const organizerRecommendationCounts = new Map<string, number>();
+    for (const row of (organizerRecData?.data || []) as {
+      organization_id: string | null;
+    }[]) {
+      if (row.organization_id) {
+        organizerRecommendationCounts.set(
+          row.organization_id,
+          (organizerRecommendationCounts.get(row.organization_id) || 0) + 1,
+        );
+      }
     }
-  }
-  for (const row of (organizerLegacyRecData?.data || []) as { org_id: string | null }[]) {
-    if (row.org_id) {
-      organizerRecommendationCounts.set(
-        row.org_id,
-        (organizerRecommendationCounts.get(row.org_id) || 0) + 1
-      );
+    for (const row of (organizerLegacyRecData?.data || []) as {
+      org_id: string | null;
+    }[]) {
+      if (row.org_id) {
+        organizerRecommendationCounts.set(
+          row.org_id,
+          (organizerRecommendationCounts.get(row.org_id) || 0) + 1,
+        );
+      }
     }
-  }
 
-  const seriesEventIds = (seriesEvents?.data || []) as { id: number; series_id: string | null }[];
-  const seriesEventMap = new Map<string, number[]>();
-  for (const row of seriesEventIds) {
-    if (!row.series_id) continue;
-    const list = seriesEventMap.get(row.series_id) || [];
-    list.push(row.id);
-    seriesEventMap.set(row.series_id, list);
-  }
-  const seriesCounts = new Map<string, { rsvp: number; recs: number }>();
-  if (seriesEventIds.length > 0) {
-    const seriesEventIdList = Array.from(new Set(seriesEventIds.map((row) => row.id)));
-    const seriesEventCounts = await fetchSocialProofCounts(seriesEventIdList);
-    for (const [seriesId, ids] of seriesEventMap.entries()) {
-      let rsvp = 0;
-      let recs = 0;
-      for (const id of ids) {
-        const counts = seriesEventCounts.get(id);
-        if (counts) {
-          rsvp += counts.going + counts.interested;
-          recs += counts.recommendations;
+    const seriesEventIds = (seriesEvents?.data || []) as {
+      id: number;
+      series_id: string | null;
+    }[];
+    const seriesEventMap = new Map<string, number[]>();
+    for (const row of seriesEventIds) {
+      if (!row.series_id) continue;
+      const list = seriesEventMap.get(row.series_id) || [];
+      list.push(row.id);
+      seriesEventMap.set(row.series_id, list);
+    }
+    const seriesCounts = new Map<string, { rsvp: number; recs: number }>();
+    if (seriesEventIds.length > 0) {
+      const seriesEventIdList = Array.from(
+        new Set(seriesEventIds.map((row) => row.id)),
+      );
+      const seriesEventCounts = await fetchSocialProofCounts(seriesEventIdList);
+      for (const [seriesId, ids] of seriesEventMap.entries()) {
+        let rsvp = 0;
+        let recs = 0;
+        for (const id of ids) {
+          const counts = seriesEventCounts.get(id);
+          if (counts) {
+            rsvp += counts.going + counts.interested;
+            recs += counts.recommendations;
+          }
+        }
+        if (rsvp > 0 || recs > 0) {
+          seriesCounts.set(seriesId, { rsvp, recs });
         }
       }
-      if (rsvp > 0 || recs > 0) {
-        seriesCounts.set(seriesId, { rsvp, recs });
-      }
     }
+
+    allResults = allResults.map((result) => {
+      if (result.type === "event") {
+        const counts = eventCounts.get(Number(result.id));
+        return {
+          ...result,
+          metadata: {
+            ...result.metadata,
+            rsvpCount: counts ? counts.going + counts.interested : 0,
+            recommendationCount: counts?.recommendations || 0,
+          },
+        };
+      }
+      if (result.type === "venue") {
+        const id = Number(result.id);
+        return {
+          ...result,
+          metadata: {
+            ...result.metadata,
+            followerCount: venueFollowerCounts.get(id) || 0,
+            recommendationCount: venueRecommendationCounts.get(id) || 0,
+          },
+        };
+      }
+      if (result.type === "organizer") {
+        const id = String(result.id);
+        return {
+          ...result,
+          metadata: {
+            ...result.metadata,
+            followerCount: organizerFollowerCounts.get(id) || 0,
+            recommendationCount: organizerRecommendationCounts.get(id) || 0,
+          },
+        };
+      }
+      if (result.type === "series") {
+        const counts = seriesCounts.get(String(result.id));
+        return {
+          ...result,
+          metadata: {
+            ...result.metadata,
+            rsvpCount: counts?.rsvp || 0,
+            recommendationCount: counts?.recs || 0,
+          },
+        };
+      }
+      return result;
+    });
   }
 
-  allResults = allResults.map((result) => {
-    if (result.type === "event") {
-      const counts = eventCounts.get(Number(result.id));
-      return {
-        ...result,
-        metadata: {
-          ...result.metadata,
-          rsvpCount: counts ? counts.going + counts.interested : 0,
-          recommendationCount: counts?.recommendations || 0,
-        },
-      };
-    }
-    if (result.type === "venue") {
-      const id = Number(result.id);
-      return {
-        ...result,
-        metadata: {
-          ...result.metadata,
-          followerCount: venueFollowerCounts.get(id) || 0,
-          recommendationCount: venueRecommendationCounts.get(id) || 0,
-        },
-      };
-    }
-    if (result.type === "organizer") {
-      const id = String(result.id);
-      return {
-        ...result,
-        metadata: {
-          ...result.metadata,
-          followerCount: organizerFollowerCounts.get(id) || 0,
-          recommendationCount: organizerRecommendationCounts.get(id) || 0,
-        },
-      };
-    }
-    if (result.type === "series") {
-      const counts = seriesCounts.get(String(result.id));
-      return {
-        ...result,
-        metadata: {
-          ...result.metadata,
-          rsvpCount: counts?.rsvp || 0,
-          recommendationCount: counts?.recs || 0,
-        },
-      };
-    }
-    return result;
-  });
-
   // Calculate total from facets
-  const total = facets.reduce((sum, f) => sum + f.count, 0);
+  const total = facets.length > 0
+    ? facets.reduce((sum, f) => sum + f.count, 0)
+    : allResults.length;
 
   return {
     results: allResults.slice(0, limit),
     facets,
     total,
-    didYouMean: didYouMean.length > 0 ? didYouMean : undefined,
+    didYouMean:
+      includeDidYouMean && didYouMean.length > 0 ? didYouMean : undefined,
   };
 }
 
@@ -879,13 +936,61 @@ async function searchOrganizations(
   }
 ): Promise<SearchResult[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (client.rpc as any)("search_organizations_ranked", {
+  let { data, error } = await (client.rpc as any)("search_organizations_ranked", {
     p_query: query,
     p_limit: options.limit,
     p_offset: options.offset,
     p_org_types: options.orgTypes || null,
     p_categories: options.categories || null,
   });
+
+  if (error && isMissingRpcFunctionError(error)) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const legacyRpcResult = await (client.rpc as any)("search_producers_ranked", {
+      p_query: query,
+      p_limit: options.limit,
+      p_offset: options.offset,
+      p_org_types: options.orgTypes || null,
+      p_categories: options.categories || null,
+    });
+    data = legacyRpcResult.data;
+    error = legacyRpcResult.error;
+  }
+
+  if (error && isMissingRpcFunctionError(error)) {
+    const { data: fallbackRows, error: fallbackError } = await client
+      .from("organizations")
+      .select(
+        "id, name, slug, org_type, categories, neighborhood, total_events_tracked"
+      )
+      .eq("hidden", false)
+      .ilike("name", `%${query}%`)
+      .order("total_events_tracked", { ascending: false, nullsFirst: false })
+      .limit(options.limit);
+    if (!fallbackError) {
+      const typedRows = (fallbackRows || []) as Array<{
+        id: string;
+        name: string;
+        slug: string;
+        org_type: string | null;
+        neighborhood: string | null;
+        total_events_tracked: number | null;
+      }>;
+      return typedRows.map((row) => ({
+        id: row.id,
+        type: "organizer" as const,
+        title: row.name,
+        subtitle: row.org_type || undefined,
+        href: `/organizer/${row.slug}`,
+        score: 1,
+        metadata: {
+          orgType: row.org_type || undefined,
+          neighborhood: row.neighborhood || undefined,
+          eventCount: row.total_events_tracked || undefined,
+        },
+      }));
+    }
+  }
 
   if (error) {
     console.error("Error searching organizations:", error);
@@ -928,6 +1033,43 @@ async function searchSeries(
     p_offset: options.offset,
     p_categories: options.categories || null,
   });
+
+  if (error && isMissingRpcFunctionError(error)) {
+    let fallbackQuery = client
+      .from("series")
+      .select(
+        "id, title, slug, description, series_type, category, image_url, updated_at"
+      )
+      .eq("is_active", true)
+      .ilike("title", `%${query}%`)
+      .order("updated_at", { ascending: false })
+      .limit(options.limit);
+    if (options.categories?.length) {
+      fallbackQuery = fallbackQuery.in("category", options.categories);
+    }
+    const { data: fallbackRows, error: fallbackError } = await fallbackQuery;
+    if (!fallbackError) {
+      const typedRows = (fallbackRows || []) as Array<{
+        id: string;
+        title: string;
+        slug: string;
+        series_type: string | null;
+        category: string | null;
+      }>;
+      return typedRows.map((row) => ({
+        id: row.id,
+        type: "series" as const,
+        title: row.title,
+        subtitle: row.series_type || undefined,
+        href: `/series/${row.slug}`,
+        score: 1,
+        metadata: {
+          category: row.category || undefined,
+          seriesType: row.series_type || undefined,
+        },
+      }));
+    }
+  }
 
   if (error) {
     console.error("Error searching series:", error);
@@ -972,6 +1114,40 @@ async function searchLists(
     p_portal_id: options.portalId || null,
   });
 
+  if (error && isMissingRpcFunctionError(error)) {
+    let fallbackQuery = client
+      .from("lists")
+      .select("id, title, slug, description, category, creator_id")
+      .eq("is_public", true)
+      .eq("status", "active")
+      .ilike("title", `%${query}%`)
+      .order("updated_at", { ascending: false })
+      .limit(options.limit);
+    if (options.portalId) {
+      fallbackQuery = fallbackQuery.eq("portal_id", options.portalId);
+    }
+    const { data: fallbackRows, error: fallbackError } = await fallbackQuery;
+    if (!fallbackError) {
+      const typedRows = (fallbackRows || []) as Array<{
+        id: string;
+        title: string;
+        slug: string;
+        category: string | null;
+      }>;
+      return typedRows.map((row) => ({
+        id: row.id,
+        type: "list" as const,
+        title: row.title,
+        subtitle: row.category || undefined,
+        href: `/list/${row.slug}`,
+        score: 1,
+        metadata: {
+          category: row.category || undefined,
+        },
+      }));
+    }
+  }
+
   if (error) {
     console.error("Error searching lists:", error);
     return [];
@@ -1013,6 +1189,47 @@ async function searchFestivals(
     p_offset: options.offset,
     p_portal_id: options.portalId || null,
   });
+
+  if (error && isMissingRpcFunctionError(error)) {
+    let fallbackQuery = client
+      .from("festivals")
+      .select(
+        "id, name, slug, description, image_url, announced_start, announced_end, primary_type, festival_type, last_year_start"
+      )
+      .ilike("name", `%${query}%`)
+      .order("announced_start", { ascending: true, nullsFirst: false })
+      .limit(options.limit);
+    if (options.portalId) {
+      fallbackQuery = fallbackQuery.eq("portal_id", options.portalId);
+    }
+    const { data: fallbackRows, error: fallbackError } = await fallbackQuery;
+    if (!fallbackError) {
+      const typedRows = (fallbackRows || []) as Array<{
+        id: string;
+        name: string;
+        slug: string;
+        announced_start: string | null;
+        announced_end: string | null;
+        primary_type: string | null;
+        festival_type: string | null;
+        last_year_start: string | null;
+      }>;
+      return typedRows.map((row) => ({
+        id: row.id,
+        type: "festival" as const,
+        title: row.name,
+        subtitle: row.announced_start
+          ? formatFestivalDateRange(row.announced_start, row.announced_end)
+          : undefined,
+        href: `/festivals/${row.slug}`,
+        score: 1,
+        metadata: {
+          category: row.primary_type || row.festival_type || undefined,
+          date: row.announced_start || row.last_year_start || undefined,
+        },
+      }));
+    }
+  }
 
   if (error) {
     console.error("Error searching festivals:", error);
@@ -1245,9 +1462,20 @@ export async function instantSearch(
   options: {
     portalId?: string;
     limit?: number;
+    types?: ("event" | "venue" | "organizer" | "series" | "list" | "festival")[];
+    includeSocialProof?: boolean;
+    includeFacets?: boolean;
+    includeDidYouMean?: boolean;
   } = {}
 ): Promise<InstantSearchResponse> {
-  const { portalId, limit = 8 } = options;
+  const {
+    portalId,
+    limit = 8,
+    types,
+    includeSocialProof = false,
+    includeFacets = false,
+    includeDidYouMean = false,
+  } = options;
   const trimmedQuery = query.trim();
 
   if (!trimmedQuery || trimmedQuery.length < 2) {
@@ -1256,15 +1484,23 @@ export async function instantSearch(
 
   // Analyze intent
   const intent = analyzeQueryIntent(trimmedQuery);
+  const selectedTypes =
+    types ||
+    (trimmedQuery.length >= 4
+      ? ["event", "venue", "organizer", "series", "list", "festival"]
+      : ["event", "venue", "organizer"]);
 
   // Perform unified search with all types
   const searchResult = await unifiedSearch({
     query: trimmedQuery,
-    types: ["event", "venue", "organizer", "series", "list", "festival"],
+    types: selectedTypes,
     limit: limit * 2, // Get more to split between suggestions and results
     portalId,
     useIntentAnalysis: true,
     boostExactMatches: true,
+    includeSocialProof,
+    includeFacets,
+    includeDidYouMean,
   });
 
   // Split results: top matches as suggestions, rest as results

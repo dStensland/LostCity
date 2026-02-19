@@ -4,6 +4,7 @@ import { format, startOfDay, addDays, startOfWeek, startOfMonth } from "date-fns
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
 import { applyPortalScopeToQuery, filterByPortalCity } from "@/lib/portal-scope";
+import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
 
 type HighlightsPeriod = "today" | "week" | "month";
 
@@ -74,6 +75,29 @@ const PERIOD_CONFIG: Record<HighlightsPeriod, { limit: number; candidateLimit: n
   week: { limit: 16, candidateLimit: 600, cacheSMaxAge: 900, cacheStaleWhileRevalidate: 1800 },
   month: { limit: 20, candidateLimit: 1000, cacheSMaxAge: 1800, cacheStaleWhileRevalidate: 3600 },
 };
+
+const TONIGHT_RESPONSE_CACHE_MAX_ENTRIES = 120;
+const TONIGHT_CACHE_NAMESPACE = "api:tonight";
+
+async function getCachedTonightResponse(
+  key: string
+): Promise<Record<string, unknown> | null> {
+  return getSharedCacheJson<Record<string, unknown>>(TONIGHT_CACHE_NAMESPACE, key);
+}
+
+async function setCachedTonightResponse(
+  key: string,
+  payload: Record<string, unknown>,
+  ttlMs: number,
+): Promise<void> {
+  await setSharedCacheJson(
+    TONIGHT_CACHE_NAMESPACE,
+    key,
+    payload,
+    ttlMs,
+    { maxEntries: TONIGHT_RESPONSE_CACHE_MAX_ENTRIES }
+  );
+}
 
 // Categories that appeal to young hip crowd
 const HIP_CATEGORIES = ["music", "comedy", "nightlife", "art", "film", "theater", "sports"];
@@ -620,6 +644,12 @@ export async function GET(request: NextRequest) {
     const cacheHeaders = {
       "Cache-Control": `public, s-maxage=${config.cacheSMaxAge}, stale-while-revalidate=${config.cacheStaleWhileRevalidate}`,
     };
+    const cacheTtlMs = config.cacheSMaxAge * 1000;
+    const cacheKey = `${request.nextUrl.searchParams.toString()}|${period}|${Math.floor(Date.now() / cacheTtlMs)}`;
+    const cachedPayload = await getCachedTonightResponse(cacheKey);
+    if (cachedPayload) {
+      return NextResponse.json(cachedPayload, { headers: cacheHeaders });
+    }
 
     const supabase = await createClient();
 
@@ -706,7 +736,9 @@ export async function GET(request: NextRequest) {
               };
             });
 
-            return NextResponse.json({ events: result, period }, { headers: cacheHeaders });
+            const payload = { events: result, period };
+            await setCachedTonightResponse(cacheKey, payload, cacheTtlMs);
+            return NextResponse.json(payload, { headers: cacheHeaders });
           }
         }
       }
@@ -800,7 +832,9 @@ export async function GET(request: NextRequest) {
 
       if (nonFilmResult.error && filmResult.error) {
         console.error("Failed to fetch tonight events:", nonFilmResult.error);
-        return NextResponse.json({ events: [], period }, {
+        const payload = { events: [], period };
+        await setCachedTonightResponse(cacheKey, payload, cacheTtlMs);
+        return NextResponse.json(payload, {
           headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120" }
         });
       }
@@ -853,7 +887,9 @@ export async function GET(request: NextRequest) {
     });
 
     if (typedEvents.length === 0) {
-      return NextResponse.json({ events: [], period }, { headers: cacheHeaders });
+      const payload = { events: [], period };
+      await setCachedTonightResponse(cacheKey, payload, cacheTtlMs);
+      return NextResponse.json(payload, { headers: cacheHeaders });
     }
 
     // PERFORMANCE: Fetch RSVP counts and venue recommendations in parallel
@@ -1223,7 +1259,9 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    return NextResponse.json({ events: result, period }, { headers: cacheHeaders });
+    const payload = { events: result, period };
+    await setCachedTonightResponse(cacheKey, payload, cacheTtlMs);
+    return NextResponse.json(payload, { headers: cacheHeaders });
   } catch (error) {
     console.error("Error in tonight API:", error);
     return NextResponse.json({ events: [], period: "today" }, { status: 500 });

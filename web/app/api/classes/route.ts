@@ -14,6 +14,7 @@ import {
 import { enrichEventsWithSocialProof } from "@/lib/search";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
 import { applyPortalScopeToQuery, filterByPortalCity } from "@/lib/portal-scope";
+import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
 
 const VALID_CLASS_CATEGORIES = [
   "painting",
@@ -35,6 +36,10 @@ const VALID_SKILL_LEVELS = [
   "advanced",
   "all-levels",
 ] as const;
+
+const CLASSES_CACHE_TTL_MS = 90 * 1000;
+const CLASSES_CACHE_NAMESPACE = "api:classes";
+const CLASSES_CACHE_CONTROL = "public, s-maxage=90, stale-while-revalidate=180";
 
 // GET /api/classes — List class events with filters
 export async function GET(request: NextRequest) {
@@ -79,6 +84,27 @@ export async function GET(request: NextRequest) {
   const portalId = portalContext.portalId;
   const portalCity = !portalExclusive ? portalContext.filters.city : undefined;
   const today = new Date().toISOString().split("T")[0];
+  const cacheBucket = Math.floor(Date.now() / CLASSES_CACHE_TTL_MS);
+  const cacheKey = [
+    portalId || "no-portal",
+    portalCity || "all-cities",
+    portalExclusive ? "exclusive" : "shared",
+    searchParams.toString(),
+    cacheBucket,
+  ].join("|");
+  const cachedPayload = await getSharedCacheJson<{
+    classes: unknown[];
+    total: number;
+    limit: number;
+    offset: number;
+  }>(CLASSES_CACHE_NAMESPACE, cacheKey);
+  if (cachedPayload) {
+    return NextResponse.json(cachedPayload, {
+      headers: {
+        "Cache-Control": CLASSES_CACHE_CONTROL,
+      },
+    });
+  }
 
   const buildQuery = (includeFestival: boolean) => {
     const seriesSelect = includeFestival
@@ -221,17 +247,23 @@ export async function GET(request: NextRequest) {
     { allowMissingCity: true }
   );
 
-  return NextResponse.json(
-    {
-      classes: cityScopedClasses,
-      total: portalCity ? cityScopedClasses.length : (count ?? 0),
-      limit,
-      offset,
-    },
-    {
-      headers: {
-        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
-      },
-    }
+  const payload = {
+    classes: cityScopedClasses,
+    total: portalCity ? cityScopedClasses.length : (count ?? 0),
+    limit,
+    offset,
+  };
+  await setSharedCacheJson(
+    CLASSES_CACHE_NAMESPACE,
+    cacheKey,
+    payload,
+    CLASSES_CACHE_TTL_MS,
+    { maxEntries: 300 }
   );
+
+  return NextResponse.json(payload, {
+    headers: {
+      "Cache-Control": CLASSES_CACHE_CONTROL,
+    },
+  });
 }

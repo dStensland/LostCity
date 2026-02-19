@@ -4,6 +4,11 @@ import { format, startOfDay, addDays } from "date-fns";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
 import { applyPortalScopeToQuery, filterByPortalCity } from "@/lib/portal-scope";
+import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
+
+const TRENDING_CACHE_TTL_MS = 60 * 1000;
+const TRENDING_CACHE_NAMESPACE = "api:trending";
+const TRENDING_CACHE_CONTROL = "public, s-maxage=60, stale-while-revalidate=300";
 
 export async function GET(request: NextRequest) {
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
@@ -24,6 +29,23 @@ export async function GET(request: NextRequest) {
         { error: "portal and portal_id parameters must reference the same portal" },
         { status: 400 }
       );
+    }
+    const cacheBucket = Math.floor(now.getTime() / TRENDING_CACHE_TTL_MS);
+    const cacheKey = [
+      portalContext.portalId || "no-portal",
+      portalContext.filters.city || "all-cities",
+      cacheBucket,
+    ].join("|");
+    const cachedPayload = await getSharedCacheJson<{ events: unknown[] }>(
+      TRENDING_CACHE_NAMESPACE,
+      cacheKey
+    );
+    if (cachedPayload) {
+      return NextResponse.json(cachedPayload, {
+        headers: {
+          "Cache-Control": TRENDING_CACHE_CONTROL,
+        },
+      });
     }
     const portalCity = portalContext.filters.city || "Atlanta";
 
@@ -59,7 +81,7 @@ export async function GET(request: NextRequest) {
       .eq("is_active", true)
       .is("canonical_event_id", null)
       .order("start_date", { ascending: true })
-      .limit(200);
+      .limit(120);
 
     eventsQuery = applyPortalScopeToQuery(eventsQuery, {
       portalId: portalContext.portalId,
@@ -117,38 +139,49 @@ export async function GET(request: NextRequest) {
     });
 
     if (!events || events.length === 0) {
-      return NextResponse.json({ events: [] }, {
+      const emptyPayload = { events: [] };
+      await setSharedCacheJson(
+        TRENDING_CACHE_NAMESPACE,
+        cacheKey,
+        emptyPayload,
+        TRENDING_CACHE_TTL_MS,
+        { maxEntries: 200 }
+      );
+      return NextResponse.json(emptyPayload, {
         headers: {
-          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600"
+          "Cache-Control": TRENDING_CACHE_CONTROL
         }
       });
     }
 
     const eventIds = events.map((e) => e.id);
 
-    // Get recent RSVPs (last 48 hours) - this shows momentum
-    const { data: recentRsvps } = await supabase
+    const recentRsvpsPromise = supabase
       .from("event_rsvps")
       .select("event_id")
       .in("event_id", eventIds)
-      .gte("created_at", hours48Ago) as { data: Array<{ event_id: number }> | null };
-
-    // Get total going counts
-    const { data: goingCounts } = await supabase
+      .gte("created_at", hours48Ago);
+    const goingCountsPromise = supabase
       .from("event_rsvps")
       .select("event_id")
       .in("event_id", eventIds)
-      .eq("status", "going") as { data: Array<{ event_id: number }> | null };
+      .eq("status", "going");
+    const [{ data: recentRsvps }, { data: goingCounts }] = await Promise.all([
+      recentRsvpsPromise,
+      goingCountsPromise,
+    ]);
+    const recentRsvpRows = (recentRsvps || []) as Array<{ event_id: number }>;
+    const goingCountRows = (goingCounts || []) as Array<{ event_id: number }>;
 
     // Count recent RSVPs per event
     const recentRsvpCounts: Record<number, number> = {};
-    for (const rsvp of recentRsvps || []) {
+    for (const rsvp of recentRsvpRows) {
       recentRsvpCounts[rsvp.event_id] = (recentRsvpCounts[rsvp.event_id] || 0) + 1;
     }
 
     // Count total going per event
     const totalGoingCounts: Record<number, number> = {};
-    for (const rsvp of goingCounts || []) {
+    for (const rsvp of goingCountRows) {
       totalGoingCounts[rsvp.event_id] = (totalGoingCounts[rsvp.event_id] || 0) + 1;
     }
 
@@ -164,9 +197,18 @@ export async function GET(request: NextRequest) {
     scored.sort((a, b) => b.score - a.score);
     const trending = scored.slice(0, 6);
 
-    return NextResponse.json({ events: trending }, {
+    const payload = { events: trending };
+    await setSharedCacheJson(
+      TRENDING_CACHE_NAMESPACE,
+      cacheKey,
+      payload,
+      TRENDING_CACHE_TTL_MS,
+      { maxEntries: 200 }
+    );
+
+    return NextResponse.json(payload, {
       headers: {
-        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600"
+        "Cache-Control": TRENDING_CACHE_CONTROL
       }
     });
   } catch (error) {

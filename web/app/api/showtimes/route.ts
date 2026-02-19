@@ -7,9 +7,43 @@ import {
 } from "@/lib/rate-limit";
 import { getLocalDateString } from "@/lib/formats";
 import { isChainCinemaVenue } from "@/lib/cinema-filter";
+import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
 
 // Cache 5 min public, 10 min stale-while-revalidate
 export const revalidate = 300;
+
+const SHOWTIMES_PAYLOAD_CACHE_TTL_MS = 2 * 60 * 1000;
+const SHOWTIMES_PAYLOAD_CACHE_MAX_ENTRIES = 120;
+const SHOWTIMES_CACHE_NAMESPACE = "api:showtimes";
+const SHOWTIMES_EVENT_LIMIT = 1200;
+const SHOWTIMES_META_DATE_LIMIT = 2000;
+const SHOWTIMES_META_LOOKAHEAD_DAYS = 60;
+
+async function getCachedShowtimesPayload(
+  key: string,
+): Promise<Record<string, unknown> | null> {
+  return getSharedCacheJson<Record<string, unknown>>(SHOWTIMES_CACHE_NAMESPACE, key);
+}
+
+async function setCachedShowtimesPayload(
+  key: string,
+  payload: Record<string, unknown>
+): Promise<void> {
+  await setSharedCacheJson(
+    SHOWTIMES_CACHE_NAMESPACE,
+    key,
+    payload,
+    SHOWTIMES_PAYLOAD_CACHE_TTL_MS,
+    { maxEntries: SHOWTIMES_PAYLOAD_CACHE_MAX_ENTRIES }
+  );
+}
+
+function addDaysToDateString(date: string, days: number): string {
+  const parsed = new Date(`${date}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return date;
+  parsed.setDate(parsed.getDate() + days);
+  return getLocalDateString(parsed);
+}
 
 type ShowtimeVenue = {
   id: number;
@@ -246,6 +280,24 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  const cacheKey = [
+    date,
+    mode,
+    theaterFilter || "",
+    special ? "1" : "0",
+    includeMeta ? "1" : "0",
+    includeChains ? "1" : "0",
+  ].join("|");
+  const cachedPayload = await getCachedShowtimesPayload(cacheKey);
+  if (cachedPayload) {
+    const cachedResponse = NextResponse.json(cachedPayload);
+    cachedResponse.headers.set(
+      "Cache-Control",
+      "public, s-maxage=300, stale-while-revalidate=600",
+    );
+    return cachedResponse;
+  }
+
   // Fetch ALL film events at cinema venues for this date (both showtime and special).
   // We fetch broadly and split in code to avoid PostgREST join-filter limitations.
   const { data: events, error } = await supabase
@@ -276,7 +328,7 @@ export async function GET(request: NextRequest) {
     .eq("category", "film")
     .not("start_time", "is", null)
     .order("start_time", { ascending: true })
-    .limit(2000);
+    .limit(SHOWTIMES_EVENT_LIMIT);
 
   if (error) {
     return NextResponse.json(
@@ -322,6 +374,8 @@ export async function GET(request: NextRequest) {
 
   // Meta: available dates, theaters, films (for UI controls)
   if (includeMeta) {
+    const dateWindowEnd = addDaysToDateString(date, SHOWTIMES_META_LOOKAHEAD_DAYS);
+
     // Get available dates with showtime-tagged film events.
     // Use client-sent date as lower bound to avoid UTC timezone mismatch on Vercel.
     // Explicit limit to avoid PostgREST default of 1000 truncating dates.
@@ -333,9 +387,10 @@ export async function GET(request: NextRequest) {
         .eq("category", "film")
         .contains("tags", ["showtime"])
         .gte("start_date", date)
+        .lte("start_date", dateWindowEnd)
         .not("start_time", "is", null)
         .order("start_date", { ascending: true })
-        .limit(5000);
+        .limit(SHOWTIMES_META_DATE_LIMIT);
 
       availableDates = [
         ...new Set(
@@ -359,9 +414,10 @@ export async function GET(request: NextRequest) {
         .eq("category", "film")
         .contains("tags", ["showtime"])
         .gte("start_date", date)
+        .lte("start_date", dateWindowEnd)
         .not("start_time", "is", null)
         .order("start_date", { ascending: true })
-        .limit(5000);
+        .limit(SHOWTIMES_META_DATE_LIMIT);
 
       const filteredRows = (
         (dateRows as unknown as
@@ -427,6 +483,8 @@ export async function GET(request: NextRequest) {
       ),
     };
   }
+
+  await setCachedShowtimesPayload(cacheKey, result);
 
   const response = NextResponse.json(result);
   response.headers.set(
