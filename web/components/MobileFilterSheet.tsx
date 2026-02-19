@@ -21,7 +21,7 @@ type FilterOption = {
 
 type FilterGroup = {
   group: string;
-  options: FilterOption[];
+  options: readonly FilterOption[];
 };
 
 interface MobileFilterSheetProps {
@@ -30,13 +30,13 @@ interface MobileFilterSheetProps {
   currentCategories: string[];
   currentDateFilter: string;
   currentFreeOnly: boolean;
-  categoryOptions?: FilterOption[];
+  categoryOptions?: readonly FilterOption[];
   currentTags?: string[];
   currentVibes?: string[];
   currentMood?: string;
-  tagGroups?: FilterGroup[];
-  vibeGroups?: FilterGroup[];
-  moodOptions?: FilterOption[];
+  tagGroups?: readonly FilterGroup[];
+  vibeGroups?: readonly FilterGroup[];
+  moodOptions?: readonly FilterOption[];
   onToggleCategory: (category: string) => void;
   onSetDateFilter: (date: string) => void;
   onToggleFreeOnly: () => void;
