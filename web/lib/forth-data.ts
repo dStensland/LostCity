@@ -21,7 +21,7 @@ import type {
 } from "./forth-types";
 import type { Portal } from "./portal-context";
 import { createClient } from "./supabase/server";
-import { getPortalSourceAccess } from "./federation";
+import { getPortalSourceAccess, type PortalSourceAccess } from "./federation";
 import { getLocalDateString } from "./formats";
 import {
   haversineDistanceKm,
@@ -321,6 +321,13 @@ type DbNextEvent = {
   category: string | null;
 };
 
+export type ForthFeedOptions = {
+  destinationLimit?: number;
+  liveDestinationLimit?: number;
+  includeUpcomingHours?: number;
+  sourceAccess?: PortalSourceAccess;
+};
+
 // ---------------------------------------------------------------------------
 // Section visibility + date range helpers (from feed route)
 // ---------------------------------------------------------------------------
@@ -480,9 +487,12 @@ const EVENT_SELECT = `
  * Simplified version of the feed route — skips holiday sections, nightlife compound mode,
  * social proof counts, and date bucket distribution. FORTH doesn't need those.
  */
-async function fetchFeedSectionsDirect(portal: Portal): Promise<FeedSection[]> {
+async function fetchFeedSectionsDirect(
+  portal: Portal,
+  options: ForthFeedOptions = {}
+): Promise<FeedSection[]> {
   const supabase = await createClient();
-  const federationAccess = await getPortalSourceAccess(portal.id);
+  const federationAccess = options.sourceAccess ?? await getPortalSourceAccess(portal.id);
   const hasSubscribedSources = federationAccess.sourceIds.length > 0;
   const isExclusivePortal = portal.portal_type === "business" && !portal.parent_portal_id;
 
@@ -698,7 +708,10 @@ async function fetchFeedSectionsDirect(portal: Portal): Promise<FeedSection[]> {
  * Fetch nearby destinations with specials directly from Supabase.
  * Replicates core logic from the specials API route.
  */
-async function fetchDestinationsDirect(portal: Portal): Promise<{
+async function fetchDestinationsDirect(
+  portal: Portal,
+  options: ForthFeedOptions = {}
+): Promise<{
   destinations: Destination[];
   liveDestinations: Destination[];
   specialsMeta: SpecialsMeta | null;
@@ -711,10 +724,12 @@ async function fetchDestinationsDirect(portal: Portal): Promise<{
   const centerLat = center[0];
   const centerLng = center[1];
   const radiusKm = portal.filters?.geo_radius_km ?? 5;
-  const includeUpcomingHours = 5;
+  const includeUpcomingHours = options.includeUpcomingHours ?? 5;
+  const destinationLimit = Math.max(1, Math.min(options.destinationLimit ?? 120, 200));
+  const liveDestinationLimit = Math.max(1, Math.min(options.liveDestinationLimit ?? 36, 100));
 
   const supabase = await createClient();
-  const federationAccess = await getPortalSourceAccess(portal.id);
+  const federationAccess = options.sourceAccess ?? await getPortalSourceAccess(portal.id);
   const hasSubscribedSources = federationAccess.sourceIds.length > 0;
   const isExclusivePortal = portal.portal_type === "business" && !portal.parent_portal_id;
 
@@ -865,14 +880,14 @@ async function fetchDestinationsDirect(portal: Portal): Promise<{
     .sort((a, b) => b._score !== a._score ? b._score - a._score : a.distance_km - b.distance_km);
 
   // Split into all destinations and live-only
-  const destinations: Destination[] = allDestinations.slice(0, 120).map((destination) => {
+  const destinations: Destination[] = allDestinations.slice(0, destinationLimit).map((destination) => {
     const { _score: score, ...rest } = destination;
     void score;
     return rest;
   });
   const liveDestinations: Destination[] = allDestinations
     .filter((d) => d.special_state === "active_now")
-    .slice(0, 36)
+    .slice(0, liveDestinationLimit)
     .map((destination) => {
       const { _score: score, ...rest } = destination;
       void score;
@@ -901,10 +916,19 @@ async function fetchDestinationsDirect(portal: Portal): Promise<{
  * Fetch all feed data for the FORTH portal via direct Supabase queries.
  * No HTTP self-fetch — saves 200-500ms per request vs the old approach.
  */
-export async function getForthFeed(portal: Portal): Promise<ForthFeedData> {
+export async function getForthFeed(
+  portal: Portal,
+  options: ForthFeedOptions = {}
+): Promise<ForthFeedData> {
+  const sourceAccess = options.sourceAccess ?? await getPortalSourceAccess(portal.id);
+  const resolvedOptions: ForthFeedOptions = {
+    ...options,
+    sourceAccess,
+  };
+
   const [sections, destResult] = await Promise.all([
-    fetchFeedSectionsDirect(portal),
-    fetchDestinationsDirect(portal),
+    fetchFeedSectionsDirect(portal, resolvedOptions),
+    fetchDestinationsDirect(portal, resolvedOptions),
   ]);
 
   return {

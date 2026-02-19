@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import { getPortalBySlug } from "@/lib/portal";
 import { getPortalSourceAccess } from "@/lib/federation";
-import { isValidUUID, parseFloatParam, parseIntParam } from "@/lib/api-utils";
+import { parseFloatParam, parseIntParam } from "@/lib/api-utils";
 import { runConciergeOrchestration } from "@/lib/agents/concierge/orchestrator";
+import { getForthFeed } from "@/lib/forth-data";
+import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
+import { logger } from "@/lib/logger";
+import type { Portal } from "@/lib/portal-context";
 import type {
   ConciergeDestination,
   FeedSection,
@@ -12,39 +16,52 @@ import type {
 
 export const dynamic = "force-dynamic";
 
+const ORCHESTRATED_CACHE_NAMESPACE = "api:concierge-orch-data";
+const ORCHESTRATED_CACHE_TTL_MS = 30 * 1000;
+const ORCHESTRATED_CACHE_MAX_ENTRIES = 120;
+
 type RouteContext = {
   params: Promise<{ slug: string }>;
 };
 
-type PortalFilters = {
-  geo_center?: [number, number];
-  geo_radius_km?: number;
-};
-
-type PortalRow = {
-  id: string;
-  slug: string;
-  name: string;
-  filters: PortalFilters | string | null;
-};
-
-function parsePortalFilters(raw: PortalFilters | string | null | undefined): PortalFilters {
-  if (!raw) return {};
-  if (typeof raw === "string") {
-    try {
-      return JSON.parse(raw) as PortalFilters;
-    } catch {
-      return {};
-    }
-  }
-  return raw;
+function createRequestId(): string {
+  const base =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID().split("-")[0]
+      : Math.random().toString(36).slice(2, 10);
+  return `CA-${Date.now().toString(36).toUpperCase()}-${base.toUpperCase()}`;
 }
 
-function createRequestId(): string {
-  const base = typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? crypto.randomUUID().split("-")[0]
-    : Math.random().toString(36).slice(2, 10);
-  return `CA-${Date.now().toString(36).toUpperCase()}-${base.toUpperCase()}`;
+function buildStableSearchParamsKey(searchParams: URLSearchParams): string {
+  return Array.from(searchParams.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+    .join("&");
+}
+
+function applyGeoOverrides(
+  portal: Portal,
+  latParam: number | undefined,
+  lngParam: number | undefined,
+  radiusParam: number | undefined,
+): Portal {
+  const filters = { ...(portal.filters || {}) };
+  const existingCenter = Array.isArray(filters.geo_center) ? filters.geo_center : undefined;
+
+  const centerLat = latParam ?? existingCenter?.[0];
+  const centerLng = lngParam ?? existingCenter?.[1];
+  if (centerLat !== undefined && centerLng !== undefined) {
+    filters.geo_center = [centerLat, centerLng];
+  }
+
+  if (radiusParam !== undefined) {
+    filters.geo_radius_km = radiusParam;
+  }
+
+  return {
+    ...portal,
+    filters,
+  };
 }
 
 export async function GET(request: NextRequest, context: RouteContext) {
@@ -62,103 +79,87 @@ export async function GET(request: NextRequest, context: RouteContext) {
   const lngParam = parseFloatParam(searchParams.get("lng"));
   const radiusParam = parseFloatParam(searchParams.get("radius_km"));
 
-  const supabase = await createClient();
-  const { data: portalData, error: portalError } = await supabase
-    .from("portals")
-    .select("id, slug, name, filters")
-    .eq("slug", slug)
-    .eq("status", "active")
-    .maybeSingle();
-
-  const portal = portalData as PortalRow | null;
-  if (portalError || !portal || !isValidUUID(portal.id)) {
+  const portal = await getPortalBySlug(slug);
+  if (!portal) {
     return NextResponse.json({ error: "Portal not found" }, { status: 404 });
   }
 
-  const parsedFilters = parsePortalFilters(portal.filters);
-  const center = parsedFilters.geo_center;
-  const lat = latParam ?? center?.[0];
-  const lng = lngParam ?? center?.[1];
-  const radius = radiusParam ?? parsedFilters.geo_radius_km;
+  const effectivePortal = applyGeoOverrides(
+    portal,
+    latParam ?? undefined,
+    lngParam ?? undefined,
+    radiusParam ?? undefined,
+  );
 
-  const sharedParams = new URLSearchParams();
-  if (lat !== null && lat !== undefined) sharedParams.set("lat", String(lat));
-  if (lng !== null && lng !== undefined) sharedParams.set("lng", String(lng));
-  if (radius !== null && radius !== undefined) sharedParams.set("radius_km", String(radius));
+  const cacheKey = `${effectivePortal.id}|${buildStableSearchParamsKey(searchParams)}`;
 
-  const allParams = new URLSearchParams(sharedParams);
-  allParams.set("include_upcoming_hours", String(includeUpcomingHours));
-  allParams.set("limit", String(limit));
+  try {
+    const payload = await getOrSetSharedCacheJson<Record<string, unknown>>(
+      ORCHESTRATED_CACHE_NAMESPACE,
+      cacheKey,
+      ORCHESTRATED_CACHE_TTL_MS,
+      async () => {
+        const requestId = createRequestId();
+        const sourceAccess = await getPortalSourceAccess(effectivePortal.id);
+        const feedData = await getForthFeed(effectivePortal, {
+          destinationLimit: limit,
+          liveDestinationLimit: liveLimit,
+          includeUpcomingHours,
+          sourceAccess,
+        });
 
-  const liveParams = new URLSearchParams(sharedParams);
-  liveParams.set("active_now", "true");
-  liveParams.set("limit", String(liveLimit));
+        const sections = (Array.isArray(feedData.sections)
+          ? feedData.sections
+          : []) as FeedSection[];
+        const destinations = (Array.isArray(feedData.destinations)
+          ? feedData.destinations
+          : []) as ConciergeDestination[];
+        const liveDestinations = (Array.isArray(feedData.liveDestinations)
+          ? feedData.liveDestinations
+          : []) as ConciergeDestination[];
+        const sourceDetails = sourceAccess.accessDetails as SourceAccessDetail[];
 
-  const requestId = createRequestId();
-  const baseOrigin = url.origin;
+        const orchestration = runConciergeOrchestration({
+          requestId,
+          now: new Date(),
+          portal: {
+            id: effectivePortal.id,
+            slug: effectivePortal.slug,
+            name: effectivePortal.name,
+          },
+          session: {
+            persona: searchParams.get("guest_persona"),
+            intent: searchParams.get("concierge_intent"),
+            view: searchParams.get("concierge_view"),
+            discoveryFocus: searchParams.get("concierge_focus"),
+            foodFocus: searchParams.get("concierge_food_focus"),
+            mode: searchParams.get("concierge_mode"),
+          },
+          sourceAccess: sourceDetails,
+          sections,
+          destinations,
+          liveDestinations,
+        });
 
-  const [feedRes, allDestRes, liveDestRes, sourceAccess] = await Promise.all([
-    fetch(`${baseOrigin}/api/portals/${slug}/feed`, { cache: "no-store" }),
-    fetch(`${baseOrigin}/api/portals/${slug}/destinations/specials?${allParams.toString()}`, { cache: "no-store" }),
-    fetch(`${baseOrigin}/api/portals/${slug}/destinations/specials?${liveParams.toString()}`, { cache: "no-store" }),
-    getPortalSourceAccess(portal.id),
-  ]);
-
-  if (!feedRes.ok || !allDestRes.ok || !liveDestRes.ok) {
-    return NextResponse.json(
-      {
-        error: "Failed to assemble concierge orchestration payload",
-        statuses: {
-          feed: feedRes.status,
-          destinations_all: allDestRes.status,
-          destinations_live: liveDestRes.status,
-        },
+        return {
+          ...orchestration,
+          data: {
+            sections,
+            destinations,
+            live_destinations: liveDestinations,
+            meta: feedData.specialsMeta ?? null,
+          },
+        };
       },
-      { status: 502 }
+      { maxEntries: ORCHESTRATED_CACHE_MAX_ENTRIES },
+    );
+
+    return NextResponse.json(payload);
+  } catch (error) {
+    logger.error("Concierge orchestrated API error:", error);
+    return NextResponse.json(
+      { error: "Failed to assemble concierge orchestration payload" },
+      { status: 500 },
     );
   }
-
-  const [feedData, allDestData, liveDestData] = await Promise.all([
-    feedRes.json() as Promise<{ sections?: FeedSection[] }>,
-    allDestRes.json() as Promise<{ destinations?: ConciergeDestination[]; meta?: unknown }>,
-    liveDestRes.json() as Promise<{ destinations?: ConciergeDestination[] }>,
-  ]);
-
-  const sections = Array.isArray(feedData.sections) ? feedData.sections : [];
-  const destinations = Array.isArray(allDestData.destinations) ? allDestData.destinations : [];
-  const liveDestinations = Array.isArray(liveDestData.destinations) ? liveDestData.destinations : [];
-  const sourceDetails = sourceAccess.accessDetails as SourceAccessDetail[];
-
-  const orchestration = runConciergeOrchestration({
-    requestId,
-    now: new Date(),
-    portal: {
-      id: portal.id,
-      slug: portal.slug,
-      name: portal.name,
-    },
-    session: {
-      persona: searchParams.get("guest_persona"),
-      intent: searchParams.get("concierge_intent"),
-      view: searchParams.get("concierge_view"),
-      discoveryFocus: searchParams.get("concierge_focus"),
-      foodFocus: searchParams.get("concierge_food_focus"),
-      mode: searchParams.get("concierge_mode"),
-    },
-    sourceAccess: sourceDetails,
-    sections,
-    destinations,
-    liveDestinations,
-  });
-
-  return NextResponse.json({
-    ...orchestration,
-    data: {
-      sections,
-      destinations,
-      live_destinations: liveDestinations,
-      meta: allDestData.meta ?? null,
-    },
-  });
 }
-

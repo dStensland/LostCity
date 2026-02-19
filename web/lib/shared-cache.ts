@@ -6,6 +6,7 @@ type MemoryCacheEntry = {
 };
 
 const memoryCache = new Map<string, MemoryCacheEntry>();
+const inFlightLoads = new Map<string, Promise<unknown>>();
 let redisClient: Redis | null | undefined;
 const SHARED_CACHE_READ_TIMEOUT_MS = Number.parseInt(
   process.env.SHARED_CACHE_READ_TIMEOUT_MS || "80",
@@ -163,5 +164,40 @@ export async function setSharedCacheJson<T>(
     );
   } catch {
     // Ignore redis write failures; memory cache already has the value.
+  }
+}
+
+export async function getOrSetSharedCacheJson<T>(
+  namespace: string,
+  key: string,
+  ttlMs: number,
+  loader: () => Promise<T>,
+  options?: { maxEntries?: number },
+): Promise<T> {
+  const cached = await getSharedCacheJson<T>(namespace, key);
+  if (cached !== null) {
+    return cached;
+  }
+
+  const namespacedKey = buildKey(namespace, key);
+  const existingLoad = inFlightLoads.get(namespacedKey);
+  if (existingLoad) {
+    return existingLoad as Promise<T>;
+  }
+
+  const loadPromise = (async () => {
+    const loadedValue = await loader();
+    await setSharedCacheJson(namespace, key, loadedValue, ttlMs, options);
+    return loadedValue;
+  })();
+
+  inFlightLoads.set(namespacedKey, loadPromise);
+  try {
+    return await loadPromise;
+  } finally {
+    const currentLoad = inFlightLoads.get(namespacedKey);
+    if (currentLoad === loadPromise) {
+      inFlightLoads.delete(namespacedKey);
+    }
   }
 }

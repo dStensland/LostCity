@@ -7,7 +7,7 @@ import { isValidUUID } from "@/lib/api-utils";
 import { isSpotOpen, DESTINATION_CATEGORIES } from "@/lib/spots";
 import { logger } from "@/lib/logger";
 import { applyPortalScopeToQuery, filterByPortalCity } from "@/lib/portal-scope";
-import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
+import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
 
 type RouteContext = {
   params: Promise<{ slug: string }>;
@@ -16,28 +16,6 @@ type RouteContext = {
 const HAPPENING_NOW_CACHE_TTL_MS = 30 * 1000;
 const HAPPENING_NOW_CACHE_MAX_ENTRIES = 120;
 const HAPPENING_NOW_CACHE_NAMESPACE = "api:happening-now";
-
-async function getCachedHappeningNowPayload(
-  key: string,
-): Promise<Record<string, unknown> | null> {
-  return getSharedCacheJson<Record<string, unknown>>(
-    HAPPENING_NOW_CACHE_NAMESPACE,
-    key
-  );
-}
-
-async function setCachedHappeningNowPayload(
-  key: string,
-  payload: Record<string, unknown>,
-): Promise<void> {
-  await setSharedCacheJson(
-    HAPPENING_NOW_CACHE_NAMESPACE,
-    key,
-    payload,
-    HAPPENING_NOW_CACHE_TTL_MS,
-    { maxEntries: HAPPENING_NOW_CACHE_MAX_ENTRIES }
-  );
-}
 
 // GET /api/portals/[slug]/happening-now - Get events happening right now
 export async function GET(request: NextRequest, context: RouteContext) {
@@ -55,14 +33,6 @@ export async function GET(request: NextRequest, context: RouteContext) {
   const currentMinute = now.getMinutes();
   const currentTimeStr = `${currentHour.toString().padStart(2, "0")}:${currentMinute.toString().padStart(2, "0")}:00`;
   const cacheKey = `${slug}|${countOnly ? "count" : "events"}|${limit}|${today}`;
-  const cachedPayload = await getCachedHappeningNowPayload(cacheKey);
-  if (cachedPayload) {
-    return NextResponse.json(cachedPayload, {
-      headers: {
-        "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
-      },
-    });
-  }
 
   const supabase = await createClient();
 
@@ -85,13 +55,18 @@ export async function GET(request: NextRequest, context: RouteContext) {
         ? (portal.filters as { city: string }).city
         : undefined;
 
-    // Build query for events happening now
-    // An event is "happening now" if:
-    // 1. It's today
-    // 2. It has started (start_time <= now)
-    // 3. It hasn't ended (end_time > now, or no end_time and within 3 hours of start)
+    const payload = await getOrSetSharedCacheJson<Record<string, unknown>>(
+      HAPPENING_NOW_CACHE_NAMESPACE,
+      cacheKey,
+      HAPPENING_NOW_CACHE_TTL_MS,
+      async () => {
+        // Build query for events happening now
+        // An event is "happening now" if:
+        // 1. It's today
+        // 2. It has started (start_time <= now)
+        // 3. It hasn't ended (end_time > now, or no end_time and within 3 hours of start)
 
-    let query = supabase
+        let query = supabase
       .from("events")
       .select(countOnly ? "*" : `
         id,
@@ -107,70 +82,68 @@ export async function GET(request: NextRequest, context: RouteContext) {
       `, { count: countOnly ? "exact" : undefined, head: countOnly })
       .eq("start_date", today)
       .eq("is_all_day", false)
-      .not("start_time", "is", null)
-      .lte("start_time", currentTimeStr);
+        .not("start_time", "is", null)
+        .lte("start_time", currentTimeStr);
 
-    query = applyPortalScopeToQuery(query, {
-      portalId: portal.id,
-      portalExclusive: portal.portal_type === "business",
-      publicOnlyWhenNoPortal: true,
-    });
+        query = applyPortalScopeToQuery(query, {
+          portalId: portal.id,
+          portalExclusive: portal.portal_type === "business",
+          publicOnlyWhenNoPortal: true,
+        });
 
     // Order by start time
-    if (!countOnly) {
-      query = query.order("start_time", { ascending: true }).limit(limit);
-    }
+        if (!countOnly) {
+          query = query.order("start_time", { ascending: true }).limit(limit);
+        }
 
-    const { data, count, error } = await query;
+        const { data, count, error } = await query;
 
-    if (error) {
-      logger.error("Error fetching happening now events:", error);
-      return NextResponse.json({ error: "Failed to fetch events" }, { status: 500 });
-    }
+        if (error) {
+          logger.error("Error fetching happening now events:", error);
+          throw error;
+        }
 
-    if (countOnly) {
-      // Also count open spots for the banner
-      const placeTypes = Object.keys(DESTINATION_CATEGORIES).flatMap(
-        (key) => DESTINATION_CATEGORIES[key as keyof typeof DESTINATION_CATEGORIES]
-      );
-      const typeFilters = placeTypes.map((t) => `venue_type.eq.${t}`).join(",");
+        if (countOnly) {
+          // Also count open spots for the banner
+          const placeTypes = Object.keys(DESTINATION_CATEGORIES).flatMap(
+            (key) => DESTINATION_CATEGORIES[key as keyof typeof DESTINATION_CATEGORIES]
+          );
+          const typeFilters = placeTypes.map((t) => `venue_type.eq.${t}`).join(",");
 
       type HoursData = Record<string, { open: string; close: string } | null>;
       type SpotRow = { id: number; hours: HoursData | null };
 
-      let spotsOpenQuery = supabase
-        .from("venues")
-        .select("id, hours")
-        .eq("active", true)
-        .or(typeFilters);
+          let spotsOpenQuery = supabase
+            .from("venues")
+            .select("id, hours")
+            .eq("active", true)
+            .or(typeFilters);
 
-      if (portalCity) {
-        spotsOpenQuery = spotsOpenQuery.in("city", [portalCity]);
-      }
+          if (portalCity) {
+            spotsOpenQuery = spotsOpenQuery.in("city", [portalCity]);
+          }
 
-      const { data: spots } = await spotsOpenQuery
-        .limit(1500) as { data: SpotRow[] | null };
+          const { data: spots } = await spotsOpenQuery
+            .limit(1500) as { data: SpotRow[] | null };
 
       // Count spots that are currently open (only those with known hours)
-      let openSpotCount = 0;
-      for (const spot of spots || []) {
-        if (!spot.hours) continue; // Skip spots with unknown hours
-        try {
-          const result = isSpotOpen(spot.hours, false);
-          if (result.isOpen) openSpotCount++;
-        } catch {
-          // If hours parsing fails, skip this spot
-        }
-      }
+          let openSpotCount = 0;
+          for (const spot of spots || []) {
+            if (!spot.hours) continue; // Skip spots with unknown hours
+            try {
+              const result = isSpotOpen(spot.hours, false);
+              if (result.isOpen) openSpotCount++;
+            } catch {
+              // If hours parsing fails, skip this spot
+            }
+          }
 
-      const payload = {
-        count: (count || 0) + openSpotCount,
-        eventCount: count || 0,
-        spotCount: openSpotCount,
-      };
-      await setCachedHappeningNowPayload(cacheKey, payload);
-      return NextResponse.json(payload);
-    }
+          return {
+            count: (count || 0) + openSpotCount,
+            eventCount: count || 0,
+            spotCount: openSpotCount,
+          };
+        }
 
     // Filter events that haven't ended yet
     interface EventRow {
@@ -210,19 +183,19 @@ export async function GET(request: NextRequest, context: RouteContext) {
       (event: EventRow) => !event.tags?.includes("showtime")
     );
 
-    const payload = {
-      events: filteredEvents,
-      count: filteredEvents.length,
-    };
-    await setCachedHappeningNowPayload(cacheKey, payload);
-    return NextResponse.json(
-      payload,
-      {
-        headers: {
-          "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
-        },
-      }
+        return {
+          events: filteredEvents,
+          count: filteredEvents.length,
+        };
+      },
+      { maxEntries: HAPPENING_NOW_CACHE_MAX_ENTRIES }
     );
+
+    return NextResponse.json(payload, {
+      headers: {
+        "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
+      },
+    });
   } catch (error) {
     logger.error("Error in happening-now GET:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

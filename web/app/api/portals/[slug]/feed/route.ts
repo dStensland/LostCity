@@ -41,6 +41,7 @@ const FEED_CACHE_TTL_MS = 5 * 60 * 1000;
 const FEED_CACHE_MAX_ENTRIES = 200;
 const FEED_CACHE_CONTROL = "public, s-maxage=300, stale-while-revalidate=3600";
 const FEED_CACHE_NAMESPACE = "api:portal-feed";
+const FEED_IN_FLIGHT_LOADS = new Map<string, Promise<unknown>>();
 const HOLIDAY_EVENTS_CACHE_TTL_MS = 12 * 60 * 60 * 1000;
 const HOLIDAY_EVENTS_CACHE_NAMESPACE = "api:portal-feed:holidays";
 
@@ -583,6 +584,18 @@ export async function GET(request: NextRequest, { params }: Props) {
 
     return true;
   });
+
+  const existingFeedLoad = FEED_IN_FLIGHT_LOADS.get(cacheKey);
+  if (existingFeedLoad) {
+    const payload = await existingFeedLoad;
+    return NextResponse.json(payload, {
+      headers: {
+        "Cache-Control": FEED_CACHE_CONTROL,
+      },
+    });
+  }
+
+  const feedLoadPromise = (async () => {
 
   // Collect all curated and pinned event IDs from sections
   const eventIds = new Set<number>();
@@ -1992,10 +2005,21 @@ export async function GET(request: NextRequest, { params }: Props) {
   };
 
   await setCachedFeedPayload(cacheKey, responsePayload);
+  return responsePayload;
+  })();
 
-  return NextResponse.json(responsePayload, {
-    headers: {
-      "Cache-Control": FEED_CACHE_CONTROL,
-    },
-  });
+  FEED_IN_FLIGHT_LOADS.set(cacheKey, feedLoadPromise);
+  try {
+    const responsePayload = await feedLoadPromise;
+    return NextResponse.json(responsePayload, {
+      headers: {
+        "Cache-Control": FEED_CACHE_CONTROL,
+      },
+    });
+  } finally {
+    const currentFeedLoad = FEED_IN_FLIGHT_LOADS.get(cacheKey);
+    if (currentFeedLoad === feedLoadPromise) {
+      FEED_IN_FLIGHT_LOADS.delete(cacheKey);
+    }
+  }
 }

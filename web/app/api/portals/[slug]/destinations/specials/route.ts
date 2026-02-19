@@ -7,7 +7,7 @@ import { getLocalDateString } from "@/lib/formats";
 import { getProximityTier, getProximityLabel, getWalkingMinutes, haversineDistanceKm, type ProximityTier } from "@/lib/geo";
 import { logger } from "@/lib/logger";
 import { applyFederatedPortalScopeToQuery } from "@/lib/portal-scope";
-import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
+import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
 
 export const dynamic = "force-dynamic";
 
@@ -95,28 +95,6 @@ const CONFIDENCE_SCORE: Record<string, number> = {
 const SPECIALS_CACHE_TTL_MS = 60 * 1000;
 const SPECIALS_CACHE_MAX_ENTRIES = 120;
 const SPECIALS_CACHE_NAMESPACE = "api:portal-specials";
-
-async function getCachedSpecialsPayload(
-  key: string
-): Promise<Record<string, unknown> | null> {
-  return getSharedCacheJson<Record<string, unknown>>(
-    SPECIALS_CACHE_NAMESPACE,
-    key
-  );
-}
-
-async function setCachedSpecialsPayload(
-  key: string,
-  payload: Record<string, unknown>
-): Promise<void> {
-  await setSharedCacheJson(
-    SPECIALS_CACHE_NAMESPACE,
-    key,
-    payload,
-    SPECIALS_CACHE_TTL_MS,
-    { maxEntries: SPECIALS_CACHE_MAX_ENTRIES }
-  );
-}
 
 function getCurrentISOWeekday(now: Date): number {
   const jsDay = now.getDay(); // 0=Sun
@@ -289,14 +267,6 @@ export async function GET(request: NextRequest, context: RouteContext) {
   const typeFilter = searchParams.get("types")?.split(",").map((v) => v.trim()).filter(Boolean) ?? [];
   const tierFilter = searchParams.get("tiers")?.split(",").map((v) => v.trim()).filter(Boolean) as ProximityTier[] | undefined;
   const cacheKey = `${slug}|${buildStableSearchParamsKey(searchParams)}`;
-  const cachedPayload = await getCachedSpecialsPayload(cacheKey);
-  if (cachedPayload) {
-    return NextResponse.json(cachedPayload, {
-      headers: {
-        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
-      },
-    });
-  }
 
   const supabase = await createClient();
 
@@ -333,7 +303,12 @@ export async function GET(request: NextRequest, context: RouteContext) {
   const lngDelta = radiusKm / (111 * Math.cos((centerLat * Math.PI) / 180));
 
   try {
-    let venuesQuery = supabase
+    const payload = await getOrSetSharedCacheJson<Record<string, unknown>>(
+      SPECIALS_CACHE_NAMESPACE,
+      cacheKey,
+      SPECIALS_CACHE_TTL_MS,
+      async () => {
+        let venuesQuery = supabase
       .from("venues")
       .select("id, name, slug, address, neighborhood, venue_type, lat, lng, city, image_url, short_description, vibes")
       .neq("active", false)
@@ -344,9 +319,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
       .gte("lng", centerLng - lngDelta)
       .lte("lng", centerLng + lngDelta);
 
-    if (cityFilter.length > 0) {
-      venuesQuery = venuesQuery.in("city", cityFilter);
-    }
+        if (cityFilter.length > 0) {
+          venuesQuery = venuesQuery.in("city", cityFilter);
+        }
 
     const venueFetchCap = Math.min(1200, Math.max(300, limit * 15));
     const { data: venuesData, error: venuesError } = await venuesQuery.limit(
@@ -354,7 +329,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     );
     if (venuesError) {
       logger.error("Destination specials - venue fetch error:", venuesError);
-      return NextResponse.json({ destinations: [], error: "Failed to fetch venues" }, { status: 500 });
+      throw venuesError;
     }
 
     const venuesInRadius = ((venuesData || []) as VenueRow[])
@@ -378,7 +353,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       } => venue !== null);
 
     if (venuesInRadius.length === 0) {
-      return NextResponse.json({
+      return {
         destinations: [],
         meta: {
           total: 0,
@@ -387,7 +362,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
           center: { lat: centerLat, lng: centerLng },
           radius_km: radiusKm,
         },
-      });
+      };
     }
 
     const candidateVenues = venuesInRadius
@@ -408,7 +383,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const { data: specialsData, error: specialsError } = await specialsQuery;
     if (specialsError) {
       logger.error("Destination specials - specials fetch error:", specialsError);
-      return NextResponse.json({ destinations: [], error: "Failed to fetch specials" }, { status: 500 });
+      throw specialsError;
     }
 
     const specialsByVenue = new Map<number, SpecialRow[]>();
@@ -607,31 +582,30 @@ export async function GET(request: NextRequest, context: RouteContext) {
       },
     };
 
-    const payload = {
-      portal: {
-        id: portal.id,
-        slug: portal.slug,
-        name: portal.name,
+        return {
+          portal: {
+            id: portal.id,
+            slug: portal.slug,
+            name: portal.name,
+          },
+          destinations,
+          meta: {
+            ...totals,
+            center: { lat: centerLat, lng: centerLng },
+            radius_km: radiusKm,
+            include_upcoming_hours: includeUpcomingHours,
+            active_now_only: activeNowOnly,
+          },
+        };
       },
-      destinations,
-      meta: {
-        ...totals,
-        center: { lat: centerLat, lng: centerLng },
-        radius_km: radiusKm,
-        include_upcoming_hours: includeUpcomingHours,
-        active_now_only: activeNowOnly,
-      },
-    };
-    await setCachedSpecialsPayload(cacheKey, payload);
-
-    return NextResponse.json(
-      payload,
-      {
-        headers: {
-          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
-        },
-      }
+      { maxEntries: SPECIALS_CACHE_MAX_ENTRIES }
     );
+
+    return NextResponse.json(payload, {
+      headers: {
+        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
+      },
+    });
   } catch (error) {
     logger.error("Destination specials API error:", error);
     return NextResponse.json({ destinations: [], error: "Failed to fetch destination specials" }, { status: 500 });

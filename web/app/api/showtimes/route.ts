@@ -7,7 +7,7 @@ import {
 } from "@/lib/rate-limit";
 import { getLocalDateString } from "@/lib/formats";
 import { isChainCinemaVenue } from "@/lib/cinema-filter";
-import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
+import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
 
 // Cache 5 min public, 10 min stale-while-revalidate
 export const revalidate = 300;
@@ -18,25 +18,6 @@ const SHOWTIMES_CACHE_NAMESPACE = "api:showtimes";
 const SHOWTIMES_EVENT_LIMIT = 1200;
 const SHOWTIMES_META_DATE_LIMIT = 2000;
 const SHOWTIMES_META_LOOKAHEAD_DAYS = 60;
-
-async function getCachedShowtimesPayload(
-  key: string,
-): Promise<Record<string, unknown> | null> {
-  return getSharedCacheJson<Record<string, unknown>>(SHOWTIMES_CACHE_NAMESPACE, key);
-}
-
-async function setCachedShowtimesPayload(
-  key: string,
-  payload: Record<string, unknown>
-): Promise<void> {
-  await setSharedCacheJson(
-    SHOWTIMES_CACHE_NAMESPACE,
-    key,
-    payload,
-    SHOWTIMES_PAYLOAD_CACHE_TTL_MS,
-    { maxEntries: SHOWTIMES_PAYLOAD_CACHE_MAX_ENTRIES }
-  );
-}
 
 function addDaysToDateString(date: string, days: number): string {
   const parsed = new Date(`${date}T00:00:00`);
@@ -288,22 +269,17 @@ export async function GET(request: NextRequest) {
     includeMeta ? "1" : "0",
     includeChains ? "1" : "0",
   ].join("|");
-  const cachedPayload = await getCachedShowtimesPayload(cacheKey);
-  if (cachedPayload) {
-    const cachedResponse = NextResponse.json(cachedPayload);
-    cachedResponse.headers.set(
-      "Cache-Control",
-      "public, s-maxage=300, stale-while-revalidate=600",
-    );
-    return cachedResponse;
-  }
-
-  // Fetch ALL film events at cinema venues for this date (both showtime and special).
-  // We fetch broadly and split in code to avoid PostgREST join-filter limitations.
-  const { data: events, error } = await supabase
-    .from("events")
-    .select(
-      `
+  const result = await getOrSetSharedCacheJson<Record<string, unknown>>(
+    SHOWTIMES_CACHE_NAMESPACE,
+    cacheKey,
+    SHOWTIMES_PAYLOAD_CACHE_TTL_MS,
+    async () => {
+      // Fetch ALL film events at cinema venues for this date (both showtime and special).
+      // We fetch broadly and split in code to avoid PostgREST join-filter limitations.
+      const { data: events, error } = await supabase
+        .from("events")
+        .select(
+          `
       id,
       title,
       start_time,
@@ -323,58 +299,55 @@ export async function GET(request: NextRequest) {
         image_url
       )
     `,
-    )
-    .eq("start_date", date)
-    .eq("category", "film")
-    .not("start_time", "is", null)
-    .order("start_time", { ascending: true })
-    .limit(SHOWTIMES_EVENT_LIMIT);
+        )
+        .eq("start_date", date)
+        .eq("category", "film")
+        .not("start_time", "is", null)
+        .order("start_time", { ascending: true })
+        .limit(SHOWTIMES_EVENT_LIMIT);
 
-  if (error) {
-    return NextResponse.json(
-      { error: "Failed to fetch showtimes" },
-      { status: 500 },
-    );
-  }
+      if (error) {
+        throw error;
+      }
 
-  const typedEvents = (events as unknown as ShowtimeEvent[] | null) || [];
-  const venueFilteredEvents = includeChains
-    ? typedEvents
-    : typedEvents.filter((event) => !isChainCinemaVenue(event.venue));
+      const typedEvents = (events as unknown as ShowtimeEvent[] | null) || [];
+      const venueFilteredEvents = includeChains
+        ? typedEvents
+        : typedEvents.filter((event) => !isChainCinemaVenue(event.venue));
 
-  // Split into regular showtimes vs special screenings
-  const regularEvents = venueFilteredEvents.filter((e) =>
-    (e.tags || []).includes("showtime"),
-  );
-  const specialEvents = venueFilteredEvents.filter(
-    (e) => !(e.tags || []).includes("showtime"),
-  );
+      // Split into regular showtimes vs special screenings
+      const regularEvents = venueFilteredEvents.filter((e) =>
+        (e.tags || []).includes("showtime"),
+      );
+      const specialEvents = venueFilteredEvents.filter(
+        (e) => !(e.tags || []).includes("showtime"),
+      );
 
-  // Choose which events to display based on special flag
-  let displayEvents = special ? specialEvents : regularEvents;
+      // Choose which events to display based on special flag
+      let displayEvents = special ? specialEvents : regularEvents;
 
-  // Apply theater filter in code
-  if (theaterFilter) {
-    displayEvents = displayEvents.filter(
-      (e) => e.venue?.slug === theaterFilter,
-    );
-  }
+      // Apply theater filter in code
+      if (theaterFilter) {
+        displayEvents = displayEvents.filter(
+          (e) => e.venue?.slug === theaterFilter,
+        );
+      }
 
-  // Build film map and response
-  const filmMap = buildFilmMap(displayEvents);
+      // Build film map and response
+      const filmMap = buildFilmMap(displayEvents);
 
-  // Build response
-  const result: Record<string, unknown> = { date };
+      // Build response
+      const responsePayload: Record<string, unknown> = { date };
 
-  if (mode === "by-theater") {
-    result.theaters = toTheatersResponse(filmMap);
-  } else {
-    result.films = toFilmsResponse(filmMap);
-  }
+      if (mode === "by-theater") {
+        responsePayload.theaters = toTheatersResponse(filmMap);
+      } else {
+        responsePayload.films = toFilmsResponse(filmMap);
+      }
 
-  // Meta: available dates, theaters, films (for UI controls)
-  if (includeMeta) {
-    const dateWindowEnd = addDaysToDateString(date, SHOWTIMES_META_LOOKAHEAD_DAYS);
+      // Meta: available dates, theaters, films (for UI controls)
+      if (includeMeta) {
+        const dateWindowEnd = addDaysToDateString(date, SHOWTIMES_META_LOOKAHEAD_DAYS);
 
     // Get available dates with showtime-tagged film events.
     // Use client-sent date as lower bound to avoid UTC timezone mismatch on Vercel.
@@ -473,18 +446,21 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    result.meta = {
-      available_dates: availableDates,
-      available_theaters: Array.from(theaterSet.values()).sort((a, b) =>
-        a.venue_name.localeCompare(b.venue_name),
-      ),
-      available_films: Array.from(filmSet.values()).sort((a, b) =>
-        a.title.localeCompare(b.title),
-      ),
-    };
-  }
+        responsePayload.meta = {
+          available_dates: availableDates,
+          available_theaters: Array.from(theaterSet.values()).sort((a, b) =>
+            a.venue_name.localeCompare(b.venue_name),
+          ),
+          available_films: Array.from(filmSet.values()).sort((a, b) =>
+            a.title.localeCompare(b.title),
+          ),
+        };
+      }
 
-  await setCachedShowtimesPayload(cacheKey, result);
+      return responsePayload;
+    },
+    { maxEntries: SHOWTIMES_PAYLOAD_CACHE_MAX_ENTRIES }
+  );
 
   const response = NextResponse.json(result);
   response.headers.set(

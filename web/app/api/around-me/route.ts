@@ -6,7 +6,7 @@ import { isSpotOpen, VENUE_TYPES_MAP, type VenueType, DESTINATION_CATEGORIES } f
 import { logger } from "@/lib/logger";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
 import { applyPortalScopeToQuery, filterByPortalCity, isVenueCityInScope } from "@/lib/portal-scope";
-import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
+import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
 
 export const dynamic = "force-dynamic";
 
@@ -14,26 +14,11 @@ const AROUND_ME_CACHE_TTL_MS = 30 * 1000;
 const AROUND_ME_CACHE_MAX_ENTRIES = 180;
 const AROUND_ME_CACHE_NAMESPACE = "api:around-me";
 
-async function getCachedAroundMePayload(
-  key: string,
-): Promise<Record<string, unknown> | null> {
-  return getSharedCacheJson<Record<string, unknown>>(
-    AROUND_ME_CACHE_NAMESPACE,
-    key
-  );
-}
-
-async function setCachedAroundMePayload(
-  key: string,
-  payload: Record<string, unknown>
-): Promise<void> {
-  await setSharedCacheJson(
-    AROUND_ME_CACHE_NAMESPACE,
-    key,
-    payload,
-    AROUND_ME_CACHE_TTL_MS,
-    { maxEntries: AROUND_ME_CACHE_MAX_ENTRIES }
-  );
+function buildStableSearchParamsKey(searchParams: URLSearchParams): string {
+  return Array.from(searchParams.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+    .join("&");
 }
 
 // Haversine formula to calculate distance between two points in miles
@@ -276,15 +261,7 @@ export async function GET(request: NextRequest) {
     centerLng = -84.365;
   }
 
-  const cacheKey = `${request.nextUrl.searchParams.toString()}|${Math.floor(Date.now() / AROUND_ME_CACHE_TTL_MS)}`;
-  const cachedPayload = await getCachedAroundMePayload(cacheKey);
-  if (cachedPayload) {
-    return NextResponse.json(cachedPayload, {
-      headers: {
-        "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
-      },
-    });
-  }
+  const cacheKey = buildStableSearchParamsKey(request.nextUrl.searchParams);
 
   try {
     const supabase = await createClient();
@@ -300,10 +277,15 @@ export async function GET(request: NextRequest) {
     // Get category filter if specified
     const categoryFilter = category ? CATEGORY_FILTERS[category] : null;
 
-    // Fetch open spots
-    let spotsQuery = supabase
-      .from("venues")
-      .select(`
+    const payload = await getOrSetSharedCacheJson<Record<string, unknown>>(
+      AROUND_ME_CACHE_NAMESPACE,
+      cacheKey,
+      AROUND_ME_CACHE_TTL_MS,
+      async () => {
+        // Fetch open spots
+        let spotsQuery = supabase
+          .from("venues")
+          .select(`
         id,
         name,
         slug,
@@ -322,58 +304,59 @@ export async function GET(request: NextRequest) {
         vibes,
         image_url,
         city
-      `)
-      .eq("active", true)
-      .not("lat", "is", null)
-      .not("lng", "is", null);
+          `)
+          .eq("active", true)
+          .not("lat", "is", null)
+          .not("lng", "is", null);
 
-    // Venues do not have portal_id; scope venues by city after fetch.
-    // Portal scoping stays on events (below) where portal_id exists.
+        // Venues do not have portal_id; scope venues by city after fetch.
+        // Portal scoping stays on events (below) where portal_id exists.
 
-    // Filter by neighborhood if specified (exact match on neighborhood field)
-    if (neighborhood && !usingGps) {
-      spotsQuery = spotsQuery.eq("neighborhood", neighborhood);
-    }
+        // Filter by neighborhood if specified (exact match on neighborhood field)
+        if (neighborhood && !usingGps) {
+          spotsQuery = spotsQuery.eq("neighborhood", neighborhood);
+        }
 
-    // Filter by spot types if category specified
-    if (categoryFilter && categoryFilter.spotTypes.length > 0) {
-      // Validate each type against known venue types before building filter
-      const validTypes = categoryFilter.spotTypes.filter(t => t in VENUE_TYPES_MAP);
-      if (validTypes.length > 0) {
-        const typeFilters = validTypes.map((t) => `venue_type.eq.${t}`).join(",");
-        spotsQuery = spotsQuery.or(typeFilters);
-      }
-    } else {
-      // Default: only include "place" venue types (bars, restaurants, etc.)
-      const placeTypes = Object.keys(DESTINATION_CATEGORIES).flatMap(
-        (key) => DESTINATION_CATEGORIES[key as keyof typeof DESTINATION_CATEGORIES]
-      );
-      // Validate types before building filter
-      const validPlaceTypes = placeTypes.filter(t => t in VENUE_TYPES_MAP);
-      if (validPlaceTypes.length > 0) {
-        const typeFilters = validPlaceTypes.map((t) => `venue_type.eq.${t}`).join(",");
-        spotsQuery = spotsQuery.or(typeFilters);
-      }
-    }
+        // Filter by spot types if category specified
+        if (categoryFilter && categoryFilter.spotTypes.length > 0) {
+          // Validate each type against known venue types before building filter
+          const validTypes = categoryFilter.spotTypes.filter((t) => t in VENUE_TYPES_MAP);
+          if (validTypes.length > 0) {
+            const typeFilters = validTypes.map((t) => `venue_type.eq.${t}`).join(",");
+            spotsQuery = spotsQuery.or(typeFilters);
+          }
+        } else {
+          // Default: only include "place" venue types (bars, restaurants, etc.)
+          const placeTypes = Object.keys(DESTINATION_CATEGORIES).flatMap(
+            (key) => DESTINATION_CATEGORIES[key as keyof typeof DESTINATION_CATEGORIES]
+          );
+          // Validate types before building filter
+          const validPlaceTypes = placeTypes.filter((t) => t in VENUE_TYPES_MAP);
+          if (validPlaceTypes.length > 0) {
+            const typeFilters = validPlaceTypes.map((t) => `venue_type.eq.${t}`).join(",");
+            spotsQuery = spotsQuery.or(typeFilters);
+          }
+        }
 
-    const spotCandidateLimit = radiusMiles !== null
-      ? Math.max(180, Math.min(900, limit * 8))
-      : Math.max(260, Math.min(1200, limit * 10));
-    if (radiusMiles !== null) {
-      const latDelta = radiusMiles / 69;
-      const lngDelta = radiusMiles / (Math.max(Math.cos((centerLat * Math.PI) / 180), 0.2) * 69);
-      spotsQuery = spotsQuery
-        .gte("lat", centerLat - latDelta)
-        .lte("lat", centerLat + latDelta)
-        .gte("lng", centerLng - lngDelta)
-        .lte("lng", centerLng + lngDelta);
-    }
-    spotsQuery = spotsQuery.limit(spotCandidateLimit);
+        const spotCandidateLimit = radiusMiles !== null
+          ? Math.max(180, Math.min(900, limit * 8))
+          : Math.max(260, Math.min(1200, limit * 10));
+        if (radiusMiles !== null) {
+          const latDelta = radiusMiles / 69;
+          const lngDelta =
+            radiusMiles / (Math.max(Math.cos((centerLat * Math.PI) / 180), 0.2) * 69);
+          spotsQuery = spotsQuery
+            .gte("lat", centerLat - latDelta)
+            .lte("lat", centerLat + latDelta)
+            .gte("lng", centerLng - lngDelta)
+            .lte("lng", centerLng + lngDelta);
+        }
+        spotsQuery = spotsQuery.limit(spotCandidateLimit);
 
-    // Fetch live events
-    let eventsQuery = supabase
-      .from("events")
-      .select(`
+        // Fetch live events
+        let eventsQuery = supabase
+          .from("events")
+          .select(`
         id,
         title,
         start_time,
@@ -395,52 +378,53 @@ export async function GET(request: NextRequest) {
           lng,
           venue_type
         )
-      `)
-      .eq("is_live", true)
-      .is("canonical_event_id", null)
-      .gte("start_date", new Date().toISOString().split("T")[0]);
+          `)
+          .eq("is_live", true)
+          .is("canonical_event_id", null)
+          .gte("start_date", new Date().toISOString().split("T")[0]);
 
-    eventsQuery = applyPortalScopeToQuery(eventsQuery, {
-      portalId: portalContext.portalId,
-      portalExclusive,
-      publicOnlyWhenNoPortal: true,
-    });
+        eventsQuery = applyPortalScopeToQuery(eventsQuery, {
+          portalId: portalContext.portalId,
+          portalExclusive,
+          publicOnlyWhenNoPortal: true,
+        });
 
-    // Filter events by category if specified
-    if (categoryFilter && categoryFilter.eventCategories.length > 0) {
-      eventsQuery = eventsQuery.in("category", categoryFilter.eventCategories);
-    }
-    const eventCandidateLimit = radiusMiles !== null
-      ? Math.max(140, Math.min(700, limit * 6))
-      : Math.max(220, Math.min(900, limit * 8));
-    eventsQuery = eventsQuery
-      .order("start_time", { ascending: true })
-      .limit(eventCandidateLimit);
+        // Filter events by category if specified
+        if (categoryFilter && categoryFilter.eventCategories.length > 0) {
+          eventsQuery = eventsQuery.in("category", categoryFilter.eventCategories);
+        }
+        const eventCandidateLimit = radiusMiles !== null
+          ? Math.max(140, Math.min(700, limit * 6))
+          : Math.max(220, Math.min(900, limit * 8));
+        eventsQuery = eventsQuery
+          .order("start_time", { ascending: true })
+          .limit(eventCandidateLimit);
 
-    // Note: neighborhood filtering for events is done post-fetch since it's on the joined venue
+        // Note: neighborhood filtering for events is done post-fetch since it's on the joined venue
 
-    // Execute both queries in parallel
-    const [spotsResult, eventsResult] = await Promise.all([
-      spotsQuery,
-      eventsQuery,
-    ]);
+        // Execute both queries in parallel
+        const [spotsResult, eventsResult] = await Promise.all([spotsQuery, eventsQuery]);
 
-    if (spotsResult.error) {
-      logger.error("Error fetching spots:", spotsResult.error);
-      throw spotsResult.error;
-    }
+        if (spotsResult.error) {
+          logger.error("Error fetching spots:", spotsResult.error);
+          throw spotsResult.error;
+        }
 
-    if (eventsResult.error) {
-      logger.error("Error fetching events:", eventsResult.error);
-      throw eventsResult.error;
-    }
+        if (eventsResult.error) {
+          logger.error("Error fetching events:", eventsResult.error);
+          throw eventsResult.error;
+        }
 
-    const spots = ((spotsResult.data || []) as SpotRow[]).filter((spot) =>
-      isVenueCityInScope(spot.city, portalCity, { allowMissingCity: true })
-    );
-    const events = filterByPortalCity((eventsResult.data || []) as LiveEventRow[], portalCity, {
-      allowMissingCity: true,
-    });
+        const spots = ((spotsResult.data || []) as SpotRow[]).filter((spot) =>
+          isVenueCityInScope(spot.city, portalCity, { allowMissingCity: true })
+        );
+        const events = filterByPortalCity(
+          (eventsResult.data || []) as LiveEventRow[],
+          portalCity,
+          {
+            allowMissingCity: true,
+          }
+        );
 
     // Process spots - filter by open status and calculate distance
     const processedSpots: AroundMeItem[] = [];
@@ -603,30 +587,29 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const payload = {
-      items: limitedItems,
-      counts: {
-        spots: processedSpots.length,
-        events: processedEvents.length,
-        total: allItems.length,
+        return {
+          items: limitedItems,
+          counts: {
+            spots: processedSpots.length,
+            events: processedEvents.length,
+            total: allItems.length,
+          },
+          center: {
+            lat: centerLat,
+            lng: centerLng,
+            usingGps,
+            neighborhood: neighborhood || null,
+          },
+        };
       },
-      center: {
-        lat: centerLat,
-        lng: centerLng,
-        usingGps,
-        neighborhood: neighborhood || null,
-      },
-    };
-    await setCachedAroundMePayload(cacheKey, payload);
-
-    return NextResponse.json(
-      payload,
-      {
-        headers: {
-          "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
-        },
-      }
+      { maxEntries: AROUND_ME_CACHE_MAX_ENTRIES }
     );
+
+    return NextResponse.json(payload, {
+      headers: {
+        "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
+      },
+    });
   } catch (error) {
     logger.error("Around me API error:", error);
     return NextResponse.json(
