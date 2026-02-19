@@ -7,7 +7,6 @@ import UnifiedHeader from "@/components/UnifiedHeader";
 import { GooglePlaceAutocomplete } from "@/components/GooglePlaceAutocomplete";
 import { useAuth } from "@/lib/auth-context";
 import type { VenueSubmissionData } from "@/lib/types";
-import { VENUE_SUBMISSION_NEIGHBORHOODS } from "@/config/neighborhoods";
 import { DEFAULT_PORTAL_SLUG } from "@/lib/constants";
 import PageFooter from "@/components/PageFooter";
 
@@ -58,7 +57,6 @@ export default function SubmitVenuePage() {
 
   // Additional optional fields
   const [venueType, setVenueType] = useState("");
-  const [neighborhood, setNeighborhood] = useState("");
   const [website, setWebsite] = useState("");
 
   // Auto-fill fields when a Foursquare place is selected
@@ -108,7 +106,6 @@ export default function SubmitVenuePage() {
           google_place_id: venueData.foursquare_id || venueData.google_place_id || undefined,
         });
         setVenueType(venueData.venue_type || "");
-        setNeighborhood(venueData.neighborhood || "");
         setWebsite(venueData.website || "");
         setEditStatus(submission.status);
         setEditRejectionReason(submission.rejection_reason);
@@ -157,7 +154,6 @@ export default function SubmitVenuePage() {
     return {
       name: selectedPlace.name,
       address: streetAddress || undefined,
-      neighborhood: neighborhood || undefined,
       city,
       state,
       zip: zip || undefined,
@@ -256,7 +252,6 @@ export default function SubmitVenuePage() {
     setEditRejectionReason(null);
     setSelectedPlace(null);
     setVenueType("");
-    setNeighborhood("");
     setWebsite("");
   };
 
@@ -406,12 +401,6 @@ export default function SubmitVenuePage() {
                   <div className="flex flex-wrap gap-2">
                     <span className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider">Type</span>
                     <span className="text-[var(--cream)]">{VENUE_TYPES.find((t) => t.id === venueType)?.label || venueType}</span>
-                  </div>
-                )}
-                {neighborhood && (
-                  <div className="flex flex-wrap gap-2">
-                    <span className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider">Neighborhood</span>
-                    <span className="text-[var(--cream)]">{neighborhood}</span>
                   </div>
                 )}
                 {website && (
@@ -569,22 +558,6 @@ export default function SubmitVenuePage() {
                         <option value="">Select type</option>
                         {VENUE_TYPES.map((t) => (
                           <option key={t.id} value={t.id}>{t.label}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">
-                        Neighborhood
-                      </label>
-                      <select
-                        value={neighborhood}
-                        onChange={(e) => setNeighborhood(e.target.value)}
-                        className="w-full px-4 py-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm focus:outline-none focus:border-[var(--coral)] transition-colors"
-                      >
-                        <option value="">Select neighborhood</option>
-                        {VENUE_SUBMISSION_NEIGHBORHOODS.map((n) => (
-                          <option key={n} value={n}>{n}</option>
                         ))}
                       </select>
                     </div>

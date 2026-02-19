@@ -376,15 +376,6 @@ export const PREFERENCE_NEIGHBORHOOD_NAMES = ITP_NEIGHBORHOODS
   .sort() as readonly string[];
 
 /**
- * Neighborhood options for venue submission with "Other" option.
- * Most active neighborhoods for user-friendly selection.
- */
-export const VENUE_SUBMISSION_NEIGHBORHOODS = [
-  ...ITP_NEIGHBORHOODS.filter((n) => n.tier <= 2).map((n) => n.name).sort(),
-  "Other",
-] as readonly string[];
-
-/**
  * Map of neighborhood name variations to canonical names.
  * Handles common spelling differences.
  */
@@ -411,6 +402,47 @@ export const NEIGHBORHOOD_ALIASES: Record<string, string> = {
   "West Side": "West Midtown",
   "Westside Provisions": "West Midtown",
 };
+
+// ============================================
+// NEIGHBORHOOD DESCRIPTIONS
+// ============================================
+
+const NEIGHBORHOOD_DESCRIPTIONS: Record<string, string> = {
+  // Tier 1
+  "downtown": "Atlanta's urban core — home to Centennial Olympic Park, Mercedes-Benz Stadium, and a growing mix of nightlife, galleries, and street culture.",
+  "midtown": "The city's arts and culture hub, anchored by the High Museum, Woodruff Arts Center, and Piedmont Park. Dense with restaurants, bars, and live venues.",
+  "buckhead": "Upscale dining, shopping, and nightlife in Atlanta's most polished district. Everything from rooftop lounges to hidden cocktail bars.",
+  "old-fourth-ward": "One of Atlanta's most dynamic neighborhoods — the BeltLine Eastside Trail, Ponce City Market, and a thriving food and bar scene.",
+  "east-atlanta-village": "A fiercely independent corner of the city with dive bars, live music venues, and a tight-knit creative community.",
+  "little-five-points": "Atlanta's counterculture heart. Vintage shops, street art, indie music, and an anything-goes energy.",
+  "decatur": "A vibrant city-within-a-city known for its restaurant scene, craft beer culture, and walkable downtown square.",
+  "west-midtown": "Former industrial warehouses transformed into restaurants, galleries, breweries, and event spaces. Atlanta's design district.",
+  "ponce-city-market": "The iconic Sears building turned food hall and gathering place, with rooftop amusements and BeltLine access.",
+  "krog-street": "A compact, walkable cluster of restaurants and the beloved Krog Street Market, nestled along the BeltLine.",
+  // Tier 2
+  "virginia-highland": "Charming tree-lined streets with neighborhood restaurants, cozy bars, and a classic Atlanta village vibe.",
+  "inman-park": "Atlanta's first planned suburb, now a foodie destination with Victorian homes, the BeltLine, and eclectic local shops.",
+  "grant-park": "Home to Zoo Atlanta and the city's second-largest park. A family-friendly neighborhood with growing dining options.",
+  "cabbagetown": "A tiny, colorful neighborhood defined by shotgun houses, street art, and the massive Krog Street Tunnel murals.",
+  "reynoldstown": "A transitioning neighborhood anchored by the Atlanta BeltLine and the Beacon, a repurposed warehouse food hall.",
+  "kirkwood": "A diverse residential neighborhood with a lively stretch of restaurants, a farmers market, and strong community spirit.",
+  "candler-park": "A beloved intown neighborhood with a tight community, local eateries, and the historic Plaza Theatre.",
+  "edgewood": "Known for its legendary bar crawl strip — Edgewood Avenue — packed with dive bars, dance clubs, and late-night spots.",
+  "west-end": "One of Atlanta's oldest neighborhoods, experiencing a cultural renaissance with new restaurants, markets, and community spaces.",
+  "atlantic-station": "A mixed-use development with shopping, dining, and entertainment. Urban convenience in a walkable setting.",
+  "ansley-park": "An elegant Midtown-adjacent neighborhood with stately homes, quiet streets, and proximity to Piedmont Park.",
+  "morningside": "A leafy residential enclave with excellent neighborhood restaurants and a strong sense of community.",
+  "druid-hills": "Historic neighborhood designed by Frederick Law Olmsted, home to Emory University and the Fernbank Museum.",
+  "east-lake": "A neighborhood on the rise, known for the East Lake Golf Club and a growing local food scene.",
+  "summerhill": "Revitalized neighborhood near Georgia State Stadium with new restaurants, a brewery, and market-rate and affordable housing.",
+};
+
+/**
+ * Get a short description for a neighborhood by its ID.
+ */
+export function getNeighborhoodDescription(id: string): string | null {
+  return NEIGHBORHOOD_DESCRIPTIONS[id] ?? null;
+}
 
 /**
  * Normalize a neighborhood name to its canonical form.

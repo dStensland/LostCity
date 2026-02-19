@@ -9,7 +9,6 @@ import VenueAutocomplete from "@/components/VenueAutocomplete";
 import OrganizationAutocomplete from "@/components/OrganizationAutocomplete";
 import { useAuth } from "@/lib/auth-context";
 import type { EventSubmissionData, VenueSubmissionData } from "@/lib/types";
-import { VENUE_SUBMISSION_NEIGHBORHOODS } from "@/config/neighborhoods";
 import { getLocalDateString } from "@/lib/formats";
 import PageFooter from "@/components/PageFooter";
 
@@ -97,7 +96,6 @@ export default function SubmitEventPage() {
   const [existingVenueId, setExistingVenueId] = useState<number | null>(null);
   const [venueName, setVenueName] = useState("");
   const [venueAddress, setVenueAddress] = useState("");
-  const [venueNeighborhood, setVenueNeighborhood] = useState("");
   const [venueWebsite, setVenueWebsite] = useState("");
   const [venueType, setVenueType] = useState("");
 
@@ -177,7 +175,6 @@ export default function SubmitEventPage() {
           setVenueMode("new");
           setVenueName(eventData.venue.name || "");
           setVenueAddress(eventData.venue.address || "");
-          setVenueNeighborhood(eventData.venue.neighborhood || "");
           setVenueWebsite(eventData.venue.website || "");
           setVenueType(eventData.venue.venue_type || "");
         }
@@ -211,7 +208,6 @@ export default function SubmitEventPage() {
     return {
       name: venueName.trim(),
       address: venueAddress.trim() || undefined,
-      neighborhood: venueNeighborhood || undefined,
       website: venueWebsite.trim() || undefined,
       venue_type: venueType || undefined,
       city: "Atlanta",
@@ -351,7 +347,6 @@ export default function SubmitEventPage() {
     setSelectedVenue(null);
     setVenueName("");
     setVenueAddress("");
-    setVenueNeighborhood("");
     setVenueWebsite("");
     setVenueType("");
     setSelectedOrg(null);
@@ -934,16 +929,6 @@ export default function SubmitEventPage() {
                       <option value="">Venue type</option>
                       {VENUE_TYPES.map((t) => (
                         <option key={t.id} value={t.id}>{t.label}</option>
-                      ))}
-                    </select>
-                    <select
-                      value={venueNeighborhood}
-                      onChange={(e) => setVenueNeighborhood(e.target.value)}
-                      className="w-full px-4 py-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm focus:outline-none focus:border-[var(--coral)] transition-colors"
-                    >
-                      <option value="">Neighborhood</option>
-                      {VENUE_SUBMISSION_NEIGHBORHOODS.map((n) => (
-                        <option key={n} value={n}>{n}</option>
                       ))}
                     </select>
                   </div>

@@ -5,7 +5,6 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { GooglePlaceAutocomplete } from "@/components/GooglePlaceAutocomplete";
-import { VENUE_SUBMISSION_NEIGHBORHOODS } from "@/config/neighborhoods";
 import type { VenueSubmissionData } from "@/lib/types";
 
 const VENUE_TYPES = [
@@ -58,7 +57,6 @@ export default function SubmitVenueModal({ isOpen, onClose, portalSlug = "atlant
     categoryName?: string;
   } | null>(null);
   const [venueType, setVenueType] = useState("");
-  const [neighborhood, setNeighborhood] = useState("");
   const [website, setWebsite] = useState("");
 
   // Auto-fill fields when a Foursquare place is selected
@@ -75,7 +73,6 @@ export default function SubmitVenueModal({ isOpen, onClose, portalSlug = "atlant
   const resetForm = useCallback(() => {
     setSelectedPlace(null);
     setVenueType("");
-    setNeighborhood("");
     setWebsite("");
     setError(null);
     setSubmitting(false);
@@ -172,7 +169,6 @@ export default function SubmitVenueModal({ isOpen, onClose, portalSlug = "atlant
     const data: VenueSubmissionData = {
       name: selectedPlace.name,
       address: streetAddress || undefined,
-      neighborhood: neighborhood || undefined,
       city,
       state,
       zip: zip || undefined,
@@ -487,19 +483,6 @@ export default function SubmitVenueModal({ isOpen, onClose, portalSlug = "atlant
                         <option value="">Select type</option>
                         {VENUE_TYPES.map((t) => (
                           <option key={t.id} value={t.id}>{t.label}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-1.5">Neighborhood</label>
-                      <select
-                        value={neighborhood}
-                        onChange={(e) => setNeighborhood(e.target.value)}
-                        className="w-full px-3 py-2.5 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm focus:outline-none focus:border-[var(--coral)] transition-colors"
-                      >
-                        <option value="">Select neighborhood</option>
-                        {VENUE_SUBMISSION_NEIGHBORHOODS.map((n) => (
-                          <option key={n} value={n}>{n}</option>
                         ))}
                       </select>
                     </div>

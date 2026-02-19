@@ -108,7 +108,7 @@ export async function createVenueFromSubmission(
       name: data.name,
       slug: finalSlug,
       address: data.address || null,
-      neighborhood: data.neighborhood || null,
+      neighborhood: null, // Polygon pipeline assigns from coordinates
       city: data.city || "Atlanta",
       state: data.state || "GA",
       zip: data.zip || null,
