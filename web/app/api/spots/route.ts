@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getLocalDateString } from "@/lib/formats";
 import { isOpenAt, type HoursData } from "@/lib/hours";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
-import { errorResponse, parseFloatParam } from "@/lib/api-utils";
+import { parseFloatParam } from "@/lib/api-utils";
 import { haversineDistanceKm, getWalkingMinutes, getProximityTier, getProximityLabel } from "@/lib/geo";
 import { logger } from "@/lib/logger";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
@@ -65,6 +65,21 @@ export async function GET(request: NextRequest) {
   const eventsWindowEndDate = new Date();
   eventsWindowEndDate.setDate(eventsWindowEndDate.getDate() + 45);
   const eventsWindowEnd = getLocalDateString(eventsWindowEndDate);
+  const portalContext = await resolvePortalQueryContext(supabase, searchParams);
+  if (portalContext.hasPortalParamMismatch) {
+    return NextResponse.json(
+      { error: "portal and portal_id parameters must reference the same portal" },
+      { status: 400 },
+    );
+  }
+  const portalId = isLegacyDefaultPortal ? null : portalContext.portalId;
+  const portalCityFilter = Array.from(
+    new Set(
+      [...(portalContext.filters.cities || []), ...(portalContext.filters.city ? [portalContext.filters.city] : [])]
+        .map((c) => c.trim())
+        .filter(Boolean),
+    ),
+  );
 
   try {
     const payload = await getOrSetSharedCacheJson<Record<string, unknown>>(
@@ -95,22 +110,6 @@ export async function GET(request: NextRequest) {
     type EventRow = {
       venue_id: number;
     };
-
-    const portalContext = await resolvePortalQueryContext(supabase, searchParams);
-    if (portalContext.hasPortalParamMismatch) {
-      return NextResponse.json(
-        { error: "portal and portal_id parameters must reference the same portal" },
-        { status: 400 }
-      );
-    }
-    const portalId = isLegacyDefaultPortal ? null : portalContext.portalId;
-    const portalCityFilter = Array.from(
-      new Set(
-        [...(portalContext.filters.cities || []), ...(portalContext.filters.city ? [portalContext.filters.city] : [])]
-          .map((c) => c.trim())
-          .filter(Boolean)
-      )
-    );
 
     // Fetch all active venues with enhanced data
     // Note: is_24_hours column may not exist in all environments
@@ -161,11 +160,18 @@ export async function GET(request: NextRequest) {
     const { data: venues, error: venuesError } = await query;
 
     if (venuesError) {
-      return errorResponse(venuesError, "GET /api/spots", 500);
+      throw venuesError;
     }
 
     if (!venues || venues.length === 0) {
-      return NextResponse.json({ spots: [] });
+      return {
+        spots: [],
+        meta: {
+          total: 0,
+          openCount: 0,
+          neighborhoods: [],
+        },
+      };
     }
 
     // Get event counts for venues with upcoming events
