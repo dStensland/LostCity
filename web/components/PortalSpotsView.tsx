@@ -491,10 +491,38 @@ function FilterDeck({
   const hasActiveFilters = filters.openNow || filters.priceLevel.length > 0 ||
     filters.venueTypes.length > 0 || filters.neighborhoods.length > 0 ||
     filters.vibes.length > 0 || filters.search || filters.withEvents;
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const advancedFilterCount = (filters.priceLevel.length > 0 ? 1 : 0) + filters.vibes.length;
+  const hasAdvancedFiltersActive = advancedFilterCount > 0;
 
   return (
-    <div className="space-y-3">
-      {/* Filter Row: Dropdowns + Toggles + Search */}
+    <div className="space-y-2.5">
+      {/* Search is primary and always visible */}
+      <div className="relative">
+        <input
+          type="text"
+          placeholder="Search destinations..."
+          value={filters.search}
+          onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
+          className="w-full h-10 px-3 pl-9 bg-[var(--night)] border border-[var(--twilight)] rounded-lg font-mono text-xs text-[var(--cream)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--coral)]/50 transition-colors"
+        />
+        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        {filters.search && (
+          <button
+            onClick={() => setFilters((f) => ({ ...f, search: "" }))}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--cream)]"
+            aria-label="Clear destination search"
+          >
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
+      </div>
+
+      {/* High-frequency controls stay visible */}
       <div className="flex items-center gap-2 flex-wrap">
         {/* Neighborhood Dropdown */}
         <FilterDropdown
@@ -510,23 +538,6 @@ function FilterDeck({
               </svg>
               <span className="text-[var(--cream)]">{opt.label}</span>
             </>
-          )}
-        />
-
-        {/* Price Dropdown */}
-        <FilterDropdown
-          label="Price"
-          value={priceValue}
-          options={priceOptions}
-          onSelect={handlePriceSelect}
-          renderSelected={(opt) => (
-            <>
-              <span className="text-[var(--gold)]">$</span>
-              <span className="text-[var(--cream)]">{opt.label}</span>
-            </>
-          )}
-          renderOption={(opt, isActive) => (
-            <span className={isActive ? "text-[var(--gold)]" : ""}>{opt.label}</span>
           )}
         />
 
@@ -568,57 +579,23 @@ function FilterDeck({
           Events
         </button>
 
-        {/* Vibe Chips */}
-        {QUICK_VIBES.map((vibe) => {
-          const isActive = filters.vibes.includes(vibe.value);
-          return (
-            <button
-              key={vibe.value}
-              onClick={() => setFilters((f) => ({
-                ...f,
-                vibes: isActive
-                  ? f.vibes.filter((v) => v !== vibe.value)
-                  : [...f.vibes, vibe.value],
-              }))}
-              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-mono text-[0.65rem] font-medium transition-all active:scale-[0.98] whitespace-nowrap ${
-                isActive
-                  ? "text-[var(--cream)] border"
-                  : "bg-[var(--night)] text-[var(--muted)] border border-[var(--twilight)] hover:text-[var(--soft)]"
-              }`}
-              style={isActive ? {
-                backgroundColor: `${vibe.color}20`,
-                borderColor: `${vibe.color}50`,
-                color: vibe.color,
-              } : undefined}
-            >
-              {vibe.label}
-            </button>
-          );
-        })}
-
-        {/* Search Input */}
-        <div className="relative flex-1 min-w-[160px] max-w-xs">
-          <input
-            type="text"
-            placeholder="Search..."
-            value={filters.search}
-            onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
-            className="w-full px-3 py-2 pl-8 bg-[var(--night)] border border-[var(--twilight)] rounded-lg font-mono text-xs text-[var(--cream)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--coral)]/50 transition-colors"
-          />
-          <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-          {filters.search && (
-            <button
-              onClick={() => setFilters((f) => ({ ...f, search: "" }))}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--cream)]"
-            >
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+        <button
+          onClick={() => setShowAdvancedFilters((current) => !current)}
+          className={`flex items-center gap-1.5 px-3 py-2 rounded-lg font-mono text-xs font-medium transition-all active:scale-[0.98] ${
+            showAdvancedFilters || hasAdvancedFiltersActive
+              ? "bg-[var(--twilight)]/75 text-[var(--cream)] border border-[var(--coral)]/35"
+              : "bg-[var(--night)] text-[var(--muted)] border border-[var(--twilight)] hover:text-[var(--cream)]"
+          }`}
+          aria-expanded={showAdvancedFilters}
+          aria-controls="destinations-advanced-filters"
+        >
+          More filters
+          {advancedFilterCount > 0 && (
+            <span className="inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-[var(--coral)]/20 text-[var(--coral)] text-[10px] leading-none">
+              {advancedFilterCount}
+            </span>
           )}
-        </div>
+        </button>
 
         {/* Clear all */}
         {hasActiveFilters && (
@@ -630,6 +607,75 @@ function FilterDeck({
           </button>
         )}
       </div>
+
+      {/* Lower-frequency controls are available on demand */}
+      {(showAdvancedFilters || hasAdvancedFiltersActive) && (
+        <div
+          id="destinations-advanced-filters"
+          className="rounded-xl border border-[var(--twilight)]/65 bg-[var(--night)]/55 p-2.5 space-y-2"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-mono text-[0.6rem] uppercase tracking-[0.12em] text-[var(--muted)]">
+              Advanced filters
+            </span>
+            {showAdvancedFilters && (
+              <button
+                onClick={() => setShowAdvancedFilters(false)}
+                className="font-mono text-[0.62rem] text-[var(--muted)] hover:text-[var(--soft)] transition-colors"
+              >
+                Hide
+              </button>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <FilterDropdown
+              label="Price"
+              value={priceValue}
+              options={priceOptions}
+              onSelect={handlePriceSelect}
+              renderSelected={(opt) => (
+                <>
+                  <span className="text-[var(--gold)]">$</span>
+                  <span className="text-[var(--cream)]">{opt.label}</span>
+                </>
+              )}
+              renderOption={(opt, isActive) => (
+                <span className={isActive ? "text-[var(--gold)]" : ""}>{opt.label}</span>
+              )}
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-1.5">
+            {QUICK_VIBES.map((vibe) => {
+              const isActive = filters.vibes.includes(vibe.value);
+              return (
+                <button
+                  key={vibe.value}
+                  onClick={() => setFilters((f) => ({
+                    ...f,
+                    vibes: isActive
+                      ? f.vibes.filter((v) => v !== vibe.value)
+                      : [...f.vibes, vibe.value],
+                  }))}
+                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-mono text-[0.65rem] font-medium transition-all active:scale-[0.98] whitespace-nowrap ${
+                    isActive
+                      ? "text-[var(--cream)] border"
+                      : "bg-[var(--night)] text-[var(--muted)] border border-[var(--twilight)] hover:text-[var(--soft)]"
+                  }`}
+                  style={isActive ? {
+                    backgroundColor: `${vibe.color}20`,
+                    borderColor: `${vibe.color}50`,
+                    color: vibe.color,
+                  } : undefined}
+                >
+                  {vibe.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
