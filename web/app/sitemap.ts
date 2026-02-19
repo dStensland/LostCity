@@ -6,10 +6,18 @@ import { getSiteUrl } from "@/lib/site-url";
 
 const BASE_URL = getSiteUrl();
 
-type EventRow = { id: number; start_date: string; updated_at: string | null; portal_id: string | null };
+type EventRow = {
+  id: number;
+  start_date: string;
+  updated_at: string | null;
+  portal_id: string | null;
+  is_class: boolean | null;
+  is_sensitive: boolean | null;
+  canonical_event_id: number | null;
+};
 type SpotRow = { slug: string | null; updated_at: string | null; portal_id: string | null };
 type SeriesRow = { slug: string | null; updated_at: string | null; portal_id: string | null };
-type PortalRow = { id: string; slug: string | null; updated_at: string | null };
+type PortalRow = { id: string; slug: string | null; updated_at: string | null; status: string | null };
 
 function resolvePortalSlug(portalId: string | null, portalSlugById: Map<string, string>): string {
   if (!portalId) return DEFAULT_PORTAL_SLUG;
@@ -20,11 +28,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabase = await createClient();
   const { data: portalData } = await supabase
     .from("portals")
-    .select("id, slug, updated_at")
-    .eq("status", "active")
-    .limit(500);
+    .select("id, slug, updated_at, status");
 
-  const portals = (portalData || []) as PortalRow[];
+  const portals = ((portalData || []) as PortalRow[])
+    .filter((portal) => portal.status === "active")
+    .slice(0, 500);
   const portalSlugById = new Map<string, string>();
   for (const portal of portals) {
     if (!portal.slug) continue;
@@ -76,12 +84,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const today = getLocalDateString();
   const { data: eventsData } = await supabase
     .from("events")
-    .select("id, start_date, updated_at, portal_id")
-    .gte("start_date", today)
-    .order("start_date", { ascending: true })
-    .limit(1000);
+    .select("id, start_date, updated_at, portal_id, is_class, is_sensitive, canonical_event_id");
 
-  const events = (eventsData || []) as EventRow[];
+  const events = ((eventsData || []) as EventRow[])
+    .filter((event) => event.start_date >= today)
+    .filter((event) => event.is_class !== true)
+    .filter((event) => event.is_sensitive !== true)
+    .filter((event) => event.canonical_event_id === null)
+    .sort((a, b) => a.start_date.localeCompare(b.start_date))
+    .slice(0, 1000);
   const eventPages: MetadataRoute.Sitemap = events.map((event) => ({
     url: `${BASE_URL}/${resolvePortalSlug(event.portal_id, portalSlugById)}/events/${event.id}`,
     lastModified: event.updated_at ? new Date(event.updated_at) : new Date(),
@@ -92,10 +103,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Fetch venues/spots
   const { data: spotsData } = await supabase
     .from("venues")
-    .select("slug, updated_at, portal_id")
-    .limit(500);
+    .select("slug, updated_at, portal_id");
 
-  const spots = (spotsData || []) as SpotRow[];
+  const spots = ((spotsData || []) as SpotRow[]).slice(0, 500);
   const spotPages: MetadataRoute.Sitemap = spots
     .filter((spot) => spot.slug)
     .map((spot) => ({
@@ -108,10 +118,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Fetch event series
   const { data: seriesData } = await supabase
     .from("series")
-    .select("slug, updated_at, portal_id")
-    .limit(200);
+    .select("slug, updated_at, portal_id");
 
-  const series = (seriesData || []) as SeriesRow[];
+  const series = ((seriesData || []) as SeriesRow[]).slice(0, 200);
   const seriesPages: MetadataRoute.Sitemap = series
     .filter((s) => Boolean(s.slug))
     .map((s) => ({
