@@ -64,7 +64,7 @@ const CLASS_SKILL_OPTIONS = [
 
 const CLASS_SKILL_KEYS = new Set(CLASS_SKILL_OPTIONS.map((option) => option.key));
 
-const PAGE_SIZE = 100; // Fetch more to fill multiple days/venues
+const PAGE_SIZE = 50; // Keep in sync with /api/classes max limit
 
 const PAINT_TWIST_PATTERN = /painting with a twist/i;
 
@@ -820,14 +820,16 @@ export default function ClassesView({
         if (requestId !== requestIdRef.current) return;
 
         const newClasses = data.classes || [];
+        const responseLimit = Math.max(1, Number(data.limit) || PAGE_SIZE);
+        const nextOffset = offset + responseLimit;
         if (append) {
           setClasses((prev) => [...prev, ...newClasses]);
         } else {
           setClasses(newClasses);
         }
         setTotal(data.total ?? 0);
-        setHasMore(offset + PAGE_SIZE < (data.total ?? 0));
-        offsetRef.current = offset + PAGE_SIZE;
+        setHasMore(nextOffset < (data.total ?? 0));
+        offsetRef.current = nextOffset;
       } catch {
         // fail silently
       } finally {

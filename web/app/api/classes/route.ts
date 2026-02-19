@@ -238,7 +238,7 @@ export async function GET(request: NextRequest) {
 
         return {
           classes: cityScopedClasses,
-          total: portalCity ? cityScopedClasses.length : (count ?? 0),
+          total: count ?? cityScopedClasses.length,
           limit,
           offset,
         };
