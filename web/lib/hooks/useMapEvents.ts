@@ -42,6 +42,23 @@ const ATLANTA_BOUNDS: MapBounds = {
   west: -84.7,
 };
 
+const MAP_EVENT_FILTER_KEYS = [
+  "search",
+  "categories",
+  "subcategories",
+  "tags",
+  "genres",
+  "vibes",
+  "neighborhoods",
+  "price",
+  "free",
+  "date",
+  "mood",
+  "venue",
+  "portal_id",
+  "portal_exclusive",
+] as const;
+
 /**
  * Hook for fetching events for map display
  *
@@ -61,17 +78,7 @@ export function useMapEvents(options: UseMapEventsOptions = {}) {
   // Create stable query key from filter params
   const filtersKey = useMemo(() => {
     const params = new URLSearchParams();
-    const filterKeys = [
-      "search",
-      "categories",
-      "subcategories",
-      "tags",
-      "vibes",
-      "neighborhoods",
-      "price",
-      "date",
-    ];
-    filterKeys.forEach((key) => {
+    MAP_EVENT_FILTER_KEYS.forEach((key) => {
       const value = searchParams.get(key);
       if (value) params.set(key, value);
     });

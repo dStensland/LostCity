@@ -44,6 +44,7 @@ const FIND_FILTER_RESET_KEYS = [
   "with_events",
   "price_level",
   "venue_type",
+  "theater",
   "display",
   "density",
   "page",

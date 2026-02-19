@@ -3,7 +3,7 @@
 import { useCallback, useMemo } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import FilterChip, { getTagVariant, type FilterChipVariant } from "./FilterChip";
-import { CATEGORIES, TAG_GROUPS } from "@/lib/search-constants";
+import { CATEGORIES, SUBCATEGORIES, TAG_GROUPS, PRICE_FILTERS } from "@/lib/search-constants";
 import { VIBE_GROUPS } from "@/lib/spots-constants";
 import { MOODS } from "@/lib/moods";
 import { formatGenre } from "@/lib/series-utils";
@@ -17,7 +17,7 @@ const DATE_LABELS: Record<string, string> = {
 };
 
 interface ActiveFilter {
-  type: "category" | "tag" | "genre" | "date" | "free" | "vibe" | "mood";
+  type: "search" | "category" | "subcategory" | "tag" | "genre" | "date" | "free" | "price" | "vibe" | "mood" | "neighborhood";
   value: string;
   label: string;
   variant: FilterChipVariant;
@@ -53,6 +53,24 @@ export default function ActiveFiltersRow({ className = "" }: ActiveFiltersRowPro
   // Build list of all active filters
   const activeFilters = useMemo(() => {
     const filters: ActiveFilter[] = [];
+    const shortSearchLabel = (value: string) => {
+      const normalized = value.trim();
+      if (!normalized) return null;
+      return normalized.length > 28
+        ? `Search: "${normalized.slice(0, 28)}..."`
+        : `Search: "${normalized}"`;
+    };
+
+    const searchParam = searchParams.get("search");
+    const searchLabel = searchParam ? shortSearchLabel(searchParam) : null;
+    if (searchLabel) {
+      filters.push({
+        type: "search",
+        value: searchParam!,
+        label: searchLabel,
+        variant: "default",
+      });
+    }
 
     // Categories
     const categoriesParam = searchParams.get("categories");
@@ -65,6 +83,22 @@ export default function ActiveFiltersRow({ className = "" }: ActiveFiltersRowPro
           value,
           label: categoryData?.label || value,
           variant: "category",
+        });
+      }
+    }
+
+    // Subcategories
+    const subcategoriesParam = searchParams.get("subcategories");
+    if (subcategoriesParam) {
+      const subcategoryValues = subcategoriesParam.split(",").filter(Boolean);
+      for (const value of subcategoryValues) {
+        const categoryKey = value.split(".")[0];
+        const subcategoryData = SUBCATEGORIES[categoryKey]?.find((s) => s.value === value);
+        filters.push({
+          type: "subcategory",
+          value,
+          label: subcategoryData?.label || value.split(".").slice(1).join(".") || value,
+          variant: "subcategory",
         });
       }
     }
@@ -133,6 +167,31 @@ export default function ActiveFiltersRow({ className = "" }: ActiveFiltersRowPro
         label: "Free",
         variant: "free",
       });
+    } else {
+      const priceParam = searchParams.get("price");
+      if (priceParam && priceParam !== "free") {
+        const priceOption = PRICE_FILTERS.find((p) => p.value === priceParam);
+        filters.push({
+          type: "price",
+          value: priceParam,
+          label: priceOption?.label || priceParam,
+          variant: "date",
+        });
+      }
+    }
+
+    // Neighborhoods
+    const neighborhoodsParam = searchParams.get("neighborhoods");
+    if (neighborhoodsParam) {
+      const neighborhoodValues = neighborhoodsParam.split(",").filter(Boolean);
+      for (const value of neighborhoodValues) {
+        filters.push({
+          type: "neighborhood",
+          value,
+          label: value,
+          variant: "default",
+        });
+      }
     }
 
     // Venue vibes
@@ -169,6 +228,9 @@ export default function ActiveFiltersRow({ className = "" }: ActiveFiltersRowPro
       const params = new URLSearchParams(searchParams.toString());
 
       switch (filter.type) {
+        case "search":
+          params.delete("search");
+          break;
         case "category": {
           const categories = params.get("categories")?.split(",").filter(Boolean) || [];
           const newCategories = categories.filter((c) => c !== filter.value);
@@ -176,6 +238,16 @@ export default function ActiveFiltersRow({ className = "" }: ActiveFiltersRowPro
             params.set("categories", newCategories.join(","));
           } else {
             params.delete("categories");
+          }
+          break;
+        }
+        case "subcategory": {
+          const subcategories = params.get("subcategories")?.split(",").filter(Boolean) || [];
+          const newSubcategories = subcategories.filter((s) => s !== filter.value);
+          if (newSubcategories.length > 0) {
+            params.set("subcategories", newSubcategories.join(","));
+          } else {
+            params.delete("subcategories");
           }
           break;
         }
@@ -206,6 +278,19 @@ export default function ActiveFiltersRow({ className = "" }: ActiveFiltersRowPro
           params.delete("free");
           params.delete("price");
           break;
+        case "price":
+          params.delete("price");
+          break;
+        case "neighborhood": {
+          const neighborhoods = params.get("neighborhoods")?.split(",").filter(Boolean) || [];
+          const newNeighborhoods = neighborhoods.filter((n) => n !== filter.value);
+          if (newNeighborhoods.length > 0) {
+            params.set("neighborhoods", newNeighborhoods.join(","));
+          } else {
+            params.delete("neighborhoods");
+          }
+          break;
+        }
         case "vibe": {
           const vibes = params.get("vibes")?.split(",").filter(Boolean) || [];
           const newVibes = vibes.filter((v) => v !== filter.value);
@@ -236,8 +321,11 @@ export default function ActiveFiltersRow({ className = "" }: ActiveFiltersRowPro
 
     // Remove all filter params
     params.delete("categories");
+    params.delete("subcategories");
     params.delete("tags");
     params.delete("genres");
+    params.delete("search");
+    params.delete("neighborhoods");
     params.delete("date");
     params.delete("free");
     params.delete("price");

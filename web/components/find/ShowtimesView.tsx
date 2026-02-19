@@ -395,12 +395,14 @@ function ShowtimesSkeleton() {
 export default function ShowtimesView({ portalSlug }: ShowtimesViewProps) {
   const searchParams = useSearchParams();
   const requestedDateParam = searchParams?.get("date") ?? null;
+  const requestedTheater = (searchParams?.get("theater") || "").trim();
   const requestedDate = useMemo(
     () => resolveDateParam(requestedDateParam),
     [requestedDateParam],
   );
 
   const [selectedDate, setSelectedDate] = useState<string>("");
+  const [selectedTheaterSlug, setSelectedTheaterSlug] = useState<string>(requestedTheater);
   const [viewMode, setViewMode] = useState<"by-movie" | "by-theater">("by-movie");
   const [showSpecial, setShowSpecial] = useState(false);
 
@@ -423,6 +425,9 @@ export default function ShowtimesView({ portalSlug }: ShowtimesViewProps) {
           meta: "true",
           include_chains: "true",
         });
+        if (requestedTheater) {
+          params.set("theater", requestedTheater);
+        }
         const res = await fetch(`/api/showtimes?${params.toString()}`);
         if (!res.ok) return;
         const data = await res.json();
@@ -450,15 +455,16 @@ export default function ShowtimesView({ portalSlug }: ShowtimesViewProps) {
       }
     }
     fetchMeta();
-  }, [requestedDate]);
+  }, [requestedDate, requestedTheater]);
 
   // Fetch showtimes when date, view mode, or special flag changes
-  const fetchShowtimes = useCallback(async (date: string, mode: string, special: boolean) => {
+  const fetchShowtimes = useCallback(async (date: string, mode: string, special: boolean, theaterSlug: string) => {
     if (!date) return;
     setLoading(true);
     try {
       const params = new URLSearchParams({ date, mode: mode === "by-movie" ? "by-film" : "by-theater" });
       if (special) params.set("special", "true");
+      if (theaterSlug) params.set("theater", theaterSlug);
       params.set("include_chains", "true");
       const res = await fetch(`/api/showtimes?${params}`);
       if (!res.ok) return;
@@ -482,8 +488,17 @@ export default function ShowtimesView({ portalSlug }: ShowtimesViewProps) {
       isInitialMount.current = false;
       return;
     }
-    fetchShowtimes(selectedDate, viewMode, showSpecial);
-  }, [selectedDate, viewMode, showSpecial, fetchShowtimes]);
+    fetchShowtimes(selectedDate, viewMode, showSpecial, selectedTheaterSlug);
+  }, [selectedDate, viewMode, showSpecial, selectedTheaterSlug, fetchShowtimes]);
+
+  // If date changes and selected theater isn't available, clear theater filter.
+  useEffect(() => {
+    if (!selectedTheaterSlug || !meta?.available_theaters?.length) return;
+    const exists = meta.available_theaters.some((theater) => theater.venue_slug === selectedTheaterSlug);
+    if (!exists) {
+      setSelectedTheaterSlug("");
+    }
+  }, [meta, selectedTheaterSlug]);
 
   // Date pills from meta (dynamic) with fallback to 7-day window
   const datePills = meta?.available_dates?.length
@@ -506,6 +521,9 @@ export default function ShowtimesView({ portalSlug }: ShowtimesViewProps) {
   const filmCount = viewMode === "by-theater"
     ? new Set(theaters.flatMap((t) => t.films.map((f) => f.series_id || f.title))).size
     : films.length;
+  const selectedTheaterName = selectedTheaterSlug
+    ? meta?.available_theaters?.find((theater) => theater.venue_slug === selectedTheaterSlug)?.venue_name
+    : null;
 
   return (
     <div>
@@ -531,7 +549,7 @@ export default function ShowtimesView({ portalSlug }: ShowtimesViewProps) {
         </div>
 
         {!loading && (filmCount > 0 || theaterCount > 0) && (
-          <div className="flex items-center gap-3 mt-2.5 pt-2 border-t border-[var(--twilight)]/40">
+          <div className="flex flex-wrap items-center gap-3 mt-2.5 pt-2 border-t border-[var(--twilight)]/40">
             <span className="font-mono text-[0.62rem] text-[var(--muted)] uppercase tracking-[0.1em]">
               {filmCount} {filmCount === 1 ? "film" : "films"}
             </span>
@@ -539,6 +557,14 @@ export default function ShowtimesView({ portalSlug }: ShowtimesViewProps) {
             <span className="font-mono text-[0.62rem] text-[var(--muted)] uppercase tracking-[0.1em]">
               {theaterCount} {theaterCount === 1 ? "theater" : "theaters"}
             </span>
+            {selectedTheaterName && (
+              <>
+                <span className="text-[var(--twilight)]/50">·</span>
+                <span className="font-mono text-[0.62rem] text-[var(--soft)] uppercase tracking-[0.1em]">
+                  {selectedTheaterName}
+                </span>
+              </>
+            )}
           </div>
         )}
       </section>
@@ -580,6 +606,23 @@ export default function ShowtimesView({ portalSlug }: ShowtimesViewProps) {
         >
           Special Screenings
         </button>
+
+        {/* Theater filter */}
+        {meta?.available_theaters && meta.available_theaters.length > 1 && (
+          <select
+            value={selectedTheaterSlug}
+            onChange={(e) => setSelectedTheaterSlug(e.target.value)}
+            className="h-8 min-w-[180px] px-2.5 rounded-lg bg-[var(--night)]/40 border border-[var(--twilight)]/60 text-[var(--cream)] font-mono text-[0.68rem] focus:outline-none focus:border-[var(--coral)] transition-colors"
+            aria-label="Filter by theater"
+          >
+            <option value="">All Theaters</option>
+            {meta.available_theaters.map((theater) => (
+              <option key={theater.venue_id} value={theater.venue_slug}>
+                {theater.venue_name}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       {/* Loading state */}
@@ -635,7 +678,7 @@ export default function ShowtimesView({ portalSlug }: ShowtimesViewProps) {
             }
           </div>
           <div className="text-[var(--muted)]/60 font-mono text-xs mt-2">
-            Try a different day or check back later
+            {selectedTheaterSlug ? "Try a different theater or day" : "Try a different day or check back later"}
           </div>
         </div>
       )}
