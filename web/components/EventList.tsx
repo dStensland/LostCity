@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useMemo, useCallback } from "react";
+import React, { useEffect, useRef, useMemo, useCallback, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import AnimatedEventList from "./AnimatedEventList";
@@ -14,6 +14,9 @@ import type { EventWithLocation } from "@/lib/search";
 
 // Max events to display (prevent memory issues)
 const MAX_EVENTS = 500;
+const INITIAL_VISIBLE_EVENTS = 40;
+const VISIBLE_EVENTS_STEP = 30;
+const STARTING_SOON_WINDOW_HOURS = 6;
 
 interface Props {
   initialEvents?: EventWithLocation[];
@@ -23,6 +26,42 @@ interface Props {
   portalExclusive?: boolean;
   portalSlug?: string;
   density?: "comfortable" | "compact";
+}
+
+function getEventStartAt(event: EventWithLocation): Date | null {
+  if (!event.start_date) return null;
+  const time = event.start_time || "19:00:00";
+  const iso = `${event.start_date}T${time}`;
+  const parsed = new Date(iso);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function getQuickPickScore(event: EventWithLocation, now: Date): number {
+  let score = 0;
+  const startAt = getEventStartAt(event);
+  if (event.is_live) score += 80;
+  if (event.is_featured) score += 55;
+  if (event.is_trending) score += 35;
+  if (event.reasons?.length) score += Math.min(event.reasons.length * 8, 24);
+  if (typeof event.score === "number") score += Math.min(Math.max(event.score, 0), 30);
+  if (event.going_count && event.going_count > 0) score += Math.min(event.going_count, 20);
+  if (event.interested_count && event.interested_count > 0) score += Math.min(event.interested_count / 2, 16);
+
+  if (startAt) {
+    const diffMs = startAt.getTime() - now.getTime();
+    if (diffMs >= 0 && diffMs <= STARTING_SOON_WINDOW_HOURS * 60 * 60 * 1000) score += 26;
+    if (diffMs < 0) score -= 20;
+  }
+
+  return score;
+}
+
+function isStartingSoon(event: EventWithLocation, now: Date): boolean {
+  if (event.is_live) return true;
+  const startAt = getEventStartAt(event);
+  if (!startAt) return false;
+  const diffMs = startAt.getTime() - now.getTime();
+  return diffMs >= 0 && diffMs <= STARTING_SOON_WINDOW_HOURS * 60 * 60 * 1000;
 }
 
 /**
@@ -63,6 +102,8 @@ export default function EventList({
     portalExclusive,
     initialData: initialEvents,
   });
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_EVENTS);
+  const [hasUserExpanded, setHasUserExpanded] = useState(false);
 
   // Friends going data
   const eventIds = useMemo(() => events.map((e) => e.id), [events]);
@@ -72,8 +113,63 @@ export default function EventList({
   const displayEvents = useMemo(() => {
     return events.length > MAX_EVENTS ? events.slice(0, MAX_EVENTS) : events;
   }, [events]);
+  const visibleEvents = useMemo(() => {
+    return displayEvents.slice(0, visibleCount);
+  }, [displayEvents, visibleCount]);
+  const hiddenLoadedCount = Math.max(displayEvents.length - visibleEvents.length, 0);
+  const canRevealLoaded = hiddenLoadedCount > 0;
+  const allowAutoPagination = (hasActiveFilters || hasUserExpanded) && !canRevealLoaded;
+  const now = useMemo(() => new Date(), []);
+  const todayIso = useMemo(() => {
+    const yyyy = now.getFullYear();
+    const mm = `${now.getMonth() + 1}`.padStart(2, "0");
+    const dd = `${now.getDate()}`.padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  }, [now]);
+  const tonightCount = useMemo(
+    () => displayEvents.filter((event) => event.start_date === todayIso || event.is_live).length,
+    [displayEvents, todayIso]
+  );
+  const freeCount = useMemo(
+    () => displayEvents.filter((event) => event.is_free).length,
+    [displayEvents]
+  );
+  const startingSoonEvents = useMemo(
+    () => displayEvents.filter((event) => isStartingSoon(event, now)).slice(0, 5),
+    [displayEvents, now]
+  );
+  const quickPicks = useMemo(() => {
+    const ranked = [...displayEvents].sort((a, b) => {
+      const scoreDiff = getQuickPickScore(b, now) - getQuickPickScore(a, now);
+      if (scoreDiff !== 0) return scoreDiff;
+      const aStart = getEventStartAt(a)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+      const bStart = getEventStartAt(b)?.getTime() ?? Number.MAX_SAFE_INTEGER;
+      return aStart - bStart;
+    });
+    return ranked.slice(0, 4);
+  }, [displayEvents, now]);
+  const filtersResetKey = useMemo(() => {
+    return [
+      filters.search || "",
+      (filters.categories || []).join(","),
+      (filters.tags || []).join(","),
+      (filters.genres || []).join(","),
+      (filters.vibes || []).join(","),
+      (filters.neighborhoods || []).join(","),
+      filters.price || "",
+      filters.date || "",
+      filters.mood || "",
+    ].join("|");
+  }, [filters]);
 
   const hasReachedMax = events.length >= MAX_EVENTS;
+
+  useEffect(() => {
+    const initial = hasActiveFilters ? 60 : INITIAL_VISIBLE_EVENTS;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional UX reset when filter signature changes
+    setVisibleCount(initial);
+    setHasUserExpanded(false);
+  }, [filtersResetKey, hasActiveFilters]);
 
   // IntersectionObserver for infinite scroll
   useEffect(() => {
@@ -82,7 +178,7 @@ export default function EventList({
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasMore && !isFetchingNextPage && !hasReachedMax) {
+        if (entries[0].isIntersecting && allowAutoPagination && hasMore && !isFetchingNextPage && !hasReachedMax) {
           loadMore();
         }
       },
@@ -95,7 +191,7 @@ export default function EventList({
     observer.observe(currentLoaderRef);
 
     return () => observer.disconnect();
-  }, [hasMore, isFetchingNextPage, loadMore, hasReachedMax]);
+  }, [allowAutoPagination, hasMore, isFetchingNextPage, loadMore, hasReachedMax]);
 
   // Pull-to-refresh handler
   const handleRefresh = useCallback(async () => {
@@ -169,9 +265,61 @@ export default function EventList({
 
   return (
     <PullToRefresh onRefresh={handleRefresh} disabled={isLoading || isRefetching}>
+      <section className="mb-3 rounded-2xl border border-[var(--twilight)]/70 bg-gradient-to-b from-[var(--night)]/92 to-[var(--void)]/86 p-3 sm:p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="font-mono text-[0.6rem] uppercase tracking-[0.18em] text-[var(--muted)]">
+              Decision Brief
+            </p>
+            <h3 className="text-[var(--cream)] font-semibold text-sm sm:text-base">Start with the best options first</h3>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full border border-[var(--twilight)]/70 bg-[var(--dusk)]/70 px-2.5 py-1 font-mono text-[0.65rem] text-[var(--soft)]">
+              {displayEvents.length} loaded
+            </span>
+            <span className="rounded-full border border-[var(--twilight)]/70 bg-[var(--dusk)]/70 px-2.5 py-1 font-mono text-[0.65rem] text-[var(--soft)]">
+              {tonightCount} tonight
+            </span>
+            <span className="rounded-full border border-[var(--twilight)]/70 bg-[var(--dusk)]/70 px-2.5 py-1 font-mono text-[0.65rem] text-[var(--soft)]">
+              {freeCount} free
+            </span>
+            {startingSoonEvents.length > 0 && (
+              <span className="rounded-full border border-[var(--coral)]/55 bg-[var(--coral)]/12 px-2.5 py-1 font-mono text-[0.65rem] text-[var(--coral)]">
+                {startingSoonEvents.length} starting soon
+              </span>
+            )}
+          </div>
+        </div>
+
+        {quickPicks.length > 0 && (
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            {quickPicks.map((event) => {
+              const href = portalSlug ? `/${portalSlug}/events/${event.id}` : `/events/${event.id}`;
+              const primaryMeta = event.start_time || (event.is_all_day ? "All day" : "Time TBA");
+              const venue = event.venue?.name || "Venue TBA";
+              return (
+                <Link
+                  key={event.id}
+                  href={href}
+                  className="rounded-xl border border-[var(--twilight)]/65 bg-[var(--night)]/70 px-3 py-2 transition-colors hover:border-[var(--coral)]/55 hover:bg-[var(--night)]"
+                >
+                  <p className="font-mono text-[0.62rem] uppercase tracking-[0.14em] text-[var(--muted)]">
+                    Top Pick
+                  </p>
+                  <p className="mt-0.5 line-clamp-1 text-sm font-medium text-[var(--cream)]">{event.title}</p>
+                  <p className="mt-0.5 line-clamp-1 text-[0.72rem] text-[var(--soft)]">
+                    {primaryMeta} · {venue}
+                  </p>
+                </Link>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
       {/* Animated event list */}
       <AnimatedEventList
-        events={displayEvents}
+        events={visibleEvents}
         standaloneFestivals={festivals}
         portalSlug={portalSlug}
         isLoading={isLoading}
@@ -182,6 +330,27 @@ export default function EventList({
         collapseFestivalPrograms={!filters.search}
         density={density}
       />
+
+      {(canRevealLoaded || (!canRevealLoaded && hasMore && !error && !hasReachedMax && !allowAutoPagination)) && (
+        <div className="py-2 flex justify-center">
+          <button
+            onClick={() => {
+              if (canRevealLoaded) {
+                setVisibleCount((prev) => Math.min(prev + VISIBLE_EVENTS_STEP, displayEvents.length));
+                setHasUserExpanded(true);
+                return;
+              }
+              loadMore();
+              setHasUserExpanded(true);
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[var(--twilight)]/75 bg-[var(--night)]/75 text-[var(--cream)] hover:border-[var(--coral)]/50 hover:bg-[var(--night)] transition-colors font-mono text-xs"
+          >
+            {canRevealLoaded
+              ? `Show ${Math.min(VISIBLE_EVENTS_STEP, hiddenLoadedCount)} more`
+              : "Load more results"}
+          </button>
+        </div>
+      )}
 
       {/* Error state */}
       {error && (
@@ -200,7 +369,7 @@ export default function EventList({
       )}
 
       {/* Infinite scroll sentinel */}
-      {hasMore && !error && !hasReachedMax && (
+      {allowAutoPagination && hasMore && !error && !hasReachedMax && (
         <div
           ref={loaderRef}
           className="h-20"
