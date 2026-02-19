@@ -24,15 +24,23 @@ async function getStats() {
   try {
     const supabase = await createClient();
     type NeighborhoodRow = { neighborhood: string | null };
-    const [eventsResult, venuesResult, artistsResult] = await Promise.all([
+    const today = new Date().toISOString().split("T")[0];
+    const [eventsResult, venuesResult] = await Promise.all([
       supabase
         .from("events")
         .select("*", { count: "exact", head: true })
-        .gte("start_date", new Date().toISOString().split("T")[0])
+        .gte("start_date", today)
         .or("is_sensitive.eq.false,is_sensitive.is.null"),
       supabase.from("venues").select("*", { count: "exact", head: true }),
-      supabase.from("artists").select("*", { count: "exact", head: true }),
     ]);
+    // Count distinct artists performing at upcoming events
+    const { data: artistRows } = await supabase
+      .from("event_artists")
+      .select("name, events!inner(start_date)")
+      .gte("events.start_date", today);
+    const uniqueArtists = new Set(
+      (artistRows ?? []).map((r: { name: string }) => r.name.toLowerCase().trim())
+    ).size;
     // Distinct neighborhood count via unique values
     const { data: hoodData } = await supabase
       .from("venues")
@@ -44,7 +52,7 @@ async function getStats() {
     return {
       events: eventsResult.count || 0,
       venues: venuesResult.count || 0,
-      artists: artistsResult.count || 0,
+      artists: uniqueArtists,
       neighborhoods,
     };
   } catch {
@@ -196,8 +204,8 @@ export default async function Home() {
               { value: formatStat(stats.neighborhoods), label: "hoods", colorClass: "home-stat-cyan" },
             ].map((stat, i) => (
               <ScrollReveal key={stat.label} direction="up" delay={i * 100}>
-                <div className="text-center p-4 md:p-6 rounded-lg border border-[#1a1a24] hover:border-[#2a2a34] home-stat-card transition-all duration-300 group">
-                  <div className={`text-[clamp(1.75rem,5vw,3.25rem)] font-semibold tracking-tight mb-1 leading-none tabular-nums whitespace-nowrap ${stat.colorClass}`}>
+                <div className="text-center p-4 md:p-6 rounded-lg border border-[#1a1a24] hover:border-[#2a2a34] home-stat-card transition-all duration-300 group overflow-hidden">
+                  <div className={`text-[clamp(1.5rem,4.5vw,3.25rem)] font-semibold tracking-tight mb-1 leading-none tabular-nums ${stat.colorClass}`}>
                     {stat.value}
                   </div>
                   <div className="text-xs md:text-sm uppercase tracking-[0.15em] text-[var(--cream)]/70 group-hover:text-[var(--cream)] transition-colors">

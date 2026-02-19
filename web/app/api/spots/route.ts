@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
       SPOTS_CACHE_NAMESPACE,
       cacheKey,
       SPOTS_CACHE_TTL_MS,
-      async () => {
+      async (): Promise<Record<string, unknown>> => {
     type VenueRow = {
       id: number;
       name: string;
