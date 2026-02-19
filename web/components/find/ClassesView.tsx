@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, type CSSProperties } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { Event } from "@/lib/supabase";
 import { format, parseISO, isToday, isTomorrow, isThisWeek } from "date-fns";
 import { formatTimeSplit } from "@/lib/formats";
@@ -38,6 +39,27 @@ const CLASS_CATEGORIES = [
   { key: "mixed", label: "Mixed", icon: "community" },
 ] as const;
 
+const CLASS_CATEGORY_KEYS = new Set(CLASS_CATEGORIES.map((category) => category.key));
+
+const CLASS_DATE_WINDOWS = [
+  { key: "upcoming", label: "Upcoming" },
+  { key: "today", label: "Today" },
+  { key: "week", label: "This Week" },
+  { key: "weekend", label: "Weekend" },
+] as const;
+
+const CLASS_DATE_WINDOW_KEYS = new Set(CLASS_DATE_WINDOWS.map((option) => option.key));
+
+const CLASS_SKILL_OPTIONS = [
+  { key: "all", label: "All Levels" },
+  { key: "beginner", label: "Beginner" },
+  { key: "all-levels", label: "All-levels classes" },
+  { key: "intermediate", label: "Intermediate" },
+  { key: "advanced", label: "Advanced" },
+] as const;
+
+const CLASS_SKILL_KEYS = new Set(CLASS_SKILL_OPTIONS.map((option) => option.key));
+
 const PAGE_SIZE = 100; // Fetch more to fill multiple days/venues
 
 const PAINT_TWIST_PATTERN = /painting with a twist/i;
@@ -58,6 +80,60 @@ function formatLocationList(locations: string[]): string {
   const unique = Array.from(new Set(locations.map((loc) => loc.trim()).filter(Boolean)));
   if (unique.length <= 3) return unique.join(" · ");
   return `${unique.slice(0, 3).join(" · ")} +${unique.length - 3} more`;
+}
+
+function toIsoDate(value: Date): string {
+  return format(value, "yyyy-MM-dd");
+}
+
+function addDays(value: Date, days: number): Date {
+  const next = new Date(value);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function resolveClassDateWindow(window: string): { startDate?: string; endDate?: string } {
+  if (window === "upcoming") return {};
+
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+
+  if (window === "today") {
+    const date = toIsoDate(today);
+    return { startDate: date, endDate: date };
+  }
+
+  if (window === "week") {
+    return {
+      startDate: toIsoDate(today),
+      endDate: toIsoDate(addDays(today, 7)),
+    };
+  }
+
+  if (window === "weekend") {
+    const day = today.getDay(); // 0 = Sun, 5 = Fri, 6 = Sat
+    let start = today;
+    let end = today;
+
+    if (day >= 1 && day <= 4) {
+      const daysUntilFriday = 5 - day;
+      start = addDays(today, daysUntilFriday);
+      end = addDays(start, 2);
+    } else if (day === 5) {
+      start = today;
+      end = addDays(today, 2);
+    } else if (day === 6) {
+      start = today;
+      end = addDays(today, 1);
+    }
+
+    return {
+      startDate: toIsoDate(start),
+      endDate: toIsoDate(end),
+    };
+  }
+
+  return {};
 }
 
 // Types for grouping
@@ -668,20 +744,51 @@ export default function ClassesView({
   portalId,
   portalSlug,
 }: ClassesViewProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialCategory = searchParams?.get("class_category") || "all";
+  const initialDateWindow = searchParams?.get("class_date") || "upcoming";
+  const initialSkill = searchParams?.get("class_skill") || "all";
+
   const [classes, setClasses] = useState<ClassEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [total, setTotal] = useState(0);
-  const [category, setCategory] = useState("all");
+  const [category, setCategory] = useState(
+    CLASS_CATEGORY_KEYS.has(initialCategory) ? initialCategory : "all"
+  );
+  const [dateWindow, setDateWindow] = useState(
+    CLASS_DATE_WINDOW_KEYS.has(initialDateWindow) ? initialDateWindow : "upcoming"
+  );
+  const [skillLevel, setSkillLevel] = useState(
+    CLASS_SKILL_KEYS.has(initialSkill) ? initialSkill : "all"
+  );
   const offsetRef = useRef(0);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const hasLoadedRef = useRef(false);
   const requestIdRef = useRef(0);
 
+  // Keep local control state synced with URL changes (back/forward navigation).
+  useEffect(() => {
+    const nextCategory = CLASS_CATEGORY_KEYS.has(initialCategory) ? initialCategory : "all";
+    const nextDateWindow = CLASS_DATE_WINDOW_KEYS.has(initialDateWindow) ? initialDateWindow : "upcoming";
+    const nextSkill = CLASS_SKILL_KEYS.has(initialSkill) ? initialSkill : "all";
+
+    setCategory((current) => (current === nextCategory ? current : nextCategory));
+    setDateWindow((current) => (current === nextDateWindow ? current : nextDateWindow));
+    setSkillLevel((current) => (current === nextSkill ? current : nextSkill));
+  }, [initialCategory, initialDateWindow, initialSkill]);
+
   const fetchClasses = useCallback(
-    async (offset: number, cat: string, append = false) => {
+    async (
+      offset: number,
+      cat: string,
+      datePreset: string,
+      skillPreset: string,
+      append = false
+    ) => {
       const requestId = ++requestIdRef.current;
       const isInitial = offset === 0;
       const shouldShowSkeleton = isInitial && !hasLoadedRef.current;
@@ -695,6 +802,10 @@ export default function ClassesView({
           offset: String(offset),
         });
         if (cat !== "all") params.set("class_category", cat);
+        const { startDate, endDate } = resolveClassDateWindow(datePreset);
+        if (startDate) params.set("start_date", startDate);
+        if (endDate) params.set("end_date", endDate);
+        if (skillPreset !== "all") params.set("skill_level", skillPreset);
         if (portalId) params.set("portal_id", portalId);
 
         const res = await fetch(`/api/classes?${params.toString()}`);
@@ -726,13 +837,32 @@ export default function ClassesView({
     [portalId]
   );
 
-  // Initial load and category change
+  // Keep URL params aligned with active class filters.
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams?.toString() || "");
+    const setOrDelete = (key: string, value: string | null) => {
+      if (value) params.set(key, value);
+      else params.delete(key);
+    };
+
+    setOrDelete("class_category", category !== "all" ? category : null);
+    setOrDelete("class_date", dateWindow !== "upcoming" ? dateWindow : null);
+    setOrDelete("class_skill", skillLevel !== "all" ? skillLevel : null);
+
+    const next = params.toString();
+    const current = searchParams?.toString() || "";
+    if (next !== current) {
+      router.replace(`/${portalSlug}?${next}`, { scroll: false });
+    }
+  }, [category, dateWindow, skillLevel, portalSlug, router, searchParams]);
+
+  // Initial load and class filter changes.
   useEffect(() => {
     offsetRef.current = 0;
     hasLoadedRef.current = false;
     requestIdRef.current += 1;
-    fetchClasses(0, category);
-  }, [category, fetchClasses]);
+    fetchClasses(0, category, dateWindow, skillLevel);
+  }, [category, dateWindow, skillLevel, fetchClasses]);
 
   // Infinite scroll via IntersectionObserver
   useEffect(() => {
@@ -741,7 +871,7 @@ export default function ClassesView({
     observerRef.current = new IntersectionObserver(
       (entries) => {
         if (entries[0]?.isIntersecting && hasMore && !loadingMore && !loading) {
-          fetchClasses(offsetRef.current, category, true);
+          fetchClasses(offsetRef.current, category, dateWindow, skillLevel, true);
         }
       },
       { rootMargin: "400px" }
@@ -752,7 +882,7 @@ export default function ClassesView({
     }
 
     return () => observerRef.current?.disconnect();
-  }, [hasMore, loadingMore, loading, category, fetchClasses]);
+  }, [category, dateWindow, fetchClasses, hasMore, loading, loadingMore, skillLevel]);
 
   // Group classes by day and venue
   const dayGroups = groupClassesByDayAndVenue(classes);
@@ -761,7 +891,33 @@ export default function ClassesView({
     <div>
       <section className="mb-4 rounded-2xl border border-[var(--twilight)]/80 bg-[var(--void)]/70 backdrop-blur-md p-3 sm:p-4 relative z-30">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <CategoryDropdown category={category} onSelect={setCategory} />
+          <div className="flex flex-wrap items-center gap-2">
+            <CategoryDropdown category={category} onSelect={setCategory} />
+            <select
+              value={dateWindow}
+              onChange={(event) => setDateWindow(event.target.value)}
+              className="h-9 px-3 rounded-lg bg-[var(--night)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-xs focus:outline-none focus:border-[var(--coral)]/50 transition-colors appearance-none cursor-pointer select-chevron-md min-w-[112px]"
+              aria-label="Class date window"
+            >
+              {CLASS_DATE_WINDOWS.map((option) => (
+                <option key={option.key} value={option.key}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <select
+              value={skillLevel}
+              onChange={(event) => setSkillLevel(event.target.value)}
+              className="h-9 px-3 rounded-lg bg-[var(--night)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-xs focus:outline-none focus:border-[var(--coral)]/50 transition-colors appearance-none cursor-pointer select-chevron-md min-w-[122px]"
+              aria-label="Class skill level"
+            >
+              {CLASS_SKILL_OPTIONS.map((option) => (
+                <option key={option.key} value={option.key}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
           {!loading && (
             <span className="inline-flex items-center px-2.5 py-1 rounded-full border border-[var(--twilight)]/70 bg-[var(--dusk)]/82 font-mono text-[0.62rem] text-[var(--soft)] whitespace-nowrap">
               {total} {total === 1 ? "class" : "classes"} across {dayGroups.length}{" "}

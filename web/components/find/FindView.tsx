@@ -30,6 +30,12 @@ const DESTINATIONS_MAP_HEIGHT = "clamp(420px, calc(100dvh - 280px), 860px)";
 const FIND_FILTER_RESET_KEYS = [
   "search",
   "categories",
+  "class_category",
+  "class_date",
+  "class_skill",
+  "skill_level",
+  "start_date",
+  "end_date",
   "subcategories",
   "genres",
   "tags",
@@ -56,6 +62,17 @@ const FIND_FILTER_RESET_KEYS = [
 ] as const;
 const SHOWTIMES_EXCLUDED_FILTER_KEYS = [
   ...FIND_FILTER_RESET_KEYS.filter((key) => key !== "date"),
+] as const;
+
+const DESTINATION_TYPE_PRESETS = [
+  { value: "all", label: "All Types" },
+  { value: "restaurant,food_hall,farmers_market", label: "Food" },
+  { value: "bar,club,nightclub,brewery,distillery", label: "Nightlife" },
+  { value: "music_venue", label: "Music" },
+  { value: "theater,gallery,museum,comedy_club", label: "Arts" },
+  { value: "coffee_shop", label: "Coffee" },
+  { value: "games,eatertainment,arcade", label: "Games" },
+  { value: "landmark,skyscraper,artifact,public_art,viewpoint,trail,historic_site", label: "Sightseeing" },
 ] as const;
 
 interface FindViewProps {
@@ -136,6 +153,138 @@ const DISPLAY_OPTIONS: Record<DisplayMode, { label: string; shortLabel: string; 
     ),
   },
 };
+
+function DestinationsMapFilterBar({ portalSlug }: { portalSlug: string }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [searchDraft, setSearchDraft] = useState(searchParams?.get("search") || "");
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const searchValue = searchParams?.get("search") || "";
+  const openNow = searchParams?.get("open_now") === "true";
+  const withEvents = searchParams?.get("with_events") === "true";
+  const venueType = searchParams?.get("venue_type") || "all";
+  const hasMapFilters = Boolean(searchValue || openNow || withEvents || (venueType && venueType !== "all"));
+
+  const updateParams = useCallback(
+    (updates: Record<string, string | null>) => {
+      const params = new URLSearchParams(searchParams?.toString() || "");
+
+      Object.entries(updates).forEach(([key, value]) => {
+        if (!value) params.delete(key);
+        else params.set(key, value);
+      });
+
+      params.set("view", "find");
+      params.set("type", "destinations");
+      params.set("display", "map");
+
+      router.replace(`/${portalSlug}?${params.toString()}`, { scroll: false });
+    },
+    [portalSlug, router, searchParams]
+  );
+
+  useEffect(() => {
+    setSearchDraft(searchValue);
+  }, [searchValue]);
+
+  useEffect(() => {
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+    }
+
+    searchDebounceRef.current = setTimeout(() => {
+      const normalized = searchDraft.trim();
+      const nextValue = normalized.length > 0 ? normalized : "";
+      if (nextValue === searchValue) return;
+      updateParams({ search: nextValue || null });
+    }, 280);
+
+    return () => {
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    };
+  }, [searchDraft, searchValue, updateParams]);
+
+  return (
+    <div className="mt-2 pt-2 border-t border-[var(--twilight)]/60">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative flex-1 min-w-[180px]">
+          <input
+            type="text"
+            placeholder="Search destinations..."
+            value={searchDraft}
+            onChange={(event) => setSearchDraft(event.target.value)}
+            className="w-full h-9 pl-8 pr-8 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-xs placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--coral)]/55 transition-colors"
+          />
+          <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--muted)] pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          {searchDraft && (
+            <button
+              onClick={() => setSearchDraft("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
+              aria-label="Clear destination search"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+
+        <select
+          value={venueType}
+          onChange={(event) => updateParams({ venue_type: event.target.value === "all" ? null : event.target.value })}
+          className="h-9 min-w-[120px] max-w-[180px] px-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-xs focus:outline-none focus:border-[var(--coral)] transition-colors appearance-none cursor-pointer select-chevron-md"
+        >
+          {DESTINATION_TYPE_PRESETS.map((preset) => (
+            <option key={preset.value} value={preset.value}>
+              {preset.label}
+            </option>
+          ))}
+        </select>
+
+        <button
+          onClick={() => updateParams({ open_now: openNow ? null : "true" })}
+          className={`h-9 px-3 rounded-lg border font-mono text-xs font-medium transition-colors ${
+            openNow
+              ? "bg-[var(--neon-green)]/18 border-[var(--neon-green)]/60 text-[var(--neon-green)]"
+              : "bg-[var(--dusk)] border-[var(--twilight)] text-[var(--soft)] hover:text-[var(--cream)]"
+          }`}
+        >
+          Open now
+        </button>
+
+        <button
+          onClick={() => updateParams({ with_events: withEvents ? null : "true" })}
+          className={`h-9 px-3 rounded-lg border font-mono text-xs font-medium transition-colors ${
+            withEvents
+              ? "bg-[var(--coral)]/20 border-[var(--coral)]/60 text-[var(--coral)]"
+              : "bg-[var(--dusk)] border-[var(--twilight)] text-[var(--soft)] hover:text-[var(--cream)]"
+          }`}
+        >
+          Has events
+        </button>
+
+        {hasMapFilters && (
+          <button
+            onClick={() =>
+              updateParams({
+                search: null,
+                venue_type: null,
+                open_now: null,
+                with_events: null,
+              })
+            }
+            className="h-9 px-2.5 rounded-lg font-mono text-[11px] text-[var(--coral)] hover:text-[var(--rose)] transition-colors"
+          >
+            Clear
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function FindViewInner({
   portalId,
@@ -775,6 +924,7 @@ function FindViewInner({
                   </span>
                 </div>
               </div>
+              <DestinationsMapFilterBar portalSlug={portalSlug} />
             </div>
             <div style={{ height: DESTINATIONS_MAP_HEIGHT }}>
               <MapViewWrapper
