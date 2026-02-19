@@ -43,7 +43,14 @@ const CLASS_CATEGORIES = [
   { key: "mixed", label: "Mixed", icon: "community" },
 ] as const;
 
-const CLASS_CATEGORY_KEYS = new Set(CLASS_CATEGORIES.map((category) => category.key));
+type ClassCategoryKey = (typeof CLASS_CATEGORIES)[number]["key"];
+const CLASS_CATEGORY_KEYS = new Set<ClassCategoryKey>(
+  CLASS_CATEGORIES.map((category) => category.key),
+);
+
+function isClassCategoryKey(value: string): value is ClassCategoryKey {
+  return CLASS_CATEGORY_KEYS.has(value as ClassCategoryKey);
+}
 
 const CLASS_DATE_WINDOWS = [
   { key: "upcoming", label: "Upcoming" },
@@ -52,7 +59,14 @@ const CLASS_DATE_WINDOWS = [
   { key: "weekend", label: "Weekend" },
 ] as const;
 
-const CLASS_DATE_WINDOW_KEYS = new Set(CLASS_DATE_WINDOWS.map((option) => option.key));
+type ClassDateWindowKey = (typeof CLASS_DATE_WINDOWS)[number]["key"];
+const CLASS_DATE_WINDOW_KEYS = new Set<ClassDateWindowKey>(
+  CLASS_DATE_WINDOWS.map((option) => option.key),
+);
+
+function isClassDateWindowKey(value: string): value is ClassDateWindowKey {
+  return CLASS_DATE_WINDOW_KEYS.has(value as ClassDateWindowKey);
+}
 
 const CLASS_SKILL_OPTIONS = [
   { key: "all", label: "All Levels" },
@@ -62,7 +76,14 @@ const CLASS_SKILL_OPTIONS = [
   { key: "advanced", label: "Advanced" },
 ] as const;
 
-const CLASS_SKILL_KEYS = new Set(CLASS_SKILL_OPTIONS.map((option) => option.key));
+type ClassSkillKey = (typeof CLASS_SKILL_OPTIONS)[number]["key"];
+const CLASS_SKILL_KEYS = new Set<ClassSkillKey>(
+  CLASS_SKILL_OPTIONS.map((option) => option.key),
+);
+
+function isClassSkillKey(value: string): value is ClassSkillKey {
+  return CLASS_SKILL_KEYS.has(value as ClassSkillKey);
+}
 
 const PAGE_SIZE = 50; // Keep in sync with /api/classes max limit
 
@@ -759,14 +780,14 @@ export default function ClassesView({
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [total, setTotal] = useState(0);
-  const [category, setCategory] = useState(
-    CLASS_CATEGORY_KEYS.has(initialCategory) ? initialCategory : "all"
+  const [category, setCategory] = useState<ClassCategoryKey>(
+    isClassCategoryKey(initialCategory) ? initialCategory : "all",
   );
-  const [dateWindow, setDateWindow] = useState(
-    CLASS_DATE_WINDOW_KEYS.has(initialDateWindow) ? initialDateWindow : "upcoming"
+  const [dateWindow, setDateWindow] = useState<ClassDateWindowKey>(
+    isClassDateWindowKey(initialDateWindow) ? initialDateWindow : "upcoming",
   );
-  const [skillLevel, setSkillLevel] = useState(
-    CLASS_SKILL_KEYS.has(initialSkill) ? initialSkill : "all"
+  const [skillLevel, setSkillLevel] = useState<ClassSkillKey>(
+    isClassSkillKey(initialSkill) ? initialSkill : "all",
   );
   const offsetRef = useRef(0);
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -777,9 +798,13 @@ export default function ClassesView({
 
   // Keep local control state synced with URL changes (back/forward navigation).
   useEffect(() => {
-    const nextCategory = CLASS_CATEGORY_KEYS.has(initialCategory) ? initialCategory : "all";
-    const nextDateWindow = CLASS_DATE_WINDOW_KEYS.has(initialDateWindow) ? initialDateWindow : "upcoming";
-    const nextSkill = CLASS_SKILL_KEYS.has(initialSkill) ? initialSkill : "all";
+    const nextCategory = isClassCategoryKey(initialCategory)
+      ? initialCategory
+      : "all";
+    const nextDateWindow = isClassDateWindowKey(initialDateWindow)
+      ? initialDateWindow
+      : "upcoming";
+    const nextSkill = isClassSkillKey(initialSkill) ? initialSkill : "all";
 
     setCategory((current) => (current === nextCategory ? current : nextCategory));
     setDateWindow((current) => (current === nextDateWindow ? current : nextDateWindow));
