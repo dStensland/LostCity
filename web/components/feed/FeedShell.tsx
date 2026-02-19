@@ -102,12 +102,6 @@ function ExploreFeedOutro({ portalSlug }: { portalSlug: string }) {
           >
             Tonight&apos;s Events
           </Link>
-          <Link
-            href={`/${portalSlug}?view=community&tab=bestof`}
-            className="px-3.5 py-2 rounded-lg border border-[var(--twilight)] text-[var(--cream)] text-xs font-mono hover:border-[var(--neon-cyan)]/40 hover:text-[var(--neon-cyan)] transition-colors"
-          >
-            Best Of Community
-          </Link>
         </div>
       </div>
     </section>

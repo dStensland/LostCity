@@ -27,7 +27,7 @@ type ListDensity = "comfortable" | "compact";
 const MAP_DESKTOP_HEIGHT = "clamp(460px, calc(100dvh - 290px), 900px)";
 const MAP_MOBILE_HEIGHT = "clamp(340px, calc(100dvh - 250px - env(safe-area-inset-bottom, 0px)), 700px)";
 const DESTINATIONS_MAP_HEIGHT = "clamp(420px, calc(100dvh - 280px), 860px)";
-const SHOWTIMES_EXCLUDED_FILTER_KEYS = [
+const FIND_FILTER_RESET_KEYS = [
   "search",
   "categories",
   "subcategories",
@@ -35,11 +35,26 @@ const SHOWTIMES_EXCLUDED_FILTER_KEYS = [
   "tags",
   "vibes",
   "neighborhoods",
+  "neighborhood",
   "price",
   "free",
   "mood",
+  "date",
+  "open_now",
+  "with_events",
+  "price_level",
+  "venue_type",
   "display",
   "density",
+  "page",
+  "map_bounds",
+  "sw_lat",
+  "sw_lng",
+  "ne_lat",
+  "ne_lng",
+] as const;
+const SHOWTIMES_EXCLUDED_FILTER_KEYS = [
+  ...FIND_FILTER_RESET_KEYS.filter((key) => key !== "date"),
 ] as const;
 
 interface FindViewProps {
@@ -135,6 +150,17 @@ function FindViewInner({
   const [eventSearch, setEventSearch] = useState(searchParams?.get("search") || "");
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const pathname = `/${portalSlug}`;
+
+  const resetFindFiltersForTypeChange = useCallback((params: URLSearchParams): boolean => {
+    let mutated = false;
+    for (const key of FIND_FILTER_RESET_KEYS) {
+      if (params.has(key)) {
+        params.delete(key);
+        mutated = true;
+      }
+    }
+    return mutated;
+  }, []);
 
   const stripShowtimesExcludedParams = useCallback((params: URLSearchParams): boolean => {
     let mutated = false;
@@ -271,14 +297,9 @@ function FindViewInner({
 
   const handleTypeChange = (type: FindType) => {
     const params = new URLSearchParams(searchParams?.toString() || "");
+    resetFindFiltersForTypeChange(params);
     params.set("view", "find");
     params.set("type", type);
-    // Reset display mode when changing type
-    params.delete("display");
-    params.delete("density");
-    if (type === "showtimes") {
-      stripShowtimesExcludedParams(params);
-    }
     router.push(`/${portalSlug}?${params.toString()}`);
   };
 

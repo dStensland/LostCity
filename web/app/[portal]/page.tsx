@@ -248,11 +248,9 @@ export default async function PortalPage({ params, searchParams }: Props) {
   }
 
   // Community sub-tab - default to "people" (Your People)
-  let communityTab: "people" | "bestof" | "groups" = "people";
+  let communityTab: "people" | "groups" = "people";
   if (searchParamsData.tab === "groups") {
     communityTab = "groups";
-  } else if (searchParamsData.tab === "bestof") {
-    communityTab = "bestof";
   }
 
   // Check for active filters

@@ -16,7 +16,6 @@ import type { EventWithLocation } from "@/lib/search";
 const MAX_EVENTS = 500;
 const INITIAL_VISIBLE_EVENTS = 40;
 const VISIBLE_EVENTS_STEP = 30;
-const STARTING_SOON_WINDOW_HOURS = 6;
 
 interface Props {
   initialEvents?: EventWithLocation[];
@@ -26,42 +25,6 @@ interface Props {
   portalExclusive?: boolean;
   portalSlug?: string;
   density?: "comfortable" | "compact";
-}
-
-function getEventStartAt(event: EventWithLocation): Date | null {
-  if (!event.start_date) return null;
-  const time = event.start_time || "19:00:00";
-  const iso = `${event.start_date}T${time}`;
-  const parsed = new Date(iso);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
-}
-
-function getQuickPickScore(event: EventWithLocation, now: Date): number {
-  let score = 0;
-  const startAt = getEventStartAt(event);
-  if (event.is_live) score += 80;
-  if (event.is_featured) score += 55;
-  if (event.is_trending) score += 35;
-  if (event.reasons?.length) score += Math.min(event.reasons.length * 8, 24);
-  if (typeof event.score === "number") score += Math.min(Math.max(event.score, 0), 30);
-  if (event.going_count && event.going_count > 0) score += Math.min(event.going_count, 20);
-  if (event.interested_count && event.interested_count > 0) score += Math.min(event.interested_count / 2, 16);
-
-  if (startAt) {
-    const diffMs = startAt.getTime() - now.getTime();
-    if (diffMs >= 0 && diffMs <= STARTING_SOON_WINDOW_HOURS * 60 * 60 * 1000) score += 26;
-    if (diffMs < 0) score -= 20;
-  }
-
-  return score;
-}
-
-function isStartingSoon(event: EventWithLocation, now: Date): boolean {
-  if (event.is_live) return true;
-  const startAt = getEventStartAt(event);
-  if (!startAt) return false;
-  const diffMs = startAt.getTime() - now.getTime();
-  return diffMs >= 0 && diffMs <= STARTING_SOON_WINDOW_HOURS * 60 * 60 * 1000;
 }
 
 /**
@@ -82,10 +45,10 @@ export default function EventList({
   const loaderRef = useRef<HTMLDivElement>(null);
 
   // Unified timeline hook — events + festivals in one stream
-  // Enable smart defaults and persistence for better UX
+  // Enable smart defaults, but avoid cross-view filter persistence.
   const { hasActiveFilters, filters } = useEventFilters({
     enableSmartDefaults: true,
-    enablePersistence: true,
+    enablePersistence: false,
   });
   const {
     events,
@@ -119,35 +82,6 @@ export default function EventList({
   const hiddenLoadedCount = Math.max(displayEvents.length - visibleEvents.length, 0);
   const canRevealLoaded = hiddenLoadedCount > 0;
   const allowAutoPagination = (hasActiveFilters || hasUserExpanded) && !canRevealLoaded;
-  const now = useMemo(() => new Date(), []);
-  const todayIso = useMemo(() => {
-    const yyyy = now.getFullYear();
-    const mm = `${now.getMonth() + 1}`.padStart(2, "0");
-    const dd = `${now.getDate()}`.padStart(2, "0");
-    return `${yyyy}-${mm}-${dd}`;
-  }, [now]);
-  const tonightCount = useMemo(
-    () => displayEvents.filter((event) => event.start_date === todayIso || event.is_live).length,
-    [displayEvents, todayIso]
-  );
-  const freeCount = useMemo(
-    () => displayEvents.filter((event) => event.is_free).length,
-    [displayEvents]
-  );
-  const startingSoonEvents = useMemo(
-    () => displayEvents.filter((event) => isStartingSoon(event, now)).slice(0, 5),
-    [displayEvents, now]
-  );
-  const quickPicks = useMemo(() => {
-    const ranked = [...displayEvents].sort((a, b) => {
-      const scoreDiff = getQuickPickScore(b, now) - getQuickPickScore(a, now);
-      if (scoreDiff !== 0) return scoreDiff;
-      const aStart = getEventStartAt(a)?.getTime() ?? Number.MAX_SAFE_INTEGER;
-      const bStart = getEventStartAt(b)?.getTime() ?? Number.MAX_SAFE_INTEGER;
-      return aStart - bStart;
-    });
-    return ranked.slice(0, 4);
-  }, [displayEvents, now]);
   const filtersResetKey = useMemo(() => {
     return [
       filters.search || "",
@@ -265,58 +199,6 @@ export default function EventList({
 
   return (
     <PullToRefresh onRefresh={handleRefresh} disabled={isLoading || isRefetching}>
-      <section className="mb-3 rounded-2xl border border-[var(--twilight)]/70 bg-gradient-to-b from-[var(--night)]/92 to-[var(--void)]/86 p-3 sm:p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <p className="font-mono text-[0.6rem] uppercase tracking-[0.18em] text-[var(--muted)]">
-              Decision Brief
-            </p>
-            <h3 className="text-[var(--cream)] font-semibold text-sm sm:text-base">Start with the best options first</h3>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full border border-[var(--twilight)]/70 bg-[var(--dusk)]/70 px-2.5 py-1 font-mono text-[0.65rem] text-[var(--soft)]">
-              {displayEvents.length} loaded
-            </span>
-            <span className="rounded-full border border-[var(--twilight)]/70 bg-[var(--dusk)]/70 px-2.5 py-1 font-mono text-[0.65rem] text-[var(--soft)]">
-              {tonightCount} tonight
-            </span>
-            <span className="rounded-full border border-[var(--twilight)]/70 bg-[var(--dusk)]/70 px-2.5 py-1 font-mono text-[0.65rem] text-[var(--soft)]">
-              {freeCount} free
-            </span>
-            {startingSoonEvents.length > 0 && (
-              <span className="rounded-full border border-[var(--coral)]/55 bg-[var(--coral)]/12 px-2.5 py-1 font-mono text-[0.65rem] text-[var(--coral)]">
-                {startingSoonEvents.length} starting soon
-              </span>
-            )}
-          </div>
-        </div>
-
-        {quickPicks.length > 0 && (
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            {quickPicks.map((event) => {
-              const href = portalSlug ? `/${portalSlug}/events/${event.id}` : `/events/${event.id}`;
-              const primaryMeta = event.start_time || (event.is_all_day ? "All day" : "Time TBA");
-              const venue = event.venue?.name || "Venue TBA";
-              return (
-                <Link
-                  key={event.id}
-                  href={href}
-                  className="rounded-xl border border-[var(--twilight)]/65 bg-[var(--night)]/70 px-3 py-2 transition-colors hover:border-[var(--coral)]/55 hover:bg-[var(--night)]"
-                >
-                  <p className="font-mono text-[0.62rem] uppercase tracking-[0.14em] text-[var(--muted)]">
-                    Top Pick
-                  </p>
-                  <p className="mt-0.5 line-clamp-1 text-sm font-medium text-[var(--cream)]">{event.title}</p>
-                  <p className="mt-0.5 line-clamp-1 text-[0.72rem] text-[var(--soft)]">
-                    {primaryMeta} · {venue}
-                  </p>
-                </Link>
-              );
-            })}
-          </div>
-        )}
-      </section>
-
       {/* Animated event list */}
       <AnimatedEventList
         events={visibleEvents}

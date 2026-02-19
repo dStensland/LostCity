@@ -1,5 +1,4 @@
-import { PortalHeader } from "@/components/headers";
-import BestOfLeaderboard from "@/components/best-of/BestOfLeaderboard";
+import { redirect } from "next/navigation";
 
 export const revalidate = 60;
 
@@ -21,19 +20,6 @@ export async function generateMetadata({ params }: Props) {
 }
 
 export default async function BestOfLeaderboardPage({ params }: Props) {
-  const { portal: portalSlug, slug } = await params;
-
-  return (
-    <div className="min-h-screen">
-      <PortalHeader
-        portalSlug={portalSlug}
-        backLink={{ label: "Best Of", fallbackHref: `/${portalSlug}?view=community&tab=bestof` }}
-        hideNav
-      />
-
-      <div className="max-w-3xl mx-auto px-4 py-6 pb-28">
-        <BestOfLeaderboard categorySlug={slug} portalSlug={portalSlug} />
-      </div>
-    </div>
-  );
+  const { portal: portalSlug } = await params;
+  redirect(`/${portalSlug}?view=community`);
 }
