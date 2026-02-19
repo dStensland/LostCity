@@ -123,9 +123,10 @@ def determine_category_and_tags(title: str, description: str = "") -> tuple[str,
     if any(word in text for word in ["prescription", "medication", "pharmacy"]):
         tags.append("prescription-help")
 
-    # All HealthWell educational events are free
-    is_free = True
-    tags.append("free")
+    # Only mark free when explicitly stated
+    is_free = "free" in text or "no cost" in text or "no charge" in text
+    if is_free:
+        tags.append("free")
 
     # Add copay relief tag
     tags.append("copay-relief")

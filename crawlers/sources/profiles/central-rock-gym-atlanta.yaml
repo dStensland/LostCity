@@ -1,0 +1,17 @@
+version: 1
+slug: central-rock-gym-atlanta
+name: Central Rock Gym Atlanta
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://centralrockgym.com/atlanta/climbing_type/events/
+detail:
+  enabled: true
+  fetch:
+    render_js: true
+data_goals:
+- events
+- images

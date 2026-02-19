@@ -10,3 +10,5 @@ discovery:
   - https://beltline.org/visit/events/
 detail:
   enabled: true
+data_goals:
+- events

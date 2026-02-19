@@ -198,7 +198,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
             detail_html = _fetch(card["url"]) or ""
             description = _extract_description(detail_html)
             category, tags = _category_and_tags(card["title"], description)
-            is_free = True
+            text = f"{card['title']} {description}".lower()
+            is_free = "free" in text or "no cost" in text or "no charge" in text
 
             event_record = {
                 "source_id": source_id,

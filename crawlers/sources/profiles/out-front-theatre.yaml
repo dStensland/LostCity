@@ -5,20 +5,19 @@ integration_method: html
 defaults:
   venue_name: Out Front Theatre Company
   category: arts
-  subcategory: theatre
   tags:
-    - theatre
-    - lgbtq
-    - performing-arts
+  - theatre
+  - lgbtq
+  - performing-arts
 discovery:
   enabled: true
   type: list
   urls:
   - https://outfronttheatre.com/shows
-  event_card: "article.elementor-post.type-event"
+  event_card: article.elementor-post.type-event
   fields:
-    title: "h3.elementor-post__title a"
-    detail_url: "h3.elementor-post__title a@href"
+    title: h3.elementor-post__title a
+    detail_url: h3.elementor-post__title a@href
   fetch:
     render_js: true
     wait_ms: 3000
@@ -29,3 +28,8 @@ detail:
   use_open_graph: true
   use_heuristic: true
   use_llm: false
+data_goals:
+- events
+- images
+- showtimes
+- tickets

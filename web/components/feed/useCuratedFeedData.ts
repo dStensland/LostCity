@@ -28,10 +28,20 @@ export function useCuratedFeedData(portalSlug: string): CuratedFeedData {
       setError(null);
       setLoading(true);
 
-      const [feedRes, momentsRes] = await Promise.all([
-        fetch(`/api/portals/${portalSlug}/feed`, { signal }),
-        fetch(`/api/moments?portal=${portalSlug}`, { signal }),
-      ]);
+      // Feed drives above-fold layout; moments are optional and should not block first render.
+      void (async () => {
+        try {
+          const momentsRes = await fetch(`/api/moments?portal=${portalSlug}`, { signal });
+          if (!signal.aborted && momentsRes.ok) {
+            setMoments(await momentsRes.json());
+          }
+        } catch (momentsErr) {
+          if (momentsErr instanceof Error && momentsErr.name === "AbortError") return;
+          console.error("Failed to load moments data:", momentsErr);
+        }
+      })();
+
+      const feedRes = await fetch(`/api/portals/${portalSlug}/feed`, { signal });
 
       if (!signal.aborted) {
         if (feedRes.ok) {
@@ -40,11 +50,6 @@ export function useCuratedFeedData(portalSlug: string): CuratedFeedData {
         } else {
           setError("Failed to load feed");
         }
-
-        if (momentsRes.ok) {
-          setMoments(await momentsRes.json());
-        }
-        // moments failure is non-critical, don't set error
 
         setLoading(false);
       }

@@ -10,3 +10,5 @@ discovery:
   - https://www.kennesaw-ga.gov
 detail:
   enabled: true
+data_goals:
+- events

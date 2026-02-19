@@ -316,7 +316,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 )
 
                 # Support groups and educational events are typically free; fundraising may not be
-                is_free = True
+                is_free = False
                 event_text = f"{title} {description or ''}".lower()
                 if any(kw in event_text for kw in ["walk to end lupus", "fundraiser", "gala", "registration fee"]):
                     is_free = False

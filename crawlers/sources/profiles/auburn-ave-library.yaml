@@ -12,3 +12,6 @@ discovery:
     format: auto
 detail:
   enabled: true
+data_goals:
+- events
+- images

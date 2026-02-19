@@ -21,6 +21,7 @@ import {
   suppressEventImagesIfVenueFlagged,
 } from "@/lib/image-quality-suppression";
 import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
+import { isSuppressedFromGeneralEventFeed } from "@/lib/event-content-classification";
 
 import { fetchSocialProofCounts } from "@/lib/search";
 import { format, startOfDay, addDays } from "date-fns";
@@ -138,6 +139,9 @@ export async function GET(request: Request) {
     const freeOnly = searchParams.get("free") === "1";
     const cursor = searchParams.get("cursor");
     const personalized = searchParams.get("personalized") !== "0"; // Default true
+    const includeExhibits = ["1", "true"].includes(
+      (searchParams.get("include_exhibits") || "").toLowerCase(),
+    );
 
     const user = await getUser();
     if (!user) {
@@ -869,6 +873,9 @@ export async function GET(request: Request) {
     events = filterByPortalCity(events, portalFilters.city, {
       allowMissingCity: true,
     });
+    events = events.filter(
+      (event) => includeExhibits || !isSuppressedFromGeneralEventFeed(event),
+    );
 
     // Score and sort events by relevance
     events = events.map((event) => {
@@ -1432,9 +1439,11 @@ export async function GET(request: Request) {
       portalFilters.city || "Atlanta",
       { allowMissingCity: true },
     );
-    const filteredTrendingEventsData = hideAdultContent
+    const filteredTrendingEventsData = (hideAdultContent
       ? trendingEventsData.filter((event) => event.is_adult !== true)
-      : trendingEventsData;
+      : trendingEventsData).filter(
+      (event) => includeExhibits || !isSuppressedFromGeneralEventFeed(event),
+    );
     let trendingEvents: (TrendingEventData & {
       score: number;
       going_count: number;

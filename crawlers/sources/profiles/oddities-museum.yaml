@@ -10,3 +10,8 @@ discovery:
   - https://theodditiesmuseum.org/calendar-of-events
 detail:
   enabled: true
+data_goals:
+- events
+- exhibits
+- images
+- tickets

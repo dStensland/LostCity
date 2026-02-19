@@ -10,3 +10,7 @@ discovery:
   - https://www.lecolonial.com/atlanta/happenings/
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- tickets

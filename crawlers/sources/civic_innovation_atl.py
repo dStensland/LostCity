@@ -233,8 +233,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     if any(kw in text_lower for kw in ["policy", "advocacy"]):
                         tags.append("advocacy")
 
-                    # Most CCI events are free
-                    is_free = True
+                    # Default to unknown/not-free; only set True when source text says "free"
+                    is_free = False
+                    if any(kw in text_lower for kw in ["free", "no cost", "no charge", "complimentary"]):
+                        is_free = True
 
                     # Generate content hash
                     content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)

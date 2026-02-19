@@ -11,3 +11,8 @@ discovery:
   - https://www.amctheatres.com
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- showtimes
+- tickets

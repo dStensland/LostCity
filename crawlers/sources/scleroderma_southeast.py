@@ -80,8 +80,8 @@ def categorize_event(title: str, description: str = "") -> tuple[str, list[str],
     # Support groups
     if any(word in text for word in ["support group", "atlanta support", "peer support"]):
         category = "wellness"
-        tags.extend(["support-group", "mental-health", "free"])
-        is_free = True
+        tags.extend(["support-group", "mental-health"])
+        is_free = "free" in text or "no cost" in text
 
     # Stepping Out walk
     elif any(word in text for word in ["stepping out", "walk", "5k", "fundraiser"]):
@@ -98,18 +98,18 @@ def categorize_event(title: str, description: str = "") -> tuple[str, list[str],
     # Educational
     elif any(word in text for word in ["workshop", "education", "seminar", "webinar", "class"]):
         category = "learning"
-        tags.extend(["education", "health-education", "free"])
-        is_free = True
+        tags.extend(["education", "health-education"])
+        is_free = "free" in text or "no cost" in text
 
     # Awareness
     elif any(word in text for word in ["awareness", "campaign", "advocacy"]):
         category = "community"
         tags.extend(["awareness", "advocacy"])
-        is_free = True
+        is_free = "free" in text or "no cost" in text
 
     else:
         category = "community"
-        is_free = True
+        is_free = "free" in text or "no cost" in text
 
     if "free" in text:
         tags.append("free")

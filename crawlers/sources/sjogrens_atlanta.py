@@ -97,9 +97,10 @@ def determine_category_and_tags(title: str, description: str = "") -> tuple[str,
     if any(word in text for word in ["virtual", "zoom", "online"]):
         tags.append("virtual")
 
-    # Free
-    tags.append("free")
-    is_free = True
+    # Only mark free when explicitly stated
+    is_free = "free" in text or "no cost" in text or "no charge" in text
+    if is_free:
+        tags.append("free")
 
     return category, list(set(tags)), is_free
 

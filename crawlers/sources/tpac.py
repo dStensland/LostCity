@@ -16,7 +16,7 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
-from utils import extract_images_from_page, extract_event_links, find_event_url
+from utils import extract_images_from_page, extract_event_links, find_event_url, enrich_event_record
 
 logger = logging.getLogger(__name__)
 
@@ -234,7 +234,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "price_min": None,
                         "price_max": None,
                         "price_note": None,
-                        "is_free": False,
+                        "is_free": None,
                         "source_url": event_url,
                         "ticket_url": event_url,
                         "image_url": image_map.get(title),
@@ -244,6 +244,21 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "recurrence_rule": None,
                         "content_hash": content_hash,
                     }
+
+                    # Enrich from detail page
+                    enrich_event_record(event_record, source_name="TPAC")
+
+                    # Determine is_free if still unknown after enrichment
+                    if event_record.get("is_free") is None:
+                        desc_lower = (event_record.get("description") or "").lower()
+                        title_lower = event_record.get("title", "").lower()
+                        combined = f"{title_lower} {desc_lower}"
+                        if any(kw in combined for kw in ["free", "no cost", "no charge", "complimentary"]):
+                            event_record["is_free"] = True
+                            event_record["price_min"] = event_record.get("price_min") or 0
+                            event_record["price_max"] = event_record.get("price_max") or 0
+                        else:
+                            event_record["is_free"] = False
 
                     existing = find_event_by_hash(content_hash)
                     if existing:

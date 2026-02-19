@@ -1,0 +1,24 @@
+version: 1
+slug: atlanta-track-club
+name: Atlanta Track Club
+integration_method: playwright
+defaults:
+  category: fitness
+  tags:
+  - running
+  - fitness
+  - races
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.atlantatrackclub.org/calendar
+  fetch:
+    render_js: true
+detail:
+  enabled: true
+  fetch:
+    render_js: true
+data_goals:
+- events
+- images

@@ -37,6 +37,13 @@ VENUE_DATA = {
     "website": "https://piedmontpark.org",
 }
 
+_INVALID_TITLE_PATTERNS = (
+    r"^(support|donate|tickets?|register|menu|home)$",
+    r"^(monday|tuesday|wednesday|thursday|friday|saturday|sunday)$",
+    r"^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|"
+    r"january|february|march|april|june|july|august|september|october|november|december)$",
+)
+
 
 def parse_time(time_text: str) -> Optional[str]:
     """Parse time from '7:00 PM' format."""
@@ -50,6 +57,23 @@ def parse_time(time_text: str) -> Optional[str]:
             hour = 0
         return f"{hour:02d}:{minute}"
     return None
+
+
+def is_valid_event_title(value: str) -> bool:
+    text = " ".join((value or "").split()).strip()
+    if len(text) < 4 or len(text) > 100:
+        return False
+    lowered = text.lower()
+    if any(re.match(pattern, lowered, re.IGNORECASE) for pattern in _INVALID_TITLE_PATTERNS):
+        return False
+    if re.match(r"^[\W\d_]+$", text):
+        return False
+    # Skip long sentence-like fragments scraped from body copy.
+    if text.count(" ") > 10 and text.endswith("."):
+        return False
+    if text.lower().startswith(("event at ", "live music at ")):
+        return False
+    return True
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
@@ -129,8 +153,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             if not title and len(check_line) > 5:
                                 if not re.match(r"\d{1,2}[:/]", check_line):
                                     if not re.match(r"(free|tickets|register|\$|more info)", check_line.lower()):
-                                        title = check_line
-                                        break
+                                        if is_valid_event_title(check_line):
+                                            title = check_line
+                                            break
 
                     if not title:
                         i += 1

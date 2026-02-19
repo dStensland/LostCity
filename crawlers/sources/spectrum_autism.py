@@ -313,11 +313,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     title, description or ""
                 )
 
-                # Check if free (most Spectrum events are free or low-cost for members)
-                is_free = True
-                if description and any(kw in description.lower() for kw in ["$", "cost", "fee", "price", "ticket"]):
-                    if "free" not in description.lower():
-                        is_free = False
+                # Default to not-free; only set True when source text says "free"
+                is_free = False
+                text_lower_check = f"{title} {description or ''}".lower()
+                if any(kw in text_lower_check for kw in ["free", "no cost", "no charge", "complimentary"]):
+                    is_free = True
 
                 # Build event record
                 event_record = {

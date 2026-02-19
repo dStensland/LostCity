@@ -4,9 +4,12 @@ name: EAV Farmers Market
 integration_method: html
 defaults: {}
 discovery:
-  enabled: false  # Recurring weekly market, not individual events — 2026-02-06 audit
+  enabled: false
   type: list
   urls:
   - https://cfmatl.org/eav/
 detail:
   enabled: false
+data_goals:
+- events
+- tickets

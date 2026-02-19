@@ -1,0 +1,15 @@
+version: 1
+slug: grant-park-conservancy
+name: Grant Park Conservancy
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://grantpark.org
+detail:
+  enabled: true
+data_goals:
+- events
+- images

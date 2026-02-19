@@ -10,3 +10,6 @@ discovery:
   - https://georgiastatesports.com
 detail:
   enabled: true
+data_goals:
+- events
+- images

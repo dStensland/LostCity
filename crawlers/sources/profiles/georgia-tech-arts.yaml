@@ -10,3 +10,6 @@ discovery:
   - https://arts.gatech.edu/events
 detail:
   enabled: true
+data_goals:
+- events
+- images

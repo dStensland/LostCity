@@ -8,6 +8,10 @@ discovery:
   type: list
   urls:
   - https://www.zucotgallery.com
-  # NOTE: DNS dead as of 2026-02-06
 detail:
   enabled: false
+data_goals:
+- events
+- exhibits
+- images
+- tickets

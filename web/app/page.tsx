@@ -106,7 +106,7 @@ export default async function Home() {
       </div>
 
       {/* Portal entry with parallax depth */}
-      <ScrollReveal direction="up" className="px-4 pb-6 md:pb-8 relative z-10">
+      <div className="px-4 pb-6 md:pb-8 relative z-10">
         <div className="max-w-lg mx-auto">
           {/* Section header */}
           <div className="flex items-center justify-center gap-4 mb-6">
@@ -120,6 +120,7 @@ export default async function Home() {
           <FloatingElement speed={0.08} scale={0.02}>
             <Link
               href={`/${DEFAULT_PORTAL_SLUG}`}
+              prefetch
               className="group relative block w-full h-64 md:h-80 rounded-2xl overflow-hidden focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#00e5ff]/50 focus-visible:ring-offset-4 focus-visible:ring-offset-[#08080c]"
             >
               {/* Skyline background */}
@@ -182,7 +183,7 @@ export default async function Home() {
             </Link>
           </FloatingElement>
         </div>
-      </ScrollReveal>
+      </div>
 
       {/* Stats — staggered reveal */}
       <div className="px-4 pb-10 md:pb-14 relative z-10">
@@ -354,11 +355,11 @@ export default async function Home() {
                   </li>
                   <li className="flex items-start gap-3">
                     <span className="text-[#00e5ff] mt-0.5">◆</span>
-                    <span>Keep a calendar going here, link with whatever your normal one is</span>
+                    <span>Keep a calendar going between portals, link with whatever your normal one is</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <span className="text-[#ff6b9d] mt-0.5">◆</span>
-                    <span>Add your friends, invite them out, see where they&apos;re interested</span>
+                    <span>Add your friends, invite them out, see what they&apos;re up to</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <span className="text-[#ff6b9d] mt-0.5">◆</span>
@@ -398,7 +399,7 @@ export default async function Home() {
               <p>
                 We&apos;ll continue to explore the latest tech, but always with the goal
                 of celebrating true blue human creators and getting people connected
-                in the real world.
+                in the real world. Our goal is to make it easier to find cool stuff to do, and to get people out and doing it - leave the computers to the computers.
               </p>
             </ExpandableSection>
           </ScrollReveal>
@@ -411,10 +412,10 @@ export default async function Home() {
               </p>
               <div className="mt-4 font-mono">
                 <a
-                  href="mailto:coach@lostcity.ai"
+                  href="mailto:info@lostcity.ai"
                   className="inline-flex items-center gap-2 hover:gap-3 transition-all duration-300 home-gradient-text-animated"
                 >
-                  coach@lostcity.ai →
+                  info@lostcity.ai →
                 </a>
               </div>
             </ExpandableSection>

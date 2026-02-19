@@ -10,3 +10,8 @@ discovery:
   - https://high.org/events
 detail:
   enabled: true
+data_goals:
+- events
+- exhibits
+- images
+- tickets

@@ -10,3 +10,6 @@ discovery:
   - https://www.homedepot.com/workshops/
 detail:
   enabled: true
+data_goals:
+- classes
+- events

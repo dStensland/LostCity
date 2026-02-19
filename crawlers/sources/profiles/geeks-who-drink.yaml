@@ -10,3 +10,7 @@ discovery:
   - https://www.geekswhodrink.com/venues/?location=Atlanta%2C+GA
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- tickets

@@ -329,7 +329,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         category, subcategory, tags = categorize_event(title, description or "")
 
                         # Kate's Club events are free
-                        is_free = True
+                        is_free = False
 
                         event_record = {
                             "source_id": source_id,

@@ -9,3 +9,7 @@ discovery:
     adapter: ticketmaster
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- tickets

@@ -5,7 +5,6 @@ integration_method: llm_crawler
 defaults:
   venue_name: Wild Heaven Beer
   category: nightlife
-  subcategory: nightlife.trivia
   tags:
   - brewery
   - beer
@@ -20,3 +19,7 @@ discovery:
   render_js: true
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- tickets

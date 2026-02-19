@@ -10,3 +10,7 @@ discovery:
   - https://www.mobilize.us/indivisibleatl/
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- tickets

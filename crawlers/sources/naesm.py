@@ -338,8 +338,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         category, subcategory, tags = categorize_event(title, description or "")
 
-                        # Most NAESM events are free
-                        is_free = True
+                        # Default to not-free; only set True when source text says "free"
+                        is_free = False
+                        text_lower_check = f"{title} {description or ''}".lower()
+                        if any(kw in text_lower_check for kw in ["free", "no cost", "no charge", "complimentary"]):
+                            is_free = True
 
                         event_record = {
                             "source_id": source_id,

@@ -10,3 +10,8 @@ discovery:
   - https://atlantafilmseries.com
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- showtimes
+- tickets

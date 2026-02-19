@@ -751,6 +751,7 @@ export type Database = {
           category: string | null
           category_id: string | null
           class_category: string | null
+          content_kind: string
           content_hash: string | null
           created_at: string | null
           data_quality: number | null
@@ -811,6 +812,7 @@ export type Database = {
           category?: string | null
           category_id?: string | null
           class_category?: string | null
+          content_kind?: string
           content_hash?: string | null
           created_at?: string | null
           data_quality?: number | null
@@ -871,6 +873,7 @@ export type Database = {
           category?: string | null
           category_id?: string | null
           class_category?: string | null
+          content_kind?: string
           content_hash?: string | null
           created_at?: string | null
           data_quality?: number | null

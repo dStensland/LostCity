@@ -24,6 +24,7 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
+from utils import enrich_event_record
 
 logger = logging.getLogger(__name__)
 
@@ -247,20 +248,24 @@ def scrape_event_page(page, event_url: str) -> Optional[dict]:
 
         # Extract description - look for paragraphs after the title
         description = ""
+        _BANNER_PHRASES = [
+            "cookie", "consent", "we value your privacy", "privacy policy",
+            "accept all", "decline all", "essential cookies", "analytics cookies",
+            "gdpr", "data protection", "manage preferences",
+        ]
         try:
-            # Find content area
-            paragraphs = page.locator("p").all()
+            # Prefer content area over all <p> tags
+            content = page.locator(".entry-content p, .event-content p, article p")
+            paragraphs = content.all() if content.count() > 0 else page.locator("p").all()
             desc_parts = []
-            for p in paragraphs[:5]:  # First 5 paragraphs
+            for p in paragraphs[:5]:
                 text = p.inner_text().strip()
-                if len(text) > 20 and "cookie" not in text.lower():
+                text_lower = text.lower()
+                if len(text) > 20 and not any(bp in text_lower for bp in _BANNER_PHRASES):
                     desc_parts.append(text)
             description = " ".join(desc_parts)[:500]
         except:
             pass
-
-        if not description:
-            description = f"Event at {title}"
 
         # Extract location/venue
         location_text = ""
@@ -273,14 +278,27 @@ def scrape_event_page(page, event_url: str) -> Optional[dict]:
         # Extract price info
         price_min, price_max, price_note, is_free = extract_price_info(body_text)
 
-        # Extract image
+        # Extract image — filter out cookie/privacy plugin images
+        _COOKIE_IMG_WORDS = ["cookie-law", "gdpr", "consent", "privacy-mgmt"]
         image_url = None
         try:
-            img = page.locator("img[src*='roswell365']").first
-            if img:
-                image_url = img.get_attribute("src")
-                if image_url and not image_url.startswith("http"):
-                    image_url = urljoin(BASE_URL, image_url)
+            # Try og:image first (most reliable)
+            og_img = page.locator("meta[property='og:image']").first
+            if og_img:
+                og_src = og_img.get_attribute("content")
+                if og_src and not any(w in og_src.lower() for w in _COOKIE_IMG_WORDS):
+                    image_url = og_src
+            # Fallback to content images
+            if not image_url:
+                for sel in [".entry-content img", ".event-content img", "article img", "img[src*='roswell365']"]:
+                    img = page.locator(sel).first
+                    if img:
+                        src = img.get_attribute("src")
+                        if src and not any(w in src.lower() for w in _COOKIE_IMG_WORDS):
+                            image_url = src
+                            break
+            if image_url and not image_url.startswith("http"):
+                image_url = urljoin(BASE_URL, image_url)
         except:
             pass
 
@@ -443,6 +461,21 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "recurrence_rule": None,
                     "content_hash": content_hash,
                 }
+
+                # Enrich from detail page
+                enrich_event_record(event_record, source_name="Roswell365")
+
+                # Determine is_free if still unknown after enrichment
+                if event_record.get("is_free") is None:
+                    desc_lower = (event_record.get("description") or "").lower()
+                    title_lower = event_record.get("title", "").lower()
+                    combined = f"{title_lower} {desc_lower}"
+                    if any(kw in combined for kw in ["free", "no cost", "no charge", "complimentary"]):
+                        event_record["is_free"] = True
+                        event_record["price_min"] = event_record.get("price_min") or 0
+                        event_record["price_max"] = event_record.get("price_max") or 0
+                    else:
+                        event_record["is_free"] = False
 
                 existing = find_event_by_hash(content_hash)
                 if existing:

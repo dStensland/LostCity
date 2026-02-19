@@ -221,8 +221,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     if any(kw in text_lower for kw in ["advocacy", "lobby"]):
                         tags.append("advocacy")
 
-                    # Most LWV events are free
-                    is_free = True
+                    # Default to unknown cost
+                    is_free = False
 
                     # Generate content hash
                     content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)

@@ -298,11 +298,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     title, description or ""
                 )
 
-                # Most LAA events are free
-                is_free = True
-                if description and any(kw in description.lower() for kw in ["$", "cost", "fee", "price"]):
-                    if "free" not in description.lower():
-                        is_free = False
+                # Only mark free if text explicitly says so
+                is_free = False
+                if description and any(kw in description.lower() for kw in ["free", "no cost", "no charge", "complimentary"]):
+                    is_free = True
 
                 # Build event record
                 event_record = {

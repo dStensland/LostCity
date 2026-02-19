@@ -12,3 +12,9 @@ discovery:
     render_js: true
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- lineup
+- showtimes
+- tickets

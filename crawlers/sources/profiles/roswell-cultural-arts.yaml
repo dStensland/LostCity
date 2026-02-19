@@ -10,3 +10,7 @@ discovery:
   - https://www.roswellgov.com/government/departments/recreation-parks-historic-cultural-affairs/cultural-arts
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- tickets

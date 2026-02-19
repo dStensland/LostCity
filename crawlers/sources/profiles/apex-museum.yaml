@@ -12,3 +12,8 @@ discovery:
     adapter: eventbrite
 detail:
   enabled: false
+data_goals:
+- events
+- exhibits
+- images
+- tickets

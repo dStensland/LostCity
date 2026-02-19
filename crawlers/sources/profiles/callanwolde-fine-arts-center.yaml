@@ -1,0 +1,23 @@
+version: 1
+slug: callanwolde-fine-arts-center
+name: Callanwolde Fine Arts Center
+integration_method: rest_api
+defaults:
+  category: learning
+  tags:
+  - arts
+  - classes
+  - education
+discovery:
+  enabled: true
+  type: feed
+  urls:
+  - https://callanwolde.org
+  feed:
+    format: ics
+detail:
+  enabled: true
+data_goals:
+- events
+- classes
+- tickets

@@ -139,17 +139,13 @@ def determine_category_and_tags(title: str, description: str = "") -> tuple[str,
     else:
         category = "community"
 
-    # Most WRCDV events are free except fundraisers
-    is_free = True
+    # Only mark free when explicitly stated
+    is_free = False
     if any(word in text for word in ["free", "no cost", "no charge", "complimentary"]):
         is_free = True
         tags.append("free")
     elif any(word in text for word in ["ticket", "$", "donation", "gala", "fundraiser"]):
         is_free = False
-    else:
-        # Most support/education events are free
-        is_free = True
-        tags.append("free")
 
     # Add safety and empowerment tags
     if any(word in text for word in ["safety", "safety plan", "restraining order", "legal"]):

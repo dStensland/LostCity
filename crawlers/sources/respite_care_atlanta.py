@@ -127,17 +127,13 @@ def determine_category_and_tags(title: str, description: str = "") -> tuple[str,
     # Add core tags
     tags.extend(["senior", "disability"])
 
-    # Most respite care events are free
-    is_free = True
+    # Only mark free when explicitly stated
+    is_free = False
     if any(word in text for word in ["free", "no cost", "no charge", "complimentary"]):
         is_free = True
         tags.append("free")
     elif any(word in text for word in ["$", "ticket", "registration fee"]):
-        if "free" in text or "no cost" in text:
-            is_free = True
-            tags.append("free")
-        else:
-            is_free = False
+        is_free = False
 
     return category, list(set(tags)), is_free
 

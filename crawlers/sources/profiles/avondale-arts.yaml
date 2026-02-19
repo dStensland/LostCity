@@ -10,3 +10,7 @@ discovery:
   - https://www.avondaleartsalliance.com/events
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- tickets

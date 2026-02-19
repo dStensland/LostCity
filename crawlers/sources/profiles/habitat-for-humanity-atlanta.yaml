@@ -1,0 +1,14 @@
+version: 1
+slug: habitat-for-humanity-atlanta
+name: Atlanta Habitat for Humanity
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.atlantahabitat.org/volunteer/
+detail:
+  enabled: true
+data_goals:
+- events

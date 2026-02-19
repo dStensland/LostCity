@@ -1,0 +1,19 @@
+version: 1
+slug: atlanta-city-meetings
+name: City of Atlanta Government Meetings
+integration_method: html
+defaults:
+  category: community
+  tags:
+  - civic
+  - government
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://atlanta.legistar.com/Calendar.aspx
+detail:
+  enabled: true
+data_goals:
+- events
+- images

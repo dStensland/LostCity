@@ -4,7 +4,6 @@ name: Decatur Makers
 integration_method: api
 defaults: {}
 discovery:
-  # Runs via main.py (Meetup/Playwright); pipeline discovery disabled
   enabled: false
   type: api
   urls:
@@ -13,3 +12,7 @@ discovery:
     adapter: custom
 detail:
   enabled: false
+data_goals:
+- events
+- images
+- tickets

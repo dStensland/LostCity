@@ -75,6 +75,7 @@ CREATE TABLE events (
   end_date DATE,
   end_time TIME,
   is_all_day BOOLEAN DEFAULT false,
+  content_kind TEXT NOT NULL DEFAULT 'event' CHECK (content_kind IN ('event', 'exhibit', 'special')),
   category TEXT,
   subcategory TEXT,
   tags TEXT[],
@@ -160,6 +161,7 @@ CREATE TABLE crawl_logs (
 -- Indexes for common queries
 CREATE INDEX idx_events_start_date ON events(start_date);
 CREATE INDEX idx_events_category ON events(category);
+CREATE INDEX idx_events_content_kind ON events(content_kind);
 CREATE INDEX idx_events_venue_id ON events(venue_id);
 CREATE INDEX idx_events_content_hash ON events(content_hash);
 CREATE INDEX idx_events_source_id ON events(source_id);

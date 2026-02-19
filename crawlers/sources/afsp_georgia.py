@@ -97,26 +97,26 @@ def determine_category_and_tags(title: str, description: str = "") -> tuple[str,
     # Educational programs
     elif any(word in text for word in ["talk saves lives", "more than sad", "presentation", "workshop", "training"]):
         category = "learning"
-        tags.extend(["education", "awareness", "free"])
-        is_free = True
+        tags.extend(["education", "awareness"])
+        is_free = "free" in text or "no cost" in text
 
     # Survivor Day events
     elif "survivor" in text or "loss day" in text or "healing" in text:
         category = "community"
-        tags.extend(["support", "healing", "free"])
-        is_free = True
+        tags.extend(["support", "healing"])
+        is_free = "free" in text or "no cost" in text
 
     # Advocacy events
     elif "advocacy" in text or "capitol" in text or "legislative" in text:
         category = "community"
         tags.extend(["advocacy", "activism"])
-        is_free = True
+        is_free = "free" in text or "no cost" in text
 
     # Support groups
     elif "support group" in text:
         category = "community"
-        tags.extend(["support-group", "free"])
-        is_free = True
+        tags.extend(["support-group"])
+        is_free = "free" in text or "no cost" in text
 
     # Fundraising galas
     elif "gala" in text or "benefit" in text or "fundraiser" in text:
@@ -128,7 +128,7 @@ def determine_category_and_tags(title: str, description: str = "") -> tuple[str,
     else:
         category = "community"
         tags.append("awareness")
-        is_free = True
+        is_free = "free" in text or "no cost" in text
 
     # Explicit free mentions
     if any(word in text for word in ["free", "no cost", "complimentary"]):

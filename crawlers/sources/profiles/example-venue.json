@@ -6,13 +6,16 @@
   "defaults": {
     "venue_name": "Example Venue",
     "category": "music",
-    "subcategory": "concert",
-    "tags": ["music"]
+    "tags": [
+      "music"
+    ]
   },
   "discovery": {
     "enabled": true,
     "type": "list",
-    "urls": ["https://example.com/events"],
+    "urls": [
+      "https://example.com/events"
+    ],
     "event_card": ".event-card",
     "fields": {
       "title": ".event-title",
@@ -33,5 +36,11 @@
     "use_open_graph": true,
     "use_heuristic": true,
     "use_llm": false
-  }
+  },
+  "data_goals": [
+    "events",
+    "images",
+    "lineup",
+    "tickets"
+  ]
 }

@@ -71,6 +71,19 @@ class SourceProfile(BaseModel):
     slug: str
     name: str
     integration_method: Optional[str] = None
+    data_goals: list[
+        Literal[
+            "events",
+            "exhibits",
+            "specials",
+            "classes",
+            "showtimes",
+            "lineup",
+            "tickets",
+            "images",
+            "venue_hours",
+        ]
+    ] = Field(default_factory=list)
     discovery: DiscoveryConfig = Field(default_factory=DiscoveryConfig)
     detail: DetailConfig = Field(default_factory=DetailConfig)
     defaults: DefaultsConfig = Field(default_factory=DefaultsConfig)

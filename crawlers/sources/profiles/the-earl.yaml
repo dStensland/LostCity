@@ -5,9 +5,8 @@ integration_method: llm_crawler
 defaults:
   venue_name: The EARL
   category: music
-  subcategory: concert
   tags:
-    - music
+  - music
 discovery:
   enabled: true
   type: html
@@ -22,4 +21,9 @@ detail:
     render_js: true
     wait_ms: 4000
   selectors:
-    artists: "#headliner-contain .headliner, #support-contain .support"
+    artists: '#headliner-contain .headliner, #support-contain .support'
+data_goals:
+- events
+- images
+- lineup
+- tickets

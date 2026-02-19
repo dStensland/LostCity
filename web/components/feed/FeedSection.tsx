@@ -165,6 +165,19 @@ function isCommunityActionSection(section: FeedSectionData): boolean {
   return COMMUNITY_SECTION_HINT.test(titleSlug);
 }
 
+/** Sections where time-of-day bucket headers add clutter rather than value */
+function shouldHideBucketHeaders(section: FeedSectionData): boolean {
+  if (section.auto_filter?.is_free) return true;
+
+  const tags = section.auto_filter?.tags || [];
+  if (tags.some((tag) => /\b(volunteer)\b/i.test(tag))) return true;
+
+  const slug = section.slug.toLowerCase();
+  if (slug.includes("free") || slug.includes("volunteer")) return true;
+
+  return false;
+}
+
 function getCommunityIconType(
   section: FeedSectionData,
 ): "community" | "activism" {
@@ -1265,7 +1278,7 @@ function EventList({
     }
   }
 
-  const showBucketHeaders = buckets.length > 1;
+  const showBucketHeaders = buckets.length > 1 && !shouldHideBucketHeaders(section);
   const bucketDisplayGroups = buckets.map((bucket) => ({
     ...bucket,
     displayItems: groupEventsForDisplay(

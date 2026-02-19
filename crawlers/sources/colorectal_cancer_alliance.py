@@ -112,18 +112,18 @@ def determine_category_and_tags(title: str, description: str = "") -> tuple[str,
     elif any(word in text for word in ["patient", "support group", "education", "seminar", "workshop"]):
         category = "learning"
         tags.extend(["patient-support", "patient-education"])
-        is_free = True
+        is_free = "free" in text or "no cost" in text
 
     # Screening events
     elif any(word in text for word in ["screening", "colonoscopy", "awareness"]):
         category = "community"
         tags.extend(["screening", "awareness", "preventive-care"])
-        is_free = True
+        is_free = "free" in text or "no cost" in text
 
     # Default to community
     else:
         category = "community"
-        is_free = True
+        is_free = "free" in text or "no cost" in text
 
     # Check for explicit free/paid mentions
     if any(word in text for word in ["free", "no cost", "complimentary"]):

@@ -10,3 +10,8 @@ discovery:
   - http://jankestudios.com/
 detail:
   enabled: true
+data_goals:
+- classes
+- events
+- images
+- tickets

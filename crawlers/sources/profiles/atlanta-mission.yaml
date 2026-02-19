@@ -10,3 +10,7 @@ discovery:
   - https://atlantamission.org/get-involved/volunteer
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- tickets

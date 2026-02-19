@@ -10,3 +10,7 @@ discovery:
   - https://www.peachstaterollerderby.com/
 detail:
   enabled: false
+data_goals:
+- events
+- images
+- tickets

@@ -10,3 +10,8 @@ discovery:
   - https://villaininarts.com/atlanta-tattoo-arts-festival/
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- lineup
+- tickets

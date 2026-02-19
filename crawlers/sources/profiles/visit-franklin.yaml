@@ -10,3 +10,7 @@ discovery:
   - https://visitfranklin.com/things-to-do-events/
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- tickets

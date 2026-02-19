@@ -10,3 +10,7 @@ discovery:
   - https://www.piedmont.org/locations/piedmont-athens/piedmont-athens-chapel-and-healing-places
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- tickets

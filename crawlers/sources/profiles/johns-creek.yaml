@@ -10,3 +10,7 @@ discovery:
   - https://johnscreekga.gov/events/
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- tickets

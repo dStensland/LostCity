@@ -1,0 +1,23 @@
+version: 1
+slug: atlanta-city-events
+name: City of Atlanta Events
+integration_method: playwright
+defaults:
+  category: community
+  tags:
+  - community
+  - civic
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.atlantaga.gov
+  fetch:
+    render_js: true
+detail:
+  enabled: true
+  fetch:
+    render_js: true
+data_goals:
+- events
+- images

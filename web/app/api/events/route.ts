@@ -4,6 +4,7 @@ import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limi
 import { generateNextCursor } from "@/lib/cursor";
 import { logger } from "@/lib/logger";
 import { apiResponse } from "@/lib/api-utils";
+import { isSuppressedFromGeneralEventFeed } from "@/lib/event-content-classification";
 
 // Helper to safely parse integers with validation
 function safeParseInt(value: string | null, defaultValue: number, min = 1, max = 1000): number {
@@ -33,6 +34,9 @@ export async function GET(request: Request) {
 
     const portalId = searchParams.get("portal_id") || undefined;
     const portalExclusive = searchParams.get("portal_exclusive") === "true";
+    const includeExhibits = ["1", "true"].includes(
+      (searchParams.get("include_exhibits") || "").toLowerCase()
+    );
 
     const dateParam = searchParams.get("date") || "";
     const dateSpecific = /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : undefined;
@@ -95,7 +99,9 @@ export async function GET(request: Request) {
       );
 
       // Enrich with social proof counts
-      const events = await enrichEventsWithSocialProof(rawEvents);
+      const events = (await enrichEventsWithSocialProof(rawEvents)).filter(
+        (event) => includeExhibits || !isSuppressedFromGeneralEventFeed(event)
+      );
 
       return apiResponse(
         {
@@ -115,7 +121,9 @@ export async function GET(request: Request) {
       const { events: rawEvents, total } = await getFilteredEventsWithSearch(filters, page, pageSize);
 
       // Enrich with social proof counts
-      const events = await enrichEventsWithSocialProof(rawEvents);
+      const events = (await enrichEventsWithSocialProof(rawEvents)).filter(
+        (event) => includeExhibits || !isSuppressedFromGeneralEventFeed(event)
+      );
 
       // Also generate a cursor from the last event for gradual migration
       const nextCursor = events.length > 0 ? generateNextCursor(events) : null;

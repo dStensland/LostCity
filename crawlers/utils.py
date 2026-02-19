@@ -71,6 +71,105 @@ def parse_price(price_text: str) -> Tuple[Optional[float], Optional[float], Opti
     return min(amounts), max(amounts), None
 
 
+_MONTH_MAP = {
+    "january": 1, "february": 2, "march": 3, "april": 4, "may": 5, "june": 6,
+    "july": 7, "august": 8, "september": 9, "october": 10, "november": 11, "december": 12,
+    "jan": 1, "feb": 2, "mar": 3, "apr": 4, "jun": 6,
+    "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12,
+}
+
+
+def parse_date_range(text: str, reference_year: int = None) -> Tuple[Optional[str], Optional[str]]:
+    """Parse exhibition/event date ranges into (start_date, end_date).
+
+    Handles common formats:
+        - "February 13 - June 28, 2026"
+        - "On View February 13 - June 28, 2026"
+        - "Feb 12 - May 1, 2026"
+        - "Through May 2026" / "Through May 1, 2026"
+        - "Runs through April 30, 2026"
+        - "Now through June 28, 2026"
+        - "May 15, 2026 - Sep 27, 2026"
+        - "May 15 - September 27, 2026"
+
+    Returns:
+        Tuple of (start_date, end_date) in YYYY-MM-DD format, or (None, None).
+    """
+    if not text:
+        return None, None
+
+    text = " ".join(text.split())  # normalize whitespace
+    year = reference_year or datetime.now().year
+
+    def _parse_month_day_year(s: str) -> Optional[str]:
+        """Parse 'Month DD, YYYY' or 'Month DD YYYY' into YYYY-MM-DD."""
+        s = s.strip().rstrip(".")
+        for fmt in ["%B %d, %Y", "%b %d, %Y", "%B %d %Y", "%b %d %Y"]:
+            try:
+                return datetime.strptime(s, fmt).strftime("%Y-%m-%d")
+            except ValueError:
+                continue
+        return None
+
+    def _parse_month_day(s: str, ref_year: int) -> Optional[str]:
+        """Parse 'Month DD' into YYYY-MM-DD using ref_year."""
+        s = s.strip().rstrip(".")
+        for fmt in ["%B %d", "%b %d"]:
+            try:
+                dt = datetime.strptime(s, fmt).replace(year=ref_year)
+                return dt.strftime("%Y-%m-%d")
+            except ValueError:
+                continue
+        return None
+
+    def _parse_month_year(s: str) -> Optional[str]:
+        """Parse 'Month YYYY' into YYYY-MM-DD (last day of month)."""
+        s = s.strip().rstrip(".")
+        for fmt in ["%B %Y", "%b %Y"]:
+            try:
+                dt = datetime.strptime(s, fmt)
+                # Use last day of month
+                if dt.month == 12:
+                    last = dt.replace(day=31)
+                else:
+                    last = dt.replace(month=dt.month + 1, day=1) - timedelta(days=1)
+                return last.strftime("%Y-%m-%d")
+            except ValueError:
+                continue
+        return None
+
+    # Pattern 1: "Month DD - Month DD, YYYY" or "Month DD, YYYY - Month DD, YYYY"
+    m = re.search(
+        r"(?:On View\s+|Opens?\s+)?([A-Za-z]+\s+\d{1,2}(?:,\s*\d{4})?)"
+        r"\s*[-–—]\s*"
+        r"([A-Za-z]+\s+\d{1,2},?\s*\d{4})",
+        text, re.IGNORECASE,
+    )
+    if m:
+        start_str, end_str = m.group(1).strip(), m.group(2).strip()
+        end_date = _parse_month_day_year(end_str)
+        if end_date:
+            end_yr = int(end_date[:4])
+            start_date = _parse_month_day_year(start_str) or _parse_month_day(start_str, end_yr)
+            if start_date and start_date > end_date:
+                # Start month is in previous year (e.g., Nov 1 - Feb 28, 2026)
+                start_date = datetime.strptime(start_date, "%Y-%m-%d").replace(year=end_yr - 1).strftime("%Y-%m-%d")
+            return start_date, end_date
+
+    # Pattern 2: "Through/Until/Thru Month DD, YYYY" or "Through Month YYYY"
+    m = re.search(
+        r"(?:through|thru|until|now through|runs? through)\s+"
+        r"([A-Za-z]+\s+\d{1,2},?\s*\d{4}|[A-Za-z]+\s+\d{4})",
+        text, re.IGNORECASE,
+    )
+    if m:
+        end_str = m.group(1).strip()
+        end_date = _parse_month_day_year(end_str) or _parse_month_year(end_str)
+        return None, end_date
+
+    return None, None
+
+
 def parse_relative_date(text: str) -> Optional[datetime]:
     """
     Parse relative date text like 'Tomorrow', 'Next Saturday'.
@@ -561,7 +660,7 @@ def enrich_event_record(event_record: dict, source_name: str = "") -> dict:
     """Enrich an event record by fetching its detail page.
 
     Fills in description, image_url, price_min, price_max, price_note, is_free,
-    start_time, end_time, and ticket_url from the event's source_url.
+    start_time, end_time, end_date, and ticket_url from the event's source_url.
 
     Only fills fields that are currently None/empty — never overwrites existing data.
     Uses the full extraction stack (JSON-LD, Open Graph, heuristic, LLM fallback).
@@ -620,6 +719,8 @@ def enrich_event_record(event_record: dict, source_name: str = "") -> dict:
             event_record["start_time"] = enriched["start_time"]
         if not event_record.get("end_time") and enriched.get("end_time"):
             event_record["end_time"] = enriched["end_time"]
+        if not event_record.get("end_date") and enriched.get("end_date"):
+            event_record["end_date"] = enriched["end_date"]
         if not event_record.get("ticket_url") and enriched.get("ticket_url"):
             event_record["ticket_url"] = enriched["ticket_url"]
 

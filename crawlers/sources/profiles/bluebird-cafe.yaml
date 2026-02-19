@@ -10,3 +10,7 @@ discovery:
   - https://bluebirdcafe.com/shows/
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- tickets

@@ -354,15 +354,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     title, description or ""
                 )
 
-                # Most BGCMA community events are free for members/participants
-                is_free = True
+                # Only mark free if text explicitly says so
+                is_free = False
                 if description:
                     desc_lower = description.lower()
-                    if any(kw in desc_lower for kw in [
-                        "ticket", "admission", "registration fee", "cost"
-                    ]):
-                        if "free" not in desc_lower:
-                            is_free = False
+                    if any(kw in desc_lower for kw in ["free", "no cost", "no charge", "complimentary"]):
+                        is_free = True
 
                 # Build event record
                 event_record = {

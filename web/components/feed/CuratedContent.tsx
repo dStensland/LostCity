@@ -533,7 +533,7 @@ export default function CuratedContent({ portalSlug }: CuratedContentProps) {
         <section
           id={CURATED_HAPPENING_NOW_ID}
           data-index-label="Happening Now"
-          className={`scroll-mt-28 ${loading ? "min-h-[96px]" : ""}`}
+          className="scroll-mt-28"
         >
           <SectionErrorBoundary>
             <Suspense fallback={<HappeningNowCtaSkeleton />}>
@@ -546,7 +546,7 @@ export default function CuratedContent({ portalSlug }: CuratedContentProps) {
         <section
           id={CURATED_SEASONAL_SPOTLIGHT_ID}
           data-index-label="Seasonal Spotlight"
-          className={`scroll-mt-28 ${loading ? "min-h-[320px]" : ""}`}
+          className="scroll-mt-28"
         >
           <SectionErrorBoundary>
             <Suspense fallback={<HolidayHeroSkeleton />}>
@@ -570,7 +570,7 @@ export default function CuratedContent({ portalSlug }: CuratedContentProps) {
         <section
           id={CURATED_FESTIVALS_ID}
           data-index-label="Festivals"
-          className={`scroll-mt-28 ${loading ? "min-h-[260px]" : ""}`}
+          className="scroll-mt-28"
         >
           <SectionErrorBoundary>
             <Suspense fallback={<MomentsSectionSkeleton />}>
@@ -583,7 +583,7 @@ export default function CuratedContent({ portalSlug }: CuratedContentProps) {
         <section
           id={CURATED_SECOND_SPOTLIGHT_ID}
           data-index-label="Special Times"
-          className={`scroll-mt-28 ${loading ? "min-h-[280px]" : ""}`}
+          className="scroll-mt-28"
         >
           <SectionErrorBoundary>
             <Suspense fallback={<DelayedFallback><HolidayHeroSkeleton /></DelayedFallback>}>
@@ -596,7 +596,7 @@ export default function CuratedContent({ portalSlug }: CuratedContentProps) {
         <section
           id={CURATED_TRENDING_ID}
           data-index-label="Trending Now"
-          className={`scroll-mt-28 ${loading ? "min-h-[170px]" : ""}`}
+          className="scroll-mt-28"
         >
           <SectionErrorBoundary>
             <Suspense fallback={<DelayedFallback><TrendingNowSkeleton /></DelayedFallback>}>

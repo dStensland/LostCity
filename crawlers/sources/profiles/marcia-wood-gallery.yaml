@@ -10,3 +10,8 @@ discovery:
   - https://www.marciawoodgallery.com
 detail:
   enabled: true
+data_goals:
+- events
+- exhibits
+- images
+- tickets

@@ -4,7 +4,7 @@ name: Nightmare's Gate
 integration_method: playwright
 defaults: {}
 discovery:
-  enabled: false  # Seasonal haunted house (Oct only) — 2026-02-06 audit
+  enabled: false
   type: list
   urls:
   - https://www.nightmaresgate.com
@@ -12,3 +12,7 @@ discovery:
     render_js: true
 detail:
   enabled: false
+data_goals:
+- events
+- images
+- tickets

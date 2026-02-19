@@ -10,3 +10,7 @@ discovery:
   - https://www.centerstage-atlanta.com
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- tickets

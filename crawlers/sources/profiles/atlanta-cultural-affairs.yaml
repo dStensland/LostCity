@@ -4,7 +4,6 @@ name: Atlanta Cultural Affairs
 integration_method: llm_crawler
 defaults:
   category: arts
-  subcategory: community
   tags:
   - arts
   - culture
@@ -17,3 +16,7 @@ discovery:
   - https://www.atlantaga.gov/government/mayor-s-office/executive-offices/office-of-cultural-affairs
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- tickets

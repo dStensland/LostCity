@@ -5,7 +5,6 @@ integration_method: html
 defaults:
   venue_name: Dancing4Fun
   category: arts
-  subcategory: dance
   tags:
   - dance
   - classes
@@ -16,3 +15,7 @@ discovery:
   - https://www.dancing4fun.com/events/
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- tickets

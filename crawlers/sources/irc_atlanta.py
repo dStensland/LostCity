@@ -301,8 +301,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     title, description or ""
                 )
 
-                # Most IRC events are free
-                is_free = True
+                # Default to unknown cost
+                is_free = False
 
                 # Build event record
                 event_record = {

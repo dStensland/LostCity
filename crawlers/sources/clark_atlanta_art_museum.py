@@ -261,7 +261,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "price_note": "Suggested donation $3",
                     "is_free": True,
                     "source_url": CURRENT_EXHIBITIONS_URL,
-                    "ticket_url": None,
+                    "ticket_url": CURRENT_EXHIBITIONS_URL,
                     "image_url": exhibition_data.get('image_url'),
                     "raw_text": f"{title}\n{date_text}\n{description}",
                     "extraction_confidence": 0.90,

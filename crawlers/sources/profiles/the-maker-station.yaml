@@ -10,3 +10,7 @@ discovery:
   - https://www.themakerstation.com/
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- tickets

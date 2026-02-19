@@ -8,6 +8,9 @@ discovery:
   type: list
   urls:
   - https://www.lyfeatl.com
-  # NOTE: DNS dead as of 2026-02-06
 detail:
   enabled: false
+data_goals:
+- events
+- images
+- tickets

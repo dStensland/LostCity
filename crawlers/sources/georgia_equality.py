@@ -205,8 +205,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 if any(kw in text_lower for kw in ["training", "workshop", "education"]):
                     tags.append("education")
 
-                # Most Georgia Equality events are free
-                is_free = True
+                # Default to not-free; only set True when source text says "free"
+                is_free = False
+                if any(kw in text_lower for kw in ["free", "no cost", "no charge", "complimentary"]):
+                    is_free = True
 
                 # Build source URL
                 source_url = CALENDAR_URL

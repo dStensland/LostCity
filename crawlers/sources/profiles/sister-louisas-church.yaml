@@ -1,0 +1,19 @@
+version: 1
+slug: sister-louisas-church
+name: Sister Louisa's Church
+integration_method: html
+defaults:
+  category: nightlife
+  tags:
+  - nightlife
+  - live-music
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.sisterlouisaschurch.com
+detail:
+  enabled: true
+data_goals:
+- events
+- images

@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import re
 import logging
-from datetime import datetime
+from datetime import datetime, date, timedelta
 from typing import Optional
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
@@ -27,6 +27,7 @@ from utils import extract_images_from_page
 logger = logging.getLogger(__name__)
 
 CALENDAR_URL = "https://www.mercedesbenzstadium.com/hdby/events-calendar"
+STALE_EVENT_GRACE_DAYS = 3
 
 VENUE_DATA = {
     "name": "The Home Depot Backyard",
@@ -210,24 +211,50 @@ def categorize_event(title: str, url: str) -> dict:
     }
 
 
-def parse_date(date_str: str) -> Optional[str]:
+def _extract_year_from_title(title: str) -> Optional[int]:
+    match = re.search(r"\b(20\d{2})\b", title or "")
+    if not match:
+        return None
+    try:
+        return int(match.group(1))
+    except ValueError:
+        return None
+
+
+def parse_date(date_str: str, title: str = "") -> Optional[str]:
     """
     Parse date string to YYYY-MM-DD format.
 
     Expected format: "March 1, 2025" or "February 28, 2025"
     """
-    try:
-        # Try parsing "Month Day, Year" format
-        date_obj = datetime.strptime(date_str.strip(), "%B %d, %Y")
-        return date_obj.strftime("%Y-%m-%d")
-    except ValueError:
+    parsed: Optional[datetime] = None
+    for fmt in ("%B %d, %Y", "%b %d, %Y"):
         try:
-            # Try alternate format with abbreviated month
-            date_obj = datetime.strptime(date_str.strip(), "%b %d, %Y")
-            return date_obj.strftime("%Y-%m-%d")
+            parsed = datetime.strptime(date_str.strip(), fmt)
+            break
         except ValueError:
-            logger.warning(f"Could not parse date: {date_str}")
-            return None
+            continue
+
+    if not parsed:
+        logger.warning(f"Could not parse date: {date_str}")
+        return None
+
+    today = date.today()
+    # Source occasionally labels annual events with an outdated year while title carries the current year.
+    title_year = _extract_year_from_title(title)
+    if title_year and title_year == parsed.year + 1:
+        candidate = parsed.replace(year=title_year)
+        if candidate.date() >= today - timedelta(days=STALE_EVENT_GRACE_DAYS):
+            parsed = candidate
+
+    # Ignore stale events to avoid keeping archived calendar rows active.
+    if parsed.date() < today - timedelta(days=STALE_EVENT_GRACE_DAYS):
+        return None
+
+    if parsed.year > today.year + 2:
+        return None
+
+    return parsed.strftime("%Y-%m-%d")
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
@@ -291,30 +318,33 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         continue
 
                     # Parse dates
-                    start_date = parse_date(start_date_str)
-                    end_date = parse_date(end_date_str) if end_date_str != start_date_str else None
+                    start_date = parse_date(start_date_str, title=title)
+                    end_date = (
+                        parse_date(end_date_str, title=title)
+                        if end_date_str != start_date_str
+                        else None
+                    )
 
                     if not start_date:
-                        logger.warning(f"Could not parse date for: {title}")
+                        logger.debug(
+                            "Skipping stale/unparseable HDBY event date for '%s': %s",
+                            title,
+                            start_date_str,
+                        )
                         continue
 
                     # Categorize event
                     cat_info = categorize_event(title, source_url)
 
-                    # Determine pricing (most HDBY events are free)
-                    is_free = True
-                    price_min = 0
-                    price_max = 0
-                    price_note = "Free"
-
-                    # Some events may have ticket links (check eventbrite/paid events)
-                    if source_url and ("eventbrite" in source_url.lower() or "ticket" in source_url.lower()):
-                        # These might be paid, but default to free unless we know otherwise
-                        is_free = True  # Still assume free for HDBY community programming
+                    # Determine pricing - default to unknown
+                    is_free = False
+                    price_min = None
+                    price_max = None
+                    price_note = None
 
                     # Build description
                     description_parts = [
-                        f"Free community event at The Home Depot Backyard at Mercedes-Benz Stadium."
+                        f"Community event at The Home Depot Backyard at Mercedes-Benz Stadium."
                     ]
 
                     if cat_info["category"] == "fitness":

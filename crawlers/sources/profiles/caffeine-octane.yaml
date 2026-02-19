@@ -10,3 +10,6 @@ discovery:
   - https://www.caffeine-and-octane.com
 detail:
   enabled: true
+data_goals:
+- events
+- images

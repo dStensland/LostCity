@@ -98,13 +98,13 @@ def determine_category_and_tags(title: str, description: str = "") -> tuple[str,
     elif any(word in text for word in ["braille", "assistive tech", "class", "training", "workshop", "orientation", "mobility"]):
         category = "learning"
         tags.extend(["education", "skills", "blindness"])
-        is_free = True
+        is_free = "free" in text or "no cost" in text
 
     # Support groups
     elif any(word in text for word in ["support group", "peer support", "community support"]):
         category = "community"
         tags.extend(["support-group", "community"])
-        is_free = True
+        is_free = "free" in text or "no cost" in text
 
     # Low vision clinics
     elif any(word in text for word in ["clinic", "low vision", "assessment", "evaluation"]):
@@ -116,7 +116,7 @@ def determine_category_and_tags(title: str, description: str = "") -> tuple[str,
     elif any(word in text for word in ["youth", "kids", "camp", "children", "teen"]):
         category = "community"
         tags.extend(["youth", "kids", "family-friendly"])
-        is_free = True
+        is_free = "free" in text or "no cost" in text
 
     # Fundraising events
     elif any(word in text for word in ["fundraiser", "gala", "benefit", "charity"]):
@@ -127,7 +127,7 @@ def determine_category_and_tags(title: str, description: str = "") -> tuple[str,
     # Default
     else:
         category = "community"
-        is_free = True
+        is_free = "free" in text or "no cost" in text
 
     # Explicit free mentions
     if any(word in text for word in ["free", "no cost", "complimentary", "no charge"]):

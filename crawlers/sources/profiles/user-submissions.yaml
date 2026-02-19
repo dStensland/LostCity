@@ -4,9 +4,13 @@ name: User Submissions
 integration_method: html
 defaults: {}
 discovery:
-  enabled: false  # Our own submit page, not a crawl source — 2026-02-06 audit
+  enabled: false
   type: list
   urls:
   - https://lostcity.io/submit
 detail:
   enabled: false
+data_goals:
+- events
+- images
+- tickets

@@ -4,9 +4,13 @@ name: DeKalb County Democrats (Mobilize)
 integration_method: llm_crawler
 defaults: {}
 discovery:
-  enabled: false  # Mobilize org slug returns 404 — 2026-02-06 audit
+  enabled: false
   type: html
   urls:
   - https://www.mobilize.us/dekalbdems/
 detail:
   enabled: false
+data_goals:
+- events
+- images
+- tickets

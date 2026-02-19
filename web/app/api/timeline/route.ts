@@ -8,6 +8,7 @@ import type { Festival } from "@/lib/festivals";
 import { logger } from "@/lib/logger";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
 import { filterByPortalCity } from "@/lib/portal-scope";
+import { isSuppressedFromGeneralEventFeed } from "@/lib/event-content-classification";
 
 function safeParseInt(value: string | null, defaultValue: number, min = 1, max = 1000): number {
   if (!value) return defaultValue;
@@ -38,6 +39,9 @@ export async function GET(request: Request) {
     }
     const portalId = portalContext.portalId || undefined;
     const portalExclusive = searchParams.get("portal_exclusive") === "true";
+    const includeExhibits = ["1", "true"].includes(
+      (searchParams.get("include_exhibits") || "").toLowerCase()
+    );
     const portalCity = !portalExclusive ? portalContext.filters.city : undefined;
 
     const filters: SearchFilters = {
@@ -137,7 +141,9 @@ export async function GET(request: Request) {
     const cityFilteredEvents = filterByPortalCity(rawEvents, portalCity, { allowMissingCity: true });
 
     // Enrich events with social proof in parallel with festival processing
-    const events = await enrichEventsWithSocialProof(cityFilteredEvents);
+    const events = (await enrichEventsWithSocialProof(cityFilteredEvents)).filter(
+      (event) => includeExhibits || !isSuppressedFromGeneralEventFeed(event)
+    );
 
     let festivals: Festival[] = [];
     let festivalError: { message: string } | null = null;

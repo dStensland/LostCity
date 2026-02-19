@@ -10,3 +10,7 @@ discovery:
   - https://www.teamtrivia.com/locations/
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- tickets

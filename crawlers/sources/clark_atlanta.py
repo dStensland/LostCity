@@ -1,35 +1,68 @@
 """
 Crawler for Clark Atlanta University Events.
-Arts, athletics, lectures, and campus events at the historic HBCU.
-Parses events from campus calendar and athletics pages.
+
+Uses the public idfive calendar API behind cau.edu/events.
 """
+
+from __future__ import annotations
 
 import json
 import logging
 import re
-from datetime import datetime
-from bs4 import BeautifulSoup
+from datetime import date, datetime
+from typing import Any, Optional
+
 import requests
+from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
-from utils import extract_image_url
 
 logger = logging.getLogger(__name__)
 
+
 # Keywords that indicate student/alumni-only events (not public)
 STUDENT_ONLY_KEYWORDS = [
-    "orientation", "new student", "prospective", "open house",
-    "registration", "enrollment", "advising", "deadline",
-    "reunion", "alumni weekend", "homecoming weekend",
-    "virtual info session", "info session",
-    "staff meeting", "faculty meeting",
-    "commencement rehearsal", "graduation rehearsal",
-    "student only", "students only", "for students",
-    "admitted students", "accepted students",
-    "parent weekend", "family weekend",
-    "preview day", "admitted student",
-    "career fair", "graduate school fair", "job fair",
+    "orientation",
+    "new student",
+    "prospective",
+    "open house",
+    "registration",
+    "enrollment",
+    "advising",
+    "deadline",
+    "reunion",
+    "alumni weekend",
+    "homecoming weekend",
+    "virtual info session",
+    "info session",
+    "staff meeting",
+    "faculty meeting",
+    "commencement rehearsal",
+    "graduation rehearsal",
+    "student only",
+    "students only",
+    "for students",
+    "admitted students",
+    "accepted students",
+    "parent weekend",
+    "family weekend",
+    "preview day",
+    "admitted student",
+    "career fair",
+    "graduate school fair",
+    "job fair",
+]
+
+# Calendar placeholders/academic milestones that are typically not consumer events.
+NON_EVENT_CALENDAR_KEYWORDS = [
+    "spring break",
+    "final exams",
+    "last day of classes",
+    "good friday",
+    "classes begin",
+    "classes end",
+    "registration period",
 ]
 
 
@@ -41,12 +74,17 @@ def is_public_event(title: str, description: str = "") -> bool:
         if keyword in text:
             return False
 
+    title_lower = (title or "").lower()
+    for keyword in NON_EVENT_CALENDAR_KEYWORDS:
+        if keyword in title_lower:
+            return False
+
     return True
 
 
 BASE_URL = "https://www.cau.edu"
 EVENTS_URL = f"{BASE_URL}/events"
-ATHLETICS_URL = "https://caupanthers.com/calendar"
+EVENTS_API_URL = f"{BASE_URL}/api/idfive_calendar/events"
 
 VENUES = {
     "museum": {
@@ -74,63 +112,99 @@ VENUES = {
 }
 
 
-def parse_jsonld_events(soup: BeautifulSoup) -> list[dict]:
-    """Extract Event data from JSON-LD scripts."""
-    events = []
-    scripts = soup.find_all("script", type="application/ld+json")
+def _normalize_time(value: Optional[str]) -> Optional[str]:
+    """Convert API time labels like '3:30 PM' to 24h HH:MM."""
+    if not value:
+        return None
 
-    for script in scripts:
+    text = " ".join(value.split())
+    if text.lower() == "all day":
+        return None
+
+    for fmt in ("%I:%M %p", "%I %p"):
         try:
-            data = json.loads(script.string)
-            if isinstance(data, dict):
-                if data.get("@type") == "Event":
-                    events.append(data)
-                if "@graph" in data:
-                    events.extend([e for e in data["@graph"] if e.get("@type") == "Event"])
-            elif isinstance(data, list):
-                events.extend([e for e in data if e.get("@type") == "Event"])
-        except (json.JSONDecodeError, TypeError):
+            return datetime.strptime(text, fmt).strftime("%H:%M")
+        except ValueError:
             continue
 
-    return events
+    return None
 
 
-def parse_text_events(soup: BeautifulSoup) -> list[dict]:
-    """Parse events from page text patterns."""
-    events = []
-    body_text = soup.get_text(separator="\n")
-    lines = [l.strip() for l in body_text.split("\n") if l.strip()]
+def _strip_html(value: Optional[str]) -> str:
+    if not value:
+        return ""
+    return BeautifulSoup(value, "html.parser").get_text(" ", strip=True)
 
-    current_date = None
 
-    for i, line in enumerate(lines):
-        # Look for date patterns
-        date_match = re.search(
-            r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s+(\d{4})",
-            line, re.IGNORECASE
-        )
-        if date_match:
-            try:
-                month, day, year = date_match.groups()
-                dt = datetime.strptime(f"{month} {day} {year}", "%B %d %Y")
-                current_date = dt.strftime("%Y-%m-%d")
-            except ValueError:
-                pass
+def _extract_api_image_url(image_blob: Any) -> Optional[str]:
+    if not isinstance(image_blob, dict):
+        return None
+
+    sizes = image_blob.get("image_sizes")
+    if not isinstance(sizes, dict):
+        return None
+
+    for key in ("large", "medium_large", "medium", "thumbnail"):
+        candidate = sizes.get(key)
+        if candidate:
+            return candidate
+    return None
+
+
+def _extract_tags(event_data: dict, title: str, description: str) -> list[str]:
+    tags = {"college", "hbcu", "clark-atlanta", "auc"}
+
+    for category_key in ("category_1", "category_2", "category_3", "category_4", "category_5"):
+        categories = event_data.get(category_key)
+        if not isinstance(categories, list):
             continue
+        for cat in categories:
+            name = (cat or {}).get("name")
+            if not name:
+                continue
+            normalized = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+            if normalized:
+                tags.add(normalized)
 
-        # Look for event titles (capitalized, reasonable length)
-        if current_date and len(line) > 5 and len(line) < 100:
-            if line[0].isupper() and not line.startswith(("http", "www", "©")):
-                # Skip common navigation items
-                skip_words = ["home", "about", "contact", "calendar", "events", "news", "search", "menu"]
-                if not any(line.lower() == w for w in skip_words):
-                    events.append({
-                        "title": line,
-                        "date": current_date,
-                    })
-                    current_date = None  # Reset for next event
+    text = f"{title} {description}".lower()
+    if "virtual" in text:
+        tags.add("virtual")
+    if "athletics" in text or "game" in text:
+        tags.add("athletics")
+    if "museum" in text or "exhibition" in text:
+        tags.add("museum")
 
-    return events
+    return sorted(tags)
+
+
+def _determine_category(title: str, description: str = "") -> tuple[str, str]:
+    text = f"{title} {description}".lower()
+    if "art" in text or "museum" in text or "exhibition" in text:
+        return "museums", "exhibition"
+    if "concert" in text or "music" in text:
+        return "music", "concert"
+    if "athletics" in text or "game" in text:
+        return "sports", "college"
+    return "community", "campus"
+
+
+def _fetch_calendar_events(headers: dict, start_date: date) -> list[dict]:
+    params = {
+        "range_start": 0,
+        "range_total": 100,
+        "start_date": start_date.isoformat(),
+    }
+    response = requests.get(EVENTS_API_URL, headers=headers, params=params, timeout=30)
+    response.raise_for_status()
+
+    payload = response.json()
+    if not isinstance(payload, dict):
+        return []
+
+    data = payload.get("data")
+    if isinstance(data, list):
+        return data
+    return []
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
@@ -148,143 +222,94 @@ def crawl(source: dict) -> tuple[int, int, int]:
     venue_id = get_or_create_venue(venue_data)
 
     try:
-        response = requests.get(EVENTS_URL, headers=headers, timeout=30)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.text, "html.parser")
+        calendar_events = _fetch_calendar_events(headers, date.today())
 
-        # Try JSON-LD first
-        json_events = parse_jsonld_events(soup)
+        for event_data in calendar_events:
+            title = (event_data.get("title") or "").strip()
+            if not title:
+                continue
 
-        if json_events:
-            for event_data in json_events:
-                title = event_data.get("name", "").strip()
-                if not title:
-                    continue
+            date_blob = event_data.get("date") or {}
+            start_blob = date_blob.get("start") or {}
+            end_blob = date_blob.get("end") or {}
 
-                # Skip student/alumni-only events
-                description = event_data.get("description", "")
-                if not is_public_event(title, description):
-                    logger.debug(f"Skipping non-public event: {title}")
-                    continue
+            start_date = start_blob.get("date")
+            if not start_date:
+                continue
 
-                events_found += 1
+            all_day = str(date_blob.get("all_day", "0")).lower() in {"1", "true"}
+            start_time = None if all_day else _normalize_time(start_blob.get("time"))
+            end_date = end_blob.get("date")
+            end_time = None if all_day else _normalize_time(end_blob.get("time"))
 
-                start_date = event_data.get("startDate", "")[:10] if event_data.get("startDate") else None
-                if not start_date:
-                    continue
+            summary = (event_data.get("summary") or "").strip()
+            details = _strip_html(event_data.get("details"))
+            description = details or summary or "Event at Clark Atlanta University"
 
-                content_hash = generate_content_hash(title, venue_data["name"], start_date)
+            if not is_public_event(title, description):
+                logger.debug("Skipping non-public event: %s", title)
+                continue
 
-                event_record = {
-                    "source_id": source_id,
-                    "venue_id": venue_id,
-                    "title": title,
-                    "description": event_data.get("description", "Event at Clark Atlanta University")[:500],
-                    "start_date": start_date,
-                    "start_time": None,
-                    "end_date": None,
-                    "end_time": None,
-                    "is_all_day": True,
-                    "category": "community",
-                    "subcategory": "campus",
-                    "tags": ["college", "hbcu", "clark-atlanta", "auc"],
-                    "price_min": None,
-                    "price_max": None,
-                    "price_note": None,
-                    "is_free": True,
-                    "source_url": EVENTS_URL,
-                    "ticket_url": None,
-                    "image_url": event_data.get("image"),
-                    "raw_text": json.dumps(event_data),
-                    "extraction_confidence": 0.85,
-                    "is_recurring": False,
-                    "recurrence_rule": None,
-                    "content_hash": content_hash,
-                }
+            category, subcategory = _determine_category(title, description)
+            source_url = (event_data.get("url") or EVENTS_URL).strip()
+            image_url = _extract_api_image_url(event_data.get("image"))
 
-                existing = find_event_by_hash(content_hash)
-                if existing:
-                    smart_update_existing_event(existing, event_record)
-                    events_updated += 1
-                    continue
+            content_hash = generate_content_hash(
+                title,
+                venue_data["name"],
+                f"{start_date}|{start_time or ''}|{source_url}",
+            )
 
-                try:
-                    insert_event(event_record)
-                    events_new += 1
-                except Exception as e:
-                    logger.error(f"Failed to insert {title}: {e}")
-        else:
-            # Fall back to text parsing
-            text_events = parse_text_events(soup)
-            for event_data in text_events:
-                title = event_data.get("title", "")
-                start_date = event_data.get("date")
+            event_record = {
+                "source_id": source_id,
+                "venue_id": venue_id,
+                "title": title,
+                "description": description[:500],
+                "start_date": start_date,
+                "start_time": start_time,
+                "end_date": end_date,
+                "end_time": end_time,
+                "is_all_day": all_day,
+                "category": category,
+                "subcategory": subcategory,
+                "tags": _extract_tags(event_data, title, description),
+                "price_min": None,
+                "price_max": None,
+                "price_note": None,
+                "is_free": True,
+                "source_url": source_url,
+                "ticket_url": source_url,
+                "image_url": image_url,
+                "raw_text": json.dumps(event_data)[:2000],
+                "extraction_confidence": 0.9,
+                "is_recurring": False,
+                "recurrence_rule": None,
+                "content_hash": content_hash,
+            }
 
-                if not title or not start_date:
-                    continue
+            events_found += 1
 
-                # Skip student/alumni-only events
-                if not is_public_event(title):
-                    logger.debug(f"Skipping non-public event: {title}")
-                    continue
+            existing = find_event_by_hash(content_hash)
+            if existing:
+                smart_update_existing_event(existing, event_record)
+                events_updated += 1
+                continue
 
-                events_found += 1
+            try:
+                insert_event(event_record)
+                events_new += 1
+            except Exception as e:
+                logger.error("Failed to insert %s: %s", title, e)
 
-                content_hash = generate_content_hash(title, venue_data["name"], start_date)
-                existing = find_event_by_hash(content_hash)
-                if existing:
-                    smart_update_existing_event(existing, event_record)
-                    events_updated += 1
-                    continue
-
-                # Determine category
-                title_lower = title.lower()
-                if "art" in title_lower or "museum" in title_lower or "exhibition" in title_lower:
-                    category, subcategory = "museums", "exhibition"
-                elif "concert" in title_lower or "music" in title_lower:
-                    category, subcategory = "music", "concert"
-                elif "athletics" in title_lower or "game" in title_lower:
-                    category, subcategory = "sports", "college"
-                else:
-                    category, subcategory = "community", "campus"
-
-                event_record = {
-                    "source_id": source_id,
-                    "venue_id": venue_id,
-                    "title": title,
-                    "description": "Event at Clark Atlanta University, a historic HBCU in the Atlanta University Center.",
-                    "start_date": start_date,
-                    "start_time": None,
-                    "end_date": None,
-                    "end_time": None,
-                    "is_all_day": True,
-                    "category": category,
-                    "subcategory": subcategory,
-                    "tags": ["college", "hbcu", "clark-atlanta", "auc"],
-                    "price_min": None,
-                    "price_max": None,
-                    "price_note": None,
-                    "is_free": True,
-                    "source_url": EVENTS_URL,
-                    "ticket_url": None,
-                    "image_url": extract_image_url(soup) if soup else None,
-                    "raw_text": None,
-                    "extraction_confidence": 0.70,
-                    "is_recurring": False,
-                    "recurrence_rule": None,
-                    "content_hash": content_hash,
-                }
-
-                try:
-                    insert_event(event_record)
-                    events_new += 1
-                except Exception as e:
-                    logger.error(f"Failed to insert {title}: {e}")
-
-        logger.info(f"Clark Atlanta University: Found {events_found} events, {events_new} new, {events_updated} existing")
+        logger.info(
+            "Clark Atlanta University: Found %s events, %s new, %s existing",
+            events_found,
+            events_new,
+            events_updated,
+        )
 
     except Exception as e:
-        logger.error(f"Failed to crawl Clark Atlanta University: {e}")
+        logger.error("Failed to crawl Clark Atlanta University: %s", e)
         raise
 
     return events_found, events_new, events_updated

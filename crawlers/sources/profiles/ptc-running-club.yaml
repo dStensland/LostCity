@@ -12,3 +12,8 @@ discovery:
     format: rss
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- lineup
+- tickets

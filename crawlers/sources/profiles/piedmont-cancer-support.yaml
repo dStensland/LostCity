@@ -10,3 +10,7 @@ discovery:
   - https://www.piedmontcancerinstitute.com/support-groups.php
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- tickets

@@ -10,3 +10,7 @@ discovery:
   - https://arthurmurrayatl.com
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- tickets

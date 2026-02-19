@@ -10,3 +10,7 @@ discovery:
   - https://www.instagram.com/blakesatl/
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- tickets

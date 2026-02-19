@@ -4,9 +4,11 @@ name: Morningside Lenox Park Association
 integration_method: html
 defaults: {}
 discovery:
-  enabled: false  # Site returns 500 error — 2026-02-06 audit
+  enabled: false
   type: list
   urls:
   - https://mlpa.org
 detail:
   enabled: false
+data_goals:
+- events

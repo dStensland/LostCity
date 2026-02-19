@@ -4,9 +4,11 @@ name: Mechanicsville Neighborhood (NPU-V)
 integration_method: html
 defaults: {}
 discovery:
-  enabled: false  # Generic atlantaga.gov URL, no event-specific page — 2026-02-06 audit
+  enabled: false
   type: list
   urls:
   - https://www.atlantaga.gov
 detail:
   enabled: false
+data_goals:
+- events

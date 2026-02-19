@@ -10,3 +10,6 @@ discovery:
   - https://www.lawrencevillega.org
 detail:
   enabled: true
+data_goals:
+- events
+- images

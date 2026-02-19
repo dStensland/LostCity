@@ -10,3 +10,6 @@ discovery:
   - https://www.alpharetta.ga.us
 detail:
   enabled: true
+data_goals:
+- events
+- images

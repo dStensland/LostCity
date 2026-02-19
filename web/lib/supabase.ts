@@ -66,6 +66,7 @@ export type Event = {
   end_date: string | null;
   end_time: string | null;
   is_all_day: boolean;
+  content_kind?: string | null;
   category: string | null;
   category_id: string | null;
   tags: string[] | null;

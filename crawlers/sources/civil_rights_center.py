@@ -15,7 +15,7 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
-from utils import extract_images_from_page, extract_event_links, find_event_url
+from utils import extract_images_from_page, extract_event_links, find_event_url, parse_date_range, enrich_event_record
 
 logger = logging.getLogger(__name__)
 
@@ -191,6 +191,30 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "recurrence_rule": None,
                         "content_hash": content_hash,
                     }
+
+                    # --- Date range extraction ---
+                    description = event_record.get("description") or ""
+                    range_text = f"{title} {description}"
+                    _, range_end = parse_date_range(range_text)
+                    if range_end:
+                        event_record["end_date"] = range_end
+
+                    # --- Exhibit detection ---
+                    _exhibit_keywords = ("exhibit", "exhibition", "on view", "collection", "installation", "permanent")
+                    _check_text = f"{title} {description}".lower()
+                    if any(kw in _check_text for kw in _exhibit_keywords):
+                        event_record["content_kind"] = "exhibit"
+                        event_record["is_all_day"] = True
+                        event_record["start_time"] = None
+
+                    # --- is_free keyword fallback ---
+                    if not event_record.get("is_free"):
+                        raw = f"{title} {description}".lower()
+                        if any(kw in raw for kw in ("free", "no cost", "no charge", "complimentary")):
+                            event_record["is_free"] = True
+
+                    # --- Enrichment from detail page ---
+                    enrich_event_record(event_record, source_name="National Center for Civil and Human Rights")
 
                     existing = find_event_by_hash(content_hash)
                     if existing:

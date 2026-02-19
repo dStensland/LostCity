@@ -1,0 +1,14 @@
+version: 1
+slug: second-helpings-atlanta
+name: Second Helpings Atlanta
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://secondhelpingsatlanta.org
+detail:
+  enabled: true
+data_goals:
+- events

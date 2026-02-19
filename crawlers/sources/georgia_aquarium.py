@@ -21,7 +21,7 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
-from utils import extract_images_from_page
+from utils import extract_images_from_page, extract_event_links, find_event_url, enrich_event_record
 
 logger = logging.getLogger(__name__)
 
@@ -188,15 +188,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 page.wait_for_timeout(1000)
 
             # Get event links for URL extraction
-            event_links = {}
-            link_elements = page.query_selector_all('a[href*="/events/event/"]')
-            for link in link_elements:
-                href = link.get_attribute("href")
-                text = link.inner_text().strip()
-                if href and text:
-                    # Map event text to URL (first occurrence wins)
-                    if text not in event_links:
-                        event_links[text.lower()] = href
+            event_links = extract_event_links(page, BASE_URL)
 
             # Get page text for parsing
             body_text = page.inner_text("body")
@@ -297,12 +289,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         # Check for existing
 
                         # Try to find event URL
-                        event_url = EVENTS_URL
-                        for key, url in event_links.items():
-                            # Match if title contains key text
-                            if any(part.lower() in key for part in title_parts):
-                                event_url = url
-                                break
+                        event_url = find_event_url(title, event_links, EVENTS_URL)
 
                         # Determine category
                         category, subcategory, tags = determine_category(title)
@@ -322,8 +309,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "tags": tags,
                             "price_min": None,
                             "price_max": None,
-                            "price_note": "May require separate ticket",
-                            "is_free": False,
+                            "price_note": None,
+                            "is_free": None,
                             "source_url": event_url,
                             "ticket_url": event_url,
                             "image_url": image_map.get(title),
@@ -333,6 +320,21 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "recurrence_rule": None,
                             "content_hash": content_hash,
                         }
+
+                        # Enrich from detail page
+                        enrich_event_record(event_record, source_name="Georgia Aquarium")
+
+                        # Determine is_free if still unknown after enrichment
+                        if event_record.get("is_free") is None:
+                            desc_lower = (event_record.get("description") or "").lower()
+                            title_lower = event_record.get("title", "").lower()
+                            combined = f"{title_lower} {desc_lower}"
+                            if any(kw in combined for kw in ["free", "no cost", "no charge", "complimentary"]):
+                                event_record["is_free"] = True
+                                event_record["price_min"] = event_record.get("price_min") or 0
+                                event_record["price_max"] = event_record.get("price_max") or 0
+                            else:
+                                event_record["is_free"] = False
 
                         existing = find_event_by_hash(content_hash)
                         if existing:

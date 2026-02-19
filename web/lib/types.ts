@@ -14,6 +14,7 @@ export type Database = {
           end_date: string | null;
           end_time: string | null;
           is_all_day: boolean;
+          content_kind: string;
           category: string | null;
           tags: string[] | null;
           price_min: number | null;

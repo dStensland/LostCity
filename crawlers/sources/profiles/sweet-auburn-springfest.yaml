@@ -10,3 +10,6 @@ discovery:
   - https://www.sweetauburn.com
 detail:
   enabled: true
+data_goals:
+- events
+- images

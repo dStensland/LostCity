@@ -2,7 +2,8 @@ version: 1
 slug: regal-atlanta
 name: Regal Cinemas Atlanta
 integration_method: html
-defaults: {}
+defaults:
+  category: film
 discovery:
   enabled: true
   type: html
@@ -10,3 +11,8 @@ discovery:
   - https://www.regmovies.com
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- showtimes
+- tickets

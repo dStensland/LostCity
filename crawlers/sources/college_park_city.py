@@ -352,10 +352,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         # Check if exists
 
-                        # Determine if free (most city events are free)
-                        is_free = True
-                        if any(word in (title + " " + description).lower() for word in ["$", "ticket", "fee", "registration"]):
-                            is_free = False
+                        # Default to not-free; only set True when source text says "free"
+                        is_free = False
+                        if any(word in (title + " " + description).lower() for word in ["free", "no cost", "no charge", "complimentary"]):
+                            is_free = True
 
                         # Build event record
                         event_record = {
@@ -525,10 +525,11 @@ def parse_text_content(
                 else:
                     category, tags = categorize_event(title, description or "")
 
-                    # Determine if free
-                    is_free = True
-                    if description and any(word in description.lower() for word in ["$", "ticket", "fee", "cost"]):
-                        is_free = False
+                    # Default to not-free; only set True when source text says "free"
+                    is_free = False
+                    text_check = f"{title} {description or ''}".lower()
+                    if any(word in text_check for word in ["free", "no cost", "no charge", "complimentary"]):
+                        is_free = True
 
                     event_record = {
                         "source_id": source_id,

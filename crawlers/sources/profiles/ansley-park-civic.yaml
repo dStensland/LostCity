@@ -10,3 +10,5 @@ discovery:
   - https://ansleypark.org
 detail:
   enabled: true
+data_goals:
+- events

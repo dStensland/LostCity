@@ -4,7 +4,7 @@ name: Basement Atlanta
 integration_method: llm_crawler
 defaults: {}
 discovery:
-  enabled: false  # 403 Forbidden — 2026-02-06 audit
+  enabled: false
   type: html
   urls:
   - https://www.basementatl.com
@@ -12,3 +12,7 @@ discovery:
     render_js: true
 detail:
   enabled: false
+data_goals:
+- events
+- images
+- tickets

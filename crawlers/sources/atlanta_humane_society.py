@@ -185,7 +185,7 @@ def process_event(event_data: dict, source_id: int, venue_id: int) -> Optional[d
         category, subcategory, event_tags = determine_category(title, description)
 
         # Price info - most AHS events are free
-        is_free = event_data.get("is_free", True)
+        is_free = event_data.get("is_free", False)
 
         # Image
         logo = event_data.get("logo") or {}

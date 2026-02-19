@@ -270,7 +270,10 @@ class TestInsertEvent:
 
         assert event_id == 901
         inserted_data = table.insert.call_args_list[0][0][0]
-        assert inserted_data["title"] == "The NeverEnding Story (40th Anniversary Screening)"
+        assert (
+            inserted_data["title"]
+            == "The NeverEnding Story (40th Anniversary Screening)"
+        )
         assert inserted_data["film_title"] == "The NeverEnding Story"
         assert inserted_data["film_release_year"] == 1984
         assert inserted_data["film_imdb_id"] == "tt0088323"
@@ -326,6 +329,65 @@ class TestInsertEvent:
         assert inserted_data["title"] == "Fight Club (1999)"
         assert inserted_data["film_title"] == "Fight Club"
         assert inserted_data["film_identity_source"] == "wikidata"
+
+    @patch("db.get_festival_source_hint", return_value=None)
+    @patch("db.get_venue_by_id_cached")
+    @patch("db.get_client")
+    def test_uses_source_url_as_ticket_url_for_film_showtimes(
+        self, mock_get_client, mock_get_venue, mock_festival_hint, sample_event_data
+    ):
+        """Film/showtime records should expose a ticket_url even when crawlers only provide source_url."""
+        client = MagicMock()
+        mock_get_client.return_value = client
+        mock_get_venue.return_value = {"vibes": []}
+
+        table = MagicMock()
+        client.table.return_value = table
+        table.insert.return_value = table
+        table.execute.return_value = MagicMock(data=[{"id": 903}])
+
+        from db import insert_event
+
+        event_data = dict(sample_event_data)
+        event_data["category"] = "film"
+        event_data["tags"] = ["showtime"]
+        event_data["ticket_url"] = None
+        event_data["source_url"] = "https://example.com/showtimes?date=2026-02-20"
+
+        event_id = insert_event(event_data)
+
+        assert event_id == 903
+        inserted_data = table.insert.call_args_list[0][0][0]
+        assert inserted_data["ticket_url"] == event_data["source_url"]
+
+    @patch("db.get_festival_source_hint", return_value=None)
+    @patch("db.get_venue_by_id_cached")
+    @patch("db.get_client")
+    def test_strips_deprecated_subcategory_fields_before_insert(
+        self, mock_get_client, mock_get_venue, mock_festival_hint, sample_event_data
+    ):
+        """Deprecated subcategory fields should never be persisted to events."""
+        client = MagicMock()
+        mock_get_client.return_value = client
+        mock_get_venue.return_value = {"vibes": []}
+
+        table = MagicMock()
+        client.table.return_value = table
+        table.insert.return_value = table
+        table.execute.return_value = MagicMock(data=[{"id": 904}])
+
+        from db import insert_event
+
+        event_data = dict(sample_event_data)
+        event_data["subcategory"] = "concert"
+        event_data["subcategory_id"] = "legacy-concert"
+
+        event_id = insert_event(event_data)
+
+        assert event_id == 904
+        inserted_data = table.insert.call_args_list[0][0][0]
+        assert "subcategory" not in inserted_data
+        assert "subcategory_id" not in inserted_data
 
 
 class TestFindEventByHash:
@@ -423,7 +485,9 @@ class TestSmartUpdateExistingEvent:
 
     @patch("db.get_source_info")
     @patch("db.get_client")
-    def test_backfills_portal_from_source_owner(self, mock_get_client, mock_get_source_info):
+    def test_backfills_portal_from_source_owner(
+        self, mock_get_client, mock_get_source_info
+    ):
         """Should fill missing portal_id from source owner on smart update."""
         client = MagicMock()
         mock_get_client.return_value = client

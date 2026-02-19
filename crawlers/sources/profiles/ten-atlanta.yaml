@@ -1,0 +1,19 @@
+version: 1
+slug: ten-atlanta
+name: Ten Atlanta
+integration_method: html
+defaults:
+  category: nightlife
+  tags:
+  - nightlife
+  - club
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.tenatlanta.com/
+detail:
+  enabled: true
+data_goals:
+- events
+- images

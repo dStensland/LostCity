@@ -10,3 +10,6 @@ discovery:
   - https://snellvillefarmersmarket.com
 detail:
   enabled: true
+data_goals:
+- events
+- images

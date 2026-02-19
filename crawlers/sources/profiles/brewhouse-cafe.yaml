@@ -4,7 +4,7 @@ name: Brewhouse Cafe
 integration_method: llm_crawler
 defaults: {}
 discovery:
-  enabled: false  # Private site / access blocked — 2026-02-06 audit
+  enabled: false
   type: html
   urls:
   - https://www.brewhousecafe.com
@@ -12,3 +12,9 @@ discovery:
     render_js: true
 detail:
   enabled: false
+data_goals:
+- events
+- images
+- specials
+- tickets
+- venue_hours

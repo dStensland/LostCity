@@ -1180,7 +1180,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             # Support optional price fields in event templates
             price_min = event_template.get("price_min")
             price_max = event_template.get("price_max")
-            is_free = price_min is None and price_max is None
+            is_free = event_template.get("is_free", False) if price_min is None and price_max is None else False
 
             event_record = {
                 "source_id": source_id,

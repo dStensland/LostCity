@@ -1,0 +1,18 @@
+version: 1
+slug: atlanta-st-patricks-parade
+name: Atlanta St. Patrick's Parade
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://atlantastpats.com
+  - https://atlantastpats.com/events
+  - https://atlantastpats.com/parade-info/map
+detail:
+  enabled: true
+data_goals:
+- events
+- images
+- tickets

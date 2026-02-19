@@ -10,3 +10,7 @@ discovery:
   - https://www.atlantatrackclub.org/peachtree
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- tickets

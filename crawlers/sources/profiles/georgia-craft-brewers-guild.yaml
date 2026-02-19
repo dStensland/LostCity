@@ -5,9 +5,9 @@ integration_method: html
 defaults:
   category: food_drink
   tags:
-    - beer
-    - craft-beer
-    - community
+  - beer
+  - craft-beer
+  - community
 discovery:
   enabled: true
   type: list
@@ -21,3 +21,9 @@ detail:
   use_open_graph: true
   use_heuristic: true
   use_llm: false
+data_goals:
+- events
+- images
+- specials
+- tickets
+- venue_hours

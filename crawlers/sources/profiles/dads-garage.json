@@ -6,13 +6,17 @@
   "defaults": {
     "venue_name": "Dad's Garage Theatre",
     "category": "comedy",
-    "subcategory": "improv",
-    "tags": ["comedy", "improv"]
+    "tags": [
+      "comedy",
+      "improv"
+    ]
   },
   "discovery": {
     "enabled": true,
     "type": "list",
-    "urls": ["https://dadsgarage.com/shows/"],
+    "urls": [
+      "https://dadsgarage.com/shows/"
+    ],
     "event_card": ".eventlist-event",
     "fields": {
       "title": ".eventlist-title",
@@ -33,5 +37,11 @@
     "use_open_graph": true,
     "use_heuristic": true,
     "use_llm": false
-  }
+  },
+  "data_goals": [
+    "events",
+    "images",
+    "lineup",
+    "tickets"
+  ]
 }

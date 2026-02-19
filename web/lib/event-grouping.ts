@@ -2,6 +2,7 @@ import { format, parseISO, isToday, isTomorrow } from "date-fns";
 import type { EventWithLocation } from "@/lib/search";
 import type { SeriesInfo, SeriesVenueGroup } from "@/components/SeriesCard";
 import type { Festival } from "@/lib/festivals";
+import { isSuppressedFromGeneralEventFeed } from "@/lib/event-content-classification";
 
 // Rollup thresholds
 const VENUE_ROLLUP_THRESHOLD = 4;
@@ -64,6 +65,7 @@ export interface GroupDisplayOptions {
   rollupVenues?: boolean;
   rollupCategories?: boolean;
   sortByTime?: boolean;
+  includeLongRunningExhibits?: boolean;
 }
 
 /**
@@ -149,8 +151,14 @@ export function groupEventsForDisplay(
   events: EventWithLocation[],
   options: GroupDisplayOptions = {}
 ): DisplayItem[] {
-  // Filter out events with no start_time (unless all-day)
-  const filteredEvents = events.filter((e) => e.start_time || e.is_all_day);
+  // Filter out events with no start_time (unless all-day).
+  // Also hide long-running exhibit-like content from generic event feeds by default.
+  const includeLongRunningExhibits = options.includeLongRunningExhibits ?? false;
+  const filteredEvents = events.filter((e) => {
+    if (!e.start_time && !e.is_all_day) return false;
+    if (!includeLongRunningExhibits && isSuppressedFromGeneralEventFeed(e)) return false;
+    return true;
+  });
 
   const items: DisplayItem[] = [];
   const usedEventIds = new Set<number>();

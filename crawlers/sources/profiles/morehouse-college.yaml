@@ -11,3 +11,6 @@ discovery:
 detail:
   enabled: true
   use_llm: true
+data_goals:
+- events
+- images

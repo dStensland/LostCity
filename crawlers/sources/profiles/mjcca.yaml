@@ -6,9 +6,9 @@ defaults:
   venue_name: Marcus Jewish Community Center of Atlanta
   category: learning
   tags:
-    - community
-    - family
-    - learning
+  - community
+  - family
+  - learning
 discovery:
   enabled: true
   type: list
@@ -21,3 +21,7 @@ detail:
   use_open_graph: true
   use_heuristic: true
   use_llm: false
+data_goals:
+- events
+- classes
+- tickets

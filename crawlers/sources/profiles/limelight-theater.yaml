@@ -5,11 +5,10 @@ integration_method: html
 defaults:
   venue_name: Limelight Theater
   category: arts
-  subcategory: film
   tags:
-    - film
-    - indie
-    - performing-arts
+  - film
+  - indie
+  - performing-arts
 discovery:
   enabled: true
   type: list
@@ -21,3 +20,8 @@ detail:
   use_open_graph: true
   use_heuristic: true
   use_llm: false
+data_goals:
+- events
+- images
+- showtimes
+- tickets

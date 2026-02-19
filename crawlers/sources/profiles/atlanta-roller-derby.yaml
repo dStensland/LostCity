@@ -10,3 +10,7 @@ discovery:
   - https://atlantarollerderby.com/schedule
 detail:
   enabled: false
+data_goals:
+- events
+- images
+- tickets

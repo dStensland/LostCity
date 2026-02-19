@@ -5,7 +5,6 @@ integration_method: html
 defaults:
   venue_name: OnStage Atlanta
   category: arts
-  subcategory: theatre
   tags:
   - theatre
   - community-theatre
@@ -20,3 +19,7 @@ detail:
   enabled: true
   fetch:
     render_js: true
+data_goals:
+- events
+- images
+- tickets

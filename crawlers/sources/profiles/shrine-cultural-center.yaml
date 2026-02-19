@@ -10,3 +10,7 @@ discovery:
   - https://www.eventbrite.com/o/shrine-cultural-center-51764997263
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- tickets

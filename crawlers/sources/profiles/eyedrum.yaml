@@ -10,3 +10,7 @@ discovery:
   - https://eyedrum.org/calendar-events-performances-art-music
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- tickets

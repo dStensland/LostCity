@@ -1,0 +1,18 @@
+version: 1
+slug: wild-bills
+name: Wild Bill's
+integration_method: html
+defaults:
+  category: nightlife
+  tags:
+  - nightlife
+  - country
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.wildbillsatlanta.com
+detail:
+  enabled: true
+data_goals:
+- events

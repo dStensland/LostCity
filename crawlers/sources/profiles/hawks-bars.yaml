@@ -8,6 +8,11 @@ discovery:
   type: list
   urls:
   - https://www.nba.com/hawks
-  # NOTE: /fans page gone (404), NBA site restructured as of 2026-02-06
 detail:
   enabled: false
+data_goals:
+- events
+- images
+- specials
+- tickets
+- venue_hours

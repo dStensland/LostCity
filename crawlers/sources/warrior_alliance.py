@@ -128,18 +128,13 @@ def determine_category_and_tags(title: str, description: str = "") -> tuple[str,
         category = "community"
         tags.append("community")
 
-    # Check if free (most Warrior Alliance events are free for veterans)
-    is_free = True
+    # Only mark free when explicitly stated
+    is_free = False
     if any(word in text for word in ["free", "no cost", "no charge", "complimentary", "no fee"]):
         is_free = True
         tags.append("free")
     elif any(word in text for word in ["$", "ticket", "registration fee", "cost", "donation"]):
-        # Check for explicit free mentions even with $ present
-        if "free" in text or "no cost" in text or "free for veterans" in text:
-            is_free = True
-            tags.append("free")
-        else:
-            is_free = False
+        is_free = False
 
     # Add family-friendly tag for appropriate events
     if any(word in text for word in ["family", "families", "kids", "children", "youth"]):

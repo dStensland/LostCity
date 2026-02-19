@@ -1,0 +1,20 @@
+version: 1
+slug: drepung-loseling-monastery
+name: Drepung Loseling Monastery
+integration_method: html
+defaults:
+  category: wellness
+  tags:
+  - wellness
+  - meditation
+  - spiritual
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.drepung.org/changing/Calendar/Current.htm
+detail:
+  enabled: true
+data_goals:
+- events
+- tickets

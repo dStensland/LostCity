@@ -10,3 +10,9 @@ discovery:
   - https://buriedalivefilmfest.com
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- lineup
+- showtimes
+- tickets

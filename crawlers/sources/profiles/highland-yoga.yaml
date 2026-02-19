@@ -10,3 +10,8 @@ discovery:
   - https://www.highland-yoga.com
 detail:
   enabled: true
+data_goals:
+- classes
+- events
+- images
+- tickets

@@ -8,8 +8,9 @@ discovery:
   type: list
   urls:
   - https://www.sidesaddleatl.com
-  # NOTE: DNS dead as of 2026-02-06; old crawler generates recurring events directly
 detail:
   enabled: false
   fetch:
     render_js: true
+data_goals:
+- events

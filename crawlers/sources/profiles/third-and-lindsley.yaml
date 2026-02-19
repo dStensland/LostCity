@@ -12,3 +12,7 @@ discovery:
     timeout_ms: 45000
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- tickets

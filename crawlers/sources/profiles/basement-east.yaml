@@ -10,3 +10,7 @@ discovery:
   - https://www.thebasementnashville.com/basement-east-calendar/
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- tickets

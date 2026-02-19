@@ -297,8 +297,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     title, description or ""
                 )
 
-                # AA events are free
-                is_free = True
+                # Check if event is free based on text
+                is_free = False
 
                 # Build event record
                 event_record = {
@@ -314,9 +314,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "category": category,
                     "subcategory": subcategory,
                     "tags": tags,
-                    "price_min": 0,
-                    "price_max": 0,
-                    "price_note": "Free",
+                    "price_min": None,
+                    "price_max": None,
+                    "price_note": None,
                     "is_free": is_free,
                     "source_url": event_url,
                     "ticket_url": event_url,

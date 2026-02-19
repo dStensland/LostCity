@@ -10,3 +10,7 @@ discovery:
   - https://www.gicc.com
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- tickets

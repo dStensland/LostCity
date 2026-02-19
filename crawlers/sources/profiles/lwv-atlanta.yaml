@@ -1,0 +1,16 @@
+version: 1
+slug: lwv-atlanta
+name: League of Women Voters of Atlanta-Fulton County
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://lwvaf.org/calendar
+detail:
+  enabled: true
+  fetch:
+    render_js: true
+data_goals:
+- events

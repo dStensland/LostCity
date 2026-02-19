@@ -1,0 +1,18 @@
+version: 1
+slug: eater-atlanta-openings
+name: Eater Atlanta Openings
+integration_method: feed
+defaults: {}
+discovery:
+  enabled: true
+  type: feed
+  urls:
+  - https://atlanta.eater.com/rss/openings/index.xml
+  feed:
+    format: rss
+detail:
+  enabled: true
+data_goals:
+- events
+- images
+- tickets

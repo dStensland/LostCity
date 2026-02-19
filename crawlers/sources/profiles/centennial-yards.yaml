@@ -1,0 +1,17 @@
+version: 1
+slug: centennial-yards
+name: Centennial Yards
+integration_method: api
+defaults: {}
+discovery:
+  enabled: true
+  type: api
+  urls:
+  - https://centennialyards.com/wp-json/wp/v2/events
+  - https://centennialyards.com/wp-json/wp/v2/news
+detail:
+  enabled: true
+data_goals:
+- events
+- images
+- tickets

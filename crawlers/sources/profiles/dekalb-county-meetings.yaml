@@ -1,0 +1,14 @@
+version: 1
+slug: dekalb-county-meetings
+name: DeKalb County Government Meetings
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://dekalbcountyga.legistar.com/Calendar.aspx
+detail:
+  enabled: true
+data_goals:
+- events
