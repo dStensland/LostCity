@@ -11,11 +11,18 @@ import { formatGenre } from "@/lib/series-utils";
 
 type FindFilterBarProps = {
   variant?: "full" | "compact";
+  portalId?: string;
+  portalExclusive?: boolean;
 };
 
 type GroupedOption = {
   group: string;
   options: { value: string; label: string }[];
+};
+
+type CategoryOption = {
+  value: string;
+  label: string;
 };
 
 const DATE_OPTIONS = [
@@ -49,7 +56,7 @@ function humanize(value: string): string {
 
 const MOOD_LABELS = new Map<string, string>(MOOD_OPTIONS.map((option) => [option.value, option.label]));
 
-export default function FindFilterBar({ variant = "full" }: FindFilterBarProps) {
+export default function FindFilterBar({ variant = "full", portalId, portalExclusive = false }: FindFilterBarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -60,6 +67,8 @@ export default function FindFilterBar({ variant = "full" }: FindFilterBarProps) 
   const [moodDropdownOpen, setMoodDropdownOpen] = useState(false);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   const [genreOptions, setGenreOptions] = useState<{ genre: string; display_order: number | null; is_format: boolean | null }[]>([]);
+  const [availableCategories, setAvailableCategories] = useState<Array<{ value: string; label: string; count: number }> | null>(null);
+  const [availableTags, setAvailableTags] = useState<Array<{ value: string; label: string; count: number }> | null>(null);
 
   const categoryDropdownRef = useRef<HTMLDivElement>(null);
   const dateDropdownRef = useRef<HTMLDivElement>(null);
@@ -86,6 +95,64 @@ export default function FindFilterBar({ variant = "full" }: FindFilterBarProps) 
   const currentMood = searchParams.get("mood") || "";
   const currentDateFilter = searchParams.get("date") || "";
   const currentFreeOnly = searchParams.get("free") === "1" || searchParams.get("price") === "free";
+
+  const categoryOptions = useMemo(() => {
+    const staticCategoryMap = new Map<string, string>(
+      CATEGORIES.map((category) => [category.value, category.label])
+    );
+    const byValue = new Map<string, CategoryOption>();
+
+    if (availableCategories && availableCategories.length > 0) {
+      for (const category of availableCategories) {
+        byValue.set(category.value, {
+          value: category.value,
+          label: category.label || staticCategoryMap.get(category.value) || humanize(category.value),
+        });
+      }
+    } else {
+      for (const category of CATEGORIES) {
+        byValue.set(category.value, { value: category.value, label: category.label });
+      }
+    }
+
+    for (const selected of currentCategories) {
+      if (!byValue.has(selected)) {
+        byValue.set(selected, {
+          value: selected,
+          label: staticCategoryMap.get(selected) || humanize(selected),
+        });
+      }
+    }
+
+    const optionOrder = CATEGORIES.map((category) => category.value);
+    return Array.from(byValue.values()).sort((a, b) => {
+      const aIdx = optionOrder.indexOf(a.value);
+      const bIdx = optionOrder.indexOf(b.value);
+      const aRank = aIdx === -1 ? Number.MAX_SAFE_INTEGER : aIdx;
+      const bRank = bIdx === -1 ? Number.MAX_SAFE_INTEGER : bIdx;
+      if (aRank !== bRank) return aRank - bRank;
+      return a.label.localeCompare(b.label);
+    });
+  }, [availableCategories, currentCategories]);
+
+  const tagGroupOptions = useMemo(() => {
+    const availableTagSet = availableTags?.length
+      ? new Set(availableTags.map((tag) => tag.value))
+      : null;
+
+    if (!availableTagSet) return TAG_GROUP_OPTIONS;
+
+    const filtered = TAG_GROUP_OPTIONS
+      .map((group) => ({
+        group: group.group,
+        options: group.options.filter(
+          (option) => availableTagSet.has(option.value) || currentTags.includes(option.value)
+        ),
+      }))
+      .filter((group) => group.options.length > 0);
+
+    return filtered.length > 0 ? filtered : TAG_GROUP_OPTIONS;
+  }, [availableTags, currentTags]);
 
   const hasFilters =
     currentCategories.length > 0 ||
@@ -123,7 +190,7 @@ export default function FindFilterBar({ variant = "full" }: FindFilterBarProps) 
     currentCategories.length === 0
       ? "Category"
       : currentCategories.length === 1
-      ? CATEGORIES.find((c) => c.value === currentCategories[0])?.label || "Category"
+      ? categoryOptions.find((c) => c.value === currentCategories[0])?.label || "Category"
       : `${currentCategories.length} categories`;
 
   const moodLabel = !currentMood ? "Mood" : MOOD_LABELS.get(currentMood) || humanize(currentMood);
@@ -297,6 +364,34 @@ export default function FindFilterBar({ variant = "full" }: FindFilterBarProps) 
     }
   }, [currentCategories]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Fetch availability-aware categories/tags for events find filters.
+  useEffect(() => {
+    const controller = new AbortController();
+    const params = new URLSearchParams();
+    if (portalId && portalId !== "default") {
+      params.set("portal_id", portalId);
+    }
+    if (portalExclusive) {
+      params.set("portal_exclusive", "true");
+    }
+    const query = params.toString();
+    const endpoint = query ? `/api/filters?${query}` : "/api/filters";
+
+    fetch(endpoint, { signal: controller.signal })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!data) return;
+        setAvailableCategories(Array.isArray(data.categories) ? data.categories : null);
+        setAvailableTags(Array.isArray(data.tags) ? data.tags : null);
+      })
+      .catch(() => {
+        setAvailableCategories(null);
+        setAvailableTags(null);
+      });
+
+    return () => controller.abort();
+  }, [portalExclusive, portalId]);
+
   return (
     <>
       <div className="hidden sm:block relative z-[140]">
@@ -324,7 +419,7 @@ export default function FindFilterBar({ variant = "full" }: FindFilterBarProps) 
               {categoryDropdownOpen && (
                 <div className="absolute top-full left-0 mt-1 w-64 max-h-80 overflow-y-auto rounded-xl border border-[var(--twilight)] shadow-xl z-[220] bg-[var(--void)]">
                   <div className="p-2">
-                    {CATEGORIES.map((cat) => {
+                    {categoryOptions.map((cat) => {
                       const isActive = currentCategories.includes(cat.value);
                       return (
                         <button
@@ -575,7 +670,8 @@ export default function FindFilterBar({ variant = "full" }: FindFilterBarProps) 
         currentTags={currentTags}
         currentVibes={currentVibes}
         currentMood={currentMood}
-        tagGroups={TAG_GROUP_OPTIONS}
+        categoryOptions={categoryOptions}
+        tagGroups={tagGroupOptions}
         vibeGroups={VIBE_GROUP_OPTIONS}
         moodOptions={MOOD_OPTIONS}
         onToggleCategory={toggleCategory}

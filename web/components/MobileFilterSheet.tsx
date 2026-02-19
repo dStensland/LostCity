@@ -30,6 +30,7 @@ interface MobileFilterSheetProps {
   currentCategories: string[];
   currentDateFilter: string;
   currentFreeOnly: boolean;
+  categoryOptions?: FilterOption[];
   currentTags?: string[];
   currentVibes?: string[];
   currentMood?: string;
@@ -52,6 +53,7 @@ export const MobileFilterSheet = memo(function MobileFilterSheet({
   currentCategories,
   currentDateFilter,
   currentFreeOnly,
+  categoryOptions = CATEGORIES,
   currentTags = [],
   currentVibes = [],
   currentMood = "",
@@ -266,7 +268,7 @@ export const MobileFilterSheet = memo(function MobileFilterSheet({
             <div>
               <h3 className="font-mono text-sm font-semibold text-[var(--cream)] mb-3">Categories</h3>
               <div className="grid grid-cols-2 gap-2">
-                {CATEGORIES.map((cat) => {
+                {categoryOptions.map((cat) => {
                   const isActive = currentCategories.includes(cat.value);
                   return (
                     <button

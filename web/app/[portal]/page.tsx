@@ -26,12 +26,12 @@ import { toAbsoluteUrl } from "@/lib/site-url";
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import EmoryMobileBottomNav from "./_components/hospital/EmoryMobileBottomNav";
+import { hasActiveFindFilters, type FindType } from "@/lib/find-filter-schema";
 
 export const revalidate = 60;
 
 type ViewMode = "feed" | "find" | "community";
 type FeedTab = "curated" | "explore" | "foryou";
-type FindType = "events" | "classes" | "destinations" | "showtimes";
 type FindDisplay = "list" | "map" | "calendar";
 
 type PortalSearchParams = {
@@ -50,6 +50,17 @@ type PortalSearchParams = {
   type?: string;
   display?: string;
   mood?: string;
+  class_category?: string;
+  class_date?: string;
+  class_skill?: string;
+  skill_level?: string;
+  start_date?: string;
+  end_date?: string;
+  open_now?: string;
+  with_events?: string;
+  price_level?: string;
+  venue_type?: string;
+  theater?: string;
   mode?: string;
   persona?: string;
   support?: string;
@@ -254,19 +265,7 @@ export default async function PortalPage({ params, searchParams }: Props) {
   }
 
   // Check for active filters
-  const hasActiveFilters = !!(
-    searchParamsData.search ||
-    searchParamsData.categories ||
-    searchParamsData.subcategories ||
-    searchParamsData.genres ||
-    searchParamsData.tags ||
-    searchParamsData.vibes ||
-    searchParamsData.neighborhoods ||
-    searchParamsData.price ||
-    searchParamsData.free ||
-    searchParamsData.date ||
-    searchParamsData.mood
-  );
+  const hasActiveFilters = hasActiveFindFilters(searchParamsData, findType);
   const hospitalMode = normalizeHospitalMode(searchParamsData.mode);
   const portalPageSchema = {
     "@context": "https://schema.org",

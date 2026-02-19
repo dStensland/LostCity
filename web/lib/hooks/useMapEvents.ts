@@ -4,6 +4,7 @@ import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import type { EventWithLocation } from "@/lib/search";
+import { FIND_TYPE_FILTER_KEYS } from "@/lib/find-filter-schema";
 
 /**
  * Map bounds (lat/lng bounding box)
@@ -43,18 +44,7 @@ const ATLANTA_BOUNDS: MapBounds = {
 };
 
 const MAP_EVENT_FILTER_KEYS = [
-  "search",
-  "categories",
-  "subcategories",
-  "tags",
-  "genres",
-  "vibes",
-  "neighborhoods",
-  "price",
-  "free",
-  "date",
-  "mood",
-  "venue",
+  ...FIND_TYPE_FILTER_KEYS.events,
   "portal_id",
   "portal_exclusive",
 ] as const;

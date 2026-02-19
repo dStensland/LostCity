@@ -19,50 +19,18 @@ import { useViewportFilter } from "@/lib/hooks/useViewportFilter";
 import MapListDrawer from "@/components/map/MapListDrawer";
 import MapBottomSheet from "@/components/map/MapBottomSheet";
 import MapDatePills from "@/components/map/MapDatePills";
+import {
+  FIND_FILTER_RESET_KEYS,
+  SHOWTIMES_EXCLUDED_FILTER_KEYS,
+  type FindType,
+} from "@/lib/find-filter-schema";
 
-type FindType = "events" | "classes" | "destinations" | "showtimes";
 type DisplayMode = "list" | "map" | "calendar";
 type ListDensity = "comfortable" | "compact";
 
 const MAP_DESKTOP_HEIGHT = "clamp(460px, calc(100dvh - 290px), 900px)";
 const MAP_MOBILE_HEIGHT = "clamp(340px, calc(100dvh - 250px - env(safe-area-inset-bottom, 0px)), 700px)";
 const DESTINATIONS_MAP_HEIGHT = "clamp(420px, calc(100dvh - 280px), 860px)";
-const FIND_FILTER_RESET_KEYS = [
-  "search",
-  "categories",
-  "class_category",
-  "class_date",
-  "class_skill",
-  "skill_level",
-  "start_date",
-  "end_date",
-  "subcategories",
-  "genres",
-  "tags",
-  "vibes",
-  "neighborhoods",
-  "neighborhood",
-  "price",
-  "free",
-  "mood",
-  "date",
-  "open_now",
-  "with_events",
-  "price_level",
-  "venue_type",
-  "theater",
-  "display",
-  "density",
-  "page",
-  "map_bounds",
-  "sw_lat",
-  "sw_lng",
-  "ne_lat",
-  "ne_lng",
-] as const;
-const SHOWTIMES_EXCLUDED_FILTER_KEYS = [
-  ...FIND_FILTER_RESET_KEYS.filter((key) => key !== "date"),
-] as const;
 
 const DESTINATION_TYPE_PRESETS = [
   { value: "all", label: "All Types" },
@@ -706,7 +674,11 @@ function FindViewInner({
                 </button>
               )}
             </div>
-            <FindFilterBar variant={displayMode === "map" ? "compact" : "full"} />
+            <FindFilterBar
+              variant={displayMode === "map" ? "compact" : "full"}
+              portalId={portalId}
+              portalExclusive={portalExclusive}
+            />
             {/* Active Filters */}
             {hasActiveFilters && displayMode === "list" && (
               <div className="px-1 pt-2">
