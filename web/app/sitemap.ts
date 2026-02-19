@@ -22,7 +22,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     .from("portals")
     .select("id, slug, updated_at")
     .eq("status", "active")
-    .not("slug", "is", null)
     .limit(500);
 
   const portals = (portalData || []) as PortalRow[];
@@ -94,7 +93,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const { data: spotsData } = await supabase
     .from("venues")
     .select("slug, updated_at, portal_id")
-    .not("slug", "is", null)
     .limit(500);
 
   const spots = (spotsData || []) as SpotRow[];
