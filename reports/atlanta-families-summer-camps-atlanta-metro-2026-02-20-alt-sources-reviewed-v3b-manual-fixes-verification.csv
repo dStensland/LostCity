@@ -1,0 +1,4 @@
+camp_name,url,domain,new_confidence,reason,http_status,content_type,token_hit_count,summer_signal,camp_signal,error,checked_at
+ITP Training Academy Racquet Camps,https://itpta.com/wp-content/uploads/2026/01/ITP-Training-Academy-Summer-Camp-Guide-20262.pdf,itpta.com,high,manual-fix:working-itpta-pdf,200,application/pdf,0,no,yes,,2026-02-20T05:28:19.728900+00:00
+Dance 411 Studios,https://www.dance411.com/camps,www.dance411.com,medium,manual-fix:official-camps-page,200,text/html; charset=UTF-8,0,yes,yes,,2026-02-20T05:28:20.149212+00:00
+Coach Jamie Hunt’s Bulldog Tennis Camp,http://www.bulldogtenniscamp.com/,www.bulldogtenniscamp.com,high,manual-fix:working-bulldog-camp-homepage,200,text/html; charset=utf-8,2,no,yes,,2026-02-20T05:28:20.405758+00:00

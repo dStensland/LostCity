@@ -61,15 +61,48 @@ CREATE INDEX IF NOT EXISTS idx_best_of_cases_category_status_upvotes
   ON best_of_cases(category_id, status, upvote_count DESC);
 
 -- 7. Missing RLS UPDATE policy for votes
-CREATE POLICY best_of_votes_update ON best_of_votes
-  FOR UPDATE USING (auth.uid() = user_id);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'best_of_votes'
+      AND policyname = 'best_of_votes_update'
+  ) THEN
+    CREATE POLICY best_of_votes_update ON best_of_votes
+      FOR UPDATE USING (auth.uid() = user_id);
+  END IF;
+END $$;
 
 -- 8. Missing RLS UPDATE/DELETE policies for nominations
-CREATE POLICY best_of_nominations_update ON best_of_nominations
-  FOR UPDATE USING (auth.uid() = user_id);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'best_of_nominations'
+      AND policyname = 'best_of_nominations_update'
+  ) THEN
+    CREATE POLICY best_of_nominations_update ON best_of_nominations
+      FOR UPDATE USING (auth.uid() = user_id);
+  END IF;
+END $$;
 
-CREATE POLICY best_of_nominations_delete ON best_of_nominations
-  FOR DELETE USING (auth.uid() = user_id);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'best_of_nominations'
+      AND policyname = 'best_of_nominations_delete'
+  ) THEN
+    CREATE POLICY best_of_nominations_delete ON best_of_nominations
+      FOR DELETE USING (auth.uid() = user_id);
+  END IF;
+END $$;
 
 -- 9. Index for per-user nomination quota check (category_id + user_id)
 CREATE INDEX IF NOT EXISTS idx_best_of_nominations_user_category
@@ -80,10 +113,16 @@ CREATE INDEX IF NOT EXISTS idx_best_of_nominations_user_category
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN
-    PERFORM cron.schedule(
-      'refresh-best-of-scores',
-      '*/30 * * * *',
-      'REFRESH MATERIALIZED VIEW CONCURRENTLY best_of_venue_scores'
-    );
+    IF NOT EXISTS (
+      SELECT 1
+      FROM cron.job
+      WHERE jobname = 'refresh-best-of-scores'
+    ) THEN
+      PERFORM cron.schedule(
+        'refresh-best-of-scores',
+        '*/30 * * * *',
+        'REFRESH MATERIALIZED VIEW CONCURRENTLY best_of_venue_scores'
+      );
+    END IF;
   END IF;
 END $$;
