@@ -220,6 +220,10 @@ export type Database = {
           event_id: number;
           status: string;
           visibility: string;
+          engagement_target: "event" | "festival_session";
+          festival_id: string | null;
+          program_id: string | null;
+          portal_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -228,10 +232,48 @@ export type Database = {
           event_id: number;
           status: string;
           visibility?: string;
+          engagement_target?: "event" | "festival_session";
+          festival_id?: string | null;
+          program_id?: string | null;
+          portal_id?: string | null;
         };
         Update: {
           status?: string;
           visibility?: string;
+          engagement_target?: "event" | "festival_session";
+          festival_id?: string | null;
+          program_id?: string | null;
+          portal_id?: string | null;
+        };
+      };
+      event_calendar_saves: {
+        Row: {
+          id: string;
+          user_id: string;
+          event_id: number;
+          provider: "google" | "outlook" | "ics";
+          engagement_target: "event" | "festival_session";
+          festival_id: string | null;
+          program_id: string | null;
+          portal_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          event_id: number;
+          provider: "google" | "outlook" | "ics";
+          engagement_target?: "event" | "festival_session";
+          festival_id?: string | null;
+          program_id?: string | null;
+          portal_id?: string | null;
+        };
+        Update: {
+          provider?: "google" | "outlook" | "ics";
+          engagement_target?: "event" | "festival_session";
+          festival_id?: string | null;
+          program_id?: string | null;
+          portal_id?: string | null;
         };
       };
       recommendations: {

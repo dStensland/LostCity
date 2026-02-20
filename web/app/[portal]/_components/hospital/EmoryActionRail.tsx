@@ -34,7 +34,7 @@ export default function EmoryActionRail({
 
   return (
     <section data-emory-action-rail className="mt-5">
-      <div className="rounded-2xl border border-[var(--line-strong)]/70 bg-[color:color-mix(in_srgb,var(--card-bg)_92%,white_8%)] p-2 shadow-[0_10px_24px_rgba(3,43,100,0.12)]">
+      <div className="rounded-2xl border border-[var(--twilight)] bg-[var(--surface-1)] p-2.5 shadow-[0_8px_20px_rgba(3,43,100,0.10)]">
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           {actions.map((action, index) => (
             <HospitalTrackedLink
@@ -52,7 +52,7 @@ export default function EmoryActionRail({
                 targetLabel: action.targetLabel || action.label,
                 targetUrl: action.targetUrl || action.href,
               }}
-              className={`inline-flex min-h-10 items-center justify-center px-3 py-2 text-center text-xs sm:text-sm ${
+              className={`inline-flex min-h-10 items-center justify-center px-3.5 py-2 text-center text-xs sm:text-[13px] ${
                 index === 0 ? "emory-primary-btn" : "emory-secondary-btn"
               }`}
             >

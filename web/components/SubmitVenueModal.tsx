@@ -404,7 +404,7 @@ export default function SubmitVenueModal({ isOpen, onClose, portalSlug = "atlant
           /* Form state */
           <>
             <h2 id="submit-venue-title" className="text-xl font-semibold text-[var(--cream)] mb-2">
-              Add a Destination
+              Add a Spot
             </h2>
             <p className="text-sm text-[var(--soft)] mb-6">
               Search for a place to add it to Lost City. Verified places are approved instantly.
@@ -514,7 +514,7 @@ export default function SubmitVenueModal({ isOpen, onClose, portalSlug = "atlant
                   disabled={submitting || !selectedPlace?.google_place_id || !!selectedPlace?.venue_id}
                   className="flex-1 py-2.5 rounded-lg bg-[var(--coral)] text-[var(--void)] font-mono text-sm font-medium hover:bg-[var(--rose)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {submitting ? "Adding..." : "Add Destination"}
+                  {submitting ? "Adding..." : "Add Spot"}
                 </button>
               </div>
             </form>

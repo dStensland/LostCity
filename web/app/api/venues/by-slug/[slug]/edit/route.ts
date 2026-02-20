@@ -15,6 +15,34 @@ import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-lim
 
 export const dynamic = "force-dynamic";
 
+const PLANNING_SERVICE_STYLES = [
+  "quick_service",
+  "casual_dine_in",
+  "full_service",
+  "tasting_menu",
+  "bar_food",
+  "coffee_dessert",
+] as const;
+
+function parseNullableBoundedInt(
+  value: unknown,
+  fieldName: string,
+  min: number,
+  max: number
+): { value: number | null; error: string | null } {
+  if (value === null || value === "") return { value: null, error: null };
+  if (typeof value !== "number" || !Number.isInteger(value)) {
+    return { value: null, error: `${fieldName} must be an integer` };
+  }
+  if (value < min || value > max) {
+    return {
+      value: null,
+      error: `${fieldName} must be between ${min} and ${max}`,
+    };
+  }
+  return { value, error: null };
+}
+
 interface EditVenueBody {
   description?: string;
   website?: string;
@@ -25,6 +53,14 @@ interface EditVenueBody {
   phone?: string;
   menu_url?: string;
   reservation_url?: string;
+  service_style?: (typeof PLANNING_SERVICE_STYLES)[number] | null;
+  meal_duration_min_minutes?: number | null;
+  meal_duration_max_minutes?: number | null;
+  walk_in_wait_minutes?: number | null;
+  payment_buffer_minutes?: number | null;
+  accepts_reservations?: boolean | null;
+  reservation_recommended?: boolean | null;
+  planning_notes?: string | null;
 }
 
 type Props = {
@@ -55,7 +91,7 @@ export async function GET(request: NextRequest, { params }: Props) {
   const { data: venue, error: venueError } = await serviceClient
     .from("venues")
     .select(
-      "id, name, slug, claimed_by, is_verified, description, website, hours, image_url, accessibility_notes, vibes, phone, menu_url, reservation_url"
+      "id, name, slug, claimed_by, is_verified, description, website, hours, image_url, accessibility_notes, vibes, phone, menu_url, reservation_url, service_style, meal_duration_min_minutes, meal_duration_max_minutes, walk_in_wait_minutes, payment_buffer_minutes, accepts_reservations, reservation_recommended, planning_notes, planning_last_verified_at"
     )
     .eq("slug", slug)
     .maybeSingle() as {
@@ -74,6 +110,15 @@ export async function GET(request: NextRequest, { params }: Props) {
         phone: string | null;
         menu_url: string | null;
         reservation_url: string | null;
+        service_style: (typeof PLANNING_SERVICE_STYLES)[number] | null;
+        meal_duration_min_minutes: number | null;
+        meal_duration_max_minutes: number | null;
+        walk_in_wait_minutes: number | null;
+        payment_buffer_minutes: number | null;
+        accepts_reservations: boolean | null;
+        reservation_recommended: boolean | null;
+        planning_notes: string | null;
+        planning_last_verified_at: string | null;
       } | null;
       error: unknown;
     };
@@ -132,13 +177,15 @@ export async function PATCH(request: NextRequest, { params }: Props) {
   // Get venue and verify ownership
   const { data: venue, error: venueError } = await serviceClient
     .from("venues")
-    .select("id, claimed_by, is_verified")
+    .select("id, claimed_by, is_verified, meal_duration_min_minutes, meal_duration_max_minutes")
     .eq("slug", slug)
     .maybeSingle() as {
       data: {
         id: number;
         claimed_by: string | null;
         is_verified: boolean | null;
+        meal_duration_min_minutes: number | null;
+        meal_duration_max_minutes: number | null;
       } | null;
       error: unknown;
     };
@@ -229,6 +276,125 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       return validationError("Invalid reservation URL");
     }
     updates.reservation_url = body.reservation_url || null;
+  }
+
+  if (body.service_style !== undefined) {
+    if (body.service_style === null || body.service_style === "") {
+      updates.service_style = null;
+    } else if (!PLANNING_SERVICE_STYLES.includes(body.service_style)) {
+      return validationError(
+        `service_style must be one of: ${PLANNING_SERVICE_STYLES.join(", ")}`
+      );
+    } else {
+      updates.service_style = body.service_style;
+    }
+  }
+
+  if (body.meal_duration_min_minutes !== undefined) {
+    const parsed = parseNullableBoundedInt(
+      body.meal_duration_min_minutes,
+      "meal_duration_min_minutes",
+      15,
+      360
+    );
+    if (parsed.error) return validationError(parsed.error);
+    updates.meal_duration_min_minutes = parsed.value;
+  }
+
+  if (body.meal_duration_max_minutes !== undefined) {
+    const parsed = parseNullableBoundedInt(
+      body.meal_duration_max_minutes,
+      "meal_duration_max_minutes",
+      15,
+      480
+    );
+    if (parsed.error) return validationError(parsed.error);
+    updates.meal_duration_max_minutes = parsed.value;
+  }
+
+  if (body.walk_in_wait_minutes !== undefined) {
+    const parsed = parseNullableBoundedInt(
+      body.walk_in_wait_minutes,
+      "walk_in_wait_minutes",
+      0,
+      240
+    );
+    if (parsed.error) return validationError(parsed.error);
+    updates.walk_in_wait_minutes = parsed.value;
+  }
+
+  if (body.payment_buffer_minutes !== undefined) {
+    const parsed = parseNullableBoundedInt(
+      body.payment_buffer_minutes,
+      "payment_buffer_minutes",
+      0,
+      60
+    );
+    if (parsed.error) return validationError(parsed.error);
+    updates.payment_buffer_minutes = parsed.value;
+  }
+
+  if (body.accepts_reservations !== undefined) {
+    if (
+      body.accepts_reservations !== null &&
+      typeof body.accepts_reservations !== "boolean"
+    ) {
+      return validationError("accepts_reservations must be boolean or null");
+    }
+    updates.accepts_reservations = body.accepts_reservations;
+  }
+
+  if (body.reservation_recommended !== undefined) {
+    if (
+      body.reservation_recommended !== null &&
+      typeof body.reservation_recommended !== "boolean"
+    ) {
+      return validationError("reservation_recommended must be boolean or null");
+    }
+    updates.reservation_recommended = body.reservation_recommended;
+  }
+
+  if (body.planning_notes !== undefined) {
+    if (body.planning_notes !== null && !isValidString(body.planning_notes, 0, 1000)) {
+      return validationError("planning_notes must be between 0 and 1000 characters");
+    }
+    updates.planning_notes = body.planning_notes ? sanitizeString(body.planning_notes) : null;
+  }
+
+  const nextMealDurationMin =
+    updates.meal_duration_min_minutes !== undefined
+      ? (updates.meal_duration_min_minutes as number | null)
+      : venue.meal_duration_min_minutes;
+  const nextMealDurationMax =
+    updates.meal_duration_max_minutes !== undefined
+      ? (updates.meal_duration_max_minutes as number | null)
+      : venue.meal_duration_max_minutes;
+
+  if (
+    nextMealDurationMin != null &&
+    nextMealDurationMax != null &&
+    nextMealDurationMin > nextMealDurationMax
+  ) {
+    return validationError(
+      "meal_duration_min_minutes cannot be greater than meal_duration_max_minutes"
+    );
+  }
+
+  const planningFields = new Set([
+    "service_style",
+    "meal_duration_min_minutes",
+    "meal_duration_max_minutes",
+    "walk_in_wait_minutes",
+    "payment_buffer_minutes",
+    "accepts_reservations",
+    "reservation_recommended",
+    "planning_notes",
+  ]);
+  const touchedPlanningFields = Object.keys(updates).some((field) =>
+    planningFields.has(field)
+  );
+  if (touchedPlanningFields) {
+    updates.planning_last_verified_at = new Date().toISOString();
   }
 
   // If no updates, return early

@@ -22,6 +22,8 @@ interface UseTimelineOptions {
   portalExclusive?: boolean;
   initialData?: EventWithLocation[];
   enabled?: boolean;
+  /** Smart date default to inject when no explicit date is in the URL */
+  dateOverride?: string;
 }
 
 /**
@@ -33,7 +35,7 @@ interface UseTimelineOptions {
  * where future festivals pushed the infinite-scroll sentinel out of view.
  */
 export function useTimeline(options: UseTimelineOptions = {}) {
-  const { portalId, portalExclusive, initialData, enabled = true } = options;
+  const { portalId, portalExclusive, initialData, enabled = true, dateOverride } = options;
   const searchParams = useSearchParams();
 
   // Stable query key from filter params (exclude view param)
@@ -56,14 +58,23 @@ export function useTimeline(options: UseTimelineOptions = {}) {
       const value = searchParams.get(key);
       if (value) params.set(key, value);
     });
+    // Inject smart date default when no explicit date in URL
+    if (!params.get("date") && dateOverride) {
+      params.set("date", dateOverride);
+    }
     return params.toString();
-  }, [searchParams]);
+  }, [searchParams, dateOverride]);
 
   // Build API params from search params
   const buildApiParams = useCallback(
     (cursor: string | null) => {
       const params = new URLSearchParams(searchParams.toString());
       params.delete("view");
+
+      // Inject smart date default when no explicit date in URL
+      if (!params.get("date") && dateOverride) {
+        params.set("date", dateOverride);
+      }
 
       if (cursor) {
         params.set("cursor", cursor);
@@ -78,7 +89,7 @@ export function useTimeline(options: UseTimelineOptions = {}) {
 
       return params;
     },
-    [searchParams, portalId, portalExclusive]
+    [searchParams, portalId, portalExclusive, dateOverride]
   );
 
   const query = useInfiniteQuery<TimelineResponse, Error>({

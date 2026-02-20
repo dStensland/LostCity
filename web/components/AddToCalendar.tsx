@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { usePortalOptional } from "@/lib/portal-context";
 
 interface Props {
+  eventId?: number;
   title: string;
   date: string;
   time: string | null;
@@ -17,6 +19,7 @@ interface Props {
 }
 
 export default function AddToCalendar({
+  eventId,
   title,
   date,
   time,
@@ -27,6 +30,9 @@ export default function AddToCalendar({
   variant = "default",
   brandName = "Lost City",
 }: Props) {
+  const portalContext = usePortalOptional();
+  const portalId = portalContext?.portal?.id || null;
+  const portalSlug = portalContext?.portal?.slug || null;
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -45,6 +51,26 @@ export default function AddToCalendar({
   const location = [venue, address, city && state ? `${city}, ${state}` : city || state]
     .filter(Boolean)
     .join(", ");
+
+  const trackCalendarSave = (provider: "google" | "outlook" | "ics") => {
+    if (!eventId) return;
+
+    const payload: Record<string, unknown> = {
+      event_id: eventId,
+      provider,
+    };
+    if (portalId) payload.portal_id = portalId;
+    if (portalSlug) payload.portal_slug = portalSlug;
+
+    void fetch("/api/user/calendar/save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      keepalive: true,
+    }).catch(() => {
+      // Non-blocking analytics/persistence signal. Calendar action should proceed regardless.
+    });
+  };
 
   // Parse date and time
   const startDate = new Date(date);
@@ -80,6 +106,8 @@ export default function AddToCalendar({
 
   // Generate ICS file content
   const generateICS = () => {
+    trackCalendarSave("ics");
+
     const prodId = brandName === "Lost City" ? "Lost City" : brandName;
     const icsContent = `BEGIN:VCALENDAR
 VERSION:2.0
@@ -156,7 +184,10 @@ END:VCALENDAR`;
             href={googleUrl}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={() => setIsOpen(false)}
+            onClick={() => {
+              trackCalendarSave("google");
+              setIsOpen(false);
+            }}
             className="flex items-center gap-3 px-4 py-3 text-sm text-[var(--soft)] hover:bg-[var(--twilight)] hover:text-[var(--cream)] transition-colors"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
@@ -183,7 +214,10 @@ END:VCALENDAR`;
             href={outlookUrl}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={() => setIsOpen(false)}
+            onClick={() => {
+              trackCalendarSave("outlook");
+              setIsOpen(false);
+            }}
             className="flex items-center gap-3 px-4 py-3 text-sm text-[var(--soft)] hover:bg-[var(--twilight)] hover:text-[var(--cream)] transition-colors"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">

@@ -169,16 +169,16 @@ export default function EmoryConciergeFoodExplorer({
   }, [items]);
 
   return (
-    <section className="rounded-xl border border-[var(--twilight)] bg-white p-3 sm:p-4">
+    <section className="rounded-xl border border-[#d7dce4] bg-white p-3 sm:p-4">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h3 className="text-[1.2rem] sm:text-[1.35rem] leading-[1.02] text-[var(--cream)]">What&apos;s nearby</h3>
-          <p className="mt-1 text-xs sm:text-sm text-[var(--muted)]">
+          <h3 className="text-[1.2rem] sm:text-[1.35rem] leading-[1.02] text-[#002f6c] font-semibold">What&apos;s nearby</h3>
+          <p className="mt-1 text-xs sm:text-sm text-[#4b5563]">
             Showing <strong>{activeCategoryLabel.toLowerCase()}</strong> around this campus.
             {activeCategoryIsFood ? ` ${activeMomentOption.label.toLowerCase()} · ${activePreferenceOption.label.toLowerCase()}.` : ""}
           </p>
         </div>
-        <p className="text-xs text-[var(--muted)]">{filtered.length} results</p>
+        <p className="text-xs text-[#6b7280]">{filtered.length} results</p>
       </div>
 
       <div className="mt-3 flex flex-wrap gap-1.5">
@@ -241,7 +241,7 @@ export default function EmoryConciergeFoodExplorer({
 
       <div className="mt-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
         {filtered.map((item) => (
-          <article key={item.id} className="overflow-hidden rounded-lg border border-[var(--twilight)] bg-white">
+          <article key={item.id} className="overflow-hidden rounded-xl border border-[#d7dce4] bg-white shadow-sm hover:shadow-md transition-shadow">
             {item.imageUrl ? (
               <img
                 src={item.imageUrl}
@@ -249,15 +249,15 @@ export default function EmoryConciergeFoodExplorer({
                 className="h-36 w-full object-cover"
               />
             ) : (
-              <div className="h-36 w-full bg-gradient-to-br from-[#e8ecf2] to-[#d7dce6]" />
+              <div className="h-36 w-full bg-gradient-to-br from-[#e1e8f2] to-[#cdd6e4]" />
             )}
             <div className="p-3">
-              <p className="text-[11px] uppercase tracking-[0.06em] text-[#6b7280]">
+              <p className="text-[10.5px] font-bold uppercase tracking-[0.07em] text-[#8094b3]">
                 {formatLabel(item.category)} · {formatLabel(item.venueType || "service")} · {item.distanceMiles.toFixed(1)} mi
               </p>
-              <h4 className="mt-1 text-[1.05rem] leading-[1.02] text-[var(--cream)] font-semibold">{item.title}</h4>
-              <p className="mt-1 text-xs text-[var(--muted)]">{item.summary}</p>
-              <p className="mt-1 text-[11px] text-[var(--muted)]">
+              <h4 className="mt-1 text-[1.05rem] leading-[1.02] text-[#002f6c] font-semibold">{item.title}</h4>
+              <p className="mt-1 text-xs text-[#4b5563]">{item.summary}</p>
+              <p className="mt-1 text-[11px] text-[#6b7280]">
                 {item.isOpenNow ? "Open now" : "Check hours"}
                 {item.openLate ? " · Open late" : ""}
                 {item.neighborhood ? ` · ${item.neighborhood}` : ""}
@@ -316,8 +316,8 @@ export default function EmoryConciergeFoodExplorer({
       </div>
 
       {filtered.length === 0 && (
-        <div className="mt-3 rounded-md border border-dashed border-[var(--twilight)] bg-[var(--surface-1)] p-3">
-          <p className="text-sm text-[var(--muted)]">No direct matches. Try another moment or preference.</p>
+        <div className="mt-3 rounded-md border border-dashed border-[#d7dce4] bg-[#f8f9fb] p-3">
+          <p className="text-sm text-[#6b7280]">No direct matches. Try another moment or preference.</p>
         </div>
       )}
     </section>

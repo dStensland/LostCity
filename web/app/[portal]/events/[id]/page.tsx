@@ -16,6 +16,7 @@ import type { Metadata } from "next";
 import { isTicketingUrl } from "@/lib/card-utils";
 import DirectionsDropdown from "@/components/DirectionsDropdown";
 import VenueVibes from "@/components/VenueVibes";
+import GettingThereSection from "@/components/GettingThereSection";
 import LinkifyText from "@/components/LinkifyText";
 import { formatTime, formatTimeSplit, formatPriceDetailed, safeJsonLd, formatRelativeTime } from "@/lib/formats";
 import VenueTagList from "@/components/VenueTagList";
@@ -459,6 +460,7 @@ export default async function PortalEventPage({ params }: Props) {
             subtitle={event.venue?.name}
             categoryColor={categoryColor}
             backFallbackHref={`/${activePortalSlug}`}
+            portrait
             categoryIcon={<CategoryIcon type={event.category || "other"} size={48} />}
             badge={
               <div className="flex items-center gap-2">
@@ -608,6 +610,7 @@ export default async function PortalEventPage({ params }: Props) {
                     </p>
 
                     <VenueVibes vibes={event.venue.vibes} className="mt-3" />
+                    <GettingThereSection transit={event.venue} variant="compact" />
                   </Link>
 
                   {isVirtualLocation && (event.ticket_url || event.source_url) && (
@@ -750,21 +753,25 @@ export default async function PortalEventPage({ params }: Props) {
             )}
 
             {/* Tags */}
-            {event.tags && event.tags.length > 0 && (
-              <>
-                <SectionHeader title="Also Featuring" count={event.tags.length} />
-                <div className="flex flex-wrap gap-2 mb-6">
-                  {event.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="px-2.5 py-1 text-[var(--soft)] rounded border border-[var(--twilight)] text-xs bg-[var(--void)]"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </>
-            )}
+            {(() => {
+              const INTERNAL_TAGS = new Set(["ticketed", "ticketmaster", "eventbrite", "meetup", "touring"]);
+              const displayTags = event.tags?.filter((t: string) => !INTERNAL_TAGS.has(t)) ?? [];
+              return displayTags.length > 0 ? (
+                <>
+                  <SectionHeader title="Tags" count={displayTags.length} />
+                  <div className="flex flex-wrap gap-2 mb-6">
+                    {displayTags.map((tag: string) => (
+                      <span
+                        key={tag}
+                        className="px-2.5 py-1 text-[var(--soft)] rounded border border-[var(--twilight)] text-xs bg-[var(--void)]"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </>
+              ) : null;
+            })()}
 
             {/* Community Tags */}
             <div className="mb-6">
@@ -883,6 +890,7 @@ export default async function PortalEventPage({ params }: Props) {
           <>
             <SaveToListButton itemType="event" itemId={event.id} />
             <AddToCalendar
+              eventId={event.id}
               title={event.title}
               date={event.start_date}
               time={event.start_time}

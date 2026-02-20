@@ -53,7 +53,7 @@ const tractionSignals = [
   },
   {
     metric: "2,300+",
-    label: "Destinations mapped",
+    label: "Spots mapped",
     context: "Venue and destination footprint used in vendor placement planning.",
   },
   {

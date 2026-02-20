@@ -370,7 +370,7 @@ export default function BestOfLeaderboard({ categorySlug, portalSlug }: BestOfLe
               style={{ color: accentColor }}
             />
           </div>
-          <p className="text-sm text-[var(--muted)] mb-1">No venues ranked yet</p>
+          <p className="text-sm text-[var(--muted)] mb-1">No spots ranked yet</p>
           {user ? (
             <p className="text-xs text-[var(--muted)] opacity-60">Be the first to nominate and vote!</p>
           ) : (

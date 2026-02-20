@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
       ll: `${searchLocation.lat},${searchLocation.lng}`,
       radius: "50000", // 50km radius
       limit: "10",
-      fields: "fsq_place_id,name,location,categories,website,geocodes",
+      fields: "fsq_place_id,name,location,categories,website,latitude,longitude",
     });
 
     // Add timeout to prevent hanging requests

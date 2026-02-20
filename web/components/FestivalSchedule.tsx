@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import type { FestivalSession, FestivalProgram } from "@/lib/festivals";
 import { getCategoryAccentColor } from "@/lib/moments-utils";
 import { decodeHtmlEntities } from "@/lib/formats";
+import RSVPButton from "@/components/RSVPButton";
+import AddToCalendar from "@/components/AddToCalendar";
 
 interface FestivalScheduleProps {
   sessions: FestivalSession[];
@@ -357,12 +359,12 @@ export default function FestivalSchedule({
               Showing {visibleSessions.length} of {filtered.length} sessions
             </p>
           )}
-          <div className="rounded-lg border border-[var(--twilight)] overflow-hidden bg-[var(--card-bg)]">
+          <div className="rounded-lg border border-[var(--twilight)] overflow-visible bg-[var(--card-bg)]">
             <div className="divide-y divide-[var(--twilight)]/30">
               {visibleSessions.map((session) => (
                 <div
                   key={session.id}
-                  className="flex items-start gap-3 px-3 py-2.5 hover:bg-[var(--card-bg-hover)] transition-colors sm:gap-4 sm:px-4 sm:py-3"
+                  className="flex items-start gap-2 px-3 py-2.5 hover:bg-[var(--card-bg-hover)] transition-colors sm:gap-4 sm:px-4 sm:py-3"
                 >
                   {/* Time */}
                   <div className="flex-shrink-0 w-14 sm:w-20 pt-0.5 sm:pt-1">
@@ -378,6 +380,10 @@ export default function FestivalSchedule({
 
                   {/* Event details */}
                   <div className="flex-1 min-w-0">
+                    {/*
+                      Sessions often ship without imagery, so keep the list text-first and
+                      expose RSVP/calendar actions inline for fast planning.
+                    */}
                     <Link
                       href={`/${portalSlug}/events/${session.id}`}
                       prefetch
@@ -418,6 +424,24 @@ export default function FestivalSchedule({
                         </span>
                       )}
                     </div>
+                  </div>
+
+                  <div className="flex shrink-0 items-center gap-1 pt-0.5">
+                    <AddToCalendar
+                      eventId={session.id}
+                      title={decodeHtmlEntities(session.title)}
+                      date={session.start_date}
+                      time={session.start_time}
+                      venue={session.venue?.name}
+                      variant="icon"
+                    />
+                    <RSVPButton
+                      eventId={session.id}
+                      eventTitle={decodeHtmlEntities(session.title)}
+                      venueId={session.venue?.id}
+                      venueName={session.venue?.name}
+                      variant="compact"
+                    />
                   </div>
                 </div>
               ))}

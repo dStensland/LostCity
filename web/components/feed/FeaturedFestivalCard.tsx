@@ -24,7 +24,7 @@ function HeroVariant({ moment, portalSlug }: Omit<FeaturedFestivalCardProps, "va
       className="block relative rounded-2xl overflow-hidden group festival-glass-hero"
     >
       {/* Image area */}
-      <div className="relative h-[280px] w-full">
+      <div className="relative aspect-[4/3] w-full">
         {festival.image_url ? (
           <SmartImage
             src={festival.image_url}
@@ -73,7 +73,7 @@ function CardVariant({ moment, portalSlug }: Omit<FeaturedFestivalCardProps, "va
       className="flex-shrink-0 w-[240px] rounded-xl overflow-hidden border border-[#65E8FF]/35 bg-[var(--void)] hover:border-[#8CF1FF]/70 hover:shadow-[0_0_20px_rgba(101,232,255,0.24)] hover:-translate-y-0.5 transition-all duration-200 group festival-glass-card"
     >
       {/* Image */}
-      <div className="relative h-[140px] w-full overflow-hidden">
+      <div className="relative aspect-[4/5] w-full overflow-hidden">
         {!imgLoaded && <div className="absolute inset-0 skeleton-shimmer" />}
         {festival.image_url ? (
           <SmartImage

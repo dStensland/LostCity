@@ -96,6 +96,7 @@ export default function EventQuickActions({ event, isLive, className = "" }: Eve
         <div className="hidden sm:flex items-center gap-1">
           <InviteToEventButton eventId={event.id} eventTitle={event.title} variant="icon" />
           <AddToCalendar
+            eventId={event.id}
             title={event.title}
             date={event.start_date}
             time={event.start_time}

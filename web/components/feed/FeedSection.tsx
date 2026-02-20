@@ -10,6 +10,7 @@ import {
 } from "react";
 import Link from "next/link";
 import Image from "@/components/SmartImage";
+import { HOLIDAYS } from "@/config/holidays";
 import { formatTime } from "@/lib/formats";
 import CategoryIcon, { getCategoryColor } from "../CategoryIcon";
 import {
@@ -385,39 +386,39 @@ export default function FeedSection({ section, isFirst }: Props) {
 // SECTION HEADER - Reusable header with "See all"
 // ============================================
 
-// Holiday/themed section icon configurations
+// Holiday/themed section icon configurations — derived from shared holiday config
+function buildHolidayGridIcon(iconPath: string): React.ReactNode {
+  if (iconPath.startsWith("/")) {
+    const isSvg = iconPath.endsWith(".svg");
+    return (
+      <Image
+        src={iconPath}
+        alt=""
+        width={32}
+        height={32}
+        className={`w-full h-full ${isSvg ? "object-contain" : "object-cover"}`}
+      />
+    );
+  }
+  return <span className="text-3xl leading-none select-none">{iconPath}</span>;
+}
+
 const THEMED_SECTION_ICONS: Record<
   string,
   { icon: React.ReactNode; color: string; iconBg?: string }
 > = {
-  "valentines-day": {
-    color: "#FF69B4", // Hot pink / neon pink
-    icon: (
-      <Image
-        src="/icons/valentines-heart.png"
-        alt=""
-        width={32}
-        height={32}
-        className="w-full h-full object-cover"
-      />
-    ),
-  },
-  "friday-the-13th": {
-    color: "#00ff41",
-    icon: <span className="text-3xl leading-none select-none">🔪</span>,
-  },
-  "lunar-new-year": {
-    color: "#DC143C", // Crimson red
-    icon: (
-      <Image
-        src="/icons/fire-horse.png"
-        alt=""
-        width={32}
-        height={32}
-        className="w-full h-full object-cover"
-      />
-    ),
-  },
+  // Derived from shared HOLIDAYS config
+  ...HOLIDAYS.reduce(
+    (acc, h) => {
+      acc[h.slug] = {
+        color: h.accentColor,
+        icon: buildHolidayGridIcon(h.gridIcon || h.icon),
+      };
+      return acc;
+    },
+    {} as Record<string, { icon: React.ReactNode; color: string; iconBg?: string }>,
+  ),
+  // Non-holiday themed sections
   "super-bowl": {
     color: "var(--neon-green)",
     iconBg: "color-mix(in srgb, var(--neon-green) 20%, transparent)",
@@ -431,71 +432,29 @@ const THEMED_SECTION_ICONS: Record<
       />
     ),
   },
-  "black-history-month": {
-    color: "#e53935", // Pan-African red
-    icon: (
-      <Image
-        src="/icons/black-history-fist.png"
-        alt=""
-        width={32}
-        height={32}
-        className="w-full h-full object-cover"
-      />
-    ),
-  },
-  "mardi-gras": {
-    color: "#ffd700", // Mardi Gras gold
-    icon: (
-      <Image
-        src="/images/mardi-gras-mask.svg"
-        alt=""
-        width={32}
-        height={32}
-        className="w-full h-full object-contain"
-      />
-    ),
-  },
 };
 
-// Holiday card styling - gradient backgrounds and glow effects
+// Holiday card styling — derived from shared holiday config
 const HOLIDAY_CARD_STYLES: Record<
   string,
   { gradient: string; glowColor: string; subtitle: string }
-> = {
-  "valentines-day": {
-    gradient:
-      "linear-gradient(135deg, #1a0a1e 0%, #2d0a2e 30%, #1e0a28 60%, #0f0a1a 100%)",
-    glowColor: "#ff4da6",
-    subtitle: "The heart has reasons that reason cannot know",
+> = HOLIDAYS.reduce(
+  (acc, h) => {
+    acc[h.slug] = {
+      gradient: h.gradient,
+      glowColor: h.glowColor,
+      subtitle: h.subtitle,
+    };
+    return acc;
   },
-  "friday-the-13th": {
-    gradient:
-      "linear-gradient(135deg, #050a05 0%, #0a1a0a 30%, #051005 60%, #030a03 100%)",
-    glowColor: "#00ff41",
-    subtitle: "Embrace the unlucky",
-  },
-  "mardi-gras": {
-    gradient:
-      "linear-gradient(135deg, #0d0520 0%, #1a0a35 25%, #0a1a08 50%, #1a1505 75%, #0d0520 100%)",
-    glowColor: "#d040ff",
-    subtitle: "Laissez les bons temps rouler",
-  },
-  "lunar-new-year": {
-    gradient:
-      "linear-gradient(135deg, #1a0505 0%, #350a0a 30%, #2a0808 60%, #1a0303 100%)",
-    glowColor: "#cc0000",
-    subtitle: "A Year of Fire Horsin' Around",
-  },
-  "black-history-month": {
-    gradient:
-      "linear-gradient(135deg, #1a0505 0%, #0c0c0c 35%, #0c0c0c 65%, #051a05 100%)",
-    glowColor: "#43a047",
-    subtitle: "Honoring Black culture, art & community",
-  },
-};
+  {} as Record<string, { gradient: string; glowColor: string; subtitle: string }>,
+);
 
 // Export themed slugs for holiday grouping
-export const THEMED_SLUGS = Object.keys(THEMED_SECTION_ICONS);
+export const THEMED_SLUGS = [
+  ...HOLIDAYS.map(h => h.slug),
+  "super-bowl",
+];
 
 // Holiday grid - renders holiday sections as horizontal cards with rich styling
 export function HolidayGrid({
@@ -1360,7 +1319,7 @@ function EventList({
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-[var(--muted)]">
-                    Section Density
+                    More in this section
                   </p>
                   <p className="text-sm text-[var(--cream)] font-medium">
                     {hiddenDisplayCount > 0

@@ -88,7 +88,7 @@ export default function EventLoading() {
         style={{ animationDelay: "100ms", animationFillMode: "backwards" }}
       >
         {/* Image skeleton */}
-        <div className="aspect-video bg-[var(--twilight)]/30 rounded-lg mb-6 skeleton-shimmer" />
+        <div className="aspect-[4/3] bg-[var(--twilight)]/30 rounded-lg mb-6 skeleton-shimmer" />
 
         {/* Main card skeleton */}
         <div className="border border-[var(--twilight)] rounded-lg p-6 sm:p-8 bg-[var(--card-bg)]">

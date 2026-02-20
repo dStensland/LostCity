@@ -13,8 +13,9 @@ import {
 } from "@/lib/rate-limit";
 import { enrichEventsWithSocialProof } from "@/lib/search";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
-import { applyPortalScopeToQuery, filterByPortalCity } from "@/lib/portal-scope";
-import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
+import { applyFederatedPortalScopeToQuery, filterByPortalCity } from "@/lib/portal-scope";
+import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
+import { getPortalSourceAccess } from "@/lib/federation";
 
 const VALID_CLASS_CATEGORIES = [
   "painting",
@@ -38,7 +39,6 @@ const VALID_SKILL_LEVELS = [
 ] as const;
 
 const CLASSES_CACHE_TTL_MS = 90 * 1000;
-const CLASSES_CACHE_MAX_ENTRIES = 300;
 const CLASSES_CACHE_NAMESPACE = "api:classes";
 const CLASSES_CACHE_CONTROL = "public, s-maxage=90, stale-while-revalidate=180";
 
@@ -83,14 +83,30 @@ export async function GET(request: NextRequest) {
     );
   }
   const portalId = portalContext.portalId;
+  const sourceAccess = portalId ? await getPortalSourceAccess(portalId) : null;
   const portalCity = !portalExclusive ? portalContext.filters.city : undefined;
   const today = new Date().toISOString().split("T")[0];
+  const cacheBucket = Math.floor(Date.now() / CLASSES_CACHE_TTL_MS);
   const cacheKey = [
     portalId || "no-portal",
     portalCity || "all-cities",
     portalExclusive ? "exclusive" : "shared",
     searchParams.toString(),
+    cacheBucket,
   ].join("|");
+  const cachedPayload = await getSharedCacheJson<{
+    classes: unknown[];
+    total: number;
+    limit: number;
+    offset: number;
+  }>(CLASSES_CACHE_NAMESPACE, cacheKey);
+  if (cachedPayload) {
+    return NextResponse.json(cachedPayload, {
+      headers: {
+        "Cache-Control": CLASSES_CACHE_CONTROL,
+      },
+    });
+  }
 
   const buildQuery = (includeFestival: boolean) => {
     const seriesSelect = includeFestival
@@ -182,10 +198,12 @@ export async function GET(request: NextRequest) {
       query = query.eq("venues.neighborhood", neighborhood);
     }
 
-    query = applyPortalScopeToQuery(query, {
+    query = applyFederatedPortalScopeToQuery(query, {
       portalId,
       portalExclusive,
       publicOnlyWhenNoPortal: true,
+      sourceIds: sourceAccess?.sourceIds || [],
+      sourceColumn: "source_id",
     });
 
     // Sorting
@@ -205,64 +223,51 @@ export async function GET(request: NextRequest) {
     return query;
   };
 
-  try {
-    const payload = await getOrSetSharedCacheJson<{
-      classes: unknown[];
-      total: number;
-      limit: number;
-      offset: number;
-    }>(
-      CLASSES_CACHE_NAMESPACE,
-      cacheKey,
-      CLASSES_CACHE_TTL_MS,
-      async () => {
-        let { data, error, count } = await buildQuery(true);
-        if (error && error.message?.includes("relationship between 'series' and 'festivals'")) {
-          ({ data, error, count } = await buildQuery(false));
-        }
+  let { data, error, count } = await buildQuery(true);
+  if (error && error.message?.includes("relationship between 'series' and 'festivals'")) {
+    ({ data, error, count } = await buildQuery(false));
+  }
 
-        if (error) {
-          throw error;
-        }
-
-        const enrichedClasses = data
-          ? await enrichEventsWithSocialProof(
-              data as unknown as Parameters<typeof enrichEventsWithSocialProof>[0]
-            )
-          : [];
-        const cityScopedClasses = filterByPortalCity(
-          enrichedClasses as Array<{ venue?: { city?: string | null } | null }>,
-          portalCity,
-          { allowMissingCity: true }
-        );
-
-        return {
-          classes: cityScopedClasses,
-          total: count ?? cityScopedClasses.length,
-          limit,
-          offset,
-        };
-      },
-      { maxEntries: CLASSES_CACHE_MAX_ENTRIES }
-    );
-
-    return NextResponse.json(payload, {
-      headers: {
-        "Cache-Control": CLASSES_CACHE_CONTROL,
-      },
-    });
-  } catch (error) {
-    const maybeError = error as { message?: string; details?: string; hint?: string };
+  if (error) {
     if (process.env.NODE_ENV === "development") {
       return NextResponse.json(
         {
-          error: maybeError?.message ?? "Failed to load classes",
-          details: maybeError?.details,
-          hint: maybeError?.hint,
+          error: error.message,
+          details: error.details,
+          hint: error.hint,
         },
         { status: 500 }
       );
     }
     return errorResponse(error, "classes list");
   }
+
+  const enrichedClasses = data
+    ? await enrichEventsWithSocialProof(data as unknown as Parameters<typeof enrichEventsWithSocialProof>[0])
+    : [];
+  const cityScopedClasses = filterByPortalCity(
+    enrichedClasses as Array<{ venue?: { city?: string | null } | null }>,
+    portalCity,
+    { allowMissingCity: true }
+  );
+
+  const payload = {
+    classes: cityScopedClasses,
+    total: portalCity ? cityScopedClasses.length : (count ?? 0),
+    limit,
+    offset,
+  };
+  await setSharedCacheJson(
+    CLASSES_CACHE_NAMESPACE,
+    cacheKey,
+    payload,
+    CLASSES_CACHE_TTL_MS,
+    { maxEntries: 300 }
+  );
+
+  return NextResponse.json(payload, {
+    headers: {
+      "Cache-Control": CLASSES_CACHE_CONTROL,
+    },
+  });
 }

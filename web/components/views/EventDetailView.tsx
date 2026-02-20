@@ -282,7 +282,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
     return (
       <div className="pt-6">
         {/* Loading skeleton with back button integrated */}
-        <div className="relative aspect-[2/1] skeleton-shimmer rounded-xl mb-4">
+        <div className="relative aspect-[4/3] skeleton-shimmer rounded-xl mb-4">
           <NeonBackButton />
         </div>
         <div className="h-24 skeleton-shimmer rounded-xl mb-4" />
@@ -294,7 +294,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
   if (error || !event) {
     return (
       <div className="pt-6">
-        <div className="relative aspect-[2/1] bg-[var(--dusk)] rounded-xl mb-4 flex items-center justify-center">
+        <div className="relative aspect-[4/3] bg-[var(--dusk)] rounded-xl mb-4 flex items-center justify-center">
           <NeonBackButton />
           <p className="text-[var(--muted)]">{error || "Event not found"}</p>
         </div>
@@ -380,7 +380,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
       />
       {/* Hero Image with integrated back button */}
       <div
-        className={`relative aspect-[2/1] bg-[var(--night)] rounded-xl overflow-hidden mb-4 ${
+        className={`relative aspect-[4/3] bg-[var(--night)] rounded-xl overflow-hidden mb-4 ${
           isLive ? "ring-2 ring-[var(--coral)] ring-opacity-50" : ""
         } ${heroAccentClass?.className ?? ""}`}
       >

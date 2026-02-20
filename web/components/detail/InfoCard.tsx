@@ -19,7 +19,7 @@ export function InfoCard({
     <>
       <ScopedStyles css={accentClass?.css} />
       <div
-        className={`rounded-lg bg-[var(--card-bg)] p-6 sm:p-8 info-card ${
+        className={`rounded-lg border border-[var(--twilight)] bg-[var(--card-bg)] p-6 sm:p-8 info-card ${
           accentClass?.className ?? ""
         } ${className}`}
       >

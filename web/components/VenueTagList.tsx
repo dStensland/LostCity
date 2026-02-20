@@ -95,7 +95,7 @@ export default function VenueTagList({ venueId, initialTags = [] }: VenueTagList
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest">
-          Community Says
+          Venue Vibes
         </h2>
         <button
           onClick={() => setShowAddModal(true)}

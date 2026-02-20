@@ -50,7 +50,7 @@ export default function EventList({
 
   // Unified timeline hook — events + festivals in one stream
   // Enable smart defaults, but avoid cross-view filter persistence.
-  const { hasActiveFilters, filters } = useEventFilters({
+  const { hasActiveFilters, filters, effectiveDate } = useEventFilters({
     enableSmartDefaults: true,
     enablePersistence: false,
   });
@@ -68,6 +68,7 @@ export default function EventList({
     portalId,
     portalExclusive,
     initialData: initialEvents,
+    dateOverride: effectiveDate,
   });
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_EVENTS);
   const [hasUserExpanded, setHasUserExpanded] = useState(false);

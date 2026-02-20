@@ -8,7 +8,7 @@ import type { Festival } from "@/lib/festivals";
 import { logger } from "@/lib/logger";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
 import { filterByPortalCity } from "@/lib/portal-scope";
-import { isSuppressedFromGeneralEventFeed } from "@/lib/event-content-classification";
+import { getPortalSourceAccess } from "@/lib/federation";
 
 function safeParseInt(value: string | null, defaultValue: number, min = 1, max = 1000): number {
   if (!value) return defaultValue;
@@ -38,10 +38,8 @@ export async function GET(request: Request) {
       );
     }
     const portalId = portalContext.portalId || undefined;
+    const sourceAccess = portalId ? await getPortalSourceAccess(portalId) : null;
     const portalExclusive = searchParams.get("portal_exclusive") === "true";
-    const includeExhibits = ["1", "true"].includes(
-      (searchParams.get("include_exhibits") || "").toLowerCase()
-    );
     const portalCity = !portalExclusive ? portalContext.filters.city : undefined;
 
     const filters: SearchFilters = {
@@ -58,6 +56,7 @@ export async function GET(request: Request) {
       mood: (searchParams.get("mood") as MoodId) || undefined,
       portal_id: portalId,
       portal_exclusive: portalExclusive,
+      source_ids: sourceAccess?.sourceIds.length ? sourceAccess.sourceIds : undefined,
       exclude_classes: true,
     };
 
@@ -141,9 +140,7 @@ export async function GET(request: Request) {
     const cityFilteredEvents = filterByPortalCity(rawEvents, portalCity, { allowMissingCity: true });
 
     // Enrich events with social proof in parallel with festival processing
-    const events = (await enrichEventsWithSocialProof(cityFilteredEvents)).filter(
-      (event) => includeExhibits || !isSuppressedFromGeneralEventFeed(event)
-    );
+    const events = await enrichEventsWithSocialProof(cityFilteredEvents);
 
     let festivals: Festival[] = [];
     let festivalError: { message: string } | null = null;

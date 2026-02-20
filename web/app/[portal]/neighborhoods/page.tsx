@@ -16,9 +16,9 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { portal } = await params;
   return {
-    title: "Neighborhoods — Atlanta Events & Destinations | Lost City",
+    title: "Neighborhoods — Atlanta Events & Spots | Lost City",
     description:
-      "Explore Atlanta neighborhoods — find events, venues, and things to do across the city's most vibrant areas.",
+      "Explore Atlanta neighborhoods — find events, spots, and things to do across the city's most vibrant areas.",
     alternates: {
       canonical: toAbsoluteUrl(`/${portal}/neighborhoods`),
     },
@@ -69,11 +69,11 @@ function NeighborhoodIndexCard({
       <div className="flex items-center gap-2 mt-1">
         {count > 0 ? (
           <span className="font-mono text-[0.6rem] text-[var(--soft)]">
-            {count} {count === 1 ? "venue" : "venues"}
+            {count} {count === 1 ? "spot" : "spots"}
           </span>
         ) : (
           <span className="font-mono text-[0.55rem] text-[var(--muted)]">
-            No venues yet
+            No spots yet
           </span>
         )}
       </div>
@@ -114,7 +114,7 @@ export default async function NeighborhoodsIndexPage({ params }: Props) {
           Neighborhoods
         </h1>
         <p className="text-sm text-[var(--soft)] mt-2 max-w-xl">
-          Explore events and destinations across Atlanta&apos;s neighborhoods and metro areas.
+          Explore events and spots across Atlanta&apos;s neighborhoods and metro areas.
         </p>
       </section>
 

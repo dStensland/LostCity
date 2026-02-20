@@ -21,6 +21,7 @@ import {
   RelatedCard,
 } from "@/components/detail";
 import { safeJsonLd, decodeHtmlEntities } from "@/lib/formats";
+import GettingThereSection from "@/components/GettingThereSection";
 import type { Metadata } from "next";
 import ScopedStylesServer from "@/components/ScopedStylesServer";
 import { createCssVarClass } from "@/lib/css-utils";
@@ -216,6 +217,12 @@ export default async function PortalFestivalPage({ params }: Props) {
     getFestivalEvents(festival.id),
     getFestivalArtists(festival.id),
   ]);
+  // Detect single-venue festival for transit info
+  const venueIds = new Set(sessions.filter((s) => s.venue).map((s) => s.venue!.id));
+  const singleVenue = venueIds.size === 1
+    ? sessions.find((s) => s.venue)?.venue ?? null
+    : null;
+
   const accentColor = getCategoryAccentColor(festival.categories?.[0]);
   const festivalAccentClass = createCssVarClass("--accent-color", accentColor, "festival");
   const festivalSchema = generateFestivalSchema(festival, sessions);
@@ -263,7 +270,7 @@ export default async function PortalFestivalPage({ params }: Props) {
             subtitle={heroSubtitle}
             categoryColor={accentColor}
             backFallbackHref={`/${activePortalSlug}`}
-            tall
+            portrait
             badge={
               <span
                 className="inline-flex items-center gap-2 px-3 py-1.5 rounded text-xs font-mono uppercase tracking-wider bg-accent-20 text-accent border border-accent-40"
@@ -308,6 +315,13 @@ export default async function PortalFestivalPage({ params }: Props) {
             </div>
           )}
 
+          {/* Brief description above schedule so users get context first */}
+          {festival.description && sessions.length > 0 && (
+            <p className="text-sm text-[var(--soft)] leading-relaxed line-clamp-3">
+              {festival.description}
+            </p>
+          )}
+
           {/* Interactive Schedule — high up for immediate engagement */}
           {sessions.length > 0 ? (
             <FestivalSchedule
@@ -321,24 +335,35 @@ export default async function PortalFestivalPage({ params }: Props) {
             />
           ) : (
             <section className="rounded-lg border border-[var(--twilight)] bg-[var(--card-bg)] p-5 sm:p-6">
-              <h2 className="text-lg font-semibold text-[var(--cream)] mb-2">Schedule Coming Soon</h2>
-              <p className="text-sm text-[var(--soft)] leading-relaxed">
-                Session times and program details have not been published yet. Check back soon, or use the official
-                festival link for the latest updates.
-              </p>
-              {primaryActionUrl && (
-                <a
-                  href={primaryActionUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 mt-4 text-sm font-medium text-accent hover:text-[var(--rose)] transition-colors"
-                >
-                  {primaryActionLabel}
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-lg bg-[var(--twilight)]/50 border border-[var(--twilight)]/60 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-5 h-5 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                </a>
-              )}
+                </div>
+                <div>
+                  <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-2">
+                    Schedule Coming Soon
+                  </h2>
+                  <p className="text-sm text-[var(--soft)] leading-relaxed">
+                    Session times and program details have not been published yet. Check back soon, or use the official
+                    festival link for the latest updates.
+                  </p>
+                  {primaryActionUrl && (
+                    <a
+                      href={primaryActionUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 mt-3 text-sm font-medium text-accent hover:text-[var(--rose)] transition-colors"
+                    >
+                      {primaryActionLabel}
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </a>
+                  )}
+                </div>
+              </div>
             </section>
           )}
 
@@ -371,6 +396,13 @@ export default async function PortalFestivalPage({ params }: Props) {
               ]}
               className="mb-8"
             />
+
+            {/* Transit info for single-venue festivals */}
+            {singleVenue && (
+              <div className="mb-8">
+                <GettingThereSection transit={singleVenue} />
+              </div>
+            )}
 
             {/* Description */}
             {festival.description && (

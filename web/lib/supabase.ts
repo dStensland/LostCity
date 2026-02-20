@@ -115,6 +115,14 @@ export type Venue = {
   vibes?: string[] | null;
   description?: string | null;
   venue_type?: string | null;
+  nearest_marta_station?: string | null;
+  marta_walk_minutes?: number | null;
+  marta_lines?: string[] | null;
+  beltline_adjacent?: boolean | null;
+  beltline_segment?: string | null;
+  parking_type?: string[] | null;
+  parking_free?: boolean | null;
+  transit_score?: number | null;
 };
 
 export type Producer = {
@@ -141,7 +149,7 @@ export async function getEventById(id: number): Promise<EventWithProducer | null
     .select(
       `
       *,
-      venue:venues(id, name, slug, address, neighborhood, city, state, location_designator, vibes, description, venue_type),
+      venue:venues(id, name, slug, address, neighborhood, city, state, location_designator, vibes, description, venue_type, nearest_marta_station, marta_walk_minutes, marta_lines, beltline_adjacent, beltline_segment, parking_type, parking_free, transit_score),
       organization:organizations(id, name, slug, org_type, website, instagram, logo_url, description),
       series:series_id(
         id,

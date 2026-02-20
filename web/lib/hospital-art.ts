@@ -41,8 +41,9 @@ export const EMORY_THEME_CSS = `
     --action-primary-hover: #7fcf75;
     --btn-primary-text: #002f6c;
     --portal-accent: #143b83;
-    --card-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
-    --card-shadow-soft: 0 8px 24px rgba(0, 0, 0, 0.07);
+    --card-shadow: 0 10px 28px rgba(0, 0, 0, 0.10);
+    --card-shadow-soft: 0 6px 20px rgba(0, 0, 0, 0.06);
+    --card-shadow-hover: 0 14px 36px rgba(0, 0, 0, 0.13);
   }
 
   .${EMORY_THEME_SCOPE_CLASS} {
@@ -74,7 +75,7 @@ export const EMORY_THEME_CSS = `
   }
 
   .${EMORY_THEME_SCOPE_CLASS} .emory-panel:hover {
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.09);
+    box-shadow: var(--card-shadow-hover);
     transition: box-shadow 200ms ease;
   }
 
@@ -90,11 +91,12 @@ export const EMORY_THEME_CSS = `
     border: 1px solid var(--line-strong);
     background: #f9fafb;
     color: #4b5563;
-    font-size: 12px;
+    font-size: 11.5px;
     font-weight: 700;
     letter-spacing: 0.03em;
     text-transform: uppercase;
-    padding: 0.24rem 0.58rem;
+    padding: 0.3rem 0.65rem;
+    white-space: nowrap;
   }
 
   .${EMORY_THEME_SCOPE_CLASS} button.emory-chip:hover {
@@ -109,19 +111,21 @@ export const EMORY_THEME_CSS = `
   }
 
   .${EMORY_THEME_SCOPE_CLASS} .emory-primary-btn {
-    border-radius: 6px;
+    border-radius: 8px;
     border: 1px solid #7ecf75;
     background: var(--action-primary);
     color: var(--btn-primary-text);
     font-weight: 700;
-    font-size: 13px;
-    padding: 0.5rem 1rem;
-    transition: background 160ms ease, border-color 160ms ease;
+    font-size: 14px;
+    padding: 0.55rem 1.15rem;
+    transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   }
 
   .${EMORY_THEME_SCOPE_CLASS} .emory-primary-btn:hover {
     background: var(--action-primary-hover);
     border-color: #69bb5f;
+    box-shadow: 0 3px 8px rgba(142, 213, 133, 0.25);
   }
 
   .${EMORY_THEME_SCOPE_CLASS} .emory-primary-btn:focus-visible {
@@ -130,19 +134,20 @@ export const EMORY_THEME_CSS = `
   }
 
   .${EMORY_THEME_SCOPE_CLASS} .emory-secondary-btn {
-    border-radius: 6px;
-    border: 1px solid var(--line-strong);
+    border-radius: 8px;
+    border: 1px solid #b7c2d3;
     background: #ffffff;
     color: #143b83;
     font-weight: 600;
-    font-size: 13px;
-    padding: 0.5rem 1rem;
-    transition: background 160ms ease, border-color 160ms ease;
+    font-size: 14px;
+    padding: 0.55rem 1.15rem;
+    transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
   }
 
   .${EMORY_THEME_SCOPE_CLASS} .emory-secondary-btn:hover {
     background: #f6f8fc;
-    border-color: #b7c2d3;
+    border-color: #9badc6;
+    box-shadow: 0 1px 3px rgba(0, 47, 108, 0.08);
   }
 
   .${EMORY_THEME_SCOPE_CLASS} .emory-secondary-btn:focus-visible {
@@ -155,9 +160,11 @@ export const EMORY_THEME_CSS = `
     font-size: 12px;
     font-weight: 600;
     text-decoration: none;
+    transition: color 150ms ease;
   }
 
   .${EMORY_THEME_SCOPE_CLASS} .emory-link-btn:hover {
+    color: #0d2d6b;
     text-decoration: underline;
   }
 
@@ -192,14 +199,15 @@ export const EMORY_THEME_CSS = `
 
   .${EMORY_THEME_SCOPE_CLASS} .emory-hero-chip {
     border-radius: 999px;
-    border: 1px solid rgba(229, 231, 235, 0.8);
-    background: rgba(0, 47, 108, 0.86);
+    border: 1px solid rgba(229, 231, 235, 0.7);
+    background: rgba(0, 47, 108, 0.88);
     color: #f9fafb;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    padding: 0.3rem 0.62rem;
+    padding: 0.3rem 0.65rem;
+    white-space: nowrap;
   }
 
   .${EMORY_THEME_SCOPE_CLASS} .emory-hero-lens {
@@ -306,9 +314,9 @@ export const EMORY_THEME_CSS = `
   }
 
   .emory-brand-native .emory-crisis-footer {
-    background: linear-gradient(135deg, #991b1b 0%, #7f1d1d 100%);
-    border-radius: 12px;
-    padding: 1.25rem;
+    background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
+    border-radius: 14px;
+    padding: 1.25rem 1.5rem;
     margin-top: 1.5rem;
   }
 
@@ -321,7 +329,8 @@ export const EMORY_THEME_CSS = `
   }
 
   .emory-brand-native .emory-story-card:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.09);
+    border-color: var(--line-strong);
   }
 
   .emory-brand-native .emory-story-card:focus-visible {

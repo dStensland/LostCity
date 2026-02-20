@@ -537,7 +537,7 @@ export default async function PortalSeriesPage({ params }: Props) {
                         : series.series_type === "festival_program"
                           ? "Session"
                           : "Event"
-                    }${events.length !== 1 ? "s" : ""}${venueShowtimes.length > 0 ? ` at ${venueShowtimes.length} ${venueShowtimes.length === 1 ? "Venue" : "Venues"}` : ""}`
+                    }${events.length !== 1 ? "s" : ""}${venueShowtimes.length > 0 ? ` at ${venueShowtimes.length} ${venueShowtimes.length === 1 ? "Spot" : "Spots"}` : ""}`
                   : series.series_type === "festival_program"
                     ? "No Scheduled Sessions"
                     : "No Upcoming Events"

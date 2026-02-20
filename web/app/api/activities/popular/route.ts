@@ -4,7 +4,8 @@ import { format, startOfDay, addDays } from "date-fns";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
-import { applyPortalScopeToQuery } from "@/lib/portal-scope";
+import { applyFederatedPortalScopeToQuery } from "@/lib/portal-scope";
+import { getPortalSourceAccess } from "@/lib/federation";
 
 /**
  * GET /api/activities/popular
@@ -33,6 +34,9 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
     }
+    const sourceAccess = portalContext.portalId
+      ? await getPortalSourceAccess(portalContext.portalId)
+      : null;
 
     // Get current date/time and calculate end date based on filter
     // Use date-fns format to get local date (not UTC from toISOString)
@@ -73,10 +77,12 @@ export async function GET(request: NextRequest) {
       .not("category", "is", null)
       .or("is_sensitive.eq.false,is_sensitive.is.null");
 
-    activityQuery = applyPortalScopeToQuery(activityQuery, {
+    activityQuery = applyFederatedPortalScopeToQuery(activityQuery, {
       portalId: portalContext.portalId,
       portalExclusive,
       publicOnlyWhenNoPortal: true,
+      sourceIds: sourceAccess?.sourceIds || [],
+      sourceColumn: "source_id",
     });
 
     const { data: activityRows, error: activityError } = await activityQuery;

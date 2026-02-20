@@ -25,6 +25,7 @@ import {
   DetailStickyBar,
 } from "@/components/detail";
 import VenueShowtimes from "@/components/VenueShowtimes";
+import GettingThereSection from "@/components/GettingThereSection";
 
 export const revalidate = 60;
 
@@ -214,7 +215,7 @@ export default async function PortalSpotPage({ params }: Props) {
                   href={`/venue/${spot.slug}/claim`}
                   className="text-[var(--muted)] hover:text-[var(--cream)] font-mono text-xs"
                 >
-                  Claim this venue
+                  Claim this spot
                 </Link>
               )}
               {spot.claimed_by && spot.is_verified && (
@@ -302,6 +303,11 @@ export default async function PortalSpotPage({ params }: Props) {
                 </p>
               </>
             )}
+
+            {/* Getting There — transit, parking, walkability */}
+            <div className="mb-6">
+              <GettingThereSection transit={spot} />
+            </div>
 
             {/* Flag for QA */}
             <SectionHeader title="Report an Issue" />

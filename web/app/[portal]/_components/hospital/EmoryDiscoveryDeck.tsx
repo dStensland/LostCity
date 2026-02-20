@@ -260,14 +260,14 @@ function VenueMapExplorer({
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.15fr)_minmax(260px,0.85fr)] gap-2.5">
-      <div className="relative overflow-hidden rounded-md border border-[var(--twilight)] bg-[var(--surface-1)] min-h-[320px]" aria-label="Interactive map showing venues and organizations">
+      <div className="relative overflow-hidden rounded-lg border border-[#d7dce4] bg-[#f8f9fb] min-h-[320px]" aria-label="Interactive map showing venues and organizations">
         {!mounted ? (
           <div className="absolute inset-0 flex items-center justify-center">
-            <p className="text-xs text-[var(--muted)]">{t("loadingMap")}</p>
+            <p className="text-xs text-[#6b7280]">{t("loadingMap")}</p>
           </div>
         ) : points.length === 0 ? (
           <div className="absolute inset-0 flex items-center justify-center px-6 text-center">
-            <p className="text-sm text-[var(--muted)]">{t("noGeocodedVenues")}</p>
+            <p className="text-sm text-[#6b7280]">{t("noGeocodedVenues")}</p>
           </div>
         ) : (
           <MapboxMap
@@ -343,9 +343,9 @@ function VenueMapExplorer({
         )}
 
         {selectedPoint && (
-          <div className="pointer-events-none absolute bottom-2 left-2 right-2 rounded-md border border-[#dbe6f8] bg-white/96 px-3 py-2 shadow-sm">
-            <p className="text-sm font-semibold text-[var(--cream)]">{selectedPoint.title}</p>
-            <p className="text-xs text-[var(--muted)]">{selectedPoint.subtitle}</p>
+          <div className="pointer-events-none absolute bottom-2 left-2 right-2 rounded-lg border border-[#dbe6f8] bg-white/96 px-3 py-2.5 shadow-md">
+            <p className="text-sm font-semibold text-[#002f6c]">{selectedPoint.title}</p>
+            <p className="text-xs text-[#4b5563]">{selectedPoint.subtitle}</p>
             <div className="mt-1 flex flex-wrap gap-3 pointer-events-auto">
               <Link href={appendContextParams(selectedPoint.detailHref, contextParams)} className="emory-link-btn">{t("open")}</Link>
               {selectedPoint.mapsHref && (
@@ -367,7 +367,7 @@ function VenueMapExplorer({
           return (
             <article
               key={item.key}
-              className={`rounded-md border px-3 py-2.5 ${isSelected ? "border-[#b9d5ff] bg-[#f4f8ff]" : "border-[var(--twilight)] bg-white"}`}
+              className={`rounded-lg border px-3 py-2.5 shadow-sm ${isSelected ? "border-[#b9d5ff] bg-[#f4f8ff]" : "border-[#d7dce4] bg-white"}`}
             >
               <div className="flex items-start gap-2.5">
                 <button
@@ -384,7 +384,7 @@ function VenueMapExplorer({
                       lng: item.lng as number,
                     });
                   }}
-                  className={`h-14 w-16 overflow-hidden rounded border border-[var(--twilight)] shrink-0 ${hasCoordinates ? "cursor-pointer" : "cursor-default"}`}
+                  className={`h-14 w-16 overflow-hidden rounded-md border border-[#d7dce4] shrink-0 ${hasCoordinates ? "cursor-pointer" : "cursor-default"}`}
                   aria-label={`Preview ${item.title}`}
                 >
                   <img src={thumb} alt={item.title} className="h-full w-full object-cover" />
@@ -405,8 +405,8 @@ function VenueMapExplorer({
                   }}
                   className={`text-left ${hasCoordinates ? "cursor-pointer" : "cursor-default"}`}
                 >
-                  <p className="text-sm font-semibold text-[var(--cream)]">{item.title}</p>
-                  <p className="mt-0.5 text-xs text-[var(--muted)]">{item.subtitle}</p>
+                  <p className="text-sm font-semibold text-[#002f6c]">{item.title}</p>
+                  <p className="mt-0.5 text-xs text-[#4b5563]">{item.subtitle}</p>
                 </button>
               </div>
               <div className="mt-1.5 flex flex-wrap gap-3">
@@ -582,11 +582,11 @@ export default function EmoryDiscoveryDeck({
   };
 
   return (
-    <section className="rounded-xl border border-[var(--twilight)] bg-white p-3 sm:p-4">
+    <section className="rounded-xl border border-[#d7dce4] bg-white p-3 sm:p-4">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h3 className="text-[1.2rem] sm:text-[1.35rem] leading-[1.02] text-[var(--cream)]">{title}</h3>
-          <p className="mt-1 text-xs sm:text-sm text-[var(--muted)]">{subtitle}</p>
+          <h3 className="text-[1.2rem] sm:text-[1.35rem] leading-[1.02] text-[#002f6c] font-semibold">{title}</h3>
+          <p className="mt-1 text-xs sm:text-sm text-[#4b5563]">{subtitle}</p>
         </div>
         <div className="flex items-center gap-1.5">
           <button
@@ -601,16 +601,16 @@ export default function EmoryDiscoveryDeck({
       </div>
 
       {isPlanOpen && (
-        <div className="mt-2 rounded-md border border-[var(--twilight)] bg-[var(--surface-1)] p-2.5">
+        <div className="mt-2 rounded-lg border border-[#d7dce4] bg-[#f8f9fb] p-2.5">
           {savedItems.length === 0 ? (
-            <p className="text-xs text-[var(--muted)]">{t("savePlanHint")}</p>
+            <p className="text-xs text-[#6b7280]">{t("savePlanHint")}</p>
           ) : (
             <div className="space-y-1.5">
               {savedItems.map((item) => (
-                <div key={item.id} className="flex items-start justify-between gap-2 rounded border border-[var(--twilight)] bg-white px-2.5 py-2">
+                <div key={item.id} className="flex items-start justify-between gap-2 rounded-lg border border-[#d7dce4] bg-white px-2.5 py-2">
                   <div>
-                    <p className="text-sm font-semibold text-[var(--cream)]">{item.title}</p>
-                    <p className="text-xs text-[var(--muted)]">{item.subtitle}</p>
+                    <p className="text-sm font-semibold text-[#002f6c]">{item.title}</p>
+                    <p className="text-xs text-[#4b5563]">{item.subtitle}</p>
                     <Link href={appendContextParams(item.href, contextParams)} className="emory-link-btn mt-0.5 inline-flex">{t("open")}</Link>
                   </div>
                   <button
@@ -689,7 +689,7 @@ export default function EmoryDiscoveryDeck({
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder={t("searchPlaceholder")}
-            className="w-full rounded-md border border-[var(--twilight)] bg-[var(--surface-1)] px-3 py-2 text-sm text-[var(--cream)] placeholder:text-[#6b7280] focus:outline-none focus:ring-2 focus:ring-[#bfd4f5]"
+            className="w-full rounded-md border border-[#d7dce4] bg-[#f8f9fb] px-3 py-2 text-sm text-[#002f6c] placeholder:text-[#6b7280] focus:outline-none focus:ring-2 focus:ring-[#bfd4f5]"
           />
         </label>
         <label>
@@ -697,7 +697,7 @@ export default function EmoryDiscoveryDeck({
           <select
             value={activeSort}
             onChange={(event) => setSort(event.target.value as DiscoverySort)}
-            className="w-full rounded-md border border-[var(--twilight)] bg-white px-2.5 py-2 text-sm text-[var(--cream)]"
+            className="w-full rounded-md border border-[#d7dce4] bg-white px-2.5 py-2 text-sm text-[#002f6c]"
           >
             {allowedSortsForTab(activeTab).map((option) => (
               <option key={option} value={option}>
@@ -718,18 +718,18 @@ export default function EmoryDiscoveryDeck({
       {activeView === "timeline" && activeTab === "events" && (
         <div className="mt-3 space-y-2">
           {timelineGroups.slice(0, 5).map((group) => (
-            <section key={group.day} className="rounded-md border border-[var(--twilight)] bg-[var(--surface-1)] p-2.5">
-              <p className="text-xs font-semibold uppercase tracking-[0.05em] text-[#4b5563]">{group.day}</p>
+            <section key={group.day} className="rounded-md border border-[#d7dce4] bg-[#f8f9fb] p-2.5">
+              <p className="text-xs font-bold uppercase tracking-[0.05em] text-[#4b6a9b]">{group.day}</p>
               <div className="mt-1.5 space-y-1.5">
                 {group.items.slice(0, 4).map((item) => (
-                  <article key={item.key} className="rounded border border-[var(--twilight)] bg-white px-2.5 py-2">
+                  <article key={item.key} className="rounded-lg border border-[#d7dce4] bg-white px-2.5 py-2 shadow-sm">
                     <div className="flex items-start gap-2.5">
-                      <div className="h-12 w-14 overflow-hidden rounded border border-[var(--twilight)] shrink-0">
+                      <div className="h-12 w-14 overflow-hidden rounded border border-[#d7dce4] shrink-0">
                         <img src={item.imageUrl || getFallbackImage(item)} alt={item.title} className="h-full w-full object-cover" />
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-[var(--cream)]">{item.title}</p>
-                        <p className="text-xs text-[var(--muted)]">{item.subtitle}</p>
+                        <p className="text-sm font-semibold text-[#002f6c]">{item.title}</p>
+                        <p className="text-xs text-[#4b5563]">{item.subtitle}</p>
                       </div>
                     </div>
                     <div className="mt-1 flex flex-wrap gap-3">
@@ -764,28 +764,27 @@ export default function EmoryDiscoveryDeck({
       )}
 
       {activeView !== "timeline" && !(activeView === "map" && activeTab === "venues") && (
-        <div className="mt-3 space-y-2">
-          {activeItems.slice(0, activeView === "map" ? 9 : 8).map((item) => {
+        <div className="mt-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+          {activeItems.slice(0, activeView === "map" ? 9 : 9).map((item) => {
             const thumb = item.imageUrl || getFallbackImage(item);
             return (
-              <article key={item.key} className="rounded-md border border-[var(--twilight)] bg-white px-3 py-2.5">
-                <div className="flex items-start gap-3">
-                  <div className="h-16 w-20 overflow-hidden rounded border border-[var(--twilight)] shrink-0">
-                    <img src={thumb} alt={item.title} className="h-full w-full object-cover" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-[var(--cream)]">{item.title}</p>
-                    <p className="mt-0.5 text-xs text-[var(--muted)]">{item.subtitle}</p>
-                  </div>
+              <article key={item.key} className="overflow-hidden rounded-xl border border-[#d7dce4] bg-white shadow-sm hover:shadow-md transition-shadow">
+                <div className="h-32 w-full overflow-hidden">
+                  <img src={thumb} alt={item.title} className="h-full w-full object-cover" />
                 </div>
-                <div className="mt-1.5 flex flex-wrap gap-3">
-                  <Link href={appendContextParams(item.detailHref, contextParams)} className="emory-link-btn">{t("open")}</Link>
-                  {item.mapsHref && (
-                    <a href={item.mapsHref} target="_blank" rel="noreferrer" className="emory-link-btn">{t("mapDirections")}</a>
-                  )}
-                  <button type="button" onClick={() => toggleSaved(item.key)} className="emory-link-btn">
-                    {savedIds.includes(item.key) ? t("saved") : t("save")}
-                  </button>
+                <div className="p-3">
+                  <p className="text-[10.5px] font-bold uppercase tracking-[0.07em] text-[#8094b3]">{item.kind === "event" ? "Event" : item.kind === "venue" ? "Venue" : "Organization"}</p>
+                  <p className="mt-0.5 text-[14px] font-semibold text-[#002f6c] leading-snug line-clamp-2">{item.title}</p>
+                  <p className="mt-1 text-xs text-[#4b5563] line-clamp-2">{item.subtitle}</p>
+                  <div className="mt-2.5 flex flex-wrap gap-3">
+                    <Link href={appendContextParams(item.detailHref, contextParams)} className="emory-link-btn">{t("open")}</Link>
+                    {item.mapsHref && (
+                      <a href={item.mapsHref} target="_blank" rel="noreferrer" className="emory-link-btn">{t("mapDirections")}</a>
+                    )}
+                    <button type="button" onClick={() => toggleSaved(item.key)} className="emory-link-btn">
+                      {savedIds.includes(item.key) ? t("saved") : t("save")}
+                    </button>
+                  </div>
                 </div>
               </article>
             );
@@ -793,9 +792,9 @@ export default function EmoryDiscoveryDeck({
         </div>
       )}
 
-      {activeCount > (activeView === "map" ? 9 : 8) && (
-        <div className="mt-2 flex items-center justify-between gap-2">
-          <p className="text-xs text-[var(--muted)]">{t("showingFirst", { count: activeView === "map" ? 9 : 8 })}</p>
+      {activeCount > 9 && (
+        <div className="mt-3 flex items-center justify-between gap-2">
+          <p className="text-xs text-[#6b7280]">{t("showingFirst", { count: 9 })}</p>
           <Link href={appendContextParams(emptyHref, contextParams)} className="emory-link-btn inline-flex">
             Open Full Listings
           </Link>
@@ -803,8 +802,8 @@ export default function EmoryDiscoveryDeck({
       )}
 
       {activeCount === 0 && (
-        <div className="mt-3 rounded-md border border-dashed border-[var(--twilight)] bg-[var(--surface-1)] p-3">
-          <p className="text-sm text-[var(--muted)]">{t("noMatches")}</p>
+        <div className="mt-3 rounded-md border border-dashed border-[#d7dce4] bg-[#f8f9fb] p-3">
+          <p className="text-sm text-[#6b7280]">{t("noMatches")}</p>
           <Link href={appendContextParams(emptyHref, contextParams)} className="emory-link-btn mt-1 inline-flex">{t("openFullListings")}</Link>
         </div>
       )}

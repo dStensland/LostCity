@@ -359,7 +359,7 @@ export default async function Home() {
                 <ul className="space-y-3 ml-4">
                   <li className="flex items-start gap-3">
                     <span className="text-[#00e5ff] mt-0.5">◆</span>
-                    <span>Find events and destinations that are worthy of checking out</span>
+                    <span>Find events and spots that are worthy of checking out</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <span className="text-[#00e5ff] mt-0.5">◆</span>

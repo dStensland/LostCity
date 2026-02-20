@@ -5,9 +5,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "@/components/SmartImage";
 import ScopedStyles from "@/components/ScopedStyles";
+import RSVPButton from "@/components/RSVPButton";
+import AddToCalendar from "@/components/AddToCalendar";
 import { createCssVarClass } from "@/lib/css-utils";
+import GettingThereSection from "@/components/GettingThereSection";
 import { format, parseISO } from "date-fns";
-import { formatTimeSplit } from "@/lib/formats";
+import { decodeHtmlEntities, formatTimeSplit } from "@/lib/formats";
 import { usePortalOptional } from "@/lib/portal-context";
 
 interface FestivalData {
@@ -33,6 +36,14 @@ interface SessionData {
     name: string;
     slug: string;
     neighborhood: string | null;
+    nearest_marta_station?: string | null;
+    marta_walk_minutes?: number | null;
+    marta_lines?: string[] | null;
+    beltline_adjacent?: boolean | null;
+    beltline_segment?: string | null;
+    parking_type?: string[] | null;
+    parking_free?: boolean | null;
+    transit_score?: number | null;
   } | null;
 }
 
@@ -178,7 +189,7 @@ export default function FestivalDetailView({
         <div className="relative rounded-xl overflow-hidden mb-6 bg-[var(--dusk)]">
           <NeonFloatingBackButton onClose={onClose} />
           <div className="p-6 flex items-start gap-4">
-            <div className="w-28 h-40 skeleton-shimmer rounded-lg" />
+            <div className="w-28 aspect-[4/5] skeleton-shimmer rounded-lg" />
             <div className="flex-1 space-y-3 pt-2">
               <div className="h-5 skeleton-shimmer rounded w-20" />
               <div className="h-7 skeleton-shimmer rounded w-3/4" />
@@ -224,7 +235,7 @@ export default function FestivalDetailView({
         <div className="p-6 flex items-start gap-4">
           <div className="flex-shrink-0">
             {showImage ? (
-              <div className="relative w-28 h-40 rounded-lg overflow-hidden border border-[var(--twilight)]">
+              <div className="relative w-28 aspect-[4/5] rounded-lg overflow-hidden border border-[var(--twilight)]">
                 {!imageLoaded && (
                   <div className="absolute inset-0 skeleton-shimmer" />
                 )}
@@ -239,8 +250,10 @@ export default function FestivalDetailView({
                 />
               </div>
             ) : (
-              <div className="w-28 h-40 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] flex items-center justify-center">
-                <span className="text-2xl">🎪</span>
+              <div className="w-28 aspect-[4/5] rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] flex items-center justify-center">
+                <svg className="w-10 h-10 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 4v16m0-12h9l-1.5 3L14 14H5" />
+                </svg>
               </div>
             )}
           </div>
@@ -292,6 +305,17 @@ export default function FestivalDetailView({
         </div>
       )}
 
+      {/* Transit info for single-venue festivals */}
+      {(() => {
+        const venueIds = new Set(allSessions.filter((s) => s.venue).map((s) => s.venue!.id));
+        const singleVenue = venueIds.size === 1 ? allSessions.find((s) => s.venue)?.venue ?? null : null;
+        return singleVenue ? (
+          <div className="mb-6">
+            <GettingThereSection transit={singleVenue} variant="compact" />
+          </div>
+        ) : null;
+      })()}
+
       <div className="space-y-4">
         {programs.length === 0 && (
           <div className="text-center py-12 text-[var(--muted)]">
@@ -342,27 +366,53 @@ export default function FestivalDetailView({
                         {format(parseISO(date), "EEE, MMM d")}
                       </div>
                       <div className="space-y-1">
-                        {sessionsByDate.get(date)!.map((session) => (
-                          <button
-                            key={session.id}
-                            onClick={() => handleSessionClick(session.id)}
-                            className="w-full flex items-center justify-between gap-3 px-2.5 py-2 rounded-lg border border-transparent hover:border-[var(--twilight)] hover:bg-[var(--twilight)]/30 text-left transition-colors"
-                          >
-                            <div className="flex items-center gap-3 min-w-0">
-                              <span className="font-mono text-[0.65rem] text-[var(--muted)] shrink-0">
-                                {formatSessionTime(session.start_time)}
-                              </span>
-                              <span className="text-sm text-[var(--cream)] truncate">
-                                {session.title}
-                              </span>
+                        {sessionsByDate.get(date)!.map((session) => {
+                          const sessionTitle = decodeHtmlEntities(session.title);
+
+                          return (
+                            <div
+                              key={session.id}
+                              className="flex items-start gap-2 px-2.5 py-2 rounded-lg border border-transparent hover:border-[var(--twilight)] hover:bg-[var(--twilight)]/30 transition-colors"
+                            >
+                              <button
+                                onClick={() => handleSessionClick(session.id)}
+                                className="flex-1 min-w-0 text-left"
+                              >
+                                <div className="flex items-center gap-3 min-w-0">
+                                  <span className="font-mono text-[0.65rem] text-[var(--muted)] shrink-0">
+                                    {formatSessionTime(session.start_time)}
+                                  </span>
+                                  <span className="text-sm text-[var(--cream)] truncate">
+                                    {sessionTitle}
+                                  </span>
+                                </div>
+                                {session.venue && (
+                                  <span className="block text-[0.65rem] text-[var(--muted)] mt-0.5 truncate">
+                                    {session.venue.name}
+                                  </span>
+                                )}
+                              </button>
+
+                              <div className="flex shrink-0 items-center gap-1 pt-0.5">
+                                <AddToCalendar
+                                  eventId={session.id}
+                                  title={sessionTitle}
+                                  date={session.start_date}
+                                  time={session.start_time}
+                                  venue={session.venue?.name}
+                                  variant="icon"
+                                />
+                                <RSVPButton
+                                  eventId={session.id}
+                                  eventTitle={sessionTitle}
+                                  venueId={session.venue?.id}
+                                  venueName={session.venue?.name}
+                                  variant="compact"
+                                />
+                              </div>
                             </div>
-                            {session.venue && (
-                              <span className="text-[0.65rem] text-[var(--muted)] truncate">
-                                {session.venue.name}
-                              </span>
-                            )}
-                          </button>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   ))}

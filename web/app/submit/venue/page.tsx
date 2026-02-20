@@ -270,7 +270,7 @@ export default function SubmitVenuePage() {
             </svg>
           </Link>
           <h1 className="text-2xl font-semibold text-[var(--cream)]">
-            Add a Destination
+            Add a Spot
           </h1>
         </div>
 

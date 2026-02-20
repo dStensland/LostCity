@@ -604,7 +604,7 @@ export default function ExploreTrackDetail({
           <div className="py-12 text-center">
             <p className="text-sm" style={{ color: "var(--muted)" }}>
               {activeFilter === "all"
-                ? "No venues in this track yet"
+                ? "No spots in this track yet"
                 : `No ${activeFilter} events right now`}
             </p>
             {activeFilter !== "all" && (

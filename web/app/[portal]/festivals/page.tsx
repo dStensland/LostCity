@@ -273,7 +273,7 @@ function FestivalCard({
       className="group block rounded-lg border border-[var(--twilight)] bg-[var(--card-bg)] overflow-hidden hover:bg-[var(--card-bg-hover)] hover:border-[var(--soft)] hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
     >
       {/* Image */}
-      <div className="relative w-full aspect-video bg-[var(--night)] overflow-hidden">
+      <div className="relative w-full aspect-[4/5] bg-[var(--night)] overflow-hidden">
         {!festival.image_url && <div className="absolute inset-0 skeleton-shimmer" />}
         {festival.image_url ? (
           <Image

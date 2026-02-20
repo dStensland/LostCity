@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { usePortal } from "@/lib/portal-context";
 import FeedSection, { type FeedSectionData, THEMED_SLUGS, HolidayGrid } from "./feed/FeedSection";
-import { getActiveHeroSlugs } from "./feed/HolidayHero";
+import { getActiveHeroSlugs } from "@/config/holidays";
 import FestivalDebugPanel from "@/components/FestivalDebugPanel";
 
 

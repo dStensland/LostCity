@@ -1,6 +1,5 @@
 "use client";
 
-import { EventCardSkeletonList } from "@/components/EventCardSkeleton";
 import Skeleton from "@/components/Skeleton";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClassForLength } from "@/lib/css-utils";
@@ -82,32 +81,53 @@ export default function PortalHappeningNowLoading() {
   return (
     <div data-skeleton-route="happening-now" data-skeleton-vertical="city" className="min-h-screen bg-[var(--void)]">
       <ScopedStyles css={filterWidthCss} />
-      <div className="max-w-3xl mx-auto px-4 py-6">
-        {/* Header skeleton */}
-        <div className="mb-6">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-3 h-3 rounded-full bg-[var(--neon-red)] animate-pulse" />
-            <div className="h-6 w-36 rounded skeleton-shimmer" />
+
+      {/* Sticky filter bar skeleton */}
+      <div className="sticky top-[52px] z-20 bg-[var(--night)]/95 border-b border-[var(--twilight)]/50">
+        <div className="max-w-3xl mx-auto px-4 py-2 space-y-2">
+          {/* Row 1: dropdown + icon buttons + count badge */}
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-8 w-[200px] rounded-lg" />
+            <Skeleton className="h-8 w-8 rounded-lg" delay="0.05s" />
+            <Skeleton className="h-8 w-8 rounded-lg" delay="0.1s" />
+            <Skeleton className="h-8 w-20 rounded-lg ml-auto" delay="0.15s" />
           </div>
-          <Skeleton className="h-4 w-48 rounded" delay="0.1s" />
+          {/* Row 2: category chips */}
+          <div className="flex gap-2 overflow-hidden">
+            {filterWidthClasses.map((widthClass, index) => (
+              <Skeleton
+                key={index}
+                className={`h-8 rounded-lg flex-shrink-0 w-[var(--skeleton-width)] ${widthClass?.className ?? ""}`}
+                delay={`${(index + 1) * 0.05}s`}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Content skeletons */}
+      <div className="max-w-3xl mx-auto px-4 py-4">
+        {/* Summary header skeleton */}
+        <div className="mb-4">
+          <Skeleton className="h-6 w-32 rounded mb-2" />
+          <Skeleton className="h-4 w-56 rounded mb-3" delay="0.05s" />
+          <div className="flex gap-3">
+            <div className="flex-1 h-16 rounded-xl skeleton-shimmer" />
+            <div className="flex-1 h-16 rounded-xl skeleton-shimmer" style={{ animationDelay: "60ms" }} />
+          </div>
         </div>
 
-        {/* Map placeholder skeleton */}
-        <div className="h-48 md:h-64 rounded-lg skeleton-shimmer mb-6" />
+        <div className="border-t border-[var(--twilight)]/40 mb-2" />
 
-        {/* Filter row skeleton */}
-        <div className="flex gap-2 mb-4 overflow-hidden">
-          {filterWidthClasses.map((widthClass, index) => (
-            <Skeleton
-              key={index}
-              className={`h-8 rounded-lg flex-shrink-0 w-[var(--skeleton-width)] ${widthClass?.className ?? ""}`}
-              delay={`${(index + 1) * 0.05}s`}
-            />
-          ))}
-        </div>
-
-        {/* Event cards skeleton */}
-        <EventCardSkeletonList count={5} />
+        {/* Collapsed cluster header skeletons */}
+        {[1, 2, 3, 4, 5].map((i) => (
+          <div key={i} className="py-3">
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-4 w-28 rounded" delay={`${i * 0.06}s`} />
+              <Skeleton className="h-3.5 w-14 rounded" delay={`${i * 0.06 + 0.03}s`} />
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

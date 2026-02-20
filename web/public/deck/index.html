@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LostCity — Platform Overview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Serif:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --navy: #002f6c;
+  --navy-deep: #001d44;
+  --green: #8ed585;
+  --green-dark: #5bb950;
+  --cream: #f2f5fa;
+  --slate: #4b5563;
+  --muted: #6b7280;
+  --white: #ffffff;
+  --coral: #f97066;
+  --gold: #d4a574;
+}
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Inter', -apple-system, sans-serif;
+  color: var(--navy);
+  background: var(--white);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+.serif { font-family: 'Noto Serif', Georgia, serif; }
+.hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: linear-gradient(135deg, #002f6c 0%, #003a7c 40%, #0b4a9e 100%);
+  position: relative;
+  overflow: hidden;
+  padding: 4rem 2rem;
+}
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.07) 1px, transparent 0);
+  background-size: 28px 28px;
+}
+.hero-inner { position: relative; max-width: 900px; margin: 0 auto; text-align: center; }
+.hero-badge {
+  display: inline-block;
+  background: rgba(142,213,133,0.15);
+  border: 1px solid rgba(142,213,133,0.3);
+  color: var(--green);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0.4rem 1rem;
+  border-radius: 999px;
+  margin-bottom: 1.5rem;
+}
+.hero h1 {
+  font-family: 'Noto Serif', Georgia, serif;
+  font-size: clamp(2.8rem, 6vw, 4.8rem);
+  font-weight: 700;
+  color: white;
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+}
+.hero h1 span { color: var(--green); }
+.hero p.lead {
+  margin-top: 1.5rem;
+  font-size: 1.15rem;
+  color: rgba(255,255,255,0.75);
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.7;
+}
+.hero-ctas {
+  margin-top: 2.5rem;
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--green);
+  color: var(--navy);
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding: 0.85rem 1.8rem;
+  border-radius: 10px;
+  text-decoration: none;
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 4px 14px rgba(142,213,133,0.3);
+  transition: all 0.2s;
+}
+.btn-primary:hover { background: var(--green-dark); color: white; }
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255,255,255,0.08);
+  color: white;
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 0.85rem 1.8rem;
+  border-radius: 10px;
+  text-decoration: none;
+  border: 1px solid rgba(255,255,255,0.2);
+  transition: all 0.2s;
+}
+.btn-ghost:hover { background: rgba(255,255,255,0.15); }
+section { padding: 5rem 2rem; }
+.container { max-width: 1000px; margin: 0 auto; }
+.section-kicker {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--green-dark);
+  margin-bottom: 0.75rem;
+}
+.section-title {
+  font-family: 'Noto Serif', Georgia, serif;
+  font-size: clamp(1.8rem, 3.5vw, 2.6rem);
+  font-weight: 700;
+  color: var(--navy);
+  line-height: 1.08;
+  letter-spacing: -0.01em;
+}
+.section-subtitle {
+  margin-top: 0.75rem;
+  font-size: 1.05rem;
+  color: var(--slate);
+  max-width: 640px;
+  line-height: 1.7;
+}
+.problem-section { background: var(--cream); }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; margin-top: 2.5rem; }
+@media (max-width: 768px) { .two-col { grid-template-columns: 1fr; } }
+.problem-card, .solution-card {
+  padding: 2rem;
+  border-radius: 16px;
+  border: 1px solid #d7dce4;
+}
+.problem-card { background: white; }
+.solution-card { background: linear-gradient(135deg, #002f6c, #0b4a9e); color: white; border-color: transparent; }
+.problem-card h3, .solution-card h3 {
+  font-family: 'Noto Serif', Georgia, serif;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+.solution-card h3 { color: var(--green); }
+.problem-card ul, .solution-card ul { list-style: none; }
+.problem-card li, .solution-card li {
+  padding: 0.5rem 0;
+  padding-left: 1.5rem;
+  position: relative;
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+.problem-card li { color: var(--slate); }
+.solution-card li { color: rgba(255,255,255,0.85); }
+.problem-card li::before { content: ''; position: absolute; left: 0; top: 0.85rem; width: 6px; height: 6px; border-radius: 50%; background: var(--coral); }
+.solution-card li::before { content: ''; position: absolute; left: 0; top: 0.85rem; width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+.verticals-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 2.5rem; }
+@media (max-width: 768px) { .verticals-grid { grid-template-columns: 1fr; } }
+.vertical-card {
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid #d7dce4;
+  background: white;
+  transition: box-shadow 0.2s;
+}
+.vertical-card:hover { box-shadow: 0 12px 32px rgba(0,0,0,0.1); }
+.vertical-card-header { padding: 2rem 2rem 1.5rem; }
+.vertical-card-header .badge {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  margin-bottom: 0.75rem;
+}
+.vertical-card h3 {
+  font-family: 'Noto Serif', Georgia, serif;
+  font-size: 1.4rem;
+  font-weight: 600;
+  line-height: 1.15;
+}
+.vertical-card p { margin-top: 0.5rem; font-size: 0.9rem; color: var(--slate); line-height: 1.6; }
+.vertical-card-features {
+  padding: 0 2rem 2rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.feature-tag {
+  background: var(--cream);
+  color: var(--navy);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid #d7dce4;
+}
+.stats-section { background: linear-gradient(135deg, #002f6c 0%, #0b4a9e 100%); color: white; position: relative; overflow: hidden; }
+.stats-section::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.05) 1px, transparent 0);
+  background-size: 28px 28px;
+}
+.stats-grid { position: relative; display: grid; grid-template-columns: repeat(4, 1fr); gap: 2rem; margin-top: 2.5rem; text-align: center; }
+@media (max-width: 768px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+.stat-number {
+  font-family: 'Noto Serif', Georgia, serif;
+  font-size: 2.8rem;
+  font-weight: 700;
+  color: var(--green);
+  line-height: 1;
+}
+.stat-label { margin-top: 0.5rem; font-size: 0.85rem; color: rgba(255,255,255,0.7); font-weight: 500; }
+.steps { margin-top: 2.5rem; }
+.step {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 1.5rem;
+  padding: 1.5rem 0;
+  border-bottom: 1px solid #e5e7eb;
+  align-items: start;
+}
+.step:last-child { border-bottom: none; }
+.step-number {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #002f6c, #0b4a9e);
+  color: var(--green);
+  font-family: 'Noto Serif', Georgia, serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.step h3 { font-size: 1.05rem; font-weight: 700; color: var(--navy); }
+.step p { margin-top: 0.25rem; font-size: 0.9rem; color: var(--slate); line-height: 1.6; }
+.arch-section { background: var(--cream); }
+.arch-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; margin-top: 2.5rem; }
+@media (max-width: 768px) { .arch-grid { grid-template-columns: 1fr; } }
+.arch-card {
+  background: white;
+  border: 1px solid #d7dce4;
+  border-radius: 14px;
+  padding: 1.5rem;
+}
+.arch-card h4 { font-size: 0.95rem; font-weight: 700; color: var(--navy); margin-bottom: 0.5rem; }
+.arch-card p { font-size: 0.85rem; color: var(--slate); line-height: 1.6; }
+.roadmap-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; margin-top: 2.5rem; }
+@media (max-width: 768px) { .roadmap-grid { grid-template-columns: 1fr; } }
+.roadmap-card {
+  padding: 1.5rem;
+  border-radius: 14px;
+  border: 1px solid #d7dce4;
+  background: white;
+}
+.roadmap-card .phase {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+.roadmap-card h4 {
+  font-family: 'Noto Serif', Georgia, serif;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--navy);
+  margin-bottom: 0.75rem;
+}
+.roadmap-card li {
+  font-size: 0.85rem;
+  color: var(--slate);
+  padding: 0.3rem 0;
+  padding-left: 1.25rem;
+  position: relative;
+  list-style: none;
+}
+.roadmap-card li::before { content: ''; position: absolute; left: 0; top: 0.7rem; width: 5px; height: 5px; border-radius: 50%; background: var(--green-dark); }
+.cta-section {
+  background: linear-gradient(135deg, #002f6c 0%, #0b4a9e 100%);
+  color: white;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.cta-section::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.05) 1px, transparent 0);
+  background-size: 28px 28px;
+}
+.cta-section .container { position: relative; }
+.cta-section h2 {
+  font-family: 'Noto Serif', Georgia, serif;
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 700;
+  line-height: 1.08;
+}
+.cta-section p { margin-top: 1rem; font-size: 1.1rem; color: rgba(255,255,255,0.75); max-width: 540px; margin-left: auto; margin-right: auto; }
+footer { padding: 2rem; text-align: center; font-size: 0.8rem; color: var(--muted); background: var(--cream); }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-inner">
+    <div class="hero-badge">Platform Overview 2026</div>
+    <h1>Community infrastructure<br>for <span>every city</span></h1>
+    <p class="lead">LostCity builds branded digital portals that connect hospitals, cultural institutions, and cities to the community resources around them — in real time.</p>
+    <div class="hero-ctas">
+      <a href="#verticals" class="btn-primary">See the verticals</a>
+      <a href="/emory-demo" class="btn-ghost">Live Emory demo &rarr;</a>
+    </div>
+  </div>
+</div>
+
+<section class="problem-section">
+  <div class="container">
+    <div class="section-kicker">The Opportunity</div>
+    <h2 class="section-title">Hospitals and cultural institutions sit at the center of their communities — but their digital presence stops at the front door.</h2>
+    <div class="two-col">
+      <div class="problem-card">
+        <h3>The problem</h3>
+        <ul>
+          <li>Patients and visitors have no way to find nearby food, lodging, pharmacies, or support services from the hospital</li>
+          <li>Community health organizations are invisible — buried across dozens of disconnected websites</li>
+          <li>Event and program data is fragmented, stale, and impossible to discover</li>
+          <li>Hospitals spend millions on patient experience but nothing on the community layer</li>
+          <li>Cultural institutions compete for attention with no shared infrastructure</li>
+        </ul>
+      </div>
+      <div class="solution-card">
+        <h3>Our solution</h3>
+        <ul>
+          <li>White-labeled community portals that extend any institution's brand into the surrounding neighborhood</li>
+          <li>Real-time event and resource feeds powered by an automated crawler network</li>
+          <li>200+ curated community organizations with verified support tracks</li>
+          <li>Context-aware concierge that adapts to visitor type — patient, caregiver, staff, or urgent</li>
+          <li>Deployable in weeks, not months — one platform, infinite portals</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="verticals">
+  <div class="container">
+    <div class="section-kicker">Verticals</div>
+    <h2 class="section-title">One platform, multiple verticals</h2>
+    <p class="section-subtitle">Each portal is fully branded to the institution and optimized for its audience.</p>
+    <div class="verticals-grid">
+      <div class="vertical-card">
+        <div class="vertical-card-header">
+          <div class="badge" style="background:#dcfce7;color:#166534;">Live Demo</div>
+          <h3>Hospital &amp; Healthcare</h3>
+          <p>Campus concierge, community health hub, and support resource directory — built for patients, caregivers, visitors, and staff.</p>
+        </div>
+        <div class="vertical-card-features">
+          <span class="feature-tag">Campus concierge</span>
+          <span class="feature-tag">Mode-aware UI</span>
+          <span class="feature-tag">Nearby food &amp; lodging</span>
+          <span class="feature-tag">Community hub</span>
+          <span class="feature-tag">200+ support orgs</span>
+          <span class="feature-tag">32 support tracks</span>
+          <span class="feature-tag">Crisis resources</span>
+          <span class="feature-tag">Staff board</span>
+          <span class="feature-tag">Multi-campus</span>
+          <span class="feature-tag">Discharge planning</span>
+          <span class="feature-tag">Wayfinding</span>
+          <span class="feature-tag">Open/closed status</span>
+        </div>
+      </div>
+      <div class="vertical-card">
+        <div class="vertical-card-header">
+          <div class="badge" style="background:#e0e7ff;color:#3730a3;">In Market</div>
+          <h3>Film &amp; Culture</h3>
+          <p>Event discovery, community groups, venue guides, and curated listings for film, art, and cultural institutions.</p>
+        </div>
+        <div class="vertical-card-features">
+          <span class="feature-tag">Event discovery</span>
+          <span class="feature-tag">Film groups</span>
+          <span class="feature-tag">Venue guides</span>
+          <span class="feature-tag">Community hub</span>
+          <span class="feature-tag">Curated lists</span>
+          <span class="feature-tag">Exhibit tracking</span>
+          <span class="feature-tag">Interactive maps</span>
+          <span class="feature-tag">RSVP &amp; save</span>
+          <span class="feature-tag">Calendar feed</span>
+          <span class="feature-tag">Neighborhood view</span>
+        </div>
+      </div>
+      <div class="vertical-card">
+        <div class="vertical-card-header">
+          <div class="badge" style="background:#fef3c7;color:#92400e;">Planned</div>
+          <h3>Cities &amp; Destinations</h3>
+          <p>Citywide event aggregation, neighborhood guides, and visitor concierge for tourism boards and municipal partners.</p>
+        </div>
+        <div class="vertical-card-features">
+          <span class="feature-tag">City event feed</span>
+          <span class="feature-tag">Neighborhood guides</span>
+          <span class="feature-tag">Visitor concierge</span>
+          <span class="feature-tag">Local business</span>
+          <span class="feature-tag">Tourism integration</span>
+          <span class="feature-tag">Transit + parking</span>
+        </div>
+      </div>
+      <div class="vertical-card">
+        <div class="vertical-card-header">
+          <div class="badge" style="background:#fef3c7;color:#92400e;">Planned</div>
+          <h3>Universities &amp; Campuses</h3>
+          <p>Student life portal, campus dining, health services, and surrounding neighborhood discovery.</p>
+        </div>
+        <div class="vertical-card-features">
+          <span class="feature-tag">Student life hub</span>
+          <span class="feature-tag">Campus dining</span>
+          <span class="feature-tag">Health services</span>
+          <span class="feature-tag">Off-campus food</span>
+          <span class="feature-tag">Event calendar</span>
+          <span class="feature-tag">Housing nearby</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="stats-section">
+  <div class="container">
+    <div class="section-kicker" style="color:var(--green);">Emory Demo — By the Numbers</div>
+    <h2 class="section-title" style="color:white;">Built and running today</h2>
+    <div class="stats-grid">
+      <div>
+        <div class="stat-number">4</div>
+        <div class="stat-label">Hospital campuses</div>
+      </div>
+      <div>
+        <div class="stat-number">200+</div>
+        <div class="stat-label">Community organizations</div>
+      </div>
+      <div>
+        <div class="stat-number">32</div>
+        <div class="stat-label">Support tracks</div>
+      </div>
+      <div>
+        <div class="stat-number">50+</div>
+        <div class="stat-label">Automated crawlers</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-kicker">How It Works</div>
+    <h2 class="section-title">From crawl to concierge in minutes</h2>
+    <p class="section-subtitle">Our automated pipeline continuously discovers, enriches, and surfaces community resources.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-number">1</div>
+        <div>
+          <h3>Crawl &amp; ingest</h3>
+          <p>50+ automated crawlers pull events, exhibits, programs, and services from venues, museums, organizations, and public health agencies across the metro area. New sources are added in hours, not weeks.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-number">2</div>
+        <div>
+          <h3>Enrich &amp; classify</h3>
+          <p>Events are deduplicated, geocoded, tagged by category, and scored for relevance. Support organizations are mapped against 32 verified tracks covering food access, mental health, housing, childcare, and more.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-number">3</div>
+        <div>
+          <h3>Brand &amp; deploy</h3>
+          <p>Each portal gets a fully white-labeled experience with custom themes, fonts, colors, and navigation. Hospital portals include campus-specific concierge, community hub, and support resource directory.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-number">4</div>
+        <div>
+          <h3>Adapt &amp; personalize</h3>
+          <p>The UI adapts in real time to context: visitor vs. patient vs. staff, time of day, campus location, and urgency mode. Open/closed status, late-night resources, and seasonal tips surface automatically.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="arch-section">
+  <div class="container">
+    <div class="section-kicker">Architecture</div>
+    <h2 class="section-title">Modern stack, production-ready</h2>
+    <p class="section-subtitle">Enterprise-grade infrastructure with zero client-side complexity.</p>
+    <div class="arch-grid">
+      <div class="arch-card">
+        <h4>Next.js 16</h4>
+        <p>App Router with server components, streaming, and edge rendering. Sub-second page loads with zero client JavaScript on first paint.</p>
+      </div>
+      <div class="arch-card">
+        <h4>Supabase</h4>
+        <p>Postgres database with Row Level Security, real-time subscriptions, and edge functions. Battle-tested auth and storage.</p>
+      </div>
+      <div class="arch-card">
+        <h4>Mapbox</h4>
+        <p>Interactive maps with clustering, geocoding, and custom light-theme styles. Venue discovery with distance-aware ranking.</p>
+      </div>
+      <div class="arch-card">
+        <h4>Crawler Network</h4>
+        <p>50+ TypeScript crawlers running on scheduled intervals. Each crawler handles a specific venue, museum, or organization with full error recovery.</p>
+      </div>
+      <div class="arch-card">
+        <h4>White-Label Theming</h4>
+        <p>CSS variable-driven theming with visual presets, custom fonts, category colors, and component-level style overrides — all from the database.</p>
+      </div>
+      <div class="arch-card">
+        <h4>i18n &amp; Analytics</h4>
+        <p>Multi-language support with next-intl. Portal-scoped analytics tracking every interaction — wayfinding, resource clicks, mode switches, and more.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="container">
+    <div class="section-kicker">Case Study</div>
+    <h2 class="section-title">Emory Healthcare demo</h2>
+    <p class="section-subtitle">A fully functional hospital community portal covering four Emory campuses in metro Atlanta.</p>
+    <div class="steps" style="margin-top:2rem;">
+      <div class="step">
+        <div class="step-number" style="font-size:1rem;">&#x1f3e5;</div>
+        <div>
+          <h3>Campus Concierge</h3>
+          <p>Each hospital gets its own landing page with hero photo, address, wayfinding, and campus-specific resources. Resources show real-time open/closed status and are grouped by audience (patient, visitor, caregiver, staff).</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-number" style="font-size:1rem;">&#x1f355;</div>
+        <div>
+          <h3>Nearby Explorer</h3>
+          <p>Interactive food, lodging, essentials, fitness, and escapes explorer with time-of-day awareness. Filters for breakfast/lunch/dinner/late-night and dietary preferences. Distance-ranked with open-now indicators.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-number" style="font-size:1rem;">&#x1f91d;</div>
+        <div>
+          <h3>Community Hub</h3>
+          <p>Aggregates health programs, support groups, food pantries, fitness classes, and community events from across the metro. Category pathways with org counts. Discovery deck with search, filters, sort, map view, and timeline.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-number" style="font-size:1rem;">&#x1f6e1;</div>
+        <div>
+          <h3>Support Resource Directory</h3>
+          <p>200+ verified organizations across 32 support tracks: food access, mental health, housing, childcare, substance use recovery, domestic violence, elder care, financial assistance, legal aid, and more.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-number" style="font-size:1rem;">&#x1f504;</div>
+        <div>
+          <h3>Audience Modes</h3>
+          <p>Four intelligent modes — Visiting, Treatment, Urgent, and Staff — that reshape the entire experience. Different resources, tips, and urgency levels surface based on who you are.</p>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:2rem;text-align:center;">
+      <a href="/emory-demo" class="btn-primary" style="background:var(--navy);color:white;box-shadow:0 4px 14px rgba(0,47,108,0.3);">Open the live Emory demo &rarr;</a>
+    </div>
+  </div>
+</section>
+
+<section style="background:var(--cream);">
+  <div class="container">
+    <div class="section-kicker">Roadmap</div>
+    <h2 class="section-title">Where we're headed</h2>
+    <div class="roadmap-grid">
+      <div class="roadmap-card">
+        <div class="phase" style="color:var(--green-dark);">Now — Q1 2026</div>
+        <h4>Hospital vertical launch</h4>
+        <ul>
+          <li>Emory pilot with 4 campuses</li>
+          <li>Community hub with 200+ orgs</li>
+          <li>Real-time campus concierge</li>
+          <li>Support source policy engine</li>
+          <li>Analytics dashboard</li>
+        </ul>
+      </div>
+      <div class="roadmap-card">
+        <div class="phase" style="color:#2563eb;">Next — Q2 2026</div>
+        <h4>Scale &amp; expand</h4>
+        <ul>
+          <li>Second health system partner</li>
+          <li>Patient journey integration</li>
+          <li>Discharge planning tools</li>
+          <li>Caregiver resource kits</li>
+          <li>Nashville &amp; second city</li>
+        </ul>
+      </div>
+      <div class="roadmap-card">
+        <div class="phase" style="color:#7c3aed;">Future — H2 2026</div>
+        <h4>Platform expansion</h4>
+        <ul>
+          <li>University campus vertical</li>
+          <li>City/tourism vertical</li>
+          <li>Self-serve portal builder</li>
+          <li>API access for partners</li>
+          <li>National crawler network</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="cta-section">
+  <div class="container">
+    <h2>Ready to bring your community online?</h2>
+    <p>LostCity is the infrastructure layer between institutions and the communities around them. Let's build yours.</p>
+    <div class="hero-ctas" style="margin-top:2rem;">
+      <a href="/emory-demo" class="btn-primary">See the live demo</a>
+      <a href="/emory-demo/hospitals/emory-university-hospital" class="btn-ghost">Hospital concierge</a>
+      <a href="/emory-demo/community-hub" class="btn-ghost">Community hub</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>LostCity &middot; Community infrastructure for every city &middot; 2026</p>
+</footer>
+
+</body>
+</html>

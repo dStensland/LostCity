@@ -33,6 +33,8 @@ interface UseMapEventsOptions {
   enabled?: boolean;
   // Initial bounds (optional, will use city default if not provided)
   initialBounds?: MapBounds;
+  /** Smart date default to inject when no explicit date is in the URL */
+  dateOverride?: string;
 }
 
 // Default Atlanta bounds (metropolitan area)
@@ -58,7 +60,7 @@ const MAP_EVENT_FILTER_KEYS = [
  * - React Query caching for efficient data reuse
  */
 export function useMapEvents(options: UseMapEventsOptions = {}) {
-  const { portalId, portalExclusive, enabled = true, initialBounds } = options;
+  const { portalId, portalExclusive, enabled = true, initialBounds, dateOverride } = options;
   const searchParams = useSearchParams();
 
   // Track current bounds (debounced)
@@ -72,8 +74,12 @@ export function useMapEvents(options: UseMapEventsOptions = {}) {
       const value = searchParams.get(key);
       if (value) params.set(key, value);
     });
+    // Inject smart date default when no explicit date in URL
+    if (!params.get("date") && dateOverride) {
+      params.set("date", dateOverride);
+    }
     return params.toString();
-  }, [searchParams]);
+  }, [searchParams, dateOverride]);
 
   // Create bounds key for query (rounded to reduce unnecessary refetches)
   const boundsKey = useMemo(() => {
@@ -85,6 +91,11 @@ export function useMapEvents(options: UseMapEventsOptions = {}) {
   const buildApiParams = useMemo(() => {
     const params = new URLSearchParams(searchParams.toString());
     params.delete("view"); // Remove view param
+
+    // Inject smart date default when no explicit date in URL
+    if (!params.get("date") && dateOverride) {
+      params.set("date", dateOverride);
+    }
 
     // Add portal params
     if (portalId && portalId !== "default") {
@@ -106,7 +117,7 @@ export function useMapEvents(options: UseMapEventsOptions = {}) {
     params.set("useCursor", "true"); // Use cursor-based to avoid COUNT(*)
 
     return params.toString();
-  }, [searchParams, portalId, portalExclusive, bounds]);
+  }, [searchParams, portalId, portalExclusive, bounds, dateOverride]);
 
   const query = useQuery<EventsResponse, Error>({
     queryKey: ["events", "map", filtersKey, boundsKey, portalId, portalExclusive],

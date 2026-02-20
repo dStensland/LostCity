@@ -547,17 +547,20 @@ export default async function HospitalLandingPage({ params, searchParams }: Prop
             </div>
           )}
 
-          <section className="emory-panel p-4 sm:p-5">
-            <div className="grid grid-cols-1 lg:grid-cols-[1.08fr_0.92fr] gap-4 items-stretch">
-              <div>
-                <p className="emory-kicker">Your campus</p>
-                <h1 className={`mt-1 text-[clamp(2.4rem,4.2vw,3.4rem)] leading-[0.94] text-[var(--cream)] ${hospitalDisplayFont.className}`}>
+          <section className="relative overflow-hidden rounded-[20px] bg-gradient-to-br from-[#002f6c] via-[#003a7c] to-[#0b4a9e]">
+            {/* Subtle grid overlay */}
+            <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '24px 24px' }} />
+
+            <div className="relative grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-0 items-stretch">
+              <div className="p-5 sm:p-7">
+                <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#8ed585]">Your Campus</p>
+                <h1 className={`mt-2 text-[clamp(1.8rem,3.6vw,2.8rem)] leading-[0.96] text-white ${hospitalDisplayFont.className}`}>
                   {data.hospital.name}
                 </h1>
-                <p className="mt-1 text-sm text-[var(--muted)]">{data.hospital.address}</p>
+                <p className="mt-1.5 text-sm text-white/70">{data.hospital.address}</p>
 
                 {/* Mode selector */}
-                <div className="mt-3 flex flex-wrap gap-1.5">
+                <div className="mt-4 flex flex-wrap gap-1.5">
                   {HOSPITAL_MODE_LIST.map((modeConfig) => {
                     const isActive = mode === modeConfig.key;
                     const modeHref = `/${portal.slug}/hospitals/${hospitalSlug}?mode=${modeConfig.key}${
@@ -568,8 +571,8 @@ export default async function HospitalLandingPage({ params, searchParams }: Prop
                         key={modeConfig.key}
                         href={modeHref}
                         className={isActive
-                          ? "inline-flex items-center rounded-full border border-[#7ecf75] bg-[#8ed585] px-3 py-1 text-[11px] font-semibold text-[#0f2f5f]"
-                          : "inline-flex items-center rounded-full border border-[#c7d3e8] bg-white px-3 py-1 text-[11px] font-semibold text-[#143b83] hover:bg-[#f3f7ff]"}
+                          ? "inline-flex items-center rounded-full border border-[#7ecf75] bg-[#8ed585] px-3.5 py-1.5 text-[11.5px] font-bold text-[#0f2f5f] shadow-sm"
+                          : "inline-flex items-center rounded-full border border-white/25 bg-white/10 px-3.5 py-1.5 text-[11.5px] font-semibold text-white/90 hover:bg-white/20 transition-colors"}
                       >
                         {modeConfig.shortLabel}
                       </Link>
@@ -579,12 +582,12 @@ export default async function HospitalLandingPage({ params, searchParams }: Prop
 
                 {/* Feature 2: Stage hero hint */}
                 {stageHeroHint && (
-                  <p className="mt-2 text-sm text-[#1a56a8] bg-[#eef4ff] rounded-lg px-3 py-2 border border-[#c7d3e8]">
+                  <p className="mt-3 text-sm text-white/90 bg-white/10 rounded-lg px-3 py-2 border border-white/15">
                     {stageHeroHint}
                   </p>
                 )}
 
-                <div className="mt-4 flex flex-wrap gap-2">
+                <div className="mt-5 flex flex-wrap gap-2">
                   <HospitalTrackedLink
                     href={wayfindingHref}
                     external
@@ -599,7 +602,7 @@ export default async function HospitalLandingPage({ params, searchParams }: Prop
                       targetLabel: "Wayfinding",
                       targetUrl: wayfindingHref,
                     }}
-                    className="emory-primary-btn inline-flex items-center"
+                    className="inline-flex items-center rounded-lg border border-[#7ecf75] bg-[#8ed585] px-4 py-2.5 text-[13px] font-bold text-[#002f6c] shadow-md hover:bg-[#7fcf75] transition-colors"
                   >
                     Wayfinding
                   </HospitalTrackedLink>
@@ -618,7 +621,7 @@ export default async function HospitalLandingPage({ params, searchParams }: Prop
                         targetLabel: "Call main desk",
                         targetUrl: `tel:${data.hospital.phone}`,
                       }}
-                      className="emory-secondary-btn inline-flex items-center"
+                      className="inline-flex items-center rounded-lg border border-white/25 bg-white/10 px-4 py-2.5 text-[13px] font-semibold text-white hover:bg-white/20 transition-colors"
                     >
                       Call main desk
                     </HospitalTrackedLink>
@@ -638,7 +641,7 @@ export default async function HospitalLandingPage({ params, searchParams }: Prop
                       targetLabel: "Manage care",
                       targetUrl: bookVisitHref,
                     }}
-                    className="emory-secondary-btn inline-flex items-center"
+                    className="inline-flex items-center rounded-lg border border-white/25 bg-white/10 px-4 py-2.5 text-[13px] font-semibold text-white hover:bg-white/20 transition-colors"
                   >
                     Manage care
                   </HospitalTrackedLink>
@@ -656,7 +659,7 @@ export default async function HospitalLandingPage({ params, searchParams }: Prop
                       targetLabel: "Switch hospital",
                       targetUrl: hospitalDirectoryHref,
                     }}
-                    className="emory-secondary-btn inline-flex items-center"
+                    className="inline-flex items-center rounded-lg border border-white/25 bg-white/10 px-4 py-2.5 text-[13px] font-semibold text-white hover:bg-white/20 transition-colors"
                   >
                     Switch hospital
                   </HospitalTrackedLink>
@@ -665,7 +668,7 @@ export default async function HospitalLandingPage({ params, searchParams }: Prop
                   {stage === "discharge" && (
                     <Link
                       href={dischargePageHref}
-                      className="emory-primary-btn inline-flex items-center bg-[#166534] hover:bg-[#15803d]"
+                      className="inline-flex items-center rounded-lg border border-[#7ecf75] bg-[#166534] px-4 py-2.5 text-[13px] font-bold text-white shadow-md hover:bg-[#15803d] transition-colors"
                     >
                       View Take-Home Resources
                     </Link>
@@ -673,8 +676,8 @@ export default async function HospitalLandingPage({ params, searchParams }: Prop
                 </div>
 
                 {/* Feature 4: Campus pill strip with handoff context */}
-                <div className="mt-4 rounded-lg border border-[var(--twilight)] bg-[#f8fafe] p-2.5">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.07em] text-[#6b7280]">Choose campus</p>
+                <div className="mt-5 rounded-lg border border-white/15 bg-white/8 p-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-white/50">Choose campus</p>
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {hospitalLocations.map((hospital) => {
                       const isActive = hospital.slug === data.hospital.slug;
@@ -697,8 +700,8 @@ export default async function HospitalLandingPage({ params, searchParams }: Prop
                             targetUrl: switchHref,
                           }}
                           className={isActive
-                            ? "inline-flex items-center rounded-md border border-[#7ecf75] bg-[#8ed585] px-2 py-1 text-[11px] font-semibold text-[#0f2f5f]"
-                            : "inline-flex items-center rounded-md border border-[#c7d3e8] bg-white px-2 py-1 text-[11px] font-semibold text-[#143b83] hover:bg-[#f3f7ff]"}
+                            ? "inline-flex items-center rounded-md border border-[#7ecf75] bg-[#8ed585] px-2.5 py-1 text-[11px] font-bold text-[#0f2f5f]"
+                            : "inline-flex items-center rounded-md border border-white/20 bg-white/8 px-2.5 py-1 text-[11px] font-semibold text-white/80 hover:bg-white/15 transition-colors"}
                         >
                           {hospital.name}
                         </HospitalTrackedLink>
@@ -708,38 +711,36 @@ export default async function HospitalLandingPage({ params, searchParams }: Prop
                 </div>
               </div>
 
-              <div
-                className="emory-photo-hero min-h-[260px] sm:min-h-[320px]"
-                style={{ "--hero-image": `url("${hospitalHeroImage}")` } as CSSProperties}
-              >
-                <div className="absolute inset-x-2 bottom-2 z-[2] rounded-md bg-[#002f6c]/88 px-2.5 py-2 text-white text-[11px] leading-tight">
-                  <div className="flex items-center justify-between gap-2">
-                    <strong>{data.hospital.name}</strong>
-                    <span className="text-white/90">Care, directions, and nearby support in one place.</span>
-                  </div>
+              {/* Hero photo */}
+              <div className="relative hidden lg:block min-h-[380px]">
+                <img src={hospitalHeroImage} alt={data.hospital.name} className="absolute inset-0 h-full w-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-r from-[#002f6c] via-[#002f6c]/40 to-transparent" />
+                <div className="absolute inset-x-3 bottom-3 z-[2] rounded-lg bg-[#002f6c]/85 backdrop-blur-sm px-3 py-2.5 text-white text-[11.5px] leading-snug border border-white/10">
+                  <strong>{data.hospital.name}</strong>
+                  <span className="ml-2 text-white/75">Care, directions, and nearby support in one place.</span>
                 </div>
               </div>
             </div>
 
             {/* Feature 8: Staff Board */}
             {staffBoardItems.length > 0 && (
-              <div className="mt-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#4b6a9b] mb-2">Staff Board — Today</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+              <div className="mt-5">
+                <p className="text-[11.5px] font-bold uppercase tracking-[0.08em] text-[#4b6a9b] mb-2.5">Staff Board — Today</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {staffBoardItems.map((item) => {
                     const colors = STAFF_BOARD_CATEGORY_COLORS[item.category];
                     return (
-                      <article key={item.id} className="rounded-xl border border-[var(--twilight)] bg-gradient-to-b from-white to-[#f9fbfe] px-3 py-3">
+                      <article key={item.id} className="rounded-xl border border-[#d7dce4] bg-white px-4 py-3.5 shadow-sm">
                         <div className="flex items-start justify-between gap-2">
-                          <p className="text-sm font-semibold text-[var(--cream)]">{item.title}</p>
-                          <span className={`shrink-0 inline-flex items-center rounded-full ${colors.bg} px-2 py-0.5 text-[10px] font-semibold ${colors.text}`}>
+                          <p className="text-sm font-semibold text-[#002f6c]">{item.title}</p>
+                          <span className={`shrink-0 inline-flex items-center rounded-full ${colors.bg} px-2.5 py-0.5 text-[10px] font-bold ${colors.text}`}>
                             {STAFF_BOARD_CATEGORY_LABELS[item.category]}
                           </span>
                         </div>
-                        <p className="mt-0.5 text-xs text-[var(--muted)]">{item.description}</p>
-                        <p className="mt-1 text-[11px] text-[#6b7280]">{item.timeHint}</p>
+                        <p className="mt-1 text-xs text-[#4b5563]">{item.description}</p>
+                        <p className="mt-1.5 text-[11px] text-[#6b7280]">{item.timeHint}</p>
                         {item.ctaLabel && (
-                          <span className="mt-1 inline-block text-[11px] font-semibold text-[#1a56a8]">{item.ctaLabel}</span>
+                          <span className="mt-1.5 inline-block text-[11.5px] font-bold text-[#1a56a8]">{item.ctaLabel} &rarr;</span>
                         )}
                       </article>
                     );
@@ -758,41 +759,41 @@ export default async function HospitalLandingPage({ params, searchParams }: Prop
 
             {/* Campus resources with open/closed badges (Feature 1) */}
             {audienceGroupedResources ? (
-              <div className="mt-4 space-y-4">
+              <div className="mt-5 space-y-5">
                 {audienceGroupedResources.map((group) => (
                   <div key={group.audience}>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#4b6a9b] mb-2">{group.label}</p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2.5">
+                    <p className="text-[11.5px] font-bold uppercase tracking-[0.08em] text-[#4b6a9b] mb-2.5">{group.label}</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                       {group.resources.map((service) => {
                         const status = resourceOpenStatuses.get(service.id);
                         return (
-                          <article key={service.id} className="rounded-xl border border-[var(--twilight)] bg-gradient-to-b from-white to-[#f9fbfe] px-3 py-3">
+                          <article key={service.id} className="rounded-xl border border-[#d7dce4] bg-white px-4 py-3.5 shadow-sm hover:shadow-md transition-shadow">
                             <div className="flex items-start justify-between gap-2">
-                              <p className="text-[11px] uppercase tracking-[0.06em] text-[#6b7280]">{service.category}</p>
+                              <p className="text-[10.5px] font-bold uppercase tracking-[0.07em] text-[#8094b3]">{service.category}</p>
                               {status && (
                                 status.isOpen ? (
-                                  <span className="inline-flex items-center rounded-full bg-[#dcfce7] px-2 py-0.5 text-[10px] font-semibold text-[#166534]">
+                                  <span className="inline-flex items-center rounded-full bg-[#dcfce7] px-2.5 py-0.5 text-[10px] font-bold text-[#166534]">
                                     {status.statusLabel}
                                   </span>
                                 ) : status.statusLabel === "Closed" ? (
-                                  <span className="inline-flex items-center rounded-full bg-[#fee2e2] px-2 py-0.5 text-[10px] font-semibold text-[#991b1b]">
+                                  <span className="inline-flex items-center rounded-full bg-[#fee2e2] px-2.5 py-0.5 text-[10px] font-bold text-[#991b1b]">
                                     Closed
                                   </span>
                                 ) : status.statusLabel !== "See Schedule" ? (
-                                  <span className="inline-flex items-center rounded-full bg-[#e0e7ff] px-2 py-0.5 text-[10px] font-semibold text-[#3730a3]">
+                                  <span className="inline-flex items-center rounded-full bg-[#e0e7ff] px-2.5 py-0.5 text-[10px] font-bold text-[#3730a3]">
                                     {status.statusLabel}
                                   </span>
                                 ) : null
                               )}
                             </div>
-                            <p className="mt-0.5 text-sm font-semibold text-[var(--cream)]">{service.name}</p>
-                            <p className="mt-0.5 text-xs text-[var(--muted)]">{service.description || "On-campus support service."}</p>
-                            <p className="mt-1 text-[11px] text-[var(--muted)]">
+                            <p className="mt-1 text-[14.5px] font-semibold text-[#002f6c] leading-snug">{service.name}</p>
+                            <p className="mt-1 text-xs text-[#4b5563] leading-relaxed">{service.description || "On-campus support service."}</p>
+                            <p className="mt-1.5 text-[11px] text-[#6b7280]">
                               {[service.open_hours, service.location_hint].filter(Boolean).join(" · ") || "Check with main desk"}
                             </p>
                             {service.cta_label && service.cta_url && (
-                              <a href={service.cta_url} target="_blank" rel="noopener noreferrer" className="mt-1.5 inline-block text-[11px] font-semibold text-[#1a56a8] hover:underline">
-                                {service.cta_label}
+                              <a href={service.cta_url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-[11.5px] font-bold text-[#1a56a8] hover:underline">
+                                {service.cta_label} &rarr;
                               </a>
                             )}
                           </article>
@@ -803,13 +804,13 @@ export default async function HospitalLandingPage({ params, searchParams }: Prop
                 ))}
               </div>
             ) : (
-              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2.5">
+              <div className="mt-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                 {campusResources.map((service) => (
-                  <article key={service.id} className="rounded-xl border border-[var(--twilight)] bg-gradient-to-b from-white to-[#f9fbfe] px-3 py-3">
-                    <p className="text-[11px] uppercase tracking-[0.06em] text-[#6b7280]">{service.category}</p>
-                    <p className="mt-0.5 text-sm font-semibold text-[var(--cream)]">{service.name}</p>
-                    <p className="mt-0.5 text-xs text-[var(--muted)]">{service.description || "On-campus support service."}</p>
-                    <p className="mt-1 text-[11px] text-[var(--muted)]">
+                  <article key={service.id} className="rounded-xl border border-[#d7dce4] bg-white px-4 py-3.5 shadow-sm hover:shadow-md transition-shadow">
+                    <p className="text-[10.5px] font-bold uppercase tracking-[0.07em] text-[#8094b3]">{service.category}</p>
+                    <p className="mt-1 text-[14.5px] font-semibold text-[#002f6c] leading-snug">{service.name}</p>
+                    <p className="mt-1 text-xs text-[#4b5563] leading-relaxed">{service.description || "On-campus support service."}</p>
+                    <p className="mt-1.5 text-[11px] text-[#6b7280]">
                       {[service.open_hours, service.location_hint].filter(Boolean).join(" · ") || "Check with main desk"}
                     </p>
                   </article>
@@ -869,11 +870,11 @@ export default async function HospitalLandingPage({ params, searchParams }: Prop
           </section>
 
           <section className="emory-panel p-4 sm:p-5" id="concierge-explorer">
-            <p className="emory-kicker">What&apos;s nearby</p>
-            <h2 className={`mt-1 text-[clamp(1.9rem,3.3vw,2.6rem)] leading-[0.96] text-[var(--cream)] ${hospitalDisplayFont.className}`}>
+            <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#4b5563]">What&apos;s nearby</p>
+            <h2 className={`mt-1 text-[clamp(1.5rem,2.8vw,2.2rem)] leading-[1] text-[#002f6c] ${hospitalDisplayFont.className}`}>
               Find what you need around campus
             </h2>
-            <p className="mt-1 text-sm text-[var(--muted)]">Food, lodging, pharmacies, fitness, and more within a few miles.</p>
+            <p className="mt-1.5 text-sm text-[#4b5563]">Food, lodging, pharmacies, fitness, and more within a few miles.</p>
 
             <div className="mt-3">
               <EmoryConciergeFoodExplorer
@@ -888,11 +889,11 @@ export default async function HospitalLandingPage({ params, searchParams }: Prop
           <section className="emory-panel p-4 sm:p-5">
             <div className="flex items-start justify-between gap-3 flex-wrap">
               <div>
-                <p className="emory-kicker">Nearby this week</p>
-                <h2 className={`mt-1 text-[clamp(1.7rem,2.9vw,2.3rem)] leading-[0.98] text-[var(--cream)] ${hospitalDisplayFont.className}`}>
+                <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#4b5563]">Nearby this week</p>
+                <h2 className={`mt-1 text-[clamp(1.4rem,2.6vw,2rem)] leading-[1] text-[#002f6c] ${hospitalDisplayFont.className}`}>
                   Events and programs near {data.hospital.short_name || data.hospital.name}
                 </h2>
-                <p className="mt-1 text-sm text-[var(--muted)]">Relevant events close to campus for patients, guests, and caregivers.</p>
+                <p className="mt-1.5 text-sm text-[#4b5563]">Relevant events close to campus for patients, guests, and caregivers.</p>
               </div>
               <HospitalTrackedLink
                 href={communityHubHref}
@@ -916,13 +917,13 @@ export default async function HospitalLandingPage({ params, searchParams }: Prop
             {nearbyEventCards.length > 0 ? (
               <div className="mt-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
                 {nearbyEventCards.map((eventCard) => (
-                  <article key={eventCard.id} className="rounded-lg border border-[var(--twilight)] bg-white overflow-hidden">
+                  <article key={eventCard.id} className="rounded-xl border border-[#d7dce4] bg-white overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                     <img src={eventCard.imageUrl || getEventFallbackImage(null, eventCard.title)} alt={eventCard.title} className="h-32 w-full object-cover" />
                     <div className="p-3">
-                      <p className="text-[11px] uppercase tracking-[0.06em] text-[#6b7280]">Event</p>
-                      <h3 className="mt-0.5 text-[1rem] leading-[1.08] text-[var(--cream)] font-semibold">{eventCard.title}</h3>
-                      <p className="mt-1 text-xs text-[var(--muted)]">{eventCard.schedule}</p>
-                      <p className="mt-0.5 text-[11px] text-[var(--muted)]">{eventCard.subtitle}</p>
+                      <p className="text-[10.5px] font-bold uppercase tracking-[0.07em] text-[#8094b3]">Event</p>
+                      <h3 className="mt-0.5 text-[1rem] leading-[1.08] text-[#002f6c] font-semibold">{eventCard.title}</h3>
+                      <p className="mt-1 text-xs text-[#4b5563]">{eventCard.schedule}</p>
+                      <p className="mt-0.5 text-[11px] text-[#6b7280]">{eventCard.subtitle}</p>
 
                       <div className="mt-2 flex flex-wrap gap-3">
                         <HospitalTrackedLink
@@ -969,8 +970,8 @@ export default async function HospitalLandingPage({ params, searchParams }: Prop
                 ))}
               </div>
             ) : (
-              <div className="mt-3 rounded-lg border border-dashed border-[var(--twilight)] bg-[#f9fbfe] px-3 py-3">
-                <p className="text-sm text-[var(--muted)]">No nearby events are currently in range. Open the community hub to browse citywide programs.</p>
+              <div className="mt-3 rounded-lg border border-dashed border-[#d7dce4] bg-[#f9fbfe] px-3 py-3">
+                <p className="text-sm text-[#6b7280]">No nearby events are currently in range. Open the community hub to browse citywide programs.</p>
               </div>
             )}
           </section>

@@ -17,7 +17,10 @@ export interface DetailHeroProps {
   categoryIcon?: ReactNode;
   badge?: ReactNode;
   isLive?: boolean;
+  /** @deprecated Use `portrait` instead */
   tall?: boolean;
+  /** Use taller (4:3) ratio for event/festival imagery. Default is landscape (16:9). */
+  portrait?: boolean;
   /** When provided, renders a floating back button over the hero. */
   backFallbackHref?: string;
   children?: ReactNode;
@@ -37,6 +40,7 @@ export function DetailHero({
   badge,
   isLive,
   tall,
+  portrait,
   backFallbackHref,
   children,
 }: DetailHeroProps) {
@@ -52,7 +56,7 @@ export function DetailHero({
 
   // Determine effective mode (fallback if image error)
   const effectiveMode = !imageUrl || imgError ? "fallback" : mode;
-  const aspectClass = tall ? "aspect-[16/10]" : "aspect-video";
+  const aspectClass = (portrait || tall) ? "aspect-[4/3]" : "aspect-video";
 
   if (effectiveMode === "fallback") {
     return (

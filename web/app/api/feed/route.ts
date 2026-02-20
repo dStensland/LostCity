@@ -477,7 +477,7 @@ export async function GET(request: Request) {
     // Set limit based on personalized mode
     // When personalized, we need to fetch more for scoring/filtering
     // When not personalized, use standard limit
-    query = query.limit(personalized ? limit * 3 : limit + 1);
+    query = query.limit(personalized ? Math.max(limit * 4, 150) : limit + 1);
 
     // Parallelize all independent event queries
     const eventSelect = `
@@ -1270,16 +1270,20 @@ export async function GET(request: Request) {
       const tonightCandidates = events.filter(
         (event) =>
           event.start_date === today &&
-          ((event.score || 0) >= 40 ||
+          ((event.score || 0) >= 20 ||
             isFollowedOrSocial(event) ||
             matchesTaste(event)),
       );
-      const tonightForYou = takeForSection(tonightCandidates, 6);
+      // Friday/Saturday nights deserve a bigger tonight section
+      const dayOfWeek = now.getDay(); // 0=Sun, 5=Fri, 6=Sat
+      const isWeekendNight = dayOfWeek === 5 || dayOfWeek === 6;
+      const tonightMax = isWeekendNight ? 12 : 8;
+      const tonightForYou = takeForSection(tonightCandidates, tonightMax);
       if (tonightForYou.length >= 2) {
         sections.push({
           id: "tonight_for_you",
-          title: "Tonight for You",
-          description: "Strong social and taste matches happening today.",
+          title: "Your Tonight",
+          description: "What's calling your name today.",
           events: tonightForYou,
         });
       }
@@ -1289,13 +1293,12 @@ export async function GET(request: Request) {
           return false;
         return matchesTaste(event) || matchesNeeds(event);
       });
-      const thisWeekFitsYourTaste = takeForSection(thisWeekCandidates, 8);
+      const thisWeekFitsYourTaste = takeForSection(thisWeekCandidates, 10);
       if (thisWeekFitsYourTaste.length >= 2) {
         sections.push({
           id: "this_week_fits_your_taste",
-          title: "This Week Fits Your Taste",
-          description:
-            "Shortlisted from your categories, genres, neighborhoods, and needs.",
+          title: "On Your Radar",
+          description: "This week's picks based on what you love.",
           events: thisWeekFitsYourTaste,
         });
       }
@@ -1303,12 +1306,12 @@ export async function GET(request: Request) {
       const followedCandidates = events.filter((event) =>
         isFollowedOrSocial(event),
       );
-      const fromPlacesPeopleYouFollow = takeForSection(followedCandidates, 8);
+      const fromPlacesPeopleYouFollow = takeForSection(followedCandidates, 10);
       if (fromPlacesPeopleYouFollow.length >= 2) {
         sections.push({
           id: "from_places_people_you_follow",
-          title: "From Places and People You Follow",
-          description: "Social proof and followed venues/organizers first.",
+          title: "Your Scene",
+          description: "From the spots and people you're into.",
           events: fromPlacesPeopleYouFollow,
         });
       }
@@ -1318,13 +1321,13 @@ export async function GET(request: Request) {
       );
       const exploreSomethingNew = takeForSection(
         exploreCandidates.length > 0 ? exploreCandidates : events,
-        8,
+        6,
       );
       if (exploreSomethingNew.length >= 2) {
         sections.push({
           id: "explore_something_new",
-          title: "Explore Something New",
-          description: "A stretch set outside your usual pattern.",
+          title: "Wild Card",
+          description: "Something outside your usual orbit.",
           events: exploreSomethingNew,
         });
       }

@@ -501,7 +501,7 @@ function FilterDeck({
       <div className="relative">
         <input
           type="text"
-          placeholder="Search destinations..."
+          placeholder="Search spots..."
           value={filters.search}
           onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
           className="w-full h-10 px-3 pl-9 bg-[var(--night)] border border-[var(--twilight)] rounded-lg font-mono text-xs text-[var(--cream)] placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--coral)]/50 transition-colors"
@@ -513,7 +513,7 @@ function FilterDeck({
           <button
             onClick={() => setFilters((f) => ({ ...f, search: "" }))}
             className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--cream)]"
-            aria-label="Clear destination search"
+            aria-label="Clear search"
           >
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -898,7 +898,7 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
   }, [sortedSpots, sortBy]);
 
   if (loading) {
-    return <CategorySkeleton count={10} title="Destinations" subtitle="Loading venues..." />;
+    return <CategorySkeleton count={10} title="Spots" subtitle="Loading spots..." />;
   }
 
   return (
@@ -906,9 +906,9 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
       <section className="mb-4 rounded-2xl border border-[var(--twilight)]/80 bg-[var(--void)]/70 backdrop-blur-md p-3 sm:p-4">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-xl font-semibold text-[var(--cream)]">Destinations</h2>
+            <h2 className="text-xl font-semibold text-[var(--cream)]">Spots</h2>
             <p className="text-sm text-[var(--muted)] mt-1">
-              <span className="text-[var(--soft)]">{spots.length}</span> places to explore
+              <span className="text-[var(--soft)]">{spots.length}</span> spots to explore
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -965,7 +965,7 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
           </div>
-          <p className="text-[var(--cream)] text-lg font-medium mb-1">No destinations found</p>
+          <p className="text-[var(--cream)] text-lg font-medium mb-1">No spots found</p>
           <p className="text-[var(--muted)] text-sm mb-4">Try adjusting your filters</p>
           <button
             onClick={() => setFilters(DEFAULT_FILTERS)}

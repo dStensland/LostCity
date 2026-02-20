@@ -690,11 +690,97 @@ export type Database = {
           },
         ]
       }
+      event_calendar_saves: {
+        Row: {
+          created_at: string | null
+          engagement_target: string
+          event_id: number
+          festival_id: string | null
+          id: string
+          portal_id: string | null
+          program_id: string | null
+          provider: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          engagement_target?: string
+          event_id: number
+          festival_id?: string | null
+          id?: string
+          portal_id?: string | null
+          program_id?: string | null
+          provider: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          engagement_target?: string
+          event_id?: number
+          festival_id?: string | null
+          id?: string
+          portal_id?: string | null
+          program_id?: string | null
+          provider?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_calendar_saves_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_calendar_saves_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events_deduplicated"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_calendar_saves_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_calendar_saves_portal_id_fkey"
+            columns: ["portal_id"]
+            isOneToOne: false
+            referencedRelation: "portals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_calendar_saves_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "series"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_calendar_saves_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_rsvps: {
         Row: {
           created_at: string | null
+          engagement_target: string
           event_id: number
+          festival_id: string | null
           id: string
+          portal_id: string | null
+          program_id: string | null
           status: string
           updated_at: string | null
           user_id: string
@@ -702,8 +788,12 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          engagement_target?: string
           event_id: number
+          festival_id?: string | null
           id?: string
+          portal_id?: string | null
+          program_id?: string | null
           status: string
           updated_at?: string | null
           user_id: string
@@ -711,8 +801,12 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          engagement_target?: string
           event_id?: number
+          festival_id?: string | null
           id?: string
+          portal_id?: string | null
+          program_id?: string | null
           status?: string
           updated_at?: string | null
           user_id?: string
@@ -731,6 +825,27 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "events_deduplicated"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_rsvps_festival_id_fkey"
+            columns: ["festival_id"]
+            isOneToOne: false
+            referencedRelation: "festivals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_rsvps_portal_id_fkey"
+            columns: ["portal_id"]
+            isOneToOne: false
+            referencedRelation: "portals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_rsvps_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "series"
             referencedColumns: ["id"]
           },
           {

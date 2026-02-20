@@ -22,7 +22,7 @@ const TABS: { key: FeedTab; label: string; authRequired: boolean }[] = [
   { key: "foryou", label: "For You", authRequired: true },
 ];
 
-// Loading skeleton for auth-gated content - matches ForYouFeed/DashboardActivity style
+// Loading skeleton for auth-gated content
 function AuthLoadingSkeleton() {
   return (
     <div className="space-y-4">
@@ -209,7 +209,7 @@ export default function FeedShell(props: FeedShellProps) {
         <div className="py-6 space-y-6">
           {/* Tab skeleton */}
           <div className="flex gap-1 p-1 bg-[var(--night)] rounded-lg">
-            {[1, 2, 3, 4].map((i) => (
+            {[1, 2, 3].map((i) => (
               <div key={i} className="flex-1 h-9 skeleton-shimmer rounded-md" />
             ))}
           </div>

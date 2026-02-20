@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePortal } from "@/lib/portal-context";
+import { getDayPart, getHappeningNowGreeting } from "@/lib/time-greeting";
 
 interface HappeningNowCTAProps {
   portalSlug: string;
@@ -18,15 +18,14 @@ function HappeningNowSkeleton() {
 
       <div className="flex items-center justify-between relative">
         <div className="flex items-center gap-3">
-          {/* Pulsing live indicator - triple ring effect */}
+          {/* Pulsing live indicator - double ring effect */}
           <div className="relative flex items-center justify-center w-4 h-4">
             <span className="absolute w-4 h-4 bg-[var(--coral)]/18 rounded-full animate-ping" />
-            <span className="absolute w-3 h-3 bg-[var(--coral)]/24 rounded-full animate-coral-pulse" />
             <span className="relative w-2 h-2 bg-[var(--coral)]/45 rounded-full animate-pulse" />
           </div>
 
           <div className="space-y-2">
-            {/* "Happening Now" text skeleton with shimmer */}
+            {/* Headline skeleton with shimmer */}
             <div className="flex items-center gap-2">
               <div className="h-3.5 w-24 rounded-sm bg-[var(--coral)]/12 relative overflow-hidden">
                 <div className="absolute inset-0 animate-coral-scan bg-gradient-to-r from-transparent via-[var(--coral)]/30 to-transparent" />
@@ -50,7 +49,6 @@ function HappeningNowSkeleton() {
 }
 
 export default function HappeningNowCTA({ portalSlug }: HappeningNowCTAProps) {
-  const { portal } = usePortal();
   const [eventCount, setEventCount] = useState<number>(0);
   const [spotCount, setSpotCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
@@ -58,15 +56,20 @@ export default function HappeningNowCTA({ portalSlug }: HappeningNowCTAProps) {
   const totalCount = eventCount + spotCount;
 
   useEffect(() => {
+    const abortController = new AbortController();
+
     async function fetchLiveCount() {
       try {
-        const res = await fetch(`/api/portals/${portalSlug}/happening-now?countOnly=true`);
+        const res = await fetch(`/api/around-me?countOnly=true`, {
+          signal: abortController.signal,
+        });
         if (res.ok) {
           const data = await res.json();
           setEventCount(data.eventCount || 0);
           setSpotCount(data.spotCount || 0);
         }
       } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") return;
         console.error("Failed to fetch happening now count:", error);
       } finally {
         setLoading(false);
@@ -77,7 +80,10 @@ export default function HappeningNowCTA({ portalSlug }: HappeningNowCTAProps) {
 
     // Refresh every 5 minutes
     const interval = setInterval(fetchLiveCount, 5 * 60 * 1000);
-    return () => clearInterval(interval);
+    return () => {
+      abortController.abort();
+      clearInterval(interval);
+    };
   }, [portalSlug]);
 
   // Show skeleton while loading
@@ -90,28 +96,29 @@ export default function HappeningNowCTA({ portalSlug }: HappeningNowCTAProps) {
     return null;
   }
 
+  const dayPart = getDayPart();
+  const { headline, subtitle } = getHappeningNowGreeting(dayPart, eventCount, spotCount);
+
   return (
     <Link
       href={`/${portalSlug}/happening-now`}
-      className="block px-4 py-3 rounded-xl border border-[var(--neon-red)]/30 bg-gradient-to-r from-[var(--neon-red)]/10 via-[var(--neon-red)]/4 to-transparent hover:border-[var(--neon-red)]/45 hover:shadow-[0_0_18px_var(--neon-red)/18] hover:scale-[1.005] active:scale-[0.99] transition-all duration-200 group"
+      className="block px-4 py-3 rounded-xl border border-[var(--coral)]/30 bg-gradient-to-r from-[var(--coral)]/10 via-[var(--coral)]/4 to-transparent hover:border-[var(--coral)]/45 hover:shadow-[0_0_18px_var(--coral)/18] hover:scale-[1.005] active:scale-[0.99] transition-all duration-200 group"
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          {/* Live indicator - enhanced quadruple ring pulse effect with brighter accent */}
-          <div className="relative flex items-center justify-center w-6 h-6">
-            <span className="absolute w-6 h-6 bg-[var(--neon-red)]/20 rounded-full animate-ping animate-duration-1800" />
-            <span className="absolute w-4 h-4 bg-[var(--neon-red)]/28 rounded-full animate-pulse animate-duration-2400" />
-            <span className="absolute w-2.5 h-2.5 bg-[var(--neon-red)]/40 rounded-full animate-ping animate-duration-1200" />
-            <span className="relative w-2 h-2 bg-[var(--neon-red)] rounded-full shadow-[0_0_12px_var(--neon-red)]" />
+          {/* Live indicator - double ring pulse effect */}
+          <div className="relative flex items-center justify-center w-5 h-5">
+            <span className="absolute w-5 h-5 bg-[var(--coral)]/20 rounded-full animate-ping animate-duration-1800" />
+            <span className="relative w-2 h-2 bg-[var(--coral)] rounded-full shadow-[0_0_12px_var(--coral)]" />
           </div>
 
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-mono text-xs font-bold text-[var(--neon-red)] uppercase tracking-wider">
-                LIVE NOW
+              <span className="font-mono text-xs font-bold text-[var(--coral)] uppercase tracking-wider">
+                {headline}
               </span>
               {eventCount > 0 && (
-                <span className="px-2 py-0.5 rounded-full bg-[var(--neon-red)]/20 text-[var(--neon-red)] border border-[var(--neon-red)]/50 font-mono text-xs font-bold">
+                <span className="px-2 py-0.5 rounded-full bg-[var(--coral)]/20 text-[var(--coral)] border border-[var(--coral)]/50 font-mono text-xs font-bold">
                   {eventCount} {eventCount === 1 ? "event" : "events"}
                 </span>
               )}
@@ -122,27 +129,14 @@ export default function HappeningNowCTA({ portalSlug }: HappeningNowCTAProps) {
               )}
             </div>
             <p className="text-sm text-[var(--soft)] mt-0.5 font-medium">
-              {eventCount > 0 && spotCount > 0 ? (
-                <>
-                  {eventCount} {eventCount === 1 ? "event" : "events"} live, {spotCount} {spotCount === 1 ? "spot" : "spots"} open in{" "}
-                </>
-              ) : eventCount > 0 ? (
-                <>
-                  {eventCount} {eventCount === 1 ? "event happening" : "events happening"} right now in{" "}
-                </>
-              ) : (
-                <>
-                  {spotCount} {spotCount === 1 ? "spot" : "spots"} open right now in{" "}
-                </>
-              )}
-              <span className="text-[var(--cream)]">{portal.name}</span>
+              {subtitle}
             </p>
           </div>
         </div>
 
         {/* Arrow with pulse */}
         <svg
-          className="w-5 h-5 text-[var(--neon-red)] group-hover:translate-x-1 transition-transform"
+          className="w-5 h-5 text-[var(--coral)] group-hover:translate-x-1 transition-transform"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"

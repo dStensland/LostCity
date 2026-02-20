@@ -21,7 +21,7 @@ import { getMoodById, type MoodId } from "./moods";
 import { decodeCursor, generateNextCursor, type CursorData } from "./cursor";
 import { createLogger } from "./logger";
 import type { Frequency, DayOfWeek } from "./recurrence";
-import { applyPortalScopeToQuery } from "./portal-scope";
+import { applyFederatedPortalScopeToQuery, applyPortalScopeToQuery } from "./portal-scope";
 
 const logger = createLogger("search");
 
@@ -680,18 +680,15 @@ export async function getFilteredEventsWithSearch(
     .or("start_time.not.is.null,is_all_day.eq.true")
     .is("canonical_event_id", null); // Only show canonical events, not duplicates
 
-  // Apply portal restriction filter.
+  // Apply portal + federated source restriction filter.
   // If no portal_id is provided, keep query unscoped for admin/global callers.
-  query = applyPortalScopeToQuery(query, {
+  query = applyFederatedPortalScopeToQuery(query, {
     portalId: filters.portal_id,
     portalExclusive: filters.portal_exclusive,
     publicOnlyWhenNoPortal: false,
+    sourceIds: filters.source_ids || [],
+    sourceColumn: "source_id",
   });
-
-  // Apply explicit source filtering if provided
-  if (filters.source_ids && filters.source_ids.length > 0) {
-    query = query.in("source_id", filters.source_ids);
-  }
 
   // Get mood data for potential vibes lookup
   const mood = filters.mood ? getMoodById(filters.mood) : null;
@@ -803,16 +800,13 @@ export async function getFilteredEventsWithCursor(
     .or("start_time.not.is.null,is_all_day.eq.true")
     .is("canonical_event_id", null); // Only show canonical events, not duplicates
 
-  query = applyPortalScopeToQuery(query, {
+  query = applyFederatedPortalScopeToQuery(query, {
     portalId: filters.portal_id,
     portalExclusive: filters.portal_exclusive,
     publicOnlyWhenNoPortal: false,
+    sourceIds: filters.source_ids || [],
+    sourceColumn: "source_id",
   });
-
-  // Apply explicit source filtering if provided
-  if (filters.source_ids && filters.source_ids.length > 0) {
-    query = query.in("source_id", filters.source_ids);
-  }
 
   // Get mood data for potential vibes lookup
   const mood = filters.mood ? getMoodById(filters.mood) : null;
@@ -966,16 +960,13 @@ export async function getEventsForMap(
     .not("venues.lng", "is", null)
     .is("canonical_event_id", null); // Only show canonical events, not duplicates
 
-  query = applyPortalScopeToQuery(query, {
+  query = applyFederatedPortalScopeToQuery(query, {
     portalId: filters.portal_id,
     portalExclusive: filters.portal_exclusive,
     publicOnlyWhenNoPortal: false,
+    sourceIds: filters.source_ids || [],
+    sourceColumn: "source_id",
   });
-
-  // Apply explicit source filtering if provided
-  if (filters.source_ids && filters.source_ids.length > 0) {
-    query = query.in("source_id", filters.source_ids);
-  }
 
   // Apply all search filters using the centralized helper
   // Note: For map view, we skip some filters that don't make sense (e.g., venue_ids)
@@ -1501,168 +1492,8 @@ export interface AvailableFilters {
   lastUpdated: string | null;
 }
 
-type AvailableFiltersOptions = {
-  portalId?: string;
-  portalExclusive?: boolean;
-};
-
-const STATIC_CATEGORY_LABELS = new Map<string, string>(
-  CATEGORIES.map((category) => [category.value, category.label]),
-);
-const STATIC_CATEGORY_ORDER = new Map<string, number>(
-  CATEGORIES.map((category, index) => [category.value, index]),
-);
-const STATIC_SUBCATEGORY_LABELS = new Map<string, string>(
-  Object.values(SUBCATEGORIES)
-    .flat()
-    .map((subcategory) => [subcategory.value, subcategory.label]),
-);
-const STATIC_SUBCATEGORY_ORDER = new Map<string, number>(
-  Object.values(SUBCATEGORIES)
-    .flat()
-    .map((subcategory, index) => [subcategory.value, index]),
-);
-const STATIC_TAG_LABELS = new Map<string, string>(
-  ALL_TAGS.map((tag) => [tag.value, tag.label]),
-);
-
-async function computePortalScopedAvailableFilters(
-  options: Required<AvailableFiltersOptions>
-): Promise<AvailableFilters> {
-  const today = format(startOfDay(new Date()), "yyyy-MM-dd");
-  const batchSize = 1000;
-  let offset = 0;
-  const categoryCounts = new Map<string, number>();
-  const subcategoryCounts = new Map<string, number>();
-  const tagCounts = new Map<string, number>();
-
-  while (true) {
-    let query = supabase
-      .from("events")
-      .select("category, subcategory, tags")
-      .or(`start_date.gte.${today},end_date.gte.${today}`)
-      .or("is_class.eq.false,is_class.is.null")
-      .or("is_sensitive.eq.false,is_sensitive.is.null")
-      .is("canonical_event_id", null)
-      .order("id", { ascending: true });
-
-    query = applyPortalScopeToQuery(query, {
-      portalId: options.portalId,
-      portalExclusive: options.portalExclusive,
-      publicOnlyWhenNoPortal: false,
-    });
-
-    const { data, error } = await query.range(offset, offset + batchSize - 1);
-    if (error) {
-      logger.error("Failed to fetch portal-scoped available filters", error, options);
-      return {
-        categories: CATEGORIES.map((c) => ({ ...c, count: 0 })),
-        subcategories: Object.fromEntries(
-          Object.entries(SUBCATEGORIES).map(([k, v]) => [
-            k,
-            v.map((s) => ({ ...s, count: 0 })),
-          ])
-        ),
-        tags: ALL_TAGS.map((t) => ({ ...t, count: 0 })),
-        lastUpdated: null,
-      };
-    }
-
-    const rows = (data as Array<{ category: string | null; subcategory: string | null; tags: string[] | null }>) || [];
-    for (const row of rows) {
-      if (row.category) {
-        categoryCounts.set(row.category, (categoryCounts.get(row.category) || 0) + 1);
-      }
-
-      if (row.subcategory) {
-        subcategoryCounts.set(row.subcategory, (subcategoryCounts.get(row.subcategory) || 0) + 1);
-      }
-
-      if (Array.isArray(row.tags)) {
-        for (const tag of row.tags) {
-          if (!tag) continue;
-          tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
-        }
-      }
-    }
-
-    if (rows.length < batchSize) break;
-    offset += batchSize;
-  }
-
-  const categories = Array.from(categoryCounts.entries())
-    .map(([value, count]) => ({
-      value,
-      label: STATIC_CATEGORY_LABELS.get(value) || humanizeLabel(value),
-      count,
-    }))
-    .sort((a, b) => {
-      const aOrder = STATIC_CATEGORY_ORDER.get(a.value);
-      const bOrder = STATIC_CATEGORY_ORDER.get(b.value);
-      if (aOrder !== undefined && bOrder !== undefined && aOrder !== bOrder) {
-        return aOrder - bOrder;
-      }
-      if (aOrder !== undefined) return -1;
-      if (bOrder !== undefined) return 1;
-      if (b.count !== a.count) return b.count - a.count;
-      return a.label.localeCompare(b.label);
-    });
-
-  const subcategories: Record<string, { value: string; label: string; count: number }[]> = {};
-  for (const [value, count] of subcategoryCounts.entries()) {
-    const parent = value.includes(".") ? value.split(".")[0] : "other";
-    if (!subcategories[parent]) {
-      subcategories[parent] = [];
-    }
-    subcategories[parent].push({
-      value,
-      label: STATIC_SUBCATEGORY_LABELS.get(value) || humanizeLabel(value.split(".").slice(1).join(" ") || value),
-      count,
-    });
-  }
-
-  Object.keys(subcategories).forEach((parent) => {
-    subcategories[parent].sort((a, b) => {
-      const aOrder = STATIC_SUBCATEGORY_ORDER.get(a.value);
-      const bOrder = STATIC_SUBCATEGORY_ORDER.get(b.value);
-      if (aOrder !== undefined && bOrder !== undefined && aOrder !== bOrder) {
-        return aOrder - bOrder;
-      }
-      if (aOrder !== undefined) return -1;
-      if (bOrder !== undefined) return 1;
-      if (b.count !== a.count) return b.count - a.count;
-      return a.label.localeCompare(b.label);
-    });
-  });
-
-  const tags = Array.from(tagCounts.entries())
-    .map(([value, count]) => ({
-      value,
-      label: STATIC_TAG_LABELS.get(value) || humanizeLabel(value),
-      count,
-    }))
-    .sort((a, b) => {
-      if (b.count !== a.count) return b.count - a.count;
-      return a.label.localeCompare(b.label);
-    });
-
-  return {
-    categories,
-    subcategories,
-    tags,
-    lastUpdated: new Date().toISOString(),
-  };
-}
-
 // Fetch available filters that have active events
-export async function getAvailableFilters(options: AvailableFiltersOptions = {}): Promise<AvailableFilters> {
-  if (options.portalId) {
-    return computePortalScopedAvailableFilters({
-      portalId: options.portalId,
-      portalExclusive: options.portalExclusive ?? false,
-    });
-  }
-
+export async function getAvailableFilters(): Promise<AvailableFilters> {
   const { data, error } = await supabase
     .from("available_filters")
     .select("*")
@@ -1725,13 +1556,4 @@ export async function getAvailableFilters(options: AvailableFiltersOptions = {})
     tags,
     lastUpdated,
   };
-}
-
-function humanizeLabel(value: string): string {
-  return value
-    .replace(/[._-]+/g, " ")
-    .split(" ")
-    .filter(Boolean)
-    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
-    .join(" ");
 }

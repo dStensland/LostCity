@@ -756,7 +756,13 @@ export async function GET(request: NextRequest, { params }: Props) {
       );
     }, 0);
     // Keep cold-load DB fanout bounded for large portals while preserving enough candidates.
-    const perBucketLimit = Math.max(40, Math.min(requestedPerBucket, 120));
+    // Nightlife sections need a bigger pool because nightlife events (7pm+) sort to the end
+    // of time-ordered queries and get cut off on busy days.
+    const hasNightlifeSectionInFeed = sectionsNeedingAutoEvents.some(
+      (s) => !!(s.auto_filter as Record<string, unknown>)?.nightlife_mode,
+    );
+    const poolCeiling = hasNightlifeSectionInFeed ? 200 : 120;
+    const perBucketLimit = Math.max(40, Math.min(requestedPerBucket, poolCeiling));
 
     // Build a base query with shared filters, then run it per date bucket
     // so that busy days (100+ events) don't starve later dates
@@ -967,28 +973,89 @@ export async function GET(request: NextRequest, { params }: Props) {
       addToPool((constrainedEvents || []) as Event[]);
     }
 
-    // Supplemental query: nightlife_mode sections need nightlife + late-night events
-    // that may be cut off by the per-bucket limit on busy days (events ordered by start_time)
+    // Supplemental query: nightlife_mode sections need evening/late-night events
+    // that get cut off by the per-bucket limit on busy days (bucket queries are ordered
+    // by start_time ASC, so daytime events fill the pool before evening ones).
+    // We run two targeted passes: (1) nightlife-category events at any time,
+    // (2) adjacent-category events starting 5pm+ (the bucket pool already has daytime ones).
     const hasNightlifeSection = sectionsNeedingAutoEvents.some(
       (s) => s.auto_filter?.nightlife_mode,
     );
     if (hasNightlifeSection) {
-      let nightlifeQuery = supabase
+      const nightlifeVenueFilter = [
+        "bar", "club", "nightclub", "lounge", "rooftop", "karaoke",
+        "sports_bar", "brewery", "cocktail_bar", "wine_bar",
+      ];
+
+      // Scope supplemental queries to today + tomorrow only. The bucket queries
+      // already cover the full date range; these exist to backfill events that
+      // the bucket's per-day limit (200) cuts off on busy days.
+      const supplementEndDate = tomorrowStr;
+
+      // Pass 1: all nightlife-category events today/tomorrow
+      let nightlifeCoreQuery = supabase
         .from("events")
         .select(eventSelect)
         .or(`start_date.gte.${today},end_date.gte.${today}`)
-        .lte("start_date", maxEndDate)
+        .lte("start_date", supplementEndDate)
         .is("canonical_event_id", null)
         .or("is_class.eq.false,is_class.is.null")
         .or("is_sensitive.eq.false,is_sensitive.is.null")
-        .or(`category.eq.nightlife,category.in.(music,comedy,dance,gaming)`);
-      nightlifeQuery = applyPortalFilter(nightlifeQuery);
-      const { data: nightlifeEvents } = await nightlifeQuery
-        .order("start_date", { ascending: true })
-        .order("start_time", { ascending: true })
-        .limit(80);
+        .eq("category", "nightlife");
+      nightlifeCoreQuery = applyPortalFilter(nightlifeCoreQuery);
 
-      addToPool((nightlifeEvents || []) as Event[]);
+      // Pass 2: entertainment categories (music/comedy/dance) evening events
+      let entertainmentQuery = supabase
+        .from("events")
+        .select(eventSelect)
+        .or(`start_date.gte.${today},end_date.gte.${today}`)
+        .lte("start_date", supplementEndDate)
+        .is("canonical_event_id", null)
+        .or("is_class.eq.false,is_class.is.null")
+        .or("is_sensitive.eq.false,is_sensitive.is.null")
+        .in("category", ["music", "comedy", "dance"])
+        .gte("start_time", "17:00:00");
+      entertainmentQuery = applyPortalFilter(entertainmentQuery);
+
+      // Pass 3: any event at nightlife venues starting 5pm+
+      // Catches art at bars, watch parties, food_drink at breweries, etc.
+      // Use inner join on venues to filter by venue_type at the DB level
+      let venueBasedQuery = supabase
+        .from("events")
+        .select(
+          eventSelect.replace(
+            "venue:venues(",
+            "venue:venues!inner(",
+          ),
+        )
+        .or(`start_date.gte.${today},end_date.gte.${today}`)
+        .lte("start_date", supplementEndDate)
+        .is("canonical_event_id", null)
+        .or("is_class.eq.false,is_class.is.null")
+        .or("is_sensitive.eq.false,is_sensitive.is.null")
+        .in("venues.venue_type", nightlifeVenueFilter)
+        .gte("start_time", "17:00:00");
+      venueBasedQuery = applyPortalFilter(venueBasedQuery);
+
+      const [coreResult, entertainmentResult, venueResult] =
+        await Promise.all([
+          nightlifeCoreQuery
+            .order("start_date", { ascending: true })
+            .order("start_time", { ascending: true })
+            .limit(60),
+          entertainmentQuery
+            .order("start_date", { ascending: true })
+            .order("start_time", { ascending: true })
+            .limit(120),
+          venueBasedQuery
+            .order("start_date", { ascending: true })
+            .order("start_time", { ascending: true })
+            .limit(60),
+        ]);
+
+      addToPool((coreResult.data || []) as Event[]);
+      addToPool((entertainmentResult.data || []) as Event[]);
+      addToPool((venueResult.data || []) as Event[]);
     }
 
     // Suppress chain-cinema regular showtimes from auto sections.
@@ -1503,7 +1570,7 @@ export async function GET(request: NextRequest, { params }: Props) {
       const baseLimit =
         section.max_items || feedSettings.items_per_section || defaultLimit;
       const limit = isNightlifeSection
-        ? 50
+        ? 80
         : isCommunitySection
           ? Math.max(baseLimit, 10)
           : baseLimit;
@@ -1574,7 +1641,7 @@ export async function GET(request: NextRequest, { params }: Props) {
         }
 
         // Apply nightlife_mode compound filter
-        // Includes: all nightlife events + music/comedy/dance/gaming at nightlife venues or starting after 7pm
+        // "Going Out Tonight" = events you'd actually go out to on a night out
         if (filter.nightlife_mode) {
           const nightlifeVenueTypes = new Set([
             "bar",
@@ -1588,22 +1655,50 @@ export async function GET(request: NextRequest, { params }: Props) {
             "cocktail_bar",
             "wine_bar",
           ]);
-          const nightlifeAdjacentCategories = new Set([
+          // Entertainment venues that host going-out-worthy events
+          const entertainmentVenueTypes = new Set([
+            "music_venue",
+            "theater",
+            "comedy_club",
+            "distillery",
+          ]);
+          // Entertainment categories qualify with just an evening time
+          const entertainmentCategories = new Set([
             "music",
             "comedy",
             "dance",
+          ]);
+          // Context-dependent categories only qualify at nightlife/entertainment venues
+          const venueRequiredCategories = new Set([
             "gaming",
+            "food_drink",
+            "social",
+            "community",
           ]);
           filtered = filtered.filter((e) => {
             // Always include events with nightlife category
             if (e.category === "nightlife") return true;
-            // Include adjacent categories at nightlife venues or after 7pm
-            if (e.category && nightlifeAdjacentCategories.has(e.category)) {
-              const atNightlifeVenue =
-                e.venue?.venue_type &&
-                nightlifeVenueTypes.has(e.venue.venue_type);
-              const startsAfter7pm = e.start_time && e.start_time >= "19:00";
-              return atNightlifeVenue || startsAfter7pm;
+            const vType = e.venue?.venue_type;
+            const atNightlifeVenue = vType && nightlifeVenueTypes.has(vType);
+            const atEntertainmentVenue =
+              vType && entertainmentVenueTypes.has(vType);
+            const startsEvening = e.start_time && e.start_time >= "17:00";
+            const startsAfter7pm = e.start_time && e.start_time >= "19:00";
+            // Any event at a nightlife venue starting 5pm+ counts
+            if (atNightlifeVenue && startsEvening) return true;
+            // Entertainment (music/comedy/dance): at nightlife venues (evening),
+            // at entertainment venues (evening), or anywhere after 7pm
+            if (e.category && entertainmentCategories.has(e.category)) {
+              if (atNightlifeVenue && startsEvening) return true;
+              if (atEntertainmentVenue && startsEvening) return true;
+              return startsAfter7pm;
+            }
+            // Context-dependent categories (gaming/food_drink/social/community):
+            // only qualify at nightlife or entertainment venues
+            if (e.category && venueRequiredCategories.has(e.category)) {
+              return (
+                (atNightlifeVenue || atEntertainmentVenue) && startsEvening
+              );
             }
             return false;
           });
@@ -1709,15 +1804,37 @@ export async function GET(request: NextRequest, { params }: Props) {
           filtered = filtered.filter((e) => !excludeSet.has(e.id));
         }
 
-        // For nightlife_mode, prioritize actual nightlife-category events over adjacent categories
-        // so the limited pool captures diverse activity types (karaoke, trivia, DJ) instead of
-        // being filled entirely by early-starting music/comedy events
+        // For nightlife_mode, sort by how "going out" an event feels:
+        // Tier 0: nightlife category (bars, clubs, DJ nights)
+        // Tier 1: music/comedy/dance at nightlife or entertainment venues
+        // Tier 2: other events at nightlife venues (trivia at a bar, etc.)
+        // Tier 3: music/comedy/dance at other venues (still going out, just less core)
+        // Within each tier, sort by start_time
         if (filter.nightlife_mode) {
+          const nightlifeVenueSet = new Set([
+            "bar", "club", "nightclub", "lounge", "rooftop", "karaoke",
+            "sports_bar", "brewery", "cocktail_bar", "wine_bar",
+          ]);
+          const entertainmentVenueSet = new Set([
+            "music_venue", "theater", "comedy_club", "distillery",
+          ]);
+          const entertainmentCatSet = new Set(["music", "comedy", "dance"]);
+
+          const getTier = (e: Event) => {
+            if (e.category === "nightlife") return 0;
+            const vt = e.venue?.venue_type;
+            const atNightlife = vt && nightlifeVenueSet.has(vt);
+            const atEntertainment = vt && entertainmentVenueSet.has(vt);
+            const isEntertainment =
+              e.category && entertainmentCatSet.has(e.category);
+            if (isEntertainment && (atNightlife || atEntertainment)) return 1;
+            if (atNightlife) return 2;
+            if (isEntertainment) return 3;
+            return 4;
+          };
           filtered.sort((a, b) => {
-            const aNightlife = a.category === "nightlife" ? 0 : 1;
-            const bNightlife = b.category === "nightlife" ? 0 : 1;
-            if (aNightlife !== bNightlife) return aNightlife - bNightlife;
-            // Within same priority, sort by start_time
+            const tierDiff = getTier(a) - getTier(b);
+            if (tierDiff !== 0) return tierDiff;
             return (a.start_time || "23:59").localeCompare(
               b.start_time || "23:59",
             );

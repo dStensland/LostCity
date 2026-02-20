@@ -12,11 +12,18 @@ import { buildDisplayDescription } from "@/lib/event-description";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
 import { applyPortalScopeToQuery, filterByPortalCity } from "@/lib/portal-scope";
 import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
+import {
+  calculatePreShowDiningTiming,
+  type PreShowDiningTimingResult,
+  type VenueDiningProfile,
+} from "@/lib/planner/dining-timing";
 
 const NEARBY_RADIUS_MILES = 10;
 const EVENT_DETAIL_CACHE_TTL_MS = 60 * 1000;
 const EVENT_DETAIL_CACHE_NAMESPACE = "api:event-detail";
 const EVENT_DETAIL_CACHE_CONTROL = "public, s-maxage=60, stale-while-revalidate=120";
+const DESTINATION_SELECT_BASE = "id, name, slug, venue_type, neighborhood, lat, lng, hours";
+const DESTINATION_SELECT_WITH_PLANNING = `${DESTINATION_SELECT_BASE}, service_style, meal_duration_min_minutes, meal_duration_max_minutes, walk_in_wait_minutes, payment_buffer_minutes, accepts_reservations, reservation_recommended`;
 
 type RawEventArtist = {
   id: number;
@@ -341,7 +348,7 @@ export async function GET(
     };
   });
 
-  type NearbyDestination = {
+  type NearbyDestination = VenueDiningProfile & {
     id: number;
     name: string;
     slug: string;
@@ -352,6 +359,14 @@ export async function GET(
     hours: HoursData | null;
     closesAt?: string;
     distance?: number;
+    pre_show_timing?: PreShowDiningTimingResult;
+  };
+
+  const estimateTravelToVenueMinutes = (distanceMiles: number | undefined): number => {
+    if (typeof distanceMiles === "number" && Number.isFinite(distanceMiles)) {
+      return Math.max(3, Math.round(distanceMiles * 20));
+    }
+    return 15;
   };
 
   const nearbyDestinations: Record<string, NearbyDestination[]> = {
@@ -367,13 +382,29 @@ export async function GET(
     const allDestinationTypes = Object.values(DESTINATION_CATEGORIES).flat();
 
     // Fetch venues in the same neighborhood
-    const { data: spots } = await supabase
+    const spotsResult = await supabase
       .from("venues")
-      .select("id, name, slug, venue_type, neighborhood, lat, lng, hours")
+      .select(DESTINATION_SELECT_WITH_PLANNING)
       .eq("neighborhood", eventData.venue.neighborhood)
       .in("venue_type", allDestinationTypes)
       .eq("active", true)
       .neq("id", eventData.venue?.id || 0);
+    let spots = spotsResult.data;
+
+    if (
+      spotsResult.error &&
+      (spotsResult.error.message.includes("column") ||
+        spotsResult.error.message.includes("schema cache"))
+    ) {
+      const fallbackResult = await supabase
+        .from("venues")
+        .select(DESTINATION_SELECT_BASE)
+        .eq("neighborhood", eventData.venue.neighborhood)
+        .in("venue_type", allDestinationTypes)
+        .eq("active", true)
+        .neq("id", eventData.venue?.id || 0);
+      spots = fallbackResult.data;
+    }
 
     if (spots) {
       for (const spot of spots) {
@@ -413,10 +444,29 @@ export async function GET(
         }
 
         if (category && nearbyDestinations[category]) {
+          const preShowTiming =
+            category === "food" && eventData.start_time
+              ? calculatePreShowDiningTiming({
+                  eventStartTime: eventData.start_time,
+                  travelToVenueMinutes: estimateTravelToVenueMinutes(distance),
+                  profile: {
+                    venue_type: s.venue_type,
+                    service_style: s.service_style,
+                    meal_duration_min_minutes: s.meal_duration_min_minutes,
+                    meal_duration_max_minutes: s.meal_duration_max_minutes,
+                    walk_in_wait_minutes: s.walk_in_wait_minutes,
+                    payment_buffer_minutes: s.payment_buffer_minutes,
+                    accepts_reservations: s.accepts_reservations,
+                    reservation_recommended: s.reservation_recommended,
+                  },
+                })
+              : undefined;
+
           nearbyDestinations[category].push({
             ...s,
             closesAt,
             distance,
+            pre_show_timing: preShowTiming,
           });
         }
       }
@@ -431,13 +481,29 @@ export async function GET(
     // Fallback: distance-based if no neighborhood (within 2 miles)
     const allDestinationTypes = Object.values(DESTINATION_CATEGORIES).flat();
 
-    const { data: spots } = await supabase
+    const spotsResult = await supabase
       .from("venues")
-      .select("id, name, slug, venue_type, neighborhood, lat, lng, hours")
+      .select(DESTINATION_SELECT_WITH_PLANNING)
       .in("venue_type", allDestinationTypes)
       .eq("active", true)
       .neq("id", eventData.venue?.id || 0)
       .limit(50);
+    let spots = spotsResult.data;
+
+    if (
+      spotsResult.error &&
+      (spotsResult.error.message.includes("column") ||
+        spotsResult.error.message.includes("schema cache"))
+    ) {
+      const fallbackResult = await supabase
+        .from("venues")
+        .select(DESTINATION_SELECT_BASE)
+        .in("venue_type", allDestinationTypes)
+        .eq("active", true)
+        .neq("id", eventData.venue?.id || 0)
+        .limit(50);
+      spots = fallbackResult.data;
+    }
 
     if (spots) {
       for (const spot of spots) {
@@ -478,7 +544,30 @@ export async function GET(
         }
 
         if (category && nearbyDestinations[category]) {
-          nearbyDestinations[category].push({ ...s, closesAt, distance });
+          const preShowTiming =
+            category === "food" && eventData.start_time
+              ? calculatePreShowDiningTiming({
+                  eventStartTime: eventData.start_time,
+                  travelToVenueMinutes: estimateTravelToVenueMinutes(distance),
+                  profile: {
+                    venue_type: s.venue_type,
+                    service_style: s.service_style,
+                    meal_duration_min_minutes: s.meal_duration_min_minutes,
+                    meal_duration_max_minutes: s.meal_duration_max_minutes,
+                    walk_in_wait_minutes: s.walk_in_wait_minutes,
+                    payment_buffer_minutes: s.payment_buffer_minutes,
+                    accepts_reservations: s.accepts_reservations,
+                    reservation_recommended: s.reservation_recommended,
+                  },
+                })
+              : undefined;
+
+          nearbyDestinations[category].push({
+            ...s,
+            closesAt,
+            distance,
+            pre_show_timing: preShowTiming,
+          });
         }
       }
 

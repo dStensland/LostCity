@@ -14,6 +14,7 @@ import { ActiveFiltersRow } from "@/components/filters";
 import AddNewChooser from "@/components/find/AddNewChooser";
 import { getNeighborhoodByName, NEIGHBORHOOD_NAMES } from "@/config/neighborhoods";
 import { useMapEvents } from "@/lib/hooks/useMapEvents";
+import { getSmartDateDefault } from "@/lib/hooks/useEventFilters";
 import { useMapSpots } from "@/lib/hooks/useMapSpots";
 import { useViewportFilter } from "@/lib/hooks/useViewportFilter";
 import MapListDrawer from "@/components/map/MapListDrawer";
@@ -81,7 +82,7 @@ const TYPE_OPTIONS: { key: FindType; label: string; icon: React.ReactNode }[] = 
   },
   {
     key: "destinations",
-    label: "Destinations",
+    label: "Spots",
     icon: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -187,7 +188,7 @@ function DestinationsMapFilterBar({ portalSlug }: { portalSlug: string }) {
         <div className="relative flex-1 min-w-[180px]">
           <input
             type="text"
-            placeholder="Search destinations..."
+            placeholder="Search spots..."
             value={searchDraft}
             onChange={(event) => setSearchDraft(event.target.value)}
             className="w-full h-9 pl-8 pr-8 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-xs placeholder:text-[var(--muted)] focus:outline-none focus:border-[var(--coral)]/55 transition-colors"
@@ -199,7 +200,7 @@ function DestinationsMapFilterBar({ portalSlug }: { portalSlug: string }) {
             <button
               onClick={() => setSearchDraft("")}
               className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
-              aria-label="Clear destination search"
+              aria-label="Clear search"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -394,6 +395,10 @@ function FindViewInner({
     return hoods.length === 1 ? hoods[0] : "all";
   }, [locationMode, neighborhoodFilter]);
 
+  // Smart date default for events (computed synchronously, no URL update)
+  const smartDateDefault = findType === "events" ? getSmartDateDefault() : undefined;
+  const effectiveDateOverride = searchParams?.get("date") ? undefined : smartDateDefault;
+
   // ─── Drawer state for map modes ───────────────────────────────────────────
   const isMapMode = displayMode === "map" && (findType === "events" || findType === "destinations");
 
@@ -402,6 +407,7 @@ function FindViewInner({
     portalId,
     portalExclusive,
     enabled: isMapMode && findType === "events",
+    dateOverride: effectiveDateOverride,
   });
   const { spots: mapSpots, isFetching: mapSpotsFetching } = useMapSpots({
     portalId,
@@ -920,7 +926,7 @@ function FindViewInner({
       )}
 
       {findType === "destinations" && displayMode === "list" && (
-        <Suspense fallback={<div className="py-16 text-center text-[var(--muted)]">Loading destinations...</div>}>
+        <Suspense fallback={<div className="py-16 text-center text-[var(--muted)]">Loading spots...</div>}>
           <PortalSpotsView
             portalId={portalId}
             portalSlug={portalSlug}

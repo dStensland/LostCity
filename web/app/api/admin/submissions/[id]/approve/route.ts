@@ -9,6 +9,7 @@ import {
   createEventFromSubmission,
   createVenueFromSubmission,
   createOrganizationFromSubmission,
+  queueCrawlerSourceEvaluationFromSubmission,
 } from "@/lib/submissions/approval";
 
 type Props = {
@@ -96,19 +97,47 @@ export async function POST(request: NextRequest, { params }: Props) {
         submission.id
       );
     } else if (submission.submission_type === "venue") {
+      const venueData = submission.data as unknown as VenueSubmissionData;
       approvedEntityId = await createVenueFromSubmission(
         serviceClient,
-        submission.data as unknown as VenueSubmissionData,
+        venueData,
         submission.submitted_by,
         submission.id
       );
+      try {
+        await queueCrawlerSourceEvaluationFromSubmission(serviceClient, {
+          name: venueData.name,
+          website: venueData.website,
+          sourceType: "venue",
+          portalId: submission.portal_id,
+        });
+      } catch (queueError) {
+        logger.warn("Failed to queue venue source for crawler evaluation", {
+          submission_id: submission.id,
+          error: queueError,
+        });
+      }
     } else if (submission.submission_type === "organization" || submission.submission_type === "producer") {
+      const orgData = submission.data as unknown as ProducerSubmissionData;
       approvedEntityId = await createOrganizationFromSubmission(
         serviceClient,
-        submission.data as unknown as ProducerSubmissionData,
+        orgData,
         submission.submitted_by,
         submission.id
       );
+      try {
+        await queueCrawlerSourceEvaluationFromSubmission(serviceClient, {
+          name: orgData.name,
+          website: orgData.website,
+          sourceType: "organization",
+          portalId: submission.portal_id,
+        });
+      } catch (queueError) {
+        logger.warn("Failed to queue organization source for crawler evaluation", {
+          submission_id: submission.id,
+          error: queueError,
+        });
+      }
     }
   } catch (error) {
     logger.error("Failed to create entity:", error);

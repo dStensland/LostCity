@@ -118,7 +118,7 @@ export default function MapBottomSheet({
       type: "spot" as const,
       id: spot.id,
       title: decodeHtmlEntities(spot.name),
-      subtitle: spot.neighborhood ? decodeHtmlEntities(spot.neighborhood) : "Destination",
+      subtitle: spot.neighborhood ? decodeHtmlEntities(spot.neighborhood) : "Spot",
       accent: getCategoryColor(spot.venue_type || "other"),
     }));
 
@@ -274,7 +274,7 @@ export default function MapBottomSheet({
                 {spots.length > 0 && events.length > 0 && (
                   <div className="flex items-center gap-2 px-4 pt-3 pb-1.5" aria-hidden="true">
                     <span className="font-mono text-[10px] font-semibold text-[var(--soft)] uppercase tracking-widest">
-                      Destinations
+                      Spots
                     </span>
                     <div className="flex-1 h-px bg-gradient-to-r from-[var(--twilight)] to-transparent" />
                   </div>

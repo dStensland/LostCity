@@ -5,8 +5,9 @@ import { getNeighborhoodByName } from "@/config/neighborhoods";
 import { isSpotOpen, VENUE_TYPES_MAP, type VenueType, DESTINATION_CATEGORIES } from "@/lib/spots";
 import { logger } from "@/lib/logger";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
-import { applyPortalScopeToQuery, filterByPortalCity, isVenueCityInScope } from "@/lib/portal-scope";
-import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
+import { applyFederatedPortalScopeToQuery, filterByPortalCity, isVenueCityInScope } from "@/lib/portal-scope";
+import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
+import { getPortalSourceAccess } from "@/lib/federation";
 
 export const dynamic = "force-dynamic";
 
@@ -14,11 +15,26 @@ const AROUND_ME_CACHE_TTL_MS = 30 * 1000;
 const AROUND_ME_CACHE_MAX_ENTRIES = 180;
 const AROUND_ME_CACHE_NAMESPACE = "api:around-me";
 
-function buildStableSearchParamsKey(searchParams: URLSearchParams): string {
-  return Array.from(searchParams.entries())
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
-    .join("&");
+async function getCachedAroundMePayload(
+  key: string,
+): Promise<Record<string, unknown> | null> {
+  return getSharedCacheJson<Record<string, unknown>>(
+    AROUND_ME_CACHE_NAMESPACE,
+    key
+  );
+}
+
+async function setCachedAroundMePayload(
+  key: string,
+  payload: Record<string, unknown>
+): Promise<void> {
+  await setSharedCacheJson(
+    AROUND_ME_CACHE_NAMESPACE,
+    key,
+    payload,
+    AROUND_ME_CACHE_TTL_MS,
+    { maxEntries: AROUND_ME_CACHE_MAX_ENTRIES }
+  );
 }
 
 // Haversine formula to calculate distance between two points in miles
@@ -34,40 +50,6 @@ function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: numbe
       Math.sin(dLng / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
-}
-
-// Inferred closing times by venue type when hours data is missing
-const INFERRED_CLOSING_TIMES: Record<string, string> = {
-  // Bars and nightlife - late night
-  bar: "02:00",
-  club: "03:00",
-  sports_bar: "02:00",
-  rooftop: "00:00",
-  lgbtq: "02:00",
-  karaoke: "02:00",
-  // Breweries and distilleries - medium late
-  brewery: "22:00",
-  distillery: "22:00",
-  winery: "21:00",
-  // Restaurants - varies
-  restaurant: "22:00",
-  food_hall: "21:00",
-  // Coffee - early close
-  coffee_shop: "18:00",
-  // Entertainment
-  games: "23:00",
-  arcade: "23:00",
-  eatertainment: "23:00",
-  // Music venues - late
-  music_venue: "02:00",
-  comedy_club: "00:00",
-  theater: "23:00",
-};
-
-// Get inferred closing time based on venue type
-function getInferredClosingTime(venueType: string | null): string | null {
-  if (!venueType) return null;
-  return INFERRED_CLOSING_TIMES[venueType] || null;
 }
 
 // Format closing time for display
@@ -86,11 +68,11 @@ const CATEGORY_FILTERS: Record<string, { spotTypes: string[]; eventCategories: s
   },
   drinks: {
     spotTypes: ["bar", "brewery", "distillery", "winery", "rooftop", "sports_bar"],
-    eventCategories: [],
+    eventCategories: ["Food & Drink"],
   },
   coffee: {
     spotTypes: ["coffee_shop"],
-    eventCategories: [],
+    eventCategories: ["Food & Drink"],
   },
   music: {
     spotTypes: ["music_venue"],
@@ -229,9 +211,10 @@ export async function GET(request: NextRequest) {
       ? 8
       : null;
   const category = searchParams.get("category"); // food, drinks, coffee, music, arts, fun
+  const countOnly = searchParams.get("countOnly") === "true";
   const requestedLimit = parseInt(searchParams.get("limit") || "50", 10);
   const limit = Number.isFinite(requestedLimit)
-    ? Math.max(1, Math.min(requestedLimit, 120))
+    ? Math.max(1, Math.min(requestedLimit, 250))
     : 50;
   const portalExclusive = searchParams.get("portal_exclusive") === "true";
 
@@ -261,7 +244,15 @@ export async function GET(request: NextRequest) {
     centerLng = -84.365;
   }
 
-  const cacheKey = buildStableSearchParamsKey(request.nextUrl.searchParams);
+  const cacheKey = `${request.nextUrl.searchParams.toString()}|${Math.floor(Date.now() / AROUND_ME_CACHE_TTL_MS)}`;
+  const cachedPayload = await getCachedAroundMePayload(cacheKey);
+  if (cachedPayload) {
+    return NextResponse.json(cachedPayload, {
+      headers: {
+        "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
+      },
+    });
+  }
 
   try {
     const supabase = await createClient();
@@ -273,19 +264,101 @@ export async function GET(request: NextRequest) {
       );
     }
     const portalCity = !portalExclusive ? portalContext.filters.city : undefined;
+    const sourceAccess = portalContext.portalId
+      ? await getPortalSourceAccess(portalContext.portalId)
+      : null;
+
+    // Fast path: countOnly mode — return just event + spot counts
+    if (countOnly) {
+      // Event count: use head+count for efficiency (no data transfer)
+      let eventCountQuery = supabase
+        .from("events")
+        .select("id", { count: "exact", head: true })
+        .eq("is_live", true)
+        .is("canonical_event_id", null)
+        .gte("start_date", new Date().toISOString().split("T")[0]);
+
+      eventCountQuery = applyFederatedPortalScopeToQuery(eventCountQuery, {
+        portalId: portalContext.portalId,
+        portalExclusive,
+        publicOnlyWhenNoPortal: true,
+        sourceIds: sourceAccess?.sourceIds || [],
+        sourceColumn: "source_id",
+      });
+
+      // Spots count: still need to fetch hours to check isSpotOpen(), but select minimal columns
+      let spotsCountQuery = supabase
+        .from("venues")
+        .select("id, lat, lng, hours, venue_type, city")
+        .eq("active", true)
+        .not("lat", "is", null)
+        .not("lng", "is", null)
+        .not("hours", "is", null);
+
+      // Apply same venue type filter as the main flow
+      const categoryFilter = category ? CATEGORY_FILTERS[category] : null;
+      if (categoryFilter && categoryFilter.spotTypes.length > 0) {
+        const validTypes = categoryFilter.spotTypes.filter(t => t in VENUE_TYPES_MAP);
+        if (validTypes.length > 0) {
+          const typeFilters = validTypes.map((t) => `venue_type.eq.${t}`).join(",");
+          spotsCountQuery = spotsCountQuery.or(typeFilters);
+        }
+      } else {
+        const placeTypes = Object.keys(DESTINATION_CATEGORIES).flatMap(
+          (key) => DESTINATION_CATEGORIES[key as keyof typeof DESTINATION_CATEGORIES]
+        );
+        const validPlaceTypes = placeTypes.filter(t => t in VENUE_TYPES_MAP);
+        if (validPlaceTypes.length > 0) {
+          const typeFilters = validPlaceTypes.map((t) => `venue_type.eq.${t}`).join(",");
+          spotsCountQuery = spotsCountQuery.or(typeFilters);
+        }
+      }
+
+      spotsCountQuery = spotsCountQuery.limit(1200);
+
+      const [eventCountResult, spotsCountResult] = await Promise.all([
+        eventCountQuery,
+        spotsCountQuery,
+      ]);
+
+      const eventCount = eventCountResult.count ?? 0;
+
+      // Count spots that are actually open right now
+      let spotCount = 0;
+      if (spotsCountResult.data) {
+        const spotsData = spotsCountResult.data as Array<{
+          id: number; lat: number | null; lng: number | null;
+          hours: HoursData | null; venue_type: string | null; city: string | null;
+        }>;
+        for (const spot of spotsData) {
+          if (!isVenueCityInScope(spot.city, portalCity, { allowMissingCity: true })) continue;
+          if (!spot.hours) continue;
+          try {
+            const result = isSpotOpen(spot.hours, false);
+            if (result.isOpen) spotCount++;
+          } catch {
+            // Hours parsing failed, skip
+          }
+        }
+      }
+
+      const countPayload = { eventCount, spotCount, count: eventCount + spotCount };
+      await setCachedAroundMePayload(cacheKey, countPayload);
+
+      return NextResponse.json(countPayload, {
+        headers: {
+          "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
+        },
+      });
+    }
 
     // Get category filter if specified
     const categoryFilter = category ? CATEGORY_FILTERS[category] : null;
 
-    const payload = await getOrSetSharedCacheJson<Record<string, unknown>>(
-      AROUND_ME_CACHE_NAMESPACE,
-      cacheKey,
-      AROUND_ME_CACHE_TTL_MS,
-      async () => {
-        // Fetch open spots
-        let spotsQuery = supabase
-          .from("venues")
-          .select(`
+    // Fetch open spots
+    let spotsQuery = supabase
+      .from("venues")
+      .select(`
         id,
         name,
         slug,
@@ -304,59 +377,58 @@ export async function GET(request: NextRequest) {
         vibes,
         image_url,
         city
-          `)
-          .eq("active", true)
-          .not("lat", "is", null)
-          .not("lng", "is", null);
+      `)
+      .eq("active", true)
+      .not("lat", "is", null)
+      .not("lng", "is", null);
 
-        // Venues do not have portal_id; scope venues by city after fetch.
-        // Portal scoping stays on events (below) where portal_id exists.
+    // Venues do not have portal_id; scope venues by city after fetch.
+    // Portal scoping stays on events (below) where portal_id exists.
 
-        // Filter by neighborhood if specified (exact match on neighborhood field)
-        if (neighborhood && !usingGps) {
-          spotsQuery = spotsQuery.eq("neighborhood", neighborhood);
-        }
+    // Filter by neighborhood if specified (exact match on neighborhood field)
+    if (neighborhood && !usingGps) {
+      spotsQuery = spotsQuery.eq("neighborhood", neighborhood);
+    }
 
-        // Filter by spot types if category specified
-        if (categoryFilter && categoryFilter.spotTypes.length > 0) {
-          // Validate each type against known venue types before building filter
-          const validTypes = categoryFilter.spotTypes.filter((t) => t in VENUE_TYPES_MAP);
-          if (validTypes.length > 0) {
-            const typeFilters = validTypes.map((t) => `venue_type.eq.${t}`).join(",");
-            spotsQuery = spotsQuery.or(typeFilters);
-          }
-        } else {
-          // Default: only include "place" venue types (bars, restaurants, etc.)
-          const placeTypes = Object.keys(DESTINATION_CATEGORIES).flatMap(
-            (key) => DESTINATION_CATEGORIES[key as keyof typeof DESTINATION_CATEGORIES]
-          );
-          // Validate types before building filter
-          const validPlaceTypes = placeTypes.filter((t) => t in VENUE_TYPES_MAP);
-          if (validPlaceTypes.length > 0) {
-            const typeFilters = validPlaceTypes.map((t) => `venue_type.eq.${t}`).join(",");
-            spotsQuery = spotsQuery.or(typeFilters);
-          }
-        }
+    // Filter by spot types if category specified
+    if (categoryFilter && categoryFilter.spotTypes.length > 0) {
+      // Validate each type against known venue types before building filter
+      const validTypes = categoryFilter.spotTypes.filter(t => t in VENUE_TYPES_MAP);
+      if (validTypes.length > 0) {
+        const typeFilters = validTypes.map((t) => `venue_type.eq.${t}`).join(",");
+        spotsQuery = spotsQuery.or(typeFilters);
+      }
+    } else {
+      // Default: only include "place" venue types (bars, restaurants, etc.)
+      const placeTypes = Object.keys(DESTINATION_CATEGORIES).flatMap(
+        (key) => DESTINATION_CATEGORIES[key as keyof typeof DESTINATION_CATEGORIES]
+      );
+      // Validate types before building filter
+      const validPlaceTypes = placeTypes.filter(t => t in VENUE_TYPES_MAP);
+      if (validPlaceTypes.length > 0) {
+        const typeFilters = validPlaceTypes.map((t) => `venue_type.eq.${t}`).join(",");
+        spotsQuery = spotsQuery.or(typeFilters);
+      }
+    }
 
-        const spotCandidateLimit = radiusMiles !== null
-          ? Math.max(180, Math.min(900, limit * 8))
-          : Math.max(260, Math.min(1200, limit * 10));
-        if (radiusMiles !== null) {
-          const latDelta = radiusMiles / 69;
-          const lngDelta =
-            radiusMiles / (Math.max(Math.cos((centerLat * Math.PI) / 180), 0.2) * 69);
-          spotsQuery = spotsQuery
-            .gte("lat", centerLat - latDelta)
-            .lte("lat", centerLat + latDelta)
-            .gte("lng", centerLng - lngDelta)
-            .lte("lng", centerLng + lngDelta);
-        }
-        spotsQuery = spotsQuery.limit(spotCandidateLimit);
+    const spotCandidateLimit = radiusMiles !== null
+      ? Math.max(180, Math.min(900, limit * 8))
+      : Math.max(260, Math.min(1200, limit * 10));
+    if (radiusMiles !== null) {
+      const latDelta = radiusMiles / 69;
+      const lngDelta = radiusMiles / (Math.max(Math.cos((centerLat * Math.PI) / 180), 0.2) * 69);
+      spotsQuery = spotsQuery
+        .gte("lat", centerLat - latDelta)
+        .lte("lat", centerLat + latDelta)
+        .gte("lng", centerLng - lngDelta)
+        .lte("lng", centerLng + lngDelta);
+    }
+    spotsQuery = spotsQuery.limit(spotCandidateLimit);
 
-        // Fetch live events
-        let eventsQuery = supabase
-          .from("events")
-          .select(`
+    // Fetch live events
+    let eventsQuery = supabase
+      .from("events")
+      .select(`
         id,
         title,
         start_time,
@@ -378,53 +450,54 @@ export async function GET(request: NextRequest) {
           lng,
           venue_type
         )
-          `)
-          .eq("is_live", true)
-          .is("canonical_event_id", null)
-          .gte("start_date", new Date().toISOString().split("T")[0]);
+      `)
+      .eq("is_live", true)
+      .is("canonical_event_id", null)
+      .gte("start_date", new Date().toISOString().split("T")[0]);
 
-        eventsQuery = applyPortalScopeToQuery(eventsQuery, {
-          portalId: portalContext.portalId,
-          portalExclusive,
-          publicOnlyWhenNoPortal: true,
-        });
+    eventsQuery = applyFederatedPortalScopeToQuery(eventsQuery, {
+      portalId: portalContext.portalId,
+      portalExclusive,
+      publicOnlyWhenNoPortal: true,
+      sourceIds: sourceAccess?.sourceIds || [],
+      sourceColumn: "source_id",
+    });
 
-        // Filter events by category if specified
-        if (categoryFilter && categoryFilter.eventCategories.length > 0) {
-          eventsQuery = eventsQuery.in("category", categoryFilter.eventCategories);
-        }
-        const eventCandidateLimit = radiusMiles !== null
-          ? Math.max(140, Math.min(700, limit * 6))
-          : Math.max(220, Math.min(900, limit * 8));
-        eventsQuery = eventsQuery
-          .order("start_time", { ascending: true })
-          .limit(eventCandidateLimit);
+    // Filter events by category if specified
+    if (categoryFilter && categoryFilter.eventCategories.length > 0) {
+      eventsQuery = eventsQuery.in("category", categoryFilter.eventCategories);
+    }
+    const eventCandidateLimit = radiusMiles !== null
+      ? Math.max(140, Math.min(700, limit * 6))
+      : Math.max(220, Math.min(900, limit * 8));
+    eventsQuery = eventsQuery
+      .order("start_time", { ascending: true })
+      .limit(eventCandidateLimit);
 
-        // Note: neighborhood filtering for events is done post-fetch since it's on the joined venue
+    // Note: neighborhood filtering for events is done post-fetch since it's on the joined venue
 
-        // Execute both queries in parallel
-        const [spotsResult, eventsResult] = await Promise.all([spotsQuery, eventsQuery]);
+    // Execute both queries in parallel
+    const [spotsResult, eventsResult] = await Promise.all([
+      spotsQuery,
+      eventsQuery,
+    ]);
 
-        if (spotsResult.error) {
-          logger.error("Error fetching spots:", spotsResult.error);
-          throw spotsResult.error;
-        }
+    if (spotsResult.error) {
+      logger.error("Error fetching spots:", spotsResult.error);
+      throw spotsResult.error;
+    }
 
-        if (eventsResult.error) {
-          logger.error("Error fetching events:", eventsResult.error);
-          throw eventsResult.error;
-        }
+    if (eventsResult.error) {
+      logger.error("Error fetching events:", eventsResult.error);
+      throw eventsResult.error;
+    }
 
-        const spots = ((spotsResult.data || []) as SpotRow[]).filter((spot) =>
-          isVenueCityInScope(spot.city, portalCity, { allowMissingCity: true })
-        );
-        const events = filterByPortalCity(
-          (eventsResult.data || []) as LiveEventRow[],
-          portalCity,
-          {
-            allowMissingCity: true,
-          }
-        );
+    const spots = ((spotsResult.data || []) as SpotRow[]).filter((spot) =>
+      isVenueCityInScope(spot.city, portalCity, { allowMissingCity: true })
+    );
+    const events = filterByPortalCity((eventsResult.data || []) as LiveEventRow[], portalCity, {
+      allowMissingCity: true,
+    });
 
     // Process spots - filter by open status and calculate distance
     const processedSpots: AroundMeItem[] = [];
@@ -435,39 +508,25 @@ export async function GET(request: NextRequest) {
       // Only filter by radius if one was specified
       if (radiusMiles !== null && distance > radiusMiles) continue;
 
-      // Check if open - filter out spots confirmed closed
-      let isOpen = true;
+      // Check if open - only include spots with known hours that confirm open
+      if (!spot.hours) continue; // No hours data = can't confirm open, skip
+
+      let isOpen = false;
       let closesAt: string | undefined;
 
-      if (spot.hours) {
-        try {
-          const result = isSpotOpen(spot.hours, false);
-          isOpen = result.isOpen;
-          closesAt = result.closesAt;
-        } catch {
-          // If hours parsing fails, treat as unknown (include in results)
-          isOpen = true;
-        }
+      try {
+        const result = isSpotOpen(spot.hours, false);
+        isOpen = result.isOpen;
+        closesAt = result.closesAt;
+      } catch {
+        // Hours parsing failed, can't confirm open
+        continue;
       }
 
-      // Skip spots that have hours data and are confirmed closed
-      // Spots without hours data still pass through (unknown != closed)
       if (!isOpen) continue;
 
       // Determine closing time display
-      let closingTimeDisplay: string | null = null;
-      let closingTimeInferred = false;
-
-      if (closesAt) {
-        closingTimeDisplay = formatClosingTime(closesAt);
-      } else {
-        // No hours data - try to infer
-        const inferredClose = getInferredClosingTime(spot.venue_type);
-        if (inferredClose) {
-          closingTimeDisplay = formatClosingTime(inferredClose);
-          closingTimeInferred = true;
-        }
-      }
+      const closingTimeDisplay = closesAt ? formatClosingTime(closesAt) : null;
 
       // Get icon and label for venue type
       const venueTypeInfo = spot.venue_type
@@ -495,7 +554,7 @@ export async function GET(request: NextRequest) {
           image_url: spot.image_url,
           isOpen: true,
           closesAt: closingTimeDisplay,
-          closingTimeInferred,
+          closingTimeInferred: false,
         },
       });
     }
@@ -587,29 +646,30 @@ export async function GET(request: NextRequest) {
       }
     }
 
-        return {
-          items: limitedItems,
-          counts: {
-            spots: processedSpots.length,
-            events: processedEvents.length,
-            total: allItems.length,
-          },
-          center: {
-            lat: centerLat,
-            lng: centerLng,
-            usingGps,
-            neighborhood: neighborhood || null,
-          },
-        };
+    const payload = {
+      items: limitedItems,
+      counts: {
+        spots: processedSpots.length,
+        events: processedEvents.length,
+        total: allItems.length,
       },
-      { maxEntries: AROUND_ME_CACHE_MAX_ENTRIES }
-    );
+      center: {
+        lat: centerLat,
+        lng: centerLng,
+        usingGps,
+        neighborhood: neighborhood || null,
+      },
+    };
+    await setCachedAroundMePayload(cacheKey, payload);
 
-    return NextResponse.json(payload, {
-      headers: {
-        "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
-      },
-    });
+    return NextResponse.json(
+      payload,
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
+        },
+      }
+    );
   } catch (error) {
     logger.error("Around me API error:", error);
     return NextResponse.json(

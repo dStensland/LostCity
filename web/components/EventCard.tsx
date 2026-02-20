@@ -17,7 +17,6 @@ import {
 import CategoryIcon, {
   getCategoryColor,
   getCategoryLabel,
-  CATEGORY_CONFIG,
   type CategoryType,
 } from "./CategoryIcon";
 import {
@@ -1161,9 +1160,8 @@ export const GridEventCard = memo(function GridEventCard({
     >
       {/* Content */}
       <div className="flex-1 p-3">
-        {/* Category + Popular */}
+        {/* Popular badge */}
         <div className="flex items-center gap-2 mb-1.5">
-          {event.category && <CategoryIcon type={event.category} size={12} />}
           {isPopular && (
             <span className="ml-auto flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[var(--coral)] text-[var(--void)] text-[0.56rem] font-mono font-medium">
               <TrendingIcon className="w-2.5 h-2.5" /> Popular
@@ -1254,9 +1252,6 @@ export const CompactEventCard = memo(function CompactEventCard({
   const compactTimeLabel = event.is_all_day
     ? "All Day"
     : `${time}${period ? ` ${period}` : ""}`;
-  const compactCategoryLabel = event.category
-    ? getCategoryLabel(event.category as CategoryType)
-    : null;
   const compactPrice = getEventPriceLabel(event);
   const compactPrimaryMetadataParts: Array<{
     key: string;
@@ -1377,11 +1372,6 @@ export const CompactEventCard = memo(function CompactEventCard({
               <span className="flex-shrink-0 font-mono text-[0.7rem] sm:text-[0.72rem] font-semibold uppercase tracking-[0.1em] text-[var(--accent-color)] min-w-[68px] sm:min-w-[82px]">
                 {compactTimeLabel}
               </span>
-              {compactCategoryLabel && (
-                <span className="ml-auto inline-block max-w-[88px] sm:max-w-[140px] truncate flex-shrink-0 font-mono text-[0.58rem] sm:text-[0.62rem] font-medium uppercase tracking-[0.1em] text-[var(--muted)]">
-                  {compactCategoryLabel}
-                </span>
-              )}
               {isPopular && (
                 <span className="flex-shrink-0 text-[var(--coral)]">
                   <TrendingIcon className="w-3 h-3" />
@@ -1512,22 +1502,6 @@ export const HeroEventCard = memo(function HeroEventCard({
             </svg>
             Featured
           </span>
-          {event.category && (
-            <span
-              data-category={event.category}
-              data-accent="category"
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono font-medium bg-accent text-[var(--void)]"
-            >
-              <CategoryIcon
-                type={event.category}
-                size={12}
-                className="!text-[var(--void)]"
-                glow="none"
-              />
-              {CATEGORY_CONFIG[event.category as CategoryType]?.label ||
-                event.category}
-            </span>
-          )}
         </div>
 
         {/* Title */}

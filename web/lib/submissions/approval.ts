@@ -7,6 +7,110 @@ import type {
 
 type ServiceClient = ReturnType<typeof createServiceClient>;
 
+type SourceCandidateInput = {
+  name: string;
+  website: string | null | undefined;
+  sourceType: "venue" | "organization";
+  portalId?: string | null;
+};
+
+function slugifyName(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+function normalizeWebsite(website: string | null | undefined): string | null {
+  if (!website) return null;
+  const trimmed = website.trim();
+  if (!trimmed) return null;
+
+  const withScheme = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  try {
+    const parsed = new URL(withScheme);
+    parsed.hash = "";
+    return parsed.toString().replace(/\/$/, "");
+  } catch {
+    return null;
+  }
+}
+
+function extractHost(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "").toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
+export async function queueCrawlerSourceEvaluationFromSubmission(
+  supabase: ServiceClient,
+  input: SourceCandidateInput
+): Promise<void> {
+  const normalizedUrl = normalizeWebsite(input.website);
+  if (!normalizedUrl) return;
+
+  const baseSlug = slugifyName(input.name) || slugifyName(extractHost(normalizedUrl)) || "submission-source";
+  let slug = baseSlug;
+
+  const { data: existingByUrl } = await supabase
+    .from("sources")
+    .select("id, slug, health_tags")
+    .eq("url", normalizedUrl)
+    .maybeSingle();
+
+  const existingUrlRow = existingByUrl as { id: number; slug: string; health_tags?: string[] | null } | null;
+  if (existingUrlRow) {
+    const tags = new Set(existingUrlRow.health_tags || []);
+    tags.add("needs-crawler-evaluation");
+    tags.add("from-user-submission");
+    await supabase
+      .from("sources")
+      .update({ health_tags: Array.from(tags) } as never)
+      .eq("id", existingUrlRow.id);
+    return;
+  }
+
+  const host = extractHost(normalizedUrl);
+  if (host) {
+    const { data: maybeHostMatch } = await supabase
+      .from("sources")
+      .select("id, slug")
+      .ilike("url", `%${host}%`)
+      .limit(1)
+      .maybeSingle();
+    const hostRow = maybeHostMatch as { id: number; slug: string } | null;
+    if (hostRow) return;
+  }
+
+  for (let i = 0; i < 20; i += 1) {
+    const { data: existingSlug } = await supabase
+      .from("sources")
+      .select("id")
+      .eq("slug", slug)
+      .maybeSingle();
+    if (!existingSlug) break;
+    slug = `${baseSlug}-${i + 2}`;
+  }
+
+  await supabase
+    .from("sources")
+    .insert(
+      {
+        name: input.name,
+        slug,
+        url: normalizedUrl,
+        source_type: input.sourceType,
+        integration_method: null,
+        crawl_frequency: "weekly",
+        is_active: false,
+        owner_portal_id: input.portalId || null,
+        health_tags: ["needs-crawler-evaluation", "from-user-submission"],
+      } as never
+    );
+}
+
 export async function createEventFromSubmission(
   supabase: ServiceClient,
   data: EventSubmissionData,

@@ -8,6 +8,7 @@ import { MOODS } from "@/lib/moods";
 import CategoryIcon from "@/components/CategoryIcon";
 import { MobileFilterSheet } from "@/components/MobileFilterSheet";
 import { formatGenre } from "@/lib/series-utils";
+import { getSmartDateDefault } from "@/lib/hooks/useEventFilters";
 
 type FindFilterBarProps = {
   variant?: "full" | "compact";
@@ -94,6 +95,8 @@ export default function FindFilterBar({ variant = "full", portalId, portalExclus
   );
   const currentMood = searchParams.get("mood") || "";
   const currentDateFilter = searchParams.get("date") || "";
+  const smartDateDefault = getSmartDateDefault();
+  const effectiveDateFilter = currentDateFilter || smartDateDefault || "";
   const currentFreeOnly = searchParams.get("free") === "1" || searchParams.get("price") === "free";
 
   const categoryOptions = useMemo(() => {
@@ -180,11 +183,11 @@ export default function FindFilterBar({ variant = "full", portalId, portalExclus
   }, []);
 
   const dateFilterLabel =
-    !currentDateFilter
+    !effectiveDateFilter
       ? "When"
       : isSpecificDate
       ? formatDateLabel(currentDateFilter)
-      : DATE_OPTIONS.find((d) => d.value === currentDateFilter)?.label || "When";
+      : DATE_OPTIONS.find((d) => d.value === effectiveDateFilter)?.label || "When";
 
   const categoryLabel =
     currentCategories.length === 0
@@ -460,7 +463,7 @@ export default function FindFilterBar({ variant = "full", portalId, portalExclus
                     setDateDropdownOpen(!wasOpen);
                   }}
                   className={`btn-press flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all border ${
-                    currentDateFilter
+                    effectiveDateFilter
                       ? "bg-[var(--gold)] text-[var(--void)] border-[var(--gold)]/40 shadow-sm"
                       : "bg-[var(--dusk)]/80 text-[var(--cream)]/80 border-[var(--twilight)]/80 hover:text-[var(--cream)]"
                   }`}
@@ -475,7 +478,7 @@ export default function FindFilterBar({ variant = "full", portalId, portalExclus
                   <div className="absolute top-full left-0 mt-1 w-44 rounded-xl border border-[var(--twilight)] shadow-xl z-[220] bg-[var(--void)]">
                     <div className="p-2">
                       {DATE_OPTIONS.map((df) => {
-                        const isActive = currentDateFilter === df.value;
+                        const isActive = effectiveDateFilter === df.value;
                         return (
                           <button
                             key={df.value}

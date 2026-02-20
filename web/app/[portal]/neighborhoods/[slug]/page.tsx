@@ -29,7 +29,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!neighborhood) return {};
 
   const description = getNeighborhoodDescription(slug);
-  const title = `${neighborhood.name} — Events & Destinations | Lost City`;
+  const title = `${neighborhood.name} — Events & Spots | Lost City`;
 
   return {
     title,
@@ -223,10 +223,10 @@ export default async function NeighborhoodPage({ params }: Props) {
         </section>
       )}
 
-      {/* Destinations */}
+      {/* Spots */}
       {spots.length > 0 && (
         <section className="mt-8">
-          <SectionHeader title="Destinations" count={spots.length} />
+          <SectionHeader title="Spots" count={spots.length} />
           <div className="space-y-1">
             {spots.map((spot, i) => (
               <SpotCard
@@ -267,7 +267,7 @@ export default async function NeighborhoodPage({ params }: Props) {
       {events.length === 0 && spots.length === 0 && (
         <div className="py-16 text-center">
           <p className="font-mono text-sm text-[var(--muted)]">
-            No venues or events in {neighborhood.name} yet.
+            No spots or events in {neighborhood.name} yet.
           </p>
         </div>
       )}

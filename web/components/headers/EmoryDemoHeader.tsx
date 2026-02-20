@@ -145,21 +145,21 @@ export default function EmoryDemoHeader({ portalSlug }: EmoryDemoHeaderProps) {
     <header className={`${hospitalBodyFont.className} sticky top-0 z-[130]`}>
       {/* Utility bar */}
       <div className="bg-[#002f6c]">
-        <div className="mx-auto flex max-w-[1240px] items-center justify-end gap-4 px-4 lg:px-6 h-8">
+        <div className="mx-auto flex max-w-[1240px] items-center justify-end gap-3 px-4 lg:px-6 h-9">
           <Link
             href={hospitalsHref}
-            className="text-[11px] tracking-[0.02em] text-white/75 hover:text-white transition-colors"
+            className="text-[11.5px] tracking-[0.02em] text-white/80 hover:text-white transition-colors"
           >
             Find a Location
           </Link>
-          <span className="text-white/30 text-[10px]" aria-hidden="true">|</span>
+          <span className="text-white/40 text-[11px] select-none" aria-hidden="true">&middot;</span>
           <Link
             href={conciergeHref}
-            className="text-[11px] tracking-[0.02em] text-white/75 hover:text-white transition-colors"
+            className="text-[11.5px] tracking-[0.02em] text-white/80 hover:text-white transition-colors"
           >
             Patient Resources
           </Link>
-          <span className="text-white/30 text-[10px]" aria-hidden="true">|</span>
+          <span className="text-white/40 text-[11px] select-none" aria-hidden="true">&middot;</span>
           <LanguageSelector onLocaleChange={() => window.location.reload()} />
         </div>
       </div>
@@ -174,7 +174,7 @@ export default function EmoryDemoHeader({ portalSlug }: EmoryDemoHeaderProps) {
               <p className={`${hospitalDisplayFont.className} text-[17px] leading-tight text-[#002f6c] tracking-[-0.01em]`}>
                 Emory Healthcare
               </p>
-              <p className="text-[10px] tracking-[0.08em] uppercase text-[#6b7280] leading-none mt-0.5">
+              <p className="text-[11px] tracking-[0.06em] uppercase text-[#6b7280] leading-none mt-0.5 font-medium">
                 Community Companion
               </p>
             </div>
@@ -247,7 +247,7 @@ export default function EmoryDemoHeader({ portalSlug }: EmoryDemoHeaderProps) {
                     onClick={closeMobileNav}
                     className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-[14px] font-semibold transition-colors ${
                       isActive
-                        ? "bg-[#f0f7ee] text-[#002f6c] border-l-[3px] border-[#8ed585]"
+                        ? "bg-[#f0f7ee] text-[#002f6c] border-l-[2.5px] border-[#8ed585]"
                         : "text-[#374151] hover:bg-[#f2f5fa]"
                     }`}
                   >

@@ -47,7 +47,7 @@ export default function MapListDrawer({
       events.forEach((event) => items.push({ kind: "event", event }));
     }
     if (hasSpots) {
-      if (hasEvents) items.push({ kind: "header", label: "Destinations", count: spots.length });
+      if (hasEvents) items.push({ kind: "header", label: "Spots", count: spots.length });
       spots.forEach((spot) => items.push({ kind: "spot", spot }));
     }
 
@@ -195,7 +195,7 @@ export default function MapListDrawer({
     <div
       className="flex flex-col h-full bg-gradient-to-b from-[var(--night)] to-[var(--void)] border-r border-[var(--twilight)] focus-within:ring-1 focus-within:ring-[var(--coral)]/50"
       role="region"
-      aria-label="Events and destinations in view"
+      aria-label="Events and spots in view"
       aria-describedby="map-drawer-keyboard-hint"
       tabIndex={0}
       onKeyDown={handleKeyDown}

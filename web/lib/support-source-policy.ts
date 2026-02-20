@@ -1288,6 +1288,107 @@ export const SUPPORT_SOURCE_POLICY_ITEMS: SupportSourcePolicyItem[] = [
     focus: "Childbirth classes, support groups, diabetes education, and wellness programs",
     url: "https://events.nghs.com",
   },
+
+  // ── Additional Life Essentials orgs ──
+  {
+    id: "united-way-atl",
+    name: "United Way of Greater Atlanta",
+    track: "financial_assistance",
+    focus: "211 helpline, financial stability programs, and emergency assistance referrals",
+    url: "https://www.unitedwayatlanta.org/",
+  },
+  {
+    id: "atlanta-habitat-humanity",
+    name: "Atlanta Habitat for Humanity",
+    track: "housing_homelessness",
+    focus: "Affordable homeownership, neighborhood revitalization, and repair programs",
+    url: "https://atlantahabitat.org/",
+  },
+  {
+    id: "atlanta-workforce-dev-agency",
+    name: "Atlanta Workforce Development Agency",
+    track: "employment_workforce",
+    focus: "Job training, adult education, career development, and employer connections",
+    url: "https://www.atlantaga.gov/government/departments/workforce-development",
+  },
+  {
+    id: "ga-legal-services",
+    name: "Georgia Legal Services Program",
+    track: "legal_aid",
+    focus: "Free legal aid for low-income Georgians — housing, benefits, family law",
+    url: "https://www.glsp.org/",
+  },
+
+  // ── Additional Recovery & Crisis orgs ──
+  {
+    id: "ga-council-substance-abuse",
+    name: "Georgia Council on Substance Abuse",
+    track: "substance_recovery",
+    focus: "Recovery advocacy, support meetings, and statewide resource navigation",
+    url: "https://gasubstanceabuse.org/",
+  },
+  {
+    id: "partnership-dv",
+    name: "Partnership Against Domestic Violence",
+    track: "crisis_safety",
+    focus: "Shelter, legal advocacy, crisis counseling, and safety planning",
+    url: "https://padv.org/",
+  },
+
+  // ── Additional Family & Children orgs ──
+  {
+    id: "march-of-dimes-ga",
+    name: "March of Dimes Georgia",
+    track: "pediatric_health",
+    focus: "March for Babies events, NICU family support, and maternal health advocacy",
+    url: "https://www.marchofdimes.org/",
+  },
+  {
+    id: "camp-sunshine",
+    name: "Camp Sunshine",
+    track: "pediatric_family",
+    focus: "Year-round support programs for children with cancer and their families",
+    url: "https://www.mycampsunshine.com/",
+  },
+
+  // ── Additional Specialized Care orgs ──
+  {
+    id: "alzheimers-assoc-ga",
+    name: "Alzheimer's Association Georgia",
+    track: "neurological",
+    focus: "Caregiver support groups, education programs, Walk to End Alzheimer's events",
+    url: "https://www.alz.org/georgia",
+  },
+  {
+    id: "american-heart-assoc-atl",
+    name: "American Heart Association Atlanta",
+    track: "chronic_disease",
+    focus: "Heart Walk, CPR training, blood pressure screening events, and heart health education",
+    url: "https://www.heart.org/",
+  },
+  {
+    id: "american-diabetes-assoc-ga",
+    name: "American Diabetes Association Georgia",
+    track: "chronic_disease",
+    focus: "Diabetes awareness walks, education programs, and community health screenings",
+    url: "https://diabetes.org/",
+  },
+  {
+    id: "kidney-foundation-ga",
+    name: "National Kidney Foundation of Georgia",
+    track: "chronic_disease",
+    focus: "Kidney screening events, patient education, and transplant family support",
+    url: "https://www.kidney.org/",
+  },
+
+  // ── Additional Immigrant/Refugee Support ──
+  {
+    id: "lat-am-assoc-atl",
+    name: "Latin American Association",
+    track: "immigrant_refugee",
+    focus: "Health fairs, legal clinics, ESL classes, and family support for Latino communities",
+    url: "https://thelaa.org/",
+  },
 ];
 
 export function getSourcesByTrack(track: SupportTrackKey): SupportSourcePolicyItem[] {
@@ -1525,6 +1626,20 @@ const SUPPORT_POLICY_ALIASES: Record<string, string[]> = {
   "northside-hospital-community": ["northside hospital community", "northside hospital classes"],
   "adventhealth-georgia": ["adventhealth georgia", "adventhealth gordon"],
   "nghs-community-events": ["northeast georgia health system", "nghs", "ngmc"],
+  // ── New org aliases ──
+  "united-way-atl": ["united way of greater atlanta", "united way atl", "211 atlanta"],
+  "atlanta-habitat-humanity": ["atlanta habitat for humanity", "habitat for humanity atlanta"],
+  "atlanta-workforce-dev-agency": ["atlanta workforce development", "awda"],
+  "ga-legal-services": ["georgia legal services program", "glsp"],
+  "ga-council-substance-abuse": ["georgia council on substance abuse", "gcsa"],
+  "partnership-dv": ["partnership against domestic violence", "padv atlanta"],
+  "march-of-dimes-ga": ["march of dimes georgia"],
+  "camp-sunshine": ["camp sunshine atlanta", "camp sunshine georgia"],
+  "alzheimers-assoc-ga": ["alzheimers association georgia", "alz georgia"],
+  "american-heart-assoc-atl": ["american heart association atlanta", "aha atlanta"],
+  "american-diabetes-assoc-ga": ["american diabetes association georgia"],
+  "kidney-foundation-ga": ["national kidney foundation georgia", "nkf ga"],
+  "lat-am-assoc-atl": ["latin american association atlanta", "thelaa"],
 };
 
 function normalizePolicyText(value: string | null | undefined): string {

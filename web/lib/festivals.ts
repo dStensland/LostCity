@@ -70,6 +70,14 @@ export interface FestivalSession {
     name: string;
     slug: string;
     neighborhood: string | null;
+    nearest_marta_station?: string | null;
+    marta_walk_minutes?: number | null;
+    marta_lines?: string[] | null;
+    beltline_adjacent?: boolean | null;
+    beltline_segment?: string | null;
+    parking_type?: string[] | null;
+    parking_free?: boolean | null;
+    transit_score?: number | null;
   } | null;
 }
 
@@ -170,7 +178,15 @@ export async function getFestivalEvents(
         id,
         name,
         slug,
-        neighborhood
+        neighborhood,
+        nearest_marta_station,
+        marta_walk_minutes,
+        marta_lines,
+        beltline_adjacent,
+        beltline_segment,
+        parking_type,
+        parking_free,
+        transit_score
       )
     `)
     .in("series_id", seriesIds)
