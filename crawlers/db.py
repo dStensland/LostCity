@@ -651,6 +651,7 @@ _FESTIVAL_SOURCE_SLUGS = {
     "furry-weekend-atlanta",
     "southern-fried-gaming-expo",
     "anime-weekend-atlanta",
+    "atlanta-salsa-bachata-festival",
 }
 
 _FESTIVAL_NAME_PATTERN = re.compile(
