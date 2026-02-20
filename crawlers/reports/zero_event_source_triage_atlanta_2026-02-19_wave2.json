@@ -1,0 +1,1046 @@
+{
+  "generated_at": "2026-02-19",
+  "input_audit_report": "/Users/coach/Projects/LostCity/crawlers/reports/source_data_goals_audit_atlanta_2026-02-19_post_nonzero_remediation.json",
+  "window_days": 120,
+  "zero_event_failures_total": 37,
+  "classification_summary": {
+    "seasonal_expected": 1,
+    "likely_broken_or_dormant": 36
+  },
+  "seasonal_expected": [
+    {
+      "slug": "eater-atlanta-openings",
+      "name": "Eater Atlanta Openings",
+      "source_id": 1091,
+      "classification": "seasonal_expected",
+      "seasonal_reason": "historical_activity_outside_window_only",
+      "reactivation_score": 30,
+      "reactivation_reasons": [
+        "expected_event_count=10"
+      ],
+      "integration_method": "feed",
+      "crawl_frequency": "daily",
+      "last_crawled_at": "2026-02-19T05:10:38.465959+00:00",
+      "active_months": [],
+      "health_tags": [],
+      "expected_event_count": 10,
+      "recent_logs": {
+        "total_considered": 7,
+        "nonzero_runs": 7,
+        "error_runs": 0
+      },
+      "history": {
+        "window_last_year": 0,
+        "outside_window_last_year": 10,
+        "last365_total": 10
+      },
+      "url": "https://atlanta.eater.com/openings"
+    }
+  ],
+  "reactivation_queue": [
+    {
+      "slug": "home-depot-backyard",
+      "name": "The Home Depot Backyard",
+      "source_id": 859,
+      "classification": "likely_broken_or_dormant",
+      "seasonal_reason": null,
+      "reactivation_score": 292,
+      "reactivation_reasons": [
+        "had_23_events_same_window_last_year",
+        "expected_event_count=75"
+      ],
+      "integration_method": "playwright",
+      "crawl_frequency": "daily",
+      "last_crawled_at": "2026-02-19T13:56:35.815664+00:00",
+      "active_months": [],
+      "health_tags": [],
+      "expected_event_count": 75,
+      "recent_logs": {
+        "total_considered": 10,
+        "nonzero_runs": 10,
+        "error_runs": 0
+      },
+      "history": {
+        "window_last_year": 23,
+        "outside_window_last_year": 37,
+        "last365_total": 60
+      },
+      "url": "https://www.mercedesbenzstadium.com/hdby/events-calendar"
+    },
+    {
+      "slug": "steady-hand-beer",
+      "name": "Steady Hand Beer Co",
+      "source_id": 214,
+      "classification": "likely_broken_or_dormant",
+      "seasonal_reason": null,
+      "reactivation_score": 117,
+      "reactivation_reasons": [
+        "had_11_events_same_window_last_year",
+        "expected_event_count=28"
+      ],
+      "integration_method": "html",
+      "crawl_frequency": "weekly",
+      "last_crawled_at": "2026-02-19T07:01:32.664309+00:00",
+      "active_months": [],
+      "health_tags": [],
+      "expected_event_count": 28,
+      "recent_logs": {
+        "total_considered": 10,
+        "nonzero_runs": 9,
+        "error_runs": 1
+      },
+      "history": {
+        "window_last_year": 11,
+        "outside_window_last_year": 6,
+        "last365_total": 17
+      },
+      "url": "https://www.steadyhandbeer.com"
+    },
+    {
+      "slug": "atlanta-liberation-center",
+      "name": "Atlanta Liberation Center",
+      "source_id": 352,
+      "classification": "likely_broken_or_dormant",
+      "seasonal_reason": null,
+      "reactivation_score": 62,
+      "reactivation_reasons": [
+        "expected_event_count=31"
+      ],
+      "integration_method": "html",
+      "crawl_frequency": "daily",
+      "last_crawled_at": "2026-02-18T18:22:16.471238+00:00",
+      "active_months": [],
+      "health_tags": [],
+      "expected_event_count": 31,
+      "recent_logs": {
+        "total_considered": 10,
+        "nonzero_runs": 9,
+        "error_runs": 1
+      },
+      "history": {
+        "window_last_year": 0,
+        "outside_window_last_year": 0,
+        "last365_total": 0
+      },
+      "url": "https://www.liberationatl.org/events"
+    },
+    {
+      "slug": "centennial-yards",
+      "name": "Centennial Yards",
+      "source_id": 1092,
+      "classification": "likely_broken_or_dormant",
+      "seasonal_reason": null,
+      "reactivation_score": 22,
+      "reactivation_reasons": [
+        "expected_event_count=11"
+      ],
+      "integration_method": "api",
+      "crawl_frequency": "weekly",
+      "last_crawled_at": "2026-02-19T05:03:40.734502+00:00",
+      "active_months": [],
+      "health_tags": [],
+      "expected_event_count": 11,
+      "recent_logs": {
+        "total_considered": 3,
+        "nonzero_runs": 1,
+        "error_runs": 0
+      },
+      "history": {
+        "window_last_year": 0,
+        "outside_window_last_year": 0,
+        "last365_total": 0
+      },
+      "url": "https://centennialyards.com"
+    },
+    {
+      "slug": "silverspot-cinema-atlanta",
+      "name": "Silverspot Cinema Atlanta",
+      "source_id": 545,
+      "classification": "likely_broken_or_dormant",
+      "seasonal_reason": null,
+      "reactivation_score": 22,
+      "reactivation_reasons": [
+        "no_recent_nonzero_crawls",
+        "high_recent_error_rate"
+      ],
+      "integration_method": "playwright",
+      "crawl_frequency": "twice_weekly",
+      "last_crawled_at": "2026-02-18T04:16:27.205787+00:00",
+      "active_months": [],
+      "health_tags": [],
+      "expected_event_count": 0,
+      "recent_logs": {
+        "total_considered": 10,
+        "nonzero_runs": 0,
+        "error_runs": 6
+      },
+      "history": {
+        "window_last_year": 0,
+        "outside_window_last_year": 0,
+        "last365_total": 0
+      },
+      "url": "https://silverspot.net"
+    },
+    {
+      "slug": "big-brothers-big-sisters-atl",
+      "name": "Big Brothers Big Sisters of Metro Atlanta",
+      "source_id": 392,
+      "classification": "likely_broken_or_dormant",
+      "seasonal_reason": null,
+      "reactivation_score": 14,
+      "reactivation_reasons": [
+        "expected_event_count=7"
+      ],
+      "integration_method": "html",
+      "crawl_frequency": "weekly",
+      "last_crawled_at": "2026-02-19T05:08:08.520778+00:00",
+      "active_months": [],
+      "health_tags": [],
+      "expected_event_count": 7,
+      "recent_logs": {
+        "total_considered": 10,
+        "nonzero_runs": 10,
+        "error_runs": 0
+      },
+      "history": {
+        "window_last_year": 0,
+        "outside_window_last_year": 0,
+        "last365_total": 0
+      },
+      "url": "https://bbbsatl.org/events"
+    },
+    {
+      "slug": "buried-alive",
+      "name": "Buried Alive Film Festival",
+      "source_id": 35,
+      "classification": "likely_broken_or_dormant",
+      "seasonal_reason": null,
+      "reactivation_score": 12,
+      "reactivation_reasons": [
+        "high_recent_error_rate",
+        "expected_event_count=1"
+      ],
+      "integration_method": "html",
+      "crawl_frequency": "weekly",
+      "last_crawled_at": "2026-02-18T06:56:32.056316+00:00",
+      "active_months": [],
+      "health_tags": [],
+      "expected_event_count": 1,
+      "recent_logs": {
+        "total_considered": 10,
+        "nonzero_runs": 5,
+        "error_runs": 5
+      },
+      "history": {
+        "window_last_year": 0,
+        "outside_window_last_year": 0,
+        "last365_total": 0
+      },
+      "url": "https://buriedalivefilmfest.com"
+    },
+    {
+      "slug": "clark-atlanta",
+      "name": "Clark Atlanta University",
+      "source_id": 263,
+      "classification": "likely_broken_or_dormant",
+      "seasonal_reason": null,
+      "reactivation_score": 12,
+      "reactivation_reasons": [
+        "no_recent_nonzero_crawls"
+      ],
+      "integration_method": "html",
+      "crawl_frequency": "weekly",
+      "last_crawled_at": "2026-02-19T16:34:31.519364+00:00",
+      "active_months": [],
+      "health_tags": [],
+      "expected_event_count": 0,
+      "recent_logs": {
+        "total_considered": 10,
+        "nonzero_runs": 0,
+        "error_runs": 4
+      },
+      "history": {
+        "window_last_year": 0,
+        "outside_window_last_year": 0,
+        "last365_total": 0
+      },
+      "url": "https://www.cau.edu/events"
+    },
+    {
+      "slug": "community-foundation-atl",
+      "name": "Community Foundation Atlanta",
+      "source_id": 282,
+      "classification": "likely_broken_or_dormant",
+      "seasonal_reason": null,
+      "reactivation_score": 12,
+      "reactivation_reasons": [
+        "no_recent_nonzero_crawls"
+      ],
+      "integration_method": "html",
+      "crawl_frequency": "weekly",
+      "last_crawled_at": "2026-02-19T06:41:03.290092+00:00",
+      "active_months": [],
+      "health_tags": [],
+      "expected_event_count": 0,
+      "recent_logs": {
+        "total_considered": 10,
+        "nonzero_runs": 0,
+        "error_runs": 2
+      },
+      "history": {
+        "window_last_year": 0,
+        "outside_window_last_year": 0,
+        "last365_total": 0
+      },
+      "url": "https://www.cfgreateratlanta.org"
+    },
+    {
+      "slug": "georgia-peace",
+      "name": "Georgia Peace and Justice Coalition",
+      "source_id": 385,
+      "classification": "likely_broken_or_dormant",
+      "seasonal_reason": null,
+      "reactivation_score": 12,
+      "reactivation_reasons": [
+        "no_recent_nonzero_crawls"
+      ],
+      "integration_method": "html",
+      "crawl_frequency": "daily",
+      "last_crawled_at": "2026-02-18T18:17:07.62381+00:00",
+      "active_months": [],
+      "health_tags": [],
+      "expected_event_count": 0,
+      "recent_logs": {
+        "total_considered": 10,
+        "nonzero_runs": 0,
+        "error_runs": 1
+      },
+      "history": {
+        "window_last_year": 0,
+        "outside_window_last_year": 0,
+        "last365_total": 0
+      },
+      "url": "https://georgiapeace.org/events"
+    },
+    {
+      "slug": "l5p-community-center",
+      "name": "Little Five Points Community Center",
+      "source_id": 168,
+      "classification": "likely_broken_or_dormant",
+      "seasonal_reason": null,
+      "reactivation_score": 12,
+      "reactivation_reasons": [
+        "no_recent_nonzero_crawls"
+      ],
+      "integration_method": "html",
+      "crawl_frequency": "daily",
+      "last_crawled_at": "2026-02-19T16:27:18.283975+00:00",
+      "active_months": [],
+      "health_tags": [],
+      "expected_event_count": 0,
+      "recent_logs": {
+        "total_considered": 10,
+        "nonzero_runs": 0,
+        "error_runs": 2
+      },
+      "history": {
+        "window_last_year": 0,
+        "outside_window_last_year": 0,
+        "last365_total": 0
+      },
+      "url": "https://www.l5pcc.org"
+    },
+    {
+      "slug": "moca-ga",
+      "name": "MOCA GA",
+      "source_id": 158,
+      "classification": "likely_broken_or_dormant",
+      "seasonal_reason": null,
+      "reactivation_score": 12,
+      "reactivation_reasons": [
+        "no_recent_nonzero_crawls"
+      ],
+      "integration_method": "playwright",
+      "crawl_frequency": "daily",
+      "last_crawled_at": "2026-02-19T14:30:46.209344+00:00",
+      "active_months": [],
+      "health_tags": [],
+      "expected_event_count": 0,
+      "recent_logs": {
+        "total_considered": 10,
+        "nonzero_runs": 0,
+        "error_runs": 1
+      },
+      "history": {
+        "window_last_year": 0,
+        "outside_window_last_year": 0,
+        "last365_total": 0
+      },
+      "url": "https://www.mocaga.org"
+    },
+    {
+      "slug": "monday-night-garage",
+      "name": "Monday Night Garage",
+      "source_id": 540,
+      "classification": "likely_broken_or_dormant",
+      "seasonal_reason": null,
+      "reactivation_score": 12,
+      "reactivation_reasons": [
+        "no_recent_nonzero_crawls"
+      ],
+      "integration_method": "html",
+      "crawl_frequency": "daily",
+      "last_crawled_at": "2026-02-19T05:19:54.175484+00:00",
+      "active_months": [],
+      "health_tags": [],
+      "expected_event_count": 0,
+      "recent_logs": {
+        "total_considered": 10,
+        "nonzero_runs": 0,
+        "error_runs": 1
+      },
+      "history": {
+        "window_last_year": 0,
+        "outside_window_last_year": 0,
+        "last365_total": 0
+      },
+      "url": "https://mondaynightbrewing.com"
+    },
+    {
+      "slug": "theatrical-outfit",
+      "name": "Theatrical Outfit",
+      "source_id": 151,
+      "classification": "likely_broken_or_dormant",
+      "seasonal_reason": null,
+      "reactivation_score": 12,
+      "reactivation_reasons": [
+        "no_recent_nonzero_crawls"
+      ],
+      "integration_method": "html",
+      "crawl_frequency": "daily",
+      "last_crawled_at": "2026-02-19T16:17:32.098139+00:00",
+      "active_months": [],
+      "health_tags": [],
+      "expected_event_count": 0,
+      "recent_logs": {
+        "total_considered": 10,
+        "nonzero_runs": 0,
+        "error_runs": 2
+      },
+      "history": {
+        "window_last_year": 0,
+        "outside_window_last_year": 0,
+        "last365_total": 0
+      },
+      "url": "https://www.theatricaloutfit.org"
+    },
+    {
+      "slug": "atlanta-beltline",
+      "name": "Atlanta BeltLine",
+      "source_id": 389,
+      "classification": "likely_broken_or_dormant",
+      "seasonal_reason": null,
+      "reactivation_score": 10,
+      "reactivation_reasons": [
+        "expected_event_count=5"
+      ],
+      "integration_method": "html",
+      "crawl_frequency": "daily",
+      "last_crawled_at": "2026-02-19T14:30:12.74747+00:00",
+      "active_months": [],
+      "health_tags": [],
+      "expected_event_count": 5,
+      "recent_logs": {
+        "total_considered": 10,
+        "nonzero_runs": 9,
+        "error_runs": 1
+      },
+      "history": {
+        "window_last_year": 0,
+        "outside_window_last_year": 0,
+        "last365_total": 0
+      },
+      "url": "https://beltline.org/events"
+    },
+    {
+      "slug": "baps-mandir",
+      "name": "BAPS Shri Swaminarayan Mandir",
+      "source_id": 795,
+      "classification": "likely_broken_or_dormant",
+      "seasonal_reason": null,
+      "reactivation_score": 10,
+      "reactivation_reasons": [
+        "expected_event_count=5"
+      ],
+      "integration_method": null,
+      "crawl_frequency": "daily",
+      "last_crawled_at": "2026-02-19T14:13:51.066664+00:00",
+      "active_months": [],
+      "health_tags": [],
+      "expected_event_count": 5,
+      "recent_logs": {
+        "total_considered": 10,
+        "nonzero_runs": 10,
+        "error_runs": 0
+      },
+      "history": {
+        "window_last_year": 0,
+        "outside_window_last_year": 0,
+        "last365_total": 0
+      },
+      "url": "https://www.baps.org/atlanta"
+    },
+    {
+      "slug": "east-lake-neighborhood",
+      "name": "East Lake Neighborhood",
+      "source_id": 435,
+      "classification": "likely_broken_or_dormant",
+      "seasonal_reason": null,
+      "reactivation_score": 10,
+      "reactivation_reasons": [
+        "expected_event_count=5"
+      ],
+      "integration_method": "llm_crawler",
+      "crawl_frequency": "daily",
+      "last_crawled_at": "2026-02-19T12:19:37.563306+00:00",
+      "active_months": [],
+      "health_tags": [],
+      "expected_event_count": 5,
+      "recent_logs": {
+        "total_considered": 10,
+        "nonzero_runs": 8,
+        "error_runs": 2
+      },
+      "history": {
+        "window_last_year": 0,
+        "outside_window_last_year": 0,
+        "last365_total": 0
+      },
+      "url": "https://eastlakefoundation.org"
+    },
+    {
+      "slug": "ebenezer-church",
+      "name": "Ebenezer Baptist Church",
+      "source_id": 800,
+      "classification": "likely_broken_or_dormant",
+      "seasonal_reason": null,
+      "reactivation_score": 5,
+      "reactivation_reasons": [
+        "expected_event_count=2"
+      ],
+      "integration_method": null,
+      "crawl_frequency": "daily",
+      "last_crawled_at": "2026-02-19T13:50:51.043877+00:00",
+      "active_months": [],
+      "health_tags": [],
+      "expected_event_count": 2,
+      "recent_logs": {
+        "total_considered": 10,
+        "nonzero_runs": 10,
+        "error_runs": 0
+      },
+      "history": {
+        "window_last_year": 0,
+        "outside_window_last_year": 1,
+        "last365_total": 1
+      },
+      "url": "https://www.ebenezeratlanta.org/events/"
+    },
+    {
+      "slug": "atlanta-comedy-theater",
+      "name": "Atlanta Comedy Theater",
+      "source_id": 99,
+      "classification": "likely_broken_or_dormant",
+      "seasonal_reason": null,
+      "reactivation_score": 4,
+      "reactivation_reasons": [
+        "expected_event_count=2"
+      ],
+      "integration_method": "html",
+      "crawl_frequency": "twice_weekly",
+      "last_crawled_at": "2026-02-19T14:48:18.544968+00:00",
+      "active_months": [],
+      "health_tags": [],
+      "expected_event_count": 2,
+      "recent_logs": {
+        "total_considered": 10,
+        "nonzero_runs": 9,
+        "error_runs": 1
+      },
+      "history": {
+        "window_last_year": 0,
+        "outside_window_last_year": 0,
+        "last365_total": 0
+      },
+      "url": "https://www.atlantacomedytheater.com"
+    },
+    {
+      "slug": "johnnys-hideaway",
+      "name": "Johnny's Hideaway",
+      "source_id": 198,
+      "classification": "likely_broken_or_dormant",
+      "seasonal_reason": null,
+      "reactivation_score": 4,
+      "reactivation_reasons": [
+        "expected_event_count=2"
+      ],
+      "integration_method": "html",
+      "crawl_frequency": "daily",
+      "last_crawled_at": "2026-02-19T15:50:21.501673+00:00",
+      "active_months": [],
+      "health_tags": [],
+      "expected_event_count": 2,
+      "recent_logs": {
+        "total_considered": 10,
+        "nonzero_runs": 7,
+        "error_runs": 2
+      },
+      "history": {
+        "window_last_year": 0,
+        "outside_window_last_year": 0,
+        "last365_total": 0
+      },
+      "url": "https://www.johnnyshideaway.com"
+    },
+    {
+      "slug": "song",
+      "name": "Southerners on New Ground (SONG)",
+      "source_id": 378,
+      "classification": "likely_broken_or_dormant",
+      "seasonal_reason": null,
+      "reactivation_score": 4,
+      "reactivation_reasons": [
+        "expected_event_count=2"
+      ],
+      "integration_method": "html",
+      "crawl_frequency": "daily",
+      "last_crawled_at": "2026-02-19T16:04:36.409662+00:00",
+      "active_months": [],
+      "health_tags": [],
+      "expected_event_count": 2,
+      "recent_logs": {
+        "total_considered": 10,
+        "nonzero_runs": 9,
+        "error_runs": 1
+      },
+      "history": {
+        "window_last_year": 0,
+        "outside_window_last_year": 0,
+        "last365_total": 0
+      },
+      "url": "https://southernersonnewground.org/events"
+    },
+    {
+      "slug": "stage-door-players",
+      "name": "Stage Door Players",
+      "source_id": 51,
+      "classification": "likely_broken_or_dormant",
+      "seasonal_reason": null,
+      "reactivation_score": 4,
+      "reactivation_reasons": [
+        "expected_event_count=2"
+      ],
+      "integration_method": "html",
+      "crawl_frequency": "daily",
+      "last_crawled_at": "2026-02-19T05:13:48.373013+00:00",
+      "active_months": [],
+      "health_tags": [],
+      "expected_event_count": 2,
+      "recent_logs": {
+        "total_considered": 10,
+        "nonzero_runs": 9,
+        "error_runs": 1
+      },
+      "history": {
+        "window_last_year": 0,
+        "outside_window_last_year": 0,
+        "last365_total": 0
+      },
+      "url": "https://www.stagedoorplayers.net"
+    },
+    {
+      "slug": "atlanta-tech-week",
+      "name": "Atlanta Tech Week",
+      "source_id": 124,
+      "classification": "likely_broken_or_dormant",
+      "seasonal_reason": null,
+      "reactivation_score": 2,
+      "reactivation_reasons": [
+        "expected_event_count=1"
+      ],
+      "integration_method": "html",
+      "crawl_frequency": "weekly",
+      "last_crawled_at": "2026-02-19T14:27:40.165157+00:00",
+      "active_months": [],
+      "health_tags": [],
+      "expected_event_count": 1,
+      "recent_logs": {
+        "total_considered": 10,
+        "nonzero_runs": 10,
+        "error_runs": 0
+      },
+      "history": {
+        "window_last_year": 0,
+        "outside_window_last_year": 0,
+        "last365_total": 0
+      },
+      "url": "https://www.atlantatechweek.com"
+    },
+    {
+      "slug": "cheshire-bridge-district",
+      "name": "Cheshire Bridge District",
+      "source_id": 430,
+      "classification": "likely_broken_or_dormant",
+      "seasonal_reason": null,
+      "reactivation_score": 2,
+      "reactivation_reasons": [
+        "expected_event_count=1"
+      ],
+      "integration_method": "html",
+      "crawl_frequency": "daily",
+      "last_crawled_at": "2026-02-19T14:38:58.51938+00:00",
+      "active_months": [],
+      "health_tags": [],
+      "expected_event_count": 1,
+      "recent_logs": {
+        "total_considered": 10,
+        "nonzero_runs": 10,
+        "error_runs": 0
+      },
+      "history": {
+        "window_last_year": 0,
+        "outside_window_last_year": 0,
+        "last365_total": 0
+      },
+      "url": "https://cheshirebridge.com"
+    },
+    {
+      "slug": "dancing-dogs-yoga",
+      "name": "Dancing Dogs Yoga",
+      "source_id": 172,
+      "classification": "likely_broken_or_dormant",
+      "seasonal_reason": null,
+      "reactivation_score": 2,
+      "reactivation_reasons": [
+        "expected_event_count=1"
+      ],
+      "integration_method": "playwright",
+      "crawl_frequency": "daily",
+      "last_crawled_at": "2026-02-19T07:06:59.53546+00:00",
+      "active_months": [],
+      "health_tags": [],
+      "expected_event_count": 1,
+      "recent_logs": {
+        "total_considered": 10,
+        "nonzero_runs": 9,
+        "error_runs": 1
+      },
+      "history": {
+        "window_last_year": 0,
+        "outside_window_last_year": 0,
+        "last365_total": 0
+      },
+      "url": "https://www.dancingdogsyoga.com/workshops"
+    },
+    {
+      "slug": "decatur-book-festival",
+      "name": "Decatur Book Festival",
+      "source_id": 65,
+      "classification": "likely_broken_or_dormant",
+      "seasonal_reason": null,
+      "reactivation_score": 2,
+      "reactivation_reasons": [
+        "expected_event_count=1"
+      ],
+      "integration_method": "jsonld_only",
+      "crawl_frequency": "weekly",
+      "last_crawled_at": "2026-02-19T14:22:15.903528+00:00",
+      "active_months": [],
+      "health_tags": [],
+      "expected_event_count": 1,
+      "recent_logs": {
+        "total_considered": 10,
+        "nonzero_runs": 8,
+        "error_runs": 2
+      },
+      "history": {
+        "window_last_year": 0,
+        "outside_window_last_year": 0,
+        "last365_total": 0
+      },
+      "url": "https://www.decaturbookfestival.com"
+    },
+    {
+      "slug": "everybody-wins-atlanta",
+      "name": "Everybody Wins Atlanta",
+      "source_id": 393,
+      "classification": "likely_broken_or_dormant",
+      "seasonal_reason": null,
+      "reactivation_score": 2,
+      "reactivation_reasons": [
+        "expected_event_count=1"
+      ],
+      "integration_method": "html",
+      "crawl_frequency": "weekly",
+      "last_crawled_at": "2026-02-19T16:15:06.593835+00:00",
+      "active_months": [],
+      "health_tags": [],
+      "expected_event_count": 1,
+      "recent_logs": {
+        "total_considered": 10,
+        "nonzero_runs": 8,
+        "error_runs": 2
+      },
+      "history": {
+        "window_last_year": 0,
+        "outside_window_last_year": 0,
+        "last365_total": 0
+      },
+      "url": "https://everybodywinsatlanta.org/events"
+    },
+    {
+      "slug": "little-shop-of-stories",
+      "name": "Little Shop of Stories",
+      "source_id": 40,
+      "classification": "likely_broken_or_dormant",
+      "seasonal_reason": null,
+      "reactivation_score": 2,
+      "reactivation_reasons": [
+        "expected_event_count=1"
+      ],
+      "integration_method": "llm_crawler",
+      "crawl_frequency": "daily",
+      "last_crawled_at": "2026-02-19T15:59:40.357905+00:00",
+      "active_months": [],
+      "health_tags": [],
+      "expected_event_count": 1,
+      "recent_logs": {
+        "total_considered": 10,
+        "nonzero_runs": 9,
+        "error_runs": 1
+      },
+      "history": {
+        "window_last_year": 0,
+        "outside_window_last_year": 0,
+        "last365_total": 0
+      },
+      "url": "https://www.littleshopofstories.com"
+    },
+    {
+      "slug": "sandy-springs-pac",
+      "name": "Sandy Springs Performing Arts Center",
+      "source_id": 103,
+      "classification": "likely_broken_or_dormant",
+      "seasonal_reason": null,
+      "reactivation_score": 2,
+      "reactivation_reasons": [
+        "expected_event_count=1"
+      ],
+      "integration_method": "playwright",
+      "crawl_frequency": "daily",
+      "last_crawled_at": "2026-02-18T15:19:17.861848+00:00",
+      "active_months": [],
+      "health_tags": [],
+      "expected_event_count": 1,
+      "recent_logs": {
+        "total_considered": 10,
+        "nonzero_runs": 8,
+        "error_runs": 2
+      },
+      "history": {
+        "window_last_year": 0,
+        "outside_window_last_year": 0,
+        "last365_total": 0
+      },
+      "url": "https://www.sandyspringsperformingarts.org"
+    },
+    {
+      "slug": "sun-dial-restaurant",
+      "name": "The Sun Dial Restaurant",
+      "source_id": 289,
+      "classification": "likely_broken_or_dormant",
+      "seasonal_reason": null,
+      "reactivation_score": 2,
+      "reactivation_reasons": [
+        "expected_event_count=1"
+      ],
+      "integration_method": "html",
+      "crawl_frequency": "weekly",
+      "last_crawled_at": "2026-02-19T14:30:16.726814+00:00",
+      "active_months": [],
+      "health_tags": [],
+      "expected_event_count": 1,
+      "recent_logs": {
+        "total_considered": 10,
+        "nonzero_runs": 10,
+        "error_runs": 0
+      },
+      "history": {
+        "window_last_year": 0,
+        "outside_window_last_year": 0,
+        "last365_total": 0
+      },
+      "url": "https://www.sundialrestaurant.com"
+    },
+    {
+      "slug": "three-taverns",
+      "name": "Three Taverns Craft Brewery",
+      "source_id": 116,
+      "classification": "likely_broken_or_dormant",
+      "seasonal_reason": null,
+      "reactivation_score": 2,
+      "reactivation_reasons": [
+        "expected_event_count=1"
+      ],
+      "integration_method": "html",
+      "crawl_frequency": "daily",
+      "last_crawled_at": "2026-02-19T12:20:08.827374+00:00",
+      "active_months": [],
+      "health_tags": [],
+      "expected_event_count": 1,
+      "recent_logs": {
+        "total_considered": 10,
+        "nonzero_runs": 10,
+        "error_runs": 0
+      },
+      "history": {
+        "window_last_year": 0,
+        "outside_window_last_year": 0,
+        "last365_total": 0
+      },
+      "url": "https://www.threetavernsbrewery.com"
+    },
+    {
+      "slug": "wewatchstuff",
+      "name": "WeWatchStuff",
+      "source_id": 354,
+      "classification": "likely_broken_or_dormant",
+      "seasonal_reason": null,
+      "reactivation_score": 2,
+      "reactivation_reasons": [
+        "expected_event_count=1"
+      ],
+      "integration_method": "html",
+      "crawl_frequency": "daily",
+      "last_crawled_at": "2026-02-19T06:01:07.695034+00:00",
+      "active_months": [],
+      "health_tags": [],
+      "expected_event_count": 1,
+      "recent_logs": {
+        "total_considered": 10,
+        "nonzero_runs": 9,
+        "error_runs": 1
+      },
+      "history": {
+        "window_last_year": 0,
+        "outside_window_last_year": 0,
+        "last365_total": 0
+      },
+      "url": "https://linktr.ee/wewatchstuff"
+    },
+    {
+      "slug": "fulton-county-meetings",
+      "name": "Fulton County Government Meetings",
+      "source_id": 1082,
+      "classification": "likely_broken_or_dormant",
+      "seasonal_reason": null,
+      "reactivation_score": 1,
+      "reactivation_reasons": [],
+      "integration_method": null,
+      "crawl_frequency": "daily",
+      "last_crawled_at": "2026-02-19T05:30:38.897324+00:00",
+      "active_months": [],
+      "health_tags": [],
+      "expected_event_count": 0,
+      "recent_logs": {
+        "total_considered": 5,
+        "nonzero_runs": 4,
+        "error_runs": 0
+      },
+      "history": {
+        "window_last_year": 0,
+        "outside_window_last_year": 1,
+        "last365_total": 1
+      },
+      "url": "https://fulton.legistar.com/Calendar.aspx"
+    },
+    {
+      "slug": "georgia-chess",
+      "name": "Georgia Chess Association",
+      "source_id": 291,
+      "classification": "likely_broken_or_dormant",
+      "seasonal_reason": null,
+      "reactivation_score": 1,
+      "reactivation_reasons": [],
+      "integration_method": "html",
+      "crawl_frequency": "weekly",
+      "last_crawled_at": "2026-02-19T13:50:24.102282+00:00",
+      "active_months": [],
+      "health_tags": [],
+      "expected_event_count": 0,
+      "recent_logs": {
+        "total_considered": 10,
+        "nonzero_runs": 9,
+        "error_runs": 0
+      },
+      "history": {
+        "window_last_year": 0,
+        "outside_window_last_year": 1,
+        "last365_total": 1
+      },
+      "url": "https://www.georgiachess.org"
+    },
+    {
+      "slug": "halfway-crooks",
+      "name": "Halfway Crooks",
+      "source_id": 217,
+      "classification": "likely_broken_or_dormant",
+      "seasonal_reason": null,
+      "reactivation_score": 1,
+      "reactivation_reasons": [],
+      "integration_method": "html",
+      "crawl_frequency": "weekly",
+      "last_crawled_at": "2026-02-19T06:49:06.947224+00:00",
+      "active_months": [],
+      "health_tags": [],
+      "expected_event_count": 0,
+      "recent_logs": {
+        "total_considered": 10,
+        "nonzero_runs": 8,
+        "error_runs": 0
+      },
+      "history": {
+        "window_last_year": 0,
+        "outside_window_last_year": 1,
+        "last365_total": 1
+      },
+      "url": "https://www.halfwaycrooks.com"
+    },
+    {
+      "slug": "mason-fine-art",
+      "name": "Mason Fine Art",
+      "source_id": 239,
+      "classification": "likely_broken_or_dormant",
+      "seasonal_reason": null,
+      "reactivation_score": 0,
+      "reactivation_reasons": [],
+      "integration_method": "llm_crawler",
+      "crawl_frequency": "weekly",
+      "last_crawled_at": "2026-02-18T15:20:43.76586+00:00",
+      "active_months": [],
+      "health_tags": [],
+      "expected_event_count": 0,
+      "recent_logs": {
+        "total_considered": 10,
+        "nonzero_runs": 2,
+        "error_runs": 1
+      },
+      "history": {
+        "window_last_year": 0,
+        "outside_window_last_year": 0,
+        "last365_total": 0
+      },
+      "url": "https://www.masonfineart.com"
+    }
+  ]
+}

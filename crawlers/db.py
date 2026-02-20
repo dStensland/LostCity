@@ -27,6 +27,11 @@ from posters import get_metadata_for_film_event, extract_film_info
 from artist_images import get_info_for_music_event
 from date_utils import MAX_FUTURE_DAYS_DEFAULT
 from show_signals import derive_show_signals
+from planning_capabilities import (
+    derive_capability_snapshot,
+    attach_capability_metadata,
+)
+from utils import is_likely_non_event_image
 from closed_venues import (
     CLOSED_VENUE_NOTE,
     CLOSED_VENUE_SLUGS,
@@ -180,6 +185,7 @@ _BLURHASH_EXECUTOR = ThreadPoolExecutor(max_workers=2, thread_name_prefix="blurh
 _EVENTS_HAS_SHOW_SIGNAL_COLUMNS: Optional[bool] = None
 _EVENTS_HAS_FILM_IDENTITY_COLUMNS: Optional[bool] = None
 _EVENTS_HAS_CONTENT_KIND_COLUMN: Optional[bool] = None
+_EVENTS_HAS_FIELD_METADATA_COLUMNS: Optional[bool] = None
 _VENUES_HAS_LOCATION_DESIGNATOR: Optional[bool] = None
 _WRITES_ENABLED = True
 _WRITE_SKIP_REASON = ""
@@ -215,11 +221,12 @@ def _log_write_skip(operation: str) -> None:
 
 def reset_client() -> None:
     """Reset cached DB client and per-process caches."""
-    global _client, _EVENTS_HAS_SHOW_SIGNAL_COLUMNS, _EVENTS_HAS_FILM_IDENTITY_COLUMNS, _EVENTS_HAS_CONTENT_KIND_COLUMN
+    global _client, _EVENTS_HAS_SHOW_SIGNAL_COLUMNS, _EVENTS_HAS_FILM_IDENTITY_COLUMNS, _EVENTS_HAS_CONTENT_KIND_COLUMN, _EVENTS_HAS_FIELD_METADATA_COLUMNS
     _client = None
     _EVENTS_HAS_SHOW_SIGNAL_COLUMNS = None
     _EVENTS_HAS_FILM_IDENTITY_COLUMNS = None
     _EVENTS_HAS_CONTENT_KIND_COLUMN = None
+    _EVENTS_HAS_FIELD_METADATA_COLUMNS = None
     _SOURCE_CACHE.clear()
     _VENUE_CACHE.clear()
 
@@ -487,6 +494,35 @@ def events_support_content_kind_column() -> bool:
             raise
 
     return bool(_EVENTS_HAS_CONTENT_KIND_COLUMN)
+
+
+def events_support_field_metadata_columns() -> bool:
+    """
+    Detect whether events.field_provenance and events.field_confidence exist.
+
+    Keeps crawler writes backward compatible before schema catches up.
+    """
+    global _EVENTS_HAS_FIELD_METADATA_COLUMNS
+    if _EVENTS_HAS_FIELD_METADATA_COLUMNS is not None:
+        return _EVENTS_HAS_FIELD_METADATA_COLUMNS
+
+    client = get_client()
+    try:
+        client.table("events").select("field_provenance,field_confidence").limit(1).execute()
+        _EVENTS_HAS_FIELD_METADATA_COLUMNS = True
+    except Exception as e:
+        error_str = str(e).lower()
+        if "does not exist" in error_str and (
+            "field_provenance" in error_str or "field_confidence" in error_str
+        ):
+            _EVENTS_HAS_FIELD_METADATA_COLUMNS = False
+            logger.warning(
+                "events metadata columns missing; field_provenance/field_confidence enrichment disabled."
+            )
+        else:
+            raise
+
+    return bool(_EVENTS_HAS_FIELD_METADATA_COLUMNS)
 
 
 def get_source_info(source_id: int) -> Optional[dict]:
@@ -1783,12 +1819,21 @@ def insert_event(
             if parsed:
                 event_data["_parsed_artists"] = parsed
 
+    # Discard likely logo/placeholder assets before fallback selection.
+    if is_likely_non_event_image(event_data.get("image_url")):
+        if event_data.get("image_url"):
+            logger.debug(
+                "Discarding low-quality image URL for event: %s",
+                event_data.get("title", "")[:80],
+            )
+        event_data["image_url"] = None
+
     # Venue image fallback: if event still has no image after film/music enrichment,
     # use the venue's image. Covers venues like Callanwolde, MJCCA, GWCC where
     # crawlers don't extract per-event images but the venue has a good photo.
     if not event_data.get("image_url") and venue:
         venue_image = venue.get("image_url")
-        if venue_image:
+        if venue_image and not is_likely_non_event_image(venue_image):
             event_data["image_url"] = venue_image
             logger.debug(
                 f"Using venue image fallback for: {event_data.get('title', '')[:50]}"
@@ -2043,6 +2088,22 @@ def insert_event(
     else:
         for field in signal_fields:
             event_data.pop(field, None)
+
+    # Derive cross-portal planning/quality capabilities into JSON metadata columns.
+    # This establishes a reusable capability layer before category-specific crawlers.
+    if events_support_field_metadata_columns():
+        capability_snapshot = derive_capability_snapshot(
+            event_data,
+            source_info=source_info,
+        )
+        attach_capability_metadata(
+            event_data,
+            capability_snapshot,
+            source_info=source_info,
+        )
+    else:
+        event_data.pop("field_provenance", None)
+        event_data.pop("field_confidence", None)
 
     # Pop transient and deprecated fields before DB insert
     parsed_artists_for_insert = event_data.pop("_parsed_artists", None)
@@ -2483,6 +2544,17 @@ def _update_event_record(client: Client, event_id: int, event_data: dict):
     return client.table("events").update(event_data).eq("id", event_id).execute()
 
 
+def _should_use_incoming_image(existing_url: Optional[str], incoming_url: Optional[str]) -> bool:
+    """True when incoming image should replace existing event image."""
+    if not incoming_url:
+        return False
+    if is_likely_non_event_image(incoming_url):
+        return False
+    if not existing_url:
+        return True
+    return is_likely_non_event_image(existing_url) and existing_url != incoming_url
+
+
 def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
     """Compare existing DB event with incoming crawler data and update if incoming is better.
 
@@ -2518,7 +2590,7 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
     # --- Image: fill missing, or replace venue-fallback with event-specific ---
     existing_img = existing.get("image_url") or ""
     incoming_img = incoming.get("image_url") or ""
-    if incoming_img and not existing_img:
+    if _should_use_incoming_image(existing_img, incoming_img):
         updates["image_url"] = incoming_img
 
     # --- Times: fill missing ---
@@ -2965,8 +3037,14 @@ def compute_event_update(
     ):
         update_data["description"] = incoming_desc
 
-    # Image / ticket / price if missing
-    for field in ("image_url", "ticket_url", "price_note"):
+    # Image quality-aware updates.
+    existing_img = existing.get("image_url")
+    incoming_img = incoming_with_signals.get("image_url")
+    if _should_use_incoming_image(existing_img, incoming_img):
+        update_data["image_url"] = incoming_img
+
+    # Ticket/price note if missing
+    for field in ("ticket_url", "price_note"):
         if incoming_with_signals.get(field) and not existing.get(field):
             update_data[field] = incoming_with_signals.get(field)
     for field in ("price_min", "price_max"):

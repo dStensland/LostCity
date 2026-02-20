@@ -19,6 +19,20 @@ from utils import parse_price
 
 logger = logging.getLogger(__name__)
 
+# Multi-week umbrella events that are already tracked in the festivals table.
+# These are wrapper entries with no useful detail — the individual programming
+# events within them are what we want.
+SKIP_UMBRELLA_KEYWORDS = [
+    "lunar new year",
+    "chinese new year",
+    "stone mountain christmas",
+    "pumpkin festival",
+    "latino family festival",
+]
+
+# Minimum span (in days) for an event to be considered an umbrella festival wrapper.
+UMBRELLA_MIN_DAYS = 7
+
 BASE_URL = "https://stonemountainpark.com"
 API_URL = f"{BASE_URL}/wp-json/tribe/events/v1/events"
 
@@ -95,6 +109,17 @@ def categorize_event(title: str, description: str) -> tuple[str, Optional[str], 
 
     # Default for park events
     return "family", None, tags
+
+
+def is_umbrella_festival(title: str, start_dt: datetime, end_dt: Optional[datetime]) -> bool:
+    """Check if an event is a multi-week festival wrapper that should be skipped."""
+    if not end_dt:
+        return False
+    span_days = (end_dt.date() - start_dt.date()).days
+    if span_days < UMBRELLA_MIN_DAYS:
+        return False
+    title_lower = title.lower()
+    return any(kw in title_lower for kw in SKIP_UMBRELLA_KEYWORDS)
 
 
 def strip_html(html_text: str) -> str:
@@ -177,6 +202,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     # Parse end time if available
                     end_time = None
                     end_date = None
+                    end_dt = None
                     if end_date_str:
                         try:
                             end_dt = datetime.strptime(end_date_str, "%Y-%m-%d %H:%M:%S")
@@ -185,6 +211,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 end_date = end_dt.strftime("%Y-%m-%d")
                         except ValueError:
                             pass
+
+                    # Skip umbrella festival wrappers (tracked in festivals table)
+                    if is_umbrella_festival(title, start_dt, end_dt):
+                        logger.debug(f"Skipping umbrella festival: {title}")
+                        continue
 
                     # Check for all-day event
                     is_all_day = event.get("all_day", False)

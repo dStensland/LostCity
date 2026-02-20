@@ -15,10 +15,30 @@ _anthropic_client = None
 _openai_client = None
 
 
-def _resolve_provider() -> str:
+def _llm_timeout_seconds() -> float:
     cfg = get_config()
-    provider = (cfg.llm.provider or "anthropic").strip().lower()
+    timeout = getattr(cfg.crawler, "request_timeout", 30)
+    try:
+        parsed = float(timeout)
+    except (TypeError, ValueError):
+        return 30.0
+    return max(5.0, parsed)
+
+
+def _llm_max_retries() -> int:
+    cfg = get_config()
+    retries = getattr(cfg.crawler, "max_retries", 2)
+    try:
+        parsed = int(retries)
+    except (TypeError, ValueError):
+        return 2
+    return max(0, parsed)
+
+
+def _normalize_provider(raw_provider: Optional[str]) -> str:
+    provider = (raw_provider or "anthropic").strip().lower()
     if provider in ("", "auto"):
+        cfg = get_config()
         if cfg.llm.openai_api_key:
             return "openai"
         if cfg.llm.anthropic_api_key:
@@ -31,6 +51,13 @@ def _resolve_provider() -> str:
     return provider
 
 
+def _resolve_provider(provider_override: Optional[str] = None) -> str:
+    if provider_override:
+        return _normalize_provider(provider_override)
+    cfg = get_config()
+    return _normalize_provider(cfg.llm.provider)
+
+
 def _get_anthropic_client():
     global _anthropic_client
     if _anthropic_client is None:
@@ -41,7 +68,11 @@ def _get_anthropic_client():
         cfg = get_config()
         if not cfg.llm.anthropic_api_key:
             raise RuntimeError("ANTHROPIC_API_KEY is not set")
-        _anthropic_client = Anthropic(api_key=cfg.llm.anthropic_api_key)
+        _anthropic_client = Anthropic(
+            api_key=cfg.llm.anthropic_api_key,
+            timeout=_llm_timeout_seconds(),
+            max_retries=_llm_max_retries(),
+        )
     return _anthropic_client
 
 
@@ -55,25 +86,35 @@ def _get_openai_client():
         cfg = get_config()
         if not cfg.llm.openai_api_key:
             raise RuntimeError("OPENAI_API_KEY is not set")
-        _openai_client = OpenAI(api_key=cfg.llm.openai_api_key)
+        _openai_client = OpenAI(
+            api_key=cfg.llm.openai_api_key,
+            timeout=_llm_timeout_seconds(),
+            max_retries=_llm_max_retries(),
+        )
     return _openai_client
 
 
-def generate_text(system_prompt: str, user_message: str) -> str:
+def generate_text(
+    system_prompt: str,
+    user_message: str,
+    provider_override: Optional[str] = None,
+    model_override: Optional[str] = None,
+) -> str:
     """
     Generate text from the configured LLM provider.
     Returns raw text output.
     """
     cfg = get_config()
-    provider = _resolve_provider()
+    provider = _resolve_provider(provider_override)
 
     if provider == "openai":
         client = _get_openai_client()
-        model = cfg.llm.openai_model or "gpt-4o-mini"
+        model = model_override or cfg.llm.openai_model or "gpt-4o-mini"
         response = client.chat.completions.create(
             model=model,
             temperature=cfg.llm.temperature,
             max_tokens=cfg.llm.max_tokens,
+            timeout=_llm_timeout_seconds(),
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_message},
@@ -85,11 +126,12 @@ def generate_text(system_prompt: str, user_message: str) -> str:
     if provider == "anthropic":
         client = _get_anthropic_client()
         response = client.messages.create(
-            model=cfg.llm.model,
+            model=model_override or cfg.llm.model,
             max_tokens=cfg.llm.max_tokens,
             temperature=cfg.llm.temperature,
             system=system_prompt,
             messages=[{"role": "user", "content": user_message}],
+            timeout=_llm_timeout_seconds(),
         )
         if response.content:
             return response.content[0].text
@@ -132,6 +174,7 @@ def generate_text_with_images(
         model=model,
         temperature=cfg.llm.temperature,
         max_tokens=cfg.llm.max_tokens,
+        timeout=_llm_timeout_seconds(),
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": content},

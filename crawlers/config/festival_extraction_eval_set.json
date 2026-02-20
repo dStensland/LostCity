@@ -1,0 +1,41 @@
+{
+  "generated_at": "2026-02-20",
+  "notes": "Fixed benchmark set for comparing LLM extraction quality on festival schedule pages.",
+  "cases": [
+    {
+      "slug": "render-atl",
+      "name": "Render ATL",
+      "url": "https://www.renderatl.com/schedule",
+      "expected_min_sessions": 20,
+      "expected_min_timed_sessions": 15
+    },
+    {
+      "slug": "out-on-film",
+      "name": "Out on Film",
+      "url": "https://outonfilm.org/",
+      "expected_min_sessions": 3,
+      "expected_min_timed_sessions": 0
+    },
+    {
+      "slug": "juneteenth-atlanta",
+      "name": "Juneteenth Atlanta Parade & Music Festival",
+      "url": "https://www.juneteenthatl.com/",
+      "expected_min_sessions": 2,
+      "expected_min_timed_sessions": 0
+    },
+    {
+      "slug": "dragon-con",
+      "name": "Dragon Con",
+      "url": "https://www.dragoncon.org/program",
+      "expected_min_sessions": 1,
+      "expected_min_timed_sessions": 0
+    },
+    {
+      "slug": "atlanta-science-festival",
+      "name": "Atlanta Science Festival",
+      "url": "https://atlantasciencefestival.org/",
+      "expected_min_sessions": 1,
+      "expected_min_timed_sessions": 0
+    }
+  ]
+}

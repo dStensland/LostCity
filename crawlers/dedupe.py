@@ -11,6 +11,7 @@ from typing import Optional
 from rapidfuzz import fuzz
 from extract import EventData
 from db import find_event_by_hash, find_events_by_date_and_venue_family
+from utils import is_likely_non_event_image
 
 logger = logging.getLogger(__name__)
 
@@ -232,9 +233,17 @@ def merge_event_data(existing: dict, new: EventData) -> dict:
     if new.price_note and not existing.get("price_note"):
         merged["price_note"] = new.price_note
 
-    # Add image if missing
-    if new.image_url and not existing.get("image_url"):
-        merged["image_url"] = new.image_url
+    # Add image if missing, or upgrade a known low-quality placeholder/logo image.
+    if new.image_url:
+        existing_img = existing.get("image_url")
+        if not existing_img:
+            if not is_likely_non_event_image(new.image_url):
+                merged["image_url"] = new.image_url
+        elif (
+            is_likely_non_event_image(existing_img)
+            and not is_likely_non_event_image(new.image_url)
+        ):
+            merged["image_url"] = new.image_url
 
     # Add ticket URL if missing
     if new.ticket_url and not existing.get("ticket_url"):

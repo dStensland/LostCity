@@ -5,7 +5,10 @@ Known for one of the largest Korean communities in the Southeast.
 Sources: Eater Atlanta, Atlanta Magazine, Explore Gwinnett
 """
 
+import argparse
+
 from db import get_client
+from destination_import_flow import add_enrichment_args, run_post_import_enrichment
 
 DESTINATIONS = [
     # === KOREAN BBQ ===
@@ -230,6 +233,12 @@ DESTINATIONS = [
 
 
 def main():
+    parser = argparse.ArgumentParser(
+        description="Import Duluth destinations and run enrichment"
+    )
+    add_enrichment_args(parser)
+    args = parser.parse_args()
+
     client = get_client()
     added = 0
 
@@ -243,6 +252,11 @@ def main():
 
     print(f"\nImported {added}/{len(DESTINATIONS)} Duluth destinations")
     print("🍜 Seoul of the South represented!")
+    run_post_import_enrichment(
+        slugs=[dest["slug"] for dest in DESTINATIONS],
+        skip_enrich=args.skip_enrich,
+        enrich_dry_run=args.enrich_dry_run,
+    )
 
 
 if __name__ == "__main__":

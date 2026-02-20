@@ -13,10 +13,16 @@ import argparse
 import logging
 import os
 import random
+import re
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FuturesTimeoutError
 from importlib import import_module
+from typing import Optional
+from urllib.parse import urljoin, urlparse, urlunparse
+
+import requests
+from bs4 import BeautifulSoup
 
 from db import (
     get_active_sources,
@@ -78,6 +84,31 @@ CHAIN_CINEMA_TIMEOUT_SLUGS = {
 BLOCKED_SOURCE_SLUGS = set(CLOSED_SOURCE_SLUGS)
 
 
+def _run_profile_fallback(source: dict) -> Optional[tuple[int, int, int]]:
+    """
+    Run the profile pipeline when a source has no dedicated module.
+
+    This keeps profile-backed sources crawlable without requiring one-off
+    Python modules for each slug.
+    """
+    from pipeline.loader import find_profile_path
+    from pipeline_main import run_profile
+
+    slug = source["slug"]
+    profile_path = find_profile_path(slug)
+    if not profile_path:
+        return None
+
+    # Festivals are session containers and should be handled by
+    # run_festival_schedules(), not profile discovery.
+    if (source.get("source_type") or "").lower() == "festival":
+        return None
+
+    logger.info("Using profile fallback for source without module: %s", slug)
+    result = run_profile(slug, dry_run=not writes_enabled(), limit=None)
+    return result.events_found, result.events_new, result.events_updated
+
+
 def get_source_timeout_seconds(slug: str) -> int:
     """Return timeout budget for a source slug."""
     if slug in CHAIN_CINEMA_TIMEOUT_SLUGS:
@@ -119,10 +150,14 @@ SOURCE_OVERRIDES = {
     
     # Name mismatches (slug != filename.replace("_", "-"))
     "all-fired-up-art": "sources.all_fired_up",
+    "aisle-5": "sources.aisle5",
     "artsatl-calendar": "sources.artsatl",
     "atlanta-botanical-garden": "sources.atlanta_botanical",
     "atlanta-recurring-social": "sources.recurring_social_events",
+    "blakes-on-the-park": "sources.blakes_on_park",
     "blue-merle-studios": "sources.blue_merle",
+    "center-civic-innovation": "sources.civic_innovation_atl",
+    "chastain-arts-center": "sources.chastain_arts",
     "city-winery-atlanta": "sources.city_winery",
     "ebenezer-baptist-church": "sources.ebenezer_church",
     "ellis-station-candle-co": "sources.ellis_station",
@@ -131,12 +166,17 @@ SOURCE_OVERRIDES = {
     "georgian-terrace-hotel": "sources.georgian_terrace",
     "goat-farm-arts-center": "sources.goat_farm",
     "hambidge-center": "sources.hambidge",
+    "hammonds-house-museum": "sources.hammonds_house",
     "illuminarium-atlanta": "sources.illuminarium",
     "le-colonial-atlanta": "sources.le_colonial",
+    "lwv-atlanta-fulton": "sources.lwv_atlanta",
+    "michael-c-carlos-museum": "sources.carlos_museum",
+    "millennium-gate-museum": "sources.millennium_gate",
     "ncg-cinemas-atlanta": "sources.ncg_atlanta",
     "sandler-hudson-gallery": "sources.sandler_hudson",
     "silverspot-cinema-atlanta": "sources.silverspot_atlanta",
     "six-flags-over-georgia": "sources.six_flags",
+    "spruill-center": "sources.spruill_center_for_the_arts",
     "skylounge-glenn-hotel": "sources.skylounge_glenn",
     "the-bakery-atl": "sources.the_bakery",
     "the-gathering-spot": "sources.gathering_spot",
@@ -162,6 +202,9 @@ def run_crawler(source: dict) -> tuple[int, int, int]:
     modules = get_source_modules()
 
     if slug not in modules:
+        fallback_result = _run_profile_fallback(source)
+        if fallback_result is not None:
+            return fallback_result
         logger.warning(f"No crawler implemented for source: {slug}")
         return 0, 0, 0
 
@@ -312,26 +355,326 @@ def run_festival_schedules() -> dict:
         "sessions_inserted": 0,
     }
 
+    slugs = [f["slug"] for f in festivals if f.get("slug")]
+    source_url_by_slug: dict[str, str] = {}
+    if slugs:
+        try:
+            source_rows = (
+                client.table("sources")
+                .select("slug,url")
+                .in_("slug", slugs)
+                .execute()
+            ).data or []
+            source_url_by_slug = {
+                row.get("slug"): row.get("url")
+                for row in source_rows
+                if row.get("slug") and row.get("url")
+            }
+        except Exception as e:
+            logger.debug("Could not load source URLs for festival schedules: %s", e)
+
     for f in festivals:
         slug = f["slug"]
         website = f["website"]
         stats["festivals_processed"] += 1
 
+        profile_urls: list[str] = []
         try:
-            found, new, _skipped = crawl_festival_schedule(
-                slug=slug, url=website, render_js=False, use_llm=False, dry_run=False,
-            )
-            stats["sessions_found"] += found
-            stats["sessions_inserted"] += new
+            from pipeline.loader import load_profile
+
+            profile = load_profile(slug)
+            profile_urls = list(profile.discovery.urls or [])
+        except Exception:
+            profile_urls = []
+
+        source_url = source_url_by_slug.get(slug)
+        candidate_urls = _build_festival_schedule_candidate_urls(
+            website=website,
+            source_url=source_url,
+            profile_urls=profile_urls,
+            discover_links=True,
+        )
+
+        festival_found = 0
+        festival_new = 0
+
+        for candidate_url in candidate_urls:
+            try:
+                found, new, _skipped = crawl_festival_schedule(
+                    slug=slug,
+                    url=candidate_url,
+                    render_js=False,
+                    use_llm=False,
+                    dry_run=False,
+                )
+            except Exception as e:
+                logger.debug("  Festival %s candidate failed (%s): %s", slug, candidate_url, e)
+                continue
+
+            festival_found += found
+            festival_new += new
             if found > 0:
-                stats["festivals_with_data"] += 1
-                logger.info(f"  Festival {slug}: {found} sessions, {new} new")
-        except Exception as e:
-            logger.debug(f"  Festival {slug}: {e}")
+                logger.info(
+                    "  Festival %s: %s sessions, %s new (%s)",
+                    slug,
+                    found,
+                    new,
+                    candidate_url,
+                )
+                break
+
+        stats["sessions_found"] += festival_found
+        stats["sessions_inserted"] += festival_new
+        if festival_found > 0:
+            stats["festivals_with_data"] += 1
 
         time.sleep(0.5)
 
     return stats
+
+
+_FESTIVAL_SCHEDULE_HINTS = (
+    "/schedule",
+    "/lineup",
+    "/program",
+    "/agenda",
+    "/sessions",
+    "/calendar",
+    "/events",
+)
+
+_FESTIVAL_DISCOVERY_HINT_TOKENS = (
+    "schedule",
+    "lineup",
+    "program",
+    "agenda",
+    "session",
+    "calendar",
+    "events",
+    "panels",
+    "tracks",
+    "workshops",
+    "programming",
+    "timetable",
+)
+
+_FESTIVAL_DISCOVERY_SKIP_TOKENS = (
+    "buy",
+    "ticket",
+    "membership",
+    "hotel",
+    "vendor",
+    "sponsor",
+    "contact",
+    "press",
+    "faq",
+    "privacy",
+    "terms",
+    "donate",
+    "volunteer",
+)
+
+
+def _normalized_host(host: str) -> str:
+    return (host or "").strip().lower().removeprefix("www.")
+
+
+def _is_same_site(base_host: str, candidate_host: str) -> bool:
+    base = _normalized_host(base_host)
+    candidate = _normalized_host(candidate_host)
+    if not base or not candidate:
+        return False
+    return candidate == base or candidate.endswith(f".{base}")
+
+
+def _discover_festival_schedule_links(
+    seed_urls: list[str],
+    max_links: int = 24,
+) -> list[str]:
+    """Discover likely schedule/program links from seed pages on the same site."""
+    if not seed_urls:
+        return []
+
+    cfg = get_config()
+    headers = {
+        "User-Agent": cfg.crawler.user_agent,
+        # Avoid brotli-only responses that can be unreadable without optional decoders.
+        "Accept-Encoding": "gzip, deflate",
+    }
+
+    discovered: list[str] = []
+    seen: set[str] = set()
+
+    for seed_url in seed_urls[:3]:
+        if len(discovered) >= max_links:
+            break
+        try:
+            resp = requests.get(
+                seed_url,
+                headers=headers,
+                timeout=cfg.crawler.request_timeout,
+                allow_redirects=True,
+            )
+            resp.raise_for_status()
+        except Exception as exc:
+            logger.debug("Festival link discovery fetch failed for %s: %s", seed_url, exc)
+            continue
+
+        content_type = (resp.headers.get("content-type") or "").lower()
+        if "html" not in content_type:
+            continue
+
+        base_url = resp.url or seed_url
+        base_host = urlparse(base_url).netloc
+        soup = BeautifulSoup(resp.text, "lxml")
+
+        for a in soup.find_all("a", href=True):
+            href = (a.get("href") or "").strip()
+            if not href or href.startswith("#"):
+                continue
+            if href.lower().startswith(("mailto:", "tel:", "javascript:")):
+                continue
+
+            candidate = _normalize_schedule_url(urljoin(base_url, href))
+            if not candidate or candidate in seen:
+                continue
+
+            parsed = urlparse(candidate)
+            if not _is_same_site(base_host, parsed.netloc):
+                continue
+
+            path = (parsed.path or "/").lower()
+            if re.search(r"\.(?:jpg|jpeg|png|gif|webp|pdf|zip|ics|xml)$", path):
+                continue
+
+            anchor_text = (a.get_text(" ", strip=True) or "").lower()
+            haystack = f"{candidate.lower()} {anchor_text}"
+            if not any(token in haystack for token in _FESTIVAL_DISCOVERY_HINT_TOKENS):
+                continue
+            if any(token in haystack for token in _FESTIVAL_DISCOVERY_SKIP_TOKENS):
+                continue
+
+            seen.add(candidate)
+            discovered.append(candidate)
+            if len(discovered) >= max_links:
+                break
+
+    return discovered
+
+
+def _normalize_schedule_url(url: str) -> str:
+    """Normalize URL for crawl dedupe without stripping useful query params."""
+    raw = (url or "").strip()
+    if not raw:
+        return ""
+    parsed = urlparse(raw)
+    if not parsed.scheme:
+        parsed = urlparse(f"https://{raw.lstrip('/')}")
+    if not parsed.netloc:
+        return ""
+
+    path = parsed.path or "/"
+    if path != "/":
+        path = path.rstrip("/") or "/"
+
+    cleaned = parsed._replace(path=path, fragment="")
+    return urlunparse(cleaned)
+
+
+def _looks_like_schedule_url(url: str) -> bool:
+    lower = (url or "").lower()
+    return any(
+        marker in lower
+        for marker in ("schedule", "lineup", "program", "agenda", "session", "calendar")
+    )
+
+
+def _build_festival_schedule_candidate_urls(
+    website: str,
+    source_url: Optional[str] = None,
+    profile_urls: Optional[list[str]] = None,
+    max_candidates: int = 6,
+    discover_links: bool = False,
+) -> list[str]:
+    """Build prioritized candidate URLs for festival session extraction."""
+    raw_candidates: list[str] = [website]
+    if source_url:
+        raw_candidates.append(source_url)
+    if profile_urls:
+        raw_candidates.extend(profile_urls)
+
+    seed_urls: list[str] = []
+    for raw_url in raw_candidates:
+        seed = _normalize_schedule_url(raw_url)
+        if seed and seed not in seed_urls:
+            seed_urls.append(seed)
+
+    expanded: list[str] = []
+    for raw_url in raw_candidates:
+        normalized = _normalize_schedule_url(raw_url)
+        if not normalized:
+            continue
+        expanded.append(normalized)
+
+        # If URL already points to a likely schedule/program page, don't fan out.
+        if _looks_like_schedule_url(normalized):
+            continue
+
+        base_for_join = normalized if normalized.endswith("/") else f"{normalized}/"
+        for suffix in _FESTIVAL_SCHEDULE_HINTS:
+            expanded.append(_normalize_schedule_url(urljoin(base_for_join, suffix.lstrip("/"))))
+
+    if discover_links:
+        discovered = _discover_festival_schedule_links(seed_urls, max_links=max_candidates * 4)
+        if discovered:
+            logger.debug("Festival URL discovery added %s links for %s", len(discovered), website)
+            expanded.extend(discovered)
+
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for url in expanded:
+        if not url or url in seen:
+            continue
+        seen.add(url)
+        deduped.append(url)
+
+    def _priority(url: str) -> tuple[int, int]:
+        parsed = urlparse(url)
+        path = parsed.path or "/"
+        score = 0
+        if _looks_like_schedule_url(url):
+            score -= 10
+        if "events" in url.lower():
+            score -= 2
+        if path in ("", "/"):
+            score += 5
+        return score, len(path)
+
+    deduped.sort(key=_priority)
+    selected = deduped[:max_candidates]
+
+    # Keep at least one root URL as a fallback for non-standard schedule routing.
+    has_root = any((urlparse(url).path or "/") in ("", "/") for url in selected)
+    if not has_root:
+        root_seed = next(
+            (u for u in seed_urls if (urlparse(u).path or "/") in ("", "/")),
+            None,
+        )
+        if root_seed and root_seed not in selected:
+            if len(selected) >= max_candidates and selected:
+                selected[-1] = root_seed
+            else:
+                selected.append(root_seed)
+
+    # Preserve ordering uniqueness after fallback insertion.
+    out: list[str] = []
+    seen_out: set[str] = set()
+    for url in selected:
+        if url in seen_out:
+            continue
+        seen_out.add(url)
+        out.append(url)
+    return out
 
 
 def demote_stale_festival_dates() -> int:

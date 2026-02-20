@@ -4,10 +4,12 @@ Import Reynoldstown destinations (restaurants, bars, cafes along Georgia Ave cor
 Run once to populate the database with neighborhood spots.
 """
 
+import argparse
 import sys
 sys.path.insert(0, '.')
 
 from db import get_or_create_venue
+from destination_import_flow import add_enrichment_args, run_post_import_enrichment
 
 REYNOLDSTOWN_DESTINATIONS = [
     # Coffee & Cafes
@@ -167,6 +169,12 @@ REYNOLDSTOWN_DESTINATIONS = [
 ]
 
 def main():
+    parser = argparse.ArgumentParser(
+        description="Import Reynoldstown destinations and run enrichment"
+    )
+    add_enrichment_args(parser)
+    args = parser.parse_args()
+
     print("Importing Reynoldstown destinations...")
 
     for dest in REYNOLDSTOWN_DESTINATIONS:
@@ -177,6 +185,11 @@ def main():
             print(f"  ✗ {dest['name']}: {e}")
 
     print(f"\nImported {len(REYNOLDSTOWN_DESTINATIONS)} Reynoldstown destinations.")
+    run_post_import_enrichment(
+        slugs=[dest["slug"] for dest in REYNOLDSTOWN_DESTINATIONS],
+        skip_enrich=args.skip_enrich,
+        enrich_dry_run=args.enrich_dry_run,
+    )
 
 if __name__ == "__main__":
     main()

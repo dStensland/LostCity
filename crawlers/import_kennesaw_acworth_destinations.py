@@ -5,7 +5,10 @@ Northwest Cobb County - family-friendly suburbs with lake lifestyle.
 Sources: TripAdvisor, Atlanta Eats, local guides
 """
 
+import argparse
+
 from db import get_client
+from destination_import_flow import add_enrichment_args, run_post_import_enrichment
 
 DESTINATIONS = [
     # === KENNESAW ===
@@ -194,6 +197,12 @@ DESTINATIONS = [
 
 
 def main():
+    parser = argparse.ArgumentParser(
+        description="Import Kennesaw/Acworth destinations and run enrichment"
+    )
+    add_enrichment_args(parser)
+    args = parser.parse_args()
+
     client = get_client()
     added = 0
 
@@ -206,6 +215,11 @@ def main():
             print(f"✗ {dest['name']}: {e}")
 
     print(f"\nImported {added}/{len(DESTINATIONS)} Kennesaw/Acworth destinations")
+    run_post_import_enrichment(
+        slugs=[dest["slug"] for dest in DESTINATIONS],
+        skip_enrich=args.skip_enrich,
+        enrich_dry_run=args.enrich_dry_run,
+    )
 
 
 if __name__ == "__main__":

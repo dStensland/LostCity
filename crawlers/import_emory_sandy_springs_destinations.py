@@ -22,7 +22,9 @@ Usage:
 """
 
 import logging
+import argparse
 from db import get_or_create_venue, get_venue_by_slug
+from destination_import_flow import add_enrichment_args, run_post_import_enrichment
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
@@ -496,6 +498,12 @@ ESSENTIALS = [
 
 def main():
     """Import all Emory Saint Joseph's Hospital area destinations to database."""
+    parser = argparse.ArgumentParser(
+        description="Import Emory Sandy Springs destinations and run enrichment"
+    )
+    add_enrichment_args(parser)
+    args = parser.parse_args()
+
     added = 0
     skipped = 0
 
@@ -533,6 +541,12 @@ def main():
     logger.info(f"  Hotels: {len(HOTELS)}")
     logger.info(f"  Essentials: {len(ESSENTIALS)}")
     logger.info(f"  Total: {len(all_venues)}")
+    run_post_import_enrichment(
+        slugs=[venue["slug"] for venue in all_venues],
+        skip_enrich=args.skip_enrich,
+        enrich_dry_run=args.enrich_dry_run,
+        logger=logger,
+    )
 
 
 if __name__ == "__main__":

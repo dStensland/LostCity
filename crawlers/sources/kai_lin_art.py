@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import re
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 from playwright.sync_api import sync_playwright
@@ -129,10 +129,16 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     try:
                         month_str = month[:3] if len(month) > 3 else month
                         dt = datetime.strptime(f"{month_str} {day} {year}", "%b %d %Y")
-                        if dt.date() < datetime.now().date():
+                        # If no explicit year was in the text, assume current/next year
+                        if not date_match.group(3) and dt.date() < datetime.now().date():
                             dt = datetime.strptime(f"{month_str} {day} {int(year) + 1}", "%b %d %Y")
                         start_date = dt.strftime("%Y-%m-%d")
                     except ValueError:
+                        i += 1
+                        continue
+
+                    # Skip past exhibitions (more than 6 months ago)
+                    if dt.date() < (datetime.now() - timedelta(days=180)).date():
                         i += 1
                         continue
 

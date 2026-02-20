@@ -21,7 +21,7 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
-from utils import extract_images_from_page, extract_event_links, find_event_url, enrich_event_record
+from utils import extract_images_from_page, extract_event_links, find_event_url, enrich_event_record, parse_date_range
 
 logger = logging.getLogger(__name__)
 
@@ -335,6 +335,20 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 event_record["price_max"] = event_record.get("price_max") or 0
                             else:
                                 event_record["is_free"] = False
+
+                        # Detect exhibits and set content_kind
+                        _exhibit_kw = ["exhibit", "exhibition", "on view", "collection", "installation"]
+                        _check = f"{event_record.get('title', '')} {event_record.get('description') or ''}".lower()
+                        if any(kw in _check for kw in _exhibit_kw):
+                            event_record["content_kind"] = "exhibit"
+                            event_record["is_all_day"] = True
+                            event_record["start_time"] = None
+
+                        # Extract end_date from date range patterns
+                        range_text = f"{event_record.get('title', '')} {event_record.get('description') or ''}"
+                        _, range_end = parse_date_range(range_text)
+                        if range_end:
+                            event_record["end_date"] = range_end
 
                         existing = find_event_by_hash(content_hash)
                         if existing:

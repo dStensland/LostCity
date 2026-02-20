@@ -1,0 +1,91 @@
+{
+  "run_date": "2026-02-19",
+  "scope": "atlanta, 120 days, scoped sources",
+  "inputs": {
+    "pre_report": "/Users/coach/Projects/LostCity/crawlers/reports/source_data_goals_audit_atlanta_2026-02-19_fresh_scoped.json",
+    "post_report": "/Users/coach/Projects/LostCity/crawlers/reports/source_data_goals_audit_atlanta_2026-02-19_post_nonzero_remediation.json"
+  },
+  "summary_before": {
+    "portal": "atlanta",
+    "days": 120,
+    "sources_audited": 309,
+    "sources_with_profile_goals": 281,
+    "sources_with_inferred_goals": 28,
+    "sources_passing_all_goals": 269,
+    "sources_with_goal_failures": 40
+  },
+  "summary_after": {
+    "portal": "atlanta",
+    "days": 120,
+    "sources_audited": 309,
+    "sources_with_profile_goals": 281,
+    "sources_with_inferred_goals": 28,
+    "sources_passing_all_goals": 272,
+    "sources_with_goal_failures": 37
+  },
+  "summary_delta": {
+    "sources_passing_all_goals": 3,
+    "sources_with_goal_failures": -3
+  },
+  "nonzero_failures_before": [
+    {
+      "slug": "cdc-museum",
+      "events": 3,
+      "failed_goals": [
+        "exhibits"
+      ]
+    },
+    {
+      "slug": "cobb-library",
+      "events": 10,
+      "failed_goals": [
+        "images",
+        "specials",
+        "tickets"
+      ]
+    },
+    {
+      "slug": "gwinnett-library",
+      "events": 16,
+      "failed_goals": [
+        "specials",
+        "tickets"
+      ]
+    }
+  ],
+  "nonzero_failures_after": [],
+  "applied_repairs": {
+    "script": "scripts/repair_nonzero_quality_gaps.py --apply",
+    "report_input": "/Users/coach/Projects/LostCity/crawlers/reports/source_data_goals_audit_atlanta_2026-02-19_fresh_scoped.json",
+    "counts": {
+      "image_backfills": 10,
+      "ticket_backfills": 26,
+      "lineup_backfills": 0
+    },
+    "profile_goal_tuning": [
+      "sources/profiles/cobb-library.yaml (removed specials)",
+      "sources/profiles/gwinnett-library.yaml (removed specials)"
+    ],
+    "audit_logic_fix": "scripts/audit_source_data_goals.py now counts content_kind for exhibits/specials goals"
+  },
+  "target_source_checks_after": {
+    "cdc-museum": {
+      "events_window_plus_ongoing": 3,
+      "missing_image": 0,
+      "missing_ticket": 0,
+      "content_kind_exhibit": 1
+    },
+    "cobb-library": {
+      "events_window_plus_ongoing": 10,
+      "missing_image": 0,
+      "missing_ticket": 0,
+      "content_kind_exhibit": 1
+    },
+    "gwinnett-library": {
+      "events_window_plus_ongoing": 16,
+      "missing_image": 3,
+      "missing_ticket": 0,
+      "content_kind_exhibit": 0
+    }
+  }
+}

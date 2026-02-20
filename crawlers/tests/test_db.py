@@ -112,15 +112,28 @@ class TestInsertEvent:
     """Tests for insert_event function."""
 
     @patch("db.get_festival_source_hint", return_value=None)
+    @patch("db.events_support_field_metadata_columns", return_value=True)
+    @patch("db.get_source_info")
     @patch("db.get_venue_by_id_cached")
     @patch("db.get_client")
     def test_inserts_event_with_tags(
-        self, mock_get_client, mock_get_venue, mock_festival_hint, sample_event_data
+        self,
+        mock_get_client,
+        mock_get_venue,
+        mock_get_source_info,
+        _mock_field_cols,
+        mock_festival_hint,
+        sample_event_data,
     ):
         """Should insert event and infer tags."""
         client = MagicMock()
         mock_get_client.return_value = client
         mock_get_venue.return_value = {"vibes": ["intimate"]}
+        mock_get_source_info.return_value = {
+            "slug": "test-source",
+            "url": "https://example.com/source",
+            "source_type": "organization",
+        }
 
         table = MagicMock()
         client.table.return_value = table
@@ -138,6 +151,9 @@ class TestInsertEvent:
         # Verify tags were added to event data (first insert call is the event)
         inserted_data = table.insert.call_args_list[0][0][0]
         assert "tags" in inserted_data
+        assert "field_confidence" in inserted_data
+        assert "capabilities" in inserted_data["field_confidence"]
+        assert inserted_data["field_confidence"]["capabilities"]["quality_score"] >= 0
 
     @patch("db.get_festival_source_hint", return_value=None)
     @patch("db.get_venue_by_id_cached")
@@ -539,6 +555,65 @@ class TestSmartUpdateExistingEvent:
             "portal_id": "portal-existing",
         }
         incoming = {"source_id": 99}
+
+        updated = smart_update_existing_event(existing, incoming)
+        assert updated is False
+        table.update.assert_not_called()
+
+    @patch("db.get_client")
+    def test_replaces_bad_existing_image_when_incoming_is_better(self, mock_get_client):
+        """Should upgrade logo/placeholder images when a better event image arrives."""
+        client = MagicMock()
+        mock_get_client.return_value = client
+
+        table = MagicMock()
+        client.table.return_value = table
+        table.update.return_value = table
+        table.eq.return_value = table
+        table.execute.return_value = MagicMock(data=[{"id": 1}])
+
+        from db import smart_update_existing_event
+
+        existing = {
+            "id": 1,
+            "title": "Existing Event",
+            "description": "Detailed description",
+            "portal_id": "portal-existing",
+            "image_url": "https://example.com/assets/logo.png",
+        }
+        incoming = {
+            "image_url": "https://images.example.com/events/headliner-1200x675.jpg",
+        }
+
+        updated = smart_update_existing_event(existing, incoming)
+        assert updated is True
+        updates = table.update.call_args[0][0]
+        assert updates["image_url"] == incoming["image_url"]
+
+    @patch("db.get_client")
+    def test_does_not_accept_bad_incoming_image_when_missing(self, mock_get_client):
+        """Should ignore incoming logo/placeholder URLs even if event image is missing."""
+        client = MagicMock()
+        mock_get_client.return_value = client
+
+        table = MagicMock()
+        client.table.return_value = table
+        table.update.return_value = table
+        table.eq.return_value = table
+        table.execute.return_value = MagicMock(data=[{"id": 1}])
+
+        from db import smart_update_existing_event
+
+        existing = {
+            "id": 1,
+            "title": "Existing Event",
+            "description": "Detailed description",
+            "portal_id": "portal-existing",
+            "image_url": None,
+        }
+        incoming = {
+            "image_url": "https://example.com/assets/default-placeholder.png",
+        }
 
         updated = smart_update_existing_event(existing, incoming)
         assert updated is False

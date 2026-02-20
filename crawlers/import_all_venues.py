@@ -66,6 +66,7 @@ def main():
             ("Coffee Shops", "add_coffee_shops.py"),
             ("Breweries & Nightlife", "add_breweries_nightlife.py"),
             ("Parks, Music Venues, Makers", "add_venues.py"),
+            ("Major Atlanta Hotels (destinations)", "import_major_atlanta_hotels_destinations.py"),
         ]
 
         for description, script in import_scripts:

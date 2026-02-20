@@ -18,6 +18,7 @@ from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
+from utils import enrich_event_record, parse_date_range
 
 logger = logging.getLogger(__name__)
 
@@ -339,6 +340,35 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "recurrence_rule": None,
                         "content_hash": content_hash,
                     }
+
+                    # Enrich from detail page
+                    enrich_event_record(event_record, source_name="Spruill Center for the Arts")
+
+                    # Determine is_free if still unknown after enrichment
+                    if event_record.get("is_free") is None:
+                        desc_lower = (event_record.get("description") or "").lower()
+                        title_lower = event_record.get("title", "").lower()
+                        combined = f"{title_lower} {desc_lower}"
+                        if any(kw in combined for kw in ["free", "no cost", "no charge", "complimentary"]):
+                            event_record["is_free"] = True
+                            event_record["price_min"] = event_record.get("price_min") or 0
+                            event_record["price_max"] = event_record.get("price_max") or 0
+                        else:
+                            event_record["is_free"] = False
+
+                    # Detect exhibits and set content_kind
+                    _exhibit_kw = ["exhibit", "exhibition", "on view", "collection", "installation"]
+                    _check = f"{event_record.get('title', '')} {event_record.get('description') or ''}".lower()
+                    if any(kw in _check for kw in _exhibit_kw):
+                        event_record["content_kind"] = "exhibit"
+                        event_record["is_all_day"] = True
+                        event_record["start_time"] = None
+
+                    # Extract end_date from date range patterns
+                    range_text = f"{event_record.get('title', '')} {event_record.get('description') or ''}"
+                    _, range_end = parse_date_range(range_text)
+                    if range_end:
+                        event_record["end_date"] = range_end
 
                     existing = find_event_by_hash(content_hash)
                     if existing:

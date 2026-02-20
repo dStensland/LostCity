@@ -1,0 +1,21 @@
+version: 1
+slug: the-ginger-room
+name: "The Ginger Room"
+integration_method: crawler
+data_goals:
+  - events
+discovery:
+  enabled: true
+  type: html
+  urls:
+    - "https://the-gingerroom.com/"
+  fetch:
+    render_js: true
+detail:
+  enabled: true
+  use_jsonld: true
+  use_open_graph: true
+  use_heuristic: true
+  use_llm: true
+defaults:
+  venue_name: "The Ginger Room"

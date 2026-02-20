@@ -1,0 +1,70 @@
+{
+  "generated_on": "2026-02-19",
+  "scope": "atlanta_wave2_zero_event_queue",
+  "sources": [
+    {
+      "slug": "home-depot-backyard",
+      "dry_run_result": "success",
+      "events_found": 2,
+      "classification": "monitor",
+      "next_action": "verify live run output quality and keep stale-date guard"
+    },
+    {
+      "slug": "steady-hand-beer",
+      "dry_run_result": "success",
+      "events_found": 0,
+      "classification": "lifecycle_check",
+      "next_action": "confirm whether source currently has public dated events"
+    },
+    {
+      "slug": "silverspot-cinema-atlanta",
+      "dry_run_result": "failed_or_skipped",
+      "events_found": 0,
+      "classification": "blocked_access",
+      "next_action": "retry after transient backoff window; evaluate alternate source path if still blocked"
+    },
+    {
+      "slug": "clark-atlanta",
+      "dry_run_result": "success",
+      "events_found": 10,
+      "classification": "resolved_extractor_fix_dry_run",
+      "next_action": "run non-dry crawl with --allow-production-writes (or staging write) to persist recovered events"
+    },
+    {
+      "slug": "community-foundation-atl",
+      "dry_run_result": "success",
+      "events_found": 0,
+      "classification": "likely_no_upcoming_schedule",
+      "next_action": "treat as seasonal/inactive candidate until site posts new dated events ('Check back soon for upcoming events.')"
+    },
+    {
+      "slug": "georgia-peace",
+      "dry_run_result": "success",
+      "events_found": 0,
+      "classification": "likely_deactivated_or_migrated",
+      "next_action": "investigate source ownership/domain drift; current events URL redirects to blog with no event listings"
+    },
+    {
+      "slug": "l5p-community-center",
+      "dry_run_result": "success",
+      "events_found": 0,
+      "classification": "likely_no_upcoming_schedule",
+      "next_action": "treat as seasonal/inactive candidate until calendar has non-empty upcoming entries"
+    },
+    {
+      "slug": "moca-ga",
+      "dry_run_result": "success",
+      "events_found": 0,
+      "classification": "likely_no_upcoming_schedule",
+      "next_action": "keep source URL migration noted (/events -> 404); current official pages show no current/upcoming events"
+    },
+    {
+      "slug": "theatrical-outfit",
+      "dry_run_result": "success",
+      "events_found": 4,
+      "classification": "resolved_extractor_fix_dry_run",
+      "next_action": "run non-dry crawl with --allow-production-writes (or staging write) to persist recovered performances"
+    }
+  ],
+  "note": "Writes were intentionally not persisted in this wave because production writes require explicit --allow-production-writes."
+}

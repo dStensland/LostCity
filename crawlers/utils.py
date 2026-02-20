@@ -496,15 +496,53 @@ def extract_image_url(
     return image_url
 
 
+_IMAGE_SKIP_PATTERNS = (
+    "logo",
+    "icon",
+    "favicon",
+    "sprite",
+    "avatar",
+    "placeholder",
+    "default",
+    "blank",
+    "spacer",
+    "1x1",
+    "pixel",
+    "tracking",
+    "badge",
+    "button",
+)
+
+
+def is_likely_non_event_image(url: Optional[str]) -> bool:
+    """Heuristic check for image URLs that are likely logos/placeholders/icons."""
+    if not url:
+        return True
+
+    url_lower = str(url).lower().strip()
+    if not url_lower:
+        return True
+
+    if any(pattern in url_lower for pattern in _IMAGE_SKIP_PATTERNS):
+        return True
+
+    # Catch tiny assets encoded in URL paths/filenames (e.g. ".../32x32/logo.png")
+    size_match = re.search(r"(?<!\d)(\d{1,3})x(\d{1,3})(?!\d)", url_lower)
+    if size_match:
+        try:
+            width = int(size_match.group(1))
+            height = int(size_match.group(2))
+            if width <= 64 and height <= 64:
+                return True
+        except (TypeError, ValueError):
+            pass
+
+    return False
+
+
 def _is_icon_or_logo(url: str) -> bool:
-    """Check if URL is likely an icon or logo, not an event image."""
-    url_lower = url.lower()
-    skip_patterns = [
-        "logo", "icon", "favicon", "sprite", "avatar",
-        "placeholder", "default", "blank", "spacer",
-        "1x1", "pixel", "tracking", "badge", "button",
-    ]
-    return any(pattern in url_lower for pattern in skip_patterns)
+    """Backward-compatible alias for icon/logo URL checks."""
+    return is_likely_non_event_image(url)
 
 
 def extract_images_from_page(

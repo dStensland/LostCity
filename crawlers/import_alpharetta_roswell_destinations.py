@@ -4,7 +4,10 @@ Import curated destinations for Alpharetta and Roswell, GA.
 Sources: Eater Atlanta, Atlanta Magazine, The Infatuation
 """
 
+import argparse
+
 from db import get_client
+from destination_import_flow import add_enrichment_args, run_post_import_enrichment
 
 DESTINATIONS = [
     # === ALPHARETTA - AVALON ===
@@ -239,6 +242,12 @@ DESTINATIONS = [
 
 
 def main():
+    parser = argparse.ArgumentParser(
+        description="Import Alpharetta/Roswell destinations and run enrichment"
+    )
+    add_enrichment_args(parser)
+    args = parser.parse_args()
+
     client = get_client()
     added = 0
 
@@ -251,6 +260,11 @@ def main():
             print(f"✗ {dest['name']}: {e}")
 
     print(f"\nImported {added}/{len(DESTINATIONS)} Alpharetta/Roswell destinations")
+    run_post_import_enrichment(
+        slugs=[dest["slug"] for dest in DESTINATIONS],
+        skip_enrich=args.skip_enrich,
+        enrich_dry_run=args.enrich_dry_run,
+    )
 
 
 if __name__ == "__main__":
