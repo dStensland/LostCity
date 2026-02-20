@@ -1,5 +1,6 @@
 import { getAllFestivals, type Festival } from "@/lib/festivals";
 import { getCachedPortalBySlug } from "@/lib/portal";
+import { createClient } from "@/lib/supabase/server";
 import { getLocalDateString } from "@/lib/formats";
 import {
   computeCountdown,
@@ -12,29 +13,32 @@ import {
 export { computeCountdown };
 
 // ============================================================================
-// TIER CLASSIFICATION
+// TIER CLASSIFICATION (DB-driven via is_tentpole on events table)
 // ============================================================================
 
-/** Tier 1 festivals per portal — the tentpole events everyone knows */
-const TIER1_BY_PORTAL: Record<string, Set<string>> = {
-  atlanta: new Set([
-    "dragon-con",
-    "atlanta-pride",
-    "shaky-knees",
-    "music-midtown",
-    "atlanta-jazz-festival",
-    "atlanta-film-festival",
-    "peachtree-road-race",
-    "atlanta-dogwood-festival",
-  ]),
-};
+/** Fetch festival IDs that have at least one is_tentpole event */
+async function getTentpoleFestivalIds(): Promise<Set<string>> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("events")
+    .select("festival_id")
+    .eq("is_tentpole", true)
+    .not("festival_id", "is", null);
+
+  if (!data) return new Set();
+  const ids = new Set<string>();
+  for (const row of data) {
+    const fid = (row as { festival_id: string | null }).festival_id;
+    if (fid) ids.add(fid);
+  }
+  return ids;
+}
 
 export function classifyFestivalTier(
   festival: Festival,
-  portalSlug: string
+  tentpoleIds: Set<string>
 ): FestivalTier {
-  const tier1Set = TIER1_BY_PORTAL[portalSlug];
-  if (tier1Set?.has(festival.slug)) return 1;
+  if (tentpoleIds.has(festival.id)) return 1;
 
   const hasImage = !!festival.image_url;
   const hasDates = !!festival.announced_start;
@@ -52,12 +56,15 @@ export async function computeMoments(
   portalSlug: string
 ): Promise<MomentsResponse> {
   const portal = await getCachedPortalBySlug(portalSlug);
-  const festivals = await getAllFestivals(portal?.id);
+  const [festivals, tentpoleIds] = await Promise.all([
+    getAllFestivals(portal?.id),
+    getTentpoleFestivalIds(),
+  ]);
   const today = getLocalDateString();
 
   const moments: FestivalMoment[] = festivals
     .map((festival) => {
-      const tier = classifyFestivalTier(festival, portalSlug);
+      const tier = classifyFestivalTier(festival, tentpoleIds);
       const countdown = computeCountdown(festival, today);
       const isLive = countdown.urgency === "happening-now";
       return { festival, tier, countdown, isLive };

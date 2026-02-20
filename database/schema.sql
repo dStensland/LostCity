@@ -118,6 +118,8 @@ CREATE TABLE events (
   recurrence_rule TEXT,
   content_hash TEXT,
   canonical_event_id INTEGER REFERENCES events(id),
+  festival_id TEXT REFERENCES festivals(id) ON DELETE SET NULL,
+  is_tentpole BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

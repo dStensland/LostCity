@@ -102,6 +102,9 @@ export type EventWithLocation = Event & {
     typical_price_min: number | null;
     typical_price_max: number | null;
   } | null;
+  // Festival / tentpole flags (direct on events table)
+  festival_id?: string | null;
+  is_tentpole?: boolean;
   // Series information (for series rollups)
   series_id?: string | null;
   series?: {

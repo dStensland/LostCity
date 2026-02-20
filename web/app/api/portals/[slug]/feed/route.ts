@@ -140,6 +140,8 @@ type Event = {
   recommendation_count?: number;
   tags?: string[] | null;
   source_id?: number | null;
+  festival_id?: string | null;
+  is_tentpole?: boolean;
   series_id?: string | null;
   series?: {
     id: string;
@@ -635,6 +637,8 @@ export async function GET(request: NextRequest, { params }: Props) {
         description,
         featured_blurb,
         tags,
+        festival_id,
+        is_tentpole,
         series_id,
         series:series_id(
           id,
@@ -782,6 +786,8 @@ export async function GET(request: NextRequest, { params }: Props) {
         description,
         featured_blurb,
         tags,
+        festival_id,
+        is_tentpole,
         series_id,
         series:series_id(
           id,
@@ -919,6 +925,8 @@ export async function GET(request: NextRequest, { params }: Props) {
           description,
           featured_blurb,
           tags,
+          festival_id,
+          is_tentpole,
           series_id,
           series:series_id(
             id,
@@ -1486,6 +1494,8 @@ export async function GET(request: NextRequest, { params }: Props) {
             description,
             featured_blurb,
             tags,
+            festival_id,
+            is_tentpole,
             series_id,
             series:series_id(
               id,

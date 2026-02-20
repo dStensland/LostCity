@@ -48,6 +48,8 @@ type LocationDesignator =
 
 type EventCardEvent = Event & {
   is_live?: boolean;
+  festival_id?: string | null;
+  is_tentpole?: boolean;
   venue?:
     | (Event["venue"] & {
         typical_price_min?: number | null;
@@ -111,6 +113,8 @@ export type FeedEventData = {
   recommendation_count?: number;
   is_trending?: boolean;
   activity_type?: string;
+  festival_id?: string | null;
+  is_tentpole?: boolean;
   ticket_url?: string | null;
   source_url?: string | null;
   series_id?: string | null;
@@ -535,6 +539,18 @@ function EventCard({
                       </span>
                     </span>
                   )}
+                  {event.festival_id && (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border bg-[#65E8FF]/15 border-[#65E8FF]/30">
+                      <svg className="w-2.5 h-2.5 text-[#65E8FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 4v16m0-12h9l-1.5 3L14 14H5" /></svg>
+                      <span className="font-mono text-[0.55rem] font-medium text-[#65E8FF] uppercase tracking-wide">Festival</span>
+                    </span>
+                  )}
+                  {event.is_tentpole && (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border bg-[var(--gold)]/15 border-[var(--gold)]/30">
+                      <svg className="w-2.5 h-2.5 text-[var(--gold)]" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                      <span className="font-mono text-[0.55rem] font-medium text-[var(--gold)] uppercase tracking-wide">Big Stuff</span>
+                    </span>
+                  )}
                 </div>
                 {/* Title row: full width - larger and bolder */}
                 <h3 className="text-[var(--text-primary)] font-semibold text-[1.03rem] leading-tight line-clamp-2 group-hover:text-[var(--accent-color)] transition-colors mb-1.5">
@@ -565,6 +581,18 @@ function EventCard({
                     <span className="font-mono text-[0.55rem] font-medium text-[var(--neon-red)] uppercase tracking-wide">
                       Live
                     </span>
+                  </span>
+                )}
+                {event.festival_id && (
+                  <span className="flex-shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded border bg-[#65E8FF]/15 border-[#65E8FF]/30">
+                    <svg className="w-2.5 h-2.5 text-[#65E8FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 4v16m0-12h9l-1.5 3L14 14H5" /></svg>
+                    <span className="font-mono text-[0.55rem] font-medium text-[#65E8FF] uppercase tracking-wide">Festival</span>
+                  </span>
+                )}
+                {event.is_tentpole && (
+                  <span className="flex-shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded border bg-[var(--gold)]/15 border-[var(--gold)]/30">
+                    <svg className="w-2.5 h-2.5 text-[var(--gold)]" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                    <span className="font-mono text-[0.55rem] font-medium text-[var(--gold)] uppercase tracking-wide">Big Stuff</span>
                   </span>
                 )}
               </div>
