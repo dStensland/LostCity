@@ -29,6 +29,11 @@ from main import get_source_modules
 from pipeline.loader import find_profile_path
 
 INTERNAL_SOURCE_TYPES = {"manual", "user", "website", "social_media"}
+FESTIVAL_MODEL_CLEANUP_TAGS = {
+    "festival-model-cleanup",
+    "not-in-festivals-table",
+    "retyped-from-festival",
+}
 
 
 def _yaml_quote(value: str | None) -> str:
@@ -44,6 +49,7 @@ def _is_internal_source(source: dict[str, Any]) -> bool:
 def _is_candidate(source: dict[str, Any], module_slugs: set[str], festival_slugs: set[str]) -> bool:
     slug = source["slug"]
     source_type = (source.get("source_type") or "").lower()
+    tags = set(source.get("health_tags") or [])
 
     if source.get("is_active"):
         return False
@@ -52,6 +58,8 @@ def _is_candidate(source: dict[str, Any], module_slugs: set[str], festival_slugs
     if source_type == "festival":
         return False
     if _is_internal_source(source):
+        return False
+    if tags.intersection(FESTIVAL_MODEL_CLEANUP_TAGS):
         return False
     # Guard against mis-modeled festival records (e.g. type=organization with festival slug).
     if slug in festival_slugs:
@@ -124,7 +132,7 @@ def main() -> None:
 
     rows = (
         client.table("sources")
-        .select("id,slug,name,url,source_type,integration_method,is_active")
+        .select("id,slug,name,url,source_type,integration_method,is_active,health_tags")
         .eq("is_active", False)
         .execute()
         .data

@@ -3,10 +3,12 @@
 Tag inactive festival source rows that are structural containers.
 
 Structural container criteria:
-- source_type='festival'
 - source is inactive
 - slug exists in festivals table
 - no dedicated crawler module for slug
+
+If a row is mis-typed (e.g., source_type='organization' for a festival slug),
+it is normalized to source_type='festival'.
 """
 
 from __future__ import annotations
@@ -53,7 +55,6 @@ def main() -> None:
         client.table("sources")
         .select("id,slug,name,is_active,source_type,integration_method,health_tags")
         .eq("is_active", False)
-        .eq("source_type", "festival")
         .execute()
         .data
         or []
@@ -73,6 +74,8 @@ def main() -> None:
     for row in sorted(targets, key=lambda r: r["slug"]):
         merged_tags = _merge_tags(row.get("health_tags"))
         patch: dict[str, Any] = {"health_tags": merged_tags}
+        if (row.get("source_type") or "").lower() != "festival":
+            patch["source_type"] = "festival"
         if not row.get("integration_method"):
             patch["integration_method"] = "festival_schedule"
         print(f"[tag] {row['slug']} -> {patch}")

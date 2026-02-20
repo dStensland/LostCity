@@ -82,7 +82,7 @@ function buildFilmMap(events: ShowtimeEvent[]) {
           venue_name: string;
           venue_slug: string;
           neighborhood: string | null;
-          times: string[];
+          times: { time: string; event_id: number }[];
         }
       >;
     }
@@ -129,8 +129,8 @@ function buildFilmMap(events: ShowtimeEvent[]) {
 
     if (event.start_time) {
       const time = event.start_time.slice(0, 5);
-      if (!theater.times.includes(time)) {
-        theater.times.push(time);
+      if (!theater.times.some((t) => t.time === time)) {
+        theater.times.push({ time, event_id: event.id });
       }
     }
   }
@@ -151,8 +151,8 @@ function buildFilmMap(events: ShowtimeEvent[]) {
       for (const [venueId, theater] of film.theaters) {
         const existing = target.theaters.get(venueId);
         if (existing) {
-          for (const time of theater.times) {
-            if (!existing.times.includes(time)) existing.times.push(time);
+          for (const entry of theater.times) {
+            if (!existing.times.some((t) => t.time === entry.time)) existing.times.push(entry);
           }
         } else {
           target.theaters.set(venueId, theater);
@@ -184,13 +184,10 @@ function toFilmsResponse(filmMap: ReturnType<typeof buildFilmMap>) {
         venue_name: theater.venue_name,
         venue_slug: theater.venue_slug,
         neighborhood: theater.neighborhood,
-        times: theater.times.sort(),
+        times: theater.times.sort((a, b) => a.time.localeCompare(b.time)),
       })),
     }))
-    .sort(
-      (a, b) =>
-        b.theaters.length - a.theaters.length || a.title.localeCompare(b.title),
-    );
+    .sort((a, b) => a.title.localeCompare(b.title));
 }
 
 /** Convert film map to by-theater response array */
@@ -210,7 +207,7 @@ function toTheatersResponse(filmMap: ReturnType<typeof buildFilmMap>) {
         genres: string[];
         director: string | null;
         year: number | null;
-        times: string[];
+        times: { time: string; event_id: number }[];
       }[];
     }
   >();
@@ -236,22 +233,18 @@ function toTheatersResponse(filmMap: ReturnType<typeof buildFilmMap>) {
         genres: film.genres,
         director: film.director,
         year: film.year,
-        times: theater.times.sort(),
+        times: theater.times.sort((a, b) => a.time.localeCompare(b.time)),
       });
     }
   }
 
-  // Sort theaters by film count desc, then name
+  // Sort theaters alphabetically by name
   return Array.from(theaterMap.values())
     .map((t) => ({
       ...t,
       films: t.films.sort((a, b) => a.title.localeCompare(b.title)),
     }))
-    .sort(
-      (a, b) =>
-        b.films.length - a.films.length ||
-        a.venue_name.localeCompare(b.venue_name),
-    );
+    .sort((a, b) => a.venue_name.localeCompare(b.venue_name));
 }
 
 export async function GET(request: NextRequest) {

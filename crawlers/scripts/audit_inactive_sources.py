@@ -50,6 +50,11 @@ INTERNAL_NONCRAWLER_TYPES = {
     "website",
     "social_media",
 }
+FESTIVAL_MODEL_CLEANUP_TAGS = {
+    "festival-model-cleanup",
+    "not-in-festivals-table",
+    "retyped-from-festival",
+}
 
 
 def _parse_ts(value: str | None) -> datetime | None:
@@ -61,7 +66,11 @@ def _parse_ts(value: str | None) -> datetime | None:
         return None
 
 
-def _classify_reason(source: dict[str, Any], module_slugs: set[str]) -> tuple[str, str, str]:
+def _classify_reason(
+    source: dict[str, Any],
+    module_slugs: set[str],
+    festival_slugs: set[str],
+) -> tuple[str, str, str]:
     """
     Returns (reason_code, reason_detail, recommended_action).
     """
@@ -79,11 +88,25 @@ def _classify_reason(source: dict[str, Any], module_slugs: set[str]) -> tuple[st
             "keep_inactive",
         )
 
-    if not module_exists and source_type == "festival":
+    if not module_exists and source_type == "festival" and slug in festival_slugs:
         return (
             "festival_structure_managed_no_crawler_required",
             "Festival entry is managed by festival hierarchy; no standalone crawler is required.",
             "keep_inactive_structural",
+        )
+
+    if not module_exists and source_type == "festival" and slug not in festival_slugs:
+        return (
+            "festival_source_missing_festival_record",
+            "Source is typed as festival but has no matching festivals.slug record.",
+            "normalize_festival_model",
+        )
+
+    if not module_exists and slug in festival_slugs:
+        return (
+            "festival_slug_mistyped_source_row",
+            "Slug exists in festivals table but source_type is not festival.",
+            "normalize_source_type_to_festival",
         )
 
     if not module_exists and source_type in INTERNAL_NONCRAWLER_TYPES:
@@ -91,6 +114,13 @@ def _classify_reason(source: dict[str, Any], module_slugs: set[str]) -> tuple[st
             "internal_noncrawler_source",
             "Internal/manual/social source should remain non-crawler.",
             "keep_inactive_internal",
+        )
+
+    if not module_exists and tags.intersection(FESTIVAL_MODEL_CLEANUP_TAGS):
+        return (
+            "festival_model_demoted_noncrawler",
+            "Legacy festival placeholder was removed from festival modeling and should stay inactive unless explicitly rebuilt.",
+            "keep_inactive_or_rebuild_explicitly",
         )
 
     if not module_exists and profile_exists:
@@ -165,6 +195,11 @@ def main() -> None:
 
     module_slugs = set(get_source_modules().keys())
     client = get_client()
+    festival_slugs = {
+        row["slug"]
+        for row in (client.table("festivals").select("slug").execute().data or [])
+        if row.get("slug")
+    }
     rows = (
         client.table("sources")
         .select(
@@ -180,7 +215,11 @@ def main() -> None:
     now = datetime.now(timezone.utc)
     results: list[dict[str, Any]] = []
     for source in rows:
-        reason_code, reason_detail, action = _classify_reason(source, module_slugs)
+        reason_code, reason_detail, action = _classify_reason(
+            source,
+            module_slugs,
+            festival_slugs,
+        )
         last_dt = _parse_ts(source.get("last_crawled_at"))
         age_days = None
         if last_dt is not None:

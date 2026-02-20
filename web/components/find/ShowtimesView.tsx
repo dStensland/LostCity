@@ -16,12 +16,17 @@ interface ShowtimesViewProps {
   portalSlug: string;
 }
 
+interface ShowtimeEntry {
+  time: string;
+  event_id: number;
+}
+
 interface Theater {
   venue_id: number;
   venue_name: string;
   venue_slug: string;
   neighborhood: string | null;
-  times: string[];
+  times: ShowtimeEntry[];
 }
 
 interface Film {
@@ -42,7 +47,7 @@ interface TheaterGroup {
     series_id: string | null;
     series_slug: string | null;
     image_url: string | null;
-    times: string[];
+    times: ShowtimeEntry[];
   }[];
 }
 
@@ -113,51 +118,18 @@ function FilmPoster({ film }: { film: { title: string; image_url: string | null 
   );
 }
 
-function TheaterRow({ theater, portalSlug }: { theater: Theater; portalSlug: string }) {
-  return (
-    <div>
-      <div className="flex items-center gap-1.5 mb-1.5">
-        <Link
-          href={`/${portalSlug}?spot=${theater.venue_slug}`}
-          scroll={false}
-          onClick={(e) => e.stopPropagation()}
-          className="font-semibold text-[0.82rem] text-[var(--cream)] hover:text-[var(--coral)] transition-colors truncate"
-        >
-          {theater.venue_name}
-        </Link>
-        {theater.neighborhood && (
-          <>
-            <span className="text-[var(--twilight)]/60 flex-shrink-0">·</span>
-            <span className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-[0.08em] flex-shrink-0">
-              {theater.neighborhood}
-            </span>
-          </>
-        )}
-      </div>
-      <div className="flex flex-wrap gap-1.5">
-        {theater.times.map((time) => (
-          <span
-            key={time}
-            className="inline-flex px-2.5 py-1 rounded-lg bg-[var(--twilight)]/25 border border-[var(--twilight)]/50 font-mono text-[0.72rem] font-medium text-[var(--soft)] tabular-nums"
-          >
-            {formatShowtime(time)}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function TimeChips({ times }: { times: string[] }) {
+function TimeChipLinks({ times, portalSlug }: { times: ShowtimeEntry[]; portalSlug: string }) {
   return (
     <div className="flex flex-wrap gap-1.5">
-      {times.map((time) => (
-        <span
-          key={time}
-          className="inline-flex px-2 py-0.5 rounded-md bg-[var(--twilight)]/25 border border-[var(--twilight)]/50 font-mono text-[0.7rem] font-medium text-[var(--soft)] tabular-nums"
+      {times.map((entry) => (
+        <Link
+          key={entry.event_id}
+          href={`/${portalSlug}?event=${entry.event_id}`}
+          scroll={false}
+          className="inline-flex px-2.5 py-1 rounded-lg bg-[var(--twilight)]/25 border border-[var(--twilight)]/50 font-mono text-[0.72rem] font-medium text-[var(--soft)] tabular-nums hover:text-[var(--cream)] hover:border-[var(--coral)]/40 transition-colors"
         >
-          {formatShowtime(time)}
-        </span>
+          {formatShowtime(entry.time)}
+        </Link>
       ))}
     </div>
   );
@@ -180,6 +152,21 @@ function ChevronIcon({ open }: { open: boolean }) {
 
 // --------------- By-film cards ---------------
 
+function FilmTitle({ film, portalSlug, className }: { film: Film; portalSlug: string; className?: string }) {
+  if (film.series_slug) {
+    return (
+      <Link
+        href={`/${portalSlug}/series/${film.series_slug}`}
+        className={`${className} hover:text-[var(--coral)] transition-colors`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {film.title}
+      </Link>
+    );
+  }
+  return <h3 className={className}>{film.title}</h3>;
+}
+
 function SingleTheaterCard({ film, portalSlug }: { film: Film; portalSlug: string }) {
   const theater = film.theaters[0];
   return (
@@ -187,9 +174,11 @@ function SingleTheaterCard({ film, portalSlug }: { film: Film; portalSlug: strin
       <div className="flex gap-3">
         <FilmPoster film={film} />
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-[0.95rem] sm:text-[1.05rem] text-[var(--cream)] leading-snug line-clamp-2">
-            {film.title}
-          </h3>
+          <FilmTitle
+            film={film}
+            portalSlug={portalSlug}
+            className="font-semibold text-[0.95rem] sm:text-[1.05rem] text-[var(--cream)] leading-snug line-clamp-2"
+          />
           <div className="flex items-center gap-1.5 mt-1">
             <Link
               href={`/${portalSlug}?spot=${theater.venue_slug}`}
@@ -208,7 +197,7 @@ function SingleTheaterCard({ film, portalSlug }: { film: Film; portalSlug: strin
             )}
           </div>
           <div className="mt-2">
-            <TimeChips times={theater.times} />
+            <TimeChipLinks times={theater.times} portalSlug={portalSlug} />
           </div>
         </div>
       </div>
@@ -220,10 +209,6 @@ function MultiTheaterCard({ film, portalSlug }: { film: Film; portalSlug: string
   const [isOpen, setIsOpen] = useState(false);
   const theaterCount = film.theaters.length;
   const totalShowtimes = film.theaters.reduce((sum, t) => sum + t.times.length, 0);
-  const seriesHref =
-    film.series_slug && theaterCount > 1
-      ? `/${portalSlug}/series/${film.series_slug}`
-      : null;
 
   return (
     <div className="rounded-xl border border-[var(--coral)]/25 bg-[var(--night)]/45 overflow-hidden">
@@ -235,9 +220,11 @@ function MultiTheaterCard({ film, portalSlug }: { film: Film; portalSlug: string
         <div className="flex gap-3">
           <FilmPoster film={film} />
           <div className="flex-1 min-w-0 flex flex-col justify-center">
-            <h3 className="font-semibold text-[0.95rem] sm:text-[1.05rem] text-[var(--cream)] leading-snug line-clamp-2 group-hover:text-[var(--coral)] transition-colors">
-              {film.title}
-            </h3>
+            <FilmTitle
+              film={film}
+              portalSlug={portalSlug}
+              className="font-semibold text-[0.95rem] sm:text-[1.05rem] text-[var(--cream)] leading-snug line-clamp-2 group-hover:text-[var(--coral)] transition-colors"
+            />
             <div className="flex items-center gap-2 mt-1.5">
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--coral)]/10 border border-[var(--coral)]/25 font-mono text-[0.62rem] font-semibold text-[var(--coral)] uppercase tracking-[0.06em]">
                 {theaterCount} {theaterCount === 1 ? "theater" : "theaters"}
@@ -256,18 +243,28 @@ function MultiTheaterCard({ film, portalSlug }: { film: Film; portalSlug: string
       {isOpen && (
         <div className="border-t border-[var(--twilight)]/35 px-3 sm:px-3.5 py-2.5 space-y-2.5">
           {film.theaters.map((theater) => (
-            <TheaterRow key={theater.venue_id} theater={theater} portalSlug={portalSlug} />
-          ))}
-          {seriesHref && (
-            <div className="pt-1">
-              <Link
-                href={seriesHref}
-                className="font-mono text-[0.64rem] uppercase tracking-[0.08em] text-[var(--coral)] hover:text-[var(--gold)] transition-colors"
-              >
-                Open series page for all locations
-              </Link>
+            <div key={theater.venue_id}>
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <Link
+                  href={`/${portalSlug}?spot=${theater.venue_slug}`}
+                  scroll={false}
+                  onClick={(e) => e.stopPropagation()}
+                  className="font-semibold text-[0.82rem] text-[var(--cream)] hover:text-[var(--coral)] transition-colors truncate"
+                >
+                  {theater.venue_name}
+                </Link>
+                {theater.neighborhood && (
+                  <>
+                    <span className="text-[var(--twilight)]/60 flex-shrink-0">·</span>
+                    <span className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-[0.08em] flex-shrink-0">
+                      {theater.neighborhood}
+                    </span>
+                  </>
+                )}
+              </div>
+              <TimeChipLinks times={theater.times} portalSlug={portalSlug} />
             </div>
-          )}
+          ))}
         </div>
       )}
     </div>
@@ -360,7 +357,7 @@ function TheaterAccordionCard({ theater, portalSlug }: { theater: TheaterGroup; 
                   </h4>
                 )}
                 <div className="mt-1.5">
-                  <TimeChips times={film.times} />
+                  <TimeChipLinks times={film.times} portalSlug={portalSlug} />
                 </div>
               </div>
             </div>
@@ -399,16 +396,13 @@ function ShowtimesSkeleton() {
 export default function ShowtimesView({ portalSlug }: ShowtimesViewProps) {
   const searchParams = useSearchParams();
   const requestedDateParam = searchParams?.get("date") ?? null;
-  const requestedTheater = (searchParams?.get("theater") || "").trim();
   const requestedDate = useMemo(
     () => resolveDateParam(requestedDateParam),
     [requestedDateParam],
   );
 
   const [selectedDate, setSelectedDate] = useState<string>("");
-  const [selectedTheaterSlug, setSelectedTheaterSlug] = useState<string>(requestedTheater);
   const [viewMode, setViewMode] = useState<"by-movie" | "by-theater">("by-movie");
-  const [showSpecial, setShowSpecial] = useState(false);
 
   const [films, setFilms] = useState<Film[]>([]);
   const [theaters, setTheaters] = useState<TheaterGroup[]>([]);
@@ -430,9 +424,6 @@ export default function ShowtimesView({ portalSlug }: ShowtimesViewProps) {
           meta: "true",
           include_chains: "true",
         });
-        if (requestedTheater) {
-          params.set("theater", requestedTheater);
-        }
         const res = await fetch(`/api/showtimes?${params.toString()}`);
         if (!res.ok) return;
         const data = await res.json();
@@ -460,16 +451,14 @@ export default function ShowtimesView({ portalSlug }: ShowtimesViewProps) {
       }
     }
     fetchMeta();
-  }, [requestedDate, requestedTheater]);
+  }, [requestedDate]);
 
-  // Fetch showtimes when date, view mode, or special flag changes
-  const fetchShowtimes = useCallback(async (date: string, mode: string, special: boolean, theaterSlug: string) => {
+  // Fetch showtimes when date or view mode changes
+  const fetchShowtimes = useCallback(async (date: string, mode: string) => {
     if (!date) return;
     setLoading(true);
     try {
       const params = new URLSearchParams({ date, mode: mode === "by-movie" ? "by-film" : "by-theater" });
-      if (special) params.set("special", "true");
-      if (theaterSlug) params.set("theater", theaterSlug);
       params.set("include_chains", "true");
       const res = await fetch(`/api/showtimes?${params}`);
       if (!res.ok) return;
@@ -493,17 +482,8 @@ export default function ShowtimesView({ portalSlug }: ShowtimesViewProps) {
       isInitialMount.current = false;
       return;
     }
-    fetchShowtimes(selectedDate, viewMode, showSpecial, selectedTheaterSlug);
-  }, [selectedDate, viewMode, showSpecial, selectedTheaterSlug, fetchShowtimes]);
-
-  // If date changes and selected theater isn't available, clear theater filter.
-  useEffect(() => {
-    if (!selectedTheaterSlug || !meta?.available_theaters?.length) return;
-    const exists = meta.available_theaters.some((theater) => theater.venue_slug === selectedTheaterSlug);
-    if (!exists) {
-      setSelectedTheaterSlug("");
-    }
-  }, [meta, selectedTheaterSlug]);
+    fetchShowtimes(selectedDate, viewMode);
+  }, [selectedDate, viewMode, fetchShowtimes]);
 
   // Date pills from meta (dynamic) with fallback to 7-day window
   const datePills = meta?.available_dates?.length
@@ -531,15 +511,11 @@ export default function ShowtimesView({ portalSlug }: ShowtimesViewProps) {
       createFindFilterSnapshot(
         {
           date: requestedDateParam ? selectedDate : undefined,
-          theater: selectedTheaterSlug || undefined,
         },
         "showtimes"
       ),
-    [requestedDateParam, selectedDate, selectedTheaterSlug]
+    [requestedDateParam, selectedDate]
   );
-  const selectedTheaterName = selectedTheaterSlug
-    ? meta?.available_theaters?.find((theater) => theater.venue_slug === selectedTheaterSlug)?.venue_name
-    : null;
   const currentResultCount = viewMode === "by-theater" ? theaters.length : films.length;
 
   useEffect(() => {
@@ -549,7 +525,7 @@ export default function ShowtimesView({ portalSlug }: ShowtimesViewProps) {
       return;
     }
     if (showtimesFilterSnapshot.activeCount === 0) return;
-    const zeroKey = `${showtimesFilterSnapshot.signature}|mode:${viewMode}|special:${showSpecial ? "1" : "0"}`;
+    const zeroKey = `${showtimesFilterSnapshot.signature}|mode:${viewMode}`;
     if (zeroResultsSignatureRef.current === zeroKey) return;
 
     trackFindZeroResults({
@@ -566,7 +542,6 @@ export default function ShowtimesView({ portalSlug }: ShowtimesViewProps) {
     loading,
     metaLoading,
     portalSlug,
-    showSpecial,
     showtimesFilterSnapshot,
     viewMode,
   ]);
@@ -603,26 +578,17 @@ export default function ShowtimesView({ portalSlug }: ShowtimesViewProps) {
             <span className="font-mono text-[0.62rem] text-[var(--muted)] uppercase tracking-[0.1em]">
               {theaterCount} {theaterCount === 1 ? "theater" : "theaters"}
             </span>
-            {selectedTheaterName && (
-              <>
-                <span className="text-[var(--twilight)]/50">·</span>
-                <span className="font-mono text-[0.62rem] text-[var(--soft)] uppercase tracking-[0.1em]">
-                  {selectedTheaterName}
-                </span>
-              </>
-            )}
           </div>
         )}
       </section>
 
-      {/* Controls row: view mode toggle + special screenings */}
-      <div className="flex items-center gap-2 mb-3 flex-wrap">
-        {/* By Movie / By Theater toggle */}
+      {/* Controls row: view mode toggle */}
+      <div className="flex items-center gap-2 mb-3">
         <div className="inline-flex rounded-lg border border-[var(--twilight)]/60 overflow-hidden">
           <button
             onClick={() => setViewMode("by-movie")}
             className={`px-3 py-1.5 font-mono text-[0.68rem] transition-all ${
-              viewMode === "by-movie" && !showSpecial
+              viewMode === "by-movie"
                 ? "bg-[var(--coral)]/20 text-[var(--coral)] font-semibold"
                 : "bg-[var(--night)]/40 text-[var(--muted)] hover:text-[var(--cream)]"
             }`}
@@ -632,7 +598,7 @@ export default function ShowtimesView({ portalSlug }: ShowtimesViewProps) {
           <button
             onClick={() => setViewMode("by-theater")}
             className={`px-3 py-1.5 font-mono text-[0.68rem] border-l border-[var(--twilight)]/60 transition-all ${
-              viewMode === "by-theater" && !showSpecial
+              viewMode === "by-theater"
                 ? "bg-[var(--coral)]/20 text-[var(--coral)] font-semibold"
                 : "bg-[var(--night)]/40 text-[var(--muted)] hover:text-[var(--cream)]"
             }`}
@@ -640,35 +606,6 @@ export default function ShowtimesView({ portalSlug }: ShowtimesViewProps) {
             By Theater
           </button>
         </div>
-
-        {/* Special Screenings toggle */}
-        <button
-          onClick={() => setShowSpecial(!showSpecial)}
-          className={`px-3 py-1.5 rounded-lg font-mono text-[0.68rem] transition-all border ${
-            showSpecial
-              ? "bg-[var(--gold)]/15 border-[var(--gold)]/40 text-[var(--gold)] font-semibold"
-              : "bg-[var(--night)]/40 border-[var(--twilight)]/50 text-[var(--muted)] hover:text-[var(--cream)] hover:border-[var(--twilight)]/80"
-          }`}
-        >
-          Special Screenings
-        </button>
-
-        {/* Theater filter */}
-        {meta?.available_theaters && meta.available_theaters.length > 1 && (
-          <select
-            value={selectedTheaterSlug}
-            onChange={(e) => setSelectedTheaterSlug(e.target.value)}
-            className="h-8 min-w-[180px] px-2.5 rounded-lg bg-[var(--night)]/40 border border-[var(--twilight)]/60 text-[var(--cream)] font-mono text-[0.68rem] focus:outline-none focus:border-[var(--coral)] transition-colors"
-            aria-label="Filter by theater"
-          >
-            <option value="">All Theaters</option>
-            {meta.available_theaters.map((theater) => (
-              <option key={theater.venue_id} value={theater.venue_slug}>
-                {theater.venue_name}
-              </option>
-            ))}
-          </select>
-        )}
       </div>
 
       {/* Loading state */}
@@ -718,13 +655,10 @@ export default function ShowtimesView({ portalSlug }: ShowtimesViewProps) {
             <CategoryIcon type="film" size={28} glow="subtle" />
           </div>
           <div className="text-[var(--muted)] font-mono text-sm">
-            {showSpecial
-              ? "No special screenings found for this date"
-              : "No showtimes found for this date"
-            }
+            No showtimes found for this date
           </div>
           <div className="text-[var(--muted)]/60 font-mono text-xs mt-2">
-            {selectedTheaterSlug ? "Try a different theater or day" : "Try a different day or check back later"}
+            Try a different day or check back later
           </div>
         </div>
       )}

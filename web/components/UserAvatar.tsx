@@ -87,6 +87,7 @@ function UserAvatar({
   return (
     <div
       className={`relative flex-shrink-0 avatar-root ${className} ${varClasses}`}
+      style={{ width: config.size, height: config.size }}
     >
       <ScopedStyles css={css} />
       {/* Neon ring background */}
@@ -95,6 +96,7 @@ function UserAvatar({
       {/* Main avatar container */}
       <div
         className={`relative rounded-full overflow-hidden ${config.ring} ring-[var(--void)] transition-all duration-300 avatar-ring ${glow ? "avatar-glow" : ""}`}
+        style={{ width: config.size, height: config.size }}
       >
         {src && !imgError ? (
           <Image
@@ -121,6 +123,7 @@ function UserAvatar({
           className={`absolute -bottom-0.5 -right-0.5 rounded-full border-2 border-[var(--void)] ${
             online ? "bg-[var(--neon-green)]" : "bg-[var(--muted)]"
           } avatar-online ${online ? "avatar-online-glow" : ""}`}
+          style={{ width: onlineSize, height: onlineSize }}
         >
           {online && (
             <div className="absolute inset-0 rounded-full bg-[var(--neon-green)] animate-ping opacity-50" />
@@ -190,6 +193,7 @@ export const AvatarStack = memo(function AvatarStack({
       {showCount && remainingCount > 0 && (
         <div
           className={`flex items-center justify-center rounded-full bg-[var(--twilight)] border-2 border-[var(--void)] font-mono font-bold text-[var(--soft)] ${config.text} avatar-root avatar-stack-item ${countZClass?.className ?? ""}`}
+          style={{ width: config.size, height: config.size }}
         >
           +{remainingCount}
         </div>
