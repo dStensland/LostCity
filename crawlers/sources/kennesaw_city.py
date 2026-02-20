@@ -232,12 +232,6 @@ def create_first_friday_concerts(source_id: int, venue_id: int) -> tuple[int, in
 
         content_hash = generate_content_hash(title, "Downtown Kennesaw", start_date)
 
-        existing = find_event_by_hash(content_hash)
-        if existing:
-            smart_update_existing_event(existing, event_record)
-            events_updated += 1
-            continue
-
         description = (
             "Free outdoor concert at Depot Park in downtown Kennesaw. "
             "Live music, food trucks, and community gathering."
@@ -269,6 +263,12 @@ def create_first_friday_concerts(source_id: int, venue_id: int) -> tuple[int, in
             "recurrence_rule": "FREQ=MONTHLY;BYDAY=1FR",
             "content_hash": content_hash,
         }
+
+        existing = find_event_by_hash(content_hash)
+        if existing:
+            smart_update_existing_event(existing, event_record)
+            events_updated += 1
+            continue
 
         series_hint = {
             "series_type": "recurring_show",

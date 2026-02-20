@@ -228,12 +228,6 @@ def create_concerts_in_park(source_id: int, venue_id: int) -> tuple[int, int]:
 
         content_hash = generate_content_hash(title, "Morningside", start_date)
 
-        existing = find_event_by_hash(content_hash)
-        if existing:
-            smart_update_existing_event(existing, event_record)
-            events_updated += 1
-            continue
-
         description = (
             "Free outdoor concert series at Sidney Marcus Park. "
             "Bring blankets and picnics, enjoy live music with neighbors. "
@@ -266,6 +260,12 @@ def create_concerts_in_park(source_id: int, venue_id: int) -> tuple[int, int]:
             "recurrence_rule": "FREQ=MONTHLY;BYDAY=2FR",
             "content_hash": content_hash,
         }
+
+        existing = find_event_by_hash(content_hash)
+        if existing:
+            smart_update_existing_event(existing, event_record)
+            events_updated += 1
+            continue
 
         series_hint = {
             "series_type": "recurring_show",
@@ -391,12 +391,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         content_hash = generate_content_hash(title, "Morningside", start_date)
 
-                        existing = find_event_by_hash(content_hash)
-                        if existing:
-                            smart_update_existing_event(existing, event_record)
-                            events_updated += 1
-                            continue
-
                         event_record = {
                             "source_id": source_id,
                             "venue_id": venue_id,
@@ -423,6 +417,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "recurrence_rule": None,
                             "content_hash": content_hash,
                         }
+
+                        existing = find_event_by_hash(content_hash)
+                        if existing:
+                            smart_update_existing_event(existing, event_record)
+                            events_updated += 1
+                            continue
 
                         try:
                             insert_event(event_record)

@@ -154,7 +154,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "is_free": False,
                     "source_url": PERFORMANCES_URL,
                     "ticket_url": None,
-                    "image_url": image_map.get(f),
+                    "image_url": image_map.get(title),
                     "raw_text": None,
                     "extraction_confidence": 0.90,
                     "is_recurring": False,

@@ -168,12 +168,6 @@ def create_npu_f_meetings(source_id: int, venue_id: int) -> tuple[int, int]:
 
         content_hash = generate_content_hash(title, "Piedmont Heights", start_date)
 
-        existing = find_event_by_hash(content_hash)
-        if existing:
-            smart_update_existing_event(existing, event_record)
-            events_updated += 1
-            continue
-
         description = (
             "NPU-F (Neighborhood Planning Unit F) monthly meeting. "
             "Covers Piedmont Heights, Ansley Park, Sherwood Forest, and surrounding areas. "
@@ -207,6 +201,12 @@ def create_npu_f_meetings(source_id: int, venue_id: int) -> tuple[int, int]:
             "recurrence_rule": "FREQ=MONTHLY;BYDAY=3WE",
             "content_hash": content_hash,
         }
+
+        existing = find_event_by_hash(content_hash)
+        if existing:
+            smart_update_existing_event(existing, event_record)
+            events_updated += 1
+            continue
 
         series_hint = {
             "series_type": "recurring_show",
@@ -253,12 +253,6 @@ def create_community_cleanup(source_id: int, venue_id: int) -> tuple[int, int]:
 
         content_hash = generate_content_hash(title, "Piedmont Heights", start_date)
 
-        existing = find_event_by_hash(content_hash)
-        if existing:
-            smart_update_existing_event(existing, event_record)
-            events_updated += 1
-            continue
-
         description = (
             "Quarterly community cleanup in Piedmont Heights. "
             "Help beautify the neighborhood by picking up litter, clearing invasive plants, "
@@ -291,6 +285,12 @@ def create_community_cleanup(source_id: int, venue_id: int) -> tuple[int, int]:
             "recurrence_rule": "FREQ=QUARTERLY",
             "content_hash": content_hash,
         }
+
+        existing = find_event_by_hash(content_hash)
+        if existing:
+            smart_update_existing_event(existing, event_record)
+            events_updated += 1
+            continue
 
         series_hint = {
             "series_type": "recurring_show",

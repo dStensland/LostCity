@@ -234,12 +234,6 @@ def create_seasonal_events(source_id: int, venue_id: int) -> tuple[int, int]:
 
         content_hash = generate_content_hash(title, "Snellville", start_date)
 
-        existing = find_event_by_hash(content_hash)
-        if existing:
-            smart_update_existing_event(existing, event_record)
-            events_updated += 1
-            continue
-
         description = (
             "Free outdoor movie night at Briscoe Park. "
             "Bring blankets and chairs for family-friendly films under the stars."
@@ -271,6 +265,12 @@ def create_seasonal_events(source_id: int, venue_id: int) -> tuple[int, int]:
             "recurrence_rule": "FREQ=MONTHLY",
             "content_hash": content_hash,
         }
+
+        existing = find_event_by_hash(content_hash)
+        if existing:
+            smart_update_existing_event(existing, event_record)
+            events_updated += 1
+            continue
 
         series_hint = {
             "series_type": "recurring_show",

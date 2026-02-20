@@ -291,24 +291,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     title, VENUE_DATA["name"], start_date
                 )
 
-                existing = find_event_by_hash(content_hash)
-                if existing:
-                    smart_update_existing_event(existing, event_record)
-                    events_updated += 1
-                    continue
-
                 description = event_template["description"]
                 image_url = image_map.get(title)
-
-                # Build series_hint
-                series_hint = {
-                    "series_type": "recurring_show",
-                    "series_title": title,
-                    "frequency": "weekly" if "weekly" in event_template["schedule"] else "monthly",
-                    "description": description,
-                }
-                if image_url:
-                    series_hint["image_url"] = image_url
 
                 event_record = {
                     "source_id": source_id,
@@ -337,6 +321,22 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "recurrence_rule": f"{event_template['schedule'].upper()}",
                     "content_hash": content_hash,
                 }
+
+                existing = find_event_by_hash(content_hash)
+                if existing:
+                    smart_update_existing_event(existing, event_record)
+                    events_updated += 1
+                    continue
+
+                # Build series_hint
+                series_hint = {
+                    "series_type": "recurring_show",
+                    "series_title": title,
+                    "frequency": "weekly" if "weekly" in event_template["schedule"] else "monthly",
+                    "description": description,
+                }
+                if image_url:
+                    series_hint["image_url"] = image_url
 
                 try:
                     insert_event(event_record, series_hint=series_hint)
