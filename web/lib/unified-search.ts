@@ -8,7 +8,7 @@
 
 import { createServiceClient } from "./supabase/service";
 import { analyzeQueryIntent, applyIntentBoost, extractCleanQuery, type QueryIntentResult, type SearchType } from "./query-intent";
-import { fetchSocialProofCounts } from "@/lib/search";
+import { fetchSocialProofCounts } from "@/lib/social-proof";
 
 // ============================================
 // Types
@@ -426,7 +426,7 @@ export async function unifiedSearch(
     boostExactMatches = true,
     includeFacets = true,
     includeDidYouMean = true,
-    includeSocialProof = true,
+    includeSocialProof = false,
   } = options;
 
   const trimmedQuery = query.trim();

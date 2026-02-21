@@ -23,7 +23,7 @@ import {
 import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
 import { isSuppressedFromGeneralEventFeed } from "@/lib/event-content-classification";
 
-import { fetchSocialProofCounts } from "@/lib/search";
+import { fetchSocialProofCounts } from "@/lib/social-proof";
 import { format, startOfDay, addDays } from "date-fns";
 
 type RecommendationReason = {

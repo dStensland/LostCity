@@ -276,7 +276,6 @@ export function convertToSearchOptions(
     useIntentAnalysis: true,
     boostExactMatches: true,
     includeFacets: true,
-    includeSocialProof: true,
   };
 
   if (parsed.categories?.length) options.categories = parsed.categories;

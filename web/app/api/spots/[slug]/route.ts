@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDistanceMiles } from "@/lib/geo";
 import { getLocalDateString } from "@/lib/formats";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
-import { fetchSocialProofCounts } from "@/lib/search";
+import { fetchSocialProofCounts } from "@/lib/social-proof";
 
 // Destination category mappings for venues
 const DESTINATION_CATEGORIES: Record<string, string[]> = {
@@ -21,7 +21,7 @@ const NOISY_PREFIX_RE =
 
 const SPOT_DETAIL_CACHE_TTL_MS = 2 * 60 * 1000;
 const SPOT_DETAIL_CACHE_MAX_ENTRIES = 200;
-const SPOT_DETAIL_CACHE_CONTROL = "public, s-maxage=120, stale-while-revalidate=600";
+const SPOT_DETAIL_CACHE_CONTROL = "public, max-age=60, s-maxage=120, stale-while-revalidate=600";
 
 type SpotCachePayload = {
   spot: Record<string, unknown>;

@@ -193,7 +193,7 @@ export default function BrandedHeader({
 
         {/* Right: Search + User menu + Mobile menu */}
         <div className="flex items-center gap-2 flex-shrink-0">
-          {headerConfig.show_search_in_header !== false && <HeaderSearchButton />}
+          {headerConfig.show_search_in_header !== false && currentView !== "find" && <HeaderSearchButton />}
           <UserMenu />
 
           {/* Mobile hamburger */}

@@ -13,6 +13,7 @@ import {
 import type { ViewMode, FindType } from "@/lib/search-context";
 import { logger } from "@/lib/logger";
 import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
+import { isNaturalLanguageQuery } from "@/lib/nl-detect";
 
 // Helper to safely parse integers with validation
 function safeParseInt(
@@ -158,6 +159,9 @@ export async function GET(request: NextRequest) {
         // Get display order based on context
         const groupOrder = getGroupDisplayOrder(context);
 
+        // Detect if this is a natural language query
+        const isNLQuery = isNaturalLanguageQuery(query);
+
         // Build response with facet counts
         const facets = result.facets ?? [];
         return {
@@ -168,6 +172,7 @@ export async function GET(request: NextRequest) {
           groupOrder,
           facets,
           intent: result.intent,
+          isNLQuery,
         };
       },
       { maxEntries: INSTANT_SEARCH_CACHE_MAX_ENTRIES }

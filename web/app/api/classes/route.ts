@@ -11,7 +11,7 @@ import {
   RATE_LIMITS,
   getClientIdentifier,
 } from "@/lib/rate-limit";
-import { enrichEventsWithSocialProof } from "@/lib/search";
+import { enrichEventsWithSocialProof } from "@/lib/social-proof";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
 import { applyFederatedPortalScopeToQuery, filterByPortalCity } from "@/lib/portal-scope";
 import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";

@@ -353,7 +353,7 @@ export default function StandardHeader({
 
           {/* Right: Search, User menu, Mobile menu */}
           <div className="portal-feed-actions flex items-center gap-1.5 sm:gap-2 flex-shrink-0 ml-auto">
-            {headerConfig.show_search_in_header !== false && <HeaderSearchButton />}
+            {headerConfig.show_search_in_header !== false && currentView !== "find" && <HeaderSearchButton />}
             <UserMenu />
 
             {/* Mobile hamburger menu */}

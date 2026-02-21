@@ -1,4 +1,5 @@
-import { getFilteredEventsWithCursor, enrichEventsWithSocialProof, PRICE_FILTERS, type SearchFilters } from "@/lib/search";
+import { getFilteredEventsWithCursor, PRICE_FILTERS, type SearchFilters } from "@/lib/search";
+import { enrichEventsWithSocialProof } from "@/lib/social-proof";
 import type { MoodId } from "@/lib/moods";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { apiResponse, escapeSQLPattern } from "@/lib/api-utils";

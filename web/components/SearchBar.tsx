@@ -1,134 +1,16 @@
 "use client";
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { getRecentSearches, addRecentSearch, removeRecentSearch, clearRecentSearches } from "@/lib/searchHistory";
+import { useCallback, useEffect, useRef, useMemo } from "react";
+import { addRecentSearch, getRecentSearches } from "@/lib/searchHistory";
 import { useSearchContext } from "@/lib/search-context";
 import { useSearchPersonalization } from "@/lib/hooks/useSearchPersonalization";
-import {
-  type QuickAction,
-  rankResults,
-  detectQuickActions,
-  groupResultsByType,
-  getGroupDisplayOrder,
-  type SearchContext as RankingContext,
-} from "@/lib/search-ranking";
+import { useInstantSearch } from "@/lib/hooks/useInstantSearch";
 import { type SearchResult } from "@/lib/unified-search";
+import type { QuickAction } from "@/lib/search-ranking";
 import { buildSearchResultHref } from "@/lib/search-navigation";
 import { SuggestionGroup, QuickActionsList } from "./search";
 import { TypeIcon } from "./SearchResultItem";
-
-// ============================================
-// Types
-// ============================================
-
-interface InstantSearchResponse {
-  suggestions: (SearchResult & { personalizationReason?: string })[];
-  topResults: SearchResult[];
-  quickActions: QuickAction[];
-  groupedResults: Record<string, SearchResult[]>;
-  groupOrder: string[];
-  facets?: { type: string; count: number }[];
-  intent?: {
-    type: string;
-    confidence: number;
-    dateFilter?: string;
-  };
-}
-
-type IntentType = "time" | "location" | "category" | "venue" | "organizer" | "series" | "general";
-
-function getIntentAwareGroupOrder(
-  baseOrder: SearchResult["type"][],
-  intentType: IntentType | null,
-  query: string
-): SearchResult["type"][] {
-  const intentOrderMap: Partial<Record<IntentType, SearchResult["type"][]>> = {
-    time: ["event", "festival", "series", "venue", "organizer", "list", "neighborhood", "category"],
-    category: ["event", "festival", "series", "venue", "organizer", "list", "neighborhood", "category"],
-    venue: ["venue", "event", "neighborhood", "festival", "organizer", "series", "list", "category"],
-    location: ["venue", "neighborhood", "event", "festival", "organizer", "series", "list", "category"],
-    organizer: ["organizer", "event", "series", "venue", "festival", "list", "neighborhood", "category"],
-    series: ["series", "event", "venue", "organizer", "festival", "list", "neighborhood", "category"],
-  };
-
-  const trimmed = query.trim().toLowerCase();
-  const liveLike = /\blive\b/.test(trimmed);
-  const preferredByIntent = intentType ? intentOrderMap[intentType] : undefined;
-  const preferred = preferredByIntent || (liveLike
-    ? ["event", "venue", "series", "festival", "organizer", "list", "neighborhood", "category"]
-    : baseOrder);
-
-  return Array.from(new Set([...preferred, ...baseOrder]));
-}
-
-function dedupeResultsByIdentity<T extends SearchResult>(results: T[]): T[] {
-  const byKey = new Map<string, T>();
-  for (const result of results) {
-    const key = `${result.type}:${String(result.id)}`;
-    const existing = byKey.get(key);
-    if (!existing || result.score > existing.score) {
-      byKey.set(key, result);
-    }
-  }
-  return Array.from(byKey.values());
-}
-
-function normalizeSearchText(value?: string): string {
-  return (value || "").trim().toLowerCase().replace(/\s+/g, " ");
-}
-
-function dedupeResultsSemantically<T extends SearchResult>(results: T[]): T[] {
-  const identityDeduped = dedupeResultsByIdentity(results);
-  const semanticSeen = new Set<string>();
-  const deduped: T[] = [];
-
-  for (const result of identityDeduped) {
-    const shouldUseSemanticKey =
-      result.type === "event" || result.type === "venue" || result.type === "organizer";
-
-    if (!shouldUseSemanticKey) {
-      deduped.push(result);
-      continue;
-    }
-
-    const semanticKey = [
-      result.type,
-      normalizeSearchText(result.title),
-      normalizeSearchText(result.subtitle),
-      result.metadata?.date || "",
-      result.metadata?.time || "",
-    ].join(":");
-
-    if (semanticSeen.has(semanticKey)) {
-      continue;
-    }
-    semanticSeen.add(semanticKey);
-    deduped.push(result);
-  }
-
-  return deduped;
-}
-
-function dedupeGroupedResults(
-  grouped: Record<string, SearchResult[]>
-): Record<string, SearchResult[]> {
-  const output: Record<string, SearchResult[]> = {};
-  for (const [type, results] of Object.entries(grouped)) {
-    output[type] = dedupeResultsSemantically(results);
-  }
-  return output;
-}
-
-function dedupeQuickActions(actions: QuickAction[]): QuickAction[] {
-  const byId = new Map<string, QuickAction>();
-  for (const action of actions) {
-    if (!byId.has(action.id)) {
-      byId.set(action.id, action);
-    }
-  }
-  return Array.from(byId.values());
-}
 
 // ============================================
 // Component
@@ -144,29 +26,11 @@ export default function SearchBar() {
   const searchContext = useSearchContext();
   const { preferences } = useSearchPersonalization();
 
-  // State
-  const [query, setQuery] = useState(currentSearchParam);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [suggestions, setSuggestions] = useState<(SearchResult & { personalizationReason?: string })[]>([]);
-  const [quickActions, setQuickActions] = useState<QuickAction[]>([]);
-  const [facets, setFacets] = useState<{ type: string; count: number }[]>([]);
-  const [apiGroupedResults, setApiGroupedResults] = useState<Record<string, SearchResult[]>>({});
-  const [recentSearches, setRecentSearches] = useState<string[]>(() => {
-    if (typeof window !== "undefined") {
-      return getRecentSearches();
-    }
-    return [];
-  });
-  const [selectedIndex, setSelectedIndex] = useState(-1);
-  const [isLoading, setIsLoading] = useState(false);
-  const [intentType, setIntentType] = useState<IntentType | null>(null);
-
   // Refs
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isInitialMount = useRef(true);
-  const fetchIdRef = useRef(0);
 
   // Prefer portal slug from search context; fall back to URL path.
   const portalSlug = useMemo(() => {
@@ -177,91 +41,21 @@ export default function SearchBar() {
     return match ? match[1] : "atlanta";
   }, [searchContext?.portalSlug, pathname]);
 
-  // Build ranking context
-  const rankingContext = useMemo<RankingContext>(() => ({
-    viewMode: searchContext?.viewMode || "feed",
-    findType: searchContext?.findType || null,
+  // Use shared search hook
+  const search = useInstantSearch({
     portalSlug,
     portalId: searchContext?.portalId,
+    findType: searchContext?.findType,
+    viewMode: searchContext?.viewMode || "feed",
     userPreferences: preferences || undefined,
-  }), [searchContext, portalSlug, preferences]);
+  });
 
-  // Derive isSearching from query vs URL mismatch
-  const isSearching = query.trim() !== currentSearchParam || isLoading;
-
-  // Fetch suggestions as user types
+  // Sync URL search param → query on mount
   useEffect(() => {
-    if (query.length < 2) {
-      setSuggestions([]);
-      setQuickActions([]);
-      setFacets([]);
-      setApiGroupedResults({});
-      setIntentType(null);
-      return;
+    if (currentSearchParam && currentSearchParam !== search.query) {
+      search.setQuery(currentSearchParam);
     }
-
-    const fetchId = ++fetchIdRef.current;
-
-    const timer = setTimeout(async () => {
-      setIsLoading(true);
-
-      try {
-        // Build API URL with context params
-        const params = new URLSearchParams({
-          q: query,
-          limit: "8",
-          portalSlug,
-          viewMode: rankingContext.viewMode,
-        });
-        if (rankingContext.findType) {
-          params.set("findType", rankingContext.findType);
-        }
-        params.set("portal", portalSlug);
-        if (rankingContext.portalId) {
-          params.set("portal_id", rankingContext.portalId);
-        }
-
-        const response = await fetch(`/api/search/instant?${params.toString()}`);
-
-        if (fetchId !== fetchIdRef.current) return; // Stale request
-
-        if (!response.ok) {
-          throw new Error("Search failed");
-        }
-
-        const data: InstantSearchResponse = await response.json();
-
-        // Apply client-side ranking with personalization
-        const rankedResults = dedupeResultsSemantically(
-          rankResults(data.suggestions, rankingContext)
-        );
-        const fallbackActions = detectQuickActions(query, portalSlug);
-        const nextQuickActions = dedupeQuickActions(data.quickActions || fallbackActions);
-
-        setSuggestions(rankedResults);
-        setQuickActions(nextQuickActions);
-        setFacets(data.facets || []);
-        setApiGroupedResults(dedupeGroupedResults(data.groupedResults || {}));
-        setIntentType((data.intent?.type as IntentType | undefined) || null);
-        setSelectedIndex(-1);
-      } catch (err) {
-        console.error("Search error:", err);
-        setSuggestions([]);
-        setQuickActions([]);
-        setFacets([]);
-        setApiGroupedResults({});
-        setIntentType(null);
-      } finally {
-        if (fetchId === fetchIdRef.current) {
-          setIsLoading(false);
-        }
-      }
-    }, 100);
-
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [query, portalSlug, rankingContext]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Debounced URL update - only when query changes from user input
   useEffect(() => {
@@ -277,10 +71,9 @@ export default function SearchBar() {
     debounceRef.current = setTimeout(() => {
       const params = new URLSearchParams(searchParams.toString());
 
-      if (query.trim()) {
-        params.set("search", query.trim());
-        addRecentSearch(query.trim());
-        setRecentSearches(getRecentSearches());
+      if (search.query.trim()) {
+        params.set("search", search.query.trim());
+        addRecentSearch(search.query.trim());
       } else {
         params.delete("search");
       }
@@ -295,203 +88,66 @@ export default function SearchBar() {
         clearTimeout(debounceRef.current);
       }
     };
-  }, [query, router, searchParams, pathname]);
+  }, [search.query, router, searchParams, pathname]);
 
-  // Handlers
-  const handleClear = useCallback(() => {
-    setQuery("");
-    setShowDropdown(false);
-    setSelectedIndex(-1);
-    setSuggestions([]);
-    setQuickActions([]);
-    setApiGroupedResults({});
-    setIntentType(null);
-  }, []);
+  // Derive isSearching from query vs URL mismatch
+  const isSearching = search.query.trim() !== currentSearchParam || search.isLoading;
 
-  const handleFocus = useCallback(() => {
-    setShowDropdown(true);
-  }, []);
-
-  const handleBlur = useCallback(() => {
-    setTimeout(() => {
-      setShowDropdown(false);
-      setSelectedIndex(-1);
-    }, 200);
-  }, []);
-
-  // Handle selecting a suggestion
-  const selectSuggestion = useCallback(
+  // Handle selecting a suggestion — navigate to result
+  const handleSelectSuggestion = useCallback(
     (result: SearchResult) => {
-      // Track the search
-      if (query.trim()) {
-        addRecentSearch(query.trim());
-        setRecentSearches(getRecentSearches());
-      }
-
-      // Close dropdown
-      setShowDropdown(false);
-      setSelectedIndex(-1);
-      setQuery("");
+      search.selectSuggestion(result);
+      search.setQuery("");
       const url = buildSearchResultHref(result, { portalSlug });
       router.push(url, { scroll: false });
       inputRef.current?.blur();
     },
-    [portalSlug, query, router]
+    [portalSlug, router, search]
   );
 
-  // Handle selecting a quick action
-  const selectQuickAction = useCallback(
+  // Handle selecting a quick action — navigate
+  const handleSelectQuickAction = useCallback(
     (action: QuickAction) => {
-      // Track the search
-      if (query.trim()) {
-        addRecentSearch(query.trim());
-        setRecentSearches(getRecentSearches());
-      }
-
-      // Close dropdown and clear query
-      setShowDropdown(false);
-      setSelectedIndex(-1);
-      setQuery("");
-
-      // Navigate to the action URL
+      search.selectQuickAction(action);
+      search.setQuery("");
       router.push(action.url, { scroll: false });
       inputRef.current?.blur();
     },
-    [query, router]
+    [router, search]
   );
 
   // Handle selecting a recent search
-  const selectRecentSearch = useCallback(
+  const handleSelectRecent = useCallback(
     (term: string) => {
-      setQuery(term);
-      setShowDropdown(false);
-      setSelectedIndex(-1);
+      search.selectRecentSearch(term);
       inputRef.current?.blur();
     },
-    []
+    [search]
   );
 
-  // Handle removing a recent search
-  const handleRemoveRecent = useCallback(
-    (term: string, e: React.MouseEvent) => {
-      e.stopPropagation();
-      removeRecentSearch(term);
-      setRecentSearches(getRecentSearches());
-    },
-    []
-  );
-
-  // Handle clearing all recent searches
-  const handleClearRecent = useCallback(() => {
-    clearRecentSearches();
-    setRecentSearches([]);
-  }, []);
-
-  // Build flat list of all selectable items for keyboard navigation
-  const showRecent = query.length < 2 && recentSearches.length > 0;
-  const showSuggestions = query.length >= 2 && suggestions.length > 0;
-  const showQuickActions = query.length >= 2 && quickActions.length > 0;
-
-  // Group suggestions by type for display
-  // Use API's pre-grouped results (which include all types from the full result set)
-  // instead of re-grouping the top-N slice (which drops minority types like festivals)
-  const groupedSuggestions = useMemo<Record<SearchResult["type"], SearchResult[]>>(() => {
-    const empty: Record<SearchResult["type"], SearchResult[]> = {
-      event: [],
-      venue: [],
-      organizer: [],
-      series: [],
-      list: [],
-      neighborhood: [],
-      category: [],
-      festival: [],
-    };
-    if (!showSuggestions) return empty;
-
-    // Prefer API grouped results (full type diversity) over re-grouping sliced suggestions
-    if (Object.keys(apiGroupedResults).length > 0) {
-      return { ...empty, ...apiGroupedResults } as Record<SearchResult["type"], SearchResult[]>;
-    }
-    return groupResultsByType(suggestions);
-  }, [showSuggestions, suggestions, apiGroupedResults]);
-
-  const groupOrder = useMemo(() => {
-    const baseOrder = Array.from(new Set(getGroupDisplayOrder(rankingContext)));
-    return getIntentAwareGroupOrder(baseOrder, intentType, query);
-  }, [rankingContext, intentType, query]);
-
-  const totalResultCount = useMemo(() => {
-    const facetTotal = facets.reduce((sum, facet) => sum + facet.count, 0);
-    if (facetTotal > 0) return facetTotal;
-
-    return Object.values(groupedSuggestions).reduce(
-      (sum, results) => sum + results.length,
-      0
-    );
-  }, [facets, groupedSuggestions]);
-
-  // Build flat list for keyboard navigation
-  const allItems = useMemo(() => {
-    const items: Array<
-      | { type: "recent"; text: string }
-      | { type: "quickAction"; action: QuickAction }
-      | { type: "suggestion"; result: SearchResult & { personalizationReason?: string } }
-    > = [];
-
-    if (showRecent) {
-      for (const term of recentSearches) {
-        items.push({ type: "recent", text: term });
-      }
-    } else if (showSuggestions) {
-      // Add quick actions first
-      if (showQuickActions) {
-        for (const action of quickActions) {
-          items.push({ type: "quickAction", action });
-        }
-      }
-
-      // Add suggestions grouped by type
-      for (const type of groupOrder) {
-        const results = groupedSuggestions[type] || [];
-        for (const result of results.slice(0, 3)) {
-          items.push({ type: "suggestion", result });
-        }
-      }
-    }
-
-    return items;
-  }, [showRecent, showSuggestions, showQuickActions, recentSearches, quickActions, groupOrder, groupedSuggestions]);
-
-  // Keyboard navigation
+  // Wrap handleKeyDown to intercept Enter for navigation
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (!showDropdown || allItems.length === 0) return;
-
-      if (e.key === "ArrowDown") {
+      if (e.key === "Enter" && search.selectedIndex >= 0) {
         e.preventDefault();
-        setSelectedIndex((prev) => (prev < allItems.length - 1 ? prev + 1 : 0));
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault();
-        setSelectedIndex((prev) => (prev > 0 ? prev - 1 : allItems.length - 1));
-      } else if (e.key === "Enter" && selectedIndex >= 0) {
-        e.preventDefault();
-        const item = allItems[selectedIndex];
-        if (item.type === "recent") {
-          selectRecentSearch(item.text);
-        } else if (item.type === "quickAction") {
-          selectQuickAction(item.action);
-        } else if (item.type === "suggestion") {
-          selectSuggestion(item.result);
+        const item = search.allItems[search.selectedIndex];
+        if (item?.type === "suggestion") {
+          handleSelectSuggestion(item.result);
+          return;
         }
-      } else if (e.key === "Escape") {
-        setShowDropdown(false);
-        setSelectedIndex(-1);
+        if (item?.type === "quickAction") {
+          handleSelectQuickAction(item.action);
+          return;
+        }
+        if (item?.type === "recent") {
+          handleSelectRecent(item.text);
+          return;
+        }
       }
+      search.handleKeyDown(e);
     },
-    [showDropdown, allItems, selectedIndex, selectRecentSearch, selectQuickAction, selectSuggestion]
+    [search, handleSelectSuggestion, handleSelectQuickAction, handleSelectRecent]
   );
-
-  const shouldShowDropdown = showDropdown && (showRecent || showSuggestions);
 
   const searchId = "event-search";
   const suggestionsId = "search-suggestions";
@@ -519,24 +175,24 @@ export default function SearchBar() {
         ref={inputRef}
         id={searchId}
         type="search"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
+        value={search.query}
+        onChange={(e) => search.setQuery(e.target.value)}
+        onFocus={search.handleFocus}
+        onBlur={search.handleBlur}
         onKeyDown={handleKeyDown}
         placeholder="Search events, venues, organizers..."
         className="block w-full pl-14 pr-12 py-3.5 border border-[var(--twilight)] rounded-xl bg-[var(--night)] text-[var(--cream)] placeholder-[var(--muted)] text-sm focus:outline-none focus:border-[var(--coral)] focus:ring-2 focus:ring-[var(--coral)]/30 focus:shadow-[0_0_0_4px_var(--coral)/10,0_0_20px_var(--coral)/15] transition-all duration-200"
         role="combobox"
-        aria-expanded={shouldShowDropdown}
+        aria-expanded={search.shouldShowDropdown}
         aria-controls={suggestionsId}
-        aria-activedescendant={selectedIndex >= 0 ? `suggestion-${selectedIndex}` : undefined}
+        aria-activedescendant={search.selectedIndex >= 0 ? `suggestion-${search.selectedIndex}` : undefined}
         aria-autocomplete="list"
         autoComplete="off"
       />
-      {query && (
+      {search.query && (
         <button
           type="button"
-          onClick={handleClear}
+          onClick={search.clear}
           className="absolute inset-y-0 right-0 pr-5 flex items-center group"
           aria-label="Clear search"
         >
@@ -547,7 +203,7 @@ export default function SearchBar() {
       )}
 
       {/* Suggestions Dropdown */}
-      {shouldShowDropdown && (
+      {search.shouldShowDropdown && (
         <div
           id={suggestionsId}
           role="listbox"
@@ -555,7 +211,7 @@ export default function SearchBar() {
           className="absolute top-full left-0 right-0 mt-1 border border-[var(--twilight)] rounded-lg shadow-xl shadow-[0_4px_20px_rgba(0,0,0,0.5)] z-[10000] overflow-hidden max-h-[78vh] sm:max-h-[72vh] overflow-y-auto animate-dropdown-in bg-[var(--dusk)]"
         >
           {/* Recent Searches */}
-          {showRecent && (
+          {search.showRecent && (
             <div className="p-2">
               <div className="flex items-center justify-between px-2 pb-2">
                 <div className="flex items-center gap-2">
@@ -565,14 +221,14 @@ export default function SearchBar() {
                   <p className="text-[0.65rem] text-[var(--muted)] font-mono uppercase tracking-wider">Recent Searches</p>
                 </div>
                 <button
-                  onMouseDown={handleClearRecent}
+                  onMouseDown={search.clearRecent}
                   className="text-[0.6rem] text-[var(--muted)] hover:text-[var(--coral)] transition-colors font-mono"
                   title="Clear all"
                 >
                   Clear
                 </button>
               </div>
-              {recentSearches.map((term, idx) => (
+              {search.recentSearches.map((term, idx) => (
                 <div
                   key={term}
                   className="group relative"
@@ -580,16 +236,16 @@ export default function SearchBar() {
                   <div
                     id={`suggestion-${idx}`}
                     role="option"
-                    aria-selected={selectedIndex === idx}
-                    onMouseEnter={() => setSelectedIndex(idx)}
+                    aria-selected={search.selectedIndex === idx}
+                    onMouseEnter={() => search.setSelectedIndex(idx)}
                     className={`flex items-center gap-2.5 w-full text-left px-3 py-2 text-sm rounded-lg transition-all ${
-                      selectedIndex === idx
+                      search.selectedIndex === idx
                         ? "bg-[var(--twilight)] text-[var(--cream)] translate-x-0.5"
                         : "text-[var(--cream)] hover:bg-[var(--twilight)]/50"
                     }`}
                   >
                     <button
-                      onMouseDown={() => selectRecentSearch(term)}
+                      onMouseDown={() => handleSelectRecent(term)}
                       className="flex items-center gap-2.5 min-w-0 flex-1 text-left"
                     >
                       <svg className="h-3.5 w-3.5 text-[var(--soft)] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -598,7 +254,7 @@ export default function SearchBar() {
                       <span className="truncate flex-1">{term}</span>
                     </button>
                     <button
-                      onMouseDown={(e) => handleRemoveRecent(term, e)}
+                      onMouseDown={(e) => search.removeRecent(term, e)}
                       className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-[var(--dusk)] transition-all"
                       title="Remove"
                       aria-label={`Remove "${term}" from recent searches`}
@@ -613,45 +269,45 @@ export default function SearchBar() {
             </div>
           )}
 
-          {showSuggestions && (
+          {search.showSuggestions && (
             <div className="px-3 py-2 border-b border-[var(--twilight)] bg-[var(--night)]/45">
               <div className="flex items-center justify-between gap-2">
                 <p className="text-[0.65rem] font-mono uppercase tracking-wider text-[var(--soft)] truncate">
-                  Search: <span className="text-[var(--cream)] normal-case tracking-normal">&quot;{query}&quot;</span>
+                  Search: <span className="text-[var(--cream)] normal-case tracking-normal">&quot;{search.query}&quot;</span>
                 </p>
                 <span className="text-[0.62rem] px-2 py-0.5 rounded-full bg-[var(--twilight)] text-[var(--muted)]">
-                  {totalResultCount} results
+                  {search.totalResultCount} results
                 </span>
               </div>
             </div>
           )}
 
           {/* Quick Actions */}
-          {showQuickActions && (
+          {search.showQuickActions && (
             <QuickActionsList
-              actions={quickActions}
-              selectedIndex={selectedIndex}
+              actions={search.quickActions}
+              selectedIndex={search.selectedIndex}
               startIndex={(() => {
                 const idx = currentIndex;
-                currentIndex += quickActions.length;
+                currentIndex += search.quickActions.length;
                 return idx;
               })()}
-              onSelect={selectQuickAction}
-              onHover={setSelectedIndex}
+              onSelect={handleSelectQuickAction}
+              onHover={search.setSelectedIndex}
             />
           )}
 
           {/* Grouped Suggestions */}
-          {showSuggestions && (
+          {search.showSuggestions && (
             <div className="p-2">
-              {groupOrder.map((type, groupIdx) => {
-                const results = groupedSuggestions[type as SearchResult["type"]] || [];
+              {search.groupOrder.map((type, groupIdx) => {
+                const results = search.groupedResults[type as SearchResult["type"]] || [];
                 if (results.length === 0) return null;
 
                 const startIdx = currentIndex;
                 currentIndex += Math.min(results.length, 3);
 
-                const facetCount = facets.find(f => f.type === type)?.count;
+                const facetCount = search.facets.find(f => f.type === type)?.count;
                 const totalCount = facetCount ?? results.length;
                 const hasMore = totalCount > 3;
 
@@ -667,23 +323,23 @@ export default function SearchBar() {
                     <SuggestionGroup
                       type={type as SearchResult["type"]}
                       results={results}
-                      query={query}
-                      selectedIndex={selectedIndex}
+                      query={search.query}
+                      selectedIndex={search.selectedIndex}
                       startIndex={startIdx}
-                      onSelect={selectSuggestion}
-                      onHover={setSelectedIndex}
+                      onSelect={handleSelectSuggestion}
+                      onHover={search.setSelectedIndex}
                       maxItems={3}
                       totalCount={facetCount}
                       onViewAll={hasMore ? () => {
-                        setShowDropdown(false);
-                        setSelectedIndex(-1);
+                        search.setShowDropdown(false);
+                        search.setSelectedIndex(-1);
                         if (type === "festival") {
-                          router.push(`/${portalSlug}/festivals?search=${encodeURIComponent(query)}`, { scroll: false });
+                          router.push(`/${portalSlug}/festivals?search=${encodeURIComponent(search.query)}`, { scroll: false });
                         } else if (type === "organizer") {
-                          router.push(`/${portalSlug}?view=community&search=${encodeURIComponent(query)}`, { scroll: false });
+                          router.push(`/${portalSlug}?view=community&search=${encodeURIComponent(search.query)}`, { scroll: false });
                         } else {
                           const findType = type === "venue" ? "destinations" : "events";
-                          router.push(`/${portalSlug}?view=find&type=${findType}&search=${encodeURIComponent(query)}`, { scroll: false });
+                          router.push(`/${portalSlug}?view=find&type=${findType}&search=${encodeURIComponent(search.query)}`, { scroll: false });
                         }
                       } : undefined}
                     />
@@ -693,8 +349,8 @@ export default function SearchBar() {
             </div>
           )}
 
-          {/* Keyboard hint */}
-          <div className="px-3 py-2 border-t border-[var(--twilight)] bg-[var(--night)]/50">
+          {/* Keyboard hint — desktop only, no physical keyboard on mobile */}
+          <div className="hidden sm:block px-3 py-2 border-t border-[var(--twilight)] bg-[var(--night)]/50">
             <p className="text-[0.6rem] text-[var(--muted)] flex items-center gap-3">
               <span className="flex items-center gap-1">
                 <kbd className="px-1.5 py-0.5 bg-[var(--twilight)] rounded text-[var(--soft)] text-[0.55rem]">&#8593;&#8595;</kbd>

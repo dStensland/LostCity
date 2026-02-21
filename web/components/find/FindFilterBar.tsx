@@ -1,29 +1,16 @@
 "use client";
 
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { useCallback, useMemo, useState, useEffect, useRef, useTransition } from "react";
-import { CATEGORIES, TAG_GROUPS } from "@/lib/search-constants";
-import { VIBE_GROUPS } from "@/lib/spots-constants";
-import { MOODS } from "@/lib/moods";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import CategoryIcon from "@/components/CategoryIcon";
 import { MobileFilterSheet } from "@/components/MobileFilterSheet";
 import { formatGenre } from "@/lib/series-utils";
-import { getSmartDateDefault } from "@/lib/hooks/useEventFilters";
+import { useFilterEngine } from "@/lib/hooks/useFilterEngine";
+import { triggerHaptic } from "@/lib/haptics";
 
 type FindFilterBarProps = {
   variant?: "full" | "compact";
   portalId?: string;
   portalExclusive?: boolean;
-};
-
-type GroupedOption = {
-  group: string;
-  options: { value: string; label: string }[];
-};
-
-type CategoryOption = {
-  value: string;
-  label: string;
 };
 
 const DATE_OPTIONS = [
@@ -33,149 +20,220 @@ const DATE_OPTIONS = [
   { value: "week", label: "This Week" },
 ] as const;
 
-const TAG_GROUP_OPTIONS: GroupedOption[] = Object.entries(TAG_GROUPS)
-  .map(([group, options]) => ({
-    group,
-    options: options.filter((option) => option.value !== "free"),
-  }))
-  .filter((group) => group.options.length > 0);
+type DropdownId = "category" | "date" | "mood" | null;
 
-const VIBE_GROUP_OPTIONS: GroupedOption[] = Object.entries(VIBE_GROUPS).map(([group, options]) => ({
-  group,
-  options: [...options],
-}));
+const MOOD_LABELS_CACHE = new Map<string, string>();
 
-const MOOD_OPTIONS = MOODS.map((mood) => ({ value: mood.id, label: mood.name }));
+// ─── Mobile strip configuration ──────────────────────────────────────────────
 
-function humanize(value: string): string {
-  return value
-    .replace(/[_-]/g, " ")
-    .split(" ")
-    .map((part) => (part ? part[0].toUpperCase() + part.slice(1) : part))
-    .join(" ");
+// The 8 categories most likely to surface relevant results on mobile.
+// "Free" is not a category — it maps to the freeOnly filter toggle.
+const MOBILE_CATEGORIES = [
+  { value: "music",      label: "Music" },
+  { value: "food_drink", label: "Food & Drink" },
+  { value: "comedy",     label: "Comedy" },
+  { value: "nightlife",  label: "Nightlife" },
+  { value: "art",        label: "Art" },
+  { value: "sports",     label: "Sports" },
+  { value: "family",     label: "Family" },
+] as const;
+
+// Resolves the CSS variable for a category's accent color.
+// Tailwind can't generate dynamic arbitrary values at build time, so we use
+// inline styles here. Falls back to --muted if no variable exists.
+function catColor(value: string): string {
+  return `var(--cat-${value}, var(--muted))`;
 }
 
-const MOOD_LABELS = new Map<string, string>(MOOD_OPTIONS.map((option) => [option.value, option.label]));
+// ─── MobileFilterStrip ───────────────────────────────────────────────────────
+
+type MobileFilterStripProps = {
+  f: ReturnType<typeof useFilterEngine>;
+  variant: "full" | "compact";
+  onOpenSheet: () => void;
+  onSetDate: (date: string) => void;
+};
+
+function MobileFilterStrip({ f, variant, onOpenSheet, onSetDate }: MobileFilterStripProps) {
+  const handleCategoryTap = useCallback((value: string) => {
+    triggerHaptic("selection");
+    f.toggleCategory(value);
+  }, [f]);
+
+  const handleDateTap = useCallback((date: string) => {
+    triggerHaptic("selection");
+    onSetDate(date);
+  }, [onSetDate]);
+
+  const handleFreeTap = useCallback(() => {
+    triggerHaptic("selection");
+    f.toggleFreeOnly();
+  }, [f]);
+
+  const handleOpenSheet = useCallback(() => {
+    triggerHaptic("light");
+    onOpenSheet();
+  }, [onOpenSheet]);
+
+  const handleClearAll = useCallback(() => {
+    triggerHaptic("medium");
+    f.clearAll();
+  }, [f]);
+
+  return (
+    <div className="sm:hidden">
+      <div
+        className="flex items-center gap-2 overflow-x-auto scrollbar-hide px-4 pb-1"
+        style={{ WebkitOverflowScrolling: "touch", overscrollBehaviorX: "contain" } as React.CSSProperties}
+      >
+        {/* Filters button — always first, fixed reference point */}
+        <button
+          onClick={handleOpenSheet}
+          className={`flex-shrink-0 min-h-[44px] flex items-center gap-1.5 px-3.5 rounded-full font-mono text-xs font-medium border transition-transform active:scale-95 ${
+            f.hasFilters
+              ? "bg-[var(--action-primary)] text-[var(--btn-primary-text)] border-[var(--action-primary)]/40"
+              : "bg-white/5 backdrop-blur-sm text-[var(--soft)] border-white/10"
+          }`}
+        >
+          <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+          </svg>
+          Filters
+          {f.filterCount > 0 && (
+            <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-black/20 text-[10px] font-bold leading-none">
+              {f.filterCount}
+            </span>
+          )}
+        </button>
+
+        {/* Thin vertical divider */}
+        <div className="flex-shrink-0 w-px h-5 bg-white/10" />
+
+        {/* Date quick-select pills — only in full variant */}
+        {variant === "full" && (
+          <>
+            <button
+              onClick={() => handleDateTap("today")}
+              className={`flex-shrink-0 min-h-[44px] px-3.5 rounded-full font-mono text-xs font-medium border transition-transform active:scale-95 ${
+                f.effectiveDateFilter === "today"
+                  ? "bg-[var(--gold)] text-[var(--void)] border-[var(--gold)]/40"
+                  : "bg-white/5 backdrop-blur-sm text-[var(--soft)] border-white/10"
+              }`}
+            >
+              Today
+            </button>
+            <button
+              onClick={() => handleDateTap("weekend")}
+              className={`flex-shrink-0 min-h-[44px] px-3.5 rounded-full font-mono text-xs font-medium border transition-transform active:scale-95 ${
+                f.effectiveDateFilter === "weekend"
+                  ? "bg-[var(--gold)] text-[var(--void)] border-[var(--gold)]/40"
+                  : "bg-white/5 backdrop-blur-sm text-[var(--soft)] border-white/10"
+              }`}
+            >
+              Weekend
+            </button>
+
+            {/* Thin vertical divider */}
+            <div className="flex-shrink-0 w-px h-5 bg-white/10" />
+          </>
+        )}
+
+        {/* Category pills */}
+        {MOBILE_CATEGORIES.map((cat) => {
+          const isActive = f.currentCategories.includes(cat.value);
+          const color = catColor(cat.value);
+          return (
+            <button
+              key={cat.value}
+              onClick={() => handleCategoryTap(cat.value)}
+              className="flex-shrink-0 min-h-[44px] flex items-center gap-1.5 px-3.5 rounded-full font-mono text-xs font-medium border transition-transform active:scale-95"
+              style={
+                isActive
+                  ? {
+                      backgroundColor: `color-mix(in srgb, ${color} 20%, transparent)`,
+                      color: color,
+                      borderColor: `color-mix(in srgb, ${color} 35%, transparent)`,
+                    }
+                  : {
+                      backgroundColor: "rgba(255,255,255,0.05)",
+                      backdropFilter: "blur(4px)",
+                      color: "var(--soft)",
+                      borderColor: "rgba(255,255,255,0.10)",
+                    }
+              }
+            >
+              <CategoryIcon
+                type={cat.value}
+                size={13}
+                glow="none"
+                className={`flex-shrink-0 ${isActive ? "" : "text-[var(--muted)]"}`}
+              />
+              {cat.label}
+            </button>
+          );
+        })}
+
+        {/* Free pill — separate from category pills, maps to freeOnly filter */}
+        <button
+          onClick={handleFreeTap}
+          className={`flex-shrink-0 min-h-[44px] px-3.5 rounded-full font-mono text-xs font-medium border transition-transform active:scale-95 ${
+            f.currentFreeOnly
+              ? "bg-[var(--neon-green)]/20 text-[var(--neon-green)] border-[var(--neon-green)]/35"
+              : "bg-white/5 backdrop-blur-sm text-[var(--soft)] border-white/10"
+          }`}
+        >
+          Free
+        </button>
+
+        {/* Clear — only visible when filters are active, trailing pill */}
+        {f.hasFilters && (
+          <button
+            onClick={handleClearAll}
+            className="flex-shrink-0 min-h-[44px] flex items-center gap-1 px-3 rounded-full font-mono text-xs font-medium border border-white/10 bg-white/5 text-[var(--muted)] active:scale-95 transition-transform whitespace-nowrap"
+          >
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            Clear
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function FindFilterBar({ variant = "full", portalId, portalExclusive = false }: FindFilterBarProps) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const [, startTransition] = useTransition();
+  const f = useFilterEngine({ portalId, portalExclusive });
 
-  const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
-  const [dateDropdownOpen, setDateDropdownOpen] = useState(false);
-  const [moodDropdownOpen, setMoodDropdownOpen] = useState(false);
+  // ─── Dropdown state (single active dropdown) ──────────────────────────────
+  const [activeDropdown, setActiveDropdown] = useState<DropdownId>(null);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
-  const [genreOptions, setGenreOptions] = useState<{ genre: string; display_order: number | null; is_format: boolean | null }[]>([]);
-  const [availableCategories, setAvailableCategories] = useState<Array<{ value: string; label: string; count: number }> | null>(null);
-  const [availableTags, setAvailableTags] = useState<Array<{ value: string; label: string; count: number }> | null>(null);
-
   const categoryDropdownRef = useRef<HTMLDivElement>(null);
   const dateDropdownRef = useRef<HTMLDivElement>(null);
   const moodDropdownRef = useRef<HTMLDivElement>(null);
   const dateInputRef = useRef<HTMLInputElement>(null);
-  const prevCategoriesRef = useRef<string[]>([]);
 
-  const currentCategories = useMemo(
-    () => searchParams.get("categories")?.split(",").filter(Boolean) || [],
-    [searchParams]
-  );
-  const currentGenres = useMemo(
-    () => searchParams.get("genres")?.split(",").filter(Boolean) || [],
-    [searchParams]
-  );
-  const currentTags = useMemo(
-    () => searchParams.get("tags")?.split(",").filter(Boolean) || [],
-    [searchParams]
-  );
-  const currentVibes = useMemo(
-    () => searchParams.get("vibes")?.split(",").filter(Boolean) || [],
-    [searchParams]
-  );
-  const currentMood = searchParams.get("mood") || "";
-  const currentDateFilter = searchParams.get("date") || "";
-  const smartDateDefault = getSmartDateDefault();
-  const effectiveDateFilter = currentDateFilter || smartDateDefault || "";
-  const currentFreeOnly = searchParams.get("free") === "1" || searchParams.get("price") === "free";
+  const toggleDropdown = useCallback((id: DropdownId) => {
+    setActiveDropdown((prev) => (prev === id ? null : id));
+  }, []);
 
-  const categoryOptions = useMemo(() => {
-    const staticCategoryMap = new Map<string, string>(
-      CATEGORIES.map((category) => [category.value, category.label])
-    );
-    const byValue = new Map<string, CategoryOption>();
+  // Close dropdown on outside click
+  useEffect(() => {
+    const onDocClick = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (
+        categoryDropdownRef.current?.contains(target) ||
+        dateDropdownRef.current?.contains(target) ||
+        moodDropdownRef.current?.contains(target)
+      ) return;
+      setActiveDropdown(null);
+    };
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, []);
 
-    if (availableCategories && availableCategories.length > 0) {
-      for (const category of availableCategories) {
-        byValue.set(category.value, {
-          value: category.value,
-          label: category.label || staticCategoryMap.get(category.value) || humanize(category.value),
-        });
-      }
-    } else {
-      for (const category of CATEGORIES) {
-        byValue.set(category.value, { value: category.value, label: category.label });
-      }
-    }
-
-    for (const selected of currentCategories) {
-      if (!byValue.has(selected)) {
-        byValue.set(selected, {
-          value: selected,
-          label: staticCategoryMap.get(selected) || humanize(selected),
-        });
-      }
-    }
-
-    const optionOrder: string[] = CATEGORIES.map((category) => category.value);
-    return Array.from(byValue.values()).sort((a, b) => {
-      const aIdx = optionOrder.indexOf(a.value);
-      const bIdx = optionOrder.indexOf(b.value);
-      const aRank = aIdx === -1 ? Number.MAX_SAFE_INTEGER : aIdx;
-      const bRank = bIdx === -1 ? Number.MAX_SAFE_INTEGER : bIdx;
-      if (aRank !== bRank) return aRank - bRank;
-      return a.label.localeCompare(b.label);
-    });
-  }, [availableCategories, currentCategories]);
-
-  const tagGroupOptions = useMemo(() => {
-    const availableTagSet = availableTags?.length
-      ? new Set(availableTags.map((tag) => tag.value))
-      : null;
-
-    if (!availableTagSet) return TAG_GROUP_OPTIONS;
-
-    const filtered = TAG_GROUP_OPTIONS
-      .map((group) => ({
-        group: group.group,
-        options: group.options.filter(
-          (option) => availableTagSet.has(option.value) || currentTags.includes(option.value)
-        ),
-      }))
-      .filter((group) => group.options.length > 0);
-
-    return filtered.length > 0 ? filtered : TAG_GROUP_OPTIONS;
-  }, [availableTags, currentTags]);
-
-  const hasFilters =
-    currentCategories.length > 0 ||
-    currentGenres.length > 0 ||
-    currentTags.length > 0 ||
-    currentVibes.length > 0 ||
-    Boolean(currentMood) ||
-    Boolean(currentDateFilter) ||
-    currentFreeOnly;
-
-  const filterCount =
-    currentCategories.length +
-    currentGenres.length +
-    currentTags.length +
-    currentVibes.length +
-    (currentMood ? 1 : 0) +
-    (currentDateFilter ? 1 : 0) +
-    (currentFreeOnly ? 1 : 0);
-
-  const isSpecificDate = /^\d{4}-\d{2}-\d{2}$/.test(currentDateFilter);
+  // ─── Derived labels ────────────────────────────────────────────────────────
+  const isSpecificDate = /^\d{4}-\d{2}-\d{2}$/.test(f.currentDateFilter);
 
   const formatDateLabel = useCallback((dateStr: string): string => {
     const d = new Date(`${dateStr}T00:00:00`);
@@ -183,251 +241,73 @@ export default function FindFilterBar({ variant = "full", portalId, portalExclus
   }, []);
 
   const dateFilterLabel =
-    !effectiveDateFilter
+    !f.effectiveDateFilter
       ? "When"
       : isSpecificDate
-      ? formatDateLabel(currentDateFilter)
-      : DATE_OPTIONS.find((d) => d.value === effectiveDateFilter)?.label || "When";
+      ? formatDateLabel(f.currentDateFilter)
+      : DATE_OPTIONS.find((d) => d.value === f.effectiveDateFilter)?.label || "When";
 
   const categoryLabel =
-    currentCategories.length === 0
+    f.currentCategories.length === 0
       ? "Category"
-      : currentCategories.length === 1
-      ? categoryOptions.find((c) => c.value === currentCategories[0])?.label || "Category"
-      : `${currentCategories.length} categories`;
+      : f.currentCategories.length === 1
+      ? f.categoryOptions.find((c) => c.value === f.currentCategories[0])?.label || "Category"
+      : `${f.currentCategories.length} categories`;
 
-  const moodLabel = !currentMood ? "Mood" : MOOD_LABELS.get(currentMood) || humanize(currentMood);
-
-  const visibleGenreOptions = currentCategories.length === 1 ? genreOptions : [];
-
-  const closeAllDropdowns = useCallback(() => {
-    setCategoryDropdownOpen(false);
-    setDateDropdownOpen(false);
-    setMoodDropdownOpen(false);
-  }, []);
-
-  const updateParams = useCallback(
-    (updates: Record<string, string | null>) => {
-      const params = new URLSearchParams(searchParams.toString());
-      for (const [key, value] of Object.entries(updates)) {
-        if (!value) params.delete(key);
-        else params.set(key, value);
-      }
-
-      // Keep routing in Find mode and reset pagination.
-      params.set("view", "find");
-      params.delete("page");
-
-      const url = params.toString() ? `${pathname}?${params.toString()}` : pathname;
-      startTransition(() => {
-        router.push(url, { scroll: false });
-      });
-    },
-    [router, pathname, searchParams, startTransition]
-  );
-
-  const toggleCategory = useCallback(
-    (category: string) => {
-      const next = currentCategories.includes(category)
-        ? currentCategories.filter((c) => c !== category)
-        : [...currentCategories, category];
-
-      updateParams({
-        categories: next.length > 0 ? next.join(",") : null,
-      });
-    },
-    [currentCategories, updateParams]
-  );
-
-  const toggleGenre = useCallback(
-    (genre: string) => {
-      const next = currentGenres.includes(genre)
-        ? currentGenres.filter((g) => g !== genre)
-        : [...currentGenres, genre];
-
-      updateParams({
-        genres: next.length > 0 ? next.join(",") : null,
-      });
-    },
-    [currentGenres, updateParams]
-  );
-
-  const toggleTag = useCallback(
-    (tag: string) => {
-      const next = currentTags.includes(tag)
-        ? currentTags.filter((value) => value !== tag)
-        : [...currentTags, tag];
-
-      updateParams({
-        tags: next.length > 0 ? next.join(",") : null,
-      });
-    },
-    [currentTags, updateParams]
-  );
-
-  const toggleVibe = useCallback(
-    (vibe: string) => {
-      const next = currentVibes.includes(vibe)
-        ? currentVibes.filter((value) => value !== vibe)
-        : [...currentVibes, vibe];
-
-      updateParams({
-        vibes: next.length > 0 ? next.join(",") : null,
-      });
-    },
-    [currentVibes, updateParams]
-  );
-
-  const setMoodFilter = useCallback(
-    (mood: string) => {
-      updateParams({
-        mood: currentMood === mood ? null : mood,
-      });
-      setMoodDropdownOpen(false);
-    },
-    [currentMood, updateParams]
-  );
-
-  const setDateFilter = useCallback(
-    (date: string) => {
-      updateParams({
-        date: currentDateFilter === date ? null : date,
-      });
-      setDateDropdownOpen(false);
-    },
-    [currentDateFilter, updateParams]
-  );
-
-  const toggleFreeOnly = useCallback(() => {
-    updateParams({
-      free: currentFreeOnly ? null : "1",
-      price: currentFreeOnly ? null : "free",
-    });
-  }, [currentFreeOnly, updateParams]);
-
-  const clearAll = useCallback(() => {
-    updateParams({
-      categories: null,
-      genres: null,
-      date: null,
-      free: null,
-      price: null,
-      tags: null,
-      vibes: null,
-      subcategories: null,
-      mood: null,
-    });
-  }, [updateParams]);
-
-  // Close dropdowns on outside click.
-  useEffect(() => {
-    const onDocClick = (event: MouseEvent) => {
-      if (
-        categoryDropdownRef.current &&
-        !categoryDropdownRef.current.contains(event.target as Node)
-      ) {
-        setCategoryDropdownOpen(false);
-      }
-      if (
-        dateDropdownRef.current &&
-        !dateDropdownRef.current.contains(event.target as Node)
-      ) {
-        setDateDropdownOpen(false);
-      }
-      if (
-        moodDropdownRef.current &&
-        !moodDropdownRef.current.contains(event.target as Node)
-      ) {
-        setMoodDropdownOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", onDocClick);
-    return () => document.removeEventListener("mousedown", onDocClick);
-  }, []);
-
-  // Fetch genre options when exactly one category is selected.
-  useEffect(() => {
-    const prev = prevCategoriesRef.current;
-    prevCategoriesRef.current = currentCategories;
-
-    if (currentCategories.length === 1) {
-      const category = currentCategories[0];
-      fetch(`/api/genres?category=${encodeURIComponent(category)}`)
-        .then((res) => res.json())
-        .then((data) => {
-          setGenreOptions(data.genres || []);
-        })
-        .catch(() => setGenreOptions([]));
-      return;
+  const moodLabel = useMemo(() => {
+    if (!f.currentMood) return "Mood";
+    if (!MOOD_LABELS_CACHE.has(f.currentMood)) {
+      const found = f.moodOptions.find((m) => m.value === f.currentMood);
+      if (found) MOOD_LABELS_CACHE.set(f.currentMood, found.label);
     }
+    return MOOD_LABELS_CACHE.get(f.currentMood) || f.currentMood;
+  }, [f.currentMood, f.moodOptions]);
 
-    if (prev.length === 1 && currentGenres.length > 0) {
-      updateParams({ genres: null });
-    }
-  }, [currentCategories]); // eslint-disable-line react-hooks/exhaustive-deps
+  const visibleGenreOptions = f.currentCategories.length === 1 ? f.genreOptions : [];
 
-  // Fetch availability-aware categories/tags for events find filters.
-  useEffect(() => {
-    const controller = new AbortController();
-    const params = new URLSearchParams();
-    if (portalId && portalId !== "default") {
-      params.set("portal_id", portalId);
-    }
-    if (portalExclusive) {
-      params.set("portal_exclusive", "true");
-    }
-    const query = params.toString();
-    const endpoint = query ? `/api/filters?${query}` : "/api/filters";
+  // Wrap date/mood setters to also close dropdown
+  const handleSetDate = useCallback((date: string) => {
+    f.setDateFilter(date);
+    setActiveDropdown(null);
+  }, [f]);
 
-    fetch(endpoint, { signal: controller.signal })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (!data) return;
-        setAvailableCategories(Array.isArray(data.categories) ? data.categories : null);
-        setAvailableTags(Array.isArray(data.tags) ? data.tags : null);
-      })
-      .catch(() => {
-        setAvailableCategories(null);
-        setAvailableTags(null);
-      });
+  const handleSetMood = useCallback((mood: string) => {
+    f.setMoodFilter(mood);
+    setActiveDropdown(null);
+  }, [f]);
 
-    return () => controller.abort();
-  }, [portalExclusive, portalId]);
-
+  // ─── Render ────────────────────────────────────────────────────────────────
   return (
     <>
-      <div className="hidden sm:block relative z-[140]">
+      {/* Desktop filter bar */}
+      <div className="hidden sm:block relative z-10">
         <div className={`${variant === "compact" ? "py-1.5" : "py-2"}`}>
           <div className={`flex items-center flex-wrap ${variant === "compact" ? "gap-1.5" : "gap-2"}`}>
+            {/* Category dropdown */}
             <div className="relative" ref={categoryDropdownRef}>
               <button
-                onClick={() => {
-                  const wasOpen = categoryDropdownOpen;
-                  closeAllDropdowns();
-                  setCategoryDropdownOpen(!wasOpen);
-                }}
-                className={`btn-press flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all border ${
-                  currentCategories.length > 0
+                onClick={() => toggleDropdown("category")}
+                className={`btn-press flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]/70 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--void)] ${
+                  f.currentCategories.length > 0
                     ? "bg-[var(--action-primary)] text-[var(--btn-primary-text)] border-[var(--action-primary)]/40 shadow-sm"
-                    : "bg-[var(--dusk)]/80 text-[var(--cream)]/80 border-[var(--twilight)]/80 hover:text-[var(--cream)]"
+                    : "bg-[var(--dusk)]/80 text-[var(--cream)]/80 border-[var(--twilight)]/80 hover:text-[var(--cream)] hover:bg-[var(--twilight)]/40 hover:border-[var(--twilight)]"
                 }`}
               >
                 {categoryLabel}
-                <svg className={`w-3 h-3 transition-transform ${categoryDropdownOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className={`w-3 h-3 transition-transform ${activeDropdown === "category" ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
 
-              {categoryDropdownOpen && (
-                <div className="absolute top-full left-0 mt-1 w-64 max-h-80 overflow-y-auto rounded-xl border border-[var(--twilight)] shadow-xl z-[220] bg-[var(--void)]">
+              {activeDropdown === "category" && (
+                <div className="absolute top-full left-0 mt-1 w-64 max-h-80 overflow-y-auto rounded-xl border border-[var(--twilight)] shadow-xl z-50 bg-[var(--void)]/95 backdrop-blur-md animate-dropdown-in">
                   <div className="p-2">
-                    {categoryOptions.map((cat) => {
-                      const isActive = currentCategories.includes(cat.value);
+                    {f.categoryOptions.map((cat) => {
+                      const isActive = f.currentCategories.includes(cat.value);
                       return (
                         <button
                           key={cat.value}
-                          onClick={() => toggleCategory(cat.value)}
+                          onClick={() => f.toggleCategory(cat.value)}
                           className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg font-mono text-xs font-medium transition-colors ${
                             isActive
                               ? "bg-[var(--action-primary)] text-[var(--btn-primary-text)]"
@@ -454,35 +334,32 @@ export default function FindFilterBar({ variant = "full", portalId, portalExclus
               )}
             </div>
 
+            {/* Date dropdown */}
             {variant === "full" && (
               <div className="relative" ref={dateDropdownRef}>
                 <button
-                  onClick={() => {
-                    const wasOpen = dateDropdownOpen;
-                    closeAllDropdowns();
-                    setDateDropdownOpen(!wasOpen);
-                  }}
-                  className={`btn-press flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all border ${
-                    effectiveDateFilter
+                  onClick={() => toggleDropdown("date")}
+                  className={`btn-press flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]/70 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--void)] ${
+                    f.effectiveDateFilter
                       ? "bg-[var(--gold)] text-[var(--void)] border-[var(--gold)]/40 shadow-sm"
-                      : "bg-[var(--dusk)]/80 text-[var(--cream)]/80 border-[var(--twilight)]/80 hover:text-[var(--cream)]"
+                      : "bg-[var(--dusk)]/80 text-[var(--cream)]/80 border-[var(--twilight)]/80 hover:text-[var(--cream)] hover:bg-[var(--twilight)]/40 hover:border-[var(--twilight)]"
                   }`}
                 >
                   {dateFilterLabel}
-                  <svg className={`w-3 h-3 transition-transform ${dateDropdownOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className={`w-3 h-3 transition-transform ${activeDropdown === "date" ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
 
-                {dateDropdownOpen && (
-                  <div className="absolute top-full left-0 mt-1 w-44 rounded-xl border border-[var(--twilight)] shadow-xl z-[220] bg-[var(--void)]">
+                {activeDropdown === "date" && (
+                  <div className="absolute top-full left-0 mt-1 w-44 rounded-xl border border-[var(--twilight)] shadow-xl z-50 bg-[var(--void)]/95 backdrop-blur-md animate-dropdown-in">
                     <div className="p-2">
                       {DATE_OPTIONS.map((df) => {
-                        const isActive = effectiveDateFilter === df.value;
+                        const isActive = f.effectiveDateFilter === df.value;
                         return (
                           <button
                             key={df.value}
-                            onClick={() => setDateFilter(df.value)}
+                            onClick={() => handleSetDate(df.value)}
                             className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg font-mono text-xs font-medium transition-colors ${
                               isActive
                                 ? "bg-[var(--gold)] text-[var(--void)]"
@@ -505,16 +382,16 @@ export default function FindFilterBar({ variant = "full", portalId, portalExclus
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
-                        {isSpecificDate ? formatDateLabel(currentDateFilter) : "Pick date"}
+                        {isSpecificDate ? formatDateLabel(f.currentDateFilter) : "Pick date"}
                       </button>
                       <input
                         ref={dateInputRef}
                         type="date"
                         className="sr-only"
                         min={new Date().toISOString().split("T")[0]}
-                        value={isSpecificDate ? currentDateFilter : ""}
+                        value={isSpecificDate ? f.currentDateFilter : ""}
                         onChange={(e) => {
-                          if (e.target.value) setDateFilter(e.target.value);
+                          if (e.target.value) handleSetDate(e.target.value);
                         }}
                       />
                     </div>
@@ -523,37 +400,34 @@ export default function FindFilterBar({ variant = "full", portalId, portalExclus
               </div>
             )}
 
+            {/* Mood dropdown */}
             <div className="relative" ref={moodDropdownRef}>
               <button
-                onClick={() => {
-                  const wasOpen = moodDropdownOpen;
-                  closeAllDropdowns();
-                  setMoodDropdownOpen(!wasOpen);
-                }}
-                className={`btn-press flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all border ${
-                  currentMood
-                    ? "bg-[#7C3AED] text-[var(--cream)] border-[#7C3AED]/40 shadow-sm"
-                    : "bg-[var(--dusk)]/80 text-[var(--cream)]/80 border-[var(--twilight)]/80 hover:text-[var(--cream)]"
+                onClick={() => toggleDropdown("mood")}
+                className={`btn-press flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]/70 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--void)] ${
+                  f.currentMood
+                    ? "bg-[var(--mood-active)] text-[var(--cream)] border-[var(--mood-active)]/40 shadow-sm"
+                    : "bg-[var(--dusk)]/80 text-[var(--cream)]/80 border-[var(--twilight)]/80 hover:text-[var(--cream)] hover:bg-[var(--twilight)]/40 hover:border-[var(--twilight)]"
                 }`}
               >
                 {moodLabel}
-                <svg className={`w-3 h-3 transition-transform ${moodDropdownOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className={`w-3 h-3 transition-transform ${activeDropdown === "mood" ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
 
-              {moodDropdownOpen && (
-                <div className="absolute top-full left-0 mt-1 w-48 rounded-xl border border-[var(--twilight)] shadow-xl z-[220] bg-[var(--void)]">
+              {activeDropdown === "mood" && (
+                <div className="absolute top-full left-0 mt-1 w-48 rounded-xl border border-[var(--twilight)] shadow-xl z-50 bg-[var(--void)]/95 backdrop-blur-md animate-dropdown-in">
                   <div className="p-2">
-                    {MOOD_OPTIONS.map((mood) => {
-                      const isActive = currentMood === mood.value;
+                    {f.moodOptions.map((mood) => {
+                      const isActive = f.currentMood === mood.value;
                       return (
                         <button
                           key={mood.value}
-                          onClick={() => setMoodFilter(mood.value)}
+                          onClick={() => handleSetMood(mood.value)}
                           className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg font-mono text-xs font-medium transition-colors ${
                             isActive
-                              ? "bg-[#7C3AED] text-[var(--cream)]"
+                              ? "bg-[var(--mood-active)] text-[var(--cream)]"
                               : "text-[var(--cream)] hover:bg-[var(--twilight)]"
                           }`}
                         >
@@ -571,10 +445,11 @@ export default function FindFilterBar({ variant = "full", portalId, portalExclus
               )}
             </div>
 
+            {/* Filters button (opens mobile sheet) */}
             <button
               onClick={() => setMobileSheetOpen(true)}
-              className={`btn-press flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all border ${
-                hasFilters
+              className={`btn-press flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]/70 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--void)] ${
+                f.hasFilters
                   ? "bg-[var(--action-primary)] text-[var(--btn-primary-text)] border-[var(--action-primary)]/40 shadow-sm"
                   : "bg-[var(--twilight)]/70 text-[var(--cream)] border-[var(--twilight)]/80 hover:bg-[var(--twilight)]"
               }`}
@@ -583,16 +458,16 @@ export default function FindFilterBar({ variant = "full", portalId, portalExclus
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
               </svg>
               Filters
-              {filterCount > 0 && (
+              {f.filterCount > 0 && (
                 <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-black/20 text-[10px] font-bold">
-                  {filterCount}
+                  {f.filterCount}
                 </span>
               )}
             </button>
 
-            {hasFilters && (
+            {f.hasFilters && (
               <button
-                onClick={clearAll}
+                onClick={f.clearAll}
                 className="btn-press flex items-center gap-1 px-2.5 py-1.5 rounded-full font-mono text-[11px] font-medium border border-[var(--twilight)]/85 bg-[var(--dusk)]/70 text-[var(--soft)] hover:text-[var(--cream)] hover:border-[var(--soft)]/45 whitespace-nowrap"
               >
                 Clear
@@ -602,17 +477,18 @@ export default function FindFilterBar({ variant = "full", portalId, portalExclus
         </div>
       </div>
 
+      {/* Genre sub-bar */}
       {visibleGenreOptions.length > 0 && (
         <div className="hidden sm:block">
           <div className="py-1.5">
             <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
               <span className="flex-shrink-0 text-[0.6rem] font-mono uppercase tracking-wider text-[var(--muted)] mr-1">Genre</span>
               {visibleGenreOptions.map((opt) => {
-                const isActive = currentGenres.includes(opt.genre);
+                const isActive = f.currentGenres.includes(opt.genre);
                 return (
                   <button
                     key={opt.genre}
-                    onClick={() => toggleGenre(opt.genre)}
+                    onClick={() => f.toggleGenre(opt.genre)}
                     className={`flex-shrink-0 px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-all border ${
                       isActive
                         ? "bg-[var(--action-primary)] text-[var(--btn-primary-text)] border-[var(--action-primary)]/40 shadow-sm"
@@ -628,62 +504,35 @@ export default function FindFilterBar({ variant = "full", portalId, portalExclus
         </div>
       )}
 
-      <div className="sm:hidden">
-        <div className={`${variant === "compact" ? "py-1.5" : "py-2"}`}>
-          <div className="flex items-center gap-2 overflow-x-auto px-4 pb-1 scrollbar-hide scroll-smooth">
-            <button
-              onClick={() => setMobileSheetOpen(true)}
-              className={`flex-shrink-0 min-h-[40px] flex items-center gap-1.5 px-3.5 py-2 rounded-full font-mono text-xs font-medium border transition-all ${
-                hasFilters
-                  ? "bg-[var(--action-primary)] text-[var(--btn-primary-text)] border-[var(--action-primary)]/40"
-                  : "bg-[var(--twilight)] text-[var(--cream)] border-[var(--twilight)]"
-              }`}
-            >
-              Filters
-              {hasFilters && (
-                <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-black/20 text-[10px] font-bold">
-                  {filterCount}
-                </span>
-              )}
-            </button>
+      {/* Mobile filter strip */}
+      <MobileFilterStrip
+        f={f}
+        variant={variant}
+        onOpenSheet={() => setMobileSheetOpen(true)}
+        onSetDate={handleSetDate}
+      />
 
-            {variant === "full" && (
-              <button
-                onClick={() => setDateFilter("weekend")}
-                className={`flex-shrink-0 min-h-[40px] flex items-center gap-1.5 px-3.5 py-2 rounded-full font-mono text-xs font-medium transition-all ${
-                  currentDateFilter === "weekend"
-                    ? "bg-[var(--gold)] text-[var(--void)]"
-                    : "bg-[var(--twilight)] text-[var(--cream)]"
-                }`}
-              >
-                Weekend
-              </button>
-            )}
-
-          </div>
-        </div>
-      </div>
-
+      {/* Mobile filter sheet */}
       <MobileFilterSheet
         isOpen={mobileSheetOpen}
         onClose={() => setMobileSheetOpen(false)}
-        currentCategories={currentCategories}
-        currentDateFilter={currentDateFilter}
-        currentFreeOnly={currentFreeOnly}
-        currentTags={currentTags}
-        currentVibes={currentVibes}
-        currentMood={currentMood}
-        categoryOptions={categoryOptions}
-        tagGroups={tagGroupOptions}
-        vibeGroups={VIBE_GROUP_OPTIONS}
-        moodOptions={MOOD_OPTIONS}
-        onToggleCategory={toggleCategory}
-        onSetDateFilter={setDateFilter}
-        onToggleFreeOnly={toggleFreeOnly}
-        onToggleTag={toggleTag}
-        onToggleVibe={toggleVibe}
-        onSetMood={setMoodFilter}
-        onClearAll={clearAll}
+        currentCategories={f.currentCategories}
+        currentDateFilter={f.currentDateFilter}
+        currentFreeOnly={f.currentFreeOnly}
+        currentTags={f.currentTags}
+        currentVibes={f.currentVibes}
+        currentMood={f.currentMood}
+        categoryOptions={f.categoryOptions}
+        tagGroups={f.tagGroupOptions}
+        vibeGroups={f.vibeGroupOptions}
+        moodOptions={f.moodOptions}
+        onToggleCategory={f.toggleCategory}
+        onSetDateFilter={handleSetDate}
+        onToggleFreeOnly={f.toggleFreeOnly}
+        onToggleTag={f.toggleTag}
+        onToggleVibe={f.toggleVibe}
+        onSetMood={handleSetMood}
+        onClearAll={f.clearAll}
       />
     </>
   );

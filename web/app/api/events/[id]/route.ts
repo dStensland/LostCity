@@ -6,7 +6,7 @@ import { getLocalDateString } from "@/lib/formats";
 import { logger } from "@/lib/logger";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 import { DESTINATION_CATEGORIES } from "@/lib/spots";
-import { fetchSocialProofCounts } from "@/lib/search";
+import { fetchSocialProofCounts } from "@/lib/social-proof";
 import { getDisplayParticipants, type EventArtist } from "@/lib/artists-utils";
 import { buildDisplayDescription } from "@/lib/event-description";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
@@ -21,7 +21,7 @@ import {
 const NEARBY_RADIUS_MILES = 10;
 const EVENT_DETAIL_CACHE_TTL_MS = 60 * 1000;
 const EVENT_DETAIL_CACHE_NAMESPACE = "api:event-detail";
-const EVENT_DETAIL_CACHE_CONTROL = "public, s-maxage=60, stale-while-revalidate=120";
+const EVENT_DETAIL_CACHE_CONTROL = "public, max-age=30, s-maxage=60, stale-while-revalidate=120";
 const DESTINATION_SELECT_BASE = "id, name, slug, venue_type, neighborhood, lat, lng, hours";
 const DESTINATION_SELECT_WITH_PLANNING = `${DESTINATION_SELECT_BASE}, service_style, meal_duration_min_minutes, meal_duration_max_minutes, walk_in_wait_minutes, payment_buffer_minutes, accepts_reservations, reservation_recommended`;
 

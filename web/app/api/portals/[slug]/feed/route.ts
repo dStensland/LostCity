@@ -17,7 +17,7 @@ import {
   getClientIdentifier,
 } from "@/lib/rate-limit";
 import { errorResponse, isValidUUID } from "@/lib/api-utils";
-import { fetchSocialProofCounts } from "@/lib/search";
+import { fetchSocialProofCounts } from "@/lib/social-proof";
 import {
   normalizePortalSlug,
   resolvePortalSlugAlias,
