@@ -172,6 +172,9 @@ export const RATE_LIMITS = {
 
   // Outbound email sends
   invites: { limit: 3, windowSec: 60 } as RateLimitConfig,
+
+  // Natural language search (LLM-backed) — moderate limit to control API costs
+  nlSearch: { limit: 20, windowSec: 60 } as RateLimitConfig,
 } as const;
 
 // ============================================================================
