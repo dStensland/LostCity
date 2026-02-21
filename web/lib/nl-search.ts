@@ -204,7 +204,7 @@ function sanitizeParsedFilters(parsed: ParsedNLFilters): ParsedNLFilters {
   };
 
   if (Array.isArray(parsed.categories)) {
-    const valid = parsed.categories.filter((c) => CATEGORY_VALUES.includes(c));
+    const valid = parsed.categories.filter((c) => (CATEGORY_VALUES as string[]).includes(c));
     if (valid.length > 0) result.categories = valid;
   }
 
@@ -241,7 +241,7 @@ function sanitizeParsedFilters(parsed: ParsedNLFilters): ParsedNLFilters {
   }
 
   if (Array.isArray(parsed.vibes)) {
-    const valid = parsed.vibes.filter((v) => VIBE_VALUES.includes(v));
+    const valid = parsed.vibes.filter((v) => (VIBE_VALUES as string[]).includes(v));
     if (valid.length > 0) result.vibes = valid;
   }
 
