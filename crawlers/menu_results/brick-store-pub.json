@@ -1,0 +1,33 @@
+{
+  "venue_id": 911,
+  "venue_slug": "brick-store-pub",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {"name": "Chocolate Ganache Torte", "price": "$12", "category": "dessert"},
+      {"name": "Basque Cheesecake", "price": "$10", "category": "dessert"},
+      {"name": "Brunswick Stew", "price": "$7", "category": "appetizer"},
+      {"name": "Brussels Sprouts", "price": "$8", "category": "appetizer"},
+      {"name": "Arugula Salad", "price": "$9", "category": "appetizer"}
+    ],
+    "dietary_options": ["gluten-free-options"],
+    "price_level": 1,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

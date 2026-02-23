@@ -1,0 +1,21 @@
+{
+  "venue_id": 72,
+  "venue_slug": "distillery-of-modern-art",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["craft-cocktails", "upscale", "date-night"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": null,
+    "reservation_url": null,
+    "phone": "(404) 482-2663",
+    "instagram": null,
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

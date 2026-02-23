@@ -1,0 +1,39 @@
+{
+  "venue_id": 4874,
+  "venue_slug": "madras-mantra-decatur",
+  "meta": {
+    "og_image": "https://img1.wsimg.com/isteam/stock/18539",
+    "meta_description": "Indian vegetarian restaurant famous for their authentic dosas and curries with plenty of vegan and gluten free options",
+    "reservation_links": [],
+    "menu_links": [
+      "https://madrasmantra.com/decatur-menu-1"
+    ],
+    "instagram": "madrasmantra",
+    "facebook_url": "https://www.facebook.com/1571511319780455",
+    "phone": null
+  },
+  "extracted": {
+    "hours": {
+      "mon": {"open": "11:30", "close": "21:30"},
+      "tue": {"open": "11:30", "close": "21:30"},
+      "wed": {"open": "11:30", "close": "21:30"},
+      "thu": {"open": "11:30", "close": "21:30"},
+      "fri": {"open": "11:30", "close": "21:30"},
+      "sat": {"open": "11:30", "close": "21:30"},
+      "sun": {"open": "11:30", "close": "21:30"}
+    },
+    "vibes": ["casual", "family-friendly", "good-for-groups"],
+    "cuisine": ["indian", "vegan"],
+    "service_style": "casual_dine_in",
+    "price_level": 2,
+    "menu_highlights": null,
+    "menu_url": "https://madrasmantra.com/decatur-menu-1",
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "madrasmantra",
+    "dietary_options": ["vegetarian-friendly", "vegan-options", "gluten-free-options"],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

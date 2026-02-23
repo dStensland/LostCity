@@ -1,0 +1,28 @@
+{
+  "venue_id": 968,
+  "venue_slug": "the-possum-den",
+  "meta": {
+    "og_image": "https://lh3.googleusercontent.com/TJE5Yinxqsv1mhpMFY_w0aCoHaiHkYZ91r80s8fu-4KKB8L2EmxRW6oHDHQKr769wzCfrEva6vpEH98f_8HOq_O6H644-T6xNLze4Rxi=s1200",
+    "meta_description": null,
+    "reservation_links": [],
+    "menu_links": [],
+    "instagram": null,
+    "facebook_url": "https://www.facebook.com/m80srock",
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["family-friendly", "all-ages", "live-music", "lively"],
+    "cuisine": [],
+    "service_style": null,
+    "price_level": null,
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": null,
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

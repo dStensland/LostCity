@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useMemo, useCallback, type MouseEvent } from "react";
+import { Suspense, useState, useEffect, useRef, useMemo, useCallback, type MouseEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import AddNewChooser from "@/components/find/AddNewChooser";
@@ -14,6 +14,11 @@ const ClassesView = dynamic(() => import("@/components/find/ClassesView"), {
 const ShowtimesView = dynamic(() => import("@/components/find/ShowtimesView"), {
   loading: () => <div className="py-16 text-center text-[var(--muted)] font-mono text-sm">Loading showtimes...</div>,
 });
+const PlaybookView = dynamic(() => import("@/components/find/PlaybookView"), {
+  loading: () => <div className="py-16 text-center text-[var(--muted)] font-mono text-sm">Loading playbook...</div>,
+});
+const OutingFAB = dynamic(() => import("@/components/outing/OutingFAB"), { ssr: false });
+const OutingDrawer = dynamic(() => import("@/components/outing/OutingDrawer"), { ssr: false });
 import {
   FIND_FILTER_RESET_KEYS,
   SHOWTIMES_EXCLUDED_FILTER_KEYS,
@@ -68,6 +73,15 @@ const TYPE_OPTIONS: { key: FindType; label: string; icon: React.ReactNode }[] = 
     icon: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
+      </svg>
+    ),
+  },
+  {
+    key: "playbook",
+    label: "Playbook",
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
       </svg>
     ),
   },
@@ -129,6 +143,28 @@ function FindShellInner({
   const searchParams = useSearchParams();
   const previousFilterSnapshotByTypeRef = useRef<Partial<Record<FindType, FindFilterSnapshot>>>({});
   const lastFilterChangeAtByTypeRef = useRef<Partial<Record<FindType, number>>>({});
+
+  // ─── Outing Builder State ─────────────────────────────────────────────────
+  const [outingDrawerOpen, setOutingDrawerOpen] = useState(false);
+  const [outingItemCount, setOutingItemCount] = useState(0);
+  const [outingAnchorEvent, setOutingAnchorEvent] = useState<{
+    id: number;
+    title: string;
+    start_time: string | null;
+    date: string;
+    venue: { id: number; name: string; slug: string; lat: number | null; lng: number | null };
+  } | null>(null);
+
+  const handlePlanAroundEvent = useCallback((item: {
+    id: number;
+    title: string;
+    start_time: string | null;
+    date: string;
+    venue: { id: number; name: string; slug: string; lat: number | null; lng: number | null };
+  }) => {
+    setOutingAnchorEvent(item);
+    setOutingDrawerOpen(true);
+  }, []);
 
   // ─── URL Helpers ──────────────────────────────────────────────────────────
 
@@ -499,7 +535,31 @@ function FindShellInner({
           displayMode={displayMode === "calendar" ? "list" : displayMode as "list" | "map"}
         />
       )}
+
+      {findType === "playbook" && (
+        <PlaybookView
+          portalId={portalId}
+          portalSlug={portalSlug}
+          onPlanAroundEvent={handlePlanAroundEvent}
+        />
+      )}
+
     </div>
+
+      {/* Outing Builder — rendered outside scroll container for correct fixed positioning */}
+      <OutingFAB
+        hasActiveOuting={!!outingAnchorEvent}
+        itemCount={outingItemCount}
+        onOpen={() => setOutingDrawerOpen(true)}
+      />
+      <OutingDrawer
+        portalId={portalId}
+        portalSlug={portalSlug}
+        open={outingDrawerOpen}
+        onClose={() => setOutingDrawerOpen(false)}
+        anchorEvent={outingAnchorEvent}
+        onItemCountChange={setOutingItemCount}
+      />
     </FindContext.Provider>
   );
 }

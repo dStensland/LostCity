@@ -1,0 +1,28 @@
+{
+  "venue_id": 2460,
+  "venue_slug": "rumis-kitchen",
+  "meta": {
+    "og_image": "http://static1.squarespace.com/static/6840cbf29346cf2038058f74/t/6840ce5d10cf0b7f9a55ae8e/1749077597991/RUMIS-KITCHEN_PRIMARY-LOGO.png?format=1500w",
+    "meta_description": "Discover authentic Persian cuisine and warm hospitality at Rumi's Kitchen, serving Middle Eastern flavors at locations across the U.S. | Book your visit today.",
+    "reservation_links": [],
+    "menu_links": [],
+    "instagram": "rumiskitchenofficial",
+    "facebook_url": null,
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["upscale", "date-spot"],
+    "cuisine": ["persian", "middle_eastern"],
+    "service_style": "full_service",
+    "price_level": null,
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "rumiskitchenofficial",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "venue_id": 529,
+  "venue_slug": "scofflaw-brewing",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["casual", "family-friendly", "sports-bar"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": null,
+    "reservation_url": null,
+    "phone": "(404) 343-2832",
+    "instagram": "scofflawbeer",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

@@ -84,9 +84,9 @@ function getWeatherAdjustedScore(
   else if (dest.special_state === "starting_soon") score += 0.2;
 
   // Weather adjustments based on venue type
-  const outdoorTypes = ["park", "garden", "farmers_market"];
+  const outdoorTypes = ["park", "recreation", "farmers_market"];
   const rooftopIndicators = ["rooftop"];
-  const cozyIndicators = ["coffee_shop", "bookstore", "bar"];
+  const cozyIndicators = ["restaurant", "bookstore", "bar"];
 
   if (outdoorTypes.includes(venueType)) {
     score += modifiers.outdoor;

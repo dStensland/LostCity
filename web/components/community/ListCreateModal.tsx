@@ -3,77 +3,16 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/Toast";
-import type { List } from "./ListsView";
+import { useFocusTrap } from "@/lib/hooks/useFocusTrap";
+import type { Curation } from "@/lib/curation-utils";
+import { CATEGORY_OPTIONS, CATEGORY_ICONS } from "@/lib/curation-constants";
 
 interface ListCreateModalProps {
   portalId: string;
   portalSlug: string;
   onClose: () => void;
-  onCreated: (list: List) => void;
+  onCreated: (list: Curation) => void;
 }
-
-const CATEGORIES = [
-  {
-    value: "hidden_gems",
-    label: "Hidden Gems",
-    description: "Underrated favorites",
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-      </svg>
-    ),
-  },
-  {
-    value: "date_night",
-    label: "Date Night",
-    description: "Romantic spots",
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-      </svg>
-    ),
-  },
-  {
-    value: "with_friends",
-    label: "With Friends",
-    description: "Group hangouts",
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-      </svg>
-    ),
-  },
-  {
-    value: "solo",
-    label: "Solo",
-    description: "Great for going alone",
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-      </svg>
-    ),
-  },
-  {
-    value: "budget",
-    label: "Budget-Friendly",
-    description: "Easy on the wallet",
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-  },
-  {
-    value: "special_occasion",
-    label: "Special Occasion",
-    description: "Celebrations",
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 15.546c-.523 0-1.046.151-1.5.454a2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0 2.701 2.701 0 00-1.5-.454M9 6v2m3-2v2m3-2v2M9 3h.01M12 3h.01M15 3h.01M21 21v-7a2 2 0 00-2-2H5a2 2 0 00-2 2v7h18zm-3-9v-2a2 2 0 00-2-2H8a2 2 0 00-2 2v2h12z" />
-      </svg>
-    ),
-  },
-];
 
 export default function ListCreateModal({
   portalId,
@@ -83,6 +22,7 @@ export default function ListCreateModal({
 }: ListCreateModalProps) {
   const router = useRouter();
   const { showToast } = useToast();
+  const trapRef = useFocusTrap<HTMLDivElement>();
   const [step, setStep] = useState(1);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -131,16 +71,16 @@ export default function ListCreateModal({
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Failed to create list");
+        throw new Error(data.error || "Failed to create curation");
       }
 
       const data = await res.json();
-      showToast("List created! Now add some items.");
+      showToast("Curation created! Now add some items.");
       onCreated(data.list);
       // Navigate to the new list page
-      router.push(`/${portalSlug}/lists/${data.list.slug}`);
+      router.push(`/${portalSlug}/curations/${data.list.slug}`);
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Failed to create list", "error");
+      showToast(err instanceof Error ? err.message : "Failed to create curation", "error");
     } finally {
       setSaving(false);
     }
@@ -149,17 +89,18 @@ export default function ListCreateModal({
   const canProceed = step === 1 ? category : title.trim();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="Create curation">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-[var(--void)]/80 backdrop-blur-sm"
+        className="absolute inset-0 bg-[var(--void)]/80 backdrop-blur-sm modal-backdrop-enter"
         onClick={onClose}
       />
 
       {/* Modal */}
       <div
+        ref={trapRef}
         data-category={category || "other"}
-        className="relative w-full max-w-md bg-[var(--dusk)] border rounded-xl shadow-2xl overflow-hidden list-create-modal"
+        className="relative w-full max-w-md bg-[var(--dusk)] border rounded-xl shadow-2xl overflow-hidden list-create-modal modal-content-enter"
       >
         {/* Gradient header */}
         <div
@@ -180,15 +121,15 @@ export default function ListCreateModal({
               </button>
             )}
             <div>
-              <h2 className="text-lg font-semibold text-[var(--cream)]">Create List</h2>
+              <h2 className="text-lg font-semibold text-[var(--cream)]">Create Curation</h2>
               <p className="text-xs text-[var(--muted)]">
-                Step {step} of 2 — {step === 1 ? "Pick a category" : "Name your list"}
+                Step {step} of 2 — {step === 1 ? "Pick a category" : "Name your curation"}
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            aria-label="Close"
+            aria-label="Close create modal"
             className="p-3 min-w-[48px] min-h-[48px] text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)] rounded-lg hover:scale-110 transition-all active:scale-95"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -220,7 +161,7 @@ export default function ListCreateModal({
                 What kind of list is this? Pick a category that best describes your recommendations.
               </p>
               <div className="grid grid-cols-2 gap-2">
-                {CATEGORIES.map((cat) => {
+                {CATEGORY_OPTIONS.map((cat) => {
                   const isSelected = category === cat.value;
                   return (
                     <button
@@ -238,7 +179,7 @@ export default function ListCreateModal({
                         <div
                           className="w-8 h-8 rounded-lg flex items-center justify-center list-category-icon"
                         >
-                          {cat.icon}
+                          {CATEGORY_ICONS[cat.value]}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div
@@ -270,10 +211,10 @@ export default function ListCreateModal({
                   className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[color-mix(in_srgb,var(--category-color)_20%,transparent)]"
                 >
                   <span className="text-[var(--category-color)]">
-                    {CATEGORIES.find((c) => c.value === category)?.icon}
+                    {CATEGORY_ICONS[category]}
                   </span>
                   <span className="text-sm font-mono text-[var(--category-color)]">
-                    {CATEGORIES.find((c) => c.value === category)?.label}
+                    {CATEGORY_OPTIONS.find((c) => c.value === category)?.label}
                   </span>
                 </div>
               )}
@@ -337,6 +278,9 @@ export default function ListCreateModal({
                 <button
                   type="button"
                   onClick={() => setIsPublic(!isPublic)}
+                  role="switch"
+                  aria-checked={isPublic}
+                  aria-label="Toggle public visibility"
                   className={`relative w-11 h-6 rounded-full transition-colors ${
                     isPublic ? "bg-[var(--coral)]" : "bg-[var(--twilight)]"
                   }`}
@@ -376,6 +320,9 @@ export default function ListCreateModal({
                   <button
                     type="button"
                     onClick={() => setAllowContributions(!allowContributions)}
+                    role="switch"
+                    aria-checked={allowContributions}
+                    aria-label="Toggle allow contributions"
                     className={`relative w-11 h-6 rounded-full transition-colors ${
                       allowContributions ? "bg-[var(--coral)]" : "bg-[var(--twilight)]"
                     }`}
@@ -417,7 +364,7 @@ export default function ListCreateModal({
                 disabled={saving || !title.trim()}
                 className="flex-1 px-4 py-2.5 rounded-lg font-mono text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed list-create-action list-create-action-primary"
               >
-                {saving ? "Creating..." : "Create List"}
+                {saving ? "Creating..." : "Create Curation"}
               </button>
             )}
           </div>

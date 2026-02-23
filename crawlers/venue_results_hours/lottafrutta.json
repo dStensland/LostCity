@@ -1,0 +1,39 @@
+{
+  "venue_id": 2278,
+  "venue_slug": "lottafrutta",
+  "meta": {
+    "og_image": "https://static.wixstatic.com/media/424ef3_4b9a8af3ae1943019cb09f214afd6936%7Emv2.jpg/v1/fit/w_2500,h_1330,al_c/424ef3_4b9a8af3ae1943019cb09f214afd6936%7Emv2.jpg",
+    "meta_description": "LottaFrutta is a Latin Fruit Cafe in Historic Old Fourth Ward",
+    "reservation_links": [],
+    "menu_links": [
+      "https://www.lottafrutta.com/comida"
+    ],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": "(404) 588-0857"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": [
+      "casual",
+      "fast-casual",
+      "counter-service"
+    ],
+    "cuisine": [
+      "caribbean"
+    ],
+    "service_style": "counter-service",
+    "price_level": "$",
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": "(404) 588-0857",
+    "instagram": null,
+    "dietary_options": [
+      "vegan",
+      "vegetarian"
+    ],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

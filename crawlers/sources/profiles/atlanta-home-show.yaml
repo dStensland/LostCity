@@ -1,0 +1,21 @@
+version: 1
+slug: atlanta-home-show
+name: "Atlanta Home Show"
+integration_method: html
+defaults:
+  venue_name: "Atlanta Home Show"
+discovery:
+  enabled: true
+  type: html
+  urls:
+    - "https://www.atlantahomeshow.com"
+  fetch:
+    render_js: false
+detail:
+  enabled: true
+  fetch:
+    render_js: false
+data_goals:
+  - events
+  - images
+  - tickets

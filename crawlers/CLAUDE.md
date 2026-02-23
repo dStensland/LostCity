@@ -2,6 +2,12 @@
 
 This file provides guidance to Claude Code when working with the crawlers pipeline.
 
+## Multi-Agent Coordination
+
+When multiple Claude Code sessions work in parallel, check `ACTIVE_WORK.md` in the repo root before starting. It tracks which agent is working on what and which files/directories are claimed. Don't modify files claimed by another agent — tell the user if you need to.
+
+See `BACKLOG.md` for the full prioritized roadmap with implementation status.
+
 ## Core Philosophy
 
 **We capture DESTINATIONS, not just events.** Every crawler should ensure the venue/spot it crawls is fully represented in our database as a place people would want to visit, regardless of whether it currently has scheduled events.

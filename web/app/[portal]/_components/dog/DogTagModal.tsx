@@ -207,7 +207,7 @@ function getVisibleGroups(venueType: string | null): DogTagGroup[] {
   const type = (venueType || "").toLowerCase();
   const isPark = ["park", "dog_park", "trail", "nature_preserve"].includes(type);
   const isTrail = ["trail", "nature_preserve"].includes(type);
-  const isFood = ["restaurant", "bar", "cafe", "brewery", "coffee_shop"].includes(type);
+  const isFood = ["restaurant", "bar", "brewery", "cocktail_bar"].includes(type);
 
   return DOG_TAG_GROUPS.filter((group) => {
     if (group.key === "base" || group.key === "amenities") return true;

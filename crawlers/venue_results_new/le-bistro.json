@@ -1,0 +1,38 @@
+{
+  "venue_id": 4916,
+  "venue_slug": "le-bistro",
+  "meta": {
+    "og_image": "http://static1.squarespace.com/static/569843f5dc5cb46161e37f2d/t/5e307eb275f9761f105f161c/1607027601882/favicon_RP.jpg?format=1500w",
+    "meta_description": null,
+    "reservation_links": [],
+    "menu_links": [
+      "http://roswellprovisions.com/le-bistro/le-bistro-menu",
+      "http://roswellprovisions.com/le-bistro/bistro-menu"
+    ],
+    "instagram": "roswellprovisions",
+    "facebook_url": null,
+    "phone": "(770) 645-2629"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["cozy", "date-spot", "outdoor-seating", "historic"],
+    "cuisine": ["french", "brunch_breakfast"],
+    "service_style": "full_service",
+    "price_level": 3,
+    "menu_highlights": [
+      {"name": "Le Croque Monsieur", "price": null, "category": "entree"},
+      {"name": "Beef Bourguignon", "price": null, "category": "entree"},
+      {"name": "Bouche a la Reine", "price": null, "category": "entree"},
+      {"name": "Bistro Brownie", "price": null, "category": "dessert"},
+      {"name": "Les Profiteroles", "price": null, "category": "dessert"}
+    ],
+    "menu_url": "http://roswellprovisions.com/le-bistro/le-bistro-menu",
+    "reservation_url": null,
+    "phone": "(770) 645-2629",
+    "instagram": "roswellprovisions",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

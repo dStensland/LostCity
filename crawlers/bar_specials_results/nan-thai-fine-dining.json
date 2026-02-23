@@ -1,0 +1,21 @@
+{
+  "venue_id": 4883,
+  "venue_slug": "nan-thai-fine-dining",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["upscale", "date-night"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "https://www.nanfinedining.com/menu",
+    "reservation_url": "https://www.opentable.com/r/nan-thai-fine-dining-atlanta",
+    "phone": "(404) 870-9933",
+    "instagram": "nanfinedining",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

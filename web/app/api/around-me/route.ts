@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createPortalScopedClient } from "@/lib/supabase/server";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 import { getNeighborhoodByName } from "@/config/neighborhoods";
 import { isSpotOpen, VENUE_TYPES_MAP, type VenueType, DESTINATION_CATEGORIES } from "@/lib/spots";
@@ -60,30 +60,26 @@ function formatClosingTime(time: string): string {
   return minutes === 0 ? `${displayHours}${period}` : `${displayHours}:${minutes.toString().padStart(2, "0")}${period}`;
 }
 
-// Category filter mapping for unified items
+// Category filter mapping for unified items (post-consolidation types)
 const CATEGORY_FILTERS: Record<string, { spotTypes: string[]; eventCategories: string[] }> = {
   food: {
-    spotTypes: ["restaurant", "food_hall", "cooking_school"],
+    spotTypes: ["restaurant"],
     eventCategories: ["Food & Drink"],
   },
   drinks: {
-    spotTypes: ["bar", "brewery", "distillery", "winery", "rooftop", "sports_bar"],
-    eventCategories: ["Food & Drink"],
-  },
-  coffee: {
-    spotTypes: ["coffee_shop"],
+    spotTypes: ["bar", "brewery", "cocktail_bar", "rooftop"],
     eventCategories: ["Food & Drink"],
   },
   music: {
-    spotTypes: ["music_venue"],
+    spotTypes: ["music_venue", "amphitheater"],
     eventCategories: ["Music"],
   },
   arts: {
-    spotTypes: ["gallery", "museum", "theater", "studio"],
+    spotTypes: ["gallery", "museum", "theater", "arts_center"],
     eventCategories: ["Art", "Theater", "Film"],
   },
   fun: {
-    spotTypes: ["games", "arcade", "karaoke", "eatertainment", "attraction"],
+    spotTypes: ["recreation", "arcade", "karaoke", "eatertainment", "attraction"],
     eventCategories: ["Comedy", "Sports", "Family"],
   },
 };
@@ -267,11 +263,12 @@ export async function GET(request: NextRequest) {
     const sourceAccess = portalContext.portalId
       ? await getPortalSourceAccess(portalContext.portalId)
       : null;
+    const portalClient = await createPortalScopedClient(portalContext.portalId);
 
     // Fast path: countOnly mode — return just event + spot counts
     if (countOnly) {
       // Event count: use head+count for efficiency (no data transfer)
-      let eventCountQuery = supabase
+      let eventCountQuery = portalClient
         .from("events")
         .select("id", { count: "exact", head: true })
         .eq("is_live", true)
@@ -426,7 +423,7 @@ export async function GET(request: NextRequest) {
     spotsQuery = spotsQuery.limit(spotCandidateLimit);
 
     // Fetch live events
-    let eventsQuery = supabase
+    let eventsQuery = portalClient
       .from("events")
       .select(`
         id,

@@ -1,0 +1,33 @@
+{
+  "venue_id": 1306,
+  "venue_slug": "noona-duluth",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {"name": "Surf & Turf", "price": null, "category": "entree"},
+      {"name": "Grilled Octopus", "price": null, "category": "appetizer"},
+      {"name": "Miso Seabass", "price": null, "category": "entree"},
+      {"name": "Grilled Sea Scallops", "price": null, "category": "entree"},
+      {"name": "Salmon Tartar", "price": null, "category": "appetizer"}
+    ],
+    "dietary_options": [],
+    "price_level": 4,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

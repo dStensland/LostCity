@@ -17,6 +17,7 @@ _PRIMARY_WITH_GROUP_RE = re.compile(
     flags=re.IGNORECASE,
 )
 _SECONDARY_SPLIT_RE = re.compile(r"\s*[,+/|•]\s*")
+_BRACKET_CONTENT_RE = re.compile(r"\s*\[[^\]]*\]\s*")
 
 
 def _normalize_name(name: str) -> str:
@@ -60,6 +61,11 @@ def split_lineup_text_with_roles(text: str) -> list[dict[str, str]]:
     if not cleaned:
         return []
 
+    # Strip bracket metadata (e.g. [FREE ENTRY W/ RSVP]) before delimiter matching
+    cleaned = _BRACKET_CONTENT_RE.sub(" ", cleaned).strip()
+    if not cleaned:
+        return []
+
     segments: list[tuple[str, str]] = []
     cursor = 0
     current_role = "headliner"
@@ -97,6 +103,12 @@ def split_lineup_text(text: str) -> list[str]:
         return []
 
     cleaned = " ".join(text.split())
+
+    # Strip bracket metadata before delimiter matching
+    cleaned = _BRACKET_CONTENT_RE.sub(" ", cleaned).strip()
+    if not cleaned:
+        return []
+
     parts: list[str] = []
 
     # First split on explicit support keywords.

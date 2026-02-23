@@ -47,20 +47,39 @@ export const GET = withAuthAndParams<Params>(
     }
 
     // Fetch items with joined event/venue data
-    const { data: items } = await serviceClient
+    // Note: events don't have lat/lng — coords come from venues
+    const { data: rawItems } = await serviceClient
       .from("itinerary_items")
       .select(
         `
         *,
-        event:events(id, title, start_date, start_time, image_url, category, lat, lng),
+        event:events(id, title, start_date, start_time, image_url, category, venue:venues(name, lat, lng)),
         venue:venues(id, slug, name, image_url, neighborhood, venue_type, lat, lng)
       `
       )
       .eq("itinerary_id", params.id)
       .order("position", { ascending: true });
 
+    // Flatten event.venue into event-level lat/lng/venue_name for frontend compatibility
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const items = (rawItems || []).map((item: any) => {
+      if (item.event?.venue) {
+        const { venue: eventVenue, ...eventRest } = item.event;
+        return {
+          ...item,
+          event: {
+            ...eventRest,
+            lat: eventVenue.lat,
+            lng: eventVenue.lng,
+            venue_name: eventVenue.name,
+          },
+        };
+      }
+      return item;
+    });
+
     return successResponse({
-      itinerary: { ...itinerary, items: items || [] },
+      itinerary: { ...itinerary, items },
     });
   }
 );

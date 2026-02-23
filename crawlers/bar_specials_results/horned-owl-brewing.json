@@ -1,0 +1,21 @@
+{
+  "venue_id": 1311,
+  "venue_slug": "horned-owl-brewing",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["patio", "outdoor-seating", "casual", "live-music"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "https://hornedowlbrewing.com/foodmenu",
+    "reservation_url": null,
+    "phone": "(678) 354-5005",
+    "instagram": null,
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

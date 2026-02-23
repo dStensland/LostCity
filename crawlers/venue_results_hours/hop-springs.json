@@ -1,0 +1,31 @@
+{
+  "venue_id": 1411,
+  "venue_slug": "hop-springs",
+  "meta": {
+    "og_image": null,
+    "meta_description": null,
+    "reservation_links": [],
+    "menu_links": [
+      "https://www.hippinhops.com",
+      "https://www.hippinhops.com/?location=Glenwood+Avenue+Southeast#1"
+    ],
+    "instagram": "hippinhopsbrewery",
+    "facebook_url": null,
+    "phone": "(678) 713-2739"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["casual", "lively", "good-for-groups", "black-owned"],
+    "cuisine": ["seafood", "cajun", "southern"],
+    "service_style": "full_service",
+    "price_level": 2,
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": "(678) 713-2739",
+    "instagram": "hippinhopsbrewery",
+    "dietary_options": ["vegan-options", "vegetarian-friendly", "gluten-free-options"],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

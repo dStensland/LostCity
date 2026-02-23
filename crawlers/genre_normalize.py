@@ -457,7 +457,7 @@ GENRE_NORMALIZATION: dict[str, str] = {
     "masters swim": "swimming",
 
     # --- Food & Drink ---
-    "soul food": "southern",
+    "soul food": "soul_food",
     "bbq": "southern",
     "barbecue": "southern",
     "cajun": "southern",

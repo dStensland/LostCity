@@ -1,0 +1,48 @@
+{
+  "venue_id": 970,
+  "venue_slug": "bloom",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Sea Salt Maple Latte",
+        "price": null,
+        "category": "cocktail"
+      },
+      {
+        "name": "Honey Badger Latte",
+        "price": null,
+        "category": "cocktail"
+      },
+      {
+        "name": "Island Mocha",
+        "price": null,
+        "category": "cocktail"
+      },
+      {
+        "name": "Dirty Chai",
+        "price": null,
+        "category": "cocktail"
+      }
+    ],
+    "dietary_options": [],
+    "price_level": 1,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

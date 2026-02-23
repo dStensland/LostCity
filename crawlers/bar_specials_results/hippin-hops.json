@@ -1,0 +1,21 @@
+{
+  "venue_id": 2497,
+  "venue_slug": "hippin-hops",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["casual"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "https://www.hippinhops.com",
+    "reservation_url": null,
+    "phone": "(678) 713-2739",
+    "instagram": null,
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

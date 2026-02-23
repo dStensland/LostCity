@@ -15,7 +15,7 @@ import { safeJsonLd } from "@/lib/formats";
 import { toAbsoluteUrl } from "@/lib/site-url";
 import { SectionHeader } from "@/components/detail/SectionHeader";
 import EventCard from "@/components/EventCard";
-import SpotCard from "@/components/SpotCard";
+import VenueCard from "@/components/VenueCard";
 
 export const revalidate = 60;
 
@@ -229,11 +229,12 @@ export default async function NeighborhoodPage({ params }: Props) {
           <SectionHeader title="Spots" count={spots.length} />
           <div className="space-y-1">
             {spots.map((spot, i) => (
-              <SpotCard
+              <VenueCard
                 key={spot.id}
-                spot={spot}
+                venue={spot}
                 index={i}
                 portalSlug={portal}
+                variant="compact"
               />
             ))}
           </div>

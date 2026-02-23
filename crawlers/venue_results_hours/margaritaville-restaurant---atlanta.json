@@ -1,0 +1,68 @@
+{
+  "venue_id": 4633,
+  "venue_slug": "margaritaville-restaurant---atlanta",
+  "meta": {
+    "og_image": "https://www.margaritavilleatlanta.com/assets/75e3ff5e/images/og_image.jpg",
+    "meta_description": "Get transported to paradise with tropical flavors at Margaritaville in Atlanta, GA! Dine in or bring the island home with delivery & takeout!",
+    "reservation_links": [],
+    "menu_links": [
+      "https://www.margaritavilleatlanta.com/menu"
+    ],
+    "instagram": "margaritavillerestaurants",
+    "facebook_url": "https://www.facebook.com/MargaritavilleAtlanta",
+    "phone": "(470) 781-2336"
+  },
+  "extracted": {
+    "hours": {
+      "mon": {
+        "open": "11:00",
+        "close": "22:00"
+      },
+      "tue": {
+        "open": "11:00",
+        "close": "22:00"
+      },
+      "wed": {
+        "open": "11:00",
+        "close": "22:00"
+      },
+      "thu": {
+        "open": "11:00",
+        "close": "22:00"
+      },
+      "fri": {
+        "open": "11:00",
+        "close": "00:00"
+      },
+      "sat": {
+        "open": "11:00",
+        "close": "00:00"
+      },
+      "sun": {
+        "open": "11:00",
+        "close": "22:00"
+      }
+    },
+    "vibes": [
+      "casual",
+      "lively",
+      "family-friendly",
+      "good-for-groups"
+    ],
+    "cuisine": [
+      "american",
+      "caribbean",
+      "seafood"
+    ],
+    "service_style": "full-service",
+    "price_level": "$$",
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": "(470) 781-2336",
+    "instagram": "margaritavillerestaurants",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "venue_id": 1597,
+  "venue_slug": "rosemary-beauty-queen",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["patio", "casual", "live-music"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "https://www.rosemaryandbeautyqueen.com/430691301607",
+    "reservation_url": "https://tables.toasttab.com/restaurants/111451c0-a051-4070-80a3-3059b71e24bc/findTime",
+    "phone": null,
+    "instagram": "rbqnashville",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

@@ -15,7 +15,7 @@ describe("dining timing", () => {
   });
 
   it("infers service style from venue type", () => {
-    expect(inferServiceStyleFromVenueType("food_hall")).toBe("quick_service");
+    expect(inferServiceStyleFromVenueType("fast_casual")).toBe("quick_service");
     expect(inferServiceStyleFromVenueType("restaurant")).toBe("casual_dine_in");
     expect(inferServiceStyleFromVenueType("unknown_type")).toBeNull();
   });

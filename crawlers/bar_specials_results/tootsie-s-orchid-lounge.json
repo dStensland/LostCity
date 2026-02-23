@@ -1,0 +1,21 @@
+{
+  "venue_id": 1599,
+  "venue_slug": "tootsie-s-orchid-lounge",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["live-music", "late-night", "casual", "rooftop"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "http://www.tootsies.net/nashville-menu",
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "tootsies_orchid_lounge",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

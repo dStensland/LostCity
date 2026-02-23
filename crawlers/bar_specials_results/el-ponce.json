@@ -1,0 +1,31 @@
+{
+  "venue_id": 4836,
+  "venue_slug": "el-ponce",
+  "meta": {},
+  "extracted": {
+    "specials": [
+      {
+        "title": "Happy Hour",
+        "type": "happy_hour",
+        "description": "Happy hour menu available with drink and food specials",
+        "days_of_week": [2, 3, 4, 5, 6, 7],
+        "time_start": null,
+        "time_end": null,
+        "price_note": null
+      }
+    ],
+    "hours": null,
+    "vibes": ["patio", "outdoor-seating", "dog-friendly", "casual", "happy-hour"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "https://www.elponce.com/home#menus",
+    "reservation_url": "https://resy.com/cities/atl/el-ponce",
+    "phone": "(404) 881-6040",
+    "instagram": null,
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "venue_id": 1342,
+  "venue_slug": "atlanta-bread",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Chicken Waldorf Sandwich",
+        "price": null,
+        "category": "entree"
+      },
+      {
+        "name": "Mediterranean Salmon Salad",
+        "price": null,
+        "category": "entree"
+      },
+      {
+        "name": "Cubano Panini",
+        "price": null,
+        "category": "entree"
+      },
+      {
+        "name": "Spiced Chai Latte",
+        "price": null,
+        "category": "cocktail"
+      },
+      {
+        "name": "Super Med Bowl",
+        "price": null,
+        "category": "entree"
+      }
+    ],
+    "dietary_options": [
+      "gluten-free-options",
+      "vegetarian-friendly"
+    ],
+    "price_level": 2,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

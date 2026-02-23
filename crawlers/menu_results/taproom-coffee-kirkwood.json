@@ -1,0 +1,48 @@
+{
+  "venue_id": 1121,
+  "venue_slug": "taproom-coffee-kirkwood",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Gochujang Caramel Latte",
+        "price": "$5.60",
+        "category": "cocktail"
+      },
+      {
+        "name": "Tiramisu Latte",
+        "price": "$5.60",
+        "category": "cocktail"
+      },
+      {
+        "name": "Oatmeal Creme Pie Latte",
+        "price": "$6.60",
+        "category": "cocktail"
+      },
+      {
+        "name": "Maple Sage Latte",
+        "price": "$5.60",
+        "category": "cocktail"
+      }
+    ],
+    "dietary_options": [],
+    "price_level": 1,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

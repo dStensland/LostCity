@@ -1,0 +1,55 @@
+{
+  "venue_id": 2481,
+  "venue_slug": "nadair-atlanta",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Braised Short Rib",
+        "price": "$25",
+        "category": "entree"
+      },
+      {
+        "name": "House Cured & Seared Duck Breast",
+        "price": null,
+        "category": "entree"
+      },
+      {
+        "name": "Steamed Northeastern Mussels",
+        "price": null,
+        "category": "appetizer"
+      },
+      {
+        "name": "Peanut Butter Chess Pie",
+        "price": null,
+        "category": "dessert"
+      },
+      {
+        "name": "Wood Oven Roasted Local Mushrooms",
+        "price": null,
+        "category": "appetizer"
+      }
+    ],
+    "dietary_options": [
+      "vegetarian-friendly"
+    ],
+    "price_level": 4,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

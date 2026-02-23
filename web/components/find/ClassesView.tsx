@@ -410,7 +410,7 @@ function CategoryDropdown({
     <div ref={dropdownRef} className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="h-9 inline-flex items-center gap-2 bg-[var(--night)]/78 border border-[var(--twilight)]/80 rounded-full px-3.5 font-mono text-xs cursor-pointer hover:border-[var(--coral)]/50 hover:bg-[var(--dusk)]/70 transition-colors"
+        className="h-9 inline-flex items-center gap-2 bg-[var(--night)]/78 border border-[var(--twilight)]/80 rounded-full px-3.5 font-mono text-xs cursor-pointer hover:border-[var(--coral)]/50 hover:bg-[var(--dusk)]/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]/70 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--void)]"
       >
         <span data-category={selected.icon} className="category-icon">
           <CategoryIcon type={selected.icon} size={14} glow="subtle" />
@@ -714,28 +714,30 @@ function VenueSection({
         </button>
 
         {/* Expanded class list */}
-        {isOpen && (
-          <div className="border-t border-[var(--twilight)]/30 py-1">
-            {venue.locationGroups && venue.locationGroups.length > 0 ? (
-              <div className="space-y-2 py-1">
-                {venue.locationGroups.map((group) => (
-                  <div key={group.location}>
-                    <div className="px-3 py-1 text-[0.6rem] font-mono uppercase tracking-wider text-[var(--muted)]">
-                      {group.location}
+        <div className="accordion-body" data-open={isOpen}>
+          <div>
+            <div className="border-t border-[var(--twilight)]/30 py-1">
+              {venue.locationGroups && venue.locationGroups.length > 0 ? (
+                <div className="space-y-2 py-1">
+                  {venue.locationGroups.map((group) => (
+                    <div key={group.location}>
+                      <div className="px-3 py-1 text-[0.6rem] font-mono uppercase tracking-wider text-[var(--muted)]">
+                        {group.location}
+                      </div>
+                      {group.classes.map((cls) => (
+                        <ClassRow key={cls.id} cls={cls} portalSlug={portalSlug} />
+                      ))}
                     </div>
-                    {group.classes.map((cls) => (
-                      <ClassRow key={cls.id} cls={cls} portalSlug={portalSlug} />
-                    ))}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              venue.classes.map((cls) => (
-                <ClassRow key={cls.id} cls={cls} portalSlug={portalSlug} />
-              ))
-            )}
+                  ))}
+                </div>
+              ) : (
+                venue.classes.map((cls) => (
+                  <ClassRow key={cls.id} cls={cls} portalSlug={portalSlug} />
+                ))
+              )}
+            </div>
           </div>
-        )}
+        </div>
       </div>
     </>
   );
@@ -1053,7 +1055,12 @@ export default function ClassesView({
 
       {/* Empty state */}
       {!loading && classes.length === 0 && (
-        <div className="py-16 text-center">
+        <div className="py-12 sm:py-16 text-center">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[var(--twilight)]/25 border border-[var(--twilight)]/50 mb-4">
+            <svg className="w-7 h-7 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            </svg>
+          </div>
           <div className="text-[var(--muted)] font-mono text-sm">
             No classes found
           </div>

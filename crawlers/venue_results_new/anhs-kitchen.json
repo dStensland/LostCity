@@ -1,0 +1,47 @@
+{
+  "venue_id": 4843,
+  "venue_slug": "anhs-kitchen",
+  "meta": {
+    "og_image": "https://img1.wsimg.com/isteam/ip/4d8e477c-dffa-4003-9b75-a40482b4e094/4030dfeb-8554-426e-84d7-2cbb422c9148.JPG",
+    "meta_description": null,
+    "reservation_links": [],
+    "menu_links": [
+      "https://anhkitchenatl.com/menus-1",
+      "https://anhkitchenatl.com/menus-1",
+      "https://anhkitchenatl.com/menus-1",
+      "https://anhkitchenatl.com/menus-1#efe45b63-eb22-4bd8-b93b-33493d4fc6b8",
+      "https://anhkitchenatl.com/menus-1"
+    ],
+    "instagram": "anhskitchenatl",
+    "facebook_url": "https://www.facebook.com/AnhsKitchenATL",
+    "phone": "(404) 989-6886"
+  },
+  "extracted": {
+    "hours": {
+      "mon": {"open": "11:00", "close": "21:30"},
+      "tue": {"open": "11:00", "close": "02:00"},
+      "wed": {"open": "11:00", "close": "02:00"},
+      "thu": {"open": "11:00", "close": "02:00"},
+      "fri": {"open": "11:00", "close": "02:00"},
+      "sat": {"open": "11:00", "close": "02:00"},
+      "sun": {"open": "11:00", "close": "01:00"}
+    },
+    "vibes": ["casual", "late-night", "fast-casual"],
+    "cuisine": ["vietnamese"],
+    "service_style": "quick_service",
+    "price_level": 1,
+    "menu_highlights": [
+      {"name": "Pho", "price": null, "category": "entree"},
+      {"name": "Bun Bo Hue", "price": null, "category": "entree"},
+      {"name": "Egg Rolls", "price": null, "category": "appetizer"}
+    ],
+    "menu_url": "https://anhkitchenatl.com/menus-1",
+    "reservation_url": null,
+    "phone": "(404) 989-6886",
+    "instagram": "anhskitchenatl",
+    "dietary_options": ["vegetarian-friendly"],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

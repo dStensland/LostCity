@@ -1,0 +1,55 @@
+{
+  "venue_id": 505,
+  "venue_slug": "madlife-stage-studios",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Parmesan-Crusted Ribeye (12oz)",
+        "price": "$38.75",
+        "category": "entree"
+      },
+      {
+        "name": "Cajun Chicken and Shrimp Pasta",
+        "price": "$29.75",
+        "category": "entree"
+      },
+      {
+        "name": "Wagyu Cheesesteak",
+        "price": "$24.75",
+        "category": "entree"
+      },
+      {
+        "name": "Fried Green Tomatoes",
+        "price": "$14.75",
+        "category": "appetizer"
+      },
+      {
+        "name": "Salted Caramel Espresso Martini",
+        "price": "$17",
+        "category": "cocktail"
+      }
+    ],
+    "dietary_options": [
+      "gluten-free-options"
+    ],
+    "price_level": 3,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

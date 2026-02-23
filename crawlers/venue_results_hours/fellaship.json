@@ -1,0 +1,32 @@
+{
+  "venue_id": 4413,
+  "venue_slug": "fellaship",
+  "meta": {
+    "og_image": "http://static1.squarespace.com/static/5f3bf904ecd409231714764c/t/5f474158272107450de4f8df/1598505308308/Fellaship_header_1920x1080.jpg?format=1500w",
+    "meta_description": "Atlanta's premium dining and cigar experience featuring live music, chic \r\nartistry and authentic southern cuisine.",
+    "reservation_links": [
+      "https://resy.com/cities/atl/fellaship-lounge"
+    ],
+    "menu_links": [
+      "https://fellashipatl.com/menu"
+    ],
+    "instagram": "fellaship.atl",
+    "facebook_url": "https://www.facebook.com/fellaship.atl",
+    "phone": "(404) 254-4970"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["upscale", "date-spot", "live-music", "trendy", "craft-cocktails", "lively"],
+    "cuisine": ["southern", "new_american"],
+    "service_style": "full_service",
+    "price_level": 3,
+    "menu_highlights": null,
+    "reservation_url": "https://resy.com/cities/atl/fellaship-lounge",
+    "phone": "(404) 254-4970",
+    "instagram": "fellaship.atl",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

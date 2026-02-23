@@ -1,0 +1,56 @@
+{
+  "venue_id": 3752,
+  "venue_slug": "willys-mexicana-grill-midtown",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Willy Philly Burrito",
+        "price": null,
+        "category": "entree"
+      },
+      {
+        "name": "Baja Burrito",
+        "price": null,
+        "category": "entree"
+      },
+      {
+        "name": "Willy's Frito Burrito",
+        "price": null,
+        "category": "entree"
+      },
+      {
+        "name": "Goal Bowl",
+        "price": null,
+        "category": "entree"
+      },
+      {
+        "name": "Cheesy Beef-amole Dip",
+        "price": null,
+        "category": "appetizer"
+      }
+    ],
+    "dietary_options": [
+      "vegetarian-friendly",
+      "vegan-options"
+    ],
+    "price_level": 1,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

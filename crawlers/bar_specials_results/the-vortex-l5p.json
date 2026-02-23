@@ -1,0 +1,21 @@
+{
+  "venue_id": 917,
+  "venue_slug": "the-vortex-l5p",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["casual", "late-night"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "http://www.thevortexbar.com/food-menu",
+    "reservation_url": null,
+    "phone": "(404) 875-1667",
+    "instagram": "thevortexatl",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

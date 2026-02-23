@@ -1,0 +1,31 @@
+{
+  "venue_id": 4807,
+  "venue_slug": "springfield-bbq-co",
+  "meta": {
+    "og_image": null,
+    "meta_description": "Low, slow smoked Atlanta BBQ food cooked over fruit wood. Eat with us at BBQ56!",
+    "reservation_links": [],
+    "menu_links": [
+      "https://www.bbq-56.com"
+    ],
+    "instagram": "bbq56atl",
+    "facebook_url": null,
+    "phone": "(470) 851-1924"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["casual", "neighborhood-bar", "family-friendly", "black-owned"],
+    "cuisine": ["bbq", "southern"],
+    "service_style": "quick_service",
+    "price_level": 1,
+    "menu_highlights": null,
+    "menu_url": "https://www.bbq-56.com",
+    "reservation_url": null,
+    "phone": "(470) 851-1924",
+    "instagram": "bbq56atl",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

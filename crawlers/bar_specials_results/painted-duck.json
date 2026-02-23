@@ -1,0 +1,21 @@
+{
+  "venue_id": 264,
+  "venue_slug": "painted-duck",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["arcade", "date-night", "craft-cocktails", "upscale", "casual"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "https://www.thepaintedduckatl.com/p/the-menus.html",
+    "reservation_url": null,
+    "phone": "(404) 352-0048",
+    "instagram": "paintedduckatl",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

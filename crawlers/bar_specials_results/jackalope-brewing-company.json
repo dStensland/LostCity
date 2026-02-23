@@ -1,0 +1,21 @@
+{
+  "venue_id": 1634,
+  "venue_slug": "jackalope-brewing-company",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["patio", "outdoor-seating", "casual", "family-friendly", "pet-friendly"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "https://www.toasttab.com/wild-leap-atlanta/v3",
+    "reservation_url": "https://www.exploretock.com/wild-leap-atlanta",
+    "phone": "(404) 254-1488",
+    "instagram": null,
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

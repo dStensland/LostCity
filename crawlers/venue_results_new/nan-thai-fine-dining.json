@@ -1,0 +1,42 @@
+{
+  "venue_id": 4883,
+  "venue_slug": "nan-thai-fine-dining",
+  "meta": {
+    "og_image": "http://static1.squarespace.com/static/6213bc68cc45b9740661f202/t/6213bd4cfbf0de7f2135c430/1645460812224/NanLogo_High-Res%2Bcopy.png?format=1500w",
+    "meta_description": "Best Thai Restaurant in Midtown Atlanta! Enjoy dining at our 16X \r\nFour-Diamond Award-Winning Restaurant. Make reservations or order online.",
+    "reservation_links": [
+      "https://www.opentable.com/r/nan-thai-fine-dining-atlanta"
+    ],
+    "menu_links": [
+      "https://www.nanfinedining.com/menu",
+      "https://www.nanfinedining.com/menu",
+      "https://www.nanfinedining.com/menu",
+      "https://www.nanfinedining.com/s/NAN-FOODS-to-Print.pdf"
+    ],
+    "instagram": "nanfinedining",
+    "facebook_url": "https://www.facebook.com/NanThaiFineDining",
+    "phone": "(404) 870-9933"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["upscale", "date-spot", "intimate", "craft-cocktails"],
+    "cuisine": ["thai", "seafood"],
+    "service_style": "full_service",
+    "price_level": 4,
+    "menu_highlights": [
+      {"name": "Wild-Caught Lobster Tail", "price": null, "category": "appetizer"},
+      {"name": "Lobster Pad Thai", "price": null, "category": "entree"},
+      {"name": "Pla Sahm Rod (Chilean Sea Bass)", "price": null, "category": "entree"},
+      {"name": "Whole Snapper 3 Flavor", "price": null, "category": "entree"},
+      {"name": "Nan's Tasting Tree", "price": null, "category": "appetizer"}
+    ],
+    "menu_url": "https://www.nanfinedining.com/menu",
+    "reservation_url": "https://www.opentable.com/r/nan-thai-fine-dining-atlanta",
+    "phone": "(404) 870-9933",
+    "instagram": "nanfinedining",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

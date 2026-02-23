@@ -1,0 +1,21 @@
+{
+  "venue_id": 723,
+  "venue_slug": "clays-sports-cafe",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["sports-bar", "casual", "family-friendly"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "https://clayssportscafe.com/menu/",
+    "reservation_url": null,
+    "phone": "(404) 843-1233",
+    "instagram": null,
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

@@ -1,9 +1,15 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createPortalScopedClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { format, startOfDay, addDays, startOfWeek, startOfMonth } from "date-fns";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
-import { applyPortalScopeToQuery, filterByPortalCity } from "@/lib/portal-scope";
+import {
+  applyPortalScopeToQuery,
+  filterByPortalCity,
+  parsePortalContentFilters,
+  applyPortalCategoryFilters,
+  filterByPortalContentScope,
+} from "@/lib/portal-scope";
 import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
 
 type HighlightsPeriod = "today" | "week" | "month";
@@ -48,10 +54,13 @@ type TonightEvent = {
     } | null;
   } | null;
   venue: {
+    id?: number | null;
     name: string;
     neighborhood: string | null;
     image_url?: string | null;
     city?: string | null;
+    lat?: number | null;
+    lng?: number | null;
   } | null;
   event_artists?: {
     artist_id: string | null;
@@ -621,7 +630,7 @@ const EVENT_SELECT = `
     id, slug, title, series_type, image_url, frequency, day_of_week, genres,
     festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
   ),
-  venue:venues(name, neighborhood, image_url, city, location_designator),
+  venue:venues(id, name, neighborhood, image_url, city, lat, lng, location_designator),
   event_artists(artist_id, name, is_headliner, billing_order, artist:artists(image_url))
 `;
 
@@ -668,6 +677,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const portalClient = await createPortalScopedClient(portalContext.portalId);
+    const portalContentFilters = parsePortalContentFilters(portalContext.filters as Record<string, unknown> | null);
+
     // PERFORMANCE: Run portal lookup and curated picks fetch in parallel
     const [curatedPicksResult, activePortalResult] = await Promise.all([
       // Check for curated picks first — if editor-curated picks exist for this period,
@@ -704,7 +716,7 @@ export async function GET(request: NextRequest) {
 
       // Only return curated-only if they fill most of the target
       if (curatedIds.length >= Math.floor(config.limit * 0.8)) {
-        const { data: curatedEvents } = await supabase
+        const { data: curatedEvents } = await portalClient
           .from("events")
           .select(EVENT_SELECT)
           .in("id", curatedIds);
@@ -774,6 +786,8 @@ export async function GET(request: NextRequest) {
         publicOnlyWhenNoPortal: true,
       });
 
+      scoped = applyPortalCategoryFilters(scoped, portalContentFilters);
+
       return scoped;
     };
 
@@ -791,7 +805,7 @@ export async function GET(request: NextRequest) {
         const wStart = format(addDays(now, w * 7), "yyyy-MM-dd");
         const wEnd = format(addDays(now, (w + 1) * 7 - 1), "yyyy-MM-dd");
         weekQueries.push(
-          baseFilters(supabase.from("events").select(EVENT_SELECT))
+          baseFilters(portalClient.from("events").select(EVENT_SELECT))
             .gte("start_date", wStart)
             .lte("start_date", wEnd)
             .neq("category", "film")
@@ -803,7 +817,7 @@ export async function GET(request: NextRequest) {
       }
       // Also fetch indie film sample
       weekQueries.push(
-        baseFilters(supabase.from("events").select(EVENT_SELECT))
+        baseFilters(portalClient.from("events").select(EVENT_SELECT))
           .eq("category", "film")
           .not("image_url", "is", null)
           .not("tags", "cs", "{showtime}")
@@ -821,14 +835,14 @@ export async function GET(request: NextRequest) {
     } else {
       // Today/week: single fetch is fine
       const [nonFilmResult, filmResult] = await Promise.all([
-        baseFilters(supabase.from("events").select(EVENT_SELECT))
+        baseFilters(portalClient.from("events").select(EVENT_SELECT))
           .neq("category", "film")
           .not("image_url", "is", null)
           .order("start_date", { ascending: true })
           .order("start_time", { ascending: true })
           .limit(config.candidateLimit),
         // Only fetch film events that AREN'T regular chain showtimes
-        baseFilters(supabase.from("events").select(EVENT_SELECT))
+        baseFilters(portalClient.from("events").select(EVENT_SELECT))
           .eq("category", "film")
           .not("image_url", "is", null)
           .not("tags", "cs", "{showtime}")
@@ -858,7 +872,7 @@ export async function GET(request: NextRequest) {
       const imageEventIds = new Set(allEvents.map(e => e.id));
       const backfillLimit = config.candidateLimit - allEvents.length;
 
-      const { data: backfillData } = await baseFilters(supabase.from("events").select(EVENT_SELECT))
+      const { data: backfillData } = await baseFilters(portalClient.from("events").select(EVENT_SELECT))
         .neq("category", "film")
         .is("image_url", null)
         .order("start_date", { ascending: true })
@@ -877,6 +891,9 @@ export async function GET(request: NextRequest) {
       portalContext.filters.city || "Atlanta",
       { allowMissingCity: false }
     );
+
+    // Apply portal content scope filters (geo, neighborhoods, tags, venue_ids, price)
+    allEvents = filterByPortalContentScope(allEvents, portalContentFilters);
 
     // Filter out today's events that already happened (started > 2 hours ago)
     // Only applies to today's date — future dates always included

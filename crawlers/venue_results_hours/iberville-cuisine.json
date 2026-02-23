@@ -1,0 +1,32 @@
+{
+  "venue_id": 2050,
+  "venue_slug": "iberville-cuisine",
+  "meta": {
+    "og_image": "https://lh3.googleusercontent.com/sitesv/APaQ0SR4piIjzr1p88x2z8UHKY-DGvySTfvN_Ci49O4YKeGVH7wYFp2hyNbMtx6HwTSqIvTblx4EucBGHG3n14iK-lr7JZsDQcTo5K-suXHd47U9t-sn2lVxAN5r3yjvUwMFYG3uXTyYEZwp4X1Nexf0LDfvvgiiMDEZMRReW2lYu2UGQrdyAoWBWkKsJcQ=w16383",
+    "meta_description": null,
+    "reservation_links": [
+      "https://www.google.com/url?q=https%3A%2F%2Fwww.tbdine.com%2Fnew-orleans%2Frestaurants%2Fiberville-cuisine&sa=D&sntz=1&usg=AOvVaw0d0-zfpHteqx9pdYZMa7gH"
+    ],
+    "menu_links": [
+      "https://www.ibervillecuisine.com/home/menu"
+    ],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["upscale", "lively", "live-music", "date-spot", "craft-cocktails", "good-for-groups"],
+    "cuisine": ["cajun", "seafood", "mediterranean"],
+    "service_style": "full_service",
+    "price_level": 3,
+    "menu_highlights": null,
+    "reservation_url": "https://www.tbdine.com/new-orleans/restaurants/iberville-cuisine",
+    "phone": null,
+    "instagram": null,
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

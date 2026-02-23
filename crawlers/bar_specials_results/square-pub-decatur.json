@@ -1,0 +1,23 @@
+{
+  "venue_id": 3798,
+  "venue_slug": "square-pub-decatur",
+  "meta": {
+    "note": "Website appears compromised - serving online gambling/casino spam content. No venue data could be extracted."
+  },
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": [],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": null,
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

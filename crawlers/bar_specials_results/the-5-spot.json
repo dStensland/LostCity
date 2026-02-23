@@ -1,0 +1,23 @@
+{
+  "venue_id": 1512,
+  "venue_slug": "the-5-spot",
+  "meta": {
+    "note": "Website redirects to Aisle 5 ATL, a music venue in Little Five Points, Atlanta. This is a different venue from The 5 Spot in Nashville."
+  },
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["live-music"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "aisle5_atl",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

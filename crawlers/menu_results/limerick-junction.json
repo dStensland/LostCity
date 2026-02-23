@@ -1,0 +1,53 @@
+{
+  "venue_id": 1003,
+  "venue_slug": "limerick-junction",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Guinness (20oz Draught)",
+        "price": "$8",
+        "category": "beer"
+      },
+      {
+        "name": "Creature Comforts Tropicalia IPA",
+        "price": "$8.50",
+        "category": "beer"
+      },
+      {
+        "name": "Paulaner Hefe-Weizen",
+        "price": "$9",
+        "category": "beer"
+      },
+      {
+        "name": "Smithwick's Irish Red Ale",
+        "price": "$7.50",
+        "category": "beer"
+      },
+      {
+        "name": "Magner's Irish Cider",
+        "price": "$8",
+        "category": "beer"
+      }
+    ],
+    "dietary_options": [],
+    "price_level": 1,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

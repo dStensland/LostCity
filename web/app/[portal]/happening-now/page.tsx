@@ -14,12 +14,11 @@ import type { AroundMeItem, AroundMeSpot, AroundMeEvent } from "@/app/api/around
 
 // Client-side category filter mapping (mirrors API CATEGORY_FILTERS)
 const CLIENT_CATEGORY_FILTERS: Record<string, { spotTypes: string[]; eventCategories: string[] }> = {
-  food: { spotTypes: ["restaurant", "food_hall", "cooking_school"], eventCategories: ["Food & Drink"] },
-  drinks: { spotTypes: ["bar", "brewery", "distillery", "winery", "rooftop", "sports_bar"], eventCategories: ["Food & Drink"] },
-  coffee: { spotTypes: ["coffee_shop"], eventCategories: ["Food & Drink"] },
-  music: { spotTypes: ["music_venue"], eventCategories: ["Music"] },
-  arts: { spotTypes: ["gallery", "museum", "theater", "studio"], eventCategories: ["Art", "Theater", "Film"] },
-  fun: { spotTypes: ["games", "arcade", "karaoke", "eatertainment", "attraction"], eventCategories: ["Comedy", "Sports", "Family"] },
+  food: { spotTypes: ["restaurant"], eventCategories: ["Food & Drink"] },
+  drinks: { spotTypes: ["bar", "brewery", "cocktail_bar", "rooftop"], eventCategories: ["Food & Drink"] },
+  music: { spotTypes: ["music_venue", "amphitheater"], eventCategories: ["Music"] },
+  arts: { spotTypes: ["gallery", "museum", "theater", "arts_center"], eventCategories: ["Art", "Theater", "Film"] },
+  fun: { spotTypes: ["recreation", "arcade", "karaoke", "eatertainment", "attraction"], eventCategories: ["Comedy", "Sports", "Family"] },
 };
 
 function filterItemsByCategory(items: AroundMeItem[], category: FilterCategory): AroundMeItem[] {

@@ -1,0 +1,21 @@
+{
+  "venue_id": 4906,
+  "venue_slug": "silla-del-toro",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["date-night", "craft-cocktails", "casual"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "http://www.silladeltoro.com/menu",
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "silladeltoro",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

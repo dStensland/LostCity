@@ -1,0 +1,28 @@
+{
+  "venue_id": 4801,
+  "venue_slug": "tookes-country-bar-b-que",
+  "meta": {
+    "og_image": null,
+    "meta_description": null,
+    "reservation_links": [],
+    "menu_links": ["https://www.tookesbbqatl.com/off-da-grill-menu"],
+    "instagram": "tookescountrybbq",
+    "facebook_url": null,
+    "phone": "(770) 968-4190"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["casual", "counter-service"],
+    "cuisine": ["bbq"],
+    "service_style": "counter-service",
+    "price_level": "$$",
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": "(770) 968-4190",
+    "instagram": "tookescountrybbq",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

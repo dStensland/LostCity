@@ -1,0 +1,57 @@
+{
+  "venue_id": 1424,
+  "venue_slug": "chiefs-on-broadway",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Rod's Original Whole Hog Plate",
+        "price": null,
+        "category": "entree"
+      },
+      {
+        "name": "Rodney's Hot Chicken Tender Sandwich",
+        "price": null,
+        "category": "entree"
+      },
+      {
+        "name": "Pork Belly Burnt Ends",
+        "price": null,
+        "category": "appetizer"
+      },
+      {
+        "name": "Brisket Plate",
+        "price": null,
+        "category": "entree"
+      },
+      {
+        "name": "Ella's Banana Puddin'",
+        "price": null,
+        "category": "dessert"
+      }
+    ],
+    "dietary_options": [
+      "gluten-free-options",
+      "vegetarian-friendly",
+      "vegan-options"
+    ],
+    "price_level": 2,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

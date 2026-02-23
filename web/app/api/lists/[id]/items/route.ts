@@ -36,7 +36,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
       }
     }
 
-    const { data: items, error } = await supabase
+    // Check if current user is the owner
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    const isOwner = currentUser?.id === list.creator_id;
+
+    let itemsQuery = supabase
       .from("list_items")
       .select(`
         *,
@@ -46,6 +50,13 @@ export async function GET(request: NextRequest, context: RouteContext) {
       `)
       .eq("list_id", listId)
       .order("position", { ascending: true });
+
+    // Non-owners only see approved items
+    if (!isOwner) {
+      itemsQuery = itemsQuery.eq("status", "approved");
+    }
+
+    const { data: items, error } = await itemsQuery;
 
     if (error) {
       logger.error("Error fetching list items", error);
@@ -84,7 +95,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     const { data: list } = await serviceClient
       .from("lists")
-      .select("creator_id, allow_contributions, status")
+      .select("creator_id, allow_contributions, submission_mode, status")
       .eq("id", listId)
       .maybeSingle();
 
@@ -93,12 +104,13 @@ export async function POST(request: NextRequest, context: RouteContext) {
     }
 
     const isOwner = list.creator_id === user.id;
-    if (!isOwner && !list.allow_contributions) {
+    const isOpenSubmission = list.submission_mode === "open" || list.allow_contributions;
+    if (!isOwner && !isOpenSubmission) {
       return NextResponse.json({ error: "Not authorized to add items to this list" }, { status: 403 });
     }
 
     const body = await request.json();
-    const { item_type, venue_id, event_id, organization_id, custom_name, custom_description } = body;
+    const { item_type, venue_id, event_id, organization_id, custom_name, custom_description, blurb } = body;
 
     if (!item_type) {
       return NextResponse.json({ error: "Item type is required" }, { status: 400 });
@@ -120,6 +132,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     const nextPosition = (lastItem?.position ?? 0) + 1;
 
+    // Non-owners submitting to open curations get pending status
+    const itemStatus = isOwner ? "approved" : "pending";
+
     const { data: item, error } = await serviceClient
       .from("list_items")
       .insert({
@@ -132,6 +147,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
         custom_description: custom_description || null,
         position: nextPosition,
         added_by: user.id,
+        blurb: blurb?.trim() || null,
+        status: itemStatus,
+        submitted_by: user.id,
       })
       .select(`
         *,
@@ -152,6 +170,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         vote_count: 0,
         user_vote: null,
       },
+      submission_status: itemStatus,
     });
   } catch (error) {
     logger.error("Error in list items POST", error);

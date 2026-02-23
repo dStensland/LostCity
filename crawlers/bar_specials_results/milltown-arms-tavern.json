@@ -1,0 +1,21 @@
+{
+  "venue_id": 904,
+  "venue_slug": "milltown-arms-tavern",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["sports-bar", "casual", "dive-bar"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "https://www.milltownarmstavern.com/menu",
+    "reservation_url": null,
+    "phone": "(404) 827-0434",
+    "instagram": "milltownarmstavern",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

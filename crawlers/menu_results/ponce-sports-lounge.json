@@ -1,0 +1,53 @@
+{
+  "venue_id": 71,
+  "venue_slug": "ponce-sports-lounge",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Teriyaki Lamb Chops",
+        "price": "$30",
+        "category": "entree"
+      },
+      {
+        "name": "Blackened Salmon Fillet",
+        "price": "$28",
+        "category": "entree"
+      },
+      {
+        "name": "Red Velvet Chicken & Waffles",
+        "price": "$15",
+        "category": "entree"
+      },
+      {
+        "name": "Strawberry Hennessy Wings",
+        "price": "$15",
+        "category": "appetizer"
+      },
+      {
+        "name": "Hibachi Rice Bowl",
+        "price": "$20",
+        "category": "entree"
+      }
+    ],
+    "dietary_options": [],
+    "price_level": 2,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

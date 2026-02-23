@@ -1,0 +1,21 @@
+{
+  "venue_id": 40,
+  "venue_slug": "monday-night-brewing-the-grove",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["beer-garden", "dog-friendly", "patio", "casual", "family-friendly", "happy-hour", "sports-bar"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "https://www.canva.com/design/DAGvUY_BMMI/ajgH1ZyhqvChzNPMvnkDqA/view?utm_content=DAGvUY_BMMI&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=hcaee712ea8",
+    "reservation_url": null,
+    "phone": "(404) 352-7703",
+    "instagram": "mondaynight",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

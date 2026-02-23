@@ -1,0 +1,30 @@
+{
+  "venue_id": 4389,
+  "venue_slug": "jr-crickets",
+  "meta": {
+    "og_image": null,
+    "meta_description": null,
+    "reservation_links": [],
+    "menu_links": [
+      "http://jrcrickets.com/index.php/menu.php"
+    ],
+    "instagram": "jrcricketsoriginal",
+    "facebook_url": "https://www.facebook.com/pages",
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["casual", "lively", "sports-bar", "outdoor-seating", "neighborhood-bar"],
+    "cuisine": ["wings", "american"],
+    "service_style": "fast_casual",
+    "price_level": 1,
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "jrcricketsoriginal",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

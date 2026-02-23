@@ -1,0 +1,38 @@
+{
+  "venue_id": 2471,
+  "venue_slug": "melting-pot",
+  "meta": {
+    "og_image": "https://www.meltingpot.com/files/2777/Brand-CheddarPretzel-1-Header.jpg",
+    "meta_description": "Melting Pot is the original fondue restaurant where guests can enjoy several fondue cooking styles and a variety of unique entrees, salads, and indulgent desserts.",
+    "reservation_links": [
+      "https://www.meltingpot.com/reservations.aspx"
+    ],
+    "menu_links": [],
+    "instagram": "themeltingpotrestaurants",
+    "facebook_url": "https://www.facebook.com/themeltingpotrestaurants",
+    "phone": "(813) 881-0055"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": [
+      "date-spot",
+      "intimate",
+      "good-for-groups"
+    ],
+    "cuisine": [
+      "fondue"
+    ],
+    "service_style": "full-service",
+    "price_level": "$$$",
+    "menu_highlights": null,
+    "reservation_url": "https://www.meltingpot.com/reservations.aspx",
+    "phone": "(813) 881-0055",
+    "instagram": "themeltingpotrestaurants",
+    "dietary_options": [
+      "gluten-free"
+    ],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "venue_id": 143,
+  "venue_slug": "smiths-olde-bar",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Why Georgia Why Fries",
+        "price": "$14",
+        "category": "appetizer"
+      },
+      {
+        "name": "Midnight Rider Sliders",
+        "price": "$10",
+        "category": "appetizer"
+      },
+      {
+        "name": "Da Funk Kimchi Dip",
+        "price": "$12",
+        "category": "appetizer"
+      },
+      {
+        "name": "Band of Nachos",
+        "price": "$16",
+        "category": "appetizer"
+      },
+      {
+        "name": "Earth, Wind & Poppers",
+        "price": "$12",
+        "category": "appetizer"
+      }
+    ],
+    "dietary_options": [],
+    "price_level": 2,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

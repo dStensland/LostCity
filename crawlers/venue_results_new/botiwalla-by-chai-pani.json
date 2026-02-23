@@ -1,0 +1,44 @@
+{
+  "venue_id": 4869,
+  "venue_slug": "botiwalla-by-chai-pani",
+  "meta": {
+    "og_image": null,
+    "meta_description": "Indian Street Grill | Asheville, Atlanta, and Charlotte",
+    "reservation_links": [],
+    "menu_links": [
+      "https://botiwalla.com/menu/botiwalla-ponce-city-market-675-ponce-de-leon-ave-ne-n134",
+      "https://botiwalla.com/menu/botiwalla-ponce-city-market-675-ponce-de-leon-ave-ne-n134",
+      "https://botiwalla.com/menu/botiwalla-clt",
+      "https://botiwalla.com/menu/botiwalla-clt",
+      "https://botiwalla.com/menu/botiwalla-downtown-avl-22-battery-park-avenue",
+      "https://botiwalla.com/menu/botiwalla-downtown-avl-22-battery-park-avenue",
+      "https://botiwalla.com/menu/botiwalla-new-opening-avl-697-haywood-road",
+      "https://botiwalla.com/menu/botiwalla-new-opening-avl-697-haywood-road"
+    ],
+    "instagram": "botiwallaatlanta",
+    "facebook_url": "https://facebook.com/botiwallaatlanta",
+    "phone": "(470) 225-8963"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["fast-casual", "casual", "counter-service", "lively"],
+    "cuisine": ["indian"],
+    "service_style": "quick_service",
+    "price_level": 2,
+    "menu_highlights": [
+      {"name": "Chicken Tikka Roll", "price": null, "category": "entree"},
+      {"name": "Lamb Seekh Kabab Rice Bowl", "price": "$13.99", "category": "entree"},
+      {"name": "MG Road Wings", "price": "$11.99", "category": "appetizer"},
+      {"name": "Masala Smashed Potatoes", "price": "$5.99", "category": "appetizer"},
+      {"name": "Paneer Tikka Rice Bowl", "price": "$13.99", "category": "entree"}
+    ],
+    "menu_url": "https://botiwalla.com/menu/botiwalla-ponce-city-market-675-ponce-de-leon-ave-ne-n134",
+    "reservation_url": null,
+    "phone": "(470) 225-8963",
+    "instagram": "botiwallaatlanta",
+    "dietary_options": ["vegan-options", "vegetarian-friendly"],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

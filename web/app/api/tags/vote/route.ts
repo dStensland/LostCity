@@ -3,6 +3,7 @@ import { validationError, checkBodySize } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { ensureUserProfile } from "@/lib/user-utils";
 import { withAuth } from "@/lib/api-middleware";
+import { resolvePortalAttributionForWrite } from "@/lib/portal-attribution";
 import { logger } from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 
@@ -60,6 +61,15 @@ export const POST = withAuth(async (request, { user, serviceClient }) => {
     // Ensure user has a profile
     await ensureUserProfile(user, serviceClient);
 
+    // Resolve portal attribution
+    const attribution = await resolvePortalAttributionForWrite(request, {
+      endpoint: "/api/tags/vote",
+      body,
+      requireWhenHinted: true,
+    });
+    if (attribution.response) return attribution.response;
+    const portalId = attribution.portalId;
+
     // Look up tag definition by slug
     const { data: tagDef, error: tagError } = await serviceClient
       .from("tag_definitions")
@@ -93,6 +103,7 @@ export const POST = withAuth(async (request, { user, serviceClient }) => {
           user_id: user.id,
           vote,
           updated_at: new Date().toISOString(),
+          ...(portalId ? { portal_id: portalId } : {}),
         } as never,
         { onConflict: "entity_type,entity_id,tag_definition_id,user_id" }
       )

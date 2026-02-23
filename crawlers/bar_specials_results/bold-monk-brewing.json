@@ -1,0 +1,31 @@
+{
+  "venue_id": 531,
+  "venue_slug": "bold-monk-brewing",
+  "meta": {},
+  "extracted": {
+    "specials": [
+      {
+        "title": "Weekend Brunch",
+        "type": "brunch",
+        "description": "Brunch service on Saturday and Sunday until 3pm",
+        "days_of_week": [6, 7],
+        "time_start": "10:30:00",
+        "time_end": "15:00:00",
+        "price_note": null
+      }
+    ],
+    "hours": null,
+    "vibes": ["beer-garden", "brunch-spot", "date-night", "cozy", "craft-cocktails"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "https://boldmonkbrewingco.com/menus/",
+    "reservation_url": "https://www.opentable.com/r/bold-monk-brewing-co-reservations-atlanta?restref=1069471&lang=en-US&ot_source=Restaurant%20website",
+    "phone": "(404) 390-3288",
+    "instagram": "boldmonkbrewing",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

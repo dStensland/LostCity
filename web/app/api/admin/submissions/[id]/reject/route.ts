@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, isAdmin, getUser } from "@/lib/supabase/server";
+import { isAdmin, getUser } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { isValidUUID, isValidString, adminErrorResponse } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 
@@ -24,10 +25,10 @@ export async function POST(request: NextRequest, { params }: Props) {
   }
 
   const isGlobalAdmin = await isAdmin();
-  const supabase = await createClient();
+  const serviceClient = createServiceClient();
 
   // Get submission
-  const { data: submissionData, error: fetchError } = await supabase
+  const { data: submissionData, error: fetchError } = await serviceClient
     .from("submissions")
     .select("id, status, portal_id")
     .eq("id", id)
@@ -41,7 +42,7 @@ export async function POST(request: NextRequest, { params }: Props) {
 
   // Check permissions
   if (!isGlobalAdmin && submission.portal_id) {
-    const { data: portalMember } = await supabase
+    const { data: portalMember } = await serviceClient
       .from("portal_members")
       .select("role")
       .eq("portal_id", submission.portal_id)
@@ -80,7 +81,7 @@ export async function POST(request: NextRequest, { params }: Props) {
   }
 
   // Update submission status
-  const { data: updated, error: updateError } = await supabase
+  const { data: updated, error: updateError } = await serviceClient
     .from("submissions")
     .update({
       status: "rejected",

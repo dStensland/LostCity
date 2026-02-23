@@ -1,0 +1,21 @@
+{
+  "venue_id": 1307,
+  "venue_slug": "good-word-brewing",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["craft-cocktails", "casual", "family-friendly", "date-night"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "https://goodwordbrewing.com/food-menu/",
+    "reservation_url": "https://tables.toasttab.com/restaurants/c0c7d14e-de39-4c0d-a21e-d4b9aef0660a/reserve",
+    "phone": "(678) 336-9928",
+    "instagram": null,
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

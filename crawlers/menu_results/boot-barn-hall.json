@@ -1,0 +1,56 @@
+{
+  "venue_id": 976,
+  "venue_slug": "boot-barn-hall",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Brisket Bruschetta",
+        "price": "$14",
+        "category": "appetizer"
+      },
+      {
+        "name": "Korean Barbecue Bowl",
+        "price": "$21",
+        "category": "entree"
+      },
+      {
+        "name": "Espresso Martini",
+        "price": "$14",
+        "category": "cocktail"
+      },
+      {
+        "name": "Bourbon Bread Pudding",
+        "price": "$15",
+        "category": "dessert"
+      },
+      {
+        "name": "Shrimp and Pepper Pasta",
+        "price": "$24",
+        "category": "entree"
+      }
+    ],
+    "dietary_options": [
+      "gluten-free-options",
+      "vegetarian-friendly"
+    ],
+    "price_level": 3,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

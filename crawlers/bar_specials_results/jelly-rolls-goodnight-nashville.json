@@ -1,0 +1,31 @@
+{
+  "venue_id": 1533,
+  "venue_slug": "jelly-rolls-goodnight-nashville",
+  "meta": {},
+  "extracted": {
+    "specials": [
+      {
+        "title": "Weekend Brunch",
+        "type": "brunch",
+        "description": "Brunch every Saturday and Sunday until 2pm with Southern comfort food, mimosa towers, DJs, and a walk-in only policy",
+        "days_of_week": [6, 7],
+        "time_start": null,
+        "time_end": "14:00:00",
+        "price_note": null
+      }
+    ],
+    "hours": null,
+    "vibes": ["rooftop", "live-music", "brunch-spot", "late-night", "dj", "dancing", "casual"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "https://goodnightnashville.com/menu/",
+    "reservation_url": null,
+    "phone": "(615) 747-7977",
+    "instagram": null,
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "venue_id": 2072,
+  "venue_slug": "oflow",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Cheesecake Truffles",
+        "price": "$5",
+        "category": "dessert"
+      },
+      {
+        "name": "Boba Milk Tea",
+        "price": "$5.45",
+        "category": "cocktail"
+      },
+      {
+        "name": "Hand Pie with Beef or Chicken",
+        "price": "$7.50",
+        "category": "entree"
+      },
+      {
+        "name": "Cinnamon Rolls",
+        "price": "$5",
+        "category": "dessert"
+      },
+      {
+        "name": "Latte",
+        "price": "$5",
+        "category": "cocktail"
+      }
+    ],
+    "dietary_options": [
+      "gluten-free-options"
+    ],
+    "price_level": 1,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

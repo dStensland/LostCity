@@ -1,0 +1,56 @@
+{
+  "venue_id": 2534,
+  "venue_slug": "savage-pizza",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Cajun Pizza",
+        "price": "$12.49",
+        "category": "entree"
+      },
+      {
+        "name": "Chicken Calzone",
+        "price": "$11.99",
+        "category": "entree"
+      },
+      {
+        "name": "Vegetarian Lasagna",
+        "price": "$11.99",
+        "category": "entree"
+      },
+      {
+        "name": "Greek Salad",
+        "price": "$8.49",
+        "category": "appetizer"
+      },
+      {
+        "name": "Alons Midnight Cake",
+        "price": "$6.49",
+        "category": "dessert"
+      }
+    ],
+    "dietary_options": [
+      "vegetarian-friendly",
+      "gluten-free-options"
+    ],
+    "price_level": 2,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

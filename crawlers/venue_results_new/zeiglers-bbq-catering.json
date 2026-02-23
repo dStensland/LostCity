@@ -1,0 +1,41 @@
+{
+  "venue_id": 4819,
+  "venue_slug": "zeiglers-bbq-catering",
+  "meta": {
+    "og_image": null,
+    "meta_description": "Zeigler BBQ in Acworth, GA is a fast casual restaurant that serves delicious food and provides excellent service. A small local family-owned-and-operated business, we do our best to ensure that customers keep coming back. Get in touch with us today for carry-out orders and catering.",
+    "reservation_links": [],
+    "menu_links": [
+      "https://zeiglersbbq.com/menu-and-services/",
+      "https://zeiglersbbq.com/menu-and-services/",
+      "https://zeiglersbbq.com/menu-and-services/"
+    ],
+    "instagram": "zeiglersbbqandcatering",
+    "facebook_url": "https://www.facebook.com/ZeiglersBBQ",
+    "phone": "(770) 529-5227"
+  },
+  "extracted": {
+    "hours": {
+      "mon": {"open": "11:00", "close": "20:00"},
+      "tue": {"open": "11:00", "close": "20:00"},
+      "wed": {"open": "11:00", "close": "20:00"},
+      "thu": {"open": "11:00", "close": "20:00"},
+      "fri": {"open": "11:00", "close": "21:00"},
+      "sat": {"open": "11:00", "close": "21:00"},
+      "sun": {"open": "11:30", "close": "19:00"}
+    },
+    "vibes": ["casual", "family-friendly", "fast-casual"],
+    "cuisine": ["bbq"],
+    "service_style": "quick_service",
+    "price_level": 1,
+    "menu_highlights": null,
+    "menu_url": "https://zeiglersbbq.com/menu-and-services/",
+    "reservation_url": null,
+    "phone": "(770) 529-5227",
+    "instagram": "zeiglersbbqandcatering",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

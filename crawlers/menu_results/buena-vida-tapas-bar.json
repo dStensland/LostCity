@@ -1,0 +1,57 @@
+{
+  "venue_id": 2330,
+  "venue_slug": "buena-vida-tapas-bar",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Seafood Paella",
+        "price": "$38",
+        "category": "entree"
+      },
+      {
+        "name": "Hand Cut Ribeye",
+        "price": "$42",
+        "category": "entree"
+      },
+      {
+        "name": "Gambas al Ajillo",
+        "price": "$17",
+        "category": "appetizer"
+      },
+      {
+        "name": "Jamon Iberico",
+        "price": "$14",
+        "category": "appetizer"
+      },
+      {
+        "name": "Passion Fruit Margarita",
+        "price": "$14",
+        "category": "cocktail"
+      }
+    ],
+    "dietary_options": [
+      "vegetarian-friendly",
+      "vegan-options",
+      "gluten-free-options"
+    ],
+    "price_level": 3,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

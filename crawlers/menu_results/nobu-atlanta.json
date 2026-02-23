@@ -1,0 +1,53 @@
+{
+  "venue_id": 2505,
+  "venue_slug": "nobu-atlanta",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Yellowtail Jalapeno",
+        "price": null,
+        "category": "appetizer"
+      },
+      {
+        "name": "Black Cod Miso",
+        "price": null,
+        "category": "entree"
+      },
+      {
+        "name": "Rock Shrimp Tempura Creamy Spicy",
+        "price": null,
+        "category": "appetizer"
+      },
+      {
+        "name": "Winter Tasting Menu",
+        "price": "$140",
+        "category": "entree"
+      },
+      {
+        "name": "3 Course Lunch Prix Fixe",
+        "price": "$40",
+        "category": "entree"
+      }
+    ],
+    "dietary_options": [],
+    "price_level": 4,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

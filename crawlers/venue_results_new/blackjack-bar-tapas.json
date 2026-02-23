@@ -1,0 +1,44 @@
+{
+  "venue_id": 4882,
+  "venue_slug": "blackjack-bar-tapas",
+  "meta": {
+    "og_image": null,
+    "meta_description": "Blackjack Bar Tapas is a high-energy craft cocktail bar and Asian-inspired \r\ntapas lounge located in the heart of Midtown Atlanta. From bold street food \r\nflavors to handcrafted drinks, it's the perfect spot for date nights, \r\nlate-night bites, and unforgettable nights out.",
+    "reservation_links": [
+      "https://www.exploretock.com/blackjackbartapas",
+      "https://www.exploretock.com/blackjackbartapas",
+      "https://www.exploretock.com/blackjackbartapas",
+      "https://www.exploretock.com/blackjackbartapas"
+    ],
+    "menu_links": [
+      "https://www.blackjackbartapas.com/menu",
+      "https://www.blackjackbartapas.com/menu",
+      "https://www.blackjackbartapas.com/menu",
+      "https://www.blackjackbartapas.com/menu"
+    ],
+    "instagram": "blackjackbartapas",
+    "facebook_url": "https://www.facebook.com/profile.php",
+    "phone": "(404) 748-9675"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["trendy", "late-night", "date-spot", "craft-cocktails", "lively"],
+    "cuisine": ["fusion", "thai"],
+    "service_style": "bar_food",
+    "price_level": 3,
+    "menu_highlights": [
+      {"name": "Thai Shrimp Salad", "price": null, "category": "appetizer"},
+      {"name": "Tom Yum Squid Ink Soup", "price": null, "category": "appetizer"},
+      {"name": "Crab Fried Rice", "price": null, "category": "entree"},
+      {"name": "Purple Yam Margarita", "price": null, "category": "cocktail"}
+    ],
+    "menu_url": "https://www.blackjackbartapas.com/menu",
+    "reservation_url": "https://www.exploretock.com/blackjackbartapas",
+    "phone": "(404) 748-9675",
+    "instagram": "blackjackbartapas",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "venue_id": 4900,
+  "venue_slug": "season",
+  "meta": {
+    "og_image": null,
+    "meta_description": "Now Open! Season, A Chef's Kitchen serving the best breakfast and lunch in Marietta. Open daily 7am-2pm",
+    "reservation_links": [],
+    "menu_links": [
+      "https://order.toasttab.com/online/seasonmarietta"
+    ],
+    "instagram": "season.marietta",
+    "facebook_url": null,
+    "phone": "(678) 439-2935"
+  },
+  "extracted": {
+    "hours": {
+      "mon": {"open": "07:00", "close": "14:00"},
+      "tue": {"open": "07:00", "close": "14:00"},
+      "wed": {"open": "07:00", "close": "14:00"},
+      "thu": {"open": "07:00", "close": "14:00"},
+      "fri": {"open": "07:00", "close": "14:00"},
+      "sat": {"open": "07:00", "close": "14:00"},
+      "sun": {"open": "07:00", "close": "14:00"}
+    },
+    "vibes": ["casual", "cozy", "trendy"],
+    "cuisine": ["brunch_breakfast", "new_american"],
+    "service_style": "casual_dine_in",
+    "price_level": 2,
+    "menu_highlights": null,
+    "menu_url": "https://order.toasttab.com/online/seasonmarietta",
+    "reservation_url": null,
+    "phone": "(678) 439-2935",
+    "instagram": "season.marietta",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

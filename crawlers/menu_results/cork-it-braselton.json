@@ -1,0 +1,55 @@
+{
+  "venue_id": 975,
+  "venue_slug": "cork-it-braselton",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Large Charcuterie & Cheese Board",
+        "price": "$42",
+        "category": "appetizer"
+      },
+      {
+        "name": "Smoked Old Fashioned",
+        "price": "$14",
+        "category": "cocktail"
+      },
+      {
+        "name": "Espresso Martini",
+        "price": "$14",
+        "category": "cocktail"
+      },
+      {
+        "name": "Pesto Flatbread",
+        "price": "$14",
+        "category": "appetizer"
+      },
+      {
+        "name": "Quilt Cabernet Sauvignon",
+        "price": "$18",
+        "category": "wine"
+      }
+    ],
+    "dietary_options": [
+      "vegetarian-friendly"
+    ],
+    "price_level": 2,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

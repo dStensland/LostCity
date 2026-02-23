@@ -1,0 +1,55 @@
+{
+  "venue_id": 3167,
+  "venue_slug": "tuscany-at-your-table",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Baked Spinach and Ricotta Cannelloni",
+        "price": "$15.95",
+        "category": "entree"
+      },
+      {
+        "name": "Meat Lasagna",
+        "price": "$15.95",
+        "category": "entree"
+      },
+      {
+        "name": "Eggplant Parmigiana",
+        "price": "$15.95",
+        "category": "entree"
+      },
+      {
+        "name": "Cannoli",
+        "price": null,
+        "category": "dessert"
+      },
+      {
+        "name": "Tiramisu",
+        "price": null,
+        "category": "dessert"
+      }
+    ],
+    "dietary_options": [
+      "vegetarian-friendly"
+    ],
+    "price_level": 2,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

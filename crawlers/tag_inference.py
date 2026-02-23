@@ -676,6 +676,132 @@ SUPPORT_GROUP_SOURCES = {
 }
 
 
+# ---------------------------------------------------------------------------
+# Religious / faith event detection
+# ---------------------------------------------------------------------------
+# Events from church venues or with strong faith keywords should be
+# category="religious", NOT "community".  Catches crawlers that default to
+# community for church events.
+
+RELIGIOUS_VENUE_TYPES = {
+    "church",
+    "temple",
+    "mosque",
+    "synagogue",
+    "monastery",
+}
+
+# Keywords that strongly signal a religious event (not just a community event
+# hosted at a church).  Cultural celebrations (Diwali, Eid, etc.) stay in
+# community — they're cultural, not devotional.
+_RELIGIOUS_KEYWORDS = [
+    "worship service",
+    "sunday service",
+    "church service",
+    "bible study",
+    "prayer meeting",
+    "prayer service",
+    "gospel",
+    "sermon",
+    "vespers",
+    "mass",
+    "liturgy",
+    "shabbat service",
+    "torah study",
+    "dharma talk",
+    "puja",
+    "worship night",
+    "praise and worship",
+    "prayer walk",
+    "revival",
+    "vacation bible school",
+    "vbs",
+    "devotional",
+    "baptism",
+    "communion",
+]
+
+# Source slugs for dedicated church/religious org crawlers.
+# Events from these sources default to religious unless clearly secular
+# (e.g. a concert or community meal).
+RELIGIOUS_SOURCES = {
+    "passion-city",
+    "passion-city-church",
+    "ebenezer-church",
+    "ebenezer-baptist-church",
+    "st-lukes-episcopal",
+    "peachtree-road-umc",
+    "cathedral-st-philip",
+    "central-presbyterian",
+    "all-saints-episcopal",
+    "new-birth",
+    "new-birth-missionary-baptist",
+    "chabad-intown",
+    "baps-mandir",
+    "faith-alliance",
+}
+
+# Secular-signal keywords — if present, don't reclassify even from a church source.
+_SECULAR_OVERRIDES = [
+    "concert",
+    "jazz",
+    "fundraiser",
+    "gala",
+    "community meal",
+    "food drive",
+    "clothing drive",
+    "blood drive",
+    "voter registration",
+    "job fair",
+    "health fair",
+    "festival",
+]
+
+
+def infer_is_religious(
+    event: dict,
+    source_slug: str | None = None,
+    venue_type: str | None = None,
+) -> bool:
+    """
+    Infer whether an event should be categorized as 'religious' instead of
+    'community'.  Only reclassifies events currently in the 'community' bucket.
+    """
+    if event.get("category") == "religious":
+        return True
+
+    # Only reclassify community events — don't touch music, art, etc.
+    if event.get("category") != "community":
+        return False
+
+    title = (event.get("title") or "").lower()
+    desc = (event.get("description") or "").lower()
+    text = f"{title} {desc}"
+
+    # Check for secular overrides first — a concert at a church stays community
+    for kw in _SECULAR_OVERRIDES:
+        if kw in title:
+            return False
+
+    # Strong keyword match in title or description
+    for kw in _RELIGIOUS_KEYWORDS:
+        if kw in text:
+            return True
+
+    # Church venue type + church source = religious by default
+    if venue_type in RELIGIOUS_VENUE_TYPES:
+        if source_slug and source_slug in RELIGIOUS_SOURCES:
+            return True
+
+    # Church source with faith/spiritual subcategory
+    if source_slug and source_slug in RELIGIOUS_SOURCES:
+        sub = (event.get("subcategory") or "").lower()
+        if sub in ("faith", "spiritual", "worship", "service"):
+            return True
+
+    return False
+
+
 def infer_is_support_group(
     event: dict,
     source_slug: str | None = None,

@@ -337,7 +337,8 @@ export function getLocalDateStringOffset(days: number): string {
  * Decode HTML entities in text (e.g. &#8211; → –, &amp; → &).
  * Common in crawled data where source HTML entities leak into titles.
  */
-export function decodeHtmlEntities(str: string): string {
+export function decodeHtmlEntities(str: string | null | undefined): string {
+  if (!str) return "";
   const named: Record<string, string> = {
     "&amp;": "&",
     "&lt;": "<",

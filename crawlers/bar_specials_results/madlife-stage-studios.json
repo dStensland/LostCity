@@ -1,0 +1,21 @@
+{
+  "venue_id": 505,
+  "venue_slug": "madlife-stage-studios",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["live-music"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "https://madlifestageandstudios.com/grill-2/",
+    "reservation_url": "https://tables.toasttab.com/restaurants/634b893e-f9f2-4709-b757-122e901cd2ec/findTime",
+    "phone": null,
+    "instagram": "madlifestage",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

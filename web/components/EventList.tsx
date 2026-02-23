@@ -3,7 +3,9 @@
 import React, { useEffect, useRef, useMemo, useCallback, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import AnimatedEventList from "./AnimatedEventList";
+import EventCard from "./EventCard";
 import { EventCardSkeletonList } from "./EventCardSkeleton";
 import PullToRefresh from "./PullToRefresh";
 import SmartEmptyState from "./SmartEmptyState";
@@ -11,6 +13,11 @@ import { useTimeline } from "@/lib/hooks/useTimeline";
 import { useEventFilters } from "@/lib/hooks/useEventFilters";
 import { useFriendsGoing } from "@/lib/hooks/use-friends-going";
 import type { EventWithLocation } from "@/lib/search";
+import {
+  groupEventsByDate,
+  getSortedDates,
+  getDateLabel,
+} from "@/lib/event-grouping";
 import {
   createFindFilterSnapshot,
   trackFindZeroResults,
@@ -20,6 +27,15 @@ import {
 const MAX_EVENTS = 500;
 const INITIAL_VISIBLE_EVENTS = 40;
 const VISIBLE_EVENTS_STEP = 30;
+const VIRTUALIZE_THRESHOLD = 80;
+const DATE_HEADER_HEIGHT = 56;
+const EVENT_ROW_HEIGHT = 180;
+const EVENT_ROW_HEIGHT_COMPACT = 140;
+const VIRTUAL_LIST_MAX_HEIGHT = "clamp(500px, calc(100dvh - 300px), 900px)";
+
+type VirtualFlatItem =
+  | { kind: "header"; date: string; count: number }
+  | { kind: "event"; event: EventWithLocation };
 
 interface Props {
   initialEvents?: EventWithLocation[];
@@ -116,6 +132,35 @@ export default function EventList({
     date: filters.date,
     mood: filters.mood,
   }, "events"), [filters]);
+
+  // ─── Virtualization (80+ items) ──────────────────────────────────────────────
+  const useVirtual = visibleEvents.length > VIRTUALIZE_THRESHOLD;
+  const virtualScrollRef = useRef<HTMLDivElement>(null);
+
+  const flatItems = useMemo<VirtualFlatItem[]>(() => {
+    if (!useVirtual) return [];
+    const byDate = groupEventsByDate(visibleEvents);
+    const dates = getSortedDates(byDate);
+    const items: VirtualFlatItem[] = [];
+    for (const date of dates) {
+      const dateEvents = byDate[date];
+      items.push({ kind: "header", date, count: dateEvents.length });
+      for (const event of dateEvents) {
+        items.push({ kind: "event", event });
+      }
+    }
+    return items;
+  }, [useVirtual, visibleEvents]);
+
+  const rowHeight = density === "compact" ? EVENT_ROW_HEIGHT_COMPACT : EVENT_ROW_HEIGHT;
+
+  // eslint-disable-next-line react-hooks/incompatible-library
+  const virtualizer = useVirtualizer({
+    count: useVirtual ? flatItems.length : 0,
+    getScrollElement: () => virtualScrollRef.current,
+    estimateSize: (i) => (flatItems[i]?.kind === "header" ? DATE_HEADER_HEIGHT : rowHeight),
+    overscan: 10,
+  });
 
   useEffect(() => {
     const initial = hasActiveFilters ? 60 : INITIAL_VISIBLE_EVENTS;
@@ -248,19 +293,66 @@ export default function EventList({
 
   return (
     <PullToRefresh onRefresh={handleRefresh} disabled={isLoading || isRefetching}>
-      {/* Animated event list */}
-      <AnimatedEventList
-        events={visibleEvents}
-        standaloneFestivals={festivals}
-        portalSlug={portalSlug}
-        isLoading={isLoading}
-        isFetchingNextPage={isFetchingNextPage}
-        isRefetching={isRefetching}
-        getFriendsForEvent={getFriendsForEvent}
-        collapseFestivals={!filters.search}
-        collapseFestivalPrograms={!filters.search}
-        density={density}
-      />
+      {/* Virtualized list for 80+ items — flat EventCard rendering for performance */}
+      {useVirtual ? (
+        <div
+          ref={virtualScrollRef}
+          className="overflow-y-auto overscroll-contain"
+          style={{ maxHeight: VIRTUAL_LIST_MAX_HEIGHT }}
+        >
+          <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
+            {virtualizer.getVirtualItems().map((virtualRow) => {
+              const item = flatItems[virtualRow.index];
+              if (item.kind === "header") {
+                return (
+                  <div
+                    key={`hdr-${item.date}`}
+                    className="absolute top-0 left-0 w-full flex items-end justify-between px-1 py-2 bg-[var(--void)]/90 backdrop-blur-md border-b border-[var(--twilight)]/45"
+                    style={{ height: virtualRow.size, transform: `translateY(${virtualRow.start}px)` }}
+                  >
+                    <h2 className="font-mono text-[1.08rem] font-semibold text-[var(--cream)] tracking-tight truncate">
+                      {getDateLabel(item.date)}
+                    </h2>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full border border-[var(--twilight)]/70 bg-[var(--dusk)]/82 font-mono text-[0.62rem] text-[var(--soft)]">
+                      {item.count}
+                    </span>
+                  </div>
+                );
+              }
+              return (
+                <div
+                  key={`ev-${item.event.id}`}
+                  className="absolute top-0 left-0 w-full"
+                  style={{ height: virtualRow.size, transform: `translateY(${virtualRow.start}px)` }}
+                >
+                  <EventCard
+                    event={item.event}
+                    index={virtualRow.index}
+                    skipAnimation
+                    portalSlug={portalSlug}
+                    friendsGoing={getFriendsForEvent?.(item.event.id)}
+                    reasons={item.event.reasons}
+                    density={density}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <AnimatedEventList
+          events={visibleEvents}
+          standaloneFestivals={festivals}
+          portalSlug={portalSlug}
+          isLoading={isLoading}
+          isFetchingNextPage={isFetchingNextPage}
+          isRefetching={isRefetching}
+          getFriendsForEvent={getFriendsForEvent}
+          collapseFestivals={!filters.search}
+          collapseFestivalPrograms={!filters.search}
+          density={density}
+        />
+      )}
 
       {(canRevealLoaded || (!canRevealLoaded && hasMore && !error && !hasReachedMax && !allowAutoPagination)) && (
         <div className="py-2 flex justify-center">

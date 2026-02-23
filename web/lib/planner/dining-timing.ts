@@ -69,14 +69,10 @@ const DEFAULTS_BY_STYLE: Record<
 
 const SERVICE_STYLE_BY_VENUE_TYPE: Record<string, DiningServiceStyle> = {
   fast_casual: "quick_service",
-  food_hall: "quick_service",
-  cafe: "coffee_dessert",
-  coffee_shop: "coffee_dessert",
-  bakery: "coffee_dessert",
   restaurant: "casual_dine_in",
   bar: "bar_food",
   brewery: "bar_food",
-  winery: "bar_food",
+  cocktail_bar: "bar_food",
   fine_dining: "full_service",
 };
 

@@ -1,0 +1,28 @@
+{
+  "venue_id": 3716,
+  "venue_slug": "reveille-coffee-sandy-springs",
+  "meta": {
+    "og_image": "http://www.reveillecoffee.com/cdn/shop/files/socialmediaicon_49cd565f-52c6-4754-a5f3-c0bc7364964a_1024x.jpg?v=1633469133",
+    "meta_description": null,
+    "reservation_links": [],
+    "menu_links": [],
+    "instagram": "reveillecoffee",
+    "facebook_url": null,
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["trendy"],
+    "cuisine": ["coffee"],
+    "service_style": "counter_service",
+    "price_level": null,
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "reveillecoffee",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

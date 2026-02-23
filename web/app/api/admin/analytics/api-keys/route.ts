@@ -1,5 +1,5 @@
-import { createClient } from "@/lib/supabase/server";
 import { isAdmin, getUser } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { NextRequest, NextResponse } from "next/server";
 import { createHash, randomBytes } from "crypto";
 import { adminErrorResponse, checkBodySize } from "@/lib/api-utils";
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.standard, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
-  const supabase = await createClient();
+  const serviceClient = createServiceClient();
 
   // Verify admin
   if (!(await isAdmin())) {
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
   }
 
   // Get all API keys with portal and creator info
-  const { data: keys, error } = await supabase
+  const { data: keys, error } = await serviceClient
     .from("api_keys")
     .select(`
       id, key_prefix, name, portal_id, scopes, is_active,
@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
   const creatorMap = new Map<string, { id: string; username: string }>();
 
   if (portalIds.length > 0) {
-    const { data: portals } = await supabase
+    const { data: portals } = await serviceClient
       .from("portals")
       .select("id, name, slug")
       .in("id", portalIds as string[]);
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
   }
 
   if (creatorIds.length > 0) {
-    const { data: creators } = await supabase
+    const { data: creators } = await serviceClient
       .from("profiles")
       .select("id, username")
       .in("id", creatorIds as string[]);
@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.standard, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
-  const supabase = await createClient();
+  const serviceClient = createServiceClient();
 
   // Verify admin
   if (!(await isAdmin())) {
@@ -159,7 +159,7 @@ export async function POST(request: NextRequest) {
 
   // Insert the key (cast to any since api_keys table isn't in generated types yet)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: newKey, error } = await (supabase as any)
+  const { data: newKey, error } = await (serviceClient as any)
     .from("api_keys")
     .insert({
       key_hash: keyHash,
@@ -196,7 +196,7 @@ export async function DELETE(request: NextRequest) {
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.standard, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
-  const supabase = await createClient();
+  const serviceClient = createServiceClient();
 
   // Verify admin
   if (!(await isAdmin())) {
@@ -212,7 +212,7 @@ export async function DELETE(request: NextRequest) {
 
   // Soft delete by deactivating
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
+  const { error } = await (serviceClient as any)
     .from("api_keys")
     .update({ is_active: false })
     .eq("id", keyId);
@@ -235,7 +235,7 @@ export async function PATCH(request: NextRequest) {
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.standard, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
-  const supabase = await createClient();
+  const serviceClient = createServiceClient();
 
   // Verify admin
   if (!(await isAdmin())) {
@@ -266,7 +266,7 @@ export async function PATCH(request: NextRequest) {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: updatedKey, error } = await (supabase as any)
+  const { data: updatedKey, error } = await (serviceClient as any)
     .from("api_keys")
     .update(updates)
     .eq("id", id)

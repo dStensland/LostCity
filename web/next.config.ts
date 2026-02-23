@@ -55,6 +55,7 @@ const imageHosts = new Set([
   "s1.ticketmaster.com",
   // Image CDNs
   "images.unsplash.com",
+  "images.pexels.com",
   "res.cloudinary.com",
   "i.imgur.com",
   "static.imgix.net",

@@ -1,0 +1,48 @@
+{
+  "venue_id": 4119,
+  "venue_slug": "merci-boxcar",
+  "meta": {
+    "og_image": "http://static1.squarespace.com/static/5bf34e60f93fd47b6628d6a0/t/6169c0d7cd706c618aeab421/1762475227726/BoxcarLogo1-min.png?format=1500w",
+    "meta_description": "Home of creative American cusine paired with the best craft beer list in the area. Steps off the Atlanta Beltline. Free Parking.",
+    "reservation_links": [
+      "https://resy.com/cities/atl/boxcar"
+    ],
+    "menu_links": [
+      "https://www.boxcaratl.com/menu"
+    ],
+    "instagram": "boxcaratl",
+    "facebook_url": "https://www.facebook.com/boxcaratl",
+    "phone": "(470) 788-8171"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": [
+      "casual",
+      "lively",
+      "outdoor-seating",
+      "good-for-groups",
+      "craft-cocktails",
+      "free-parking"
+    ],
+    "cuisine": [
+      "american",
+      "new_american",
+      "burger"
+    ],
+    "service_style": "full-service",
+    "price_level": "$$",
+    "menu_highlights": null,
+    "reservation_url": "https://resy.com/cities/atl/boxcar",
+    "phone": "(470) 788-8171",
+    "instagram": "boxcaratl",
+    "dietary_options": [
+      "vegetarian",
+      "gluten-free"
+    ],
+    "specials": [],
+    "genres": [],
+    "parking": [
+      "free-parking"
+    ]
+  }
+}

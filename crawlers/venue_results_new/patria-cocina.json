@@ -1,0 +1,32 @@
+{
+  "venue_id": 4831,
+  "venue_slug": "patria-cocina",
+  "meta": {
+    "og_image": "https://popmenucloud.com/cdn-cgi/image/width=1200,height=630,format=auto,fit=cover/gnuflqkm/3c81af56-d049-4646-a6c8-42108d4adf5c.jpg",
+    "meta_description": "Patria Cocina | Authentic Mexican Dining in Atlanta, GA. Call us at (404) 622-3501. Check out our location and hours, and latest menu with photos and reviews.",
+    "reservation_links": [],
+    "menu_links": [
+      "http://www.patriacocinaatl.com/menu",
+      "http://www.patriacocinaatl.com/DRINK"
+    ],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["casual", "lively"],
+    "cuisine": ["mexican"],
+    "service_style": "casual_dine_in",
+    "price_level": 2,
+    "menu_highlights": null,
+    "menu_url": "http://www.patriacocinaatl.com/menu",
+    "reservation_url": null,
+    "phone": "(404) 622-3501",
+    "instagram": null,
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

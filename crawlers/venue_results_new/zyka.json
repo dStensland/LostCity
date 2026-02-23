@@ -1,0 +1,45 @@
+{
+  "venue_id": 4872,
+  "venue_slug": "zyka",
+  "meta": {
+    "og_image": "https://static.wixstatic.com/media/f0ae8a_f61c8344760d44338324119a95c0d801%7Emv2.png/v1/fit/w_2500,h_1330,al_c/f0ae8a_f61c8344760d44338324119a95c0d801%7Emv2.png",
+    "meta_description": "Zyka offers halal, vegan, vegetarian, and gluten free food options in metro Atlanta. Come try our famous Chicken 65 or join us for grilled items that include tandoori chicken, chicken boti, chicken seekh kabob, or behari kabob.",
+    "reservation_links": [],
+    "menu_links": [
+      "https://www.zyka.com/menu"
+    ],
+    "instagram": "zykaatl",
+    "facebook_url": "https://facebook.com/zykaatl",
+    "phone": "(678) 580-0538"
+  },
+  "extracted": {
+    "hours": {
+      "mon": null,
+      "tue": {"open": "12:00", "close": "21:30"},
+      "wed": {"open": "12:00", "close": "21:30"},
+      "thu": {"open": "12:00", "close": "21:30"},
+      "fri": {"open": "12:00", "close": "22:00"},
+      "sat": {"open": "12:00", "close": "22:00"},
+      "sun": {"open": "12:00", "close": "21:30"}
+    },
+    "vibes": ["casual", "family-friendly"],
+    "cuisine": ["indian"],
+    "service_style": "casual_dine_in",
+    "price_level": 2,
+    "menu_highlights": [
+      {"name": "Chicken 65", "price": "$10.99", "category": "appetizer"},
+      {"name": "Butter Chicken", "price": "$11.99", "category": "entree"},
+      {"name": "Chicken Tikka Masala", "price": null, "category": "entree"},
+      {"name": "Hyderabadi Biryani", "price": null, "category": "entree"},
+      {"name": "Behari Kabob", "price": "$13.99", "category": "appetizer"}
+    ],
+    "menu_url": "https://www.zyka.com/menu",
+    "reservation_url": null,
+    "phone": "(678) 580-0538",
+    "instagram": "zykaatl",
+    "dietary_options": ["vegetarian-friendly", "vegan-options", "gluten-free-options", "halal"],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "venue_id": 3216,
+  "venue_slug": "wok-chi-asian-kitchen-west-midtown-georgia-tech",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Wok Chi Pork Dumplings",
+        "price": "$10",
+        "category": "appetizer"
+      },
+      {
+        "name": "Spicy Wontons",
+        "price": "$8",
+        "category": "appetizer"
+      },
+      {
+        "name": "Salt & Pepper Calamari",
+        "price": "$17",
+        "category": "appetizer"
+      },
+      {
+        "name": "BBQ Spare Ribs",
+        "price": "$12",
+        "category": "appetizer"
+      },
+      {
+        "name": "Chicken Lettuce Wrap",
+        "price": "$19.50",
+        "category": "entree"
+      }
+    ],
+    "dietary_options": [
+      "vegetarian-friendly",
+      "vegan-options",
+      "gluten-free-options"
+    ],
+    "price_level": 1,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

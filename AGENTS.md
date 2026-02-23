@@ -53,10 +53,12 @@ npm run seed:clear  # clear seeded data
 - Initialize Supabase with `database/schema.sql` before running crawlers.
 
 ## AI Base Instructions (Required)
+- **North Star**: Read `.claude/north-star.md` before every task. If work doesn't serve current priorities, challenge it.
 - For AI-assisted work, follow `/Users/coach/Projects/LostCity/docs/ai-base-instructions-v1.md`.
 - Non-negotiable: preserve portal scope and attribution contracts, consumer/admin surface boundaries, and consistent metadata/presentation quality.
 - Any schema change must include `database/migrations`, `supabase/migrations`, and `database/schema.sql` updates in the same change set.
 - For event participants, never infer entities from event titles; use structured fields or omit participant modules.
+- **Working style**: Be a critical partner. Challenge ideas that don't serve the north star. Surface decisions at the strategic level — handle technical details autonomously. No sycophancy.
 
 ## Verification Matrix (Run What Applies)
 ### Portal scope / attribution / API behavior

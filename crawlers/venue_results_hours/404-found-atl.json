@@ -1,0 +1,30 @@
+{
+  "venue_id": 1101,
+  "venue_slug": "404-found-atl",
+  "meta": {
+    "og_image": "https://img1.wsimg.com/isteam/ip/f5342c33-2a66-40f3-bd12-b30c3b637fec/IMG_5262.JPG",
+    "meta_description": "At 404 Coffee, we offer a variety of black coffee blends that will satisfy your taste buds. Enjoy our delicious coffee without the long lines and high prices of Starbucks.",
+    "reservation_links": [],
+    "menu_links": [
+      "http://www.404coffeeatl.com/menu"
+    ],
+    "instagram": "404coffeecafe",
+    "facebook_url": "https://www.facebook.com/100805535965110",
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["cozy", "artsy", "neighborhood-bar", "black-owned"],
+    "cuisine": ["coffee"],
+    "service_style": "cafe",
+    "price_level": 1,
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "404coffeecafe",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

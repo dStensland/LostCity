@@ -1,0 +1,53 @@
+{
+  "venue_id": 1289,
+  "venue_slug": "table-and-main",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Shrimp 'n Grits",
+        "price": "$25",
+        "category": "entree"
+      },
+      {
+        "name": "Prime Wagyu NY Strip",
+        "price": "$64",
+        "category": "entree"
+      },
+      {
+        "name": "Fried Chicken",
+        "price": "$26.50",
+        "category": "entree"
+      },
+      {
+        "name": "Boiled Peanut Hummus",
+        "price": "$14",
+        "category": "appetizer"
+      },
+      {
+        "name": "Apple Pie Bread Puddin'",
+        "price": "$13",
+        "category": "dessert"
+      }
+    ],
+    "dietary_options": [],
+    "price_level": 3,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

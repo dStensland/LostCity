@@ -120,6 +120,7 @@ export function useTimeline(options: UseTimelineOptions = {}) {
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.cursor,
     enabled,
+    staleTime: 30 * 1000,
     refetchOnWindowFocus: false,
     retry: false,
     throwOnError: (error) => {

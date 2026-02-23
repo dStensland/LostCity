@@ -1,0 +1,29 @@
+{
+  "venue_id": 4835,
+  "venue_slug": "calaveritas-taqueria-vegana",
+  "meta": {
+    "og_image": "https://www.calaveritasvegancuisine.com/uploads/b/02d08fa0-5617-11eb-8d5d-d3b36fd19c8c/SPREAD%202.jpg",
+    "meta_description": "Atlanta's go-to for authentic vegan tacos & burritos. Order for delivery or pickup from Calaveritas in Doraville!",
+    "reservation_links": [],
+    "menu_links": [],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["casual", "fast-casual"],
+    "cuisine": ["mexican", "vegan"],
+    "service_style": "quick_service",
+    "price_level": 1,
+    "menu_highlights": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": null,
+    "dietary_options": ["vegan-options", "vegetarian-friendly"],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

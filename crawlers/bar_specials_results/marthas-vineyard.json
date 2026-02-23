@@ -1,0 +1,21 @@
+{
+  "venue_id": 2173,
+  "venue_slug": "marthas-vineyard",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["outdoor-seating", "family-friendly"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": null,
+    "reservation_url": null,
+    "phone": "(404) 500-9708",
+    "instagram": "norwood.vineyard",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

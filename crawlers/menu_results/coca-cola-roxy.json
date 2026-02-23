@@ -1,0 +1,53 @@
+{
+  "venue_id": 140,
+  "venue_slug": "coca-cola-roxy",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Jack and Coke Glazed Pork Belly",
+        "price": null,
+        "category": "entree"
+      },
+      {
+        "name": "Braised Short Rib Hoagie",
+        "price": null,
+        "category": "entree"
+      },
+      {
+        "name": "Gochujang Fried Chicken Sandwich",
+        "price": null,
+        "category": "entree"
+      },
+      {
+        "name": "Crispy Brussels Sprouts",
+        "price": null,
+        "category": "appetizer"
+      },
+      {
+        "name": "Smash Burger",
+        "price": null,
+        "category": "entree"
+      }
+    ],
+    "dietary_options": [],
+    "price_level": 2,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

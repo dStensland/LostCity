@@ -415,7 +415,7 @@ export function SearchResultSection({
     venue: "Venues",
     organizer: "Organizers",
     series: "Series",
-    list: "Lists",
+    list: "Curations",
     neighborhood: "Neighborhoods",
     category: "Categories",
     festival: "Festivals",

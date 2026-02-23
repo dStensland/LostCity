@@ -1,0 +1,37 @@
+{
+  "venue_id": 4903,
+  "venue_slug": "the-marietta-local",
+  "meta": {
+    "og_image": "https://popmenucloud.com/cdn-cgi/image/width=1200,height=630,format=auto,fit=cover/wiauzbtx/04ca9043-d504-4960-a957-241f73572d66.jpg",
+    "meta_description": "The Marietta Local in Marietta, GA. Call us at (770) 766-8403. Check out our location and hours, and latest menu with photos and reviews.",
+    "reservation_links": [],
+    "menu_links": [
+      "https://www.themariettalocal.com/menu"
+    ],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["casual", "family-friendly", "neighborhood-bar"],
+    "cuisine": ["southern", "american", "brunch_breakfast"],
+    "service_style": "casual_dine_in",
+    "price_level": 2,
+    "menu_highlights": [
+      {"name": "Award Winning Fried Chicken & French Toast", "price": "$20", "category": "entree"},
+      {"name": "Famous Fried Chicken Platter", "price": "$14", "category": "entree"},
+      {"name": "Nashville Hot Chicken", "price": null, "category": "entree"},
+      {"name": "Mom's Meatloaf Platter", "price": null, "category": "entree"},
+      {"name": "Nashville Hot Chicken Breakfast", "price": null, "category": "entree"}
+    ],
+    "menu_url": "https://www.themariettalocal.com/menu",
+    "reservation_url": null,
+    "phone": "(770) 766-8403",
+    "instagram": null,
+    "dietary_options": ["gluten-free-options"],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createPortalScopedClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import {
   addDays,
@@ -22,7 +22,12 @@ import {
   normalizePortalSlug,
   resolvePortalSlugAlias,
 } from "@/lib/portal-aliases";
-import { applyManifestFederatedScopeToQuery } from "@/lib/portal-scope";
+import {
+  applyManifestFederatedScopeToQuery,
+  parsePortalContentFilters,
+  applyPortalCategoryFilters,
+  filterByPortalContentScope,
+} from "@/lib/portal-scope";
 import {
   buildPortalManifest,
   shouldApplyCityFilter,
@@ -483,6 +488,10 @@ export async function GET(request: NextRequest, { params }: Props) {
       };
     }
   }
+  // Parse content-level filters (categories, geo, neighborhoods, price, tags, venue_ids)
+  const portalContentFilters = parsePortalContentFilters(
+    portalData.filters as Record<string, unknown> | string | null
+  );
   const portalCities = Array.from(
     new Set(
       [
@@ -508,6 +517,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     return NextResponse.json({ error: "Invalid portal" }, { status: 400 });
   }
 
+  const portalClient = await createPortalScopedClient(portal.id);
   const feedSettings = (portal.settings?.feed || {}) as {
     feed_type?: string;
     featured_section_ids?: string[];
@@ -650,12 +660,12 @@ export async function GET(request: NextRequest, { params }: Props) {
           day_of_week,
           festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
         ),
-        venue:venues(id, name, neighborhood, slug, venue_type, location_designator)
+        venue:venues(id, name, neighborhood, slug, venue_type, location_designator, lat, lng)
       `;
 
   const curatedEventsPromise =
     eventIds.size > 0
-      ? supabase
+      ? portalClient
           .from("events")
           .select(curatedEventSelect)
           .in("id", Array.from(eventIds))
@@ -667,7 +677,7 @@ export async function GET(request: NextRequest, { params }: Props) {
 
   const pinnedEventsPromise =
     pinnedEventIds.size > 0
-      ? supabase
+      ? portalClient
           .from("events")
           .select(curatedEventSelect)
           .in("id", Array.from(pinnedEventIds))
@@ -800,7 +810,7 @@ export async function GET(request: NextRequest, { params }: Props) {
           festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
         ),
         source_id,
-        venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city)
+        venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city, lat, lng)
     `;
 
     const applyPortalFilter = (query: ReturnType<typeof supabase.from>) => {
@@ -826,7 +836,7 @@ export async function GET(request: NextRequest, { params }: Props) {
       endDate: string,
       limit: number,
     ) => {
-      let q = supabase
+      let q = portalClient
         .from("events")
         .select(eventSelect)
         .gte("start_date", startDate)
@@ -835,6 +845,7 @@ export async function GET(request: NextRequest, { params }: Props) {
         .or("is_class.eq.false,is_class.is.null")
         .or("is_sensitive.eq.false,is_sensitive.is.null");
       q = applyPortalFilter(q);
+      q = applyPortalCategoryFilters(q, portalContentFilters);
       return q
         .order("start_date", { ascending: true })
         .order("start_time", { ascending: true })
@@ -899,14 +910,14 @@ export async function GET(request: NextRequest, { params }: Props) {
       }
     };
 
-    addToPool((todayResult.data || []) as Event[]);
-    addToPool(((weekResult as { data: Event[] | null }).data || []) as Event[]);
-    addToPool((laterResult.data || []) as Event[]);
+    addToPool(filterByPortalContentScope((todayResult.data || []) as Event[], portalContentFilters));
+    addToPool(filterByPortalContentScope(((weekResult as { data: Event[] | null }).data || []) as Event[], portalContentFilters));
+    addToPool(filterByPortalContentScope((laterResult.data || []) as Event[], portalContentFilters));
 
     // Supplemental query: explicitly pull from constrained sources/venues so those
     // sections always have a fair candidate pool before section-level filtering.
     if (constrainedSourceIds.length > 0 || constrainedVenueIds.length > 0) {
-      let constrainedQuery = supabase
+      let constrainedQuery = portalClient
         .from("events")
         .select(
           `
@@ -991,8 +1002,8 @@ export async function GET(request: NextRequest, { params }: Props) {
     );
     if (hasNightlifeSection) {
       const nightlifeVenueFilter = [
-        "bar", "club", "nightclub", "lounge", "rooftop", "karaoke",
-        "sports_bar", "brewery", "cocktail_bar", "wine_bar",
+        "bar", "nightclub", "rooftop", "karaoke",
+        "brewery", "cocktail_bar",
       ];
 
       // Scope supplemental queries to today + tomorrow only. The bucket queries
@@ -1001,7 +1012,7 @@ export async function GET(request: NextRequest, { params }: Props) {
       const supplementEndDate = tomorrowStr;
 
       // Pass 1: all nightlife-category events today/tomorrow
-      let nightlifeCoreQuery = supabase
+      let nightlifeCoreQuery = portalClient
         .from("events")
         .select(eventSelect)
         .or(`start_date.gte.${today},end_date.gte.${today}`)
@@ -1013,7 +1024,7 @@ export async function GET(request: NextRequest, { params }: Props) {
       nightlifeCoreQuery = applyPortalFilter(nightlifeCoreQuery);
 
       // Pass 2: entertainment categories (music/comedy/dance) evening events
-      let entertainmentQuery = supabase
+      let entertainmentQuery = portalClient
         .from("events")
         .select(eventSelect)
         .or(`start_date.gte.${today},end_date.gte.${today}`)
@@ -1028,7 +1039,7 @@ export async function GET(request: NextRequest, { params }: Props) {
       // Pass 3: any event at nightlife venues starting 5pm+
       // Catches art at bars, watch parties, food_drink at breweries, etc.
       // Use inner join on venues to filter by venue_type at the DB level
-      let venueBasedQuery = supabase
+      let venueBasedQuery = portalClient
         .from("events")
         .select(
           eventSelect.replace(
@@ -1475,7 +1486,7 @@ export async function GET(request: NextRequest, { params }: Props) {
       >(HOLIDAY_EVENTS_CACHE_NAMESPACE, holidayCacheKey);
 
       if (!holidayEvents) {
-        const { data: allHolidayEvents } = await supabase
+        const { data: allHolidayEvents } = await portalClient
           .from("events")
           .select(
             `
@@ -1655,22 +1666,17 @@ export async function GET(request: NextRequest, { params }: Props) {
         if (filter.nightlife_mode) {
           const nightlifeVenueTypes = new Set([
             "bar",
-            "club",
             "nightclub",
-            "lounge",
             "rooftop",
             "karaoke",
-            "sports_bar",
             "brewery",
             "cocktail_bar",
-            "wine_bar",
           ]);
           // Entertainment venues that host going-out-worthy events
           const entertainmentVenueTypes = new Set([
             "music_venue",
             "theater",
-            "comedy_club",
-            "distillery",
+            "amphitheater",
           ]);
           // Entertainment categories qualify with just an evening time
           const entertainmentCategories = new Set([
@@ -1822,11 +1828,11 @@ export async function GET(request: NextRequest, { params }: Props) {
         // Within each tier, sort by start_time
         if (filter.nightlife_mode) {
           const nightlifeVenueSet = new Set([
-            "bar", "club", "nightclub", "lounge", "rooftop", "karaoke",
-            "sports_bar", "brewery", "cocktail_bar", "wine_bar",
+            "bar", "nightclub", "rooftop", "karaoke",
+            "brewery", "cocktail_bar",
           ]);
           const entertainmentVenueSet = new Set([
-            "music_venue", "theater", "comedy_club", "distillery",
+            "music_venue", "theater", "amphitheater",
           ]);
           const entertainmentCatSet = new Set(["music", "comedy", "dance"]);
 

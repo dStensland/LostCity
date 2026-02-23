@@ -1,0 +1,31 @@
+{
+  "venue_id": 700,
+  "venue_slug": "minhwa-spirits",
+  "meta": {},
+  "extracted": {
+    "specials": [
+      {
+        "title": "Weekend Brunch",
+        "type": "brunch",
+        "description": "Lunch/brunch service featuring award-winning chef Lino Yi's Korean-inspired dishes",
+        "days_of_week": [6, 7],
+        "time_start": "10:00:00",
+        "time_end": "16:00:00",
+        "price_note": null
+      }
+    ],
+    "hours": null,
+    "vibes": ["craft-cocktails", "cozy", "date-night"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "https://minhwaspirits.com/pages/jumak",
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "minhwaspirits",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

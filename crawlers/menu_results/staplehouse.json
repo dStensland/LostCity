@@ -1,0 +1,53 @@
+{
+  "venue_id": 674,
+  "venue_slug": "staplehouse",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Foie Gras Pizza",
+        "price": null,
+        "category": "entree"
+      },
+      {
+        "name": "Grinder",
+        "price": "$23",
+        "category": "entree"
+      },
+      {
+        "name": "Alkaline Noodles",
+        "price": "$18",
+        "category": "entree"
+      },
+      {
+        "name": "Citrus Salad with Burrata",
+        "price": "$21",
+        "category": "appetizer"
+      },
+      {
+        "name": "Staplehouse Charcuterie Board",
+        "price": "$25",
+        "category": "appetizer"
+      }
+    ],
+    "dietary_options": [],
+    "price_level": 3,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

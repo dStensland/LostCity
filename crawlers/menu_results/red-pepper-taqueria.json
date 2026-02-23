@@ -1,0 +1,57 @@
+{
+  "venue_id": 2100,
+  "venue_slug": "red-pepper-taqueria",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Quesabirria",
+        "price": null,
+        "category": "entree"
+      },
+      {
+        "name": "Crispy Lobster Taco",
+        "price": null,
+        "category": "entree"
+      },
+      {
+        "name": "Birria Ramen",
+        "price": null,
+        "category": "entree"
+      },
+      {
+        "name": "Steak Frites",
+        "price": null,
+        "category": "entree"
+      },
+      {
+        "name": "32oz RPT Grande Margarita",
+        "price": null,
+        "category": "cocktail"
+      }
+    ],
+    "dietary_options": [
+      "vegetarian-friendly",
+      "vegan-options",
+      "gluten-free-options"
+    ],
+    "price_level": 2,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

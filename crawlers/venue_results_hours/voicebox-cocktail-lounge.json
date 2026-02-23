@@ -1,0 +1,35 @@
+{
+  "venue_id": 1818,
+  "venue_slug": "voicebox-cocktail-lounge",
+  "meta": {
+    "og_image": "http://static1.squarespace.com/static/6847880745f5540c929b580a/t/6862f0f4e6822f37b9055859/1751314676885/Voicebox+logo+-+transparent.png?format=1500w",
+    "meta_description": null,
+    "reservation_links": [],
+    "menu_links": ["https://voicebox.bar/menu-3"],
+    "instagram": "voiceboxbar",
+    "facebook_url": null,
+    "phone": null
+  },
+  "extracted": {
+    "hours": {
+      "mon": {"open": "17:30", "close": "23:00"},
+      "tue": {"open": "17:30", "close": "23:00"},
+      "wed": {"open": "17:30", "close": "23:00"},
+      "thu": {"open": "17:30", "close": "23:00"},
+      "fri": {"open": "17:30", "close": "00:00"},
+      "sat": {"open": "17:30", "close": "00:00"}
+    },
+    "vibes": ["upscale", "intimate", "date-spot", "craft-cocktails", "live-music", "trendy"],
+    "cuisine": [],
+    "service_style": "full-service",
+    "price_level": "$$$",
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "voiceboxbar",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

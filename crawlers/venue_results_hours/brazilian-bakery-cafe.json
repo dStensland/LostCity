@@ -1,0 +1,28 @@
+{
+  "venue_id": 4908,
+  "venue_slug": "brazilian-bakery-cafe",
+  "meta": {
+    "og_image": "https://cdn.prod.website-files.com/66294152164194dc2954f5fe/688d10d151b591b18294a3a5_Aligned_Sales_2025_Jan_to_Jun_Raw.jpg",
+    "meta_description": "Experience the best of Brazil at Brazilian Bakery Cafe. Authentic Brazilian pastries, cakes, and meals made fresh daily in Atlanta. Order online or visit us today!",
+    "reservation_links": [],
+    "menu_links": [],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": "(770) 818-0088"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["casual", "family-friendly", "cozy"],
+    "cuisine": ["brazilian", "bakery"],
+    "service_style": "counter_service",
+    "price_level": 1,
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": "(770) 818-0088",
+    "instagram": null,
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

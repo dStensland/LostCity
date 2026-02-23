@@ -1,0 +1,42 @@
+{
+  "venue_id": 4845,
+  "venue_slug": "so-ba-vietnamese-restaurant",
+  "meta": {
+    "og_image": null,
+    "meta_description": "So Ba is not your typical Vietnamese restaurant. The same great food with a livelier atmoshpere. A full service bar and located in the hip entertainment district of east atlanta village",
+    "reservation_links": [],
+    "menu_links": [
+      "https://www.soba-eav.com/menu/"
+    ],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": "(404) 627-9911"
+  },
+  "extracted": {
+    "hours": {
+      "mon": null,
+      "tue": {"open": "17:00", "close": "22:00"},
+      "wed": {"open": "17:00", "close": "22:00"},
+      "thu": {"open": "17:00", "close": "22:00"},
+      "fri": {"open": "17:00", "close": "22:00"},
+      "sat": {"open": "17:00", "close": "22:00"},
+      "sun": {"open": "17:00", "close": "22:00"}
+    },
+    "vibes": ["casual", "lively", "neighborhood-bar"],
+    "cuisine": ["vietnamese"],
+    "service_style": "casual_dine_in",
+    "price_level": 2,
+    "menu_highlights": null,
+    "menu_url": "https://www.soba-eav.com/menu/",
+    "reservation_url": null,
+    "phone": "(404) 627-9911",
+    "instagram": null,
+    "dietary_options": [],
+    "specials": [
+      {"day_of_week": 6, "title": "Hangover Helper", "description": "Medium bowl of Pho and a Bloody Mary for just $12", "special_type": "daily_special", "start_time": "17:00", "end_time": "22:00"},
+      {"day_of_week": 7, "title": "Hangover Helper", "description": "Medium bowl of Pho and a Bloody Mary for just $12", "special_type": "daily_special", "start_time": "17:00", "end_time": "22:00"}
+    ],
+    "genres": [],
+    "parking": []
+  }
+}

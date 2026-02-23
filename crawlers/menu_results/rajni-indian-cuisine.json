@@ -1,0 +1,33 @@
+{
+  "venue_id": 3481,
+  "venue_slug": "rajni-indian-cuisine",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {"name": "Rajni Special Chicken Biryani", "price": "$16.99", "category": "entree"},
+      {"name": "Chicken 65", "price": "$11.99", "category": "appetizer"},
+      {"name": "Lamb Chops Tandoori", "price": "$18.99", "category": "entree"},
+      {"name": "Paneer Tikka Masala", "price": "$13.99", "category": "entree"},
+      {"name": "Karimeen Tawa Fry", "price": "$18.99", "category": "appetizer"}
+    ],
+    "dietary_options": ["vegetarian-friendly", "vegan-options"],
+    "price_level": 2,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

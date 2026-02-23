@@ -102,6 +102,7 @@ const ICON_MAP: Record<string, ComponentType<IconProps>> = {
   // Film & Visual - cinematic
   film: FilmSlate,
   cinema: MonitorPlay,
+  amphitheater: SpeakerHigh,
 
   // Comedy & Theater - expressive
   comedy: Smiley,
@@ -112,6 +113,9 @@ const ICON_MAP: Record<string, ComponentType<IconProps>> = {
   art: Palette,
   gallery: FrameCorners,
   museum: Bank,
+  arts_center: Palette,
+  public_art: FrameCorners,
+  artifact: Bank,
 
   // Food & Drink - craft cocktail culture
   food_drink: Martini,
@@ -128,16 +132,20 @@ const ICON_MAP: Record<string, ComponentType<IconProps>> = {
 
   // Nightlife & Entertainment - after dark energy
   nightlife: MoonStars,
+  nightclub: DiscoBall,
   club: DiscoBall,
+  cocktail_bar: Martini,
   dance: MusicNotes,
   gaming: GameController,
   games: GameController,
+  arcade: GameController,
   eatertainment: Knife,
 
   // Sports & Fitness - dynamic energy
   sports: PersonSimpleRun,
   fitness: Barbell,
   fitness_center: Barbell,
+  recreation: PersonSimpleRun,
   arena: Trophy,
   sports_bar: Television,
   yoga: Leaf,
@@ -167,6 +175,10 @@ const ICON_MAP: Record<string, ComponentType<IconProps>> = {
   outdoor: Mountains,
   park: Tree,
   garden: Flower,
+  trail: Mountains,
+  viewpoint: Compass,
+  landmark: Buildings,
+  skyscraper: BuildingOffice,
 
   // Tours & Travel - exploration
   tours: Compass,
@@ -179,6 +191,7 @@ const ICON_MAP: Record<string, ComponentType<IconProps>> = {
   convention_center: BuildingOffice,
   festival: Tent,
   markets: Warehouse,
+  market: Storefront,
 
   // Religious & Special
   religious: Cross,

@@ -1,0 +1,33 @@
+{
+  "venue_id": 1196,
+  "venue_slug": "red-phone-booth",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {"name": "Bistecca Pizza", "price": "$22", "category": "entree"},
+      {"name": "Tartufo E Funghi Pizza", "price": "$17", "category": "entree"},
+      {"name": "RPB Shrimp Pizza", "price": "$18", "category": "entree"},
+      {"name": "Margherita D.O.P.", "price": "$15", "category": "entree"},
+      {"name": "Tiramisu", "price": "$12", "category": "dessert"}
+    ],
+    "dietary_options": ["vegetarian-friendly"],
+    "price_level": 2,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

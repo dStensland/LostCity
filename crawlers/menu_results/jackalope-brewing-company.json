@@ -1,0 +1,48 @@
+{
+  "venue_id": 1634,
+  "venue_slug": "jackalope-brewing-company",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Double Smash Burger",
+        "price": "$10",
+        "category": "entree"
+      },
+      {
+        "name": "Midnyt Chicken Sandwich",
+        "price": "$10",
+        "category": "entree"
+      },
+      {
+        "name": "Lunar Style Fries",
+        "price": "$8",
+        "category": "appetizer"
+      },
+      {
+        "name": "Nocturnal Style Fries",
+        "price": "$11",
+        "category": "appetizer"
+      }
+    ],
+    "dietary_options": [],
+    "price_level": 1,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

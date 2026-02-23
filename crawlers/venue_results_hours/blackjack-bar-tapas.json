@@ -1,0 +1,32 @@
+{
+  "venue_id": 4882,
+  "venue_slug": "blackjack-bar-tapas",
+  "meta": {
+    "og_image": null,
+    "meta_description": "Blackjack Bar Tapas is a high-energy craft cocktail bar and Asian-inspired tapas lounge located in the heart of Midtown Atlanta. From bold street food flavors to handcrafted drinks, it's the perfect spot for date nights, late-night bites, and unforgettable nights out.",
+    "reservation_links": [
+      "https://www.exploretock.com/blackjackbartapas"
+    ],
+    "menu_links": [
+      "https://www.blackjackbartapas.com/menu"
+    ],
+    "instagram": "blackjackbartapas",
+    "facebook_url": "https://www.facebook.com/profile.php",
+    "phone": "(404) 748-9675"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["trendy", "date-spot", "late-night", "craft-cocktails", "lively"],
+    "cuisine": ["tapas", "fusion", "thai"],
+    "service_style": "bar_service",
+    "price_level": 3,
+    "menu_highlights": null,
+    "reservation_url": "https://www.exploretock.com/blackjackbartapas",
+    "phone": "(404) 748-9675",
+    "instagram": "blackjackbartapas",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

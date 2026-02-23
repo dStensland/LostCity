@@ -1,4 +1,5 @@
 import { createClient, canManagePortal } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { NextRequest, NextResponse } from "next/server";
 import { DEFAULT_PORTAL_SLUG } from "@/lib/constants";
 import { isCustomDomainAvailable, generateDomainVerificationToken } from "@/lib/portal";
@@ -133,7 +134,8 @@ export async function PATCH(request: NextRequest, { params }: Props) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
-  const supabase = await createClient();
+  // Use service client for all DB operations — auth already verified via canManagePortal()
+  const serviceClient = createServiceClient();
 
   const body = await request.json();
 
@@ -156,7 +158,7 @@ export async function PATCH(request: NextRequest, { params }: Props) {
   }
 
   // Get current portal data for custom domain comparison and plan enforcement
-  const { data: currentPortal } = await supabase
+  const { data: currentPortal } = await serviceClient
     .from("portals")
     .select("custom_domain, plan")
     .eq("id", id)
@@ -241,7 +243,7 @@ export async function PATCH(request: NextRequest, { params }: Props) {
   updates.updated_at = new Date().toISOString();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await (serviceClient as any)
     .from("portals")
     .update(updates)
     .eq("id", id)
@@ -250,6 +252,10 @@ export async function PATCH(request: NextRequest, { params }: Props) {
 
   if (error) {
     return errorResponse(error, "PATCH /api/admin/portals/[id]");
+  }
+
+  if (!data) {
+    return NextResponse.json({ error: "Portal not found or update failed" }, { status: 404 });
   }
 
   // Return verification instructions if custom domain was set
@@ -278,10 +284,10 @@ export async function DELETE(request: NextRequest, { params }: Props) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
-  const supabase = await createClient();
+  const serviceClient = createServiceClient();
 
   // Check if portal exists
-  const { data: portalData } = await supabase
+  const { data: portalData } = await serviceClient
     .from("portals")
     .select("id, slug")
     .eq("id", id)
@@ -299,7 +305,7 @@ export async function DELETE(request: NextRequest, { params }: Props) {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
+  const { error } = await (serviceClient as any)
     .from("portals")
     .delete()
     .eq("id", id);

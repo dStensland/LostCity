@@ -1,0 +1,21 @@
+{
+  "venue_id": 4882,
+  "venue_slug": "blackjack-bar-tapas",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["craft-cocktails", "date-night", "late-night", "upscale"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "https://www.blackjackbartapas.com/menu",
+    "reservation_url": "https://www.exploretock.com/blackjackbartapas",
+    "phone": "(404) 748-9675",
+    "instagram": "blackjackbartapas",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

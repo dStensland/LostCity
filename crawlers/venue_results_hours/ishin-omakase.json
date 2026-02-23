@@ -1,0 +1,30 @@
+{
+  "venue_id": 4795,
+  "venue_slug": "ishin-omakase",
+  "meta": {
+    "og_image": null,
+    "meta_description": null,
+    "reservation_links": [
+      "https://www.opentable.com/r/ishin-omakase-reservations-atlanta?restref=1463197&lang=en-US&ot_source=Restaurant%20website"
+    ],
+    "menu_links": [],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["upscale", "intimate", "date-spot"],
+    "cuisine": ["japanese", "sushi"],
+    "service_style": "full_service",
+    "price_level": 4,
+    "menu_highlights": null,
+    "reservation_url": "https://www.opentable.com/r/ishin-omakase-reservations-atlanta?restref=1463197&lang=en-US&ot_source=Restaurant%20website",
+    "phone": null,
+    "instagram": null,
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createPortalScopedClient } from "@/lib/supabase/server";
 import { getPortalSourceAccess } from "@/lib/federation";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { parseFloatParam, parseIntParam, validationError, isValidUUID } from "@/lib/api-utils";
@@ -283,6 +283,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: "Portal not found" }, { status: 404 });
   }
 
+  const portalClient = await createPortalScopedClient(portal.id);
   const parsedFilters = parsePortalFilters(portal.filters);
   const portalCenter = parsedFilters.geo_center;
   const centerLat = latParam ?? portalCenter?.[0];
@@ -401,7 +402,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const federationAccess = await getPortalSourceAccess(portal.id);
     const hasSubscribedSources = federationAccess.sourceIds.length > 0;
 
-    let eventsQuery = supabase
+    let eventsQuery = portalClient
       .from("events")
       .select("id, title, start_date, start_time, venue_id, source_id, category")
       .in("venue_id", venueIds)

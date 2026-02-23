@@ -1,0 +1,43 @@
+{
+  "venue_id": 4862,
+  "venue_slug": "du-bu-gong-bang",
+  "meta": {
+    "og_image": null,
+    "meta_description": null,
+    "reservation_links": [],
+    "menu_links": [],
+    "instagram": "dubu.gongbang",
+    "facebook_url": null,
+    "phone": "(470) 299-5776"
+  },
+  "extracted": {
+    "hours": {
+      "mon": {"open": "11:00", "close": "21:30"},
+      "tue": {"open": "11:00", "close": "21:30"},
+      "wed": {"open": "11:00", "close": "21:30"},
+      "thu": {"open": "11:00", "close": "21:30"},
+      "fri": {"open": "11:00", "close": "22:30"},
+      "sat": {"open": "11:00", "close": "22:30"},
+      "sun": {"open": "11:00", "close": "21:30"}
+    },
+    "vibes": ["casual", "cozy", "trendy"],
+    "cuisine": ["korean"],
+    "service_style": "casual_dine_in",
+    "price_level": 2,
+    "menu_highlights": [
+      {"name": "Soon Dubu & Galbi Combo", "price": "$32.95", "category": "entree"},
+      {"name": "Haemul Pajeon", "price": "$19.95", "category": "appetizer"},
+      {"name": "Grilled Eel Sot Bap", "price": "$19.95", "category": "entree"},
+      {"name": "LA Kalbi Short Ribs", "price": "$27.95", "category": "entree"},
+      {"name": "Red Bean Taiyaki with Vanilla Ice Cream", "price": "$7.95", "category": "dessert"}
+    ],
+    "menu_url": null,
+    "reservation_url": null,
+    "phone": "(470) 299-5776",
+    "instagram": "dubu.gongbang",
+    "dietary_options": ["vegetarian-friendly", "vegan-options", "gluten-free-options"],
+    "specials": [],
+    "genres": [],
+    "parking": ["free-parking"]
+  }
+}

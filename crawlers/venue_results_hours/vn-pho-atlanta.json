@@ -1,0 +1,28 @@
+{
+  "venue_id": 4879,
+  "venue_slug": "vn-pho-atlanta",
+  "meta": {
+    "og_image": "https://lh3.googleusercontent.com/sitesv/APaQ0SRTE3PEyP5FZtDEJH_sn1Ps9kVwMK-fUC_9F5yPvuZq5lD3HoTb-JgorlmUdzyaWTRDQYIkAUSr_mAPwfvEs7aZzHTuDmRB4bd4gh3NfbmuqlKTnyYYhGXb64J6zqsmt15tj59qAsrgfHOPbx4FcwIMNwlFpQ_Ss0_O1ZjqilGqS9PEEFTUzgrPYLc=w16383",
+    "meta_description": null,
+    "reservation_links": [],
+    "menu_links": [],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["casual"],
+    "cuisine": ["vietnamese"],
+    "service_style": "counter-service",
+    "price_level": "$",
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": null,
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

@@ -887,6 +887,23 @@ def run_post_crawl_tasks() -> None:
     except Exception as e:
         logger.warning(f"Festival tier summary failed: {e}")
 
+    # 2f. Artist backfill and normalization
+    logger.info("Running artist backfill and normalization...")
+    try:
+        from scripts.backfill_event_artists import run_artist_backfill
+        artist_stats = run_artist_backfill(dry_run=False)
+        logger.info(
+            "Artist backfill: cleanup %s checked (%s changed, %s deleted), "
+            "backfill %s checked (%s added)",
+            artist_stats.get("cleanup_checked", 0),
+            artist_stats.get("cleanup_changed", 0),
+            artist_stats.get("cleanup_deleted", 0),
+            artist_stats.get("backfill_checked", 0),
+            artist_stats.get("backfill_added", 0),
+        )
+    except Exception as e:
+        logger.warning(f"Artist backfill failed: {e}")
+
     # 3. Deactivate TBA events (missing start_time after enrichment)
     logger.info("Deactivating TBA events (missing start_time)...")
     try:

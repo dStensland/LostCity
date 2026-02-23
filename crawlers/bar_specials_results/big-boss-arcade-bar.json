@@ -1,0 +1,21 @@
+{
+  "venue_id": 269,
+  "venue_slug": "big-boss-arcade-bar",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["dive-bar", "arcade", "casual"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "http://joystickgamebar.com/drinks",
+    "reservation_url": null,
+    "phone": "(404) 525-3002",
+    "instagram": "joystickgamebar",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

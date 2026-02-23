@@ -6,6 +6,7 @@ import Image from "@/components/SmartImage";
 import { useAuth } from "@/lib/auth-context";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
+import CurationTipCard, { type CurationTipData } from "./CurationTipCard";
 
 export type ListItem = {
   id: string;
@@ -17,6 +18,9 @@ export type ListItem = {
   custom_name: string | null;
   custom_description: string | null;
   note?: string | null;
+  blurb?: string | null;
+  status?: "approved" | "pending" | "rejected";
+  submitted_by?: string | null;
   added_by?: string | null;
   added_by_profile?: {
     username: string;
@@ -54,8 +58,11 @@ interface ListItemCardProps {
   categoryColor: string;
   portalSlug: string;
   isOwner?: boolean;
+  isConfirmingRemove?: boolean;
+  tips?: CurationTipData[];
   onVote?: (itemId: string, voteType: "up" | "down") => void;
   onRemove?: (itemId: string) => void;
+  onCancelRemove?: () => void;
   onNoteChange?: (itemId: string, note: string) => void;
 }
 
@@ -88,8 +95,11 @@ export default function ListItemCard({
   categoryColor,
   portalSlug,
   isOwner = false,
+  isConfirmingRemove = false,
+  tips = [],
   onVote,
   onRemove,
+  onCancelRemove,
   onNoteChange,
 }: ListItemCardProps) {
   const { user } = useAuth();
@@ -255,6 +265,34 @@ export default function ListItemCard({
           )}
         </div>
 
+        {/* Blurb (editorial note from curator) */}
+        {item.blurb && (
+          <p className="mt-1.5 text-xs text-[var(--soft)] italic">
+            &ldquo;{item.blurb}&rdquo;
+          </p>
+        )}
+
+        {/* Tips from community */}
+        {tips.length > 0 && (
+          <div className="mt-2 space-y-1.5">
+            {tips.slice(0, 2).map((tip) => (
+              <CurationTipCard key={tip.id} tip={tip} />
+            ))}
+            {tips.length > 2 && (
+              <p className="text-[0.65rem] font-mono text-[var(--muted)]">
+                +{tips.length - 2} more tip{tips.length - 2 !== 1 ? "s" : ""}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Status badge for pending items */}
+        {item.status === "pending" && (
+          <span className="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded text-[0.6rem] font-mono font-medium bg-[var(--amber)]/15 text-[var(--amber)] border border-[var(--amber)]/20">
+            Pending review
+          </span>
+        )}
+
         {/* Note */}
         {(item.note || isEditingNote) && (
           <div className="mt-2">
@@ -361,18 +399,43 @@ export default function ListItemCard({
               </svg>
             </button>
           )}
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              if (onRemove) onRemove(item.id);
-            }}
-            className="p-1.5 text-[var(--muted)] hover:text-[var(--neon-red)] transition-colors"
-            title="Remove from list"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-          </button>
+          {isConfirmingRemove ? (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (onRemove) onRemove(item.id);
+                }}
+                className="px-2 py-1 text-[0.65rem] font-mono font-medium text-[var(--neon-red)] bg-[var(--neon-red)]/10 rounded hover:bg-[var(--neon-red)]/20 transition-colors"
+                title="Confirm remove"
+              >
+                Remove
+              </button>
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (onCancelRemove) onCancelRemove();
+                }}
+                className="px-2 py-1 text-[0.65rem] font-mono text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
+                title="Cancel"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                if (onRemove) onRemove(item.id);
+              }}
+              className="p-1.5 text-[var(--muted)] hover:text-[var(--neon-red)] transition-colors"
+              title="Remove from list"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+          )}
         </div>
       )}
     </div>

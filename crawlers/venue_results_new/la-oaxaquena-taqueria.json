@@ -1,0 +1,46 @@
+{
+  "venue_id": 4773,
+  "venue_slug": "la-oaxaquena-taqueria",
+  "meta": {
+    "og_image": null,
+    "meta_description": null,
+    "reservation_links": [],
+    "menu_links": [
+      "http://www.taquerialaoaxaquena.com/home/#menu",
+      "http://www.taquerialaoaxaquena.com/drinks"
+    ],
+    "instagram": null,
+    "facebook_url": "https://www.facebook.com/laoaxaquenaatlanta",
+    "phone": "(770) 960-3010"
+  },
+  "extracted": {
+    "hours": {
+      "mon": {"open": "10:00", "close": "22:00"},
+      "tue": {"open": "10:00", "close": "22:00"},
+      "wed": null,
+      "thu": {"open": "10:00", "close": "22:00"},
+      "fri": {"open": "10:00", "close": "22:00"},
+      "sat": {"open": "10:00", "close": "22:00"},
+      "sun": {"open": "10:00", "close": "22:00"}
+    },
+    "vibes": ["casual", "family-friendly", "neighborhood-bar"],
+    "cuisine": ["mexican"],
+    "service_style": "casual_dine_in",
+    "price_level": 1,
+    "menu_highlights": [
+      {"name": "Traditional Mole", "price": null, "category": "entree"},
+      {"name": "Tlayudas", "price": null, "category": "entree"},
+      {"name": "Chile Relleno", "price": null, "category": "entree"},
+      {"name": "Huarache", "price": null, "category": "entree"},
+      {"name": "Flautas", "price": null, "category": "entree"}
+    ],
+    "menu_url": "http://www.taquerialaoaxaquena.com/home/#menu",
+    "reservation_url": null,
+    "phone": "(770) 960-3010",
+    "instagram": null,
+    "dietary_options": ["vegetarian-friendly"],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

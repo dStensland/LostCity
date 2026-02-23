@@ -1,0 +1,55 @@
+{
+  "venue_id": 1533,
+  "venue_slug": "jelly-rolls-goodnight-nashville",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Nashville Mac N' Cheese",
+        "price": null,
+        "category": "entree"
+      },
+      {
+        "name": "NADC Wagyu Burger",
+        "price": null,
+        "category": "entree"
+      },
+      {
+        "name": "Crab Hush Pups",
+        "price": null,
+        "category": "appetizer"
+      },
+      {
+        "name": "Steak Frites",
+        "price": null,
+        "category": "entree"
+      },
+      {
+        "name": "House Marg Cocktail",
+        "price": null,
+        "category": "cocktail"
+      }
+    ],
+    "dietary_options": [
+      "gluten-free-options"
+    ],
+    "price_level": 2,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

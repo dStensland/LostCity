@@ -1,0 +1,29 @@
+{
+  "venue_id": 4814,
+  "venue_slug": "fords-bbq",
+  "meta": {
+    "og_image": "https://popmenucloud.com/cdn-cgi/image/width=1200,height=630,format=auto,fit=cover/yhfsrtca/5318650f-b32d-4690-bae1-d65175521b24.jpg",
+    "meta_description": "Ford's BBQ in Atlanta, GA. Call us at (404) 254-2846. Check out our location and hours, and latest menu with photos and reviews.",
+    "reservation_links": [],
+    "menu_links": [],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["casual", "neighborhood-bar", "family-friendly"],
+    "cuisine": ["bbq"],
+    "service_style": "casual_dine_in",
+    "price_level": 2,
+    "menu_highlights": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": null,
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

@@ -129,7 +129,6 @@ type VenueCandidate = {
 
 const FOOD_VENUE_TYPES = new Set([
   "restaurant",
-  "coffee_shop",
   "farmers_market",
 ]);
 

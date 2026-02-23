@@ -173,6 +173,8 @@ export default async function ProfilePage({ params }: Props) {
 
       <ProfileTabsClient
         username={profile.username}
+        userId={profile.id}
+        isOwnProfile={isOwnProfile}
         initialActivities={recentActivity.map((a) => ({
           id: a.id,
           activity_type: a.activity_type,

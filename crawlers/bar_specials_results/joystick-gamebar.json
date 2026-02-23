@@ -1,0 +1,21 @@
+{
+  "venue_id": 257,
+  "venue_slug": "joystick-gamebar",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["dive-bar", "arcade", "casual", "late-night"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "http://joystickgamebar.com/drinks",
+    "reservation_url": null,
+    "phone": "(404) 525-3002",
+    "instagram": null,
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

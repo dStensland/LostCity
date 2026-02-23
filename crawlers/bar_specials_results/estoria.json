@@ -1,0 +1,21 @@
+{
+  "venue_id": 903,
+  "venue_slug": "estoria",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["dive-bar", "casual"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "http://estoriabar.com/menu",
+    "reservation_url": null,
+    "phone": "(678) 974-7919",
+    "instagram": null,
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

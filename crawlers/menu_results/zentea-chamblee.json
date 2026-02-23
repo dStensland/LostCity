@@ -1,0 +1,56 @@
+{
+  "venue_id": 4142,
+  "venue_slug": "zentea-chamblee",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Tea & Cream for One",
+        "price": "$19",
+        "category": "dessert"
+      },
+      {
+        "name": "Hot Matcha Latte",
+        "price": "$5.25",
+        "category": "cocktail"
+      },
+      {
+        "name": "Chicken Salad Sandwich",
+        "price": "$7.95",
+        "category": "entree"
+      },
+      {
+        "name": "Spanakopita",
+        "price": "$6.95",
+        "category": "entree"
+      },
+      {
+        "name": "Flight of Tea",
+        "price": "$5",
+        "category": "cocktail"
+      }
+    ],
+    "dietary_options": [
+      "vegetarian-friendly",
+      "gluten-free-options"
+    ],
+    "price_level": 1,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

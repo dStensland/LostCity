@@ -1,0 +1,38 @@
+{
+  "venue_id": 4655,
+  "venue_slug": "fellinis-pizza-ponce",
+  "meta": {
+    "og_image": null,
+    "meta_description": null,
+    "reservation_links": [],
+    "menu_links": [
+      "https://fellinisatlanta.com/menu-2/"
+    ],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": "(404) 873-3088"
+  },
+  "extracted": {
+    "hours": {
+      "mon": {"open": "11:30", "close": "00:00"},
+      "tue": {"open": "11:30", "close": "00:00"},
+      "wed": {"open": "11:30", "close": "00:00"},
+      "thu": {"open": "11:30", "close": "00:00"},
+      "fri": {"open": "11:30", "close": "00:00"},
+      "sat": {"open": "11:30", "close": "00:00"},
+      "sun": {"open": "11:30", "close": "00:00"}
+    },
+    "vibes": ["casual", "late-night", "counter-service", "outdoor-seating", "patio", "family-friendly", "neighborhood-bar"],
+    "cuisine": ["pizza", "italian"],
+    "service_style": "counter_service",
+    "price_level": 1,
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": "(404) 873-3088",
+    "instagram": null,
+    "dietary_options": ["vegetarian-friendly"],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

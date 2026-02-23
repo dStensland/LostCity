@@ -1,0 +1,37 @@
+{
+  "venue_id": 4853,
+  "venue_slug": "canton-cooks-sandy-springs",
+  "meta": {
+    "og_image": null,
+    "meta_description": "Canton Cooks, 5984 Roswell Rd NE, Atlanta, GA 30328, We serve food for dine in, take out.",
+    "reservation_links": [],
+    "menu_links": [],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": "(404) 252-0322"
+  },
+  "extracted": {
+    "hours": {
+      "mon": {"open": "11:00", "close": "22:00"},
+      "tue": {"open": "11:00", "close": "22:00"},
+      "wed": {"open": "11:00", "close": "22:00"},
+      "thu": {"open": "11:00", "close": "22:00"},
+      "fri": {"open": "11:00", "close": "22:00"},
+      "sat": {"open": "12:00", "close": "22:00"},
+      "sun": {"open": "12:00", "close": "22:00"}
+    },
+    "vibes": ["casual", "family-friendly"],
+    "cuisine": ["chinese"],
+    "service_style": "casual_dine_in",
+    "price_level": 2,
+    "menu_highlights": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "phone": "(404) 252-0322",
+    "instagram": null,
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

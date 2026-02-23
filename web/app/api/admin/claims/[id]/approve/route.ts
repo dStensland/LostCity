@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, getUser, isAdmin } from "@/lib/supabase/server";
+import { getUser, isAdmin } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { isValidUUID, adminErrorResponse } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
@@ -27,9 +27,9 @@ export async function POST(request: NextRequest, { params }: Props) {
     return NextResponse.json({ error: "Access denied" }, { status: 403 });
   }
 
-  const supabase = await createClient();
+  const serviceClient = createServiceClient();
 
-  const { data: claimData, error: fetchError } = await supabase
+  const { data: claimData, error: fetchError } = await serviceClient
     .from("entity_claim_requests")
     .select("id, status, requested_by, venue_id, organization_id")
     .eq("id", id)
@@ -53,8 +53,6 @@ export async function POST(request: NextRequest, { params }: Props) {
       { status: 400 }
     );
   }
-
-  const serviceClient = createServiceClient();
 
   const claimQuery = serviceClient
     .from("entity_claims")
@@ -90,7 +88,7 @@ export async function POST(request: NextRequest, { params }: Props) {
       .eq("id", claim.organization_id);
   }
 
-  const { data: updated, error: updateError } = await supabase
+  const { data: updated, error: updateError } = await serviceClient
     .from("entity_claim_requests")
     .update({
       status: "approved",

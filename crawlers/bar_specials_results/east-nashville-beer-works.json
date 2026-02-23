@@ -1,0 +1,21 @@
+{
+  "venue_id": 1639,
+  "venue_slug": "east-nashville-beer-works",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["outdoor-seating", "dog-friendly", "family-friendly", "casual", "beer-garden"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "http://www.eastnashbeerworks.com/uploads/menus/ENBW-Food-Menu-August24-Print.pdf",
+    "reservation_url": null,
+    "phone": "(615) 891-3108",
+    "instagram": null,
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

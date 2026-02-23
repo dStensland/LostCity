@@ -1,0 +1,31 @@
+{
+  "venue_id": 4815,
+  "venue_slug": "dba-barbecue",
+  "meta": {
+    "og_image": null,
+    "meta_description": "Full service BBQ catering in Atlanta, GA by DBA Barbecue. Contact us today to elevate your event with delicious barbecue!",
+    "reservation_links": [],
+    "menu_links": [
+      "https://www.dbabbq-chastain.com/menus",
+      "https://www.dbabbq-chastain.com/_files/ugd/ecb077_7167491d41d64f74b1e1ac369169c129.pdf"
+    ],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": "(404) 975-3516"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["casual", "good-for-groups", "outdoor-seating", "neighborhood-bar"],
+    "cuisine": ["bbq", "southern"],
+    "service_style": "full_service",
+    "price_level": 2,
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": "(404) 975-3516",
+    "instagram": null,
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

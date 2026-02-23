@@ -1,0 +1,36 @@
+{
+  "venue_id": 3762,
+  "venue_slug": "dancing-goats-coffee-midtown",
+  "meta": {
+    "og_image": "http://www.dancinggoats.com/cdn/shop/files/DG_logo.png?v=1753991282",
+    "meta_description": "Home to specialty single origin coffee and blended coffees and the legendary Dancing Goats Blend. Over thirty years, roasting exceptional coffees. Honoring farmers and their families with direct, working partnerships and fair pricing.",
+    "reservation_links": [],
+    "menu_links": [],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": "(800) 955-5282"
+  },
+  "extracted": {
+    "hours": {
+      "mon": {"open": "06:30", "close": "19:00"},
+      "tue": {"open": "06:30", "close": "19:00"},
+      "wed": {"open": "06:30", "close": "19:00"},
+      "thu": {"open": "06:30", "close": "19:00"},
+      "fri": {"open": "06:30", "close": "19:00"},
+      "sat": {"open": "07:00", "close": "19:00"},
+      "sun": {"open": "07:00", "close": "19:00"}
+    },
+    "vibes": ["casual", "cozy"],
+    "cuisine": ["coffee"],
+    "service_style": "cafe",
+    "price_level": 2,
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": "(800) 955-5282",
+    "instagram": null,
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

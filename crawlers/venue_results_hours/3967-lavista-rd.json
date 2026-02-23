@@ -1,0 +1,47 @@
+{
+  "venue_id": 4228,
+  "venue_slug": "3967-lavista-rd",
+  "meta": {
+    "og_image": "https://static.cfacdn.com/photos/restaurants/02799/large.jpg",
+    "meta_description": "Come visit Chick-fil-A in Tucker – Northlake Festival for delicious options such as our signature chicken sandwiches, salads, chicken nuggets, and breakfast",
+    "reservation_links": [],
+    "menu_links": [
+      "https://www.chick-fil-a.com/menu/breakfast",
+      "https://www.chick-fil-a.com/menu/entrees",
+      "https://www.chick-fil-a.com/menu/salads",
+      "https://www.chick-fil-a.com/menu/sides",
+      "https://www.chick-fil-a.com/menu/kidsmeals",
+      "https://www.chick-fil-a.com/menu/family-style-meals",
+      "https://www.chick-fil-a.com/menu/treats",
+      "https://www.chick-fil-a.com/menu/beverages",
+      "https://www.chick-fil-a.com/menu/dipping-sauces-and-dressings",
+      "https://www.chick-fil-a.com/menu",
+      "https://www.chick-fil-a.com/catering/drinks"
+    ],
+    "instagram": "chickfila",
+    "facebook_url": "https://www.facebook.com/ChickfilA",
+    "phone": "(770) 939-9001"
+  },
+  "extracted": {
+    "hours": {
+      "mon": {"open": "06:30", "close": "22:00"},
+      "tue": {"open": "06:30", "close": "22:00"},
+      "wed": {"open": "06:30", "close": "22:00"},
+      "thu": {"open": "06:30", "close": "22:00"},
+      "fri": {"open": "06:30", "close": "22:00"},
+      "sat": {"open": "06:30", "close": "22:00"}
+    },
+    "vibes": ["fast-casual", "family-friendly"],
+    "cuisine": ["american"],
+    "service_style": "fast_casual",
+    "price_level": 1,
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": "(770) 939-9001",
+    "instagram": "chickfila",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": ["free-parking"]
+  }
+}

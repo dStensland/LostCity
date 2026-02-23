@@ -1,0 +1,38 @@
+{
+  "venue_id": 4562,
+  "venue_slug": "luella",
+  "meta": {
+    "og_image": "http://static1.squarespace.com/static/68084605947182676e95d9d5/t/6925e364283ac94f3faef55f/1764090724236/Social+Sharing+Image+-+Luella-01.png?format=1500w",
+    "meta_description": "Luella is an Italian steakhouse with Japanese influence. Stop by and stay a while at 3717 Roswell Rd, Atlanta, Georgia.",
+    "reservation_links": [],
+    "menu_links": [
+      "https://www.luellaatl.com/menus"
+    ],
+    "instagram": "luellaatl",
+    "facebook_url": "http://facebook.com/luellaatl",
+    "phone": "(470) 486-6172"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": [
+      "upscale",
+      "date-spot",
+      "intimate"
+    ],
+    "cuisine": [
+      "italian",
+      "steakhouse",
+      "fusion"
+    ],
+    "service_style": "full-service",
+    "price_level": "$$$$",
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": "(470) 486-6172",
+    "instagram": "luellaatl",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

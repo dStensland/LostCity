@@ -1,0 +1,21 @@
+{
+  "venue_id": 916,
+  "venue_slug": "the-porter-beer-bar",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["cozy", "craft-cocktails", "casual"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "https://www.theporterbeerbar.com/wordpress/wp-content/uploads/2025/12/DRAFT-LIST-12.19.25.pdf",
+    "reservation_url": null,
+    "phone": "(404) 549-7132",
+    "instagram": "theporterbeerbar",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "venue_id": 4912,
+  "venue_slug": "crazy-love-coffee-house",
+  "meta": {
+    "og_image": "http://static1.squarespace.com/static/589289ee37c581b3913d64de/t/5be42cf770a6adc86fe42a30/1541680388505/Crazy+Love+-+Red.jpg?format=1500w",
+    "meta_description": "Our Christian cafe is a cozy Roswell location. Join us for a great cup of coffee, lunch, or brunch; browse our marketplace; or book our event spaces now!",
+    "reservation_links": [],
+    "menu_links": [
+      "https://www.crazylove.coffee/waffle-menu",
+      "https://www.crazylove.coffee/brunchmenu",
+      "https://www.crazylove.coffee/lunch-menu",
+      "https://www.crazylove.coffee/drink-menu"
+    ],
+    "instagram": "crazylovecoffeehouse",
+    "facebook_url": "http://www.facebook.com/crazylovecoffeehouse",
+    "phone": "(770) 545-8228"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["cozy", "casual", "family-friendly"],
+    "cuisine": ["coffee", "american", "bakery"],
+    "service_style": "cafe",
+    "price_level": 2,
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": "(770) 545-8228",
+    "instagram": "crazylovecoffeehouse",
+    "dietary_options": ["vegetarian-friendly", "vegan-options"],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

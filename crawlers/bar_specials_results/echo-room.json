@@ -1,0 +1,21 @@
+{
+  "venue_id": 969,
+  "venue_slug": "echo-room",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["speakeasy", "dj", "craft-cocktails", "date-night", "cozy", "late-night", "live-music"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": null,
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

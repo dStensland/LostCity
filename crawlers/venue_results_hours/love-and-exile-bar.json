@@ -1,0 +1,38 @@
+{
+  "venue_id": 1808,
+  "venue_slug": "love-and-exile-bar",
+  "meta": {
+    "og_image": "http://static1.squarespace.com/static/6484d02c8f362142f5141ed6/t/6488ea811a7926722f343dd2/1694631651111/love+%26+exile+6.4.202325.jpeg?format=1500w",
+    "meta_description": "Love & Exile is a working winery, restaurant, bar and event space in the heart of East Nashville, Tennessee.",
+    "reservation_links": [
+      "https://www.opentable.com/restref/client/?restref=1438465&lang=en-US&ot_source=Restaurant%20website&corrid=6fc94335-5b50-49d8-8293-5437abf8184b"
+    ],
+    "menu_links": [
+      "https://www.loveandexile.bar/menu"
+    ],
+    "instagram": "loveandexilebar",
+    "facebook_url": "http://Facebook.com/loveandexilebar",
+    "phone": "(615) 712-9780"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": [
+      "trendy",
+      "patio",
+      "craft-cocktails",
+      "lively",
+      "good-for-groups"
+    ],
+    "cuisine": [],
+    "service_style": "full-service",
+    "price_level": "$$",
+    "menu_highlights": null,
+    "reservation_url": "https://www.opentable.com/restref/client/?restref=1438465&lang=en-US&ot_source=Restaurant%20website&corrid=6fc94335-5b50-49d8-8293-5437abf8184b",
+    "phone": "(615) 712-9780",
+    "instagram": "loveandexilebar",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

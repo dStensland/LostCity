@@ -1,12 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createPortalScopedClient } from "@/lib/supabase/server";
 import { getPortalBySlug } from "@/lib/portal";
 import { getLocalDateString } from "@/lib/formats";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 import { isValidUUID } from "@/lib/api-utils";
 import { isSpotOpen, DESTINATION_CATEGORIES } from "@/lib/spots";
 import { logger } from "@/lib/logger";
-import { applyFederatedPortalScopeToQuery, filterByPortalCity } from "@/lib/portal-scope";
+import {
+  applyFederatedPortalScopeToQuery,
+  filterByPortalCity,
+  parsePortalContentFilters,
+  applyPortalCategoryFilters,
+  filterByPortalContentScope,
+} from "@/lib/portal-scope";
 import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
 import { getPortalSourceAccess } from "@/lib/federation";
 
@@ -85,7 +91,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
           )
         ? (portal.filters as { city: string }).city
         : undefined;
+    const portalContentFilters = parsePortalContentFilters(
+      portal.filters as Record<string, unknown> | null
+    );
     const sourceAccess = await getPortalSourceAccess(portal.id);
+    const portalClient = await createPortalScopedClient(portal.id);
 
     // Build query for events happening now
     // An event is "happening now" if:
@@ -93,7 +103,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     // 2. It has started (start_time <= now)
     // 3. It hasn't ended (end_time > now, or no end_time and within 3 hours of start)
 
-    let query = supabase
+    let query = portalClient
       .from("events")
       .select(countOnly ? "*" : `
         id,
@@ -105,7 +115,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         category,
         tags,
         image_url,
-        venue:venues(id, name, slug, neighborhood, city, location_designator)
+        venue:venues(id, name, slug, neighborhood, city, location_designator, lat, lng)
       `, { count: countOnly ? "exact" : undefined, head: countOnly })
       .eq("start_date", today)
       .eq("is_all_day", false)
@@ -119,6 +129,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
       sourceIds: sourceAccess.sourceIds,
       sourceColumn: "source_id",
     });
+
+    // Apply portal category filters (include/exclude)
+    query = applyPortalCategoryFilters(query, portalContentFilters);
 
     // Order by start time
     if (!countOnly) {
@@ -180,8 +193,16 @@ export async function GET(request: NextRequest, context: RouteContext) {
     interface EventRow {
       start_time: string | null;
       end_time: string | null;
+      category?: string | null;
       tags?: string[] | null;
-      venue?: { city?: string | null } | null;
+      price?: number | null;
+      venue?: {
+        id?: number | null;
+        city?: string | null;
+        neighborhood?: string | null;
+        lat?: number | null;
+        lng?: number | null;
+      } | null;
       [key: string]: unknown;
     }
     const scopedByCity = filterByPortalCity(
@@ -189,7 +210,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
       portalCity,
       { allowMissingCity: true }
     );
-    const liveEvents = scopedByCity.filter((event: EventRow) => {
+    const scopedByContent = filterByPortalContentScope(scopedByCity, portalContentFilters);
+    const liveEvents = scopedByContent.filter((event: EventRow) => {
       if (!event.start_time) return false;
 
       // Parse start time

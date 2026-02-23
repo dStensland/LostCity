@@ -1,0 +1,51 @@
+{
+  "venue_id": 4901,
+  "venue_slug": "macs-chophouse",
+  "meta": {
+    "og_image": null,
+    "meta_description": "Enjoy prime steaks & sustainable seafood at Mac's Chophouse. Join us for lunch or book a private event in our historic setting.",
+    "reservation_links": [
+      "https://www.opentable.com/restaurant/profile/####/reserve?rid=####&restref=####"
+    ],
+    "menu_links": [
+      "http://macschophouse.com/lunch",
+      "http://macschophouse.com/dinner-menu",
+      "http://macschophouse.com/brunch-menu",
+      "http://macschophouse.com/dessert-menu",
+      "http://macschophouse.com/bar-menu",
+      "http://macschophouse.com/kids-menu"
+    ],
+    "instagram": "macschophouse",
+    "facebook_url": "https://www.facebook.com/MacsChophouse",
+    "phone": "(770) 238-1202"
+  },
+  "extracted": {
+    "hours": {
+      "mon": {"open": "11:00", "close": "22:00"},
+      "tue": {"open": "11:00", "close": "22:00"},
+      "wed": {"open": "11:00", "close": "22:00"},
+      "thu": {"open": "11:00", "close": "22:00"},
+      "fri": {"open": "11:00", "close": "22:00"},
+      "sat": {"open": "11:00", "close": "23:00"},
+      "sun": {"open": "09:30", "close": "22:00"}
+    },
+    "vibes": ["upscale", "date-spot", "historic", "craft-cocktails", "outdoor-seating"],
+    "cuisine": ["steakhouse", "seafood", "new_american"],
+    "service_style": "full_service",
+    "price_level": 4,
+    "menu_highlights": [
+      {"name": "USDA Prime Steak", "price": null, "category": "entree"},
+      {"name": "Banana Cream Pie", "price": null, "category": "dessert"},
+      {"name": "Creme Brulee French Toast", "price": null, "category": "entree"},
+      {"name": "Brunswick Shrimp", "price": null, "category": "entree"}
+    ],
+    "menu_url": "http://macschophouse.com/dinner-menu",
+    "reservation_url": "https://www.opentable.com/restaurant/profile/####/reserve?rid=####&restref=####",
+    "phone": "(770) 238-1202",
+    "instagram": "macschophouse",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

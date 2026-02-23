@@ -1,0 +1,28 @@
+{
+  "venue_id": 2215,
+  "venue_slug": "universal-joint",
+  "meta": {
+    "og_image": null,
+    "meta_description": "Universal Joint serves craft beer, and burgers in a laid-back setting. Local flavor, dog-friendly patios, and it all Drinks Well With Others.",
+    "reservation_links": [],
+    "menu_links": ["https://www.ujointbar.com/menus"],
+    "instagram": "ujointbar",
+    "facebook_url": null,
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["casual", "neighborhood-bar", "dog-friendly", "patio", "divey"],
+    "cuisine": ["american", "burger", "wings"],
+    "service_style": "full-service",
+    "price_level": "$$",
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "ujointbar",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

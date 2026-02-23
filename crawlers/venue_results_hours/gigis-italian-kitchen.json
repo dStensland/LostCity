@@ -1,0 +1,30 @@
+{
+  "venue_id": 4767,
+  "venue_slug": "gigis-italian-kitchen",
+  "meta": {
+    "og_image": null,
+    "meta_description": "Cargo",
+    "reservation_links": [],
+    "menu_links": [
+      "http://gigisitaliankitchenatl.com/Menu"
+    ],
+    "instagram": "gigisitaliankitchen",
+    "facebook_url": null,
+    "phone": "(404) 371-0889"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["cozy", "neighborhood-bar", "intimate", "date-spot"],
+    "cuisine": ["italian"],
+    "service_style": "full_service",
+    "price_level": 2,
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": "(404) 371-0889",
+    "instagram": "gigisitaliankitchen",
+    "dietary_options": ["vegetarian-friendly"],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

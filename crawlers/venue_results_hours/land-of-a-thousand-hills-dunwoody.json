@@ -1,0 +1,33 @@
+{
+  "venue_id": 3715,
+  "venue_slug": "land-of-a-thousand-hills-dunwoody",
+  "meta": {
+    "og_image": "https://landofathousandhills.com/cdn/shopifycloud/storefront/assets/no-image-2048-a2addb12_600x600.gif",
+    "meta_description": "We're dedicated to crafting specialty coffee that makes a difference...and is delicious too. Our mission is to craft beautiful coffee, create purposeful work, and cultivate flourishing communities.",
+    "reservation_links": [],
+    "menu_links": [],
+    "instagram": "landofathousandhillscoffee",
+    "facebook_url": "https://www.facebook.com/thousandhillscoffee",
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": [
+      "cozy",
+      "casual"
+    ],
+    "cuisine": [
+      "coffee"
+    ],
+    "service_style": "counter-service",
+    "price_level": "$",
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "landofathousandhillscoffee",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

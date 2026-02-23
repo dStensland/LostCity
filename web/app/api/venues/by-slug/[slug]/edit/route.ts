@@ -279,7 +279,7 @@ export async function PATCH(request: NextRequest, { params }: Props) {
   }
 
   if (body.service_style !== undefined) {
-    if (body.service_style === null || body.service_style === "") {
+    if (body.service_style === null || (body.service_style as string) === "") {
       updates.service_style = null;
     } else if (!PLANNING_SERVICE_STYLES.includes(body.service_style)) {
       return validationError(

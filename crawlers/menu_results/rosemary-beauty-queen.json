@@ -1,0 +1,53 @@
+{
+  "venue_id": 1597,
+  "venue_slug": "rosemary-beauty-queen",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Mol\u00e9 Old Fashioned",
+        "price": "$12",
+        "category": "cocktail"
+      },
+      {
+        "name": "La Llorona",
+        "price": "$13",
+        "category": "cocktail"
+      },
+      {
+        "name": "RBQ Pi\u00f1a",
+        "price": "$12",
+        "category": "cocktail"
+      },
+      {
+        "name": "Paloma",
+        "price": "$12",
+        "category": "cocktail"
+      },
+      {
+        "name": "Field Recordings Skins Orange Wine",
+        "price": "$15",
+        "category": "wine"
+      }
+    ],
+    "dietary_options": [],
+    "price_level": 2,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

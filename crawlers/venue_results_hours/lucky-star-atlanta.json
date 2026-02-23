@@ -1,0 +1,40 @@
+{
+  "venue_id": 2478,
+  "venue_slug": "lucky-star-atlanta",
+  "meta": {
+    "og_image": "https://static.wixstatic.com/media/f1a40d_eedee69f8a204cdd8d47042bd714674a%7Emv2.png/v1/fit/w_2500,h_1330,al_c/f1a40d_eedee69f8a204cdd8d47042bd714674a%7Emv2.png",
+    "meta_description": "At Lucky Star, we celebrate the vibrant, innovative flavors of Taiwanese food, offering a unique culinary journey that showcases the art of cocktails and Taiwanese bites.",
+    "reservation_links": [
+      "https://www.opentable.com/r/lucky-star-reservations-atlanta?restref=1402957&lang=en-US&ot_source=Restaurant%20website"
+    ],
+    "menu_links": [
+      "https://www.luckystaratl.com/blank-4"
+    ],
+    "instagram": "luckystaratl",
+    "facebook_url": null,
+    "phone": "(678) 994-6016"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": [
+      "trendy",
+      "craft-cocktails",
+      "date-spot",
+      "intimate"
+    ],
+    "cuisine": [
+      "fusion",
+      "coffee"
+    ],
+    "service_style": "full-service",
+    "price_level": "$$$",
+    "menu_highlights": null,
+    "reservation_url": "https://www.opentable.com/r/lucky-star-reservations-atlanta?restref=1402957&lang=en-US&ot_source=Restaurant%20website",
+    "phone": "(678) 994-6016",
+    "instagram": "luckystaratl",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

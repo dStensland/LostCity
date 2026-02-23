@@ -1,0 +1,28 @@
+{
+  "venue_id": 4556,
+  "venue_slug": "so-fox",
+  "meta": {
+    "og_image": "https://platform.atlanta.eater.com/wp-content/uploads/sites/14/2026/01/So.-Fox-Rendering-1.png?quality=90&strip=all&crop=0%2C3.4613147178592%2C100%2C93.077370564282&w=1200",
+    "meta_description": "So. Fox will open next door to Kinship in Virginia-Highland this spring",
+    "reservation_links": [],
+    "menu_links": [],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["upscale", "date-spot", "intimate", "farm_to_table"],
+    "cuisine": ["new_american", "farm_to_table"],
+    "service_style": "full_service",
+    "price_level": "$$$",
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": null,
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

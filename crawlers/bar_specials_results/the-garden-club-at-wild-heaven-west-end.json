@@ -1,0 +1,21 @@
+{
+  "venue_id": 2063,
+  "venue_slug": "the-garden-club-at-wild-heaven-west-end",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["live-music", "beer-garden", "casual"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "http://www.thegardenclubatlanta.com/west-end/menu",
+    "reservation_url": null,
+    "phone": "(404) 228-2961",
+    "instagram": "beerwildheaven",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

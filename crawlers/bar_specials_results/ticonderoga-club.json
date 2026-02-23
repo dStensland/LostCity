@@ -1,0 +1,21 @@
+{
+  "venue_id": 677,
+  "venue_slug": "ticonderoga-club",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["craft-cocktails", "date-night", "upscale"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "https://ticonderogaclub.com/menu",
+    "reservation_url": "https://resy.com/cities/atlanta-ga/venues/ticonderoga-club",
+    "phone": "(404) 458-4534",
+    "instagram": "ticonderogaclub",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

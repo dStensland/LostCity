@@ -1,27 +1,20 @@
-import FeedShell from "@/components/feed/FeedShell";
-import CuratedContent from "@/components/feed/CuratedContent";
+import CityPulseShell from "@/components/feed/CityPulseShell";
 import { FamilyFeed } from "@/components/family";
 import type { Portal } from "@/lib/portal-context";
 
-type FeedTab = "curated" | "explore" | "foryou";
-
 interface DefaultTemplateProps {
   portal: Portal;
-  feedTab: FeedTab;
 }
 
 /**
- * Default template - standard feed layout used by most portals.
- * Supports both curated and personalized "for you" content.
+ * Default template - CityPulse feed for all portals.
  */
 export async function DefaultTemplate({
   portal,
-  feedTab,
 }: DefaultTemplateProps) {
-  const isExclusive = portal.portal_type === "business" && !portal.parent_portal_id;
-
   // Special case: atlanta-families uses custom FamilyFeed
   if (portal.slug === "atlanta-families") {
+    const isExclusive = portal.portal_type === "business" && !portal.parent_portal_id;
     return (
       <FamilyFeed
         portalId={portal.id}
@@ -31,13 +24,9 @@ export async function DefaultTemplate({
     );
   }
 
-  // Standard feed for all other portals
   return (
-    <FeedShell
-      portalId={portal.id}
+    <CityPulseShell
       portalSlug={portal.slug}
-      activeTab={feedTab}
-      curatedContent={<CuratedContent portalSlug={portal.slug} />}
     />
   );
 }

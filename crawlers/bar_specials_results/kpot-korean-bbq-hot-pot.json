@@ -1,0 +1,40 @@
+{
+  "venue_id": 2097,
+  "venue_slug": "kpot-korean-bbq-hot-pot",
+  "meta": {},
+  "extracted": {
+    "specials": [
+      {
+        "title": "Happy Hour",
+        "type": "happy_hour",
+        "description": "Happy hour specials featuring handcrafted cocktails, refreshing drinks, and delicious bites at special prices",
+        "days_of_week": [1, 2, 3, 4, 5, 6, 7],
+        "time_start": null,
+        "time_end": null,
+        "price_note": null
+      },
+      {
+        "title": "Birthday Free Meal",
+        "type": "recurring_deal",
+        "description": "Eat free on your birthday at KPOT",
+        "days_of_week": [1, 2, 3, 4, 5, 6, 7],
+        "time_start": null,
+        "time_end": null,
+        "price_note": "Free on your birthday"
+      }
+    ],
+    "hours": null,
+    "vibes": ["late-night", "casual", "family-friendly"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "https://thekpot.com/menu/",
+    "reservation_url": null,
+    "phone": "(404) 343-0819",
+    "instagram": null,
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

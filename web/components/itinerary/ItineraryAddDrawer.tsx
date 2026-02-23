@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import Image from "next/image";
 import type { AddItineraryItemInput } from "@/lib/itinerary-utils";
 import { getProxiedImageSrc } from "@/lib/image-proxy";
+import OutingSuggestions from "@/components/outing/OutingSuggestions";
 
 interface SearchResult {
   id: number;
@@ -16,11 +17,19 @@ interface SearchResult {
   lng: number | null;
 }
 
+interface AnchorEventInfo {
+  lat: number;
+  lng: number;
+  time: string;
+  date: string;
+}
+
 interface ItineraryAddDrawerProps {
   portalSlug: string;
   open: boolean;
   onClose: () => void;
   onAdd: (input: AddItineraryItemInput) => void;
+  anchorEvent?: AnchorEventInfo | null;
 }
 
 export default function ItineraryAddDrawer({
@@ -28,11 +37,14 @@ export default function ItineraryAddDrawer({
   open,
   onClose,
   onAdd,
+  anchorEvent,
 }: ItineraryAddDrawerProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
-  const [tab, setTab] = useState<"search" | "custom">("search");
+  const [tab, setTab] = useState<"search" | "custom" | "suggestions">(
+    anchorEvent ? "suggestions" : "search",
+  );
   const [customTitle, setCustomTitle] = useState("");
   const [customAddress, setCustomAddress] = useState("");
   const [customTime, setCustomTime] = useState("");
@@ -184,6 +196,18 @@ export default function ItineraryAddDrawer({
           >
             Custom Stop
           </button>
+          {anchorEvent && (
+            <button
+              onClick={() => setTab("suggestions")}
+              className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${
+                tab === "suggestions"
+                  ? "bg-white/10 text-white"
+                  : "text-white/40 hover:text-white/60"
+              }`}
+            >
+              Suggestions
+            </button>
+          )}
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 pb-4">
@@ -253,6 +277,25 @@ export default function ItineraryAddDrawer({
                 })}
               </div>
             </>
+          ) : tab === "suggestions" && anchorEvent ? (
+            <OutingSuggestions
+              portalSlug={portalSlug}
+              anchorLat={anchorEvent.lat}
+              anchorLng={anchorEvent.lng}
+              anchorTime={anchorEvent.time}
+              anchorDate={anchorEvent.date}
+              onAddSuggestion={(s) => {
+                onAdd({
+                  item_type: s.type === "event" ? "event" : "venue",
+                  ...(s.type === "event"
+                    ? { event_id: s.id }
+                    : { venue_id: s.venue.id }),
+                  custom_lat: s.venue.lat || undefined,
+                  custom_lng: s.venue.lng || undefined,
+                });
+                onClose();
+              }}
+            />
           ) : (
             <div className="space-y-3">
               <div>

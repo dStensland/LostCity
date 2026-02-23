@@ -1,0 +1,21 @@
+{
+  "venue_id": 1022,
+  "venue_slug": "banshee-atlanta",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["date-night", "upscale", "craft-cocktails", "late-night", "live-music"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "https://www.banshee-atl.com/wp-content/uploads/Banshee-Dinner-Menu.pdf",
+    "reservation_url": "https://resy.com/cities/atl/banshee",
+    "phone": "(470) 428-2034",
+    "instagram": "banshee_eav",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

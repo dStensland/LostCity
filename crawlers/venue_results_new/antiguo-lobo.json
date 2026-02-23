@@ -1,0 +1,39 @@
+{
+  "venue_id": 4837,
+  "venue_slug": "antiguo-lobo",
+  "meta": {
+    "og_image": "https://popmenucloud.com/cdn-cgi/image/width=1200,height=630,format=auto,fit=cover/qwehspkb/3162f805-6905-4959-ad46-a611256a3cc2.jpg",
+    "meta_description": "Antiguo Lobo in Chamblee, GA. Antiguo Lobo rooted in authenticity but not stuck in the past. Elevated agave spirits and classic flavors are reimagined and remixed for a modern edge.",
+    "reservation_links": [
+      "https://resy.com/cities/chamblee-ga/venues/antiguo-lobo"
+    ],
+    "menu_links": [
+      "https://www.antiguolobo.com/menu"
+    ],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["trendy", "craft-cocktails", "casual", "good-for-groups"],
+    "cuisine": ["mexican"],
+    "service_style": "casual_dine_in",
+    "price_level": 2,
+    "menu_highlights": [
+      {"name": "Aquachile de Camaron", "price": "$17", "category": "appetizer"},
+      {"name": "Queso Fundido", "price": "$13", "category": "appetizer"},
+      {"name": "Papas Bravas", "price": "$13", "category": "appetizer"},
+      {"name": "Old Wolf Path Agave Flight", "price": "$40", "category": "cocktail"},
+      {"name": "Dorados", "price": "$12.50", "category": "appetizer"}
+    ],
+    "menu_url": "https://www.antiguolobo.com/menu",
+    "reservation_url": "https://resy.com/cities/chamblee-ga/venues/antiguo-lobo",
+    "phone": null,
+    "instagram": null,
+    "dietary_options": ["vegetarian-friendly"],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

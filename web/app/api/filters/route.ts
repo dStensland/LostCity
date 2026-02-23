@@ -11,14 +11,7 @@ export async function GET(request: Request) {
   if (rateLimitResult) return rateLimitResult;
 
   try {
-    const { searchParams } = new URL(request.url);
-    const portalId = searchParams.get("portal_id") || undefined;
-    const portalExclusive = searchParams.get("portal_exclusive") === "true";
-
-    const filters = await getAvailableFilters({
-      portalId,
-      portalExclusive,
-    });
+    const filters = await getAvailableFilters();
     return NextResponse.json(filters, {
       headers: {
         // Filter options rarely change - cache for 10 minutes

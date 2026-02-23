@@ -1,0 +1,21 @@
+{
+  "venue_id": 1640,
+  "venue_slug": "black-abbey-brewing-company",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["casual", "beer-garden"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": null,
+    "reservation_url": null,
+    "phone": "(615) 755-0070",
+    "instagram": "blackabbeybrewing",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

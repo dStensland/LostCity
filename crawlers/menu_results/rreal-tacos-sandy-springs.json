@@ -1,0 +1,56 @@
+{
+  "venue_id": 3335,
+  "venue_slug": "rreal-tacos-sandy-springs",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Birria Ramen",
+        "price": "$18.99",
+        "category": "entree"
+      },
+      {
+        "name": "Picanha Taco",
+        "price": "$5.69",
+        "category": "entree"
+      },
+      {
+        "name": "Pineapple Guava Margarita",
+        "price": "$13",
+        "category": "cocktail"
+      },
+      {
+        "name": "Trio Appetizer",
+        "price": "$19.99",
+        "category": "appetizer"
+      },
+      {
+        "name": "Tres Leches Cake",
+        "price": "$6.99",
+        "category": "dessert"
+      }
+    ],
+    "dietary_options": [
+      "gluten-free-options",
+      "vegetarian-friendly"
+    ],
+    "price_level": 2,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "venue_id": 4820,
+  "venue_slug": "socks-love-barbecue",
+  "meta": {
+    "og_image": "https://popmenucloud.com/cdn-cgi/image/width=1200,height=630,format=auto,fit=cover/apwvdxgc/47feb4b0-a7c2-49df-ad8a-cce191318e22.jpg",
+    "meta_description": "Socks' Love Barbecue in Cumming, GA. Call us at (470) 302-8383. Check out our location and hours, and latest menu with photos and reviews.",
+    "reservation_links": [],
+    "menu_links": [
+      "http://sockslovebarbecue.com/menu"
+    ],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["casual", "family-friendly"],
+    "cuisine": ["bbq"],
+    "service_style": "quick_service",
+    "price_level": 2,
+    "menu_highlights": null,
+    "menu_url": "http://sockslovebarbecue.com/menu",
+    "reservation_url": null,
+    "phone": "(470) 302-8383",
+    "instagram": null,
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

@@ -1,0 +1,103 @@
+{
+  "venue_id": 4828,
+  "venue_slug": "big-bs-fish-joint",
+  "meta": {
+    "og_image": null,
+    "meta_description": "Big B's Fish Joint.  A casual fresh fish and seafood restaurant and bar.",
+    "reservation_links": [],
+    "menu_links": [
+      "https://www.bigbsfishjoint.com",
+      "https://www.bigbsfishjoint.com/menus"
+    ],
+    "instagram": "thebigbsfishjoint",
+    "facebook_url": "http://www.facebook.com/bigbsfishjoint",
+    "phone": "(470) 355-8326"
+  },
+  "extracted": {
+    "hours": {
+      "mon": null,
+      "tue": {"open": "11:30", "close": "21:00"},
+      "wed": {"open": "11:30", "close": "21:00"},
+      "thu": {"open": "11:30", "close": "21:00"},
+      "fri": {"open": "11:30", "close": "21:00"},
+      "sat": {"open": "11:30", "close": "21:00"},
+      "sun": {"open": "11:30", "close": "21:00"}
+    },
+    "vibes": ["casual", "happy-hour", "family-friendly", "neighborhood-bar"],
+    "cuisine": ["seafood"],
+    "service_style": "casual_dine_in",
+    "price_level": 3,
+    "menu_highlights": [
+      {"name": "Oysters on Half Shell", "price": "$24.95", "category": "appetizer"},
+      {"name": "Jumbo Shrimp 'n Grits", "price": "$22.95", "category": "entree"},
+      {"name": "Faroe Islands Salmon", "price": "$31.95", "category": "entree"},
+      {"name": "Classic Fish 'n Chips", "price": "$24.95", "category": "entree"},
+      {"name": "Tuna Poke Bowl", "price": "$22.95", "category": "entree"}
+    ],
+    "menu_url": "https://www.bigbsfishjoint.com/menus",
+    "reservation_url": null,
+    "phone": "(470) 355-8326",
+    "instagram": "thebigbsfishjoint",
+    "dietary_options": [],
+    "specials": [
+      {
+        "day_of_week": 1,
+        "title": "Happy Hour",
+        "description": "$1.50 Raw Oysters & Jumbo Shrimp, $5 Margaritas, $6 Happy Hour Wine",
+        "special_type": "happy_hour",
+        "start_time": "16:00",
+        "end_time": "18:00"
+      },
+      {
+        "day_of_week": 2,
+        "title": "Happy Hour",
+        "description": "$1.50 Raw Oysters & Jumbo Shrimp, $5 Margaritas, $6 Happy Hour Wine",
+        "special_type": "happy_hour",
+        "start_time": "16:00",
+        "end_time": "18:00"
+      },
+      {
+        "day_of_week": 3,
+        "title": "Happy Hour",
+        "description": "$1.50 Raw Oysters & Jumbo Shrimp, $5 Margaritas, $6 Happy Hour Wine",
+        "special_type": "happy_hour",
+        "start_time": "16:00",
+        "end_time": "18:00"
+      },
+      {
+        "day_of_week": 4,
+        "title": "Happy Hour",
+        "description": "$1.50 Raw Oysters & Jumbo Shrimp, $5 Margaritas, $6 Happy Hour Wine",
+        "special_type": "happy_hour",
+        "start_time": "16:00",
+        "end_time": "18:00"
+      },
+      {
+        "day_of_week": 5,
+        "title": "Happy Hour",
+        "description": "$1.50 Raw Oysters & Jumbo Shrimp, $5 Margaritas, $6 Happy Hour Wine",
+        "special_type": "happy_hour",
+        "start_time": "16:00",
+        "end_time": "18:00"
+      },
+      {
+        "day_of_week": 6,
+        "title": "Happy Hour",
+        "description": "$1.50 Raw Oysters & Jumbo Shrimp, $5 Margaritas, $6 Happy Hour Wine",
+        "special_type": "happy_hour",
+        "start_time": "16:00",
+        "end_time": "18:00"
+      },
+      {
+        "day_of_week": 7,
+        "title": "Happy Hour",
+        "description": "$1.50 Raw Oysters & Jumbo Shrimp, $5 Margaritas, $6 Happy Hour Wine",
+        "special_type": "happy_hour",
+        "start_time": "16:00",
+        "end_time": "18:00"
+      }
+    ],
+    "genres": [],
+    "parking": []
+  }
+}

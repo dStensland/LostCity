@@ -39,7 +39,7 @@ export function buildSearchResultHref(
     case "festival":
       return hasPortalContext ? `/${portal}?festival=${slug}` : `/festivals/${slug}`;
     case "list":
-      return `/${portal}/lists/${slug}`;
+      return `/${portal}/curations/${slug}`;
     case "neighborhood":
       return `/${portal}?view=find&type=events&neighborhoods=${encodeURIComponent(result.title)}`;
     case "category":

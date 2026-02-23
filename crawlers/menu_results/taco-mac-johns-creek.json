@@ -1,0 +1,55 @@
+{
+  "venue_id": 3810,
+  "venue_slug": "taco-mac-johns-creek",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Three Mile Island Wings",
+        "price": "$14.99",
+        "category": "entree"
+      },
+      {
+        "name": "The '79 Original Burger",
+        "price": "$13.79",
+        "category": "entree"
+      },
+      {
+        "name": "Smoked Brisket Tacos",
+        "price": "$12.49",
+        "category": "entree"
+      },
+      {
+        "name": "La Gloria Signature Margarita",
+        "price": "$11.99",
+        "category": "cocktail"
+      },
+      {
+        "name": "Lavender Lemon Fizz",
+        "price": "$11.99",
+        "category": "cocktail"
+      }
+    ],
+    "dietary_options": [
+      "vegetarian-friendly"
+    ],
+    "price_level": 2,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

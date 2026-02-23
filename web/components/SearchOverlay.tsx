@@ -887,7 +887,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                       loading={isLoading && activeTypeFilter === "list"}
                     >
                       <TypeIcon type="list" className="w-3 h-3 mr-1" />
-                      Lists ({getFacetCount("list") ?? groupedResults.list.length})
+                      Curations ({getFacetCount("list") ?? groupedResults.list.length})
                     </FilterPill>
                   )}
                 </div>

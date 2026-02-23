@@ -1,0 +1,55 @@
+{
+  "venue_id": 1816,
+  "venue_slug": "joeys-joint",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Bone-In Ribeye (22oz)",
+        "price": "$68",
+        "category": "entree"
+      },
+      {
+        "name": "Filet Mignon (8oz)",
+        "price": "$49",
+        "category": "entree"
+      },
+      {
+        "name": "Charbroiled Oysters",
+        "price": "$20",
+        "category": "appetizer"
+      },
+      {
+        "name": "D'Angelo Burger",
+        "price": "$18",
+        "category": "entree"
+      },
+      {
+        "name": "Barrel-Aged Old Fashioned",
+        "price": "$14",
+        "category": "cocktail"
+      }
+    ],
+    "dietary_options": [
+      "vegetarian-friendly"
+    ],
+    "price_level": 4,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

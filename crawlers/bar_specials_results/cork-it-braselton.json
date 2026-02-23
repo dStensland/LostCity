@@ -1,0 +1,21 @@
+{
+  "venue_id": 975,
+  "venue_slug": "cork-it-braselton",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["wine-bar", "cozy", "date-night"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "http://www.corkitbraselton.com/menu",
+    "reservation_url": null,
+    "phone": "(229) 630-6311",
+    "instagram": null,
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

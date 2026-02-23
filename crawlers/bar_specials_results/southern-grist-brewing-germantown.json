@@ -1,0 +1,21 @@
+{
+  "venue_id": 1633,
+  "venue_slug": "southern-grist-brewing-germantown",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["patio", "pet-friendly", "family-friendly", "casual"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "http://www.southerngristbrewing.com/lbylauter",
+    "reservation_url": null,
+    "phone": "(615) 864-7133",
+    "instagram": "southerngristbrewing",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

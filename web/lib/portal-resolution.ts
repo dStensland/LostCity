@@ -40,7 +40,7 @@ export async function resolvePortalId(request: NextRequest): Promise<string | nu
   // 1. Try to get portal context from request body
   try {
     const body = await request.clone().json();
-    if (typeof body?.portal_slug === "string" && body.portal_slug.trim()) {
+    if (typeof body?.portal_slug === "string" && isValidPortalSlug(body.portal_slug)) {
       portalSlug = body.portal_slug.trim();
     }
     if (typeof body?.portal_id === "string" && isValidUUID(body.portal_id)) {
@@ -50,17 +50,22 @@ export async function resolvePortalId(request: NextRequest): Promise<string | nu
     // No body or invalid JSON - continue
   }
 
-  // 2. Try explicit headers
-  if (!portalId) {
-    const headerPortalId = request.headers.get("x-portal-id");
-    if (headerPortalId && isValidUUID(headerPortalId)) {
-      portalId = headerPortalId;
+  // 2. Try explicit headers (skip for API routes — these headers are only
+  //    legitimately set as response headers by the proxy during page renders,
+  //    not as trusted request headers on API calls)
+  const isApiRoute = new URL(request.url).pathname.startsWith("/api/");
+  if (!isApiRoute) {
+    if (!portalId) {
+      const headerPortalId = request.headers.get("x-portal-id");
+      if (headerPortalId && isValidUUID(headerPortalId)) {
+        portalId = headerPortalId;
+      }
     }
-  }
-  if (!portalSlug) {
-    const headerPortalSlug = request.headers.get("x-portal-slug");
-    if (headerPortalSlug) {
-      portalSlug = headerPortalSlug.trim();
+    if (!portalSlug) {
+      const headerPortalSlug = request.headers.get("x-portal-slug");
+      if (headerPortalSlug && isValidPortalSlug(headerPortalSlug)) {
+        portalSlug = headerPortalSlug.trim();
+      }
     }
   }
 
@@ -75,7 +80,7 @@ export async function resolvePortalId(request: NextRequest): Promise<string | nu
     }
     if (!portalSlug) {
       const queryPortalSlug = url.searchParams.get("portal");
-      if (queryPortalSlug) {
+      if (queryPortalSlug && isValidPortalSlug(queryPortalSlug)) {
         portalSlug = queryPortalSlug.trim();
       }
     }

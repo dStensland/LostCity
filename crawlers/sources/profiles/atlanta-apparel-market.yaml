@@ -1,0 +1,21 @@
+version: 1
+slug: atlanta-apparel-market
+name: "Atlanta Apparel Market"
+integration_method: playwright
+defaults:
+  venue_name: "Atlanta Apparel Market"
+discovery:
+  enabled: true
+  type: html
+  urls:
+    - "https://www.atlanta-apparel.com"
+  fetch:
+    render_js: true
+detail:
+  enabled: true
+  fetch:
+    render_js: true
+data_goals:
+  - events
+  - images
+  - tickets

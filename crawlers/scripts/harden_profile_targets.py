@@ -253,15 +253,27 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Hardening run for profile-backed crawler targets")
     parser.add_argument("--top10", action="store_true", help="Run top-10 wave")
     parser.add_argument("--all", action="store_true", help="Run all-56 wave")
+    parser.add_argument("--slugs", type=str, help="Comma-separated custom slug list")
     parser.add_argument("--activate-nonzero", action="store_true", help="Activate non-zero dry-run sources")
     parser.add_argument("--limit", type=int, default=20, help="run_profile limit parameter")
     parser.add_argument("--timeout-seconds", type=int, default=75, help="Per-source timeout")
     args = parser.parse_args()
 
-    if not args.top10 and not args.all:
-        parser.error("Choose one: --top10 or --all")
+    custom_slugs: list[str] = []
+    if args.slugs:
+        custom_slugs = [s.strip() for s in args.slugs.split(",") if s.strip()]
 
-    slugs = TOP10_SLUGS if args.top10 else ALL56_SLUGS
+    selected_waves = int(bool(args.top10)) + int(bool(args.all)) + int(bool(custom_slugs))
+    if selected_waves != 1:
+        parser.error("Choose exactly one: --top10, --all, or --slugs")
+
+    if custom_slugs:
+        slugs = custom_slugs
+        wave = f"custom{len(slugs)}"
+    else:
+        slugs = TOP10_SLUGS if args.top10 else ALL56_SLUGS
+        wave = "top10" if args.top10 else "all56"
+
     limit = args.limit if args.limit > 0 else None
     client = get_client()
 
@@ -278,7 +290,6 @@ def main() -> None:
         )
 
     now = datetime.now().strftime("%Y%m%d_%H%M%S")
-    wave = "top10" if args.top10 else "all56"
     report_name = f"profile_hardening_{wave}_{now}.csv"
     report_path = _write_report(results, report_name)
 

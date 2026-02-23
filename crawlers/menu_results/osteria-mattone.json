@@ -1,0 +1,55 @@
+{
+  "venue_id": 1290,
+  "venue_slug": "osteria-mattone",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Agnolotti Di Oxo",
+        "price": "$29",
+        "category": "entree"
+      },
+      {
+        "name": "Osso Buco di Agnello",
+        "price": "$42",
+        "category": "entree"
+      },
+      {
+        "name": "Pizza Al Mattone",
+        "price": "$24",
+        "category": "entree"
+      },
+      {
+        "name": "Arancini Alla 'Nduja",
+        "price": "$14",
+        "category": "appetizer"
+      },
+      {
+        "name": "Torta Al Cioccolato",
+        "price": "$14",
+        "category": "dessert"
+      }
+    ],
+    "dietary_options": [
+      "gluten-free-options"
+    ],
+    "price_level": 3,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

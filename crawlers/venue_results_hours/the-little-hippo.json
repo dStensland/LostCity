@@ -1,0 +1,28 @@
+{
+  "venue_id": 2102,
+  "venue_slug": "the-little-hippo",
+  "meta": {
+    "og_image": "http://static1.squarespace.com/static/65a84b1f7f33d269272b78f2/t/66ef2d23bbfb151c49686520/1726950691466/the-little-hippo_id-graphics-03.png?format=1500w",
+    "meta_description": null,
+    "reservation_links": [],
+    "menu_links": ["http://thelittlehippoavondale.com/menus"],
+    "instagram": "thelittlehippoavondale",
+    "facebook_url": null,
+    "phone": "(404) 941-9763"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["casual", "outdoor-seating", "counter-service", "patio", "craft-cocktails"],
+    "cuisine": ["american", "deli"],
+    "service_style": "counter-service",
+    "price_level": "$$",
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": "(404) 941-9763",
+    "instagram": "thelittlehippoavondale",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

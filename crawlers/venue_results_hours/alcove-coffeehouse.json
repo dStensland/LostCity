@@ -1,0 +1,28 @@
+{
+  "venue_id": 4631,
+  "venue_slug": "alcove-coffeehouse",
+  "meta": {
+    "og_image": null,
+    "meta_description": "Alcove Coffeehouse a charming cafe with a lakeview",
+    "reservation_links": [],
+    "menu_links": [],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": "(770) 979-3030"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["cozy", "neighborhood-bar", "casual"],
+    "cuisine": ["coffee"],
+    "service_style": "cafe",
+    "price_level": 1,
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": "(770) 979-3030",
+    "instagram": null,
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

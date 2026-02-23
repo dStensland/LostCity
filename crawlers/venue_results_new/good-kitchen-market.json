@@ -1,0 +1,45 @@
+{
+  "venue_id": 4899,
+  "venue_slug": "good-kitchen-market",
+  "meta": {
+    "og_image": "https://static-content.owner.com/funnel/images/d126bc75-38cd-49dc-9396-2f7facb6ae81?v=8962055554",
+    "meta_description": "Good Kitchen Official Website. Save Money Ordering Directly Here. Healthy Options. Fast Service. Friendly Team. Top Rated.",
+    "reservation_links": [],
+    "menu_links": [
+      "https://goodkitchenandmarket.com/goodkitchenmarketmarietta?utm_source=google/menu/goodkitchenmarketmarietta"
+    ],
+    "instagram": "goodkitchensmyrna",
+    "facebook_url": "https://www.facebook.com/profile.php",
+    "phone": "(678) 653-9129"
+  },
+  "extracted": {
+    "hours": {
+      "mon": {"open": "08:00", "close": "20:00"},
+      "tue": {"open": "08:00", "close": "20:00"},
+      "wed": {"open": "08:00", "close": "20:00"},
+      "thu": {"open": "08:00", "close": "20:00"},
+      "fri": {"open": "08:00", "close": "20:00"},
+      "sat": {"open": "08:00", "close": "20:00"},
+      "sun": {"open": "08:00", "close": "15:00"}
+    },
+    "vibes": ["casual", "family-friendly", "outdoor-seating", "counter-service"],
+    "cuisine": ["american", "brunch_breakfast", "coffee"],
+    "service_style": "fast_casual",
+    "price_level": 2,
+    "menu_highlights": [
+      {"name": "Carnivore Bowl", "price": "$19.00", "category": "entree"},
+      {"name": "Thai Stir Fry Bowl", "price": "$17.00", "category": "entree"},
+      {"name": "Double Loaded Avocado Toast", "price": "$16.75", "category": "entree"},
+      {"name": "Birria Tacos", "price": "$22.00", "category": "entree"},
+      {"name": "Churro Latte", "price": "$5.75", "category": "cocktail"}
+    ],
+    "menu_url": "https://goodkitchenandmarket.com/goodkitchenmarketmarietta?utm_source=google/menu/goodkitchenmarketmarietta",
+    "reservation_url": null,
+    "phone": "(678) 653-9129",
+    "instagram": "goodkitchensmyrna",
+    "dietary_options": ["vegetarian-friendly", "vegan-options", "gluten-free-options", "allergy-aware"],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

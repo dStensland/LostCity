@@ -1,0 +1,21 @@
+{
+  "venue_id": 1519,
+  "venue_slug": "the-legendary-kimbros",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["live-music", "cozy", "casual"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "https://www.legendarykimbros.com/menu",
+    "reservation_url": null,
+    "phone": "(615) 567-3877",
+    "instagram": null,
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

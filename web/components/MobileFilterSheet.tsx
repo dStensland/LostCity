@@ -311,7 +311,7 @@ export const MobileFilterSheet = memo(function MobileFilterSheet({
                         onClick={() => handleSetMood(mood.value)}
                         className={`min-h-[44px] px-4 py-2.5 rounded-lg font-mono text-sm font-medium transition-all ${
                           isActive
-                            ? "bg-[#7C3AED] text-[var(--cream)]"
+                            ? "bg-[var(--mood-active)] text-[var(--cream)]"
                             : "bg-[var(--twilight)] text-[var(--cream)] hover:bg-[var(--dusk)]"
                         }`}
                       >

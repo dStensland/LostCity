@@ -1,0 +1,28 @@
+{
+  "venue_id": 1515,
+  "venue_slug": "gray-dudley",
+  "meta": {
+    "og_image": "https://d375meowklgl72.cloudfront.net/wp-content/uploads/2020/03/Logo.svg",
+    "meta_description": null,
+    "reservation_links": [],
+    "menu_links": [],
+    "instagram": "lifeatgray",
+    "facebook_url": "https://www.facebook.com/lifeatgray",
+    "phone": "(770) 672-0873"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": [],
+    "cuisine": [],
+    "service_style": null,
+    "price_level": null,
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": "(770) 672-0873",
+    "instagram": "lifeatgray",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

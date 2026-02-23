@@ -48,7 +48,7 @@ const VARIANT_STYLES: Record<FilterChipVariant, { active: string; inactive: stri
   },
   vibe: {
     inactive: "border-[var(--twilight)] text-[var(--muted)] hover:text-[#A78BFA] hover:border-[#A78BFA]/50",
-    active: "bg-[#7C3AED] text-[var(--cream)] border-[#7C3AED]",
+    active: "bg-[var(--mood-active)] text-[var(--cream)] border-[var(--mood-active)]",
     glowClass: "chip-glow-vibe",
   },
   access: {

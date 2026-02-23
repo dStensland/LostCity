@@ -1,0 +1,38 @@
+{
+  "venue_id": 4858,
+  "venue_slug": "kang-nam",
+  "meta": {
+    "og_image": null,
+    "meta_description": null,
+    "reservation_links": [
+      "https://www.kangnamjapanese.com"
+    ],
+    "menu_links": [
+      "https://www.kangnamjapanese.com/menu"
+    ],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": "(770) 455-3464"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["casual", "family-friendly", "good-for-groups"],
+    "cuisine": ["japanese", "korean"],
+    "service_style": "full_service",
+    "price_level": 3,
+    "menu_highlights": [
+      {"name": "Kang Nam Sashimi", "price": null, "category": "entree"},
+      {"name": "V.I.P Sashimi (Flounder + Lobster)", "price": null, "category": "entree"},
+      {"name": "Chicken Teriyaki", "price": null, "category": "entree"},
+      {"name": "Sashimi & Sushi Combo", "price": null, "category": "entree"}
+    ],
+    "menu_url": "https://www.kangnamjapanese.com/menu",
+    "reservation_url": "https://www.kangnamjapanese.com",
+    "phone": "(770) 455-3464",
+    "instagram": null,
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

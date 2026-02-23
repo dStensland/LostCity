@@ -1,0 +1,28 @@
+{
+  "venue_id": 1681,
+  "venue_slug": "tin-lizzys-buckhead",
+  "meta": {
+    "og_image": null,
+    "meta_description": "Combining flavorful food and made-to-order cocktails with chill vibes is where we thrive. Let us take your tastebuds on vacation.",
+    "reservation_links": [],
+    "menu_links": ["https://tinlizzysatl.com/menu/"],
+    "instagram": "tinlizzyscantina",
+    "facebook_url": "https://www.facebook.com/TinLizzysCantinaATL",
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["casual", "lively", "happy-hour", "good-for-groups"],
+    "cuisine": ["mexican", "tex_mex"],
+    "service_style": "full-service",
+    "price_level": "$$",
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "tinlizzyscantina",
+    "dietary_options": ["gluten-free", "vegetarian"],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

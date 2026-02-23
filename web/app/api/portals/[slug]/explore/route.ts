@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createPortalScopedClient } from "@/lib/supabase/server";
 import { getPortalBySlug } from "@/lib/portal";
 import { getLocalDateString } from "@/lib/formats";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
@@ -28,6 +28,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: "Portal not found" }, { status: 404 });
     }
 
+    const portalClient = await createPortalScopedClient(portal.id);
     const today = getLocalDateString();
 
     // Collect all venue types mapped by explore categories
@@ -104,7 +105,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     // Fetch upcoming event counts per venue (single query, portal-scoped)
     const venueIds = venueRows.map((v) => v.id);
-    let eventCountsQuery = supabase
+    let eventCountsQuery = portalClient
       .from("events")
       .select("venue_id, id, title, start_date")
       .in("venue_id", venueIds)

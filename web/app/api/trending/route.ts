@@ -1,9 +1,15 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createPortalScopedClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { format, startOfDay, addDays } from "date-fns";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
-import { applyPortalScopeToQuery, filterByPortalCity } from "@/lib/portal-scope";
+import {
+  applyPortalScopeToQuery,
+  filterByPortalCity,
+  parsePortalContentFilters,
+  applyPortalCategoryFilters,
+  filterByPortalContentScope,
+} from "@/lib/portal-scope";
 import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
 
 const TRENDING_CACHE_TTL_MS = 60 * 1000;
@@ -31,9 +37,12 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
     }
+    const portalClient = await createPortalScopedClient(portalContext.portalId);
+    const portalContentFilters = parsePortalContentFilters(portalContext.filters as Record<string, unknown> | null);
     const cacheKey = [
       portalContext.portalId || "no-portal",
       portalContext.filters.city || "all-cities",
+      JSON.stringify(portalContentFilters),
     ].join("|");
     const payload = await getOrSetSharedCacheJson<{ events: unknown[] }>(
       TRENDING_CACHE_NAMESPACE,
@@ -43,7 +52,7 @@ export async function GET(request: NextRequest) {
         const portalCity = portalContext.filters.city || "Atlanta";
 
         // Get upcoming events this week
-        let eventsQuery = supabase
+        let eventsQuery = portalClient
           .from("events")
           .select(`
         id,
@@ -55,6 +64,7 @@ export async function GET(request: NextRequest) {
         is_all_day,
         is_free,
         category,
+        tags,
         image_url,
         series_id,
         series:series_id(
@@ -67,7 +77,7 @@ export async function GET(request: NextRequest) {
           day_of_week,
           festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
         ),
-        venue:venues(id, name, slug, neighborhood, city, location_designator)
+        venue:venues(id, name, slug, neighborhood, city, lat, lng, location_designator)
       `)
           .gte("start_date", today)
           .lte("start_date", weekFromNow)
@@ -82,6 +92,8 @@ export async function GET(request: NextRequest) {
           publicOnlyWhenNoPortal: true,
         });
 
+        eventsQuery = applyPortalCategoryFilters(eventsQuery, portalContentFilters);
+
         const { data: eventsRaw } = await eventsQuery as { data: Array<{
             id: number;
             title: string;
@@ -92,6 +104,7 @@ export async function GET(request: NextRequest) {
             is_all_day: boolean;
             is_free: boolean;
             category: string | null;
+            tags?: string[] | null;
             image_url: string | null;
             series_id?: string | null;
             series?: {
@@ -118,6 +131,8 @@ export async function GET(request: NextRequest) {
               slug: string;
               neighborhood: string | null;
               city?: string | null;
+              lat?: number | null;
+              lng?: number | null;
               location_designator?:
                 | "standard"
                 | "private_after_signup"
@@ -127,9 +142,10 @@ export async function GET(request: NextRequest) {
             } | null;
           }> | null };
 
-        const events = filterByPortalCity(eventsRaw || [], portalCity, {
+        const cityFiltered = filterByPortalCity(eventsRaw || [], portalCity, {
           allowMissingCity: true,
         });
+        const events = filterByPortalContentScope(cityFiltered, portalContentFilters);
 
         if (!events || events.length === 0) {
           return { events: [] };

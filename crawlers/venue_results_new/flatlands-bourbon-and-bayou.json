@@ -1,0 +1,37 @@
+{
+  "venue_id": 4890,
+  "venue_slug": "flatlands-bourbon-and-bayou",
+  "meta": {
+    "og_image": "https://popmenucloud.com/cdn-cgi/image/width=1200,height=630,format=auto,fit=cover/tsbnyvma/ab6b3e34-17bd-433a-9eae-b9a55093879c",
+    "meta_description": "Flatlands Bourbon and Bayou in Alpharetta, GA. Call us at (470) 242-5458. Check out our location and hours, and latest menu with photos and reviews.",
+    "reservation_links": [],
+    "menu_links": [
+      "https://www.flatlands52.com/menu"
+    ],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": "(470) 242-5458"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["lively", "good-for-groups", "casual", "craft-cocktails"],
+    "cuisine": ["cajun_creole", "southern"],
+    "service_style": "full_service",
+    "price_level": 3,
+    "menu_highlights": [
+      {"name": "Alligator Bites", "price": "$17.67", "category": "appetizer"},
+      {"name": "New Orleans BBQ Shrimp", "price": "$16.89", "category": "appetizer"},
+      {"name": "Hot Crab Dip", "price": "$15.59", "category": "appetizer"},
+      {"name": "Fried Goat Cheese", "price": "$14.55", "category": "appetizer"},
+      {"name": "Catfish Nuggets", "price": "$15.59", "category": "appetizer"}
+    ],
+    "menu_url": "https://www.flatlands52.com/menu",
+    "reservation_url": null,
+    "phone": "(470) 242-5458",
+    "instagram": null,
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "venue_id": 3365,
+  "venue_slug": "paris-baguette",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Salted Caramel Pretzel Supreme Croissant",
+        "price": null,
+        "category": "dessert"
+      },
+      {
+        "name": "Strawberry Soft Cream Cake",
+        "price": null,
+        "category": "dessert"
+      },
+      {
+        "name": "King Cream Donut",
+        "price": null,
+        "category": "dessert"
+      },
+      {
+        "name": "Pink Velvet Macchiato",
+        "price": null,
+        "category": "cocktail"
+      },
+      {
+        "name": "Sourdough Turkey Melt",
+        "price": null,
+        "category": "entree"
+      }
+    ],
+    "dietary_options": [
+      "vegan-options",
+      "gluten-free-options"
+    ],
+    "price_level": 1,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "venue_id": 4858,
+  "venue_slug": "kang-nam",
+  "meta": {
+    "og_image": null,
+    "meta_description": null,
+    "reservation_links": [
+      "https://www.kangnamjapanese.com"
+    ],
+    "menu_links": [
+      "https://www.kangnamjapanese.com/menu"
+    ],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": "(770) 455-3464"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["casual"],
+    "cuisine": ["japanese", "sushi", "korean"],
+    "service_style": "full_service",
+    "price_level": 2,
+    "menu_highlights": null,
+    "reservation_url": "https://www.kangnamjapanese.com",
+    "phone": "(770) 455-3464",
+    "instagram": null,
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

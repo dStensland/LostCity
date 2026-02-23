@@ -1,0 +1,45 @@
+{
+  "venue_id": 4910,
+  "venue_slug": "gracious-plenty-bakery-breakfast",
+  "meta": {
+    "og_image": "https://cdn.prod.website-files.com/63eab9ae6e50c9f801ea735c/63eabf80fb46226c388fd68d_gp%20-%20img%204.jpg",
+    "meta_description": "Local, seasonal southern cooking prepared in a classically trained kitchen. Our team, led by Roswell locals, is committed to serving our community by sourcing ingredients from Roswell-area farms and serving in a space where all are welcome. Delicious breakfast and brunch option in metro Atlanta.",
+    "reservation_links": [],
+    "menu_links": [
+      "https://www.graciousplentybb.com/menu"
+    ],
+    "instagram": "graciousplentybb",
+    "facebook_url": "https://www.facebook.com/GraciousPlentyBB",
+    "phone": "(678) 878-3105"
+  },
+  "extracted": {
+    "hours": {
+      "mon": {"open": "08:00", "close": "14:30"},
+      "tue": null,
+      "wed": null,
+      "thu": {"open": "08:00", "close": "14:30"},
+      "fri": {"open": "08:00", "close": "14:30"},
+      "sat": {"open": "08:00", "close": "14:30"},
+      "sun": {"open": "08:00", "close": "14:30"}
+    },
+    "vibes": ["casual", "cozy", "family-friendly", "neighborhood-bar"],
+    "cuisine": ["southern", "brunch_breakfast", "bakery"],
+    "service_style": "casual_dine_in",
+    "price_level": 2,
+    "menu_highlights": [
+      {"name": "Bruce's Plate", "price": "$16.50", "category": "entree"},
+      {"name": "Biscuit & Gravy", "price": "$9.00", "category": "entree"},
+      {"name": "Southern Burga'", "price": "$13.00", "category": "entree"},
+      {"name": "Philly Cheesesteak", "price": "$16.00", "category": "entree"},
+      {"name": "Monkey Bread", "price": "$4.00", "category": "dessert"}
+    ],
+    "menu_url": "https://www.graciousplentybb.com/menu",
+    "reservation_url": null,
+    "phone": "(678) 878-3105",
+    "instagram": "graciousplentybb",
+    "dietary_options": ["vegetarian-friendly"],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

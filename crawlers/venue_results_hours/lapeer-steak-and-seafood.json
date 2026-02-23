@@ -1,0 +1,34 @@
+{
+  "venue_id": 4889,
+  "venue_slug": "lapeer-steak-and-seafood",
+  "meta": {
+    "og_image": "https://framerusercontent.com/images/tXHbe5hcUm1drXJCLR005Uppzw8.png",
+    "meta_description": "Lapeer Steak & Seafood is a chef inspired coastal concept. ",
+    "reservation_links": [],
+    "menu_links": [],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": [
+      "upscale",
+      "date-spot"
+    ],
+    "cuisine": [
+      "steakhouse",
+      "seafood"
+    ],
+    "service_style": "full-service",
+    "price_level": null,
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": null,
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

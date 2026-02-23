@@ -1,0 +1,28 @@
+{
+  "venue_id": 480,
+  "venue_slug": "crystal-lake-golf-club",
+  "meta": {
+    "og_image": null,
+    "meta_description": "Looking for the right place to play? Look no further, with great membership rates and open to the public, The Green Valley Golf Group has it all!",
+    "reservation_links": [],
+    "menu_links": [],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": "(770) 471-3233"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["outdoor-seating"],
+    "cuisine": ["american"],
+    "service_style": "full_service",
+    "price_level": null,
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": "(770) 471-3233",
+    "instagram": null,
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": ["free-parking"]
+  }
+}

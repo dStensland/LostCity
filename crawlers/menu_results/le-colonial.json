@@ -1,0 +1,57 @@
+{
+  "venue_id": 1166,
+  "venue_slug": "le-colonial",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Bo Luc Lac (Shaking Beef)",
+        "price": null,
+        "category": "entree"
+      },
+      {
+        "name": "Pho Bo (Hanoi Beef Noodle Soup)",
+        "price": null,
+        "category": "entree"
+      },
+      {
+        "name": "Spicy Yellowfin Tuna Tartare",
+        "price": null,
+        "category": "appetizer"
+      },
+      {
+        "name": "Lychee Martini",
+        "price": null,
+        "category": "cocktail"
+      },
+      {
+        "name": "Vanilla Creme Brulee",
+        "price": null,
+        "category": "dessert"
+      }
+    ],
+    "dietary_options": [
+      "vegetarian-friendly",
+      "vegan-options",
+      "gluten-free-options"
+    ],
+    "price_level": 3,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

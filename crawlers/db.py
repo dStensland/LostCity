@@ -18,6 +18,7 @@ from tags import VALID_CATEGORIES, VALID_VENUE_TYPES, VALID_VIBES
 from tag_inference import (
     infer_tags,
     infer_is_class,
+    infer_is_religious,
     infer_is_support_group,
     infer_genres,
 )
@@ -59,6 +60,14 @@ _SPECIALS_SOURCE_SLUGS = {
     "wrecking-bar",
 }
 _DEPRECATED_EVENT_FIELDS = ("subcategory", "subcategory_id")
+
+# Nightlife subcategories that never have real performers (participatory events).
+# Subcategories like "club", "dj", "drag" CAN have performers and are NOT skipped.
+_NIGHTLIFE_SKIP_SUBCATEGORIES = {
+    "karaoke", "trivia", "bar_event", "poker", "bingo",
+    "nightlife.karaoke", "nightlife.trivia", "nightlife.bar_event",
+    "nightlife.poker", "nightlife.bingo",
+}
 
 # ===== TITLE CASE HELPER =====
 # Python's .title() breaks on apostrophes: "JOHN'S" -> "John'S" (wrong)
@@ -1515,6 +1524,16 @@ def validate_event_title(title: str) -> bool:
     if re.match(r"^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\d+$", title, re.IGNORECASE):
         return False
 
+    # Number-prefixed weekday + date ("23Monday, February 23", "7Tue, Mar 7")
+    if re.match(
+        r"^\d{1,2}\s*(Mon|Tue|Wed|Thu|Fri|Sat|Sun|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\b"
+        r"\s*,?\s*(January|February|March|April|May|June|July|August|September|October|November|December|"
+        r"Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2}(?:,?\s+\d{4})?\s*$",
+        title,
+        re.IGNORECASE,
+    ):
+        return False
+
     # Phone numbers as titles ("404-888-4760")
     if re.match(r"^[\d\-\(\)\.\s]{7,}$", title):
         return False
@@ -1812,9 +1831,11 @@ def insert_event(
         if music_info.genres and not genres:
             genres = music_info.genres
 
-    # Parse lineup from title for event_artists population (music + comedy)
-    if event_data.get("category") in ("music", "comedy"):
-        if not event_data.get("_parsed_artists"):
+    # Parse lineup from title for event_artists population (music, comedy, nightlife)
+    if event_data.get("category") in ("music", "comedy", "nightlife"):
+        sub = (event_data.get("subcategory") or "").strip().lower()
+        skip = event_data.get("category") == "nightlife" and sub in _NIGHTLIFE_SKIP_SUBCATEGORIES
+        if not skip and not event_data.get("_parsed_artists"):
             parsed = parse_lineup_from_title(event_data.get("title", ""))
             if parsed:
                 event_data["_parsed_artists"] = parsed
@@ -1843,6 +1864,10 @@ def insert_event(
     if not is_class_flag:
         if infer_is_class(event_data, source_slug=source_slug, venue_type=venue_type):
             is_class_flag = True
+
+    # Auto-detect religious events — reclassify community→religious
+    if infer_is_religious(event_data, source_slug=source_slug, venue_type=venue_type):
+        event_data["category"] = "religious"
 
     # Auto-detect support groups — reclassify and mark sensitive
     if infer_is_support_group(event_data, source_slug=source_slug):
@@ -2151,6 +2176,55 @@ def _insert_event_record(client: Client, event_data: dict):
     return client.table("events").insert(event_data).execute()
 
 
+_GENERIC_EVENT_TITLE_RE = re.compile(
+    r"^("
+    # Day + genre: "Saturday Jazz", "Friday Blues Night"
+    r"(?:(?:mon|tue|wed|thu|fri|sat|sun)\w*\s+(?:jazz|blues|soul|funk|karaoke|r&b|dj|latin|salsa|country|rock|reggae|hip\s*hop|open\s+mic|brunch|dance|acoustic|comedy|trivia|bingo)(?:\s+(?:night|session|sessions|jam|party|hour|social|series|show|set)s?)?)"
+    r"|"
+    # Genre + day: "Jazz Saturday", "Karaoke Friday"
+    r"(?:(?:jazz|blues|soul|funk|karaoke|r&b|dj|latin|salsa|country|rock|reggae|hip\s*hop|open\s+mic|comedy|trivia|bingo)\s+(?:mon|tue|wed|thu|fri|sat|sun)\w*(?:\s+(?:night|session|sessions|jam|party|hour|social|series|show|set)s?)?)"
+    r"|"
+    # "Live Music" + optional day/night
+    r"(?:live\s+music(?:\s+(?:mon|tue|wed|thu|fri|sat|sun)\w*)?(?:\s+(?:night|session|sessions|happy\s+hour)s?)?)"
+    r"|"
+    # Holiday events
+    r"(?:(?:mardi\s+gras|new\s+year'?s?\s+eve|valentine'?s?\s+day|st\.?\s+patrick'?s?\s+day|cinco\s+de\s+mayo|halloween|christmas|nye)\s+(?:party|bash|celebration|event|gala|special|night|show|concert))"
+    r"|"
+    # Venue + day branding: "OPIUM NIGHTCLUB SATURDAYS"
+    r"(?:\w+\s+(?:nightclub|lounge|bar|club|tavern|pub)\s+(?:mon|tue|wed|thu|fri|sat|sun)\w*s?)"
+    r"|"
+    # Generic nightlife: "Ladies Night", "Industry Night Friday", "College Night"
+    r"(?:(?:ladies|industry|college|singles|vip)\s+night(?:\s+(?:mon|tue|wed|thu|fri|sat|sun)\w*)?)"
+    r"|"
+    # Activity titles: "Happy Hour", "Day Party", "Pool Party", "Bottle Service Saturday"
+    r"(?:(?:happy\s+hour|day\s+party|pool\s+party|brunch\s+party|after\s*party|bottle\s+service)(?:\s+(?:mon|tue|wed|thu|fri|sat|sun)\w*)?)"
+    r"|"
+    # Standalone participatory activities: "Karaoke Night", "Trivia", "Bingo Night", etc.
+    r"(?:(?:karaoke|trivia|bingo|poker\s+night)(?:\s+(?:night|nite|lounge|party))?)"
+    r"|"
+    # "{Day} Night" at venue: "Friday Night at X", "Saturday Night DJs"
+    r"(?:(?:mon|tue|wed|thu|fri|sat|sun)\w*\s+night(?:\s+(?:djs?|country|two-step|at\s+\w[\w\s]*?))?)"
+    r"|"
+    # "{Genre/theme} Night/Nite" without day-of-week: "Salsa Night", "Drag Nite", "Emo Nite"
+    r"(?:(?:salsa|bachata|reggaeton|latin|country|emo|goth|punk|drag|r&b|hip\s*hop|dance|rock)\s+(?:night|nite)s?)"
+    r")$",
+    flags=re.IGNORECASE,
+)
+
+_DATE_SUFFIX_RE = re.compile(
+    r"\s*[-–—]\s+(?:january|february|march|april|may|june|july|august|"
+    r"september|october|november|december)\s+\d{1,2}(?:,?\s+\d{4})?\s*$",
+    flags=re.IGNORECASE,
+)
+
+_PURE_YEAR_RE = re.compile(r"^(19|20)\d{2}$")
+_MONTH_FRAGMENT_RE = re.compile(
+    r"^(?:january|february|march|april|may|june|july|august|"
+    r"september|october|november|december)(?:\s+\d{1,2})?$",
+    flags=re.IGNORECASE,
+)
+
+
 def parse_lineup_from_title(title: str) -> list[dict]:
     """Parse artist lineup from event title.
 
@@ -2181,18 +2255,40 @@ def parse_lineup_from_title(title: str) -> list[dict]:
         return bool(
             re.search(
                 r"(open mic|comedy night|home game|suite|suites|"
-                r"parking|ticket package|presented by)",
+                r"parking|ticket package|presented by|"
+                r"nightclub\s+(?:mon|tue|wed|thu|fri|sat|sun)\w*|"
+                r"(?:mon|tue|wed|thu|fri|sat|sun)\w*\s+night\s+party|"
+                r"(?:running|book|wine|supper)\s+club|"
+                # Nightlife boilerplate
+                r"ladies\s+night|industry\s+night|bottle\s+service|vip\s+night|"
+                r"day\s+party|pool\s+party|brunch\s+party|after\s*party|happy\s+hour|"
+                # Participatory activities — word alone is strong enough signal
+                r"\bkaraoke\b|\btrivia\b|\bbingo\b|\bpoker\s+night\b|"
+                r"\bbowling\b|\bcurling\b|"
+                # Comedy/improv boilerplate
+                r"\bimprov\w*\b|sketch\s+show|"
+                r"comedy\s+(?:workshop|showcase)|stand-?up\s+showcase)",
                 value,
                 flags=re.IGNORECASE,
             )
         )
 
-    parsed_entries = dedupe_artist_entries(split_lineup_text_with_roles(title))
+    # --- Pre-processing: reject generic event titles outright ---
+    cleaned_title = title.strip()
+    if _GENERIC_EVENT_TITLE_RE.match(cleaned_title):
+        return []
+
+    # Strip trailing date suffix before parsing
+    cleaned_title = _DATE_SUFFIX_RE.sub("", cleaned_title).strip()
+    if not cleaned_title:
+        return []
+
+    parsed_entries = dedupe_artist_entries(split_lineup_text_with_roles(cleaned_title))
 
     # If the parser only captured the full title, try a stronger headliner extraction pass.
     if len(parsed_entries) == 1:
         only_name = str(parsed_entries[0].get("name") or "").strip()
-        headliner = extract_artist_from_title(title)
+        headliner = extract_artist_from_title(cleaned_title)
         if (
             headliner
             and _normalize(headliner)
@@ -2202,7 +2298,7 @@ def parse_lineup_from_title(title: str) -> list[dict]:
 
     if not parsed_entries:
         # Fallback: single artist extraction (removes tour names, prefixes, etc.)
-        headliner = extract_artist_from_title(title)
+        headliner = extract_artist_from_title(cleaned_title)
         if headliner:
             parsed_entries = [{"name": headliner, "role": "headliner"}]
 
@@ -2222,6 +2318,14 @@ def parse_lineup_from_title(title: str) -> list[dict]:
             continue
         if len(name) < 4 and " " not in name:
             continue
+        # Reject pure year numbers (e.g. "2026") and bare month fragments
+        if _PURE_YEAR_RE.match(name):
+            continue
+        if _MONTH_FRAGMENT_RE.match(name):
+            continue
+        # Activity words are never real performers — reject unconditionally
+        if re.search(r"\bkaraoke\b|\btrivia\b|\bbingo\b|\bimprov\w*\b", name, re.IGNORECASE):
+            continue
         normalized_name = _normalize(name)
         is_title_mirror = bool(
             normalized_title and normalized_name and normalized_name == normalized_title
@@ -2233,7 +2337,7 @@ def parse_lineup_from_title(title: str) -> list[dict]:
         filtered_entries.append({"name": name, "role": entry.get("role")})
 
     if not filtered_entries:
-        fallback = extract_artist_from_title(title)
+        fallback = extract_artist_from_title(cleaned_title)
         if (
             fallback
             and fallback.lower() not in _ARTIST_BLOCKLIST
@@ -2279,7 +2383,12 @@ _PARTICIPANT_DESCRIPTOR_RE = re.compile(
 )
 
 _PARTICIPANT_BOILERPLATE_RE = re.compile(
-    r"(open mic|comedy night|home game|suite|suites|parking|ticket package|item voucher|voucher|presented by)",
+    r"(open mic|comedy night|home game|suite|suites|parking|ticket package|item voucher|voucher|presented by|"
+    r"ladies\s+night|industry\s+night|bottle\s+service|vip\s+night|"
+    r"day\s+party|pool\s+party|brunch\s+party|after\s*party|happy\s+hour|"
+    r"\bkaraoke\b|\btrivia\b|\bbingo\b|\bpoker\s+night\b|\bbowling\b|\bcurling\b|"
+    r"\bimprov\w*\b|sketch\s+show|"
+    r"comedy\s+(?:workshop|showcase)|stand-?up\s+showcase)",
     flags=re.IGNORECASE,
 )
 
@@ -2394,7 +2503,7 @@ def sanitize_event_artists(
             }
         )
 
-    if not raw_cleaned:
+    if not raw_cleaned and category not in {"music", "comedy", "nightlife", "sports"}:
         return []
 
     raw_cleaned.sort(
@@ -2476,7 +2585,7 @@ def sanitize_event_artists(
                 }
             )
 
-    if not filtered and category in {"music", "comedy"}:
+    if not filtered and category in {"music", "comedy", "nightlife"}:
         filtered = parse_lineup_from_title(title)
 
     if not filtered:
@@ -2670,24 +2779,51 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
         updates["title"] = incoming_title
 
     if not updates:
-        return False
+        # Even if no field updates, still check for missing artists below
+        pass
 
-    if not writes_enabled():
-        _log_write_skip(f"update events id={event_id} (smart update)")
-        return True
+    if updates:
+        if not writes_enabled():
+            _log_write_skip(f"update events id={event_id} (smart update)")
+        else:
+            try:
+                client = get_client()
+                _update_event_record(client, event_id, updates)
+                updated_fields = list(updates.keys())
+                logger.info(
+                    f"Smart-updated event {event_id}: {', '.join(updated_fields)} "
+                    f"for '{existing_title[:50]}'"
+                )
+            except Exception as e:
+                logger.error(f"Failed to smart-update event {event_id}: {e}")
+                return False
 
-    try:
-        client = get_client()
-        _update_event_record(client, event_id, updates)
-        updated_fields = list(updates.keys())
-        logger.info(
-            f"Smart-updated event {event_id}: {', '.join(updated_fields)} "
-            f"for '{existing_title[:50]}'"
-        )
-        return True
-    except Exception as e:
-        logger.error(f"Failed to smart-update event {event_id}: {e}")
-        return False
+    # --- Backfill event_artists if missing (music/comedy/nightlife) ---
+    category = existing.get("category") or incoming.get("category") or ""
+    sub = (incoming.get("subcategory") or existing.get("subcategory") or "").strip().lower()
+    _skip_nightlife = category == "nightlife" and sub in _NIGHTLIFE_SKIP_SUBCATEGORIES
+    if category in ("music", "comedy", "nightlife") and not _skip_nightlife:
+        try:
+            client = get_client()
+            has_artists = (
+                client.table("event_artists")
+                .select("id")
+                .eq("event_id", event_id)
+                .limit(1)
+                .execute()
+            )
+            if not has_artists.data:
+                title = incoming.get("title") or existing.get("title") or ""
+                parsed = parse_lineup_from_title(title)
+                if parsed:
+                    upsert_event_artists(event_id, parsed)
+                    logger.debug(
+                        f"Backfilled {len(parsed)} artist(s) on update for event {event_id}"
+                    )
+        except Exception as e:
+            logger.debug(f"Artist backfill on update failed for event {event_id}: {e}")
+
+    return bool(updates)
 
 
 def upsert_event_artists(

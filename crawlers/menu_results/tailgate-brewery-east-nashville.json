@@ -1,0 +1,32 @@
+{
+  "venue_id": 1636,
+  "venue_slug": "tailgate-brewery-east-nashville",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {"name": "Garlic Knockers", "price": "$11.99", "category": "appetizer"},
+      {"name": "Spicy Feta Dip", "price": "$10.99", "category": "appetizer"},
+      {"name": "Traditional Wings", "price": "$15.99", "category": "appetizer"},
+      {"name": "Cream Cheese Stuffed Pretzel", "price": "$12.99", "category": "appetizer"}
+    ],
+    "dietary_options": ["allergy-aware"],
+    "price_level": 1,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

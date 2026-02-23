@@ -1,0 +1,21 @@
+{
+  "venue_id": 1638,
+  "venue_slug": "smith-lentz-brewing",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["patio", "dog-friendly", "casual", "family-friendly"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "smithandlentzbeer",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

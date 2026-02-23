@@ -1,0 +1,21 @@
+{
+  "venue_id": 993,
+  "venue_slug": "metalsome-live-band-karaoke",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["karaoke", "live-music"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": null,
+    "reservation_url": null,
+    "phone": "(404) 538-0130",
+    "instagram": "metalsomekaraoke",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "venue_id": 1844,
+  "venue_slug": "3rd-and-lindsley",
+  "meta": {
+    "og_image": null,
+    "meta_description": null,
+    "reservation_links": [],
+    "menu_links": [
+      "https://www.3rdandlindsley.com/menus/"
+    ],
+    "instagram": "3rdandlindsley",
+    "facebook_url": "https://www.facebook.com/3rdlindsley",
+    "phone": "(615) 259-9891"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["live-music", "lively", "good-for-groups"],
+    "cuisine": ["american"],
+    "service_style": "full_service",
+    "price_level": 2,
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": "(615) 259-9891",
+    "instagram": "3rdandlindsley",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "venue_id": 3844,
+  "venue_slug": "brick-and-mortar",
+  "meta": {
+    "og_image": "http://thisisbrickandmortar.com/cdn/shop/files/B_M_Logo_RGBHorizontal_Reversed_4x_cd9f73fa-af68-426e-999d-cc56eab7bb2f.png?height=628&pad_color=3c4330&v=1654190616&width=1200",
+    "meta_description": "The purpose of Brick+Mortar is to create a sense of place. Everything we do, from our scents to our storefront to our jobs program, we want to create a sense of place where people feel welcomed and valued.",
+    "reservation_links": [],
+    "menu_links": [],
+    "instagram": "thisisbrickandmortar",
+    "facebook_url": "https://www.facebook.com/thisisbrickandmortar",
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["artsy", "cozy"],
+    "cuisine": [],
+    "service_style": null,
+    "price_level": null,
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "thisisbrickandmortar",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

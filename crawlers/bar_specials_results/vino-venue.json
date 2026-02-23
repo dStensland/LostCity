@@ -1,0 +1,21 @@
+{
+  "venue_id": 1202,
+  "venue_slug": "vino-venue",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["wine-bar", "date-night", "upscale"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "https://vinovenue.com/pages/wine-menu",
+    "reservation_url": null,
+    "phone": "(770) 668-0435",
+    "instagram": "vinovenue",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

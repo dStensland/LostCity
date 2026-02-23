@@ -104,6 +104,8 @@ export type FeedEventData = {
   price_max: number | null;
   category: string | null;
   subcategory?: string | null;
+  tags?: string[] | null;
+  genres?: string[] | null;
   image_url: string | null;
   blurhash?: string | null;
   description: string | null;
@@ -1152,7 +1154,7 @@ function getUnifiedMetadata(
 // ============================================
 
 interface GridEventCardProps {
-  event: FeedEventData;
+  event: FeedEventData & { contextual_label?: string };
   isCarousel?: boolean;
   portalSlug?: string;
 }
@@ -1188,8 +1190,13 @@ export const GridEventCard = memo(function GridEventCard({
     >
       {/* Content */}
       <div className="flex-1 p-3">
-        {/* Popular badge */}
+        {/* Popular badge + contextual label */}
         <div className="flex items-center gap-2 mb-1.5">
+          {(event as FeedEventData & { contextual_label?: string }).contextual_label && (
+            <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[0.56rem] font-mono font-medium text-[var(--neon-cyan)] bg-[var(--neon-cyan)]/10 border border-[var(--neon-cyan)]/25">
+              {(event as FeedEventData & { contextual_label?: string }).contextual_label}
+            </span>
+          )}
           {isPopular && (
             <span className="ml-auto flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[var(--coral)] text-[var(--void)] text-[0.56rem] font-mono font-medium">
               <TrendingIcon className="w-2.5 h-2.5" /> Popular
@@ -1517,20 +1524,38 @@ export const HeroEventCard = memo(function HeroEventCard({
           <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/60 to-black/30" />
         </>
       ) : (
-        <div className="absolute inset-0 bg-gradient-to-br from-[var(--twilight)] to-[var(--void)]" />
+        <>
+          {/* Category-colored mesh gradient fallback */}
+          <div
+            className="absolute inset-0"
+            style={{
+              background: `linear-gradient(135deg, var(--dusk) 0%, color-mix(in srgb, ${getCategoryColor(event.category)} 25%, var(--twilight)) 40%, color-mix(in srgb, ${getCategoryColor(event.category)} 15%, var(--void)) 100%)`,
+            }}
+          />
+          {/* Subtle dot-grid texture to break up the flat gradient */}
+          <div
+            className="absolute inset-0 opacity-40"
+            style={{
+              backgroundImage: `radial-gradient(circle at center, color-mix(in srgb, ${getCategoryColor(event.category)} 10%, transparent) 1px, transparent 1px)`,
+              backgroundSize: "24px 24px",
+            }}
+          />
+        </>
       )}
 
       {/* Content */}
       <div className="relative p-6 pt-36 sm:pt-44">
-        {/* Featured + Category badges */}
-        <div className="flex flex-wrap items-center gap-2 mb-3">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--gold)] text-[var(--void)] text-xs font-mono font-medium">
-            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-            </svg>
-            Featured
-          </span>
-        </div>
+        {/* Featured + Category badges — only show when editorially featured */}
+        {(event.is_tentpole || event.featured_blurb) && (
+          <div className="flex flex-wrap items-center gap-2 mb-3">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[var(--gold)] text-[var(--void)] text-xs font-mono font-medium">
+              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+              </svg>
+              Featured
+            </span>
+          </div>
+        )}
 
         {/* Title */}
         <h2 className="text-2xl sm:text-3xl font-semibold text-white mb-2 group-hover:text-[var(--coral)] transition-colors leading-tight">

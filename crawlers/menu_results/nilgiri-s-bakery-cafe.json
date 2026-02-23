@@ -1,0 +1,56 @@
+{
+  "venue_id": 3506,
+  "venue_slug": "nilgiri-s-bakery-cafe",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Goat Biriyani",
+        "price": "$20.68",
+        "category": "entree"
+      },
+      {
+        "name": "Paneer Butter Masala",
+        "price": "$17.58",
+        "category": "entree"
+      },
+      {
+        "name": "Chicken 65",
+        "price": "$15.51",
+        "category": "appetizer"
+      },
+      {
+        "name": "Masala Dosa",
+        "price": "$12.40",
+        "category": "entree"
+      },
+      {
+        "name": "Mango Lassi",
+        "price": "$4.13",
+        "category": "cocktail"
+      }
+    ],
+    "dietary_options": [
+      "vegetarian-friendly",
+      "vegan-options"
+    ],
+    "price_level": 2,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

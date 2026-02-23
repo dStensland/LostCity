@@ -1,0 +1,55 @@
+{
+  "venue_id": 1377,
+  "venue_slug": "apache-xlr",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Apache Chicken Alfredo",
+        "price": "$26",
+        "category": "entree"
+      },
+      {
+        "name": "Salmon Mac & Cheese",
+        "price": "$24",
+        "category": "entree"
+      },
+      {
+        "name": "Fish and Grits",
+        "price": "$20.50",
+        "category": "entree"
+      },
+      {
+        "name": "Sunday Supper Nachos",
+        "price": "$18",
+        "category": "appetizer"
+      },
+      {
+        "name": "Homemade Cheesecake",
+        "price": "$12",
+        "category": "dessert"
+      }
+    ],
+    "dietary_options": [
+      "vegetarian-friendly"
+    ],
+    "price_level": 3,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

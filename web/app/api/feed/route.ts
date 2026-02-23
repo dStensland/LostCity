@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient, getUser } from "@/lib/supabase/server";
+import { createClient, createPortalScopedClient, getUser } from "@/lib/supabase/server";
 import {
   applyRateLimit,
   RATE_LIMITS,
@@ -11,6 +11,8 @@ import { resolvePortalQueryContext } from "@/lib/portal-query-context";
 import {
   applyPortalScopeToQuery,
   filterByPortalCity,
+  filterByPortalContentScope,
+  type PortalContentFilters,
 } from "@/lib/portal-scope";
 import {
   isChainCinemaVenue,
@@ -235,11 +237,8 @@ export async function GET(request: Request) {
     }
 
     const portalId = portalContext.portalId;
-    const portalFilters: {
-      categories?: string[];
-      neighborhoods?: string[];
-      city?: string;
-    } = portalContext.filters;
+    const portalClient = await createPortalScopedClient(portalId);
+    const portalFilters = portalContext.filters;
 
     const prefsData = prefsResult.data;
 
@@ -395,7 +394,7 @@ export async function GET(request: Request) {
     // Build personalized event query - fetch broadly, score later
     // When personalized=true, we pre-filter to followed entities
     // When personalized=false, we show all events (with additional filters)
-    let query = supabase
+    let query = portalClient
       .from("events")
       .select(
         `
@@ -429,7 +428,7 @@ export async function GET(request: Request) {
         day_of_week,
         festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
       ),
-      venue:venues(id, name, neighborhood, slug, location_designator, blurhash, city)
+      venue:venues(id, name, neighborhood, slug, location_designator, blurhash, city, lat, lng)
     `,
       )
       .or(`start_date.gte.${startDateFilter},end_date.gte.${startDateFilter}`) // Include ongoing events (exhibitions with end_date)
@@ -457,6 +456,15 @@ export async function GET(request: Request) {
     // Apply portal category filters if specified (only if no explicit category filter)
     if (portalId && portalFilters.categories?.length && !categories?.length) {
       query = query.in("category", portalFilters.categories);
+    }
+
+    // Exclude categories from portal filters (always apply)
+    if (portalId && portalFilters.exclude_categories?.length) {
+      query = query.not(
+        "category",
+        "in",
+        `(${portalFilters.exclude_categories.join(",")})`
+      );
     }
 
     // Apply explicit category filter
@@ -523,7 +531,7 @@ export async function GET(request: Request) {
 
     // Followed venues query
     if (followedVenueIds.length > 0) {
-      let venueQuery = supabase
+      let venueQuery = portalClient
         .from("events")
         .select(eventSelect)
         .in("venue_id", followedVenueIds)
@@ -551,7 +559,7 @@ export async function GET(request: Request) {
 
     // Followed organizations by organization_id query
     if (followedOrganizationIds.length > 0) {
-      let producerQuery = supabase
+      let producerQuery = portalClient
         .from("events")
         .select(eventSelect)
         .in("organization_id", followedOrganizationIds)
@@ -579,7 +587,7 @@ export async function GET(request: Request) {
 
     // Followed organizations by source_id query
     if (producerSourceIds.length > 0) {
-      let sourceQuery = supabase
+      let sourceQuery = portalClient
         .from("events")
         .select(eventSelect)
         .in("source_id", producerSourceIds)
@@ -610,7 +618,7 @@ export async function GET(request: Request) {
     if (favoriteNeighborhoods.length > 0) {
       // Query events with venues in favorite neighborhoods
       // We filter by joining venue data and checking neighborhood
-      let neighborhoodQuery = supabase
+      let neighborhoodQuery = portalClient
         .from("events")
         .select(`${eventSelect}, venue!inner(neighborhood)`)
         .in("venue.neighborhood", favoriteNeighborhoods)
@@ -640,7 +648,7 @@ export async function GET(request: Request) {
 
     // Category events query
     if (favoriteCategories.length > 0) {
-      let categoryQuery = supabase
+      let categoryQuery = portalClient
         .from("events")
         .select(eventSelect)
         .in("category", favoriteCategories)
@@ -873,6 +881,20 @@ export async function GET(request: Request) {
     events = filterByPortalCity(events, portalFilters.city, {
       allowMissingCity: true,
     });
+
+    // Apply portal content filters (geo, neighborhoods, tags, venue_ids, price)
+    if (portalId) {
+      const contentFilters: PortalContentFilters = {
+        neighborhoods: portalFilters.neighborhoods,
+        geo_center: portalFilters.geo_center,
+        geo_radius_km: portalFilters.geo_radius_km,
+        price_max: portalFilters.price_max,
+        venue_ids: portalFilters.venue_ids,
+        tags: portalFilters.tags,
+      };
+      events = filterByPortalContentScope(events, contentFilters);
+    }
+
     events = events.filter(
       (event) => includeExhibits || !isSuppressedFromGeneralEventFeed(event),
     );

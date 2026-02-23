@@ -1,0 +1,46 @@
+{
+  "venue_id": 4851,
+  "venue_slug": "bo-bo-garden-asian-cuisine",
+  "meta": {
+    "og_image": null,
+    "meta_description": "Order online from Bo Bo Garden, Doraville GA 30340. You are ordering direct from our store. Not a third party platform.",
+    "reservation_links": [],
+    "menu_links": [
+      "https://www.bobogardenga.com/index.php",
+      "https://www.bobogardenga.com/index.php"
+    ],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": "(678) 547-1881"
+  },
+  "extracted": {
+    "hours": {
+      "mon": {"open": "11:30", "close": "21:00"},
+      "tue": {"open": "11:30", "close": "21:00"},
+      "wed": {"open": "11:30", "close": "21:00"},
+      "thu": {"open": "11:30", "close": "21:00"},
+      "fri": {"open": "11:30", "close": "21:00"},
+      "sat": {"open": "11:30", "close": "21:00"},
+      "sun": {"open": "11:30", "close": "21:00"}
+    },
+    "vibes": ["casual", "family-friendly", "good-for-groups"],
+    "cuisine": ["chinese"],
+    "service_style": "casual_dine_in",
+    "price_level": 2,
+    "menu_highlights": [
+      {"name": "Crispy Roasted Duck", "price": null, "category": "entree"},
+      {"name": "Peking Duck", "price": null, "category": "entree"},
+      {"name": "Hong Kong Style Duck Tongue", "price": "$23.99", "category": "appetizer"},
+      {"name": "Hot Casserole Dishes", "price": null, "category": "entree"},
+      {"name": "Dim Sum", "price": null, "category": "appetizer"}
+    ],
+    "menu_url": "https://www.bobogardenga.com/index.php",
+    "reservation_url": null,
+    "phone": "(678) 547-1881",
+    "instagram": null,
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

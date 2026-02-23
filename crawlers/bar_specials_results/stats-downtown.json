@@ -1,0 +1,21 @@
+{
+  "venue_id": 654,
+  "venue_slug": "stats-downtown",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["sports-bar", "casual", "late-night"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "https://www.statsatl.com/atlanta-downtown-atlanta-stats-brewpub-food-menu",
+    "reservation_url": "https://resy.com/cities/atl/stats-brewpub",
+    "phone": "(404) 885-1472",
+    "instagram": "statsbrewpub",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

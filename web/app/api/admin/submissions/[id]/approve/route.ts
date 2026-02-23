@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, isAdmin, getUser } from "@/lib/supabase/server";
+import { isAdmin, getUser } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { isValidUUID, adminErrorResponse, checkBodySize } from "@/lib/api-utils";
 import type { EventSubmissionData, VenueSubmissionData, ProducerSubmissionData, Submission } from "@/lib/types";
@@ -38,10 +38,10 @@ export async function POST(request: NextRequest, { params }: Props) {
   }
 
   const isGlobalAdmin = await isAdmin();
-  const supabase = await createClient();
 
   // Get submission
-  const { data: submissionData, error: fetchError } = await supabase
+  const serviceClient = createServiceClient();
+  const { data: submissionData, error: fetchError } = await serviceClient
     .from("submissions")
     .select("id, portal_id, submission_type, status, data, submitted_by, created_at")
     .eq("id", id)
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest, { params }: Props) {
 
   // Check permissions
   if (!isGlobalAdmin && submission.portal_id) {
-    const { data: portalMember } = await supabase
+    const { data: portalMember } = await serviceClient
       .from("portal_members")
       .select("role")
       .eq("portal_id", submission.portal_id)
@@ -81,9 +81,6 @@ export async function POST(request: NextRequest, { params }: Props) {
   // Parse request body for any overrides
   const body = await request.json().catch(() => ({}));
   const { admin_notes } = body as { admin_notes?: string };
-
-  // Use service client to bypass RLS for creating entities
-  const serviceClient = createServiceClient();
 
   // Create the entity based on submission type
   let approvedEntityId: number | string | null = null;
@@ -160,7 +157,7 @@ export async function POST(request: NextRequest, { params }: Props) {
     updateData.approved_organization_id = approvedEntityId;
   }
 
-  const { data: updated, error: updateError } = await supabase
+  const { data: updated, error: updateError } = await serviceClient
     .from("submissions")
     .update(updateData as never)
     .eq("id", id)

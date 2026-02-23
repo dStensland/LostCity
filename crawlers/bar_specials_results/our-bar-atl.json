@@ -1,0 +1,21 @@
+{
+  "venue_id": 1001,
+  "venue_slug": "our-bar-atl",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["late-night", "live-music", "dj", "casual"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "https://www.ourbaratl.com/menus",
+    "reservation_url": null,
+    "phone": "(678) 929-8380",
+    "instagram": "ourbaratl",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

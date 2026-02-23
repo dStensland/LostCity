@@ -12,8 +12,8 @@ export async function generateMetadata({ params }: Props) {
   // Could fetch list title here for better SEO using params.slug
   void params; // Mark as intentionally unused for now
   return {
-    title: `List | Lost City`,
-    description: `Community-curated list on Lost City`,
+    title: `Curation | Lost City`,
+    description: `Community-curated guide on Lost City`,
   };
 }
 

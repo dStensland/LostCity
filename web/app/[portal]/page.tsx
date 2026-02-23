@@ -30,7 +30,6 @@ import EmoryMobileBottomNav from "./_components/hospital/EmoryMobileBottomNav";
 export const revalidate = 60;
 
 type ViewMode = "feed" | "find" | "community";
-type FeedTab = "curated" | "explore" | "foryou";
 type FindType = "events" | "classes" | "destinations" | "showtimes";
 type FindDisplay = "list" | "map" | "calendar";
 
@@ -220,13 +219,8 @@ export default async function PortalPage({ params, searchParams }: Props) {
     viewMode = "feed";
   }
 
-  // Parse sub-parameters - handle legacy "activity" tab by treating it as curated
-  let feedTab: FeedTab = "curated";
-  if (searchParamsData.tab === "explore") {
-    feedTab = "explore";
-  } else if (searchParamsData.tab === "foryou") {
-    feedTab = "foryou";
-  }
+  // feedTab only used by HospitalTemplate — legacy, always "curated"
+  const feedTab = "curated" as const;
 
   // Determine find type - support legacy view params
   // Note: "orgs" was moved to community view, redirect to events
@@ -248,11 +242,11 @@ export default async function PortalPage({ params, searchParams }: Props) {
   }
 
   // Community sub-tab - default to "people" (Your People)
-  let communityTab: "people" | "bestof" | "groups" = "people";
-  if (searchParamsData.tab === "groups") {
+  let communityTab: "people" | "groups" | "curations" = "people";
+  if (searchParamsData.tab === "curations") {
+    communityTab = "curations";
+  } else if (searchParamsData.tab === "groups") {
     communityTab = "groups";
-  } else if (searchParamsData.tab === "bestof") {
-    communityTab = "bestof";
   }
 
   // Check for active filters
@@ -352,7 +346,7 @@ export default async function PortalPage({ params, searchParams }: Props) {
                           <TimelineTemplate portal={portal} />
                         ) : (
                           /* Default template for backwards compatibility */
-                          <DefaultTemplate portal={portal} feedTab={feedTab} />
+                          <DefaultTemplate portal={portal} />
                         )
                       )}
                     </Suspense>
@@ -494,30 +488,31 @@ function FeedSkeleton({
   }
 
   return (
-    <div data-skeleton-route="feed-view" data-skeleton-vertical={skeletonVertical} className="py-6 space-y-6">
-      {/* Feed tabs skeleton */}
-      <div className="flex gap-1 p-1 bg-[var(--night)] rounded-xl border border-[var(--twilight)]/30 max-w-sm">
-        <div className="flex-1 h-10 skeleton-shimmer rounded-lg" />
-        <div className="flex-1 h-10 skeleton-shimmer rounded-lg" />
-        <div className="flex-1 h-10 skeleton-shimmer rounded-lg" />
+    <div data-skeleton-route="feed-view" data-skeleton-vertical={skeletonVertical} className="space-y-4">
+      {/* Hero skeleton — matches GreetingBar compact height */}
+      <div className="h-[200px] sm:h-[240px] rounded-2xl skeleton-shimmer" />
+      {/* Quick links skeleton */}
+      <div className="flex gap-2">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="h-10 w-24 rounded-full skeleton-shimmer shrink-0" style={{ animationDelay: `${i * 40}ms` }} />
+        ))}
       </div>
-      {/* Live now banner skeleton */}
-      <div className="h-16 skeleton-shimmer rounded-xl" />
-      {/* Tonight's picks skeleton */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 skeleton-shimmer rounded-full" />
-          <div className="space-y-2">
-            <div className="h-6 w-40 skeleton-shimmer rounded" />
-            <div className="h-3 w-32 skeleton-shimmer rounded" />
-          </div>
-        </div>
-        <div className="h-48 skeleton-shimmer rounded-xl" />
-      </div>
-      {/* Event cards skeleton */}
-      <div className="space-y-3">
+      {/* Tab bar skeleton */}
+      <div className="flex gap-4 border-b border-[var(--twilight)]/20 pb-3">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-24 skeleton-shimmer rounded-xl" />
+          <div key={i} className="h-4 w-20 skeleton-shimmer rounded" style={{ animationDelay: `${i * 50}ms` }} />
+        ))}
+      </div>
+      {/* Compact event rows skeleton */}
+      <div className="space-y-0">
+        {[1, 2, 3, 4, 5, 6].map((i) => (
+          <div key={i} className="flex items-center gap-3 py-1">
+            <div className="w-16 h-[3.75rem] skeleton-shimmer shrink-0" style={{ animationDelay: `${i * 30}ms` }} />
+            <div className="flex-1 space-y-1.5">
+              <div className="h-3.5 w-[70%] skeleton-shimmer rounded" />
+              <div className="h-3 w-[45%] skeleton-shimmer rounded" />
+            </div>
+          </div>
         ))}
       </div>
     </div>

@@ -1,0 +1,54 @@
+{
+  "venue_id": 4768,
+  "venue_slug": "the-farmhouse-at-serenbe",
+  "meta": {
+    "og_image": "https://cdn.prod.website-files.com/632814d8fc3ab30fa47bc032/632c078ba2678b3f196d365a_image.jpg",
+    "meta_description": "The Farmhouse at Serenbe, one of Atlanta's original farm-to-table restaurants, serves regional cuisine using locally grown, organic ingredients from the restaurant's own garden as well as from Serenbe Farms and other area producers.",
+    "reservation_links": [
+      "https://www.exploretock.com/the-farmhouse-at-serenbe",
+      "https://www.exploretock.com/the-farmhouse-at-serenbe",
+      "https://www.exploretock.com/the-farmhouse-at-serenbe",
+      "https://www.exploretock.com/the-farmhouse-at-serenbe",
+      "https://www.exploretock.com/the-farmhouse-at-serenbe/detail/352474/dinner-a-la-carte-seasonal-tasting-menu",
+      "https://www.exploretock.com/the-farmhouse-at-serenbe/detail/352475/weekend-fried-chicken-lunch",
+      "https://www.exploretock.com/the-farmhouse-at-serenbe/detail/390143/easter-prix-fixe-lunch",
+      "https://www.exploretock.com/the-farmhouse-at-serenbe/detail/390144/mothers-day-prix-fixe-lunch"
+    ],
+    "menu_links": [
+      "https://www.serenbe.com/press-awards/food-drink-spotlight"
+    ],
+    "instagram": "serenbefarmhouse",
+    "facebook_url": "https://www.facebook.com/SerenbeFarmhouse",
+    "phone": "(770) 463-9997"
+  },
+  "extracted": {
+    "hours": {
+      "mon": {"open": "12:00", "close": "21:00"},
+      "tue": {"open": "12:00", "close": "21:00"},
+      "wed": {"open": "12:00", "close": "21:00"},
+      "thu": {"open": "12:00", "close": "21:00"},
+      "fri": {"open": "12:00", "close": "21:00"},
+      "sat": {"open": "12:00", "close": "21:00"},
+      "sun": {"open": "12:00", "close": "21:00"}
+    },
+    "vibes": ["upscale", "date-spot", "intimate", "outdoor-seating"],
+    "cuisine": ["new_american", "southern"],
+    "service_style": "tasting_menu",
+    "price_level": 4,
+    "menu_highlights": [
+      {"name": "Bone-In Ribeye", "price": "$86", "category": "entree"},
+      {"name": "Alabama Jumbo Lump Crab Fritter", "price": "$32", "category": "appetizer"},
+      {"name": "Beef Cheek Ragu Pappardelle", "price": "$48", "category": "entree"},
+      {"name": "Buttermilk Fried Chicken", "price": "$26", "category": "entree"},
+      {"name": "February Tasting Menu", "price": "$85", "category": "entree"}
+    ],
+    "menu_url": null,
+    "reservation_url": "https://www.exploretock.com/the-farmhouse-at-serenbe",
+    "phone": "(770) 463-9997",
+    "instagram": "serenbefarmhouse",
+    "dietary_options": ["vegetarian-friendly", "gluten-free-options"],
+    "specials": [],
+    "genres": [],
+    "parking": ["free-parking"]
+  }
+}

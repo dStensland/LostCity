@@ -1,0 +1,21 @@
+{
+  "venue_id": 4897,
+  "venue_slug": "7-acre-barngrill",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["family-friendly", "patio", "outdoor-seating", "casual"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "https://www.7acrebarngrill.com/menu",
+    "reservation_url": null,
+    "phone": "(770) 777-2273",
+    "instagram": "7acrebarngrill",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

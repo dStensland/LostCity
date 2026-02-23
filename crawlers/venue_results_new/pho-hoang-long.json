@@ -1,0 +1,46 @@
+{
+  "venue_id": 4841,
+  "venue_slug": "pho-hoang-long",
+  "meta": {
+    "og_image": "https://static3.grubbio.com/39194g-albums-1.jpg",
+    "meta_description": "Discover Pho Hoang Long, a local favorite in Marietta, GA, offering authentic Vietnamese dishes like flavorful pho, delicious vermicelli noodles, and refreshing milk teas. Enjoy exceptional service and a cozy atmosphere perfect for dining in or takeout. J",
+    "reservation_links": [],
+    "menu_links": [
+      "https://grubbio.com/#build-menus",
+      "https://pho-hoang-long.grubbio.com/menu"
+    ],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": "(770) 384-0530"
+  },
+  "extracted": {
+    "hours": {
+      "mon": {"open": "11:30", "close": "20:30"},
+      "tue": null,
+      "wed": {"open": "11:30", "close": "20:30"},
+      "thu": {"open": "11:30", "close": "20:30"},
+      "fri": {"open": "11:30", "close": "20:30"},
+      "sat": {"open": "11:30", "close": "20:30"},
+      "sun": {"open": "11:30", "close": "20:00"}
+    },
+    "vibes": ["casual", "cozy", "family-friendly"],
+    "cuisine": ["vietnamese", "thai"],
+    "service_style": "casual_dine_in",
+    "price_level": 2,
+    "menu_highlights": [
+      {"name": "Pho Dac Biet (House Special Combo)", "price": "$18.95", "category": "entree"},
+      {"name": "Bun Bo Hue (Hue's Noodle Soup)", "price": "$19.95", "category": "entree"},
+      {"name": "Bun Rieu (Crab & Tomato Noodle Soup)", "price": "$19.95", "category": "entree"},
+      {"name": "Pad Thai", "price": "$18.95", "category": "entree"},
+      {"name": "Pho Tai (Rare Steak)", "price": "$17.95", "category": "entree"}
+    ],
+    "menu_url": "https://pho-hoang-long.grubbio.com/menu",
+    "reservation_url": null,
+    "phone": "(770) 384-0530",
+    "instagram": null,
+    "dietary_options": ["vegetarian-friendly", "gluten-free-options"],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

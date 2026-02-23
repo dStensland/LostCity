@@ -1,0 +1,30 @@
+{
+  "venue_id": 1707,
+  "venue_slug": "hattie-b-s",
+  "meta": {
+    "og_image": null,
+    "meta_description": "Nashville born, nationally loved. Hattie B's Hot Chicken serves authentic Nashville hot chicken across Tennessee, Georgia, Texas & more since 2012.",
+    "reservation_links": [],
+    "menu_links": [
+      "http://hattieb.com/menu"
+    ],
+    "instagram": "hattiebs",
+    "facebook_url": "https://www.facebook.com/HattieBsHotChicken",
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["casual", "lively", "fast-casual"],
+    "cuisine": ["southern", "american"],
+    "service_style": "fast_casual",
+    "price_level": 2,
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "hattiebs",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

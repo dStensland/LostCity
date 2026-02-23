@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { checkBodySize, errorResponse, parseIntParam } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { withOptionalAuth, withAuth } from "@/lib/api-middleware";
+import { resolvePortalAttributionForWrite } from "@/lib/portal-attribution";
 import { logger } from "@/lib/logger";
 
 export const GET = withOptionalAuth(async (request, { user, serviceClient }) => {
@@ -88,6 +89,14 @@ export const POST = withAuth(async (request, { user, serviceClient }) => {
     return NextResponse.json({ error: "Missing target" }, { status: 400 });
   }
 
+  const attribution = await resolvePortalAttributionForWrite(request, {
+    endpoint: "/api/recommend",
+    body,
+    requireWhenHinted: true,
+  });
+  if (attribution.response) return attribution.response;
+  const portalId = attribution.portalId;
+
   try {
     if (action === "remove") {
       let query = serviceClient
@@ -132,7 +141,7 @@ export const POST = withAuth(async (request, { user, serviceClient }) => {
         // Update existing
         let updateQuery = serviceClient
           .from("recommendations")
-          .update({ note: note || null, visibility: visibility || "public" } as never)
+          .update({ note: note || null, visibility: visibility || "public", ...(portalId ? { portal_id: portalId } : {}) } as never)
           .eq("user_id", user.id);
 
         if (eventId) {
@@ -155,6 +164,7 @@ export const POST = withAuth(async (request, { user, serviceClient }) => {
           user_id: user.id,
           note: note || null,
           visibility: visibility || "public",
+          ...(portalId ? { portal_id: portalId } : {}),
         };
 
         if (eventId) {

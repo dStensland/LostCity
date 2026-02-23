@@ -1,0 +1,28 @@
+{
+  "venue_id": 4847,
+  "venue_slug": "vietvana-pho-noodle-house",
+  "meta": {
+    "og_image": "http://static1.squarespace.com/static/679f844cb924866c2534f7aa/t/68694f85ef610e096e067b88/1751732101438/vietvana-culture-001.jpg?format=1500w",
+    "meta_description": "Discover Vietvana's authentic Vietnamese dishes, crafted with passion and tradition. Order online or visit us to enjoy true flavors and a cultural experience in Atlanta.",
+    "reservation_links": [],
+    "menu_links": ["https://vietvana.com/menu"],
+    "instagram": "vietvana",
+    "facebook_url": "https://www.facebook.com/vietvana",
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["casual", "counter-service"],
+    "cuisine": ["vietnamese"],
+    "service_style": "counter-service",
+    "price_level": "$$",
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "vietvana",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

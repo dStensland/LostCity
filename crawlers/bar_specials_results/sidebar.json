@@ -1,0 +1,23 @@
+{
+  "venue_id": 1697,
+  "venue_slug": "sidebar",
+  "meta": {
+    "note": "Website appears compromised - serving unrelated spam content. No venue data could be extracted."
+  },
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": [],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": null,
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

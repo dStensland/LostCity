@@ -4,9 +4,15 @@ import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
 
 export type PortalFilters = {
   categories?: string[];
+  exclude_categories?: string[];
   neighborhoods?: string[];
   city?: string;
   cities?: string[];
+  geo_center?: [number, number];
+  geo_radius_km?: number;
+  price_max?: number;
+  venue_ids?: number[];
+  tags?: string[];
 };
 
 export type PortalQueryContext = {
@@ -46,6 +52,9 @@ function parsePortalFilters(raw: unknown): PortalFilters {
   const categories = Array.isArray(obj.categories)
     ? obj.categories.filter((value): value is string => typeof value === "string")
     : undefined;
+  const exclude_categories = Array.isArray(obj.exclude_categories)
+    ? obj.exclude_categories.filter((value): value is string => typeof value === "string")
+    : undefined;
   const neighborhoods = Array.isArray(obj.neighborhoods)
     ? obj.neighborhoods.filter((value): value is string => typeof value === "string")
     : undefined;
@@ -54,7 +63,29 @@ function parsePortalFilters(raw: unknown): PortalFilters {
     ? obj.cities.filter((value): value is string => typeof value === "string")
     : undefined;
 
-  return { categories, neighborhoods, city, cities };
+  let geo_center: [number, number] | undefined;
+  if (Array.isArray(obj.geo_center) && obj.geo_center.length === 2) {
+    const lat = Number(obj.geo_center[0]);
+    const lng = Number(obj.geo_center[1]);
+    if (!isNaN(lat) && !isNaN(lng)) geo_center = [lat, lng];
+  }
+  const geo_radius_km = typeof obj.geo_radius_km === "number" && obj.geo_radius_km > 0
+    ? obj.geo_radius_km : undefined;
+  const price_max = typeof obj.price_max === "number" && obj.price_max > 0
+    ? obj.price_max : undefined;
+  const venue_ids = Array.isArray(obj.venue_ids)
+    ? obj.venue_ids.filter((v): v is number => typeof v === "number" && Number.isInteger(v) && v > 0)
+    : undefined;
+  const tags = Array.isArray(obj.tags)
+    ? obj.tags.filter((value): value is string => typeof value === "string")
+    : undefined;
+
+  return {
+    categories, exclude_categories, neighborhoods, city, cities,
+    geo_center, geo_radius_km, price_max,
+    venue_ids: venue_ids?.length ? venue_ids : undefined,
+    tags: tags?.length ? tags : undefined,
+  };
 }
 
 /**

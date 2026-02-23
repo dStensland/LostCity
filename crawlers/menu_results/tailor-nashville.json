@@ -1,0 +1,53 @@
+{
+  "venue_id": 1460,
+  "venue_slug": "tailor-nashville",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Bear Creek Farm Beef Steak Masala",
+        "price": null,
+        "category": "entree"
+      },
+      {
+        "name": "Mom's Catfish",
+        "price": null,
+        "category": "entree"
+      },
+      {
+        "name": "Nantucket Bay Scallop Crudo",
+        "price": null,
+        "category": "appetizer"
+      },
+      {
+        "name": "Bacon Bhel",
+        "price": null,
+        "category": "appetizer"
+      },
+      {
+        "name": "Sweet Potato Spice Cake",
+        "price": null,
+        "category": "dessert"
+      }
+    ],
+    "dietary_options": [],
+    "price_level": 4,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

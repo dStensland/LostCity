@@ -63,6 +63,38 @@ export async function createClient() {
   });
 }
 
+// Create a Supabase client scoped to a specific portal via RLS.
+// Injects x-portal-id header so PostgREST passes it to PostgreSQL,
+// where _portal_id() reads it and RLS restricts events by source access.
+export async function createPortalScopedClient(portalId: string | null | undefined) {
+  if (!portalId) return createClient();
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+  const supabaseKey = sanitizeKey(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  if (!supabaseUrl || !supabaseKey) return createClient();
+
+  const cookieStore = await cookies();
+  return createServerClient<Database>(supabaseUrl, supabaseKey, {
+    cookies: {
+      getAll() {
+        return cookieStore.getAll();
+      },
+      setAll(cookiesToSet) {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            cookieStore.set(name, value, options)
+          );
+        } catch {
+          // The `setAll` method was called from a Server Component.
+        }
+      },
+    },
+    global: {
+      headers: { "x-portal-id": portalId },
+    },
+  });
+}
+
 // Get current user from server context
 export async function getUser() {
   const supabase = await createClient();

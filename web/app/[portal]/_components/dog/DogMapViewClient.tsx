@@ -15,7 +15,7 @@ const FILTER_OPTIONS = [
 ] as const;
 
 const PARK_TYPES = new Set(["park", "dog_park", "trail", "nature_preserve"]);
-const PATIO_TYPES = new Set(["brewery", "restaurant", "bar", "coffee_shop", "cafe"]);
+const PATIO_TYPES = new Set(["brewery", "restaurant", "bar", "cocktail_bar"]);
 const SERVICE_TYPES = new Set(["vet", "groomer", "pet_store", "pet_daycare", "animal_shelter"]);
 const TRAIL_TYPES = new Set(["trail", "nature_preserve"]);
 

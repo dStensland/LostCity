@@ -1,0 +1,63 @@
+{
+  "venue_id": 4821,
+  "venue_slug": "breaker-breaker",
+  "meta": {
+    "og_image": "http://static1.squarespace.com/static/627a97904976422bd6a2e3bc/t/69346410ce3d1e23027a2f36/1765041168174/BB_logoanimation_blue.gif?format=1500w",
+    "meta_description": "Take a Little Time Off at Break Breaker. Bar, Seafood & Patio Hangs on the \r\nAtlanta Beltline. Established 2023.",
+    "reservation_links": [],
+    "menu_links": [
+      "http://www.breakerbreakeratl.com/menu",
+      "http://www.breakerbreakeratl.com/menu"
+    ],
+    "instagram": "breakerbreaker_atl",
+    "facebook_url": "https://www.facebook.com/breakerbreakerATL",
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["casual", "patio", "outdoor-seating", "happy-hour", "craft-cocktails"],
+    "cuisine": ["seafood", "american"],
+    "service_style": "casual_dine_in",
+    "price_level": 2,
+    "menu_highlights": [
+      {"name": "Lobster Roll", "price": null, "category": "entree"},
+      {"name": "Seafood Pasta", "price": null, "category": "entree"},
+      {"name": "Captain's Platter", "price": null, "category": "entree"},
+      {"name": "Beltline Barbie", "price": null, "category": "cocktail"},
+      {"name": "Ice Road Trucker", "price": null, "category": "cocktail"}
+    ],
+    "menu_url": "http://www.breakerbreakeratl.com/menu",
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "breakerbreaker_atl",
+    "dietary_options": [],
+    "specials": [
+      {
+        "day_of_week": 3,
+        "title": "Happy Hour",
+        "description": "Happy hour specials on Wednesdays",
+        "special_type": "happy_hour",
+        "start_time": null,
+        "end_time": null
+      },
+      {
+        "day_of_week": 4,
+        "title": "Happy Hour",
+        "description": "Happy hour specials on Thursdays",
+        "special_type": "happy_hour",
+        "start_time": null,
+        "end_time": null
+      },
+      {
+        "day_of_week": 7,
+        "title": "Happy Hour",
+        "description": "Happy hour specials on Sundays",
+        "special_type": "happy_hour",
+        "start_time": null,
+        "end_time": null
+      }
+    ],
+    "genres": [],
+    "parking": []
+  }
+}
