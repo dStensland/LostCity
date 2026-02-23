@@ -461,3 +461,44 @@ export function normalizeNeighborhoodName(name: string): string {
   // Return original if no match
   return name;
 }
+
+// ─── Portal-aware neighborhood shortcuts ──────────────────────────────────
+// Allows each portal/city to define its own area grouping shortcuts
+// (e.g., Atlanta has "ITP", Houston could have "Inside the Loop")
+
+export type NeighborhoodShortcut = {
+  key: string;
+  label: string;
+  neighborhoods: string[];
+};
+
+const ITP_SHORTCUT: NeighborhoodShortcut = {
+  key: "itp",
+  label: "ITP (Inside Perimeter)",
+  neighborhoods: ITP_NEIGHBORHOODS.map((n) => n.name),
+};
+
+/** Portal slug → shortcut groups. Falls back to city-level default. */
+const PORTAL_NEIGHBORHOOD_SHORTCUTS: Record<string, NeighborhoodShortcut[]> = {
+  // All Atlanta-area portals share ITP
+  _atlanta: [ITP_SHORTCUT],
+};
+
+/** Cities that each portal belongs to — add new portals here */
+const PORTAL_CITY_MAP: Record<string, string> = {
+  atlanta: "_atlanta",
+  forth: "_atlanta",
+  "hidden-atlanta": "_atlanta",
+  "dog-atlanta": "_atlanta",
+  "atlanta-families": "_atlanta",
+};
+
+/**
+ * Get neighborhood shortcut groups for a portal.
+ * Returns shortcuts like ITP for Atlanta-based portals, empty for unknown cities.
+ */
+export function getPortalNeighborhoodShortcuts(portalSlug?: string): NeighborhoodShortcut[] {
+  if (!portalSlug) return PORTAL_NEIGHBORHOOD_SHORTCUTS._atlanta || [];
+  const cityKey = PORTAL_CITY_MAP[portalSlug];
+  return cityKey ? (PORTAL_NEIGHBORHOOD_SHORTCUTS[cityKey] || []) : [];
+}
