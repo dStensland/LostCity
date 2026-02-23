@@ -18,6 +18,13 @@ import {
   getItemCoords,
 } from "@/lib/itinerary-utils";
 
+type OutingEvent = {
+  id: number;
+  title: string;
+  start_date: string;
+  start_time?: string | null;
+};
+
 type UseItineraryReturn = {
   itineraries: (Itinerary | LocalItinerary)[];
   activeItinerary: (Itinerary & { items: ItineraryItem[] }) | LocalItinerary | null;
@@ -25,12 +32,13 @@ type UseItineraryReturn = {
   saving: boolean;
   createItinerary: (portalId: string, title?: string, date?: string) => Promise<string | null>;
   loadItinerary: (id: string) => Promise<void>;
-  updateItinerary: (updates: { title?: string; date?: string; is_public?: boolean }) => Promise<void>;
-  deleteItinerary: (id: string) => Promise<void>;
-  addItem: (input: AddItineraryItemInput) => Promise<void>;
-  removeItem: (itemId: string) => Promise<void>;
-  reorderItems: (itemIds: string[]) => Promise<void>;
+  updateItinerary: (updates: { title?: string; date?: string; is_public?: boolean }) => Promise<boolean>;
+  deleteItinerary: (id: string) => Promise<boolean>;
+  addItem: (input: AddItineraryItemInput, itineraryId?: string) => Promise<boolean>;
+  removeItem: (itemId: string) => Promise<boolean>;
+  reorderItems: (itemIds: string[]) => Promise<boolean>;
   getShareUrl: () => string | null;
+  createOutingFromEvent: (portalId: string, event: OutingEvent) => Promise<string | null>;
 };
 
 export function useItinerary(portalId: string, portalSlug: string): UseItineraryReturn {
@@ -52,9 +60,12 @@ export function useItinerary(portalId: string, portalSlug: string): UseItinerary
           if (res.ok) {
             const data = await res.json();
             setItineraries(data.itineraries || []);
+          } else {
+            console.error("Failed to load itineraries:", res.status);
+            setItineraries(getLocalItineraries(portalId));
           }
-        } catch {
-          // Fall back to local
+        } catch (err) {
+          console.error("Failed to load itineraries:", err);
           setItineraries(getLocalItineraries(portalId));
         }
       } else {
@@ -82,9 +93,11 @@ export function useItinerary(portalId: string, portalSlug: string): UseItinerary
             setActiveItinerary({ ...itin, items: [] });
             setSaving(false);
             return itin.id;
+          } else {
+            console.error("Failed to create itinerary:", res.status);
           }
-        } catch {
-          // noop
+        } catch (err) {
+          console.error("Failed to create itinerary:", err);
         }
         setSaving(false);
         return null;
@@ -119,10 +132,16 @@ export function useItinerary(portalId: string, portalSlug: string): UseItinerary
           const res = await fetch(`/api/itineraries/${id}`);
           if (res.ok) {
             const data = await res.json();
-            setActiveItinerary(data.itinerary);
+            if (data.itinerary && typeof data.itinerary.id === "string") {
+              setActiveItinerary(data.itinerary);
+            } else {
+              console.error("Invalid itinerary response shape:", data);
+            }
+          } else {
+            console.error("Failed to load itinerary:", res.status);
           }
-        } catch {
-          // noop
+        } catch (err) {
+          console.error("Failed to load itinerary:", err);
         }
       } else {
         const locals = getLocalItineraries(portalId);
@@ -135,8 +154,8 @@ export function useItinerary(portalId: string, portalSlug: string): UseItinerary
   );
 
   const updateItinerary = useCallback(
-    async (updates: { title?: string; date?: string; is_public?: boolean }) => {
-      if (!activeItinerary) return;
+    async (updates: { title?: string; date?: string; is_public?: boolean }): Promise<boolean> => {
+      if (!activeItinerary) return false;
       setSaving(true);
 
       if (user) {
@@ -151,9 +170,17 @@ export function useItinerary(portalId: string, portalSlug: string): UseItinerary
             setActiveItinerary((prev) =>
               prev ? { ...prev, ...data.itinerary } : prev
             );
+            setSaving(false);
+            return true;
+          } else {
+            console.error("Failed to update itinerary:", res.status);
+            setSaving(false);
+            return false;
           }
-        } catch {
-          // noop
+        } catch (err) {
+          console.error("Failed to update itinerary:", err);
+          setSaving(false);
+          return false;
         }
       } else {
         const locals = getLocalItineraries(portalId);
@@ -163,37 +190,51 @@ export function useItinerary(portalId: string, portalSlug: string): UseItinerary
           saveLocalItineraries(portalId, locals);
           setActiveItinerary(locals[idx]);
         }
+        setSaving(false);
+        return true;
       }
-      setSaving(false);
     },
     [user, activeItinerary, portalId]
   );
 
   const deleteItinerary = useCallback(
-    async (id: string) => {
-      if (user) {
-        await fetch(`/api/itineraries/${id}`, { method: "DELETE" });
+    async (id: string): Promise<boolean> => {
+      try {
+        if (user) {
+          const res = await fetch(`/api/itineraries/${id}`, { method: "DELETE" });
+          if (!res.ok) {
+            console.error("Failed to delete itinerary:", res.status);
+            return false;
+          }
+        }
+        const locals = getLocalItineraries(portalId);
+        saveLocalItineraries(
+          portalId,
+          locals.filter((l) => l.id !== id)
+        );
+        setItineraries((prev) => (prev as Itinerary[]).filter((i) => i.id !== id));
+        if (activeItinerary?.id === id) setActiveItinerary(null);
+        return true;
+      } catch (err) {
+        console.error("Failed to delete itinerary:", err);
+        return false;
       }
-      const locals = getLocalItineraries(portalId);
-      saveLocalItineraries(
-        portalId,
-        locals.filter((l) => l.id !== id)
-      );
-      setItineraries((prev) => (prev as Itinerary[]).filter((i) => i.id !== id));
-      if (activeItinerary?.id === id) setActiveItinerary(null);
     },
     [user, activeItinerary, portalId]
   );
 
   const addItem = useCallback(
-    async (input: AddItineraryItemInput) => {
-      if (!activeItinerary) return;
+    async (input: AddItineraryItemInput, itineraryId?: string): Promise<boolean> => {
+      // Support explicit itineraryId to avoid stale closure when called
+      // immediately after createItinerary (state hasn't re-rendered yet)
+      const targetId = itineraryId || activeItinerary?.id;
+      if (!targetId) return false;
       setSaving(true);
 
       if (user) {
         try {
           const res = await fetch(
-            `/api/itineraries/${activeItinerary.id}/items`,
+            `/api/itineraries/${targetId}/items`,
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -202,13 +243,25 @@ export function useItinerary(portalId: string, portalSlug: string): UseItinerary
           );
           if (res.ok) {
             // Reload the full itinerary to get joined data
-            await loadItinerary(activeItinerary.id);
+            await loadItinerary(targetId);
+          } else {
+            console.error("Failed to add item:", res.status);
+            setSaving(false);
+            return false;
           }
-        } catch {
-          // noop
+        } catch (err) {
+          console.error("Failed to add item:", err);
+          setSaving(false);
+          return false;
         }
       } else {
-        const localItin = activeItinerary as LocalItinerary;
+        // For localStorage: find itinerary from state or storage
+        const localItin = (activeItinerary?.id === targetId
+          ? activeItinerary
+          : getLocalItineraries(portalId).find((l) => l.id === targetId)
+        ) as LocalItinerary | null;
+        if (!localItin) { setSaving(false); return false; }
+
         const items = localItin.items || [];
         const prevItem = items[items.length - 1];
 
@@ -263,76 +316,101 @@ export function useItinerary(portalId: string, portalSlug: string): UseItinerary
         saveLocalItineraries(portalId, locals);
       }
       setSaving(false);
+      return true;
     },
     [user, activeItinerary, portalId, loadItinerary]
   );
 
   const removeItem = useCallback(
-    async (itemId: string) => {
-      if (!activeItinerary) return;
+    async (itemId: string): Promise<boolean> => {
+      if (!activeItinerary) return false;
       setSaving(true);
 
-      if (user) {
-        await fetch(
-          `/api/itineraries/${activeItinerary.id}/items/${itemId}`,
-          { method: "DELETE" }
-        );
-        await loadItinerary(activeItinerary.id);
-      } else {
-        const localItin = activeItinerary as LocalItinerary;
-        const updatedItems = localItin.items
-          .filter((i) => i.id !== itemId)
-          .map((item, idx) => ({ ...item, position: idx }));
-        const updatedItin: LocalItinerary = {
-          ...localItin,
-          items: updatedItems,
-          updated_at: new Date().toISOString(),
-        };
-        setActiveItinerary(updatedItin);
-        const locals = getLocalItineraries(portalId);
-        const idx = locals.findIndex((l) => l.id === localItin.id);
-        if (idx >= 0) {
-          locals[idx] = updatedItin;
-          saveLocalItineraries(portalId, locals);
+      try {
+        if (user) {
+          const res = await fetch(
+            `/api/itineraries/${activeItinerary.id}/items/${itemId}`,
+            { method: "DELETE" }
+          );
+          if (!res.ok) {
+            console.error("Failed to remove item:", res.status);
+            setSaving(false);
+            return false;
+          }
+          await loadItinerary(activeItinerary.id);
+        } else {
+          const localItin = activeItinerary as LocalItinerary;
+          const updatedItems = localItin.items
+            .filter((i) => i.id !== itemId)
+            .map((item, idx) => ({ ...item, position: idx }));
+          const updatedItin: LocalItinerary = {
+            ...localItin,
+            items: updatedItems,
+            updated_at: new Date().toISOString(),
+          };
+          setActiveItinerary(updatedItin);
+          const locals = getLocalItineraries(portalId);
+          const idx = locals.findIndex((l) => l.id === localItin.id);
+          if (idx >= 0) {
+            locals[idx] = updatedItin;
+            saveLocalItineraries(portalId, locals);
+          }
         }
+        setSaving(false);
+        return true;
+      } catch (err) {
+        console.error("Failed to remove item:", err);
+        setSaving(false);
+        return false;
       }
-      setSaving(false);
     },
     [user, activeItinerary, portalId, loadItinerary]
   );
 
   const reorderItems = useCallback(
-    async (itemIds: string[]) => {
-      if (!activeItinerary) return;
+    async (itemIds: string[]): Promise<boolean> => {
+      if (!activeItinerary) return false;
       setSaving(true);
 
-      if (user) {
-        await fetch(`/api/itineraries/${activeItinerary.id}/items/reorder`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ item_ids: itemIds }),
-        });
-        await loadItinerary(activeItinerary.id);
-      } else {
-        const localItin = activeItinerary as LocalItinerary;
-        const itemMap = new Map(localItin.items.map((i) => [i.id, i]));
-        const reordered = itemIds
-          .map((id) => itemMap.get(id))
-          .filter(Boolean) as LocalItineraryItem[];
-        const updatedItin: LocalItinerary = {
-          ...localItin,
-          items: reordered.map((item, idx) => ({ ...item, position: idx })),
-          updated_at: new Date().toISOString(),
-        };
-        setActiveItinerary(updatedItin);
-        const locals = getLocalItineraries(portalId);
-        const idx = locals.findIndex((l) => l.id === localItin.id);
-        if (idx >= 0) {
-          locals[idx] = updatedItin;
-          saveLocalItineraries(portalId, locals);
+      try {
+        if (user) {
+          const res = await fetch(`/api/itineraries/${activeItinerary.id}/items/reorder`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ item_ids: itemIds }),
+          });
+          if (!res.ok) {
+            console.error("Failed to reorder items:", res.status);
+            setSaving(false);
+            return false;
+          }
+          await loadItinerary(activeItinerary.id);
+        } else {
+          const localItin = activeItinerary as LocalItinerary;
+          const itemMap = new Map(localItin.items.map((i) => [i.id, i]));
+          const reordered = itemIds
+            .map((id) => itemMap.get(id))
+            .filter(Boolean) as LocalItineraryItem[];
+          const updatedItin: LocalItinerary = {
+            ...localItin,
+            items: reordered.map((item, idx) => ({ ...item, position: idx })),
+            updated_at: new Date().toISOString(),
+          };
+          setActiveItinerary(updatedItin);
+          const locals = getLocalItineraries(portalId);
+          const idx = locals.findIndex((l) => l.id === localItin.id);
+          if (idx >= 0) {
+            locals[idx] = updatedItin;
+            saveLocalItineraries(portalId, locals);
+          }
         }
+        setSaving(false);
+        return true;
+      } catch (err) {
+        console.error("Failed to reorder items:", err);
+        setSaving(false);
+        return false;
       }
-      setSaving(false);
     },
     [user, activeItinerary, portalId, loadItinerary]
   );
@@ -342,8 +420,22 @@ export function useItinerary(portalId: string, portalSlug: string): UseItinerary
     const token = (activeItinerary as Itinerary).share_token;
     if (!token) return null;
     if (typeof window === "undefined") return null;
-    return `${window.location.origin}/${portalSlug}/itinerary/${token}`;
+    return `${window.location.origin}/${portalSlug}/playbook/share/${token}`;
   }, [activeItinerary, portalSlug]);
+
+  const createOutingFromEvent = useCallback(
+    async (pid: string, event: OutingEvent): Promise<string | null> => {
+      const itinId = await createItinerary(pid, event.title, event.start_date);
+      if (!itinId) return null;
+      await addItem({
+        item_type: "event",
+        event_id: event.id,
+        start_time: event.start_time || undefined,
+      }, itinId);
+      return itinId;
+    },
+    [createItinerary, addItem],
+  );
 
   return {
     itineraries,
@@ -358,5 +450,6 @@ export function useItinerary(portalId: string, portalSlug: string): UseItinerary
     removeItem,
     reorderItems,
     getShareUrl,
+    createOutingFromEvent,
   };
 }

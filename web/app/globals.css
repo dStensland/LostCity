@@ -205,6 +205,7 @@
   --mood-artsy: hsl(260, 80%, 75%);
   --mood-romantic: hsl(330, 85%, 80%);
   --mood-weird: hsl(48, 95%, 65%);
+  --mood-active: #7C3AED;            /* Generic mood/vibe accent for active states */
 
   /* UI colors */
   --background: var(--void);
@@ -473,6 +474,42 @@
 
   .announcement-body {
     color: var(--announcement-text, var(--soft));
+  }
+
+  /* ── CityPulse glass & glow utilities ─────────────────────── */
+
+  .glass-card {
+    background: rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .glow-coral {
+    box-shadow: 0 0 20px rgba(255, 107, 122, 0.15), 0 0 40px rgba(255, 107, 122, 0.05);
+  }
+  .glow-cyan {
+    box-shadow: 0 0 20px rgba(0, 212, 255, 0.15), 0 0 40px rgba(0, 212, 255, 0.05);
+  }
+  .glow-magenta {
+    box-shadow: 0 0 20px rgba(232, 85, 160, 0.15), 0 0 40px rgba(232, 85, 160, 0.05);
+  }
+  .glow-gold {
+    box-shadow: 0 0 20px rgba(255, 217, 61, 0.15), 0 0 40px rgba(255, 217, 61, 0.05);
+  }
+  .glow-green {
+    box-shadow: 0 0 20px rgba(0, 217, 160, 0.15), 0 0 40px rgba(0, 217, 160, 0.05);
+  }
+
+  .hero-gradient {
+    background: linear-gradient(to bottom, rgba(9, 9, 11, 0.4) 0%, rgba(9, 9, 11, 0.3) 35%, rgba(9, 9, 11, 0.7) 70%, rgba(9, 9, 11, 0.88) 100%);
+  }
+
+  .text-gradient-coral {
+    background: linear-gradient(135deg, var(--coral) 0%, var(--coral-light) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
 
   .skeleton-delay {
@@ -1668,27 +1705,27 @@ body:has([data-forth-experience="true"]) {
 .nav-tab-active {
   background: linear-gradient(
     180deg,
-    hsl(var(--neon-amber-hsl) / 0.95) 0%,
-    hsl(var(--neon-amber-hsl) / 0.85) 100%
+    hsl(var(--coral-hsl) / 0.95) 0%,
+    hsl(var(--coral-hsl) / 0.85) 100%
   );
   box-shadow:
-    0 0 12px hsl(var(--neon-amber-hsl) / 0.7),
-    0 0 20px hsl(var(--neon-amber-hsl) / 0.4),
-    0 3px 0 hsl(var(--neon-amber-hsl)),
+    0 0 12px hsl(var(--coral-hsl) / 0.7),
+    0 0 20px hsl(var(--coral-hsl) / 0.4),
+    0 3px 0 hsl(var(--coral-hsl)),
     inset 0 1px 0 hsl(0 0% 100% / 0.3);
   text-shadow: 0 1px 2px hsl(0 0% 0% / 0.3);
 }
 
 .nav-tab:not(.nav-tab-active):hover {
-  background: hsl(var(--neon-amber-hsl) / 0.15);
-  border-bottom: 2px solid hsl(var(--neon-amber-hsl) / 0.4);
+  background: hsl(var(--coral-hsl) / 0.15);
+  border-bottom: 2px solid hsl(var(--coral-hsl) / 0.4);
 }
 
 /* Reduced motion - disable glow but keep border for contrast */
 @media (prefers-reduced-motion: reduce) {
   .nav-tab-active {
     box-shadow:
-      0 3px 0 hsl(var(--neon-amber-hsl)),
+      0 3px 0 hsl(var(--coral-hsl)),
       inset 0 1px 0 hsl(0 0% 100% / 0.2);
   }
 }
@@ -1803,27 +1840,7 @@ body:has([data-forth-experience="true"]) {
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
-.portal-feed-header::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    repeating-linear-gradient(
-      -65deg,
-      transparent 0,
-      transparent 14px,
-      rgba(112, 143, 255, 0.08) 14px,
-      rgba(112, 143, 255, 0.08) 16px
-    ),
-    linear-gradient(
-      90deg,
-      rgba(255, 104, 124, 0.06) 0%,
-      rgba(117, 225, 255, 0.05) 52%,
-      transparent 100%
-    );
-  opacity: 0.5;
-}
+/* Removed: diagonal stripe ::before — created visual noise on a 52px bar */
 
 .portal-feed-header::after {
   content: "";
@@ -1842,8 +1859,9 @@ body:has([data-forth-experience="true"]) {
   );
 }
 
+/* Row divider: subtle solid line instead of dashed */
 .portal-feed-header-row {
-  border-bottom: 1px dashed rgba(145, 156, 196, 0.26);
+  border-bottom: 1px solid rgba(145, 156, 196, 0.12);
 }
 
 .portal-feed-logo-wrap {
@@ -1893,10 +1911,8 @@ body:has([data-forth-experience="true"]) {
 
 .portal-feed-nav:not(.nav-tab-underline):not(.nav-tab-minimal) .portal-feed-tab.nav-tab-active {
   box-shadow:
-    0 0 14px hsl(var(--neon-amber-hsl) / 0.62),
-    0 0 26px hsl(var(--neon-amber-hsl) / 0.3),
-    0 2px 0 hsl(var(--neon-amber-hsl) / 0.92),
-    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    0 0 12px rgba(255, 107, 122, 0.5),
+    0 2px 0 rgba(255, 107, 122, 0.8);
 }
 
 .portal-feed-actions {
@@ -2843,16 +2859,14 @@ body:has([data-forth-experience="true"]) {
 @keyframes page-enter {
   from {
     opacity: 0;
-    transform: translateY(8px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
 .animate-page-enter {
-  animation: page-enter 0.3s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+  animation: page-enter 0.3s ease-out forwards;
 }
 
 /* Reduced motion support */
@@ -3018,6 +3032,19 @@ textarea:focus-visible {
 
 .animate-dropdown-in {
   animation: dropdown-in 150ms ease-out forwards;
+}
+
+/* Accordion expand/collapse via CSS Grid */
+.accordion-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 200ms ease-out;
+}
+.accordion-body[data-open="true"] {
+  grid-template-rows: 1fr;
+}
+.accordion-body > * {
+  overflow: hidden;
 }
 
 /* ============================================
@@ -3360,7 +3387,7 @@ textarea:focus-visible {
     var(--twilight) 75%
   );
   background-size: 400% 100%;
-  animation: skeleton-shimmer 5s ease-in-out infinite;
+  animation: skeleton-shimmer 1.8s ease-in-out infinite;
 }
 
 /* Light mode skeleton shimmer - for family/light theme portals */
@@ -3372,7 +3399,7 @@ textarea:focus-visible {
     rgba(0, 0, 0, 0.06) 75%
   );
   background-size: 400% 100%;
-  animation: skeleton-shimmer 3.5s ease-in-out infinite;
+  animation: skeleton-shimmer 1.8s ease-in-out infinite;
 }
 
 /* Skeleton base - for use with shimmer */
@@ -4588,6 +4615,10 @@ body[data-forth-bg="off"] .rain-overlay {
     transition-duration: 50ms !important;
   }
 
+  .accordion-body {
+    transition-duration: 50ms !important;
+  }
+
   /* Stagger delays reduced to near-zero */
   .stagger-1,
   .stagger-2,
@@ -4708,7 +4739,7 @@ body[data-forth-bg="off"] .rain-overlay {
 
   /* Navigation tab hover */
   .nav-tab:not(.nav-tab-active):hover {
-    background: hsl(var(--neon-amber-hsl) / 0.15);
+    background: hsl(var(--coral-hsl) / 0.1);
   }
 
   /* Mobile menu item hover */
@@ -4800,6 +4831,16 @@ body[data-forth-bg="off"] .rain-overlay {
 
 .animate-chip-toggle {
   animation: chip-toggle 0.2s ease-out;
+}
+
+/* Near Me hint — subtle border pulse for first-time users */
+@keyframes near-me-hint {
+  0%, 100% { border-color: var(--twilight); }
+  50% { border-color: var(--neon-cyan); }
+}
+.animate-near-me-hint {
+  animation: near-me-hint 1.8s ease-in-out 2;
+  animation-delay: 1.2s;
 }
 
 /* Chip glow variants - applied when active */
@@ -4911,6 +4952,28 @@ body[data-forth-bg="off"] .rain-overlay {
 .animate-stagger-2 { animation: stagger-fade-in 0.4s ease-out 0.2s backwards; }
 .animate-stagger-3 { animation: stagger-fade-in 0.4s ease-out 0.3s backwards; }
 .animate-stagger-4 { animation: stagger-fade-in 0.4s ease-out 0.4s backwards; }
+
+/* Modal enter/exit animations */
+@keyframes modal-backdrop-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes modal-content-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+.modal-backdrop-enter {
+  animation: modal-backdrop-enter 0.2s ease-out;
+}
+.modal-content-enter {
+  animation: modal-content-enter 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
 
 /* ============================================
    CATEGORY PLACEHOLDER VARIANTS
