@@ -3,14 +3,14 @@
 /**
  * CompactEventRow — Neon Underground event row for the Lineup list.
  *
- * Layout: category glow edge | 80px thumbnail | title / venue·neighborhood / time·free·social
+ * Layout: elliptical neon accent | flush thumbnail | title / venue·neighborhood / time·cat·free·social
  * Featured/trending events get a stronger glow and tinted background.
  */
 
 import Link from "next/link";
 import type { FeedEventData } from "@/components/EventCard";
 import Image from "@/components/SmartImage";
-import { getCategoryColor } from "@/lib/category-config";
+import { getCategoryColor, getCategoryLabel } from "@/lib/category-config";
 import CategoryIcon from "@/components/CategoryIcon";
 import { Users, Lightning, Ticket } from "@phosphor-icons/react";
 import { formatTime, getEventStatus } from "@/lib/formats";
@@ -23,6 +23,7 @@ interface CompactEventRowProps {
 
 export default function CompactEventRow({ event, portalSlug, isLast }: CompactEventRowProps) {
   const catColor = getCategoryColor(event.category);
+  const catLabel = getCategoryLabel(event.category);
   const goingCount = event.going_count || 0;
   const isFeatured = event.is_tentpole || event.is_trending;
 
@@ -43,7 +44,7 @@ export default function CompactEventRow({ event, portalSlug, isLast }: CompactEv
       href={`/${portalSlug}?event=${event.id}`}
       scroll={false}
       className={[
-        "flex items-stretch gap-3 pr-3 transition-all group relative",
+        "flex items-stretch gap-0 transition-all group relative",
         !isLast && "border-b border-[var(--twilight)]/20",
       ]
         .filter(Boolean)
@@ -52,22 +53,19 @@ export default function CompactEventRow({ event, portalSlug, isLast }: CompactEv
         background: `linear-gradient(to right, color-mix(in srgb, ${catColor} 6%, transparent), transparent 60%)`,
       } : undefined}
     >
-      {/* Category accent — gradient edge glow */}
+      {/* Neon accent — elliptical: narrow/dim at edges, bright/thick in center */}
       <div
-        className="shrink-0 self-stretch rounded-r-full"
+        className="shrink-0 self-stretch"
         style={{
-          width: isFeatured ? "3px" : "2px",
-          background: `linear-gradient(to bottom, ${catColor}, color-mix(in srgb, ${catColor} ${isFeatured ? "40%" : "20%"}, transparent))`,
+          width: isFeatured ? "5px" : "4px",
+          borderRadius: "50%",
+          background: `linear-gradient(to bottom, transparent, ${catColor}, transparent)`,
+          boxShadow: isFeatured ? `0 0 8px color-mix(in srgb, ${catColor} 40%, transparent)` : undefined,
         }}
       />
 
-      {/* 80px thumbnail with subtle category ring */}
-      <div
-        className="shrink-0 w-20 h-20 self-center relative overflow-hidden rounded-xl my-2.5"
-        style={{
-          boxShadow: `0 0 0 1px color-mix(in srgb, ${catColor} 15%, transparent)`,
-        }}
-      >
+      {/* Flush thumbnail — no rounding, stretches to cell edges */}
+      <div className="shrink-0 w-20 self-stretch relative overflow-hidden">
         {event.image_url ? (
           <Image
             src={event.image_url}
@@ -88,7 +86,7 @@ export default function CompactEventRow({ event, portalSlug, isLast }: CompactEv
       </div>
 
       {/* Event info — three lines */}
-      <div className="min-w-0 flex-1 py-3 flex flex-col justify-center gap-0.5">
+      <div className="min-w-0 flex-1 py-3 pl-3 pr-3 flex flex-col justify-center gap-0.5">
         {/* Line 1: Title */}
         <p className="text-[0.875rem] font-semibold text-[var(--cream)] truncate group-hover:text-white transition-colors leading-snug">
           {event.title}
@@ -104,7 +102,7 @@ export default function CompactEventRow({ event, portalSlug, isLast }: CompactEv
           )}
         </p>
 
-        {/* Line 3: Time + badges */}
+        {/* Line 3: Time + category + badges */}
         <div className="flex items-center gap-2 mt-0.5">
           <span
             className={[
@@ -120,6 +118,15 @@ export default function CompactEventRow({ event, portalSlug, isLast }: CompactEv
             )}
             {isSoon && <Lightning weight="fill" className="w-3 h-3" />}
             {timeStr}
+          </span>
+
+          {/* Category icon + label */}
+          <span
+            className="inline-flex items-center gap-0.5 font-mono text-[0.5625rem] font-bold uppercase tracking-wider"
+            style={{ color: catColor }}
+          >
+            <CategoryIcon type={event.category || "other"} size={10} glow="none" weight="bold" />
+            {catLabel}
           </span>
 
           {event.is_free && (

@@ -50,10 +50,7 @@ export default function LineupHero({ event, portalSlug }: LineupHeroProps) {
     <Link
       href={`/${portalSlug}?event=${event.id}`}
       scroll={false}
-      className="block rounded-2xl overflow-hidden transition-all group mb-3 relative"
-      style={{
-        boxShadow: `0 0 0 1px color-mix(in srgb, ${catColor} 20%, transparent), 0 4px 24px -4px color-mix(in srgb, ${catColor} 15%, transparent)`,
-      }}
+      className="block overflow-hidden transition-all group mb-0 relative"
     >
       <div className="relative h-56 sm:h-72 overflow-hidden">
         {event.image_url ? (

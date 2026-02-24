@@ -3,7 +3,7 @@
 /**
  * InlineSpecialRow — special/deal row matching the Neon Underground CompactEventRow language.
  *
- * Layout: gold gradient edge | 80px thumbnail | title / venue·neighborhood / time·price
+ * Layout: elliptical gold accent | flush thumbnail | title / venue·neighborhood / time·price
  * Active specials get a green "Now" indicator with pulse.
  */
 
@@ -36,29 +36,26 @@ export default function InlineSpecialRow({ special, portalSlug, isLast }: Inline
       href={`/${portalSlug}?spot=${special.venue.slug}`}
       scroll={false}
       className={[
-        "flex items-stretch gap-3 pr-3 transition-all group relative",
+        "flex items-stretch gap-0 transition-all group relative",
         !isLast && "border-b border-[var(--twilight)]/20",
         isActive && "bg-[var(--gold)]/[0.03]",
       ]
         .filter(Boolean)
         .join(" ")}
     >
-      {/* Gold gradient accent edge */}
+      {/* Gold neon accent — elliptical */}
       <div
-        className="shrink-0 self-stretch rounded-r-full"
+        className="shrink-0 self-stretch"
         style={{
-          width: isActive ? "3px" : "2px",
-          background: `linear-gradient(to bottom, var(--gold), color-mix(in srgb, var(--gold) ${isActive ? "40%" : "20%"}, transparent))`,
+          width: isActive ? "5px" : "4px",
+          borderRadius: "50%",
+          background: `linear-gradient(to bottom, transparent, var(--gold), transparent)`,
+          boxShadow: isActive ? "0 0 8px color-mix(in srgb, var(--gold) 40%, transparent)" : undefined,
         }}
       />
 
-      {/* 80px thumbnail — venue image or gold gradient fallback */}
-      <div
-        className="shrink-0 w-20 h-20 self-center relative overflow-hidden rounded-xl my-2.5"
-        style={{
-          boxShadow: "0 0 0 1px color-mix(in srgb, var(--gold) 15%, transparent)",
-        }}
-      >
+      {/* Flush thumbnail — no rounding, stretches to cell edges */}
+      <div className="shrink-0 w-20 self-stretch relative overflow-hidden">
         {special.venue.image_url ? (
           <Image
             src={special.venue.image_url}
@@ -78,7 +75,7 @@ export default function InlineSpecialRow({ special, portalSlug, isLast }: Inline
       </div>
 
       {/* Special info — three lines */}
-      <div className="min-w-0 flex-1 py-3 flex flex-col justify-center gap-0.5">
+      <div className="min-w-0 flex-1 py-3 pl-3 pr-3 flex flex-col justify-center gap-0.5">
         {/* Line 1: Title */}
         <p className="text-[0.875rem] font-semibold text-[var(--cream)] truncate group-hover:text-[var(--gold)] transition-colors leading-snug">
           {special.title}

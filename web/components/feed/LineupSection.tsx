@@ -705,12 +705,26 @@ export default function LineupSection({
         </>
       )}
 
-      {/* See all link */}
+      {/* See all link — contextual to active chip */}
       <Link
-        href={activeTab.seeAllHref(portalSlug)}
+        href={(() => {
+          const base = activeTab.seeAllHref(portalSlug);
+          // Append category filter if a specific chip is active
+          if (activeChipId !== "all" && activeChipId !== "free" && activeChipId !== "happy_hour") {
+            const chip = INTEREST_MAP.get(activeChipId);
+            if (chip && chip.type === "category") {
+              const sep = base.includes("?") ? "&" : "?";
+              return `${base}${sep}categories=${activeChipId}`;
+            }
+          }
+          return base;
+        })()}
         className="mt-3 w-full flex items-center justify-center gap-2 text-[0.75rem] font-mono font-medium py-3 rounded-lg transition-all hover:bg-white/[0.02] text-[var(--coral)]"
       >
-        See all events
+        {activeChipId !== "all" && activeChipId !== "free" && activeChipId !== "happy_hour"
+          ? `See all ${INTEREST_MAP.get(activeChipId)?.label?.toLowerCase() || ""} events`
+          : "See all events"
+        }
         <ArrowRight className="w-3.5 h-3.5" />
       </Link>
     </section>
