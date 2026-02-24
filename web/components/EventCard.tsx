@@ -451,6 +451,12 @@ function EventCard({
                     blurhash={railBlurhash}
                     sizes="124px"
                     className="object-cover"
+                    fallback={
+                      <div className="absolute inset-0 flex items-center justify-center bg-[var(--night)]"
+                        style={{ color: getCategoryColor(event.category) }}>
+                        <CategoryIcon type={event.category || "other"} size={28} glow="subtle" weight="light" />
+                      </div>
+                    }
                   />
                   <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/56 to-black/20 pointer-events-none" />
                 </div>
@@ -1519,6 +1525,13 @@ export const HeroEventCard = memo(function HeroEventCard({
               className="object-cover"
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 800px"
               blurhash={event.blurhash}
+              fallback={
+                <div className="absolute inset-0"
+                  style={{
+                    background: `linear-gradient(135deg, var(--dusk) 0%, color-mix(in srgb, ${getCategoryColor(event.category)} 25%, var(--twilight)) 40%, color-mix(in srgb, ${getCategoryColor(event.category)} 15%, var(--void)) 100%)`,
+                  }}
+                />
+              }
             />
           </div>
           <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/60 to-black/30" />

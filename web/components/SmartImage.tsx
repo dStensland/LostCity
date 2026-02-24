@@ -1,13 +1,15 @@
 "use client";
 
 import Image, { type ImageProps } from "next/image";
-import { useMemo } from "react";
+import { useState, useCallback, useMemo, type ReactNode } from "react";
 import { getProxiedImageSrc } from "@/lib/image-proxy";
 
 import { decode } from "blurhash";
 
 interface SmartImageProps extends Omit<ImageProps, "placeholder" | "blurDataURL"> {
   blurhash?: string | null;
+  /** Custom fallback UI rendered when image fails to load. Receives the container's full area. */
+  fallback?: ReactNode;
 }
 
 const UNOPTIMIZED_IMAGE_HOSTS = new Set([
@@ -43,8 +45,39 @@ function blurhashToDataUrl(hash: string, width = 32, height = 32): string {
   return canvas.toDataURL();
 }
 
+/** Generic fallback shown when no custom fallback is provided */
+function DefaultFallback({ fill, className }: { fill?: boolean; className?: string }) {
+  // Match the container's sizing strategy: fill → absolute inset-0, else use className dimensions
+  return (
+    <div
+      className={`flex items-center justify-center bg-[var(--twilight,#2A2A3E)]/60 ${fill ? "absolute inset-0" : ""} ${className || ""}`}
+      aria-hidden
+    >
+      <svg
+        className="w-6 h-6 text-[var(--muted,#8B8B9E)]/40"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.5}
+          d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z"
+        />
+      </svg>
+    </div>
+  );
+}
+
 export default function SmartImage(props: SmartImageProps) {
-  const { src, alt = "", blurhash, unoptimized: unoptimizedProp, ...rest } = props;
+  const { src, alt = "", blurhash, unoptimized: unoptimizedProp, fallback, ...rest } = props;
+  const [failed, setFailed] = useState(false);
+
+  const handleError = useCallback(() => {
+    setFailed(true);
+  }, []);
+
   const resolvedSrc = getProxiedImageSrc(src);
   const needsUnoptimizedProxy =
     typeof resolvedSrc === "string" && resolvedSrc.startsWith("/api/image-proxy?url=");
@@ -66,6 +99,12 @@ export default function SmartImage(props: SmartImageProps) {
     }
   }, [blurhash]);
 
+  // Show fallback when image fails to load
+  if (failed) {
+    if (fallback) return <>{fallback}</>;
+    return <DefaultFallback fill={rest.fill} className={rest.className} />;
+  }
+
   // Use blur placeholder if we have a blurhash
   if (blurDataURL) {
     return (
@@ -75,10 +114,11 @@ export default function SmartImage(props: SmartImageProps) {
         unoptimized={unoptimized}
         placeholder="blur"
         blurDataURL={blurDataURL}
+        onError={handleError}
         {...rest}
       />
     );
   }
 
-  return <Image src={resolvedSrc} alt={alt} unoptimized={unoptimized} {...rest} />;
+  return <Image src={resolvedSrc} alt={alt} unoptimized={unoptimized} onError={handleError} {...rest} />;
 }
