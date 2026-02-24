@@ -106,7 +106,7 @@ type PortalData = {
 const EVENT_SELECT = `
   id, title, start_date, start_time, end_date, end_time,
   is_all_day, is_free, price_min, price_max,
-  category, genres, image_url, featured_blurb,
+  category:category_id, genres, image_url, featured_blurb,
   tags, festival_id, is_tentpole, is_featured, series_id, source_id, organization_id,
   series:series_id(id, frequency, day_of_week),
   venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city)
@@ -450,11 +450,8 @@ function resolveCuratedSections(
       }
     }
 
-    // Map events to FeedEvent shape (same transform as portal feed)
-    const feedEvents = events.map((event) => ({
-      ...event,
-      category_id: event.category,
-    }));
+    // Events already have `category` via the alias in EVENT_SELECT
+    const feedEvents = events;
 
     return {
       id: section.id,
@@ -660,7 +657,7 @@ export async function GET(request: NextRequest, { params }: Props) {
   const buildCategoryQuery = (start: string, end: string) => {
     let q = portalClient
       .from("events")
-      .select("category, genres, tags")
+      .select("category_id, genres, tags")
       .gte("start_date", start)
       .lte("start_date", end)
       .is("canonical_event_id", null)
@@ -672,13 +669,13 @@ export async function GET(request: NextRequest, { params }: Props) {
 
   /** Count events by category and genre/tag from lightweight query results */
   const buildCategoryCounts = (
-    rows: { category: string | null; genres: string[] | null; tags: string[] | null }[],
+    rows: { category_id: string | null; genres: string[] | null; tags: string[] | null }[],
   ): Record<string, number> => {
     const counts: Record<string, number> = {};
     for (const row of rows) {
       // Count by category
-      if (row.category) {
-        counts[row.category] = (counts[row.category] || 0) + 1;
+      if (row.category_id) {
+        counts[row.category_id] = (counts[row.category_id] || 0) + 1;
       }
       // Count by genres (for genre-based chips like trivia, karaoke, etc.)
       if (Array.isArray(row.genres)) {
