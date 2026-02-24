@@ -30,6 +30,7 @@ import LineupSection from "./LineupSection";
 import QuickLinksBar from "./QuickLinksBar";
 import CityPulseSection from "./CityPulseSection";
 import LazySection from "./LazySection";
+import NetworkFeedSection from "./sections/NetworkFeedSection";
 import FeedTimeMachine from "./FeedTimeMachine";
 import FeedCustomizer from "./FeedCustomizer";
 import type { CityPulseSectionType, TimeSlot, FeedLayout } from "@/lib/city-pulse/types";
@@ -49,21 +50,18 @@ const TIMELINE_SECTION_TYPES = new Set<CityPulseSectionType>([
 /** The non-timeline sections we render, in order */
 const DEFAULT_SECTION_ORDER: CityPulseSectionType[] = [
   "trending",
-  "weather_discovery",
   "browse",
 ];
 
 /** Estimated heights per section type to reduce CLS when lazy loading */
 const SECTION_HEIGHT_ESTIMATES: Record<string, number> = {
   trending: 500,
-  weather_discovery: 260,
   browse: 400,
 };
 
 /** Map FeedBlockId → CityPulseSectionType for layout application */
 const BLOCK_TO_SECTION: Record<string, CityPulseSectionType> = {
   trending: "trending",
-  weather_discovery: "weather_discovery",
   browse: "browse",
 };
 
@@ -211,6 +209,7 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
     portalSlug,
     timeSlotOverride,
     dayOverride,
+    interests: feedLayout?.interests ?? undefined,
   });
 
   // Clean up legacy ?tab= param
@@ -360,7 +359,17 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
         </div>
       )}
 
-      {/* 4+. Trending → WeatherDiscovery → Browse (order customizable) */}
+      {/* 4. Network Feed — indie Atlanta publications */}
+      <div className="mt-8">
+        <div className="h-px bg-[var(--twilight)]" />
+        <div className="pt-6">
+          <LazySection minHeight={400}>
+            <NetworkFeedSection portalSlug={portalSlug} />
+          </LazySection>
+        </div>
+      </div>
+
+      {/* 5+. Trending → WeatherDiscovery → Browse (order customizable) */}
       {orderedSections.map((section) => (
         <div key={section.id} className="mt-8">
           <div className="h-px bg-[var(--twilight)]" />

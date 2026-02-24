@@ -359,7 +359,6 @@ export interface DashboardCard {
 export type FeedBlockId =
   | "timeline"
   | "trending"
-  | "weather_discovery"
   | "your_people"
   | "new_from_spots"
   | "coming_up"
@@ -376,7 +375,6 @@ export interface FeedLayout {
 export const DEFAULT_FEED_ORDER: FeedBlockId[] = [
   "timeline",
   "trending",
-  "weather_discovery",
   "your_people",
   "new_from_spots",
   "coming_up",

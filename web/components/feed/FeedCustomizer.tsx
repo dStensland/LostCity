@@ -28,7 +28,6 @@ import { DEFAULT_FEED_ORDER } from "@/lib/city-pulse/types";
 const BLOCK_LABELS: Record<FeedBlockId, string> = {
   timeline: "Events",
   trending: "Trending",
-  weather_discovery: "Weather Discovery",
   your_people: "Your People",
   new_from_spots: "New from Spots",
   coming_up: "Coming Up",
@@ -38,7 +37,6 @@ const BLOCK_LABELS: Record<FeedBlockId, string> = {
 const BLOCK_DESCRIPTIONS: Record<FeedBlockId, string> = {
   timeline: "Today, This Week, and Coming Up events",
   trending: "What the city is buzzing about",
-  weather_discovery: "Places that match the weather",
   your_people: "Events your friends are attending",
   new_from_spots: "New events from spots you follow",
   coming_up: "Events in the next two weeks",

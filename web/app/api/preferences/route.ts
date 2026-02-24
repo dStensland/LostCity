@@ -12,7 +12,7 @@ import type { FeedBlockId, FeedLayout } from "@/lib/city-pulse/types";
 import { ALL_INTEREST_IDS } from "@/lib/city-pulse/interests";
 
 const VALID_BLOCK_IDS: FeedBlockId[] = [
-  "timeline", "trending", "weather_discovery",
+  "timeline", "trending",
   "your_people", "new_from_spots", "coming_up", "browse",
 ];
 
