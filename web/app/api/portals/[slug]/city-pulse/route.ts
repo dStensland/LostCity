@@ -655,6 +655,47 @@ export async function GET(request: NextRequest, { params }: Props) {
     return q;
   };
 
+  // Lightweight category + tags query — fetches only the fields needed
+  // for per-category counting. No payload bloat, just small strings.
+  const buildCategoryQuery = (start: string, end: string) => {
+    let q = portalClient
+      .from("events")
+      .select("category, genres, tags")
+      .gte("start_date", start)
+      .lte("start_date", end)
+      .is("canonical_event_id", null)
+      .or("is_class.eq.false,is_class.is.null")
+      .or("is_sensitive.eq.false,is_sensitive.is.null");
+    q = applyPortalScope(q);
+    return q;
+  };
+
+  /** Count events by category and genre/tag from lightweight query results */
+  const buildCategoryCounts = (
+    rows: { category: string | null; genres: string[] | null; tags: string[] | null }[],
+  ): Record<string, number> => {
+    const counts: Record<string, number> = {};
+    for (const row of rows) {
+      // Count by category
+      if (row.category) {
+        counts[row.category] = (counts[row.category] || 0) + 1;
+      }
+      // Count by genres (for genre-based chips like trivia, karaoke, etc.)
+      if (Array.isArray(row.genres)) {
+        for (const g of row.genres) {
+          counts[`genre:${g}`] = (counts[`genre:${g}`] || 0) + 1;
+        }
+      }
+      // Count by tags (genre chips also check tags array)
+      if (Array.isArray(row.tags)) {
+        for (const t of row.tags) {
+          counts[`tag:${t}`] = (counts[`tag:${t}`] || 0) + 1;
+        }
+      }
+    }
+    return counts;
+  };
+
   // Weather venue filter
   const weatherFilter = feedContext.weather
     ? getWeatherVenueFilter(feedContext.weather as import("@/lib/weather-utils").WeatherData)
@@ -850,6 +891,12 @@ export async function GET(request: NextRequest, { params }: Props) {
     buildCountQuery(weekAhead, fourWeeksAhead),
   ]);
 
+  const categoryQueries = Promise.all([
+    buildCategoryQuery(today, today),
+    buildCategoryQuery(tomorrow, weekAhead),
+    buildCategoryQuery(weekAhead, fourWeeksAhead),
+  ]);
+
   // ---------------------------------------------------------------------------
   // Tab-only mode: ?tab=this_week or ?tab=coming_up
   // Returns just the requested tab's events + fresh counts — minimal payload
@@ -861,9 +908,10 @@ export async function GET(request: NextRequest, { params }: Props) {
         ? buildEventQuery(tomorrow, weekAhead, 500)
         : buildEventQuery(weekAhead, fourWeeksAhead, 500);
 
-    const [tabEventsResult, countResults, tabUserSignals] = await Promise.all([
+    const [tabEventsResult, countResults, categoryResults, tabUserSignals] = await Promise.all([
       tabEventQuery,
       countQueries,
+      categoryQueries,
       loadUserSignals(),
     ]);
 
@@ -955,6 +1003,11 @@ export async function GET(request: NextRequest, { params }: Props) {
       },
       events_pulse: { total_active: 0, trending_event: null },
       tab_counts: tabCountsObj,
+      category_counts: {
+        today: buildCategoryCounts((categoryResults[0].data || []) as any[]),
+        this_week: buildCategoryCounts((categoryResults[1].data || []) as any[]),
+        coming_up: buildCategoryCounts((categoryResults[2].data || []) as any[]),
+      },
     };
 
     return NextResponse.json(tabResponse, {
@@ -984,6 +1037,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     profileResult,
     userSignals,
     countResults,
+    categoryResults,
   ] = await Promise.all([
     buildEventQuery(today, today, 50),
     buildEveningQuery(),
@@ -995,6 +1049,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     buildProfileQuery(),
     loadUserSignals(),
     countQueries,
+    categoryQueries,
   ]);
 
   const tabCountResults = countResults.map((r) => r.count ?? 0);
@@ -1340,6 +1395,11 @@ export async function GET(request: NextRequest, { params }: Props) {
     },
     events_pulse: eventsPulse,
     tab_counts,
+    category_counts: {
+      today: buildCategoryCounts((categoryResults[0].data || []) as any[]),
+      this_week: buildCategoryCounts((categoryResults[1].data || []) as any[]),
+      coming_up: buildCategoryCounts((categoryResults[2].data || []) as any[]),
+    },
   };
 
   // ---------------------------------------------------------------------------

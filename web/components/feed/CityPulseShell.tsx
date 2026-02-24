@@ -202,6 +202,7 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
     sections,
     personalization,
     tabCounts,
+    categoryCounts,
     isLoading,
     error,
     refresh,
@@ -351,6 +352,7 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
             sections={lineupSections}
             portalSlug={portalSlug}
             tabCounts={tabCounts}
+            categoryCounts={categoryCounts}
             fetchTab={fetchTab}
             activeInterests={feedLayout?.interests}
             onInterestsChange={handleInterestsChange}

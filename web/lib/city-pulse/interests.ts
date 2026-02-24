@@ -285,6 +285,48 @@ export const INTEREST_CHIPS: InterestChip[] = [
 /** Map from interest ID to chip config */
 export const INTEREST_MAP = new Map(INTEREST_CHIPS.map((c) => [c.id, c]));
 
+/**
+ * Map a chip ID to the server-side category_counts keys it should look up.
+ * Category-based chips match their category directly (e.g. "music" → ["music"]).
+ * Genre-based chips match genre:X and tag:X keys (e.g. "trivia" → ["genre:trivia", "tag:trivia"]).
+ * "free" matches tag:free.
+ */
+const CHIP_COUNT_KEYS: Record<string, string[]> = {
+  // Genre-based chips — check both genre: and tag: prefixed keys
+  trivia: ["genre:trivia", "tag:trivia"],
+  karaoke: ["genre:karaoke", "tag:karaoke"],
+  drag: ["genre:drag", "tag:drag"],
+  open_mic: ["genre:open-mic", "genre:openmic", "tag:open-mic", "tag:openmic"],
+  improv: ["genre:improv", "tag:improv"],
+  dj_electronic: ["genre:dj", "genre:electronic", "genre:edm", "tag:dj", "tag:electronic", "tag:edm"],
+  // Tag-based chips
+  free: ["tag:free"],
+};
+
+/**
+ * Get the total server-side count for a chip from category_counts.
+ * For category chips, returns counts[chipId] directly.
+ * For genre/tag chips, sums across all matching keys.
+ * Returns undefined if category_counts is not available.
+ */
+export function getServerChipCount(
+  chipId: string,
+  categoryCounts: Record<string, number> | undefined,
+): number | undefined {
+  if (!categoryCounts) return undefined;
+  const keys = CHIP_COUNT_KEYS[chipId];
+  if (keys) {
+    // Genre/tag chip — sum across all matching keys (dedup not needed,
+    // server counts genres and tags separately so same event may be counted
+    // via both, but that's the correct behavior matching genreMatch())
+    let total = 0;
+    for (const k of keys) total += categoryCounts[k] || 0;
+    return total;
+  }
+  // Category chip — direct lookup
+  return categoryCounts[chipId] ?? 0;
+}
+
 /** All valid interest IDs */
 export const ALL_INTEREST_IDS = INTEREST_CHIPS.map((c) => c.id);
 

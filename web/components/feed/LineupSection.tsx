@@ -28,6 +28,7 @@ import {
   INTEREST_MAP,
   DEFAULT_INTEREST_IDS,
   buildUnionMatcher,
+  getServerChipCount,
   type InterestChip,
 } from "@/lib/city-pulse/interests";
 import LineupHero from "./LineupHero";
@@ -141,6 +142,12 @@ interface LineupSectionProps {
   sections: CityPulseSection[];
   portalSlug: string;
   tabCounts?: { today: number; this_week: number; coming_up: number } | null;
+  /** Server-side per-category counts for each tab — exact GROUP BY results */
+  categoryCounts?: {
+    today: Record<string, number>;
+    this_week: Record<string, number>;
+    coming_up: Record<string, number>;
+  } | null;
   fetchTab?: (tab: "this_week" | "coming_up") => Promise<CityPulseResponse>;
   /** Active interest IDs from user preferences. null/undefined = defaults. */
   activeInterests?: string[] | null;
@@ -156,6 +163,7 @@ export default function LineupSection({
   sections,
   portalSlug,
   tabCounts,
+  categoryCounts,
   fetchTab,
   activeInterests,
   onInterestsChange,
@@ -176,6 +184,7 @@ export default function LineupSection({
   // Lazy-loaded tab data + fresh server counts from tab responses
   const [lazyData, setLazyData] = useState<Record<string, CityPulseSection[]>>({});
   const [lazyTabCounts, setLazyTabCounts] = useState<Record<string, number>>({});
+  const [lazyCategoryCounts, setLazyCategoryCounts] = useState<Record<string, Record<string, number>>>({});
   const [loadingTab, setLoadingTab] = useState<string | null>(null);
 
   // Local interest state — synced from props but editable via picker
@@ -260,6 +269,15 @@ export default function LineupSection({
             ),
           }));
         }
+        // Capture per-category counts for the loaded tab
+        if (data.category_counts) {
+          setLazyCategoryCounts((prev) => ({
+            ...prev,
+            ...Object.fromEntries(
+              Object.entries(data.category_counts!).filter(([, v]) => v && Object.keys(v).length > 0),
+            ),
+          }));
+        }
       } finally {
         setLoadingTab(null);
       }
@@ -339,61 +357,92 @@ export default function LineupSection({
     return evts;
   }, [tabDateEvents, activeChipId, unionMatcher, isHappyHour]);
 
-  // Date tab counts — interest-filtered, scaled to the true server total.
-  // The pool is capped (50 today, 500 per tab) so raw pool.filter() undercounts.
-  // We compute the interest ratio from the pool and apply it to the HEAD count.
+  // Merged category counts: initial response + lazy-loaded tab overrides
+  const mergedCategoryCounts = useMemo(() => {
+    const merged: Record<string, Record<string, number>> = {};
+    // Start with initial-load counts
+    if (categoryCounts) {
+      for (const [tab, counts] of Object.entries(categoryCounts)) {
+        merged[tab] = { ...counts };
+      }
+    }
+    // Override with lazy-loaded tab counts (fresher)
+    for (const [tab, counts] of Object.entries(lazyCategoryCounts)) {
+      merged[tab] = { ...counts };
+    }
+    return merged;
+  }, [categoryCounts, lazyCategoryCounts]);
+
+  // Date tab counts — sum server-side category counts for the user's active interests.
+  // Falls back to ratio estimation only if server counts aren't available.
   const dateTabCounts = useMemo(() => {
     const counts: Record<string, number> = {};
 
-    // First pass: compute ratio from each loaded tab's pool
-    const ratios: Record<string, number> = {};
     for (const tab of TABS) {
-      const pool = tabEventPools[tab.id];
-      if (pool && pool.length > 0) {
-        ratios[tab.id] = pool.filter(unionMatcher).length / pool.length;
-      }
-    }
-    // Fallback ratio from any loaded tab (today is always loaded)
-    const fallbackRatio = ratios["today"] ?? Object.values(ratios)[0] ?? 1;
-
-    for (const tab of TABS) {
-      const serverCount = lazyTabCounts[tab.id]
-        ?? tabCounts?.[tab.id as keyof typeof tabCounts]
-        ?? 0;
-      const pool = tabEventPools[tab.id];
-      if (pool && pool.length > 0) {
-        if (pool.length >= serverCount) {
-          // We have all events — exact count
-          counts[tab.id] = pool.filter(unionMatcher).length;
-        } else {
-          // Pool is a subset — scale ratio to server total
-          counts[tab.id] = Math.round(serverCount * ratios[tab.id]);
+      const serverCats = mergedCategoryCounts[tab.id];
+      if (serverCats) {
+        // Exact server count: sum all active interest chip counts
+        let total = 0;
+        for (const id of localInterests) {
+          const chip = INTEREST_MAP.get(id);
+          if (!chip || chip.type === "specials" || chip.type === "tag") continue;
+          const chipCount = getServerChipCount(id, serverCats);
+          if (chipCount != null) total += chipCount;
         }
+        counts[tab.id] = total;
       } else {
-        // Tab not loaded — estimate from fallback ratio
-        counts[tab.id] = Math.round(serverCount * fallbackRatio);
+        // Fallback: use raw tab count (no interest filtering)
+        counts[tab.id] = lazyTabCounts[tab.id]
+          ?? tabCounts?.[tab.id as keyof typeof tabCounts]
+          ?? 0;
       }
     }
     return counts as { today: number; this_week: number; coming_up: number };
-  }, [tabEventPools, unionMatcher, tabCounts, lazyTabCounts]);
+  }, [mergedCategoryCounts, localInterests, tabCounts, lazyTabCounts]);
 
-  // Category chip counts — per chip, within the active date tab
+  // Category chip counts — prefer exact server counts, fall back to pool counts
   const chipCounts = useMemo(() => {
-    const counts: Record<string, number> = {
-      all: tabDateEvents.filter(unionMatcher).length,
-    };
-    for (const chip of INTEREST_CHIPS) {
-      if (chip.type === "specials") continue;
-      if (chip.type === "tag" && chip.id === "free") {
-        counts[chip.id] = tabDateEvents.filter(
-          (e) => unionMatcher(e) && chip.match(e),
-        ).length;
-      } else {
-        counts[chip.id] = tabDateEvents.filter((e) => chip.match(e)).length;
+    const serverCats = mergedCategoryCounts[activeTabId];
+    const counts: Record<string, number> = {};
+
+    if (serverCats) {
+      // "All" = sum of active category/genre interest counts
+      let allTotal = 0;
+      for (const id of localInterests) {
+        const chip = INTEREST_MAP.get(id);
+        if (!chip || chip.type === "specials" || chip.type === "tag") continue;
+        const c = getServerChipCount(id, serverCats);
+        if (c != null) allTotal += c;
+      }
+      counts["all"] = allTotal;
+
+      // Per-chip counts from server
+      for (const chip of INTEREST_CHIPS) {
+        if (chip.type === "specials") continue;
+        const c = getServerChipCount(chip.id, serverCats);
+        if (c != null) {
+          counts[chip.id] = c;
+        } else {
+          // Chip not represented in server counts — fall back to pool
+          counts[chip.id] = tabDateEvents.filter((e) => chip.match(e)).length;
+        }
+      }
+    } else {
+      // No server counts — fall back to pool counting
+      counts["all"] = tabDateEvents.filter(unionMatcher).length;
+      for (const chip of INTEREST_CHIPS) {
+        if (chip.type === "specials") continue;
+        if (chip.type === "tag" && chip.id === "free") {
+          counts[chip.id] = tabDateEvents.filter(
+            (e) => unionMatcher(e) && chip.match(e),
+          ).length;
+        } else {
+          counts[chip.id] = tabDateEvents.filter((e) => chip.match(e)).length;
+        }
       }
     }
     return counts;
-  }, [tabDateEvents, unionMatcher]);
+  }, [mergedCategoryCounts, activeTabId, localInterests, tabDateEvents, unionMatcher]);
 
   // Specials — only shown in Happy Hour mode
   const specials = useMemo(() => {

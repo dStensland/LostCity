@@ -106,6 +106,7 @@ export function useCityPulseFeed(options: UseCityPulseFeedOptions) {
     curatedSections: query.data?.curated_sections ?? [],
     personalization: query.data?.personalization ?? null,
     tabCounts: query.data?.tab_counts ?? null,
+    categoryCounts: query.data?.category_counts ?? null,
     isLoading: query.isLoading,
     isRefetching: query.isRefetching,
     error: query.error?.message ?? null,

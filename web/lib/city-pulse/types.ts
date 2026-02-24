@@ -284,6 +284,12 @@ export interface CityPulseResponse {
   events_pulse: EventsPulse;
   /** Real event counts per timeline tab (cheap HEAD queries) */
   tab_counts?: { today: number; this_week: number; coming_up: number };
+  /** Per-category event counts for each tab — exact server-side GROUP BY */
+  category_counts?: {
+    today: Record<string, number>;
+    this_week: Record<string, number>;
+    coming_up: Record<string, number>;
+  };
 }
 
 // ---------------------------------------------------------------------------
