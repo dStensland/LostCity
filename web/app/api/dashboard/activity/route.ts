@@ -165,7 +165,7 @@ export async function GET(request: NextRequest) {
         status,
         created_at,
         user:profiles!event_rsvps_user_id_fkey(id, username, display_name, avatar_url),
-        event:events!event_rsvps_event_id_fkey(id, title, start_date, start_time, is_all_day, category, image_url, venue:venues(name))
+        event:events!event_rsvps_event_id_fkey(id, title, start_date, start_time, is_all_day, category:category_id, image_url, venue:venues(name))
       `)
       .in("user_id", friendIds)
       .in("status", ["going", "interested"])
@@ -200,7 +200,7 @@ export async function GET(request: NextRequest) {
         id,
         created_at,
         user:profiles!saved_items_user_id_fkey(id, username, display_name, avatar_url),
-        event:events(id, title, start_date, start_time, is_all_day, category, image_url, venue:venues(name))
+        event:events(id, title, start_date, start_time, is_all_day, category:category_id, image_url, venue:venues(name))
       `)
       .in("user_id", friendIds)
       .not("event_id", "is", null)

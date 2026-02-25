@@ -36,7 +36,7 @@ export const GET = withOptionalAuth(async (request, { user, serviceClient }) => 
           start_date,
           start_time,
           image_url,
-          category,
+          category:category_id,
           series_id,
           series:series!events_series_id_fkey(
             id,

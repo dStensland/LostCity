@@ -102,7 +102,7 @@ export async function GET(request: Request) {
         is_free,
         price_min,
         price_max,
-        category,
+        category:category_id,
         image_url,
         description,
         ticket_url,

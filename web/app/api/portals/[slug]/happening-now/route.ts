@@ -112,7 +112,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         start_time,
         end_time,
         is_all_day,
-        category,
+        category:category_id,
         tags,
         image_url,
         venue:venues(id, name, slug, neighborhood, city, location_designator, lat, lng)

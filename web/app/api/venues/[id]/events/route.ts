@@ -48,7 +48,7 @@ export async function GET(request: NextRequest, { params }: Props) {
       start_time,
       end_time,
       is_all_day,
-      category,
+      category:category_id,
       series:series_id(slug),
       venue:venues(city)
     `)

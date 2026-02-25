@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
         end_time,
         is_all_day,
         is_free,
-        category,
+        category:category_id,
         tags,
         image_url,
         series_id,

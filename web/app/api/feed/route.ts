@@ -200,7 +200,7 @@ export async function GET(request: Request) {
         is_all_day,
         is_free,
         is_adult,
-        category,
+        category_id,
         image_url,
         blurhash,
         series_id,
@@ -408,7 +408,7 @@ export async function GET(request: Request) {
       is_free,
       price_min,
       price_max,
-      category,
+      category_id,
       genres,
       tags,
       image_url,
@@ -455,13 +455,13 @@ export async function GET(request: Request) {
 
     // Apply portal category filters if specified (only if no explicit category filter)
     if (portalId && portalFilters.categories?.length && !categories?.length) {
-      query = query.in("category", portalFilters.categories);
+      query = query.in("category_id", portalFilters.categories);
     }
 
     // Exclude categories from portal filters (always apply)
     if (portalId && portalFilters.exclude_categories?.length) {
       query = query.not(
-        "category",
+        "category_id",
         "in",
         `(${portalFilters.exclude_categories.join(",")})`
       );
@@ -469,7 +469,7 @@ export async function GET(request: Request) {
 
     // Apply explicit category filter
     if (categories?.length) {
-      query = query.in("category", categories);
+      query = query.in("category_id", categories);
     }
 
     // Apply free filter
@@ -499,7 +499,7 @@ export async function GET(request: Request) {
     is_free,
     price_min,
     price_max,
-    category,
+    category:category_id,
     genres,
     tags,
     image_url,
@@ -651,7 +651,7 @@ export async function GET(request: Request) {
       let categoryQuery = portalClient
         .from("events")
         .select(eventSelect)
-        .in("category", favoriteCategories)
+        .in("category_id", favoriteCategories)
         .gte("start_date", today)
         .eq("is_active", true)
         .is("canonical_event_id", null)

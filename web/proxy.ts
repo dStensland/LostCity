@@ -123,7 +123,7 @@ async function resolveCustomDomainInMiddleware(
 export async function proxy(request: NextRequest) {
   const nonce = generateNonce();
   const isDev = process.env.NODE_ENV !== "production";
-  const csp = buildCsp(nonce, { isDev });
+  const csp = buildCsp(nonce, { isDev, includeUpgradeInsecureRequests: !isDev });
   const cspReportOnly = buildCsp(nonce, {
     isDev,
     allowInlineStyles: true,

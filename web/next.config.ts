@@ -8,6 +8,8 @@ const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === "true",
 });
 
+const isDev = process.env.NODE_ENV !== "production";
+
 const securityHeaders = [
   {
     key: "X-Frame-Options",
@@ -33,10 +35,16 @@ const securityHeaders = [
     key: "Cross-Origin-Resource-Policy",
     value: "same-origin",
   },
-  {
-    key: "Strict-Transport-Security",
-    value: "max-age=31536000; includeSubDomains; preload",
-  },
+  // HSTS must not be sent in development — it causes Chrome to permanently
+  // redirect http://localhost to https://localhost which doesn't exist.
+  ...(isDev
+    ? []
+    : [
+        {
+          key: "Strict-Transport-Security",
+          value: "max-age=31536000; includeSubDomains; preload",
+        },
+      ]),
 ];
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -147,7 +155,7 @@ const nextConfig: NextConfig = {
     },
   },
   experimental: {
-    optimizePackageImports: ["@phosphor-icons/react"],
+    optimizePackageImports: ["@phosphor-icons/react", "date-fns"],
   },
   images: {
     // Allow only known HTTPS image hosts. Add more via NEXT_PUBLIC_IMAGE_HOSTS.
@@ -164,6 +172,10 @@ const nextConfig: NextConfig = {
       {
         protocol: "https" as const,
         hostname: "**.squarespace.com",
+      },
+      {
+        protocol: "https" as const,
+        hostname: "**.wp.com",
       },
       {
         protocol: "http" as const,

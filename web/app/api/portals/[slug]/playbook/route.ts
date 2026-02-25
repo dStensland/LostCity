@@ -210,7 +210,7 @@ function isSpecialActive(
 const EVENT_SELECT = `
   id, title, start_date, start_time, end_date, end_time,
   is_all_day, is_free, price_min, price_max,
-  category, genres, image_url, content_kind, tags,
+  category:category_id, genres, image_url, content_kind, tags,
   series:series_id(id, frequency, day_of_week),
   venue:venues(id, name, neighborhood, slug, venue_type, lat, lng, city, image_url)
 `;

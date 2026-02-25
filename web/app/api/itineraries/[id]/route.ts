@@ -53,7 +53,7 @@ export const GET = withAuthAndParams<Params>(
       .select(
         `
         *,
-        event:events(id, title, start_date, start_time, image_url, category, venue:venues(name, lat, lng)),
+        event:events(id, title, start_date, start_time, image_url, category:category_id, venue:venues(name, lat, lng)),
         venue:venues(id, slug, name, image_url, neighborhood, venue_type, lat, lng)
       `
       )
