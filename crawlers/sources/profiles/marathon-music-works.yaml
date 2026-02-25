@@ -10,3 +10,8 @@ discovery:
   - https://www.marathonmusicworks.com/tickets/
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- lineup
+- tickets

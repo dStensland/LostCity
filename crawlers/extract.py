@@ -195,7 +195,9 @@ def _strip_html_boilerplate(html: str) -> str:
 def extract_events(
     raw_content: str,
     source_url: str,
-    source_name: str
+    source_name: str,
+    llm_provider: Optional[str] = None,
+    llm_model: Optional[str] = None,
 ) -> list[EventData]:
     """
     Extract structured event data from raw HTML/text content.
@@ -217,7 +219,12 @@ Content to extract:
 {cleaned[:50000]}"""  # Truncate very long content
 
     try:
-        response_text = generate_text(EXTRACTION_PROMPT, user_message)
+        response_text = generate_text(
+            EXTRACTION_PROMPT,
+            user_message,
+            provider_override=llm_provider,
+            model_override=llm_model,
+        )
 
         # Try to extract JSON from response
         json_str = response_text

@@ -85,7 +85,7 @@ const ORG_SELECT = `
 const PARK_TYPES = ["park", "dog_park", "trail", "nature_preserve"];
 
 /** Venue types for food/drink */
-const PATIO_TYPES = ["brewery", "restaurant", "bar", "coffee_shop", "cafe"];
+const PATIO_TYPES = ["brewery", "restaurant", "bar", "cocktail_bar"];
 
 /** Venue types for services */
 const SERVICE_TYPES = ["vet", "groomer", "pet_store", "pet_daycare", "animal_shelter"];

@@ -1,0 +1,28 @@
+{
+  "venue_id": 4134,
+  "venue_slug": "just-add-honey-tea",
+  "meta": {
+    "og_image": "http://justaddhoney.net/cdn/shop/files/B9A08BAC-E3DD-457E-8C25-105247433D03_1_201_a_d2e9230a-ad0d-40b0-b8a4-4648eef9129f.jpg?v=1616417656",
+    "meta_description": "loose leaf tea | retail cafe | afternoon tea | local honey fancy without the fuss. enjoy a new tea experience with just add honey. we offer thoughtfully blended loose leaf teas made in small batches to ensure the perfect cup cheers!",
+    "reservation_links": [],
+    "menu_links": [],
+    "instagram": "justaddhoney",
+    "facebook_url": "https://facebook.com/justaddhoney",
+    "phone": "(404) 850-6510"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["cozy", "artsy", "casual", "outdoor-seating", "black-owned", "woman-owned"],
+    "cuisine": ["tea", "coffee"],
+    "service_style": "cafe",
+    "price_level": 2,
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": "(404) 850-6510",
+    "instagram": "justaddhoney",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

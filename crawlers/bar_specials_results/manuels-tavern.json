@@ -1,0 +1,31 @@
+{
+  "venue_id": 643,
+  "venue_slug": "manuels-tavern",
+  "meta": {},
+  "extracted": {
+    "specials": [
+      {
+        "title": "Weekend Brunch",
+        "type": "brunch",
+        "description": "Weekend brunch menu featuring eggs benedict and other classics",
+        "days_of_week": [6, 7],
+        "time_start": null,
+        "time_end": null,
+        "price_note": null
+      }
+    ],
+    "hours": null,
+    "vibes": ["dive-bar", "casual", "family-friendly"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "https://manuelstavern.com/menus/food",
+    "reservation_url": null,
+    "phone": "(404) 536-8130",
+    "instagram": "manuels_tavern",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

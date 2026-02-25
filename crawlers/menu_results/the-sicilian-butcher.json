@@ -1,0 +1,55 @@
+{
+  "venue_id": 1571,
+  "venue_slug": "the-sicilian-butcher",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Meatball Ferris Wheel",
+        "price": null,
+        "category": "appetizer"
+      },
+      {
+        "name": "10 Layer Lasagna",
+        "price": null,
+        "category": "entree"
+      },
+      {
+        "name": "Sicilian In Strada Board",
+        "price": null,
+        "category": "appetizer"
+      },
+      {
+        "name": "The Siciliano Cocktail",
+        "price": null,
+        "category": "cocktail"
+      },
+      {
+        "name": "Taste Of Sicily Mini Cannoli Ferris Wheel",
+        "price": null,
+        "category": "dessert"
+      }
+    ],
+    "dietary_options": [
+      "gluten-free-options"
+    ],
+    "price_level": 3,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

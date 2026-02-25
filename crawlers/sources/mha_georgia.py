@@ -136,7 +136,7 @@ def determine_category_and_tags(title: str, description: str, cost_str: str = ""
         tags.append("virtual")
 
     # Check if free
-    is_free = "free" in text or "no cost" in text or not cost_str or cost_str.lower() == "free"
+    is_free = "free" in text or "no cost" in text or (bool(cost_str) and cost_str.lower() == "free")
     if is_free:
         tags.append("free")
 
@@ -277,11 +277,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     # Get cost info
                     cost_str = event_data.get("cost", "")
-                    is_free = True
+                    is_free = bool(cost_str and cost_str.lower() == "free")
                     price_note = None
 
                     if cost_str and cost_str.lower() != "free":
-                        is_free = False
                         price_note = cost_str
 
                     # Determine category and tags

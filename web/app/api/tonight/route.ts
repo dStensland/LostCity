@@ -1,9 +1,16 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createPortalScopedClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { format, startOfDay, addDays, startOfWeek, startOfMonth } from "date-fns";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
-import { applyPortalScopeToQuery, filterByPortalCity } from "@/lib/portal-scope";
+import {
+  applyPortalScopeToQuery,
+  filterByPortalCity,
+  parsePortalContentFilters,
+  applyPortalCategoryFilters,
+  filterByPortalContentScope,
+} from "@/lib/portal-scope";
+import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
 
 type HighlightsPeriod = "today" | "week" | "month";
 
@@ -12,13 +19,18 @@ type TonightEvent = {
   title: string;
   start_date: string;
   start_time: string | null;
+  doors_time?: string | null;
   end_date: string | null;
   end_time: string | null;
   is_all_day: boolean;
   is_free: boolean;
   category: string | null;
+  genres?: string[] | null;
   image_url: string | null;
   description: string | null;
+  source_url?: string | null;
+  ticket_url?: string | null;
+  age_policy?: string | null;
   tags: string[] | null;
   venue_id: number | null;
   series_id?: string | null;
@@ -30,6 +42,7 @@ type TonightEvent = {
     image_url: string | null;
     frequency: string | null;
     day_of_week: string | null;
+    genres?: string[] | null;
     festival?: {
       id: string;
       slug: string;
@@ -41,13 +54,17 @@ type TonightEvent = {
     } | null;
   } | null;
   venue: {
+    id?: number | null;
     name: string;
     neighborhood: string | null;
     image_url?: string | null;
     city?: string | null;
+    lat?: number | null;
+    lng?: number | null;
   } | null;
   event_artists?: {
     artist_id: string | null;
+    name?: string | null;
     is_headliner: boolean | null;
     billing_order: number | null;
     artist: {
@@ -67,6 +84,30 @@ const PERIOD_CONFIG: Record<HighlightsPeriod, { limit: number; candidateLimit: n
   week: { limit: 16, candidateLimit: 600, cacheSMaxAge: 900, cacheStaleWhileRevalidate: 1800 },
   month: { limit: 20, candidateLimit: 1000, cacheSMaxAge: 1800, cacheStaleWhileRevalidate: 3600 },
 };
+
+const TONIGHT_RESPONSE_CACHE_MAX_ENTRIES = 120;
+const TONIGHT_CACHE_NAMESPACE = "api:tonight";
+const TONIGHT_IN_FLIGHT_LOADS = new Map<string, Promise<Response>>();
+
+async function getCachedTonightResponse(
+  key: string
+): Promise<Record<string, unknown> | null> {
+  return getSharedCacheJson<Record<string, unknown>>(TONIGHT_CACHE_NAMESPACE, key);
+}
+
+async function setCachedTonightResponse(
+  key: string,
+  payload: Record<string, unknown>,
+  ttlMs: number,
+): Promise<void> {
+  await setSharedCacheJson(
+    TONIGHT_CACHE_NAMESPACE,
+    key,
+    payload,
+    ttlMs,
+    { maxEntries: TONIGHT_RESPONSE_CACHE_MAX_ENTRIES }
+  );
+}
 
 // Categories that appeal to young hip crowd
 const HIP_CATEGORIES = ["music", "comedy", "nightlife", "art", "film", "theater", "sports"];
@@ -124,6 +165,107 @@ const CHAIN_CINEMA_PATTERNS = [
   /^ncg\b/i,
   /springs cinema/i,
 ];
+
+const SUPPORT_SPLIT_RE =
+  /\s+(?:w\/|with|feat\.?|ft\.?|featuring|support(?:ing)?|special guests?|openers?|opening)\s+/i;
+const NOISY_PREFIX_RE =
+  /^(with|w\/|special guests?|support(?:ing)?|opening|openers?)\b/i;
+const ACTIVITY_TAG_PRIORITY = [
+  "festival",
+  "live-music",
+  "dj",
+  "drag",
+  "comedy",
+  "improv",
+  "standup",
+  "market",
+  "workshop",
+  "trivia",
+  "karaoke",
+  "screening",
+  "sports",
+  "brunch",
+  "networking",
+  "late-night",
+];
+
+const normalizeText = (value: string | null | undefined): string =>
+  (value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const isLikelyRootUrl = (url: string | null | undefined): boolean => {
+  if (!url) return true;
+  try {
+    const parsed = new URL(url);
+    const path = parsed.pathname.replace(/\/+$/, "");
+    return path === "";
+  } catch {
+    return false;
+  }
+};
+
+const getPrimaryTitleToken = (title: string): string => {
+  const firstChunk = title.split(SUPPORT_SPLIT_RE)[0] || title;
+  const commaChunk = firstChunk.split(",")[0] || firstChunk;
+  return normalizeText(commaChunk);
+};
+
+const getArtistCount = (event: TonightEvent): number => {
+  const artists = event.event_artists || [];
+  const names = new Set<string>();
+  for (const row of artists) {
+    const normalized = normalizeText(row.name || "");
+    if (normalized) names.add(normalized);
+  }
+  return names.size;
+};
+
+const getActivitySignature = (event: TonightEvent): string => {
+  const cat = event.category || "other";
+  const tags = event.tags || [];
+  const titleDesc = `${event.title || ""} ${event.description || ""}`.toLowerCase();
+
+  const tagged = ACTIVITY_TAG_PRIORITY.find((tag) => tags.includes(tag));
+  if (tagged) return `${cat}:${tagged}`;
+
+  const genre = event.genres?.[0] || event.series?.genres?.[0];
+  if (genre) return `${cat}:${normalizeText(genre)}`;
+
+  if (/\b(dj|dance party|club night|house music|techno)\b/i.test(titleDesc)) {
+    return `${cat}:dj-night`;
+  }
+  if (/\b(trivia|quiz)\b/i.test(titleDesc)) {
+    return `${cat}:trivia`;
+  }
+  if (/\b(karaoke)\b/i.test(titleDesc)) {
+    return `${cat}:karaoke`;
+  }
+  if (/\b(open mic|showcase|jam)\b/i.test(titleDesc)) {
+    return `${cat}:open-mic`;
+  }
+  if (/\b(screening|premiere)\b/i.test(titleDesc)) {
+    return `${cat}:screening`;
+  }
+
+  return `${cat}:general`;
+};
+
+const getDedupeKey = (event: TonightEvent): string => {
+  const venue = (event.venue?.name || "").toLowerCase().replace(/^the\s+/, "").trim();
+  const slot = `${event.start_date}|${event.start_time || "all-day"}`;
+  const headliner = normalizeText(
+    (event.event_artists || [])
+      .slice()
+      .sort((a, b) => (a.billing_order || 99) - (b.billing_order || 99))
+      .find((a) => a.is_headliner || a.billing_order === 1)
+      ?.name || ""
+  );
+  const performerToken = headliner || getPrimaryTitleToken(event.title);
+  return `${slot}|${venue}|${performerToken}`;
+};
 
 // Calculate quality score optimized for young hip audience
 function calculateQualityScore(
@@ -222,6 +364,22 @@ function calculateQualityScore(
     score += 3;
   }
 
+  // Metadata completeness: events with real details convert better and feel premium
+  if (event.ticket_url) score += 2;
+  if (!isLikelyRootUrl(event.source_url)) score += 2;
+  if (event.age_policy && /\b(all ages|18\+|21\+|\d{2}\+)\b/i.test(event.age_policy)) score += 1;
+  if ((event.genres && event.genres.length > 0) || (event.series?.genres && event.series.genres.length > 0)) {
+    score += 2;
+  }
+
+  // Shows with explicit lineup metadata are usually cleaner and more trustworthy
+  const artistCount = getArtistCount(event);
+  if (cat === "music" || cat === "comedy") {
+    if (artistCount >= 3) score += 4;
+    else if (artistCount === 2) score += 3;
+    else if (artistCount === 1) score += 1;
+  }
+
   // Penalize ALL_CAPS titles (often low-quality data)
   if (title.length > 5 && title === title.toUpperCase()) {
     score -= 8;
@@ -230,6 +388,9 @@ function calculateQualityScore(
   // Penalize very short or generic titles
   if (title.length <= 5) {
     score -= 10;
+  }
+  if (NOISY_PREFIX_RE.test(title.trim())) {
+    score -= 8;
   }
 
   // Penalize truncated/stub titles (e.g. "Swarm vs.", "TBA -", "Artist:")
@@ -462,15 +623,15 @@ function getDateRange(period: HighlightsPeriod, now: Date): { startDate: string;
 }
 
 const EVENT_SELECT = `
-  id, title, start_date, start_time, end_date, end_time,
-  is_all_day, is_free, category, image_url, description, venue_id,
-  tags, series_id,
+  id, title, start_date, start_time, doors_time, end_date, end_time,
+  is_all_day, is_free, category, genres, image_url, description, venue_id,
+  source_url, ticket_url, age_policy, tags, series_id,
   series:series_id(
-    id, slug, title, series_type, image_url, frequency, day_of_week,
+    id, slug, title, series_type, image_url, frequency, day_of_week, genres,
     festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
   ),
-  venue:venues(name, neighborhood, image_url, city),
-  event_artists(artist_id, is_headliner, billing_order, artist:artists(image_url))
+  venue:venues(id, name, neighborhood, image_url, city, lat, lng, location_designator),
+  event_artists(artist_id, name, is_headliner, billing_order, artist:artists(image_url))
 `;
 
 export async function GET(request: NextRequest) {
@@ -493,7 +654,19 @@ export async function GET(request: NextRequest) {
     const cacheHeaders = {
       "Cache-Control": `public, s-maxage=${config.cacheSMaxAge}, stale-while-revalidate=${config.cacheStaleWhileRevalidate}`,
     };
+    const cacheTtlMs = config.cacheSMaxAge * 1000;
+    const cacheKey = `${request.nextUrl.searchParams.toString()}|${period}|${Math.floor(Date.now() / cacheTtlMs)}`;
+    const cachedPayload = await getCachedTonightResponse(cacheKey);
+    if (cachedPayload) {
+      return NextResponse.json(cachedPayload, { headers: cacheHeaders });
+    }
 
+    const existingTonightLoad = TONIGHT_IN_FLIGHT_LOADS.get(cacheKey);
+    if (existingTonightLoad) {
+      return existingTonightLoad;
+    }
+
+    const tonightLoadPromise = (async (): Promise<Response> => {
     const supabase = await createClient();
 
     const portalContext = await resolvePortalQueryContext(supabase, request.nextUrl.searchParams);
@@ -503,6 +676,9 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const portalClient = await createPortalScopedClient(portalContext.portalId);
+    const portalContentFilters = parsePortalContentFilters(portalContext.filters as Record<string, unknown> | null);
 
     // PERFORMANCE: Run portal lookup and curated picks fetch in parallel
     const [curatedPicksResult, activePortalResult] = await Promise.all([
@@ -540,7 +716,7 @@ export async function GET(request: NextRequest) {
 
       // Only return curated-only if they fill most of the target
       if (curatedIds.length >= Math.floor(config.limit * 0.8)) {
-        const { data: curatedEvents } = await supabase
+        const { data: curatedEvents } = await portalClient
           .from("events")
           .select(EVENT_SELECT)
           .in("id", curatedIds);
@@ -579,7 +755,9 @@ export async function GET(request: NextRequest) {
               };
             });
 
-            return NextResponse.json({ events: result, period }, { headers: cacheHeaders });
+            const payload = { events: result, period };
+            await setCachedTonightResponse(cacheKey, payload, cacheTtlMs);
+            return NextResponse.json(payload, { headers: cacheHeaders });
           }
         }
       }
@@ -608,6 +786,8 @@ export async function GET(request: NextRequest) {
         publicOnlyWhenNoPortal: true,
       });
 
+      scoped = applyPortalCategoryFilters(scoped, portalContentFilters);
+
       return scoped;
     };
 
@@ -625,7 +805,7 @@ export async function GET(request: NextRequest) {
         const wStart = format(addDays(now, w * 7), "yyyy-MM-dd");
         const wEnd = format(addDays(now, (w + 1) * 7 - 1), "yyyy-MM-dd");
         weekQueries.push(
-          baseFilters(supabase.from("events").select(EVENT_SELECT))
+          baseFilters(portalClient.from("events").select(EVENT_SELECT))
             .gte("start_date", wStart)
             .lte("start_date", wEnd)
             .neq("category", "film")
@@ -637,7 +817,7 @@ export async function GET(request: NextRequest) {
       }
       // Also fetch indie film sample
       weekQueries.push(
-        baseFilters(supabase.from("events").select(EVENT_SELECT))
+        baseFilters(portalClient.from("events").select(EVENT_SELECT))
           .eq("category", "film")
           .not("image_url", "is", null)
           .not("tags", "cs", "{showtime}")
@@ -655,14 +835,14 @@ export async function GET(request: NextRequest) {
     } else {
       // Today/week: single fetch is fine
       const [nonFilmResult, filmResult] = await Promise.all([
-        baseFilters(supabase.from("events").select(EVENT_SELECT))
+        baseFilters(portalClient.from("events").select(EVENT_SELECT))
           .neq("category", "film")
           .not("image_url", "is", null)
           .order("start_date", { ascending: true })
           .order("start_time", { ascending: true })
           .limit(config.candidateLimit),
         // Only fetch film events that AREN'T regular chain showtimes
-        baseFilters(supabase.from("events").select(EVENT_SELECT))
+        baseFilters(portalClient.from("events").select(EVENT_SELECT))
           .eq("category", "film")
           .not("image_url", "is", null)
           .not("tags", "cs", "{showtime}")
@@ -673,7 +853,9 @@ export async function GET(request: NextRequest) {
 
       if (nonFilmResult.error && filmResult.error) {
         console.error("Failed to fetch tonight events:", nonFilmResult.error);
-        return NextResponse.json({ events: [], period }, {
+        const payload = { events: [], period };
+        await setCachedTonightResponse(cacheKey, payload, cacheTtlMs);
+        return NextResponse.json(payload, {
           headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120" }
         });
       }
@@ -690,7 +872,7 @@ export async function GET(request: NextRequest) {
       const imageEventIds = new Set(allEvents.map(e => e.id));
       const backfillLimit = config.candidateLimit - allEvents.length;
 
-      const { data: backfillData } = await baseFilters(supabase.from("events").select(EVENT_SELECT))
+      const { data: backfillData } = await baseFilters(portalClient.from("events").select(EVENT_SELECT))
         .neq("category", "film")
         .is("image_url", null)
         .order("start_date", { ascending: true })
@@ -710,6 +892,9 @@ export async function GET(request: NextRequest) {
       { allowMissingCity: false }
     );
 
+    // Apply portal content scope filters (geo, neighborhoods, tags, venue_ids, price)
+    allEvents = filterByPortalContentScope(allEvents, portalContentFilters);
+
     // Filter out today's events that already happened (started > 2 hours ago)
     // Only applies to today's date — future dates always included
     const isEarlyMorning = currentHour < 6;
@@ -726,7 +911,9 @@ export async function GET(request: NextRequest) {
     });
 
     if (typedEvents.length === 0) {
-      return NextResponse.json({ events: [], period }, { headers: cacheHeaders });
+      const payload = { events: [], period };
+      await setCachedTonightResponse(cacheKey, payload, cacheTtlMs);
+      return NextResponse.json(payload, { headers: cacheHeaders });
     }
 
     // PERFORMANCE: Fetch RSVP counts and venue recommendations in parallel
@@ -807,25 +994,39 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    // Filter out events with very negative scores (generic/low quality)
-    // Today requires images (hero carousel). Week/month allow imageless events
-    // as backfill — they rank lower since image resolution already ran.
-    // Also dedupe by title+venue (some events appear multiple times)
-    const seen = new Set<string>();
-    const qualityEvents = scoredEvents.filter(e => {
-      if (e.quality_score <= -10) return false;
-      if (period === "today" && !e.image_url) return false;
+    // Filter out low-signal events, then dedupe by slot/venue/headliner while
+    // keeping the highest-scoring variant. We dedupe AFTER scoring so weak
+    // duplicates can't accidentally block better rows.
+    const dedupedByKey = new Map<string, ScoredEvent>();
+    for (const event of scoredEvents) {
+      if (event.quality_score <= -10) continue;
+      if (period === "today" && !event.image_url) continue;
 
-      // Dedupe key: normalized title + venue
-      const key = `${e.title.toLowerCase().trim()}|${e.venue?.name?.toLowerCase() || ""}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
+      const key = getDedupeKey(event);
+      const existing = dedupedByKey.get(key);
+      if (!existing) {
+        dedupedByKey.set(key, event);
+        continue;
+      }
 
-      return true;
-    });
+      const shouldReplace =
+        event.quality_score > existing.quality_score ||
+        (event.quality_score === existing.quality_score && event.title.length > existing.title.length);
+      if (shouldReplace) {
+        dedupedByKey.set(key, event);
+      }
+    }
 
-    // Sort by quality score (descending)
-    qualityEvents.sort((a, b) => b.quality_score - a.quality_score);
+    const qualityEvents = Array.from(dedupedByKey.values()).sort(
+      (a, b) => b.quality_score - a.quality_score
+    );
+
+    // Maintain a premium baseline for pass 1/2 selection.
+    // If the pool is too thin, pass 3 still backfills from all quality events.
+    const MIN_PRIMARY_SCORE = period === "today" ? 10 : period === "week" ? 7 : 5;
+    const primaryCandidates = qualityEvents.filter((e) => e.quality_score >= MIN_PRIMARY_SCORE);
+    const rankedCandidates =
+      primaryCandidates.length >= Math.floor(config.limit * 0.7) ? primaryCandidates : qualityEvents;
 
     // Normalize venue name for dedup: "The Masquerade - Purgatory" -> "masquerade"
     const normalizeVenueName = (name: string): string => {
@@ -842,6 +1043,7 @@ export async function GET(request: NextRequest) {
     const selected: ScoredEvent[] = [];
     const selectedIds = new Set<number>();
     const categoryCounts = new Map<string, number>();
+    const activitySignatureCounts = new Map<string, number>();
     const seriesCounts = new Map<string, number>();
     const neighborhoodCounts = new Map<string, number>();
     // Category caps — generous enough for music/comedy on a Saturday
@@ -851,6 +1053,7 @@ export async function GET(request: NextRequest) {
     const MAX_PER_NEIGHBORHOOD = period === "today" ? 4 : period === "week" ? 6 : 8;
     // Allow 2 events per venue for today, 3 for longer periods (sub-venues like Masquerade rooms)
     const MAX_PER_VENUE = period === "today" ? 2 : 3;
+    const MAX_PER_ACTIVITY_SIGNATURE = period === "today" ? 1 : 2;
     // Series dedup: today=1 (don't show same series twice), week=2, month=3
     // A great weekly series should appear on multiple dates in a 30-day view
     const MAX_PER_SERIES = period === "today" ? 1 : period === "week" ? 2 : 3;
@@ -906,13 +1109,20 @@ export async function GET(request: NextRequest) {
       if (!seriesId) return false;
       return (seriesCounts.get(seriesId) || 0) >= MAX_PER_SERIES;
     };
+    const trackActivitySignature = (signature: string) => {
+      activitySignatureCounts.set(signature, (activitySignatureCounts.get(signature) || 0) + 1);
+    };
+    const isActivitySignatureFull = (signature: string) => {
+      return (activitySignatureCounts.get(signature) || 0) >= MAX_PER_ACTIVITY_SIGNATURE;
+    };
 
     // Pass 1: Pick top-scoring event from each hip category (ensures variety)
     const MIN_FEATURED_SCORE = 10;
     const hipCategoriesSeen = new Set<string>();
-    for (const event of qualityEvents) {
+    for (const event of rankedCandidates) {
       const cat = event.category || "other";
       const venueName = normalizeVenueName(event.venue?.name || "");
+      const signature = getActivitySignature(event);
 
       if (!HIP_CATEGORIES.includes(cat)) continue;
       if (hipCategoriesSeen.has(cat)) continue;
@@ -921,11 +1131,13 @@ export async function GET(request: NextRequest) {
       if (isSeriesFull(event.series_id)) continue;
       if (isNeighborhoodFull(event)) continue;
       if (isDateFull(event.start_date)) continue;
+      if (isActivitySignatureFull(signature)) continue;
 
       selected.push(event);
       selectedIds.add(event.id);
       hipCategoriesSeen.add(cat);
       categoryCounts.set(cat, (categoryCounts.get(cat) || 0) + 1);
+      trackActivitySignature(signature);
       trackVenue(venueName);
       if (event.series_id) trackSeries(event.series_id);
       trackNeighborhood(event);
@@ -950,7 +1162,7 @@ export async function GET(request: NextRequest) {
         const needed = RESERVE_PER_WEEK - alreadyHave;
         if (needed <= 0) continue;
         let added = 0;
-        for (const e of qualityEvents) {
+        for (const e of rankedCandidates) {
           if (added >= needed) break;
           if (selectedIds.has(e.id)) continue;
           if (getWeekBucket(e.start_date) !== w) continue;
@@ -958,9 +1170,12 @@ export async function GET(request: NextRequest) {
 
           const cat = e.category || "other";
           const venueName = normalizeVenueName(e.venue?.name || "");
+          const signature = getActivitySignature(e);
+          if (isActivitySignatureFull(signature)) continue;
           selected.push(e);
           selectedIds.add(e.id);
           categoryCounts.set(cat, (categoryCounts.get(cat) || 0) + 1);
+          trackActivitySignature(signature);
           trackVenue(venueName);
           if (e.series_id) trackSeries(e.series_id);
           trackNeighborhood(e);
@@ -974,10 +1189,11 @@ export async function GET(request: NextRequest) {
     // Pass 2: Fill remaining slots with highest-scoring events
     // Enforce category, neighborhood, date diversity and series/venue caps
     if (selected.length < config.limit) {
-      for (const event of qualityEvents) {
+      for (const event of rankedCandidates) {
         if (selectedIds.has(event.id)) continue;
         const cat = event.category || "other";
         const venueName = normalizeVenueName(event.venue?.name || "");
+        const signature = getActivitySignature(event);
 
         if (isVenueFull(venueName)) continue;
         if ((categoryCounts.get(cat) || 0) >= MAX_PER_CATEGORY) continue;
@@ -985,10 +1201,12 @@ export async function GET(request: NextRequest) {
         if (isSeriesFull(event.series_id)) continue;
         if (isNeighborhoodFull(event)) continue;
         if (isDateFull(event.start_date)) continue;
+        if (isActivitySignatureFull(signature)) continue;
 
         selected.push(event);
         selectedIds.add(event.id);
         categoryCounts.set(cat, (categoryCounts.get(cat) || 0) + 1);
+        trackActivitySignature(signature);
         trackVenue(venueName);
         if (event.series_id) trackSeries(event.series_id);
         trackNeighborhood(event);
@@ -1004,10 +1222,12 @@ export async function GET(request: NextRequest) {
         if (selectedIds.has(event.id)) continue;
         const cat = event.category || "other";
         const venueName = normalizeVenueName(event.venue?.name || "");
+        const signature = getActivitySignature(event);
 
         if (isVenueFull(venueName)) continue;
         if ((categoryCounts.get(cat) || 0) >= MAX_PER_CATEGORY + 3) continue;
         if (cat === "film" && (categoryCounts.get("film") || 0) >= MAX_FILM + 1) continue;
+        if ((activitySignatureCounts.get(signature) || 0) >= MAX_PER_ACTIVITY_SIGNATURE + 1) continue;
         // Relaxed date cap: allow 1 more per date, but keep week-bucket cap
         if ((dateCounts.get(event.start_date) || 0) >= MAX_PER_DATE + 1) continue;
         if (period === "month") {
@@ -1018,6 +1238,7 @@ export async function GET(request: NextRequest) {
         selected.push(event);
         selectedIds.add(event.id);
         categoryCounts.set(cat, (categoryCounts.get(cat) || 0) + 1);
+        trackActivitySignature(signature);
         trackVenue(venueName);
         if (event.series_id) trackSeries(event.series_id);
         trackNeighborhood(event);
@@ -1027,16 +1248,55 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Strip internal scoring fields, venue image_url, and event_artists before returning
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const result = selected.map(({ quality_score: _, rsvp_count, description: _d, venue_id: _v, tags: _t, event_artists: _ea, ...event }) => ({
-      ...event,
-      // Strip venue.image_url (only used internally for image resolution)
-      venue: event.venue ? { name: event.venue.name, neighborhood: event.venue.neighborhood } : null,
-      rsvp_count: rsvp_count > 0 ? rsvp_count : undefined,
-    }));
+    // Strip internal scoring fields, helper metadata, venue image_url, and event_artists before returning
+    const result = selected.map((entry) => {
+      const {
+        quality_score,
+        rsvp_count,
+        description,
+        venue_id,
+        tags,
+        event_artists,
+        source_url,
+        ticket_url,
+        age_policy,
+        genres,
+        doors_time,
+        ...event
+      } = entry;
+      void quality_score;
+      void description;
+      void venue_id;
+      void tags;
+      void event_artists;
+      void source_url;
+      void ticket_url;
+      void age_policy;
+      void genres;
+      void doors_time;
 
-    return NextResponse.json({ events: result, period }, { headers: cacheHeaders });
+      return {
+        ...event,
+        // Strip venue.image_url (only used internally for image resolution)
+        venue: event.venue ? { name: event.venue.name, neighborhood: event.venue.neighborhood } : null,
+        rsvp_count: rsvp_count > 0 ? rsvp_count : undefined,
+      };
+    });
+
+    const payload = { events: result, period };
+    await setCachedTonightResponse(cacheKey, payload, cacheTtlMs);
+    return NextResponse.json(payload, { headers: cacheHeaders });
+    })();
+
+    TONIGHT_IN_FLIGHT_LOADS.set(cacheKey, tonightLoadPromise);
+    try {
+      return await tonightLoadPromise;
+    } finally {
+      const currentTonightLoad = TONIGHT_IN_FLIGHT_LOADS.get(cacheKey);
+      if (currentTonightLoad === tonightLoadPromise) {
+        TONIGHT_IN_FLIGHT_LOADS.delete(cacheKey);
+      }
+    }
   } catch (error) {
     console.error("Error in tonight API:", error);
     return NextResponse.json({ events: [], period: "today" }, { status: 500 });

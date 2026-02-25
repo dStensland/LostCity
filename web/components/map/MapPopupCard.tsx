@@ -25,6 +25,7 @@ interface SpotPopupProps {
   slug: string;
   name: string;
   venueType: string | null;
+  locationDesignator?: "standard" | "private_after_signup" | "virtual" | "recovery_meeting" | null;
   address: string | null;
   neighborhood: string | null;
   portalSlug: string;
@@ -136,11 +137,20 @@ function SpotPopupContent({
   slug,
   name,
   venueType,
+  locationDesignator,
   address,
   neighborhood,
   portalSlug,
 }: SpotPopupProps) {
   const categoryKey = venueType || "other";
+  const locationLabel =
+    locationDesignator === "private_after_signup"
+      ? "Location after RSVP"
+      : locationDesignator === "virtual"
+      ? "Virtual"
+      : locationDesignator === "recovery_meeting"
+      ? "Recovery meeting location"
+      : null;
 
   return (
     <div
@@ -183,6 +193,14 @@ function SpotPopupContent({
       {neighborhood && (
         <div className="flex items-center gap-1.5 font-mono text-[0.65rem] text-[var(--muted)]">
           <span className="truncate">{neighborhood}</span>
+        </div>
+      )}
+
+      {locationLabel && (
+        <div className="mt-1.5">
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-[0.6rem] font-mono uppercase tracking-wide bg-[var(--twilight)]/70 text-[var(--soft)] border border-[var(--twilight)]">
+            {locationLabel}
+          </span>
         </div>
       )}
 

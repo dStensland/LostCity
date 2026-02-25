@@ -1,0 +1,31 @@
+{
+  "venue_id": 2504,
+  "venue_slug": "capital-grille-buckhead",
+  "meta": {
+    "og_image": "https://media.thecapitalgrille.com/images/site/responsive/logo-desktop.png",
+    "meta_description": "The Capital Grille is a fine dining restaurant & steakhouse. We use only the freshest ingredients for our artfully prepared dishes.",
+    "reservation_links": [],
+    "menu_links": [
+      "https://www.thecapitalgrille.com/menu-listing",
+      "https://www.thecapitalgrille.com/menu"
+    ],
+    "instagram": "thecapitalgrille",
+    "facebook_url": "https://www.facebook.com/thecapitalgrille",
+    "phone": "(407) 351-2210"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["upscale", "date-spot", "intimate", "good-for-groups"],
+    "cuisine": ["steakhouse", "american", "seafood"],
+    "service_style": "full_service",
+    "price_level": 4,
+    "menu_highlights": null,
+    "reservation_url": "https://www.thecapitalgrille.com/",
+    "phone": "(407) 351-2210",
+    "instagram": "thecapitalgrille",
+    "dietary_options": ["gluten-free-options"],
+    "specials": [],
+    "genres": [],
+    "parking": ["valet"]
+  }
+}

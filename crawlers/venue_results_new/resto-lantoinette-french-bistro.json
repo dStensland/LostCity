@@ -1,0 +1,45 @@
+{
+  "venue_id": 4892,
+  "venue_slug": "resto-lantoinette-french-bistro",
+  "meta": {
+    "og_image": "https://restolantoinette.com/wp-content/uploads/2026/02/Solomon-Brothers-Wine-Tasting-9-1024x576.png",
+    "meta_description": "Experience elevated French cuisine at L'Antoinette in Milton. Join us for chef-driven menus, wine tastings, and unforgettable events.",
+    "reservation_links": [
+      "https://www.opentable.com/r/resto-lantoinette-reservations-milton?restref=1344625&lang=en-US&ot_source=Restaurant%20website",
+      "https://www.opentable.com/r/resto-lantoinette-reservations-milton?restref=1344625&lang=en-US&ot_source=Restaurant%20website",
+      "https://www.opentable.com/r/resto-lantoinette-milton",
+      "https://www.opentable.com/r/resto-lantoinette-milton"
+    ],
+    "menu_links": [
+      "https://restolantoinette.com/#mobile-menu-toggle",
+      "https://restolantoinette.com/#sidr-menu-close"
+    ],
+    "instagram": "lantoinetterestaurant",
+    "facebook_url": "https://www.facebook.com/RestoLAntoinette",
+    "phone": "(770) 797-5074"
+  },
+  "extracted": {
+    "hours": {
+      "mon": null,
+      "tue": {"open": "17:00", "close": "21:00"},
+      "wed": {"open": "17:00", "close": "21:00"},
+      "thu": {"open": "17:00", "close": "21:00"},
+      "fri": {"open": "17:00", "close": "21:00"},
+      "sat": {"open": "17:00", "close": "21:00"},
+      "sun": null
+    },
+    "vibes": ["upscale", "date-spot", "intimate"],
+    "cuisine": ["french"],
+    "service_style": "full_service",
+    "price_level": 4,
+    "menu_highlights": null,
+    "menu_url": null,
+    "reservation_url": "https://www.opentable.com/r/resto-lantoinette-milton",
+    "phone": "(770) 797-5074",
+    "instagram": "lantoinetterestaurant",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

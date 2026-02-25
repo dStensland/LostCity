@@ -1,0 +1,55 @@
+{
+  "venue_id": 1465,
+  "venue_slug": "yolan",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Agnolotti del Plin",
+        "price": null,
+        "category": "entree"
+      },
+      {
+        "name": "Gnocchi alla Bava with Truffles",
+        "price": null,
+        "category": "entree"
+      },
+      {
+        "name": "Esperienza Yolan Tasting Menu",
+        "price": null,
+        "category": "entree"
+      },
+      {
+        "name": "Polenta Olive Oil Cake",
+        "price": null,
+        "category": "dessert"
+      },
+      {
+        "name": "Yolan Burger",
+        "price": null,
+        "category": "entree"
+      }
+    ],
+    "dietary_options": [
+      "vegetarian-friendly"
+    ],
+    "price_level": 4,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

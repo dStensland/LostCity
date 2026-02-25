@@ -1,0 +1,39 @@
+{
+  "venue_id": 4826,
+  "venue_slug": "madre-selva",
+  "meta": {
+    "og_image": "https://popmenucloud.com/cdn-cgi/image/width=1200,height=630,format=auto,fit=cover/pbywtzvc/d7dcebfb-57b7-447f-b41b-7ce5277ae5e8.jpg",
+    "meta_description": "Madre Selva in Atlanta, GA. Madre Selva invites you to escape the ordinary and embrace vibrant living. From day to night, immerse yourself in a sensory journey of bold Latin flavors, lush tropical vibes, and soulful music. Passionately crafted cocktails, exquisite cuisine, and an atmosphere alive with energy make every moment unforgettable. Let us take you to a world where joy, wonder, and connection come together—right in the heart of the city. Life is always vibrant at Madre Selva.",
+    "reservation_links": [],
+    "menu_links": [
+      "https://www.madreselva.restaurant/menu"
+    ],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": null
+  },
+  "extracted": {
+    "hours": {
+      "mon": {"open": "17:00", "close": "22:00"},
+      "tue": {"open": "17:00", "close": "22:00"},
+      "wed": {"open": "17:00", "close": "22:00"},
+      "thu": {"open": "17:00", "close": "23:00"},
+      "fri": {"open": "12:00", "close": "23:00"},
+      "sat": {"open": "12:00", "close": "23:00"},
+      "sun": {"open": "12:00", "close": "22:00"}
+    },
+    "vibes": ["trendy", "date-spot", "lively", "craft-cocktails"],
+    "cuisine": ["mexican", "fusion"],
+    "service_style": "full_service",
+    "price_level": 3,
+    "menu_highlights": null,
+    "menu_url": "https://www.madreselva.restaurant/menu",
+    "reservation_url": null,
+    "phone": "(470) 516-1389",
+    "instagram": null,
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

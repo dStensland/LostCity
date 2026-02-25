@@ -1,0 +1,42 @@
+{
+  "venue_id": 4770,
+  "venue_slug": "muss-and-turners",
+  "meta": {
+    "og_image": "https://mussandturners.com/wp-content/uploads/2023/07/BirdseyeL31.webp",
+    "meta_description": "Welcome to Muss & Turners, a restaurant founded by 3 locals. We believe that people matter most. Click here to check out our exclusive menus.",
+    "reservation_links": [
+      "https://www.opentable.com/r/muss-and-turners-reservations-smyrna?restref=12106&lang=en-US&ot_source=Restaurant"
+    ],
+    "menu_links": [
+      "https://mussandturners.com/our-menus/"
+    ],
+    "instagram": "mussandturners",
+    "facebook_url": "https://www.facebook.com/mussandturners",
+    "phone": "(770) 434-1114"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["neighborhood-bar", "cozy", "craft-cocktails", "happy-hour"],
+    "cuisine": ["new_american", "deli", "gastropub"],
+    "service_style": "full_service",
+    "price_level": 3,
+    "menu_highlights": null,
+    "menu_url": "https://mussandturners.com/our-menus/",
+    "reservation_url": "https://www.opentable.com/r/muss-and-turners-reservations-smyrna?restref=12106&lang=en-US&ot_source=Restaurant",
+    "phone": "(770) 434-1114",
+    "instagram": "mussandturners",
+    "dietary_options": [],
+    "specials": [
+      {
+        "day_of_week": null,
+        "title": "Happy Hour",
+        "description": "7 days a week from 3-5PM",
+        "special_type": "happy_hour",
+        "start_time": "15:00",
+        "end_time": "17:00"
+      }
+    ],
+    "genres": [],
+    "parking": []
+  }
+}

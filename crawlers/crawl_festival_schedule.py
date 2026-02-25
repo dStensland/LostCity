@@ -23,8 +23,11 @@ import argparse
 import json
 import logging
 import re
+import shutil
+import subprocess
 import sys
-from datetime import datetime
+from datetime import date, datetime, timedelta
+from pathlib import Path
 from typing import Optional
 from urllib.parse import urljoin
 
@@ -40,9 +43,23 @@ from db import (
     find_event_by_hash,
 )
 from dedupe import generate_content_hash
-from utils import setup_logging, slugify
+from utils import setup_logging, slugify, is_likely_non_event_image
 
 logger = logging.getLogger(__name__)
+
+_UNKNOWN_VENUE_MARKERS = {
+    "unknown venue",
+    "unknown",
+    "tba",
+    "to be announced",
+    "n/a",
+    "none",
+    "off campus in atl",
+}
+
+_FESTIVAL_LLM_PROVIDER_OVERRIDES_PATH = (
+    Path(__file__).resolve().parent / "config" / "festival_llm_provider_overrides.json"
+)
 
 
 # ---------------------------------------------------------------------------
@@ -86,6 +103,52 @@ class SessionData:
         return f"Session({self.title!r}, {self.start_date}, {self.start_time})"
 
 
+def _normalize_image_url(image_url: Optional[str], base_url: str) -> Optional[str]:
+    """Normalize and quality-filter an image URL."""
+    if not image_url:
+        return None
+    normalized = str(image_url).strip()
+    if not normalized:
+        return None
+
+    if normalized.startswith("//"):
+        normalized = "https:" + normalized
+    elif not normalized.startswith("http"):
+        normalized = urljoin(base_url, normalized)
+
+    if is_likely_non_event_image(normalized):
+        return None
+    return normalized
+
+
+def _pick_best_image_url(image_field, base_url: str) -> Optional[str]:
+    """Pick the first usable image URL from JSON-LD image payloads."""
+    candidates: list[str] = []
+
+    if isinstance(image_field, str):
+        candidates.append(image_field)
+    elif isinstance(image_field, dict):
+        for key in ("url", "contentUrl", "thumbnailUrl"):
+            value = image_field.get(key)
+            if isinstance(value, str) and value:
+                candidates.append(value)
+    elif isinstance(image_field, list):
+        for item in image_field:
+            if isinstance(item, str):
+                candidates.append(item)
+            elif isinstance(item, dict):
+                for key in ("url", "contentUrl", "thumbnailUrl"):
+                    value = item.get(key)
+                    if isinstance(value, str) and value:
+                        candidates.append(value)
+
+    for candidate in candidates:
+        normalized = _normalize_image_url(candidate, base_url)
+        if normalized:
+            return normalized
+    return None
+
+
 # ---------------------------------------------------------------------------
 # Page fetching
 # ---------------------------------------------------------------------------
@@ -99,9 +162,45 @@ def fetch_html(url: str, render_js: bool = False) -> str:
 
 def _fetch_with_requests(url: str) -> str:
     cfg = get_config()
-    headers = {"User-Agent": cfg.crawler.user_agent}
+    headers = {
+        "User-Agent": cfg.crawler.user_agent,
+        # Keep decoding predictable for parser/LLM input.
+        "Accept-Encoding": "gzip, deflate",
+    }
     resp = requests.get(url, headers=headers, timeout=cfg.crawler.request_timeout)
     resp.raise_for_status()
+    if (resp.headers.get("content-encoding") or "").lower() == "br":
+        return _decode_brotli_response(resp)
+    return resp.text
+
+
+def _decode_brotli_response(resp: requests.Response) -> str:
+    """Decode brotli-compressed response bytes with optional local decoders."""
+    raw = resp.content
+
+    for module_name in ("brotli", "brotlicffi"):
+        try:
+            decoder = __import__(module_name)
+            decoded = decoder.decompress(raw)
+            return decoded.decode(resp.encoding or "utf-8", errors="replace")
+        except Exception:
+            continue
+
+    brotli_bin = shutil.which("brotli")
+    if brotli_bin:
+        try:
+            proc = subprocess.run(
+                [brotli_bin, "-d", "-c"],
+                input=raw,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=True,
+            )
+            return proc.stdout.decode(resp.encoding or "utf-8", errors="replace")
+        except Exception as exc:
+            logger.debug("brotli CLI decode failed for %s: %s", resp.url, exc)
+
+    logger.warning("Brotli content received but no decoder available for %s", resp.url)
     return resp.text
 
 
@@ -196,14 +295,7 @@ def _parse_jsonld_event(item: dict, base_url: str) -> Optional[SessionData]:
         description = description[:1000]
 
     # Image
-    image = item.get("image")
-    image_url = None
-    if isinstance(image, str):
-        image_url = image
-    elif isinstance(image, list) and image:
-        image_url = image[0] if isinstance(image[0], str) else image[0].get("url")
-    elif isinstance(image, dict):
-        image_url = image.get("url")
+    image_url = _pick_best_image_url(item.get("image"), base_url)
 
     # URL
     source_url = item.get("url")
@@ -323,7 +415,14 @@ def _parse_wp_event_element(el: Tag, base_url: str) -> Optional[SessionData]:
 
     # Image
     img = el.select_one("img")
-    image_url = img.get("src") if img else None
+    image_url = None
+    if img:
+        src = img.get("src") or img.get("data-src")
+        if not src:
+            srcset = img.get("srcset")
+            if srcset:
+                src = srcset.split(",")[0].strip().split(" ")[0]
+        image_url = _normalize_image_url(src, base_url)
 
     return SessionData(
         title=title,
@@ -440,6 +539,164 @@ def extract_sessions_llm(html: str, url: str, festival_name: str) -> list[Sessio
     return sessions
 
 
+def _load_provider_overrides() -> dict[str, str]:
+    if not _FESTIVAL_LLM_PROVIDER_OVERRIDES_PATH.exists():
+        return {}
+
+    try:
+        payload = json.loads(_FESTIVAL_LLM_PROVIDER_OVERRIDES_PATH.read_text())
+    except Exception as exc:
+        logger.warning("Unable to parse provider override file %s: %s", _FESTIVAL_LLM_PROVIDER_OVERRIDES_PATH, exc)
+        return {}
+
+    raw = payload.get("providers_by_slug", {}) if isinstance(payload, dict) else {}
+    if not isinstance(raw, dict):
+        return {}
+    out: dict[str, str] = {}
+    for slug, provider in raw.items():
+        if isinstance(slug, str) and isinstance(provider, str):
+            out[slug.strip().lower()] = provider.strip().lower()
+    return out
+
+
+def _resolve_llm_provider_for_slug(slug: str, override_provider: Optional[str]) -> Optional[str]:
+    if override_provider:
+        return override_provider.strip().lower()
+    overrides = _load_provider_overrides()
+    return overrides.get((slug or "").strip().lower())
+
+
+def _extract_sessions_llm_with_provider(
+    html: str,
+    url: str,
+    festival_name: str,
+    slug: str,
+    llm_provider: Optional[str] = None,
+    llm_model: Optional[str] = None,
+) -> list[SessionData]:
+    """Run LLM extraction with optional per-source provider override."""
+    from extract import extract_events
+
+    provider = _resolve_llm_provider_for_slug(slug, llm_provider)
+    events = extract_events(
+        html,
+        url,
+        festival_name,
+        llm_provider=provider,
+        llm_model=llm_model,
+    )
+    sessions = []
+    for ev in events:
+        sessions.append(SessionData(
+            title=ev.title,
+            start_date=ev.start_date,
+            start_time=ev.start_time,
+            end_time=ev.end_time,
+            description=ev.description,
+            venue_name=ev.venue.name if ev.venue else None,
+            category=ev.category,
+            image_url=ev.image_url,
+            source_url=ev.detail_url or url,
+            is_all_day=ev.is_all_day,
+            tags=ev.tags,
+            artists=ev.artists,
+        ))
+
+    if provider:
+        logger.info("LLM extraction provider for %s: %s", slug, provider)
+    logger.info(f"LLM extraction: extracted {len(sessions)} sessions")
+    return sessions
+
+
+def _is_unknown_venue(venue_name: Optional[str]) -> bool:
+    if not venue_name:
+        return True
+    normalized = venue_name.strip().lower()
+    return normalized in _UNKNOWN_VENUE_MARKERS
+
+
+def _is_generic_title(title: str, festival_name: str) -> bool:
+    normalized_title = (title or "").strip().lower()
+    normalized_festival = (festival_name or "").strip().lower()
+    if not normalized_title:
+        return True
+    if normalized_festival and normalized_title == normalized_festival:
+        return True
+    # Same title with only year suffix variation.
+    return bool(
+        normalized_festival
+        and re.sub(r"\s+\d{4}$", "", normalized_title) == re.sub(r"\s+\d{4}$", "", normalized_festival)
+    )
+
+
+def _parse_session_date(value: Optional[str]) -> Optional[date]:
+    if not value:
+        return None
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").date()
+    except ValueError:
+        return None
+
+
+def _apply_llm_quality_gate(
+    sessions: list[SessionData],
+    festival_name: str,
+    today: Optional[date] = None,
+) -> tuple[list[SessionData], list[str]]:
+    """Drop low-signal LLM sessions that are likely hallucinated placeholders."""
+    if not sessions:
+        return sessions, []
+
+    now = today or date.today()
+    reasons: list[str] = []
+    kept: list[SessionData] = []
+
+    for session in sessions:
+        session_date = _parse_session_date(session.start_date)
+        if session_date is None:
+            reasons.append(f"drop:{session.title}:invalid_date")
+            continue
+        if session_date < now:
+            reasons.append(f"drop:{session.title}:past_date")
+            continue
+        if len((session.title or "").strip()) < 4:
+            reasons.append(f"drop:{session.title}:short_title")
+            continue
+        kept.append(session)
+
+    if not kept:
+        reasons.append("batch_reject:no_valid_sessions_after_row_filter")
+        return [], reasons
+
+    if len(kept) == 1:
+        only = kept[0]
+        only_date = _parse_session_date(only.start_date)
+        jan_first = bool(only_date and only_date.month == 1 and only_date.day == 1)
+        low_signal_singleton = (
+            not only.start_time
+            and (
+                _is_unknown_venue(only.venue_name)
+                or _is_generic_title(only.title, festival_name)
+                or jan_first
+            )
+        )
+        if low_signal_singleton:
+            reasons.append("batch_reject:singleton_low_signal")
+            return [], reasons
+
+    unknown_venue_count = sum(1 for session in kept if _is_unknown_venue(session.venue_name))
+    missing_time_count = sum(1 for session in kept if not session.start_time)
+    if (
+        len(kept) <= 2
+        and missing_time_count == len(kept)
+        and unknown_venue_count == len(kept)
+    ):
+        reasons.append("batch_reject:tiny_batch_all_tba_unknown_venue")
+        return [], reasons
+
+    return kept, reasons
+
+
 # ---------------------------------------------------------------------------
 # Date/time parsing helpers
 # ---------------------------------------------------------------------------
@@ -449,21 +706,23 @@ def _parse_iso_datetime(dt_str: str) -> tuple[Optional[str], Optional[str]]:
     if not dt_str:
         return None, None
 
-    # Try full datetime formats
-    for fmt in ("%Y-%m-%dT%H:%M:%S%z", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M"):
-        try:
-            dt = datetime.strptime(dt_str[:19], fmt[:len(dt_str[:19]) + 2].rstrip("%z"))
-            return dt.strftime("%Y-%m-%d"), dt.strftime("%H:%M")
-        except ValueError:
-            continue
+    value = dt_str.strip()
+
+    # Native ISO parser handles timezone offsets and fractional seconds.
+    try:
+        normalized = value.replace("Z", "+00:00")
+        dt = datetime.fromisoformat(normalized)
+        return dt.strftime("%Y-%m-%d"), dt.strftime("%H:%M")
+    except ValueError:
+        pass
 
     # Try ISO date with timezone (strip tz)
-    m = re.match(r"(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})", dt_str)
+    m = re.search(r"(\d{4}-\d{2}-\d{2})[T\s](\d{2}:\d{2})", value)
     if m:
         return m.group(1), m.group(2)
 
     # Date only
-    m = re.match(r"(\d{4}-\d{2}-\d{2})", dt_str)
+    m = re.search(r"(\d{4}-\d{2}-\d{2})", value)
     if m:
         return m.group(1), None
 
@@ -485,6 +744,19 @@ def _parse_human_datetime(text: str) -> tuple[Optional[str], Optional[str]]:
 
     text = text.strip()
 
+    # Parse first explicit time token, if present.
+    time_value = None
+    time_match = re.search(r"(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b", text, re.IGNORECASE)
+    if time_match:
+        hour = int(time_match.group(1))
+        minute = int(time_match.group(2) or "00")
+        period = time_match.group(3).lower()
+        if period == "pm" and hour != 12:
+            hour += 12
+        elif period == "am" and hour == 12:
+            hour = 0
+        time_value = f"{hour:02d}:{minute:02d}"
+
     # "March 15, 2026" or "Mar 15, 2026"
     m = re.search(
         r"(\w+)\s+(\d{1,2}),?\s*(\d{4})",
@@ -496,7 +768,7 @@ def _parse_human_datetime(text: str) -> tuple[Optional[str], Optional[str]]:
         year = int(m.group(3))
         month = MONTH_MAP.get(month_str)
         if month:
-            return f"{year:04d}-{month:02d}-{day:02d}", None
+            return f"{year:04d}-{month:02d}-{day:02d}", time_value
 
     # "March 15" (assume current/next year)
     m = re.search(r"(\w+)\s+(\d{1,2})(?!\d)", text)
@@ -508,14 +780,14 @@ def _parse_human_datetime(text: str) -> tuple[Optional[str], Optional[str]]:
             year = datetime.now().year
             # If the date has passed, use next year
             candidate = datetime(year, month, day)
-            if candidate < datetime.now() - __import__("datetime").timedelta(days=30):
+            if candidate < datetime.now() - timedelta(days=30):
                 year += 1
-            return f"{year:04d}-{month:02d}-{day:02d}", None
+            return f"{year:04d}-{month:02d}-{day:02d}", time_value
 
     # "2026-03-15"
     m = re.match(r"(\d{4})-(\d{2})-(\d{2})", text)
     if m:
-        return m.group(0), None
+        return m.group(0), time_value
 
     return None, None
 
@@ -674,6 +946,8 @@ def crawl_festival_schedule(
     render_js: bool = False,
     use_llm: bool = False,
     dry_run: bool = False,
+    llm_provider: Optional[str] = None,
+    llm_model: Optional[str] = None,
 ) -> tuple[int, int, int]:
     """
     Crawl a festival schedule page and insert sessions.
@@ -684,6 +958,8 @@ def crawl_festival_schedule(
         render_js: Use Playwright for JS-rendered pages
         use_llm: Force LLM extraction instead of structured parsing
         dry_run: Log what would be inserted without writing to DB
+        llm_provider: Optional provider override ("openai" | "anthropic")
+        llm_model: Optional model override for the selected provider
 
     Returns:
         (sessions_found, sessions_new, sessions_skipped)
@@ -710,9 +986,18 @@ def crawl_festival_schedule(
 
     # Extract sessions using available strategies
     sessions: list[SessionData] = []
+    used_llm = False
 
     if use_llm:
-        sessions = extract_sessions_llm(html, url, festival_name)
+        used_llm = True
+        sessions = _extract_sessions_llm_with_provider(
+            html=html,
+            url=url,
+            festival_name=festival_name,
+            slug=slug,
+            llm_provider=llm_provider,
+            llm_model=llm_model,
+        )
     else:
         # Try strategies in order of quality
         sessions = extract_sessions_jsonld(html, url)
@@ -725,7 +1010,20 @@ def crawl_festival_schedule(
 
         if not sessions:
             logger.info("No structured data found, falling back to LLM extraction")
-            sessions = extract_sessions_llm(html, url, festival_name)
+            used_llm = True
+            sessions = _extract_sessions_llm_with_provider(
+                html=html,
+                url=url,
+                festival_name=festival_name,
+                slug=slug,
+                llm_provider=llm_provider,
+                llm_model=llm_model,
+            )
+
+    if used_llm and sessions:
+        sessions, gate_reasons = _apply_llm_quality_gate(sessions, festival_name)
+        if gate_reasons:
+            logger.info("LLM quality gate (%s): %s", slug, "; ".join(gate_reasons))
 
     if not sessions:
         logger.warning(f"No sessions extracted from {url}")
@@ -761,6 +1059,8 @@ def main():
     parser.add_argument("--url", required=True, help="Schedule page URL")
     parser.add_argument("--render-js", action="store_true", help="Use Playwright for JS rendering")
     parser.add_argument("--use-llm", action="store_true", help="Force LLM extraction")
+    parser.add_argument("--llm-provider", choices=["openai", "anthropic"], help="Override LLM provider for this run")
+    parser.add_argument("--llm-model", help="Override model name for the selected provider")
     parser.add_argument("--dry-run", action="store_true", help="Log without inserting")
     parser.add_argument("--verbose", action="store_true", help="Enable debug logging")
 
@@ -776,6 +1076,8 @@ def main():
         render_js=args.render_js,
         use_llm=args.use_llm,
         dry_run=args.dry_run,
+        llm_provider=args.llm_provider,
+        llm_model=args.llm_model,
     )
 
 

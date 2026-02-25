@@ -59,7 +59,6 @@ MISSING_SOURCES = [
 
     # Breweries & Distilleries
     {"name": "SweetWater Brewing Company", "slug": "sweetwater", "url": "https://www.sweetwaterbrew.com", "source_type": "scrape", "crawl_frequency": "daily"},
-    {"name": "Orpheus Brewing", "slug": "orpheus-brewing", "url": "https://www.orpheusbrewing.com", "source_type": "scrape", "crawl_frequency": "daily"},
     {"name": "Three Taverns Craft Brewery", "slug": "three-taverns", "url": "https://www.threetavernsbrewery.com", "source_type": "scrape", "crawl_frequency": "daily"},
     {"name": "Pontoon Brewing", "slug": "pontoon-brewing", "url": "https://www.pontoonbrewing.com", "source_type": "scrape", "crawl_frequency": "daily"},
     {"name": "ASW Distillery", "slug": "asw-distillery", "url": "https://www.aswdistillery.com", "source_type": "scrape", "crawl_frequency": "daily"},

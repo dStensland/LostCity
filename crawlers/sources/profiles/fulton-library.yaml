@@ -10,3 +10,7 @@ discovery:
   - https://www.fulcolibrary.org
 detail:
   enabled: true
+data_goals:
+- events
+- classes
+- images

@@ -4,9 +4,14 @@ name: EEG Arena
 integration_method: llm_crawler
 defaults: {}
 discovery:
-  enabled: false  # Not an event venue (brain research org) — 2026-02-06 audit
+  enabled: false
   type: html
   urls:
   - https://www.eeg.com
 detail:
   enabled: false
+data_goals:
+- events
+- images
+- lineup
+- tickets

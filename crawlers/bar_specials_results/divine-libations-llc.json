@@ -1,0 +1,21 @@
+{
+  "venue_id": 70,
+  "venue_slug": "divine-libations-llc",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["wine-bar"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": null,
+    "reservation_url": null,
+    "phone": "(404) 578-0980",
+    "instagram": null,
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

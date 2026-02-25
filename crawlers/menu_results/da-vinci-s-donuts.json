@@ -1,0 +1,53 @@
+{
+  "venue_id": 3385,
+  "venue_slug": "da-vinci-s-donuts",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Maple Bacon Donut",
+        "price": "$1.50",
+        "category": "dessert"
+      },
+      {
+        "name": "Samoa Donut",
+        "price": "$1.50",
+        "category": "dessert"
+      },
+      {
+        "name": "Cinnamon Roll Donut",
+        "price": "$1.50",
+        "category": "dessert"
+      },
+      {
+        "name": "DaVinci's Dozen",
+        "price": "$17.75",
+        "category": "dessert"
+      },
+      {
+        "name": "Cold Brew Iced Coffee",
+        "price": "$4.25",
+        "category": "cocktail"
+      }
+    ],
+    "dietary_options": [],
+    "price_level": 1,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

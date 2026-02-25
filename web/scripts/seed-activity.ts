@@ -184,19 +184,13 @@ function pickRandom<T>(arr: T[], count: number): T[] {
   return shuffled.slice(0, count);
 }
 
-function randomFutureTimestamp(daysAhead: number = 30): string {
-  const now = new Date();
-  const offset = Math.random() * daysAhead * 24 * 60 * 60 * 1000;
-  return new Date(now.getTime() + offset).toISOString();
-}
-
 function randomPastTimestamp(daysBack: number = 7): string {
   const now = new Date();
   const offset = Math.random() * daysBack * 24 * 60 * 60 * 1000;
   return new Date(now.getTime() - offset).toISOString();
 }
 
-function getRecommendationNote(persona: Persona, venueCategories: string[]): string {
+function getRecommendationNote(persona: Persona): string {
   // Pick the most relevant category for this persona
   const relevantCats = persona.categories.filter((c) =>
     NOTE_TEMPLATES[c.toLowerCase()]
@@ -271,22 +265,6 @@ async function getVenueBySlug(
 
 // ─── Org lookup ─────────────────────────────────────────────────────────────
 
-async function getOrgsByCategories(
-  categories: string[],
-  limit: number
-): Promise<Array<{ id: string; name: string }>> {
-  const mapped = mapCategories(categories);
-
-  const { data, error } = await supabase
-    .from("organizations")
-    .select("id, name")
-    .limit(limit * 2);
-
-  if (error || !data) return [];
-
-  return pickRandom(data, limit);
-}
-
 // ─── Main logic ─────────────────────────────────────────────────────────────
 
 async function lookupProfiles(): Promise<Map<string, string>> {
@@ -313,7 +291,7 @@ async function clearActivityData(userIds: string[]) {
   console.log("Clearing existing activity data for seed users...");
 
   // Clear in parallel for speed
-  const [r1, r2, r3, r4, r5] = await Promise.all([
+  await Promise.all([
     supabase.from("event_rsvps").delete().in("user_id", userIds),
     supabase.from("recommendations").delete().in("user_id", userIds),
     supabase.from("saved_items").delete().in("user_id", userIds),
@@ -501,7 +479,7 @@ async function seedRecommendations(
         recs.push({
           user_id: persona.userId,
           venue_id: venue.id,
-          note: getRecommendationNote(persona, persona.categories),
+          note: getRecommendationNote(persona),
           visibility: "public",
           created_at: randomPastTimestamp(10),
         });

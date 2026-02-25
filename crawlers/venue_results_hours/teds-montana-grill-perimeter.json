@@ -1,0 +1,28 @@
+{
+  "venue_id": 3702,
+  "venue_slug": "teds-montana-grill-perimeter",
+  "meta": {
+    "og_image": null,
+    "meta_description": "Ted's Montana Grill",
+    "reservation_links": [],
+    "menu_links": ["https://www.tedsmontanagrill.com/menu.html"],
+    "instagram": "tedsmontanagrill",
+    "facebook_url": "https://www.facebook.com/tedsmontanagrill",
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["casual", "good-for-groups"],
+    "cuisine": ["american", "steakhouse"],
+    "service_style": "full-service",
+    "price_level": "$$",
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "tedsmontanagrill",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

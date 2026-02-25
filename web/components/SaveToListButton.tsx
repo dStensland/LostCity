@@ -167,7 +167,7 @@ export const SaveToListButton = memo(function SaveToListButton({
       // Navigate back to the list
       setIsOpen(false);
       if (addedList) {
-        router.push(`/${portalSlug}/lists/${addedList.slug}`);
+        router.push(`/${portalSlug}/curations/${addedList.slug}`);
       }
     } catch (err) {
       console.error("Error toggling list item:", err);
@@ -186,7 +186,7 @@ export const SaveToListButton = memo(function SaveToListButton({
         ref={buttonRef}
         variant="ghost"
         size="md"
-        label="Save to list"
+        label="Save to curation"
         onClick={handleButtonClick}
         className="relative"
       >
@@ -206,7 +206,7 @@ export const SaveToListButton = memo(function SaveToListButton({
           {/* Header */}
           <div className="px-4 py-3 border-b border-[var(--twilight)]">
             <h3 className="text-sm font-mono font-semibold text-[var(--cream)]">
-              Save to list
+              Save to curation
             </h3>
           </div>
 
@@ -228,14 +228,14 @@ export const SaveToListButton = memo(function SaveToListButton({
             {!isLoading && !error && lists.length === 0 && (
               <div className="p-4 text-center">
                 <p className="text-sm text-[var(--soft)] mb-3">
-                  You don&apos;t have any lists yet
+                  You don&apos;t have any curations yet
                 </p>
                 <Link
-                  href="/community/lists/create"
+                  href={`/${portalSlug}?view=community&tab=curations`}
                   className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--coral)] text-[var(--void)] rounded-lg text-sm font-mono hover:bg-[var(--rose)] transition-colors"
                 >
                   <PlusIcon className="w-4 h-4" />
-                  Create your first list
+                  Create your first curation
                 </Link>
               </div>
             )}
@@ -286,11 +286,11 @@ export const SaveToListButton = memo(function SaveToListButton({
                 {/* Create new list button */}
                 <div className="border-t border-[var(--twilight)] p-2">
                   <Link
-                    href="/community/lists/create"
+                    href={`/${portalSlug}?view=community&tab=curations`}
                     className="w-full flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-mono text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)] transition-colors"
                   >
                     <PlusIcon className="w-4 h-4" />
-                    Create new list
+                    Create new curation
                   </Link>
                 </div>
               </>

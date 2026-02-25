@@ -1,0 +1,44 @@
+{
+  "venue_id": 2461,
+  "venue_slug": "la-grotta",
+  "meta": {
+    "og_image": "http://static1.squarespace.com/static/651199578bfa4f0119468845/t/65119a85e84b1b2ba2cb5784/1695652485416/LG_final_logo_high_res+copy+2.png?format=1500w",
+    "meta_description": null,
+    "reservation_links": [
+      "https://www.opentable.com/restref/client/?corrid=214c462c-f266-43df-9418-a46ab4cb283c&lang=en-US&ot_source=Restaurant%20website&restref=39637",
+      "https://www.opentable.com/la-grotta"
+    ],
+    "menu_links": [
+      "https://lagrottaatlanta.com/aboutus-1-1"
+    ],
+    "instagram": "lagrottaatl",
+    "facebook_url": null,
+    "phone": "(404) 231-1368"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": [
+      "upscale",
+      "date-spot",
+      "intimate",
+      "historic"
+    ],
+    "cuisine": [
+      "italian"
+    ],
+    "service_style": "full-service",
+    "price_level": "$$$$",
+    "menu_highlights": null,
+    "reservation_url": "https://www.opentable.com/la-grotta",
+    "phone": "(404) 231-1368",
+    "instagram": "lagrottaatl",
+    "dietary_options": [
+      "gluten-free"
+    ],
+    "specials": [],
+    "genres": [],
+    "parking": [
+      "free-parking"
+    ]
+  }
+}

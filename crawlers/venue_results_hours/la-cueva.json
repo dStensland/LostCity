@@ -1,0 +1,42 @@
+{
+  "venue_id": 4420,
+  "venue_slug": "la-cueva",
+  "meta": {
+    "og_image": "https://static.spotapps.co/website_images/ab_websites/420750_website_v0/social_share.jpg",
+    "meta_description": "Authentic Oaxacan cuisine meets bold northern Mexican influences - paired with craft cocktails, a curated library of mezcals, Spanish wines, and Mexican beers. With an intimate, cave-like ambiance, Cuevac\u00eda invites you to linger, connect, and be nourished - in body, in spirit, and in celebration of a life well lived. A sacred place of gathering - a symbol of rebirth, service, and love.",
+    "reservation_links": [
+      "https://www.opentable.com/booking/restref/availability?lang=en-US&correlationId=e9ffdccf-d02b-4dd1-8c36-d26b6838f992&restRef=1465948&otSource=Restaurant%20website#"
+    ],
+    "menu_links": [
+      "http://cuevacia.com/food-menu"
+    ],
+    "instagram": "cuevacia",
+    "facebook_url": "https://www.facebook.com/559821243887394",
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": [
+      "intimate",
+      "date-spot",
+      "upscale",
+      "craft-cocktails"
+    ],
+    "cuisine": [
+      "mexican"
+    ],
+    "service_style": "full-service",
+    "price_level": "$$$",
+    "menu_highlights": null,
+    "reservation_url": "https://www.opentable.com/booking/restref/availability?lang=en-US&correlationId=e9ffdccf-d02b-4dd1-8c36-d26b6838f992&restRef=1465948&otSource=Restaurant%20website#",
+    "phone": null,
+    "instagram": "cuevacia",
+    "dietary_options": [
+      "gluten-free",
+      "vegan"
+    ],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

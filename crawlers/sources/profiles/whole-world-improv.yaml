@@ -14,3 +14,7 @@ detail:
   enabled: true
   jsonld_only: true
   use_jsonld: true
+data_goals:
+- events
+- images
+- tickets

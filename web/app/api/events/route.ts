@@ -1,9 +1,11 @@
-import { getFilteredEventsWithSearch, getFilteredEventsWithCursor, enrichEventsWithSocialProof, PRICE_FILTERS, type SearchFilters } from "@/lib/search";
+import { getFilteredEventsWithSearch, getFilteredEventsWithCursor, PRICE_FILTERS, type SearchFilters } from "@/lib/search";
+import { enrichEventsWithSocialProof } from "@/lib/social-proof";
 import type { MoodId } from "@/lib/moods";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 import { generateNextCursor } from "@/lib/cursor";
 import { logger } from "@/lib/logger";
 import { apiResponse } from "@/lib/api-utils";
+import { isSuppressedFromGeneralEventFeed } from "@/lib/event-content-classification";
 
 // Helper to safely parse integers with validation
 function safeParseInt(value: string | null, defaultValue: number, min = 1, max = 1000): number {
@@ -24,7 +26,7 @@ export async function GET(request: Request) {
     // Parse price filter - same logic as page.tsx
     const priceParam = searchParams.get("price");
     const priceFilter = PRICE_FILTERS.find(p => p.value === priceParam);
-    const isFree = priceParam === "free" || undefined;
+    const isFree = priceParam === "free" || searchParams.get("free") === "1" || searchParams.get("free") === "true" || undefined;
     const priceMax = priceFilter?.max || undefined;
 
     // Parse venue_id with validation
@@ -33,6 +35,9 @@ export async function GET(request: Request) {
 
     const portalId = searchParams.get("portal_id") || undefined;
     const portalExclusive = searchParams.get("portal_exclusive") === "true";
+    const includeExhibits = ["1", "true"].includes(
+      (searchParams.get("include_exhibits") || "").toLowerCase()
+    );
 
     const dateParam = searchParams.get("date") || "";
     const dateSpecific = /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : undefined;
@@ -95,7 +100,9 @@ export async function GET(request: Request) {
       );
 
       // Enrich with social proof counts
-      const events = await enrichEventsWithSocialProof(rawEvents);
+      const events = (await enrichEventsWithSocialProof(rawEvents)).filter(
+        (event) => includeExhibits || !isSuppressedFromGeneralEventFeed(event)
+      );
 
       return apiResponse(
         {
@@ -115,7 +122,9 @@ export async function GET(request: Request) {
       const { events: rawEvents, total } = await getFilteredEventsWithSearch(filters, page, pageSize);
 
       // Enrich with social proof counts
-      const events = await enrichEventsWithSocialProof(rawEvents);
+      const events = (await enrichEventsWithSocialProof(rawEvents)).filter(
+        (event) => includeExhibits || !isSuppressedFromGeneralEventFeed(event)
+      );
 
       // Also generate a cursor from the last event for gradual migration
       const nextCursor = events.length > 0 ? generateNextCursor(events) : null;

@@ -16,7 +16,10 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
-from utils import extract_images_from_page
+from utils import (
+    extract_images_from_page, extract_event_links, find_event_url,
+    enrich_event_record, parse_price, parse_date_range,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +35,9 @@ VENUE_DATA = {
     "state": "GA",
     "zip": "30309",
     "venue_type": "museum",
+    "spot_type": "museum",
+    "lat": 33.7906,
+    "lng": -84.3846,
     "website": BASE_URL,
 }
 
@@ -39,6 +45,12 @@ MONTHS = {
     "JAN": 1, "FEB": 2, "MAR": 3, "APR": 4, "MAY": 5, "JUN": 6,
     "JUL": 7, "AUG": 8, "SEP": 9, "OCT": 10, "NOV": 11, "DEC": 12
 }
+
+SERIES_PREFIXES = [
+    "STEAM Story Time", "Design Book Club", "LEGO Labs", "LEGO Adventures",
+    "Design Next", "Make @ MODA", "Tantrum Thursday", "MODA Members Meetup",
+    "Digital Art Studio",
+]
 
 
 def parse_date_from_parts(month_abbr: str, day: int, year: int = None) -> Optional[str]:
@@ -53,7 +65,7 @@ def parse_date_from_parts(month_abbr: str, day: int, year: int = None) -> Option
     try:
         dt = datetime(year, month, day)
         # If date is in the past, assume next year
-        if dt < now and year == now.year:
+        if dt.date() < now.date() and year == now.year:
             dt = datetime(year + 1, month, day)
         return dt.strftime("%Y-%m-%d")
     except ValueError:
@@ -113,18 +125,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             image_map = extract_images_from_page(page)
 
             # Extract event links - build a map of title -> URL
-            event_links = {}
-            links = page.query_selector_all('a[href*="event"], a[href*="program"], a[href*="workshop"]')
-            for link in links:
-                try:
-                    href = link.get_attribute('href')
-                    text = link.inner_text().strip()
-                    if href and text and len(text) > 3:
-                        if not href.startswith('http'):
-                            href = BASE_URL + href
-                        event_links[text.lower()] = href
-                except Exception:
-                    pass
+            event_links = extract_event_links(page, BASE_URL)
             logger.info(f"Found {len(event_links)} event links")
 
             # Scroll to load all content
@@ -228,13 +229,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             is_virtual = "virtual" in location_info.lower()
 
                             # Try to find specific event URL
-                            event_url = event_links.get(title.lower(), EVENTS_URL)
+                            event_url = find_event_url(title, event_links, EVENTS_URL)
 
                             event_record = {
                                 "source_id": source_id,
                                 "venue_id": venue_id if not is_virtual else None,
                                 "title": title,
-                                "description": description if description else location_info,
+                                "description": None,
                                 "start_date": start_date,
                                 "start_time": start_time,
                                 "end_date": None,
@@ -245,8 +246,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 "tags": tags,
                                 "price_min": None,
                                 "price_max": None,
-                                "price_note": "Check MODA website for pricing",
-                                "is_free": False,
+                                "price_note": None,
+                                "is_free": None,
                                 "source_url": event_url,
                                 "ticket_url": event_url,
                                 "image_url": image_map.get(title),
@@ -257,6 +258,51 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 "content_hash": content_hash,
                             }
 
+                            # Enrich from detail page (JSON-LD, OG, heuristic, LLM)
+                            enrich_event_record(event_record, source_name="MODA")
+
+                            # Fallback: use listing description if enrichment didn't find one
+                            if not event_record.get("description"):
+                                event_record["description"] = description if description else location_info
+
+                            # Determine is_free from description if still unknown
+                            if event_record.get("is_free") is None:
+                                desc_lower = (event_record.get("description") or "").lower()
+                                title_lower = title.lower()
+                                combined = f"{title_lower} {desc_lower}"
+                                if any(kw in combined for kw in ["free", "no cost", "no charge", "complimentary"]):
+                                    event_record["is_free"] = True
+                                    event_record["price_min"] = event_record.get("price_min") or 0
+                                    event_record["price_max"] = event_record.get("price_max") or 0
+                                else:
+                                    event_record["is_free"] = False
+
+                            # Extract end_date from date range patterns
+                            range_text = f"{title} {event_record.get('description') or ''}"
+                            _, range_end = parse_date_range(range_text)
+                            if range_end:
+                                event_record["end_date"] = range_end
+
+                            # Detect exhibits and set content_kind
+                            _exhibit_kw = ["exhibit", "exhibition", "on view", "collection", "installation"]
+                            _check = f"{title} {event_record.get('description') or ''}".lower()
+                            if any(kw in _check for kw in _exhibit_kw):
+                                event_record["content_kind"] = "exhibit"
+                                event_record["is_all_day"] = True
+                                event_record["start_time"] = None
+
+                            # Series grouping for recurring programs
+                            series_hint = None
+                            for prefix in SERIES_PREFIXES:
+                                if title.lower().startswith(prefix.lower()):
+                                    series_hint = {
+                                        "series_type": "class_series",
+                                        "series_title": prefix,
+                                        "frequency": "monthly",
+                                    }
+                                    event_record["is_recurring"] = True
+                                    break
+
                             existing = find_event_by_hash(content_hash)
                             if existing:
                                 smart_update_existing_event(existing, event_record)
@@ -265,7 +311,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 continue
 
                             try:
-                                insert_event(event_record)
+                                insert_event(event_record, series_hint=series_hint)
                                 events_new += 1
                                 logger.info(f"Added: {title} on {start_date}")
                             except Exception as e:

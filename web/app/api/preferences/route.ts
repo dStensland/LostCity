@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import {
   applyRateLimit,
   RATE_LIMITS,
@@ -7,6 +8,13 @@ import {
 } from "@/lib/rate-limit";
 import { errorResponse, checkBodySize } from "@/lib/api-utils";
 import { logger } from "@/lib/logger";
+import type { FeedBlockId, FeedLayout } from "@/lib/city-pulse/types";
+import { ALL_INTEREST_IDS } from "@/lib/city-pulse/interests";
+
+const VALID_BLOCK_IDS: FeedBlockId[] = [
+  "timeline", "trending",
+  "your_people", "new_from_spots", "coming_up", "browse",
+];
 
 // Valid categories from search-constants.ts
 const VALID_CATEGORIES = [
@@ -97,23 +105,80 @@ export async function POST(request: NextRequest) {
         ? body.cross_portal_recommendations
         : true;
 
-    const supabase = await createClient();
+    // Feed layout validation
+    let feed_layout: FeedLayout | null | undefined = undefined;
+    if (body.feed_layout !== undefined) {
+      if (body.feed_layout === null) {
+        feed_layout = null; // Reset to default
+      } else if (
+        typeof body.feed_layout === "object" &&
+        body.feed_layout.version === 1 &&
+        Array.isArray(body.feed_layout.visible_blocks) &&
+        Array.isArray(body.feed_layout.hidden_blocks)
+      ) {
+        const visible = (body.feed_layout.visible_blocks as string[])
+          .filter((b): b is FeedBlockId => VALID_BLOCK_IDS.includes(b as FeedBlockId));
+        const hidden = (body.feed_layout.hidden_blocks as string[])
+          .filter((b): b is FeedBlockId => VALID_BLOCK_IDS.includes(b as FeedBlockId));
+        // Timeline must always be visible
+        if (!visible.includes("timeline")) visible.unshift("timeline");
 
+        // Validate interests array if present
+        let interests: string[] | null | undefined;
+        if (body.feed_layout.interests === null) {
+          interests = null;
+        } else if (Array.isArray(body.feed_layout.interests)) {
+          interests = (body.feed_layout.interests as string[])
+            .filter((id) => ALL_INTEREST_IDS.includes(id))
+            .slice(0, 30);
+        }
+
+        feed_layout = {
+          visible_blocks: visible,
+          hidden_blocks: hidden,
+          ...(interests !== undefined && { interests }),
+          version: 1,
+        };
+      }
+    }
+
+    const serviceClient = createServiceClient();
+
+    // Build payload conditionally — only include fields present in the request
+    // to avoid wiping unrelated preference fields on partial updates.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase as any).from("user_preferences").upsert(
-      {
-        user_id: user.id,
-        favorite_categories: favorite_categories || [],
-        favorite_neighborhoods: favorite_neighborhoods || [],
-        favorite_vibes: favorite_vibes || [],
-        price_preference: price_preference || "any",
-        cross_portal_recommendations,
-        ...(hide_adult_content !== undefined && { hide_adult_content }),
-        ...(favorite_genres !== undefined && { favorite_genres }),
-        ...(needs_accessibility !== undefined && { needs_accessibility }),
-        ...(needs_dietary !== undefined && { needs_dietary }),
-        ...(needs_family !== undefined && { needs_family }),
-      },
+    const payload: Record<string, any> = { user_id: user.id };
+
+    if ("favorite_categories" in body) payload.favorite_categories = favorite_categories;
+    if ("favorite_neighborhoods" in body) payload.favorite_neighborhoods = favorite_neighborhoods;
+    if ("favorite_vibes" in body) payload.favorite_vibes = favorite_vibes;
+    if ("price_preference" in body) payload.price_preference = price_preference;
+    if ("cross_portal_recommendations" in body) payload.cross_portal_recommendations = cross_portal_recommendations;
+    if (hide_adult_content !== undefined) payload.hide_adult_content = hide_adult_content;
+    if (favorite_genres !== undefined) payload.favorite_genres = favorite_genres;
+    if ("needs_accessibility" in body) payload.needs_accessibility = needs_accessibility;
+    if ("needs_dietary" in body) payload.needs_dietary = needs_dietary;
+    if ("needs_family" in body) payload.needs_family = needs_family;
+    if (feed_layout !== undefined) payload.feed_layout = feed_layout;
+
+    // Check if row exists — if not, provide defaults for required columns on INSERT
+    const { data: existing } = await serviceClient
+      .from("user_preferences")
+      .select("user_id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (!existing) {
+      // First-time INSERT: fill in defaults for fields not in the request
+      if (!("favorite_categories" in body)) payload.favorite_categories = [];
+      if (!("favorite_neighborhoods" in body)) payload.favorite_neighborhoods = [];
+      if (!("favorite_vibes" in body)) payload.favorite_vibes = [];
+      if (!("price_preference" in body)) payload.price_preference = "any";
+      if (!("cross_portal_recommendations" in body)) payload.cross_portal_recommendations = true;
+    }
+
+    const { error } = await (serviceClient as any).from("user_preferences").upsert(
+      payload,
       { onConflict: "user_id" },
     );
 
@@ -174,6 +239,7 @@ export async function GET(request: NextRequest) {
           needs_family: [],
           hide_adult_content: false,
           cross_portal_recommendations: true,
+          feed_layout: null,
         },
         {
           headers: {

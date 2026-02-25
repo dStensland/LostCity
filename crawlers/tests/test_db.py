@@ -4,6 +4,7 @@ Uses mocked Supabase client to avoid actual database calls.
 """
 
 from unittest.mock import patch, MagicMock
+from types import SimpleNamespace
 
 
 class TestGetOrCreateVenue:
@@ -78,20 +79,61 @@ class TestGetOrCreateVenue:
         assert venue_id == 123
         table.insert.assert_called_once_with(sample_venue_data)
 
+    @patch("db.get_client")
+    def test_dry_run_skips_new_venue_insert(self, mock_get_client, sample_venue_data):
+        """Should return a synthetic ID and skip insert in dry-run mode."""
+        client = MagicMock()
+        mock_get_client.return_value = client
+
+        table = MagicMock()
+        client.table.return_value = table
+        table.select.return_value = table
+        table.eq.return_value = table
+
+        # No existing venue found by slug or name.
+        table.execute.side_effect = [
+            MagicMock(data=[]),
+            MagicMock(data=[]),
+        ]
+
+        from db import get_or_create_venue, configure_write_mode
+
+        configure_write_mode(False, reason="test dry run")
+        try:
+            venue_id = get_or_create_venue(sample_venue_data)
+        finally:
+            configure_write_mode(True)
+
+        assert venue_id < 0
+        table.insert.assert_not_called()
+
 
 class TestInsertEvent:
     """Tests for insert_event function."""
 
     @patch("db.get_festival_source_hint", return_value=None)
+    @patch("db.events_support_field_metadata_columns", return_value=True)
+    @patch("db.get_source_info")
     @patch("db.get_venue_by_id_cached")
     @patch("db.get_client")
     def test_inserts_event_with_tags(
-        self, mock_get_client, mock_get_venue, mock_festival_hint, sample_event_data
+        self,
+        mock_get_client,
+        mock_get_venue,
+        mock_get_source_info,
+        _mock_field_cols,
+        mock_festival_hint,
+        sample_event_data,
     ):
         """Should insert event and infer tags."""
         client = MagicMock()
         mock_get_client.return_value = client
         mock_get_venue.return_value = {"vibes": ["intimate"]}
+        mock_get_source_info.return_value = {
+            "slug": "test-source",
+            "url": "https://example.com/source",
+            "source_type": "organization",
+        }
 
         table = MagicMock()
         client.table.return_value = table
@@ -109,6 +151,9 @@ class TestInsertEvent:
         # Verify tags were added to event data (first insert call is the event)
         inserted_data = table.insert.call_args_list[0][0][0]
         assert "tags" in inserted_data
+        assert "field_confidence" in inserted_data
+        assert "capabilities" in inserted_data["field_confidence"]
+        assert inserted_data["field_confidence"]["capabilities"]["quality_score"] >= 0
 
     @patch("db.get_festival_source_hint", return_value=None)
     @patch("db.get_venue_by_id_cached")
@@ -194,6 +239,171 @@ class TestInsertEvent:
         # Category should be defaulted to "other"
         inserted_data = table.insert.call_args_list[0][0][0]
         assert inserted_data["category"] == "other"
+
+    @patch("db.get_festival_source_hint", return_value=None)
+    @patch("db.events_support_film_identity_columns", return_value=True)
+    @patch("db.get_metadata_for_film_event")
+    @patch("db.get_venue_by_id_cached")
+    @patch("db.get_client")
+    def test_stores_film_identity_without_overwriting_event_title(
+        self,
+        mock_get_client,
+        mock_get_venue,
+        mock_get_film_metadata,
+        mock_film_cols,
+        mock_festival_hint,
+        sample_event_data,
+    ):
+        """Film identity should be stored in dedicated fields while title stays venue-provided."""
+        client = MagicMock()
+        mock_get_client.return_value = client
+        mock_get_venue.return_value = {"vibes": []}
+        mock_get_film_metadata.return_value = SimpleNamespace(
+            title="The NeverEnding Story",
+            poster_url="https://example.com/poster.jpg",
+            director="Wolfgang Petersen",
+            runtime_minutes=94,
+            year=1984,
+            rating="PG",
+            imdb_id="tt0088323",
+            genres=["adventure", "family"],
+            plot="A young boy discovers a magical world through a mysterious book.",
+        )
+
+        table = MagicMock()
+        client.table.return_value = table
+        table.insert.return_value = table
+        table.execute.return_value = MagicMock(data=[{"id": 901}])
+
+        from db import insert_event
+
+        event_data = dict(sample_event_data)
+        event_data["category"] = "film"
+        event_data["title"] = "The NeverEnding Story (40th Anniversary Screening)"
+        event_data["tags"] = ["showtime"]
+
+        event_id = insert_event(event_data)
+
+        assert event_id == 901
+        inserted_data = table.insert.call_args_list[0][0][0]
+        assert (
+            inserted_data["title"]
+            == "The NeverEnding Story (40th Anniversary Screening)"
+        )
+        assert inserted_data["film_title"] == "The NeverEnding Story"
+        assert inserted_data["film_release_year"] == 1984
+        assert inserted_data["film_imdb_id"] == "tt0088323"
+        assert inserted_data["film_identity_source"] == "omdb"
+        assert inserted_data["film_external_genres"] == ["adventure", "family"]
+
+    @patch("db.get_festival_source_hint", return_value=None)
+    @patch("db.events_support_film_identity_columns", return_value=True)
+    @patch("db.get_metadata_for_film_event")
+    @patch("db.get_venue_by_id_cached")
+    @patch("db.get_client")
+    def test_uses_wikidata_source_for_film_identity_when_omdb_misses(
+        self,
+        mock_get_client,
+        mock_get_venue,
+        mock_get_film_metadata,
+        mock_film_cols,
+        mock_festival_hint,
+        sample_event_data,
+    ):
+        """Film identity source should reflect Wikidata fallback when it provides metadata."""
+        client = MagicMock()
+        mock_get_client.return_value = client
+        mock_get_venue.return_value = {"vibes": []}
+        mock_get_film_metadata.return_value = SimpleNamespace(
+            title="Fight Club",
+            poster_url=None,
+            director="David Fincher",
+            runtime_minutes=139,
+            year=1999,
+            rating=None,
+            imdb_id="tt0137523",
+            genres=["drama"],
+            plot=None,
+            source="wikidata",
+        )
+
+        table = MagicMock()
+        client.table.return_value = table
+        table.insert.return_value = table
+        table.execute.return_value = MagicMock(data=[{"id": 902}])
+
+        from db import insert_event
+
+        event_data = dict(sample_event_data)
+        event_data["category"] = "film"
+        event_data["title"] = "Fight Club (1999)"
+
+        event_id = insert_event(event_data)
+
+        assert event_id == 902
+        inserted_data = table.insert.call_args_list[0][0][0]
+        assert inserted_data["title"] == "Fight Club (1999)"
+        assert inserted_data["film_title"] == "Fight Club"
+        assert inserted_data["film_identity_source"] == "wikidata"
+
+    @patch("db.get_festival_source_hint", return_value=None)
+    @patch("db.get_venue_by_id_cached")
+    @patch("db.get_client")
+    def test_uses_source_url_as_ticket_url_for_film_showtimes(
+        self, mock_get_client, mock_get_venue, mock_festival_hint, sample_event_data
+    ):
+        """Film/showtime records should expose a ticket_url even when crawlers only provide source_url."""
+        client = MagicMock()
+        mock_get_client.return_value = client
+        mock_get_venue.return_value = {"vibes": []}
+
+        table = MagicMock()
+        client.table.return_value = table
+        table.insert.return_value = table
+        table.execute.return_value = MagicMock(data=[{"id": 903}])
+
+        from db import insert_event
+
+        event_data = dict(sample_event_data)
+        event_data["category"] = "film"
+        event_data["tags"] = ["showtime"]
+        event_data["ticket_url"] = None
+        event_data["source_url"] = "https://example.com/showtimes?date=2026-02-20"
+
+        event_id = insert_event(event_data)
+
+        assert event_id == 903
+        inserted_data = table.insert.call_args_list[0][0][0]
+        assert inserted_data["ticket_url"] == event_data["source_url"]
+
+    @patch("db.get_festival_source_hint", return_value=None)
+    @patch("db.get_venue_by_id_cached")
+    @patch("db.get_client")
+    def test_strips_deprecated_subcategory_fields_before_insert(
+        self, mock_get_client, mock_get_venue, mock_festival_hint, sample_event_data
+    ):
+        """Deprecated subcategory fields should never be persisted to events."""
+        client = MagicMock()
+        mock_get_client.return_value = client
+        mock_get_venue.return_value = {"vibes": []}
+
+        table = MagicMock()
+        client.table.return_value = table
+        table.insert.return_value = table
+        table.execute.return_value = MagicMock(data=[{"id": 904}])
+
+        from db import insert_event
+
+        event_data = dict(sample_event_data)
+        event_data["subcategory"] = "concert"
+        event_data["subcategory_id"] = "legacy-concert"
+
+        event_id = insert_event(event_data)
+
+        assert event_id == 904
+        inserted_data = table.insert.call_args_list[0][0][0]
+        assert "subcategory" not in inserted_data
+        assert "subcategory_id" not in inserted_data
 
 
 class TestFindEventByHash:
@@ -286,6 +496,130 @@ class TestFindEventsByDateAndVenue:
         assert results == []
 
 
+class TestSmartUpdateExistingEvent:
+    """Tests for smart_update_existing_event function."""
+
+    @patch("db.get_source_info")
+    @patch("db.get_client")
+    def test_backfills_portal_from_source_owner(
+        self, mock_get_client, mock_get_source_info
+    ):
+        """Should fill missing portal_id from source owner on smart update."""
+        client = MagicMock()
+        mock_get_client.return_value = client
+        mock_get_source_info.return_value = {"owner_portal_id": "portal-123"}
+
+        table = MagicMock()
+        client.table.return_value = table
+        table.update.return_value = table
+        table.eq.return_value = table
+        table.execute.return_value = MagicMock(data=[{"id": 1}])
+
+        from db import smart_update_existing_event
+
+        existing = {
+            "id": 1,
+            "title": "Existing Event",
+            "description": "Existing",
+            "portal_id": None,
+        }
+        incoming = {
+            "source_id": 99,
+            "description": "Existing description with a bit more detail",
+        }
+
+        updated = smart_update_existing_event(existing, incoming)
+
+        assert updated is True
+        updates = table.update.call_args[0][0]
+        assert updates["portal_id"] == "portal-123"
+
+    @patch("db.get_client")
+    def test_keeps_existing_portal_unchanged(self, mock_get_client):
+        """Should not overwrite existing portal_id when already set."""
+        client = MagicMock()
+        mock_get_client.return_value = client
+
+        table = MagicMock()
+        client.table.return_value = table
+        table.update.return_value = table
+        table.eq.return_value = table
+        table.execute.return_value = MagicMock(data=[{"id": 1}])
+
+        from db import smart_update_existing_event
+
+        existing = {
+            "id": 1,
+            "title": "Existing Event",
+            "description": "Detailed description",
+            "portal_id": "portal-existing",
+        }
+        incoming = {"source_id": 99}
+
+        updated = smart_update_existing_event(existing, incoming)
+        assert updated is False
+        table.update.assert_not_called()
+
+    @patch("db.get_client")
+    def test_replaces_bad_existing_image_when_incoming_is_better(self, mock_get_client):
+        """Should upgrade logo/placeholder images when a better event image arrives."""
+        client = MagicMock()
+        mock_get_client.return_value = client
+
+        table = MagicMock()
+        client.table.return_value = table
+        table.update.return_value = table
+        table.eq.return_value = table
+        table.execute.return_value = MagicMock(data=[{"id": 1}])
+
+        from db import smart_update_existing_event
+
+        existing = {
+            "id": 1,
+            "title": "Existing Event",
+            "description": "Detailed description",
+            "portal_id": "portal-existing",
+            "image_url": "https://example.com/assets/logo.png",
+        }
+        incoming = {
+            "image_url": "https://images.example.com/events/headliner-1200x675.jpg",
+        }
+
+        updated = smart_update_existing_event(existing, incoming)
+        assert updated is True
+        updates = table.update.call_args[0][0]
+        assert updates["image_url"] == incoming["image_url"]
+
+    @patch("db.get_client")
+    def test_does_not_accept_bad_incoming_image_when_missing(self, mock_get_client):
+        """Should ignore incoming logo/placeholder URLs even if event image is missing."""
+        client = MagicMock()
+        mock_get_client.return_value = client
+
+        table = MagicMock()
+        client.table.return_value = table
+        table.update.return_value = table
+        table.eq.return_value = table
+        table.execute.return_value = MagicMock(data=[{"id": 1}])
+
+        from db import smart_update_existing_event
+
+        existing = {
+            "id": 1,
+            "title": "Existing Event",
+            "description": "Detailed description",
+            "portal_id": "portal-existing",
+            "image_url": None,
+        }
+        incoming = {
+            "image_url": "https://example.com/assets/default-placeholder.png",
+        }
+
+        updated = smart_update_existing_event(existing, incoming)
+        assert updated is False
+        table.update.assert_not_called()
+
+
 class TestCrawlLog:
     """Tests for crawl log functions."""
 
@@ -312,6 +646,20 @@ class TestCrawlLog:
         assert insert_data["source_id"] == 1
         assert insert_data["status"] == "running"
         assert "started_at" in insert_data
+
+    @patch("db.get_client")
+    def test_create_crawl_log_dry_run_skips_insert(self, mock_get_client):
+        """Should return synthetic ID and avoid DB writes in dry-run mode."""
+        from db import create_crawl_log, configure_write_mode
+
+        configure_write_mode(False, reason="test dry run")
+        try:
+            log_id = create_crawl_log(source_id=1)
+        finally:
+            configure_write_mode(True)
+
+        assert log_id < 0
+        mock_get_client.assert_not_called()
 
     @patch("db.get_client")
     def test_update_crawl_log(self, mock_get_client):
@@ -366,3 +714,79 @@ class TestCrawlLog:
         update_data = table.update.call_args[0][0]
         assert update_data["status"] == "failed"
         assert update_data["error_message"] == "Connection timeout"
+
+
+class TestCrossSourceCanonicalSelection:
+    """Tests for cross-source canonical ranking."""
+
+    def test_source_priority_penalizes_inactive_sources(self):
+        """Inactive sources should always rank lower than active peers."""
+        from db import _source_priority_for_dedupe
+
+        active = _source_priority_for_dedupe("blakes-on-park", True)
+        inactive = _source_priority_for_dedupe("blakes-on-park", False)
+
+        assert active < inactive
+
+    @patch("db.get_source_info")
+    @patch("db.get_client")
+    def test_prefers_active_source_for_cross_source_canonical(
+        self, mock_get_client, mock_get_source_info
+    ):
+        """Canonical selector should prefer active source rows over inactive rows."""
+        client = MagicMock()
+        mock_get_client.return_value = client
+
+        table = MagicMock()
+        client.table.return_value = table
+        table.select.return_value = table
+        table.eq.return_value = table
+        table.neq.return_value = table
+        table.is_.return_value = table
+        table.execute.return_value = MagicMock(
+            data=[
+                {
+                    "id": 901,
+                    "title": "Bocce League at The Painted Duck",
+                    "source_id": 1001,
+                    "canonical_event_id": None,
+                    "created_at": "2026-02-17T10:00:00+00:00",
+                    "description": "Long detailed description",
+                    "image_url": "https://example.com/img.jpg",
+                    "ticket_url": "https://example.com/tickets",
+                },
+                {
+                    "id": 902,
+                    "title": "Bocce League at The Painted Duck",
+                    "source_id": 1002,
+                    "canonical_event_id": None,
+                    "created_at": "2026-02-17T09:00:00+00:00",
+                    "description": "Long detailed description",
+                    "image_url": "https://example.com/img.jpg",
+                    "ticket_url": "https://example.com/tickets",
+                },
+            ]
+        )
+
+        def source_lookup(source_id):
+            if source_id == 1001:
+                return {"slug": "blakes-on-the-park", "is_active": False}
+            if source_id == 1002:
+                return {"slug": "blakes-on-park", "is_active": True}
+            return None
+
+        mock_get_source_info.side_effect = source_lookup
+
+        from db import find_cross_source_canonical_for_insert
+
+        canonical_id = find_cross_source_canonical_for_insert(
+            {
+                "source_id": 2000,
+                "venue_id": 333,
+                "start_date": "2026-02-18",
+                "start_time": "19:00",
+                "title": "Bocce League at The Painted Duck",
+            }
+        )
+
+        assert canonical_id == 902

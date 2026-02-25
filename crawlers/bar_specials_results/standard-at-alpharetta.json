@@ -1,0 +1,21 @@
+{
+  "venue_id": 978,
+  "venue_slug": "standard-at-alpharetta",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["live-music", "casual", "outdoor-seating"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "https://standardrestaurantgroup.com/alpharetta/wp-content/uploads/2025/03/1-STNDRD_MenuDesign_BILLS_2021Season-1.pdf",
+    "reservation_url": null,
+    "phone": "(770) 729-8443",
+    "instagram": "eatatstandard",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

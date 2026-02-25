@@ -1,7 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = 'https://rtppvljfrkjtoxmaizea.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ0cHB2bGpmcmtqdG94bWFpemVhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2ODE0MzMxNCwiZXhwIjoyMDgzNzE5MzE0fQ.9Z0uJrvjKg6yFjAEq8fedgFEp8s_GPXKsBzZaRliE5M';
+const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey =
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error(
+    'Missing Supabase credentials. Set SUPABASE_URL (or NEXT_PUBLIC_SUPABASE_URL) and SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SERVICE_KEY).'
+  );
+}
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -201,7 +208,7 @@ async function runDiagnostics() {
     
     console.log('\n  Common co-occurring vibes:');
     Object.entries(vibeStats)
-      .filter(([_, count]) => count > 0)
+      .filter(([, count]) => count > 0)
       .sort((a, b) => b[1] - a[1])
       .forEach(([vibe, count]) => {
         console.log(`    ${vibe}: ${count}`);

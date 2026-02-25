@@ -1,0 +1,51 @@
+{
+  "venue_id": 4844,
+  "venue_slug": "who-wanna-pho",
+  "meta": {
+    "og_image": "https://whowannapho.com/wp-content/uploads/2023/02/down-arrow-1024x1024.png",
+    "meta_description": "Who Wanna Pho is the world's first Vietnamese cuisine and lounge, offering authentic pho and a one-of-a-kind hookah experience. Visit us for a modern twist on traditional Vietnamese dining. Catering available!",
+    "reservation_links": [
+      "https://www.opentable.com/r/who-wanna-pho-atlanta?shareReferrer=ios-share",
+      "https://www.opentable.com/r/who-wanna-pho-atlanta?shareReferrer=ios-share",
+      "https://www.opentable.com/r/who-wanna-pho-atlanta?shareReferrer=ios-share",
+      "https://www.opentable.com/r/who-wanna-pho-atlanta?shareReferrer=ios-share",
+      "https://www.opentable.com/r/who-wanna-pho-atlanta?shareReferrer=ios-share"
+    ],
+    "menu_links": [
+      "https://whowannapho.com/menu/"
+    ],
+    "instagram": "whowannapho",
+    "facebook_url": "https://www.facebook.com/whowannapho",
+    "phone": "(800) 275-8777"
+  },
+  "extracted": {
+    "hours": {
+      "mon": {"open": "14:00", "close": "02:00"},
+      "tue": {"open": "14:00", "close": "02:00"},
+      "wed": {"open": "14:00", "close": "02:00"},
+      "thu": {"open": "14:00", "close": "02:00"},
+      "fri": {"open": "14:00", "close": "05:00"},
+      "sat": {"open": "14:00", "close": "05:00"},
+      "sun": {"open": "12:00", "close": "00:00"}
+    },
+    "vibes": ["late-night", "trendy", "lively", "good-for-groups"],
+    "cuisine": ["vietnamese"],
+    "service_style": "full_service",
+    "price_level": 2,
+    "menu_highlights": [
+      {"name": "Pho Tha Culture - Steak & Shrimp Pho", "price": "$17", "category": "entree"},
+      {"name": "Sea Pho Tha Streetz (Seafood Pho)", "price": "$30", "category": "entree"},
+      {"name": "Beef Short Ribs Rice Plate", "price": "$26", "category": "entree"},
+      {"name": "Goin' Pho Tha Wynn Cocktail", "price": "$14", "category": "cocktail"},
+      {"name": "Pho Lovers Only Hookah", "price": "$40", "category": "side"}
+    ],
+    "menu_url": "https://whowannapho.com/menu/",
+    "reservation_url": "https://www.opentable.com/r/who-wanna-pho-atlanta?shareReferrer=ios-share",
+    "phone": "(404) 549-2984",
+    "instagram": "whowannapho",
+    "dietary_options": ["vegan-options"],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

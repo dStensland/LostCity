@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { MarketplacePersona } from "@/lib/marketplace-art";
 
 interface MarketplaceTimeGreetingProps {
@@ -43,11 +43,7 @@ const GREETINGS: Record<DayPart, Record<MarketplacePersona, string>> = {
 export default function MarketplaceTimeGreeting({
   persona,
 }: MarketplaceTimeGreetingProps) {
-  const [dayPart, setDayPart] = useState<DayPart>("afternoon");
-
-  useEffect(() => {
-    setDayPart(getDayPart());
-  }, []);
+  const [dayPart] = useState<DayPart>(() => getDayPart());
 
   const greeting = GREETINGS[dayPart][persona];
 

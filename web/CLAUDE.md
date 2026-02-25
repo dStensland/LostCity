@@ -27,6 +27,14 @@ npm run lint     # ESLint
 
 ---
 
+## Multi-Agent Coordination
+
+When multiple Claude Code sessions work in parallel, check `ACTIVE_WORK.md` in the repo root before starting. It tracks which agent is working on what and which files/directories are claimed. Don't modify files claimed by another agent — tell the user if you need to.
+
+See `BACKLOG.md` for the full prioritized roadmap with implementation status.
+
+---
+
 ## Authentication & Database Access
 
 ### CRITICAL: Never Do Direct Supabase Mutations from Components

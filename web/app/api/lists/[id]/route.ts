@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
-import { checkBodySize, type AnySupabase } from "@/lib/api-utils";
+import { checkBodySize, isValidUrl, type AnySupabase } from "@/lib/api-utils";
 import { logger } from "@/lib/logger";
+import { isValidSubmissionMode, isValidOwnerType, isValidVibeTags, isValidHexColor } from "@/lib/curation-utils";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -28,13 +29,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
   }
 
   try {
-    // Get the list
+    // Step 1: Fetch the list (must come first to verify existence)
     const { data: list, error: listError } = await svc
       .from("lists")
-      .select(`
-        *,
-        creator:profiles!creator_id(username, display_name, avatar_url)
-      `)
+      .select("*")
       .eq("id", id)
       .eq("status", "active")
       .maybeSingle();
@@ -43,55 +41,54 @@ export async function GET(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: "List not found" }, { status: 404 });
     }
 
-    // Only allow viewing public lists (or own lists via auth)
-    if (!list.is_public) {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user || user.id !== list.creator_id) {
-        return NextResponse.json({ error: "List not found" }, { status: 404 });
-      }
-    }
-
-    // Get current user for vote status
-    const { data: { user } } = await supabase.auth.getUser();
-
-    // Get items with vote counts
-    const { data: items, error: itemsError } = await svc
-      .from("list_items")
-      .select(`
+    // Step 2: Parallelize independent queries — auth, creator, items, vote counts
+    const [
+      { data: { user } },
+      { data: creator },
+      { data: items, error: itemsError },
+      { data: voteCounts },
+    ] = await Promise.all([
+      supabase.auth.getUser(),
+      svc.from("profiles").select("username, display_name, avatar_url").eq("id", list.creator_id).maybeSingle(),
+      svc.from("list_items").select(`
         *,
         venue:venues(id, name, slug, neighborhood, venue_type),
         event:events(id, title, start_date, venue:venues(name)),
         organization:organizations(id, name, slug)
-      `)
-      .eq("list_id", id)
-      .order("position", { ascending: true });
+      `).eq("list_id", id).order("position", { ascending: true }),
+      svc.from("list_votes").select("item_id").eq("list_id", id).not("item_id", "is", null),
+    ]);
 
     if (itemsError) {
       logger.error("Error fetching list items", itemsError);
     }
 
-    // Get vote counts for items
-    const { data: voteCounts } = await svc
-      .from("list_votes")
-      .select("item_id")
-      .eq("list_id", id)
-      .not("item_id", "is", null);
+    list.creator = creator;
 
-    // Get user votes if logged in
+    // Private list access check
+    if (!list.is_public) {
+      if (!user || user.id !== list.creator_id) {
+        return NextResponse.json({ error: "List not found" }, { status: 404 });
+      }
+    }
+
+    // Step 3: User-dependent queries (parallel)
     let userVotes: Record<string, string> = {};
-    if (user) {
-      const { data: votes } = await svc
-        .from("list_votes")
-        .select("item_id, vote_type")
-        .eq("list_id", id)
-        .eq("user_id", user.id);
+    let isFollowing = false;
 
-      if (votes) {
-        userVotes = votes.reduce((acc: Record<string, string>, v: { item_id: string | null; vote_type: string }) => {
+    if (user) {
+      const [votesResult, followResult] = await Promise.all([
+        svc.from("list_votes").select("item_id, vote_type").eq("list_id", id).eq("user_id", user.id),
+        svc.from("curation_follows").select("id").eq("list_id", id).eq("user_id", user.id).maybeSingle(),
+      ]);
+
+      if (votesResult.data) {
+        userVotes = votesResult.data.reduce((acc: Record<string, string>, v: { item_id: string | null; vote_type: string }) => {
           if (v.item_id) acc[v.item_id] = v.vote_type;
           return acc;
         }, {} as Record<string, string>);
       }
+      isFollowing = !!followResult.data;
     }
 
     // Count votes per item
@@ -115,17 +112,12 @@ export async function GET(request: NextRequest, context: RouteContext) {
       user_vote: userVotes[item.id] || null,
     }));
 
-    // Get total vote count for the list
-    const { count: totalVotes } = await svc
-      .from("list_votes")
-      .select("*", { count: "exact", head: true })
-      .eq("list_id", id);
-
     return NextResponse.json({
       list: {
         ...list,
         item_count: items?.length || 0,
-        vote_count: totalVotes || 0,
+        vote_count: list.upvote_count ?? 0,
+        is_following: isFollowing,
       },
       items: itemsWithVotes,
     });
@@ -177,13 +169,46 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     if (body.is_public !== undefined) updates.is_public = body.is_public;
     if (body.allow_contributions !== undefined) updates.allow_contributions = body.allow_contributions;
     if (body.status !== undefined) {
-      // Validate status against allowlist
       const VALID_STATUSES = ["active", "archived", "deleted"];
       if (!VALID_STATUSES.includes(body.status)) {
         return NextResponse.json({ error: "Invalid status value" }, { status: 400 });
       }
       updates.status = body.status;
     }
+
+    // Curation-specific fields
+    if (body.cover_image_url !== undefined) {
+      if (body.cover_image_url && !isValidUrl(body.cover_image_url)) {
+        return NextResponse.json({ error: "Invalid cover image URL" }, { status: 400 });
+      }
+      updates.cover_image_url = body.cover_image_url || null;
+    }
+    if (body.accent_color !== undefined) {
+      if (body.accent_color && !isValidHexColor(body.accent_color)) {
+        return NextResponse.json({ error: "Invalid accent color (use #RRGGBB)" }, { status: 400 });
+      }
+      updates.accent_color = body.accent_color || null;
+    }
+    if (body.vibe_tags !== undefined) {
+      if (!isValidVibeTags(body.vibe_tags)) {
+        return NextResponse.json({ error: "Invalid vibe tags" }, { status: 400 });
+      }
+      updates.vibe_tags = body.vibe_tags;
+    }
+    if (body.submission_mode !== undefined) {
+      if (!isValidSubmissionMode(body.submission_mode)) {
+        return NextResponse.json({ error: "Invalid submission mode" }, { status: 400 });
+      }
+      updates.submission_mode = body.submission_mode;
+      if (body.submission_mode === "open") updates.allow_contributions = true;
+    }
+    if (body.owner_type !== undefined) {
+      if (!isValidOwnerType(body.owner_type)) {
+        return NextResponse.json({ error: "Invalid owner type" }, { status: 400 });
+      }
+      updates.owner_type = body.owner_type;
+    }
+    if (body.is_pinned !== undefined) updates.is_pinned = !!body.is_pinned;
 
     // Use service client to bypass RLS - auth already validated above
     let serviceClient: AnySupabase;

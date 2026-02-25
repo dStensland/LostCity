@@ -4,6 +4,30 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
+const PLANNING_SERVICE_STYLE_OPTIONS = [
+  { value: "", label: "Unknown" },
+  { value: "quick_service", label: "Quick service" },
+  { value: "casual_dine_in", label: "Casual dine-in" },
+  { value: "full_service", label: "Full service" },
+  { value: "tasting_menu", label: "Tasting menu" },
+  { value: "bar_food", label: "Bar food" },
+  { value: "coffee_dessert", label: "Coffee / dessert" },
+] as const;
+
+type TriStateBoolean = "unknown" | "yes" | "no";
+
+function toTriStateBoolean(value: boolean | null | undefined): TriStateBoolean {
+  if (value === true) return "yes";
+  if (value === false) return "no";
+  return "unknown";
+}
+
+function fromTriStateBoolean(value: TriStateBoolean): boolean | null {
+  if (value === "yes") return true;
+  if (value === "no") return false;
+  return null;
+}
+
 export default function VenueEditPage({
   params,
 }: {
@@ -28,6 +52,14 @@ export default function VenueEditPage({
     phone: "",
     menu_url: "",
     reservation_url: "",
+    service_style: "",
+    meal_duration_min_minutes: "",
+    meal_duration_max_minutes: "",
+    walk_in_wait_minutes: "",
+    payment_buffer_minutes: "",
+    accepts_reservations: "unknown" as TriStateBoolean,
+    reservation_recommended: "unknown" as TriStateBoolean,
+    planning_notes: "",
     vibes: [] as string[],
   });
 
@@ -63,6 +95,28 @@ export default function VenueEditPage({
           phone: venueData.phone || "",
           menu_url: venueData.menu_url || "",
           reservation_url: venueData.reservation_url || "",
+          service_style: venueData.service_style || "",
+          meal_duration_min_minutes:
+            venueData.meal_duration_min_minutes != null
+              ? String(venueData.meal_duration_min_minutes)
+              : "",
+          meal_duration_max_minutes:
+            venueData.meal_duration_max_minutes != null
+              ? String(venueData.meal_duration_max_minutes)
+              : "",
+          walk_in_wait_minutes:
+            venueData.walk_in_wait_minutes != null
+              ? String(venueData.walk_in_wait_minutes)
+              : "",
+          payment_buffer_minutes:
+            venueData.payment_buffer_minutes != null
+              ? String(venueData.payment_buffer_minutes)
+              : "",
+          accepts_reservations: toTriStateBoolean(venueData.accepts_reservations),
+          reservation_recommended: toTriStateBoolean(
+            venueData.reservation_recommended
+          ),
+          planning_notes: venueData.planning_notes || "",
           vibes: venueData.vibes || [],
         });
       } catch (err) {
@@ -81,12 +135,34 @@ export default function VenueEditPage({
     setError(null);
 
     try {
+      const payload = {
+        ...formData,
+        service_style: formData.service_style || null,
+        meal_duration_min_minutes: formData.meal_duration_min_minutes
+          ? Number(formData.meal_duration_min_minutes)
+          : null,
+        meal_duration_max_minutes: formData.meal_duration_max_minutes
+          ? Number(formData.meal_duration_max_minutes)
+          : null,
+        walk_in_wait_minutes: formData.walk_in_wait_minutes
+          ? Number(formData.walk_in_wait_minutes)
+          : null,
+        payment_buffer_minutes: formData.payment_buffer_minutes
+          ? Number(formData.payment_buffer_minutes)
+          : null,
+        accepts_reservations: fromTriStateBoolean(formData.accepts_reservations),
+        reservation_recommended: fromTriStateBoolean(
+          formData.reservation_recommended
+        ),
+        planning_notes: formData.planning_notes || null,
+      };
+
       const response = await fetch(`/api/venues/by-slug/${params.slug}/edit`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -293,6 +369,184 @@ export default function VenueEditPage({
               className="w-full bg-[var(--void-light)] border border-[var(--border)] rounded px-4 py-2 text-[var(--cream)] focus:outline-none focus:border-[var(--coral)]"
               placeholder="https://resy.com/yourrestaurant"
             />
+          </div>
+
+          {/* Planning Metadata */}
+          <div className="rounded border border-[var(--border)] bg-[var(--void-light)]/50 p-4 space-y-4">
+            <div>
+              <h2 className="text-sm font-semibold">Planning Metadata</h2>
+              <p className="text-xs text-[var(--muted)] mt-1">
+                Help us estimate on-time dining windows before nearby shows.
+              </p>
+            </div>
+
+            <div>
+              <label htmlFor="service_style" className="block text-sm font-medium mb-2">
+                Service Style
+              </label>
+              <select
+                id="service_style"
+                value={formData.service_style}
+                onChange={(e) =>
+                  setFormData({ ...formData, service_style: e.target.value })
+                }
+                className="w-full bg-[var(--void-light)] border border-[var(--border)] rounded px-4 py-2 text-[var(--cream)] focus:outline-none focus:border-[var(--coral)]"
+              >
+                {PLANNING_SERVICE_STYLE_OPTIONS.map((option) => (
+                  <option key={option.value || "unknown"} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label htmlFor="meal_duration_min_minutes" className="block text-sm font-medium mb-2">
+                  Meal Duration Min (minutes)
+                </label>
+                <input
+                  id="meal_duration_min_minutes"
+                  type="number"
+                  min={15}
+                  max={360}
+                  value={formData.meal_duration_min_minutes}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      meal_duration_min_minutes: e.target.value,
+                    })
+                  }
+                  className="w-full bg-[var(--void-light)] border border-[var(--border)] rounded px-4 py-2 text-[var(--cream)] focus:outline-none focus:border-[var(--coral)]"
+                  placeholder="60"
+                />
+              </div>
+              <div>
+                <label htmlFor="meal_duration_max_minutes" className="block text-sm font-medium mb-2">
+                  Meal Duration Max (minutes)
+                </label>
+                <input
+                  id="meal_duration_max_minutes"
+                  type="number"
+                  min={15}
+                  max={480}
+                  value={formData.meal_duration_max_minutes}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      meal_duration_max_minutes: e.target.value,
+                    })
+                  }
+                  className="w-full bg-[var(--void-light)] border border-[var(--border)] rounded px-4 py-2 text-[var(--cream)] focus:outline-none focus:border-[var(--coral)]"
+                  placeholder="90"
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label htmlFor="walk_in_wait_minutes" className="block text-sm font-medium mb-2">
+                  Walk-in Wait (minutes)
+                </label>
+                <input
+                  id="walk_in_wait_minutes"
+                  type="number"
+                  min={0}
+                  max={240}
+                  value={formData.walk_in_wait_minutes}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      walk_in_wait_minutes: e.target.value,
+                    })
+                  }
+                  className="w-full bg-[var(--void-light)] border border-[var(--border)] rounded px-4 py-2 text-[var(--cream)] focus:outline-none focus:border-[var(--coral)]"
+                  placeholder="15"
+                />
+              </div>
+              <div>
+                <label htmlFor="payment_buffer_minutes" className="block text-sm font-medium mb-2">
+                  Payment Buffer (minutes)
+                </label>
+                <input
+                  id="payment_buffer_minutes"
+                  type="number"
+                  min={0}
+                  max={60}
+                  value={formData.payment_buffer_minutes}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      payment_buffer_minutes: e.target.value,
+                    })
+                  }
+                  className="w-full bg-[var(--void-light)] border border-[var(--border)] rounded px-4 py-2 text-[var(--cream)] focus:outline-none focus:border-[var(--coral)]"
+                  placeholder="10"
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label htmlFor="accepts_reservations" className="block text-sm font-medium mb-2">
+                  Accepts Reservations
+                </label>
+                <select
+                  id="accepts_reservations"
+                  value={formData.accepts_reservations}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      accepts_reservations: e.target.value as TriStateBoolean,
+                    })
+                  }
+                  className="w-full bg-[var(--void-light)] border border-[var(--border)] rounded px-4 py-2 text-[var(--cream)] focus:outline-none focus:border-[var(--coral)]"
+                >
+                  <option value="unknown">Unknown</option>
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="reservation_recommended" className="block text-sm font-medium mb-2">
+                  Reservation Recommended
+                </label>
+                <select
+                  id="reservation_recommended"
+                  value={formData.reservation_recommended}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      reservation_recommended: e.target.value as TriStateBoolean,
+                    })
+                  }
+                  className="w-full bg-[var(--void-light)] border border-[var(--border)] rounded px-4 py-2 text-[var(--cream)] focus:outline-none focus:border-[var(--coral)]"
+                >
+                  <option value="unknown">Unknown</option>
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="planning_notes" className="block text-sm font-medium mb-2">
+                Planning Notes
+              </label>
+              <textarea
+                id="planning_notes"
+                value={formData.planning_notes}
+                onChange={(e) =>
+                  setFormData({ ...formData, planning_notes: e.target.value })
+                }
+                rows={3}
+                className="w-full bg-[var(--void-light)] border border-[var(--border)] rounded px-4 py-2 text-[var(--cream)] focus:outline-none focus:border-[var(--coral)]"
+                placeholder="e.g. Kitchen can slow down after 7:30 PM on weekends."
+              />
+              <p className="text-xs text-[var(--muted)] mt-1">
+                {formData.planning_notes.length} / 1000 characters
+              </p>
+            </div>
           </div>
 
           {/* Accessibility Notes */}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Logo from "@/components/Logo";
 import Image from "@/components/SmartImage";
@@ -18,18 +18,40 @@ type Portal = {
   branding: {
     logo_url?: string;
   };
+  filters?: {
+    categories?: string[];
+  } | null;
 };
 
 function OnboardingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const portalSlug = searchParams.get("portal");
+  const runtimeSearch = useMemo(() => {
+    if (typeof window === "undefined") return null;
+    return new URLSearchParams(window.location.search);
+  }, []);
+  const portalSlug = searchParams.get("portal") ?? runtimeSearch?.get("portal");
+  const isPreviewMode =
+    searchParams.get("preview") === "1" || runtimeSearch?.get("preview") === "1";
+  const previewStepParam = searchParams.get("step") ?? runtimeSearch?.get("step");
+  const previewCategoriesParam =
+    searchParams.get("categories") ?? runtimeSearch?.get("categories");
   const { user, loading: authLoading } = useAuth();
   const supabase = createClient();
 
+  const initialStep: OnboardingStep =
+    isPreviewMode && previewStepParam === "genres" ? "genres" : "categories";
+  const initialPreviewCategories =
+    isPreviewMode && previewCategoriesParam
+      ? previewCategoriesParam
+          .split(",")
+          .map((value) => value.trim())
+          .filter(Boolean)
+      : [];
+
   // State
-  const [step, setStep] = useState<OnboardingStep>("categories");
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [step, setStep] = useState<OnboardingStep>(initialStep);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(initialPreviewCategories);
   const [selectedGenres, setSelectedGenres] = useState<Record<string, string[]>>({});
   const [selectedNeeds, setSelectedNeeds] = useState<{
     accessibility: string[];
@@ -42,10 +64,10 @@ function OnboardingContent() {
 
   // Redirect if not logged in
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (!isPreviewMode && !authLoading && !user) {
       router.push(`/auth/login${portalSlug ? `?redirect=/onboarding?portal=${portalSlug}` : ""}`);
     }
-  }, [authLoading, user, router, portalSlug]);
+  }, [authLoading, isPreviewMode, user, router, portalSlug]);
 
   // Load portal data if specified
   useEffect(() => {
@@ -54,7 +76,7 @@ function OnboardingContent() {
 
       const { data } = await supabase
         .from("portals")
-        .select("id, slug, name, branding")
+        .select("id, slug, name, branding, filters")
         .eq("slug", portalSlug)
         .eq("status", "active")
         .maybeSingle();
@@ -65,6 +87,13 @@ function OnboardingContent() {
     }
     loadPortal();
   }, [portalSlug, supabase]);
+
+  const portalCategoryFilter = useMemo(() => {
+    const categories = portal?.filters?.categories;
+    if (!Array.isArray(categories)) return undefined;
+    const valid = categories.filter((value): value is string => typeof value === "string");
+    return valid.length > 0 ? valid : undefined;
+  }, [portal?.filters?.categories]);
 
   // Step handlers
   const handleCategoryComplete = useCallback(
@@ -113,7 +142,13 @@ function OnboardingContent() {
     genres: Record<string, string[]>,
     needs: { accessibility: string[]; dietary: string[]; family: string[] }
   ) => {
-    if (!user) return;
+    if (!user) {
+      if (isPreviewMode) {
+        if (portalSlug) router.push(`/${portalSlug}`);
+        else router.push("/atlanta");
+      }
+      return;
+    }
 
     try {
       await fetch("/api/onboarding/complete", {
@@ -163,7 +198,7 @@ function OnboardingContent() {
   }, [user, selectedCategories, selectedGenres, selectedNeeds, portalSlug, router]);
 
   // Loading state
-  if (authLoading || !user) {
+  if (authLoading || (!user && !isPreviewMode)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--void)]">
         <div className="w-8 h-8 border-2 border-[var(--coral)] border-t-transparent rounded-full animate-spin" />
@@ -172,43 +207,61 @@ function OnboardingContent() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[var(--void)]">
+    <div className="relative min-h-screen overflow-hidden bg-[var(--void)]">
+      <div className="pointer-events-none absolute inset-0 opacity-60 [background:radial-gradient(circle_at_16%_14%,rgba(0,212,232,0.12),transparent_42%),radial-gradient(circle_at_80%_12%,rgba(255,107,122,0.12),transparent_46%)]" />
+      <div className="pointer-events-none absolute inset-0 opacity-35 [background:repeating-linear-gradient(125deg,rgba(255,255,255,0.025)_0,rgba(255,255,255,0.025)_2px,transparent_2px,transparent_11px)]" />
+      <div className="relative z-10 flex min-h-screen flex-col">
       {/* Header */}
-      <header className="px-4 sm:px-6 py-4 border-b border-[var(--twilight)] flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          {portal?.branding?.logo_url ? (
-            <Image
-              src={portal.branding.logo_url}
-              alt={portal.name}
-              width={32}
-              height={32}
-              className="rounded-lg"
-            />
-          ) : (
-            <Logo />
-          )}
-          {portal && (
-            <span className="font-mono text-xs text-[var(--muted)]">{portal.name}</span>
-          )}
-        </div>
+      <header className="border-b border-[var(--twilight)]/45 bg-[var(--night)]/75 px-4 py-4 backdrop-blur-sm sm:px-6">
+        <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            {portal?.branding?.logo_url ? (
+              <Image
+                src={portal.branding.logo_url}
+                alt={portal.name}
+                width={32}
+                height={32}
+                className="rounded-lg"
+              />
+            ) : (
+              <Logo />
+            )}
+            <div className="flex flex-col">
+              {portal && (
+                <span className="font-mono text-xs text-[var(--muted)]">{portal.name}</span>
+              )}
+              {isPreviewMode && (
+                <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-[var(--soft)]">
+                  Preview Mode
+                </span>
+              )}
+            </div>
+          </div>
 
-        {/* Exit button */}
-        <button
-          onClick={handleExit}
-          className="p-2 text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
-          aria-label="Exit onboarding"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+          <div className="flex items-center gap-2">
+            <p className="hidden font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--soft)] sm:block">
+              Personalized Discovery Setup
+            </p>
+
+            {/* Exit button */}
+            <button
+              onClick={handleExit}
+              className="p-2 text-[var(--muted)] transition-colors hover:text-[var(--cream)]"
+              aria-label="Exit onboarding"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
       </header>
 
       {/* Progress bar */}
       <OnboardingProgress currentStep={step} />
 
       {/* Main content */}
-      <main className="flex-1 relative overflow-hidden">
+      <main className="relative flex-1 overflow-hidden">
         {/* Celebration overlay */}
         {showCelebration && (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-[var(--void)]/80 backdrop-blur-sm animate-fadeIn">
@@ -226,7 +279,7 @@ function OnboardingContent() {
                   />
                 </svg>
               </div>
-              <p className="font-mono text-xl text-[var(--cream)]">You're all set!</p>
+              <p className="font-mono text-xl text-[var(--cream)]">You&apos;re all set!</p>
             </div>
           </div>
         )}
@@ -238,6 +291,7 @@ function OnboardingContent() {
               <CategoryPicker
                 onComplete={handleCategoryComplete}
                 onSkip={handleCategorySkip}
+                portalCategoryFilter={portalCategoryFilter}
               />
             </div>
           )}
@@ -248,11 +302,13 @@ function OnboardingContent() {
                 onComplete={handleGenreComplete}
                 onSkip={handleGenreSkip}
                 selectedCategories={selectedCategories}
+                portalCategoryFilter={portalCategoryFilter}
               />
             </div>
           )}
         </div>
       </main>
+      </div>
     </div>
   );
 }

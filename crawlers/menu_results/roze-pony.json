@@ -1,0 +1,56 @@
+{
+  "venue_id": 1470,
+  "venue_slug": "roze-pony",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Abatti Wagyu Bistro Steak",
+        "price": "$47",
+        "category": "entree"
+      },
+      {
+        "name": "Grilled Branzino",
+        "price": "$35",
+        "category": "entree"
+      },
+      {
+        "name": "Souffl\u00e9 Pancakes",
+        "price": "$17",
+        "category": "entree"
+      },
+      {
+        "name": "Mortadella Sando",
+        "price": "$17",
+        "category": "entree"
+      },
+      {
+        "name": "Espresso No. 2",
+        "price": "$16",
+        "category": "cocktail"
+      }
+    ],
+    "dietary_options": [
+      "vegetarian-friendly",
+      "vegan-options"
+    ],
+    "price_level": 3,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

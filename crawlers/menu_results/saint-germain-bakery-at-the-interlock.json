@@ -1,0 +1,53 @@
+{
+  "venue_id": 3248,
+  "venue_slug": "saint-germain-bakery-at-the-interlock",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Paris-Brest",
+        "price": null,
+        "category": "dessert"
+      },
+      {
+        "name": "Croque Monsieur",
+        "price": null,
+        "category": "entree"
+      },
+      {
+        "name": "Cannel\u00e9",
+        "price": null,
+        "category": "dessert"
+      },
+      {
+        "name": "Riviera Sandwich",
+        "price": null,
+        "category": "entree"
+      },
+      {
+        "name": "Champagne Mimosa",
+        "price": null,
+        "category": "wine"
+      }
+    ],
+    "dietary_options": [],
+    "price_level": 2,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

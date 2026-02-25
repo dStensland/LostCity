@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
       .from("events")
       .select(`
         id,
-        category,
+        category:category_id,
         venue:venues(id, name, neighborhood)
       `)
       .eq("id", event_id)

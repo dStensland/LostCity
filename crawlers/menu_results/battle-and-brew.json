@@ -1,0 +1,53 @@
+{
+  "venue_id": 256,
+  "venue_slug": "battle-and-brew",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Nuka Cola",
+        "price": null,
+        "category": "cocktail"
+      },
+      {
+        "name": "Princess Peach",
+        "price": null,
+        "category": "cocktail"
+      },
+      {
+        "name": "Mana Potion",
+        "price": null,
+        "category": "cocktail"
+      },
+      {
+        "name": "Masterchief Mule",
+        "price": null,
+        "category": "cocktail"
+      },
+      {
+        "name": "Arcadia's Cauldron",
+        "price": null,
+        "category": "cocktail"
+      }
+    ],
+    "dietary_options": [],
+    "price_level": 2,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

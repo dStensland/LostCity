@@ -93,32 +93,32 @@ def categorize_event(title: str, description: str = "") -> tuple[str, list[str],
     # Screening programs
     elif any(word in text for word in ["screening", "mammogram", "health fair", "breast health"]):
         category = "wellness"
-        tags.extend(["screening", "preventive-care", "health", "free"])
-        is_free = True
+        tags.extend(["screening", "preventive-care", "health"])
+        is_free = "free" in text or "no cost" in text
 
     # Support groups
     elif any(word in text for word in ["support group", "survivor", "patient support", "peer support"]):
         category = "wellness"
         tags.extend(["support-group", "patient-support", "survivors", "mental-health"])
-        is_free = True
+        is_free = "free" in text or "no cost" in text
 
     # Educational workshops
     elif any(word in text for word in ["workshop", "education", "seminar", "webinar", "class", "training"]):
         category = "learning"
         tags.extend(["education", "health-education", "awareness"])
-        is_free = True
+        is_free = "free" in text or "no cost" in text
 
     # Awareness events
     elif any(word in text for word in ["awareness", "pink", "campaign", "advocacy"]):
         category = "community"
         tags.extend(["awareness", "advocacy", "pink"])
-        is_free = True
+        is_free = "free" in text or "no cost" in text
 
     # Default
     else:
         category = "community"
         tags.append("community-health")
-        is_free = True
+        is_free = "free" in text or "no cost" in text
 
     # Check for explicit free/paid markers
     if "free" in text or "no cost" in text:
@@ -320,11 +320,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     title, "Susan G Komen Greater Atlanta", start_date
                 )
 
-                if find_event_by_hash(content_hash):
-                    events_updated += 1
-                    logger.debug(f"Event already exists: {title}")
-                    continue
-
                 event_record = {
                     "source_id": source_id,
                     "venue_id": venue_id,
@@ -351,6 +346,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "recurrence_rule": None,
                     "content_hash": content_hash,
                 }
+
+                existing = find_event_by_hash(content_hash)
+                if existing:
+                    smart_update_existing_event(existing, event_record)
+                    events_updated += 1
+                    logger.debug(f"Event updated: {title}")
+                    continue
 
                 try:
                     insert_event(event_record)

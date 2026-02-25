@@ -10,3 +10,6 @@ discovery:
   - https://www.hotelclermont.com
 detail:
   enabled: true
+data_goals:
+- events
+- venue_hours

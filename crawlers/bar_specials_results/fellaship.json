@@ -1,0 +1,49 @@
+{
+  "venue_id": 4413,
+  "venue_slug": "fellaship",
+  "meta": {},
+  "extracted": {
+    "specials": [
+      {
+        "title": "Jazz & Juice Brunch",
+        "type": "brunch",
+        "description": "Live band brunch every Sunday featuring traditional saxophone jazz meets 21st century hip-hop",
+        "days_of_week": [7],
+        "time_start": null,
+        "time_end": null,
+        "price_note": null
+      },
+      {
+        "title": "Fellaship Fridays",
+        "type": "event_night",
+        "description": "Weekly Friday event with guest DJs kicking off the weekend with good vibes",
+        "days_of_week": [5],
+        "time_start": null,
+        "time_end": null,
+        "price_note": null
+      },
+      {
+        "title": "SaturDaze",
+        "type": "event_night",
+        "description": "Saturday gathering with a grown folks vibe, like a family reunion every week",
+        "days_of_week": [6],
+        "time_start": null,
+        "time_end": null,
+        "price_note": null
+      }
+    ],
+    "hours": null,
+    "vibes": ["upscale", "live-music", "dj", "date-night", "craft-cocktails", "brunch-spot", "dancing"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "https://fellashipatl.com/menu",
+    "reservation_url": "https://resy.com/cities/atl/fellaship-lounge",
+    "phone": "(404) 254-4970",
+    "instagram": null,
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

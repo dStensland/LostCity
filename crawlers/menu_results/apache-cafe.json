@@ -1,0 +1,55 @@
+{
+  "venue_id": 57,
+  "venue_slug": "apache-cafe",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Apache Chicken Alfredo",
+        "price": "$26",
+        "category": "entree"
+      },
+      {
+        "name": "Salmon Mac & Cheese",
+        "price": "$24",
+        "category": "entree"
+      },
+      {
+        "name": "Apache Jerk Wings",
+        "price": null,
+        "category": "appetizer"
+      },
+      {
+        "name": "Hot Chicken Sandwich",
+        "price": "$18",
+        "category": "entree"
+      },
+      {
+        "name": "Homemade Cheesecake",
+        "price": "$12",
+        "category": "dessert"
+      }
+    ],
+    "dietary_options": [
+      "vegetarian-friendly"
+    ],
+    "price_level": 3,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

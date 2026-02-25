@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import { format } from "date-fns";
 import { getProxiedImageSrc } from "@/lib/image-proxy";
@@ -15,9 +16,9 @@ function formatTime(time: string): string {
 
 function resolveEventHref(
   portalSlug: string,
-  event: { id?: string | null; title: string; venue_name?: string | null }
+  event: { id?: string | number | null; title: string; venue_name?: string | null }
 ): string {
-  const id = typeof event.id === "string" ? event.id.trim() : "";
+  const id = event.id == null ? "" : String(event.id).trim();
   if (id) return `/${portalSlug}/events/${id}`;
   const fallbackQuery = event.venue_name || event.title;
   return `/${portalSlug}?view=find&type=events&search=${encodeURIComponent(fallbackQuery)}`;
@@ -31,7 +32,7 @@ function formatEventDate(dateValue: string): string {
 
 interface HotelEventCardProps {
   event: {
-    id: string;
+    id: string | number;
     title: string;
     start_date: string;
     start_time?: string | null;

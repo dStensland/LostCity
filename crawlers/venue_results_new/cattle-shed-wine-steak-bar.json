@@ -1,0 +1,93 @@
+{
+  "venue_id": 4895,
+  "venue_slug": "cattle-shed-wine-steak-bar",
+  "meta": {
+    "og_image": "https://popmenucloud.com/cdn-cgi/image/width=1200,height=630,format=auto,fit=cover/aomsbuel/5fc7d65e-72fd-46ee-ab1d-3c3fd92c3550.jpeg",
+    "meta_description": "Cattle Shed in Alpharetta, GA. Cattle Shed offers a chef curated dining experience, highlighting some fresh seasonal ingredients from local and regional growers when available, hand cut USDA Prime and Premium cut steaks, fresh seafood and artisan cheeses & meats. We take the same care with our wine and cocktail lists as we do our food menus. Through our partnership with Georgia's only Master Sommelier we're able to showcase unique artisanal wines as well as famous classics.",
+    "reservation_links": [],
+    "menu_links": [
+      "https://www.cattleshedwinebar.com/menu",
+      "https://www.cattleshedwinebar.com/menu"
+    ],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["upscale", "date-spot", "happy-hour", "craft-cocktails"],
+    "cuisine": ["steakhouse", "new_american"],
+    "service_style": "full_service",
+    "price_level": 4,
+    "menu_highlights": [
+      {"name": "Premium Cut Steaks", "price": null, "category": "entree"},
+      {"name": "Charcuterie Board", "price": null, "category": "appetizer"},
+      {"name": "Happy Hour Wine", "price": "$5", "category": "wine"}
+    ],
+    "menu_url": "https://www.cattleshedwinebar.com/menu",
+    "reservation_url": null,
+    "phone": null,
+    "instagram": null,
+    "dietary_options": [],
+    "specials": [
+      {
+        "day_of_week": 1,
+        "title": "Happy Hour",
+        "description": "Daily happy hour with $5 wines including Pinot Grigio, Chardonnay, Pinot Noir, Cabernet, Merlot",
+        "special_type": "happy_hour",
+        "start_time": "14:30",
+        "end_time": "18:00"
+      },
+      {
+        "day_of_week": 2,
+        "title": "Happy Hour",
+        "description": "Daily happy hour with $5 wines including Pinot Grigio, Chardonnay, Pinot Noir, Cabernet, Merlot",
+        "special_type": "happy_hour",
+        "start_time": "14:30",
+        "end_time": "18:00"
+      },
+      {
+        "day_of_week": 3,
+        "title": "Happy Hour",
+        "description": "Daily happy hour with $5 wines including Pinot Grigio, Chardonnay, Pinot Noir, Cabernet, Merlot",
+        "special_type": "happy_hour",
+        "start_time": "14:30",
+        "end_time": "18:00"
+      },
+      {
+        "day_of_week": 4,
+        "title": "Happy Hour",
+        "description": "Daily happy hour with $5 wines including Pinot Grigio, Chardonnay, Pinot Noir, Cabernet, Merlot",
+        "special_type": "happy_hour",
+        "start_time": "14:30",
+        "end_time": "18:00"
+      },
+      {
+        "day_of_week": 5,
+        "title": "Happy Hour",
+        "description": "Daily happy hour with $5 wines including Pinot Grigio, Chardonnay, Pinot Noir, Cabernet, Merlot",
+        "special_type": "happy_hour",
+        "start_time": "14:30",
+        "end_time": "18:00"
+      },
+      {
+        "day_of_week": 6,
+        "title": "Happy Hour",
+        "description": "Daily happy hour with $5 wines including Pinot Grigio, Chardonnay, Pinot Noir, Cabernet, Merlot",
+        "special_type": "happy_hour",
+        "start_time": "14:30",
+        "end_time": "18:00"
+      },
+      {
+        "day_of_week": 7,
+        "title": "Happy Hour",
+        "description": "Daily happy hour with $5 wines including Pinot Grigio, Chardonnay, Pinot Noir, Cabernet, Merlot",
+        "special_type": "happy_hour",
+        "start_time": "14:30",
+        "end_time": "18:00"
+      }
+    ],
+    "genres": [],
+    "parking": []
+  }
+}

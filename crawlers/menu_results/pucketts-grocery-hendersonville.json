@@ -1,0 +1,55 @@
+{
+  "venue_id": 1523,
+  "venue_slug": "pucketts-grocery-hendersonville",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Baby Back Ribs",
+        "price": "$21.95",
+        "category": "entree"
+      },
+      {
+        "name": "The Whole Farm Platter",
+        "price": "$36.95",
+        "category": "entree"
+      },
+      {
+        "name": "Pimento Cheese Bites",
+        "price": "$11.95",
+        "category": "appetizer"
+      },
+      {
+        "name": "Music City Hot Chicken Sandwich",
+        "price": "$14.95",
+        "category": "entree"
+      },
+      {
+        "name": "Deep Fried Brownie Sundae",
+        "price": "$11.95",
+        "category": "dessert"
+      }
+    ],
+    "dietary_options": [
+      "vegetarian-friendly"
+    ],
+    "price_level": 2,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

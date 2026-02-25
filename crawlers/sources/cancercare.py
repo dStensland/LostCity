@@ -172,8 +172,8 @@ def determine_category_and_tags(title: str, description: str = "") -> tuple[str,
     if "caregiver" in text or "family" in text:
         tags.append("family-friendly")
 
-    # Most CancerCare services are free
-    is_free = True
+    # Only mark free when explicitly stated
+    is_free = False
     if any(word in text for word in ["free", "no cost", "no charge", "complimentary"]):
         tags.append("free")
         is_free = True
@@ -332,12 +332,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     # Generate content hash
                     content_hash = generate_content_hash(title, "CancerCare", start_date)
 
-                    # Check if already exists
-                    if find_event_by_hash(content_hash):
-                        events_updated += 1
-                        logger.debug(f"Event already exists: {title}")
-                        continue
-
                     # Create event record
                     event_record = {
                         "source_id": source_id,
@@ -365,6 +359,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "recurrence_rule": None,
                         "content_hash": content_hash,
                     }
+
+                    existing = find_event_by_hash(content_hash)
+                    if existing:
+                        smart_update_existing_event(existing, event_record)
+                        events_updated += 1
+                        logger.debug(f"Event updated: {title}")
+                        continue
 
                     try:
                         insert_event(event_record)

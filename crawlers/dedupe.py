@@ -6,10 +6,12 @@ Identifies and merges duplicate events from different sources.
 import hashlib
 import re
 import logging
+from datetime import date as dt_date, datetime
 from typing import Optional
 from rapidfuzz import fuzz
 from extract import EventData
 from db import find_event_by_hash, find_events_by_date_and_venue_family
+from utils import is_likely_non_event_image
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +74,35 @@ def normalize_text(text: str) -> str:
     return text
 
 
-def generate_content_hash(title: str, venue_name: str, date: str) -> str:
+def _normalize_date_for_hash(value) -> str:
+    """Normalize date-like values to YYYY-MM-DD for stable hashing."""
+    if isinstance(value, dt_date):
+        return value.isoformat()
+    if isinstance(value, datetime):
+        return value.date().isoformat()
+
+    text = str(value or "").strip()
+    if not text:
+        return ""
+
+    # Handles values like "2026-02-17T00:00:00" / "2026-02-17 00:00:00"
+    m = re.match(r"^(\d{4}-\d{2}-\d{2})", text)
+    if m:
+        return m.group(1)
+    return text
+
+
+def generate_legacy_content_hash(title: str, venue_name: str, date) -> str:
+    """
+    Legacy hash used before 2026-02-16 venue normalization change.
+    Kept for backward-compatible dedupe lookup during migration.
+    """
+    normalized_venue = normalize_venue_for_dedup(venue_name)
+    normalized = f"{normalize_text(title)}|{normalized_venue}|{_normalize_date_for_hash(date)}"
+    return hashlib.md5(normalized.encode()).hexdigest()
+
+
+def generate_content_hash(title: str, venue_name: str, date) -> str:
     """
     Generate a content hash for deduplication.
     Hash is based on ONLY: normalized title + normalized venue + date.
@@ -83,8 +113,18 @@ def generate_content_hash(title: str, venue_name: str, date: str) -> str:
     venue_after_room_strip = normalize_venue_for_dedup(venue_name)
     normalized_venue = normalize_text(venue_after_room_strip)
     normalized_title = normalize_text(title)
-    normalized = f"{normalized_title}|{normalized_venue}|{date}"
+    normalized = f"{normalized_title}|{normalized_venue}|{_normalize_date_for_hash(date)}"
     return hashlib.md5(normalized.encode()).hexdigest()
+
+
+def generate_content_hash_candidates(title: str, venue_name: str, date) -> list[str]:
+    """Return current+legacy hash candidates (deduped, stable order)."""
+    hashes = [
+        generate_content_hash(title, venue_name, date),
+        generate_legacy_content_hash(title, venue_name, date),
+    ]
+    deduped = list(dict.fromkeys(hashes))
+    return [h for h in deduped if h]
 
 
 def calculate_similarity(event1: EventData, event2: dict) -> float:
@@ -193,9 +233,17 @@ def merge_event_data(existing: dict, new: EventData) -> dict:
     if new.price_note and not existing.get("price_note"):
         merged["price_note"] = new.price_note
 
-    # Add image if missing
-    if new.image_url and not existing.get("image_url"):
-        merged["image_url"] = new.image_url
+    # Add image if missing, or upgrade a known low-quality placeholder/logo image.
+    if new.image_url:
+        existing_img = existing.get("image_url")
+        if not existing_img:
+            if not is_likely_non_event_image(new.image_url):
+                merged["image_url"] = new.image_url
+        elif (
+            is_likely_non_event_image(existing_img)
+            and not is_likely_non_event_image(new.image_url)
+        ):
+            merged["image_url"] = new.image_url
 
     # Add ticket URL if missing
     if new.ticket_url and not existing.get("ticket_url"):

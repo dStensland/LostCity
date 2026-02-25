@@ -1,0 +1,53 @@
+{
+  "venue_id": 2502,
+  "venue_slug": "old-lady-gang",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Aunt Bertha's Fried Chicken",
+        "price": "$22",
+        "category": "entree"
+      },
+      {
+        "name": "Riley's Shrimp & Grits",
+        "price": "$24",
+        "category": "entree"
+      },
+      {
+        "name": "Fried Green Tomatoes",
+        "price": "$13",
+        "category": "appetizer"
+      },
+      {
+        "name": "Kandi's Peach Cobbler Bread Pudding",
+        "price": "$9",
+        "category": "dessert"
+      },
+      {
+        "name": "Aunt Nora's Sneaky Georgia Peach",
+        "price": "$15",
+        "category": "cocktail"
+      }
+    ],
+    "dietary_options": [],
+    "price_level": 3,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

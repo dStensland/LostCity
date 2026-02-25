@@ -27,9 +27,24 @@ CREATE TABLE venues (
   lat DECIMAL(10, 8),
   lng DECIMAL(11, 8),
   venue_type TEXT,
+  location_designator TEXT NOT NULL DEFAULT 'standard',
   website TEXT,
   menu_url TEXT,
   reservation_url TEXT,
+  service_style TEXT CHECK (service_style IN ('quick_service', 'casual_dine_in', 'full_service', 'tasting_menu', 'bar_food', 'coffee_dessert')),
+  meal_duration_min_minutes INTEGER CHECK (meal_duration_min_minutes BETWEEN 15 AND 360),
+  meal_duration_max_minutes INTEGER CHECK (meal_duration_max_minutes BETWEEN 15 AND 480),
+  walk_in_wait_minutes INTEGER CHECK (walk_in_wait_minutes BETWEEN 0 AND 240),
+  payment_buffer_minutes INTEGER CHECK (payment_buffer_minutes BETWEEN 0 AND 60),
+  accepts_reservations BOOLEAN,
+  reservation_recommended BOOLEAN,
+  planning_notes TEXT,
+  planning_last_verified_at TIMESTAMPTZ,
+  CONSTRAINT venues_meal_duration_order_check CHECK (
+    meal_duration_min_minutes IS NULL
+    OR meal_duration_max_minutes IS NULL
+    OR meal_duration_min_minutes <= meal_duration_max_minutes
+  ),
   aliases TEXT[],
   last_verified_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW()
@@ -74,6 +89,7 @@ CREATE TABLE events (
   end_date DATE,
   end_time TIME,
   is_all_day BOOLEAN DEFAULT false,
+  content_kind TEXT NOT NULL DEFAULT 'event' CHECK (content_kind IN ('event', 'exhibit', 'special')),
   category TEXT,
   subcategory TEXT,
   tags TEXT[],
@@ -88,6 +104,11 @@ CREATE TABLE events (
   source_url TEXT NOT NULL,
   ticket_url TEXT,
   image_url TEXT,
+  film_title TEXT,
+  film_release_year INTEGER,
+  film_imdb_id TEXT,
+  film_external_genres TEXT[],
+  film_identity_source TEXT,
   raw_text TEXT,
   extraction_confidence DECIMAL(3, 2),
   field_provenance JSONB,
@@ -97,6 +118,8 @@ CREATE TABLE events (
   recurrence_rule TEXT,
   content_hash TEXT,
   canonical_event_id INTEGER REFERENCES events(id),
+  festival_id TEXT REFERENCES festivals(id) ON DELETE SET NULL,
+  is_tentpole BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -154,6 +177,7 @@ CREATE TABLE crawl_logs (
 -- Indexes for common queries
 CREATE INDEX idx_events_start_date ON events(start_date);
 CREATE INDEX idx_events_category ON events(category);
+CREATE INDEX idx_events_content_kind ON events(content_kind);
 CREATE INDEX idx_events_venue_id ON events(venue_id);
 CREATE INDEX idx_events_content_hash ON events(content_hash);
 CREATE INDEX idx_events_source_id ON events(source_id);
@@ -182,6 +206,35 @@ CREATE TRIGGER update_events_updated_at
   BEFORE UPDATE ON events
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
+
+-- Session-aware engagement model (festival sessions + calendar intent)
+ALTER TABLE IF EXISTS event_rsvps
+  ADD COLUMN IF NOT EXISTS engagement_target TEXT NOT NULL DEFAULT 'event',
+  ADD COLUMN IF NOT EXISTS festival_id TEXT REFERENCES festivals(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS program_id UUID REFERENCES series(id) ON DELETE SET NULL;
+
+DO $$
+BEGIN
+  IF to_regclass('public.profiles') IS NOT NULL
+    AND to_regclass('public.events') IS NOT NULL
+    AND to_regclass('public.festivals') IS NOT NULL
+    AND to_regclass('public.series') IS NOT NULL
+    AND to_regclass('public.portals') IS NOT NULL THEN
+    CREATE TABLE IF NOT EXISTS event_calendar_saves (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+      event_id INT NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+      provider TEXT NOT NULL CHECK (provider IN ('google', 'outlook', 'ics')),
+      engagement_target TEXT NOT NULL DEFAULT 'event' CHECK (engagement_target IN ('event', 'festival_session')),
+      festival_id TEXT REFERENCES festivals(id) ON DELETE SET NULL,
+      program_id UUID REFERENCES series(id) ON DELETE SET NULL,
+      portal_id UUID REFERENCES portals(id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ DEFAULT now(),
+      updated_at TIMESTAMPTZ DEFAULT now(),
+      UNIQUE (user_id, event_id, provider)
+    );
+  END IF;
+END $$;
 
 -- Insert initial sources
 INSERT INTO sources (name, slug, url, source_type) VALUES

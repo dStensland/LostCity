@@ -114,7 +114,7 @@ def determine_category_and_tags(title: str, description: str = "") -> tuple[str,
     elif any(word in text for word in ["digital security", "cybersecurity", "tech", "encryption", "privacy"]):
         category = "learning"
         tags.extend(["technology", "security", "training", "privacy"])
-        is_free = True
+        is_free = "free" in text or "no cost" in text
 
     # Legal training and CLE courses
     elif any(word in text for word in ["cle", "continuing legal education", "attorney", "lawyer training", "legal training"]):
@@ -126,24 +126,24 @@ def determine_category_and_tags(title: str, description: str = "") -> tuple[str,
     elif any(word in text for word in ["policy", "forum", "panel", "discussion", "advocacy", "legislative"]):
         category = "community"
         tags.extend(["policy", "advocacy", "forum"])
-        is_free = True
+        is_free = "free" in text or "no cost" in text
 
     # Community workshops and education
     elif any(word in text for word in ["workshop", "training", "seminar", "class", "education"]):
         category = "learning"
         tags.extend(["workshop", "education"])
-        is_free = True
+        is_free = "free" in text or "no cost" in text
 
     # Joyful Resistance and community events
     elif any(word in text for word in ["joyful resistance", "community", "organizing", "activism"]):
         category = "community"
         tags.extend(["activism", "organizing", "community"])
-        is_free = True
+        is_free = "free" in text or "no cost" in text
 
     # Default to community
     else:
         category = "community"
-        is_free = True
+        is_free = "free" in text or "no cost" in text
 
     # Check for explicit free/paid mentions
     if any(word in text for word in ["free", "no cost", "no charge", "complimentary"]):
@@ -335,12 +335,6 @@ def crawl_main_site(source_id: int, venue_id: int) -> tuple[int, int, int]:
                 title, "Southern Center for Human Rights", start_date
             )
 
-            # Check if already exists
-            if find_event_by_hash(content_hash):
-                events_updated += 1
-                logger.debug(f"Event already exists: {title}")
-                continue
-
             # Create event record
             event_record = {
                 "source_id": source_id,
@@ -368,6 +362,13 @@ def crawl_main_site(source_id: int, venue_id: int) -> tuple[int, int, int]:
                 "recurrence_rule": None,
                 "content_hash": content_hash,
             }
+
+            existing = find_event_by_hash(content_hash)
+            if existing:
+                smart_update_existing_event(existing, event_record)
+                events_updated += 1
+                logger.debug(f"Event updated: {title}")
+                continue
 
             try:
                 insert_event(event_record)

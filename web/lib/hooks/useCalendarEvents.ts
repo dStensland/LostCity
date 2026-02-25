@@ -17,6 +17,7 @@ export interface CalendarEvent {
   is_free: boolean;
   price_min: number | null;
   price_max: number | null;
+  genres?: string[] | null;
   venue?: {
     name: string;
     neighborhood: string | null;

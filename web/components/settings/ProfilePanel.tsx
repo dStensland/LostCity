@@ -1,67 +1,74 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useAuth } from "@/lib/auth-context";
+import { useState } from "react";
+import { useAuth, type Profile } from "@/lib/auth-context";
 import { createClient } from "@/lib/supabase/client";
 import AvatarUpload from "@/components/AvatarUpload";
 
-export default function ProfilePanel() {
-  const { user, profile, refreshProfile } = useAuth();
-  const supabase = createClient();
+type EditableProfile = {
+  displayName: string;
+  bio: string;
+  location: string;
+  website: string;
+  avatarUrl: string | null;
+};
 
-  const [loading, setLoading] = useState(true);
+function getEditableProfile(profile: Profile | null): EditableProfile {
+  return {
+    displayName: profile?.display_name || "",
+    bio: profile?.bio || "",
+    location: profile?.location || "",
+    website: profile?.website || "",
+    avatarUrl: profile?.avatar_url || null,
+  };
+}
+
+export default function ProfilePanel() {
+  const { user, profile, profileLoading, refreshProfile } = useAuth();
+
+  if (!user) return null;
+
+  if (profileLoading && !profile) {
+    return (
+      <div className="py-12 text-center">
+        <div className="w-8 h-8 border-2 border-[var(--coral)] border-t-transparent rounded-full animate-spin mx-auto" />
+      </div>
+    );
+  }
+
+  return (
+    <ProfileForm
+      key={profile?.updated_at || user.id}
+      userId={user.id}
+      username={profile?.username || ""}
+      initialProfile={getEditableProfile(profile)}
+      onRefreshProfile={refreshProfile}
+    />
+  );
+}
+
+function ProfileForm({
+  userId,
+  username,
+  initialProfile,
+  onRefreshProfile,
+}: {
+  userId: string;
+  username: string;
+  initialProfile: EditableProfile;
+  onRefreshProfile: () => Promise<void>;
+}) {
+  const supabase = createClient();
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const [displayName, setDisplayName] = useState("");
-  const [bio, setBio] = useState("");
-  const [location, setLocation] = useState("");
-  const [website, setWebsite] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (profile) {
-      setDisplayName(profile.display_name || "");
-      setBio(profile.bio || "");
-      setLocation(profile.location || "");
-      setWebsite(profile.website || "");
-      setAvatarUrl(profile.avatar_url);
-      setLoading(false);
-    } else if (user) {
-      const userId = user.id;
-      async function loadProfile() {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data } = await (supabase as any)
-          .from("profiles")
-          .select("*")
-          .eq("id", userId)
-          .maybeSingle();
-
-        type ProfileData = {
-          display_name: string | null;
-          bio: string | null;
-          location: string | null;
-          website: string | null;
-          avatar_url: string | null;
-        };
-        const p = data as ProfileData | null;
-        if (p) {
-          setDisplayName(p.display_name || "");
-          setBio(p.bio || "");
-          setLocation(p.location || "");
-          setWebsite(p.website || "");
-          setAvatarUrl(p.avatar_url);
-        }
-        setLoading(false);
-      }
-      loadProfile();
-    }
-  }, [user, profile, supabase]);
+  const [displayName, setDisplayName] = useState(initialProfile.displayName);
+  const [bio, setBio] = useState(initialProfile.bio);
+  const [location, setLocation] = useState(initialProfile.location);
+  const [website, setWebsite] = useState(initialProfile.website);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(initialProfile.avatarUrl);
 
   const handleSave = async () => {
-    if (!user) return;
-
     setError(null);
     setSuccess(false);
     setSaving(true);
@@ -72,16 +79,15 @@ export default function ProfilePanel() {
       return;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error: updateError } = await (supabase as any)
+    const { error: updateError } = await supabase
       .from("profiles")
       .update({
         display_name: displayName.trim() || null,
         bio: bio.trim() || null,
         location: location.trim() || null,
         website: website.trim() || null,
-      })
-      .eq("id", user.id);
+      } as never)
+      .eq("id", userId);
 
     setSaving(false);
 
@@ -91,23 +97,10 @@ export default function ProfilePanel() {
       return;
     }
 
-    if (refreshProfile) {
-      await refreshProfile();
-    }
-
+    await onRefreshProfile();
     setSuccess(true);
     setTimeout(() => setSuccess(false), 3000);
   };
-
-  if (!user) return null;
-
-  if (loading) {
-    return (
-      <div className="py-12 text-center">
-        <div className="w-8 h-8 border-2 border-[var(--coral)] border-t-transparent rounded-full animate-spin mx-auto" />
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -118,20 +111,19 @@ export default function ProfilePanel() {
         </p>
       </div>
 
-      {/* Avatar Upload */}
       <div className="flex justify-center py-4">
         <AvatarUpload
           currentAvatarUrl={avatarUrl}
           displayName={displayName}
-          username={profile?.username || ""}
+          username={username}
           size="xl"
           onUploadComplete={(url) => {
             setAvatarUrl(url);
-            refreshProfile?.();
+            void onRefreshProfile();
           }}
           onRemove={() => {
             setAvatarUrl(null);
-            refreshProfile?.();
+            void onRefreshProfile();
           }}
         />
       </div>
@@ -148,7 +140,6 @@ export default function ProfilePanel() {
         </div>
       )}
 
-      {/* Display Name */}
       <div>
         <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">
           Display Name
@@ -166,7 +157,6 @@ export default function ProfilePanel() {
         </p>
       </div>
 
-      {/* Bio */}
       <div>
         <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">
           Bio
@@ -184,7 +174,6 @@ export default function ProfilePanel() {
         </p>
       </div>
 
-      {/* Location */}
       <div>
         <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">
           Location
@@ -199,7 +188,6 @@ export default function ProfilePanel() {
         />
       </div>
 
-      {/* Website */}
       <div>
         <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">
           Website
@@ -213,7 +201,6 @@ export default function ProfilePanel() {
         />
       </div>
 
-      {/* Save */}
       <div className="flex gap-3 pt-4">
         <button
           onClick={handleSave}

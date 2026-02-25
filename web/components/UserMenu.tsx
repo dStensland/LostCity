@@ -38,11 +38,15 @@ export default function UserMenu() {
   const loginUrl = currentUrl
     ? `/auth/login?redirect=${encodeURIComponent(currentUrl)}`
     : "/auth/login";
+  const signedOutClasses =
+    "inline-flex h-8 items-center gap-1.5 font-mono text-[0.7rem] font-medium text-[var(--muted)] uppercase tracking-wide transition-colors hover:text-[var(--cream)] sm:min-w-[78px] sm:justify-end";
 
   // Brief loading state during auth init only
   if (loading) {
     return (
-      <div className="w-8 h-8 rounded-full bg-[var(--twilight)] animate-pulse" />
+      <div className="flex items-center justify-end sm:min-w-[78px]">
+        <div className="h-8 w-[72px] rounded-md bg-[var(--twilight)] animate-pulse" />
+      </div>
     );
   }
 
@@ -51,7 +55,7 @@ export default function UserMenu() {
     return (
       <Link
         href={loginUrl}
-        className="inline-flex items-center gap-1.5 font-mono text-[0.7rem] font-medium text-[var(--muted)] uppercase tracking-wide hover:text-[var(--cream)] transition-colors"
+        className={signedOutClasses}
         aria-label="Sign in"
       >
         <svg className="w-4 h-4 sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">

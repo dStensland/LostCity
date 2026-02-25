@@ -1,0 +1,16 @@
+version: 1
+slug: ponce-city-market-rooftop
+name: Ponce City Market Rooftop Screenings
+integration_method: html
+defaults:
+  category: film
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://poncecitymarket.com/events
+detail:
+  enabled: true
+data_goals:
+- events
+- images

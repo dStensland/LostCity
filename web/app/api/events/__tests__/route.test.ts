@@ -14,11 +14,14 @@ vi.mock("@/lib/rate-limit", () => ({
 vi.mock("@/lib/search", () => ({
   getFilteredEventsWithSearch: vi.fn(),
   getFilteredEventsWithCursor: vi.fn(),
-  enrichEventsWithSocialProof: vi.fn((events) => Promise.resolve(events)),
   PRICE_FILTERS: [
     { value: "free", max: 0 },
     { value: "budget", max: 20 },
   ],
+}));
+
+vi.mock("@/lib/social-proof", () => ({
+  enrichEventsWithSocialProof: vi.fn((events) => Promise.resolve(events)),
 }));
 
 vi.mock("@/lib/cursor", () => ({
@@ -436,7 +439,8 @@ describe("GET /api/events", () => {
 
   describe("Social proof enrichment", () => {
     it("enriches events with social proof", async () => {
-      const { getFilteredEventsWithSearch, enrichEventsWithSocialProof } = await import("@/lib/search");
+      const { getFilteredEventsWithSearch } = await import("@/lib/search");
+      const { enrichEventsWithSocialProof } = await import("@/lib/social-proof");
 
       vi.mocked(getFilteredEventsWithSearch).mockResolvedValueOnce({
         events: mockEvents,

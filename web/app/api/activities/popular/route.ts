@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createPortalScopedClient } from "@/lib/supabase/server";
 import { format, startOfDay, addDays } from "date-fns";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
-import { applyPortalScopeToQuery } from "@/lib/portal-scope";
+import {
+  applyFederatedPortalScopeToQuery,
+  parsePortalContentFilters,
+  applyPortalCategoryFilters,
+} from "@/lib/portal-scope";
+import { getPortalSourceAccess } from "@/lib/federation";
 
 /**
  * GET /api/activities/popular
@@ -33,6 +38,11 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
     }
+    const sourceAccess = portalContext.portalId
+      ? await getPortalSourceAccess(portalContext.portalId)
+      : null;
+    const portalClient = await createPortalScopedClient(portalContext.portalId);
+    const portalContentFilters = parsePortalContentFilters(portalContext.filters as Record<string, unknown> | null);
 
     // Get current date/time and calculate end date based on filter
     // Use date-fns format to get local date (not UTC from toISOString)
@@ -63,7 +73,7 @@ export async function GET(request: NextRequest) {
     const timeFilter = `start_date.gt.${today},end_time.gte.${currentTime},and(end_time.is.null,start_time.gte.${currentTime}),is_all_day.eq.true`;
 
     // Query activity dimensions with same filters as search
-    let activityQuery = client
+    let activityQuery = portalClient
       .from("events")
       .select("category, genres")
       .gte("start_date", today)
@@ -73,11 +83,15 @@ export async function GET(request: NextRequest) {
       .not("category", "is", null)
       .or("is_sensitive.eq.false,is_sensitive.is.null");
 
-    activityQuery = applyPortalScopeToQuery(activityQuery, {
+    activityQuery = applyFederatedPortalScopeToQuery(activityQuery, {
       portalId: portalContext.portalId,
       portalExclusive,
       publicOnlyWhenNoPortal: true,
+      sourceIds: sourceAccess?.sourceIds || [],
+      sourceColumn: "source_id",
     });
+
+    activityQuery = applyPortalCategoryFilters(activityQuery, portalContentFilters);
 
     const { data: activityRows, error: activityError } = await activityQuery;
 

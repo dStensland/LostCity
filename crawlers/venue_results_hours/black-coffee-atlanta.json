@@ -1,0 +1,38 @@
+{
+  "venue_id": 4230,
+  "venue_slug": "black-coffee-atlanta",
+  "meta": {
+    "og_image": "https://static.wixstatic.com/media/85280f_fddf9a8224c9433dabc3f395b0d4995c~mv2.jpg/v1/fill/w_2500,h_1666,al_c/85280f_fddf9a8224c9433dabc3f395b0d4995c~mv2.jpg",
+    "meta_description": "Coffee Shop, Black Owned, Free Wi-Fi, Black Coffee Atlanta, Black Coffee ATL, 1800 Jonesboro RD SE, Lakewood, GA, 30315, Things to do in Atlanta, Coffee, Tea, Merchandise, Light Skin Keisha, Love Below, Avocado Toast, Smoked Salmon, Cold Brew Coffee, Lavender Simple Syrup, Family, Fun, Co-Working",
+    "reservation_links": [],
+    "menu_links": [
+      "https://www.theblackcoffeecompany.com/menu"
+    ],
+    "instagram": "blkcoffeeco",
+    "facebook_url": "https://www.facebook.com/BlkCoffeeCo",
+    "phone": null
+  },
+  "extracted": {
+    "hours": {
+      "mon": {"open": "07:00", "close": "18:00"},
+      "tue": {"open": "07:00", "close": "18:00"},
+      "wed": {"open": "07:00", "close": "18:00"},
+      "thu": {"open": "07:00", "close": "18:00"},
+      "fri": {"open": "07:00", "close": "18:00"},
+      "sat": {"open": "08:00", "close": "18:00"},
+      "sun": {"open": "08:00", "close": "18:00"}
+    },
+    "vibes": ["cozy", "artsy", "black-owned", "casual"],
+    "cuisine": ["coffee"],
+    "service_style": "cafe",
+    "price_level": 1,
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "blkcoffeeco",
+    "dietary_options": ["vegan-options", "vegetarian-friendly"],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

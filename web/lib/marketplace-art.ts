@@ -53,7 +53,7 @@ export function classifyTenant(
   // Default based on venue type
   if (type === "restaurant") return "dinner";
   if (type === "bar" || type === "nightclub") return "drinks";
-  if (type === "coffee_shop") return "coffee";
+  // coffee_shop consolidated into restaurant
 
   return "shopping";
 }

@@ -39,7 +39,7 @@ function removeVibes(existing: string[] | null, toRemove: string[]): string[] {
 
 const today = new Date().toISOString().split("T")[0];
 
-let stats = {
+const stats = {
   petServicesTagged: 0,
   adoptionEventsTagged: 0,
   trainingEventsTagged: 0,

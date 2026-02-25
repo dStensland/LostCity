@@ -10,3 +10,7 @@ discovery:
   - https://dogwoodalliance.org/events
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- tickets

@@ -461,12 +461,28 @@ def should_skip_crawl(source_slug: str) -> tuple[bool, str]:
 
     # Skip if too many consecutive failures (unless transient)
     if health.consecutive_failures >= 5:
-        # Check if last error was transient
-        if health.last_error_type in ["socket", "network", "timeout"]:
-            # Allow retry with warning
+        error_type = health.last_error_type or "unknown"
+        error_class = ERROR_CLASSIFICATIONS.get(error_type, ERROR_CLASSIFICATIONS["unknown"])
+
+        if error_class.is_transient:
+            # Back off transient failures according to the classification window.
+            last_failure_at = health.last_failure_at
+            if last_failure_at:
+                try:
+                    failure_dt = datetime.fromisoformat(last_failure_at.replace("Z", "+00:00"))
+                    elapsed = (datetime.utcnow() - failure_dt.replace(tzinfo=None)).total_seconds()
+                    if elapsed < error_class.retry_after_seconds:
+                        remaining = int(error_class.retry_after_seconds - elapsed)
+                        return True, f"transient_backoff={error_type},{remaining}s"
+                except Exception:
+                    logger.debug(
+                        "Failed to parse last_failure_at for %s: %s",
+                        source_slug,
+                        last_failure_at,
+                    )
             return False, ""
-        else:
-            return True, f"consecutive_failures={health.consecutive_failures}"
+
+        return True, f"consecutive_failures={health.consecutive_failures}"
 
     return False, ""
 

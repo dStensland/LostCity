@@ -2,32 +2,36 @@ version: 1
 slug: doraville-art-center
 name: Doraville Art Center
 integration_method: playwright
-notes: >
-  Wix site with Wix Bookings widget for classes. Content loads dynamically.
+notes: 'Wix site with Wix Bookings widget for classes. Content loads dynamically.
   Playwright required to wait for booking widget hydration (~5s).
+
+  '
 defaults:
   venue_name: Doraville Art Center
   category: art
-  subcategory: workshop
   tags:
-    - doraville
-    - class
-    - art
-    - community
+  - doraville
+  - class
+  - art
+  - community
 discovery:
   enabled: true
   type: list
   urls:
-    - https://www.doravilleartcenter.org/classes
-  event_card: "[data-hook='service-card'], .service-card, .booking-service"
+  - https://www.doravilleartcenter.org/classes
+  event_card: '[data-hook=''service-card''], .service-card, .booking-service'
   fields:
-    title: "[data-hook='service-title'], h2, h3"
-    description: "[data-hook='service-description'], p"
-    price: "[data-hook='service-price'], .service-price"
-    detail_url: "a@href"
+    title: '[data-hook=''service-title''], h2, h3'
+    description: '[data-hook=''service-description''], p'
+    price: '[data-hook=''service-price''], .service-price'
+    detail_url: a@href
 detail:
   enabled: false
   use_jsonld: false
   use_open_graph: false
   use_heuristic: true
   use_llm: false
+data_goals:
+- events
+- images
+- tickets

@@ -7,6 +7,25 @@ from datetime import datetime, timedelta
 from unittest.mock import MagicMock, patch
 
 
+@pytest.fixture(autouse=True)
+def reset_db_write_mode():
+    """Ensure tests don't leak dry-run/write-mode state between cases."""
+    try:
+        from db import configure_write_mode
+
+        configure_write_mode(True)
+    except Exception:
+        # Some tests don't import db; ignore in that case.
+        pass
+    yield
+    try:
+        from db import configure_write_mode
+
+        configure_write_mode(True)
+    except Exception:
+        pass
+
+
 @pytest.fixture
 def mock_supabase_client():
     """Mock Supabase client for database tests."""

@@ -1,0 +1,109 @@
+{
+  "generated_at": "2026-02-19",
+  "window_days": 120,
+  "source_goal_summary": {
+    "portal": "atlanta",
+    "days": 120,
+    "sources_audited": 309,
+    "sources_with_profile_goals": 281,
+    "sources_with_inferred_goals": 28,
+    "sources_passing_all_goals": 269,
+    "sources_with_goal_failures": 40
+  },
+  "failure_split": {
+    "total_failing_sources": 40,
+    "zero_event_failures": 37,
+    "nonzero_event_failures": 3
+  },
+  "nonzero_failures": [
+    {
+      "slug": "cdc-museum",
+      "events": 3,
+      "failed_goals": [
+        "exhibits"
+      ]
+    },
+    {
+      "slug": "cobb-library",
+      "events": 10,
+      "failed_goals": [
+        "images",
+        "specials",
+        "tickets"
+      ]
+    },
+    {
+      "slug": "gwinnett-library",
+      "events": 16,
+      "failed_goals": [
+        "specials",
+        "tickets"
+      ]
+    }
+  ],
+  "zero_event_failure_slugs": [
+    "atlanta-beltline",
+    "atlanta-comedy-theater",
+    "atlanta-liberation-center",
+    "atlanta-tech-week",
+    "baps-mandir",
+    "big-brothers-big-sisters-atl",
+    "buried-alive",
+    "centennial-yards",
+    "cheshire-bridge-district",
+    "clark-atlanta",
+    "community-foundation-atl",
+    "dancing-dogs-yoga",
+    "decatur-book-festival",
+    "east-lake-neighborhood",
+    "eater-atlanta-openings",
+    "ebenezer-church",
+    "everybody-wins-atlanta",
+    "fulton-county-meetings",
+    "georgia-chess",
+    "georgia-peace",
+    "halfway-crooks",
+    "home-depot-backyard",
+    "johnnys-hideaway",
+    "l5p-community-center",
+    "little-shop-of-stories",
+    "mason-fine-art",
+    "moca-ga",
+    "monday-night-garage",
+    "sandy-springs-pac",
+    "silverspot-cinema-atlanta",
+    "song",
+    "stage-door-players",
+    "steady-hand-beer",
+    "sun-dial-restaurant",
+    "theatrical-outfit",
+    "three-taverns",
+    "wewatchstuff"
+  ],
+  "event_quality_fingerprint": {
+    "events_scoped_window": 9738,
+    "rates": {
+      "all_caps_title": {
+        "count": 213,
+        "rate": 0.0219
+      },
+      "missing_image": {
+        "count": 1633,
+        "rate": 0.1677
+      },
+      "missing_start_time_non_all_day": {
+        "count": 195,
+        "rate": 0.02
+      },
+      "missing_ticket_likely_paid_or_ticketed": {
+        "count": 512,
+        "rate": 0.0526
+      },
+      "short_description": {
+        "count": 1298,
+        "rate": 0.1333
+      }
+    }
+  },
+  "source_report_path": "/Users/coach/Projects/LostCity/crawlers/reports/source_data_goals_audit_atlanta_2026-02-19_fresh_scoped.json"
+}

@@ -1,0 +1,28 @@
+{
+  "venue_id": 4142,
+  "venue_slug": "zentea-chamblee",
+  "meta": {
+    "og_image": "https://zentea.com/wp-content/uploads/2023/09/HMC_5097.jpg",
+    "meta_description": "It is our passion to share with you the Zen Experience of tea. We offer over 150 premium full leaf teas, herbs, quality pyramid tea bags, iced tea pouches",
+    "reservation_links": [],
+    "menu_links": ["https://zentea.com/zentea-food-beverage-menu/"],
+    "instagram": "zenteaatl",
+    "facebook_url": "https://www.facebook.com/zentea.atlanta",
+    "phone": "(678) 547-0877"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["cozy", "artsy", "intimate"],
+    "cuisine": ["tea", "bakery"],
+    "service_style": "counter-service",
+    "price_level": "$$",
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": "(678) 547-0877",
+    "instagram": "zenteaatl",
+    "dietary_options": ["gluten-free", "vegetarian"],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

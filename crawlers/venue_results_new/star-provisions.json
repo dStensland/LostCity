@@ -1,0 +1,31 @@
+{
+  "venue_id": 4771,
+  "venue_slug": "star-provisions",
+  "meta": {
+    "og_image": "http://static1.squarespace.com/static/62e82b47d2d9de7b152b8f47/t/62e970c8f380e92de66da6a7/1724448609846/StarLogo-02.png?format=1500w",
+    "meta_description": null,
+    "reservation_links": [
+      "https://resy.com/cities/atl/bacchanalia"
+    ],
+    "menu_links": [],
+    "instagram": "starprovisions",
+    "facebook_url": null,
+    "phone": "(404) 365-0410"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["upscale", "artsy", "trendy"],
+    "cuisine": ["new_american", "deli"],
+    "service_style": "full_service",
+    "price_level": 4,
+    "menu_highlights": null,
+    "menu_url": null,
+    "reservation_url": "https://resy.com/cities/atl/bacchanalia",
+    "phone": "(404) 365-0410",
+    "instagram": "starprovisions",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

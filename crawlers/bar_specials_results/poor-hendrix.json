@@ -1,0 +1,21 @@
+{
+  "venue_id": 673,
+  "venue_slug": "poor-hendrix",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["cozy", "date-night", "casual"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "https://poorhendrix.com/home",
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "poorhendrix",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

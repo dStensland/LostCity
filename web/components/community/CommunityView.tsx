@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import BestOfCategoryGrid from "@/components/best-of/BestOfCategoryGrid";
 import PortalCommunityView from "@/components/PortalCommunityView";
 import DashboardActivity from "@/components/dashboard/DashboardActivity";
+import CurationsDiscoveryView from "@/components/community/CurationsDiscoveryView";
 
-type CommunityTab = "bestof" | "groups" | "people";
+type CommunityTab = "groups" | "people" | "curations";
 
 interface CommunityViewProps {
   portalId: string;
@@ -29,12 +29,12 @@ const TABS: { key: CommunityTab; label: string; icon: React.ReactNode; authRequi
     ),
   },
   {
-    key: "bestof",
-    label: "Best Of",
-    description: "Community-ranked favorites",
+    key: "curations",
+    label: "Curations",
+    description: "Thematic guides by locals",
     icon: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
       </svg>
     ),
   },
@@ -136,87 +136,26 @@ function CommunityViewInner({ portalId, portalSlug, portalName, activeTab }: Com
       </div>
 
       {/* Tab content */}
-      {activeTab === "people" && (
-        <Suspense fallback={<PeopleLoadingSkeleton />}>
-          <DashboardActivity />
-        </Suspense>
-      )}
+      {activeTab === "people" && <DashboardActivity />}
 
-      {activeTab === "bestof" && (
-        <Suspense fallback={<BestOfLoadingSkeleton />}>
-          <BestOfCategoryGrid />
-        </Suspense>
+      {activeTab === "curations" && (
+        <CurationsDiscoveryView
+          portalId={portalId}
+          portalSlug={portalSlug}
+        />
       )}
 
       {activeTab === "groups" && (
-        <Suspense fallback={<GroupsLoadingSkeleton />}>
-          <PortalCommunityView
-            portalId={portalId}
-            portalSlug={portalSlug}
-            portalName={portalName}
-          />
-        </Suspense>
+        <PortalCommunityView
+          portalId={portalId}
+          portalSlug={portalSlug}
+          portalName={portalName}
+        />
       )}
-    </div>
-  );
-}
-
-function PeopleLoadingSkeleton() {
-  return (
-    <div className="space-y-6">
-      {/* Search skeleton */}
-      <div className="h-12 skeleton-shimmer rounded-xl" />
-      {/* Activity skeleton */}
-      <div className="space-y-3">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="p-4 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 skeleton-shimmer rounded-full" />
-              <div className="flex-1 space-y-2">
-                <div className="h-4 skeleton-shimmer rounded w-3/4" />
-                <div className="h-3 skeleton-shimmer rounded w-1/2" />
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function BestOfLoadingSkeleton() {
-  return (
-    <div className="grid grid-cols-2 gap-3">
-      {[1, 2, 3, 4, 5, 6].map((i) => (
-        <div key={i} className="h-36 skeleton-shimmer rounded-xl" />
-      ))}
-    </div>
-  );
-}
-
-function GroupsLoadingSkeleton() {
-  return (
-    <div className="space-y-4">
-      {[1, 2, 3, 4, 5].map((i) => (
-        <div key={i} className="p-5 rounded-xl border border-[var(--twilight)] bg-[var(--card-bg)]">
-          <div className="flex items-start gap-4">
-            <div className="w-[72px] h-[72px] rounded-xl skeleton-shimmer" />
-            <div className="flex-1 min-w-0 space-y-2">
-              <div className="h-5 w-2/3 skeleton-shimmer rounded" />
-              <div className="h-4 w-24 skeleton-shimmer rounded" />
-              <div className="h-8 w-36 skeleton-shimmer rounded-lg" />
-            </div>
-          </div>
-        </div>
-      ))}
     </div>
   );
 }
 
 export default function CommunityView(props: CommunityViewProps) {
-  return (
-    <Suspense fallback={<BestOfLoadingSkeleton />}>
-      <CommunityViewInner {...props} />
-    </Suspense>
-  );
+  return <CommunityViewInner {...props} />;
 }

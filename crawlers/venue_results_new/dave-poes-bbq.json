@@ -1,0 +1,47 @@
+{
+  "venue_id": 4816,
+  "venue_slug": "dave-poes-bbq",
+  "meta": {
+    "og_image": null,
+    "meta_description": null,
+    "reservation_links": [
+      "https://tmt.spotapps.co/private-parties?spot_id=72194&callback_url=http://davepoes.com/"
+    ],
+    "menu_links": [
+      "https://davepoes.com/marietta-dave-poe-s-bbq-food-menu"
+    ],
+    "instagram": "davepoes",
+    "facebook_url": "https://www.facebook.com/136498713170513",
+    "phone": "(770) 792-2272"
+  },
+  "extracted": {
+    "hours": {
+      "mon": {"open": "11:00", "close": "15:00"},
+      "tue": {"open": "11:00", "close": "15:00"},
+      "wed": {"open": "11:00", "close": "15:00"},
+      "thu": {"open": "11:00", "close": "19:30"},
+      "fri": {"open": "11:00", "close": "19:30"},
+      "sat": {"open": "11:00", "close": "19:30"},
+      "sun": null
+    },
+    "vibes": ["casual", "family-friendly", "neighborhood-bar"],
+    "cuisine": ["bbq"],
+    "service_style": "casual_dine_in",
+    "price_level": 2,
+    "menu_highlights": [
+      {"name": "Baby Back Ribs Plate", "price": "$19.95", "category": "entree"},
+      {"name": "Beef Brisket Plate", "price": "$16.95", "category": "entree"},
+      {"name": "Mac & Cheese", "price": "$3.50", "category": "side"},
+      {"name": "Smoked Wings", "price": "$14.95", "category": "entree"},
+      {"name": "Redneck Lasagna", "price": "$6.95", "category": "entree"}
+    ],
+    "menu_url": "https://davepoes.com/marietta-dave-poe-s-bbq-food-menu",
+    "reservation_url": null,
+    "phone": "(770) 792-2272",
+    "instagram": "davepoes",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

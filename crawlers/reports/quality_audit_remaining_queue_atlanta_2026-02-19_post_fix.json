@@ -1,0 +1,49 @@
+{
+  "generated_on": "2026-02-19",
+  "scope": "atlanta_wave2_post_extractor_fixes",
+  "resolved_in_wave": [
+    {
+      "slug": "clark-atlanta",
+      "dry_run_events_found": 10,
+      "status": "resolved_pending_write_enabled_run"
+    },
+    {
+      "slug": "theatrical-outfit",
+      "dry_run_events_found": 4,
+      "status": "resolved_pending_write_enabled_run"
+    }
+  ],
+  "remaining_priority_queue": [
+    {
+      "slug": "silverspot-cinema-atlanta",
+      "classification": "blocked_access",
+      "evidence": "Cloudflare challenge (403/Just a moment), transient_backoff=captcha"
+    },
+    {
+      "slug": "steady-hand-beer",
+      "classification": "likely_stale_archive",
+      "evidence": "Events page populated with 2024 entries; no current dated schedule detected"
+    },
+    {
+      "slug": "georgia-peace",
+      "classification": "likely_deactivated_or_migrated",
+      "evidence": "events URL resolves to blog-like content without upcoming event listings"
+    },
+    {
+      "slug": "community-foundation-atl",
+      "classification": "likely_no_upcoming_schedule",
+      "evidence": "Page message: 'Check back soon for upcoming events.'"
+    },
+    {
+      "slug": "l5p-community-center",
+      "classification": "likely_no_upcoming_schedule",
+      "evidence": "Calendar payload and UI show 'There are no upcoming events.'"
+    },
+    {
+      "slug": "moca-ga",
+      "classification": "likely_no_upcoming_schedule",
+      "evidence": "Official page text: 'No Current or Upcoming Events'; /events is 404"
+    }
+  ],
+  "operational_note": "Write-enabled crawls require --allow-production-writes (or staging target) to persist remediation."
+}

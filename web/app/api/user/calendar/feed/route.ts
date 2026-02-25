@@ -1,15 +1,12 @@
 import { createClient, getUser } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { format, addMonths } from "date-fns";
-import { generateFeedToken } from "@/lib/calendar-feed-utils";
+import { generateFeedToken, generateLegacyFeedToken } from "@/lib/calendar-feed-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 import { timingSafeEqual } from "crypto";
 import { logger } from "@/lib/logger";
 
-// Verify token and extract userId
-function verifyFeedToken(token: string, userId: string): boolean {
-  const expectedToken = generateFeedToken(userId);
-
+function timingSafeTokenCompare(token: string, expectedToken: string): boolean {
   // Use timing-safe comparison to prevent timing attacks
   if (token.length !== expectedToken.length) {
     return false;
@@ -23,6 +20,40 @@ function verifyFeedToken(token: string, userId: string): boolean {
   } catch {
     return false;
   }
+}
+
+function isMissingColumnError(error: unknown): boolean {
+  const err = error as { code?: string; message?: string } | null;
+  if (!err) return false;
+  if (err.code === "42703") return true;
+  if (typeof err.message === "string" && err.message.includes("calendar_feed_secret")) return true;
+  return false;
+}
+
+// Verify token and extract userId
+async function verifyFeedToken(token: string, userId: string): Promise<boolean> {
+  const serviceClient = createServiceClient();
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: profileData, error } = await (serviceClient as any)
+    .from("profiles")
+    .select("calendar_feed_secret")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (error) {
+    if (!isMissingColumnError(error)) {
+      logger.error("Calendar feed token lookup error:", error);
+    }
+    return timingSafeTokenCompare(token, generateLegacyFeedToken(userId));
+  }
+
+  const profile = profileData as { calendar_feed_secret: string | null } | null;
+  if (!profile?.calendar_feed_secret) {
+    return timingSafeTokenCompare(token, generateLegacyFeedToken(userId));
+  }
+
+  return timingSafeTokenCompare(token, generateFeedToken(userId, profile.calendar_feed_secret));
 }
 
 // Format date for iCal (YYYYMMDDTHHMMSSZ)
@@ -58,7 +89,7 @@ export async function GET(request: Request) {
 
   // Try token-based auth first (for calendar subscriptions)
   if (token && userId) {
-    if (verifyFeedToken(token, userId)) {
+    if (await verifyFeedToken(token, userId)) {
       authenticatedUserId = userId;
     } else {
       return new Response("Invalid token", { status: 401 });
@@ -222,4 +253,3 @@ export async function GET(request: Request) {
     return new Response("Internal server error", { status: 500 });
   }
 }
-

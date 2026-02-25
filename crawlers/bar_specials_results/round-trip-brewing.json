@@ -1,0 +1,21 @@
+{
+  "venue_id": 452,
+  "venue_slug": "round-trip-brewing",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["beer-garden", "family-friendly", "dog-friendly", "casual", "patio"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "https://roundtripbrewing.com/food-menu/",
+    "reservation_url": null,
+    "phone": "(404) 963-1252",
+    "instagram": "roundtripbeer",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

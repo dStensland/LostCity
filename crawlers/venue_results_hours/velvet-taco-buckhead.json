@@ -1,0 +1,36 @@
+{
+  "venue_id": 4647,
+  "venue_slug": "velvet-taco-buckhead",
+  "meta": {
+    "og_image": "https://velvettaco.b-cdn.net/wp-content/uploads/2024/09/vt_tacos_og_image_mobile.jpg",
+    "meta_description": "Dine-In, Delivery & Take-Out Available! Featuring a variety of globally inspired tacos made in-house with fresh local ingredients and bold flavors.",
+    "reservation_links": [],
+    "menu_links": ["https://www.velvettaco.com/menu/"],
+    "instagram": "velvettaco",
+    "facebook_url": "https://facebook.com/velvettaco",
+    "phone": null
+  },
+  "extracted": {
+    "hours": {
+      "mon": {"open": "11:00", "close": "23:00"},
+      "tue": {"open": "11:00", "close": "23:00"},
+      "wed": {"open": "11:00", "close": "23:00"},
+      "thu": {"open": "11:00", "close": "23:00"},
+      "fri": {"open": "11:00", "close": "00:00"},
+      "sat": {"open": "11:00", "close": "00:00"},
+      "sun": {"open": "11:00", "close": "23:00"}
+    },
+    "vibes": ["fast-casual", "trendy", "late-night"],
+    "cuisine": ["mexican", "fusion", "tapas"],
+    "service_style": "fast-casual",
+    "price_level": "$$",
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "velvettaco",
+    "dietary_options": ["gluten-free", "vegetarian", "vegan"],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

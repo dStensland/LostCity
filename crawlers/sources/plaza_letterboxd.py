@@ -163,13 +163,21 @@ def parse_item(item: ET.Element) -> Optional[dict]:
             if enclosure is not None:
                 movie["image_url"] = enclosure.get("url")
 
-        # Get ticket URL from link
-        link_el = item.find("link")
-        if link_el is not None and link_el.text:
-            # The link goes to Letterboxd, but description may have ticket URL
-            if desc_el is not None and desc_el.text:
+        # Get ticket URL from description links.
+        # Plaza commonly uses /movie/* URLs that do not include "tickets" in the path.
+        if desc_el is not None and desc_el.text:
+            # Prefer anchors explicitly labeled as a ticket purchase action.
+            purchase_match = re.search(
+                r'(?:Purchase|Buy)\s+tickets[^<]*<a[^>]+href="(https?://[^"]+)"',
+                desc_el.text,
+                re.IGNORECASE
+            )
+            if purchase_match:
+                movie["ticket_url"] = purchase_match.group(1)
+            else:
+                # Fallback for known ticketing providers and legacy patterns.
                 ticket_match = re.search(
-                    r'href="(https?://[^"]*(?:tickets|eventbrite|veeps)[^"]*)"',
+                    r'href="(https?://[^"]*(?:tickets|eventbrite|veeps|ticketmaster|axs|dice\.fm)[^"]*)"',
                     desc_el.text,
                     re.IGNORECASE
                 )

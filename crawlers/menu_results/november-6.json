@@ -1,0 +1,57 @@
+{
+  "venue_id": 4560,
+  "venue_slug": "november-6",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Mol\u00e9 Old Fashioned",
+        "price": null,
+        "category": "cocktail"
+      },
+      {
+        "name": "Espresso Martini & Tonic",
+        "price": null,
+        "category": "cocktail"
+      },
+      {
+        "name": "French Onion Pastry Pocket",
+        "price": null,
+        "category": "appetizer"
+      },
+      {
+        "name": "Low Country Kettle Chips",
+        "price": null,
+        "category": "appetizer"
+      },
+      {
+        "name": "Super Martini",
+        "price": null,
+        "category": "cocktail"
+      }
+    ],
+    "dietary_options": [
+      "vegetarian-friendly",
+      "gluten-free-options",
+      "vegan-options"
+    ],
+    "price_level": 2,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

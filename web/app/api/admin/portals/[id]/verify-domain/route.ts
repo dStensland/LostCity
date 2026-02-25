@@ -1,4 +1,5 @@
-import { createClient, canManagePortal } from "@/lib/supabase/server";
+import { canManagePortal } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import { NextRequest, NextResponse } from "next/server";
 import { invalidateDomainCache } from "@/lib/domain-cache";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
@@ -27,11 +28,11 @@ export async function POST(request: NextRequest, { params }: Props) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
-  const supabase = await createClient();
+  const serviceClient = createServiceClient();
 
   // Get portal with domain info
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: portal, error: fetchError } = await (supabase as any)
+  const { data: portal, error: fetchError } = await (serviceClient as any)
     .from("portals")
     .select("id, custom_domain, custom_domain_verified, custom_domain_verification_token")
     .eq("id", id)
@@ -105,7 +106,7 @@ export async function POST(request: NextRequest, { params }: Props) {
     if (verified) {
       // Update portal as verified
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error: updateError } = await (supabase as any)
+      const { error: updateError } = await (serviceClient as any)
         .from("portals")
         .update({
           custom_domain_verified: true,

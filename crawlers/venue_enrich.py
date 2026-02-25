@@ -297,6 +297,60 @@ def map_google_to_vibes(place: dict) -> list[str]:
     return vibes
 
 
+def map_google_hours(place: dict) -> Optional[dict]:
+    """
+    Convert Google Places regularOpeningHours to our hours format.
+
+    Google format: {"periods": [{"open": {"day": 0, "hour": 11, "minute": 0},
+                                  "close": {"day": 0, "hour": 22, "minute": 0}}, ...]}
+    Our format: {"mon": {"open": "11:00", "close": "22:00"}, ...}
+
+    Google day mapping: 0=Sunday, 1=Monday, ..., 6=Saturday
+    """
+    hours_data = place.get("regularOpeningHours", {})
+    if not hours_data:
+        return None
+
+    periods = hours_data.get("periods", [])
+    if not periods:
+        return None
+
+    DAY_MAP = {0: "sun", 1: "mon", 2: "tue", 3: "wed", 4: "thu", 5: "fri", 6: "sat"}
+    result = {}
+
+    for period in periods:
+        open_info = period.get("open", {})
+        close_info = period.get("close", {})
+
+        day_num = open_info.get("day")
+        if day_num is None:
+            continue
+
+        day_key = DAY_MAP.get(day_num)
+        if not day_key:
+            continue
+
+        open_hour = open_info.get("hour", 0)
+        open_min = open_info.get("minute", 0)
+        open_str = f"{open_hour:02d}:{open_min:02d}"
+
+        if close_info:
+            close_hour = close_info.get("hour", 0)
+            close_min = close_info.get("minute", 0)
+            # Handle midnight/next-day closing
+            if close_hour == 0 and close_min == 0:
+                close_str = "23:59"
+            else:
+                close_str = f"{close_hour:02d}:{close_min:02d}"
+        else:
+            # No close time means 24 hours
+            close_str = "23:59"
+
+        result[day_key] = {"open": open_str, "close": close_str}
+
+    return result if result else None
+
+
 def map_price_level(google_price: Optional[str]) -> Optional[int]:
     """Map Google price level to our 1-4 scale."""
     if not google_price:
@@ -445,6 +499,17 @@ def enrich_venue(venue_id: int, google_place: dict, dry_run: bool = False) -> di
     if price_level:
         updates["price_level"] = price_level
 
+    # Map hours from Google Places
+    hours = map_google_hours(google_place)
+    if hours:
+        updates["hours"] = hours
+        updates["hours_source"] = "google_places"
+
+    # Map phone from Google Places
+    phone = google_place.get("nationalPhoneNumber")
+    if phone:
+        updates["phone"] = phone
+
     if not dry_run:
         client = get_client()
         client.table("venues").update(updates).eq("id", venue_id).execute()
@@ -533,6 +598,80 @@ def enrich_incomplete_venues(limit: int = 50, dry_run: bool = False) -> dict:
             stats["failed"] += 1
 
         # Rate limit: 1 request per second
+        time.sleep(1)
+
+    return stats
+
+
+def enrich_hours_only(limit: int = 50, venue_type: Optional[str] = None, dry_run: bool = False) -> dict:
+    """
+    Enrich venues missing hours via Google Places API.
+    Only updates hours, hours_source, and phone (if missing).
+    """
+    client = get_client()
+
+    query = (client.table("venues")
+             .select("id, name, slug, address, city, state, lat, lng, hours, phone, venue_type")
+             .eq("active", True)
+             .is_("hours", "null")
+             .not_.is_("name", "null"))
+
+    if venue_type:
+        query = query.eq("venue_type", venue_type)
+
+    result = query.order("name").limit(limit).execute()
+    venues = result.data or []
+
+    stats = {"total": len(venues), "enriched": 0, "failed": 0, "skipped": 0}
+    print(f"\nFound {len(venues)} venues missing hours")
+    print("=" * 60)
+
+    for i, venue in enumerate(venues, 1):
+        print(f"\n[{i}/{len(venues)}] {venue['name']}")
+
+        name = venue.get("name", "")
+        address = venue.get("address", "")
+        city = venue.get("city", "Atlanta")
+        state = venue.get("state", "GA")
+
+        if address:
+            query_str = f"{name}, {address}"
+        else:
+            query_str = f"{name}, {city}, {state}"
+
+        print(f"  Searching: {query_str}")
+        place = search_google_places(query_str)
+
+        if not place:
+            print("  No results found")
+            stats["failed"] += 1
+            time.sleep(1)
+            continue
+
+        found_name = place.get("displayName", {}).get("text", "")
+        print(f"  Found: {found_name}")
+
+        hours = map_google_hours(place)
+        if not hours:
+            print("  No hours in Google Places data")
+            stats["failed"] += 1
+            time.sleep(1)
+            continue
+
+        updates = {"hours": hours, "hours_source": "google_places"}
+
+        # Also grab phone if missing
+        phone = place.get("nationalPhoneNumber")
+        if phone and not venue.get("phone"):
+            updates["phone"] = phone
+
+        if not dry_run:
+            client.table("venues").update(updates).eq("id", venue["id"]).execute()
+            print(f"  Updated hours: {len(hours)} days")
+        else:
+            print(f"  [DRY RUN] Would set hours: {len(hours)} days")
+
+        stats["enriched"] += 1
         time.sleep(1)
 
     return stats
@@ -746,10 +885,17 @@ if __name__ == "__main__":
     parser.add_argument("--dry-run", action="store_true", help="Don't actually update database")
     parser.add_argument("--addresses", action="store_true", help="Process address-like venue names")
     parser.add_argument("--website-enrich", action="store_true", help="Analyze venue websites for vibes/type/price")
+    parser.add_argument("--hours-only", action="store_true", help="Enrich venues missing hours via Google Places")
+    parser.add_argument("--venue-type", help="Filter by venue type (restaurant, bar, etc.)")
 
     args = parser.parse_args()
 
-    if args.website_enrich:
+    if args.hours_only:
+        if not GOOGLE_API_KEY:
+            print("Error: GOOGLE_PLACES_API_KEY environment variable not set")
+            exit(1)
+        stats = enrich_hours_only(limit=args.limit, venue_type=args.venue_type, dry_run=args.dry_run)
+    elif args.website_enrich:
         # Website enrichment uses Anthropic API, not Google
         cfg = get_config()
         if not cfg.llm.anthropic_api_key:

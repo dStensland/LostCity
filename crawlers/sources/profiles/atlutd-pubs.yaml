@@ -10,3 +10,9 @@ discovery:
   - https://www.atlutd.com/fans/pub-partners
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- specials
+- tickets
+- venue_hours

@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   applyFederatedPortalScopeToQuery,
+  applyManifestFederatedScopeToQuery,
   applyPortalScopeToQuery,
   filterByPortalCity,
+  getFederatedScopeOptionsFromManifest,
   isVenueCityInScope,
 } from "@/lib/portal-scope";
 
@@ -90,6 +92,51 @@ describe("applyFederatedPortalScopeToQuery", () => {
       publicOnlyWhenNoPortal: true,
     });
     expect(query.ops).toEqual(["or:portal_id.eq.portal-123,portal_id.is.null"]);
+  });
+});
+
+describe("manifest scope adapter", () => {
+  it("derives scope options from portal manifest", () => {
+    const options = getFederatedScopeOptionsFromManifest({
+      portalId: "portal-123",
+      scope: {
+        portalExclusive: true,
+        allowFederatedSources: true,
+        sourceIds: [5, 7],
+        sourceColumn: "source_id",
+        publicOnlyWhenNoPortal: true,
+        enforceCityFilter: "shared_only",
+      },
+    });
+
+    expect(options).toEqual({
+      portalId: "portal-123",
+      portalExclusive: true,
+      publicOnlyWhenNoPortal: true,
+      sourceIds: [5, 7],
+      sourceColumn: "source_id",
+    });
+  });
+
+  it("applies manifest-derived filters to query", () => {
+    const query = new MockQuery();
+    applyManifestFederatedScopeToQuery(
+      query,
+      {
+        portalId: "portal-123",
+        scope: {
+          portalExclusive: true,
+          allowFederatedSources: true,
+          sourceIds: [5, 7],
+          sourceColumn: "source_id",
+          publicOnlyWhenNoPortal: true,
+          enforceCityFilter: "shared_only",
+        },
+      },
+      { sourceIds: [5, 7] }
+    );
+
+    expect(query.ops).toEqual(["or:portal_id.eq.portal-123,source_id.in.(5,7)"]);
   });
 });
 

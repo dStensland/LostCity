@@ -1,0 +1,34 @@
+{
+  "venue_id": 4797,
+  "venue_slug": "big-softie",
+  "meta": {
+    "og_image": "https://images.getbento.com/accounts/f0a772b38b942fac8c8951287500e4ba/media/images/11687big-softie.png?w=1200&fit=fill&auto=compress,format&cs=origin&h=600&bg=EDEDF1&pad=100",
+    "meta_description": "Our soft serve is made with the best ingredients, including local, organic dairy and organic cane sugar. Toppings and waffle cones are all made in-house.",
+    "reservation_links": [],
+    "menu_links": [],
+    "instagram": "bigsoftieatl",
+    "facebook_url": null,
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["casual", "family-friendly", "trendy"],
+    "cuisine": ["ice_cream_dessert"],
+    "service_style": "counter_service",
+    "price_level": 1,
+    "menu_highlights": [
+      {"name": "Classic Vanilla Soft Serve", "price": null, "category": "dessert"},
+      {"name": "Matcha Soft Serve", "price": null, "category": "dessert"},
+      {"name": "Crunchy Sammie", "price": null, "category": "dessert"},
+      {"name": "Soft Serve Cakes", "price": null, "category": "dessert"}
+    ],
+    "menu_url": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "bigsoftieatl",
+    "dietary_options": ["vegan-options"],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

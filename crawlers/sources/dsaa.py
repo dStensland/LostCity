@@ -328,7 +328,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 )
 
                 # Most DSAA events are free for members
-                is_free = True
+                is_free = False
                 if description and any(kw in description.lower() for kw in ["$", "cost", "fee", "price", "ticket"]):
                     # Check if it explicitly says free
                     if "free" in description.lower():

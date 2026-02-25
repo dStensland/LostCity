@@ -59,10 +59,9 @@ type Destination = {
 
 type DayPart = "morning" | "afternoon" | "evening" | "late_night";
 
-const DINE_TYPES = new Set(["restaurant", "food_hall"]);
-const DRINK_TYPES = new Set(["bar", "brewery", "rooftop", "sports_bar", "distillery", "nightclub"]);
-const COFFEE_TYPES = new Set(["coffee_shop"]);
-const HOTEL_AMENITY_TYPES = new Set(["hotel", "spa", "fitness_center", "restaurant", "bar", "rooftop"]);
+const DINE_TYPES = new Set(["restaurant"]);
+const DRINK_TYPES = new Set(["bar", "brewery", "cocktail_bar", "rooftop", "nightclub"]);
+const HOTEL_AMENITY_TYPES = new Set(["hotel", "spa", "fitness", "restaurant", "bar", "rooftop"]);
 
 function getDayPart(now: Date): DayPart {
   const hour = now.getHours();
@@ -79,11 +78,10 @@ function getDayPartSubtitle(part: DayPart): string {
   return "Late-night destinations and tomorrow's best options.";
 }
 
-function getCategory(venueType: string | null): "dine" | "drink" | "coffee" | "explore" {
+function getCategory(venueType: string | null): "dine" | "drink" | "explore" {
   if (!venueType) return "explore";
   if (DINE_TYPES.has(venueType)) return "dine";
   if (DRINK_TYPES.has(venueType)) return "drink";
-  if (COFFEE_TYPES.has(venueType)) return "coffee";
   return "explore";
 }
 
@@ -199,10 +197,9 @@ export default function HotelConciergeFeed({ portal }: HotelConciergeFeedProps) 
   const freeSection = sections.find((s) => s.slug === "free" || s.slug === "complimentary");
 
   const categorized = useMemo(() => {
-    const result: Record<"dine" | "drink" | "coffee" | "explore", Destination[]> = {
+    const result: Record<"dine" | "drink" | "explore", Destination[]> = {
       dine: [],
       drink: [],
-      coffee: [],
       explore: [],
     };
 
@@ -223,7 +220,7 @@ export default function HotelConciergeFeed({ portal }: HotelConciergeFeedProps) 
 
   const leadDestinations = useMemo(() => {
     if (dayPart === "morning") {
-      return categorized.coffee.slice(0, 12);
+      return categorized.dine.slice(0, 12);
     }
     if (dayPart === "afternoon" && startingSoon.length > 0) {
       return startingSoon.slice(0, 12);
@@ -232,7 +229,7 @@ export default function HotelConciergeFeed({ portal }: HotelConciergeFeedProps) 
       return liveDestinations.slice(0, 12);
     }
     return walkable.slice(0, 12);
-  }, [categorized.coffee, dayPart, liveDestinations, startingSoon, walkable]);
+  }, [categorized.dine, dayPart, liveDestinations, startingSoon, walkable]);
 
   const leadTitle = dayPart === "morning"
     ? "Morning Nearby"
@@ -337,7 +334,7 @@ export default function HotelConciergeFeed({ portal }: HotelConciergeFeedProps) 
             title="Where To Eat"
             subtitle="Dining destinations prioritized for this part of day."
             className="mb-16"
-            action={{ label: "All dining", href: `/${portal.slug}?view=find&type=destinations&venue_type=restaurant,food_hall` }}
+            action={{ label: "All dining", href: `/${portal.slug}?view=find&type=destinations&venue_type=restaurant` }}
           >
             <HotelCarousel>
               {categorized.dine.slice(0, 15).map((destination) => (

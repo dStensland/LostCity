@@ -10,3 +10,7 @@ discovery:
   - https://www.songkick.com/venues/3586926-echo-room
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- tickets

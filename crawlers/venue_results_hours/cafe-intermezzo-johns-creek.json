@@ -1,0 +1,28 @@
+{
+  "venue_id": 3740,
+  "venue_slug": "cafe-intermezzo-johns-creek",
+  "meta": {
+    "og_image": null,
+    "meta_description": "Cafe Intermezzo embodied the essence of the 300 year-old European Coffeehouse. Step into Cafe Intermezzo, and you are stepping into another time, another place.",
+    "reservation_links": [],
+    "menu_links": [],
+    "instagram": "cafeintermezzo",
+    "facebook_url": "https://www.facebook.com/cafeintermezzo",
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["upscale", "cozy", "date-spot", "late-night", "intimate"],
+    "cuisine": ["coffee", "bakery", "dessert"],
+    "service_style": "full_service",
+    "price_level": 2,
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "cafeintermezzo",
+    "dietary_options": ["vegetarian-friendly"],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

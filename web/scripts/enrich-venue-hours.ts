@@ -174,7 +174,7 @@ async function main() {
     .select("id, name, address, city, state, lat, lng, spot_type, hours")
     .eq("active", true)
     .is("hours", null)
-    .in("spot_type", ["bar", "restaurant", "coffee_shop", "club", "brewery", "distillery", "winery"])
+    .in("spot_type", ["bar", "restaurant", "nightclub", "brewery"])
     .order("name")
     .limit(limit);
 

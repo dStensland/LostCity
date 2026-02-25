@@ -10,6 +10,7 @@ import {
   checkBodySize,
 } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import { resolvePortalAttributionForWrite } from "@/lib/portal-attribution";
 
 export const dynamic = "force-dynamic";
 
@@ -58,6 +59,15 @@ export async function POST(request: NextRequest) {
   if (proof_url && !isValidUrl(proof_url)) {
     return validationError("Invalid proof_url - must be a valid URL");
   }
+
+  // Resolve portal attribution
+  const attribution = await resolvePortalAttributionForWrite(request, {
+    endpoint: "/api/venues/claim",
+    body,
+    requireWhenHinted: true,
+  });
+  if (attribution.response) return attribution.response;
+  const portalId = attribution.portalId;
 
   // Use service client for database operations
   const serviceClient = createServiceClient();
@@ -134,6 +144,7 @@ export async function POST(request: NextRequest) {
       status,
       proof_url: proof_url || null,
       reviewed_at: status === "approved" ? new Date().toISOString() : null,
+      ...(portalId ? { portal_id: portalId } : {}),
     } as never)
     .select("id, status, claimed_at")
     .single();

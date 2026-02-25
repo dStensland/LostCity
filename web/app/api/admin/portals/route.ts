@@ -131,9 +131,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
-  const supabase = await createClient();
   const serviceClient = createServiceClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user } } = await (await createClient()).auth.getUser();
   // user is guaranteed non-null since isAdmin() passed
   const userId = user!.id;
 
@@ -168,7 +167,7 @@ export async function POST(request: NextRequest) {
 
   // Verify parent portal exists if provided
   if (parent_portal_id) {
-    const { data: parentPortal } = await supabase
+    const { data: parentPortal } = await serviceClient
       .from("portals")
       .select("id, portal_type")
       .eq("id", parent_portal_id)
@@ -185,7 +184,7 @@ export async function POST(request: NextRequest) {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data, error } = await (serviceClient as any)
     .from("portals")
     .insert({
       slug: slug.toLowerCase().replace(/[^a-z0-9-]/g, "-"),
@@ -214,7 +213,7 @@ export async function POST(request: NextRequest) {
 
   // Add creator as owner member
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (supabase as any).from("portal_members").insert({
+  await (serviceClient as any).from("portal_members").insert({
     portal_id: data.id,
     user_id: userId,
     role: "owner",

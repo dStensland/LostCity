@@ -1,0 +1,53 @@
+{
+  "venue_id": 99,
+  "venue_slug": "dads-garage",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Monk's Meadery Rotating Draft Mead",
+        "price": "$9",
+        "category": "beer"
+      },
+      {
+        "name": "Cycling Frog THC Seltzer",
+        "price": "$10",
+        "category": "beer"
+      },
+      {
+        "name": "Tip Top Canned Espresso Martini",
+        "price": "$10",
+        "category": "cocktail"
+      },
+      {
+        "name": "Oyster Bay Sauvignon Blanc",
+        "price": "$12",
+        "category": "wine"
+      },
+      {
+        "name": "Woodford Kentucky Rye Whiskey",
+        "price": "$12",
+        "category": "cocktail"
+      }
+    ],
+    "dietary_options": [],
+    "price_level": 1,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

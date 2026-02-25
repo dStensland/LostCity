@@ -169,7 +169,7 @@ export const VISUAL_PRESETS: Record<VisualPresetId, VisualPreset> = {
       template: "standard",
       logo_position: "left",
       logo_size: "md",
-      nav_style: "tabs",
+      nav_style: "underline",
       show_search_in_header: true,
       transparent_on_top: false,
     },

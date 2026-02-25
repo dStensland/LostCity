@@ -1,0 +1,31 @@
+{
+  "venue_id": 4803,
+  "venue_slug": "daddy-dz",
+  "meta": {
+    "og_image": null,
+    "meta_description": null,
+    "reservation_links": [],
+    "menu_links": [
+      "https://online.skytab.com/s/daddydzbbq"
+    ],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["casual", "neighborhood-bar"],
+    "cuisine": ["bbq"],
+    "service_style": "casual_dine_in",
+    "price_level": 2,
+    "menu_highlights": null,
+    "menu_url": "https://online.skytab.com/s/daddydzbbq",
+    "reservation_url": null,
+    "phone": null,
+    "instagram": null,
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

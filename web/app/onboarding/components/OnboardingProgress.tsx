@@ -24,17 +24,18 @@ export function OnboardingProgress({ currentStep }: OnboardingProgressProps) {
   );
 
   return (
-    <div className="w-full">
+    <div className="w-full border-b border-[var(--twilight)]/35 bg-[var(--night)]/55 px-4 py-3 backdrop-blur-sm sm:px-6">
       <ScopedStyles css={progressClass?.css} />
+      <div className="mx-auto w-full max-w-4xl">
       {/* Progress bar */}
-      <div className="h-1 bg-[var(--twilight)]">
+      <div className="h-1 overflow-hidden rounded-full bg-[var(--twilight)]/55">
         <div
-          className={`h-full bg-[var(--coral)] transition-all duration-500 ease-out w-[var(--onboarding-progress)] ${progressClass?.className ?? ""}`}
+          className={`h-full w-[var(--onboarding-progress)] bg-[linear-gradient(90deg,var(--coral),var(--neon-cyan))] transition-all duration-500 ease-out ${progressClass?.className ?? ""}`}
         />
       </div>
 
       {/* Step dots with labels */}
-      <div className="flex justify-center gap-8 mt-4 px-4">
+      <div className="mt-4 flex justify-center gap-8">
         {steps.map((step, index) => {
           const isActive = index === currentIndex;
           const isComplete = index < currentIndex;
@@ -44,7 +45,7 @@ export function OnboardingProgress({ currentStep }: OnboardingProgressProps) {
               <div
                 className={`w-3 h-3 rounded-full transition-all duration-300 ${
                   isActive
-                    ? "bg-[var(--coral)] animate-onboarding-dot-pulse scale-110"
+                    ? "scale-110 bg-[var(--coral)] animate-onboarding-dot-pulse"
                     : isComplete
                     ? "bg-[var(--coral)]"
                     : "bg-[var(--twilight)]"
@@ -62,6 +63,7 @@ export function OnboardingProgress({ currentStep }: OnboardingProgressProps) {
             </div>
           );
         })}
+      </div>
       </div>
     </div>
   );

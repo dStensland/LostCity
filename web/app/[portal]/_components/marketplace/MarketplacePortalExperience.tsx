@@ -8,8 +8,6 @@ import {
   getNeighborhoodVenues,
   type PCMEvent,
   type PCMTenant,
-  type NeighborhoodEvent,
-  type NeighborhoodVenue,
 } from "@/lib/marketplace-data";
 import {
   classifyTenant,
@@ -130,16 +128,6 @@ function formatShortDate(isoDate: string): string {
     day: "numeric",
     timeZone: "UTC",
   }).format(utcMidday);
-}
-
-function formatTime(time: string | null): string {
-  if (!time) return "";
-  const hour = Number(time.slice(0, 2));
-  const minute = time.slice(3, 5);
-  if (Number.isNaN(hour)) return time;
-  const normalizedHour = hour % 12 === 0 ? 12 : hour % 12;
-  const period = hour >= 12 ? "PM" : "AM";
-  return `${normalizedHour}:${minute} ${period}`;
 }
 
 function groupEventsByDate(events: PCMEvent[]): Map<string, PCMEvent[]> {

@@ -10,3 +10,7 @@ discovery:
   - https://529atlanta.com/calendar/
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- tickets

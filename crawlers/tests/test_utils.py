@@ -11,6 +11,7 @@ from utils import (
     normalize_time_format,
     get_date_range,
     extract_text_content,
+    is_likely_non_event_image,
 )
 
 
@@ -299,3 +300,19 @@ class TestExtractTextContent:
         result = extract_text_content(html)
         lines = [l for l in result.split("\n") if l.strip()]
         assert len(lines) >= 2
+
+
+class TestImageUrlQuality:
+    """Tests for image URL quality heuristics."""
+
+    def test_flags_logo_assets(self):
+        assert is_likely_non_event_image("https://example.com/assets/logo.png") is True
+
+    def test_flags_tiny_icon_dimensions(self):
+        assert is_likely_non_event_image("https://cdn.example.com/img/event-32x32.jpg") is True
+
+    def test_allows_photographic_event_image(self):
+        assert (
+            is_likely_non_event_image("https://example.com/images/festival-hero-1200x675.jpg")
+            is False
+        )

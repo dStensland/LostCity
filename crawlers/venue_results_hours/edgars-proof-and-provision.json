@@ -1,0 +1,38 @@
+{
+  "venue_id": 4417,
+  "venue_slug": "edgars-proof-and-provision",
+  "meta": {
+    "og_image": null,
+    "meta_description": null,
+    "reservation_links": [],
+    "menu_links": [
+      "http://www.pandpatl.com/menu"
+    ],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": "(404) 897-1991"
+  },
+  "extracted": {
+    "hours": {
+      "mon": {"open": "17:00", "close": "23:00"},
+      "tue": {"open": "17:00", "close": "23:00"},
+      "wed": {"open": "17:00", "close": "23:00"},
+      "thu": {"open": "17:00", "close": "23:00"},
+      "fri": {"open": "14:00", "close": "23:00"},
+      "sat": {"open": "14:00", "close": "23:00"},
+      "sun": {"open": "14:00", "close": "23:00"}
+    },
+    "vibes": ["intimate", "upscale", "date-spot", "craft-cocktails", "late-night", "historic"],
+    "cuisine": ["american", "new_american"],
+    "service_style": "bar_service",
+    "price_level": 3,
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": "(404) 897-1991",
+    "instagram": null,
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

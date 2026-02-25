@@ -12,13 +12,94 @@ from pydantic import BaseModel, Field
 env_path = Path(__file__).parent.parent / ".env"
 load_dotenv(env_path)
 
+SUPPORTED_DATABASE_TARGETS = {"production", "staging"}
+
+
+def _normalize_database_target(raw_target: str) -> str:
+    """Normalize DB target input to a supported value."""
+    target = (raw_target or "production").strip().lower()
+    if target not in SUPPORTED_DATABASE_TARGETS:
+        return "production"
+    return target
+
 
 class DatabaseConfig(BaseModel):
     """Database connection settings."""
+    target: str = Field(
+        default_factory=lambda: _normalize_database_target(
+            os.getenv("CRAWLER_DB_TARGET", "production")
+        )
+    )
     supabase_url: str = Field(default_factory=lambda: os.getenv("SUPABASE_URL", ""))
     supabase_key: str = Field(default_factory=lambda: os.getenv("SUPABASE_KEY", ""))
-    supabase_service_key: str = Field(default_factory=lambda: os.getenv("SUPABASE_SERVICE_KEY", ""))
+    supabase_service_key: str = Field(
+        default_factory=lambda: os.getenv("SUPABASE_SERVICE_KEY", "")
+    )
     database_url: str = Field(default_factory=lambda: os.getenv("DATABASE_URL", ""))
+    staging_supabase_url: str = Field(
+        default_factory=lambda: os.getenv(
+            "STAGING_SUPABASE_URL", os.getenv("SUPABASE_URL_STAGING", "")
+        )
+    )
+    staging_supabase_key: str = Field(
+        default_factory=lambda: os.getenv(
+            "STAGING_SUPABASE_KEY", os.getenv("SUPABASE_KEY_STAGING", "")
+        )
+    )
+    staging_supabase_service_key: str = Field(
+        default_factory=lambda: os.getenv(
+            "STAGING_SUPABASE_SERVICE_KEY",
+            os.getenv("SUPABASE_SERVICE_KEY_STAGING", ""),
+        )
+    )
+    staging_database_url: str = Field(
+        default_factory=lambda: os.getenv(
+            "STAGING_DATABASE_URL", os.getenv("DATABASE_URL_STAGING", "")
+        )
+    )
+
+    @property
+    def active_target(self) -> str:
+        return _normalize_database_target(self.target)
+
+    @property
+    def active_supabase_url(self) -> str:
+        if self.active_target == "staging":
+            return self.staging_supabase_url
+        return self.supabase_url
+
+    @property
+    def active_supabase_key(self) -> str:
+        if self.active_target == "staging":
+            return self.staging_supabase_key
+        return self.supabase_key
+
+    @property
+    def active_supabase_service_key(self) -> str:
+        if self.active_target == "staging":
+            return self.staging_supabase_service_key
+        return self.supabase_service_key
+
+    @property
+    def active_database_url(self) -> str:
+        if self.active_target == "staging":
+            return self.staging_database_url
+        return self.database_url
+
+    def missing_active_credentials(self) -> list[str]:
+        """Return required credential names missing for the active target."""
+        missing: list[str] = []
+        if self.active_target == "staging":
+            if not self.active_supabase_url:
+                missing.append("STAGING_SUPABASE_URL")
+            if not self.active_supabase_service_key:
+                missing.append("STAGING_SUPABASE_SERVICE_KEY")
+        else:
+            if not self.active_supabase_url:
+                missing.append("SUPABASE_URL")
+            if not self.active_supabase_service_key:
+                missing.append("SUPABASE_SERVICE_KEY")
+        return missing
 
 
 class LLMConfig(BaseModel):
@@ -76,4 +157,14 @@ config = Config()
 
 def get_config() -> Config:
     """Get the global configuration instance."""
+    return config
+
+
+def set_database_target(target: str) -> Config:
+    """Set runtime DB target and refresh global config."""
+    normalized = _normalize_database_target(target)
+    os.environ["CRAWLER_DB_TARGET"] = normalized
+
+    global config
+    config = Config()
     return config

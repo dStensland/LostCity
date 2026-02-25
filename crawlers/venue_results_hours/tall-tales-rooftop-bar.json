@@ -1,0 +1,28 @@
+{
+  "venue_id": 1582,
+  "venue_slug": "tall-tales-rooftop-bar",
+  "meta": {
+    "og_image": "https://i0.wp.com/talltalesrooftop.com/wp-content/uploads/2025/12/Tall-tales-home-hero-Drone-View.jpg?fit=1200%2C630&quality=89&ssl=1",
+    "meta_description": "Experience East Nashville's go-to rooftop venue. Enjoy sophisticated pours, craveable bites, and skyline views at Tall Tales Rooftop Bar. Book your table now.",
+    "reservation_links": ["https://www.opentable.com/r/tall-tales-nashville"],
+    "menu_links": ["https://talltalesrooftop.com/menu/"],
+    "instagram": "talltalesnashville",
+    "facebook_url": null,
+    "phone": "(615) 650-9075"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["rooftop", "upscale", "trendy", "live-music", "craft-cocktails", "date-spot"],
+    "cuisine": [],
+    "service_style": "full_service",
+    "price_level": "$$$",
+    "menu_highlights": null,
+    "reservation_url": "https://www.opentable.com/r/tall-tales-nashville",
+    "phone": "(615) 650-9075",
+    "instagram": "talltalesnashville",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

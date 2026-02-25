@@ -1,0 +1,71 @@
+{
+  "venue_id": 4772,
+  "venue_slug": "a-mano",
+  "meta": {
+    "og_image": null,
+    "meta_description": "echoing the personality of Old Fourth Ward in Atlanta, a mano is a \r\nneighborhood bistro with a casual atmosphere serving traditional Italian \r\ndishes with a southern twist",
+    "reservation_links": [
+      "https://resy.com/cities/atlanta-ga/venues/a-mano-ga",
+      "https://resy.com/cities/atlanta-ga/venues/a-mano-ga"
+    ],
+    "menu_links": [
+      "https://www.amanoatl.com/menu"
+    ],
+    "instagram": "amanoatl",
+    "facebook_url": "https://www.facebook.com/amanoatl",
+    "phone": "(404) 549-7727"
+  },
+  "extracted": {
+    "hours": {
+      "mon": null,
+      "tue": {"open": "11:00", "close": "21:00"},
+      "wed": {"open": "11:00", "close": "21:00"},
+      "thu": {"open": "11:00", "close": "21:00"},
+      "fri": {"open": "11:00", "close": "21:00"},
+      "sat": {"open": "11:00", "close": "21:00"},
+      "sun": {"open": "11:00", "close": "21:00"}
+    },
+    "vibes": ["date-spot", "intimate", "craft-cocktails", "patio", "neighborhood-bar"],
+    "cuisine": ["italian"],
+    "service_style": "full_service",
+    "price_level": 3,
+    "menu_highlights": [
+      {"name": "House-made Pasta", "price": null, "category": "entree"},
+      {"name": "Natural & Biodynamic Wines", "price": null, "category": "wine"},
+      {"name": "Seasonal Italian Dishes", "price": null, "category": "entree"}
+    ],
+    "menu_url": "https://www.amanoatl.com/menu",
+    "reservation_url": "https://resy.com/cities/atlanta-ga/venues/a-mano-ga",
+    "phone": "(404) 549-7727",
+    "instagram": "amanoatl",
+    "dietary_options": [],
+    "specials": [
+      {
+        "day_of_week": 2,
+        "title": "$10 Tuesdays",
+        "description": "Most popular dishes for $10 each during lunch service 11AM-12:30PM",
+        "special_type": "daily_special",
+        "start_time": "11:00",
+        "end_time": "12:30"
+      },
+      {
+        "day_of_week": 2,
+        "title": "Tuesday Bottle Deals",
+        "description": "Handpicked wines at discounted prices with Elemental Spirits Co.",
+        "special_type": "daily_special",
+        "start_time": "17:00",
+        "end_time": "21:30"
+      },
+      {
+        "day_of_week": 6,
+        "title": "Spritzy Saturdays",
+        "description": "Specialty spritzes for $10 each during lunch on the patio",
+        "special_type": "daily_special",
+        "start_time": "11:00",
+        "end_time": "14:30"
+      }
+    ],
+    "genres": [],
+    "parking": []
+  }
+}

@@ -130,18 +130,13 @@ def determine_category_and_tags(title: str, description: str = "") -> tuple[str,
     else:
         category = "community"
 
-    # Most Good Sam events are free or low-cost
-    is_free = True
+    # Only mark free when explicitly stated
+    is_free = False
     if any(word in text for word in ["free", "no cost", "no charge", "complimentary", "no fee"]):
         is_free = True
         tags.append("free")
     elif any(word in text for word in ["$", "ticket", "registration fee", "cost", "donation"]):
-        # Check for explicit free mentions even with $ present
-        if "free" in text or "no cost" in text:
-            is_free = True
-            tags.append("free")
-        else:
-            is_free = False
+        is_free = False
 
     # Add health equity tag for community-focused events
     if any(word in text for word in ["uninsured", "underinsured", "low-cost", "safety-net", "community health"]):
@@ -354,12 +349,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     title, "Good Samaritan Health Center of Atlanta", start_date
                 )
 
-                # Check if already exists
-                if find_event_by_hash(content_hash):
-                    events_updated += 1
-                    logger.debug(f"Event already exists: {title}")
-                    continue
-
                 # Create event record
                 event_record = {
                     "source_id": source_id,
@@ -387,6 +376,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "recurrence_rule": None,
                     "content_hash": content_hash,
                 }
+
+                existing = find_event_by_hash(content_hash)
+                if existing:
+                    smart_update_existing_event(existing, event_record)
+                    events_updated += 1
+                    logger.debug(f"Event updated: {title}")
+                    continue
 
                 try:
                     insert_event(event_record)

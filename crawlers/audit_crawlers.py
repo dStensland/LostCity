@@ -170,6 +170,27 @@ def check_missing_dedup():
 
     return results
 
+def check_dedup_without_backfill():
+    """Check for hash-dedup skip paths that never call smart_update_existing_event."""
+    sources_dir = Path(__file__).parent / 'sources'
+    results = []
+
+    for file in sorted(sources_dir.glob('*.py')):
+        if file.name.startswith('_'):
+            continue
+
+        content = file.read_text()
+
+        has_hash_skip = bool(re.search(r'if\s+find_event_by_hash\(content_hash\)\s*:', content))
+        has_smart_update = 'smart_update_existing_event(' in content
+
+        if has_hash_skip and not has_smart_update:
+            results.append({
+                'file': file.name,
+            })
+
+    return results
+
 def check_hardcoded_dates():
     """Check for hardcoded year values that will break."""
     sources_dir = Path(__file__).parent / 'sources'
@@ -204,7 +225,7 @@ def check_hardcoded_dates():
     return results
 
 def print_report(import_results, category_results, all_day_results,
-                 permanent_results, dedup_results, date_results):
+                 permanent_results, dedup_results, dedup_backfill_results, date_results):
     """Print formatted audit report."""
 
     print("=" * 80)
@@ -311,6 +332,20 @@ def print_report(import_results, category_results, all_day_results,
             print(f"  ... and {len(date_results) - 20} more")
         print()
 
+    # Dedupe skip without backfill
+    print("7. HASH DEDUP WITHOUT BACKFILL")
+    print("-" * 80)
+    print(f"Crawlers with hash-skip but no smart backfill: {len(dedup_backfill_results)}")
+    print()
+
+    if dedup_backfill_results:
+        print("Issues found:")
+        for issue in dedup_backfill_results[:50]:
+            print(f"  {issue['file']}")
+        if len(dedup_backfill_results) > 50:
+            print(f"  ... and {len(dedup_backfill_results) - 50} more")
+        print()
+
     # Summary
     print("=" * 80)
     print("SUMMARY")
@@ -322,6 +357,7 @@ def print_report(import_results, category_results, all_day_results,
         len(all_day_results) +
         len(permanent_results) +
         len(dedup_results) +
+        len(dedup_backfill_results) +
         len(date_results)
     )
 
@@ -346,6 +382,7 @@ def main():
     all_day_results = check_is_all_day_inference()
     permanent_results = check_permanent_attractions()
     dedup_results = check_missing_dedup()
+    dedup_backfill_results = check_dedup_without_backfill()
     date_results = check_hardcoded_dates()
 
     # Print report
@@ -355,6 +392,7 @@ def main():
         all_day_results,
         permanent_results,
         dedup_results,
+        dedup_backfill_results,
         date_results
     )
 

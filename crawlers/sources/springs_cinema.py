@@ -250,11 +250,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     )
                     seen_hashes.add(content_hash)
 
-                    existing = find_event_by_hash(content_hash)
-                    if existing:
-                        total_updated += 1
-                        continue
-
                     poster_key = movie.get("posterImage")
                     image_url = (
                         f"{IMAGE_BASE}/{poster_key}?fit=crop&w=400&h=600&fm=jpeg&auto=format,compress"
@@ -300,6 +295,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "recurrence_rule": None,
                         "content_hash": content_hash,
                     }
+
+                    existing = find_event_by_hash(content_hash)
+                    if existing:
+                        smart_update_existing_event(existing, event_record)
+                        total_updated += 1
+                        continue
 
                     series_hint = {"series_type": "film", "series_title": title}
 

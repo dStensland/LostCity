@@ -1,0 +1,21 @@
+{
+  "venue_id": 1629,
+  "venue_slug": "yazoo-brewing-company",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["casual", "beer-garden", "patio"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "yazoobrew",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

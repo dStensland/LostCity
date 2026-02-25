@@ -1,0 +1,92 @@
+[
+  {
+    "slug": "home-depot-backyard",
+    "status": "ok",
+    "seconds": 79.9,
+    "found": null,
+    "new": null,
+    "updated": null,
+    "note": ""
+  },
+  {
+    "slug": "steady-hand-beer",
+    "status": "ok",
+    "seconds": 25.7,
+    "found": null,
+    "new": null,
+    "updated": null,
+    "note": "ERROR:sources.steady_hand_beer:Failed to insert: The Trio features Bill Sommer, Andy Eulau, and Mike Walters. Musicians can take turns leading the group or join in with others. Whether you\u2019re a jazz aficionado or simply looking for a fun and laid-back way to spend your Sunday, our jazz jam is the perfect destination.: Invalid event title: \"The Trio features Bill Sommer, Andy Eulau, and Mik\" | ERROR:sources.steady_hand_beer:Failed to insert: Jay Rydel is an American singer, songwriter, and producer born and raised in Atlanta, Georgia. His music is rooted in rock guitar and explores pop, r&b, and hip-hop vocals. If John Mayer, Andre 3000, D\u2019angelo, and Justin Bieber formed a supergroup it would sound like Jay Rydel. Jay has been a full time musician since 2015. He has been patiently developi"
+  },
+  {
+    "slug": "silverspot-cinema-atlanta",
+    "status": "rc_1",
+    "seconds": 11.4,
+    "found": null,
+    "new": null,
+    "updated": null,
+    "note": "/Users/coach/Projects/LostCity/crawlers/venv/lib/python3.9/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020\n  warnings.warn(\nINFO:__main__:DB target=production | writes=disabled\nINFO:httpx:HTTP Request: GET https://rtppvljfrkjtoxmaizea.supabase.co/rest/v1/sources?select=%2A&slug=eq.silverspot-cinema-atlanta \"HTTP/2 200 OK\"\nINFO:httpx:HTTP Request: GET https://rtppvljfrkjtoxmaizea.supabase.co/rest/v1/crawl_logs?select=status%2Cstarted_at%2Cerror_message&source_id=eq.545&started_at=gte.2026-02-18T16%3A49%3A04.262399&order=started_at.desc&limit=4 \"HTTP/2 200 OK\"\nWARNING:__main__:Skipping silverspot-cinema-atlanta: health check faile"
+  },
+  {
+    "slug": "clark-atlanta",
+    "status": "ok",
+    "seconds": 5.5,
+    "found": 0,
+    "new": null,
+    "updated": null,
+    "note": ""
+  },
+  {
+    "slug": "community-foundation-atl",
+    "status": "ok",
+    "seconds": 6.3,
+    "found": 0,
+    "new": null,
+    "updated": null,
+    "note": ""
+  },
+  {
+    "slug": "georgia-peace",
+    "status": "ok",
+    "seconds": 16.6,
+    "found": null,
+    "new": null,
+    "updated": null,
+    "note": ""
+  },
+  {
+    "slug": "l5p-community-center",
+    "status": "ok",
+    "seconds": 17.0,
+    "found": null,
+    "new": null,
+    "updated": null,
+    "note": ""
+  },
+  {
+    "slug": "moca-ga",
+    "status": "ok",
+    "seconds": 12.7,
+    "found": null,
+    "new": null,
+    "updated": null,
+    "note": ""
+  },
+  {
+    "slug": "monday-night-garage",
+    "status": "ok",
+    "seconds": 2.1,
+    "found": null,
+    "new": null,
+    "updated": null,
+    "note": ""
+  },
+  {
+    "slug": "theatrical-outfit",
+    "status": "rc_-15",
+    "seconds": 92.9,
+    "found": null,
+    "new": null,
+    "updated": null,
+    "note": "/Users/coach/Projects/LostCity/crawlers/venv/lib/python3.9/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020\n  warnings.warn(\nINFO:__main__:DB target=production | writes=disabled\nINFO:httpx:HTTP Request: GET https://rtppvljfrkjtoxmaizea.supabase.co/rest/v1/sources?select=%2A&slug=eq.theatrical-outfit \"HTTP/2 200 OK\"\nINFO:httpx:HTTP Request: GET https://rtppvljfrkjtoxmaizea.supabase.co/rest/v1/crawl_logs?select=status%2Cstarted_at%2Cerror_message&source_id=eq.151&started_at=gte.2026-02-18T16%3A50%3A06.773419&order=started_at.desc&limit=4 \"HTTP/2 200 OK\"\nINFO:__main__:Starting crawl for: Theatrical Outfit\nINFO:db:[DRY RUN] Skipping "
+  }
+]

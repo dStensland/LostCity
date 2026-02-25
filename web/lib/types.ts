@@ -14,6 +14,7 @@ export type Database = {
           end_date: string | null;
           end_time: string | null;
           is_all_day: boolean;
+          content_kind: string;
           category: string | null;
           tags: string[] | null;
           price_min: number | null;
@@ -52,6 +53,7 @@ export type Database = {
           lat: number | null;
           lng: number | null;
           venue_type: string | null;
+          location_designator: "standard" | "private_after_signup" | "virtual" | "recovery_meeting";
           website: string | null;
           aliases: string[] | null;
           created_at: string;
@@ -218,6 +220,10 @@ export type Database = {
           event_id: number;
           status: string;
           visibility: string;
+          engagement_target: "event" | "festival_session";
+          festival_id: string | null;
+          program_id: string | null;
+          portal_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -226,10 +232,48 @@ export type Database = {
           event_id: number;
           status: string;
           visibility?: string;
+          engagement_target?: "event" | "festival_session";
+          festival_id?: string | null;
+          program_id?: string | null;
+          portal_id?: string | null;
         };
         Update: {
           status?: string;
           visibility?: string;
+          engagement_target?: "event" | "festival_session";
+          festival_id?: string | null;
+          program_id?: string | null;
+          portal_id?: string | null;
+        };
+      };
+      event_calendar_saves: {
+        Row: {
+          id: string;
+          user_id: string;
+          event_id: number;
+          provider: "google" | "outlook" | "ics";
+          engagement_target: "event" | "festival_session";
+          festival_id: string | null;
+          program_id: string | null;
+          portal_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          event_id: number;
+          provider: "google" | "outlook" | "ics";
+          engagement_target?: "event" | "festival_session";
+          festival_id?: string | null;
+          program_id?: string | null;
+          portal_id?: string | null;
+        };
+        Update: {
+          provider?: "google" | "outlook" | "ics";
+          engagement_target?: "event" | "festival_session";
+          festival_id?: string | null;
+          program_id?: string | null;
+          portal_id?: string | null;
         };
       };
       recommendations: {

@@ -1,0 +1,41 @@
+{
+  "venue_id": 4836,
+  "venue_slug": "el-ponce",
+  "meta": {
+    "og_image": "http://static1.squarespace.com/static/57e02f629f7456a0e803295f/t/695e75128cfd3f3da1524948/1767798034041/logo-0.png?format=1500w",
+    "meta_description": "El Ponce offers delicious traditional Mexican food in a fun and friendly \r\nenvironment. We are located at 939 Ponce de Leon Ave in Atlanta, GA down \r\nthe street from Ponce City Market and the Beltline. We have a great outdoor \r\ndog friendly patio and excellent margaritas. Come on by. #friendsAreHere",
+    "reservation_links": [
+      "https://resy.com/cities/atl/el-ponce"
+    ],
+    "menu_links": [
+      "https://www.elponce.com/home#menus"
+    ],
+    "instagram": "elponceatl",
+    "facebook_url": "https://www.facebook.com/Elponceatl",
+    "phone": "(404) 881-6040"
+  },
+  "extracted": {
+    "hours": {
+      "mon": null,
+      "tue": {"open": "11:30", "close": "21:30"},
+      "wed": {"open": "11:30", "close": "21:30"},
+      "thu": {"open": "11:30", "close": "21:30"},
+      "fri": {"open": "11:30", "close": "22:30"},
+      "sat": {"open": "11:30", "close": "22:30"},
+      "sun": {"open": "11:30", "close": "21:30"}
+    },
+    "vibes": ["lively", "patio", "dog-friendly", "casual"],
+    "cuisine": ["mexican"],
+    "service_style": "full_service",
+    "price_level": 2,
+    "menu_highlights": null,
+    "menu_url": "https://www.elponce.com/home#menus",
+    "reservation_url": "https://resy.com/cities/atl/el-ponce",
+    "phone": "(404) 881-6040",
+    "instagram": "elponceatl",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

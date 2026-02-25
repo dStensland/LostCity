@@ -188,12 +188,12 @@
       "vibes": ["casual", "social", "chill"],
       "activity_level": "regular",
       "personality": "Brewery hopper who knows every taproom in the city. Loves beer festivals and food pairings.",
-      "recommended_venues": ["monday-night", "three-taverns", "orpheus-brewing", "sweetwater", "wild-heaven-beer", "scofflaw-brewing", "second-self-brewing", "bold-monk-brewing", "reformation-brewery"],
+      "recommended_venues": ["monday-night", "three-taverns", "sweetwater", "wild-heaven-beer", "scofflaw-brewing", "second-self-brewing", "bold-monk-brewing", "reformation-brewery"],
       "lists": [
         {
           "title": "Best Taprooms in Atlanta",
           "description": "Ranked by vibes, beer selection, and whether you can bring your dog. All dog-friendly.",
-          "venues": ["monday-night", "orpheus-brewing", "three-taverns", "wild-heaven-beer", "bold-monk-brewing", "scofflaw-brewing", "sweetwater", "second-self-brewing"]
+          "venues": ["monday-night", "three-taverns", "wild-heaven-beer", "bold-monk-brewing", "scofflaw-brewing", "sweetwater", "second-self-brewing"]
         }
       ]
     },
@@ -626,7 +626,7 @@
       "vibes": ["chill", "casual", "outdoor"],
       "activity_level": "regular",
       "personality": "Craft beer enthusiast. RSVPs to every brewery release party and beer festival.",
-      "recommended_venues": ["sweetwater", "monday-night", "wild-heaven-beer", "three-taverns", "orpheus-brewing", "sweetwater-420-fest", "atlanta-beer-week"]
+      "recommended_venues": ["sweetwater", "monday-night", "wild-heaven-beer", "three-taverns", "sweetwater-420-fest", "atlanta-beer-week"]
     },
     {
       "id": "piedmont-parkinson",

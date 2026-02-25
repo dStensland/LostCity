@@ -1,0 +1,21 @@
+{
+  "venue_id": 1593,
+  "venue_slug": "patterson-house",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["speakeasy", "craft-cocktails", "upscale", "date-night", "cozy"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "http://www.thepattersonnashville.com/menu",
+    "reservation_url": "https://www.opentable.com/restref/client/?restref=1170280&lang=en-US&ot_source=Restaurant%20website&corrid=48ecf3a8-7752-4f06-8dd5-6d7af616fe91",
+    "phone": "(615) 810-8200",
+    "instagram": "the_pattersonhouse",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

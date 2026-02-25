@@ -1,0 +1,37 @@
+{
+  "venue_id": 2502,
+  "venue_slug": "old-lady-gang",
+  "meta": {
+    "og_image": "https://oldladygang.com/wp-content/uploads/2017/03/olg-social-cover-1.jpg",
+    "meta_description": "The Old Lady Gang promises to deliver its patrons good old fashioned southern cuisine prepared with love. Make your reservation today!",
+    "reservation_links": [],
+    "menu_links": [
+      "https://oldladygang.com/menu/"
+    ],
+    "instagram": "oldladygang",
+    "facebook_url": "http://facebook.com/oldladygang",
+    "phone": "(404) 748-9689"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": [
+      "lively",
+      "good-for-groups",
+      "black-owned"
+    ],
+    "cuisine": [
+      "soul_food",
+      "southern"
+    ],
+    "service_style": "full-service",
+    "price_level": "$$",
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": "(404) 748-9689",
+    "instagram": "oldladygang",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

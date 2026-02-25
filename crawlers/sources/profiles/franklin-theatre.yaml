@@ -10,3 +10,8 @@ discovery:
   - https://www.franklintheatre.com/all-events/
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- showtimes
+- tickets

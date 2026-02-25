@@ -38,6 +38,23 @@ Exception: if a venue/org has no first-party API and is well covered by Ticketma
 
 If an event appears in a curator but not in our database, add a crawler for the original venue instead.
 
+### Festival Hierarchy Rule (No Per-Session Crawlers)
+
+With the current festival model, individual festival programs/sessions should be
+represented in the festival hierarchy, not as standalone source crawlers:
+
+- `festivals` = parent festival entity
+- `series` with `series_type='festival_program'` = program track/show block
+- `events` = individual sessions/showtimes
+
+Implication: not every festival-related source row needs a crawler module. If a
+source is an internal festival structural entry (especially `source_type='festival'`),
+it can remain inactive without being crawler debt.
+
+Why these rows still exist: festival session events still need a stable
+`events.source_id` for attribution and source-level analytics, so we keep a
+festival source container row even when there is no standalone crawler module.
+
 ### Strategy Priority Order (Per Source)
 1. First-party org/venue API.
 2. Aggregator APIs (Ticketmaster/Eventbrite) when the venue has no API or the aggregator data is materially better.
@@ -57,6 +74,20 @@ Use the audit tool when investigating a new source to recommend an integration m
 python scripts/source_audit.py --url https://example.org/events
 ```
 It reports signals (feeds, JSON-LD, JS rendering) and a recommended method based on the priority order.
+
+### Submission-to-Crawler Intake Rule
+
+Approved venue/organization submissions should automatically create or tag an
+inactive source candidate for crawler evaluation (`needs-crawler-evaluation`),
+instead of relying on manual backlog triage.
+
+Operational rule:
+- Keep candidate source inactive by default
+- Generate/maintain a profile in `sources/profiles/`
+- Validate with dry-run crawl
+- Activate only after non-zero signal and quality check
+
+This keeps user-submitted websites in a continuous crawler intake loop.
 
 ### Tier 1: High-Volume Aggregators (Priority: First)
 **Goal:** Establish baseline coverage quickly

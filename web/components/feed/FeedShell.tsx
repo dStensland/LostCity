@@ -22,7 +22,7 @@ const TABS: { key: FeedTab; label: string; authRequired: boolean }[] = [
   { key: "foryou", label: "For You", authRequired: true },
 ];
 
-// Loading skeleton for auth-gated content - matches ForYouFeed/DashboardActivity style
+// Loading skeleton for auth-gated content
 function AuthLoadingSkeleton() {
   return (
     <div className="space-y-4">
@@ -71,6 +71,40 @@ function ForYouSignUpPrompt({ portalSlug }: { portalSlug: string }) {
         </Link>
       </div>
     </div>
+  );
+}
+
+function ExploreFeedOutro({ portalSlug }: { portalSlug: string }) {
+  return (
+    <section className="mt-7 sm:mt-8 rounded-2xl overflow-hidden border border-[var(--twilight)]/50">
+      <div className="h-[2px] bg-gradient-to-r from-[var(--coral)]/70 via-[var(--neon-amber)]/70 to-[var(--neon-cyan)]/70" />
+      <div className="p-5 sm:p-6 bg-[linear-gradient(145deg,rgba(10,14,24,0.92),rgba(14,18,30,0.78))]">
+        <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">
+          Keep Exploring
+        </p>
+        <h3 className="text-lg sm:text-xl font-semibold text-[var(--cream)] mt-1">
+          Take this energy somewhere specific
+        </h3>
+        <p className="text-sm text-[var(--muted)] mt-1.5 max-w-xl">
+          Jump from editorial tracks into live places, tonight&apos;s events, or community picks.
+        </p>
+
+        <div className="mt-4 flex flex-wrap gap-2.5">
+          <Link
+            href={`/${portalSlug}?view=find&type=destinations`}
+            className="px-3.5 py-2 rounded-lg border border-[var(--twilight)] text-[var(--cream)] text-xs font-mono hover:border-[var(--neon-amber)]/40 hover:text-[var(--neon-amber)] transition-colors"
+          >
+            Browse Places
+          </Link>
+          <Link
+            href={`/${portalSlug}?view=find&type=events`}
+            className="px-3.5 py-2 rounded-lg border border-[var(--twilight)] text-[var(--cream)] text-xs font-mono hover:border-[var(--coral)]/40 hover:text-[var(--coral)] transition-colors"
+          >
+            Tonight&apos;s Events
+          </Link>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -156,7 +190,12 @@ function FeedShellInner({ portalId, portalSlug, activeTab, curatedContent }: Fee
       {/* Tab content */}
       {activeTab === "curated" && curatedContent}
 
-      {activeTab === "explore" && <ExploreTrackList />}
+      {activeTab === "explore" && (
+        <>
+          <ExploreTrackList />
+          <ExploreFeedOutro portalSlug={portalSlug} />
+        </>
+      )}
 
       {activeTab === "foryou" && renderProtectedContent(<ForYouView portalSlug={portalSlug} portalId={portalId} />, true)}
     </div>
@@ -170,7 +209,7 @@ export default function FeedShell(props: FeedShellProps) {
         <div className="py-6 space-y-6">
           {/* Tab skeleton */}
           <div className="flex gap-1 p-1 bg-[var(--night)] rounded-lg">
-            {[1, 2, 3, 4].map((i) => (
+            {[1, 2, 3].map((i) => (
               <div key={i} className="flex-1 h-9 skeleton-shimmer rounded-md" />
             ))}
           </div>

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import re
 import logging
+import hashlib
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -21,6 +22,7 @@ from utils import extract_event_links, find_event_url
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.auroracineplex.com"
+EVENTS_URL = f"{BASE_URL}/movies"
 
 VENUE_DATA = {
     "name": "Aurora Cineplex",
@@ -62,6 +64,8 @@ def extract_movies(
     source_id: int,
     venue_id: int,
     seen_hashes: set,
+    event_links: list[str],
+    events_url: str,
 ) -> tuple[int, int, int]:
     """Extract movies and showtimes from the Aurora Cineplex page."""
     events_found = 0
@@ -127,7 +131,7 @@ def extract_movies(
                     # Get specific event URL
 
 
-                    event_url = find_event_url(title, event_links, EVENTS_URL)
+                    event_url = find_event_url(title, event_links, events_url)
 
 
 
@@ -149,7 +153,7 @@ def extract_movies(
                         "price_note": None,
                         "is_free": False,
                         "source_url": event_url,
-                        "ticket_url": event_url if event_url != (EVENTS_URL if "EVENTS_URL" in dir() else BASE_URL) else None,
+                        "ticket_url": event_url if event_url != events_url else None,
                         "image_url": image_url,
                         "raw_text": None,
                         "extraction_confidence": 0.85,
@@ -178,7 +182,13 @@ def extract_movies(
                 continue
     else:
         events_found, events_new, events_updated = _extract_from_text(
-            page, date_str, source_id, venue_id, seen_hashes
+            page,
+            date_str,
+            source_id,
+            venue_id,
+            seen_hashes,
+            event_links,
+            events_url,
         )
 
     return events_found, events_new, events_updated
@@ -190,6 +200,8 @@ def _extract_from_text(
     source_id: int,
     venue_id: int,
     seen_hashes: set,
+    event_links: list[str],
+    events_url: str,
 ) -> tuple[int, int, int]:
     """Fallback text-based extraction."""
     events_found = 0
@@ -224,7 +236,9 @@ def _extract_from_text(
                         else:
                             # Get specific event URL
 
-                            event_url = find_event_url(title, event_links, EVENTS_URL)
+                            event_url = find_event_url(
+                                current_movie, event_links, events_url
+                            )
 
 
                             event_record = {
@@ -245,7 +259,7 @@ def _extract_from_text(
                                 "price_note": None,
                                 "is_free": False,
                                 "source_url": event_url,
-                                "ticket_url": event_url if event_url != (EVENTS_URL if "EVENTS_URL" in dir() else BASE_URL) else None,
+                                "ticket_url": event_url if event_url != events_url else None,
                                 "image_url": None,
                                 "raw_text": None,
                                 "extraction_confidence": 0.80,
@@ -295,6 +309,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             today = datetime.now().date()
 
             # Try showtimes page
+            events_url = EVENTS_URL
             for path in ["/showtimes", "/now-showing", "/movies", ""]:
                 url = f"{BASE_URL}{path}" if path else BASE_URL
                 logger.info(f"Fetching: {url}")
@@ -306,36 +321,136 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         ".movie-card, .film-card, [class*='movie'], [class*='film'], .showtime"
                     )
                     if has_movies:
+                        events_url = url
                         break
                 except Exception as e:
                     logger.debug(f"Failed to load {url}: {e}")
                     continue
 
+            def _signature() -> str:
+                """Build a lightweight page fingerprint from title/time pairs."""
+                pairs: list[str] = []
+                containers = page.query_selector_all(
+                    ".movie-card, .film-card, .showtime-card, "
+                    "[class*='movie'], [class*='film'], "
+                    ".show-item, .now-showing-item"
+                )
+                for container in containers:
+                    try:
+                        title_el = container.query_selector(
+                            "h2, h3, h4, .movie-title, .film-title, .title"
+                        )
+                        if not title_el:
+                            continue
+                        title = " ".join(title_el.inner_text().strip().split()).lower()
+                        if not title:
+                            continue
+                        times: list[str] = []
+                        for el in container.query_selector_all(
+                            "button, .showtime, .time, a[class*='time']"
+                        ):
+                            parsed = parse_time((el.inner_text() or "").strip())
+                            if parsed and parsed not in times:
+                                times.append(parsed)
+                        if times:
+                            pairs.append(f"{title}|{','.join(sorted(times))}")
+                    except Exception:
+                        continue
+                if not pairs:
+                    return ""
+                raw = "||".join(sorted(pairs))
+                return hashlib.sha1(raw.encode("utf-8")).hexdigest()
+
+            def _navigate_to_day(day: int) -> tuple[bool, bool]:
+                """Click next day and return (clicked, confidently_selected)."""
+                try:
+                    date_btn = page.locator(f"text=/^{day}$/").first
+                    if not date_btn.is_visible(timeout=1200):
+                        return False, False
+                    date_btn.click()
+                    page.wait_for_timeout(1800)
+                except Exception:
+                    return False, False
+
+                try:
+                    selected = page.evaluate(
+                        """
+                        (targetDay) => {
+                            const dayText = String(targetDay).trim();
+                            const selectors = [
+                                ".active",
+                                ".is-active",
+                                ".selected",
+                                ".current",
+                                "[aria-current='date']",
+                                "[aria-selected='true']",
+                                "[class*='active']",
+                                "[class*='selected']",
+                            ];
+                            for (const selector of selectors) {
+                                const nodes = document.querySelectorAll(selector);
+                                for (const node of nodes) {
+                                    const text = (node.textContent || "").trim();
+                                    if (text === dayText) return true;
+                                }
+                            }
+                            return false;
+                        }
+                        """,
+                        day,
+                    )
+                    return True, bool(selected)
+                except Exception:
+                    return True, False
+
+            previous_signature = ""
+
             for day_offset in range(DAYS_AHEAD):
                 target_date = today + timedelta(days=day_offset)
                 date_str = target_date.strftime("%Y-%m-%d")
 
+                if day_offset > 0:
+                    clicked, confirmed = _navigate_to_day(target_date.day)
+                    if not clicked:
+                        logger.info(
+                            f"No date button available for {date_str}; stopping day loop."
+                        )
+                        break
+                else:
+                    confirmed = True
+
+                current_signature = _signature()
+                # Safety guard: if navigation wasn't confidently confirmed and the page
+                # payload didn't change, stop to avoid cloning the same schedule to new dates.
+                if (
+                    day_offset > 0
+                    and not confirmed
+                    and current_signature
+                    and current_signature == previous_signature
+                ):
+                    logger.warning(
+                        f"Date switch could not be verified for {date_str}; "
+                        "page signature unchanged. Stopping to avoid cloned showtimes."
+                    )
+                    break
+
                 logger.info(f"Extracting showtimes for {date_str}")
+                event_links = extract_event_links(page, BASE_URL)
                 found, new, updated = extract_movies(
-                    page, date_str, source_id, venue_id, seen_hashes
+                    page,
+                    date_str,
+                    source_id,
+                    venue_id,
+                    seen_hashes,
+                    event_links,
+                    events_url,
                 )
                 total_found += found
                 total_new += new
                 total_updated += updated
 
-                # Try date navigation
-                if day_offset < DAYS_AHEAD - 1:
-                    next_date = today + timedelta(days=day_offset + 1)
-                    day_num = next_date.day
-                    try:
-                        date_btn = page.locator(f"text=/^{day_num}$/").first
-                        if date_btn.is_visible(timeout=1000):
-                            date_btn.click()
-                            page.wait_for_timeout(2000)
-                        else:
-                            break
-                    except Exception:
-                        break
+                if current_signature:
+                    previous_signature = current_signature
 
             browser.close()
 

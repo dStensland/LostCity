@@ -1,0 +1,45 @@
+{
+  "venue_id": 80,
+  "venue_slug": "taste-wine-bar-and-market",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Blueberry Brie Grilled Cheese",
+        "price": "$15.99",
+        "category": "entree"
+      },
+      {
+        "name": "Chicken Salad Sandwich",
+        "price": "$16.99",
+        "category": "entree"
+      },
+      {
+        "name": "Caprese Sandwich",
+        "price": "$14.99",
+        "category": "entree"
+      }
+    ],
+    "dietary_options": [
+      "vegetarian-friendly"
+    ],
+    "price_level": 2,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

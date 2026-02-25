@@ -1,0 +1,19 @@
+version: 1
+slug: dice-and-diversions
+name: Dice + Diversions
+integration_method: html
+defaults:
+  category: gaming
+  tags:
+  - gaming
+  - tabletop
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://diceanddiversions.com
+detail:
+  enabled: true
+data_goals:
+- events
+- images

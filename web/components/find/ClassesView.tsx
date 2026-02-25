@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, type CSSProperties } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo, type CSSProperties } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { Event } from "@/lib/supabase";
 import { format, parseISO, isToday, isTomorrow, isThisWeek } from "date-fns";
 import { formatTimeSplit } from "@/lib/formats";
@@ -10,6 +11,10 @@ import SeriesCard, { type SeriesInfo, type SeriesVenueGroup } from "@/components
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
 import { getReflectionClass } from "@/lib/card-utils";
+import {
+  createFindFilterSnapshot,
+  trackFindZeroResults,
+} from "@/lib/analytics/find-tracking";
 
 interface ClassesViewProps {
   portalId: string;
@@ -38,7 +43,49 @@ const CLASS_CATEGORIES = [
   { key: "mixed", label: "Mixed", icon: "community" },
 ] as const;
 
-const PAGE_SIZE = 100; // Fetch more to fill multiple days/venues
+type ClassCategoryKey = (typeof CLASS_CATEGORIES)[number]["key"];
+const CLASS_CATEGORY_KEYS = new Set<ClassCategoryKey>(
+  CLASS_CATEGORIES.map((category) => category.key),
+);
+
+function isClassCategoryKey(value: string): value is ClassCategoryKey {
+  return CLASS_CATEGORY_KEYS.has(value as ClassCategoryKey);
+}
+
+const CLASS_DATE_WINDOWS = [
+  { key: "upcoming", label: "Upcoming" },
+  { key: "today", label: "Today" },
+  { key: "week", label: "This Week" },
+  { key: "weekend", label: "Weekend" },
+] as const;
+
+type ClassDateWindowKey = (typeof CLASS_DATE_WINDOWS)[number]["key"];
+const CLASS_DATE_WINDOW_KEYS = new Set<ClassDateWindowKey>(
+  CLASS_DATE_WINDOWS.map((option) => option.key),
+);
+
+function isClassDateWindowKey(value: string): value is ClassDateWindowKey {
+  return CLASS_DATE_WINDOW_KEYS.has(value as ClassDateWindowKey);
+}
+
+const CLASS_SKILL_OPTIONS = [
+  { key: "all", label: "All Levels" },
+  { key: "beginner", label: "Beginner" },
+  { key: "all-levels", label: "All-levels classes" },
+  { key: "intermediate", label: "Intermediate" },
+  { key: "advanced", label: "Advanced" },
+] as const;
+
+type ClassSkillKey = (typeof CLASS_SKILL_OPTIONS)[number]["key"];
+const CLASS_SKILL_KEYS = new Set<ClassSkillKey>(
+  CLASS_SKILL_OPTIONS.map((option) => option.key),
+);
+
+function isClassSkillKey(value: string): value is ClassSkillKey {
+  return CLASS_SKILL_KEYS.has(value as ClassSkillKey);
+}
+
+const PAGE_SIZE = 50; // Keep in sync with /api/classes max limit
 
 const PAINT_TWIST_PATTERN = /painting with a twist/i;
 
@@ -58,6 +105,60 @@ function formatLocationList(locations: string[]): string {
   const unique = Array.from(new Set(locations.map((loc) => loc.trim()).filter(Boolean)));
   if (unique.length <= 3) return unique.join(" · ");
   return `${unique.slice(0, 3).join(" · ")} +${unique.length - 3} more`;
+}
+
+function toIsoDate(value: Date): string {
+  return format(value, "yyyy-MM-dd");
+}
+
+function addDays(value: Date, days: number): Date {
+  const next = new Date(value);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function resolveClassDateWindow(window: string): { startDate?: string; endDate?: string } {
+  if (window === "upcoming") return {};
+
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+
+  if (window === "today") {
+    const date = toIsoDate(today);
+    return { startDate: date, endDate: date };
+  }
+
+  if (window === "week") {
+    return {
+      startDate: toIsoDate(today),
+      endDate: toIsoDate(addDays(today, 7)),
+    };
+  }
+
+  if (window === "weekend") {
+    const day = today.getDay(); // 0 = Sun, 5 = Fri, 6 = Sat
+    let start = today;
+    let end = today;
+
+    if (day >= 1 && day <= 4) {
+      const daysUntilFriday = 5 - day;
+      start = addDays(today, daysUntilFriday);
+      end = addDays(start, 2);
+    } else if (day === 5) {
+      start = today;
+      end = addDays(today, 2);
+    } else if (day === 6) {
+      start = today;
+      end = addDays(today, 1);
+    }
+
+    return {
+      startDate: toIsoDate(start),
+      endDate: toIsoDate(end),
+    };
+  }
+
+  return {};
 }
 
 // Types for grouping
@@ -285,8 +386,8 @@ function CategoryDropdown({
   category,
   onSelect,
 }: {
-  category: string;
-  onSelect: (key: string) => void;
+  category: ClassCategoryKey;
+  onSelect: (key: ClassCategoryKey) => void;
 }) {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -309,7 +410,7 @@ function CategoryDropdown({
     <div ref={dropdownRef} className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="h-9 inline-flex items-center gap-2 bg-[var(--night)]/78 border border-[var(--twilight)]/80 rounded-full px-3.5 font-mono text-xs cursor-pointer hover:border-[var(--coral)]/50 hover:bg-[var(--dusk)]/70 transition-colors"
+        className="h-9 inline-flex items-center gap-2 bg-[var(--night)]/78 border border-[var(--twilight)]/80 rounded-full px-3.5 font-mono text-xs cursor-pointer hover:border-[var(--coral)]/50 hover:bg-[var(--dusk)]/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]/70 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--void)]"
       >
         <span data-category={selected.icon} className="category-icon">
           <CategoryIcon type={selected.icon} size={14} glow="subtle" />
@@ -613,28 +714,30 @@ function VenueSection({
         </button>
 
         {/* Expanded class list */}
-        {isOpen && (
-          <div className="border-t border-[var(--twilight)]/30 py-1">
-            {venue.locationGroups && venue.locationGroups.length > 0 ? (
-              <div className="space-y-2 py-1">
-                {venue.locationGroups.map((group) => (
-                  <div key={group.location}>
-                    <div className="px-3 py-1 text-[0.6rem] font-mono uppercase tracking-wider text-[var(--muted)]">
-                      {group.location}
+        <div className="accordion-body" data-open={isOpen}>
+          <div>
+            <div className="border-t border-[var(--twilight)]/30 py-1">
+              {venue.locationGroups && venue.locationGroups.length > 0 ? (
+                <div className="space-y-2 py-1">
+                  {venue.locationGroups.map((group) => (
+                    <div key={group.location}>
+                      <div className="px-3 py-1 text-[0.6rem] font-mono uppercase tracking-wider text-[var(--muted)]">
+                        {group.location}
+                      </div>
+                      {group.classes.map((cls) => (
+                        <ClassRow key={cls.id} cls={cls} portalSlug={portalSlug} />
+                      ))}
                     </div>
-                    {group.classes.map((cls) => (
-                      <ClassRow key={cls.id} cls={cls} portalSlug={portalSlug} />
-                    ))}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              venue.classes.map((cls) => (
-                <ClassRow key={cls.id} cls={cls} portalSlug={portalSlug} />
-              ))
-            )}
+                  ))}
+                </div>
+              ) : (
+                venue.classes.map((cls) => (
+                  <ClassRow key={cls.id} cls={cls} portalSlug={portalSlug} />
+                ))
+              )}
+            </div>
           </div>
-        )}
+        </div>
       </div>
     </>
   );
@@ -668,20 +771,56 @@ export default function ClassesView({
   portalId,
   portalSlug,
 }: ClassesViewProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialCategory = searchParams?.get("class_category") || "all";
+  const initialDateWindow = searchParams?.get("class_date") || "upcoming";
+  const initialSkill = searchParams?.get("class_skill") || "all";
+
   const [classes, setClasses] = useState<ClassEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [total, setTotal] = useState(0);
-  const [category, setCategory] = useState("all");
+  const [category, setCategory] = useState<ClassCategoryKey>(
+    isClassCategoryKey(initialCategory) ? initialCategory : "all",
+  );
+  const [dateWindow, setDateWindow] = useState<ClassDateWindowKey>(
+    isClassDateWindowKey(initialDateWindow) ? initialDateWindow : "upcoming",
+  );
+  const [skillLevel, setSkillLevel] = useState<ClassSkillKey>(
+    isClassSkillKey(initialSkill) ? initialSkill : "all",
+  );
   const offsetRef = useRef(0);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const hasLoadedRef = useRef(false);
   const requestIdRef = useRef(0);
+  const zeroResultsSignatureRef = useRef<string | null>(null);
+
+  // Keep local control state synced with URL changes (back/forward navigation).
+  useEffect(() => {
+    const nextCategory = isClassCategoryKey(initialCategory)
+      ? initialCategory
+      : "all";
+    const nextDateWindow = isClassDateWindowKey(initialDateWindow)
+      ? initialDateWindow
+      : "upcoming";
+    const nextSkill = isClassSkillKey(initialSkill) ? initialSkill : "all";
+
+    setCategory((current) => (current === nextCategory ? current : nextCategory));
+    setDateWindow((current) => (current === nextDateWindow ? current : nextDateWindow));
+    setSkillLevel((current) => (current === nextSkill ? current : nextSkill));
+  }, [initialCategory, initialDateWindow, initialSkill]);
 
   const fetchClasses = useCallback(
-    async (offset: number, cat: string, append = false) => {
+    async (
+      offset: number,
+      cat: string,
+      datePreset: string,
+      skillPreset: string,
+      append = false
+    ) => {
       const requestId = ++requestIdRef.current;
       const isInitial = offset === 0;
       const shouldShowSkeleton = isInitial && !hasLoadedRef.current;
@@ -695,6 +834,10 @@ export default function ClassesView({
           offset: String(offset),
         });
         if (cat !== "all") params.set("class_category", cat);
+        const { startDate, endDate } = resolveClassDateWindow(datePreset);
+        if (startDate) params.set("start_date", startDate);
+        if (endDate) params.set("end_date", endDate);
+        if (skillPreset !== "all") params.set("skill_level", skillPreset);
         if (portalId) params.set("portal_id", portalId);
 
         const res = await fetch(`/api/classes?${params.toString()}`);
@@ -704,14 +847,16 @@ export default function ClassesView({
         if (requestId !== requestIdRef.current) return;
 
         const newClasses = data.classes || [];
+        const responseLimit = Math.max(1, Number(data.limit) || PAGE_SIZE);
+        const nextOffset = offset + responseLimit;
         if (append) {
           setClasses((prev) => [...prev, ...newClasses]);
         } else {
           setClasses(newClasses);
         }
         setTotal(data.total ?? 0);
-        setHasMore(offset + PAGE_SIZE < (data.total ?? 0));
-        offsetRef.current = offset + PAGE_SIZE;
+        setHasMore(nextOffset < (data.total ?? 0));
+        offsetRef.current = nextOffset;
       } catch {
         // fail silently
       } finally {
@@ -726,13 +871,32 @@ export default function ClassesView({
     [portalId]
   );
 
-  // Initial load and category change
+  // Keep URL params aligned with active class filters.
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams?.toString() || "");
+    const setOrDelete = (key: string, value: string | null) => {
+      if (value) params.set(key, value);
+      else params.delete(key);
+    };
+
+    setOrDelete("class_category", category !== "all" ? category : null);
+    setOrDelete("class_date", dateWindow !== "upcoming" ? dateWindow : null);
+    setOrDelete("class_skill", skillLevel !== "all" ? skillLevel : null);
+
+    const next = params.toString();
+    const current = searchParams?.toString() || "";
+    if (next !== current) {
+      router.replace(`/${portalSlug}?${next}`, { scroll: false });
+    }
+  }, [category, dateWindow, skillLevel, portalSlug, router, searchParams]);
+
+  // Initial load and class filter changes.
   useEffect(() => {
     offsetRef.current = 0;
     hasLoadedRef.current = false;
     requestIdRef.current += 1;
-    fetchClasses(0, category);
-  }, [category, fetchClasses]);
+    fetchClasses(0, category, dateWindow, skillLevel);
+  }, [category, dateWindow, skillLevel, fetchClasses]);
 
   // Infinite scroll via IntersectionObserver
   useEffect(() => {
@@ -741,7 +905,7 @@ export default function ClassesView({
     observerRef.current = new IntersectionObserver(
       (entries) => {
         if (entries[0]?.isIntersecting && hasMore && !loadingMore && !loading) {
-          fetchClasses(offsetRef.current, category, true);
+          fetchClasses(offsetRef.current, category, dateWindow, skillLevel, true);
         }
       },
       { rootMargin: "400px" }
@@ -752,16 +916,84 @@ export default function ClassesView({
     }
 
     return () => observerRef.current?.disconnect();
-  }, [hasMore, loadingMore, loading, category, fetchClasses]);
+  }, [category, dateWindow, fetchClasses, hasMore, loading, loadingMore, skillLevel]);
 
   // Group classes by day and venue
   const dayGroups = groupClassesByDayAndVenue(classes);
+  const classFilterSnapshot = useMemo(
+    () =>
+      createFindFilterSnapshot(
+        {
+          class_category: category !== "all" ? category : undefined,
+          class_date: dateWindow !== "upcoming" ? dateWindow : undefined,
+          class_skill: skillLevel !== "all" ? skillLevel : undefined,
+        },
+        "classes"
+      ),
+    [category, dateWindow, skillLevel]
+  );
+
+  useEffect(() => {
+    if (!portalSlug || loading) return;
+    if (classes.length > 0) {
+      zeroResultsSignatureRef.current = null;
+      return;
+    }
+    if (classFilterSnapshot.activeCount === 0) return;
+    if (zeroResultsSignatureRef.current === classFilterSnapshot.signature) return;
+
+    trackFindZeroResults({
+      portalSlug,
+      findType: "classes",
+      displayMode: "list",
+      surface: "classes_list",
+      snapshot: classFilterSnapshot,
+      resultCount: classes.length,
+    });
+    zeroResultsSignatureRef.current = classFilterSnapshot.signature;
+  }, [classFilterSnapshot, classes.length, loading, portalSlug]);
 
   return (
     <div>
       <section className="mb-4 rounded-2xl border border-[var(--twilight)]/80 bg-[var(--void)]/70 backdrop-blur-md p-3 sm:p-4 relative z-30">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <CategoryDropdown category={category} onSelect={setCategory} />
+          <div className="flex flex-wrap items-center gap-2">
+            <CategoryDropdown category={category} onSelect={setCategory} />
+            <select
+              value={dateWindow}
+              onChange={(event) => {
+                const nextValue = event.target.value;
+                if (isClassDateWindowKey(nextValue)) {
+                  setDateWindow(nextValue);
+                }
+              }}
+              className="h-9 px-3 rounded-lg bg-[var(--night)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-xs focus:outline-none focus:border-[var(--coral)]/50 transition-colors appearance-none cursor-pointer select-chevron-md min-w-[112px]"
+              aria-label="Class date window"
+            >
+              {CLASS_DATE_WINDOWS.map((option) => (
+                <option key={option.key} value={option.key}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <select
+              value={skillLevel}
+              onChange={(event) => {
+                const nextValue = event.target.value;
+                if (isClassSkillKey(nextValue)) {
+                  setSkillLevel(nextValue);
+                }
+              }}
+              className="h-9 px-3 rounded-lg bg-[var(--night)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-xs focus:outline-none focus:border-[var(--coral)]/50 transition-colors appearance-none cursor-pointer select-chevron-md min-w-[122px]"
+              aria-label="Class skill level"
+            >
+              {CLASS_SKILL_OPTIONS.map((option) => (
+                <option key={option.key} value={option.key}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
           {!loading && (
             <span className="inline-flex items-center px-2.5 py-1 rounded-full border border-[var(--twilight)]/70 bg-[var(--dusk)]/82 font-mono text-[0.62rem] text-[var(--soft)] whitespace-nowrap">
               {total} {total === 1 ? "class" : "classes"} across {dayGroups.length}{" "}
@@ -823,7 +1055,12 @@ export default function ClassesView({
 
       {/* Empty state */}
       {!loading && classes.length === 0 && (
-        <div className="py-16 text-center">
+        <div className="py-12 sm:py-16 text-center">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[var(--twilight)]/25 border border-[var(--twilight)]/50 mb-4">
+            <svg className="w-7 h-7 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            </svg>
+          </div>
           <div className="text-[var(--muted)] font-mono text-sm">
             No classes found
           </div>

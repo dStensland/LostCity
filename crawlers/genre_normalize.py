@@ -417,6 +417,10 @@ GENRE_NORMALIZATION: dict[str, str] = {
     "aerial yoga": "yoga",
     "run club": "run",
     "running club": "run",
+    "running": "run",
+    "race": "run",
+    "athletics": "run",
+    "cardio": "run",
     "group run": "run",
     "trail run": "run",
     "spin": "cycling",
@@ -453,7 +457,7 @@ GENRE_NORMALIZATION: dict[str, str] = {
     "masters swim": "swimming",
 
     # --- Food & Drink ---
-    "soul food": "southern",
+    "soul food": "soul_food",
     "bbq": "southern",
     "barbecue": "southern",
     "cajun": "southern",
@@ -636,6 +640,7 @@ GENRE_NORMALIZATION: dict[str, str] = {
     "experiment": "science",
     "zoo": "nature",
     "wildlife": "nature",
+    "animals": "nature",
     "butterfly": "nature",
     "animal encounter": "nature",
     "puppet show": "puppet-show",

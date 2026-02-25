@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient, getUser } from "@/lib/supabase/server";
+import { createClient, createPortalScopedClient, getUser } from "@/lib/supabase/server";
 import {
   applyRateLimit,
   RATE_LIMITS,
@@ -8,9 +8,24 @@ import {
 import { getLocalDateString } from "@/lib/formats";
 import { escapeSQLPattern, errorResponse } from "@/lib/api-utils";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
-import { applyPortalScopeToQuery, filterByPortalCity } from "@/lib/portal-scope";
+import {
+  applyPortalScopeToQuery,
+  filterByPortalCity,
+  filterByPortalContentScope,
+  type PortalContentFilters,
+} from "@/lib/portal-scope";
+import {
+  isChainCinemaVenue,
+  isRegularShowtimeEvent,
+} from "@/lib/cinema-filter";
+import {
+  suppressEventImageIfVenueFlagged,
+  suppressEventImagesIfVenueFlagged,
+} from "@/lib/image-quality-suppression";
+import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
+import { isSuppressedFromGeneralEventFeed } from "@/lib/event-content-classification";
 
-import { fetchSocialProofCounts } from "@/lib/search";
+import { fetchSocialProofCounts } from "@/lib/social-proof";
 import { format, startOfDay, addDays } from "date-fns";
 
 type RecommendationReason = {
@@ -31,6 +46,33 @@ type FeedSectionId =
   | "this_week_fits_your_taste"
   | "from_places_people_you_follow"
   | "explore_something_new";
+
+const FEED_RESPONSE_CACHE_TTL_MS = 30 * 1000;
+const FEED_RESPONSE_CACHE_MAX_ENTRIES = 200;
+const FEED_RESPONSE_CACHE_NAMESPACE = "api:feed";
+const FEED_RESPONSE_IN_FLIGHT_LOADS = new Map<string, Promise<Response>>();
+
+async function getCachedFeedResponse(
+  key: string
+): Promise<Record<string, unknown> | null> {
+  return getSharedCacheJson<Record<string, unknown>>(
+    FEED_RESPONSE_CACHE_NAMESPACE,
+    key
+  );
+}
+
+async function setCachedFeedResponse(
+  key: string,
+  payload: Record<string, unknown>
+): Promise<void> {
+  await setSharedCacheJson(
+    FEED_RESPONSE_CACHE_NAMESPACE,
+    key,
+    payload,
+    FEED_RESPONSE_CACHE_TTL_MS,
+    { maxEntries: FEED_RESPONSE_CACHE_MAX_ENTRIES }
+  );
+}
 
 // Helper to parse cursor for pagination
 function parseCursor(
@@ -55,12 +97,25 @@ function createCursor(score: number, id: number, date: string): string {
   return Buffer.from(`${score}|${id}|${date}`).toString("base64");
 }
 
+function normalizeStringList(values: unknown): string[] {
+  if (!Array.isArray(values)) return [];
+  return values.filter((value): value is string => typeof value === "string");
+}
+
+function normalizeLowercaseStringList(values: unknown): string[] {
+  return normalizeStringList(values).map((value) => value.toLowerCase());
+}
+
 export async function GET(request: Request) {
   // Rate limit: expensive endpoint (7+ queries per request)
   const rateLimitResult = await applyRateLimit(
     request,
-    RATE_LIMITS.expensive,
+    RATE_LIMITS.feed,
     getClientIdentifier(request),
+    {
+      bucket: "feed:global",
+      logContext: "feed:global",
+    }
   );
   if (rateLimitResult) return rateLimitResult;
 
@@ -86,12 +141,32 @@ export async function GET(request: Request) {
     const freeOnly = searchParams.get("free") === "1";
     const cursor = searchParams.get("cursor");
     const personalized = searchParams.get("personalized") !== "0"; // Default true
+    const includeExhibits = ["1", "true"].includes(
+      (searchParams.get("include_exhibits") || "").toLowerCase(),
+    );
 
     const user = await getUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    const responseHeaders = {
+      // Private cache for user-specific content
+      "Cache-Control": "private, max-age=60, stale-while-revalidate=120",
+    };
+    const cacheKey = `${user.id}|${searchParams.toString()}|${Math.floor(Date.now() / FEED_RESPONSE_CACHE_TTL_MS)}`;
+    const cachedResponse = await getCachedFeedResponse(cacheKey);
+    if (cachedResponse) {
+      return NextResponse.json(cachedResponse, {
+        headers: responseHeaders,
+      });
+    }
 
+    const existingFeedLoad = FEED_RESPONSE_IN_FLIGHT_LOADS.get(cacheKey);
+    if (existingFeedLoad) {
+      return existingFeedLoad;
+    }
+
+    const feedLoadPromise = (async (): Promise<Response> => {
     const supabase = await createClient();
 
     // Calculate date range for trending events
@@ -103,8 +178,8 @@ export async function GET(request: Request) {
     ).toISOString();
 
     // Get portal context, user preferences, and trending events in parallel (independent queries)
-    const [portalContext, prefsResult, trendingEventsResult] = await Promise.all(
-      [
+    const [portalContext, prefsResult, trendingEventsResult] =
+      await Promise.all([
         resolvePortalQueryContext(supabase, searchParams),
         supabase
           .from("user_preferences")
@@ -125,7 +200,7 @@ export async function GET(request: Request) {
         is_all_day,
         is_free,
         is_adult,
-        category,
+        category_id,
         image_url,
         blurhash,
         series_id,
@@ -139,7 +214,7 @@ export async function GET(request: Request) {
           day_of_week,
           festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
         ),
-        venue:venues(id, name, slug, neighborhood, blurhash, city)
+        venue:venues(id, name, slug, neighborhood, location_designator, blurhash, city)
       `,
           )
           .gte("start_date", todayForTrending)
@@ -149,18 +224,21 @@ export async function GET(request: Request) {
           .is("portal_id", null)
           .order("start_date", { ascending: true })
           .limit(200),
-      ],
-    );
+      ]);
 
     if (portalContext.hasPortalParamMismatch) {
       return NextResponse.json(
-        { error: "portal and portal_id parameters must reference the same portal" },
+        {
+          error:
+            "portal and portal_id parameters must reference the same portal",
+        },
         { status: 400 },
       );
     }
 
     const portalId = portalContext.portalId;
-    const portalFilters: { categories?: string[]; neighborhoods?: string[]; city?: string } = portalContext.filters;
+    const portalClient = await createPortalScopedClient(portalId);
+    const portalFilters = portalContext.filters;
 
     const prefsData = prefsResult.data;
 
@@ -178,22 +256,20 @@ export async function GET(request: Request) {
     };
 
     const prefs = prefsData as UserPrefs | null;
-    const favoriteNeighborhoods = prefs?.favorite_neighborhoods || [];
-    const favoriteCategories = prefs?.favorite_categories || [];
+    const favoriteNeighborhoods = normalizeStringList(
+      prefs?.favorite_neighborhoods,
+    );
+    const favoriteCategories = normalizeStringList(prefs?.favorite_categories);
     const favoriteGenres = Object.values(prefs?.favorite_genres || {})
       .flat()
       .filter((genre): genre is string => typeof genre === "string")
       .map((genre) => genre.toLowerCase());
     const favoriteGenreSet = new Set(favoriteGenres);
-    const needsAccessibility = (prefs?.needs_accessibility || []).map((need) =>
-      need.toLowerCase(),
+    const needsAccessibility = normalizeLowercaseStringList(
+      prefs?.needs_accessibility,
     );
-    const needsDietary = (prefs?.needs_dietary || []).map((need) =>
-      need.toLowerCase(),
-    );
-    const needsFamily = (prefs?.needs_family || []).map((need) =>
-      need.toLowerCase(),
-    );
+    const needsDietary = normalizeLowercaseStringList(prefs?.needs_dietary);
+    const needsFamily = normalizeLowercaseStringList(prefs?.needs_family);
     const hideAdultContent = prefs?.hide_adult_content ?? false;
     const crossPortalRecommendations =
       prefs?.cross_portal_recommendations ?? true;
@@ -318,7 +394,7 @@ export async function GET(request: Request) {
     // Build personalized event query - fetch broadly, score later
     // When personalized=true, we pre-filter to followed entities
     // When personalized=false, we show all events (with additional filters)
-    let query = supabase
+    let query = portalClient
       .from("events")
       .select(
         `
@@ -332,7 +408,7 @@ export async function GET(request: Request) {
       is_free,
       price_min,
       price_max,
-      category,
+      category_id,
       genres,
       tags,
       image_url,
@@ -352,7 +428,7 @@ export async function GET(request: Request) {
         day_of_week,
         festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
       ),
-      venue:venues(id, name, neighborhood, slug, blurhash, city)
+      venue:venues(id, name, neighborhood, slug, location_designator, blurhash, city, lat, lng)
     `,
       )
       .or(`start_date.gte.${startDateFilter},end_date.gte.${startDateFilter}`) // Include ongoing events (exhibitions with end_date)
@@ -379,12 +455,21 @@ export async function GET(request: Request) {
 
     // Apply portal category filters if specified (only if no explicit category filter)
     if (portalId && portalFilters.categories?.length && !categories?.length) {
-      query = query.in("category", portalFilters.categories);
+      query = query.in("category_id", portalFilters.categories);
+    }
+
+    // Exclude categories from portal filters (always apply)
+    if (portalId && portalFilters.exclude_categories?.length) {
+      query = query.not(
+        "category_id",
+        "in",
+        `(${portalFilters.exclude_categories.join(",")})`
+      );
     }
 
     // Apply explicit category filter
     if (categories?.length) {
-      query = query.in("category", categories);
+      query = query.in("category_id", categories);
     }
 
     // Apply free filter
@@ -400,7 +485,7 @@ export async function GET(request: Request) {
     // Set limit based on personalized mode
     // When personalized, we need to fetch more for scoring/filtering
     // When not personalized, use standard limit
-    query = query.limit(personalized ? limit * 3 : limit + 1);
+    query = query.limit(personalized ? Math.max(limit * 4, 150) : limit + 1);
 
     // Parallelize all independent event queries
     const eventSelect = `
@@ -414,7 +499,7 @@ export async function GET(request: Request) {
     is_free,
     price_min,
     price_max,
-    category,
+    category:category_id,
     genres,
     tags,
     image_url,
@@ -434,7 +519,7 @@ export async function GET(request: Request) {
       day_of_week,
       festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
     ),
-    venue:venues(id, name, neighborhood, slug, blurhash, city)
+    venue:venues(id, name, neighborhood, slug, location_designator, blurhash, city)
   `;
 
     // Build all queries, tracking which ones we're running
@@ -446,7 +531,7 @@ export async function GET(request: Request) {
 
     // Followed venues query
     if (followedVenueIds.length > 0) {
-      let venueQuery = supabase
+      let venueQuery = portalClient
         .from("events")
         .select(eventSelect)
         .in("venue_id", followedVenueIds)
@@ -474,7 +559,7 @@ export async function GET(request: Request) {
 
     // Followed organizations by organization_id query
     if (followedOrganizationIds.length > 0) {
-      let producerQuery = supabase
+      let producerQuery = portalClient
         .from("events")
         .select(eventSelect)
         .in("organization_id", followedOrganizationIds)
@@ -502,7 +587,7 @@ export async function GET(request: Request) {
 
     // Followed organizations by source_id query
     if (producerSourceIds.length > 0) {
-      let sourceQuery = supabase
+      let sourceQuery = portalClient
         .from("events")
         .select(eventSelect)
         .in("source_id", producerSourceIds)
@@ -533,7 +618,7 @@ export async function GET(request: Request) {
     if (favoriteNeighborhoods.length > 0) {
       // Query events with venues in favorite neighborhoods
       // We filter by joining venue data and checking neighborhood
-      let neighborhoodQuery = supabase
+      let neighborhoodQuery = portalClient
         .from("events")
         .select(`${eventSelect}, venue!inner(neighborhood)`)
         .in("venue.neighborhood", favoriteNeighborhoods)
@@ -563,10 +648,10 @@ export async function GET(request: Request) {
 
     // Category events query
     if (favoriteCategories.length > 0) {
-      let categoryQuery = supabase
+      let categoryQuery = portalClient
         .from("events")
         .select(eventSelect)
-        .in("category", favoriteCategories)
+        .in("category_id", favoriteCategories)
         .gte("start_date", today)
         .eq("is_active", true)
         .is("canonical_event_id", null)
@@ -788,26 +873,39 @@ export async function GET(request: Request) {
       recommendation_count?: number;
     };
 
-    let events = (mergedEventsData || []) as EventResult[];
+    let events = suppressEventImagesIfVenueFlagged(
+      (mergedEventsData || []) as EventResult[],
+    );
 
     // Filter out cross-city events that leak via portal_id=NULL
     events = filterByPortalCity(events, portalFilters.city, {
       allowMissingCity: true,
     });
 
+    // Apply portal content filters (geo, neighborhoods, tags, venue_ids, price)
+    if (portalId) {
+      const contentFilters: PortalContentFilters = {
+        neighborhoods: portalFilters.neighborhoods,
+        geo_center: portalFilters.geo_center,
+        geo_radius_km: portalFilters.geo_radius_km,
+        price_max: portalFilters.price_max,
+        venue_ids: portalFilters.venue_ids,
+        tags: portalFilters.tags,
+      };
+      events = filterByPortalContentScope(events, contentFilters);
+    }
+
+    events = events.filter(
+      (event) => includeExhibits || !isSuppressedFromGeneralEventFeed(event),
+    );
+
     // Score and sort events by relevance
     events = events.map((event) => {
       let score = 0;
       const reasons: RecommendationReason[] = [];
       const tasteMatches: string[] = [];
-      const eventGenres = (event.genres || []).map((genre) =>
-        genre.toLowerCase(),
-      );
-      const haystack = [
-        event.title,
-        ...(event.tags || []),
-        ...eventGenres,
-      ]
+      const eventGenres = normalizeLowercaseStringList(event.genres);
+      const haystack = [event.title, ...(event.tags || []), ...eventGenres]
         .join(" ")
         .toLowerCase();
 
@@ -984,13 +1082,14 @@ export async function GET(request: Request) {
       });
     }
 
-    // Filter regular showtimes from curated feed (they belong in the showtimes rollup)
-    // Followed venues bypass the filter so users see showtimes from theaters they follow
+    // Filter only chain-cinema regular showtimes from curated feed.
+    // Indie theaters (Plaza/Tara/Landmark/Starlight, etc.) are intentionally kept.
+    // Followed venues always bypass suppression.
     events = events.filter((event) => {
-      if (!event.tags?.includes("showtime")) return true;
+      if (!isRegularShowtimeEvent(event.tags)) return true;
       if (event.venue?.id && followedVenueIds.includes(event.venue.id))
         return true;
-      return false;
+      return !isChainCinemaVenue(event.venue);
     });
 
     // When personalized mode is ON, filter to only events from followed entities
@@ -1028,8 +1127,10 @@ export async function GET(request: Request) {
           return true;
         // Keep events matching favorite genres
         if (
-          event.genres?.some((genre) =>
-            favoriteGenreSet.has(genre.toLowerCase()),
+          event.genres?.some(
+            (genre) =>
+              typeof genre === "string" &&
+              favoriteGenreSet.has(genre.toLowerCase()),
           )
         )
           return true;
@@ -1144,8 +1245,10 @@ export async function GET(request: Request) {
       const matchesTaste = (event: EventResult) =>
         Boolean(
           (event.category && favoriteCategories.includes(event.category)) ||
-          event.genres?.some((genre) =>
-            favoriteGenreSet.has(genre.toLowerCase()),
+          event.genres?.some(
+            (genre) =>
+              typeof genre === "string" &&
+              favoriteGenreSet.has(genre.toLowerCase()),
           ) ||
           (event.venue?.neighborhood &&
             favoriteNeighborhoods.includes(event.venue.neighborhood)),
@@ -1189,16 +1292,20 @@ export async function GET(request: Request) {
       const tonightCandidates = events.filter(
         (event) =>
           event.start_date === today &&
-          ((event.score || 0) >= 40 ||
+          ((event.score || 0) >= 20 ||
             isFollowedOrSocial(event) ||
             matchesTaste(event)),
       );
-      const tonightForYou = takeForSection(tonightCandidates, 6);
+      // Friday/Saturday nights deserve a bigger tonight section
+      const dayOfWeek = now.getDay(); // 0=Sun, 5=Fri, 6=Sat
+      const isWeekendNight = dayOfWeek === 5 || dayOfWeek === 6;
+      const tonightMax = isWeekendNight ? 12 : 8;
+      const tonightForYou = takeForSection(tonightCandidates, tonightMax);
       if (tonightForYou.length >= 2) {
         sections.push({
           id: "tonight_for_you",
-          title: "Tonight for You",
-          description: "Strong social and taste matches happening today.",
+          title: "Your Tonight",
+          description: "What's calling your name today.",
           events: tonightForYou,
         });
       }
@@ -1208,13 +1315,12 @@ export async function GET(request: Request) {
           return false;
         return matchesTaste(event) || matchesNeeds(event);
       });
-      const thisWeekFitsYourTaste = takeForSection(thisWeekCandidates, 8);
+      const thisWeekFitsYourTaste = takeForSection(thisWeekCandidates, 10);
       if (thisWeekFitsYourTaste.length >= 2) {
         sections.push({
           id: "this_week_fits_your_taste",
-          title: "This Week Fits Your Taste",
-          description:
-            "Shortlisted from your categories, genres, neighborhoods, and needs.",
+          title: "On Your Radar",
+          description: "This week's picks based on what you love.",
           events: thisWeekFitsYourTaste,
         });
       }
@@ -1222,12 +1328,12 @@ export async function GET(request: Request) {
       const followedCandidates = events.filter((event) =>
         isFollowedOrSocial(event),
       );
-      const fromPlacesPeopleYouFollow = takeForSection(followedCandidates, 8);
+      const fromPlacesPeopleYouFollow = takeForSection(followedCandidates, 10);
       if (fromPlacesPeopleYouFollow.length >= 2) {
         sections.push({
           id: "from_places_people_you_follow",
-          title: "From Places and People You Follow",
-          description: "Social proof and followed venues/organizers first.",
+          title: "Your Scene",
+          description: "From the spots and people you're into.",
           events: fromPlacesPeopleYouFollow,
         });
       }
@@ -1237,13 +1343,13 @@ export async function GET(request: Request) {
       );
       const exploreSomethingNew = takeForSection(
         exploreCandidates.length > 0 ? exploreCandidates : events,
-        8,
+        6,
       );
       if (exploreSomethingNew.length >= 2) {
         sections.push({
           id: "explore_something_new",
-          title: "Explore Something New",
-          description: "A stretch set outside your usual pattern.",
+          title: "Wild Card",
+          description: "Something outside your usual orbit.",
           events: exploreSomethingNew,
         });
       }
@@ -1349,17 +1455,20 @@ export async function GET(request: Request) {
       } | null;
     };
 
-    const trendingEventsRaw = (trendingEventsResult.data ||
-      []) as TrendingEventData[];
+    const trendingEventsRaw = suppressEventImagesIfVenueFlagged(
+      (trendingEventsResult.data || []) as TrendingEventData[],
+    );
     // Filter by city to prevent cross-city leakage, then by adult content preference
     const trendingEventsData = filterByPortalCity(
       trendingEventsRaw,
       portalFilters.city || "Atlanta",
-      { allowMissingCity: true }
+      { allowMissingCity: true },
     );
-    const filteredTrendingEventsData = hideAdultContent
+    const filteredTrendingEventsData = (hideAdultContent
       ? trendingEventsData.filter((event) => event.is_adult !== true)
-      : trendingEventsData;
+      : trendingEventsData).filter(
+      (event) => includeExhibits || !isSuppressedFromGeneralEventFeed(event),
+    );
     let trendingEvents: (TrendingEventData & {
       score: number;
       going_count: number;
@@ -1402,7 +1511,7 @@ export async function GET(request: Request) {
 
       // Score events based on recent activity + total interest
       const scored = filteredTrendingEventsData.map((event) => ({
-        ...event,
+        ...suppressEventImageIfVenueFlagged(event),
         score:
           (recentRsvpCounts[event.id] || 0) * 3 +
           (totalGoingCounts[event.id] || 0),
@@ -1442,32 +1551,40 @@ export async function GET(request: Request) {
         };
 
     // Return results with cursor pagination, trending, and preferences
-    return NextResponse.json(
-      {
-        events: pageEventsWithCounts,
-        sections: parsedCursor ? [] : sectionsWithCounts,
-        trending: trendingEvents,
-        preferences: preferencesResponse,
-        cursor: nextCursor,
-        hasMore,
-        hasPreferences: !!(
-          favoriteCategories.length ||
-          favoriteNeighborhoods.length ||
-          favoriteGenres.length ||
-          prefs?.favorite_vibes?.length ||
-          needsAccessibility.length ||
-          needsDietary.length ||
-          needsFamily.length
-        ),
-        personalization,
-      },
-      {
-        headers: {
-          // Private cache for user-specific content
-          "Cache-Control": "private, max-age=60, stale-while-revalidate=120",
-        },
-      },
-    );
+    const payload = {
+      events: pageEventsWithCounts,
+      sections: parsedCursor ? [] : sectionsWithCounts,
+      trending: trendingEvents,
+      preferences: preferencesResponse,
+      cursor: nextCursor,
+      hasMore,
+      hasPreferences: !!(
+        favoriteCategories.length ||
+        favoriteNeighborhoods.length ||
+        favoriteGenres.length ||
+        prefs?.favorite_vibes?.length ||
+        needsAccessibility.length ||
+        needsDietary.length ||
+        needsFamily.length
+      ),
+      personalization,
+    };
+    await setCachedFeedResponse(cacheKey, payload);
+
+    return NextResponse.json(payload, {
+      headers: responseHeaders,
+    });
+    })();
+
+    FEED_RESPONSE_IN_FLIGHT_LOADS.set(cacheKey, feedLoadPromise);
+    try {
+      return await feedLoadPromise;
+    } finally {
+      const currentFeedLoad = FEED_RESPONSE_IN_FLIGHT_LOADS.get(cacheKey);
+      if (currentFeedLoad === feedLoadPromise) {
+        FEED_RESPONSE_IN_FLIGHT_LOADS.delete(cacheKey);
+      }
+    }
   } catch (err) {
     return errorResponse(err, "GET /api/feed");
   }

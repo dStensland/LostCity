@@ -2,34 +2,38 @@ version: 1
 slug: needle-nook
 name: Needle Nook
 integration_method: playwright
-notes: >
-  WordPress + WooCommerce. Classes listed as products at /shop/classes/.
-  Each class has title, price, and link to detail page with dates.
+notes: 'WordPress + WooCommerce. Classes listed as products at /shop/classes/. Each
+  class has title, price, and link to detail page with dates.
+
+  '
 defaults:
   venue_name: Needle Nook
   category: art
-  subcategory: workshop
   tags:
-    - fiber-arts
-    - knitting
-    - crochet
-    - class
+  - fiber-arts
+  - knitting
+  - crochet
+  - class
 discovery:
   enabled: true
   type: list
   urls:
-    - https://needlenookyarns.com/shop/classes/
-  event_card: ".product, .type-product, li.product"
+  - https://needlenookyarns.com/shop/classes/
+  event_card: .product, .type-product, li.product
   fields:
-    title: "h2, .woocommerce-loop-product__title"
-    detail_url: "a[href*='/product/']@href"
-    price: ".price, .woocommerce-Price-amount"
+    title: h2, .woocommerce-loop-product__title
+    detail_url: a[href*='/product/']@href
+    price: .price, .woocommerce-Price-amount
 detail:
   enabled: true
   selectors:
-    description: ".woocommerce-product-details__short-description, .product-description"
-    price: ".price .woocommerce-Price-amount"
+    description: .woocommerce-product-details__short-description, .product-description
+    price: .price .woocommerce-Price-amount
   use_jsonld: true
   use_open_graph: false
   use_heuristic: true
   use_llm: false
+data_goals:
+- events
+- images
+- tickets

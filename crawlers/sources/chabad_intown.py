@@ -372,10 +372,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     series_hint = get_series_hint(title, description)
                     is_recurring = series_hint is not None
 
-                    # Determine if free (most Chabad events are free or donation-based)
-                    is_free = True
-                    price_note = "Free - donations welcome"
+                    # Determine if free based on text
+                    is_free = False
+                    price_note = None
                     text_lower = text.lower()
+
+                    if any(kw in text_lower for kw in ["free", "no cost", "no charge", "complimentary"]):
+                        is_free = True
+                        price_note = "Free"
 
                     if any(kw in text_lower for kw in ["$", "cost:", "price:", "ticket"]):
                         # If price is mentioned, try to extract it

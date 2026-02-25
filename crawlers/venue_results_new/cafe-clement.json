@@ -1,0 +1,44 @@
+{
+  "venue_id": 4898,
+  "venue_slug": "cafe-clement",
+  "meta": {
+    "og_image": "http://static1.squarespace.com/static/5c9d299450fe900001e00278/t/63f8ea6ab77d93707bc0b954/1677257322796/ccname4.png?format=1500w",
+    "meta_description": "We are a coffee roastery that specializes in sourcing high quality coffees \r\nand working with the same producers every year creating a more consistent \r\nand sustainable coffee buying experience. We roast weekly, offering \r\nespresso blends, single-origin coffees, subscriptions, and more.",
+    "reservation_links": [],
+    "menu_links": [
+      "https://www.cafeclement.com/menu",
+      "http://www.cafeclement.com/menu"
+    ],
+    "instagram": "cafeclement",
+    "facebook_url": null,
+    "phone": null
+  },
+  "extracted": {
+    "hours": {
+      "mon": {"open": "07:00", "close": "15:30"},
+      "tue": {"open": "07:00", "close": "15:30"},
+      "wed": {"open": "07:00", "close": "15:30"},
+      "thu": {"open": "07:00", "close": "15:30"},
+      "fri": {"open": "07:00", "close": "15:30"},
+      "sat": {"open": "08:00", "close": "15:30"},
+      "sun": null
+    },
+    "vibes": ["cozy", "casual", "artsy"],
+    "cuisine": ["coffee", "bakery"],
+    "service_style": "coffee_dessert",
+    "price_level": 1,
+    "menu_highlights": [
+      {"name": "Classique Espresso", "price": null, "category": "dessert"},
+      {"name": "Single-Origin Coffees", "price": null, "category": "dessert"},
+      {"name": "Specialty Coffee Subscriptions", "price": null, "category": "dessert"}
+    ],
+    "menu_url": "https://www.cafeclement.com/menu",
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "cafeclement",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

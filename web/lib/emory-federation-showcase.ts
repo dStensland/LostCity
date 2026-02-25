@@ -6,7 +6,7 @@ import {
   isCompetitorExcluded,
   resolveEmorySourcePolicy,
 } from "@/lib/emory-source-policy";
-import { resolveSupportSourcePolicy } from "@/lib/support-source-policy";
+import { resolveSupportSourcePolicy, SUPPORT_SOURCE_POLICY_ITEMS } from "@/lib/support-source-policy";
 import type { HospitalLocation } from "@/lib/hospitals";
 import { supabase } from "@/lib/supabase";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -698,9 +698,30 @@ export async function getEmoryFederationShowcase(args: {
     });
   }
 
+  // Enrich with always-available support policy orgs that have no active events
+  const existingOrgNames = new Set(
+    [...orgMap.values()].map((o) => normalizePolicyText(o.name))
+  );
+  for (const policyOrg of SUPPORT_SOURCE_POLICY_ITEMS) {
+    const normalizedName = normalizePolicyText(policyOrg.name);
+    if (existingOrgNames.has(normalizedName)) continue;
+    const orgId = `support:${policyOrg.id}`;
+    if (orgMap.has(orgId)) continue;
+    orgMap.set(orgId, {
+      id: orgId,
+      name: policyOrg.name,
+      slug: null,
+      orgType: "Always available",
+      imageUrl: null,
+      upcomingCount: 0,
+      detailHref: policyOrg.url,
+    });
+    existingOrgNames.add(normalizedName);
+  }
+
   const organizations = [...orgMap.values()]
-    .sort((a, b) => b.upcomingCount - a.upcomingCount)
-    .slice(0, 24);
+    .sort((a, b) => b.upcomingCount - a.upcomingCount || a.name.localeCompare(b.name))
+    .slice(0, 48);
 
   if (eventPreviews.length === 0 && rankedVenues.length === 0 && organizations.length === 0) {
     return buildFallbackShowcase({

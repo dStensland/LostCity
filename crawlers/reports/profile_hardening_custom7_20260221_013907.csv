@@ -1,0 +1,8 @@
+slug,source_exists,source_type,is_active_before,events_found,events_new,events_updated,duration_seconds,status,error,activated
+atlanta-apparel-market,True,organization,False,0,0,0,75.03,timeout,profile validation timed out,False
+atlanta-cocktail-week,True,organization,False,1,1,0,37.87,ok,,True
+atlanta-coin-show,True,organization,False,2,2,0,31.98,ok,,True
+atlanta-home-show,True,organization,False,0,0,0,75.02,timeout,profile validation timed out,False
+garden-lights-holiday-nights,True,organization,False,0,0,0,32.59,ok,,False
+smyrna-oysterfest,True,organization,False,1,1,0,41.45,ok,,True
+woodstock-summer-concert-series,True,organization,False,0,0,0,75.03,timeout,profile validation timed out,False

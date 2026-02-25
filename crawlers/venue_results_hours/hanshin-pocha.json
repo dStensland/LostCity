@@ -1,0 +1,28 @@
+{
+  "venue_id": 4403,
+  "venue_slug": "hanshin-pocha",
+  "meta": {
+    "og_image": "https://static.wixstatic.com/media/512626_9035734396be47f19412a98eff4d8a52%7Emv2.png/v1/fit/w_2500,h_1330,al_c/512626_9035734396be47f19412a98eff4d8a52%7Emv2.png",
+    "meta_description": "Hanshin Pocha is not only a place to satisfy their hunger, but also a place to find companies and entertainment.\nEnjoy delicious Korean food.",
+    "reservation_links": [],
+    "menu_links": [],
+    "instagram": "hanshinpocha.us",
+    "facebook_url": null,
+    "phone": "(562) 623-5715"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["casual", "lively", "late-night"],
+    "cuisine": ["korean"],
+    "service_style": "full_service",
+    "price_level": 2,
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": "(562) 623-5715",
+    "instagram": "hanshinpocha.us",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

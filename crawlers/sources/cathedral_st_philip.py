@@ -15,7 +15,13 @@ from typing import Optional
 from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    get_or_create_venue,
+    insert_event,
+    find_event_by_hash,
+    smart_update_existing_event,
+    validate_event_title,
+)
 from dedupe import generate_content_hash
 from utils import extract_event_links, find_event_url, normalize_time_format
 
@@ -242,6 +248,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                                         break
 
                                     if title:
+                                        if not validate_event_title(title):
+                                            i += 1
+                                            continue
+
                                         category = determine_category(title)
 
                                         # Skip religious services (not concerts/events)
@@ -257,6 +267,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
 
                                         event_url = find_event_url(title, event_links, url)
+                                        if event_url and event_url.lower().startswith("javascript:"):
+                                            event_url = url
 
                                         event_record = {
                                             "source_id": source_id,
@@ -328,6 +340,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 if not start_date:
                                     continue
 
+                                if not validate_event_title(title):
+                                    continue
+
                                 # Extract time
                                 time_text = date_text
                                 start_time = parse_time(time_text)
@@ -348,6 +363,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 event_url = link_elem["href"] if link_elem else url
                                 if event_url and not event_url.startswith("http"):
                                     event_url = BASE_URL + event_url if event_url.startswith("/") else BASE_URL + "/" + event_url
+                                if event_url and event_url.lower().startswith("javascript:"):
+                                    event_url = url
 
                                 # Extract image
                                 img_elem = container.find("img", src=True)
@@ -360,12 +377,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                 content_hash = generate_content_hash(
                                     title, "The Cathedral of St. Philip", start_date
                                 )
-
-                                existing = find_event_by_hash(content_hash)
-                                if existing:
-                                    smart_update_existing_event(existing, event_record)
-                                    events_updated += 1
-                                    continue
 
                                 event_record = {
                                     "source_id": source_id,
@@ -393,6 +404,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                     "recurrence_rule": None,
                                     "content_hash": content_hash,
                                 }
+
+                                existing = find_event_by_hash(content_hash)
+                                if existing:
+                                    smart_update_existing_event(existing, event_record)
+                                    events_updated += 1
+                                    continue
 
                                 try:
                                     insert_event(event_record)

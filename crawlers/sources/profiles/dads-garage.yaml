@@ -5,7 +5,6 @@ integration_method: html
 defaults:
   venue_name: Dad's Garage Theatre
   category: comedy
-  subcategory: improv
   tags:
   - comedy
   - improv
@@ -30,3 +29,8 @@ detail:
   use_open_graph: true
   use_heuristic: true
   use_llm: false
+data_goals:
+- events
+- images
+- lineup
+- tickets

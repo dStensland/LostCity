@@ -89,11 +89,11 @@ def determine_category_and_tags(title: str, description: str = "") -> tuple[str,
     text = f"{title} {description}".lower()
     tags = ["ocd", "mental-health"]
 
-    # Support groups (always free)
+    # Support groups
     if "support group" in text or "support" in text:
         category = "community"
         tags.append("support-group")
-        is_free = True
+        is_free = "free" in text or "no cost" in text
 
         # Specific group types
         if "poc" in text or "people of color" in text or "bipoc" in text:
@@ -111,7 +111,7 @@ def determine_category_and_tags(title: str, description: str = "") -> tuple[str,
     elif any(word in text for word in ["workshop", "seminar", "training", "education", "class"]):
         category = "learning"
         tags.extend(["education", "workshop"])
-        is_free = True
+        is_free = "free" in text or "no cost" in text
 
     # Conferences/symposiums
     elif "conference" in text or "symposium" in text:
@@ -128,7 +128,7 @@ def determine_category_and_tags(title: str, description: str = "") -> tuple[str,
     # Default
     else:
         category = "community"
-        is_free = True
+        is_free = "free" in text or "no cost" in text
 
     # Virtual events
     if any(word in text for word in ["virtual", "online", "zoom", "webinar"]):

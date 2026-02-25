@@ -1,0 +1,21 @@
+{
+  "venue_id": 1582,
+  "venue_slug": "tall-tales-rooftop-bar",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["rooftop", "live-music", "dj", "date-night", "upscale", "craft-cocktails", "dancing"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "https://talltalesrooftop.com/menu/",
+    "reservation_url": "https://www.opentable.com/r/tall-tales-nashville",
+    "phone": "(615) 650-9075",
+    "instagram": "talltalesnashville",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

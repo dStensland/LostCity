@@ -1,0 +1,28 @@
+{
+  "venue_id": 978,
+  "venue_slug": "standard-at-alpharetta",
+  "meta": {
+    "og_image": null,
+    "meta_description": null,
+    "reservation_links": [],
+    "menu_links": ["https://drive.google.com/file/d/16hF7nC6aGUSXg4b6AoGvGVVdYmLfyO1k/view?usp=sharing", "https://drive.google.com/file/d/1_sWxLgiOJOJmPuwrWJwbCLnzPFt1OChi/view?usp=drive_link", "https://standardrestaurantgroup.com/alpharetta/wp-content/uploads/2025/03/1-STNDRD_MenuDesign_BILLS_2021Season-1.pdf"],
+    "instagram": "eatatstandard",
+    "facebook_url": "https://www.facebook.com/StandardAtRoswell",
+    "phone": "(770) 729-8443"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["casual", "lively", "live-music", "outdoor-seating", "good-for-groups"],
+    "cuisine": ["pizza", "american", "wings"],
+    "service_style": "full_service",
+    "price_level": "$$",
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": "(770) 729-8443",
+    "instagram": "eatatstandard",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

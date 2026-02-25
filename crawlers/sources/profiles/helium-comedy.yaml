@@ -10,3 +10,8 @@ discovery:
   - https://atlanta.heliumcomedy.com
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- lineup
+- tickets

@@ -325,7 +325,7 @@ function EventsTabContent({
       {hasVenueEvents && (
         <div>
           <h3 className="text-xs font-mono uppercase tracking-wider text-[var(--muted)] mb-2">
-            At {venueName || "this venue"}
+            At {venueName || "this spot"}
           </h3>
           <VenueEventsByDay
             events={venueEvents}

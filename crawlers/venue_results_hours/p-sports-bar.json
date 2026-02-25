@@ -1,0 +1,36 @@
+{
+  "venue_id": 1891,
+  "venue_slug": "p-sports-bar",
+  "meta": {
+    "og_image": null,
+    "meta_description": "P Sports Bar #1 sports bar in Atlanta. Open 7 days a week at 5pm! ",
+    "reservation_links": [],
+    "menu_links": ["https://www.flowcode.com/page/penthouse"],
+    "instagram": "penthouse.atl",
+    "facebook_url": "https://www.facebook.com/profile.php",
+    "phone": "(470) 753-4800"
+  },
+  "extracted": {
+    "hours": {
+      "mon": {"open": "17:00", "close": "23:00"},
+      "tue": {"open": "17:00", "close": "23:00"},
+      "wed": {"open": "17:00", "close": "23:00"},
+      "thu": {"open": "17:00", "close": "23:00"},
+      "fri": {"open": "17:00", "close": "23:00"},
+      "sat": {"open": "17:00", "close": "23:00"},
+      "sun": {"open": "17:00", "close": "23:00"}
+    },
+    "vibes": ["sports-bar", "late-night", "lively", "upscale"],
+    "cuisine": [],
+    "service_style": "full_service",
+    "price_level": null,
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": "(470) 753-4800",
+    "instagram": "penthouse.atl",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

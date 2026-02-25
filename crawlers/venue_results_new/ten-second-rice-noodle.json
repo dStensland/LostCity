@@ -1,0 +1,44 @@
+{
+  "venue_id": 4852,
+  "venue_slug": "ten-second-rice-noodle",
+  "meta": {
+    "og_image": null,
+    "meta_description": "Order online from 十秒到云南过桥米线TEN SECOND, Doraville GA 30360. You are ordering direct from our store. Not a third party platform.",
+    "reservation_links": [],
+    "menu_links": [
+      "http://www.tensecondricenoodle.com/index.php",
+      "http://www.tensecondricenoodle.com/index.php"
+    ],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": "(678) 395-6096"
+  },
+  "extracted": {
+    "hours": {
+      "mon": {"open": "11:00", "close": "21:30"},
+      "tue": {"open": "11:00", "close": "21:30"},
+      "wed": {"open": "11:00", "close": "21:30"},
+      "thu": {"open": "11:00", "close": "21:30"},
+      "fri": {"open": "11:00", "close": "22:00"},
+      "sat": {"open": "11:00", "close": "22:00"},
+      "sun": {"open": "11:00", "close": "21:30"}
+    },
+    "vibes": ["casual", "fast-casual"],
+    "cuisine": ["chinese"],
+    "service_style": "quick_service",
+    "price_level": 1,
+    "menu_highlights": [
+      {"name": "Coke", "price": "$2.00", "category": "side"},
+      {"name": "Jdb Herbal Tea", "price": "$3.00", "category": "side"},
+      {"name": "Coconut Milk", "price": "$3.00", "category": "side"}
+    ],
+    "menu_url": "http://www.tensecondricenoodle.com/index.php",
+    "reservation_url": null,
+    "phone": "(678) 395-6096",
+    "instagram": null,
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

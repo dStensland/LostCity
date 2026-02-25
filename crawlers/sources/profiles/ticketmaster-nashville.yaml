@@ -12,3 +12,7 @@ discovery:
     adapter: ticketmaster-nashville
 detail:
   enabled: false
+data_goals:
+- events
+- images
+- tickets

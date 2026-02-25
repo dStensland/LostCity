@@ -10,7 +10,6 @@ import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
 import {
   PREFERENCE_CATEGORIES,
-  PREFERENCE_NEIGHBORHOODS,
   PREFERENCE_VIBES,
   PRICE_PREFERENCES,
   PREFERENCE_NEEDS_ACCESSIBILITY,
@@ -156,8 +155,9 @@ export default function PreferencesClient({
         ? current.filter((g) => g !== genre)
         : [...current, genre];
       if (updated.length === 0) {
-        const { [category]: _, ...rest } = prev;
-        return rest;
+        const next = { ...prev };
+        delete next[category];
+        return next;
       }
       return { ...prev, [category]: updated };
     });

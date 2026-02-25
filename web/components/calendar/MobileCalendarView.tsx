@@ -394,7 +394,7 @@ export default function MobileCalendarView({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
             </div>
-            <p className="text-[var(--muted)] text-sm">No events</p>
+            <p className="text-[var(--muted)] text-sm">No events for this day</p>
             <p className="text-[var(--muted)]/60 text-xs mt-1">
               {isBefore(selectedDate, new Date()) && !isToday(selectedDate)
                 ? "That day has passed"

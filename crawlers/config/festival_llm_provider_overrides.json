@@ -1,0 +1,8 @@
+{
+  "updated_at": "2026-02-20",
+  "notes": "Per-festival provider overrides used by crawl_festival_schedule fallback extraction.",
+  "providers_by_slug": {
+    "out-on-film": "openai",
+    "render-atl": "openai"
+  }
+}

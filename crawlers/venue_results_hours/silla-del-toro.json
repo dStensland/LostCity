@@ -1,0 +1,36 @@
+{
+  "venue_id": 4906,
+  "venue_slug": "silla-del-toro",
+  "meta": {
+    "og_image": "http://static1.squarespace.com/static/5d1cdb3538b02a0001bd2f19/t/5fb17e0b24c06f5373fb63fb/1605467662670/ST_LOGO+FULL.png?format=1500w",
+    "meta_description": "Serving traditional Spanish tapas + drinks in Marietta Square and Toco Hill | Atlanta. Visit our award-winning restaurant + bar, open every night at 4 PM and for brunch on Saturdays + Sundays starting at noon. Accepting walk-ins and reservations.",
+    "reservation_links": [],
+    "menu_links": ["http://www.silladeltoro.com/menu", "http://www.silladeltoro.com/drinks"],
+    "instagram": "silladeltoro",
+    "facebook_url": "http://www.facebook.com/silladeltoro",
+    "phone": null
+  },
+  "extracted": {
+    "hours": {
+      "mon": {"open": "16:00", "close": "22:00"},
+      "tue": {"open": "16:00", "close": "22:00"},
+      "wed": {"open": "16:00", "close": "22:00"},
+      "thu": {"open": "16:00", "close": "22:00"},
+      "fri": {"open": "16:00", "close": "22:00"},
+      "sat": {"open": "12:00", "close": "22:00"},
+      "sun": {"open": "12:00", "close": "22:00"}
+    },
+    "vibes": ["date-spot", "tapas", "craft-cocktails", "intimate"],
+    "cuisine": ["spanish", "tapas"],
+    "service_style": "full_service",
+    "price_level": "$$",
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "silladeltoro",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

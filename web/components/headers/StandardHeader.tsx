@@ -222,60 +222,30 @@ export default function StandardHeader({
       <header
         className="portal-feed-header sticky top-0 z-[100] border-b border-[var(--twilight)]/30 bg-[var(--void)]/95 backdrop-blur-sm relative"
       >
-        {/* Atlanta atmospheric backdrop — inverted skyline, photo-negative feel */}
+        {/* Atlanta atmospheric backdrop — inverted skyline silhouettes */}
         {portalSlug === "atlanta" && (
           <div
             aria-hidden="true"
             className="absolute inset-0 pointer-events-none overflow-hidden"
           >
-            {/* Desktop: Inverted skyline silhouettes — buildings hang from top edge */}
-            <div
-              className="absolute inset-0 hidden sm:block"
-              style={{
-                backgroundImage: 'url("/portals/atlanta/header-skyline-collage.jpg")',
-                backgroundSize: "cover",
-                backgroundPosition: "center bottom",
-                backgroundRepeat: "no-repeat",
-                transform: "scaleY(-1)",
-                mixBlendMode: "screen",
-                opacity: 0.5,
-              }}
-            />
-            {/* Desktop: Cyan-magenta tint over the revealed buildings */}
-            <div
-              className="absolute inset-0 hidden sm:block"
-              style={{
-                background: "linear-gradient(135deg, hsl(185 100% 46% / 0.12) 0%, hsl(320 80% 62% / 0.08) 100%)",
-                mixBlendMode: "screen",
-                pointerEvents: "none",
-              }}
-            />
-            {/* Mobile: Inverted skyline silhouettes */}
-            <div
-              className="absolute inset-0 sm:hidden"
-              style={{
-                backgroundImage: 'url("/portals/atlanta/header-skyline-collage.jpg")',
-                backgroundSize: "cover",
-                backgroundPosition: "center bottom",
-                backgroundRepeat: "no-repeat",
-                transform: "scaleY(-1)",
-                mixBlendMode: "screen",
-                opacity: 0.35,
-              }}
-            />
-            {/* Mobile: Light cyan tint */}
-            <div
-              className="absolute inset-0 sm:hidden"
-              style={{
-                background: "linear-gradient(135deg, hsl(185 100% 46% / 0.06) 0%, hsl(320 80% 62% / 0.04) 100%)",
-                mixBlendMode: "screen",
-              }}
-            />
-            {/* Dark vignette — ensures text/icons always readable over bright skyline patches */}
+            {/* Inverted skyline — buildings hang from top edge */}
             <div
               className="absolute inset-0"
               style={{
-                background: "radial-gradient(ellipse 120% 100% at 50% 0%, rgba(0,0,0,0.35) 0%, transparent 70%)",
+                backgroundImage: 'url("/portals/atlanta/header-skyline-collage.jpg")',
+                backgroundSize: "cover",
+                backgroundPosition: "center bottom",
+                backgroundRepeat: "no-repeat",
+                transform: "scaleY(-1)",
+                mixBlendMode: "soft-light",
+                opacity: 0.18,
+              }}
+            />
+            {/* Coral-cyan tint */}
+            <div
+              className="absolute inset-0"
+              style={{
+                background: "linear-gradient(135deg, hsl(355 100% 71% / 0.06) 0%, hsl(185 100% 46% / 0.04) 100%)",
                 pointerEvents: "none",
               }}
             />
@@ -335,8 +305,8 @@ export default function StandardHeader({
                     href={getHref(tab)}
                     className={`portal-feed-tab nav-tab relative flex-1 text-center px-3 py-1.5 rounded-md font-mono text-xs whitespace-nowrap transition-all duration-300 ${
                       active
-                        ? "nav-tab-active text-[var(--void)] font-medium"
-                        : "text-[var(--muted)] hover:text-[var(--neon-amber)] border border-transparent"
+                        ? "nav-tab-active text-[var(--cream)] font-medium"
+                        : "text-[var(--muted)] hover:text-[var(--soft)] border border-transparent"
                     }`}
                     role="tab"
                     aria-selected={active}
@@ -351,16 +321,16 @@ export default function StandardHeader({
             </nav>
           )}
 
-          {/* Right: Search, User menu, Mobile menu */}
-          <div className="portal-feed-actions flex items-center gap-1.5 sm:gap-2 flex-shrink-0 ml-auto" style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.9)) drop-shadow(0 0 6px rgba(0,0,0,0.5))" }}>
-            {headerConfig.show_search_in_header !== false && <HeaderSearchButton />}
+          {/* Right: Search, User menu, Mobile overflow */}
+          <div className="portal-feed-actions flex items-center gap-1.5 sm:gap-2 flex-shrink-0 ml-auto">
+            {headerConfig.show_search_in_header !== false && currentView !== "find" && <HeaderSearchButton />}
             <UserMenu />
 
-            {/* Mobile hamburger menu */}
+            {/* Mobile overflow menu — utility items only (nav is in the tab bar below) */}
             <div className="relative sm:hidden" ref={mobileMenuRef}>
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="p-2 text-[var(--cream)] hover:text-[var(--neon-amber)] hover:bg-[var(--twilight)]/70 rounded-lg transition-colors active:scale-95 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
+                className="p-2 text-[var(--cream)] hover:text-[var(--soft)] hover:bg-[var(--twilight)]/70 rounded-lg transition-colors active:scale-95 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
                 aria-expanded={mobileMenuOpen}
                 aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
               >
@@ -370,57 +340,28 @@ export default function StandardHeader({
                   </svg>
                 ) : (
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01" />
                   </svg>
                 )}
               </button>
 
               {mobileMenuOpen && (
-                <div className="absolute right-0 top-full mt-2 w-56 py-2 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg shadow-xl z-[200]">
-                  <div className="px-3 py-1.5 text-[0.65rem] font-mono text-[var(--muted)] uppercase tracking-wider">
-                    Quick Links
-                  </div>
-                  <Link
-                    href={`/${portalSlug}?view=find&type=events`}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-2 px-3 py-2 font-mono text-sm text-[var(--muted)] hover:text-[var(--neon-amber)] hover:bg-[var(--twilight)]/30"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    Events
-                  </Link>
-                  <Link
-                    href={`/${portalSlug}?view=find&type=destinations`}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-2 px-3 py-2 font-mono text-sm text-[var(--muted)] hover:text-[var(--neon-amber)] hover:bg-[var(--twilight)]/30"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    Places
-                  </Link>
+                <div className="absolute right-0 top-full mt-2 w-48 py-2 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg shadow-xl z-[200]">
                   <Link
                     href={`/${portalSlug}?view=find&display=map`}
                     onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-2 px-3 py-2 font-mono text-sm text-[var(--muted)] hover:text-[var(--neon-amber)] hover:bg-[var(--twilight)]/30"
+                    className="flex items-center gap-2 px-3 py-2 font-mono text-sm text-[var(--muted)] hover:text-[var(--soft)] hover:bg-[var(--twilight)]/30"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
                     </svg>
                     Map View
                   </Link>
-
-                  <div className="my-2 border-t border-[var(--twilight)]" />
-
-                  <div className="px-3 py-1.5 text-[0.65rem] font-mono text-[var(--muted)] uppercase tracking-wider">
-                    Settings
-                  </div>
+                  <div className="my-1.5 border-t border-[var(--twilight)]" />
                   <Link
                     href="/settings"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-2 px-3 py-2 font-mono text-sm text-[var(--muted)] hover:text-[var(--neon-amber)] hover:bg-[var(--twilight)]/30"
+                    className="flex items-center gap-2 px-3 py-2 font-mono text-sm text-[var(--muted)] hover:text-[var(--soft)] hover:bg-[var(--twilight)]/30"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -450,8 +391,8 @@ export default function StandardHeader({
                     href={getHref(tab)}
                     className={`portal-feed-tab nav-tab relative flex-1 text-center py-1 rounded-md font-mono text-[0.65rem] whitespace-nowrap transition-all duration-300 ${
                       active
-                        ? "nav-tab-active text-[var(--void)] font-medium"
-                        : "text-[var(--muted)] hover:text-[var(--neon-amber)] border border-transparent"
+                        ? "nav-tab-active text-[var(--cream)] font-medium"
+                        : "text-[var(--muted)] hover:text-[var(--soft)] border border-transparent"
                     }`}
                     role="tab"
                     aria-selected={active}

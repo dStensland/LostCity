@@ -31,7 +31,7 @@ const OPTIONS: { key: Option; label: string; icon: React.ReactNode }[] = [
   },
   {
     key: "destination",
-    label: "Destination",
+    label: "Spot",
     icon: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -134,7 +134,7 @@ export default function AddNewChooser({ portalSlug }: AddNewChooserProps) {
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
-          <span className="font-mono text-xs">Submit an event, destination, or organization</span>
+          <span className="font-mono text-xs">Submit an event, spot, or organization</span>
         </button>
 
         {isDropdownOpen && (

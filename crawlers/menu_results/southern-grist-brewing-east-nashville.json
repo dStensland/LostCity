@@ -1,0 +1,48 @@
+{
+  "venue_id": 1632,
+  "venue_slug": "southern-grist-brewing-east-nashville",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "The Grist Dry Aged Burger",
+        "price": "$14",
+        "category": "entree"
+      },
+      {
+        "name": "Caesar Fries",
+        "price": "$14",
+        "category": "appetizer"
+      },
+      {
+        "name": "Fried White Cheddar Curds",
+        "price": "$9",
+        "category": "appetizer"
+      },
+      {
+        "name": "BLT Sandwich",
+        "price": "$14",
+        "category": "entree"
+      }
+    ],
+    "dietary_options": [],
+    "price_level": 2,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

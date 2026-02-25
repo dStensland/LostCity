@@ -269,9 +269,13 @@ def crawl(source: dict) -> Tuple[int, int, int]:
                 if "lecture" in title_lower or "talk" in title_lower:
                     tags.append("lecture")
 
-                # Determine if free (most Presidential Library events are free)
-                is_free = True
-                price_note = "Free admission"
+                # Determine if free based on text
+                is_free = False
+                price_note = None
+                combined_text = f"{title} {description or ''}".lower()
+                if any(kw in combined_text for kw in ["free", "no cost", "no charge", "complimentary"]):
+                    is_free = True
+                    price_note = "Free admission"
 
                 # Generate content hash
                 content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)

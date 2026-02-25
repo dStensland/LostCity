@@ -286,8 +286,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 else:
                     event_description = f"{title} at Auburn Avenue Research Library, Atlanta's premier research library dedicated to African American culture and history."
 
-                # All library events are free
-                is_free = True
+                # Default to unknown cost
+                is_free = False
 
                 # Get image from enclosure if available
                 image_url = None

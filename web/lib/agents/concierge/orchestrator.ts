@@ -43,19 +43,19 @@ const DISCOVERY_KEYWORDS: Record<Exclude<ConciergeDiscoveryFocus, "any">, string
 
 const FOOD_FOCUS_CONFIG: Record<Exclude<ConciergeFoodFocus, "any">, { venueTypes: string[]; keywords: string[] }> = {
   cocktails: {
-    venueTypes: ["bar", "rooftop", "distillery", "nightclub"],
+    venueTypes: ["bar", "cocktail_bar", "rooftop", "nightclub"],
     keywords: ["cocktail", "martini", "speakeasy", "mixology", "aperitivo"],
   },
   sports_bar: {
-    venueTypes: ["sports_bar", "bar", "brewery"],
+    venueTypes: ["bar", "brewery"],
     keywords: ["sports", "watch", "game", "match"],
   },
   mexican: {
-    venueTypes: ["restaurant", "food_hall", "bar"],
+    venueTypes: ["restaurant", "bar"],
     keywords: ["mexican", "taco", "taqueria", "mezcal", "cantina"],
   },
   coffee: {
-    venueTypes: ["coffee_shop", "restaurant", "food_hall"],
+    venueTypes: ["restaurant"],
     keywords: ["coffee", "espresso", "cafe", "bakery", "brunch"],
   },
   rooftop: {

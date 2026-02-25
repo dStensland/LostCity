@@ -1,0 +1,21 @@
+{
+  "venue_id": 1681,
+  "venue_slug": "tin-lizzys-buckhead",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["casual"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "https://tinlizzysatl.com/menu/",
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "tinlizzyscantina",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

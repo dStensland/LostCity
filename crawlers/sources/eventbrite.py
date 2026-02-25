@@ -253,10 +253,6 @@ def process_event(event_data: dict, source_id: int, producer_id: Optional[int]) 
         # Generate content hash
         content_hash = generate_content_hash(title, venue_name, start_date)
 
-        # Check if already exists
-        if find_event_by_hash(content_hash):
-            return {"status": "exists"}
-
         # Build tags
         tags = ["eventbrite", category]
         if is_free:
@@ -270,7 +266,7 @@ def process_event(event_data: dict, source_id: int, producer_id: Optional[int]) 
         organizer = event_data.get("organizer") or {}
         organizer_name = organizer.get("name", "") if organizer else ""
 
-        return {
+        event_record = {
             "source_id": source_id,
             "venue_id": venue_id,
             "producer_id": producer_id,
@@ -297,6 +293,13 @@ def process_event(event_data: dict, source_id: int, producer_id: Optional[int]) 
             "recurrence_rule": None,
             "content_hash": content_hash,
         }
+
+        existing = find_event_by_hash(content_hash)
+        if existing:
+            smart_update_existing_event(existing, event_record)
+            return {"status": "exists"}
+
+        return event_record
     except Exception as e:
         logger.error(f"Error processing event: {e}")
         return None

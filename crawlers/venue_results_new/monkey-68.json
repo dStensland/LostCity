@@ -1,0 +1,41 @@
+{
+  "venue_id": 4914,
+  "venue_slug": "monkey-68",
+  "meta": {
+    "og_image": "https://lirp.cdn-website.com/d9335a0a/dms3rep/multi/opt/Untitled+design+%2812%29-1920w.png",
+    "meta_description": "Discover innovative dishes at Monkey 68, a sushi restaurant in Roswell and Alpharetta. Enjoy traditional Asian flavors with a modern twist. Book now!",
+    "reservation_links": [
+      "https://www.exploretock.com/monkey68?tock_source=tock&tock_medium=search_nav"
+    ],
+    "menu_links": [
+      "http://www.monkey68atl.com/roswell-menu"
+    ],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": "(770) 587-3277"
+  },
+  "extracted": {
+    "hours": {
+      "mon": null,
+      "tue": null,
+      "wed": {"open": "17:00", "close": "21:00"},
+      "thu": {"open": "17:00", "close": "21:00"},
+      "fri": {"open": "17:00", "close": "22:00"},
+      "sat": {"open": "17:00", "close": "22:00"},
+      "sun": {"open": "17:00", "close": "21:00"}
+    },
+    "vibes": ["trendy", "date-spot", "intimate", "craft-cocktails"],
+    "cuisine": ["japanese", "fusion"],
+    "service_style": "full_service",
+    "price_level": 3,
+    "menu_highlights": null,
+    "menu_url": "http://www.monkey68atl.com/roswell-menu",
+    "reservation_url": "https://www.exploretock.com/monkey68?tock_source=tock&tock_medium=search_nav",
+    "phone": "(770) 587-3277",
+    "instagram": null,
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

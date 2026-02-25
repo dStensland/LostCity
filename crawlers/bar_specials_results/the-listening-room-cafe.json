@@ -1,0 +1,21 @@
+{
+  "venue_id": 1510,
+  "venue_slug": "the-listening-room-cafe",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["cozy", "date-night", "dj", "craft-cocktails"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "echoroomatl",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

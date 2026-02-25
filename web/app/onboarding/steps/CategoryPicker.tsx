@@ -1,15 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
 import { PREFERENCE_CATEGORIES } from "@/lib/preferences";
 
 interface CategoryPickerProps {
   onComplete: (categories: string[]) => void;
   onSkip: () => void;
+  portalCategoryFilter?: string[];
 }
 
-export function CategoryPicker({ onComplete, onSkip }: CategoryPickerProps) {
+type AvailableFilterCategory = {
+  value: string;
+  label: string;
+  count: number;
+};
+
+export function CategoryPicker({
+  onComplete,
+  onSkip,
+  portalCategoryFilter,
+}: CategoryPickerProps) {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [availableCategories, setAvailableCategories] = useState<AvailableFilterCategory[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
 
   const toggleCategory = (value: string) => {
     setSelectedCategories((prev) =>
@@ -27,23 +41,122 @@ export function CategoryPicker({ onComplete, onSkip }: CategoryPickerProps) {
   const [showCelebration, setShowCelebration] = useState(false);
   const [hasShownCelebration, setHasShownCelebration] = useState(false);
 
-  // Show celebration on first selection
-  if (selectedCategories.length === 1 && !hasShownCelebration) {
-    setHasShownCelebration(true);
-    setShowCelebration(true);
-    setTimeout(() => setShowCelebration(false), 1500);
-  }
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadFilters() {
+      try {
+        const res = await fetch("/api/filters");
+        if (!res.ok) throw new Error("Failed to fetch filters");
+        const data = await res.json();
+        if (cancelled) return;
+        const categories = Array.isArray(data?.categories)
+          ? data.categories.filter(
+              (category: unknown): category is AvailableFilterCategory =>
+                !!category &&
+                typeof category === "object" &&
+                typeof (category as AvailableFilterCategory).value === "string" &&
+                typeof (category as AvailableFilterCategory).label === "string" &&
+                typeof (category as AvailableFilterCategory).count === "number"
+            )
+          : [];
+        setAvailableCategories(categories);
+      } catch (error) {
+        if (!cancelled) {
+          console.error("Failed to load onboarding categories", error);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingCategories(false);
+        }
+      }
+    }
+
+    loadFilters();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (selectedCategories.length === 1 && !hasShownCelebration) {
+      setHasShownCelebration(true);
+      setShowCelebration(true);
+      const timer = setTimeout(() => setShowCelebration(false), 1200);
+      return () => clearTimeout(timer);
+    }
+    return;
+  }, [hasShownCelebration, selectedCategories.length]);
+
+  const preferenceCategoryMap = useMemo(() => {
+    return new Map<string, (typeof PREFERENCE_CATEGORIES)[number]>(
+      PREFERENCE_CATEGORIES.map((category) => [category.value, category])
+    );
+  }, []);
+
+  const displayCategories = useMemo(() => {
+    const source =
+      availableCategories.length > 0
+        ? availableCategories
+        : PREFERENCE_CATEGORIES.map((category) => ({
+            value: category.value,
+            label: category.label,
+            count: 0,
+          }));
+
+    const filtered = portalCategoryFilter?.length
+      ? source.filter((category) => portalCategoryFilter.includes(category.value))
+      : source;
+
+    return filtered
+      .slice()
+      .sort((a, b) => b.count - a.count)
+      .map((category) => {
+        const known = preferenceCategoryMap.get(category.value);
+        const iconType = category.value === "museums" ? "museum" : category.value;
+        return {
+          value: category.value,
+          label: known?.label || category.label,
+          count: category.count,
+          iconType,
+          accentColor: getCategoryColor(iconType),
+        };
+      })
+      .slice(0, 16);
+  }, [availableCategories, portalCategoryFilter, preferenceCategoryMap]);
+
+  const hexToRgba = (hex: string, alpha: number) => {
+    const cleaned = hex.replace("#", "").trim();
+    const normalized =
+      cleaned.length === 3
+        ? cleaned
+            .split("")
+            .map((char) => char + char)
+            .join("")
+        : cleaned;
+    const int = Number.parseInt(normalized, 16);
+    if (!Number.isFinite(int) || normalized.length !== 6) {
+      return `rgba(255,107,122,${alpha})`;
+    }
+    const r = (int >> 16) & 255;
+    const g = (int >> 8) & 255;
+    const b = int & 255;
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-120px)] px-4 py-8">
-      <div className="w-full max-w-lg animate-fadeIn">
+    <div className="px-4 py-8 sm:px-6">
+      <div className="mx-auto w-full max-w-4xl animate-fadeIn">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-2xl sm:text-3xl font-semibold text-[var(--cream)] mb-2">
+        <div className="mb-8 text-center">
+          <p className="mb-2 font-mono text-[0.65rem] uppercase tracking-[0.24em] text-[var(--soft)]">
+            Step 1 · Signal Your Taste
+          </p>
+          <h1 className="mb-2 text-2xl font-semibold text-[var(--cream)] sm:text-3xl">
             What are you into?
           </h1>
-          <p className="text-[var(--soft)] text-sm">
-            Pick as many as you want — you can always change these later
+          <p className="text-sm text-[var(--soft)]">
+            We’re pulling from live category data so your feed starts with what’s active now.
           </p>
 
           {/* First selection celebration */}
@@ -55,40 +168,75 @@ export function CategoryPicker({ onComplete, onSkip }: CategoryPickerProps) {
         </div>
 
         {/* Category grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-8">
-          {PREFERENCE_CATEGORIES.map((category) => {
-            const isSelected = selectedCategories.includes(category.value);
-            return (
-              <button
-                key={category.value}
-                onClick={() => toggleCategory(category.value)}
-                className={`group relative p-4 rounded-xl border-2 transition-all duration-200 text-left ${
-                  isSelected
-                    ? "border-[var(--coral)] bg-[var(--coral)]/10 animate-category-select"
-                    : "border-[var(--twilight)] bg-[var(--dusk)]/50 hover:border-[var(--coral)]/50 hover:scale-105"
-                }`}
-              >
-                {/* Emoji */}
-                <span className="text-2xl mb-2 block">
-                  {category.emoji}
-                </span>
+        <div className="relative mb-8 overflow-hidden rounded-2xl border border-[var(--twilight)]/45 bg-[linear-gradient(155deg,rgba(14,18,31,0.9),rgba(8,11,20,0.95))] p-4 sm:p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <p className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-[var(--muted)]">
+              {loadingCategories ? "Loading live categories..." : `${displayCategories.length} categories available`}
+            </p>
+            <p className="font-mono text-[0.7rem] text-[var(--soft)]">
+              {selectedCategories.length} selected
+            </p>
+          </div>
 
-                {/* Label */}
-                <h3 className="font-mono text-sm text-[var(--cream)]">
-                  {category.label}
-                </h3>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            {displayCategories.map((category) => {
+              const isSelected = selectedCategories.includes(category.value);
+              const selectedStyle: CSSProperties | undefined = isSelected
+                ? {
+                    borderColor: category.accentColor,
+                    background: `linear-gradient(145deg, ${hexToRgba(category.accentColor, 0.18)}, rgba(22,30,48,0.85))`,
+                    boxShadow: `0 0 16px ${hexToRgba(category.accentColor, 0.24)}`,
+                    "--category-accent": category.accentColor,
+                  } as CSSProperties
+                : {
+                    "--category-accent": category.accentColor,
+                  } as CSSProperties;
 
-                {/* Check indicator */}
-                <div
-                  className={`absolute top-2 right-2 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+              return (
+                <button
+                  key={category.value}
+                  onClick={() => toggleCategory(category.value)}
+                  className={`group relative rounded-xl border p-3 text-left transition-all duration-200 ${
                     isSelected
-                      ? "border-[var(--coral)] bg-[var(--coral)]"
-                      : "border-[var(--twilight)]"
+                      ? ""
+                      : "border-[var(--twilight)]/60 bg-[var(--dusk)]/55 hover:border-[var(--neon-cyan)]/45 hover:bg-[var(--dusk)]/85"
                   }`}
+                  style={selectedStyle}
                 >
-                  {isSelected && (
+                  <div className="mb-2 flex items-start justify-between gap-2">
+                    <CategoryIcon
+                      type={category.iconType}
+                      size={20}
+                      glow={isSelected ? "default" : "subtle"}
+                      className={isSelected ? "text-[var(--category-accent)]" : "text-[var(--soft)]"}
+                    />
+                  </div>
+
+                  <h3 className="font-mono text-xs uppercase tracking-[0.08em] text-[var(--cream)]">
+                    {category.label}
+                  </h3>
+                  <p className="mt-1 text-[11px] text-[var(--muted)]">
+                    {category.count > 0 ? `${category.count.toLocaleString()} events` : "Fresh picks"}
+                  </p>
+
+                  {/* Check indicator */}
+                  <div
+                    className={`absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full border transition-all ${
+                      isSelected
+                        ? "text-[var(--void)]"
+                        : "border-[var(--twilight)] text-transparent"
+                    }`}
+                    style={
+                      isSelected
+                        ? {
+                            borderColor: category.accentColor,
+                            backgroundColor: category.accentColor,
+                          }
+                        : undefined
+                    }
+                  >
                     <svg
-                      className="w-3 h-3 text-[var(--void)]"
+                      className="h-3 w-3"
                       fill="currentColor"
                       viewBox="0 0 20 20"
                     >
@@ -98,11 +246,11 @@ export function CategoryPicker({ onComplete, onSkip }: CategoryPickerProps) {
                         clipRule="evenodd"
                       />
                     </svg>
-                  )}
-                </div>
-              </button>
-            );
-          })}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Actions */}
@@ -110,20 +258,20 @@ export function CategoryPicker({ onComplete, onSkip }: CategoryPickerProps) {
           <button
             onClick={handleContinue}
             disabled={selectedCategories.length === 0}
-            className={`w-full py-3 px-6 rounded-xl font-mono text-sm transition-all ${
+            className={`w-full rounded-xl px-6 py-3 font-mono text-sm transition-all ${
               selectedCategories.length > 0
                 ? "bg-[var(--coral)] text-[var(--void)] hover:bg-[var(--rose)]"
-                : "bg-[var(--twilight)] text-[var(--muted)] cursor-not-allowed"
+                : "cursor-not-allowed bg-[var(--twilight)] text-[var(--muted)]"
             }`}
           >
-            Continue{selectedCategories.length > 0 && ` (${selectedCategories.length})`}
+            Continue{selectedCategories.length > 0 ? ` (${selectedCategories.length})` : ""}
           </button>
 
           <button
             onClick={onSkip}
-            className="w-full py-3 text-center font-mono text-sm text-[var(--soft)] hover:text-[var(--cream)] transition-colors"
+            className="w-full py-3 text-center font-mono text-sm text-[var(--soft)] transition-colors hover:text-[var(--cream)]"
           >
-            Just show me everything
+            Skip and show everything
           </button>
         </div>
       </div>

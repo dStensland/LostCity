@@ -1,0 +1,39 @@
+{
+  "venue_id": 4766,
+  "venue_slug": "the-alden",
+  "meta": {
+    "og_image": null,
+    "meta_description": "The Alden Restaurant, conceived by Chef Jared A. Hucks, leverages tradition and innovation to create an expressive dining experience in Atlanta, Georgia. We serve a healthy selection of tasteful, contrasting dishes crafted from fresh, seasonal ingredients sourced locally and regionally.",
+    "reservation_links": [
+      "https://www.opentable.com/r/the-alden-reservations-chamblee",
+      "https://www.opentable.com/r/the-alden-reservations-chamblee"
+    ],
+    "menu_links": [
+      "http://www.thealdenrestaurant.com/",
+      "https://thealdenrestaurant.com/dinner-menu/",
+      "https://thealdenrestaurant.com/chefs-tasting-menu-2/",
+      "http://www.thealdenrestaurant.com/",
+      "https://thealdenrestaurant.com/dinner-menu/",
+      "https://thealdenrestaurant.com/chefs-tasting-menu-2/"
+    ],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["upscale", "intimate", "date-spot", "craft-cocktails"],
+    "cuisine": ["new_american", "southern"],
+    "service_style": "tasting_menu",
+    "price_level": 4,
+    "menu_highlights": null,
+    "menu_url": "https://thealdenrestaurant.com/dinner-menu/",
+    "reservation_url": "https://www.opentable.com/r/the-alden-reservations-chamblee",
+    "phone": null,
+    "instagram": null,
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

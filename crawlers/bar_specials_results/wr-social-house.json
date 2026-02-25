@@ -1,0 +1,85 @@
+{
+  "venue_id": 2104,
+  "venue_slug": "wr-social-house",
+  "meta": {},
+  "extracted": {
+    "specials": [
+      {
+        "title": "Taco Tuesday & Margarita Special",
+        "type": "daily_special",
+        "description": "$3 tacos and $6 margaritas",
+        "days_of_week": [2],
+        "time_start": null,
+        "time_end": null,
+        "price_note": "$3 tacos, $6 margaritas"
+      },
+      {
+        "title": "Wine Wednesday",
+        "type": "daily_special",
+        "description": "Half off select wines every Wednesday",
+        "days_of_week": [3],
+        "time_start": null,
+        "time_end": null,
+        "price_note": "1/2 off select wine"
+      },
+      {
+        "title": "Beer & Burger Wednesday",
+        "type": "daily_special",
+        "description": "$15 featured beer and burger combo every Wednesday",
+        "days_of_week": [3],
+        "time_start": null,
+        "time_end": null,
+        "price_note": "$15 featured beer & burger"
+      },
+      {
+        "title": "Half Price Oyster Wednesday",
+        "type": "daily_special",
+        "description": "Half price raw and charbroiled oysters every Wednesday",
+        "days_of_week": [3],
+        "time_start": null,
+        "time_end": null,
+        "price_note": "1/2 price oysters"
+      },
+      {
+        "title": "Mimosa & Bloody Mary Specials",
+        "type": "brunch",
+        "description": "Mimosa and Bloody Mary specials available during daily brunch",
+        "days_of_week": [1, 2, 3, 4, 5, 6, 7],
+        "time_start": null,
+        "time_end": null,
+        "price_note": null
+      },
+      {
+        "title": "Trivia Night",
+        "type": "event_night",
+        "description": "Trivia night with prizes for 1st and 2nd place winners",
+        "days_of_week": null,
+        "time_start": null,
+        "time_end": null,
+        "price_note": null
+      },
+      {
+        "title": "Live DJ Friday",
+        "type": "event_night",
+        "description": "Live DJ every Friday starting at 9:00 PM",
+        "days_of_week": [5],
+        "time_start": "21:00:00",
+        "time_end": null,
+        "price_note": null
+      }
+    ],
+    "hours": null,
+    "vibes": ["brunch-spot", "trivia", "casual", "happy-hour", "dj"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "https://wrsocialhouse.com/menu/",
+    "reservation_url": "https://wrsocialhouse.com/reservations-parties/",
+    "phone": "(770) 792-9995",
+    "instagram": null,
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

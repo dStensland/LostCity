@@ -1,0 +1,29 @@
+{
+  "venue_id": 4876,
+  "venue_slug": "honest-indian-restaurant-suwanee",
+  "meta": {
+    "og_image": null,
+    "meta_description": null,
+    "reservation_links": [],
+    "menu_links": [],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["casual", "family-friendly"],
+    "cuisine": ["indian"],
+    "service_style": "casual_dine_in",
+    "price_level": null,
+    "menu_highlights": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": null,
+    "dietary_options": ["vegetarian-friendly"],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

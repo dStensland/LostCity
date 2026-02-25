@@ -10,3 +10,5 @@ discovery:
   - https://mondaynightbrewing.com
 detail:
   enabled: true
+data_goals:
+- venue_hours

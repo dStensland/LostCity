@@ -63,10 +63,10 @@ export const POST = withAuthAndParams<Params>(
       return errorApiResponse("Itinerary not found", 404);
     }
 
-    // Get the next position
+    // Get the next position (events don't have lat/lng — join through to venues)
     const { data: existingItems } = await serviceClient
       .from("itinerary_items")
-      .select("id, position, event:events(lat, lng), venue:venues(lat, lng), custom_lat, custom_lng")
+      .select("id, position, event:events(venue:venues(lat, lng)), venue:venues(lat, lng), custom_lat, custom_lng")
       .eq("itinerary_id", params.id)
       .order("position", { ascending: false })
       .limit(1);
@@ -86,17 +86,17 @@ export const POST = withAuthAndParams<Params>(
       eventId = parseIntParam(String(body.event_id));
       if (!eventId) return validationError("event_id is required for event items");
 
-      // Fetch event coords
-      const { data: event } = await serviceClient
+      // Fetch event with venue coords (events don't have lat/lng — venues do)
+      const { data: event, error: eventError } = await serviceClient
         .from("events")
-        .select("id, lat, lng")
+        .select("id, venue:venues(lat, lng)")
         .eq("id", eventId)
         .maybeSingle();
 
-      if (!event) return errorApiResponse("Event not found", 404);
-      const eventData = event as { id: number; lat: number | null; lng: number | null };
-      newItemLat = eventData.lat;
-      newItemLng = eventData.lng;
+      if (eventError || !event) return errorApiResponse("Event not found", 404);
+      const eventData = event as unknown as { id: number; venue: { lat: number | null; lng: number | null } | null };
+      newItemLat = eventData.venue?.lat ?? null;
+      newItemLng = eventData.venue?.lng ?? null;
     } else if (body.item_type === "venue") {
       venueId = parseIntParam(String(body.venue_id));
       if (!venueId) return validationError("venue_id is required for venue items");
@@ -131,7 +131,7 @@ export const POST = withAuthAndParams<Params>(
       newItemLng != null
     ) {
       const prev = existingItems[0] as unknown as {
-        event: { lat: number | null; lng: number | null } | null;
+        event: { venue: { lat: number | null; lng: number | null } | null } | null;
         venue: { lat: number | null; lng: number | null } | null;
         custom_lat: number | null;
         custom_lng: number | null;
@@ -143,9 +143,9 @@ export const POST = withAuthAndParams<Params>(
       if (prev.custom_lat != null && prev.custom_lng != null) {
         prevLat = prev.custom_lat;
         prevLng = prev.custom_lng;
-      } else if (prev.event?.lat != null && prev.event?.lng != null) {
-        prevLat = prev.event.lat;
-        prevLng = prev.event.lng;
+      } else if (prev.event?.venue?.lat != null && prev.event?.venue?.lng != null) {
+        prevLat = prev.event.venue.lat;
+        prevLng = prev.event.venue.lng;
       } else if (prev.venue?.lat != null && prev.venue?.lng != null) {
         prevLat = prev.venue.lat;
         prevLng = prev.venue.lng;
@@ -181,8 +181,8 @@ export const POST = withAuthAndParams<Params>(
       position: nextPosition,
       start_time:
         typeof body.start_time === "string" &&
-        /^\d{2}:\d{2}$/.test(body.start_time)
-          ? body.start_time
+        /^\d{2}:\d{2}(:\d{2})?$/.test(body.start_time)
+          ? body.start_time.substring(0, 5)
           : null,
       duration_minutes:
         typeof body.duration_minutes === "number" &&
@@ -198,13 +198,13 @@ export const POST = withAuthAndParams<Params>(
           : null,
     };
 
-    const { data: item, error } = await serviceClient
+    const { data: rawItem, error } = await serviceClient
       .from("itinerary_items")
       .insert(insertData as never)
       .select(
         `
         *,
-        event:events(id, title, start_date, start_time, image_url, category, lat, lng),
+        event:events(id, title, start_date, start_time, image_url, category:category_id, venue:venues(name, lat, lng)),
         venue:venues(id, slug, name, image_url, neighborhood, venue_type, lat, lng)
       `
       )
@@ -214,6 +214,17 @@ export const POST = withAuthAndParams<Params>(
       console.error("Error adding itinerary item:", error.message);
       return errorApiResponse("Failed to add item", 500);
     }
+
+    // Flatten event.venue into event-level fields for frontend compatibility
+    const item = (() => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const r = rawItem as any;
+      if (r?.event?.venue) {
+        const { venue: eventVenue, ...eventRest } = r.event;
+        return { ...r, event: { ...eventRest, lat: eventVenue.lat, lng: eventVenue.lng, venue_name: eventVenue.name } };
+      }
+      return r;
+    })();
 
     // Update itinerary's updated_at
     await serviceClient

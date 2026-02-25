@@ -1,0 +1,33 @@
+{
+  "venue_id": 1291,
+  "venue_slug": "1920-tavern",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {"name": "Redfish Cioppino", "price": "$35.95", "category": "entree"},
+      {"name": "Lobster & Shrimp Spaghetti", "price": "$29.95", "category": "entree"},
+      {"name": "Petite Filet Mignon", "price": "$22.95", "category": "entree"},
+      {"name": "Sesame Crusted Seared Tuna", "price": "$20.95", "category": "entree"},
+      {"name": "Nawlin's Shrimp & Grits", "price": "$17.95", "category": "entree"}
+    ],
+    "dietary_options": ["gluten-free-options"],
+    "price_level": 3,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

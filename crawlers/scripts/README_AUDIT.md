@@ -9,7 +9,30 @@
 # From crawlers directory
 cd /Users/coach/Projects/LostCity/crawlers
 python3 scripts/audit_data_quality.py
+# Formal launch/content audit
+python3 scripts/content_health_audit.py
 ```
+
+## Formal Content Health Audit
+
+Use `content_health_audit.py` for a consistent launch-grade baseline across initiatives.
+
+It outputs:
+- `crawlers/reports/content_health_metrics_YYYY-MM-DD.json`
+- `crawlers/reports/content_health_assessment_YYYY-MM-DD.md`
+- `crawlers/reports/content_health_gate_YYYY-MM-DD.json` (launch pass/warn/fail checks)
+- `crawlers/reports/content_health_findings_YYYY-MM-DD.md` (readable drilldown report)
+
+Coverage includes:
+- dedupe integrity (same-source and cross-source overlap)
+- indie theater showtime completeness
+- specials/happy-hour coverage
+- genres coverage
+- walkability/mobility coverage (distributed model + dedicated-column checks)
+- historic coverage (vibes/types/descriptions/editorial blurbs + dedicated-column checks)
+- closed venue leakage
+- crawl freshness (24h and 7d context)
+- date-over-date regression against the previous metrics run
 
 ## What It Checks
 

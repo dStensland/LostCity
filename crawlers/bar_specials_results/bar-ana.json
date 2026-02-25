@@ -1,0 +1,21 @@
+{
+  "venue_id": 2485,
+  "venue_slug": "bar-ana",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["late-night", "upscale", "craft-cocktails", "date-night"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "https://www.baranaatl.com/menus",
+    "reservation_url": "https://resy.com/cities/atlanta-ga/venues/bar-ana",
+    "phone": "(470) 763-9626",
+    "instagram": "barana.atl",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

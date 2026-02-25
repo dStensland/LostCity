@@ -4,6 +4,7 @@ import ProfileTabs, { type ProfileSection } from "@/components/profile/ProfileTa
 import ProfileActivity from "@/components/profile/ProfileActivity";
 import ProfileUpcoming from "@/components/profile/ProfileUpcoming";
 import ProfileVenues from "@/components/profile/ProfileVenues";
+import ProfileCurations from "@/components/profile/ProfileCurations";
 import ProfileTaste from "@/components/profile/ProfileTaste";
 
 type Activity = {
@@ -17,11 +18,15 @@ type Activity = {
 
 interface ProfileTabsClientProps {
   username: string;
+  userId: string;
+  isOwnProfile: boolean;
   initialActivities: Activity[];
 }
 
 export default function ProfileTabsClient({
   username,
+  userId,
+  isOwnProfile,
   initialActivities,
 }: ProfileTabsClientProps) {
   return (
@@ -34,6 +39,8 @@ export default function ProfileTabsClient({
             return <ProfileUpcoming username={username} />;
           case "venues":
             return <ProfileVenues username={username} />;
+          case "curations":
+            return <ProfileCurations userId={userId} isOwnProfile={isOwnProfile} />;
           case "taste":
             return <ProfileTaste username={username} />;
           default:

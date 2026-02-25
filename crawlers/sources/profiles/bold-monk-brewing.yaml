@@ -5,7 +5,6 @@ integration_method: llm_crawler
 defaults:
   venue_name: Bold Monk Brewing
   category: nightlife
-  subcategory: brewery
   tags:
   - brewery
   - beer
@@ -17,3 +16,9 @@ discovery:
   - https://boldmonkbrewingco.com/events
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- specials
+- tickets
+- venue_hours

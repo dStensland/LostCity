@@ -84,6 +84,33 @@ class TestDatabaseConfig:
         assert isinstance(cfg.supabase_url, str)
         assert isinstance(cfg.supabase_key, str)
 
+    def test_staging_target_uses_staging_credentials(self):
+        """Should resolve active credentials from staging variables when selected."""
+        test_env = {
+            "CRAWLER_DB_TARGET": "staging",
+            "STAGING_SUPABASE_URL": "https://staging.supabase.co",
+            "STAGING_SUPABASE_SERVICE_KEY": "staging-service-key",
+        }
+        with patch.dict(os.environ, test_env, clear=True):
+            import importlib
+            import config
+
+            importlib.reload(config)
+            cfg = config.DatabaseConfig()
+            assert cfg.active_target == "staging"
+            assert cfg.active_supabase_url == "https://staging.supabase.co"
+            assert cfg.active_supabase_service_key == "staging-service-key"
+
+    def test_invalid_target_falls_back_to_production(self):
+        """Should normalize unsupported targets to production."""
+        with patch.dict(os.environ, {"CRAWLER_DB_TARGET": "qa"}, clear=True):
+            import importlib
+            import config
+
+            importlib.reload(config)
+            cfg = config.DatabaseConfig()
+            assert cfg.active_target == "production"
+
 
 class TestLLMConfig:
     """Tests for LLMConfig."""
@@ -195,3 +222,13 @@ class TestGetConfig:
         cfg1 = get_config()
         cfg2 = get_config()
         assert cfg1 is cfg2
+
+    def test_set_database_target_refreshes_config(self):
+        """Should update global config target when set_database_target is called."""
+        from config import get_config, set_database_target
+
+        set_database_target("staging")
+        assert get_config().database.active_target == "staging"
+
+        set_database_target("production")
+        assert get_config().database.active_target == "production"

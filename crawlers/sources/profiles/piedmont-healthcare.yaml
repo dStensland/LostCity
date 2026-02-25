@@ -4,9 +4,13 @@ name: Piedmont Healthcare
 integration_method: llm_crawler
 defaults: {}
 discovery:
-  enabled: false  # Redirects to Inquicker platform; see piedmont-classes — 2026-02-06 audit
+  enabled: false
   type: html
   urls:
   - https://www.piedmont.org/classes-and-events/classes-and-events
 detail:
   enabled: false
+data_goals:
+- events
+- images
+- tickets

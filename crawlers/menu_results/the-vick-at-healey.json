@@ -1,0 +1,55 @@
+{
+  "venue_id": 75,
+  "venue_slug": "the-vick-at-healey",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Shrimp & Grits",
+        "price": "$17",
+        "category": "entree"
+      },
+      {
+        "name": "Lamb & Eggs",
+        "price": "$32",
+        "category": "entree"
+      },
+      {
+        "name": "Chicken & Waffles",
+        "price": "$16",
+        "category": "entree"
+      },
+      {
+        "name": "Mimosa Flight",
+        "price": "$34",
+        "category": "cocktail"
+      },
+      {
+        "name": "Steak & Eggs",
+        "price": "$39",
+        "category": "entree"
+      }
+    ],
+    "dietary_options": [
+      "vegetarian-friendly"
+    ],
+    "price_level": 2,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

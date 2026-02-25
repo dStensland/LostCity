@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { withAuth } from "@/lib/api-middleware";
-import { applyRateLimit, getClientIdentifier } from "@/lib/rate-limit";
+import { applyDailyQuota, applyRateLimit, getClientIdentifier, RATE_LIMITS } from "@/lib/rate-limit";
 import { checkBodySize } from "@/lib/api-utils";
 import { generalInviteEmail, eventInviteEmail } from "@/lib/email-templates";
 import { Resend } from "resend";
@@ -17,15 +17,30 @@ function getResend(): Resend {
 const MAX_EMAILS_PER_REQUEST = 10;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// Strict rate limit: 5 requests per minute to prevent email spam
-const INVITE_RATE_LIMIT = { limit: 5, windowSec: 60 };
-
 export const POST = withAuth(async (request, { user, serviceClient }) => {
+  if (process.env.ENABLE_EMAIL_INVITES === "false") {
+    return NextResponse.json({ error: "Invites are temporarily disabled" }, { status: 503 });
+  }
+
   const sizeCheck = checkBodySize(request);
   if (sizeCheck) return sizeCheck;
 
-  const rateLimitResult = await applyRateLimit(request, INVITE_RATE_LIMIT, getClientIdentifier(request));
+  const rateLimitId = `${user.id}:${getClientIdentifier(request)}`;
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.invites, rateLimitId, {
+    bucket: "find-friends:send-invites",
+    logContext: "find-friends:send-invites",
+  });
   if (rateLimitResult) return rateLimitResult;
+
+  const dailyLimit = Number.parseInt(
+    process.env.RATE_LIMIT_INVITES_DAILY_LIMIT || "100",
+    10
+  );
+  const dailyQuotaResult = await applyDailyQuota(request, dailyLimit, user.id, {
+    bucket: "find-friends:send-invites",
+    logContext: "find-friends:send-invites",
+  });
+  if (dailyQuotaResult) return dailyQuotaResult;
 
   const body = await request.json();
   const { emails, eventId } = body as { emails: string[]; eventId?: number };

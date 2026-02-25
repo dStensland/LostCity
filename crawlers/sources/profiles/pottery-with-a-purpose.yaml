@@ -1,0 +1,19 @@
+version: 1
+slug: pottery-with-a-purpose
+name: "Pottery With a Purpose"
+integration_method: llm_crawler
+data_goals:
+  - events
+discovery:
+  enabled: true
+  type: html
+  urls:
+    - "https://www.potterywithapurpose.com"
+  fetch:
+    render_js: false
+detail:
+  enabled: true
+  use_jsonld: true
+  use_open_graph: true
+  use_heuristic: true
+  use_llm: true

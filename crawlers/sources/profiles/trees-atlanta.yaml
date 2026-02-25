@@ -10,3 +10,6 @@ discovery:
   - https://www.treesatlanta.org/get-involved/events/
 detail:
   enabled: true
+data_goals:
+- events
+- tickets

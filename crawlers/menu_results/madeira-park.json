@@ -1,0 +1,48 @@
+{
+  "venue_id": 708,
+  "venue_slug": "madeira-park",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Domaine Vacheron Sancerre Blanc",
+        "price": null,
+        "category": "wine"
+      },
+      {
+        "name": "Lopez de Heredia Rioja Tondonia Reserva 2012",
+        "price": null,
+        "category": "wine"
+      },
+      {
+        "name": "D'Oliveira Terrantez 1899 Madeira",
+        "price": null,
+        "category": "wine"
+      },
+      {
+        "name": "Flavien Nowack Champagne Extra Brut",
+        "price": null,
+        "category": "wine"
+      }
+    ],
+    "dietary_options": [],
+    "price_level": 3,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

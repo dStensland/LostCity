@@ -1,0 +1,80 @@
+{
+  "venue_id": 4887,
+  "venue_slug": "tbb-122",
+  "meta": {
+    "og_image": "http://static1.squarespace.com/static/5cf1734a9845770001874f99/t/62101697f9bac07f434f8be4/1645221527443/tbb+122+Vector+logo+Outline.png?format=1500w",
+    "meta_description": "Located on lazy Marietta Street in Alpharetta, TBB is a community-focused \r\nall-day cafe and restaurant serving delicious, healthful meals prepared \r\nusing local ingredients. Stop in for a coffee, stay for lunch, or enjoy \r\ndinner on the porch under our 150 year old oak tree!",
+    "reservation_links": [
+      "https://resy.com/cities/alph/tbb-122",
+      "https://resy.com/cities/alph/tbb-122",
+      "https://resy.com/cities/alph/tbb-122",
+      "https://resy.com/cities/alpharetta-ga/venues/tbb-122/events/barbera-wine-tasting-2026-02-25",
+      "https://www.opentable.com/r/tbb-122-reservations-alpharetta?lang=en-US&ot_source=Restaurant%20website&restref=1279375"
+    ],
+    "menu_links": [
+      "http://tbb122.com/menus-1",
+      "http://tbb122.com/s/aperitivo-hour-menu-20260124-2.pdf",
+      "http://tbb122.com/menu"
+    ],
+    "instagram": "tbb_122",
+    "facebook_url": "http://Facebook.com/tbb122",
+    "phone": "(678) 691-8364"
+  },
+  "extracted": {
+    "hours": {
+      "mon": null,
+      "tue": {"open": "08:00", "close": "17:00"},
+      "wed": {"open": "08:00", "close": "21:00"},
+      "thu": {"open": "08:00", "close": "21:00"},
+      "fri": {"open": "08:00", "close": "22:00"},
+      "sat": {"open": "08:00", "close": "22:00"},
+      "sun": {"open": "08:00", "close": "16:00"}
+    },
+    "vibes": ["cozy", "outdoor-seating", "trendy", "date-spot"],
+    "cuisine": ["new_american", "brunch_breakfast"],
+    "service_style": "full_service",
+    "price_level": 3,
+    "menu_highlights": null,
+    "menu_url": "http://tbb122.com/menus-1",
+    "reservation_url": "https://resy.com/cities/alph/tbb-122",
+    "phone": "(678) 691-8364",
+    "instagram": "tbb_122",
+    "dietary_options": ["vegetarian-friendly"],
+    "specials": [
+      {
+        "day_of_week": 3,
+        "title": "Aperitivo Hour",
+        "description": "$7 spritzes, $6 select wines, and bites made for sharing",
+        "special_type": "happy_hour",
+        "start_time": "16:00",
+        "end_time": "17:30"
+      },
+      {
+        "day_of_week": 4,
+        "title": "Aperitivo Hour",
+        "description": "$7 spritzes, $6 select wines, and bites made for sharing",
+        "special_type": "happy_hour",
+        "start_time": "16:00",
+        "end_time": "17:30"
+      },
+      {
+        "day_of_week": 5,
+        "title": "Aperitivo Hour",
+        "description": "$7 spritzes, $6 select wines, and bites made for sharing",
+        "special_type": "happy_hour",
+        "start_time": "16:00",
+        "end_time": "17:30"
+      },
+      {
+        "day_of_week": 6,
+        "title": "Aperitivo Hour",
+        "description": "$7 spritzes, $6 select wines, and bites made for sharing",
+        "special_type": "happy_hour",
+        "start_time": "16:00",
+        "end_time": "17:30"
+      }
+    ],
+    "genres": [],
+    "parking": ["free-parking"]
+  }
+}

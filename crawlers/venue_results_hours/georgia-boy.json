@@ -1,0 +1,28 @@
+{
+  "venue_id": 2448,
+  "venue_slug": "georgia-boy",
+  "meta": {
+    "og_image": "http://static1.squarespace.com/static/62f15f45b79ae90d6b935f09/t/6706d65651e78e2d2fb28f6b/1771613420508/GeorgiaBoy_Logo.png?format=1500w",
+    "meta_description": null,
+    "reservation_links": [],
+    "menu_links": [],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": [],
+    "cuisine": [],
+    "service_style": null,
+    "price_level": null,
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": null,
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

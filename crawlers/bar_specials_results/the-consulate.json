@@ -1,0 +1,21 @@
+{
+  "venue_id": 1197,
+  "venue_slug": "the-consulate",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["date-night", "upscale", "craft-cocktails"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "https://www.theconsulateatlanta.com/eat",
+    "reservation_url": "https://www.opentable.com/r/the-consulate-reservations-atlanta?lang=en-US&ot_source=Restaurant%20website&restref=335032",
+    "phone": null,
+    "instagram": "theconsulateatl",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

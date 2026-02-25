@@ -1,0 +1,33 @@
+{
+  "venue_id": 4472,
+  "venue_slug": "lee-white",
+  "meta": {
+    "og_image": "https://dpbvj4a9anukr.cloudfront.net/acb845c4-7c10-49e1-b473-40115e23ad50/e1d77cc6-71ae-4bf3-9762-8dfb9eed4fb5/e1873765ffc1004851c157846b2aa835/Lee-White----Logo-brightgreen.png",
+    "meta_description": null,
+    "reservation_links": [],
+    "menu_links": [],
+    "instagram": "leeandwhite",
+    "facebook_url": "https://www.facebook.com/LEEandWHITE",
+    "phone": "(770) 742-1254"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": [
+      "trendy",
+      "lively",
+      "outdoor-seating",
+      "good-for-groups"
+    ],
+    "cuisine": [],
+    "service_style": null,
+    "price_level": null,
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": "(770) 742-1254",
+    "instagram": "leeandwhite",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

@@ -171,12 +171,6 @@ def create_museum_programs(source_id: int, venue_id: int) -> tuple[int, int]:
 
         content_hash = generate_content_hash(title, "Southern Museum of Civil War and Locomotive History", start_date)
 
-        existing = find_event_by_hash(content_hash)
-        if existing:
-            smart_update_existing_event(existing, event_record)
-            events_updated += 1
-            continue
-
         description = (
             "Monthly educational program for homeschool families. "
             "Hands-on activities, guided tours, and Civil War/railroad history lessons."
@@ -208,6 +202,12 @@ def create_museum_programs(source_id: int, venue_id: int) -> tuple[int, int]:
             "recurrence_rule": "FREQ=MONTHLY;BYDAY=1WE",
             "content_hash": content_hash,
         }
+
+        existing = find_event_by_hash(content_hash)
+        if existing:
+            smart_update_existing_event(existing, event_record)
+            events_updated += 1
+            continue
 
         series_hint = {
             "series_type": "class_series",

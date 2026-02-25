@@ -45,6 +45,8 @@ export type ExploreTrack = {
   freeCount: number;
   featuredEvent: ExploreTrackFeaturedEvent | null;
   accentColor: string;
+  category: string;
+  groupName: string | null;
 };
 
 /** Venue preview shown on track cards */
@@ -171,6 +173,20 @@ export const TRACK_SLUGS = [
 
 export type TrackSlug = (typeof TRACK_SLUGS)[number];
 
+// Artefact slugs whose images are intentionally marked as uncertain for manual review.
+export const UNCERTAIN_ARTEFACT_IMAGE_SLUGS = [
+  "one-person-jail-cell",
+  "adalanta-desert-plaque",
+  "fiddlin-john-carsons-grave",
+] as const;
+
+const UNCERTAIN_ARTEFACT_IMAGE_SLUG_SET = new Set<string>(UNCERTAIN_ARTEFACT_IMAGE_SLUGS);
+
+export function isUncertainArtefactImageSlug(slug: string | null | undefined): boolean {
+  if (!slug) return false;
+  return UNCERTAIN_ARTEFACT_IMAGE_SLUG_SET.has(slug);
+}
+
 // ============================================================================
 // Design tokens for the Explore dark theme
 // ============================================================================
@@ -200,73 +216,11 @@ export type FlagReason = (typeof FLAG_REASONS)[number];
 export const TIP_STATUSES = ["pending", "approved", "rejected", "flagged"] as const;
 export type TipStatus = (typeof TIP_STATUSES)[number];
 
-// ============================================================================
-// Track accent colors — per-track identity for cinematic banners
-// ============================================================================
+// Default accent color for tracks missing DB value
+export const DEFAULT_ACCENT_COLOR = EXPLORE_THEME.primary;
 
-export const TRACK_ACCENT_COLORS: Record<string, string> = {
-  "welcome-to-atlanta": "#C1D32F",       // Hawks Volt Green — classic Atlanta
-  "good-trouble": "#E03A3E",             // Civil rights red
-  "the-south-got-something-to-say": "#D4A574", // Warm brown — music heritage
-  "keep-moving-forward": "#10B981",      // BeltLine green
-  "the-itis": "#FB923C",                 // Food orange
-  "city-in-a-forest": "#34D399",         // Forest emerald
-  "hard-in-da-paint": "#14B8A6",         // Teal — street art & local art
-  "a-beautiful-mosaic": "#8B5CF6",       // Diverse violet
-  "too-busy-to-hate": "#EAB308",         // Progress gold
-  "the-midnight-train": "#A78BFA",       // Purple — quirky & hidden gems
-  "keep-swinging": "#F472B6",            // Pink — sports & game day
-  "lifes-like-a-movie": "#F59E0B",       // Warm amber — family & kids
-  "say-less": "#D97706",                 // Deep amber — speakeasy warmth
-  "yallywood": "#EF4444",                // Cinema red
-  "spelhouse-spirit": "#9F1239",         // Morehouse maroon
-  "resurgens": "#D4AF37",               // Architectural gold — BoA Plaza spire
-  "up-on-the-roof": "#38BDF8",          // Sky blue — rooftop views
-  "artefacts-of-the-lost-city": "#FB923C",       // Warm orange — curiosities & artifacts
-  "not-from-around-here": "#E07C4F",             // Warm terracotta — global spice
-  "as-seen-on-tv": "#60A5FA",                    // Screen blue — TV/film locations
-  "comedy-live": "#FBBF24",                      // Spotlight gold — stage lights
-  "native-heritage": "#92400E",                  // Earth brown — ancient land
-  "hell-of-an-engineer": "#B89B5E",              // Old gold — GT colors
-} as const;
-
-export function getTrackAccentColor(slug: string): string {
-  return TRACK_ACCENT_COLORS[slug] ?? EXPLORE_THEME.primary;
-}
-
-// ============================================================================
-// Track category labels — descriptive subtitle shown on banners
-// ============================================================================
-
-export const TRACK_CATEGORIES: Record<string, string> = {
-  "welcome-to-atlanta": "Classic Atlanta",
-  "good-trouble": "Civil Rights Heritage",
-  "the-south-got-something-to-say": "Dirty South",
-  "keep-moving-forward": "The BeltLine",
-  "the-itis": "Food Scene",
-  "city-in-a-forest": "Great Outdoors",
-  "hard-in-da-paint": "Street Art & Local Art",
-  "a-beautiful-mosaic": "Global Atlanta",
-  "too-busy-to-hate": "LGBTQ+ Culture",
-  "the-midnight-train": "Weird Spots for Freaks",
-  "keep-swinging": "Sports & Game Day",
-  "lifes-like-a-movie": "Family & Kids",
-  "say-less": "Speakeasy & Cocktails",
-  "yallywood": "Cinema",
-  "spelhouse-spirit": "HBCU Culture",
-  "resurgens": "Skyline & Architecture",
-  "up-on-the-roof": "Rooftop & Skyline Views",
-  "artefacts-of-the-lost-city": "Artefacts & Curiosities",
-  "not-from-around-here": "International & Regional Eats",
-  "as-seen-on-tv": "Filming Locations",
-  "comedy-live": "Comedy & Live Performance",
-  "native-heritage": "Creek & Cherokee Heritage",
-  "hell-of-an-engineer": "Georgia Tech",
-} as const;
-
-export function getTrackCategory(slug: string): string {
-  return TRACK_CATEGORIES[slug] ?? "Explore";
-}
+// Default category for tracks missing DB value
+export const DEFAULT_CATEGORY = "Explore";
 
 // ============================================================================
 // Semantic pill colors — distinct from track accent, tied to pill meaning

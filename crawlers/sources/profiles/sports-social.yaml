@@ -4,7 +4,7 @@ name: Sports Social
 integration_method: jsonld_only
 defaults: {}
 discovery:
-  enabled: false  # Domain redirects to unrelated site — 2026-02-06 audit
+  enabled: false
   type: list
   urls:
   - https://www.sportssocial.com
@@ -12,3 +12,8 @@ detail:
   enabled: true
   jsonld_only: true
   use_jsonld: true
+data_goals:
+- events
+- images
+- lineup
+- tickets

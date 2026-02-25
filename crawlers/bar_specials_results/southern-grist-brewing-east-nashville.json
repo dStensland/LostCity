@@ -1,0 +1,21 @@
+{
+  "venue_id": 1632,
+  "venue_slug": "southern-grist-brewing-east-nashville",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["patio", "pet-friendly", "family-friendly", "casual"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "http://www.southerngristbrewing.com/lauter",
+    "reservation_url": null,
+    "phone": "(629) 203-7159",
+    "instagram": "southerngristbrewing",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

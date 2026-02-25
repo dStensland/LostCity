@@ -68,7 +68,7 @@ export function RelatedCard({
           accentClass?.className ?? ""
         }`}
       >
-        <div className="relative w-full aspect-video bg-[var(--night)] overflow-hidden">
+        <div className="relative w-full aspect-[4/5] bg-[var(--night)] overflow-hidden">
           {imageUrl ? (
             <Image
               src={imageUrl}

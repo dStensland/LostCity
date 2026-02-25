@@ -1,0 +1,47 @@
+{
+  "venue_id": 4864,
+  "venue_slug": "sambong-naengmyun",
+  "meta": {
+    "og_image": null,
+    "meta_description": null,
+    "reservation_links": [],
+    "menu_links": [
+      "https://sambong.co/menu/",
+      "http://www.sambong.co/menu",
+      "https://sambong.co/menu/"
+    ],
+    "instagram": "sambongnaengmyun",
+    "facebook_url": null,
+    "phone": "(470) 569-5995"
+  },
+  "extracted": {
+    "hours": {
+      "mon": {"open": "11:00", "close": "21:00"},
+      "tue": {"open": "11:00", "close": "21:00"},
+      "wed": {"open": "11:00", "close": "21:00"},
+      "thu": {"open": "11:00", "close": "21:00"},
+      "fri": {"open": "11:00", "close": "21:00"},
+      "sat": {"open": "11:00", "close": "21:00"},
+      "sun": {"open": "11:00", "close": "21:00"}
+    },
+    "vibes": ["casual", "family-friendly", "cozy"],
+    "cuisine": ["korean"],
+    "service_style": "casual_dine_in",
+    "price_level": 2,
+    "menu_highlights": [
+      {"name": "Original Cold Noodle (Mul Naengmyeon)", "price": null, "category": "entree"},
+      {"name": "Spicy Cold Noodle (Bibim Naengmyeon)", "price": null, "category": "entree"},
+      {"name": "Spicy Cold Noodle with Raw Fish", "price": null, "category": "entree"},
+      {"name": "Ox-Bone Soup (Seolleongtang)", "price": null, "category": "entree"},
+      {"name": "Short Rib Soup with Radish (Galbitang)", "price": null, "category": "entree"}
+    ],
+    "menu_url": "https://sambong.co/menu/",
+    "reservation_url": null,
+    "phone": "(470) 569-5995",
+    "instagram": "sambongnaengmyun",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

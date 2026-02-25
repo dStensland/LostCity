@@ -72,6 +72,27 @@ def parse_exhibition_dates(text: str) -> Optional[tuple[datetime, datetime]]:
             except ValueError:
                 pass
 
+    # Pattern: "D MON - D MON YYYY" (missing start year; assume same as end year)
+    pattern = r"(\d{1,2})\s+([A-Z]+)\s*[-–]\s*(\d{1,2})\s+([A-Z]+)\s+(\d{4})"
+    match = re.search(pattern, text.upper())
+    if match:
+        start_day = int(match.group(1))
+        start_month_str = match.group(2)
+        end_day = int(match.group(3))
+        end_month_str = match.group(4)
+        end_year = int(match.group(5))
+
+        start_month = MONTH_MAP.get(start_month_str)
+        end_month = MONTH_MAP.get(end_month_str)
+        if start_month and end_month:
+            try:
+                start_year = end_year if start_month <= end_month else end_year - 1
+                start_date = datetime(start_year, start_month, start_day)
+                end_date = datetime(end_year, end_month, end_day)
+                return (start_date, end_date)
+            except ValueError:
+                pass
+
     return None
 
 
@@ -156,6 +177,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         end_date_str = end_date.strftime("%Y-%m-%d")
 
                         full_title = f"{artist}: {title}" if artist else title
+                        if full_title.isupper():
+                            full_title = full_title.title()
 
                         content_hash = generate_content_hash(full_title, "Marcia Wood Gallery", start_date_str)
 
@@ -190,7 +213,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "price_note": "Free admission",
                             "is_free": True,
                             "source_url": event_url,
-                            "ticket_url": event_url if event_url != (EVENTS_URL if "EVENTS_URL" in dir() else BASE_URL) else None,
+                            "ticket_url": event_url,
                             "image_url": image_map.get(full_title),
                             "raw_text": f"{full_title} - {start_date_str} to {end_date_str}",
                             "extraction_confidence": 0.90,

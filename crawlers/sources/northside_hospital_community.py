@@ -334,11 +334,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                         content_hash = generate_content_hash(title, "Northside Hospital Atlanta", current_date)
 
-                        if find_event_by_hash(content_hash):
-                            events_updated += 1
-                            i += 2
-                            continue
-
                         # Categorize event
                         event_metadata = categorize_event(title)
 
@@ -384,6 +379,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "recurrence_rule": None,
                             "content_hash": content_hash,
                         }
+
+                        existing = find_event_by_hash(content_hash)
+                        if existing:
+                            smart_update_existing_event(existing, event_record)
+                            events_updated += 1
+                            i += 2
+                            continue
 
                         try:
                             insert_event(event_record)

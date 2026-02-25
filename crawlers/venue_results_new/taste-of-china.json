@@ -1,0 +1,37 @@
+{
+  "venue_id": 4856,
+  "venue_slug": "taste-of-china",
+  "meta": {
+    "og_image": null,
+    "meta_description": "Duluth, GA 30096 Chinese food for Pickup -  Order from Taste Of China in Duluth, GA 30096, phone: 678-899-3288 ",
+    "reservation_links": [],
+    "menu_links": [],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": "(678) 899-3288"
+  },
+  "extracted": {
+    "hours": {
+      "mon": {"open": "11:30", "close": "23:00"},
+      "tue": {"open": "11:30", "close": "23:00"},
+      "wed": null,
+      "thu": {"open": "11:30", "close": "23:00"},
+      "fri": {"open": "11:30", "close": "23:00"},
+      "sat": {"open": "11:30", "close": "23:00"},
+      "sun": {"open": "11:30", "close": "23:00"}
+    },
+    "vibes": ["casual", "fast-casual"],
+    "cuisine": ["chinese"],
+    "service_style": "quick_service",
+    "price_level": 1,
+    "menu_highlights": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "phone": "(678) 899-3288",
+    "instagram": null,
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

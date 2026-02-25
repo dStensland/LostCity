@@ -48,9 +48,6 @@ export default function FestivalMap({ sessions, portalSlug }: FestivalMapProps) 
     return Array.from(venueMap.values());
   }, [sessions]);
 
-  // Skip for single-venue or no-venue festivals
-  if (venues.length < 2) return null;
-
   // Group venues by neighborhood, sorted by total event count per group
   const grouped = useMemo(() => {
     const groups = new Map<string, VenuePin[]>();
@@ -69,6 +66,9 @@ export default function FestivalMap({ sessions, portalSlug }: FestivalMapProps) 
       }))
       .sort((a, b) => b.totalEvents - a.totalEvents);
   }, [venues]);
+
+  // Skip for single-venue or no-venue festivals
+  if (venues.length < 2) return null;
 
   return (
     <section>

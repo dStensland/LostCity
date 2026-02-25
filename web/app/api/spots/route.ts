@@ -1,15 +1,36 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createPortalScopedClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { getLocalDateString } from "@/lib/formats";
 import { isOpenAt, type HoursData } from "@/lib/hours";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
-import { errorResponse, parseFloatParam } from "@/lib/api-utils";
+import { parseFloatParam } from "@/lib/api-utils";
 import { haversineDistanceKm, getWalkingMinutes, getProximityTier, getProximityLabel } from "@/lib/geo";
 import { logger } from "@/lib/logger";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
-import { applyPortalScopeToQuery } from "@/lib/portal-scope";
+import { applyPortalScopeToQuery, expandCityFilterForMetro } from "@/lib/portal-scope";
+import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
 
 export const dynamic = "force-dynamic";
+
+const SPOTS_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes — venue data is stable
+const SPOTS_CACHE_MAX_ENTRIES = 160;
+const SPOTS_CACHE_NAMESPACE = "api:spots";
+
+// Only include data-shaping params in cache key.
+// Presentation params (limit, sort, center coords, radius) are excluded
+// so identical filter combos hit the same cache entry.
+const CACHE_KEY_PARAMS = new Set([
+  "portal_id", "portal", "exclusive", "open_now", "with_events",
+  "price_level", "venue_type", "neighborhood", "vibes", "genres", "cuisine", "q", "include_hours",
+]);
+
+function buildStableSearchParamsKey(searchParams: URLSearchParams): string {
+  return Array.from(searchParams.entries())
+    .filter(([key]) => CACHE_KEY_PARAMS.has(key))
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+    .join("&");
+}
 
 export async function GET(request: NextRequest) {
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
@@ -29,10 +50,17 @@ export async function GET(request: NextRequest) {
   const vibes = searchParams.get("vibes")?.split(",").filter(Boolean);
   const genres = searchParams.get("genres")?.split(",").filter(Boolean);
   const search = searchParams.get("q")?.toLowerCase().trim();
+  // Escape PostgREST filter special characters in search term
+  const safeSearch = search?.replace(/[%_]/g, "\\$&");
   const centerLat = parseFloatParam(searchParams.get("center_lat"));
   const centerLng = parseFloatParam(searchParams.get("center_lng"));
   const radiusKm = parseFloatParam(searchParams.get("radius_km"));
   const sortBy = searchParams.get("sort"); // distance | special_relevance | hybrid
+  const includeHours = searchParams.get("include_hours") === "true";
+  const responseLimitRaw = Number.parseInt(searchParams.get("limit") || "600", 10);
+  const responseLimit = Number.isFinite(responseLimitRaw)
+    ? Math.max(1, Math.min(responseLimitRaw, 1200))
+    : 600;
 
   const hasCenter = centerLat !== null && centerLng !== null;
 
@@ -42,9 +70,35 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  const cacheKey = buildStableSearchParamsKey(searchParams);
+
   const today = getLocalDateString();
+  const eventsWindowEndDate = new Date();
+  eventsWindowEndDate.setDate(eventsWindowEndDate.getDate() + 45);
+  const eventsWindowEnd = getLocalDateString(eventsWindowEndDate);
+  const portalContext = await resolvePortalQueryContext(supabase, searchParams);
+  if (portalContext.hasPortalParamMismatch) {
+    return NextResponse.json(
+      { error: "portal and portal_id parameters must reference the same portal" },
+      { status: 400 },
+    );
+  }
+  const portalId = isLegacyDefaultPortal ? null : portalContext.portalId;
+  const portalClient = await createPortalScopedClient(portalId);
+  const portalCityFilter = Array.from(
+    new Set(
+      [...(portalContext.filters.cities || []), ...(portalContext.filters.city ? [portalContext.filters.city] : [])]
+        .map((c) => c.trim())
+        .filter(Boolean),
+    ),
+  );
 
   try {
+    const payload = await getOrSetSharedCacheJson<Record<string, unknown>>(
+      SPOTS_CACHE_NAMESPACE,
+      cacheKey,
+      SPOTS_CACHE_TTL_MS,
+      async (): Promise<Record<string, unknown>> => {
     type VenueRow = {
       id: number;
       name: string;
@@ -52,6 +106,7 @@ export async function GET(request: NextRequest) {
       address: string | null;
       neighborhood: string | null;
       venue_type: string | null;
+      location_designator: "standard" | "private_after_signup" | "virtual" | "recovery_meeting" | null;
       city: string;
       image_url: string | null;
       lat: number | null;
@@ -68,37 +123,45 @@ export async function GET(request: NextRequest) {
       venue_id: number;
     };
 
-    const portalContext = await resolvePortalQueryContext(supabase, searchParams);
-    if (portalContext.hasPortalParamMismatch) {
-      return NextResponse.json(
-        { error: "portal and portal_id parameters must reference the same portal" },
-        { status: 400 }
-      );
-    }
-    const portalId = isLegacyDefaultPortal ? null : portalContext.portalId;
-    const portalCityFilter = Array.from(
-      new Set(
-        [...(portalContext.filters.cities || []), ...(portalContext.filters.city ? [portalContext.filters.city] : [])]
-          .map((c) => c.trim())
-          .filter(Boolean)
-      )
-    );
+    type SpotRow = {
+      id: number;
+      name: string;
+      slug: string;
+      neighborhood: string | null;
+      venue_type: string | null;
+      location_designator: string;
+      image_url: string | null;
+      event_count: number;
+      price_level: number | null;
+      lat: number | null;
+      lng: number | null;
+      hours_display: string | null;
+      is_24_hours: boolean;
+      vibes: string[] | null;
+      short_description: string | null;
+      genres: string[] | null;
+      is_open: boolean;
+      closes_at: string | null | undefined;
+      distance_km: number | null;
+      // Conditionally included fields
+      address?: string | null;
+      walking_minutes?: number | null;
+      proximity_tier?: string | null;
+      proximity_label?: string | null;
+      hours?: HoursData | null;
+    };
 
     // Fetch all active venues with enhanced data
     // Note: is_24_hours column may not exist in all environments
     let query = supabase
       .from("venues")
-      .select("id, name, slug, address, neighborhood, venue_type, city, image_url, lat, lng, price_level, hours, hours_display, vibes, short_description, genres")
+      .select("id, name, slug, address, neighborhood, venue_type, location_designator, city, image_url, lat, lng, price_level, hours, hours_display, vibes, short_description, genres")
       .neq("active", false); // Exclude deactivated venues
 
-    query = applyPortalScopeToQuery(query, {
-      portalId,
-      portalExclusive: isExclusive,
-      publicOnlyWhenNoPortal: true,
-    });
-
+    // Note: venues table has no portal_id column, so we scope by city instead
     if (portalCityFilter.length > 0) {
-      query = query.in("city", portalCityFilter);
+      const expandedCities = expandCityFilterForMetro(portalCityFilter);
+      query = query.in("city", expandedCities);
     }
 
     // Apply venue type filter
@@ -129,23 +192,48 @@ export async function GET(request: NextRequest) {
       query = query.overlaps("genres", genres);
     }
 
-    query = query.order("name").limit(5000);
+    // Apply cuisine filter (array overlap)
+    const cuisineParam = searchParams.get("cuisine")?.split(",").filter(Boolean);
+    if (cuisineParam && cuisineParam.length > 0) {
+      query = query.overlaps("cuisine", cuisineParam);
+    }
+
+    // Apply text search at DB level using ilike
+    if (safeSearch) {
+      query = query.or(
+        `name.ilike.%${safeSearch}%,neighborhood.ilike.%${safeSearch}%,short_description.ilike.%${safeSearch}%`
+      );
+    }
+
+    const venueCandidateLimit = Math.max(
+      700,
+      Math.min(3000, responseLimit * 3),
+    );
+    query = query.order("name").limit(venueCandidateLimit);
 
     const { data: venues, error: venuesError } = await query;
 
     if (venuesError) {
-      return errorResponse(venuesError, "GET /api/spots", 500);
+      throw venuesError;
     }
 
     if (!venues || venues.length === 0) {
-      return NextResponse.json({ spots: [] });
+      return {
+        spots: [],
+        meta: {
+          total: 0,
+          openCount: 0,
+          neighborhoods: [],
+        },
+      };
     }
 
     // Get event counts for venues with upcoming events
-    let eventsQuery = supabase
+    let eventsQuery = portalClient
       .from("events")
       .select("venue_id")
       .gte("start_date", today)
+      .lte("start_date", eventsWindowEnd)
       .not("venue_id", "is", null);
 
     eventsQuery = applyPortalScopeToQuery(eventsQuery, {
@@ -154,7 +242,11 @@ export async function GET(request: NextRequest) {
       publicOnlyWhenNoPortal: true,
     });
 
-    const { data: events } = await eventsQuery.limit(10000);
+    const eventCandidateLimit = Math.max(
+      400,
+      Math.min(3500, responseLimit * 5),
+    );
+    const { data: events } = await eventsQuery.limit(eventCandidateLimit);
 
     // Count events per venue
     const eventCounts = new Map<number, number>();
@@ -167,76 +259,53 @@ export async function GET(request: NextRequest) {
 
     // Combine venues with event counts and compute open status
     const now = new Date();
+    const DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
     let spots = (venues as VenueRow[]).map(venue => {
-      const openStatus = isOpenAt(venue.hours, now, false);
+      // Detect 24-hour venues: open 00:00 / close 00:00 (or 23:59) on all days
+      const is24h = venue.hours != null && DAY_KEYS.every(d => {
+        const h = venue.hours?.[d];
+        return h && h.open === "00:00" && (h.close === "00:00" || h.close === "23:59");
+      });
+      const openStatus = isOpenAt(venue.hours, now, is24h);
       const distanceKm = hasCenter && venue.lat !== null && venue.lng !== null
         ? haversineDistanceKm(centerLat!, centerLng!, venue.lat, venue.lng)
         : null;
-
-      return {
+      const baseSpot: SpotRow = {
         id: venue.id,
         name: venue.name,
         slug: venue.slug,
-        address: venue.address,
         neighborhood: venue.neighborhood,
         venue_type: venue.venue_type,
+        location_designator: venue.location_designator || "standard",
         image_url: venue.image_url,
         event_count: eventCounts.get(venue.id) || 0,
         price_level: venue.price_level,
         lat: venue.lat,
         lng: venue.lng,
-        hours: venue.hours,
         hours_display: venue.hours_display,
-        is_24_hours: false,
+        is_24_hours: is24h,
         vibes: venue.vibes,
         short_description: venue.short_description,
         genres: venue.genres,
         is_open: openStatus.isOpen,
         closes_at: openStatus.closesAt,
         distance_km: distanceKm !== null ? Math.round(distanceKm * 100) / 100 : null,
-        walking_minutes: distanceKm !== null ? getWalkingMinutes(distanceKm) : null,
-        proximity_tier: distanceKm !== null ? getProximityTier(distanceKm) : null,
-        proximity_label: distanceKm !== null ? getProximityLabel(distanceKm) : null,
       };
+
+      // Geo fields only when a center point is provided
+      if (hasCenter) {
+        baseSpot.address = venue.address;
+        baseSpot.walking_minutes = distanceKm !== null ? getWalkingMinutes(distanceKm) : null;
+        baseSpot.proximity_tier = distanceKm !== null ? getProximityTier(distanceKm) : null;
+        baseSpot.proximity_label = distanceKm !== null ? getProximityLabel(distanceKm) : null;
+      }
+
+      if (includeHours) {
+        baseSpot.hours = venue.hours;
+      }
+
+      return baseSpot;
     });
-
-    // Fetch social proof counts (followers + recommendations)
-    const venueIds = spots.map((spot) => spot.id);
-    const followerCounts = new Map<number, number>();
-    const recommendationCounts = new Map<number, number>();
-
-    if (venueIds.length > 0) {
-      const [{ data: followsData }, { data: recData }] = await Promise.all([
-        supabase
-          .from("follows")
-          .select("followed_venue_id")
-          .in("followed_venue_id", venueIds)
-          .not("followed_venue_id", "is", null),
-        supabase
-          .from("recommendations")
-          .select("venue_id")
-          .in("venue_id", venueIds)
-          .eq("visibility", "public"),
-      ]);
-
-      for (const row of (followsData || []) as { followed_venue_id: number | null }[]) {
-        if (row.followed_venue_id) {
-          followerCounts.set(
-            row.followed_venue_id,
-            (followerCounts.get(row.followed_venue_id) || 0) + 1
-          );
-        }
-      }
-
-      for (const row of (recData || []) as { venue_id: number | null }[]) {
-        if (row.venue_id) {
-          recommendationCounts.set(
-            row.venue_id,
-            (recommendationCounts.get(row.venue_id) || 0) + 1
-          );
-        }
-      }
-    }
 
     // Filter to only venues with events if requested
     if (withEventsOnly) {
@@ -257,22 +326,7 @@ export async function GET(request: NextRequest) {
     const addressNamePattern = /^\d+\s+[\w\s]+(St|Street|Ave|Avenue|Blvd|Boulevard|Rd|Road|Dr|Drive|Ln|Lane|Way|Ct|Court|Pl|Place|Pkwy|Parkway|Hwy|Highway|Pike|Circle|Trail)\b/i;
     spots = spots.filter(s => !addressNamePattern.test(s.name));
 
-    // Apply text search filter (client-side for now)
-    if (search) {
-      spots = spots.filter(s =>
-        s.name.toLowerCase().includes(search) ||
-        s.neighborhood?.toLowerCase().includes(search) ||
-        s.short_description?.toLowerCase().includes(search)
-      );
-    }
-
     // Sort: venues with events first (by count), then alphabetically
-    spots = spots.map((spot) => ({
-      ...spot,
-      follower_count: followerCounts.get(spot.id) || 0,
-      recommendation_count: recommendationCounts.get(spot.id) || 0,
-    }));
-
     if (hasCenter && sortBy === "distance") {
       spots.sort((a, b) => {
         if (a.distance_km === null && b.distance_km === null) return a.name.localeCompare(b.name);
@@ -307,25 +361,78 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // Bound response size before social proof fanout queries.
+    spots = spots.slice(0, responseLimit);
+
+    // Fetch social proof counts (followers + recommendations) for returned venues only.
+    const venueIds = spots.map((spot) => spot.id);
+    const followerCounts = new Map<number, number>();
+    const recommendationCounts = new Map<number, number>();
+    if (venueIds.length > 0) {
+      // Cap social proof row fetch to prevent unbounded reads.
+      // With 600 venues and ~20 avg followers each, 8000 covers the typical case.
+      const socialProofLimit = 8000;
+      const [{ data: followsData }, { data: recData }] = await Promise.all([
+        supabase
+          .from("follows")
+          .select("followed_venue_id")
+          .in("followed_venue_id", venueIds)
+          .not("followed_venue_id", "is", null)
+          .limit(socialProofLimit),
+        supabase
+          .from("recommendations")
+          .select("venue_id")
+          .in("venue_id", venueIds)
+          .eq("visibility", "public")
+          .limit(socialProofLimit),
+      ]);
+
+      for (const row of (followsData || []) as { followed_venue_id: number | null }[]) {
+        if (row.followed_venue_id) {
+          followerCounts.set(
+            row.followed_venue_id,
+            (followerCounts.get(row.followed_venue_id) || 0) + 1,
+          );
+        }
+      }
+
+      for (const row of (recData || []) as { venue_id: number | null }[]) {
+        if (row.venue_id) {
+          recommendationCounts.set(
+            row.venue_id,
+            (recommendationCounts.get(row.venue_id) || 0) + 1,
+          );
+        }
+      }
+    }
+
+    spots = spots.map((spot) => ({
+      ...spot,
+      follower_count: followerCounts.get(spot.id) || 0,
+      recommendation_count: recommendationCounts.get(spot.id) || 0,
+    }));
+
     // Compute metadata for filter UI (from full unfiltered data)
     const allNeighborhoods = [...new Set((venues as VenueRow[]).map(v => v.neighborhood).filter(Boolean))] as string[];
     const openCount = spots.filter(s => s.is_open).length;
 
-    return NextResponse.json(
-      {
-        spots,
-        meta: {
-          total: spots.length,
-          openCount,
-          neighborhoods: allNeighborhoods.sort(),
-        }
+        return {
+          spots,
+          meta: {
+            total: spots.length,
+            openCount,
+            neighborhoods: allNeighborhoods.sort(),
+          }
+        };
       },
-      {
-        headers: {
-          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
-        },
-      }
+      { maxEntries: SPOTS_CACHE_MAX_ENTRIES }
     );
+
+    return NextResponse.json(payload, {
+      headers: {
+        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
+      },
+    });
   } catch (error) {
     logger.error("Spots API error:", error);
     return NextResponse.json({ spots: [], error: "Failed to fetch spots" }, { status: 500 });

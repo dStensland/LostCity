@@ -1,0 +1,21 @@
+{
+  "venue_id": 1006,
+  "venue_slug": "asw-whiskey-exchange",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["craft-cocktails"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "aswdistillery",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

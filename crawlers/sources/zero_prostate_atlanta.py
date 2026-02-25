@@ -105,20 +105,20 @@ def determine_category_and_tags(title: str, description: str = "") -> tuple[str,
     # Free screening events
     if any(word in text for word in ["screening", "psa", "free screening", "health screening"]):
         category = "community"
-        tags.extend(["screening", "free-clinic", "preventive-care", "free"])
-        is_free = True
+        tags.extend(["screening", "free-clinic", "preventive-care"])
+        is_free = "free" in text or "no cost" in text
 
     # CHAMPS Summit and educational events
     elif any(word in text for word in ["summit", "champs", "conference", "seminar", "workshop", "education"]):
         category = "learning"
         tags.extend(["health-education", "summit"])
-        is_free = True
+        is_free = "free" in text or "no cost" in text
 
     # Support groups
     elif any(word in text for word in ["support group", "peer support", "patient support", "caregiver"]):
         category = "support_group"
         tags.extend(["patient-support", "community"])
-        is_free = True
+        is_free = "free" in text or "no cost" in text
 
     # Awareness events and fundraisers
     elif any(word in text for word in ["walk", "run", "5k", "race", "fundraiser", "gala", "benefit"]):
@@ -129,7 +129,7 @@ def determine_category_and_tags(title: str, description: str = "") -> tuple[str,
     # Default to community
     else:
         category = "community"
-        is_free = True
+        is_free = "free" in text or "no cost" in text
 
     # Check for explicit free/paid mentions
     if any(word in text for word in ["free", "no cost", "complimentary", "no charge"]):
@@ -333,12 +333,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     title, "ZERO Prostate Cancer Atlanta", start_date
                 )
 
-                # Check if already exists
-                if find_event_by_hash(content_hash):
-                    events_updated += 1
-                    logger.debug(f"Event already exists: {title}")
-                    continue
-
                 # Create event record
                 event_record = {
                     "source_id": source_id,
@@ -366,6 +360,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "recurrence_rule": None,
                     "content_hash": content_hash,
                 }
+
+                existing = find_event_by_hash(content_hash)
+                if existing:
+                    smart_update_existing_event(existing, event_record)
+                    events_updated += 1
+                    logger.debug(f"Event updated: {title}")
+                    continue
 
                 try:
                     insert_event(event_record)

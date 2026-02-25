@@ -18,6 +18,7 @@ from bs4 import BeautifulSoup
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from description_fetcher import fetch_description_playwright
+from utils import enrich_event_record
 
 logger = logging.getLogger(__name__)
 
@@ -225,7 +226,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "price_min": evt["price_min"],
                     "price_max": evt["price_max"],
                     "price_note": evt["price_note"],
-                    "is_free": False,
+                    "is_free": None,
                     "source_url": CALENDAR_URL,
                     "ticket_url": evt["event_url"],
                     "image_url": evt["image_url"],
@@ -236,11 +237,26 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "content_hash": evt["content_hash"],
                 }
 
-                    existing = find_event_by_hash(content_hash)
-                    if existing:
-                        smart_update_existing_event(existing, event_record)
-                        events_updated += 1
-                        continue
+                # Enrich from detail page
+                enrich_event_record(event_record, source_name="3rd & Lindsley")
+
+                # Determine is_free if still unknown after enrichment
+                if event_record.get("is_free") is None:
+                    desc_lower = (event_record.get("description") or "").lower()
+                    title_lower = event_record.get("title", "").lower()
+                    combined = f"{title_lower} {desc_lower}"
+                    if any(kw in combined for kw in ["free", "no cost", "no charge", "complimentary"]):
+                        event_record["is_free"] = True
+                        event_record["price_min"] = event_record.get("price_min") or 0
+                        event_record["price_max"] = event_record.get("price_max") or 0
+                    else:
+                        event_record["is_free"] = False
+
+                existing = find_event_by_hash(evt["content_hash"])
+                if existing:
+                    smart_update_existing_event(existing, event_record)
+                    events_updated += 1
+                    continue
 
                 try:
                     insert_event(event_record)

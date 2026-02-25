@@ -1,0 +1,55 @@
+{
+  "venue_id": 3519,
+  "venue_slug": "the-creek-caf-gelato",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Pistachio Gelato",
+        "price": "$5.75",
+        "category": "dessert"
+      },
+      {
+        "name": "Italian Charcuterie Board",
+        "price": "$22.50",
+        "category": "appetizer"
+      },
+      {
+        "name": "Prosciutto & Arugula Sandwich",
+        "price": "$13.25",
+        "category": "entree"
+      },
+      {
+        "name": "Hot Chocolate Ganache",
+        "price": "$7",
+        "category": "cocktail"
+      },
+      {
+        "name": "Creek Special Flatbread",
+        "price": "$13.50",
+        "category": "entree"
+      }
+    ],
+    "dietary_options": [
+      "vegetarian-friendly"
+    ],
+    "price_level": 2,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

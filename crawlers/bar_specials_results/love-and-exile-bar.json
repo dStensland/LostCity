@@ -1,0 +1,21 @@
+{
+  "venue_id": 1808,
+  "venue_slug": "love-and-exile-bar",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["patio", "wine-bar", "date-night", "casual"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "https://www.loveandexile.bar/menu",
+    "reservation_url": "https://www.opentable.com/restref/client/?restref=1438465&lang=en-US&ot_source=Restaurant%20website&corrid=6fc94335-5b50-49d8-8293-5437abf8184b",
+    "phone": "(615) 712-9780",
+    "instagram": "loveandexilebar",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

@@ -1,0 +1,22 @@
+version: 1
+slug: spruill-center-for-the-arts
+name: Spruill Center for the Arts
+integration_method: rest_api
+defaults:
+  category: learning
+  tags:
+  - arts
+  - classes
+  - workshops
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.spruillarts.org
+detail:
+  enabled: true
+data_goals:
+- classes
+- events
+- images
+- tickets

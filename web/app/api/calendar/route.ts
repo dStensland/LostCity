@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createPortalScopedClient } from "@/lib/supabase/server";
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, format } from "date-fns";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";
 import { parseIntParam } from "@/lib/api-utils";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
-import { applyPortalScopeToQuery, filterByPortalCity } from "@/lib/portal-scope";
+import {
+  applyPortalScopeToQuery,
+  filterByPortalCity,
+  parsePortalContentFilters,
+  applyPortalCategoryFilters,
+  filterByPortalContentScope,
+} from "@/lib/portal-scope";
 
 /**
  * Calendar API - Optimized endpoint for calendar view
@@ -68,8 +74,10 @@ export async function GET(request: NextRequest) {
       { status: 400 }
     );
   }
+  const portalClient = await createPortalScopedClient(portalContext.portalId);
   const portalId = portalContext.portalId;
   const portalCity = !portalExclusive ? portalContext.filters.city : undefined;
+  const portalContentFilters = parsePortalContentFilters(portalContext.filters as Record<string, unknown> | null);
 
   // Type for calendar events (minimal fields)
   type CalendarEvent = {
@@ -82,12 +90,15 @@ export async function GET(request: NextRequest) {
     is_free: boolean;
     price_min: number | null;
     price_max: number | null;
-    venue: { name: string; neighborhood: string | null; city: string | null } | null;
+    tags?: string[] | null;
+    genres?: string[] | null;
+    venue: { id: number; name: string; neighborhood: string | null; city: string | null; lat: number | null; lng: number | null } | null;
+    series: { genres: string[] | null } | null;
   };
 
   // Helper to build base query with filters
   const buildQuery = () => {
-    let query = supabase
+    let query = portalClient
       .from("events")
       .select(`
         id,
@@ -99,10 +110,17 @@ export async function GET(request: NextRequest) {
         is_free,
         price_min,
         price_max,
+        tags,
         venue:venues!events_venue_id_fkey (
+          id,
           name,
           neighborhood,
-          city
+          city,
+          lat,
+          lng
+        ),
+        series:series!events_series_id_fkey (
+          genres
         )
       `)
       .gte("start_date", startDate)
@@ -136,6 +154,10 @@ export async function GET(request: NextRequest) {
       portalId,
       portalExclusive,
       publicOnlyWhenNoPortal: true,
+    });
+
+    query = applyPortalCategoryFilters(query, portalContentFilters, {
+      userCategoriesActive: !!(categories && categories.length > 0),
     });
 
     return query;
@@ -177,15 +199,26 @@ export async function GET(request: NextRequest) {
     if (page > 10) break;
   }
 
-  const events = filterByPortalCity(allEvents, portalCity, {
+  const cityFiltered = filterByPortalCity(allEvents, portalCity, {
     allowMissingCity: true,
+  });
+  const events = filterByPortalContentScope(cityFiltered, portalContentFilters);
+
+  // Flatten genres from series into top-level event field
+  const eventsWithGenres = events.map((event) => {
+    const { series, ...rest } = event;
+    return {
+      ...rest,
+      genres: series?.genres || null,
+    };
   });
 
   // Group events by date
-  const eventsByDate: Record<string, CalendarEvent[]> = {};
+  type EventWithGenres = Omit<CalendarEvent, "series"> & { genres: string[] | null };
+  const eventsByDate: Record<string, EventWithGenres[]> = {};
   const categoryCounts: Record<string, number> = {};
 
-  events.forEach((event) => {
+  eventsWithGenres.forEach((event) => {
     const dateKey = event.start_date;
     if (!eventsByDate[dateKey]) {
       eventsByDate[dateKey] = [];
@@ -199,7 +232,7 @@ export async function GET(request: NextRequest) {
   });
 
   // Calculate summary stats
-  const totalEvents = events?.length || 0;
+  const totalEvents = eventsWithGenres.length;
   const daysWithEvents = Object.keys(eventsByDate).length;
 
   return NextResponse.json({

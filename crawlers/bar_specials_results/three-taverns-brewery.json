@@ -1,0 +1,21 @@
+{
+  "venue_id": 558,
+  "venue_slug": "three-taverns-brewery",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["casual", "beer-garden"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "threetaverns",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

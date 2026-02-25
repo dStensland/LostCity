@@ -1,0 +1,18 @@
+version: 1
+slug: bronzelens
+name: BronzeLens Film Festival
+integration_method: html
+defaults:
+  category: film
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://bronzelens.com
+  - https://bronzelens.eventive.org
+detail:
+  enabled: true
+data_goals:
+- events
+- images
+- tickets

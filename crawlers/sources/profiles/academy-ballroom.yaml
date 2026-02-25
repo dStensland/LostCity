@@ -5,7 +5,6 @@ integration_method: feed
 defaults:
   venue_name: Academy Ballroom
   category: arts
-  subcategory: dance
   tags:
   - dance
   - ballroom
@@ -19,3 +18,8 @@ discovery:
   - https://calendar.google.com/calendar/ical/academyatl@gmail.com/public/basic.ics
 detail:
   enabled: true
+data_goals:
+- classes
+- events
+- images
+- tickets

@@ -40,7 +40,7 @@ export async function GET(
   const { data: eventsData } = await supabase
     .from("events")
     .select(`
-      id, title, start_date, start_time, end_time, is_free, price_min, category,
+      id, title, start_date, start_time, end_time, is_free, price_min, category:category_id,
       venue:venues(id, name, slug, neighborhood)
     `)
     .eq("organization_id", organization.id)

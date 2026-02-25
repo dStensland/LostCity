@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createPortalScopedClient } from "@/lib/supabase/server";
 import { errorResponse, isValidString, escapeSQLPattern } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
-import { applyPortalScopeToQuery, filterByPortalCity } from "@/lib/portal-scope";
+import {
+  applyPortalScopeToQuery,
+  filterByPortalCity,
+  parsePortalContentFilters,
+  applyPortalCategoryFilters,
+  filterByPortalContentScope,
+} from "@/lib/portal-scope";
 
 // GET /api/events/search?q= - Search events for autocomplete
 export async function GET(request: NextRequest) {
@@ -34,13 +40,15 @@ export async function GET(request: NextRequest) {
       { status: 400 }
     );
   }
+  const portalClient = await createPortalScopedClient(portalContext.portalId);
   const portalCity = !portalExclusive ? portalContext.filters.city : undefined;
+  const portalContentFilters = parsePortalContentFilters(portalContext.filters as Record<string, unknown> | null);
 
   // Normalize search query
   const normalizedQuery = query.toLowerCase().trim();
 
   // Search events by title
-  let searchQuery = supabase
+  let searchQuery = portalClient
     .from("events")
     .select(
       `
@@ -50,7 +58,9 @@ export async function GET(request: NextRequest) {
       start_date,
       end_date,
       is_all_day,
-      venue:venues(id, name, neighborhood, city),
+      category,
+      tags,
+      venue:venues(id, name, neighborhood, city, lat, lng, location_designator),
       organization:organizations(id, name)
     `
     )
@@ -75,6 +85,8 @@ export async function GET(request: NextRequest) {
     publicOnlyWhenNoPortal: true,
   });
 
+  searchQuery = applyPortalCategoryFilters(searchQuery, portalContentFilters);
+
   const { data: eventsData, error } = await searchQuery;
 
   if (error) {
@@ -88,11 +100,21 @@ export async function GET(request: NextRequest) {
     start_date: string;
     end_date: string | null;
     is_all_day: boolean;
+    category: string | null;
+    tags: string[] | null;
     venue: {
       id: number;
       name: string;
       neighborhood: string | null;
       city?: string | null;
+      lat?: number | null;
+      lng?: number | null;
+      location_designator?:
+        | "standard"
+        | "private_after_signup"
+        | "virtual"
+        | "recovery_meeting"
+        | null;
     } | null;
     organization: {
       id: string;
@@ -100,9 +122,10 @@ export async function GET(request: NextRequest) {
     } | null;
   };
 
-  const events = filterByPortalCity((eventsData as EventResult[] | null) || [], portalCity, {
+  const cityFiltered = filterByPortalCity((eventsData as EventResult[] | null) || [], portalCity, {
     allowMissingCity: true,
   });
+  const events = filterByPortalContentScope(cityFiltered, portalContentFilters);
 
   // Sort results: exact matches first, then prefix matches, then by date
   const sortedEvents = events.sort((a, b) => {

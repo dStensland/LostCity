@@ -9,8 +9,14 @@ const DAY_NAMES = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
 /**
  * Parse a time string (HH:MM) into minutes since midnight
  */
-function timeToMinutes(time: string): number {
-  const [hours, minutes] = time.split(":").map(Number);
+function timeToMinutes(time: string | null | undefined): number {
+  if (!time) return -1;
+  const parts = time.split(":");
+  if (parts.length !== 2) return -1;
+  const hours = Number(parts[0]);
+  const minutes = Number(parts[1]);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return -1;
+  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return -1;
   return hours * 60 + minutes;
 }
 
@@ -48,20 +54,25 @@ export function isOpenAt(
 
     if (yesterdayHours) {
       const { open, close } = yesterdayHours;
-      const openMins = timeToMinutes(open);
-      const closeMins = timeToMinutes(close);
+      if (open && close) {
+        const openMins = timeToMinutes(open);
+        const closeMins = timeToMinutes(close);
 
-      // Check for overnight (close < open means next day)
-      if (closeMins < openMins && currentMinutes < closeMins) {
-        return { isOpen: true, closesAt: close };
+        // Check for overnight (close < open means next day)
+        if (openMins >= 0 && closeMins >= 0 && closeMins < openMins && currentMinutes < closeMins) {
+          return { isOpen: true, closesAt: close };
+        }
       }
     }
     return { isOpen: false };
   }
 
   const { open, close } = todayHours;
+  if (!open || !close) return { isOpen: false };
   const openMins = timeToMinutes(open);
   const closeMins = timeToMinutes(close);
+
+  if (openMins < 0 || closeMins < 0) return { isOpen: false };
 
   // Handle overnight hours (e.g., open 18:00, close 02:00)
   if (closeMins < openMins) {
@@ -143,7 +154,11 @@ export function isCloseTimeRelevant(
  * e.g., "02:00" -> "2am", "14:30" -> "2:30pm"
  */
 export function formatCloseTime(time: string): string {
-  const [hours, minutes] = time.split(":").map(Number);
+  const parts = time.split(":");
+  if (parts.length !== 2) return time;
+  const hours = Number(parts[0]);
+  const minutes = Number(parts[1]);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return time;
   const adjustedHours = hours > 12 ? hours - 12 : hours === 0 ? 12 : hours;
 
   // Handle overnight times (close time < 6am is next day)
@@ -217,6 +232,9 @@ export function isSpotOpenDuringEvent(
   const openMins = timeToMinutes(open);
   let closeMins = timeToMinutes(close);
   const eventStartMins = timeToMinutes(eventStart);
+
+  if (openMins < 0 || closeMins < 0 || eventStartMins < 0) return { isRelevant: true };
+
   const eventEndMins = eventEnd
     ? timeToMinutes(eventEnd)
     : eventStartMins + 180; // Default 3 hour event

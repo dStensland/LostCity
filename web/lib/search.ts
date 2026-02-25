@@ -1,5 +1,4 @@
 import { supabase, type Event } from "./supabase";
-import { createServiceClient } from "./supabase/service";
 import {
   CATEGORIES,
   SUBCATEGORIES,
@@ -21,7 +20,7 @@ import { getMoodById, type MoodId } from "./moods";
 import { decodeCursor, generateNextCursor, type CursorData } from "./cursor";
 import { createLogger } from "./logger";
 import type { Frequency, DayOfWeek } from "./recurrence";
-import { applyPortalScopeToQuery } from "./portal-scope";
+import { applyFederatedPortalScopeToQuery, applyPortalScopeToQuery } from "./portal-scope";
 
 const logger = createLogger("search");
 
@@ -89,6 +88,12 @@ export type EventWithLocation = Event & {
     typical_price_min: number | null;
     typical_price_max: number | null;
     venue_type?: string | null;
+    location_designator?:
+      | "standard"
+      | "private_after_signup"
+      | "virtual"
+      | "recovery_meeting"
+      | null;
     vibes?: string[] | null;
     description?: string | null;
   } | null;
@@ -96,6 +101,9 @@ export type EventWithLocation = Event & {
     typical_price_min: number | null;
     typical_price_max: number | null;
   } | null;
+  // Festival / tentpole flags (direct on events table)
+  festival_id?: string | null;
+  is_tentpole?: boolean;
   // Series information (for series rollups)
   series_id?: string | null;
   series?: {
@@ -131,20 +139,6 @@ export type EventWithLocation = Event & {
   friends_going?: { user_id: string; username: string; display_name: string | null }[];
 };
 
-export type Category = {
-  id: string;
-  name: string;
-  display_order: number;
-  icon: string | null;
-  color: string | null;
-};
-
-export type Subcategory = {
-  id: string;
-  category_id: string;
-  name: string;
-  display_order: number;
-};
 
 // Escape special characters for PostgREST filter strings
 // Prevents injection in .or() and .filter() query parameters
@@ -656,7 +650,7 @@ export async function getFilteredEventsWithSearch(
     .select(
       `
       *,
-      venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max, venue_type, blurhash),
+      venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max, venue_type, location_designator, blurhash),
       category_data:categories(typical_price_min, typical_price_max),
       series:series(id, slug, title, series_type, image_url, frequency, day_of_week, festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood))
     `,
@@ -674,18 +668,15 @@ export async function getFilteredEventsWithSearch(
     .or("start_time.not.is.null,is_all_day.eq.true")
     .is("canonical_event_id", null); // Only show canonical events, not duplicates
 
-  // Apply portal restriction filter.
+  // Apply portal + federated source restriction filter.
   // If no portal_id is provided, keep query unscoped for admin/global callers.
-  query = applyPortalScopeToQuery(query, {
+  query = applyFederatedPortalScopeToQuery(query, {
     portalId: filters.portal_id,
     portalExclusive: filters.portal_exclusive,
     publicOnlyWhenNoPortal: false,
+    sourceIds: filters.source_ids || [],
+    sourceColumn: "source_id",
   });
-
-  // Apply explicit source filtering if provided
-  if (filters.source_ids && filters.source_ids.length > 0) {
-    query = query.in("source_id", filters.source_ids);
-  }
 
   // Get mood data for potential vibes lookup
   const mood = filters.mood ? getMoodById(filters.mood) : null;
@@ -785,7 +776,7 @@ export async function getFilteredEventsWithCursor(
     .select(
       `
       *,
-      venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max, venue_type, blurhash),
+      venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max, venue_type, location_designator, blurhash),
       category_data:categories(typical_price_min, typical_price_max),
       series:series(id, slug, title, series_type, image_url, frequency, day_of_week, festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood))
     `
@@ -797,16 +788,13 @@ export async function getFilteredEventsWithCursor(
     .or("start_time.not.is.null,is_all_day.eq.true")
     .is("canonical_event_id", null); // Only show canonical events, not duplicates
 
-  query = applyPortalScopeToQuery(query, {
+  query = applyFederatedPortalScopeToQuery(query, {
     portalId: filters.portal_id,
     portalExclusive: filters.portal_exclusive,
     publicOnlyWhenNoPortal: false,
+    sourceIds: filters.source_ids || [],
+    sourceColumn: "source_id",
   });
-
-  // Apply explicit source filtering if provided
-  if (filters.source_ids && filters.source_ids.length > 0) {
-    query = query.in("source_id", filters.source_ids);
-  }
 
   // Get mood data for potential vibes lookup
   const mood = filters.mood ? getMoodById(filters.mood) : null;
@@ -960,16 +948,13 @@ export async function getEventsForMap(
     .not("venues.lng", "is", null)
     .is("canonical_event_id", null); // Only show canonical events, not duplicates
 
-  query = applyPortalScopeToQuery(query, {
+  query = applyFederatedPortalScopeToQuery(query, {
     portalId: filters.portal_id,
     portalExclusive: filters.portal_exclusive,
     publicOnlyWhenNoPortal: false,
+    sourceIds: filters.source_ids || [],
+    sourceColumn: "source_id",
   });
-
-  // Apply explicit source filtering if provided
-  if (filters.source_ids && filters.source_ids.length > 0) {
-    query = query.in("source_id", filters.source_ids);
-  }
 
   // Apply all search filters using the centralized helper
   // Note: For map view, we skip some filters that don't make sense (e.g., venue_ids)
@@ -1022,457 +1007,9 @@ export async function getEventsForMap(
   return events;
 }
 
-// Fetch categories from database
-export async function getCategories(): Promise<Category[]> {
-  const { data, error } = await supabase
-    .from("categories")
-    .select("*")
-    .order("display_order", { ascending: true });
 
-  if (error) {
-    logger.error("Failed to fetch categories", error);
-    return [];
-  }
-
-  return data as Category[];
-}
-
-// Fetch subcategories from database
-export async function getSubcategories(categoryId?: string): Promise<Subcategory[]> {
-  let query = supabase
-    .from("subcategories")
-    .select("*")
-    .order("display_order", { ascending: true });
-
-  if (categoryId) {
-    query = query.eq("category_id", categoryId);
-  }
-
-  const { data, error } = await query;
-
-  if (error) {
-    logger.error("Failed to fetch subcategories", error, { categoryId });
-    return [];
-  }
-
-  return data as Subcategory[];
-}
-
-export interface VenueWithCount {
-  id: number;
-  name: string;
-  neighborhood: string | null;
-  event_count: number;
-}
-
-// Get venues that have upcoming events
-export async function getVenuesWithEvents(): Promise<VenueWithCount[]> {
-  // Use date-fns format to get local date (not UTC from toISOString)
-  const today = format(startOfDay(new Date()), "yyyy-MM-dd");
-
-  const { data: events, error } = await supabase
-    .from("events")
-    .select("venue_id, venue:venues(id, name, neighborhood)")
-    .or(`start_date.gte.${today},end_date.gte.${today}`)
-    // Hide TBA events (no start_time, not all-day)
-    .or("start_time.not.is.null,is_all_day.eq.true")
-    .not("venue_id", "is", null)
-    .limit(500);
-
-  if (error || !events) {
-    logger.error("Failed to fetch venues with events", error);
-    return [];
-  }
-
-  const venueMap = new Map<number, VenueWithCount>();
-
-  type EventWithVenue = {
-    venue_id: number | null;
-    venue: { id: number; name: string; neighborhood: string | null } | null;
-  };
-
-  for (const event of events as EventWithVenue[]) {
-    const venue = event.venue;
-    if (!venue) continue;
-
-    const existing = venueMap.get(venue.id);
-    if (existing) {
-      existing.event_count++;
-    } else {
-      venueMap.set(venue.id, {
-        id: venue.id,
-        name: venue.name,
-        neighborhood: venue.neighborhood,
-        event_count: 1,
-      });
-    }
-  }
-
-  return Array.from(venueMap.values()).sort((a, b) => {
-    if (b.event_count !== a.event_count) return b.event_count - a.event_count;
-    return a.name.localeCompare(b.name);
-  });
-}
-
-// Get search suggestions for autocomplete
-export type SearchSuggestion = {
-  text: string;
-  type: "venue" | "event" | "neighborhood" | "organizer";
-};
-
-export async function getSearchSuggestions(prefix: string, options?: { portalId?: string; portalCities?: string[] }): Promise<SearchSuggestion[]> {
-  if (prefix.length < 2) return [];
-
-  const searchTerm = `${escapePostgrestValue(prefix)}%`;
-  // Use date-fns format to get local date (not UTC from toISOString)
-  const today = format(startOfDay(new Date()), "yyyy-MM-dd");
-
-  // Build venue query with optional city filter
-  let venueQuery = supabase.from("venues").select("name").ilike("name", searchTerm);
-  if (options?.portalCities?.length) {
-    venueQuery = venueQuery.in("city", options.portalCities);
-  }
-
-  // Build event query with optional portal filter
-  let eventQuery = supabase
-    .from("events")
-    .select("title")
-    .ilike("title", searchTerm)
-    .or(`start_date.gte.${today},end_date.gte.${today}`);
-  eventQuery = applyPortalScopeToQuery(eventQuery, {
-    portalId: options?.portalId,
-    portalExclusive: false,
-    publicOnlyWhenNoPortal: false,
-  });
-
-  // Build neighborhood query with optional city filter
-  let neighborhoodQuery = supabase
-    .from("venues")
-    .select("neighborhood")
-    .ilike("neighborhood", searchTerm)
-    .not("neighborhood", "is", null);
-  if (options?.portalCities?.length) {
-    neighborhoodQuery = neighborhoodQuery.in("city", options.portalCities);
-  }
-
-  const [venueResult, eventResult, neighborhoodResult, producerResult] = await Promise.all([
-    venueQuery.limit(3),
-    eventQuery.limit(3),
-    neighborhoodQuery.limit(3),
-    supabase
-      .from("organizations")
-      .select("name")
-      .ilike("name", searchTerm)
-      .eq("hidden", false)
-      .limit(2),
-  ]);
-
-  const suggestions: SearchSuggestion[] = [];
-
-  // Add venues
-  const venues = (venueResult.data as { name: string }[] | null) || [];
-  for (const v of venues) {
-    if (!suggestions.some((s) => s.text === v.name)) {
-      suggestions.push({ text: v.name, type: "venue" });
-    }
-  }
-
-  // Add organizers (producers)
-  const producers = (producerResult.data as { name: string }[] | null) || [];
-  for (const p of producers) {
-    if (!suggestions.some((s) => s.text === p.name)) {
-      suggestions.push({ text: p.name, type: "organizer" });
-    }
-  }
-
-  // Add unique neighborhoods
-  const neighborhoods = (neighborhoodResult.data as { neighborhood: string | null }[] | null) || [];
-  const uniqueNeighborhoods = [...new Set(neighborhoods.map((n) => n.neighborhood).filter(Boolean))];
-  for (const n of uniqueNeighborhoods) {
-    if (n && !suggestions.some((s) => s.text === n)) {
-      suggestions.push({ text: n, type: "neighborhood" });
-    }
-  }
-
-  // Add events
-  const events = (eventResult.data as { title: string }[] | null) || [];
-  for (const e of events) {
-    if (!suggestions.some((s) => s.text === e.title)) {
-      suggestions.push({ text: e.title, type: "event" });
-    }
-  }
-
-  return suggestions.slice(0, 6);
-}
-
-// ============================================================================
-// ROLLUP SUPPORT - Collapse repeated events from same venue/source
-// ============================================================================
-
-interface RollupStats {
-  venueRollups: {
-    venueId: number;
-    venueName: string;
-    venueSlug: string;
-    count: number;
-  }[];
-}
-
-// Get rollup statistics for a date range
-async function getRollupStats(
-  dateStart: string,
-  dateEnd: string,
-  categoryId?: string,
-  portalId?: string,
-  portalExclusive?: boolean
-): Promise<RollupStats> {
-  // Get events with source rollup behavior
-  let query = supabase
-    .from("events")
-    .select(
-      `
-      venue_id,
-      source_id,
-      venues(id, name, slug),
-      sources(id, name, rollup_behavior)
-    `
-    )
-    .gte("start_date", dateStart)
-    .lte("start_date", dateEnd)
-    .is("canonical_event_id", null); // Only show canonical events, not duplicates
-
-  query = applyPortalScopeToQuery(query, {
-    portalId,
-    portalExclusive,
-    publicOnlyWhenNoPortal: false,
-  });
-
-  if (categoryId) {
-    query = query.eq("category_id", categoryId);
-  }
-
-  const { data, error } = await query;
-
-  if (error || !data) {
-    return { venueRollups: [] };
-  }
-
-  // Count events by venue for 'venue' rollup behavior
-  const venueCounts = new Map<
-    number,
-    { venueId: number; venueName: string; venueSlug: string; count: number }
-  >();
-
-  type EventWithJoins = {
-    venue_id: number | null;
-    source_id: number | null;
-    venues: { id: number; name: string; slug: string } | null;
-    sources: { id: number; name: string; rollup_behavior: string } | null;
-  };
-
-  for (const event of data as EventWithJoins[]) {
-    const venue = event.venues;
-    const source = event.sources;
-    const rollupBehavior = source?.rollup_behavior || "normal";
-
-    if (rollupBehavior === "venue" && venue) {
-      const existing = venueCounts.get(venue.id);
-      if (existing) {
-        existing.count++;
-      } else {
-        venueCounts.set(venue.id, {
-          venueId: venue.id,
-          venueName: venue.name,
-          venueSlug: venue.slug,
-          count: 1,
-        });
-      }
-    }
-  }
-
-  // Filter to only those exceeding thresholds
-  const venueRollups = Array.from(venueCounts.values()).filter((v) => v.count > 3);
-
-  return { venueRollups };
-}
-
-// Get events with rollup support
-export async function getFilteredEventsWithRollups(
-  filters: SearchFilters,
-  page = 1,
-  pageSize = 20
-): Promise<{ items: EventOrGroup[]; total: number }> {
-  // Use date-fns format to get local date (not UTC from toISOString)
-  const today = format(startOfDay(new Date()), "yyyy-MM-dd");
-
-  // Get date range for rollup calculation
-  const dateRange = filters.date_filter
-    ? getDateRange(filters.date_filter)
-    : { start: today, end: format(addDays(new Date(), 365), "yyyy-MM-dd") };
-
-  // Get rollup stats
-  const rollupStats = await getRollupStats(
-    dateRange.start,
-    dateRange.end,
-    filters.categories?.[0],
-    filters.portal_id,
-    filters.portal_exclusive
-  );
-
-  const venueIdsToExclude = rollupStats.venueRollups.map((v) => v.venueId);
-
-  // Get regular events (excluding those that will be rolled up)
-  const { events, total } = await getFilteredEventsWithSearch(
-    {
-      ...filters,
-      // We'll handle exclusion in a separate step since Supabase can't easily do NOT IN
-    },
-    page,
-    pageSize
-  );
-
-  // Filter out events that should be rolled up
-  const filteredEvents = events.filter((event) => {
-    // Check if venue should be rolled up
-    if (event.venue && venueIdsToExclude.includes(event.venue.id)) {
-      return false;
-    }
-    // Check source_id - need to get it from the event
-    // For now, we don't have source_id in the event select, so skip source exclusion
-    return true;
-  });
-
-  // Build rollup groups
-  const groups: EventGroup[] = [];
-
-  for (const vr of rollupStats.venueRollups) {
-    // Get preview events for this venue
-    const { data: previewData } = await supabase
-      .from("events")
-      .select(
-        `
-        *,
-        venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max, venue_type)
-      `
-      )
-      .eq("venue_id", vr.venueId)
-      .gte("start_date", dateRange.start)
-      .lte("start_date", dateRange.end)
-      .order("start_date")
-      .order("start_time")
-      .limit(3);
-
-    groups.push({
-      type: "venue",
-      id: `venue-${vr.venueId}`,
-      title: vr.venueName,
-      subtitle: `${vr.count} events`,
-      previewEvents: (previewData || []) as EventWithLocation[],
-      totalCount: vr.count,
-      expandUrl: `/spots/${vr.venueSlug}`,
-    });
-  }
-
-  // Combine and sort by date
-  const items: EventOrGroup[] = [...filteredEvents, ...groups];
-
-  // Sort: events by date, groups by their first preview event date
-  items.sort((a, b) => {
-    const dateA = isEventGroup(a)
-      ? a.previewEvents[0]?.start_date || "9999-99-99"
-      : a.start_date;
-    const dateB = isEventGroup(b)
-      ? b.previewEvents[0]?.start_date || "9999-99-99"
-      : b.start_date;
-    return dateA.localeCompare(dateB);
-  });
-
-  return {
-    items,
-    total: total - venueIdsToExclude.length * 3 + groups.length, // Approximate
-  };
-}
-
-// Fetch social proof counts for a list of events
-export async function fetchSocialProofCounts(
-  eventIds: number[]
-): Promise<Map<number, { going: number; interested: number; recommendations: number }>> {
-  if (eventIds.length === 0) {
-    return new Map();
-  }
-
-  const counts = new Map<number, { going: number; interested: number; recommendations: number }>();
-
-  // Use service client to bypass RLS for aggregation queries
-  // This is server-side only and safe for reading public social data
-  let serviceClient;
-  try {
-    serviceClient = createServiceClient();
-  } catch {
-    // Service key not available (e.g., during build), return empty counts
-    // Initialize all events with 0 counts
-    eventIds.forEach((id) => {
-      counts.set(id, { going: 0, interested: 0, recommendations: 0 });
-    });
-    return counts;
-  }
-
-  // PERFORMANCE OPTIMIZATION: Use database function to aggregate counts in a single query
-  // This replaces fetching all individual RSVP/recommendation rows and counting in JS
-  const { data, error } = await (
-    serviceClient.rpc as unknown as (
-      name: string,
-      params?: Record<string, unknown>
-    ) => Promise<{ data: unknown; error: unknown }>
-  )("get_social_proof_counts", {
-    event_ids: eventIds,
-  });
-
-  if (error) {
-    logger.error("Failed to fetch social proof counts", error);
-    // Return empty counts on error
-    eventIds.forEach((id) => {
-      counts.set(id, { going: 0, interested: 0, recommendations: 0 });
-    });
-    return counts;
-  }
-
-  // Map the aggregated results
-  type SocialProofRow = {
-    event_id: number;
-    going_count: number;
-    interested_count: number;
-    recommendation_count: number;
-  };
-
-  for (const row of (data || []) as SocialProofRow[]) {
-    counts.set(row.event_id, {
-      going: Number(row.going_count),
-      interested: Number(row.interested_count),
-      recommendations: Number(row.recommendation_count),
-    });
-  }
-
-  return counts;
-}
-
-// Enrich events with social proof counts
-export async function enrichEventsWithSocialProof(
-  events: EventWithLocation[]
-): Promise<EventWithLocation[]> {
-  const eventIds = events.map((e) => e.id);
-  const counts = await fetchSocialProofCounts(eventIds);
-
-  return events.map((event) => {
-    const eventCounts = counts.get(event.id);
-    return {
-      ...event,
-      going_count: eventCounts?.going || 0,
-      interested_count: eventCounts?.interested || 0,
-      recommendation_count: eventCounts?.recommendations || 0,
-    };
-  });
-}
+// Re-export social proof from canonical module for backward compatibility
+export { fetchSocialProofCounts, enrichEventsWithSocialProof } from "./social-proof";
 
 // ============================================================================
 // DYNAMIC FILTER AVAILABILITY

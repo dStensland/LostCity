@@ -1,0 +1,25 @@
+version: 1
+slug: cooks-warehouse
+name: Cook's Warehouse
+integration_method: playwright
+defaults:
+  category: learning
+  tags:
+  - classes
+  - cooking
+  - learning
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://cookswarehouse.com
+  fetch:
+    render_js: true
+detail:
+  enabled: true
+  fetch:
+    render_js: true
+data_goals:
+- classes
+- events
+- tickets

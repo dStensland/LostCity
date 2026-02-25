@@ -1,0 +1,28 @@
+{
+  "venue_id": 1762,
+  "venue_slug": "thistle-farms",
+  "meta": {
+    "og_image": "https://thistlefarms.org/cdn/shop/files/Untitled_design_156d70b3-58ca-42de-bf10-8fa4cbfd15a0.png?v=1677262358",
+    "meta_description": "For 25 years, Thistle Farms has lit a pathway of healing and hope for women survivors of trafficking, prostitution, and addiction.",
+    "reservation_links": [],
+    "menu_links": [],
+    "instagram": "thistlefarms",
+    "facebook_url": "https://www.facebook.com/ThistleFarms",
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["cozy", "woman-owned"],
+    "cuisine": ["coffee"],
+    "service_style": "counter-service",
+    "price_level": "$$",
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "thistlefarms",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

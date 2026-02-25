@@ -1,16 +1,50 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createPortalScopedClient } from "@/lib/supabase/server";
 import { getPortalBySlug } from "@/lib/portal";
 import { getLocalDateString } from "@/lib/formats";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 import { isValidUUID } from "@/lib/api-utils";
 import { isSpotOpen, DESTINATION_CATEGORIES } from "@/lib/spots";
 import { logger } from "@/lib/logger";
-import { applyPortalScopeToQuery, filterByPortalCity } from "@/lib/portal-scope";
+import {
+  applyFederatedPortalScopeToQuery,
+  filterByPortalCity,
+  parsePortalContentFilters,
+  applyPortalCategoryFilters,
+  filterByPortalContentScope,
+} from "@/lib/portal-scope";
+import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
+import { getPortalSourceAccess } from "@/lib/federation";
 
 type RouteContext = {
   params: Promise<{ slug: string }>;
 };
+
+const HAPPENING_NOW_CACHE_TTL_MS = 30 * 1000;
+const HAPPENING_NOW_CACHE_MAX_ENTRIES = 120;
+const HAPPENING_NOW_CACHE_NAMESPACE = "api:happening-now";
+
+async function getCachedHappeningNowPayload(
+  key: string,
+): Promise<Record<string, unknown> | null> {
+  return getSharedCacheJson<Record<string, unknown>>(
+    HAPPENING_NOW_CACHE_NAMESPACE,
+    key
+  );
+}
+
+async function setCachedHappeningNowPayload(
+  key: string,
+  payload: Record<string, unknown>,
+): Promise<void> {
+  await setSharedCacheJson(
+    HAPPENING_NOW_CACHE_NAMESPACE,
+    key,
+    payload,
+    HAPPENING_NOW_CACHE_TTL_MS,
+    { maxEntries: HAPPENING_NOW_CACHE_MAX_ENTRIES }
+  );
+}
 
 // GET /api/portals/[slug]/happening-now - Get events happening right now
 export async function GET(request: NextRequest, context: RouteContext) {
@@ -18,11 +52,26 @@ export async function GET(request: NextRequest, context: RouteContext) {
   if (rateLimitResult) return rateLimitResult;
 
   const { slug } = await context.params;
-  const supabase = await createClient();
   const searchParams = request.nextUrl.searchParams;
 
   const countOnly = searchParams.get("countOnly") === "true";
   const limit = parseInt(searchParams.get("limit") || "20");
+  const now = new Date();
+  const today = getLocalDateString(now);
+  const currentHour = now.getHours();
+  const currentMinute = now.getMinutes();
+  const currentTimeStr = `${currentHour.toString().padStart(2, "0")}:${currentMinute.toString().padStart(2, "0")}:00`;
+  const cacheKey = `${slug}|${countOnly ? "count" : "events"}|${limit}|${today}`;
+  const cachedPayload = await getCachedHappeningNowPayload(cacheKey);
+  if (cachedPayload) {
+    return NextResponse.json(cachedPayload, {
+      headers: {
+        "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
+      },
+    });
+  }
+
+  const supabase = await createClient();
 
   try {
     // Get portal
@@ -42,13 +91,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
           )
         ? (portal.filters as { city: string }).city
         : undefined;
-
-    // Get current time in local timezone
-    const now = new Date();
-    const today = getLocalDateString(now);
-    const currentHour = now.getHours();
-    const currentMinute = now.getMinutes();
-    const currentTimeStr = `${currentHour.toString().padStart(2, "0")}:${currentMinute.toString().padStart(2, "0")}:00`;
+    const portalContentFilters = parsePortalContentFilters(
+      portal.filters as Record<string, unknown> | null
+    );
+    const sourceAccess = await getPortalSourceAccess(portal.id);
+    const portalClient = await createPortalScopedClient(portal.id);
 
     // Build query for events happening now
     // An event is "happening now" if:
@@ -56,7 +103,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     // 2. It has started (start_time <= now)
     // 3. It hasn't ended (end_time > now, or no end_time and within 3 hours of start)
 
-    let query = supabase
+    let query = portalClient
       .from("events")
       .select(countOnly ? "*" : `
         id,
@@ -65,21 +112,26 @@ export async function GET(request: NextRequest, context: RouteContext) {
         start_time,
         end_time,
         is_all_day,
-        category,
+        category:category_id,
         tags,
         image_url,
-        venue:venues(id, name, slug, neighborhood, city)
+        venue:venues(id, name, slug, neighborhood, city, location_designator, lat, lng)
       `, { count: countOnly ? "exact" : undefined, head: countOnly })
       .eq("start_date", today)
       .eq("is_all_day", false)
       .not("start_time", "is", null)
       .lte("start_time", currentTimeStr);
 
-    query = applyPortalScopeToQuery(query, {
+    query = applyFederatedPortalScopeToQuery(query, {
       portalId: portal.id,
       portalExclusive: portal.portal_type === "business",
       publicOnlyWhenNoPortal: true,
+      sourceIds: sourceAccess.sourceIds,
+      sourceColumn: "source_id",
     });
+
+    // Apply portal category filters (include/exclude)
+    query = applyPortalCategoryFilters(query, portalContentFilters);
 
     // Order by start time
     if (!countOnly) {
@@ -103,11 +155,18 @@ export async function GET(request: NextRequest, context: RouteContext) {
       type HoursData = Record<string, { open: string; close: string } | null>;
       type SpotRow = { id: number; hours: HoursData | null };
 
-      const { data: spots } = await supabase
+      let spotsOpenQuery = supabase
         .from("venues")
         .select("id, hours")
         .eq("active", true)
-        .or(typeFilters) as { data: SpotRow[] | null };
+        .or(typeFilters);
+
+      if (portalCity) {
+        spotsOpenQuery = spotsOpenQuery.in("city", [portalCity]);
+      }
+
+      const { data: spots } = await spotsOpenQuery
+        .limit(1500) as { data: SpotRow[] | null };
 
       // Count spots that are currently open (only those with known hours)
       let openSpotCount = 0;
@@ -121,19 +180,29 @@ export async function GET(request: NextRequest, context: RouteContext) {
         }
       }
 
-      return NextResponse.json({
+      const payload = {
         count: (count || 0) + openSpotCount,
         eventCount: count || 0,
         spotCount: openSpotCount,
-      });
+      };
+      await setCachedHappeningNowPayload(cacheKey, payload);
+      return NextResponse.json(payload);
     }
 
     // Filter events that haven't ended yet
     interface EventRow {
       start_time: string | null;
       end_time: string | null;
+      category?: string | null;
       tags?: string[] | null;
-      venue?: { city?: string | null } | null;
+      price?: number | null;
+      venue?: {
+        id?: number | null;
+        city?: string | null;
+        neighborhood?: string | null;
+        lat?: number | null;
+        lng?: number | null;
+      } | null;
       [key: string]: unknown;
     }
     const scopedByCity = filterByPortalCity(
@@ -141,7 +210,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
       portalCity,
       { allowMissingCity: true }
     );
-    const liveEvents = scopedByCity.filter((event: EventRow) => {
+    const scopedByContent = filterByPortalContentScope(scopedByCity, portalContentFilters);
+    const liveEvents = scopedByContent.filter((event: EventRow) => {
       if (!event.start_time) return false;
 
       // Parse start time
@@ -166,11 +236,13 @@ export async function GET(request: NextRequest, context: RouteContext) {
       (event: EventRow) => !event.tags?.includes("showtime")
     );
 
+    const payload = {
+      events: filteredEvents,
+      count: filteredEvents.length,
+    };
+    await setCachedHappeningNowPayload(cacheKey, payload);
     return NextResponse.json(
-      {
-        events: filteredEvents,
-        count: filteredEvents.length,
-      },
+      payload,
       {
         headers: {
           "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",

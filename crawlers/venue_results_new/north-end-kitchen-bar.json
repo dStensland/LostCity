@@ -1,0 +1,59 @@
+{
+  "venue_id": 4909,
+  "venue_slug": "north-end-kitchen-bar",
+  "meta": {
+    "og_image": null,
+    "meta_description": "Official website of North End Kitchen and Bar in Roswell, GA.",
+    "reservation_links": [
+      "https://resy.com/cities/rswl/north-end-kitchen-and-bar",
+      "https://resy.com/cities/rswl/north-end-kitchen-and-bar",
+      "https://resy.com/cities/rswl/north-end-kitchen-and-bar"
+    ],
+    "menu_links": [
+      "https://northendkitchen.com/menu.html#food-menu",
+      "https://northendkitchen.com/pdf/menu.pdf",
+      "https://northendkitchen.com/pdf/menu_seasonal.pdf"
+    ],
+    "instagram": "north_end_kitchen",
+    "facebook_url": "https://facebook.com/northendkitchen",
+    "phone": "(770) 992-8866"
+  },
+  "extracted": {
+    "hours": {
+      "mon": {"open": "16:00", "close": "21:30"},
+      "tue": {"open": "16:00", "close": "21:30"},
+      "wed": {"open": "16:00", "close": "21:30"},
+      "thu": {"open": "16:00", "close": "21:30"},
+      "fri": {"open": "16:00", "close": "21:30"},
+      "sat": {"open": "16:00", "close": "21:30"},
+      "sun": {"open": "16:00", "close": "21:30"}
+    },
+    "vibes": ["date-spot", "outdoor-seating", "craft-cocktails", "happy-hour", "free-parking"],
+    "cuisine": ["new_american", "southern"],
+    "service_style": "full_service",
+    "price_level": 3,
+    "menu_highlights": [
+      {"name": "Korean BBQ Short Rib", "price": "$30", "category": "entree"},
+      {"name": "Cocoa Rubbed Ribeye", "price": "$45", "category": "entree"},
+      {"name": "Sesame Ahi Bowl", "price": "$34", "category": "entree"},
+      {"name": "Canton Street Charcuterie", "price": "$26", "category": "appetizer"},
+      {"name": "Espressito Martini", "price": "$15", "category": "cocktail"}
+    ],
+    "menu_url": "https://northendkitchen.com/menu.html#food-menu",
+    "reservation_url": "https://resy.com/cities/rswl/north-end-kitchen-and-bar",
+    "phone": "(770) 992-8866",
+    "instagram": "north_end_kitchen",
+    "dietary_options": [],
+    "specials": [
+      {"day_of_week": 7, "title": "$20 Burger and Draft Beer", "description": "$20 Burger and Draft Beer", "special_type": "daily_special", "start_time": "16:00", "end_time": "21:30"},
+      {"day_of_week": 1, "title": "$20 Burger and Draft Beer", "description": "$20 Burger and Draft Beer", "special_type": "daily_special", "start_time": "16:00", "end_time": "21:30"},
+      {"day_of_week": 2, "title": "Half Off Cocktails", "description": "Half off cocktails", "special_type": "happy_hour", "start_time": "16:00", "end_time": "21:30"},
+      {"day_of_week": 3, "title": "Half Priced Bottles of Wine", "description": "Half priced bottles of wine", "special_type": "daily_special", "start_time": "16:00", "end_time": "21:30"},
+      {"day_of_week": 4, "title": "$7 Ketel One Drinks", "description": "$7 Ketel One Drinks, Any Way You Like", "special_type": "daily_special", "start_time": "16:00", "end_time": "21:30"},
+      {"day_of_week": 5, "title": "Chef's Feature", "description": "Chef's Feature on Friday", "special_type": "daily_special", "start_time": "16:00", "end_time": "21:30"},
+      {"day_of_week": 6, "title": "Chef's Feature", "description": "Chef's Feature on Saturday", "special_type": "daily_special", "start_time": "16:00", "end_time": "21:30"}
+    ],
+    "genres": [],
+    "parking": []
+  }
+}

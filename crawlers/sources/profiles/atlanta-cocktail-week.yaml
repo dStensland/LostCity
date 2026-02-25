@@ -1,0 +1,21 @@
+version: 1
+slug: atlanta-cocktail-week
+name: "Atlanta Cocktail Week"
+integration_method: playwright
+defaults:
+  venue_name: "Atlanta Cocktail Week"
+discovery:
+  enabled: true
+  type: html
+  urls:
+    - "https://atlantacocktailweek.com/"
+  fetch:
+    render_js: true
+detail:
+  enabled: true
+  fetch:
+    render_js: true
+data_goals:
+  - events
+  - images
+  - tickets

@@ -1,15 +1,13 @@
 """
 Crawler for Theatrical Outfit (theatricaloutfit.org).
-Downtown Atlanta theater at the Balzer Theater at Herren's.
 
-Site structure: Shows listed under season navigation, individual show pages.
+Reads live performances from the events calendar (FullCalendar UI).
 """
 
 from __future__ import annotations
 
-import re
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 from playwright.sync_api import sync_playwright
@@ -20,6 +18,8 @@ from dedupe import generate_content_hash
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.theatricaloutfit.org"
+CALENDAR_URL = f"{BASE_URL}/events-calendar/"
+MONTHS_AHEAD = 4
 
 VENUE_DATA = {
     "name": "Theatrical Outfit",
@@ -36,96 +36,47 @@ VENUE_DATA = {
     "website": BASE_URL,
 }
 
-# Known shows from their 2025-2026 season
-KNOWN_SHOWS = [
-    "the-glass-menagerie",
-    "bleeding-hearts",
-    "the-price",
-    "the-revolutionists",
-]
 
-SKIP_PATTERNS = [
-    r"^(home|about|contact|donate|support|subscribe|tickets?|buy|cart|menu)$",
-    r"^(login|sign in|register|account)$",
-    r"^(facebook|twitter|instagram|youtube)$",
-    r"^(privacy|terms|policy|copyright)$",
-    r"^(season|launchpad|calendar)$",
-    r"^\d+$",
-    r"^[a-z]{1,3}$",
-]
+def _normalize_title(value: str) -> str:
+    text = " ".join((value or "").split()).strip()
+    if not text:
+        return ""
+    if text.isupper():
+        return text.title()
+    return text
 
 
-def is_valid_title(title: str) -> bool:
-    """Check if a string looks like a valid show title."""
-    if not title or len(title) < 3 or len(title) > 200:
-        return False
-    title_lower = title.lower().strip()
-    for pattern in SKIP_PATTERNS:
-        if re.match(pattern, title_lower, re.IGNORECASE):
-            return False
-    return True
+def _parse_calendar_time(value: Optional[str]) -> Optional[str]:
+    if not value:
+        return None
 
+    text = " ".join(value.replace(".", ":").split()).upper()
+    if text == "ALL DAY":
+        return None
 
-def parse_date_range(date_text: str) -> tuple[Optional[str], Optional[str]]:
-    """Parse date range from various formats."""
-    if not date_text:
-        return None, None
-
-    date_text = date_text.strip()
-
-    # Pattern: "Month Day - Month Day, Year"
-    range_match = re.search(
-        r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})\s*[-–—]\s*(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s*(\d{4})",
-        date_text,
-        re.IGNORECASE
-    )
-    if range_match:
-        start_month, start_day, end_month, end_day, year = range_match.groups()
+    for fmt in ("%I:%M %p", "%I %p"):
         try:
-            start_dt = datetime.strptime(f"{start_month} {start_day} {year}", "%B %d %Y")
-            end_dt = datetime.strptime(f"{end_month} {end_day} {year}", "%B %d %Y")
-            return start_dt.strftime("%Y-%m-%d"), end_dt.strftime("%Y-%m-%d")
+            return datetime.strptime(text, fmt).strftime("%H:%M")
         except ValueError:
-            pass
+            continue
+    return None
 
-    # Same month range
-    same_month_match = re.search(
-        r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})\s*[-–—]\s*(\d{1,2}),?\s*(\d{4})",
-        date_text,
-        re.IGNORECASE
-    )
-    if same_month_match:
-        month, start_day, end_day, year = same_month_match.groups()
-        try:
-            start_dt = datetime.strptime(f"{month} {start_day} {year}", "%B %d %Y")
-            end_dt = datetime.strptime(f"{month} {end_day} {year}", "%B %d %Y")
-            return start_dt.strftime("%Y-%m-%d"), end_dt.strftime("%Y-%m-%d")
-        except ValueError:
-            pass
 
-    # Single date
-    single_match = re.search(
-        r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s*(\d{4})",
-        date_text,
-        re.IGNORECASE
-    )
-    if single_match:
-        month, day, year = single_match.groups()
-        try:
-            dt = datetime.strptime(f"{month} {day} {year}", "%B %d %Y")
-            return dt.strftime("%Y-%m-%d"), dt.strftime("%Y-%m-%d")
-        except ValueError:
-            pass
-
-    return None, None
+def _to_absolute_url(value: Optional[str]) -> Optional[str]:
+    if not value:
+        return None
+    if value.startswith("http"):
+        return value
+    return f"{BASE_URL}/{value.lstrip('/')}"
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Theatrical Outfit shows."""
+    """Crawl Theatrical Outfit calendar performances."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
+    seen_hashes: set[str] = set()
 
     try:
         with sync_playwright() as p:
@@ -137,170 +88,142 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page = context.new_page()
 
             venue_id = get_or_create_venue(VENUE_DATA)
+            today = datetime.now().date()
+            max_date = today + timedelta(days=180)
 
-            # Theatrical Outfit doesn't have a simple shows page
-            # Shows are linked from navigation under the season
-            # We'll try to discover show URLs from the main page
+            logger.info("Fetching Theatrical Outfit calendar: %s", CALENDAR_URL)
+            page.goto(CALENDAR_URL, wait_until="domcontentloaded", timeout=30000)
+            page.wait_for_timeout(6000)
 
-            logger.info(f"Fetching Theatrical Outfit: {BASE_URL}")
-            page.goto(BASE_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(4000)
+            for month_idx in range(MONTHS_AHEAD):
+                perf_nodes = page.query_selector_all(".fc-daygrid-day .c-cal-perf")
+                logger.info("Calendar month %s: %s performances in view", month_idx + 1, len(perf_nodes))
 
-            # Find all internal links that might be shows
-            all_links = page.query_selector_all("a[href]")
-
-            show_urls = set()
-            for link in all_links:
-                href = link.get_attribute("href")
-                if not href:
-                    continue
-
-                # Look for show-like URLs
-                href_lower = href.lower()
-                if any(show in href_lower for show in KNOWN_SHOWS):
-                    full_url = href if href.startswith("http") else BASE_URL + href
-                    show_urls.add(full_url)
-                elif "/shows/" in href_lower or "/production/" in href_lower:
-                    full_url = href if href.startswith("http") else BASE_URL + href
-                    show_urls.add(full_url)
-
-            # Also try direct URLs for known shows
-            for show_slug in KNOWN_SHOWS:
-                possible_urls = [
-                    f"{BASE_URL}/{show_slug}/",
-                    f"{BASE_URL}/shows/{show_slug}/",
-                    f"{BASE_URL}/production/{show_slug}/",
-                ]
-                for url in possible_urls:
-                    show_urls.add(url)
-
-            logger.info(f"Found {len(show_urls)} potential show URLs")
-
-            for show_url in show_urls:
-                try:
-                    response = page.goto(show_url, wait_until="domcontentloaded", timeout=15000)
-                    page.wait_for_timeout(3000)
-                    if not response or response.status >= 400:
-                        continue
-
-                    # Get title
-                    title = None
-                    for selector in ["h1", ".show-title", ".entry-title", ".page-title"]:
-                        el = page.query_selector(selector)
-                        if el:
-                            title = el.inner_text().strip()
-                            if is_valid_title(title):
-                                break
-                            title = None
-
-                    if not title:
-                        continue
-
-                    # Get dates
-                    body_text = page.inner_text("body")
-                    start_date, end_date = parse_date_range(body_text)
-
-                    if not start_date:
-                        logger.debug(f"No dates found for {title}")
-                        continue
-
-                    # Skip past shows
-                    check_date = end_date or start_date
+                for perf in perf_nodes:
                     try:
-                        if datetime.strptime(check_date, "%Y-%m-%d").date() < datetime.now().date():
+                        date_text = perf.evaluate(
+                            "el => el.closest('.fc-daygrid-day')?.getAttribute('data-date')"
+                        )
+                        if not date_text:
                             continue
-                    except ValueError:
-                        pass
 
-                    # Get description
-                    description = None
-                    for selector in [".show-description", ".entry-content p", "article p", ".synopsis", "main p"]:
-                        el = page.query_selector(selector)
-                        if el:
-                            desc = el.inner_text().strip()
-                            if desc and len(desc) > 30:
-                                description = desc[:500]
-                                break
+                        try:
+                            start_day = datetime.strptime(date_text, "%Y-%m-%d").date()
+                        except ValueError:
+                            continue
 
-                    # Get image
-                    image_url = None
-                    for selector in [".show-image img", ".featured-image img", "article img"]:
-                        el = page.query_selector(selector)
-                        if el:
-                            src = el.get_attribute("src") or el.get_attribute("data-src")
-                            if src and "logo" not in src.lower():
-                                image_url = src if src.startswith("http") else BASE_URL + src
-                                break
+                        if start_day < today or start_day > max_date:
+                            continue
 
-                    events_found += 1
+                        title_el = perf.query_selector(".c-cal-perf__title")
+                        time_el = perf.query_selector(".c-cal-perf__time")
 
-                    content_hash = generate_content_hash(title, "Theatrical Outfit", start_date)
+                        title = _normalize_title(title_el.inner_text() if title_el else "")
+                        if not title:
+                            continue
 
+                        start_time = _parse_calendar_time(time_el.inner_text() if time_el else None)
 
-                    # Build series hint for show runs
-                    series_hint = None
-                    if end_date and end_date != start_date:
-                        series_hint = {
-                            "series_type": "recurring_show",
-                            "series_title": title,
+                        view_url = None
+                        ticket_url = None
+                        for anchor in perf.query_selector_all("a"):
+                            label = (anchor.inner_text() or "").strip().lower()
+                            href = _to_absolute_url(anchor.get_attribute("href"))
+                            if not href:
+                                continue
+                            if label == "view":
+                                view_url = href
+                            elif "ticket" in label:
+                                ticket_url = href
+
+                        source_url = view_url or CALENDAR_URL
+                        if not ticket_url:
+                            ticket_url = view_url
+
+                        content_hash = generate_content_hash(
+                            title,
+                            VENUE_DATA["name"],
+                            f"{date_text}|{start_time or ''}|{source_url}",
+                        )
+
+                        if content_hash in seen_hashes:
+                            continue
+                        seen_hashes.add(content_hash)
+
+                        event_record = {
+                            "source_id": source_id,
+                            "venue_id": venue_id,
+                            "title": title,
+                            "description": f"{title} at Theatrical Outfit",
+                            "start_date": date_text,
+                            "start_time": start_time or "19:30",
+                            "end_date": None,
+                            "end_time": None,
+                            "is_all_day": False,
+                            "category": "theater",
+                            "subcategory": "play",
+                            "tags": [
+                                "theatrical-outfit",
+                                "theater",
+                                "downtown",
+                                "balzer-theater",
+                                "performance",
+                            ],
+                            "price_min": None,
+                            "price_max": None,
+                            "price_note": None,
+                            "is_free": False,
+                            "source_url": source_url,
+                            "ticket_url": ticket_url,
+                            "image_url": None,
+                            "raw_text": f"{title} {date_text} {start_time or ''}".strip(),
+                            "extraction_confidence": 0.9,
+                            "is_recurring": False,
+                            "recurrence_rule": None,
+                            "content_hash": content_hash,
                         }
-                        if description:
-                            series_hint["description"] = description
-                        if image_url:
-                            series_hint["image_url"] = image_url
 
-                    event_record = {
-                        "source_id": source_id,
-                        "venue_id": venue_id,
-                        "title": title,
-                        "description": description or f"{title} at Theatrical Outfit",
-                        "start_date": start_date,
-                        "start_time": "19:30",
-                        "end_date": end_date,
-                        "end_time": None,
-                        "is_all_day": False,
-                        "category": "theater",
-                        "subcategory": "play",
-                        "tags": ["theatrical-outfit", "theater", "downtown", "balzer-theater"],
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": None,
-                        "is_free": False,
-                        "source_url": show_url,
-                        "ticket_url": show_url,
-                        "image_url": image_url,
-                        "raw_text": f"{title}",
-                        "extraction_confidence": 0.85,
-                        "is_recurring": True if end_date and end_date != start_date else False,
-                        "recurrence_rule": None,
-                        "content_hash": content_hash,
-                    }
+                        events_found += 1
 
-                    existing = find_event_by_hash(content_hash)
-                    if existing:
-                        smart_update_existing_event(existing, event_record)
-                        events_updated += 1
+                        existing = find_event_by_hash(content_hash)
+                        if existing:
+                            smart_update_existing_event(existing, event_record)
+                            events_updated += 1
+                            continue
+
+                        try:
+                            insert_event(event_record)
+                            events_new += 1
+                            logger.info("Added: %s on %s", title, date_text)
+                        except Exception as e:
+                            logger.error("Failed to insert %s: %s", title, e)
+
+                    except Exception as e:
+                        logger.debug("Failed to parse performance node: %s", e)
                         continue
 
+                # Advance the calendar one month forward.
+                if month_idx < MONTHS_AHEAD - 1:
+                    next_btn = page.query_selector(".fc-next-button")
+                    if not next_btn:
+                        break
                     try:
-                        insert_event(event_record, series_hint=series_hint)
-                        events_new += 1
-                        logger.info(f"Added: {title} ({start_date} to {end_date})")
-                    except Exception as e:
-                        logger.error(f"Failed to insert: {title}: {e}")
-
-                except Exception as e:
-                    logger.debug(f"Failed to process {show_url}: {e}")
-                    continue
+                        next_btn.click()
+                        page.wait_for_timeout(1500)
+                    except Exception:
+                        break
 
             browser.close()
 
         logger.info(
-            f"Theatrical Outfit crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
+            "Theatrical Outfit crawl complete: %s found, %s new, %s updated",
+            events_found,
+            events_new,
+            events_updated,
         )
 
     except Exception as e:
-        logger.error(f"Failed to crawl Theatrical Outfit: {e}")
+        logger.error("Failed to crawl Theatrical Outfit: %s", e)
         raise
 
     return events_found, events_new, events_updated

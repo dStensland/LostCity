@@ -1,0 +1,21 @@
+{
+  "venue_id": 45,
+  "venue_slug": "jojos-beloved-cocktail-lounge",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["speakeasy", "craft-cocktails", "date-night", "cozy", "upscale", "dancing"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "http://jojosbeloved.com/s/JoJos-Beloved_Menu_2024_09122024.pdf",
+    "reservation_url": "https://resy.com/cities/atl/jojos-beloved-cocktail-lounge",
+    "phone": "(404) 236-9455",
+    "instagram": null,
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

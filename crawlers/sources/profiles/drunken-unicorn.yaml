@@ -10,3 +10,7 @@ discovery:
   - https://www.songkick.com/venues/3517036-drunken-unicorn
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- tickets

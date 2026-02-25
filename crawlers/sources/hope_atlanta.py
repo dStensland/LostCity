@@ -309,7 +309,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 )
 
                 # Volunteer and community events are typically free; fundraising may not be
-                is_free = True
+                is_free = False
                 event_text = f"{title} {description or ''}".lower()
                 if any(kw in event_text for kw in ["fundraiser", "gala", "benefit", "ticket"]):
                     is_free = False

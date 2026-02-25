@@ -1,0 +1,18 @@
+{
+  "venue_id": 655,
+  "venue_slug": "meehans-downtown",
+  "venue_name": "Meehan's Public House",
+  "website": "https://www.meehanspublichouse.com",
+  "combined_text": "--- Main Page ---\nMeehan's Public House\nMEEHAN'S VININGS\nVisit Website\nMEEHAN'S DOWNTOWN\nVisit Website",
+  "meta": {
+    "og_image": null,
+    "meta_description": null,
+    "reservation_links": [
+      "https://tmt.spotapps.co/reservations?spot_id=77257&callback_url=https://meehanspublichouse.com/"
+    ],
+    "menu_links": [],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": "(404) 214-9821"
+  }
+}

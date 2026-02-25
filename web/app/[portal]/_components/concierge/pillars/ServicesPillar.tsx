@@ -6,17 +6,15 @@ import ServiceGrid from "../sections/ServiceGrid";
 
 interface ServicesPillarProps {
   data: ServicesPillarData;
-  portalSlug: string;
   portalName: string;
 }
 
-export default function ServicesPillar({ data, portalSlug, portalName }: ServicesPillarProps) {
+export default function ServicesPillar({ data, portalName }: ServicesPillarProps) {
   return (
     <div className="space-y-12">
       <PropertyPreview
         signatureVenues={data.signatureVenues}
         amenities={data.amenities}
-        portalSlug={portalSlug}
         portalName={portalName}
       />
 

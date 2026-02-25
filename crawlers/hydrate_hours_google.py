@@ -17,6 +17,7 @@ import time
 import logging
 import argparse
 import requests
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 from dotenv import load_dotenv
@@ -27,6 +28,7 @@ load_dotenv(Path(__file__).parent.parent / "web" / ".env.local")
 
 sys.path.insert(0, str(Path(__file__).parent))
 from db import get_client
+from hours_utils import format_hours_display, prepare_hours_update, should_update_hours
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
@@ -221,59 +223,6 @@ def parse_google_hours(opening_hours: dict) -> tuple[Optional[dict], Optional[st
     return hours_json if hours_json else None, display
 
 
-def format_hours_display(hours: dict) -> str:
-    """Generate a human-readable hours display string."""
-    if not hours:
-        return ""
-
-    day_order = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
-    day_labels = {"mon": "Mon", "tue": "Tue", "wed": "Wed", "thu": "Thu",
-                  "fri": "Fri", "sat": "Sat", "sun": "Sun"}
-
-    lines = []
-    i = 0
-    while i < len(day_order):
-        day = day_order[i]
-        if day not in hours:
-            i += 1
-            continue
-
-        times = hours[day]
-        start_day = day
-        end_day = day
-
-        # Find consecutive days with same hours
-        j = i + 1
-        while j < len(day_order):
-            next_day = day_order[j]
-            if next_day in hours and hours[next_day] == times:
-                end_day = next_day
-                j += 1
-            else:
-                break
-
-        # Format time range
-        open_time = times["open"]
-        close_time = times["close"]
-
-        def to_12h(t):
-            h, m = int(t[:2]), t[3:]
-            period = "am" if h < 12 else "pm"
-            h = h % 12 or 12
-            return f"{h}:{m}{period}" if m != "00" else f"{h}{period}"
-
-        time_str = f"{to_12h(open_time)}-{to_12h(close_time)}"
-
-        if start_day == end_day:
-            lines.append(f"{day_labels[start_day]}: {time_str}")
-        else:
-            lines.append(f"{day_labels[start_day]}-{day_labels[end_day]}: {time_str}")
-
-        i = j
-
-    return ", ".join(lines)
-
-
 DESTINATION_TYPES = [
     "restaurant", "bar", "brewery", "distillery", "winery", "coffee_shop",
     "rooftop", "sports_bar", "food_hall", "music_venue", "comedy_club",
@@ -287,36 +236,63 @@ def get_venues_needing_hours(
     venue_type: Optional[str] = None,
     limit: int = 50,
     destinations_only: bool = False,
+    max_age_days: int = 30,
 ) -> list[dict]:
-    """Get venues missing hours."""
+    """Get venues missing hours, with stale hours, or from lower-confidence sources."""
     client = get_client()
 
     query = client.table("venues").select(
-        "id, name, slug, address, city, lat, lng, hours, venue_type"
+        "id, name, slug, address, city, lat, lng, hours, venue_type, hours_source, hours_updated_at"
     ).eq("active", True).not_.is_("lat", "null").not_.is_("lng", "null")
-
-    # Must not have hours (null or empty object)
-    query = query.or_("hours.is.null,hours.eq.{}")
 
     if venue_type:
         query = query.eq("venue_type", venue_type)
     elif destinations_only:
         query = query.in_("venue_type", DESTINATION_TYPES)
 
-    query = query.order("venue_type").limit(limit)
+    query = query.order("venue_type").limit(limit * 3)  # Over-fetch to filter client-side
 
     result = query.execute()
-    return result.data or []
+    venues = result.data or []
+
+    # Filter: no hours, stale hours, or hours from a lower-confidence source
+    now = datetime.now(timezone.utc)
+    filtered = []
+    for v in venues:
+        # No hours — always include
+        if not v.get("hours") or v["hours"] == {}:
+            filtered.append(v)
+            continue
+        # Already from Google — skip unless stale
+        if v.get("hours_source") == "google":
+            if v.get("hours_updated_at"):
+                try:
+                    updated = datetime.fromisoformat(v["hours_updated_at"].replace("Z", "+00:00"))
+                    if (now - updated).days >= max_age_days:
+                        filtered.append(v)
+                except (ValueError, TypeError):
+                    pass
+            continue
+        # Lower-confidence source — include for upgrade
+        if should_update_hours(v.get("hours_source"), "google"):
+            filtered.append(v)
+
+    return filtered[:limit]
 
 
 def update_venue_hours(venue_id: int, hours: dict, hours_display: str, dry_run: bool = False) -> bool:
-    """Update venue with hours."""
+    """Update venue with hours from Google."""
     if dry_run:
         return True
 
     client = get_client()
     try:
-        updates = {"hours": hours}
+        now = datetime.now(timezone.utc).isoformat()
+        updates = {
+            "hours": hours,
+            "hours_source": "google",
+            "hours_updated_at": now,
+        }
         if hours_display:
             updates["hours_display"] = hours_display
 
@@ -363,15 +339,23 @@ def hydrate_venue_hours(venue: dict, dry_run: bool = False) -> dict:
         result["status"] = "no_hours"
         return result
 
-    hours_json, hours_display = parse_google_hours(opening_hours)
+    raw_hours, raw_display = parse_google_hours(opening_hours)
 
+    if not raw_hours:
+        result["status"] = "no_hours"
+        return result
+
+    # Normalize/validate through shared pipeline
+    hours_json, hours_display = prepare_hours_update(
+        raw_hours, source="google", venue_type=venue.get("venue_type"),
+    )
     if not hours_json:
         result["status"] = "no_hours"
         return result
 
-    # Generate our own display if needed
-    if not hours_display:
-        hours_display = format_hours_display(hours_json)
+    # Prefer Google's own display string, fall back to generated
+    if raw_display:
+        hours_display = raw_display
 
     result["hours"] = hours_json
     result["hours_display"] = hours_display
@@ -392,6 +376,7 @@ def main():
     parser.add_argument("--destinations", action="store_true", help="Only destination types (bars, restaurants, etc.)")
     parser.add_argument("--limit", type=int, default=50, help="Max venues to process")
     parser.add_argument("--dry-run", action="store_true", help="Preview without updating")
+    parser.add_argument("--max-age-days", type=int, default=30, help="Re-fetch hours older than this many days (default: 30)")
     args = parser.parse_args()
 
     if not GOOGLE_API_KEY:
@@ -402,7 +387,7 @@ def main():
     logger.info("Google Places Hours Hydration")
     logger.info("=" * 70)
 
-    venues = get_venues_needing_hours(args.venue_type, args.limit, destinations_only=args.destinations)
+    venues = get_venues_needing_hours(args.venue_type, args.limit, destinations_only=args.destinations, max_age_days=args.max_age_days)
     logger.info(f"Found {len(venues)} venues missing hours")
     logger.info("")
 

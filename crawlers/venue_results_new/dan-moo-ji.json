@@ -1,0 +1,39 @@
+{
+  "venue_id": 4861,
+  "venue_slug": "dan-moo-ji",
+  "meta": {
+    "og_image": null,
+    "meta_description": "Dan Moo Ji is a fun take on your traditional Korean food. From sushi and kimbobs to ramyun, you will surely find something that your taste buds will love. We will quickly become your favorite K-Food place.",
+    "reservation_links": [],
+    "menu_links": [
+      "https://www.danmoojiatlanta.com/services-4",
+      "https://www.danmoojiatlanta.com/_files/ugd/f85776_718b4d5cd3a84336a36fdfe8ccf24757.pdf",
+      "http://menus.fyi/3327778"
+    ],
+    "instagram": "danmooji_atlanta",
+    "facebook_url": "https://www.facebook.com/danmoojiatl",
+    "phone": "(770) 814-2310"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["casual", "fast-casual", "counter-service"],
+    "cuisine": ["korean"],
+    "service_style": "quick_service",
+    "price_level": 1,
+    "menu_highlights": [
+      {"name": "Donkatsu", "price": null, "category": "entree"},
+      {"name": "Bulgogi Kimbob", "price": null, "category": "entree"},
+      {"name": "Jjahm Pong (Ramyun/Udon)", "price": null, "category": "entree"},
+      {"name": "Kimchi Cheese Omelette Rice", "price": null, "category": "entree"},
+      {"name": "Spicy Pork Cup Bob", "price": null, "category": "entree"}
+    ],
+    "menu_url": "https://www.danmoojiatlanta.com/services-4",
+    "reservation_url": null,
+    "phone": "(770) 814-2310",
+    "instagram": "danmooji_atlanta",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

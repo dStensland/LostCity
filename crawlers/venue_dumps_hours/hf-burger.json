@@ -1,0 +1,19 @@
+{
+  "venue_id": 2094,
+  "venue_slug": "hf-burger",
+  "venue_name": "H&F Burger",
+  "website": "http://hfburger.com/",
+  "combined_text": "--- Main Page ---\nH&F Burger\nOUR MENU\nMEDIA AND MORE FUN",
+  "meta": {
+    "og_image": "http://static1.squarespace.com/static/5537b158e4b0c01655bb08b5/t/654bcadcaa5c68656c654a93/1699465948097/Profile+Picture+%281%29.png?format=1500w",
+    "meta_description": "H&F Burger serves the best burgers in Atlanta, Georgia with locations at \r\nPonce City Market, Truist Park and Mercedes Benz Stadium. Executive Chef, \r\nLinton Hopkins, serves up delicious burgers, milkshakes and more at his \r\ndelicious, casual burger restaurant.",
+    "reservation_links": [],
+    "menu_links": [
+      "http://hfburger.com/#menus-section",
+      "http://hfburger.com/#menus-section"
+    ],
+    "instagram": "hfburger",
+    "facebook_url": "http://www.facebook.com/the24burger",
+    "phone": null
+  }
+}

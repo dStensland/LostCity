@@ -10,3 +10,7 @@ discovery:
   - https://www.piedmont.org/heart/healthcare-professionals/conferences
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- tickets

@@ -8,6 +8,7 @@ import EventBrowser from "../sections/EventBrowser";
 interface PlannerPillarProps {
   data: PlannerPillarData;
   portal: Portal;
+  conciergePhone?: string;
 }
 
 export default function PlannerPillar({ data, portal }: PlannerPillarProps) {

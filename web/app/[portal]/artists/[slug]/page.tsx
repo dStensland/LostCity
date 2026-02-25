@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import { cache } from "react";
 import { format, parseISO } from "date-fns";
 import { PortalHeader } from "@/components/headers";

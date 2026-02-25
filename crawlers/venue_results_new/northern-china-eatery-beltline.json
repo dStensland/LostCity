@@ -1,0 +1,49 @@
+{
+  "venue_id": 4799,
+  "venue_slug": "northern-china-eatery-beltline",
+  "meta": {
+    "og_image": null,
+    "meta_description": "Experience authentic Northern Chinese cuisine in Atlanta. Visit Northern China Eatery at our two locations for handmade dumplings, noodles & bold flavors.",
+    "reservation_links": [],
+    "menu_links": [
+      "https://s.fronttab.com/eV14Y9",
+      "https://www.northernchinaeatery.com/menu",
+      "https://www.northernchinaeatery.com/menu",
+      "https://www.northernchinaeatery.com/menu",
+      "https://www.northernchinaeatery.com/menu"
+    ],
+    "instagram": "northernchinaeatery",
+    "facebook_url": "https://www.facebook.com/NorthernChinaEatery",
+    "phone": "(229) 258-8832"
+  },
+  "extracted": {
+    "hours": {
+      "mon": {"open": "11:00", "close": "22:00"},
+      "tue": null,
+      "wed": {"open": "11:00", "close": "22:00"},
+      "thu": {"open": "11:00", "close": "22:00"},
+      "fri": {"open": "11:00", "close": "22:00"},
+      "sat": {"open": "11:00", "close": "22:00"},
+      "sun": {"open": "11:00", "close": "22:00"}
+    },
+    "vibes": ["casual", "lively", "outdoor-seating", "good-for-groups"],
+    "cuisine": ["chinese"],
+    "service_style": "casual_dine_in",
+    "price_level": 2,
+    "menu_highlights": [
+      {"name": "Soup Dumplings (Xiaolongbao)", "price": "$19", "category": "appetizer"},
+      {"name": "Pork Buns", "price": "$19", "category": "appetizer"},
+      {"name": "Wok-Fried Noodles", "price": "$19", "category": "entree"},
+      {"name": "Fried Rice", "price": "$19", "category": "entree"},
+      {"name": "Hot Pot", "price": "$19", "category": "entree"}
+    ],
+    "menu_url": "https://www.northernchinaeatery.com/menu",
+    "reservation_url": null,
+    "phone": "(229) 258-8832",
+    "instagram": "northernchinaeatery",
+    "dietary_options": ["vegetarian-friendly"],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

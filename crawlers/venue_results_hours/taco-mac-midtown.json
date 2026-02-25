@@ -1,0 +1,28 @@
+{
+  "venue_id": 1685,
+  "venue_slug": "taco-mac-midtown",
+  "meta": {
+    "og_image": null,
+    "meta_description": "Taco Mac's world-class wings, curated craft beer menus, and love for our home teams have set the scene for friends and family to gather and celebrate moments of all sizes.",
+    "reservation_links": [],
+    "menu_links": ["https://tacomac.com/menu-main/"],
+    "instagram": "tacomacofficial",
+    "facebook_url": "https://www.facebook.com/tacomacofficial",
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["sports-bar", "casual", "lively", "good-for-groups", "happy-hour"],
+    "cuisine": ["american", "wings"],
+    "service_style": "full_service",
+    "price_level": "$$",
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "tacomacofficial",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

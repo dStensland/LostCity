@@ -1,0 +1,21 @@
+{
+  "venue_id": 936,
+  "venue_slug": "victory-sandwich-bar",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["casual", "dive-bar"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "http://vicsandwich.com/menu",
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "victorysandwichbar",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

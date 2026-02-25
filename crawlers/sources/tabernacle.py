@@ -15,7 +15,7 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
-from utils import extract_images_from_page
+from utils import extract_images_from_page, enrich_event_record
 from description_fetcher import fetch_detail_html_playwright
 from pipeline.detail_enrich import enrich_from_detail
 from pipeline.models import DetailConfig
@@ -228,7 +228,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "price_min": None,
                             "price_max": None,
                             "price_note": None,
-                            "is_free": False,
+                            "is_free": None,
                             "source_url": SHOWS_URL,
                             "ticket_url": SHOWS_URL,
                             "image_url": image_map.get(title),
@@ -274,9 +274,24 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     detail_fetches += 1
                     page.wait_for_timeout(1000)
 
+                # Enrich from detail page
+                enrich_event_record(evt, source_name="Tabernacle")
+
                 # Synthetic fallback
                 if not evt["description"]:
                     evt["description"] = f"Live event at The Tabernacle."
+
+                # Determine is_free if still unknown after enrichment
+                if evt.get("is_free") is None:
+                    desc_lower = (evt.get("description") or "").lower()
+                    title_lower = evt.get("title", "").lower()
+                    combined = f"{title_lower} {desc_lower}"
+                    if any(kw in combined for kw in ["free", "no cost", "no charge", "complimentary"]):
+                        evt["is_free"] = True
+                        evt["price_min"] = evt.get("price_min") or 0
+                        evt["price_max"] = evt.get("price_max") or 0
+                    else:
+                        evt["is_free"] = False
 
                 try:
                     insert_event(evt)

@@ -1,0 +1,47 @@
+{
+  "venue_id": 4881,
+  "venue_slug": "nagomiya",
+  "meta": {
+    "og_image": "https://static.wixstatic.com/media/845d5f_31b6eb895f4347ef860bda0a23badcd6%7Emv2.png/v1/fit/w_2500,h_1330,al_c/845d5f_31b6eb895f4347ef860bda0a23badcd6%7Emv2.png",
+    "meta_description": "Nagomiya is authentic, full-service Japanese restaurant with a full bar in Midtown Atlanta. It's owned by a Japanese chef who is behind Wagaya, Wagaya Groceries and Chirori.  ",
+    "reservation_links": [
+      "https://www.nagomiyaatlanta.com"
+    ],
+    "menu_links": [
+      "https://www.nagomiyaatlanta.com/menu-1"
+    ],
+    "instagram": "nagomiyaatl",
+    "facebook_url": "https://www.facebook.com/NagomiyaAtlanta",
+    "phone": "(404) 975-3851"
+  },
+  "extracted": {
+    "hours": {
+      "mon": null,
+      "tue": {"open": "11:30", "close": "22:00"},
+      "wed": {"open": "11:30", "close": "22:00"},
+      "thu": {"open": "11:30", "close": "22:00"},
+      "fri": {"open": "11:30", "close": "22:30"},
+      "sat": {"open": "12:00", "close": "22:30"},
+      "sun": {"open": "12:00", "close": "21:30"}
+    },
+    "vibes": ["intimate", "date-spot", "cozy", "craft-cocktails"],
+    "cuisine": ["japanese"],
+    "service_style": "full_service",
+    "price_level": 2,
+    "menu_highlights": [
+      {"name": "Chirashi Don", "price": "$25.00", "category": "entree"},
+      {"name": "Negitoro Don", "price": "$18.00", "category": "entree"},
+      {"name": "Teppan Chicken Teriyaki", "price": "$17.00", "category": "entree"},
+      {"name": "Takoyaki", "price": "$7.00", "category": "appetizer"},
+      {"name": "Crab Fried Rice", "price": "$12.00", "category": "entree"}
+    ],
+    "menu_url": "https://www.nagomiyaatlanta.com/menu-1",
+    "reservation_url": "https://www.nagomiyaatlanta.com",
+    "phone": "(404) 975-3851",
+    "instagram": "nagomiyaatl",
+    "dietary_options": ["vegetarian-friendly", "vegan-options"],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

@@ -1,0 +1,49 @@
+/Users/coach/Projects/LostCity/crawlers/venv/lib/python3.9/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+INFO:__main__:DB target=production | writes=disabled
+INFO:httpx:HTTP Request: GET https://rtppvljfrkjtoxmaizea.supabase.co/rest/v1/events?select=category&start_date=gte.2026-02-17 "HTTP/2 200 OK"
+INFO:httpx:HTTP Request: GET https://rtppvljfrkjtoxmaizea.supabase.co/rest/v1/events?select=start_date%2Ccategory&start_date=gte.2026-02-17&start_date=lte.2026-03-19 "HTTP/2 200 OK"
+INFO:httpx:HTTP Request: GET https://rtppvljfrkjtoxmaizea.supabase.co/rest/v1/events?select=venue_id%2Cvenue%3Avenues%28name%2Cneighborhood%29&start_date=gte.2026-02-17&start_date=lte.2026-03-19 "HTTP/2 200 OK"
+
+============================================================
+LOSTCITY ANALYTICS REPORT
+============================================================
+
+📊 Events by Category:
+----------------------------------------
+  community             3098 ( 62.0%) ████████████
+  art                    859 ( 17.2%) ███
+  family                 774 ( 15.5%) ███
+  comedy                 214 (  4.3%) 
+  film                    52 (  1.0%) 
+  dance                    3 (  0.1%) 
+
+📅 Events per Day (next 14 days):
+----------------------------------------
+  Tue 02/17     348 ██████████████████████████████
+  Wed 02/18     298 █████████████████████████████
+  Thu 02/19     292 █████████████████████████████
+  Fri 02/20     368 ██████████████████████████████
+  Sat 02/21     488 ██████████████████████████████
+  Sun 02/22     255 █████████████████████████
+  Mon 02/23     157 ███████████████
+  Tue 02/24     152 ███████████████
+  Wed 02/25     175 █████████████████
+  Thu 02/26     181 ██████████████████
+  Fri 02/27     184 ██████████████████
+  Sat 02/28     306 ██████████████████████████████
+  Sun 03/01     125 ████████████
+  Mon 03/02      85 ████████
+
+🏛️ Top Venues:
+----------------------------------------
+Traceback (most recent call last):
+  File "/Users/coach/Projects/LostCity/crawlers/main.py", line 1092, in <module>
+    sys.exit(main())
+  File "/Users/coach/Projects/LostCity/crawlers/main.py", line 998, in main
+    print_analytics_report()
+  File "/Users/coach/Projects/LostCity/crawlers/analytics.py", line 260, in print_analytics_report
+    venues = get_venue_popularity()[:10]
+  File "/Users/coach/Projects/LostCity/crawlers/analytics.py", line 197, in get_venue_popularity
+    venue_name = venue.get("name", "Unknown")
+AttributeError: 'NoneType' object has no attribute 'get'

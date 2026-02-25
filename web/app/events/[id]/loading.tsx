@@ -8,7 +8,7 @@ export default function EventLoading() {
 
       <main className="max-w-3xl mx-auto px-4 py-8">
         {/* Image skeleton */}
-        <div className="aspect-video bg-[var(--twilight)]/30 rounded-lg mb-6 skeleton-shimmer" />
+        <div className="aspect-[4/3] bg-[var(--twilight)]/30 rounded-lg mb-6 skeleton-shimmer" />
 
         {/* Main card skeleton */}
         <div className="border border-[var(--twilight)] rounded-lg p-6 sm:p-8 bg-[var(--card-bg)]">

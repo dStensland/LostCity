@@ -1,0 +1,45 @@
+{
+  "venue_id": 4827,
+  "venue_slug": "el-solecito",
+  "meta": {
+    "og_image": null,
+    "meta_description": "Order online directly from the restaurant El Solecito Mexican Grill Restaurant, browse the El Solecito Mexican Grill Restaurant menu, or view El Solecito Mexican Grill Restaurant hours.",
+    "reservation_links": [],
+    "menu_links": [
+      "https://elsolecitomexicangrillrestaurantga.com/el-solecito-mexican-grill-restaurant/"
+    ],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": "(770) 944-0511"
+  },
+  "extracted": {
+    "hours": {
+      "mon": {"open": "10:00", "close": "22:00"},
+      "tue": {"open": "10:00", "close": "22:00"},
+      "wed": {"open": "10:00", "close": "22:00"},
+      "thu": {"open": "10:00", "close": "22:00"},
+      "fri": {"open": "10:00", "close": "23:00"},
+      "sat": {"open": "11:00", "close": "23:00"},
+      "sun": {"open": "10:00", "close": "22:00"}
+    },
+    "vibes": ["casual", "family-friendly"],
+    "cuisine": ["mexican"],
+    "service_style": "casual_dine_in",
+    "price_level": 2,
+    "menu_highlights": [
+      {"name": "Pollo Loco", "price": "$17.99", "category": "entree"},
+      {"name": "Aguachile", "price": "$27.99", "category": "appetizer"},
+      {"name": "Chilaquiles con Huevo", "price": "$16.99", "category": "entree"},
+      {"name": "Ceviche Tradicional", "price": "$23.99", "category": "appetizer"},
+      {"name": "Coctel de Camaron Large", "price": "$21.99", "category": "appetizer"}
+    ],
+    "menu_url": "https://elsolecitomexicangrillrestaurantga.com/el-solecito-mexican-grill-restaurant/",
+    "reservation_url": null,
+    "phone": "(770) 944-0511",
+    "instagram": null,
+    "dietary_options": ["vegetarian-friendly"],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

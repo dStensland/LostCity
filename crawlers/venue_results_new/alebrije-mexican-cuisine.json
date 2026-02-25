@@ -1,0 +1,31 @@
+{
+  "venue_id": 4839,
+  "venue_slug": "alebrije-mexican-cuisine",
+  "meta": {
+    "og_image": "https://popmenucloud.com/cdn-cgi/image/width=1200,height=630,format=auto,fit=cover/rksamjzw/2c19ff46-a7fe-4dfb-bfcf-0c3fe05c5de4.jpg",
+    "meta_description": "Alebrije Mexican Restaurant in Duluth, GA. Call us at (770) 676-6093. Check out our location and hours, and latest menu with photos and reviews.",
+    "reservation_links": [],
+    "menu_links": [
+      "https://www.alebrijemexicancuisine.com/menu"
+    ],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["casual", "family-friendly"],
+    "cuisine": ["mexican"],
+    "service_style": "casual_dine_in",
+    "price_level": 2,
+    "menu_highlights": null,
+    "menu_url": "https://www.alebrijemexicancuisine.com/menu",
+    "reservation_url": null,
+    "phone": "(770) 676-6093",
+    "instagram": null,
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

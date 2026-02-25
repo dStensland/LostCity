@@ -5,9 +5,7 @@ import Link from "next/link";
 import Image from "@/components/SmartImage";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
 import CategoryIcon from "@/components/CategoryIcon";
-import { usePortal } from "@/lib/portal-context";
-import type { ExploreVenue, ExploreCategory, ExploreCollection } from "@/lib/explore-constants";
-import { EXPLORE_CATEGORIES } from "@/lib/explore-constants";
+import type { ExploreVenue, ExploreCollection } from "@/lib/explore-constants";
 
 type ExploreData = {
   featured: ExploreVenue[];

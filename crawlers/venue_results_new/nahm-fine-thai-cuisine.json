@@ -1,0 +1,52 @@
+{
+  "venue_id": 4891,
+  "venue_slug": "nahm-fine-thai-cuisine",
+  "meta": {
+    "og_image": "https://static.spotapps.co/website_images/ab_websites/70356_website/menu.jpg",
+    "meta_description": null,
+    "reservation_links": [
+      "https://www.opentable.com/restref/client/?restref=48733&lang=en-US&ot_source=Restaurant%20website&corrid=b20c07f6-0bca-44c3-bf30-38d9e883c671#",
+      "https://www.opentable.com/restref/client/?restref=48733&lang=en-US&ot_source=Restaurant%20website&corrid=b20c07f6-0bca-44c3-bf30-38d9e883c671"
+    ],
+    "menu_links": [
+      "http://www.nahmfinethaicuisine.com/alpharetta-nahm-fine-thai-cuisine-food-menu",
+      "http://www.nahmfinethaicuisine.com/alpharetta-nahm-fine-thai-cuisine-food-menu",
+      "http://www.nahmfinethaicuisine.com/alpharetta-nahm-fine-thai-cuisine-drink-menu",
+      "http://www.nahmfinethaicuisine.com/alpharetta-nahm-fine-thai-cuisine-food-menu",
+      "http://www.nahmfinethaicuisine.com/alpharetta-nahm-fine-thai-cuisine-food-menu"
+    ],
+    "instagram": "nahmfinethaicuisine",
+    "facebook_url": "https://www.facebook.com/nahmfinethiacuisine",
+    "phone": "(678) 762-1818"
+  },
+  "extracted": {
+    "hours": {
+      "mon": {"open": "11:00", "close": "22:00"},
+      "tue": {"open": "11:00", "close": "22:00"},
+      "wed": {"open": "11:00", "close": "22:00"},
+      "thu": {"open": "11:00", "close": "22:00"},
+      "fri": {"open": "11:00", "close": "22:00"},
+      "sat": {"open": "17:00", "close": "22:00"},
+      "sun": {"open": "17:00", "close": "21:30"}
+    },
+    "vibes": ["upscale", "date-spot", "intimate", "craft-cocktails"],
+    "cuisine": ["thai", "seafood"],
+    "service_style": "full_service",
+    "price_level": 3,
+    "menu_highlights": [
+      {"name": "Seared Scallops", "price": "$28", "category": "appetizer"},
+      {"name": "Ka-Nom Jeen Jumbo Lump Crab Curry", "price": "$29", "category": "appetizer"},
+      {"name": "Crispy Coconut Shrimp", "price": "$21", "category": "appetizer"},
+      {"name": "Fresh Papaya Salad with Grilled Jumbo Prawn", "price": "$35", "category": "entree"},
+      {"name": "Neu Nam Tok", "price": "$28", "category": "entree"}
+    ],
+    "menu_url": "http://www.nahmfinethaicuisine.com/alpharetta-nahm-fine-thai-cuisine-food-menu",
+    "reservation_url": "https://www.opentable.com/restref/client/?restref=48733&lang=en-US&ot_source=Restaurant%20website&corrid=b20c07f6-0bca-44c3-bf30-38d9e883c671",
+    "phone": "(678) 762-1818",
+    "instagram": "nahmfinethaicuisine",
+    "dietary_options": ["vegetarian-friendly"],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

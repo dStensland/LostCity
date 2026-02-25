@@ -250,37 +250,38 @@ def extract_movies_for_date(
                     )
                     seen_hashes.add(content_hash)
 
+                    event_record = {
+                        "source_id": source_id,
+                        "venue_id": venue_id,
+                        "title": movie_title,
+                        "description": None,
+                        "start_date": date_str,
+                        "start_time": start_time,
+                        "end_date": None,
+                        "end_time": None,
+                        "is_all_day": False,
+                        "category": "film",
+                        "subcategory": "cinema",
+                        "tags": tags,
+                        "price_min": None,
+                        "price_max": None,
+                        "price_note": None,
+                        "is_free": False,
+                        "source_url": f"{BASE_URL}/now-showing",
+                        "ticket_url": enrichment.get("ticket_url"),
+                        "image_url": image_url,
+                        "raw_text": None,
+                        "extraction_confidence": 0.90,
+                        "is_recurring": False,
+                        "recurrence_rule": None,
+                        "content_hash": content_hash,
+                    }
+
                     existing = find_event_by_hash(content_hash)
                     if existing:
-                        events_updated += 1
+                        if smart_update_existing_event(existing, event_record):
+                            events_updated += 1
                     else:
-                        event_record = {
-                            "source_id": source_id,
-                            "venue_id": venue_id,
-                            "title": movie_title,
-                            "description": None,
-                            "start_date": date_str,
-                            "start_time": start_time,
-                            "end_date": None,
-                            "end_time": None,
-                            "is_all_day": False,
-                            "category": "film",
-                            "subcategory": "cinema",
-                            "tags": tags,
-                            "price_min": None,
-                            "price_max": None,
-                            "price_note": None,
-                            "is_free": False,
-                            "source_url": f"{BASE_URL}/now-showing",
-                            "ticket_url": enrichment.get("ticket_url"),
-                            "image_url": image_url,
-                            "raw_text": None,
-                            "extraction_confidence": 0.90,
-                            "is_recurring": False,
-                            "recurrence_rule": None,
-                            "content_hash": content_hash,
-                        }
-
                         series_hint = {
                             "series_type": "film",
                             "series_title": movie_title,
@@ -396,37 +397,38 @@ def _extract_movies_from_text(
             )
             seen_hashes.add(content_hash)
 
+            event_record = {
+                "source_id": source_id,
+                "venue_id": venue_id,
+                "title": title,
+                "description": None,
+                "start_date": date_str,
+                "start_time": start_time,
+                "end_date": None,
+                "end_time": None,
+                "is_all_day": False,
+                "category": "film",
+                "subcategory": "cinema",
+                "tags": tags,
+                "price_min": None,
+                "price_max": None,
+                "price_note": None,
+                "is_free": False,
+                "source_url": f"{BASE_URL}/now-showing",
+                "ticket_url": enrichment.get("ticket_url"),
+                "image_url": image_url,
+                "raw_text": None,
+                "extraction_confidence": 0.85,
+                "is_recurring": False,
+                "recurrence_rule": None,
+                "content_hash": content_hash,
+            }
+
             existing = find_event_by_hash(content_hash)
             if existing:
-                events_updated += 1
+                if smart_update_existing_event(existing, event_record):
+                    events_updated += 1
             else:
-                event_record = {
-                    "source_id": source_id,
-                    "venue_id": venue_id,
-                    "title": title,
-                    "description": None,
-                    "start_date": date_str,
-                    "start_time": start_time,
-                    "end_date": None,
-                    "end_time": None,
-                    "is_all_day": False,
-                    "category": "film",
-                    "subcategory": "cinema",
-                    "tags": tags,
-                    "price_min": None,
-                    "price_max": None,
-                    "price_note": None,
-                    "is_free": False,
-                    "source_url": f"{BASE_URL}/now-showing",
-                    "ticket_url": enrichment.get("ticket_url"),
-                    "image_url": image_url,
-                    "raw_text": None,
-                    "extraction_confidence": 0.85,
-                    "is_recurring": False,
-                    "recurrence_rule": None,
-                    "content_hash": content_hash,
-                }
-
                 series_hint = {
                     "series_type": "film",
                     "series_title": title,
@@ -547,53 +549,54 @@ def extract_special_events(
                     )
                     seen_hashes.add(content_hash)
 
+                    enrichment = enrich_movie_data(title, letterboxd_movies) or {}
+                    tags = ["film", "cinema", "independent", "plaza-theatre", "special-event"]
+                    if enrichment.get("special_event"):
+                        tags.append(enrichment["special_event"])
+
+                    # Check title for special markers
+                    if "35mm" in title.lower():
+                        tags.append("35mm")
+                    if "trivia" in title.lower():
+                        tags.append("trivia")
+
+                    image_url = (
+                        enrichment.get("image_url")
+                        or find_image_for_movie(title, image_map)
+                    )
+
+                    event_record = {
+                        "source_id": source_id,
+                        "venue_id": venue_id,
+                        "title": title,
+                        "description": description,
+                        "start_date": event_date,
+                        "start_time": time_str,
+                        "end_date": None,
+                        "end_time": None,
+                        "is_all_day": time_str is None,
+                        "category": "film",
+                        "subcategory": "special_screening",
+                        "tags": tags,
+                        "price_min": None,
+                        "price_max": None,
+                        "price_note": None,
+                        "is_free": False,
+                        "source_url": f"{BASE_URL}/special-events/",
+                        "ticket_url": enrichment.get("ticket_url"),
+                        "image_url": image_url,
+                        "raw_text": None,
+                        "extraction_confidence": 0.85,
+                        "is_recurring": False,
+                        "recurrence_rule": None,
+                        "content_hash": content_hash,
+                    }
+
                     existing = find_event_by_hash(content_hash)
                     if existing:
-                        events_updated += 1
+                        if smart_update_existing_event(existing, event_record):
+                            events_updated += 1
                     else:
-                        enrichment = enrich_movie_data(title, letterboxd_movies) or {}
-                        tags = ["film", "cinema", "independent", "plaza-theatre", "special-event"]
-                        if enrichment.get("special_event"):
-                            tags.append(enrichment["special_event"])
-
-                        # Check title for special markers
-                        if "35mm" in title.lower():
-                            tags.append("35mm")
-                        if "trivia" in title.lower():
-                            tags.append("trivia")
-
-                        image_url = (
-                            enrichment.get("image_url")
-                            or find_image_for_movie(title, image_map)
-                        )
-
-                        event_record = {
-                            "source_id": source_id,
-                            "venue_id": venue_id,
-                            "title": title,
-                            "description": description,
-                            "start_date": event_date,
-                            "start_time": time_str,
-                            "end_date": None,
-                            "end_time": None,
-                            "is_all_day": time_str is None,
-                            "category": "film",
-                            "subcategory": "special_screening",
-                            "tags": tags,
-                            "price_min": None,
-                            "price_max": None,
-                            "price_note": None,
-                            "is_free": False,
-                            "source_url": f"{BASE_URL}/special-events/",
-                            "ticket_url": enrichment.get("ticket_url"),
-                            "image_url": image_url,
-                            "raw_text": None,
-                            "extraction_confidence": 0.85,
-                            "is_recurring": False,
-                            "recurrence_rule": None,
-                            "content_hash": content_hash,
-                        }
-
                         series_hint = {
                             "series_type": "film",
                             "series_title": title,

@@ -10,3 +10,7 @@ discovery:
   - https://www.murfreesborotn.gov/Calendar.aspx
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- tickets

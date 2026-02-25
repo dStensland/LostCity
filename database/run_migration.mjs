@@ -71,7 +71,9 @@ async function runMigration(filePath) {
       console.log('  ✓ Success');
     } catch (error) {
       console.error(`  ✗ Failed: ${error.message}`);
-      // Continue with other statements
+      throw new Error(
+        `Migration failed in ${path.basename(filePath)} at statement ${i + 1}/${statements.length}`
+      );
     }
   }
 
@@ -82,11 +84,8 @@ async function main() {
   const args = process.argv.slice(2);
 
   if (args.length === 0) {
-    // Default: run our new migrations
-    args.push(
-      path.join(__dirname, 'migrations', '086_producer_to_organization_rename.sql'),
-      path.join(__dirname, 'migrations', '087_venue_type_consolidation.sql')
-    );
+    console.error('Usage: node run_migration.mjs <migration_file> [migration_file2] ...');
+    process.exit(1);
   }
 
   console.log('Supabase Migration Runner');
@@ -96,8 +95,7 @@ async function main() {
   for (const migration of args) {
     const filePath = path.resolve(migration);
     if (!fs.existsSync(filePath)) {
-      console.error(`File not found: ${filePath}`);
-      continue;
+      throw new Error(`File not found: ${filePath}`);
     }
     await runMigration(filePath);
   }
@@ -106,4 +104,7 @@ async function main() {
   console.log('Migration complete!');
 }
 
-main().catch(console.error);
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

@@ -4,7 +4,7 @@ name: Resident Advisor
 integration_method: playwright
 defaults: {}
 discovery:
-  enabled: false  # DataDome CAPTCHA blocks scraping — 2026-02-06 audit
+  enabled: false
   type: list
   urls:
   - https://ra.co/events/us/atlanta
@@ -12,3 +12,7 @@ discovery:
     render_js: true
 detail:
   enabled: false
+data_goals:
+- events
+- images
+- tickets

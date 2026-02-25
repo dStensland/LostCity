@@ -10,3 +10,8 @@ discovery:
   - https://lostcity.ai
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- lineup
+- tickets

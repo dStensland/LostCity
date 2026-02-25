@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createPortalScopedClient } from "@/lib/supabase/server";
 import {
   errorResponse,
   parseIntParam,
@@ -11,9 +11,17 @@ import {
   RATE_LIMITS,
   getClientIdentifier,
 } from "@/lib/rate-limit";
-import { enrichEventsWithSocialProof } from "@/lib/search";
+import { enrichEventsWithSocialProof } from "@/lib/social-proof";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
-import { applyPortalScopeToQuery, filterByPortalCity } from "@/lib/portal-scope";
+import {
+  applyFederatedPortalScopeToQuery,
+  filterByPortalCity,
+  parsePortalContentFilters,
+  applyPortalCategoryFilters,
+  filterByPortalContentScope,
+} from "@/lib/portal-scope";
+import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
+import { getPortalSourceAccess } from "@/lib/federation";
 
 const VALID_CLASS_CATEGORIES = [
   "painting",
@@ -35,6 +43,10 @@ const VALID_SKILL_LEVELS = [
   "advanced",
   "all-levels",
 ] as const;
+
+const CLASSES_CACHE_TTL_MS = 90 * 1000;
+const CLASSES_CACHE_NAMESPACE = "api:classes";
+const CLASSES_CACHE_CONTROL = "public, s-maxage=90, stale-while-revalidate=180";
 
 // GET /api/classes — List class events with filters
 export async function GET(request: NextRequest) {
@@ -77,8 +89,32 @@ export async function GET(request: NextRequest) {
     );
   }
   const portalId = portalContext.portalId;
+  const portalClient = await createPortalScopedClient(portalId);
+  const sourceAccess = portalId ? await getPortalSourceAccess(portalId) : null;
   const portalCity = !portalExclusive ? portalContext.filters.city : undefined;
+  const portalContentFilters = parsePortalContentFilters(portalContext.filters as Record<string, unknown> | null);
   const today = new Date().toISOString().split("T")[0];
+  const cacheBucket = Math.floor(Date.now() / CLASSES_CACHE_TTL_MS);
+  const cacheKey = [
+    portalId || "no-portal",
+    portalCity || "all-cities",
+    portalExclusive ? "exclusive" : "shared",
+    searchParams.toString(),
+    cacheBucket,
+  ].join("|");
+  const cachedPayload = await getSharedCacheJson<{
+    classes: unknown[];
+    total: number;
+    limit: number;
+    offset: number;
+  }>(CLASSES_CACHE_NAMESPACE, cacheKey);
+  if (cachedPayload) {
+    return NextResponse.json(cachedPayload, {
+      headers: {
+        "Cache-Control": CLASSES_CACHE_CONTROL,
+      },
+    });
+  }
 
   const buildQuery = (includeFestival: boolean) => {
     const seriesSelect = includeFestival
@@ -106,7 +142,7 @@ export async function GET(request: NextRequest) {
         )
       `;
 
-    let query = supabase
+    let query = portalClient
       .from("events")
       .select(
         `
@@ -118,8 +154,7 @@ export async function GET(request: NextRequest) {
         end_date,
         end_time,
         is_all_day,
-        category,
-        subcategory,
+        category_id,
         tags,
         price_min,
         price_max,
@@ -136,7 +171,7 @@ export async function GET(request: NextRequest) {
         is_recurring,
         recurrence_rule,
         series_id,
-        venue:venues(id, name, slug, address, neighborhood, city, state),
+        venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng),
         ${seriesSelect}
       `,
         { count: "exact" }
@@ -170,10 +205,18 @@ export async function GET(request: NextRequest) {
       query = query.eq("venues.neighborhood", neighborhood);
     }
 
-    query = applyPortalScopeToQuery(query, {
+    query = applyFederatedPortalScopeToQuery(query, {
       portalId,
       portalExclusive,
       publicOnlyWhenNoPortal: true,
+      sourceIds: sourceAccess?.sourceIds || [],
+      sourceColumn: "source_id",
+    });
+
+    // Classes are their own vertical — skip portal category include,
+    // but still apply exclude_categories.
+    query = applyPortalCategoryFilters(query, portalContentFilters, {
+      userCategoriesActive: true,
     });
 
     // Sorting
@@ -220,18 +263,25 @@ export async function GET(request: NextRequest) {
     portalCity,
     { allowMissingCity: true }
   );
+  const contentScopedClasses = filterByPortalContentScope(cityScopedClasses, portalContentFilters);
 
-  return NextResponse.json(
-    {
-      classes: cityScopedClasses,
-      total: portalCity ? cityScopedClasses.length : (count ?? 0),
-      limit,
-      offset,
-    },
-    {
-      headers: {
-        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
-      },
-    }
+  const payload = {
+    classes: contentScopedClasses,
+    total: portalCity || Object.keys(portalContentFilters).length > 0 ? contentScopedClasses.length : (count ?? 0),
+    limit,
+    offset,
+  };
+  await setSharedCacheJson(
+    CLASSES_CACHE_NAMESPACE,
+    cacheKey,
+    payload,
+    CLASSES_CACHE_TTL_MS,
+    { maxEntries: 300 }
   );
+
+  return NextResponse.json(payload, {
+    headers: {
+      "Cache-Control": CLASSES_CACHE_CONTROL,
+    },
+  });
 }

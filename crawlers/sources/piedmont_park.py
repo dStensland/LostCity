@@ -145,9 +145,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 # Get event URL
                 source_url = event_data.get("url", "https://piedmontpark.org/calendar/")
 
-                # Determine if free
+                # Determine if free — only mark free if explicitly stated
                 cost = event_data.get("cost", "")
-                is_free = not cost or "free" in cost.lower()
+                is_free = bool(cost and "free" in cost.lower())
 
                 # Parse cost if present
                 price_min, price_max = None, None

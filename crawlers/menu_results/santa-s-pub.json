@@ -1,0 +1,55 @@
+{
+  "venue_id": 1603,
+  "venue_slug": "santa-s-pub",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Ceviche De Pulpo",
+        "price": "$15",
+        "category": "appetizer"
+      },
+      {
+        "name": "Quesabirria",
+        "price": "$14.50",
+        "category": "entree"
+      },
+      {
+        "name": "Chuleta Ahumada Taco",
+        "price": "$6",
+        "category": "entree"
+      },
+      {
+        "name": "Brioche Bravo",
+        "price": "$16",
+        "category": "entree"
+      },
+      {
+        "name": "Caramel Flan",
+        "price": "$7",
+        "category": "dessert"
+      }
+    ],
+    "dietary_options": [
+      "vegetarian-friendly"
+    ],
+    "price_level": 2,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

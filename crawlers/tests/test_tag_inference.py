@@ -249,3 +249,61 @@ class TestInferGenres:
         }
         genres = infer_genres(event)
         assert "activism" not in genres
+
+    def test_infer_genres_from_tags_for_sparse_music_payload(self):
+        event = {
+            "title": "Thu 19",
+            "description": "",
+            "category": "music",
+            "tags": ["live-music", "jazz", "ticketed"],
+        }
+        genres = infer_genres(event)
+        assert "jazz" in genres
+
+    def test_infer_genres_from_tags_scoped_to_category(self):
+        event = {
+            "title": "Community meetup",
+            "description": "",
+            "category": "community",
+            "tags": ["classic", "activism"],
+        }
+        genres = infer_genres(event)
+        assert "activism" in genres
+        assert "classic" not in genres
+
+    def test_infer_fitness_running_tag_to_run_genre(self):
+        event = {
+            "title": "Morning meetup",
+            "description": "",
+            "category": "fitness",
+            "tags": ["running", "outdoor"],
+        }
+        genres = infer_genres(event)
+        assert "run" in genres
+
+    def test_vibe_fallback_uses_canonical_genre(self):
+        event = {
+            "title": "Untitled event",
+            "description": "",
+            "category": "art",
+        }
+        genres = infer_genres(event, venue_vibes=["paint-and-sip"])
+        assert "craft" in genres
+
+    def test_infer_music_dj_title_as_electronic(self):
+        event = {
+            "title": "DJ RudeDawg",
+            "description": "",
+            "category": "music",
+        }
+        genres = infer_genres(event)
+        assert "electronic" in genres
+
+    def test_infer_fitness_5k_as_run(self):
+        event = {
+            "title": "Neighborhood 5K Run/Walk",
+            "description": "",
+            "category": "fitness",
+        }
+        genres = infer_genres(event)
+        assert "run" in genres

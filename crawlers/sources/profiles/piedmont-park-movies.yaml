@@ -1,0 +1,16 @@
+version: 1
+slug: piedmont-park-movies
+name: Piedmont Park Outdoor Movies
+integration_method: html
+defaults:
+  category: film
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - https://piedmontpark.org/events
+detail:
+  enabled: true
+data_goals:
+- events
+- images

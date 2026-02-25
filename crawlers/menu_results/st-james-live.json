@@ -1,0 +1,53 @@
+{
+  "venue_id": 437,
+  "venue_slug": "st-james-live",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Herb-Marinated Lamb Lollipops",
+        "price": "$25",
+        "category": "appetizer"
+      },
+      {
+        "name": "Pan Seared Salmon",
+        "price": "$16",
+        "category": "entree"
+      },
+      {
+        "name": "Chicken & Waffles",
+        "price": "$14",
+        "category": "entree"
+      },
+      {
+        "name": "Hennessy Lemonade",
+        "price": "$25",
+        "category": "cocktail"
+      },
+      {
+        "name": "Brownie Cheesecake",
+        "price": "$14",
+        "category": "dessert"
+      }
+    ],
+    "dietary_options": [],
+    "price_level": 2,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

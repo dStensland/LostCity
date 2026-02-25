@@ -1,0 +1,40 @@
+{
+  "venue_id": 4824,
+  "venue_slug": "oaxaca",
+  "meta": {
+    "og_image": "https://popmenucloud.com/cdn-cgi/image/width=1200,height=630,format=auto,fit=cover/onjwvbgh/000539fa-11fe-41d3-86c5-7d0a6a3fbe11.jpg",
+    "meta_description": "Oaxaca ATL in Atlanta, GA. Call us at (770) 450-4805. Check out our location and hours, and latest menu with photos and reviews.",
+    "reservation_links": [
+      "https://resy.com/cities/chamblee-ga/venues/oaxaca-tacos-and-tequila-bar?seats=2&date=2024-10-24",
+      "https://resy.com/cities/chamblee-ga/venues/oaxaca-tacos-and-tequila-bar?seats=2&date=2024-10-24"
+    ],
+    "menu_links": [
+      "https://www.oaxacaatl.com/menu"
+    ],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["casual", "lively", "trendy"],
+    "cuisine": ["mexican"],
+    "service_style": "casual_dine_in",
+    "price_level": 2,
+    "menu_highlights": [
+      {"name": "Steak Tlayuda Brunch", "price": "$25", "category": "entree"},
+      {"name": "Enmoladas", "price": "$18", "category": "entree"},
+      {"name": "Chilaquiles", "price": "$17", "category": "entree"},
+      {"name": "Pan Frances Tres Leches Cafe de Olla", "price": "$15", "category": "entree"},
+      {"name": "Oaxaca Pina Colada", "price": "$14", "category": "cocktail"}
+    ],
+    "menu_url": "https://www.oaxacaatl.com/menu",
+    "reservation_url": "https://resy.com/cities/chamblee-ga/venues/oaxaca-tacos-and-tequila-bar",
+    "phone": "(770) 450-4805",
+    "instagram": null,
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

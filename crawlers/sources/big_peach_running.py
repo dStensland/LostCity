@@ -169,11 +169,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     content_hash = generate_content_hash(title, "Big Peach Running Co", start_date_str)
 
-                    if find_event_by_hash(content_hash):
-                        events_updated += 1
-                        current += timedelta(days=7)
-                        continue
-
                     # Get specific event URL
 
 
@@ -209,6 +204,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "recurrence_rule": f"FREQ=WEEKLY;BYDAY={['MO','TU','WE','TH','FR','SA','SU'][weekday]}",
                         "content_hash": content_hash,
                     }
+
+                    existing = find_event_by_hash(content_hash)
+                    if existing:
+                        smart_update_existing_event(existing, event_record)
+                        events_updated += 1
+                        current += timedelta(days=7)
+                        continue
 
                     day_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
                     series_hint = {
@@ -253,10 +255,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                                 content_hash = generate_content_hash(title, "Big Peach Running Co", start_date_str)
 
-                                if find_event_by_hash(content_hash):
-                                    events_updated += 1
-                                    break
-
                                 # Get specific event URL
 
 
@@ -290,6 +288,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                     "recurrence_rule": None,
                                     "content_hash": content_hash,
                                 }
+
+                                existing = find_event_by_hash(content_hash)
+                                if existing:
+                                    smart_update_existing_event(existing, event_record)
+                                    events_updated += 1
+                                    break
 
                                 try:
                                     insert_event(event_record)

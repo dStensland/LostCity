@@ -1,0 +1,21 @@
+{
+  "venue_id": 4561,
+  "venue_slug": "close-company-bar",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["craft-cocktails", "casual", "late-night"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "https://www.closecompanybar.com/menu/",
+    "reservation_url": "https://www.exploretock.com/close-company-nashville/experience/547883/large-party-reservation",
+    "phone": null,
+    "instagram": "closecompanybar",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

@@ -15,22 +15,82 @@ from typing import Optional, Tuple
 from supabase import create_client, Client
 from config import get_config
 from tags import VALID_CATEGORIES, VALID_VENUE_TYPES, VALID_VIBES
-from tag_inference import infer_tags, infer_is_class, infer_is_support_group, infer_genres
+from tag_inference import (
+    infer_tags,
+    infer_is_class,
+    infer_is_religious,
+    infer_is_support_group,
+    infer_genres,
+)
 from genre_normalize import normalize_genres
-from description_fetcher import generate_synthetic_description
 from series import get_or_create_series, update_series_metadata
-from posters import get_metadata_for_film_event
+from posters import get_metadata_for_film_event, extract_film_info
 from artist_images import get_info_for_music_event
 from date_utils import MAX_FUTURE_DAYS_DEFAULT
 from show_signals import derive_show_signals
+from planning_capabilities import (
+    derive_capability_snapshot,
+    attach_capability_metadata,
+)
+from utils import is_likely_non_event_image
+from closed_venues import (
+    CLOSED_VENUE_NOTE,
+    CLOSED_VENUE_SLUGS,
+    CLOSED_VENUE_NAMES_NORMALIZED,
+)
 
 logger = logging.getLogger(__name__)
 
+_AGGREGATOR_SOURCE_PREFIXES = (
+    "ticketmaster",
+    "eventbrite",
+    "mobilize",
+)
+_AGGREGATOR_SOURCE_SLUGS = {
+    "atlanta-recurring-social",
+    "instagram-captions",
+    "creative-loafing",
+}
+_SPECIALS_SOURCE_SLUGS = {
+    "battle-and-brew",
+    "our-bar-atl",
+    "bold-monk-brewing",
+    "scofflaw-brewing",
+    "sweetwater",
+    "wrecking-bar",
+}
+_DEPRECATED_EVENT_FIELDS = ("subcategory", "subcategory_id")
+
+# Nightlife subcategories that never have real performers (participatory events).
+# Subcategories like "club", "dj", "drag" CAN have performers and are NOT skipped.
+_NIGHTLIFE_SKIP_SUBCATEGORIES = {
+    "karaoke", "trivia", "bar_event", "poker", "bingo",
+    "nightlife.karaoke", "nightlife.trivia", "nightlife.bar_event",
+    "nightlife.poker", "nightlife.bingo",
+}
 
 # ===== TITLE CASE HELPER =====
 # Python's .title() breaks on apostrophes: "JOHN'S" -> "John'S" (wrong)
 # This function handles possessives/contractions correctly.
-_SMALL_WORDS = {"a", "an", "the", "and", "but", "or", "for", "nor", "on", "at", "to", "in", "of", "by", "is", "vs"}
+_SMALL_WORDS = {
+    "a",
+    "an",
+    "the",
+    "and",
+    "but",
+    "or",
+    "for",
+    "nor",
+    "on",
+    "at",
+    "to",
+    "in",
+    "of",
+    "by",
+    "is",
+    "vs",
+}
+
 
 def smart_title_case(text: str) -> str:
     """Title-case that correctly handles apostrophes and small words."""
@@ -132,6 +192,52 @@ _SOURCE_CACHE: dict[int, dict] = {}
 _VENUE_CACHE: dict[int, dict] = {}
 _BLURHASH_EXECUTOR = ThreadPoolExecutor(max_workers=2, thread_name_prefix="blurhash")
 _EVENTS_HAS_SHOW_SIGNAL_COLUMNS: Optional[bool] = None
+_EVENTS_HAS_FILM_IDENTITY_COLUMNS: Optional[bool] = None
+_EVENTS_HAS_CONTENT_KIND_COLUMN: Optional[bool] = None
+_EVENTS_HAS_FIELD_METADATA_COLUMNS: Optional[bool] = None
+_VENUES_HAS_LOCATION_DESIGNATOR: Optional[bool] = None
+_WRITES_ENABLED = True
+_WRITE_SKIP_REASON = ""
+_TEMP_ID_COUNTER = 0
+_TEMP_ID_LOCK = threading.Lock()
+
+
+def configure_write_mode(enable_writes: bool, reason: str = "") -> None:
+    """Configure runtime write mode for crawler operations."""
+    global _WRITES_ENABLED, _WRITE_SKIP_REASON
+    _WRITES_ENABLED = enable_writes
+    _WRITE_SKIP_REASON = reason.strip()
+
+
+def writes_enabled() -> bool:
+    """Return True when DB writes are allowed for this process."""
+    return _WRITES_ENABLED
+
+
+def _next_temp_id() -> int:
+    """Return a negative synthetic ID for dry-run inserts."""
+    global _TEMP_ID_COUNTER
+    with _TEMP_ID_LOCK:
+        _TEMP_ID_COUNTER -= 1
+        return _TEMP_ID_COUNTER
+
+
+def _log_write_skip(operation: str) -> None:
+    """Emit a consistent log line when a DB write is skipped."""
+    suffix = f" ({_WRITE_SKIP_REASON})" if _WRITE_SKIP_REASON else ""
+    logger.info(f"[DRY RUN] Skipping DB write: {operation}{suffix}")
+
+
+def reset_client() -> None:
+    """Reset cached DB client and per-process caches."""
+    global _client, _EVENTS_HAS_SHOW_SIGNAL_COLUMNS, _EVENTS_HAS_FILM_IDENTITY_COLUMNS, _EVENTS_HAS_CONTENT_KIND_COLUMN, _EVENTS_HAS_FIELD_METADATA_COLUMNS
+    _client = None
+    _EVENTS_HAS_SHOW_SIGNAL_COLUMNS = None
+    _EVENTS_HAS_FILM_IDENTITY_COLUMNS = None
+    _EVENTS_HAS_CONTENT_KIND_COLUMN = None
+    _EVENTS_HAS_FIELD_METADATA_COLUMNS = None
+    _SOURCE_CACHE.clear()
+    _VENUE_CACHE.clear()
 
 
 def retry_on_network_error(max_retries: int = 3, base_delay: float = 0.5):
@@ -193,7 +299,67 @@ VIRTUAL_VENUE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "venue_type": "virtual",
+    "location_designator": "virtual",
 }
+
+
+def infer_location_designator(venue_data: dict) -> str:
+    """Infer location designator for venue-level rendering/quality logic."""
+    slug = (venue_data.get("slug") or "").strip().lower()
+    name = _normalize_venue_name(venue_data.get("name"))
+    venue_type = (venue_data.get("venue_type") or "").strip().lower()
+
+    if (
+        venue_type == "virtual"
+        or slug == VIRTUAL_VENUE_SLUG
+        or "online / virtual" in name
+        or "virtual event" in name
+    ):
+        return "virtual"
+
+    if (
+        slug.startswith("aa-")
+        or slug.startswith("na-")
+        or "anonymous" in name
+        or "recovery" in name
+        or "alcoholics anonymous" in name
+        or "narcotics anonymous" in name
+    ):
+        return "recovery_meeting"
+
+    if (
+        slug == "community-location"
+        or slug.startswith("this-event-s-address-is-private")
+        or name.startswith("community location")
+        or "address is private" in name
+        or "private location" in name
+        or "sign up for more details" in name
+    ):
+        return "private_after_signup"
+
+    return "standard"
+
+
+def venues_support_location_designator() -> bool:
+    """Detect whether venues.location_designator exists."""
+    global _VENUES_HAS_LOCATION_DESIGNATOR
+    if _VENUES_HAS_LOCATION_DESIGNATOR is not None:
+        return _VENUES_HAS_LOCATION_DESIGNATOR
+
+    client = get_client()
+    try:
+        client.table("venues").select("location_designator").limit(1).execute()
+        _VENUES_HAS_LOCATION_DESIGNATOR = True
+    except Exception as e:
+        error_str = str(e).lower()
+        if "does not exist" in error_str and "location_designator" in error_str:
+            _VENUES_HAS_LOCATION_DESIGNATOR = False
+            logger.warning(
+                "venues.location_designator missing; run migration 227_venue_location_designator.sql"
+            )
+        else:
+            raise
+    return bool(_VENUES_HAS_LOCATION_DESIGNATOR)
 
 
 def get_or_create_virtual_venue() -> int:
@@ -204,7 +370,13 @@ def get_or_create_virtual_venue() -> int:
     )
     if result.data:
         return result.data[0]["id"]
-    result = client.table("venues").insert(VIRTUAL_VENUE_DATA).execute()
+    if not writes_enabled():
+        _log_write_skip(f"insert venues slug={VIRTUAL_VENUE_SLUG}")
+        return _next_temp_id()
+    payload = dict(VIRTUAL_VENUE_DATA)
+    if not venues_support_location_designator():
+        payload.pop("location_designator", None)
+    result = client.table("venues").insert(payload).execute()
     return result.data[0]["id"]
 
 
@@ -213,8 +385,15 @@ def get_client() -> Client:
     global _client
     if _client is None:
         cfg = get_config()
+        missing_credentials = cfg.database.missing_active_credentials()
+        if missing_credentials:
+            missing_display = ", ".join(missing_credentials)
+            raise RuntimeError(
+                f"Missing DB credentials for target '{cfg.database.active_target}': {missing_display}"
+            )
         _client = create_client(
-            cfg.database.supabase_url, cfg.database.supabase_service_key
+            cfg.database.active_supabase_url,
+            cfg.database.active_supabase_service_key,
         )
     return _client
 
@@ -233,7 +412,9 @@ def events_support_show_signal_columns() -> bool:
     try:
         (
             client.table("events")
-            .select("doors_time,age_policy,ticket_status,reentry_policy,set_times_mentioned")
+            .select(
+                "doors_time,age_policy,ticket_status,reentry_policy,set_times_mentioned"
+            )
             .limit(1)
             .execute()
         )
@@ -257,6 +438,102 @@ def events_support_show_signal_columns() -> bool:
     return bool(_EVENTS_HAS_SHOW_SIGNAL_COLUMNS)
 
 
+def events_support_film_identity_columns() -> bool:
+    """
+    Detect whether dedicated film identity columns exist on events.
+
+    Keeps crawler writes backward compatible before SQL migration is applied.
+    """
+    global _EVENTS_HAS_FILM_IDENTITY_COLUMNS
+    if _EVENTS_HAS_FILM_IDENTITY_COLUMNS is not None:
+        return _EVENTS_HAS_FILM_IDENTITY_COLUMNS
+
+    client = get_client()
+    try:
+        (
+            client.table("events")
+            .select(
+                "film_title,film_release_year,film_imdb_id,film_external_genres,film_identity_source"
+            )
+            .limit(1)
+            .execute()
+        )
+        _EVENTS_HAS_FILM_IDENTITY_COLUMNS = True
+    except Exception as e:
+        error_str = str(e).lower()
+        if "does not exist" in error_str and (
+            "film_title" in error_str
+            or "film_release_year" in error_str
+            or "film_imdb_id" in error_str
+            or "film_external_genres" in error_str
+            or "film_identity_source" in error_str
+        ):
+            _EVENTS_HAS_FILM_IDENTITY_COLUMNS = False
+            logger.warning(
+                "events table missing film identity columns; run migration 225_film_identity_fields.sql"
+            )
+        else:
+            raise
+
+    return bool(_EVENTS_HAS_FILM_IDENTITY_COLUMNS)
+
+
+def events_support_content_kind_column() -> bool:
+    """
+    Detect whether events.content_kind exists.
+
+    Keeps crawler writes backward compatible before SQL migration is applied.
+    """
+    global _EVENTS_HAS_CONTENT_KIND_COLUMN
+    if _EVENTS_HAS_CONTENT_KIND_COLUMN is not None:
+        return _EVENTS_HAS_CONTENT_KIND_COLUMN
+
+    client = get_client()
+    try:
+        client.table("events").select("content_kind").limit(1).execute()
+        _EVENTS_HAS_CONTENT_KIND_COLUMN = True
+    except Exception as e:
+        error_str = str(e).lower()
+        if "does not exist" in error_str and "content_kind" in error_str:
+            _EVENTS_HAS_CONTENT_KIND_COLUMN = False
+            logger.warning(
+                "events.content_kind missing; run migration 230_event_content_kind.sql"
+            )
+        else:
+            raise
+
+    return bool(_EVENTS_HAS_CONTENT_KIND_COLUMN)
+
+
+def events_support_field_metadata_columns() -> bool:
+    """
+    Detect whether events.field_provenance and events.field_confidence exist.
+
+    Keeps crawler writes backward compatible before schema catches up.
+    """
+    global _EVENTS_HAS_FIELD_METADATA_COLUMNS
+    if _EVENTS_HAS_FIELD_METADATA_COLUMNS is not None:
+        return _EVENTS_HAS_FIELD_METADATA_COLUMNS
+
+    client = get_client()
+    try:
+        client.table("events").select("field_provenance,field_confidence").limit(1).execute()
+        _EVENTS_HAS_FIELD_METADATA_COLUMNS = True
+    except Exception as e:
+        error_str = str(e).lower()
+        if "does not exist" in error_str and (
+            "field_provenance" in error_str or "field_confidence" in error_str
+        ):
+            _EVENTS_HAS_FIELD_METADATA_COLUMNS = False
+            logger.warning(
+                "events metadata columns missing; field_provenance/field_confidence enrichment disabled."
+            )
+        else:
+            raise
+
+    return bool(_EVENTS_HAS_FIELD_METADATA_COLUMNS)
+
+
 def get_source_info(source_id: int) -> Optional[dict]:
     """Fetch source info with caching."""
     if source_id in _SOURCE_CACHE:
@@ -266,7 +543,9 @@ def get_source_info(source_id: int) -> Optional[dict]:
     try:
         result = (
             client.table("sources")
-            .select("id, slug, name, url, owner_portal_id, producer_id, is_sensitive")
+            .select(
+                "id, slug, name, url, owner_portal_id, producer_id, is_sensitive, is_active"
+            )
             .eq("id", source_id)
             .execute()
         )
@@ -275,18 +554,27 @@ def get_source_info(source_id: int) -> Optional[dict]:
             # Backward-compatible fallback for environments where producer_id isn't present.
             result = (
                 client.table("sources")
-                .select("id, slug, name, url, owner_portal_id, is_sensitive")
+                .select("id, slug, name, url, owner_portal_id, is_sensitive, is_active")
                 .eq("id", source_id)
                 .execute()
             )
         except Exception:
-            # Backward-compatible fallback for environments where is_sensitive isn't present.
-            result = (
-                client.table("sources")
-                .select("id, slug, name, url, owner_portal_id")
-                .eq("id", source_id)
-                .execute()
-            )
+            try:
+                # Backward-compatible fallback for environments where is_sensitive isn't present.
+                result = (
+                    client.table("sources")
+                    .select("id, slug, name, url, owner_portal_id, is_active")
+                    .eq("id", source_id)
+                    .execute()
+                )
+            except Exception:
+                # Last-resort fallback for very old schemas where is_active isn't present.
+                result = (
+                    client.table("sources")
+                    .select("id, slug, name, url, owner_portal_id")
+                    .eq("id", source_id)
+                    .execute()
+                )
     if result.data:
         _SOURCE_CACHE[source_id] = result.data[0]
         return result.data[0]
@@ -408,6 +696,7 @@ _FESTIVAL_SOURCE_SLUGS = {
     "furry-weekend-atlanta",
     "southern-fried-gaming-expo",
     "anime-weekend-atlanta",
+    "atlanta-salsa-bachata-festival",
 }
 
 _FESTIVAL_NAME_PATTERN = re.compile(
@@ -526,6 +815,8 @@ def get_producer_id_for_source(source_id: int) -> Optional[str]:
 
 def _compute_and_save_event_blurhash(event_id: int, image_url: str) -> None:
     """Best-effort async blurhash generation for newly inserted events."""
+    if not writes_enabled():
+        return
     try:
         from backfill_blurhash import (
             compute_blurhash,
@@ -592,10 +883,107 @@ def _fetch_venue_description(url: str) -> Optional[str]:
     return None
 
 
+def _normalize_venue_name(value: Optional[str]) -> str:
+    return re.sub(r"\s+", " ", (value or "").strip().lower())
+
+
+def _is_permanently_closed_venue(venue_data: dict) -> bool:
+    slug = (venue_data.get("slug") or "").strip().lower()
+    name = _normalize_venue_name(venue_data.get("name"))
+    return slug in CLOSED_VENUE_SLUGS or name in CLOSED_VENUE_NAMES_NORMALIZED
+
+
+def _with_closed_note(description: Optional[str]) -> str:
+    text = (description or "").strip()
+    if not text:
+        return CLOSED_VENUE_NOTE
+    lower = text.lower()
+    if "do not reactivate via crawler" in lower:
+        return text
+    if "permanently closed" in lower:
+        needs_period = not text.endswith((".", "!", "?"))
+        suffix = "Do not reactivate via crawler."
+        return f"{text}. {suffix}" if needs_period else f"{text} {suffix}"
+    needs_period = not text.endswith((".", "!", "?"))
+    return (
+        f"{text}. {CLOSED_VENUE_NOTE}"
+        if needs_period
+        else f"{text} {CLOSED_VENUE_NOTE}"
+    )
+
+
+def _lock_closed_venue_record(client: Client, venue_id: int, existing: dict) -> None:
+    """Ensure a permanently-closed venue remains inactive."""
+    update_data = {}
+    if existing.get("active") is not False:
+        update_data["active"] = False
+    next_description = _with_closed_note(existing.get("description"))
+    if next_description != (existing.get("description") or "").strip():
+        update_data["description"] = next_description
+
+    if not update_data:
+        return
+
+    if not writes_enabled():
+        _log_write_skip(f"update venues id={venue_id} set closed lock")
+        return
+
+    client.table("venues").update(update_data).eq("id", venue_id).execute()
+
+
 @retry_on_network_error(max_retries=3, base_delay=0.5)
 def get_or_create_venue(venue_data: dict) -> int:
     """Get existing venue or create new one. Returns venue ID."""
     client = get_client()
+
+    if _is_permanently_closed_venue(venue_data):
+        slug = venue_data.get("slug")
+        name = venue_data.get("name")
+        logger.info(
+            "Closed venue guard: keeping '%s' inactive",
+            slug or name or "unknown",
+        )
+
+        existing = None
+        if slug:
+            res = (
+                client.table("venues")
+                .select("id, active, description")
+                .eq("slug", slug)
+                .limit(1)
+                .execute()
+            )
+            if res.data:
+                existing = res.data[0]
+
+        if not existing and name:
+            res = (
+                client.table("venues")
+                .select("id, active, description")
+                .eq("name", name)
+                .limit(1)
+                .execute()
+            )
+            if res.data:
+                existing = res.data[0]
+
+        if existing:
+            _lock_closed_venue_record(client, existing["id"], existing)
+            return existing["id"]
+
+        blocked_venue_data = dict(venue_data)
+        blocked_venue_data["active"] = False
+        blocked_venue_data["description"] = _with_closed_note(
+            blocked_venue_data.get("description")
+        )
+
+        if not writes_enabled():
+            _log_write_skip(
+                f"insert venues name={blocked_venue_data.get('name', 'unknown')} (closed guard)"
+            )
+            return _next_temp_id()
+        result = client.table("venues").insert(blocked_venue_data).execute()
+        return result.data[0]["id"]
 
     # Try to find by slug first
     slug = venue_data.get("slug")
@@ -637,8 +1025,11 @@ def get_or_create_venue(venue_data: dict) -> int:
                     if shorter < 3:
                         continue
                     # Simple substring check: one contains the other, or starts the same
-                    if (name_lower in existing_name or existing_name in name_lower
-                            or name_lower[:shorter] == existing_name[:shorter]):
+                    if (
+                        name_lower in existing_name
+                        or existing_name in name_lower
+                        or name_lower[:shorter] == existing_name[:shorter]
+                    ):
                         logger.info(
                             f"Proximity dedup: reusing '{row['name']}' (id={row['id']}) for '{name}'"
                         )
@@ -694,7 +1085,15 @@ def get_or_create_venue(venue_data: dict) -> int:
             )
         venue_data["vibes"] = valid or None
 
+    if venues_support_location_designator():
+        venue_data.setdefault(
+            "location_designator", infer_location_designator(venue_data)
+        )
+
     # Create new venue
+    if not writes_enabled():
+        _log_write_skip(f"insert venues name={venue_data.get('name', 'unknown')}")
+        return _next_temp_id()
     result = client.table("venues").insert(venue_data).execute()
     return result.data[0]["id"]
 
@@ -1125,6 +1524,16 @@ def validate_event_title(title: str) -> bool:
     if re.match(r"^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\d+$", title, re.IGNORECASE):
         return False
 
+    # Number-prefixed weekday + date ("23Monday, February 23", "7Tue, Mar 7")
+    if re.match(
+        r"^\d{1,2}\s*(Mon|Tue|Wed|Thu|Fri|Sat|Sun|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\b"
+        r"\s*,?\s*(January|February|March|April|May|June|July|August|September|October|November|December|"
+        r"Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2}(?:,?\s+\d{4})?\s*$",
+        title,
+        re.IGNORECASE,
+    ):
+        return False
+
     # Phone numbers as titles ("404-888-4760")
     if re.match(r"^[\d\-\(\)\.\s]{7,}$", title):
         return False
@@ -1187,6 +1596,66 @@ def normalize_category(category):
     return _CATEGORY_NORMALIZATION_MAP.get(category, category)
 
 
+_CONTENT_KIND_ALLOWED = {"event", "exhibit", "special"}
+_EXHIBIT_SIGNAL_TAGS = {
+    "exhibit",
+    "exhibition",
+    "museum",
+    "gallery",
+    "installation",
+    "on-view",
+    "on_view",
+}
+_SPECIAL_SIGNAL_TAGS = {"special", "specials", "happy-hour", "happy_hour"}
+_EXHIBIT_SIGNAL_RE = re.compile(
+    r"(exhibit|exhibition|on view|collection|installation|permanent)",
+    flags=re.IGNORECASE,
+)
+
+
+def infer_content_kind(
+    event_data: dict, series_hint: Optional[dict] = None, source_slug: Optional[str] = None
+) -> str:
+    """Infer event content kind for feed-level filtering and UX treatment."""
+    explicit_value = str(event_data.get("content_kind") or "").strip().lower()
+    if explicit_value in _CONTENT_KIND_ALLOWED:
+        return explicit_value
+
+    series_type = str(
+        (series_hint or {}).get("series_type")
+        or ((event_data.get("series") or {}) if isinstance(event_data.get("series"), dict) else {}).get("series_type")
+        or ""
+    ).strip().lower()
+    if series_type == "exhibition":
+        return "exhibit"
+
+    tags = {str(tag).strip().lower() for tag in (event_data.get("tags") or [])}
+    genres = {str(genre).strip().lower() for genre in (event_data.get("genres") or [])}
+    searchable_text = " ".join(
+        filter(
+            None,
+            [
+                str(event_data.get("title") or ""),
+                str(event_data.get("description") or ""),
+                str((series_hint or {}).get("series_title") or ""),
+            ],
+        )
+    )
+
+    if tags & _EXHIBIT_SIGNAL_TAGS or genres & _EXHIBIT_SIGNAL_TAGS:
+        return "exhibit"
+    if _EXHIBIT_SIGNAL_RE.search(searchable_text):
+        return "exhibit"
+
+    if source_slug in _SPECIALS_SOURCE_SLUGS:
+        return "special"
+    if tags & _SPECIAL_SIGNAL_TAGS:
+        return "special"
+
+    return "event"
+
+
+@retry_on_network_error(max_retries=4, base_delay=0.5)
 def insert_event(
     event_data: dict, series_hint: dict = None, genres: list = None
 ) -> int:
@@ -1235,7 +1704,13 @@ def insert_event(
     venue_id = event_data.get("venue_id")
     if venue_id and title:
         try:
-            venue_row = client.table("venues").select("name").eq("id", venue_id).maybe_single().execute()
+            venue_row = (
+                client.table("venues")
+                .select("name")
+                .eq("id", venue_id)
+                .maybe_single()
+                .execute()
+            )
             if venue_row.data:
                 venue_name_db = (venue_row.data.get("name") or "").strip().lower()
                 if venue_name_db and title.strip().lower() == venue_name_db:
@@ -1249,6 +1724,7 @@ def insert_event(
     # Auto-generate content_hash if missing (defense-in-depth for dedup)
     if not event_data.get("content_hash"):
         from dedupe import generate_content_hash  # lazy import to avoid circular
+
         venue_name_for_hash = ""
         if venue_id:
             venue_info = get_venue_by_id_cached(venue_id)
@@ -1307,11 +1783,39 @@ def insert_event(
     # Auto-fetch movie metadata (poster, director, runtime, etc.) for film events
     film_metadata = None
     if event_data.get("category") == "film":
+        parsed_film_title, parsed_film_year = extract_film_info(
+            event_data.get("title", "")
+        )
+        if events_support_film_identity_columns():
+            if parsed_film_title and not event_data.get("film_title"):
+                event_data["film_title"] = parsed_film_title
+                event_data["film_identity_source"] = "title_parse"
+            if parsed_film_year and not event_data.get("film_release_year"):
+                try:
+                    event_data["film_release_year"] = int(parsed_film_year)
+                except (TypeError, ValueError):
+                    pass
+
         film_metadata = get_metadata_for_film_event(
             event_data.get("title", ""), event_data.get("image_url")
         )
-        if film_metadata and not event_data.get("image_url"):
-            event_data["image_url"] = film_metadata.poster_url
+        if film_metadata:
+            metadata_source = getattr(film_metadata, "source", None) or "omdb"
+            if not event_data.get("image_url"):
+                event_data["image_url"] = film_metadata.poster_url
+            if events_support_film_identity_columns():
+                if film_metadata.title:
+                    event_data["film_title"] = film_metadata.title
+                if film_metadata.year:
+                    event_data["film_release_year"] = film_metadata.year
+                if film_metadata.imdb_id:
+                    event_data["film_imdb_id"] = film_metadata.imdb_id
+                if film_metadata.genres:
+                    event_data["film_external_genres"] = film_metadata.genres
+                event_data["film_identity_source"] = metadata_source
+            # Keep event title exactly as venue provided, but use matched movie genres for tagging/filtering.
+            if film_metadata.genres and not genres:
+                genres = film_metadata.genres
 
     # Auto-fetch artist image, genres, and bio for music events
     music_info = None
@@ -1327,26 +1831,43 @@ def insert_event(
         if music_info.genres and not genres:
             genres = music_info.genres
 
-    # Parse lineup from title for event_artists population (music + comedy)
-    if event_data.get("category") in ("music", "comedy"):
-        if not event_data.get("_parsed_artists"):
+    # Parse lineup from title for event_artists population (music, comedy, nightlife)
+    if event_data.get("category") in ("music", "comedy", "nightlife"):
+        sub = (event_data.get("subcategory") or "").strip().lower()
+        skip = event_data.get("category") == "nightlife" and sub in _NIGHTLIFE_SKIP_SUBCATEGORIES
+        if not skip and not event_data.get("_parsed_artists"):
             parsed = parse_lineup_from_title(event_data.get("title", ""))
             if parsed:
                 event_data["_parsed_artists"] = parsed
+
+    # Discard likely logo/placeholder assets before fallback selection.
+    if is_likely_non_event_image(event_data.get("image_url")):
+        if event_data.get("image_url"):
+            logger.debug(
+                "Discarding low-quality image URL for event: %s",
+                event_data.get("title", "")[:80],
+            )
+        event_data["image_url"] = None
 
     # Venue image fallback: if event still has no image after film/music enrichment,
     # use the venue's image. Covers venues like Callanwolde, MJCCA, GWCC where
     # crawlers don't extract per-event images but the venue has a good photo.
     if not event_data.get("image_url") and venue:
         venue_image = venue.get("image_url")
-        if venue_image:
+        if venue_image and not is_likely_non_event_image(venue_image):
             event_data["image_url"] = venue_image
-            logger.debug(f"Using venue image fallback for: {event_data.get('title', '')[:50]}")
+            logger.debug(
+                f"Using venue image fallback for: {event_data.get('title', '')[:50]}"
+            )
 
     # Auto-infer is_class if not explicitly set
     if not is_class_flag:
         if infer_is_class(event_data, source_slug=source_slug, venue_type=venue_type):
             is_class_flag = True
+
+    # Auto-detect religious events — reclassify community→religious
+    if infer_is_religious(event_data, source_slug=source_slug, venue_type=venue_type):
+        event_data["category"] = "religious"
 
     # Auto-detect support groups — reclassify and mark sensitive
     if infer_is_support_group(event_data, source_slug=source_slug):
@@ -1369,10 +1890,7 @@ def insert_event(
             # For festival programs, consolidate under inferred program or festival name.
             # NEVER fall back to event title — that creates one series per event.
             inferred_program = infer_program_title(event_data.get("title"))
-            series_title = (
-                inferred_program
-                or festival_hint.get("festival_name")
-            )
+            series_title = inferred_program or festival_hint.get("festival_name")
             if not series_title:
                 # No usable series title — skip series creation entirely
                 festival_hint = None
@@ -1383,9 +1901,13 @@ def insert_event(
                 }
 
         if festival_hint and series_hint:
-            if festival_hint.get("festival_name") and not series_hint.get("festival_name"):
+            if festival_hint.get("festival_name") and not series_hint.get(
+                "festival_name"
+            ):
                 series_hint["festival_name"] = festival_hint["festival_name"]
-            if festival_hint.get("festival_type") and not series_hint.get("festival_type"):
+            if festival_hint.get("festival_type") and not series_hint.get(
+                "festival_type"
+            ):
                 series_hint["festival_type"] = festival_hint["festival_type"]
             if source_url and not series_hint.get("festival_website"):
                 series_hint["festival_website"] = source_url
@@ -1430,6 +1952,10 @@ def insert_event(
         venue_type=venue_type,
         genres=merged_genres,
     )
+    if source_slug in _SPECIALS_SOURCE_SLUGS:
+        tags = {str(tag).lower() for tag in (event_data.get("tags") or [])}
+        if "specials" not in tags:
+            event_data["tags"] = list(dict.fromkeys((event_data.get("tags") or []) + ["specials"]))
 
     # Update genres variable for downstream use
     if merged_genres:
@@ -1452,7 +1978,7 @@ def insert_event(
                 series_hint[key] = value
 
     # Process series association if hint provided — but only if no series_id already set
-    if series_hint and not event_data.get("series_id"):
+    if series_hint and not event_data.get("series_id") and writes_enabled():
         # Inject inferred genres into series_hint so new series get genres at creation
         if genres and not series_hint.get("genres"):
             series_hint["genres"] = genres
@@ -1502,6 +2028,17 @@ def insert_event(
     if genres:
         event_data["genres"] = genres
 
+    # Persist content_kind when the schema supports it.
+    # This is the canonical signal for separating exhibits/specials from event feeds.
+    if events_support_content_kind_column():
+        event_data["content_kind"] = infer_content_kind(
+            event_data,
+            series_hint=series_hint,
+            source_slug=source_slug,
+        )
+    else:
+        event_data.pop("content_kind", None)
+
     # Backfill description from film metadata when missing or too short to be useful
     existing_desc = event_data.get("description") or ""
     if film_metadata and film_metadata.plot and len(existing_desc) < 80:
@@ -1539,6 +2076,26 @@ def insert_event(
     if is_sensitive_flag:
         event_data["is_sensitive"] = True
 
+    # Preserve a dedicated ticket_url so downstream quality checks and UI affordances work.
+    # For paid events, source_url is at least a valid destination when a dedicated
+    # purchase URL was not captured.
+    if not event_data.get("ticket_url") and event_data.get("source_url"):
+        category_value = str(event_data.get("category") or "").lower()
+        tags_value = {str(tag).lower() for tag in (event_data.get("tags") or [])}
+        genres_value = {
+            str(genre).lower() for genre in (event_data.get("genres") or [])
+        }
+        is_paid = event_data.get("is_free") is False or (
+            event_data.get("price_min") is not None and float(event_data.get("price_min") or 0) > 0
+        )
+        if (
+            category_value == "film"
+            or "showtime" in tags_value
+            or "showtime" in genres_value
+            or is_paid
+        ):
+            event_data["ticket_url"] = event_data["source_url"]
+
     # Safety guard: an event with a real price can never be free
     if event_data.get("price_min") is not None and event_data["price_min"] > 0:
         event_data["is_free"] = False
@@ -1557,11 +2114,47 @@ def insert_event(
         for field in signal_fields:
             event_data.pop(field, None)
 
+    # Derive cross-portal planning/quality capabilities into JSON metadata columns.
+    # This establishes a reusable capability layer before category-specific crawlers.
+    if events_support_field_metadata_columns():
+        capability_snapshot = derive_capability_snapshot(
+            event_data,
+            source_info=source_info,
+        )
+        attach_capability_metadata(
+            event_data,
+            capability_snapshot,
+            source_info=source_info,
+        )
+    else:
+        event_data.pop("field_provenance", None)
+        event_data.pop("field_confidence", None)
+
     # Pop transient and deprecated fields before DB insert
     parsed_artists_for_insert = event_data.pop("_parsed_artists", None)
-    event_data.pop("subcategory", None)  # DEPRECATED: migrated to genres[]
+    for field_name in _DEPRECATED_EVENT_FIELDS:
+        event_data.pop(field_name, None)
 
-    result = client.table("events").insert(event_data).execute()
+    # Final defense-in-depth dedupe before insert:
+    # - checks current + legacy content_hash variants
+    # - falls back to natural key (source+venue+title+date+time)
+    existing = find_existing_event_for_insert(event_data)
+    if existing:
+        smart_update_existing_event(existing, event_data)
+        return existing["id"]
+
+    # Cross-source duplicate suppression: keep one visible canonical row per venue/time/title.
+    cross_source_canonical_id = find_cross_source_canonical_for_insert(event_data)
+    if cross_source_canonical_id:
+        event_data["canonical_event_id"] = cross_source_canonical_id
+
+    if not writes_enabled():
+        _log_write_skip(
+            f"insert events title={event_data.get('title', 'untitled')[:60]}"
+        )
+        return _next_temp_id()
+
+    result = _insert_event_record(client, event_data)
     event_id = result.data[0]["id"]
 
     # Generate blurhash in background to avoid slowing crawl throughput.
@@ -1577,6 +2170,61 @@ def insert_event(
     return event_id
 
 
+@retry_on_network_error(max_retries=4, base_delay=0.5)
+def _insert_event_record(client: Client, event_data: dict):
+    """Insert event row with retries for transient socket/network errors."""
+    return client.table("events").insert(event_data).execute()
+
+
+_GENERIC_EVENT_TITLE_RE = re.compile(
+    r"^("
+    # Day + genre: "Saturday Jazz", "Friday Blues Night"
+    r"(?:(?:mon|tue|wed|thu|fri|sat|sun)\w*\s+(?:jazz|blues|soul|funk|karaoke|r&b|dj|latin|salsa|country|rock|reggae|hip\s*hop|open\s+mic|brunch|dance|acoustic|comedy|trivia|bingo)(?:\s+(?:night|session|sessions|jam|party|hour|social|series|show|set)s?)?)"
+    r"|"
+    # Genre + day: "Jazz Saturday", "Karaoke Friday"
+    r"(?:(?:jazz|blues|soul|funk|karaoke|r&b|dj|latin|salsa|country|rock|reggae|hip\s*hop|open\s+mic|comedy|trivia|bingo)\s+(?:mon|tue|wed|thu|fri|sat|sun)\w*(?:\s+(?:night|session|sessions|jam|party|hour|social|series|show|set)s?)?)"
+    r"|"
+    # "Live Music" + optional day/night
+    r"(?:live\s+music(?:\s+(?:mon|tue|wed|thu|fri|sat|sun)\w*)?(?:\s+(?:night|session|sessions|happy\s+hour)s?)?)"
+    r"|"
+    # Holiday events
+    r"(?:(?:mardi\s+gras|new\s+year'?s?\s+eve|valentine'?s?\s+day|st\.?\s+patrick'?s?\s+day|cinco\s+de\s+mayo|halloween|christmas|nye)\s+(?:party|bash|celebration|event|gala|special|night|show|concert))"
+    r"|"
+    # Venue + day branding: "OPIUM NIGHTCLUB SATURDAYS"
+    r"(?:\w+\s+(?:nightclub|lounge|bar|club|tavern|pub)\s+(?:mon|tue|wed|thu|fri|sat|sun)\w*s?)"
+    r"|"
+    # Generic nightlife: "Ladies Night", "Industry Night Friday", "College Night"
+    r"(?:(?:ladies|industry|college|singles|vip)\s+night(?:\s+(?:mon|tue|wed|thu|fri|sat|sun)\w*)?)"
+    r"|"
+    # Activity titles: "Happy Hour", "Day Party", "Pool Party", "Bottle Service Saturday"
+    r"(?:(?:happy\s+hour|day\s+party|pool\s+party|brunch\s+party|after\s*party|bottle\s+service)(?:\s+(?:mon|tue|wed|thu|fri|sat|sun)\w*)?)"
+    r"|"
+    # Standalone participatory activities: "Karaoke Night", "Trivia", "Bingo Night", etc.
+    r"(?:(?:karaoke|trivia|bingo|poker\s+night)(?:\s+(?:night|nite|lounge|party))?)"
+    r"|"
+    # "{Day} Night" at venue: "Friday Night at X", "Saturday Night DJs"
+    r"(?:(?:mon|tue|wed|thu|fri|sat|sun)\w*\s+night(?:\s+(?:djs?|country|two-step|at\s+\w[\w\s]*?))?)"
+    r"|"
+    # "{Genre/theme} Night/Nite" without day-of-week: "Salsa Night", "Drag Nite", "Emo Nite"
+    r"(?:(?:salsa|bachata|reggaeton|latin|country|emo|goth|punk|drag|r&b|hip\s*hop|dance|rock)\s+(?:night|nite)s?)"
+    r")$",
+    flags=re.IGNORECASE,
+)
+
+_DATE_SUFFIX_RE = re.compile(
+    r"\s*[-–—]\s+(?:january|february|march|april|may|june|july|august|"
+    r"september|october|november|december)\s+\d{1,2}(?:,?\s+\d{4})?\s*$",
+    flags=re.IGNORECASE,
+)
+
+_PURE_YEAR_RE = re.compile(r"^(19|20)\d{2}$")
+_MONTH_FRAGMENT_RE = re.compile(
+    r"^(?:january|february|march|april|may|june|july|august|"
+    r"september|october|november|december)(?:\s+\d{1,2})?$",
+    flags=re.IGNORECASE,
+)
+
+
 def parse_lineup_from_title(title: str) -> list[dict]:
     """Parse artist lineup from event title.
 
@@ -1589,7 +2237,9 @@ def parse_lineup_from_title(title: str) -> list[dict]:
     from artist_images import extract_artist_from_title, _ARTIST_BLOCKLIST
 
     def _normalize(value: Optional[str]) -> str:
-        return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9]+", " ", (value or "").lower())).strip()
+        return re.sub(
+            r"\s+", " ", re.sub(r"[^a-z0-9]+", " ", (value or "").lower())
+        ).strip()
 
     def _title_has_descriptors(value: str) -> bool:
         return bool(
@@ -1605,24 +2255,50 @@ def parse_lineup_from_title(title: str) -> list[dict]:
         return bool(
             re.search(
                 r"(open mic|comedy night|home game|suite|suites|"
-                r"parking|ticket package|presented by)",
+                r"parking|ticket package|presented by|"
+                r"nightclub\s+(?:mon|tue|wed|thu|fri|sat|sun)\w*|"
+                r"(?:mon|tue|wed|thu|fri|sat|sun)\w*\s+night\s+party|"
+                r"(?:running|book|wine|supper)\s+club|"
+                # Nightlife boilerplate
+                r"ladies\s+night|industry\s+night|bottle\s+service|vip\s+night|"
+                r"day\s+party|pool\s+party|brunch\s+party|after\s*party|happy\s+hour|"
+                # Participatory activities — word alone is strong enough signal
+                r"\bkaraoke\b|\btrivia\b|\bbingo\b|\bpoker\s+night\b|"
+                r"\bbowling\b|\bcurling\b|"
+                # Comedy/improv boilerplate
+                r"\bimprov\w*\b|sketch\s+show|"
+                r"comedy\s+(?:workshop|showcase)|stand-?up\s+showcase)",
                 value,
                 flags=re.IGNORECASE,
             )
         )
 
-    parsed_entries = dedupe_artist_entries(split_lineup_text_with_roles(title))
+    # --- Pre-processing: reject generic event titles outright ---
+    cleaned_title = title.strip()
+    if _GENERIC_EVENT_TITLE_RE.match(cleaned_title):
+        return []
+
+    # Strip trailing date suffix before parsing
+    cleaned_title = _DATE_SUFFIX_RE.sub("", cleaned_title).strip()
+    if not cleaned_title:
+        return []
+
+    parsed_entries = dedupe_artist_entries(split_lineup_text_with_roles(cleaned_title))
 
     # If the parser only captured the full title, try a stronger headliner extraction pass.
     if len(parsed_entries) == 1:
         only_name = str(parsed_entries[0].get("name") or "").strip()
-        headliner = extract_artist_from_title(title)
-        if headliner and _normalize(headliner) and _normalize(headliner) != _normalize(only_name):
+        headliner = extract_artist_from_title(cleaned_title)
+        if (
+            headliner
+            and _normalize(headliner)
+            and _normalize(headliner) != _normalize(only_name)
+        ):
             parsed_entries = [{"name": headliner, "role": "headliner"}]
 
     if not parsed_entries:
         # Fallback: single artist extraction (removes tour names, prefixes, etc.)
-        headliner = extract_artist_from_title(title)
+        headliner = extract_artist_from_title(cleaned_title)
         if headliner:
             parsed_entries = [{"name": headliner, "role": "headliner"}]
 
@@ -1642,11 +2318,17 @@ def parse_lineup_from_title(title: str) -> list[dict]:
             continue
         if len(name) < 4 and " " not in name:
             continue
+        # Reject pure year numbers (e.g. "2026") and bare month fragments
+        if _PURE_YEAR_RE.match(name):
+            continue
+        if _MONTH_FRAGMENT_RE.match(name):
+            continue
+        # Activity words are never real performers — reject unconditionally
+        if re.search(r"\bkaraoke\b|\btrivia\b|\bbingo\b|\bimprov\w*\b", name, re.IGNORECASE):
+            continue
         normalized_name = _normalize(name)
         is_title_mirror = bool(
-            normalized_title
-            and normalized_name
-            and normalized_name == normalized_title
+            normalized_title and normalized_name and normalized_name == normalized_title
         )
         if is_title_mirror and (len(parsed_entries) > 1 or has_title_descriptors):
             continue
@@ -1655,7 +2337,7 @@ def parse_lineup_from_title(title: str) -> list[dict]:
         filtered_entries.append({"name": name, "role": entry.get("role")})
 
     if not filtered_entries:
-        fallback = extract_artist_from_title(title)
+        fallback = extract_artist_from_title(cleaned_title)
         if (
             fallback
             and fallback.lower() not in _ARTIST_BLOCKLIST
@@ -1672,7 +2354,9 @@ def parse_lineup_from_title(title: str) -> list[dict]:
 
     result: list[dict] = []
     for idx, entry in enumerate(filtered_entries, 1):
-        role = str(entry.get("role") or "").lower() or ("headliner" if idx == 1 else "support")
+        role = str(entry.get("role") or "").lower() or (
+            "headliner" if idx == 1 else "support"
+        )
         if role not in {"headliner", "support", "opener"}:
             role = "headliner" if idx == 1 else "support"
 
@@ -1699,18 +2383,27 @@ _PARTICIPANT_DESCRIPTOR_RE = re.compile(
 )
 
 _PARTICIPANT_BOILERPLATE_RE = re.compile(
-    r"(open mic|comedy night|home game|suite|suites|parking|ticket package|item voucher|voucher|presented by)",
+    r"(open mic|comedy night|home game|suite|suites|parking|ticket package|item voucher|voucher|presented by|"
+    r"ladies\s+night|industry\s+night|bottle\s+service|vip\s+night|"
+    r"day\s+party|pool\s+party|brunch\s+party|after\s*party|happy\s+hour|"
+    r"\bkaraoke\b|\btrivia\b|\bbingo\b|\bpoker\s+night\b|\bbowling\b|\bcurling\b|"
+    r"\bimprov\w*\b|sketch\s+show|"
+    r"comedy\s+(?:workshop|showcase)|stand-?up\s+showcase)",
     flags=re.IGNORECASE,
 )
 
 
 def _normalize_participant_text(value: Optional[str]) -> str:
-    return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9]+", " ", (value or "").lower())).strip()
+    return re.sub(
+        r"\s+", " ", re.sub(r"[^a-z0-9]+", " ", (value or "").lower())
+    ).strip()
 
 
 def _normalize_team_entity(value: Optional[str]) -> str:
     normalized = _normalize_participant_text(value)
-    normalized = re.sub(r"\b(fc|sc|club|team|women|womens|men|mens|athletics)\b", " ", normalized)
+    normalized = re.sub(
+        r"\b(fc|sc|club|team|women|womens|men|mens|athletics)\b", " ", normalized
+    )
     return re.sub(r"\s+", " ", normalized).strip()
 
 
@@ -1810,12 +2503,16 @@ def sanitize_event_artists(
             }
         )
 
-    if not raw_cleaned:
+    if not raw_cleaned and category not in {"music", "comedy", "nightlife", "sports"}:
         return []
 
     raw_cleaned.sort(
         key=lambda item: (
-            item.get("billing_order") if item.get("billing_order") is not None else 10_000,
+            (
+                item.get("billing_order")
+                if item.get("billing_order") is not None
+                else 10_000
+            ),
             _normalize_participant_text(item.get("name")),
         )
     )
@@ -1829,7 +2526,8 @@ def sanitize_event_artists(
 
         is_title_mirror = bool(title_norm and name_norm == title_norm)
         has_alt_name_in_title = any(
-            _normalize_participant_text(other["name"]) not in ("", name_norm, title_norm)
+            _normalize_participant_text(other["name"])
+            not in ("", name_norm, title_norm)
             and _normalize_participant_text(other["name"]) in title_norm
             for other in raw_cleaned
         )
@@ -1840,7 +2538,9 @@ def sanitize_event_artists(
             continue
 
         if is_title_mirror and (
-            has_descriptors or _looks_like_participant_boilerplate(name) or has_alt_name_in_title
+            has_descriptors
+            or _looks_like_participant_boilerplate(name)
+            or has_alt_name_in_title
         ):
             continue
 
@@ -1885,7 +2585,7 @@ def sanitize_event_artists(
                 }
             )
 
-    if not filtered and category in {"music", "comedy"}:
+    if not filtered and category in {"music", "comedy", "nightlife"}:
         filtered = parse_lineup_from_title(title)
 
     if not filtered:
@@ -1901,7 +2601,11 @@ def sanitize_event_artists(
 
     filtered.sort(
         key=lambda item: (
-            item.get("billing_order") if item.get("billing_order") is not None else 10_000,
+            (
+                item.get("billing_order")
+                if item.get("billing_order") is not None
+                else 10_000
+            ),
             _normalize_participant_text(item.get("name")),
         )
     )
@@ -1936,8 +2640,28 @@ def sanitize_event_artists(
 
 def update_event(event_id: int, event_data: dict) -> None:
     """Update an existing event."""
+    if not writes_enabled():
+        _log_write_skip(f"update events id={event_id}")
+        return
     client = get_client()
-    client.table("events").update(event_data).eq("id", event_id).execute()
+    _update_event_record(client, event_id, event_data)
+
+
+@retry_on_network_error(max_retries=4, base_delay=0.5)
+def _update_event_record(client: Client, event_id: int, event_data: dict):
+    """Update event row with retries for transient socket/network errors."""
+    return client.table("events").update(event_data).eq("id", event_id).execute()
+
+
+def _should_use_incoming_image(existing_url: Optional[str], incoming_url: Optional[str]) -> bool:
+    """True when incoming image should replace existing event image."""
+    if not incoming_url:
+        return False
+    if is_likely_non_event_image(incoming_url):
+        return False
+    if not existing_url:
+        return True
+    return is_likely_non_event_image(existing_url) and existing_url != incoming_url
 
 
 def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
@@ -1975,7 +2699,7 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
     # --- Image: fill missing, or replace venue-fallback with event-specific ---
     existing_img = existing.get("image_url") or ""
     incoming_img = incoming.get("image_url") or ""
-    if incoming_img and not existing_img:
+    if _should_use_incoming_image(existing_img, incoming_img):
         updates["image_url"] = incoming_img
 
     # --- Times: fill missing ---
@@ -2000,6 +2724,43 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
     if incoming.get("source_url") and not existing.get("source_url"):
         updates["source_url"] = incoming["source_url"]
 
+    # --- Portal: fill missing from incoming or source ownership ---
+    if not existing.get("portal_id"):
+        incoming_portal_id = incoming.get("portal_id")
+        if not incoming_portal_id and incoming.get("source_id"):
+            source_info = get_source_info(incoming["source_id"])
+            if source_info:
+                incoming_portal_id = source_info.get("owner_portal_id")
+        if incoming_portal_id:
+            updates["portal_id"] = incoming_portal_id
+
+    # --- Content kind: prefer explicit non-default classifications ---
+    if events_support_content_kind_column():
+        existing_kind = str(existing.get("content_kind") or "").strip().lower()
+        incoming_kind = str(incoming.get("content_kind") or "").strip().lower()
+        if incoming_kind in _CONTENT_KIND_ALLOWED:
+            if not existing_kind or (
+                existing_kind == "event" and incoming_kind in {"exhibit", "special"}
+            ):
+                updates["content_kind"] = incoming_kind
+
+    # --- Film identity: preserve venue title, enrich canonical movie identity separately ---
+    if events_support_film_identity_columns() and existing.get("category") == "film":
+        if incoming.get("film_title") and not existing.get("film_title"):
+            updates["film_title"] = incoming["film_title"]
+        if incoming.get("film_release_year") and not existing.get("film_release_year"):
+            updates["film_release_year"] = incoming["film_release_year"]
+        if incoming.get("film_imdb_id") and not existing.get("film_imdb_id"):
+            updates["film_imdb_id"] = incoming["film_imdb_id"]
+        if incoming.get("film_external_genres") and not existing.get(
+            "film_external_genres"
+        ):
+            updates["film_external_genres"] = incoming["film_external_genres"]
+        if incoming.get("film_identity_source") and not existing.get(
+            "film_identity_source"
+        ):
+            updates["film_identity_source"] = incoming["film_identity_source"]
+
     # --- Tags: union merge ---
     existing_tags = set(existing.get("tags") or [])
     incoming_tags = set(incoming.get("tags") or [])
@@ -2018,25 +2779,61 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
         updates["title"] = incoming_title
 
     if not updates:
-        return False
+        # Even if no field updates, still check for missing artists below
+        pass
 
-    try:
-        client = get_client()
-        client.table("events").update(updates).eq("id", event_id).execute()
-        updated_fields = list(updates.keys())
-        logger.info(
-            f"Smart-updated event {event_id}: {', '.join(updated_fields)} "
-            f"for '{existing_title[:50]}'"
-        )
-        return True
-    except Exception as e:
-        logger.error(f"Failed to smart-update event {event_id}: {e}")
-        return False
+    if updates:
+        if not writes_enabled():
+            _log_write_skip(f"update events id={event_id} (smart update)")
+        else:
+            try:
+                client = get_client()
+                _update_event_record(client, event_id, updates)
+                updated_fields = list(updates.keys())
+                logger.info(
+                    f"Smart-updated event {event_id}: {', '.join(updated_fields)} "
+                    f"for '{existing_title[:50]}'"
+                )
+            except Exception as e:
+                logger.error(f"Failed to smart-update event {event_id}: {e}")
+                return False
+
+    # --- Backfill event_artists if missing (music/comedy/nightlife) ---
+    category = existing.get("category") or incoming.get("category") or ""
+    sub = (incoming.get("subcategory") or existing.get("subcategory") or "").strip().lower()
+    _skip_nightlife = category == "nightlife" and sub in _NIGHTLIFE_SKIP_SUBCATEGORIES
+    if category in ("music", "comedy", "nightlife") and not _skip_nightlife:
+        try:
+            client = get_client()
+            has_artists = (
+                client.table("event_artists")
+                .select("id")
+                .eq("event_id", event_id)
+                .limit(1)
+                .execute()
+            )
+            if not has_artists.data:
+                title = incoming.get("title") or existing.get("title") or ""
+                parsed = parse_lineup_from_title(title)
+                if parsed:
+                    upsert_event_artists(event_id, parsed)
+                    logger.debug(
+                        f"Backfilled {len(parsed)} artist(s) on update for event {event_id}"
+                    )
+        except Exception as e:
+            logger.debug(f"Artist backfill on update failed for event {event_id}: {e}")
+
+    return bool(updates)
 
 
-def upsert_event_artists(event_id: int, artists: list, link_canonical: bool = True) -> None:
+def upsert_event_artists(
+    event_id: int, artists: list, link_canonical: bool = True
+) -> None:
     """Replace event artists for an event, preserving billing order."""
     if not artists:
+        return
+    if not writes_enabled():
+        _log_write_skip(f"upsert event_artists event_id={event_id}")
         return
 
     client = get_client()
@@ -2084,6 +2881,9 @@ def upsert_event_artists(event_id: int, artists: list, link_canonical: bool = Tr
 def upsert_event_images(event_id: int, images: list) -> None:
     """Upsert images for an event."""
     if not images:
+        return
+    if not writes_enabled():
+        _log_write_skip(f"upsert event_images event_id={event_id}")
         return
 
     payload = []
@@ -2139,6 +2939,9 @@ def upsert_event_images(event_id: int, images: list) -> None:
 def upsert_event_links(event_id: int, links: list) -> None:
     """Upsert links for an event (ticketing, organizer, etc.)."""
     if not links:
+        return
+    if not writes_enabled():
+        _log_write_skip(f"upsert event_links event_id={event_id}")
         return
 
     payload = []
@@ -2206,6 +3009,10 @@ def update_event_extraction_metadata(
     if not update_data:
         return
 
+    if not writes_enabled():
+        _log_write_skip(f"update events id={event_id} (extraction metadata)")
+        return
+
     client = get_client()
     client.table("events").update(update_data).eq("id", event_id).execute()
 
@@ -2261,6 +3068,10 @@ def _filter_users_with_event_updates(user_ids: list[str]) -> list[str]:
 
 def create_event_update_notifications(event_id: int, message: str) -> int:
     """Create in-app notifications for users with RSVPs or saved items."""
+    if not writes_enabled():
+        _log_write_skip(f"insert notifications event_id={event_id}")
+        return 0
+
     client = get_client()
 
     # RSVP users (going/interested)
@@ -2310,43 +3121,48 @@ def compute_event_update(
     """Compute update fields and a change summary for notifications."""
     update_data: dict = {}
     changes: list[str] = []
-    incoming_with_signals = {**incoming, **derive_show_signals(incoming, preserve_existing=False)}
+    incoming_with_signals = {
+        **incoming,
+        **derive_show_signals(incoming, preserve_existing=False),
+    }
 
     # Time/date changes
-    if incoming_with_signals.get("start_date") and incoming_with_signals.get("start_date") != existing.get(
+    if incoming_with_signals.get("start_date") and incoming_with_signals.get(
         "start_date"
-    ):
+    ) != existing.get("start_date"):
         changes.append(
             f"date {existing.get('start_date')} → {incoming_with_signals.get('start_date')}"
         )
         update_data["start_date"] = incoming_with_signals.get("start_date")
-    if incoming_with_signals.get("start_time") and incoming_with_signals.get("start_time") != existing.get(
+    if incoming_with_signals.get("start_time") and incoming_with_signals.get(
         "start_time"
-    ):
+    ) != existing.get("start_time"):
         changes.append(
             f"time {existing.get('start_time') or 'TBA'} → {incoming_with_signals.get('start_time')}"
         )
         update_data["start_time"] = incoming_with_signals.get("start_time")
-    if incoming_with_signals.get("end_date") and incoming_with_signals.get("end_date") != existing.get(
+    if incoming_with_signals.get("end_date") and incoming_with_signals.get(
         "end_date"
-    ):
+    ) != existing.get("end_date"):
         update_data["end_date"] = incoming_with_signals.get("end_date")
-    if incoming_with_signals.get("end_time") and incoming_with_signals.get("end_time") != existing.get(
+    if incoming_with_signals.get("end_time") and incoming_with_signals.get(
         "end_time"
-    ):
+    ) != existing.get("end_time"):
         update_data["end_time"] = incoming_with_signals.get("end_time")
 
     # Venue change
-    if incoming_with_signals.get("venue_id") and incoming_with_signals.get("venue_id") != existing.get(
+    if incoming_with_signals.get("venue_id") and incoming_with_signals.get(
         "venue_id"
-    ):
+    ) != existing.get("venue_id"):
         changes.append("venue updated")
         update_data["venue_id"] = incoming_with_signals.get("venue_id")
 
     # Title change (preserve cancellation/reschedule markers)
     incoming_title = incoming_with_signals.get("title")
     if incoming_title and incoming_title != existing.get("title"):
-        if _event_looks_cancelled(incoming_title, incoming_with_signals.get("description")):
+        if _event_looks_cancelled(
+            incoming_title, incoming_with_signals.get("description")
+        ):
             update_data["title"] = incoming_title
 
     # Description (prefer longer)
@@ -2357,8 +3173,14 @@ def compute_event_update(
     ):
         update_data["description"] = incoming_desc
 
-    # Image / ticket / price if missing
-    for field in ("image_url", "ticket_url", "price_note"):
+    # Image quality-aware updates.
+    existing_img = existing.get("image_url")
+    incoming_img = incoming_with_signals.get("image_url")
+    if _should_use_incoming_image(existing_img, incoming_img):
+        update_data["image_url"] = incoming_img
+
+    # Ticket/price note if missing
+    for field in ("ticket_url", "price_note"):
         if incoming_with_signals.get(field) and not existing.get(field):
             update_data[field] = incoming_with_signals.get(field)
     for field in ("price_min", "price_max"):
@@ -2393,6 +3215,224 @@ def find_event_by_hash(content_hash: str) -> Optional[dict]:
     if result.data and len(result.data) > 0:
         return result.data[0]
     return None
+
+
+def _normalize_title_for_natural_key(title: Optional[str]) -> str:
+    """Normalize title for exact-ish natural-key dedupe checks."""
+    from dedupe import normalize_text  # lazy import avoids circular at module load
+
+    return normalize_text(title or "")
+
+
+@retry_on_network_error(max_retries=3, base_delay=0.5)
+def find_existing_event_by_natural_key(event_data: dict) -> Optional[dict]:
+    """
+    Find a likely duplicate event by natural key when hash lookup misses.
+
+    Key shape:
+    - source_id
+    - venue_id
+    - start_date
+    - start_time (or both NULL)
+    - normalized title equality
+    """
+    source_id = event_data.get("source_id")
+    venue_id = event_data.get("venue_id")
+    start_date = event_data.get("start_date")
+    title = event_data.get("title")
+
+    if not source_id or not venue_id or not start_date or not title:
+        return None
+
+    incoming_start_time = event_data.get("start_time")
+    incoming_title_norm = _normalize_title_for_natural_key(title)
+    if not incoming_title_norm:
+        return None
+
+    client = get_client()
+    query = (
+        client.table("events")
+        .select("*")
+        .eq("source_id", source_id)
+        .eq("venue_id", venue_id)
+        .eq("start_date", start_date)
+    )
+
+    if incoming_start_time:
+        query = query.eq("start_time", incoming_start_time)
+    else:
+        query = query.is_("start_time", "null")
+
+    result = query.execute()
+    candidates = result.data or []
+
+    for candidate in candidates:
+        if (
+            _normalize_title_for_natural_key(candidate.get("title"))
+            == incoming_title_norm
+        ):
+            return candidate
+
+    return None
+
+
+def find_existing_event_for_insert(event_data: dict) -> Optional[dict]:
+    """
+    Dedupe guard for insert_event.
+
+    1) Hash candidates (current + legacy)
+    2) Natural key fallback
+    """
+    title = event_data.get("title")
+    venue_name = ""
+    if event_data.get("venue_id"):
+        venue_info = get_venue_by_id_cached(event_data["venue_id"])
+        if venue_info and isinstance(venue_info, dict):
+            venue_name = venue_info.get("name", "") or ""
+    start_date = event_data.get("start_date")
+
+    try:
+        from dedupe import generate_content_hash_candidates  # lazy import
+
+        hash_candidates = generate_content_hash_candidates(
+            title or "", venue_name, start_date
+        )
+    except Exception:
+        hash_candidates = (
+            [event_data.get("content_hash")] if event_data.get("content_hash") else []
+        )
+
+    for content_hash in hash_candidates:
+        existing = find_event_by_hash(content_hash)
+        if existing:
+            # Move canonical row to current hash to avoid stale-hash churn.
+            if event_data.get("content_hash") and existing.get(
+                "content_hash"
+            ) != event_data.get("content_hash"):
+                update_event(
+                    existing["id"], {"content_hash": event_data["content_hash"]}
+                )
+                existing["content_hash"] = event_data["content_hash"]
+            return existing
+
+    # Fallback when hash style changed or source provided malformed date while hashing.
+    existing = find_existing_event_by_natural_key(event_data)
+    if (
+        existing
+        and event_data.get("content_hash")
+        and existing.get("content_hash") != event_data.get("content_hash")
+    ):
+        update_event(existing["id"], {"content_hash": event_data["content_hash"]})
+        existing["content_hash"] = event_data["content_hash"]
+    return existing
+
+
+def _source_priority_for_dedupe(
+    source_slug: Optional[str], is_active: Optional[bool] = None
+) -> int:
+    """Lower is better (preferred canonical source)."""
+    slug = (source_slug or "").strip().lower()
+    inactive_penalty = 500 if is_active is False else 0
+    if not slug:
+        return 200 + inactive_penalty
+    if slug.endswith("-test"):
+        return 300 + inactive_penalty
+    if slug in _AGGREGATOR_SOURCE_SLUGS:
+        return 230 + inactive_penalty
+    if slug.startswith(_AGGREGATOR_SOURCE_PREFIXES):
+        return 220 + inactive_penalty
+    return 100 + inactive_penalty
+
+
+def _candidate_quality_score(event_row: dict) -> tuple[int, int, int]:
+    """
+    Rank candidate quality for canonical selection.
+    Higher tuple is better:
+    - richer description
+    - has image
+    - has ticket URL
+    """
+    desc_len = len((event_row.get("description") or "").strip())
+    has_image = 1 if event_row.get("image_url") else 0
+    has_ticket = 1 if event_row.get("ticket_url") else 0
+    return (desc_len, has_image, has_ticket)
+
+
+@retry_on_network_error(max_retries=3, base_delay=0.5)
+def find_cross_source_canonical_for_insert(event_data: dict) -> Optional[int]:
+    """
+    Find canonical event ID for cross-source duplicate suppression.
+
+    We only consider same venue/date/time + normalized title equality, but different source.
+    """
+    source_id = event_data.get("source_id")
+    venue_id = event_data.get("venue_id")
+    start_date = event_data.get("start_date")
+    start_time = event_data.get("start_time")
+    title = event_data.get("title")
+
+    if not source_id or not venue_id or not start_date or not title:
+        return None
+
+    incoming_title_norm = _normalize_title_for_natural_key(title)
+    if not incoming_title_norm:
+        return None
+
+    client = get_client()
+    query = (
+        client.table("events")
+        .select(
+            "id,title,source_id,canonical_event_id,created_at,description,image_url,ticket_url"
+        )
+        .eq("venue_id", venue_id)
+        .eq("start_date", start_date)
+        .neq("source_id", source_id)
+    )
+    if start_time:
+        query = query.eq("start_time", start_time)
+    else:
+        query = query.is_("start_time", "null")
+
+    result = query.execute()
+    candidates = [
+        row
+        for row in (result.data or [])
+        if _normalize_title_for_natural_key(row.get("title")) == incoming_title_norm
+    ]
+    if not candidates:
+        return None
+
+    resolved: list[dict] = []
+    for row in candidates:
+        canonical_id = row.get("canonical_event_id")
+        if canonical_id:
+            canonical = (
+                client.table("events")
+                .select("id,source_id,created_at,description,image_url,ticket_url")
+                .eq("id", canonical_id)
+                .maybe_single()
+                .execute()
+            ).data
+            if canonical:
+                resolved.append(canonical)
+                continue
+        resolved.append(row)
+
+    unique_by_id = {row["id"]: row for row in resolved if row.get("id")}
+    candidates = list(unique_by_id.values())
+    if not candidates:
+        return None
+
+    def _sort_key(row: dict):
+        s = get_source_info(row.get("source_id")) or {}
+        source_priority = _source_priority_for_dedupe(s.get("slug"), s.get("is_active"))
+        quality = _candidate_quality_score(row)
+        created = row.get("created_at") or ""
+        # Lower source_priority is better; higher quality is better; older created_at wins ties.
+        return (source_priority, -quality[0], -quality[1], -quality[2], created)
+
+    canonical = sorted(candidates, key=_sort_key)[0]
+    return canonical.get("id")
 
 
 @retry_on_network_error()
@@ -2431,6 +3471,12 @@ def remove_stale_source_events(source_id: int, current_hashes: set[str]) -> int:
 
     if not stale_ids:
         return 0
+
+    if not writes_enabled():
+        _log_write_skip(
+            f"delete stale events source_id={source_id} count={len(stale_ids)}"
+        )
+        return len(stale_ids)
 
     # Clear canonical references pointing to stale events
     for stale_id in stale_ids:
@@ -2524,6 +3570,10 @@ def find_events_by_date_and_venue_family(date: str, venue_id: int) -> list[dict]
 
 def create_crawl_log(source_id: int) -> int:
     """Create a new crawl log entry. Returns log ID."""
+    if not writes_enabled():
+        _log_write_skip(f"insert crawl_logs source_id={source_id}")
+        return _next_temp_id()
+
     client = get_client()
     result = (
         client.table("crawl_logs")
@@ -2554,6 +3604,9 @@ def get_all_events(limit: int = 1000, offset: int = 0) -> list[dict]:
 
 def update_event_tags(event_id: int, tags: list[str]) -> None:
     """Update only the tags field of an event."""
+    if not writes_enabled():
+        _log_write_skip(f"update events id={event_id} (tags)")
+        return
     client = get_client()
     client.table("events").update({"tags": tags}).eq("id", event_id).execute()
 
@@ -2568,6 +3621,10 @@ def update_crawl_log(
     error_message: Optional[str] = None,
 ) -> None:
     """Update crawl log with results."""
+    if not writes_enabled():
+        _log_write_skip(f"update crawl_logs id={log_id}")
+        return
+
     client = get_client()
 
     # Build update data
@@ -2581,6 +3638,9 @@ def update_crawl_log(
 
     if error_message:
         update_data["error_message"] = error_message
+    elif status != "error":
+        # Clear stale error text when a run completes successfully/cancelled without a new error.
+        update_data["error_message"] = None
 
     # events_rejected column guaranteed by migration 20260215000000
     update_data["events_rejected"] = events_rejected
@@ -2594,6 +3654,10 @@ def refresh_available_filters() -> bool:
     Call this after each crawl run to update filter availability.
     Returns True on success, False on error.
     """
+    if not writes_enabled():
+        _log_write_skip("rpc refresh_available_filters")
+        return True
+
     client = get_client()
     try:
         # Call the PostgreSQL function that refreshes filters
@@ -2618,6 +3682,10 @@ def update_source_health_tags(
     Returns:
         True on success, False on error
     """
+    if not writes_enabled():
+        _log_write_skip(f"update sources id={source_id} (health tags)")
+        return True
+
     client = get_client()
     try:
         update_data = {"health_tags": health_tags}
@@ -2693,6 +3761,10 @@ def deactivate_tba_events() -> int:
 
 def update_source_last_crawled(source_id: int) -> None:
     """Set last_crawled_at = NOW() for a source after successful crawl."""
+    if not writes_enabled():
+        _log_write_skip(f"update sources id={source_id} (last_crawled_at)")
+        return
+
     client = get_client()
     client.table("sources").update(
         {"last_crawled_at": datetime.utcnow().isoformat()}
@@ -2705,6 +3777,10 @@ def update_expected_event_count(source_id: int, events_found: int) -> None:
     Uses exponential moving average: new = 0.7 * old + 0.3 * current.
     If old is NULL, sets directly.
     """
+    if not writes_enabled():
+        _log_write_skip(f"update sources id={source_id} (expected_event_count)")
+        return
+
     client = get_client()
     result = (
         client.table("sources")
@@ -2721,9 +3797,9 @@ def update_expected_event_count(source_id: int, events_found: int) -> None:
     else:
         new_count = int(0.7 * old + 0.3 * events_found)
 
-    client.table("sources").update(
-        {"expected_event_count": new_count}
-    ).eq("id", source_id).execute()
+    client.table("sources").update({"expected_event_count": new_count}).eq(
+        "id", source_id
+    ).execute()
 
 
 def get_sources_due_for_crawl() -> list[dict]:
@@ -2834,10 +3910,19 @@ def detect_zero_event_sources() -> tuple[int, list[str]]:
             if "zero-events-deactivated" not in existing_tags:
                 existing_tags.append("zero-events-deactivated")
 
-            client.table("sources").update({
-                "is_active": False,
-                "health_tags": existing_tags,
-            }).eq("id", source["id"]).execute()
+            if not writes_enabled():
+                _log_write_skip(
+                    f"update sources id={source['id']} (auto-deactivate zero-events)"
+                )
+                deactivated_slugs.append(source["slug"])
+                continue
+
+            client.table("sources").update(
+                {
+                    "is_active": False,
+                    "health_tags": existing_tags,
+                }
+            ).eq("id", source["id"]).execute()
 
             deactivated_slugs.append(source["slug"])
             logger.warning(

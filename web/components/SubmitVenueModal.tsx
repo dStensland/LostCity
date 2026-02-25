@@ -5,7 +5,6 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { GooglePlaceAutocomplete } from "@/components/GooglePlaceAutocomplete";
-import { VENUE_SUBMISSION_NEIGHBORHOODS } from "@/config/neighborhoods";
 import type { VenueSubmissionData } from "@/lib/types";
 
 const VENUE_TYPES = [
@@ -58,7 +57,6 @@ export default function SubmitVenueModal({ isOpen, onClose, portalSlug = "atlant
     categoryName?: string;
   } | null>(null);
   const [venueType, setVenueType] = useState("");
-  const [neighborhood, setNeighborhood] = useState("");
   const [website, setWebsite] = useState("");
 
   // Auto-fill fields when a Foursquare place is selected
@@ -75,7 +73,6 @@ export default function SubmitVenueModal({ isOpen, onClose, portalSlug = "atlant
   const resetForm = useCallback(() => {
     setSelectedPlace(null);
     setVenueType("");
-    setNeighborhood("");
     setWebsite("");
     setError(null);
     setSubmitting(false);
@@ -172,7 +169,6 @@ export default function SubmitVenueModal({ isOpen, onClose, portalSlug = "atlant
     const data: VenueSubmissionData = {
       name: selectedPlace.name,
       address: streetAddress || undefined,
-      neighborhood: neighborhood || undefined,
       city,
       state,
       zip: zip || undefined,
@@ -408,7 +404,7 @@ export default function SubmitVenueModal({ isOpen, onClose, portalSlug = "atlant
           /* Form state */
           <>
             <h2 id="submit-venue-title" className="text-xl font-semibold text-[var(--cream)] mb-2">
-              Add a Destination
+              Add a Spot
             </h2>
             <p className="text-sm text-[var(--soft)] mb-6">
               Search for a place to add it to Lost City. Verified places are approved instantly.
@@ -490,19 +486,6 @@ export default function SubmitVenueModal({ isOpen, onClose, portalSlug = "atlant
                         ))}
                       </select>
                     </div>
-                    <div>
-                      <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-1.5">Neighborhood</label>
-                      <select
-                        value={neighborhood}
-                        onChange={(e) => setNeighborhood(e.target.value)}
-                        className="w-full px-3 py-2.5 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm focus:outline-none focus:border-[var(--coral)] transition-colors"
-                      >
-                        <option value="">Select neighborhood</option>
-                        {VENUE_SUBMISSION_NEIGHBORHOODS.map((n) => (
-                          <option key={n} value={n}>{n}</option>
-                        ))}
-                      </select>
-                    </div>
                   </div>
                   <div className="mt-3">
                     <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-1.5">Website</label>
@@ -531,7 +514,7 @@ export default function SubmitVenueModal({ isOpen, onClose, portalSlug = "atlant
                   disabled={submitting || !selectedPlace?.google_place_id || !!selectedPlace?.venue_id}
                   className="flex-1 py-2.5 rounded-lg bg-[var(--coral)] text-[var(--void)] font-mono text-sm font-medium hover:bg-[var(--rose)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {submitting ? "Adding..." : "Add Destination"}
+                  {submitting ? "Adding..." : "Add Spot"}
                 </button>
               </div>
             </form>

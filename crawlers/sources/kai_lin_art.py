@@ -9,14 +9,14 @@ from __future__ import annotations
 
 import re
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
-from utils import extract_images_from_page, extract_event_links, find_event_url
+from utils import extract_images_from_page, extract_event_links, find_event_url, parse_date_range, enrich_event_record
 
 logger = logging.getLogger(__name__)
 
@@ -129,10 +129,16 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     try:
                         month_str = month[:3] if len(month) > 3 else month
                         dt = datetime.strptime(f"{month_str} {day} {year}", "%b %d %Y")
-                        if dt.date() < datetime.now().date():
+                        # If no explicit year was in the text, assume current/next year
+                        if not date_match.group(3) and dt.date() < datetime.now().date():
                             dt = datetime.strptime(f"{month_str} {day} {int(year) + 1}", "%b %d %Y")
                         start_date = dt.strftime("%Y-%m-%d")
                     except ValueError:
+                        i += 1
+                        continue
+
+                    # Skip past exhibitions (more than 6 months ago)
+                    if dt.date() < (datetime.now() - timedelta(days=180)).date():
                         i += 1
                         continue
 
@@ -153,10 +159,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "title": title,
                         "description": "Exhibition at Kai Lin Art",
                         "start_date": start_date,
-                        "start_time": start_time or "18:00",
+                        "start_time": None,
                         "end_date": None,
                         "end_time": None,
-                        "is_all_day": False,
+                        "is_all_day": True,
+                        "content_kind": "exhibit",
                         "category": "art",
                         "subcategory": "gallery",
                         "tags": ["art", "gallery", "contemporary", "inman-park", "exhibition"],
@@ -173,6 +180,29 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "recurrence_rule": None,
                         "content_hash": content_hash,
                     }
+
+                    # Date range extraction: scan surrounding lines for end dates
+                    context_start = max(0, i - 3)
+                    context_end = min(len(lines), i + 5)
+                    range_text = " ".join(lines[context_start:context_end])
+                    _, range_end = parse_date_range(range_text)
+                    if range_end:
+                        event_record["end_date"] = range_end
+
+                    # Enrich from detail page
+                    enrich_event_record(event_record, source_name="Kai Lin Art")
+
+                    # Determine is_free if still unknown after enrichment
+                    if event_record.get("is_free") is None:
+                        desc_lower = (event_record.get("description") or "").lower()
+                        title_lower = event_record.get("title", "").lower()
+                        combined = f"{title_lower} {desc_lower}"
+                        if any(kw in combined for kw in ["free", "no cost", "no charge", "complimentary"]):
+                            event_record["is_free"] = True
+                            event_record["price_min"] = event_record.get("price_min") or 0
+                            event_record["price_max"] = event_record.get("price_max") or 0
+                        else:
+                            event_record["is_free"] = False
 
                     existing = find_event_by_hash(content_hash)
                     if existing:

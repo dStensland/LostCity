@@ -1,0 +1,45 @@
+{
+  "venue_id": 4870,
+  "venue_slug": "desi-spice-indian-cuisine",
+  "meta": {
+    "og_image": "https://www.desispiceindianatlanta.com/toeyv5ea/opengraph-image-959cal/og-image?0b56cf29834ff804",
+    "meta_description": "Experience the best authentic and delicious Indian at Desi Spice Indian Cuisine. View our hours, explore our menu, and order online for convenient pickup or delivery near you!",
+    "reservation_links": [],
+    "menu_links": [
+      "https://desispiceindianatlanta.com/9im730j4/desi-spice-indian-cuisine-atlanta-30308/order-online#menu-section"
+    ],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": "(404) 872-2220"
+  },
+  "extracted": {
+    "hours": {
+      "mon": {"open": "15:00", "close": "22:30"},
+      "tue": {"open": "15:00", "close": "22:30"},
+      "wed": {"open": "15:00", "close": "22:30"},
+      "thu": {"open": "15:00", "close": "22:30"},
+      "fri": {"open": "15:00", "close": "23:00"},
+      "sat": {"open": "15:00", "close": "23:00"},
+      "sun": {"open": "14:00", "close": "22:00"}
+    },
+    "vibes": ["casual", "cozy"],
+    "cuisine": ["indian"],
+    "service_style": "casual_dine_in",
+    "price_level": 2,
+    "menu_highlights": [
+      {"name": "Chicken 65", "price": "$11", "category": "appetizer"},
+      {"name": "Tandoori Wings", "price": "$12", "category": "appetizer"},
+      {"name": "Meat Dinner For 2", "price": "$48", "category": "entree"},
+      {"name": "Puri Shrimp Masala", "price": "$12", "category": "appetizer"},
+      {"name": "Chicken Sheek Kabab", "price": "$11", "category": "appetizer"}
+    ],
+    "menu_url": "https://desispiceindianatlanta.com/9im730j4/desi-spice-indian-cuisine-atlanta-30308/order-online#menu-section",
+    "reservation_url": null,
+    "phone": "(404) 872-2220",
+    "instagram": null,
+    "dietary_options": ["vegetarian-friendly", "vegan-options"],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

@@ -10,3 +10,6 @@ discovery:
   - https://www.poncecitymarket.com
 detail:
   enabled: true
+data_goals:
+- events
+- tickets

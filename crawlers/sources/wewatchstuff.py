@@ -2,7 +2,7 @@
 Crawler for WeWatchStuff (linktr.ee/wewatchstuff).
 Atlanta community film screening club - free monthly screenings of underrated films.
 Parses Linktree page for event links with date patterns.
-Fetches movie posters from TMDB for film events.
+Fetches movie posters from OMDb for film events.
 """
 
 from __future__ import annotations
@@ -17,17 +17,13 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
-from utils import extract_event_links, find_event_url
+from utils import find_event_url
 
 logger = logging.getLogger(__name__)
 
-# TMDB API for movie posters (free tier, no key required for basic search)
-TMDB_API_KEY = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI0YjYyNTI2YjU4MTU3MjNjNGVhMjc2MWQ3NmZlMGJhYyIsInN1YiI6IjY1ZjJmMjZkMDdlMjgxMDE2M2IwZjJhYyIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.PLACEHOLDER"
-
-
 def fetch_movie_poster(title: str, year: Optional[str] = None) -> Optional[str]:
     """
-    Fetch movie poster URL from TMDB.
+    Fetch movie poster URL from OMDb.
 
     Args:
         title: Movie title
@@ -36,42 +32,7 @@ def fetch_movie_poster(title: str, year: Optional[str] = None) -> Optional[str]:
     Returns:
         Poster URL or None if not found
     """
-    try:
-        # Use TMDB search API
-        search_url = "https://api.themoviedb.org/3/search/movie"
-        params = {
-            "query": title,
-            "include_adult": "false",
-            "language": "en-US",
-            "page": "1",
-        }
-        if year:
-            params["year"] = year
-
-        headers = {
-            "accept": "application/json",
-        }
-
-        # Try without API key first (some endpoints work)
-        response = requests.get(search_url, params=params, headers=headers, timeout=10)
-
-        if response.status_code == 401:
-            # Need API key - try OMDB instead (truly free)
-            return fetch_movie_poster_omdb(title, year)
-
-        if response.status_code == 200:
-            data = response.json()
-            if data.get("results") and len(data["results"]) > 0:
-                poster_path = data["results"][0].get("poster_path")
-                if poster_path:
-                    return f"https://image.tmdb.org/t/p/w500{poster_path}"
-
-        # Fallback to OMDB
-        return fetch_movie_poster_omdb(title, year)
-
-    except Exception as e:
-        logger.debug(f"Error fetching poster from TMDB for '{title}': {e}")
-        return fetch_movie_poster_omdb(title, year)
+    return fetch_movie_poster_omdb(title, year)
 
 
 def fetch_movie_poster_omdb(title: str, year: Optional[str] = None) -> Optional[str]:
@@ -218,7 +179,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page = context.new_page()
 
             # Get or create venues
-            org_venue_id = get_or_create_venue(ORG_VENUE_DATA)
+            get_or_create_venue(ORG_VENUE_DATA)
             screening_venue_id = get_or_create_venue(SCREENING_VENUE_DATA)
 
             logger.info(f"Fetching WeWatchStuff Linktree: {BASE_URL}")
@@ -290,12 +251,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     # Generate content hash
                     content_hash = generate_content_hash(title, SCREENING_VENUE_DATA["name"], start_date)
 
-                    # Check if exists
-                    if find_event_by_hash(content_hash):
-                        events_updated += 1
-                        logger.debug(f"Event already exists: {title}")
-                        continue
-
                     # Fetch movie poster
                     poster_url = fetch_movie_poster(film_title, film_year)
                     if poster_url:
@@ -305,7 +260,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     # Use Encyclomedia as the screening venue
                     # Get specific event URL
 
-                    event_url = find_event_url(title, event_links, EVENTS_URL)
+                    event_url = find_event_url(title, [(text, href)], BASE_URL) or href or BASE_URL
 
 
                     event_record = {
@@ -334,6 +289,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "recurrence_rule": None,
                         "content_hash": content_hash,
                     }
+
+                    existing = find_event_by_hash(content_hash)
+                    if existing:
+                        smart_update_existing_event(existing, event_record)
+                        events_updated += 1
+                        logger.debug(f"Event updated: {title}")
+                        continue
 
                     try:
                         insert_event(event_record)

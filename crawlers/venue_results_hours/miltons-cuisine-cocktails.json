@@ -1,0 +1,44 @@
+{
+  "venue_id": 4893,
+  "venue_slug": "miltons-cuisine-cocktails",
+  "meta": {
+    "og_image": "https://miltonscuisine.com/wp-content/uploads/2017/02/Miltons_Logo.png",
+    "meta_description": "Welcome to Milton's Cuisine & Cocktails",
+    "reservation_links": [
+      "https://miltonscuisine.com/reserve/",
+      "https://www.opentable.com/miltons-cuisine-and-cocktails-reservations-alpharetta?restref=5627&lang=e"
+    ],
+    "menu_links": [
+      "https://miltonscuisine.com/menu-2/"
+    ],
+    "instagram": "miltons_cuisine",
+    "facebook_url": "https://www.facebook.com/miltonscuisine",
+    "phone": "(770) 817-0161"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": [
+      "cozy",
+      "date-spot",
+      "outdoor-seating",
+      "live-music",
+      "historic",
+      "farm_to_table"
+    ],
+    "cuisine": [
+      "southern",
+      "new_american",
+      "farm_to_table"
+    ],
+    "service_style": "full-service",
+    "price_level": "$$$",
+    "menu_highlights": null,
+    "reservation_url": "https://www.opentable.com/miltons-cuisine-and-cocktails-reservations-alpharetta?restref=5627&lang=e",
+    "phone": "(770) 817-0161",
+    "instagram": "miltons_cuisine",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

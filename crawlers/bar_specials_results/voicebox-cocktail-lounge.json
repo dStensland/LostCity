@@ -1,0 +1,21 @@
+{
+  "venue_id": 1818,
+  "venue_slug": "voicebox-cocktail-lounge",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["craft-cocktails", "date-night", "upscale", "cozy", "live-music"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "https://voicebox.bar/menu-3",
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "voiceboxbar",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

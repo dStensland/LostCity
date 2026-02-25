@@ -1,0 +1,31 @@
+{
+  "venue_id": 1571,
+  "venue_slug": "the-sicilian-butcher",
+  "meta": {},
+  "extracted": {
+    "specials": [
+      {
+        "title": "All-Day Happy Hour",
+        "type": "happy_hour",
+        "description": "All-day happy hour available daily alongside lunch and dinner service",
+        "days_of_week": [1, 2, 3, 4, 5, 6, 7],
+        "time_start": null,
+        "time_end": null,
+        "price_note": null
+      }
+    ],
+    "hours": null,
+    "vibes": ["date-night", "craft-cocktails", "upscale", "casual"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "https://thesicilianbutcher.com/menu/",
+    "reservation_url": "https://thesicilianbutcher.com/reserve-now/",
+    "phone": "(615) 800-5954",
+    "instagram": null,
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": ["gluten-free"],
+    "service_style": null
+  }
+}

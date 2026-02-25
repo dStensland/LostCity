@@ -22,6 +22,7 @@ from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
+from utils import parse_date_range
 
 logger = logging.getLogger(__name__)
 
@@ -317,6 +318,20 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "recurrence_rule": None,
                     "content_hash": content_hash,
                 }
+
+                # Extract end_date from date range patterns in title/description
+                range_text = f"{title} {description or ''}"
+                _, range_end = parse_date_range(range_text)
+                if range_end:
+                    event_record["end_date"] = range_end
+
+                # Detect exhibits and set content_kind / is_all_day
+                exhibit_keywords = ["exhibit", "exhibition", "on view", "collection", "installation"]
+                combined_text = f"{title} {description or ''}".lower()
+                if any(kw in combined_text for kw in exhibit_keywords):
+                    event_record["content_kind"] = "exhibit"
+                    event_record["is_all_day"] = True
+                    event_record["start_time"] = None
 
                 existing = find_event_by_hash(content_hash)
                 if existing:

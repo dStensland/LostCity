@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import re
 import logging
-from datetime import datetime
+from datetime import datetime, date, timedelta
 from typing import Optional
 
 from playwright.sync_api import sync_playwright
@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.steadyhandbeer.com"
 EVENTS_URL = f"{BASE_URL}/events"
+STALE_EVENT_GRACE_DAYS = 3
 
 VENUE_DATA = {
     "name": "Steady Hand Beer Co",
@@ -47,6 +48,78 @@ def parse_time(time_text: str) -> Optional[str]:
             hour = 0
         return f"{hour:02d}:{minute}"
     return None
+
+
+def _extract_year_from_title(title: str) -> Optional[int]:
+    match = re.search(r"\b(20\d{2})\b", title or "")
+    if not match:
+        return None
+    try:
+        return int(match.group(1))
+    except ValueError:
+        return None
+
+
+def _resolve_event_date(month: str, day: str, year_token: Optional[str], title: str) -> Optional[str]:
+    """Resolve event date while rejecting stale archive rows."""
+    today = date.today()
+    month_str = month[:3] if len(month) > 3 else month
+
+    parsed: Optional[datetime] = None
+
+    if year_token:
+        try:
+            parsed = datetime.strptime(f"{month_str} {day} {int(year_token)}", "%b %d %Y")
+        except ValueError:
+            return None
+    else:
+        for candidate_year in (today.year, today.year + 1):
+            try:
+                candidate = datetime.strptime(f"{month_str} {day} {candidate_year}", "%b %d %Y")
+            except ValueError:
+                continue
+            if candidate.date() >= today - timedelta(days=STALE_EVENT_GRACE_DAYS):
+                parsed = candidate
+                break
+
+    if not parsed:
+        return None
+
+    title_year = _extract_year_from_title(title)
+    if (
+        title_year
+        and title_year == parsed.year + 1
+        and parsed.date() < today - timedelta(days=STALE_EVENT_GRACE_DAYS)
+    ):
+        shifted = parsed.replace(year=title_year)
+        if shifted.date() >= today - timedelta(days=STALE_EVENT_GRACE_DAYS):
+            parsed = shifted
+
+    if parsed.date() < today - timedelta(days=STALE_EVENT_GRACE_DAYS):
+        return None
+    if parsed.year > today.year + 2:
+        return None
+
+    return parsed.strftime("%Y-%m-%d")
+
+
+def _looks_like_event_title(text: str) -> bool:
+    value = " ".join((text or "").split()).strip()
+    if len(value) < 4 or len(value) > 120:
+        return False
+    if len(value.split()) > 16:
+        return False
+    lowered = value.lower()
+    if lowered.startswith(("join us", "photo:", "event starts", "whether you're", "if john")):
+        return False
+    if "http://" in lowered or "https://" in lowered:
+        return False
+    if value.count(",") >= 6:
+        return False
+    # Avoid sentence-like blurbs being mistaken for titles.
+    if len(value) > 80 and re.search(r"[.!?]", value):
+        return False
+    return True
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
@@ -119,33 +192,21 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             if not title and len(check_line) > 5:
                                 if not re.match(r"\d{1,2}[:/]", check_line):
                                     if not re.match(r"(free|tickets|register|\$|more info)", check_line.lower()):
-                                        title = check_line
+                                        if _looks_like_event_title(check_line):
+                                            title = check_line
                                         break
 
                     if not title:
                         i += 1
                         continue
 
-                    try:
-                        month_str = month[:3] if len(month) > 3 else month
-                        dt = datetime.strptime(f"{month_str} {day} {year}", "%b %d %Y")
-                        if dt.date() < datetime.now().date():
-                            dt = datetime.strptime(f"{month_str} {day} {int(year) + 1}", "%b %d %Y")
-                        start_date = dt.strftime("%Y-%m-%d")
-                    except ValueError:
+                    start_date = _resolve_event_date(month, day, year, title)
+                    if not start_date:
                         i += 1
                         continue
 
-                    events_found += 1
                     content_hash = generate_content_hash(title, "Steady Hand Beer Co", start_date)
-
-
-                    # Get specific event URL
-
-
-                    event_url = find_event_url(title, event_links, EVENTS_URL)
-
-
+                    event_url = find_event_url(title, event_links, EVENTS_URL) or EVENTS_URL
 
                     event_record = {
                         "source_id": source_id,
@@ -165,7 +226,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "price_note": None,
                         "is_free": True,
                         "source_url": event_url,
-                        "ticket_url": event_url if event_url != (EVENTS_URL if "EVENTS_URL" in dir() else BASE_URL) else None,
+                        "ticket_url": event_url if event_url != EVENTS_URL else None,
                         "image_url": image_map.get(title),
                         "raw_text": f"{title} - {start_date}",
                         "extraction_confidence": 0.80,
@@ -173,6 +234,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "recurrence_rule": None,
                         "content_hash": content_hash,
                     }
+
+                    events_found += 1
 
                     existing = find_event_by_hash(content_hash)
                     if existing:

@@ -228,8 +228,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     if desc_elem:
                         description = desc_elem.inner_text().strip()
 
-                    # Check if free (should always be free for Atlanta Contemporary)
-                    is_free = True
+                    # Check if free
+                    is_free = False
                     label_elem = article.query_selector(".event__label")
                     if label_elem and "free" in label_elem.inner_text().lower():
                         is_free = True

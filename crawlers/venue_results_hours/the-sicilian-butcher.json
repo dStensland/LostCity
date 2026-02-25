@@ -1,0 +1,28 @@
+{
+  "venue_id": 1571,
+  "venue_slug": "the-sicilian-butcher",
+  "meta": {
+    "og_image": "https://llp-assets.meetsoci.com/live/assets/sicilianbutcher/images/new/Main-Logo-og-image.png",
+    "meta_description": "Stop into your local The Sicilian Butcher location in Nashville, TN.",
+    "reservation_links": ["https://thesicilianbutcher.com/reserve-now/"],
+    "menu_links": ["https://thesicilianbutcher.com/menu/"],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": "(615) 800-5954"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["trendy", "date-spot", "craft-cocktails", "happy-hour"],
+    "cuisine": ["italian"],
+    "service_style": "full-service",
+    "price_level": "$$",
+    "menu_highlights": null,
+    "reservation_url": "https://thesicilianbutcher.com/reserve-now/",
+    "phone": "(615) 800-5954",
+    "instagram": null,
+    "dietary_options": ["gluten-free"],
+    "specials": [],
+    "genres": [],
+    "parking": ["garage"]
+  }
+}

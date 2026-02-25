@@ -1,0 +1,29 @@
+{
+  "venue_id": 4842,
+  "venue_slug": "pho-dakao",
+  "meta": {
+    "og_image": "https://www.phocobb.com/uploads/b/75c27440-30f3-11ef-93f7-3326e8c0a34b/Pho%20dakao-2.png",
+    "meta_description": "Pho Dakao - Smyrna location\nCall us at: (678)-909-6088\n2411 Cobb Pkwy, Smyrna, 30080, GA",
+    "reservation_links": [],
+    "menu_links": [],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["casual"],
+    "cuisine": ["vietnamese"],
+    "service_style": "casual_dine_in",
+    "price_level": 1,
+    "menu_highlights": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "phone": "(678) 909-6088",
+    "instagram": null,
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

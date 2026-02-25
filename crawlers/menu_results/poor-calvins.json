@@ -1,0 +1,57 @@
+{
+  "venue_id": 2457,
+  "venue_slug": "poor-calvins",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Sichuan Chilean Sea Bass",
+        "price": "$59",
+        "category": "entree"
+      },
+      {
+        "name": "Imperial Duck & Lobster",
+        "price": "$55",
+        "category": "entree"
+      },
+      {
+        "name": "Lobster Crawfish Wontons",
+        "price": "$16",
+        "category": "appetizer"
+      },
+      {
+        "name": "PC's Seafood Curry",
+        "price": "$44",
+        "category": "entree"
+      },
+      {
+        "name": "Crying Tiger Beef",
+        "price": "$19",
+        "category": "appetizer"
+      }
+    ],
+    "dietary_options": [
+      "vegetarian-friendly",
+      "vegan-options",
+      "gluten-free-options"
+    ],
+    "price_level": 4,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

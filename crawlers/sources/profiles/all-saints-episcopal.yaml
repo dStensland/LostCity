@@ -1,0 +1,14 @@
+version: 1
+slug: all-saints-episcopal
+name: All Saints' Episcopal Church
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.allsaintsatlanta.org/events/
+detail:
+  enabled: true
+data_goals:
+- events

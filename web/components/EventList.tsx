@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useEffect, useRef, useMemo, useCallback } from "react";
+import React, { useEffect, useRef, useMemo, useCallback, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import AnimatedEventList from "./AnimatedEventList";
+import EventCard from "./EventCard";
 import { EventCardSkeletonList } from "./EventCardSkeleton";
 import PullToRefresh from "./PullToRefresh";
 import SmartEmptyState from "./SmartEmptyState";
@@ -11,9 +13,29 @@ import { useTimeline } from "@/lib/hooks/useTimeline";
 import { useEventFilters } from "@/lib/hooks/useEventFilters";
 import { useFriendsGoing } from "@/lib/hooks/use-friends-going";
 import type { EventWithLocation } from "@/lib/search";
+import {
+  groupEventsByDate,
+  getSortedDates,
+  getDateLabel,
+} from "@/lib/event-grouping";
+import {
+  createFindFilterSnapshot,
+  trackFindZeroResults,
+} from "@/lib/analytics/find-tracking";
 
 // Max events to display (prevent memory issues)
 const MAX_EVENTS = 500;
+const INITIAL_VISIBLE_EVENTS = 40;
+const VISIBLE_EVENTS_STEP = 30;
+const VIRTUALIZE_THRESHOLD = 80;
+const DATE_HEADER_HEIGHT = 56;
+const EVENT_ROW_HEIGHT = 180;
+const EVENT_ROW_HEIGHT_COMPACT = 140;
+const VIRTUAL_LIST_MAX_HEIGHT = "clamp(500px, calc(100dvh - 300px), 900px)";
+
+type VirtualFlatItem =
+  | { kind: "header"; date: string; count: number }
+  | { kind: "event"; event: EventWithLocation };
 
 interface Props {
   initialEvents?: EventWithLocation[];
@@ -43,10 +65,10 @@ export default function EventList({
   const loaderRef = useRef<HTMLDivElement>(null);
 
   // Unified timeline hook — events + festivals in one stream
-  // Enable smart defaults and persistence for better UX
-  const { hasActiveFilters, filters } = useEventFilters({
+  // Enable smart defaults, but avoid cross-view filter persistence.
+  const { hasActiveFilters, filters, effectiveDate } = useEventFilters({
     enableSmartDefaults: true,
-    enablePersistence: true,
+    enablePersistence: false,
   });
   const {
     events,
@@ -62,7 +84,10 @@ export default function EventList({
     portalId,
     portalExclusive,
     initialData: initialEvents,
+    dateOverride: effectiveDate,
   });
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_EVENTS);
+  const [hasUserExpanded, setHasUserExpanded] = useState(false);
 
   // Friends going data
   const eventIds = useMemo(() => events.map((e) => e.id), [events]);
@@ -72,8 +97,107 @@ export default function EventList({
   const displayEvents = useMemo(() => {
     return events.length > MAX_EVENTS ? events.slice(0, MAX_EVENTS) : events;
   }, [events]);
+  const visibleEvents = useMemo(() => {
+    return displayEvents.slice(0, visibleCount);
+  }, [displayEvents, visibleCount]);
+  const hiddenLoadedCount = Math.max(displayEvents.length - visibleEvents.length, 0);
+  const canRevealLoaded = hiddenLoadedCount > 0;
+  const allowAutoPagination = (hasActiveFilters || hasUserExpanded) && !canRevealLoaded;
+  const filtersResetKey = useMemo(() => {
+    return [
+      filters.search || "",
+      (filters.categories || []).join(","),
+      (filters.tags || []).join(","),
+      (filters.genres || []).join(","),
+      (filters.vibes || []).join(","),
+      (filters.neighborhoods || []).join(","),
+      filters.price || "",
+      filters.date || "",
+      filters.mood || "",
+    ].join("|");
+  }, [filters]);
 
   const hasReachedMax = events.length >= MAX_EVENTS;
+  const zeroResultsSignatureRef = useRef<string | null>(null);
+
+  const eventsFilterSnapshot = useMemo(() => createFindFilterSnapshot({
+    search: filters.search,
+    categories: filters.categories,
+    tags: filters.tags,
+    genres: filters.genres,
+    vibes: filters.vibes,
+    neighborhoods: filters.neighborhoods,
+    price: filters.price,
+    free: filters.price === "free" ? "1" : undefined,
+    date: filters.date,
+    mood: filters.mood,
+  }, "events"), [filters]);
+
+  // ─── Virtualization (80+ items) ──────────────────────────────────────────────
+  const useVirtual = visibleEvents.length > VIRTUALIZE_THRESHOLD;
+  const virtualScrollRef = useRef<HTMLDivElement>(null);
+
+  const flatItems = useMemo<VirtualFlatItem[]>(() => {
+    if (!useVirtual) return [];
+    const byDate = groupEventsByDate(visibleEvents);
+    const dates = getSortedDates(byDate);
+    const items: VirtualFlatItem[] = [];
+    for (const date of dates) {
+      const dateEvents = byDate[date];
+      items.push({ kind: "header", date, count: dateEvents.length });
+      for (const event of dateEvents) {
+        items.push({ kind: "event", event });
+      }
+    }
+    return items;
+  }, [useVirtual, visibleEvents]);
+
+  const rowHeight = density === "compact" ? EVENT_ROW_HEIGHT_COMPACT : EVENT_ROW_HEIGHT;
+
+  // eslint-disable-next-line react-hooks/incompatible-library
+  const virtualizer = useVirtualizer({
+    count: useVirtual ? flatItems.length : 0,
+    getScrollElement: () => virtualScrollRef.current,
+    estimateSize: (i) => (flatItems[i]?.kind === "header" ? DATE_HEADER_HEIGHT : rowHeight),
+    overscan: 10,
+  });
+
+  useEffect(() => {
+    const initial = hasActiveFilters ? 60 : INITIAL_VISIBLE_EVENTS;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional UX reset when filter signature changes
+    setVisibleCount(initial);
+    setHasUserExpanded(false);
+  }, [filtersResetKey, hasActiveFilters]);
+
+  useEffect(() => {
+    if (!portalSlug || isLoading || isRefetching) return;
+
+    if (!hasActiveFilters || events.length > 0) {
+      if (events.length > 0) zeroResultsSignatureRef.current = null;
+      return;
+    }
+
+    if (zeroResultsSignatureRef.current === eventsFilterSnapshot.signature) {
+      return;
+    }
+
+    trackFindZeroResults({
+      portalSlug,
+      findType: "events",
+      displayMode: "list",
+      surface: "event_list",
+      snapshot: eventsFilterSnapshot,
+      resultCount: events.length,
+    });
+    zeroResultsSignatureRef.current = eventsFilterSnapshot.signature;
+  }, [
+    events.length,
+    eventsFilterSnapshot,
+    hasActiveFilters,
+    isLoading,
+    isRefetching,
+    portalSlug,
+  ]);
 
   // IntersectionObserver for infinite scroll
   useEffect(() => {
@@ -82,7 +206,7 @@ export default function EventList({
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasMore && !isFetchingNextPage && !hasReachedMax) {
+        if (entries[0].isIntersecting && allowAutoPagination && hasMore && !isFetchingNextPage && !hasReachedMax) {
           loadMore();
         }
       },
@@ -95,7 +219,7 @@ export default function EventList({
     observer.observe(currentLoaderRef);
 
     return () => observer.disconnect();
-  }, [hasMore, isFetchingNextPage, loadMore, hasReachedMax]);
+  }, [allowAutoPagination, hasMore, isFetchingNextPage, loadMore, hasReachedMax]);
 
   // Pull-to-refresh handler
   const handleRefresh = useCallback(async () => {
@@ -169,19 +293,87 @@ export default function EventList({
 
   return (
     <PullToRefresh onRefresh={handleRefresh} disabled={isLoading || isRefetching}>
-      {/* Animated event list */}
-      <AnimatedEventList
-        events={displayEvents}
-        standaloneFestivals={festivals}
-        portalSlug={portalSlug}
-        isLoading={isLoading}
-        isFetchingNextPage={isFetchingNextPage}
-        isRefetching={isRefetching}
-        getFriendsForEvent={getFriendsForEvent}
-        collapseFestivals={!filters.search}
-        collapseFestivalPrograms={!filters.search}
-        density={density}
-      />
+      {/* Virtualized list for 80+ items — flat EventCard rendering for performance */}
+      {useVirtual ? (
+        <div
+          ref={virtualScrollRef}
+          className="overflow-y-auto overscroll-contain"
+          style={{ maxHeight: VIRTUAL_LIST_MAX_HEIGHT }}
+        >
+          <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
+            {virtualizer.getVirtualItems().map((virtualRow) => {
+              const item = flatItems[virtualRow.index];
+              if (item.kind === "header") {
+                return (
+                  <div
+                    key={`hdr-${item.date}`}
+                    className="absolute top-0 left-0 w-full flex items-end justify-between px-1 py-2 bg-[var(--void)]/90 backdrop-blur-md border-b border-[var(--twilight)]/45"
+                    style={{ height: virtualRow.size, transform: `translateY(${virtualRow.start}px)` }}
+                  >
+                    <h2 className="font-mono text-[1.08rem] font-semibold text-[var(--cream)] tracking-tight truncate">
+                      {getDateLabel(item.date)}
+                    </h2>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full border border-[var(--twilight)]/70 bg-[var(--dusk)]/82 font-mono text-[0.62rem] text-[var(--soft)]">
+                      {item.count}
+                    </span>
+                  </div>
+                );
+              }
+              return (
+                <div
+                  key={`ev-${item.event.id}`}
+                  className="absolute top-0 left-0 w-full"
+                  style={{ height: virtualRow.size, transform: `translateY(${virtualRow.start}px)` }}
+                >
+                  <EventCard
+                    event={item.event}
+                    index={virtualRow.index}
+                    skipAnimation
+                    portalSlug={portalSlug}
+                    friendsGoing={getFriendsForEvent?.(item.event.id)}
+                    reasons={item.event.reasons}
+                    density={density}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <AnimatedEventList
+          events={visibleEvents}
+          standaloneFestivals={festivals}
+          portalSlug={portalSlug}
+          isLoading={isLoading}
+          isFetchingNextPage={isFetchingNextPage}
+          isRefetching={isRefetching}
+          getFriendsForEvent={getFriendsForEvent}
+          collapseFestivals={!filters.search}
+          collapseFestivalPrograms={!filters.search}
+          density={density}
+        />
+      )}
+
+      {(canRevealLoaded || (!canRevealLoaded && hasMore && !error && !hasReachedMax && !allowAutoPagination)) && (
+        <div className="py-2 flex justify-center">
+          <button
+            onClick={() => {
+              if (canRevealLoaded) {
+                setVisibleCount((prev) => Math.min(prev + VISIBLE_EVENTS_STEP, displayEvents.length));
+                setHasUserExpanded(true);
+                return;
+              }
+              loadMore();
+              setHasUserExpanded(true);
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[var(--twilight)]/75 bg-[var(--night)]/75 text-[var(--cream)] hover:border-[var(--coral)]/50 hover:bg-[var(--night)] transition-colors font-mono text-xs"
+          >
+            {canRevealLoaded
+              ? `Show ${Math.min(VISIBLE_EVENTS_STEP, hiddenLoadedCount)} more`
+              : "Load more results"}
+          </button>
+        </div>
+      )}
 
       {/* Error state */}
       {error && (
@@ -200,7 +392,7 @@ export default function EventList({
       )}
 
       {/* Infinite scroll sentinel */}
-      {hasMore && !error && !hasReachedMax && (
+      {allowAutoPagination && hasMore && !error && !hasReachedMax && (
         <div
           ref={loaderRef}
           className="h-20"

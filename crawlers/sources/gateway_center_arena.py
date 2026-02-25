@@ -227,7 +227,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     # Check for pricing
                     cost = event_data.get("cost", "")
-                    is_free = not cost or "free" in cost.lower()
+                    is_free = bool(cost and "free" in cost.lower())
                     price_min = None
                     price_max = None
 

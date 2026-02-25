@@ -1,5 +1,7 @@
 import { createServiceClient } from "@/lib/supabase/service";
 import { isValidString } from "@/lib/api-utils";
+import { resolveNeighborhood } from "@/lib/geo";
+import { normalizeNeighborhoodName } from "@/config/neighborhoods";
 
 // Foursquare Places API base URL (migrated from api.foursquare.com/v3)
 const FOURSQUARE_BASE_URL = "https://places-api.foursquare.com";
@@ -190,6 +192,18 @@ export async function autoApproveVenue(
     // Generate unique slug
     const slug = await generateUniqueSlug(name, serviceClient);
 
+    // Resolve neighborhood via polygon boundaries, fall back to Foursquare
+    const lat = placeDetails.latitude ?? null;
+    const lng = placeDetails.longitude ?? null;
+    let neighborhood: string | null = null;
+    if (lat !== null && lng !== null) {
+      neighborhood = resolveNeighborhood(lat, lng);
+    }
+    if (!neighborhood) {
+      const fsqHood = addressData.neighborhood;
+      neighborhood = fsqHood ? normalizeNeighborhoodName(fsqHood) : null;
+    }
+
     // Create the venue
     const { data: newVenue, error: insertError } = await serviceClient
       .from("venues")
@@ -197,7 +211,7 @@ export async function autoApproveVenue(
         name,
         slug,
         address: formattedAddress || null,
-        neighborhood: addressData.neighborhood,
+        neighborhood,
         city: addressData.city,
         state: addressData.state,
         zip: addressData.zip,

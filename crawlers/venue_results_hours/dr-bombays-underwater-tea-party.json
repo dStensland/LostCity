@@ -1,0 +1,32 @@
+{
+  "venue_id": 4118,
+  "venue_slug": "dr-bombays-underwater-tea-party",
+  "meta": {
+    "og_image": "http://static1.squarespace.com/static/52b8e6bbe4b02ffea7581af0/t/5a0a33d1e2c483d6cbca9f27/1537382317426/Dr.B-FINAL-LOGO-04.png?format=1500w",
+    "meta_description": "Tea house and coffee shop in the Candler Park neighborhood of Atlanta, GA. \r\nFilled with vintage furniture and decor, this is also a bookshop and home \r\nof The Learning Tea, a project dedicated to providing scholarships for \r\nunderserved women living in Darjeeling, India.",
+    "reservation_links": [
+      "https://www.drbombays.com/reservations"
+    ],
+    "menu_links": [
+      "http://www.drbombays.com/menu"
+    ],
+    "instagram": null,
+    "facebook_url": "https://www.facebook.com/drbombays",
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["cozy", "intimate", "artsy", "date-spot"],
+    "cuisine": ["tea"],
+    "service_style": "full_service",
+    "price_level": 2,
+    "menu_highlights": null,
+    "reservation_url": "https://www.drbombays.com/reservations",
+    "phone": null,
+    "instagram": null,
+    "dietary_options": ["vegetarian-friendly"],
+    "specials": [],
+    "genres": [],
+    "parking": ["free-parking", "street-parking"]
+  }
+}

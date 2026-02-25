@@ -38,6 +38,11 @@ _ARTIST_BLOCKLIST: set[str] = {
     # Academic / institutional
     "faculty", "senior", "junior", "guest", "masters", "doctoral",
     "graduate", "undergraduate", "department", "music",
+    # Venue types
+    "nightclub", "lounge",
+    # Activity descriptors (single words that match random MusicBrainz entries)
+    "improv", "standup", "karaoke", "trivia", "bingo", "drag",
+    "bowling", "curling", "poker",
     # Status words
     "free", "open", "closed", "cancelled", "postponed", "rescheduled",
     "tba", "tbd", "various", "artist", "artists", "special guest", "student",
@@ -135,6 +140,12 @@ def extract_artist_from_title(title: str) -> Optional[str]:
         prefix_words = prefix.split()
         if all(w.lower() in _ARTIST_BLOCKLIST for w in prefix_words):
             cleaned = colon_match.group(2).strip()
+        # Strip "Presents:" / "Productions:" promoter prefix
+        elif prefix.lower().endswith(("presents", "productions")):
+            cleaned = colon_match.group(2).strip()
+
+    # Strip "@ VenueName" suffix (always a venue reference in event titles)
+    cleaned = re.sub(r'\s+@\s+[A-Z][A-Za-z\s&\']+$', '', cleaned)
 
     # Remove "Live at/in [Venue]" suffix
     cleaned = re.sub(r'\s+[Ll]ive\s+(?:at|in)\s+.*$', '', cleaned)
@@ -150,7 +161,7 @@ def extract_artist_from_title(title: str) -> Optional[str]:
         r'\s+featuring\s+',    # "featuring"
         r'\s+ft\.?\s+',        # "ft" or "ft."
         r'\s+feat\.?\s+',      # "feat" or "feat."
-        r'\s*[,&]\s+',         # comma or ampersand (multiple artists)
+        r'\s*,\s+',            # comma (multiple artists)
         r'\s*[-–—]\s+',        # dash variants (tour name or support)
         r':\s+',               # colon (tour name)
         r'\s+\+\s+',           # plus sign

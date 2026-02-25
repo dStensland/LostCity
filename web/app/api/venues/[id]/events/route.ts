@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createPortalScopedClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { getLocalDateString } from "@/lib/formats";
 import { errorResponse } from "@/lib/api-utils";
@@ -29,6 +29,7 @@ export async function GET(request: NextRequest, { params }: Props) {
       { status: 400 }
     );
   }
+  const portalClient = await createPortalScopedClient(portalContext.portalId);
   const portalCity = !portalExclusive ? portalContext.filters.city : undefined;
 
   const venueId = parseInt(id);
@@ -38,7 +39,7 @@ export async function GET(request: NextRequest, { params }: Props) {
 
   const today = getLocalDateString();
 
-  let query = supabase
+  let query = portalClient
     .from("events")
     .select(`
       id,
@@ -47,7 +48,7 @@ export async function GET(request: NextRequest, { params }: Props) {
       start_time,
       end_time,
       is_all_day,
-      category,
+      category:category_id,
       series:series_id(slug),
       venue:venues(city)
     `)

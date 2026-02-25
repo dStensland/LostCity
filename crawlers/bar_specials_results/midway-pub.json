@@ -1,0 +1,21 @@
+{
+  "venue_id": 1147,
+  "venue_slug": "midway-pub",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["casual", "patio"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": null,
+    "reservation_url": null,
+    "phone": "(404) 584-0335",
+    "instagram": "midwaypub",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

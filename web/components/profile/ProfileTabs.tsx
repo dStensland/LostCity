@@ -3,12 +3,13 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 
-export type ProfileSection = "activity" | "upcoming" | "venues" | "taste";
+export type ProfileSection = "activity" | "upcoming" | "venues" | "curations" | "taste";
 
 const TABS: { key: ProfileSection; label: string }[] = [
   { key: "activity", label: "Activity" },
   { key: "upcoming", label: "Upcoming" },
   { key: "venues", label: "Venues" },
+  { key: "curations", label: "Curations" },
   { key: "taste", label: "Taste" },
 ];
 

@@ -1,0 +1,21 @@
+{
+  "venue_id": 693,
+  "venue_slug": "lucian-books-wine",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["wine-bar", "date-night", "upscale", "cozy"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "https://www.lucianbooksandwine.com/menus",
+    "reservation_url": "https://resy.com/cities/atlanta-ga/venues/lucian",
+    "phone": null,
+    "instagram": null,
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

@@ -79,7 +79,7 @@ export async function GET(
       start_time,
       end_time,
       series_id,
-      venue:venues(id, name, slug, neighborhood, city)
+      venue:venues(id, name, slug, neighborhood, city, nearest_marta_station, marta_walk_minutes, marta_lines, beltline_adjacent, beltline_segment, parking_type, parking_free, transit_score)
     `)
     .in("series_id", programIds)
     .gte("start_date", today)
@@ -107,6 +107,14 @@ export async function GET(
       slug: string;
       neighborhood: string | null;
       city?: string | null;
+      nearest_marta_station?: string | null;
+      marta_walk_minutes?: number | null;
+      marta_lines?: string[] | null;
+      beltline_adjacent?: boolean | null;
+      beltline_segment?: string | null;
+      parking_type?: string[] | null;
+      parking_free?: boolean | null;
+      transit_score?: number | null;
     } | null;
   }[];
   const sessions = filterByPortalCity(rawSessions, portalCity, {

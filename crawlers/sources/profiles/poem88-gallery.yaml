@@ -10,3 +10,8 @@ discovery:
   - https://www.poem88.net
 detail:
   enabled: true
+data_goals:
+- events
+- exhibits
+- images
+- tickets

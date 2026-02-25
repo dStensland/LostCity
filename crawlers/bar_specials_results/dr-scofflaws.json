@@ -1,0 +1,21 @@
+{
+  "venue_id": 2112,
+  "venue_slug": "dr-scofflaws",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["patio", "outdoor-seating", "casual", "family-friendly", "sports-bar"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": null,
+    "reservation_url": null,
+    "phone": "(404) 343-2832",
+    "instagram": null,
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

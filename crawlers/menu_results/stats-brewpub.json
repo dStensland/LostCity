@@ -1,0 +1,56 @@
+{
+  "venue_id": 2113,
+  "venue_slug": "stats-brewpub",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "BBQ Brisket Burger",
+        "price": "$20",
+        "category": "entree"
+      },
+      {
+        "name": "Marietta Street Tacos",
+        "price": "$20",
+        "category": "entree"
+      },
+      {
+        "name": "Kung Fu Ribs",
+        "price": "$15",
+        "category": "appetizer"
+      },
+      {
+        "name": "Norwegian Salmon",
+        "price": "$26",
+        "category": "entree"
+      },
+      {
+        "name": "Chicken & Waffles",
+        "price": "$19",
+        "category": "entree"
+      }
+    ],
+    "dietary_options": [
+      "gluten-free-options",
+      "vegetarian-friendly"
+    ],
+    "price_level": 2,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "venue_id": 1778,
+  "venue_slug": "westside-motor-lounge",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["live-music", "outdoor-seating", "beer-garden", "dog-friendly", "sports-bar", "dj", "patio"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "https://www.westsidemotorlounge.com/menus/",
+    "reservation_url": null,
+    "phone": "(678) 388-9536",
+    "instagram": "westside_motor_lounge",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

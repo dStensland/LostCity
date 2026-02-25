@@ -1,0 +1,28 @@
+{
+  "venue_id": 4918,
+  "venue_slug": "roux-on-canton",
+  "meta": {
+    "og_image": "http://static1.squarespace.com/static/519beac6e4b0722c6536dec5/t/67edaaac47c5015c979de8a1/1743628972948/Roux+Logo+1+-+Red.png?format=1500w",
+    "meta_description": "Southern. Cajun. Craft Beer. Raw Oysters. Awesome Staff. Live Music. Feel at home with the Roux Crew in Downtown Historic Roswell, Georgia.",
+    "reservation_links": [],
+    "menu_links": ["http://rouxoncanton.com/menu20"],
+    "instagram": "rouxoncanton",
+    "facebook_url": "http://www.facebook.com/rouxoncanton",
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["lively", "live-music", "casual", "happy-hour", "neighborhood-bar"],
+    "cuisine": ["southern", "cajun", "seafood"],
+    "service_style": "full_service",
+    "price_level": null,
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "rouxoncanton",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

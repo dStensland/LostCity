@@ -10,3 +10,5 @@ discovery:
   - https://www.wildasterbooks.com
 detail:
   enabled: true
+data_goals:
+- events

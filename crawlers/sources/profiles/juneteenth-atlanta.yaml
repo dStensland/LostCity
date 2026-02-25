@@ -10,3 +10,7 @@ discovery:
   - https://www.juneteenthatl.com
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- tickets

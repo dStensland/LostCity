@@ -1,0 +1,36 @@
+{
+  "venue_id": 3796,
+  "venue_slug": "waffle-house-n-decatur-rd",
+  "meta": {
+    "og_image": null,
+    "meta_description": "Waffle House, Inc. is an American restaurant chain with over 1,900 locations in 25 states in the United States. The bulk of the locations are in the Midwest and especially the South, where the chain is a regional cultural icon. The menu consists mainly of Southern breakfast food.",
+    "reservation_links": [],
+    "menu_links": ["https://www.wafflehouse.com/beyond-the-menu/"],
+    "instagram": "wafflehouseofficial",
+    "facebook_url": "https://www.facebook.com/WaffleHouse",
+    "phone": null
+  },
+  "extracted": {
+    "hours": {
+      "mon": {"open": "00:00", "close": "23:59"},
+      "tue": {"open": "00:00", "close": "23:59"},
+      "wed": {"open": "00:00", "close": "23:59"},
+      "thu": {"open": "00:00", "close": "23:59"},
+      "fri": {"open": "00:00", "close": "23:59"},
+      "sat": {"open": "00:00", "close": "23:59"},
+      "sun": {"open": "00:00", "close": "23:59"}
+    },
+    "vibes": ["casual", "late-night", "counter-service", "family-friendly"],
+    "cuisine": ["american", "southern"],
+    "service_style": "counter-service",
+    "price_level": "$",
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "wafflehouseofficial",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": ["free-parking"]
+  }
+}

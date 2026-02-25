@@ -5,11 +5,10 @@ integration_method: api
 defaults:
   venue_name: Terminal West
   category: music
-  subcategory: concert
   tags:
-    - music
-    - live-music
-    - concert
+  - music
+  - live-music
+  - concert
 discovery:
   enabled: true
   type: api
@@ -18,6 +17,11 @@ discovery:
   api:
     adapter: aeg
     params:
-      venue_id: "211"
+      venue_id: '211'
 detail:
   enabled: false
+data_goals:
+- events
+- images
+- lineup
+- tickets

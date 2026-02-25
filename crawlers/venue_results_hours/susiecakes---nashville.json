@@ -1,0 +1,28 @@
+{
+  "venue_id": 1801,
+  "venue_slug": "susiecakes---nashville",
+  "meta": {
+    "og_image": null,
+    "meta_description": "SusieCakes is an All-American bakery offering classic desserts made entirely from scratch using simple, natural ingredients. SusieCakes is now shipping nationwide!",
+    "reservation_links": [],
+    "menu_links": ["https://www.susiecakes.com/menu", "https://www.susiecakes.com/menu/cakes", "https://www.susiecakes.com/menu/cupcakes/", "https://www.susiecakes.com/menu/cookies", "https://www.susiecakes.com/menu/seasonal"],
+    "instagram": "susiecakesbakery",
+    "facebook_url": "https://www.facebook.com/SusieCakesBakery",
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["casual", "family-friendly"],
+    "cuisine": ["bakery", "dessert"],
+    "service_style": "counter_service",
+    "price_level": "$$",
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "susiecakesbakery",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

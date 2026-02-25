@@ -1,0 +1,42 @@
+{
+  "venue_id": 4896,
+  "venue_slug": "bloom-roadside",
+  "meta": {
+    "og_image": "http://bloomgeneral.com/cdn/shop/files/New_Bloom_Logo_e2a99813-d026-4291-863e-25fd3f36ba20.png?v=1741216044",
+    "meta_description": "doughnuts and coffee, burgers and shakes",
+    "reservation_links": [],
+    "menu_links": [],
+    "instagram": "bloom_roadside",
+    "facebook_url": "https://www.facebook.com/bloomdoughnutsmilton",
+    "phone": null
+  },
+  "extracted": {
+    "hours": {
+      "mon": {"open": "07:00", "close": "15:00"},
+      "tue": {"open": "07:00", "close": "15:00"},
+      "wed": {"open": "07:00", "close": "15:00"},
+      "thu": {"open": "07:00", "close": "15:00"},
+      "fri": {"open": "07:00", "close": "15:00"},
+      "sat": {"open": "07:00", "close": "15:00"},
+      "sun": {"open": "07:00", "close": "15:00"}
+    },
+    "vibes": ["casual", "family-friendly", "counter-service"],
+    "cuisine": ["bakery", "brunch_breakfast", "burgers"],
+    "service_style": "counter_service",
+    "price_level": 1,
+    "menu_highlights": [
+      {"name": "Handcrafted Yeast Donuts", "price": null, "category": "dessert"},
+      {"name": "Roadside Burger", "price": null, "category": "entree"},
+      {"name": "Sausage Egg Burrito", "price": null, "category": "entree"},
+      {"name": "Bloom Honey Latte", "price": null, "category": "dessert"}
+    ],
+    "menu_url": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "bloom_roadside",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

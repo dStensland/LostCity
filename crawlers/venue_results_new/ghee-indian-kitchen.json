@@ -1,0 +1,45 @@
+{
+  "venue_id": 4796,
+  "venue_slug": "ghee-indian-kitchen",
+  "meta": {
+    "og_image": "https://images.getbento.com/accounts/16458ac94bdf2a2e2ce87889467ac888/media/images/37161logo.png?w=1200&fit=fill&auto=compress,format&cs=origin&h=600&bg=EDEDF1&pad=100",
+    "meta_description": "Ghee Indian Kitchen is an Indian restaurant putting seasonal & contemporary spins on traditional fare, with two locations in Miami, FL.",
+    "reservation_links": [
+      "https://www.opentable.com/r/ghee-indian-kitchen-atlanta?corrid=942c6042-a55c-4e99-b023-486c46e00301&p=2&sd=2025-10-01T19%3A00%3A00"
+    ],
+    "menu_links": [],
+    "instagram": "gheemiami",
+    "facebook_url": "https://www.facebook.com/gheemiami",
+    "phone": "(404) 201-2581"
+  },
+  "extracted": {
+    "hours": {
+      "mon": {"open": "17:00", "close": "22:00"},
+      "tue": {"open": "17:00", "close": "22:00"},
+      "wed": {"open": "17:00", "close": "22:00"},
+      "thu": {"open": "17:00", "close": "22:00"},
+      "fri": {"open": "17:00", "close": "23:00"},
+      "sat": {"open": "17:00", "close": "23:00"},
+      "sun": {"open": "17:00", "close": "22:00"}
+    },
+    "vibes": ["upscale", "date-spot", "trendy", "craft-cocktails"],
+    "cuisine": ["indian", "new_american"],
+    "service_style": "full_service",
+    "price_level": 3,
+    "menu_highlights": [
+      {"name": "Duck Biryani", "price": "$47", "category": "entree"},
+      {"name": "Chicken Tikka Masala", "price": "$24", "category": "entree"},
+      {"name": "Yellowfin Tuna Bhel", "price": "$19", "category": "appetizer"},
+      {"name": "Ghost Pepper Cheddar Naan", "price": "$15", "category": "side"},
+      {"name": "Warm Sticky Date Cake", "price": "$14", "category": "dessert"}
+    ],
+    "menu_url": null,
+    "reservation_url": "https://www.opentable.com/r/ghee-indian-kitchen-atlanta?corrid=942c6042-a55c-4e99-b023-486c46e00301&p=2&sd=2025-10-01T19%3A00%3A00",
+    "phone": "(404) 201-2581",
+    "instagram": "gheemiami",
+    "dietary_options": ["vegetarian-friendly", "vegan-options", "gluten-free-options"],
+    "specials": [],
+    "genres": [],
+    "parking": ["free-parking"]
+  }
+}

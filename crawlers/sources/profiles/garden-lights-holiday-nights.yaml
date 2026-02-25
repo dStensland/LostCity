@@ -1,0 +1,21 @@
+version: 1
+slug: garden-lights-holiday-nights
+name: "Garden Lights, Holiday Nights"
+integration_method: playwright
+defaults:
+  venue_name: "Atlanta Botanical Garden"
+discovery:
+  enabled: true
+  type: html
+  urls:
+    - "https://atlantabg.org"
+  fetch:
+    render_js: true
+detail:
+  enabled: true
+  fetch:
+    render_js: true
+data_goals:
+  - events
+  - images
+  - tickets

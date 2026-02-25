@@ -1,0 +1,21 @@
+{
+  "venue_id": 1605,
+  "venue_slug": "the-springwater-supper-club-lounge",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["dive-bar", "live-music", "late-night", "casual"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "springwaterdive",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

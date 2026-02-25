@@ -1,0 +1,28 @@
+{
+  "venue_id": 2531,
+  "venue_slug": "stereo-coffee",
+  "meta": {
+    "og_image": "https://cdn.shopify.com/s/files/1/0056/1922/0547/files/logo_website.jpg?height=628&pad_color=ffffff&v=1614334784&width=1200",
+    "meta_description": "Specialty coffee roaster with an emphasis on sourcing ethical and sustainable coffees, wholesale and retail sales, coffee equipment and barista training.",
+    "reservation_links": [],
+    "menu_links": [],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": "(647) 347-7743"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["artsy", "trendy"],
+    "cuisine": ["coffee"],
+    "service_style": "counter_service",
+    "price_level": "$$",
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": "(647) 347-7743",
+    "instagram": null,
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

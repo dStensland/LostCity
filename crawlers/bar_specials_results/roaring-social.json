@@ -1,0 +1,21 @@
+{
+  "venue_id": 1288,
+  "venue_slug": "roaring-social",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["speakeasy", "craft-cocktails", "live-music", "date-night", "upscale", "dancing"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": null,
+    "reservation_url": null,
+    "phone": "(678) 580-1970",
+    "instagram": "roaring.social",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "venue_id": 2064,
+  "venue_slug": "guac-y-margys",
+  "meta": {
+    "og_image": null,
+    "meta_description": "Guac y Margys is your new go-to for margaritas and guacamole on the Atlanta BeltLine. Fresh lime juice #nomix + ripe avocados #yum + Atlanta vibes #atl = ATL GyM",
+    "reservation_links": [],
+    "menu_links": [],
+    "instagram": "guacymargys",
+    "facebook_url": "https://www.facebook.com/guacymargys",
+    "phone": "(404) 343-4691"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["casual", "lively", "outdoor-seating", "patio", "happy-hour", "good-for-groups", "trendy"],
+    "cuisine": ["mexican", "tex_mex"],
+    "service_style": "fast_casual",
+    "price_level": 2,
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": "(404) 343-4691",
+    "instagram": "guacymargys",
+    "dietary_options": ["vegetarian-friendly", "vegan-options"],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

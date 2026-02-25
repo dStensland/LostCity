@@ -1,4 +1,5 @@
-import { getFilteredEventsWithCursor, enrichEventsWithSocialProof, PRICE_FILTERS, type SearchFilters } from "@/lib/search";
+import { getFilteredEventsWithCursor, PRICE_FILTERS, type SearchFilters } from "@/lib/search";
+import { enrichEventsWithSocialProof } from "@/lib/social-proof";
 import type { MoodId } from "@/lib/moods";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { apiResponse, escapeSQLPattern } from "@/lib/api-utils";
@@ -7,6 +8,8 @@ import { getLocalDateString } from "@/lib/formats";
 import type { Festival } from "@/lib/festivals";
 import { logger } from "@/lib/logger";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
+import { filterByPortalCity } from "@/lib/portal-scope";
+import { getPortalSourceAccess } from "@/lib/federation";
 
 function safeParseInt(value: string | null, defaultValue: number, min = 1, max = 1000): number {
   if (!value) return defaultValue;
@@ -36,6 +39,7 @@ export async function GET(request: Request) {
       );
     }
     const portalId = portalContext.portalId || undefined;
+    const sourceAccess = portalId ? await getPortalSourceAccess(portalId) : null;
     const portalExclusive = searchParams.get("portal_exclusive") === "true";
     const portalCity = !portalExclusive ? portalContext.filters.city : undefined;
 
@@ -53,7 +57,7 @@ export async function GET(request: Request) {
       mood: (searchParams.get("mood") as MoodId) || undefined,
       portal_id: portalId,
       portal_exclusive: portalExclusive,
-      city: portalCity,
+      source_ids: sourceAccess?.sourceIds.length ? sourceAccess.sourceIds : undefined,
       exclude_classes: true,
     };
 
@@ -133,8 +137,11 @@ export async function GET(request: Request) {
 
     const { events: rawEvents, nextCursor, hasMore } = eventsResult;
 
+    // Filter events by portal city (in-memory, avoids header overflow from venue ID pre-fetching)
+    const cityFilteredEvents = filterByPortalCity(rawEvents, portalCity, { allowMissingCity: true });
+
     // Enrich events with social proof in parallel with festival processing
-    const events = await enrichEventsWithSocialProof(rawEvents);
+    const events = await enrichEventsWithSocialProof(cityFilteredEvents);
 
     let festivals: Festival[] = [];
     let festivalError: { message: string } | null = null;

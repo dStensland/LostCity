@@ -1,0 +1,28 @@
+{
+  "venue_id": 2107,
+  "venue_slug": "swan-coach-house",
+  "meta": {
+    "og_image": "https://static.wixstatic.com/media/a941b2_7e068634689a4436a532553f55919072%7Emv2.jpg/v1/fit/w_2500,h_1330,al_c/a941b2_7e068634689a4436a532553f55919072%7Emv2.jpg",
+    "meta_description": "Discover the Swan Coach House, an elegant event space in Atlanta perfect for weddings and special occasions. Enjoy delightful lunch in Buckhead, explore our unique gift shop in Atlanta, and experience exceptional catering services. Your premier wedding venue and catering destination in Atlanta.",
+    "reservation_links": ["https://www.swancoachhouse.com/reservations"],
+    "menu_links": ["https://www.swancoachhouse.com/_files/ugd/bf90f4_91d16f760ab94b8fb181c3a7f94fe4d0.pdf", "https://mylightspeed.app/giftcard/b84c6e78-d09a-46c8-9e63-af373410ef47/menu"],
+    "instagram": "swancoachhouse",
+    "facebook_url": "https://www.facebook.com/swancoachhouse",
+    "phone": "(404) 261-0636"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["upscale", "historic", "intimate"],
+    "cuisine": ["american"],
+    "service_style": "full_service",
+    "price_level": "$$$",
+    "menu_highlights": null,
+    "reservation_url": "https://www.swancoachhouse.com/reservations",
+    "phone": "(404) 261-0636",
+    "instagram": "swancoachhouse",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": ["valet"]
+  }
+}

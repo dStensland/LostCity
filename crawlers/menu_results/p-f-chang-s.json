@@ -1,0 +1,56 @@
+{
+  "venue_id": 3355,
+  "venue_slug": "p-f-chang-s",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Chang's Lettuce Wraps",
+        "price": null,
+        "category": "appetizer"
+      },
+      {
+        "name": "Mongolian Beef",
+        "price": null,
+        "category": "entree"
+      },
+      {
+        "name": "Dynamite Shrimp",
+        "price": null,
+        "category": "appetizer"
+      },
+      {
+        "name": "The Great Wall of Chocolate",
+        "price": null,
+        "category": "dessert"
+      },
+      {
+        "name": "Miso Glazed Salmon",
+        "price": null,
+        "category": "entree"
+      }
+    ],
+    "dietary_options": [
+      "vegetarian-friendly",
+      "gluten-free-options"
+    ],
+    "price_level": 2,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

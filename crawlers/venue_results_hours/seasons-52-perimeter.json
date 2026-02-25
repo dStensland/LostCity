@@ -1,0 +1,28 @@
+{
+  "venue_id": 3704,
+  "venue_slug": "seasons-52-perimeter",
+  "meta": {
+    "og_image": "https://media.seasons52.com/images/site/responsive/logo.png",
+    "meta_description": "Seasons 52 is a wine bar & grill that offers fresh, seasonal restaurant dishes served in a casual and sophisticated atmosphere.",
+    "reservation_links": [],
+    "menu_links": ["https://www.seasons52.com/menu-listing", "https://www.seasons52.com/menu-listing/wine-bar", "https://www.seasons52.com/menu", "https://www.seasons52.com/menu/all-day", "https://www.seasons52.com/menu-listing/takeout"],
+    "instagram": "seasons52",
+    "facebook_url": "https://www.facebook.com/seasons52",
+    "phone": "(407) 351-2210"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["upscale", "date-spot"],
+    "cuisine": ["new_american", "farm_to_table"],
+    "service_style": "full_service",
+    "price_level": "$$$",
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": "(407) 351-2210",
+    "instagram": "seasons52",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

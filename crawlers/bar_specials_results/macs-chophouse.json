@@ -1,0 +1,31 @@
+{
+  "venue_id": 4901,
+  "venue_slug": "macs-chophouse",
+  "meta": {},
+  "extracted": {
+    "specials": [
+      {
+        "title": "Weekend Brunch",
+        "type": "brunch",
+        "description": "Weekend brunch featuring classics like creme brulee French toast, eggs benedict, and steak plates with brunch cocktails and mimosas",
+        "days_of_week": [6, 7],
+        "time_start": "11:00:00",
+        "time_end": null,
+        "price_note": null
+      }
+    ],
+    "hours": null,
+    "vibes": ["upscale", "date-night", "outdoor-seating", "craft-cocktails"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "http://macschophouse.com/dinner-menu",
+    "reservation_url": "https://www.opentable.com/restaurant/profile/####/reserve",
+    "phone": "(770) 238-1202",
+    "instagram": "macschophouse",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

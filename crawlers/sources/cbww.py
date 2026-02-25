@@ -347,7 +347,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 )
 
                 # Most CBWW events are free or sliding scale
-                is_free = True
+                is_free = False
                 if description and any(kw in description.lower() for kw in ["$", "cost", "fee", "price", "donation"]):
                     # Check if it explicitly says free or sliding scale
                     if any(kw in description.lower() for kw in ["free", "sliding scale", "donation"]):

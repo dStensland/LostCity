@@ -1,0 +1,31 @@
+{
+  "venue_id": 4393,
+  "venue_slug": "escobar-restaurant",
+  "meta": {},
+  "extracted": {
+    "specials": [
+      {
+        "title": "Weekend Brunch",
+        "type": "brunch",
+        "description": "Brunch served Saturdays and Sundays from 11am to 4pm with entrees like chicken and red velvet waffles, fish and grits, and peach cobbler french toast",
+        "days_of_week": [6, 7],
+        "time_start": "11:00:00",
+        "time_end": "16:00:00",
+        "price_note": null
+      }
+    ],
+    "hours": null,
+    "vibes": ["upscale", "live-music", "craft-cocktails", "brunch-spot", "date-night"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": null,
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

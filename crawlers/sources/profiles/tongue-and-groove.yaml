@@ -8,8 +8,11 @@ discovery:
   type: list
   urls:
   - https://www.tongueandgroove.com
-  # NOTE: DNS dead as of 2026-02-06
   fetch:
     render_js: true
 detail:
   enabled: false
+data_goals:
+- events
+- images
+- tickets

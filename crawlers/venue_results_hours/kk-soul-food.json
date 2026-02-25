@@ -1,0 +1,36 @@
+{
+  "venue_id": 4390,
+  "venue_slug": "kk-soul-food",
+  "meta": {
+    "og_image": null,
+    "meta_description": "K & K SOUL FOOD | From Generation to Generation",
+    "reservation_links": [],
+    "menu_links": [],
+    "instagram": "kksoulfood",
+    "facebook_url": "https://www.facebook.com/KK-Soul-Food-160341633994688",
+    "phone": "(404) 685-1073"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": [
+      "casual",
+      "neighborhood-bar",
+      "family-friendly",
+      "black-owned"
+    ],
+    "cuisine": [
+      "soul_food",
+      "southern"
+    ],
+    "service_style": "counter-service",
+    "price_level": "$",
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": "(404) 685-1073",
+    "instagram": "kksoulfood",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

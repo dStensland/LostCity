@@ -105,13 +105,13 @@ def determine_category_and_tags(title: str, description: str = "") -> tuple[str,
     elif any(word in text for word in ["conference", "seminar", "workshop", "education", "lunch and learn", "patient education"]):
         category = "learning"
         tags.extend(["patient-education", "health-education"])
-        is_free = True
+        is_free = "free" in text or "no cost" in text
 
     # Support groups
     elif any(word in text for word in ["support group", "peer support", "patient support"]):
         category = "support_group"
         tags.extend(["patient-support", "community"])
-        is_free = True
+        is_free = "free" in text or "no cost" in text
 
     # Awareness events
     elif any(word in text for word in ["awareness", "walk", "run", "5k"]):
@@ -122,7 +122,7 @@ def determine_category_and_tags(title: str, description: str = "") -> tuple[str,
     # Default to community
     else:
         category = "community"
-        is_free = True
+        is_free = "free" in text or "no cost" in text
 
     # Check for explicit free/paid mentions
     if any(word in text for word in ["free", "no cost", "complimentary"]):
@@ -325,12 +325,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     title, "National Psoriasis Foundation Southeast", start_date
                 )
 
-                # Check if already exists
-                if find_event_by_hash(content_hash):
-                    events_updated += 1
-                    logger.debug(f"Event already exists: {title}")
-                    continue
-
                 # Create event record
                 event_record = {
                     "source_id": source_id,
@@ -358,6 +352,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "recurrence_rule": None,
                     "content_hash": content_hash,
                 }
+
+                existing = find_event_by_hash(content_hash)
+                if existing:
+                    smart_update_existing_event(existing, event_record)
+                    events_updated += 1
+                    logger.debug(f"Event updated: {title}")
+                    continue
 
                 try:
                     insert_event(event_record)

@@ -1,0 +1,32 @@
+{
+  "venue_id": 4557,
+  "venue_slug": "ikara",
+  "meta": {
+    "og_image": "http://static1.squarespace.com/static/6467bf3637e94a1f4ad775c7/t/646f9e95e5ceeb673ef916f0/1685036696383/LOGO_KD_NEW+COLOR_2022-15.png?format=1500w",
+    "meta_description": null,
+    "reservation_links": [
+      "https://resy.com/cities/atl/kitty-dare?date=2023-05-21&seats=2"
+    ],
+    "menu_links": [
+      "http://kittydare.com/menus"
+    ],
+    "instagram": "kittydareatl",
+    "facebook_url": null,
+    "phone": "(404) 228-1566"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["trendy", "date-spot", "good-for-groups"],
+    "cuisine": [],
+    "service_style": "full_service",
+    "price_level": null,
+    "menu_highlights": null,
+    "reservation_url": "https://resy.com/cities/atl/kitty-dare?date=2023-05-21&seats=2",
+    "phone": "(404) 228-1566",
+    "instagram": "kittydareatl",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

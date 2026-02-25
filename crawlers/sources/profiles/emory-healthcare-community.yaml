@@ -1,0 +1,23 @@
+version: 1
+slug: emory-healthcare-community
+name: Emory Healthcare Community Events
+integration_method: playwright
+defaults:
+  category: community
+  tags:
+  - community
+  - health
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://events.blackthorn.io/00D5e000002EtNZ
+  fetch:
+    render_js: true
+detail:
+  enabled: true
+  fetch:
+    render_js: true
+data_goals:
+- events
+- tickets

@@ -25,7 +25,10 @@ describe("security headers", () => {
     expect(keys.has("Permissions-Policy")).toBe(true);
     expect(keys.has("Cross-Origin-Opener-Policy")).toBe(true);
     expect(keys.has("Cross-Origin-Resource-Policy")).toBe(true);
-    expect(keys.has("Strict-Transport-Security")).toBe(true);
+    // HSTS is only included in production to avoid poisoning Chrome's
+    // HSTS cache for localhost during development
+    const isProd = process.env.NODE_ENV === "production";
+    expect(keys.has("Strict-Transport-Security")).toBe(isProd);
     expect(keys.has("Content-Security-Policy")).toBe(false);
   });
 

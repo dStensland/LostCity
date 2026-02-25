@@ -3,11 +3,22 @@ import { validationError, checkBodySize } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { ensureUserProfile } from "@/lib/user-utils";
 import { withAuth } from "@/lib/api-middleware";
+import { resolvePortalAttributionForWrite } from "@/lib/portal-attribution";
 import { logger } from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 
 const VALID_ENTITY_TYPES = ["venue", "event", "series", "festival"] as const;
 const VALID_VOTES = ["confirm", "deny"] as const;
+type EntityType = (typeof VALID_ENTITY_TYPES)[number];
+type VoteType = (typeof VALID_VOTES)[number];
+
+function isValidEntityType(value: string): value is EntityType {
+  return (VALID_ENTITY_TYPES as readonly string[]).includes(value);
+}
+
+function isValidVote(value: string): value is VoteType {
+  return (VALID_VOTES as readonly string[]).includes(value);
+}
 
 /**
  * POST /api/tags/vote
@@ -28,7 +39,7 @@ export const POST = withAuth(async (request, { user, serviceClient }) => {
     const { entity_type, entity_id, tag_slug, vote } = body;
 
     // Validate entity_type
-    if (!entity_type || !VALID_ENTITY_TYPES.includes(entity_type)) {
+    if (typeof entity_type !== "string" || !isValidEntityType(entity_type)) {
       return validationError("Invalid entity_type. Must be: venue, event, series, or festival");
     }
 
@@ -43,12 +54,21 @@ export const POST = withAuth(async (request, { user, serviceClient }) => {
     }
 
     // Validate vote
-    if (!vote || !VALID_VOTES.includes(vote)) {
+    if (typeof vote !== "string" || !isValidVote(vote)) {
       return validationError("Invalid vote. Must be: confirm or deny");
     }
 
     // Ensure user has a profile
     await ensureUserProfile(user, serviceClient);
+
+    // Resolve portal attribution
+    const attribution = await resolvePortalAttributionForWrite(request, {
+      endpoint: "/api/tags/vote",
+      body,
+      requireWhenHinted: true,
+    });
+    if (attribution.response) return attribution.response;
+    const portalId = attribution.portalId;
 
     // Look up tag definition by slug
     const { data: tagDef, error: tagError } = await serviceClient
@@ -83,6 +103,7 @@ export const POST = withAuth(async (request, { user, serviceClient }) => {
           user_id: user.id,
           vote,
           updated_at: new Date().toISOString(),
+          ...(portalId ? { portal_id: portalId } : {}),
         } as never,
         { onConflict: "entity_type,entity_id,tag_definition_id,user_id" }
       )
@@ -119,7 +140,7 @@ export const DELETE = withAuth(async (request, { user, serviceClient }) => {
     const tag_slug = searchParams.get("tag_slug");
 
     // Validate entity_type
-    if (!entity_type || !VALID_ENTITY_TYPES.includes(entity_type as any)) {
+    if (!entity_type || !isValidEntityType(entity_type)) {
       return validationError("Invalid entity_type");
     }
 
@@ -195,7 +216,7 @@ export async function GET(request: NextRequest) {
     const entity_id = searchParams.get("entity_id");
 
     // Validate entity_type
-    if (!entity_type || !VALID_ENTITY_TYPES.includes(entity_type as any)) {
+    if (!entity_type || !isValidEntityType(entity_type)) {
       return validationError("Invalid entity_type");
     }
 
@@ -245,7 +266,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Combine summary with user votes
-    const tagsWithVotes = ((tagSummary || []) as Array<any>).map((tag: any) => {
+    const tagsWithVotes = ((tagSummary || []) as Array<Record<string, unknown> & { tag_id: string }>).map((tag) => {
       const userVote = userVotes.find((v) => v.tag_definition_id === tag.tag_id);
       return {
         ...tag,

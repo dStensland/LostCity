@@ -1,0 +1,21 @@
+{
+  "venue_id": 1765,
+  "venue_slug": "monday-night-brewing---the-garage",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["beer-garden", "dog-friendly", "patio", "casual", "family-friendly", "craft-cocktails"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "https://www.canva.com/design/DAG67rT5KlY/N7Qzos1pf4zmjV1gjn6gcQ/view?utm_content=DAG67rT5KlY&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=h64c9fa590b",
+    "reservation_url": null,
+    "phone": "(404) 400-5068",
+    "instagram": "mondaynight",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

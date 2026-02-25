@@ -1,0 +1,32 @@
+{
+  "venue_id": 4879,
+  "venue_slug": "vn-pho-atlanta",
+  "meta": {
+    "og_image": "https://lh3.googleusercontent.com/sitesv/APaQ0STXjA5zbzMJI1JmvpoRzjoQ1Mqwsg9M0IWqm1BtzZh2iPQMV_Aq2S1qX-Z5cFFfweluQC8sZFLhODwSEQ25Ycs73oba9zfRxCInN_KxKrzz3sihlTakW2a6cfwS5s78efhBcRfuMegttqHK_EqfGNZYcU75GQnZBUwcWulrosPHG_gNyaZ4wUowgNY=w16383",
+    "meta_description": null,
+    "reservation_links": [],
+    "menu_links": [
+      "https://www.google.com/url?q=https%3A%2F%2Fwww.skiplinow.com%2Fshop%2F-M1DAWQVUIzYPraAjtNM&sa=D&sntz=1&usg=AOvVaw0WLio6paqgVAb_1MotB0GV",
+      "https://www.google.com/url?q=https%3A%2F%2Fwww.skiplinow.com%2Fshop%2F-M1DAWQVUIzYPraAjtNM&sa=D&sntz=1&usg=AOvVaw0WLio6paqgVAb_1MotB0GV"
+    ],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["casual", "fast-casual"],
+    "cuisine": ["vietnamese"],
+    "service_style": "quick_service",
+    "price_level": 1,
+    "menu_highlights": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": null,
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

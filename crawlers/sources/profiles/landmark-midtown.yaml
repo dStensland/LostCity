@@ -11,3 +11,8 @@ discovery:
   - https://www.landmarktheatres.com/atlanta/midtown-art-cinema
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- showtimes
+- tickets

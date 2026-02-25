@@ -1,0 +1,57 @@
+{
+  "venue_id": 4561,
+  "venue_slug": "close-company-bar",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Mole Old Fashioned",
+        "price": null,
+        "category": "cocktail"
+      },
+      {
+        "name": "Super Martini",
+        "price": null,
+        "category": "cocktail"
+      },
+      {
+        "name": "Wild Strawberry Daiquiri",
+        "price": null,
+        "category": "cocktail"
+      },
+      {
+        "name": "French Onion Pastry Pocket",
+        "price": null,
+        "category": "appetizer"
+      },
+      {
+        "name": "Low Country Kettle Chips",
+        "price": null,
+        "category": "appetizer"
+      }
+    ],
+    "dietary_options": [
+      "vegan-options",
+      "gluten-free-options",
+      "vegetarian-friendly"
+    ],
+    "price_level": 2,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

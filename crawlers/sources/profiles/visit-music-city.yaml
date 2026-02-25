@@ -10,3 +10,8 @@ discovery:
   - https://www.visitmusiccity.com/nashville-events
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- lineup
+- tickets

@@ -139,17 +139,13 @@ def determine_category_and_tags(title: str, description: str = "") -> tuple[str,
     else:
         category = "community"
 
-    # Most WRCDV events are free except fundraisers
-    is_free = True
+    # Only mark free when explicitly stated
+    is_free = False
     if any(word in text for word in ["free", "no cost", "no charge", "complimentary"]):
         is_free = True
         tags.append("free")
     elif any(word in text for word in ["ticket", "$", "donation", "gala", "fundraiser"]):
         is_free = False
-    else:
-        # Most support/education events are free
-        is_free = True
-        tags.append("free")
 
     # Add safety and empowerment tags
     if any(word in text for word in ["safety", "safety plan", "restraining order", "legal"]):
@@ -300,12 +296,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     title, "Women's Resource Center to End Domestic Violence", start_date
                 )
 
-                # Check if already exists
-                if find_event_by_hash(content_hash):
-                    events_updated += 1
-                    logger.debug(f"Event already exists: {title}")
-                    continue
-
                 # Create event record
                 event_record = {
                     "source_id": source_id,
@@ -333,6 +323,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "recurrence_rule": None,
                     "content_hash": content_hash,
                 }
+
+                existing = find_event_by_hash(content_hash)
+                if existing:
+                    smart_update_existing_event(existing, event_record)
+                    events_updated += 1
+                    logger.debug(f"Event updated: {title}")
+                    continue
 
                 try:
                     insert_event(event_record)

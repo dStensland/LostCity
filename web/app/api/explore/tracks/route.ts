@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { getLocalDateString } from "@/lib/formats";
+import { suppressVenueImagesIfFlagged } from "@/lib/image-quality-suppression";
 
 export const revalidate = 900; // 15 min
 
@@ -15,6 +16,9 @@ type TrackRow = {
   description: string | null;
   sort_order: number;
   is_active: boolean;
+  accent_color: string | null;
+  category: string | null;
+  group_name: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -192,7 +196,6 @@ export async function GET(request: NextRequest) {
     }
 
     // Build per-track activity aggregates
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const trackVenueNameMap = new Map<number, string>(); // venueId → name for featured event
     for (const td of trackData) {
       for (const tv of td.trackVenues) {
@@ -247,7 +250,7 @@ export async function GET(request: NextRequest) {
           editorial_blurb: tv.editorial_blurb,
           is_featured: tv.is_featured,
           upvote_count: tv.upvote_count,
-          venue: tv.venues,
+          venue: tv.venues ? suppressVenueImagesIfFlagged(tv.venues) : null,
           upcoming_event_count: tv.venues?.id ? (eventCountsByVenue.get(tv.venues.id) ?? 0) : 0,
         })),
       };

@@ -14,3 +14,9 @@ detail:
   enabled: true
   fetch:
     render_js: true
+data_goals:
+- events
+- images
+- specials
+- tickets
+- venue_hours

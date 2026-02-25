@@ -15,7 +15,7 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
-from utils import extract_images_from_page, extract_event_links, find_event_url
+from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +37,23 @@ VENUE_DATA = {
     "website": BASE_URL,
 }
 
+_INVALID_TITLE_PATTERNS = (
+    r"^(support|donate|tickets?|register|menu|home)$",
+    r"^(sponsors?|volunteer|exhibitor|vendors?)$",
+    r"^(monday|tuesday|wednesday|thursday|friday|saturday|sunday)$",
+    r"^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|"
+    r"january|february|march|april|june|july|august|september|october|november|december)$",
+    r"^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|"
+    r"january|february|march|april|may|june|july|august|september|october|november|december)\s+"
+    r"\d{1,2}(?:st|nd|rd|th)?(?:,?\s+\d{4})?$",
+    r"^\d{1,2}(?::\d{2})?\s*(am|pm)$",
+)
+
+WEEKDAY_PATTERN = re.compile(
+    r"^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)$",
+    re.IGNORECASE,
+)
+
 
 def parse_time(time_text: str) -> Optional[str]:
     """Parse time from '7:00 PM' format."""
@@ -50,6 +67,47 @@ def parse_time(time_text: str) -> Optional[str]:
             hour = 0
         return f"{hour:02d}:{minute}"
     return None
+
+
+def parse_time_range(time_range_text: str) -> tuple[Optional[str], Optional[str]]:
+    """Parse a time range line like '3:00 pm – Midnight'."""
+    text = " ".join((time_range_text or "").split())
+    if not text:
+        return None, None
+
+    parts = re.split(r"\s*[–-]\s*", text, maxsplit=1)
+    if len(parts) == 1:
+        return parse_time(parts[0]), None
+
+    start_raw, end_raw = parts[0].strip(), parts[1].strip().lower()
+    start_time = parse_time(start_raw)
+    if end_raw == "midnight":
+        end_time = "23:59"
+    elif end_raw == "noon":
+        end_time = "12:00"
+    else:
+        end_time = parse_time(parts[1])
+
+    return start_time, end_time
+
+
+def is_valid_event_title(value: str) -> bool:
+    text = " ".join((value or "").split()).strip()
+    if len(text) < 4 or len(text) > 100:
+        return False
+    lowered = text.lower()
+    if any(re.match(pattern, lowered, re.IGNORECASE) for pattern in _INVALID_TITLE_PATTERNS):
+        return False
+    if re.match(r"^[\W\d_]+$", text):
+        return False
+    if "sponsor" in lowered or "thanks to our" in lowered:
+        return False
+    # Skip long sentence-like fragments scraped from body copy.
+    if text.count(" ") > 10 and text.endswith("."):
+        return False
+    if text.lower().startswith(("event at ", "live music at ")):
+        return False
+    return True
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
@@ -77,9 +135,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
             # Extract images from page
             image_map = extract_images_from_page(page)
 
-            # Extract event links for specific URLs
-            event_links = extract_event_links(page, BASE_URL)
-
             # Scroll to load all content
             for _ in range(5):
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
@@ -88,6 +143,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
             # Get page text and parse line by line
             body_text = page.inner_text("body")
             lines = [l.strip() for l in body_text.split("\n") if l.strip()]
+            default_image_url = None
+            for key, url in image_map.items():
+                lowered = key.lower()
+                if "southern-fried gaming expo" in lowered or "sfge" in lowered:
+                    default_image_url = url
+                    break
 
             # Parse events - look for date patterns
             i = 0
@@ -107,34 +168,41 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 )
 
                 if date_match:
+                    if re.search(
+                        r"[–-]\s*(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|"
+                        r"January|February|March|April|May|June|July|August|September|October|November|December)\b",
+                        line,
+                        re.IGNORECASE,
+                    ):
+                        i += 1
+                        continue
+
                     month = date_match.group(1)
                     day = date_match.group(2)
                     year = date_match.group(3) if date_match.group(3) else str(datetime.now().year)
 
-                    # Look for title in surrounding lines
-                    title = None
-                    start_time = None
-
-                    for offset in [-2, -1, 1, 2, 3]:
+                    weekday_label = None
+                    for offset in [-1, -2]:
                         idx = i + offset
                         if 0 <= idx < len(lines):
-                            check_line = lines[idx]
-                            if re.match(r"(January|February|March)", check_line, re.IGNORECASE):
-                                continue
-                            if not start_time:
-                                time_result = parse_time(check_line)
-                                if time_result:
-                                    start_time = time_result
-                                    continue
-                            if not title and len(check_line) > 5:
-                                if not re.match(r"\d{1,2}[:/]", check_line):
-                                    if not re.match(r"(free|tickets|register|\$|more info)", check_line.lower()):
-                                        title = check_line
-                                        break
+                            maybe_weekday = lines[idx].strip()
+                            if WEEKDAY_PATTERN.match(maybe_weekday):
+                                weekday_label = maybe_weekday.title()
+                                break
 
-                    if not title:
-                        i += 1
-                        continue
+                    title = (
+                        f"Southern-Fried Gaming Expo - {weekday_label}"
+                        if weekday_label
+                        else "Southern-Fried Gaming Expo"
+                    )
+                    start_time = None
+                    end_time = None
+                    for offset in [1, 2]:
+                        idx = i + offset
+                        if 0 <= idx < len(lines):
+                            start_time, end_time = parse_time_range(lines[idx])
+                            if start_time:
+                                break
 
                     # Parse date
                     try:
@@ -151,23 +219,15 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     content_hash = generate_content_hash(title, "Southern-Fried Gaming Expo", start_date)
 
-
-                    # Get specific event URL
-
-
-                    event_url = find_event_url(title, event_links, EVENTS_URL)
-
-
-
                     event_record = {
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": "Event at Southern-Fried Gaming Expo",
+                        "description": "Daily pass window for Southern-Fried Gaming Expo.",
                         "start_date": start_date,
                         "start_time": start_time,
                         "end_date": None,
-                        "end_time": None,
+                        "end_time": end_time,
                         "is_all_day": False,
                         "category": "gaming",
                         "subcategory": None,
@@ -183,9 +243,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "price_max": None,
                         "price_note": None,
                         "is_free": False,
-                        "source_url": event_url,
-                        "ticket_url": event_url,
-                        "image_url": image_map.get(title),
+                        "source_url": EVENTS_URL,
+                        "ticket_url": EVENTS_URL,
+                        "image_url": default_image_url,
                         "raw_text": f"{title} - {start_date}",
                         "extraction_confidence": 0.80,
                         "is_recurring": False,

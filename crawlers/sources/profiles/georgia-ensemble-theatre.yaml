@@ -5,7 +5,6 @@ integration_method: html
 defaults:
   venue_name: Georgia Ensemble Theatre
   category: arts
-  subcategory: theatre
   tags:
   - theatre
   - performing-arts
@@ -16,3 +15,8 @@ discovery:
   - https://get.org/25-26-season/
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- showtimes
+- tickets

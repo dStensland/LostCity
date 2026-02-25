@@ -1,0 +1,209 @@
+{
+  "generated_at": "2026-02-18T02:09:12.118852+00:00",
+  "as_of": "2026-02-18",
+  "overall_status": "FAIL",
+  "counts": {
+    "PASS": 3,
+    "WARN": 4,
+    "FAIL": 4
+  },
+  "checks": [
+    {
+      "id": "duplicates.cross_source_visible",
+      "label": "Visible cross-source duplicate groups",
+      "value": 7,
+      "status": "FAIL",
+      "threshold": {
+        "warn_gt": 0,
+        "fail_gt": 5
+      },
+      "context": ""
+    },
+    {
+      "id": "duplicates.same_source_visible",
+      "label": "Visible same-source duplicate groups",
+      "value": 108,
+      "status": "FAIL",
+      "threshold": {
+        "warn_gt": 0,
+        "fail_gt": 25
+      },
+      "context": ""
+    },
+    {
+      "id": "closed.registry_leakage",
+      "label": "Visible events on registry-closed venues",
+      "value": 9,
+      "status": "FAIL",
+      "threshold": {
+        "warn_gt": 0,
+        "fail_gt": 0
+      },
+      "context": ""
+    },
+    {
+      "id": "closed.inactive_leakage",
+      "label": "Visible events on inactive venues",
+      "value": 141,
+      "status": "FAIL",
+      "threshold": {
+        "warn_gt": 25,
+        "fail_gt": 100
+      },
+      "context": ""
+    },
+    {
+      "id": "crawl.error_rate_24h",
+      "label": "24h crawl error rate %",
+      "value": 14.0,
+      "status": "WARN",
+      "threshold": {
+        "warn_gt": 8.0,
+        "fail_gt": 15.0
+      },
+      "context": ""
+    },
+    {
+      "id": "genres.future_coverage",
+      "label": "Future events with genres %",
+      "value": 47.2,
+      "status": "WARN",
+      "threshold": {
+        "warn_lt": 50.0,
+        "fail_lt": 40.0
+      },
+      "context": ""
+    },
+    {
+      "id": "specials.active_total",
+      "label": "Active specials total",
+      "value": 337,
+      "status": "PASS",
+      "threshold": {
+        "warn_lt": 300,
+        "fail_lt": 200
+      },
+      "context": ""
+    },
+    {
+      "id": "showtimes.plaza-theatre",
+      "label": "Plaza Theatre time coverage %",
+      "value": 75.0,
+      "status": "WARN",
+      "threshold": {
+        "warn_lt": 85.0,
+        "fail_lt": 70.0
+      },
+      "context": "45/60 with time"
+    },
+    {
+      "id": "showtimes.tara-theatre",
+      "label": "Tara Theatre time coverage %",
+      "value": 100.0,
+      "status": "PASS",
+      "threshold": {
+        "warn_lt": 90.0,
+        "fail_lt": 80.0
+      },
+      "context": "61/61 with time"
+    },
+    {
+      "id": "showtimes.landmark-midtown-art-cinema",
+      "label": "Landmark Midtown Art Cinema time coverage %",
+      "value": 81.2,
+      "status": "WARN",
+      "threshold": {
+        "warn_lt": 90.0,
+        "fail_lt": 80.0
+      },
+      "context": "13/16 with time"
+    },
+    {
+      "id": "showtimes.starlight-drive-in",
+      "label": "Starlight Drive-In Theatre time coverage %",
+      "value": 100.0,
+      "status": "PASS",
+      "threshold": {
+        "warn_lt": 90.0,
+        "fail_lt": 80.0
+      },
+      "context": "24/24 with time"
+    }
+  ],
+  "regression": {
+    "previous_date": "2026-02-17",
+    "available": true,
+    "metrics": [
+      {
+        "path": "counts.future_events_visible",
+        "label": "Visible future events",
+        "current": 17781,
+        "previous": 18409,
+        "delta": -628.0
+      },
+      {
+        "path": "duplicates.visible_future.same_source_duplicate_groups",
+        "label": "Visible same-source duplicate groups",
+        "current": 108,
+        "previous": 131,
+        "delta": -23.0
+      },
+      {
+        "path": "closed_venues.future_visible_events_on_inactive_venues",
+        "label": "Closed venue leakage (inactive)",
+        "current": 141,
+        "previous": 164,
+        "delta": -23.0
+      },
+      {
+        "path": "indie_showtimes.plaza-theatre.time_coverage_pct",
+        "label": "Plaza Theatre time coverage %",
+        "current": 75.0,
+        "previous": 78.8,
+        "delta": -3.8
+      },
+      {
+        "path": "genres.future_events_genres_pct",
+        "label": "Future genre coverage %",
+        "current": 47.2,
+        "previous": 46.9,
+        "delta": 0.3
+      },
+      {
+        "path": "duplicates.visible_future.cross_source_groups",
+        "label": "Visible cross-source duplicate groups",
+        "current": 7,
+        "previous": 7,
+        "delta": 0.0
+      },
+      {
+        "path": "closed_venues.future_visible_events_on_registry_closed_venues",
+        "label": "Closed venue leakage (registry)",
+        "current": 9,
+        "previous": 9,
+        "delta": 0.0
+      },
+      {
+        "path": "specials.active_total",
+        "label": "Active specials",
+        "current": 337,
+        "previous": 337,
+        "delta": 0.0
+      },
+      {
+        "path": "mobility.venues_with_walkable_neighbor_count",
+        "label": "Venues with walkable neighbors",
+        "current": 1274,
+        "previous": 1274,
+        "delta": 0.0
+      },
+      {
+        "path": "indie_showtimes.tara-theatre.time_coverage_pct",
+        "label": "Tara Theatre time coverage %",
+        "current": 100.0,
+        "previous": 100.0,
+        "delta": 0.0
+      }
+    ]
+  }
+}

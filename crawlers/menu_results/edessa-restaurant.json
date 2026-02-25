@@ -1,0 +1,56 @@
+{
+  "venue_id": 1474,
+  "venue_slug": "edessa-restaurant",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Kabob Festival (for 2)",
+        "price": "$74.95",
+        "category": "entree"
+      },
+      {
+        "name": "Iskender Kabob",
+        "price": "$23.95",
+        "category": "entree"
+      },
+      {
+        "name": "Edessa Appetizer Platter",
+        "price": "$16.95",
+        "category": "appetizer"
+      },
+      {
+        "name": "Kunafe",
+        "price": "$9.95",
+        "category": "dessert"
+      },
+      {
+        "name": "Cig Kofte (Vegan Meatballs)",
+        "price": "$12.95",
+        "category": "appetizer"
+      }
+    ],
+    "dietary_options": [
+      "vegetarian-friendly",
+      "vegan-options"
+    ],
+    "price_level": 2,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

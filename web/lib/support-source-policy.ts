@@ -1288,10 +1288,155 @@ export const SUPPORT_SOURCE_POLICY_ITEMS: SupportSourcePolicyItem[] = [
     focus: "Childbirth classes, support groups, diabetes education, and wellness programs",
     url: "https://events.nghs.com",
   },
+
+  // ── Additional Life Essentials orgs ──
+  {
+    id: "united-way-atl",
+    name: "United Way of Greater Atlanta",
+    track: "financial_assistance",
+    focus: "211 helpline, financial stability programs, and emergency assistance referrals",
+    url: "https://www.unitedwayatlanta.org/",
+  },
+  {
+    id: "atlanta-habitat-humanity",
+    name: "Atlanta Habitat for Humanity",
+    track: "housing_homelessness",
+    focus: "Affordable homeownership, neighborhood revitalization, and repair programs",
+    url: "https://atlantahabitat.org/",
+  },
+  {
+    id: "atlanta-workforce-dev-agency",
+    name: "Atlanta Workforce Development Agency",
+    track: "employment_workforce",
+    focus: "Job training, adult education, career development, and employer connections",
+    url: "https://www.atlantaga.gov/government/departments/workforce-development",
+  },
+  {
+    id: "ga-legal-services",
+    name: "Georgia Legal Services Program",
+    track: "legal_aid",
+    focus: "Free legal aid for low-income Georgians — housing, benefits, family law",
+    url: "https://www.glsp.org/",
+  },
+
+  // ── Additional Recovery & Crisis orgs ──
+  {
+    id: "ga-council-substance-abuse",
+    name: "Georgia Council on Substance Abuse",
+    track: "substance_recovery",
+    focus: "Recovery advocacy, support meetings, and statewide resource navigation",
+    url: "https://gasubstanceabuse.org/",
+  },
+  {
+    id: "partnership-dv",
+    name: "Partnership Against Domestic Violence",
+    track: "crisis_safety",
+    focus: "Shelter, legal advocacy, crisis counseling, and safety planning",
+    url: "https://padv.org/",
+  },
+
+  // ── Additional Family & Children orgs ──
+  {
+    id: "march-of-dimes-ga",
+    name: "March of Dimes Georgia",
+    track: "pediatric_health",
+    focus: "March for Babies events, NICU family support, and maternal health advocacy",
+    url: "https://www.marchofdimes.org/",
+  },
+  {
+    id: "camp-sunshine",
+    name: "Camp Sunshine",
+    track: "pediatric_family",
+    focus: "Year-round support programs for children with cancer and their families",
+    url: "https://www.mycampsunshine.com/",
+  },
+
+  // ── Additional Specialized Care orgs ──
+  {
+    id: "alzheimers-assoc-ga",
+    name: "Alzheimer's Association Georgia",
+    track: "neurological",
+    focus: "Caregiver support groups, education programs, Walk to End Alzheimer's events",
+    url: "https://www.alz.org/georgia",
+  },
+  {
+    id: "american-heart-assoc-atl",
+    name: "American Heart Association Atlanta",
+    track: "chronic_disease",
+    focus: "Heart Walk, CPR training, blood pressure screening events, and heart health education",
+    url: "https://www.heart.org/",
+  },
+  {
+    id: "american-diabetes-assoc-ga",
+    name: "American Diabetes Association Georgia",
+    track: "chronic_disease",
+    focus: "Diabetes awareness walks, education programs, and community health screenings",
+    url: "https://diabetes.org/",
+  },
+  {
+    id: "kidney-foundation-ga",
+    name: "National Kidney Foundation of Georgia",
+    track: "chronic_disease",
+    focus: "Kidney screening events, patient education, and transplant family support",
+    url: "https://www.kidney.org/",
+  },
+
+  // ── Additional Immigrant/Refugee Support ──
+  {
+    id: "lat-am-assoc-atl",
+    name: "Latin American Association",
+    track: "immigrant_refugee",
+    focus: "Health fairs, legal clinics, ESL classes, and family support for Latino communities",
+    url: "https://thelaa.org/",
+  },
 ];
 
 export function getSourcesByTrack(track: SupportTrackKey): SupportSourcePolicyItem[] {
   return SUPPORT_SOURCE_POLICY_ITEMS.filter((item) => item.track === track);
+}
+
+export function getSupportPolicyCounts(): {
+  totalOrganizations: number;
+  totalTracks: number;
+  trackCounts: Record<SupportTrackKey, number>;
+} {
+  const trackCounts = {} as Record<SupportTrackKey, number>;
+  for (const item of SUPPORT_SOURCE_POLICY_ITEMS) {
+    trackCounts[item.track] = (trackCounts[item.track] || 0) + 1;
+  }
+  return {
+    totalOrganizations: SUPPORT_SOURCE_POLICY_ITEMS.length,
+    totalTracks: Object.keys(trackCounts).length,
+    trackCounts,
+  };
+}
+
+/** High-profile organizations suitable for a "Trusted Partners" rail display */
+export function getTrustedPartnerOrgs(limit = 12): SupportSourcePolicyItem[] {
+  const priorityIds = [
+    "cdc",
+    "ymca-atlanta",
+    "atlanta-community-food-bank",
+    "nami-georgia",
+    "cancer-support-community-atlanta",
+    "planned-parenthood-se",
+    "united-way-atlanta",
+    "hands-on-atlanta",
+    "choa-community-events",
+    "va-atlanta",
+    "grady-health",
+    "shepherd-center",
+    "winship-cancer-institute",
+    "mercy-care",
+  ];
+  const byId = new Map(SUPPORT_SOURCE_POLICY_ITEMS.map((item) => [item.id, item]));
+  const result: SupportSourcePolicyItem[] = [];
+  for (const id of priorityIds) {
+    const item = byId.get(id);
+    if (item) result.push(item);
+    if (result.length >= limit) break;
+  }
+  return result;
 }
 
 const SUPPORT_POLICY_ALIASES: Record<string, string[]> = {
@@ -1463,7 +1608,7 @@ const SUPPORT_POLICY_ALIASES: Record<string, string[]> = {
   "aids-walk-atlanta": ["aids walk atlanta", "aids walk"],
   // ── hospital_community ──
   "piedmont-healthcare": ["piedmont healthcare"],
-  "piedmonthealthcare-events": ["piedmont healthcare events"],
+  "piedmonthealthcare-events": ["piedmont healthcare events", "piedmont healthcare nc"],
   "piedmont-classes": ["piedmont classes"],
   "piedmont-heart-conferences": ["piedmont heart conferences"],
   "piedmont-womens-heart": ["piedmont womens heart", "piedmont women's heart"],
@@ -1472,11 +1617,29 @@ const SUPPORT_POLICY_ALIASES: Record<string, string[]> = {
   "piedmont-foundation": ["piedmont foundation events", "piedmont foundation"],
   "piedmont-auxiliary": ["piedmont auxiliary", "piedmont hospital auxiliary"],
   "piedmont-athens": ["piedmont athens spiritual care"],
-  "piedmont-cme": ["piedmont cme", "piedmont continuing education"],
+  "piedmont-cme": [
+    "piedmont cme",
+    "piedmont continuing education",
+    "piedmont healthcare cme",
+  ],
   "wellstar-community-events": ["wellstar health system", "wellstar community", "wellstar"],
   "northside-hospital-community": ["northside hospital community", "northside hospital classes"],
   "adventhealth-georgia": ["adventhealth georgia", "adventhealth gordon"],
   "nghs-community-events": ["northeast georgia health system", "nghs", "ngmc"],
+  // ── New org aliases ──
+  "united-way-atl": ["united way of greater atlanta", "united way atl", "211 atlanta"],
+  "atlanta-habitat-humanity": ["atlanta habitat for humanity", "habitat for humanity atlanta"],
+  "atlanta-workforce-dev-agency": ["atlanta workforce development", "awda"],
+  "ga-legal-services": ["georgia legal services program", "glsp"],
+  "ga-council-substance-abuse": ["georgia council on substance abuse", "gcsa"],
+  "partnership-dv": ["partnership against domestic violence", "padv atlanta"],
+  "march-of-dimes-ga": ["march of dimes georgia"],
+  "camp-sunshine": ["camp sunshine atlanta", "camp sunshine georgia"],
+  "alzheimers-assoc-ga": ["alzheimers association georgia", "alz georgia"],
+  "american-heart-assoc-atl": ["american heart association atlanta", "aha atlanta"],
+  "american-diabetes-assoc-ga": ["american diabetes association georgia"],
+  "kidney-foundation-ga": ["national kidney foundation georgia", "nkf ga"],
+  "lat-am-assoc-atl": ["latin american association atlanta", "thelaa"],
 };
 
 function normalizePolicyText(value: string | null | undefined): string {
@@ -1495,6 +1658,31 @@ function getMatchTerms(item: SupportSourcePolicyItem): string[] {
     .filter(Boolean);
 }
 
+function findBestPolicyMatch(value: string): SupportSourcePolicyItem | null {
+  let best: { item: SupportSourcePolicyItem; score: number; termLength: number } | null = null;
+
+  for (const item of SUPPORT_SOURCE_POLICY_ITEMS) {
+    const terms = getMatchTerms(item);
+    for (const term of terms) {
+      const isExact = value === term;
+      const isContains = !isExact && value.includes(term);
+      if (!isExact && !isContains) continue;
+
+      const score = isExact ? 2 : 1;
+      const termLength = term.length;
+      if (
+        !best ||
+        score > best.score ||
+        (score === best.score && termLength > best.termLength)
+      ) {
+        best = { item, score, termLength };
+      }
+    }
+  }
+
+  return best?.item ?? null;
+}
+
 export function resolveSupportSourcePolicy(args: {
   slug?: string | null;
   name?: string | null;
@@ -1503,18 +1691,14 @@ export function resolveSupportSourcePolicy(args: {
   const name = normalizePolicyText(args.name);
   if (!slug && !name) return null;
 
-  for (const item of SUPPORT_SOURCE_POLICY_ITEMS) {
-    const terms = getMatchTerms(item);
-    if (slug && terms.some((term) => slug === term || slug.includes(term))) {
-      return item;
-    }
+  if (slug) {
+    const slugMatch = findBestPolicyMatch(slug);
+    if (slugMatch) return slugMatch;
   }
 
-  for (const item of SUPPORT_SOURCE_POLICY_ITEMS) {
-    const terms = getMatchTerms(item);
-    if (name && terms.some((term) => name === term || name.includes(term))) {
-      return item;
-    }
+  if (name) {
+    const nameMatch = findBestPolicyMatch(name);
+    if (nameMatch) return nameMatch;
   }
 
   return null;

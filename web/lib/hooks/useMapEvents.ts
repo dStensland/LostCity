@@ -4,6 +4,7 @@ import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import type { EventWithLocation } from "@/lib/search";
+import { FIND_TYPE_FILTER_KEYS } from "@/lib/find-filter-schema";
 
 /**
  * Map bounds (lat/lng bounding box)
@@ -32,6 +33,8 @@ interface UseMapEventsOptions {
   enabled?: boolean;
   // Initial bounds (optional, will use city default if not provided)
   initialBounds?: MapBounds;
+  /** Smart date default to inject when no explicit date is in the URL */
+  dateOverride?: string;
 }
 
 // Default Atlanta bounds (metropolitan area)
@@ -42,6 +45,12 @@ const ATLANTA_BOUNDS: MapBounds = {
   west: -84.7,
 };
 
+const MAP_EVENT_FILTER_KEYS = [
+  ...FIND_TYPE_FILTER_KEYS.events,
+  "portal_id",
+  "portal_exclusive",
+] as const;
+
 /**
  * Hook for fetching events for map display
  *
@@ -51,7 +60,7 @@ const ATLANTA_BOUNDS: MapBounds = {
  * - React Query caching for efficient data reuse
  */
 export function useMapEvents(options: UseMapEventsOptions = {}) {
-  const { portalId, portalExclusive, enabled = true, initialBounds } = options;
+  const { portalId, portalExclusive, enabled = true, initialBounds, dateOverride } = options;
   const searchParams = useSearchParams();
 
   // Track current bounds (debounced)
@@ -61,22 +70,16 @@ export function useMapEvents(options: UseMapEventsOptions = {}) {
   // Create stable query key from filter params
   const filtersKey = useMemo(() => {
     const params = new URLSearchParams();
-    const filterKeys = [
-      "search",
-      "categories",
-      "subcategories",
-      "tags",
-      "vibes",
-      "neighborhoods",
-      "price",
-      "date",
-    ];
-    filterKeys.forEach((key) => {
+    MAP_EVENT_FILTER_KEYS.forEach((key) => {
       const value = searchParams.get(key);
       if (value) params.set(key, value);
     });
+    // Inject smart date default when no explicit date in URL
+    if (!params.get("date") && dateOverride) {
+      params.set("date", dateOverride);
+    }
     return params.toString();
-  }, [searchParams]);
+  }, [searchParams, dateOverride]);
 
   // Create bounds key for query (rounded to reduce unnecessary refetches)
   const boundsKey = useMemo(() => {
@@ -88,6 +91,11 @@ export function useMapEvents(options: UseMapEventsOptions = {}) {
   const buildApiParams = useMemo(() => {
     const params = new URLSearchParams(searchParams.toString());
     params.delete("view"); // Remove view param
+
+    // Inject smart date default when no explicit date in URL
+    if (!params.get("date") && dateOverride) {
+      params.set("date", dateOverride);
+    }
 
     // Add portal params
     if (portalId && portalId !== "default") {
@@ -109,7 +117,7 @@ export function useMapEvents(options: UseMapEventsOptions = {}) {
     params.set("useCursor", "true"); // Use cursor-based to avoid COUNT(*)
 
     return params.toString();
-  }, [searchParams, portalId, portalExclusive, bounds]);
+  }, [searchParams, portalId, portalExclusive, bounds, dateOverride]);
 
   const query = useQuery<EventsResponse, Error>({
     queryKey: ["events", "map", filtersKey, boundsKey, portalId, portalExclusive],

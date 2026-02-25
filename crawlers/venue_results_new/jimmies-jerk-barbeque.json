@@ -1,0 +1,89 @@
+{
+  "venue_id": 4806,
+  "venue_slug": "jimmies-jerk-barbeque",
+  "meta": {
+    "og_image": null,
+    "meta_description": null,
+    "reservation_links": [
+      "https://www.jamaicanjerk.biz/reservations"
+    ],
+    "menu_links": [
+      "https://www.jamaicanjerk.biz/menus",
+      "https://www.jamaicanjerk.biz/menu"
+    ],
+    "instagram": "jamaicanjerkbiz",
+    "facebook_url": "https://www.facebook.com/Jamaican-Jerk-Biz-639651416673170",
+    "phone": "(404) 963-5662"
+  },
+  "extracted": {
+    "hours": {
+      "mon": null,
+      "tue": {"open": "12:00", "close": "22:00"},
+      "wed": {"open": "12:00", "close": "22:00"},
+      "thu": {"open": "12:00", "close": "22:00"},
+      "fri": {"open": "12:00", "close": "23:00"},
+      "sat": {"open": "12:00", "close": "23:00"},
+      "sun": {"open": "12:00", "close": "18:00"}
+    },
+    "vibes": ["casual", "lively", "family-friendly"],
+    "cuisine": ["caribbean", "bbq"],
+    "service_style": "casual_dine_in",
+    "price_level": 2,
+    "menu_highlights": [
+      {"name": "Signature Jerk Chicken", "price": "$16.00", "category": "entree"},
+      {"name": "Oxtails", "price": "$28.00", "category": "entree"},
+      {"name": "Curry Goat", "price": "$18.00", "category": "entree"},
+      {"name": "Jerk Salmon", "price": "$25.00", "category": "entree"},
+      {"name": "Jerk Chicken Egg Roll / Empanadas", "price": "$16.00", "category": "appetizer"}
+    ],
+    "menu_url": "https://www.jamaicanjerk.biz/menus",
+    "reservation_url": "https://www.jamaicanjerk.biz/reservations",
+    "phone": "(404) 963-5662",
+    "instagram": "jamaicanjerkbiz",
+    "dietary_options": ["vegetarian-friendly"],
+    "specials": [
+      {
+        "day_of_week": 1,
+        "title": "Lunch Special",
+        "description": "Stew Chicken or Curry Chicken with rice & peas and cabbage for $10.98",
+        "special_type": "daily_special",
+        "start_time": "11:00",
+        "end_time": "13:00"
+      },
+      {
+        "day_of_week": 2,
+        "title": "Lunch Special",
+        "description": "Stew Chicken or Curry Chicken with rice & peas and cabbage for $10.98",
+        "special_type": "daily_special",
+        "start_time": "11:00",
+        "end_time": "13:00"
+      },
+      {
+        "day_of_week": 3,
+        "title": "Lunch Special",
+        "description": "Stew Chicken or Curry Chicken with rice & peas and cabbage for $10.98",
+        "special_type": "daily_special",
+        "start_time": "11:00",
+        "end_time": "13:00"
+      },
+      {
+        "day_of_week": 4,
+        "title": "Lunch Special",
+        "description": "Stew Chicken or Curry Chicken with rice & peas and cabbage for $10.98",
+        "special_type": "daily_special",
+        "start_time": "11:00",
+        "end_time": "13:00"
+      },
+      {
+        "day_of_week": 5,
+        "title": "Lunch Special",
+        "description": "Stew Chicken or Curry Chicken with rice & peas and cabbage for $10.98",
+        "special_type": "daily_special",
+        "start_time": "11:00",
+        "end_time": "13:00"
+      }
+    ],
+    "genres": [],
+    "parking": []
+  }
+}

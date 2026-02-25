@@ -4,9 +4,13 @@ name: Atlanta Recurring Social Events
 integration_method: llm_crawler
 defaults: {}
 discovery:
-  enabled: false  # Aggregator site (badslava.com) — violates original-source-only rule — 2026-02-06 audit
+  enabled: false
   type: html
   urls:
   - https://badslava.com/
 detail:
   enabled: false
+data_goals:
+- events
+- images
+- tickets

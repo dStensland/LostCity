@@ -1,0 +1,28 @@
+{
+  "venue_id": 1504,
+  "venue_slug": "skinny-dennis",
+  "meta": {
+    "og_image": "https://skinnydennisnashville.com/wp-content/uploads/2025/01/skinnydennis_boot_willies-min.png",
+    "meta_description": null,
+    "reservation_links": ["https://skinnydennisnashville.com/vip-reservations/"],
+    "menu_links": [],
+    "instagram": "skinnydennis_nash",
+    "facebook_url": "https://www.facebook.com/people",
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["divey", "live-music", "lively", "casual", "neighborhood-bar"],
+    "cuisine": [],
+    "service_style": "full_service",
+    "price_level": null,
+    "menu_highlights": null,
+    "reservation_url": "https://skinnydennisnashville.com/vip-reservations/",
+    "phone": null,
+    "instagram": "skinnydennis_nash",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

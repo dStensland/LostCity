@@ -45,7 +45,7 @@ export const POST = withAuth(async (request: NextRequest, { user, serviceClient 
         .maybeSingle(),
       serviceClient
         .from("venues")
-        .select("id, city")
+        .select("id, city, active")
         .eq("id", venueId)
         .maybeSingle(),
       serviceClient
@@ -70,7 +70,10 @@ export const POST = withAuth(async (request: NextRequest, { user, serviceClient 
 
     // Portal-venue scoping: verify venue belongs to same portal city
     const catRow = category as unknown as { id: string; portal_id: string };
-    const venueRow = venue as unknown as { id: number; city: string | null };
+    const venueRow = venue as unknown as { id: number; city: string | null; active: boolean | null };
+    if (venueRow.active === false) {
+      return NextResponse.json({ error: "Venue is inactive and cannot be nominated" }, { status: 400 });
+    }
     if (catRow.portal_id) {
       const { data: portal } = await serviceClient
         .from("portals")

@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import FeedShell from "@/components/feed/FeedShell";
 import CuratedContent from "@/components/feed/CuratedContent";
 import type { Portal } from "@/lib/portal-context";
@@ -15,10 +16,16 @@ import {
   hospitalBodyFont,
   hospitalDisplayFont,
   isEmoryDemoPortal,
+  HOSPITAL_CARD_IMAGE_BY_SLUG,
+  HOSPITAL_CARD_FALLBACK_IMAGE,
+  getEventFallbackImage,
 } from "@/lib/hospital-art";
 import HospitalTrackedLink from "@/app/[portal]/_components/hospital/HospitalTrackedLink";
+import ContinueToHospitalBanner from "@/app/[portal]/_components/hospital/ContinueToHospitalBanner";
 import type { CSSProperties } from "react";
 import { getEmoryFederationShowcase } from "@/lib/emory-federation-showcase";
+import { getSupportPolicyCounts } from "@/lib/support-source-policy";
+import { Suspense } from "react";
 
 type FeedTab = "curated" | "explore" | "foryou";
 
@@ -38,19 +45,6 @@ type HospitalCardModel = {
 };
 
 const HERO_IMAGE = "https://images.unsplash.com/photo-1505751172876-fa1923c5c528?auto=format&fit=crop&w=1400&q=80";
-const HOSPITAL_CARD_IMAGE_BY_SLUG: Record<string, string> = {
-  "emory-university-hospital": "https://images.unsplash.com/photo-1576765608535-5f04d1e3f289?auto=format&fit=crop&w=1200&q=80",
-  "emory-saint-josephs-hospital": "https://images.unsplash.com/photo-1586773860418-d37222d8fce3?auto=format&fit=crop&w=1200&q=80",
-  "emory-johns-creek-hospital": "https://images.unsplash.com/photo-1551076805-e1869033e561?auto=format&fit=crop&w=1200&q=80",
-  "emory-university-hospital-midtown": "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=1200&q=80",
-};
-const HOSPITAL_CARD_FALLBACK_IMAGE = "https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=1200&q=80";
-const COMMUNITY_FALLBACK_IMAGE = "https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=900&q=80";
-const COMMUNITY_FALLBACK_IMAGES = [
-  "https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=900&q=80",
-  "https://images.unsplash.com/photo-1490645935967-10de6ba17061?auto=format&fit=crop&w=900&q=80",
-  "https://images.unsplash.com/photo-1515169067868-5387ec356754?auto=format&fit=crop&w=900&q=80",
-];
 
 function appendQueryParams(href: string, entries: Record<string, string>): string {
   const [path, query = ""] = href.split("?");
@@ -139,7 +133,9 @@ export default async function HospitalPortalExperience({
     mode,
   });
 
-  const communityHref = `/${portal.slug}?view=community`;
+  const supportCounts = getSupportPolicyCounts();
+
+  const communityHref = `/${portal.slug}/community-hub`;
   const directoryHref = `/${portal.slug}/hospitals`;
 
   const emergencyHref = primaryHospital?.emergency_phone
@@ -153,79 +149,104 @@ export default async function HospitalPortalExperience({
   const billingHref = resourceHref(primaryHospital, directoryHref, ["billing_url", "insurance_url", "financial_help_url"]);
   const languageHref = resourceHref(primaryHospital, directoryHref, ["language_support_url", "accessibility_url", "interpreter_url"]);
 
+  const foodSupportOrgCount = supportCounts.trackCounts.food_support || 0;
+
   const categoryCards = [
     {
       id: "support-groups",
-      label: "Support groups and orgs",
-      count: showcase.counts.organizations,
+      label: "Community organizations",
+      count: supportCounts.totalOrganizations,
+      countLabel: `${supportCounts.totalOrganizations}+ organizations`,
       href: appendQueryParams(communityHref, {
         community_hub_tab: "organizations",
         community_hub_filter: "community_support",
         community_hub_view: "list",
       }),
       detail: "Peer support, caregiver circles, and neighborhood partners",
+      accent: "#143b83",
+      accentBg: "#e8edf6",
+      emoji: "\u{1F91D}",
     },
     {
       id: "health-events",
       label: "Health events this week",
       count: showcase.counts.events,
+      countLabel: null,
       href: appendQueryParams(communityHref, {
         community_hub_tab: "events",
         community_hub_filter: "all",
         community_hub_view: "list",
       }),
       detail: "Screenings, classes, and practical wellness programs",
+      accent: "#0e7c5f",
+      accentBg: "#e6f5f0",
+      emoji: "\u{1F4C5}",
     },
     {
       id: "fitness",
       label: "Fitness and movement",
       count: Math.max(1, Math.floor(showcase.counts.events * 0.28)),
+      countLabel: null,
       href: appendQueryParams(communityHref, {
         community_hub_tab: "events",
         community_hub_filter: "fitness",
         community_hub_view: "list",
       }),
       detail: "Walks, mobility sessions, and movement meetups",
+      accent: "#b45309",
+      accentBg: "#fef3e2",
+      emoji: "\u{1F3C3}",
     },
     {
       id: "healthy-eating",
       label: "Healthy eating resources",
-      count: Math.max(1, Math.floor(showcase.counts.venues * 0.45)),
+      count: foodSupportOrgCount,
+      countLabel: `${foodSupportOrgCount} organizations`,
       href: appendQueryParams(communityHref, {
         community_hub_tab: "venues",
         community_hub_filter: "healthy_eating",
         community_hub_view: "list",
       }),
       detail: "Nutrition-friendly programs, venues, and local support",
+      accent: "#15803d",
+      accentBg: "#e8f5e9",
+      emoji: "\u{1F96C}",
     },
   ] as const;
 
   const supportCards = [
-    { id: "emergency", label: "Emergency support", detail: "Immediate phone support", cta: "Call now", href: emergencyHref, external: emergencyHref.startsWith("http") },
-    { id: "main-line", label: "Main hospital line", detail: "Call the front desk directly", cta: "Call desk", href: mainLineHref, external: false },
-    { id: "wayfinding", label: "Wayfinding and parking", detail: "Navigate entrances and parking", cta: "Open map", href: wayfindingHref, external: /^https?:\/\//i.test(wayfindingHref) },
-    { id: "care", label: "Care and appointments", detail: "Manage visits and appointments", cta: "Manage care", href: careHref, external: /^https?:\/\//i.test(careHref) },
-    { id: "billing", label: "Billing and insurance", detail: "Financial and coverage help", cta: "Get help", href: billingHref, external: /^https?:\/\//i.test(billingHref) },
-    { id: "language", label: "Language and accessibility", detail: "Interpreter and accessibility support", cta: "Language help", href: languageHref, external: /^https?:\/\//i.test(languageHref) },
+    { id: "emergency", label: "Emergency support", detail: "Immediate phone support", cta: "Call now", href: emergencyHref, external: emergencyHref.startsWith("http"), emoji: "\u{1F6A8}", accentColor: "#dc2626" },
+    { id: "main-line", label: "Main hospital line", detail: "Call the front desk directly", cta: "Call desk", href: mainLineHref, external: false, emoji: "\u{1F4DE}", accentColor: "#143b83" },
+    { id: "wayfinding", label: "Wayfinding and parking", detail: "Navigate entrances and parking", cta: "Open map", href: wayfindingHref, external: /^https?:\/\//i.test(wayfindingHref), emoji: "\u{1F5FA}\u{FE0F}", accentColor: "#0e7c5f" },
+    { id: "care", label: "Care and appointments", detail: "Manage visits and appointments", cta: "Manage care", href: careHref, external: /^https?:\/\//i.test(careHref), emoji: "\u{1F4CB}", accentColor: "#7c3aed" },
+    { id: "billing", label: "Billing and insurance", detail: "Financial and coverage help", cta: "Get help", href: billingHref, external: /^https?:\/\//i.test(billingHref), emoji: "\u{1F4B3}", accentColor: "#b45309" },
+    { id: "language", label: "Language and accessibility", detail: "Interpreter and accessibility support", cta: "Language help", href: languageHref, external: /^https?:\/\//i.test(languageHref), emoji: "\u{1F310}", accentColor: "#0284c7" },
   ] as const;
 
   return (
     <>
       <style>{EMORY_THEME_CSS}</style>
 
-      <div className={`${hospitalBodyFont.className} ${EMORY_THEME_SCOPE_CLASS} py-6 space-y-5`}>
-        <section className="emory-panel p-4 sm:p-5">
-          <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-4">
-            <div>
-              <p className="emory-kicker">Your Hospital Network</p>
-              <h1 className={`mt-2 text-[clamp(2.6rem,4.8vw,3.8rem)] leading-[0.93] text-[var(--cream)] ${hospitalDisplayFont.className}`}>
-                Everything you need, all in one place.
+      <div className={`${hospitalBodyFont.className} ${EMORY_THEME_SCOPE_CLASS} py-6 pb-20 lg:pb-6 space-y-6`}>
+        {/* Continue to Hospital Banner (Feature 7) */}
+        <Suspense fallback={null}>
+          <ContinueToHospitalBanner portalSlug={portal.slug} portalId={portal.id} />
+        </Suspense>
+
+        {/* 1. Hero */}
+        <section className="relative overflow-hidden rounded-[20px] bg-gradient-to-br from-[#002f6c] via-[#003a7c] to-[#0b4a9e]">
+          <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M0 30h60M30 0v60\' stroke=\'%23fff\' stroke-width=\'.5\' fill=\'none\'/%3E%3C/svg%3E")', backgroundSize: '60px 60px' }} />
+          <div className="relative grid grid-cols-1 lg:grid-cols-[1fr_0.85fr]">
+            <div className="p-6 sm:p-8 lg:p-10 flex flex-col justify-center">
+              <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[#8ed585]">Your Hospital Network</p>
+              <h1 className={`mt-3 text-[clamp(1.75rem,3.8vw,2.8rem)] leading-[1.05] text-white ${hospitalDisplayFont.className}`}>
+                Everything you need,<br />all in one place.
               </h1>
-              <p className="mt-3 max-w-[52ch] text-sm sm:text-base text-[var(--muted)]">
-                Find your hospital, explore nearby options, and connect with community health resources.
+              <p className="mt-3 max-w-[44ch] text-[15px] leading-relaxed text-white/75">
+                Find your hospital, explore nearby options, and connect with community health resources across Atlanta.
               </p>
 
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="mt-6 flex flex-wrap gap-2.5">
                 <HospitalTrackedLink
                   href="#choose-hospital"
                   tracking={{
@@ -238,7 +259,7 @@ export default async function HospitalPortalExperience({
                     targetId: "find-nearby",
                     targetLabel: "Find what is nearby",
                   }}
-                  className="emory-primary-btn inline-flex items-center"
+                  className="inline-flex items-center rounded-lg bg-[#8ed585] px-5 py-2.5 text-[14px] font-bold text-[#002f6c] hover:bg-[#7fcf75] transition-colors shadow-lg shadow-[#8ed585]/20"
                 >
                   Explore Nearby
                 </HospitalTrackedLink>
@@ -254,7 +275,7 @@ export default async function HospitalPortalExperience({
                     targetLabel: "Manage My Care",
                     targetUrl: directoryHref,
                   }}
-                  className="emory-secondary-btn inline-flex items-center"
+                  className="inline-flex items-center rounded-lg border border-white/30 bg-white/10 px-5 py-2.5 text-[14px] font-semibold text-white hover:bg-white/20 transition-colors backdrop-blur-sm"
                 >
                   Manage My Care
                 </HospitalTrackedLink>
@@ -270,85 +291,51 @@ export default async function HospitalPortalExperience({
                     targetLabel: "Community Guide",
                     targetUrl: communityHref,
                   }}
-                  className="emory-secondary-btn inline-flex items-center"
+                  className="inline-flex items-center rounded-lg border border-white/30 bg-white/10 px-5 py-2.5 text-[14px] font-semibold text-white hover:bg-white/20 transition-colors backdrop-blur-sm"
                 >
                   Community Health
                 </HospitalTrackedLink>
               </div>
 
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                <span className="emory-chip">{showcase.counts.events} health events this week</span>
-                <span className="emory-chip">{showcase.counts.organizations} support groups and orgs</span>
-                <span className="emory-chip">{showcase.counts.venues} nearby options</span>
+              <div className="mt-5 flex flex-wrap gap-2">
+                <span className="rounded-full bg-white/10 border border-white/20 px-3 py-1 text-[11.5px] font-bold uppercase tracking-[0.03em] text-white/90">{showcase.counts.events} health events this week</span>
+                <span className="rounded-full bg-white/10 border border-white/20 px-3 py-1 text-[11.5px] font-bold uppercase tracking-[0.03em] text-white/90">{supportCounts.totalOrganizations}+ organizations</span>
               </div>
             </div>
 
-            <div
-              className="emory-photo-hero min-h-[240px] sm:min-h-[290px]"
-              style={{ "--hero-image": `url("${HERO_IMAGE}")` } as CSSProperties}
-            >
-                  <div className="absolute inset-x-2 bottom-2 z-[2] rounded-md bg-[#002f6c]/88 px-2.5 py-2 text-white text-[11px] leading-tight">
-                <div className="flex items-center justify-between gap-2">
-                  <strong>Today at {primaryHospital?.name || "Emory Healthcare"}</strong>
-                  <span className="text-white/90">Care, directions, and local support in one place.</span>
-                </div>
+            <div className="relative hidden lg:block">
+              <img
+                src={HERO_IMAGE}
+                alt="Emory Healthcare"
+                className="h-full w-full object-cover min-h-[340px]"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-[#002f6c] via-[#002f6c]/40 to-transparent" />
+              <div className="absolute inset-x-4 bottom-4 z-[2] rounded-lg bg-black/50 px-3.5 py-2.5 text-white text-[13px] leading-tight backdrop-blur-md">
+                <strong>Today at {primaryHospital?.name || "Emory Healthcare"}</strong>
+                <span className="text-white/80 ml-2">Care, directions, and local support in one place.</span>
               </div>
             </div>
           </div>
         </section>
 
-        <section className="emory-panel p-4 sm:p-5">
-          <p className="emory-kicker">Quick support</p>
-          <h2 className={`mt-1 text-[clamp(1.8rem,3.2vw,2.5rem)] leading-[0.97] text-[var(--cream)] ${hospitalDisplayFont.className}`}>
-            Help when you need it
-          </h2>
-          <p className="mt-1 text-sm text-[var(--muted)]">Phone numbers, directions, and essential services.</p>
-
-          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-            {supportCards.map((item) => (
-              <article key={item.id} className="rounded-xl border border-[var(--twilight)] bg-gradient-to-b from-white to-[#f9fbfe] px-3 py-3">
-                <p className="text-sm font-semibold text-[var(--cream)]">{item.label}</p>
-                <p className="mt-0.5 text-xs text-[var(--muted)]">{item.detail}</p>
-                <HospitalTrackedLink
-                  href={item.href}
-                  external={item.external}
-                  tracking={{
-                    actionType: "resource_clicked",
-                    portalSlug: portal.slug,
-                    hospitalSlug: primaryHospital?.slug,
-                    modeContext: mode,
-                    sectionKey: "v5_hub_support",
-                    targetKind: "always_available_support",
-                    targetId: item.id,
-                    targetLabel: item.label,
-                    targetUrl: item.href,
-                  }}
-                  className="mt-2 inline-flex items-center rounded-md border border-[#c7d3e8] bg-white px-2 py-1 text-[11px] font-semibold text-[#143b83] hover:bg-[#f3f7ff]"
-                >
-                  {item.cta}
-                </HospitalTrackedLink>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="emory-panel p-4 sm:p-5" id="choose-hospital">
+        {/* 2. Hospital Campuses */}
+        <section className="emory-panel p-4 sm:p-5 scroll-mt-20" id="choose-hospital">
           <div className="flex items-start justify-between gap-3 flex-wrap">
             <div>
               <p className="emory-kicker">Your hospitals</p>
-              <h2 className={`mt-1 text-[clamp(2rem,3.5vw,2.8rem)] leading-[0.96] text-[var(--cream)] ${hospitalDisplayFont.className}`}>
+              <h2 className={`mt-1.5 text-[clamp(1.5rem,2.8vw,2.2rem)] leading-[1.05] text-[var(--cream)] ${hospitalDisplayFont.className}`}>
                 Select a campus
               </h2>
               <p className="mt-1 text-sm text-[var(--muted)]">View nearby food, lodging, services, and directions for each campus.</p>
             </div>
           </div>
 
-          <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3.5">
             {hospitalCards.map((card) => {
               const conciergeHref = `/${portal.slug}/hospitals/${card.hospital.slug}`;
               const hospitalWayfindingHref = getHospitalWayfindingHref(card.hospital);
               return (
-                <article key={card.hospital.id} className="group overflow-hidden rounded-xl border border-[var(--twilight)] bg-white shadow-[0_5px_16px_rgba(12,28,58,0.08)]">
+                <article key={card.hospital.id} className="group overflow-hidden rounded-xl border border-[var(--twilight)] bg-white shadow-[0_4px_16px_rgba(12,28,58,0.07)] transition-shadow hover:shadow-[0_8px_24px_rgba(12,28,58,0.12)]">
                   <div className="relative">
                     <img src={card.imageUrl} alt={card.hospital.name} className="h-44 w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" />
                     <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#0b2d5f]/85 via-[#0b2d5f]/60 to-transparent px-3 pb-2.5 pt-5 text-white">
@@ -428,15 +415,10 @@ export default async function HospitalPortalExperience({
           </div>
         </section>
 
-        <section className="emory-panel p-4 sm:p-5">
-          <div className="flex items-start justify-between gap-3 flex-wrap">
-            <div>
-              <p className="emory-kicker">Community health</p>
-              <h2 className={`mt-1 text-[clamp(1.9rem,3.3vw,2.6rem)] leading-[0.96] text-[var(--cream)] ${hospitalDisplayFont.className}`}>
-                Health resources in your neighborhood
-              </h2>
-              <p className="mt-1 text-sm text-[var(--muted)]">Events, programs, and support organizations across Atlanta.</p>
-            </div>
+        {/* 3. Community Health Preview (elevated from position 5) */}
+        <section className="rounded-[20px] border border-[#d0dae8] bg-gradient-to-br from-[#f0f4fa] to-[#f8f9fc] p-5 sm:p-6">
+          <div>
+            <p className="emory-kicker">Community health</p>
             <HospitalTrackedLink
               href={communityHref}
               tracking={{
@@ -446,46 +428,59 @@ export default async function HospitalPortalExperience({
                 sectionKey: "v5_hub_community_preview",
                 targetKind: "community_hub",
                 targetId: "explore-all",
-                targetLabel: "Explore all",
+                targetLabel: "Health resources in your neighborhood",
                 targetUrl: communityHref,
               }}
-              className="emory-link-btn"
+              className="block mt-1 hover:opacity-80 transition-opacity"
             >
-              Explore all
+              <h2 className={`text-[clamp(1.4rem,2.6vw,2rem)] leading-[1.05] text-[var(--cream)] ${hospitalDisplayFont.className}`}>
+                Health resources in your neighborhood
+              </h2>
             </HospitalTrackedLink>
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              Events, programs, and support organizations across Atlanta.
+              Including CDC, YMCA, Atlanta Community Food Bank, and {supportCounts.totalOrganizations}+ organizations.
+            </p>
           </div>
 
-          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2.5">
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
             {categoryCards.map((category) => (
-              <article key={category.id} className="rounded-xl border border-[var(--twilight)] bg-gradient-to-b from-white to-[#f9fbfe] px-3 py-3">
-                <p className="text-[11px] font-bold uppercase tracking-[0.06em] text-[#6b7280]">Active this week</p>
-                <p className="mt-1 text-sm font-semibold text-[var(--cream)]">{category.label}</p>
-                <p className="mt-0.5 text-xs text-[var(--muted)]">{category.detail}</p>
-                <p className="mt-2 text-2xl font-semibold text-[#143b83]">{category.count}</p>
-                <HospitalTrackedLink
-                  href={category.href}
-                  tracking={{
-                    actionType: "resource_clicked",
-                    portalSlug: portal.slug,
-                    modeContext: mode,
-                    sectionKey: "v5_hub_community_preview",
-                    targetKind: "community_category",
-                    targetId: category.id,
-                    targetLabel: category.label,
-                    targetUrl: category.href,
-                  }}
-                  className="emory-link-btn mt-1.5 inline-flex items-center"
-                >
-                  Explore
-                </HospitalTrackedLink>
-              </article>
+              <HospitalTrackedLink
+                key={category.id}
+                href={category.href}
+                tracking={{
+                  actionType: "resource_clicked",
+                  portalSlug: portal.slug,
+                  modeContext: mode,
+                  sectionKey: "v5_hub_community_preview",
+                  targetKind: "community_category",
+                  targetId: category.id,
+                  targetLabel: category.label,
+                  targetUrl: category.href,
+                }}
+                className="group block rounded-xl border border-[var(--twilight)] bg-white px-4 py-4 transition-all hover:shadow-[0_6px_20px_rgba(12,28,58,0.10)] hover:border-[var(--line-strong)]"
+                style={{ borderLeftWidth: '3px', borderLeftColor: category.accent } as CSSProperties}
+              >
+                <div className="flex items-start gap-3">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-lg" style={{ background: category.accentBg }}>{category.emoji}</span>
+                  <div className="min-w-0">
+                    <p className="text-[10.5px] font-bold uppercase tracking-[0.07em] text-[#6b7280]">Active this week</p>
+                    <p className="mt-1 text-sm font-semibold text-[var(--cream)] leading-snug">{category.label}</p>
+                    <p className="mt-0.5 text-xs text-[var(--muted)] leading-relaxed">{category.detail}</p>
+                  </div>
+                </div>
+                <div className="mt-3 flex items-end justify-between">
+                  <p className="text-2xl font-bold" style={{ color: category.accent }}>{category.countLabel || category.count}</p>
+                  <span className="text-xs font-semibold text-[var(--portal-accent)] group-hover:underline">Explore &rarr;</span>
+                </div>
+              </HospitalTrackedLink>
             ))}
           </div>
 
-          <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-            {showcase.events.slice(0, 3).map((event, index) => {
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {showcase.events.slice(0, 3).map((event) => {
               const eventHref = event.detailHref || communityHref;
-              const eventImage = event.imageUrl || COMMUNITY_FALLBACK_IMAGES[index % COMMUNITY_FALLBACK_IMAGES.length] || COMMUNITY_FALLBACK_IMAGE;
+              const eventImage = event.imageUrl || getEventFallbackImage(event.category, event.title);
               return (
                 <HospitalTrackedLink
                   key={event.id}
@@ -521,8 +516,49 @@ export default async function HospitalPortalExperience({
           </div>
         </section>
 
-        <footer className="mt-2 text-center">
-          <p className="text-[10.5px] font-medium tracking-[0.04em] text-[#9ca3af]">
+        {/* 4. Quick Support (moved down from position 2) */}
+        <section className="emory-panel p-4 sm:p-5">
+          <p className="emory-kicker">Quick support</p>
+          <h2 className={`mt-1.5 text-[clamp(1.4rem,2.6vw,2rem)] leading-[1.05] text-[var(--cream)] ${hospitalDisplayFont.className}`}>
+            Help when you need it
+          </h2>
+          <p className="mt-1 text-sm text-[var(--muted)]">Phone numbers, directions, and essential services.</p>
+
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {supportCards.map((item) => (
+              <HospitalTrackedLink
+                key={item.id}
+                href={item.href}
+                external={item.external}
+                tracking={{
+                  actionType: "resource_clicked",
+                  portalSlug: portal.slug,
+                  hospitalSlug: primaryHospital?.slug,
+                  modeContext: mode,
+                  sectionKey: "v5_hub_support",
+                  targetKind: "always_available_support",
+                  targetId: item.id,
+                  targetLabel: item.label,
+                  targetUrl: item.href,
+                }}
+                className="group flex items-start gap-3 rounded-xl border border-[var(--twilight)] bg-white px-3.5 py-3.5 transition-all hover:shadow-[0_4px_14px_rgba(12,28,58,0.08)] hover:border-[var(--line-strong)]"
+              >
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-2)] text-lg">{item.emoji}</span>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-[var(--cream)]">{item.label}</p>
+                  <p className="mt-0.5 text-xs text-[var(--muted)] leading-relaxed">{item.detail}</p>
+                  <span className="mt-1.5 inline-flex items-center rounded-md text-xs font-semibold group-hover:underline" style={{ color: item.accentColor }}>
+                    {item.cta} &rarr;
+                  </span>
+                </div>
+              </HospitalTrackedLink>
+            ))}
+          </div>
+        </section>
+
+        {/* 5. Footer */}
+        <footer className="mt-3 text-center pb-2">
+          <p className="text-[11.5px] font-medium tracking-[0.03em] text-[#9ca3af]">
             Emory Healthcare &middot; Guest Services: (404) 712-2000
           </p>
         </footer>

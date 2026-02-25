@@ -329,7 +329,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 )
 
                 # Most PPSE community events are free
-                is_free = True
+                is_free = False
                 if description:
                     desc_lower = description.lower()
                     if any(kw in desc_lower for kw in ["$", "ticket", "admission", "cost", "fee"]):

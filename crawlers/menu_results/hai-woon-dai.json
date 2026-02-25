@@ -1,0 +1,43 @@
+{
+  "venue_id": 1475,
+  "venue_slug": "hai-woon-dai",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Beef Bulgogi",
+        "price": "$26.99",
+        "category": "entree"
+      },
+      {
+        "name": "Bibimbab",
+        "price": "$17.99",
+        "category": "entree"
+      },
+      {
+        "name": "Kun-Mandu (Pan Fried Dumplings)",
+        "price": "$10.99",
+        "category": "appetizer"
+      }
+    ],
+    "dietary_options": [],
+    "price_level": 2,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

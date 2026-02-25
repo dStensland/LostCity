@@ -1,0 +1,43 @@
+{
+  "venue_id": 4825,
+  "venue_slug": "alici-oyster-bar",
+  "meta": {
+    "og_image": "http://static1.squarespace.com/static/61e0689875c32e76b233cc28/t/63a3dfc65b23880c8c389952/1671684038443/ALICI_website_logo.png?format=1500w",
+    "meta_description": null,
+    "reservation_links": [
+      "https://www.opentable.com/r/alici-atlanta"
+    ],
+    "menu_links": [
+      "https://www.alicioysterbar.com/drinks",
+      "https://www.alicioysterbar.com/drinks",
+      "https://www.alicioysterbar.com/menu",
+      "https://www.alicioysterbar.com/drinks",
+      "https://www.alicioysterbar.com/dinner"
+    ],
+    "instagram": "alicioysterbar",
+    "facebook_url": null,
+    "phone": "(404) 876-1000"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["upscale", "date-spot", "craft-cocktails", "good-for-groups"],
+    "cuisine": ["seafood", "italian", "mediterranean"],
+    "service_style": "full_service",
+    "price_level": 3,
+    "menu_highlights": [
+      {"name": "Oysters on the Half Shell", "price": null, "category": "appetizer"},
+      {"name": "Squid Ink Spaghetti", "price": null, "category": "entree"},
+      {"name": "Lobster Roll", "price": null, "category": "entree"},
+      {"name": "Alici Wagyu Burger", "price": null, "category": "entree"},
+      {"name": "Little Big Man", "price": null, "category": "cocktail"}
+    ],
+    "menu_url": "https://www.alicioysterbar.com/menu",
+    "reservation_url": "https://www.opentable.com/r/alici-atlanta",
+    "phone": "(404) 876-1000",
+    "instagram": "alicioysterbar",
+    "dietary_options": ["allergy-aware"],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

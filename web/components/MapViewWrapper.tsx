@@ -51,7 +51,7 @@ interface Props {
 
 export default function MapViewWrapper({
   events: providedEvents,
-  spots,
+  spots: providedSpots,
   userLocation,
   viewRadius,
   centerPoint,
@@ -65,16 +65,19 @@ export default function MapViewWrapper({
   hoveredItemId,
   onItemSelect,
 }: Props) {
+  const hasProvidedSpots = providedSpots !== undefined;
+
   // Only use the hook if events aren't provided directly
   const { events: fetchedEvents, isLoading } = useMapEvents({
     portalId,
     portalExclusive,
-    enabled: !providedEvents, // Skip fetching if events are provided
+    enabled: !providedEvents && !hasProvidedSpots, // Skip fetching if events or spots are provided
   });
 
   // Use provided events if available, otherwise use fetched events
   const events = providedEvents || fetchedEvents;
-  const loading = !providedEvents && isLoading;
+  const spots = providedSpots ?? [];
+  const loading = !providedEvents && !hasProvidedSpots && isLoading;
 
   if (loading && events.length === 0) {
     return (

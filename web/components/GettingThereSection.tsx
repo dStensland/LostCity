@@ -36,6 +36,44 @@ function hasAnyTransitData(transit: TransitData): boolean {
   );
 }
 
+// ─── Icons ───────────────────────────────────────────────────────────────
+
+function TrainIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 18l-2 3m10-3l2 3M12 2C8 2 5 3 5 6v9a3 3 0 003 3h8a3 3 0 003-3V6c0-3-3-4-7-4z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 15h.01M15 15h.01M5 10h14" />
+    </svg>
+  );
+}
+
+function PathIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+    </svg>
+  );
+}
+
+function ParkingIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <rect x="3" y="3" width="18" height="18" rx="3" strokeWidth={1.5} />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 17V7h4a3 3 0 010 6H9" />
+    </svg>
+  );
+}
+
+function WalkIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 4a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM7 21l3-7m0 0l2-2m-2 2l-2-4 4-3 2 1 3-2m-5 13l3-3.5" />
+    </svg>
+  );
+}
+
+// ─── Shared helpers ──────────────────────────────────────────────────────
+
 function TransitScoreBadge({ score }: { score: number }) {
   let color: string;
   let label: string;
@@ -87,44 +125,54 @@ function formatParkingTypes(types: string[], isFree?: boolean | null): string {
   return formatted;
 }
 
-// ─── Compact variant (for EventDetailView) ─────────────────────────────
+// ─── Compact variant ─────────────────────────────────────────────────────
 
 function CompactTransit({ transit }: { transit: TransitData }) {
-  const chips: { emoji: string; text: string }[] = [];
+  const chips: { icon: React.ReactNode; text: string }[] = [];
 
   if (transit.nearest_marta_station && transit.marta_walk_minutes && transit.marta_walk_minutes <= 15) {
-    chips.push({ emoji: "🚇", text: `${transit.marta_walk_minutes} min` });
+    chips.push({
+      icon: <TrainIcon className="w-3 h-3" />,
+      text: `${transit.marta_walk_minutes} min`,
+    });
   }
   if (transit.beltline_adjacent) {
-    chips.push({ emoji: "🚶", text: "BeltLine" });
+    chips.push({
+      icon: <PathIcon className="w-3 h-3" />,
+      text: "BeltLine",
+    });
   }
   if (transit.parking_type && transit.parking_type.length > 0) {
-    const label = transit.parking_free ? "Free parking" : transit.parking_type[0];
     const labels: Record<string, string> = {
-      lot: "Lot",
-      deck: "Deck",
-      garage: "Garage",
-      valet: "Valet",
-      street: "Street",
+      lot: "Lot", deck: "Deck", garage: "Garage", valet: "Valet", street: "Street",
     };
-    chips.push({ emoji: "🅿️", text: transit.parking_free ? "Free" : (labels[label] || label) });
+    const label = transit.parking_free
+      ? "Free"
+      : (labels[transit.parking_type[0]] || transit.parking_type[0]);
+    chips.push({
+      icon: <ParkingIcon className="w-3 h-3" />,
+      text: label,
+    });
   }
 
   if (chips.length === 0) return null;
 
   return (
-    <div className="flex items-center gap-3 mt-2 text-[0.7rem] font-mono text-[var(--muted)]">
+    <div className="flex items-center gap-2 mt-2">
       {chips.map((chip, i) => (
-        <span key={i} className="inline-flex items-center gap-1">
-          <span>{chip.emoji}</span>
-          <span>{chip.text}</span>
+        <span
+          key={i}
+          className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[0.65rem] font-mono text-[var(--soft)] border border-[var(--twilight)] bg-[var(--night)]/40"
+        >
+          <span className="text-[var(--muted)]">{chip.icon}</span>
+          {chip.text}
         </span>
       ))}
     </div>
   );
 }
 
-// ─── Expanded variant (for VenueDetailView) ─────────────────────────────
+// ─── Expanded variant ────────────────────────────────────────────────────
 
 function ExpandedTransit({
   transit,
@@ -142,10 +190,11 @@ function ExpandedTransit({
 
   return (
     <div className="space-y-3">
-      {/* MARTA */}
       {showMarta && (
         <div className="flex items-start gap-3">
-          <span className="text-base flex-shrink-0 mt-0.5">🚇</span>
+          <div className="w-8 h-8 rounded-lg bg-[var(--twilight)]/50 border border-[var(--twilight)]/60 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <TrainIcon className="w-4 h-4 text-[var(--neon-cyan, #65E8FF)]" />
+          </div>
           <div>
             <p className="text-[var(--soft)] text-sm">
               <span className="text-[var(--cream)] font-medium">{transit.nearest_marta_station}</span>
@@ -160,10 +209,11 @@ function ExpandedTransit({
         </div>
       )}
 
-      {/* BeltLine */}
       {showBeltLine && (
         <div className="flex items-start gap-3">
-          <span className="text-base flex-shrink-0 mt-0.5">🚶</span>
+          <div className="w-8 h-8 rounded-lg bg-[var(--twilight)]/50 border border-[var(--twilight)]/60 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <PathIcon className="w-4 h-4 text-[var(--neon-green, #22c55e)]" />
+          </div>
           <div>
             <p className="text-[var(--soft)] text-sm">
               <span className="text-[var(--cream)] font-medium">BeltLine</span>
@@ -180,10 +230,11 @@ function ExpandedTransit({
         </div>
       )}
 
-      {/* Parking */}
       {showParking && (
         <div className="flex items-start gap-3">
-          <span className="text-base flex-shrink-0 mt-0.5">🅿️</span>
+          <div className="w-8 h-8 rounded-lg bg-[var(--twilight)]/50 border border-[var(--twilight)]/60 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <ParkingIcon className="w-4 h-4 text-[var(--gold, #eab308)]" />
+          </div>
           <div>
             <p className="text-[var(--soft)] text-sm">
               {formatParkingTypes(transit.parking_type!, transit.parking_free)}
@@ -197,10 +248,11 @@ function ExpandedTransit({
         </div>
       )}
 
-      {/* Walkable neighbors */}
       {showWalkable && (
         <div className="flex items-start gap-3">
-          <span className="text-base flex-shrink-0 mt-0.5">📍</span>
+          <div className="w-8 h-8 rounded-lg bg-[var(--twilight)]/50 border border-[var(--twilight)]/60 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <WalkIcon className="w-4 h-4 text-[var(--coral)]" />
+          </div>
           <div>
             <p className="text-[0.7rem] text-[var(--muted)] font-mono uppercase tracking-wider mb-1.5">
               Walkable to
@@ -210,7 +262,7 @@ function ExpandedTransit({
                 <button
                   key={neighbor.id}
                   onClick={() => onSpotClick?.(neighbor.slug)}
-                  className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs bg-[var(--twilight)]/50 text-[var(--soft)] hover:text-[var(--coral)] hover:bg-[var(--twilight)] transition-colors"
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs bg-[var(--twilight)]/50 text-[var(--soft)] hover:text-[var(--coral)] hover:bg-[var(--twilight)] transition-colors border border-[var(--twilight)]/60"
                 >
                   <span className="truncate max-w-[140px]">{neighbor.name}</span>
                   <span className="text-[var(--muted)] font-mono text-[0.6rem]">{neighbor.walk_minutes}m</span>

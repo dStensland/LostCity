@@ -4,6 +4,10 @@ import { useState, useEffect, useCallback } from "react";
 
 const DARK_HOURS_OVERRIDE_KEY = "dark_hours_override";
 
+function isDarkHour(hour: number): boolean {
+  return hour >= 22 || hour < 5;
+}
+
 /**
  * Hook that detects "dark hours" (10pm-5am) for enhanced nightlife theming.
  * Returns true during night hours when the darker, more neon-glowy theme should activate.
@@ -16,9 +20,21 @@ export function useDarkHours(): {
   hour: number;
   toggleOverride: () => void;
 } {
-  const [isDarkHours, setIsDarkHours] = useState(false);
-  const [isOverride, setIsOverride] = useState(false);
   const [hour, setHour] = useState(() => new Date().getHours());
+  const [isOverride, setIsOverride] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const override = localStorage.getItem(DARK_HOURS_OVERRIDE_KEY);
+    return override === "on" || override === "off";
+  });
+  const [isDarkHours, setIsDarkHours] = useState(() => {
+    const initialHour = new Date().getHours();
+    if (typeof window === "undefined") return isDarkHour(initialHour);
+
+    const override = localStorage.getItem(DARK_HOURS_OVERRIDE_KEY);
+    if (override === "on") return true;
+    if (override === "off") return false;
+    return isDarkHour(initialHour);
+  });
 
   useEffect(() => {
     // Check for manual override in localStorage
@@ -38,8 +54,7 @@ export function useDarkHours(): {
     const checkDarkHours = () => {
       const currentHour = new Date().getHours();
       setHour(currentHour);
-      // 10pm (22) to 5am (4) = dark hours
-      setIsDarkHours(currentHour >= 22 || currentHour < 5);
+      setIsDarkHours(isDarkHour(currentHour));
     };
 
     // Check immediately
@@ -61,7 +76,7 @@ export function useDarkHours(): {
       // Check actual time
       const currentHour = new Date().getHours();
       setHour(currentHour);
-      setIsDarkHours(currentHour >= 22 || currentHour < 5);
+      setIsDarkHours(isDarkHour(currentHour));
     } else {
       // Not forced on -> force on
       localStorage.setItem(DARK_HOURS_OVERRIDE_KEY, "on");

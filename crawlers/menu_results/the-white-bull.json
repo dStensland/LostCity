@@ -1,0 +1,55 @@
+{
+  "venue_id": 2487,
+  "venue_slug": "the-white-bull",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Beef Cheeks",
+        "price": null,
+        "category": "appetizer"
+      },
+      {
+        "name": "Black Spaghetti",
+        "price": null,
+        "category": "entree"
+      },
+      {
+        "name": "Cavatelli Venison Bolognese",
+        "price": null,
+        "category": "entree"
+      },
+      {
+        "name": "Persimmon Negroni",
+        "price": null,
+        "category": "cocktail"
+      },
+      {
+        "name": "Prosciutto Di Parma Galloni Gold",
+        "price": null,
+        "category": "appetizer"
+      }
+    ],
+    "dietary_options": [
+      "vegetarian-friendly"
+    ],
+    "price_level": 3,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

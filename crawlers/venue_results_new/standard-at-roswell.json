@@ -1,0 +1,40 @@
+{
+  "venue_id": 4911,
+  "venue_slug": "standard-at-roswell",
+  "meta": {
+    "og_image": null,
+    "meta_description": null,
+    "reservation_links": [],
+    "menu_links": [
+      "https://drive.google.com/file/d/16hF7nC6aGUSXg4b6AoGvGVVdYmLfyO1k/view?usp=sharing",
+      "https://drive.google.com/file/d/1_sWxLgiOJOJmPuwrWJwbCLnzPFt1OChi/view?usp=drive_link",
+      "https://standardrestaurantgroup.com/roswell/wp-content/uploads/2025/03/1-STNDRD_MenuDesign_BILLS_2021Season-1.pdf",
+      "https://drive.google.com/file/d/16hF7nC6aGUSXg4b6AoGvGVVdYmLfyO1k/view?usp=sharing"
+    ],
+    "instagram": "eatatstandard",
+    "facebook_url": "https://www.facebook.com/StandardAtRoswell",
+    "phone": "(770) 729-8443"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["casual", "lively", "outdoor-seating", "live-music", "good-for-groups"],
+    "cuisine": ["pizza", "american"],
+    "service_style": "casual_dine_in",
+    "price_level": 2,
+    "menu_highlights": [
+      {"name": "The Supreme Pizza", "price": null, "category": "entree"},
+      {"name": "Standard Wings", "price": null, "category": "appetizer"},
+      {"name": "Standard Burger", "price": null, "category": "entree"},
+      {"name": "Strawberry Spring Salad", "price": null, "category": "entree"},
+      {"name": "Italian Sammie", "price": null, "category": "entree"}
+    ],
+    "menu_url": "https://standardrestaurantgroup.com/roswell/wp-content/uploads/2025/03/1-STNDRD_MenuDesign_BILLS_2021Season-1.pdf",
+    "reservation_url": null,
+    "phone": "(770) 729-8443",
+    "instagram": "eatatstandard",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

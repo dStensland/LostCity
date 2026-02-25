@@ -1,0 +1,57 @@
+{
+  "venue_id": 1411,
+  "venue_slug": "hop-springs",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "The Bottom of the Bayou Oysters",
+        "price": "$24",
+        "category": "appetizer"
+      },
+      {
+        "name": "Mac Daddy Rolls",
+        "price": "$14",
+        "category": "appetizer"
+      },
+      {
+        "name": "Catfish Po' Boy",
+        "price": "$19",
+        "category": "entree"
+      },
+      {
+        "name": "The Oyster Overload",
+        "price": "$27",
+        "category": "appetizer"
+      },
+      {
+        "name": "Vegan Sausage Po' Boy",
+        "price": "$19",
+        "category": "entree"
+      }
+    ],
+    "dietary_options": [
+      "vegetarian-friendly",
+      "vegan-options",
+      "gluten-free-options"
+    ],
+    "price_level": 2,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

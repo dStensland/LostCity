@@ -10,3 +10,7 @@ discovery:
   - https://www.nashvillescene.com/calendar/
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- tickets

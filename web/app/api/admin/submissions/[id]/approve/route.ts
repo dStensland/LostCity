@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, isAdmin, getUser } from "@/lib/supabase/server";
+import { isAdmin, getUser } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { isValidUUID, adminErrorResponse, checkBodySize } from "@/lib/api-utils";
 import type { EventSubmissionData, VenueSubmissionData, ProducerSubmissionData, Submission } from "@/lib/types";
@@ -9,6 +9,7 @@ import {
   createEventFromSubmission,
   createVenueFromSubmission,
   createOrganizationFromSubmission,
+  queueCrawlerSourceEvaluationFromSubmission,
 } from "@/lib/submissions/approval";
 
 type Props = {
@@ -37,10 +38,10 @@ export async function POST(request: NextRequest, { params }: Props) {
   }
 
   const isGlobalAdmin = await isAdmin();
-  const supabase = await createClient();
 
   // Get submission
-  const { data: submissionData, error: fetchError } = await supabase
+  const serviceClient = createServiceClient();
+  const { data: submissionData, error: fetchError } = await serviceClient
     .from("submissions")
     .select("id, portal_id, submission_type, status, data, submitted_by, created_at")
     .eq("id", id)
@@ -54,7 +55,7 @@ export async function POST(request: NextRequest, { params }: Props) {
 
   // Check permissions
   if (!isGlobalAdmin && submission.portal_id) {
-    const { data: portalMember } = await supabase
+    const { data: portalMember } = await serviceClient
       .from("portal_members")
       .select("role")
       .eq("portal_id", submission.portal_id)
@@ -81,9 +82,6 @@ export async function POST(request: NextRequest, { params }: Props) {
   const body = await request.json().catch(() => ({}));
   const { admin_notes } = body as { admin_notes?: string };
 
-  // Use service client to bypass RLS for creating entities
-  const serviceClient = createServiceClient();
-
   // Create the entity based on submission type
   let approvedEntityId: number | string | null = null;
 
@@ -96,19 +94,47 @@ export async function POST(request: NextRequest, { params }: Props) {
         submission.id
       );
     } else if (submission.submission_type === "venue") {
+      const venueData = submission.data as unknown as VenueSubmissionData;
       approvedEntityId = await createVenueFromSubmission(
         serviceClient,
-        submission.data as unknown as VenueSubmissionData,
+        venueData,
         submission.submitted_by,
         submission.id
       );
+      try {
+        await queueCrawlerSourceEvaluationFromSubmission(serviceClient, {
+          name: venueData.name,
+          website: venueData.website,
+          sourceType: "venue",
+          portalId: submission.portal_id,
+        });
+      } catch (queueError) {
+        logger.warn("Failed to queue venue source for crawler evaluation", {
+          submission_id: submission.id,
+          error: queueError,
+        });
+      }
     } else if (submission.submission_type === "organization" || submission.submission_type === "producer") {
+      const orgData = submission.data as unknown as ProducerSubmissionData;
       approvedEntityId = await createOrganizationFromSubmission(
         serviceClient,
-        submission.data as unknown as ProducerSubmissionData,
+        orgData,
         submission.submitted_by,
         submission.id
       );
+      try {
+        await queueCrawlerSourceEvaluationFromSubmission(serviceClient, {
+          name: orgData.name,
+          website: orgData.website,
+          sourceType: "organization",
+          portalId: submission.portal_id,
+        });
+      } catch (queueError) {
+        logger.warn("Failed to queue organization source for crawler evaluation", {
+          submission_id: submission.id,
+          error: queueError,
+        });
+      }
     }
   } catch (error) {
     logger.error("Failed to create entity:", error);
@@ -131,7 +157,7 @@ export async function POST(request: NextRequest, { params }: Props) {
     updateData.approved_organization_id = approvedEntityId;
   }
 
-  const { data: updated, error: updateError } = await supabase
+  const { data: updated, error: updateError } = await serviceClient
     .from("submissions")
     .update(updateData as never)
     .eq("id", id)

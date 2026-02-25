@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useCallback } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useFriends, type Profile } from "@/lib/hooks/useFriends";
@@ -174,9 +175,9 @@ function InviteModal({ eventId, eventTitle, onClose, showToast }: InviteModalPro
           ) : friends.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-[var(--muted)] text-sm font-mono">No friends yet</p>
-              <a href="/find-friends" className="text-[var(--coral)] text-xs font-mono hover:underline mt-1 inline-block">
+              <Link href="/find-friends" className="text-[var(--coral)] text-xs font-mono hover:underline mt-1 inline-block">
                 Find friends
-              </a>
+              </Link>
             </div>
           ) : (
             friends.map((friend) => (

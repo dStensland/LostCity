@@ -5,7 +5,6 @@ integration_method: llm_crawler
 defaults:
   venue_name: ATL Gaming
   category: entertainment
-  subcategory: gaming
   tags:
   - gaming
   - esports
@@ -20,3 +19,7 @@ detail:
   enabled: true
   fetch:
     render_js: true
+data_goals:
+- events
+- images
+- tickets

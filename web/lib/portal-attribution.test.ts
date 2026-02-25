@@ -27,6 +27,7 @@ const PORTAL_ATTRIBUTED_TABLES = [
   "hidden_events",
   "activity_reactions",
   "activities",
+  "event_calendar_saves",
 ];
 
 // Routes that are explicitly exempt from portal attribution
@@ -109,6 +110,7 @@ describe("Portal attribution coverage", () => {
       "app/api/personalization/hide/route.ts",
       "app/api/signals/track/route.ts",
       "app/api/onboarding/complete/route.ts",
+      "app/api/user/calendar/save/route.ts",
     ];
 
     const missing: string[] = [];

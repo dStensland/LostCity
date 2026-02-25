@@ -1,0 +1,39 @@
+{
+  "venue_id": 4893,
+  "venue_slug": "miltons-cuisine-cocktails",
+  "meta": {
+    "og_image": "https://miltonscuisine.com/wp-content/uploads/2017/02/Miltons_Logo.png",
+    "meta_description": "Welcome to Milton's Cuisine & Cocktails \r\nGather, Savor, Stay Awhile\r\nSince opening our doors in 2006, Milton's Cuisine & Cocktails has grown into a cherished part of the Milton and Alpharetta dining community—a gathering place where neighbors meet, families unwind, and every meal",
+    "reservation_links": [
+      "https://www.opentable.com/miltons-cuisine-and-cocktails-reservations-alpharetta?restref=5627&lang=e"
+    ],
+    "menu_links": [
+      "https://miltonscuisine.com/menu-2/"
+    ],
+    "instagram": "miltons_cuisine",
+    "facebook_url": "https://www.facebook.com/miltonscuisine",
+    "phone": "(770) 817-0161"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["cozy", "date-spot", "historic", "outdoor-seating", "live-music"],
+    "cuisine": ["southern", "new_american"],
+    "service_style": "full_service",
+    "price_level": 3,
+    "menu_highlights": [
+      {"name": "Housemade Pimento Cheese", "price": null, "category": "appetizer"},
+      {"name": "Sweet Potato Shrimp Fritters", "price": null, "category": "appetizer"},
+      {"name": "12oz Bone-In Pork Chop", "price": null, "category": "entree"},
+      {"name": "Fried Chicken", "price": null, "category": "entree"},
+      {"name": "Blackened Salmon over Pimento Cheese Grits", "price": null, "category": "entree"}
+    ],
+    "menu_url": "https://miltonscuisine.com/menu-2/",
+    "reservation_url": "https://www.opentable.com/miltons-cuisine-and-cocktails-reservations-alpharetta?restref=5627&lang=e",
+    "phone": "(770) 817-0161",
+    "instagram": "miltons_cuisine",
+    "dietary_options": ["vegetarian-friendly"],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

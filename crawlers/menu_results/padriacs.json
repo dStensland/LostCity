@@ -1,0 +1,53 @@
+{
+  "venue_id": 2099,
+  "venue_slug": "padriacs",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "8oz Prime Filet",
+        "price": null,
+        "category": "entree"
+      },
+      {
+        "name": "Jambalaya Pasta",
+        "price": null,
+        "category": "entree"
+      },
+      {
+        "name": "Padriac's Burger",
+        "price": null,
+        "category": "entree"
+      },
+      {
+        "name": "Shrimp & Grits",
+        "price": null,
+        "category": "entree"
+      },
+      {
+        "name": "Corned Beef & Cabbage",
+        "price": null,
+        "category": "entree"
+      }
+    ],
+    "dietary_options": [],
+    "price_level": 2,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

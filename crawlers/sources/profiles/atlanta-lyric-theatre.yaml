@@ -10,3 +10,8 @@ discovery:
   - https://www.atlantalyrictheatre.com
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- showtimes
+- tickets

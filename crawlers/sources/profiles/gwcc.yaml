@@ -10,3 +10,5 @@ discovery:
   - https://www.gwcca.org/event-calendar
 detail:
   enabled: true
+data_goals:
+- events

@@ -6,13 +6,17 @@
   "defaults": {
     "venue_name": "The EARL",
     "category": "music",
-    "subcategory": "concert",
-    "tags": ["music"]
+    "tags": [
+      "music"
+    ]
   },
   "discovery": {
     "enabled": true,
     "type": "html",
-    "urls": ["https://badearl.com/show-calendar/", "https://badearl.com"],
+    "urls": [
+      "https://badearl.com/show-calendar/",
+      "https://badearl.com"
+    ],
     "fetch": {
       "render_js": true,
       "wait_ms": 4000
@@ -27,5 +31,11 @@
     "selectors": {
       "artists": "#headliner-contain .headliner, #support-contain .support"
     }
-  }
+  },
+  "data_goals": [
+    "events",
+    "images",
+    "lineup",
+    "tickets"
+  ]
 }

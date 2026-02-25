@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import type { HospitalAudienceMode } from "@/lib/hospital-modes";
 import { trackPortalAction, type PortalActionType } from "@/lib/analytics/portal-action-tracker";
 
@@ -22,6 +22,7 @@ type TrackingContext = {
 type Props = {
   href: string;
   className?: string;
+  style?: CSSProperties;
   children: ReactNode;
   external?: boolean;
   tracking: TrackingContext;
@@ -30,6 +31,7 @@ type Props = {
 export default function HospitalTrackedLink({
   href,
   className,
+  style,
   children,
   external = false,
   tracking,
@@ -51,14 +53,14 @@ export default function HospitalTrackedLink({
 
   if (external) {
     return (
-      <a href={href} className={className} target="_blank" rel="noreferrer" onClick={onClick}>
+      <a href={href} className={className} style={style} target="_blank" rel="noreferrer" onClick={onClick}>
         {children}
       </a>
     );
   }
 
   return (
-    <Link href={href} className={className} onClick={onClick}>
+    <Link href={href} className={className} style={style} onClick={onClick}>
       {children}
     </Link>
   );

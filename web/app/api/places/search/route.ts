@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
       ll: `${searchLocation.lat},${searchLocation.lng}`,
       radius: "50000", // 50km radius
       limit: "10",
-      fields: "fsq_place_id,name,location,categories,website,geocodes",
+      fields: "fsq_place_id,name,location,categories,website,latitude,longitude",
     });
 
     // Add timeout to prevent hanging requests
@@ -188,24 +188,24 @@ export async function POST(request: NextRequest) {
       if (/restaurant|diner|cafe|eatery|bistro|grill|pizz|sushi|taco|burger|bbq|seafood|steakhouse/.test(name)) return "restaurant";
       if (/nightclub|dance club|disco/.test(name)) return "nightclub";
       if (/music venue|concert|jazz|blues club/.test(name)) return "music_venue";
-      if (/comedy/.test(name)) return "comedy_club";
+      if (/comedy/.test(name)) return "theater";
       if (/gallery|art/.test(name)) return "gallery";
       if (/museum/.test(name)) return "museum";
       if (/brew|taproom/.test(name)) return "brewery";
-      if (/coffee|tea room/.test(name)) return "coffee_shop";
+      if (/coffee|tea room/.test(name)) return "restaurant";
       if (/bookstore|book shop/.test(name)) return "bookstore";
       if (/movie|cinema|theater|theatre/.test(name)) return "cinema";
       if (/park|garden|trail/.test(name)) return "park";
       if (/market|farmer/.test(name)) return "farmers_market";
-      if (/food hall|food court/.test(name)) return "food_hall";
-      if (/arena|stadium/.test(name)) return "arena";
+      if (/food hall|food court/.test(name)) return "restaurant";
+      if (/arena|stadium/.test(name)) return "stadium";
       if (/hotel|inn|motel/.test(name)) return "hotel";
-      if (/gym|fitness|yoga|pilates/.test(name)) return "fitness_center";
-      if (/distillery/.test(name)) return "distillery";
-      if (/winery/.test(name)) return "winery";
-      if (/sports bar/.test(name)) return "sports_bar";
+      if (/gym|fitness|yoga|pilates/.test(name)) return "fitness";
+      if (/distillery/.test(name)) return "brewery";
+      if (/winery/.test(name)) return "brewery";
+      if (/sports bar/.test(name)) return "bar";
       if (/record|vinyl/.test(name)) return "record_store";
-      if (/church|mosque|temple|synagogue/.test(name)) return "church";
+      if (/church|mosque|temple|synagogue/.test(name)) return "community_center";
       if (/library/.test(name)) return "library";
       if (/event space|banquet|convention/.test(name)) return "event_space";
       if (/coworking/.test(name)) return "coworking";

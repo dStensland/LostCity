@@ -1,0 +1,36 @@
+{
+  "venue_id": 2379,
+  "venue_slug": "social-fox-brewing",
+  "meta": {
+    "og_image": "https://www.socialfoxbrewing.com/wp-content/uploads/2020/02/Social-Fox-blue-outine-sraight-2.0-1-e1582247695748.png",
+    "meta_description": "The first award winning Norcross brewery located in the historic downtown area with 18 taps of craft beer, hard seltzers, beermosas, beer slushies, wine-beer hybrids, gluten reduced beer and gluten free options with hard seltzers, hard tea and spiked lemonade all hand crafted on site.",
+    "reservation_links": [],
+    "menu_links": ["https://www.socialfoxbrewing.com/beer-and-cocktail-menu/"],
+    "instagram": "socialfoxbrewing",
+    "facebook_url": "https://www.facebook.com/socialfoxbrewing",
+    "phone": "(470) 359-4109"
+  },
+  "extracted": {
+    "hours": {
+      "mon": {"open": "17:00", "close": "21:00"},
+      "tue": {"open": "17:00", "close": "21:00"},
+      "wed": {"open": "16:00", "close": "22:00"},
+      "thu": {"open": "16:00", "close": "22:00"},
+      "fri": {"open": "16:00", "close": "22:00"},
+      "sat": {"open": "12:00", "close": "22:00"},
+      "sun": {"open": "12:30", "close": "20:00"}
+    },
+    "vibes": ["casual", "neighborhood-bar", "dog-friendly", "family-friendly", "live-music", "games", "free-parking"],
+    "cuisine": [],
+    "service_style": "counter_service",
+    "price_level": "$$",
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": "(470) 359-4109",
+    "instagram": "socialfoxbrewing",
+    "dietary_options": ["gluten-free"],
+    "specials": [],
+    "genres": [],
+    "parking": ["free_parking"]
+  }
+}

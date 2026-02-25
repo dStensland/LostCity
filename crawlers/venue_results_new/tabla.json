@@ -1,0 +1,32 @@
+{
+  "venue_id": 4871,
+  "venue_slug": "tabla",
+  "meta": {
+    "og_image": "http://static1.squarespace.com/static/52114de8e4b004f80b4aa7e9/t/604e82858e57d50afdda8c5b/1615757961940/TABLA-logo.png?format=1500w",
+    "meta_description": "Authentic Indian restaurant with a modern gourmet twist in Midtown Atlanta.",
+    "reservation_links": [],
+    "menu_links": [
+      "https://www.tablaatlanta.com/menu",
+      "https://www.tablaatlanta.com/menu"
+    ],
+    "instagram": "tablaatlanta",
+    "facebook_url": "https://www.facebook.com/tablaatlanta",
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["upscale", "date-spot", "intimate", "craft-cocktails"],
+    "cuisine": ["indian"],
+    "service_style": "full_service",
+    "price_level": 3,
+    "menu_highlights": null,
+    "menu_url": "https://www.tablaatlanta.com/menu",
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "tablaatlanta",
+    "dietary_options": ["vegetarian-friendly"],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

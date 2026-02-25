@@ -285,6 +285,44 @@ class TestMergeEventData:
         merged = merge_event_data(existing, new)
         assert merged["image_url"] == "https://example.com/image.jpg"
 
+    def test_replace_bad_existing_image_with_better_image(self):
+        class MockEventData:
+            description = None
+            start_time = None
+            end_time = None
+            confidence = 0.8
+            tags = []
+            price_min = None
+            price_max = None
+            price_note = None
+            image_url = "https://images.example.com/show-photo.jpg"
+            ticket_url = None
+
+        existing = {"image_url": "https://example.com/assets/logo.png"}
+        new = MockEventData()
+
+        merged = merge_event_data(existing, new)
+        assert merged["image_url"] == "https://images.example.com/show-photo.jpg"
+
+    def test_does_not_replace_good_image_with_bad_image(self):
+        class MockEventData:
+            description = None
+            start_time = None
+            end_time = None
+            confidence = 0.8
+            tags = []
+            price_min = None
+            price_max = None
+            price_note = None
+            image_url = "https://example.com/assets/default-placeholder.png"
+            ticket_url = None
+
+        existing = {"image_url": "https://images.example.com/show-photo.jpg"}
+        new = MockEventData()
+
+        merged = merge_event_data(existing, new)
+        assert merged["image_url"] == "https://images.example.com/show-photo.jpg"
+
     def test_prefer_lower_confidence(self):
         class MockEventData:
             description = None

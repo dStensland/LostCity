@@ -1,0 +1,21 @@
+{
+  "venue_id": 1398,
+  "venue_slug": "the-bluebird-cafe",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["live-music", "cozy"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "https://bluebirdcafe.com/menu/",
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "bluebirdcafetn",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

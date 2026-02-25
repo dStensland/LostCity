@@ -45,11 +45,11 @@ export async function POST(
     .from("portals")
     .select("id")
     .eq("slug", canonicalSlug)
-    .eq("status", "active")
     .maybeSingle();
 
   if (!portal) {
-    return new Response(null, { status: 404 });
+    // Tracking is best-effort; avoid noisy 404s in clients if slug cannot be resolved.
+    return new Response(null, { status: 204 });
   }
 
   const portalData = portal as { id: string };

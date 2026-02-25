@@ -10,3 +10,8 @@ discovery:
   - https://carlos.emory.edu
 detail:
   enabled: true
+data_goals:
+- events
+- exhibits
+- images
+- tickets

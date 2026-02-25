@@ -70,6 +70,14 @@ export interface FestivalSession {
     name: string;
     slug: string;
     neighborhood: string | null;
+    nearest_marta_station?: string | null;
+    marta_walk_minutes?: number | null;
+    marta_lines?: string[] | null;
+    beltline_adjacent?: boolean | null;
+    beltline_segment?: string | null;
+    parking_type?: string[] | null;
+    parking_free?: boolean | null;
+    transit_score?: number | null;
   } | null;
 }
 
@@ -170,7 +178,15 @@ export async function getFestivalEvents(
         id,
         name,
         slug,
-        neighborhood
+        neighborhood,
+        nearest_marta_station,
+        marta_walk_minutes,
+        marta_lines,
+        beltline_adjacent,
+        beltline_segment,
+        parking_type,
+        parking_free,
+        transit_score
       )
     `)
     .in("series_id", seriesIds)
@@ -244,6 +260,85 @@ export async function getAllFestivals(portalId?: string): Promise<Festival[]> {
 
     return true;
   });
+}
+
+export interface TentpoleEvent {
+  id: number;
+  title: string;
+  start_date: string;
+  start_time: string | null;
+  end_date: string | null;
+  end_time: string | null;
+  is_all_day: boolean;
+  is_free: boolean;
+  image_url: string | null;
+  description: string | null;
+  category: string | null;
+  festival_id: string | null;
+  is_tentpole: boolean;
+  source_url: string | null;
+  ticket_url: string | null;
+  venue: {
+    id: number;
+    name: string;
+    slug: string;
+    neighborhood: string | null;
+  } | null;
+  festival: {
+    id: string;
+    slug: string;
+    name: string;
+    image_url: string | null;
+    festival_type: string | null;
+    location: string | null;
+    neighborhood: string | null;
+  } | null;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function getTentpoleEvents(portalId?: string): Promise<TentpoleEvent[]> {
+  const supabase = await createClient();
+  const today = getLocalDateString();
+
+  const query = supabase
+    .from("events")
+    .select(`
+      id,
+      title,
+      start_date,
+      start_time,
+      end_date,
+      end_time,
+      is_all_day,
+      is_free,
+      image_url,
+      description,
+      category,
+      festival_id,
+      is_tentpole,
+      source_url,
+      ticket_url,
+      venue:venues(id, name, slug, neighborhood),
+      festival:festivals!events_festival_id_fkey(id, slug, name, image_url, festival_type, location, neighborhood)
+    `)
+    .eq("is_tentpole", true)
+    .or(`start_date.gte.${today},end_date.gte.${today}`)
+    .is("canonical_event_id", null)
+    .order("start_date", { ascending: true })
+    .order("start_time", { ascending: true });
+
+  // Portal scoping: if portalId provided, filter by portal
+  // Tentpole events are associated with festivals which have portal_id
+  // We join through festival_id → festivals.portal_id
+  // For now, we fetch all tentpole events and filter client-side if needed
+
+  const { data, error } = await query;
+
+  if (error || !data) {
+    return [];
+  }
+
+  return data as TentpoleEvent[];
 }
 
 export function groupEventsByDay(sessions: FestivalSession[]): Map<string, FestivalSession[]> {

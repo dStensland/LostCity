@@ -1,0 +1,11 @@
+slug,source_exists,source_type,is_active_before,events_found,events_new,events_updated,duration_seconds,status,error,activated
+dirty-south-trivia,True,organization_calendar,False,0,0,0,0.84,ok,,False
+geeks-who-drink,True,organization_calendar,False,0,0,0,0.8,ok,,False
+outspoken-entertainment,True,organization_calendar,False,0,0,0,75.02,timeout,profile validation timed out,False
+team-trivia,True,organization_calendar,False,0,0,0,1.02,ok,,False
+path-foundation,True,scrape,False,0,0,0,1.35,ok,,False
+limelight-theater,True,venue,False,0,0,0,1.2,ok,,False
+georgia-craft-brewers-guild,True,organization,False,0,0,0,1.37,ok,,False
+scott-antique-markets,True,venue,False,3,3,0,55.72,ok,,True
+atlanta-printmakers-studio,True,scrape,False,1,1,0,30.48,ok,,True
+a-queens-tea-party,True,venue,False,0,0,0,32.42,ok,,False

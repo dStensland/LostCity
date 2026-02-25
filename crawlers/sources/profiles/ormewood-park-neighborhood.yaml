@@ -10,3 +10,5 @@ discovery:
   - https://ormewoodpark.org
 detail:
   enabled: true
+data_goals:
+- events

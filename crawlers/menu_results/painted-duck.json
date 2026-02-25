@@ -1,0 +1,33 @@
+{
+  "venue_id": 264,
+  "venue_slug": "painted-duck",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {"name": "Whole Roasted Peking Duck", "price": "$125", "category": "entree"},
+      {"name": "Au Poivre Burger", "price": "$16", "category": "entree"},
+      {"name": "Duck Nuggets", "price": "$16", "category": "appetizer"},
+      {"name": "Ornithology", "price": "$12", "category": "cocktail"},
+      {"name": "Pinot Noir", "price": "$15", "category": "wine"}
+    ],
+    "dietary_options": [],
+    "price_level": 2,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

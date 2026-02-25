@@ -5,6 +5,7 @@ import { ensureUserProfile } from "@/lib/user-utils";
 import { withAuth } from "@/lib/api-middleware";
 import { resolvePortalAttributionForWrite } from "@/lib/portal-attribution";
 import { logger } from "@/lib/logger";
+import { resolveSessionEngagementContext } from "@/lib/session-engagement";
 
 const VALID_STATUSES = ["going", "interested", "went"] as const;
 const VALID_VISIBILITIES = ["friends", "public", "private"] as const;
@@ -52,6 +53,7 @@ export const POST = withAuth(async (request, { user, serviceClient }) => {
     });
     if (attribution.response) return attribution.response;
     const portalId = attribution.portalId;
+    const engagementContext = await resolveSessionEngagementContext(serviceClient, event_id);
 
     // Upsert the RSVP
     const { data, error } = await serviceClient
@@ -62,6 +64,9 @@ export const POST = withAuth(async (request, { user, serviceClient }) => {
           event_id,
           status,
           visibility,
+          engagement_target: engagementContext.engagement_target,
+          festival_id: engagementContext.festival_id,
+          program_id: engagementContext.program_id,
           updated_at: new Date().toISOString(),
           ...(portalId ? { portal_id: portalId } : {}),
         } as never,

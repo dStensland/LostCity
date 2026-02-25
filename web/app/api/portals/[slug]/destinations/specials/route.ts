@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createPortalScopedClient } from "@/lib/supabase/server";
 import { getPortalSourceAccess } from "@/lib/federation";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { parseFloatParam, parseIntParam, validationError, isValidUUID } from "@/lib/api-utils";
@@ -7,6 +7,7 @@ import { getLocalDateString } from "@/lib/formats";
 import { getProximityTier, getProximityLabel, getWalkingMinutes, haversineDistanceKm, type ProximityTier } from "@/lib/geo";
 import { logger } from "@/lib/logger";
 import { applyFederatedPortalScopeToQuery } from "@/lib/portal-scope";
+import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
 
 export const dynamic = "force-dynamic";
 
@@ -91,6 +92,10 @@ const CONFIDENCE_SCORE: Record<string, number> = {
   low: 1,
 };
 
+const SPECIALS_CACHE_TTL_MS = 60 * 1000;
+const SPECIALS_CACHE_MAX_ENTRIES = 120;
+const SPECIALS_CACHE_NAMESPACE = "api:portal-specials";
+
 function getCurrentISOWeekday(now: Date): number {
   const jsDay = now.getDay(); // 0=Sun
   return jsDay === 0 ? 7 : jsDay;
@@ -106,6 +111,13 @@ function parsePortalFilters(raw: PortalFilters | string | null | undefined): Por
     }
   }
   return raw;
+}
+
+function buildStableSearchParamsKey(searchParams: URLSearchParams): string {
+  return Array.from(searchParams.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+    .join("&");
 }
 
 function getPortalCities(filters: PortalFilters): string[] {
@@ -254,6 +266,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
   const lngParam = parseFloatParam(searchParams.get("lng"));
   const typeFilter = searchParams.get("types")?.split(",").map((v) => v.trim()).filter(Boolean) ?? [];
   const tierFilter = searchParams.get("tiers")?.split(",").map((v) => v.trim()).filter(Boolean) as ProximityTier[] | undefined;
+  const cacheKey = `${slug}|${buildStableSearchParamsKey(searchParams)}`;
 
   const supabase = await createClient();
 
@@ -270,6 +283,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: "Portal not found" }, { status: 404 });
   }
 
+  const portalClient = await createPortalScopedClient(portal.id);
   const parsedFilters = parsePortalFilters(portal.filters);
   const portalCenter = parsedFilters.geo_center;
   const centerLat = latParam ?? portalCenter?.[0];
@@ -290,7 +304,12 @@ export async function GET(request: NextRequest, context: RouteContext) {
   const lngDelta = radiusKm / (111 * Math.cos((centerLat * Math.PI) / 180));
 
   try {
-    let venuesQuery = supabase
+    const payload = await getOrSetSharedCacheJson<Record<string, unknown>>(
+      SPECIALS_CACHE_NAMESPACE,
+      cacheKey,
+      SPECIALS_CACHE_TTL_MS,
+      async () => {
+        let venuesQuery = supabase
       .from("venues")
       .select("id, name, slug, address, neighborhood, venue_type, lat, lng, city, image_url, short_description, vibes")
       .neq("active", false)
@@ -301,14 +320,17 @@ export async function GET(request: NextRequest, context: RouteContext) {
       .gte("lng", centerLng - lngDelta)
       .lte("lng", centerLng + lngDelta);
 
-    if (cityFilter.length > 0) {
-      venuesQuery = venuesQuery.in("city", cityFilter);
-    }
+        if (cityFilter.length > 0) {
+          venuesQuery = venuesQuery.in("city", cityFilter);
+        }
 
-    const { data: venuesData, error: venuesError } = await venuesQuery.limit(2000);
+    const venueFetchCap = Math.min(1200, Math.max(300, limit * 15));
+    const { data: venuesData, error: venuesError } = await venuesQuery.limit(
+      venueFetchCap,
+    );
     if (venuesError) {
       logger.error("Destination specials - venue fetch error:", venuesError);
-      return NextResponse.json({ destinations: [], error: "Failed to fetch venues" }, { status: 500 });
+      throw venuesError;
     }
 
     const venuesInRadius = ((venuesData || []) as VenueRow[])
@@ -332,7 +354,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       } => venue !== null);
 
     if (venuesInRadius.length === 0) {
-      return NextResponse.json({
+      return {
         destinations: [],
         meta: {
           total: 0,
@@ -341,10 +363,13 @@ export async function GET(request: NextRequest, context: RouteContext) {
           center: { lat: centerLat, lng: centerLng },
           radius_km: radiusKm,
         },
-      });
+      };
     }
 
-    const venueIds = venuesInRadius.map((venue) => venue.id);
+    const candidateVenues = venuesInRadius
+      .sort((a, b) => a.distance_km - b.distance_km)
+      .slice(0, Math.min(600, Math.max(200, limit * 10)));
+    const venueIds = candidateVenues.map((venue) => venue.id);
 
     let specialsQuery = supabase
       .from("venue_specials")
@@ -359,7 +384,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const { data: specialsData, error: specialsError } = await specialsQuery;
     if (specialsError) {
       logger.error("Destination specials - specials fetch error:", specialsError);
-      return NextResponse.json({ destinations: [], error: "Failed to fetch specials" }, { status: 500 });
+      throw specialsError;
     }
 
     const specialsByVenue = new Map<number, SpecialRow[]>();
@@ -377,7 +402,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const federationAccess = await getPortalSourceAccess(portal.id);
     const hasSubscribedSources = federationAccess.sourceIds.length > 0;
 
-    let eventsQuery = supabase
+    let eventsQuery = portalClient
       .from("events")
       .select("id, title, start_date, start_time, venue_id, source_id, category")
       .in("venue_id", venueIds)
@@ -393,7 +418,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
       publicOnlyWhenNoPortal: true,
     });
 
-    const { data: eventsData } = await eventsQuery.order("start_date", { ascending: true }).order("start_time", { ascending: true }).limit(1000);
+    const eventsLimit = Math.min(900, Math.max(300, venueIds.length * 2));
+    const { data: eventsData } = await eventsQuery
+      .order("start_date", { ascending: true })
+      .order("start_time", { ascending: true })
+      .limit(eventsLimit);
 
     const nextEventByVenue = new Map<number, EventRow>();
     for (const event of (eventsData || []) as EventRow[]) {
@@ -434,7 +463,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       recommendationsByVenue.set(row.venue_id, (recommendationsByVenue.get(row.venue_id) || 0) + 1);
     }
 
-    const destinations = venuesInRadius
+    const destinations = candidateVenues
       .map((venue) => {
         if (tierFilter?.length && !tierFilter.includes(venue.proximity_tier)) {
           return null;
@@ -554,28 +583,30 @@ export async function GET(request: NextRequest, context: RouteContext) {
       },
     };
 
-    return NextResponse.json(
-      {
-        portal: {
-          id: portal.id,
-          slug: portal.slug,
-          name: portal.name,
-        },
-        destinations,
-        meta: {
-          ...totals,
-          center: { lat: centerLat, lng: centerLng },
-          radius_km: radiusKm,
-          include_upcoming_hours: includeUpcomingHours,
-          active_now_only: activeNowOnly,
-        },
+        return {
+          portal: {
+            id: portal.id,
+            slug: portal.slug,
+            name: portal.name,
+          },
+          destinations,
+          meta: {
+            ...totals,
+            center: { lat: centerLat, lng: centerLng },
+            radius_km: radiusKm,
+            include_upcoming_hours: includeUpcomingHours,
+            active_now_only: activeNowOnly,
+          },
+        };
       },
-      {
-        headers: {
-          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
-        },
-      }
+      { maxEntries: SPECIALS_CACHE_MAX_ENTRIES }
     );
+
+    return NextResponse.json(payload, {
+      headers: {
+        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
+      },
+    });
   } catch (error) {
     logger.error("Destination specials API error:", error);
     return NextResponse.json({ destinations: [], error: "Failed to fetch destination specials" }, { status: 500 });

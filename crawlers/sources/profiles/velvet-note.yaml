@@ -1,0 +1,19 @@
+version: 1
+slug: velvet-note
+name: The Velvet Note
+integration_method: html
+defaults:
+  category: music
+  tags:
+  - live-music
+  - jazz
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://thevelvetnote.com/events/
+detail:
+  enabled: true
+data_goals:
+- events
+- tickets

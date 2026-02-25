@@ -1,0 +1,40 @@
+{
+  "venue_id": 4915,
+  "venue_slug": "chelo",
+  "meta": {
+    "og_image": "https://popmenucloud.com/cdn-cgi/image/width=1200,height=630,format=auto,fit=cover/wdnukoqv/3e9aaa27-c8a2-4248-adce-5c8467e92dae.jpg",
+    "meta_description": "Chelo in Roswell, GA. Authentic Persian Middle-Eastern cuisine, located in the heart of Historic Roswell",
+    "reservation_links": [
+      "https://www.opentable.com/r/chelo-reservations-roswell?restref=1328485&lang=en-US&ot_source=Restaurant%20website&ot_campaign=Webiste%20"
+    ],
+    "menu_links": [
+      "https://www.cheloroswell.com/menu",
+      "https://www.cheloroswell.com/menu"
+    ],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["upscale", "date-spot", "craft-cocktails", "trendy"],
+    "cuisine": ["middle_eastern", "mediterranean"],
+    "service_style": "full_service",
+    "price_level": 3,
+    "menu_highlights": [
+      {"name": "Persian Smoke", "price": "$18", "category": "cocktail"},
+      {"name": "Ember Spicy Margarita", "price": "$16", "category": "cocktail"},
+      {"name": "Elixir Old Fashioned", "price": "$16", "category": "cocktail"},
+      {"name": "Hot Mezze", "price": null, "category": "appetizer"},
+      {"name": "Crispy Violet", "price": "$14", "category": "cocktail"}
+    ],
+    "menu_url": "https://www.cheloroswell.com/menu",
+    "reservation_url": "https://www.opentable.com/r/chelo-reservations-roswell?restref=1328485&lang=en-US&ot_source=Restaurant%20website&ot_campaign=Webiste%20",
+    "phone": null,
+    "instagram": null,
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

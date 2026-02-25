@@ -1,0 +1,37 @@
+{
+  "venue_id": 4894,
+  "venue_slug": "laghmans-express",
+  "meta": {
+    "og_image": "http://static1.squarespace.com/static/687985cbf5167414cca20108/t/687985d9f5167414cca2047e/1738682538965/ChowNow_GenericSocialShare.png?format=1500w",
+    "meta_description": null,
+    "reservation_links": [],
+    "menu_links": [
+      "http://laghmanexpressga.com/index.php/menu"
+    ],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": "(470) 448-1919"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["casual", "fast-casual"],
+    "cuisine": ["middle_eastern", "fusion"],
+    "service_style": "fast_casual",
+    "price_level": 2,
+    "menu_highlights": [
+      {"name": "Suirou Laghman", "price": "$17.99", "category": "entree"},
+      {"name": "Taskent Style Plov", "price": "$18.99", "category": "entree"},
+      {"name": "Stir Fried Lamb with Cumin", "price": "$22.99", "category": "entree"},
+      {"name": "Central Asian Manty", "price": "$18.99", "category": "appetizer"},
+      {"name": "Lamb Kebab", "price": "$14.99", "category": "entree"}
+    ],
+    "menu_url": "http://laghmanexpressga.com/index.php/menu",
+    "reservation_url": null,
+    "phone": "(470) 448-1919",
+    "instagram": null,
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

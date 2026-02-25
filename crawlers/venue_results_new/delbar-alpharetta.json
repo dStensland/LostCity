@@ -1,0 +1,35 @@
+{
+  "venue_id": 4884,
+  "venue_slug": "delbar-alpharetta",
+  "meta": {
+    "og_image": "https://popmenucloud.com/cdn-cgi/image/width=1200,height=630,format=auto,fit=cover/ifzpyktr/45358948-1df4-4949-9d03-06e9ea976a1e.jpg",
+    "meta_description": "Delbar Middle Eastern in Alpharetta, GA. Translating to \"heart, captured\" in Farsi, Delbar is a love letter to the influential dishes that shaped Fares Kargar's youth and the women in his life who instilled his deep appreciation for Middle Eastern cooking.",
+    "reservation_links": [],
+    "menu_links": [],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["upscale", "date-spot", "trendy"],
+    "cuisine": ["middle_eastern", "mediterranean"],
+    "service_style": "full_service",
+    "price_level": 3,
+    "menu_highlights": [
+      {"name": "Omani Shrimp", "price": "$22", "category": "appetizer"},
+      {"name": "Smoked Bass", "price": "$28", "category": "appetizer"},
+      {"name": "Adana Bite", "price": "$14", "category": "appetizer"},
+      {"name": "Falafel Plate", "price": "$16", "category": "entree"},
+      {"name": "Za'atar Wings", "price": "$15", "category": "appetizer"}
+    ],
+    "menu_url": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": null,
+    "dietary_options": ["vegetarian-friendly", "vegan-options", "gluten-free-options", "allergy-aware"],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

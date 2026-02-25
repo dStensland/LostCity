@@ -1,0 +1,772 @@
+{
+  "generated_at": "2026-02-23T16:46:30.525512+00:00",
+  "scope": {
+    "future_start_date": "2026-02-23",
+    "next_window_end_date": "2026-03-25",
+    "window_days": 30
+  },
+  "counts": {
+    "future_events_total": 19417,
+    "future_events_visible": 18500,
+    "active_sources": 488,
+    "venues_total": 4438
+  },
+  "duplicates": {
+    "all_future": {
+      "same_source_duplicate_groups": 38,
+      "same_source_duplicate_rows": 39,
+      "cross_source_groups": 40,
+      "cross_source_rows": 82,
+      "cross_source_duplicate_rows": 42
+    },
+    "visible_future": {
+      "same_source_duplicate_groups": 36,
+      "same_source_duplicate_rows": 37,
+      "cross_source_groups": 3,
+      "cross_source_rows": 6,
+      "cross_source_duplicate_rows": 3
+    },
+    "visible_clusters_top": [
+      {
+        "normalized_title": "paid speaker shift  from free talks to paid keynotes",
+        "start_date": "2026-03-02",
+        "venue_id": 0,
+        "venue_name": "0",
+        "event_ids": [
+          20421,
+          57206
+        ],
+        "canonical_event_ids": [],
+        "source_slugs": [
+          "atlanta-preservation-center",
+          "eventbrite"
+        ],
+        "source_count": 2,
+        "row_count": 2
+      },
+      {
+        "normalized_title": "great ant sleepover",
+        "start_date": "2026-05-16",
+        "venue_id": 125,
+        "venue_name": "Alliance Theatre",
+        "event_ids": [
+          10268,
+          65593
+        ],
+        "canonical_event_ids": [],
+        "source_slugs": [
+          "alliance-theatre",
+          "theatre-for-young-audiences"
+        ],
+        "source_count": 2,
+        "row_count": 2
+      },
+      {
+        "normalized_title": "basura",
+        "start_date": "2026-05-30",
+        "venue_id": 125,
+        "venue_name": "Alliance Theatre",
+        "event_ids": [
+          10269,
+          65594
+        ],
+        "canonical_event_ids": [],
+        "source_slugs": [
+          "alliance-theatre",
+          "theatre-for-young-audiences"
+        ],
+        "source_count": 2,
+        "row_count": 2
+      },
+      {
+        "normalized_title": "best of atlanta comedy showcase",
+        "start_date": "2026-02-28",
+        "venue_id": 194,
+        "venue_name": "Laughing Skull Lounge",
+        "event_ids": [
+          2077,
+          56664,
+          56665
+        ],
+        "canonical_event_ids": [],
+        "source_slugs": [
+          "laughing-skull"
+        ],
+        "source_count": 1,
+        "row_count": 3
+      },
+      {
+        "normalized_title": "best of atlanta comedy showcase",
+        "start_date": "2026-02-27",
+        "venue_id": 194,
+        "venue_name": "Laughing Skull Lounge",
+        "event_ids": [
+          11180,
+          56663
+        ],
+        "canonical_event_ids": [],
+        "source_slugs": [
+          "laughing-skull"
+        ],
+        "source_count": 1,
+        "row_count": 2
+      },
+      {
+        "normalized_title": "saturday soir\u00e9e date night galactic love tree",
+        "start_date": "2026-02-28",
+        "venue_id": 1758,
+        "venue_name": "Painting With a Twist - Lawrenceville",
+        "event_ids": [
+          15756,
+          56563
+        ],
+        "canonical_event_ids": [],
+        "source_slugs": [
+          "painting-with-a-twist"
+        ],
+        "source_count": 1,
+        "row_count": 2
+      },
+      {
+        "normalized_title": "sip  strokes saturday sassy in blue",
+        "start_date": "2026-02-28",
+        "venue_id": 1754,
+        "venue_name": "Painting With a Twist - Kennesaw",
+        "event_ids": [
+          15324,
+          56299
+        ],
+        "canonical_event_ids": [],
+        "source_slugs": [
+          "painting-with-a-twist"
+        ],
+        "source_count": 1,
+        "row_count": 2
+      },
+      {
+        "normalized_title": "covington",
+        "start_date": "2026-03-03",
+        "venue_id": 2736,
+        "venue_name": "Serenity House - Covington",
+        "event_ids": [
+          45615,
+          59138
+        ],
+        "canonical_event_ids": [],
+        "source_slugs": [
+          "aa-atlanta"
+        ],
+        "source_count": 1,
+        "row_count": 2
+      },
+      {
+        "normalized_title": "covington",
+        "start_date": "2026-03-05",
+        "venue_id": 2736,
+        "venue_name": "Serenity House - Covington",
+        "event_ids": [
+          44202,
+          58212
+        ],
+        "canonical_event_ids": [],
+        "source_slugs": [
+          "aa-atlanta"
+        ],
+        "source_count": 1,
+        "row_count": 2
+      },
+      {
+        "normalized_title": "best of atlanta comedy showcase",
+        "start_date": "2026-03-06",
+        "venue_id": 194,
+        "venue_name": "Laughing Skull Lounge",
+        "event_ids": [
+          49053,
+          56666
+        ],
+        "canonical_event_ids": [],
+        "source_slugs": [
+          "laughing-skull"
+        ],
+        "source_count": 1,
+        "row_count": 2
+      },
+      {
+        "normalized_title": "covington",
+        "start_date": "2026-03-06",
+        "venue_id": 2736,
+        "venue_name": "Serenity House - Covington",
+        "event_ids": [
+          43689,
+          58038
+        ],
+        "canonical_event_ids": [],
+        "source_slugs": [
+          "aa-atlanta"
+        ],
+        "source_count": 1,
+        "row_count": 2
+      },
+      {
+        "normalized_title": "paulding democrats  knocking doors for the special election for congress",
+        "start_date": "2026-03-07",
+        "venue_id": 4360,
+        "venue_name": "Parking lot behind McDonald's",
+        "event_ids": [
+          54748,
+          55721
+        ],
+        "canonical_event_ids": [],
+        "source_slugs": [
+          "mobilize-api"
+        ],
+        "source_count": 1,
+        "row_count": 2
+      },
+      {
+        "normalized_title": "spring potluck  chili cookoff contest",
+        "start_date": "2026-03-08",
+        "venue_id": 0,
+        "venue_name": "0",
+        "event_ids": [
+          69276,
+          69277
+        ],
+        "canonical_event_ids": [],
+        "source_slugs": [
+          "meetup"
+        ],
+        "source_count": 1,
+        "row_count": 2
+      },
+      {
+        "normalized_title": "covington",
+        "start_date": "2026-03-09",
+        "venue_id": 2736,
+        "venue_name": "Serenity House - Covington",
+        "event_ids": [
+          46008,
+          59509
+        ],
+        "canonical_event_ids": [],
+        "source_slugs": [
+          "aa-atlanta"
+        ],
+        "source_count": 1,
+        "row_count": 2
+      },
+      {
+        "normalized_title": "covington",
+        "start_date": "2026-03-10",
+        "venue_id": 2736,
+        "venue_name": "Serenity House - Covington",
+        "event_ids": [
+          45616,
+          59139
+        ],
+        "canonical_event_ids": [],
+        "source_slugs": [
+          "aa-atlanta"
+        ],
+        "source_count": 1,
+        "row_count": 2
+      },
+      {
+        "normalized_title": "eidola  the eviscerate  mend tour",
+        "start_date": "2026-03-10",
+        "venue_id": 104,
+        "venue_name": "The Masquerade - Hell",
+        "event_ids": [
+          1041,
+          60200
+        ],
+        "canonical_event_ids": [],
+        "source_slugs": [
+          "ticketmaster"
+        ],
+        "source_count": 1,
+        "row_count": 2
+      },
+      {
+        "normalized_title": "eviscerate  mend tour",
+        "start_date": "2026-03-10",
+        "venue_id": 364,
+        "venue_name": "The Masquerade",
+        "event_ids": [
+          5729,
+          56289
+        ],
+        "canonical_event_ids": [],
+        "source_slugs": [
+          "the-masquerade"
+        ],
+        "source_count": 1,
+        "row_count": 2
+      },
+      {
+        "normalized_title": "covington",
+        "start_date": "2026-03-12",
+        "venue_id": 2736,
+        "venue_name": "Serenity House - Covington",
+        "event_ids": [
+          44207,
+          58213
+        ],
+        "canonical_event_ids": [],
+        "source_slugs": [
+          "aa-atlanta"
+        ],
+        "source_count": 1,
+        "row_count": 2
+      },
+      {
+        "normalized_title": "covington",
+        "start_date": "2026-03-13",
+        "venue_id": 2736,
+        "venue_name": "Serenity House - Covington",
+        "event_ids": [
+          49668,
+          57963
+        ],
+        "canonical_event_ids": [],
+        "source_slugs": [
+          "aa-atlanta"
+        ],
+        "source_count": 1,
+        "row_count": 2
+      },
+      {
+        "normalized_title": "free poker night at the independent",
+        "start_date": "2026-03-14",
+        "venue_id": 667,
+        "venue_name": "The Independent",
+        "event_ids": [
+          17236,
+          56923
+        ],
+        "canonical_event_ids": [],
+        "source_slugs": [
+          "freeroll-atlanta"
+        ],
+        "source_count": 1,
+        "row_count": 2
+      }
+    ]
+  },
+  "genres": {
+    "future_events_with_genres": 8561,
+    "future_events_genres_pct": 44.1,
+    "music_film_events_total": 3261,
+    "music_film_with_genres": 2205,
+    "music_film_genres_pct": 67.6,
+    "venues_with_genres": 414,
+    "venues_with_genres_pct": 9.3
+  },
+  "specials": {
+    "active_total": 850,
+    "active_by_type": {
+      "daily_special": 489,
+      "event_night": 105,
+      "holiday_special": 56,
+      "recurring_deal": 55,
+      "happy_hour": 50,
+      "holiday_hours": 42,
+      "brunch": 35,
+      "seasonal_menu": 16,
+      "daily_deal": 2
+    },
+    "happy_hour_active": 50
+  },
+  "mobility": {
+    "venues_with_parking_note": 2424,
+    "venues_with_parking_note_pct": 54.6,
+    "venues_with_transit_note": 73,
+    "venues_with_transit_note_pct": 1.6,
+    "venues_with_transit_score": 3313,
+    "venues_with_transit_score_pct": 74.7,
+    "venues_with_walkable_neighbor_count": 1273,
+    "venues_with_walkable_neighbor_count_pct": 28.7,
+    "walkable_neighbors_rows": 58322,
+    "walkability_score_column_present": false,
+    "coverage_by_neighborhood_top": [
+      {
+        "neighborhood": "Midtown",
+        "venues_with_walkable_neighbors": 136
+      },
+      {
+        "neighborhood": "Downtown",
+        "venues_with_walkable_neighbors": 131
+      },
+      {
+        "neighborhood": "Buckhead",
+        "venues_with_walkable_neighbors": 85
+      },
+      {
+        "neighborhood": "Old Fourth Ward",
+        "venues_with_walkable_neighbors": 42
+      },
+      {
+        "neighborhood": "Unknown",
+        "venues_with_walkable_neighbors": 40
+      },
+      {
+        "neighborhood": "Decatur",
+        "venues_with_walkable_neighbors": 40
+      },
+      {
+        "neighborhood": "Inman Park",
+        "venues_with_walkable_neighbors": 37
+      },
+      {
+        "neighborhood": "Downtown Nashville",
+        "venues_with_walkable_neighbors": 37
+      },
+      {
+        "neighborhood": "East Atlanta Village",
+        "venues_with_walkable_neighbors": 32
+      },
+      {
+        "neighborhood": "Poncey-Highland",
+        "venues_with_walkable_neighbors": 28
+      },
+      {
+        "neighborhood": "West Midtown",
+        "venues_with_walkable_neighbors": 27
+      },
+      {
+        "neighborhood": "East Nashville",
+        "venues_with_walkable_neighbors": 27
+      }
+    ]
+  },
+  "historic": {
+    "venues_with_historic_vibe": 97,
+    "venues_with_museum_or_historic_type": 106,
+    "venues_with_historyish_description": 336,
+    "explore_track_venues_total": 459,
+    "explore_track_venues_with_editorial_blurb": 409,
+    "explore_track_venues_with_historyish_blurb": 66,
+    "historic_facts_column_present": false,
+    "coverage_by_neighborhood_top": [
+      {
+        "neighborhood": "Midtown",
+        "venues_with_history_signal": 46
+      },
+      {
+        "neighborhood": "Downtown",
+        "venues_with_history_signal": 39
+      },
+      {
+        "neighborhood": "Unknown",
+        "venues_with_history_signal": 30
+      },
+      {
+        "neighborhood": "Buckhead",
+        "venues_with_history_signal": 20
+      },
+      {
+        "neighborhood": "Downtown Nashville",
+        "venues_with_history_signal": 15
+      },
+      {
+        "neighborhood": "Decatur",
+        "venues_with_history_signal": 13
+      },
+      {
+        "neighborhood": "Druid Hills",
+        "venues_with_history_signal": 13
+      },
+      {
+        "neighborhood": "West End",
+        "venues_with_history_signal": 13
+      },
+      {
+        "neighborhood": "Roswell",
+        "venues_with_history_signal": 13
+      },
+      {
+        "neighborhood": "Virginia-Highland",
+        "venues_with_history_signal": 12
+      },
+      {
+        "neighborhood": "Sandy Springs",
+        "venues_with_history_signal": 11
+      },
+      {
+        "neighborhood": "Grant Park",
+        "venues_with_history_signal": 11
+      }
+    ]
+  },
+  "time_quality": {
+    "buckets_visible_future": {
+      "timed": 17232,
+      "all_day": 641,
+      "date_only": 627
+    },
+    "top_date_only_categories": [
+      {
+        "category": "community",
+        "date_only_events": 275
+      },
+      {
+        "category": "music",
+        "date_only_events": 178
+      },
+      {
+        "category": "sports",
+        "date_only_events": 38
+      },
+      {
+        "category": "film",
+        "date_only_events": 20
+      },
+      {
+        "category": "fitness",
+        "date_only_events": 18
+      },
+      {
+        "category": "learning",
+        "date_only_events": 17
+      },
+      {
+        "category": "words",
+        "date_only_events": 16
+      },
+      {
+        "category": "food_drink",
+        "date_only_events": 13
+      },
+      {
+        "category": "nightlife",
+        "date_only_events": 9
+      },
+      {
+        "category": "art",
+        "date_only_events": 9
+      }
+    ]
+  },
+  "genre_coverage_by_category_top": [
+    {
+      "category": "support_group",
+      "events_total": 5523,
+      "with_genres": 35,
+      "coverage_pct": 0.6
+    },
+    {
+      "category": "community",
+      "events_total": 2986,
+      "with_genres": 1448,
+      "coverage_pct": 48.5
+    },
+    {
+      "category": "music",
+      "events_total": 2093,
+      "with_genres": 1817,
+      "coverage_pct": 86.8
+    },
+    {
+      "category": "learning",
+      "events_total": 1574,
+      "with_genres": 1276,
+      "coverage_pct": 81.1
+    },
+    {
+      "category": "sports",
+      "events_total": 1009,
+      "with_genres": 717,
+      "coverage_pct": 71.1
+    },
+    {
+      "category": "film",
+      "events_total": 916,
+      "with_genres": 126,
+      "coverage_pct": 13.8
+    },
+    {
+      "category": "art",
+      "events_total": 872,
+      "with_genres": 159,
+      "coverage_pct": 18.2
+    },
+    {
+      "category": "family",
+      "events_total": 689,
+      "with_genres": 511,
+      "coverage_pct": 74.2
+    },
+    {
+      "category": "nightlife",
+      "events_total": 462,
+      "with_genres": 364,
+      "coverage_pct": 78.8
+    },
+    {
+      "category": "words",
+      "events_total": 411,
+      "with_genres": 115,
+      "coverage_pct": 28.0
+    },
+    {
+      "category": "theater",
+      "events_total": 363,
+      "with_genres": 182,
+      "coverage_pct": 50.1
+    },
+    {
+      "category": "fitness",
+      "events_total": 348,
+      "with_genres": 202,
+      "coverage_pct": 58.0
+    },
+    {
+      "category": "outdoors",
+      "events_total": 317,
+      "with_genres": 315,
+      "coverage_pct": 99.4
+    },
+    {
+      "category": "food_drink",
+      "events_total": 243,
+      "with_genres": 111,
+      "coverage_pct": 45.7
+    },
+    {
+      "category": "comedy",
+      "events_total": 226,
+      "with_genres": 220,
+      "coverage_pct": 97.3
+    }
+  ],
+  "specials_by_neighborhood_top": [
+    {
+      "neighborhood": "Midtown",
+      "active_specials": 90
+    },
+    {
+      "neighborhood": "Sandy Springs",
+      "active_specials": 62
+    },
+    {
+      "neighborhood": "Old Fourth Ward",
+      "active_specials": 48
+    },
+    {
+      "neighborhood": "Buckhead",
+      "active_specials": 46
+    },
+    {
+      "neighborhood": "Unknown",
+      "active_specials": 46
+    },
+    {
+      "neighborhood": "Downtown",
+      "active_specials": 43
+    },
+    {
+      "neighborhood": "Virginia-Highland",
+      "active_specials": 42
+    },
+    {
+      "neighborhood": "West Midtown",
+      "active_specials": 42
+    },
+    {
+      "neighborhood": "Inman Park",
+      "active_specials": 25
+    },
+    {
+      "neighborhood": "Roswell",
+      "active_specials": 20
+    },
+    {
+      "neighborhood": "SoBro",
+      "active_specials": 18
+    },
+    {
+      "neighborhood": "Downtown Nashville",
+      "active_specials": 17
+    }
+  ],
+  "closed_venues": {
+    "registry_venues_matched": 9,
+    "future_visible_events_on_registry_closed_venues": 7,
+    "future_visible_events_on_inactive_venues": 308
+  },
+  "crawl_freshness": {
+    "logs_last_24h": 542,
+    "logs_last_7d": 5082,
+    "unique_sources_last_24h": 488,
+    "status_last_24h": {
+      "success": 481,
+      "error": 39,
+      "running": 22
+    },
+    "error_rate_pct": 7.5,
+    "events_found_last_24h": 18255,
+    "events_new_last_24h": 875,
+    "events_updated_last_24h": 15397,
+    "top_error_sources_last_24h": [
+      {
+        "source_id": 781,
+        "source": "atlanta-city-events",
+        "errors": 2
+      },
+      {
+        "source_id": 791,
+        "source": "lifeline-animal-project",
+        "errors": 2
+      },
+      {
+        "source_id": 567,
+        "source": "peach-state-roller-derby",
+        "errors": 2
+      },
+      {
+        "source_id": 972,
+        "source": "hdsa-georgia",
+        "errors": 2
+      },
+      {
+        "source_id": 188,
+        "source": "southern-fried-gaming",
+        "errors": 2
+      }
+    ]
+  },
+  "indie_showtimes": {
+    "plaza-theatre": {
+      "venue_name": "Plaza Theatre",
+      "events_next_window": 7,
+      "with_start_time": 1,
+      "without_start_time": 6,
+      "time_coverage_pct": 14.3,
+      "tomorrow_events": 0
+    },
+    "tara-theatre": {
+      "venue_name": "Tara Theatre",
+      "events_next_window": 22,
+      "with_start_time": 22,
+      "without_start_time": 0,
+      "time_coverage_pct": 100.0,
+      "tomorrow_events": 0
+    },
+    "landmark-midtown-art-cinema": {
+      "venue_name": "Landmark Midtown Art Cinema",
+      "events_next_window": 45,
+      "with_start_time": 42,
+      "without_start_time": 3,
+      "time_coverage_pct": 93.3,
+      "tomorrow_events": 9
+    },
+    "starlight-drive-in": {
+      "venue_name": "Starlight Drive-In Theatre",
+      "events_next_window": 30,
+      "with_start_time": 30,
+      "without_start_time": 0,
+      "time_coverage_pct": 100.0,
+      "tomorrow_events": 5
+    }
+  }
+}

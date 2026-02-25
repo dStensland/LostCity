@@ -254,7 +254,7 @@ export default function ImmersiveHeader({
 
           {/* Right: Search + User menu + Mobile menu */}
           <div className="flex items-center gap-2 flex-shrink-0">
-            {headerConfig.show_search_in_header !== false && (
+            {headerConfig.show_search_in_header !== false && currentView !== "find" && (
               <div className={scrollProgress > 0.3 ? "" : "text-white"}>
                 <HeaderSearchButton />
               </div>

@@ -18,10 +18,12 @@ import time
 import logging
 import argparse
 import requests
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 from dotenv import load_dotenv
 from db import get_client
+from hours_utils import format_hours_display, prepare_hours_update, should_update_hours
 
 # Load .env file from project root
 env_path = Path(__file__).parent.parent / ".env"
@@ -116,93 +118,70 @@ def parse_foursquare_hours(hours_data: Optional[dict]) -> tuple[Optional[dict], 
     return hours_json if hours_json else None, display
 
 
-def format_hours_display(hours: dict) -> str:
-    """Generate a human-readable hours display string."""
-    if not hours:
-        return ""
-
-    day_order = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
-    day_labels = {"mon": "Mon", "tue": "Tue", "wed": "Wed", "thu": "Thu",
-                  "fri": "Fri", "sat": "Sat", "sun": "Sun"}
-
-    lines = []
-    i = 0
-    while i < len(day_order):
-        day = day_order[i]
-        if day not in hours:
-            i += 1
-            continue
-
-        times = hours[day]
-        start_day = day
-        end_day = day
-
-        # Find consecutive days with same hours
-        j = i + 1
-        while j < len(day_order):
-            next_day = day_order[j]
-            if next_day in hours and hours[next_day] == times:
-                end_day = next_day
-                j += 1
-            else:
-                break
-
-        # Format time range
-        open_time = times["open"]
-        close_time = times["close"]
-
-        def to_12h(t):
-            h, m = int(t[:2]), t[3:]
-            period = "am" if h < 12 else "pm"
-            h = h % 12 or 12
-            return f"{h}:{m}{period}" if m != "00" else f"{h}{period}"
-
-        time_str = f"{to_12h(open_time)}-{to_12h(close_time)}"
-
-        if start_day == end_day:
-            lines.append(f"{day_labels[start_day]}: {time_str}")
-        else:
-            lines.append(f"{day_labels[start_day]}-{day_labels[end_day]}: {time_str}")
-
-        i = j
-
-    return ", ".join(lines)
-
-
 def get_venues_needing_hours(
     venue_type: Optional[str] = None,
     limit: int = 30,
+    max_age_days: int = 30,
 ) -> list[dict]:
-    """Get venues with foursquare_id but no hours."""
+    """Get venues with foursquare_id that need hours (missing, stale, or lower-confidence)."""
     client = get_client()
 
     query = client.table("venues").select(
-        "id, name, slug, foursquare_id, hours, venue_type"
+        "id, name, slug, foursquare_id, hours, venue_type, hours_source, hours_updated_at"
     ).eq("active", True)
 
     # Must have foursquare_id
     query = query.not_.is_("foursquare_id", "null")
 
-    # Must not have hours
-    query = query.is_("hours", "null")
-
     if venue_type:
         query = query.eq("venue_type", venue_type)
 
-    query = query.limit(limit)
+    query = query.limit(limit * 3)  # Over-fetch to filter client-side
 
     result = query.execute()
-    return result.data or []
+    venues = result.data or []
+
+    # Filter: no hours, stale, or upgradeable from lower-confidence source
+    now = datetime.now(timezone.utc)
+    filtered = []
+    for v in venues:
+        # No hours — always include
+        if not v.get("hours"):
+            filtered.append(v)
+            continue
+        # Skip venues with Google hours (higher confidence) unless stale
+        if v.get("hours_source") == "google":
+            continue
+        # Foursquare hours already present — only re-fetch if stale
+        if v.get("hours_source") == "foursquare":
+            if v.get("hours_updated_at"):
+                try:
+                    updated = datetime.fromisoformat(v["hours_updated_at"].replace("Z", "+00:00"))
+                    if (now - updated).days >= max_age_days:
+                        filtered.append(v)
+                except (ValueError, TypeError):
+                    pass
+            continue
+        # Lower-confidence source (website, social_bio) — include for upgrade
+        if should_update_hours(v.get("hours_source"), "foursquare"):
+            filtered.append(v)
+
+    return filtered[:limit]
 
 
 def update_venue_hours(venue_id: int, hours: dict, hours_display: str, dry_run: bool = False) -> bool:
-    """Update venue with hours."""
+    """Update venue with hours from Foursquare."""
     if dry_run:
         return True
 
     client = get_client()
     try:
-        updates = {"hours": hours}
+        now = datetime.now(timezone.utc).isoformat()
+        updates = {
+            "hours": hours,
+            "hours_source": "foursquare",
+            "hours_updated_at": now,
+        }
         if hours_display:
             updates["hours_display"] = hours_display
 
@@ -218,6 +197,7 @@ def main():
     parser.add_argument("--venue-type", help="Filter by venue type (bar, restaurant, etc.)")
     parser.add_argument("--limit", type=int, default=30, help="Max venues to process")
     parser.add_argument("--dry-run", action="store_true", help="Preview without updating")
+    parser.add_argument("--max-age-days", type=int, default=30, help="Re-fetch hours older than this many days (default: 30)")
     args = parser.parse_args()
 
     if not FOURSQUARE_API_KEY:
@@ -228,8 +208,8 @@ def main():
     logger.info("Foursquare Hours Hydration")
     logger.info("=" * 60)
 
-    venues = get_venues_needing_hours(args.venue_type, args.limit)
-    logger.info(f"Found {len(venues)} venues with Foursquare ID but no hours")
+    venues = get_venues_needing_hours(args.venue_type, args.limit, max_age_days=args.max_age_days)
+    logger.info(f"Found {len(venues)} venues needing Foursquare hours")
     logger.info("")
 
     hydrated = 0
@@ -239,12 +219,21 @@ def main():
         name = venue["name"]
         fsq_id = venue["foursquare_id"]
 
-        hours, display = get_foursquare_hours(fsq_id)
+        raw_hours, raw_display = get_foursquare_hours(fsq_id)
 
-        if hours:
-            # Generate our own display if Foursquare didn't provide one
-            if not display:
-                display = format_hours_display(hours)
+        if raw_hours:
+            # Normalize/validate through shared pipeline
+            hours, display = prepare_hours_update(
+                raw_hours, source="foursquare", venue_type=venue.get("venue_type"),
+            )
+            if not hours:
+                logger.info(f"  NO HOURS: {name} (validation failed)")
+                failed += 1
+                time.sleep(3)
+                continue
+            # Prefer Foursquare's own display if we don't have one
+            if not display and raw_display:
+                display = raw_display
 
             if args.dry_run:
                 logger.info(f"  FOUND: {name}")

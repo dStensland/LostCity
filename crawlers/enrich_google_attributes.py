@@ -55,6 +55,8 @@ FIELD_MASK = ",".join([
     "places.displayName",
     "places.formattedAddress",
     "places.location",
+    "places.primaryType",
+    "places.types",
     "places.accessibilityOptions",
     "places.allowsDogs",
     "places.goodForChildren",
@@ -84,6 +86,35 @@ ATTRIBUTE_TO_VIBE = {
     "liveMusic": "live-music",
     "outdoorSeating": "outdoor-seating",
     "goodForWatchingSports": "sports",
+}
+
+# Google Place type → our cuisine taxonomy
+GOOGLE_TYPE_TO_CUISINE = {
+    "mexican_restaurant": "mexican",
+    "sushi_restaurant": "japanese",
+    "thai_restaurant": "thai",
+    "indian_restaurant": "indian",
+    "chinese_restaurant": "chinese",
+    "korean_restaurant": "korean",
+    "italian_restaurant": "italian",
+    "french_restaurant": "french",
+    "mediterranean_restaurant": "mediterranean",
+    "japanese_restaurant": "japanese",
+    "vietnamese_restaurant": "vietnamese",
+    "brazilian_restaurant": "brazilian",
+    "greek_restaurant": "mediterranean",
+    "turkish_restaurant": "turkish",
+    "american_restaurant": "american",
+    "seafood_restaurant": "seafood",
+    "steak_house": "steakhouse",
+    "barbecue_restaurant": "bbq",
+    "pizza_restaurant": "pizza",
+    "hamburger_restaurant": "burgers",
+    "ice_cream_shop": "ice_cream_dessert",
+    "bakery": "bakery",
+    "cafe": "coffee",
+    "coffee_shop": "coffee",
+    "vegan_restaurant": "vegan",
 }
 
 # Day mapping for hours
@@ -285,6 +316,30 @@ def extract_vibes_from_attributes(place: dict) -> list[str]:
     return vibes
 
 
+def extract_cuisine_from_types(place: dict) -> list[str]:
+    """Extract cuisine tags from Google Place primaryType and types fields."""
+    cuisines = []
+    seen = set()
+
+    # Check primaryType first (most specific)
+    primary = place.get("primaryType", "")
+    if primary in GOOGLE_TYPE_TO_CUISINE:
+        tag = GOOGLE_TYPE_TO_CUISINE[primary]
+        if tag not in seen:
+            cuisines.append(tag)
+            seen.add(tag)
+
+    # Check types array for additional cuisine signals
+    for t in place.get("types", []):
+        if t in GOOGLE_TYPE_TO_CUISINE:
+            tag = GOOGLE_TYPE_TO_CUISINE[t]
+            if tag not in seen:
+                cuisines.append(tag)
+                seen.add(tag)
+
+    return cuisines
+
+
 def map_price_level(google_price: Optional[str]) -> Optional[int]:
     """Map Google price level to our 1-4 scale."""
     if not google_price:
@@ -321,7 +376,7 @@ def get_venues(
 
     query = (
         client.table("venues")
-        .select("id, name, slug, city, lat, lng, vibes, hours, hours_display, menu_url, reservation_url, price_level, phone, last_verified_at")
+        .select("id, name, slug, city, lat, lng, vibes, cuisine, hours, hours_display, menu_url, reservation_url, price_level, phone, last_verified_at")
         .eq("active", True)
         .not_.is_("lat", "null")
         .not_.is_("lng", "null")
@@ -431,6 +486,13 @@ def enrich_venue(venue: dict, dry_run: bool = False) -> dict:
             updates["phone"] = phone
             result["phone_added"] = phone
 
+    # Cuisine: extract from Google types, only if venue has no cuisine yet
+    if not venue.get("cuisine"):
+        google_cuisines = extract_cuisine_from_types(google)
+        if google_cuisines:
+            updates["cuisine"] = google_cuisines
+            result["cuisine_added"] = google_cuisines
+
     # Stamp last_verified_at on any venue that was successfully matched and updated
     if updates:
         updates["last_verified_at"] = datetime.utcnow().isoformat()
@@ -489,6 +551,7 @@ def main():
         "updated_hours": 0,
         "updated_price": 0,
         "updated_phone": 0,
+        "updated_cuisine": 0,
         "skipped": 0,
     }
 
@@ -526,6 +589,10 @@ def main():
                 changes.append(f"phone:{result['phone_added']}")
                 stats["updated_phone"] += 1
 
+            if result.get("cuisine_added"):
+                changes.append(f"cuisine:{','.join(result['cuisine_added'])}")
+                stats["updated_cuisine"] += 1
+
             if changes:
                 logger.info(f"  ✓ {venue['name']}: {', '.join(changes)}")
             else:
@@ -543,6 +610,7 @@ def main():
     logger.info(f"  Updated hours: {stats['updated_hours']}")
     logger.info(f"  Updated price: {stats['updated_price']}")
     logger.info(f"  Updated phone: {stats['updated_phone']}")
+    logger.info(f"  Updated cuisine:{stats['updated_cuisine']}")
     logger.info(f"  Skipped:       {stats['skipped']}")
 
     if args.dry_run:

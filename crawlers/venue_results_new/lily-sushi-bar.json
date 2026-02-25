@@ -1,0 +1,47 @@
+{
+  "venue_id": 4886,
+  "venue_slug": "lily-sushi-bar",
+  "meta": {
+    "og_image": "https://lirp.cdn-website.com/b09f5c2d/dms3rep/multi/opt/Lily+Sushi+Bar+Logo-1920w.png",
+    "meta_description": "With a combined 30 years' experience in the Japanese sushi restaurant industry, we deliver the highest quality food/beverages in a Japanese environment.",
+    "reservation_links": [],
+    "menu_links": [
+      "http://lilysushibar.com/menu",
+      "http://lilysushibar.com/all-day-menu",
+      "http://lilysushibar.com/lunch-special"
+    ],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": "(678) 650-3168"
+  },
+  "extracted": {
+    "hours": {
+      "mon": {"open": "11:30", "close": "21:00"},
+      "tue": {"open": "11:30", "close": "21:00"},
+      "wed": {"open": "11:30", "close": "21:00"},
+      "thu": {"open": "11:30", "close": "21:00"},
+      "fri": {"open": "11:30", "close": "22:00"},
+      "sat": {"open": "11:30", "close": "22:00"},
+      "sun": null
+    },
+    "vibes": ["upscale", "date-spot", "intimate"],
+    "cuisine": ["japanese"],
+    "service_style": "full_service",
+    "price_level": 3,
+    "menu_highlights": [
+      {"name": "O-Toro Nigiri", "price": "$20.00", "category": "entree"},
+      {"name": "A5 Wagyu Beef Aburi", "price": "$26.00", "category": "entree"},
+      {"name": "King of the Sea Roll", "price": "$26.00", "category": "entree"},
+      {"name": "Japanese A5 Wagyu", "price": "$105.00", "category": "entree"},
+      {"name": "Tuna Carpacio", "price": "$17.00", "category": "appetizer"}
+    ],
+    "menu_url": "http://lilysushibar.com/menu",
+    "reservation_url": null,
+    "phone": "(678) 650-3168",
+    "instagram": null,
+    "dietary_options": ["gluten-free-options"],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

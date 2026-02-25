@@ -5,13 +5,12 @@ integration_method: html
 defaults:
   venue_name: Earl Smith Strand Theatre
   category: arts
-  subcategory: theatre
   tags:
   - theatre
   - performing-arts
   - film
 discovery:
-  enabled: false  # Hardcoded crawler (sources/strand_theatre.py) has better data with times
+  enabled: false
   type: html
   urls:
   - https://thestrand.my.salesforce-sites.com/ticket/
@@ -24,3 +23,7 @@ detail:
   enabled: true
   fetch:
     render_js: true
+data_goals:
+- events
+- images
+- tickets

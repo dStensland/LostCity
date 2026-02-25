@@ -1,0 +1,42 @@
+{
+  "venue_id": 4873,
+  "venue_slug": "nathus-sweets",
+  "meta": {
+    "og_image": "https://img1.wsimg.com/isteam/stock/18549",
+    "meta_description": null,
+    "reservation_links": [],
+    "menu_links": [
+      "https://nathususa.com/home/menu-1",
+      "https://nathususa.com/home/menu-1",
+      "https://nathususa.com/home/menu-1",
+      "https://nathususa.com/home/menu-1"
+    ],
+    "instagram": "home",
+    "facebook_url": "https://www.facebook.com/HOME",
+    "phone": "(404) 343-6797"
+  },
+  "extracted": {
+    "hours": {
+      "mon": null,
+      "tue": {"open": "11:30", "close": "21:30"},
+      "wed": {"open": "11:30", "close": "21:30"},
+      "thu": {"open": "11:30", "close": "21:30"},
+      "fri": {"open": "11:30", "close": "22:00"},
+      "sat": {"open": "11:30", "close": "22:00"},
+      "sun": {"open": "11:30", "close": "21:30"}
+    },
+    "vibes": ["casual", "family-friendly"],
+    "cuisine": ["indian"],
+    "service_style": "casual_dine_in",
+    "price_level": 1,
+    "menu_highlights": null,
+    "menu_url": "https://nathususa.com/home/menu-1",
+    "reservation_url": null,
+    "phone": "(404) 343-6797",
+    "instagram": null,
+    "dietary_options": ["vegetarian-friendly", "vegan-options"],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

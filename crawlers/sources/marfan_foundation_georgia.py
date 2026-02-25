@@ -94,7 +94,7 @@ def determine_category_and_tags(title: str, description: str = "") -> tuple[str,
     if "camp victory" in text or "camp twin lakes" in text:
         category = "community"
         tags.extend(["camp", "family-friendly"])
-        is_free = True  # Subsidized for affected families
+        is_free = "free" in text or "no cost" in text
 
         if "kids" in text or "children" in text:
             tags.append("kids")
@@ -105,7 +105,7 @@ def determine_category_and_tags(title: str, description: str = "") -> tuple[str,
     elif "support group" in text or "support" in text:
         category = "community"
         tags.extend(["support-group", "community", "free"])
-        is_free = True
+        is_free = "free" in text or "no cost" in text
 
         if "virtual" in text or "zoom" in text or "online" in text:
             tags.append("online")
@@ -114,7 +114,7 @@ def determine_category_and_tags(title: str, description: str = "") -> tuple[str,
     elif any(word in text for word in ["webinar", "workshop", "education", "training", "class", "ask the expert"]):
         category = "learning"
         tags.extend(["education", "webinar", "free"])
-        is_free = True
+        is_free = "free" in text or "no cost" in text
 
         if "virtual" in text or "online" in text or "zoom" in text:
             tags.append("online")
@@ -129,7 +129,7 @@ def determine_category_and_tags(title: str, description: str = "") -> tuple[str,
     elif "awareness" in text or "save our heartbeats" in text:
         category = "community"
         tags.extend(["awareness", "activism", "free"])
-        is_free = True
+        is_free = "free" in text or "no cost" in text
 
     # Fundraising
     elif "fundraiser" in text or "gala" in text or "benefit" in text:
@@ -141,7 +141,7 @@ def determine_category_and_tags(title: str, description: str = "") -> tuple[str,
     else:
         category = "community"
         tags.append("support")
-        is_free = True
+        is_free = "free" in text or "no cost" in text
 
     # Explicit free mentions
     if any(word in text for word in ["free", "no cost", "complimentary", "scholarship"]):

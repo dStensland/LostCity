@@ -10,3 +10,8 @@ discovery:
   - https://www.decaturartsfestival.com
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- lineup
+- tickets

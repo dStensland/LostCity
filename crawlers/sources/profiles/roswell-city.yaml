@@ -10,3 +10,5 @@ discovery:
   - https://www.roswellgov.com
 detail:
   enabled: true
+data_goals:
+- events

@@ -1,0 +1,41 @@
+{
+  "venue_id": 4813,
+  "venue_slug": "old-hickory-house",
+  "meta": {
+    "og_image": null,
+    "meta_description": "Old Hickory House is the choice restaurant in Tucker, GA that offers mouthwatering barbecue to our various patrons.",
+    "reservation_links": [],
+    "menu_links": [
+      "https://oldhickoryhousebbq.com/our-menu/",
+      "https://oldhickoryhousebbq.com/wp-content/uploads/2024/08/menu.pdf",
+      "https://oldhickoryhousebbq.com/our-menu/"
+    ],
+    "instagram": "oldhickoryhousebbq",
+    "facebook_url": "https://www.facebook.com/oldhickoryhouse",
+    "phone": "(770) 939-8621"
+  },
+  "extracted": {
+    "hours": {
+      "mon": null,
+      "tue": {"open": "08:00", "close": "21:00"},
+      "wed": {"open": "08:00", "close": "21:00"},
+      "thu": {"open": "08:00", "close": "21:00"},
+      "fri": {"open": "08:00", "close": "21:00"},
+      "sat": {"open": "08:00", "close": "21:00"},
+      "sun": {"open": "08:00", "close": "21:00"}
+    },
+    "vibes": ["casual", "family-friendly", "historic"],
+    "cuisine": ["bbq", "southern", "brunch_breakfast"],
+    "service_style": "casual_dine_in",
+    "price_level": 2,
+    "menu_highlights": null,
+    "menu_url": "https://oldhickoryhousebbq.com/our-menu/",
+    "reservation_url": null,
+    "phone": "(770) 939-8621",
+    "instagram": "oldhickoryhousebbq",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

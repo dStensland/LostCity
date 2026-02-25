@@ -1,0 +1,36 @@
+{
+  "venue_id": 2112,
+  "venue_slug": "dr-scofflaws",
+  "meta": {
+    "og_image": "https://craftpeak-cooler-images.imgix.net/scofflaw-brewing/underline.png?auto=compress%2Cformat&ixlib=php-3.3.1&s=26dd3d17078616eb4fa504a367378ba4",
+    "meta_description": "Continue to the main page content Born and raised in Atlanta, Scofflaw has always stood for going your own way and making your own rules. Hell…",
+    "reservation_links": [],
+    "menu_links": [],
+    "instagram": "scofflawbeer",
+    "facebook_url": "https://www.facebook.com/scofflawbrewingco",
+    "phone": "(404) 343-2832"
+  },
+  "extracted": {
+    "hours": {
+      "mon": {"open": "16:00", "close": "21:00"},
+      "tue": {"open": "16:00", "close": "21:00"},
+      "wed": {"open": "16:00", "close": "21:00"},
+      "thu": {"open": "16:00", "close": "22:00"},
+      "fri": {"open": "12:00", "close": "00:00"},
+      "sat": {"open": "12:00", "close": "00:00"},
+      "sun": {"open": "12:00", "close": "20:00"}
+    },
+    "vibes": ["casual", "lively", "outdoor-seating", "patio", "good-for-groups"],
+    "cuisine": ["american"],
+    "service_style": "bar_service",
+    "price_level": 2,
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": "(404) 254-3846",
+    "instagram": "scofflawbeer",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

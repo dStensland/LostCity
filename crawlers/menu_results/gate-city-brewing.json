@@ -1,0 +1,48 @@
+{
+  "venue_id": 1292,
+  "venue_slug": "gate-city-brewing",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Sweater Weather Bourbon Cocktail",
+        "price": "$10",
+        "category": "cocktail"
+      },
+      {
+        "name": "Gin Makes Me Sin",
+        "price": "$10",
+        "category": "cocktail"
+      },
+      {
+        "name": "Copperhead American Amber Ale",
+        "price": null,
+        "category": "beer"
+      },
+      {
+        "name": "Pretty Bird Hazy IPA",
+        "price": null,
+        "category": "beer"
+      }
+    ],
+    "dietary_options": [],
+    "price_level": 1,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

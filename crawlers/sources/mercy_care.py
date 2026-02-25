@@ -301,7 +301,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 )
 
                 # Check if free
-                is_free = True
+                is_free = False
                 if description and any(kw in description.lower() for kw in ["$", "cost", "fee", "price", "ticket"]):
                     if "free" not in description.lower():
                         is_free = False

@@ -79,6 +79,20 @@ Run `database/schema.sql` in Supabase SQL Editor to initialize tables.
 - `events` - Core event data with foreign keys to sources/venues
 - `crawl_logs` - Crawler run history for monitoring
 
+## Multi-Agent Coordination
+
+When multiple Claude Code sessions work in parallel, check `ACTIVE_WORK.md` in the repo root before starting. It tracks which agent is working on what and which files/directories are claimed.
+
+**Rules for parallel agents:**
+1. Read `ACTIVE_WORK.md` before starting work. If another agent claims a file or directory, don't touch it.
+2. When you start a task, ask the user to update `ACTIVE_WORK.md` with your assignment (or update it yourself if instructed to).
+3. When you finish, ask the user to clear your entry from `ACTIVE_WORK.md`.
+4. If you need to touch a claimed file, stop and tell the user — they'll coordinate.
+5. Database migrations: always check the latest migration number before creating a new one to avoid collisions. Use `ls database/migrations/ | tail -5` to find the next number.
+6. Prefer working in git worktrees (`/worktree`) for isolation when touching shared files.
+
+See `BACKLOG.md` for the full prioritized roadmap with implementation status.
+
 ## Environment Variables
 
 Required in `.env`:

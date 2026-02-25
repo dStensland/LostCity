@@ -1,0 +1,21 @@
+version: 1
+slug: just-add-honey-tea
+name: "Just Add Honey Tea Company"
+integration_method: crawler
+data_goals:
+  - events
+discovery:
+  enabled: true
+  type: html
+  urls:
+    - "https://justaddhoney.net/"
+  fetch:
+    render_js: true
+detail:
+  enabled: true
+  use_jsonld: true
+  use_open_graph: true
+  use_heuristic: true
+  use_llm: true
+defaults:
+  venue_name: "Just Add Honey Tea Company"

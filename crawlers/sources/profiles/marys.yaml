@@ -10,3 +10,6 @@ discovery:
   - https://www.instagram.com/marysatl/
 detail:
   enabled: true
+data_goals:
+- events
+- images

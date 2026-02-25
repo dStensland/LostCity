@@ -1,0 +1,43 @@
+{
+  "venue_id": 4810,
+  "venue_slug": "wallace-barbecue",
+  "meta": {
+    "og_image": null,
+    "meta_description": null,
+    "reservation_links": [],
+    "menu_links": [],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": "(770) 739-1686"
+  },
+  "extracted": {
+    "hours": {
+      "mon": null,
+      "tue": null,
+      "wed": {"open": "10:30", "close": "21:00"},
+      "thu": {"open": "10:30", "close": "21:00"},
+      "fri": {"open": "10:30", "close": "21:00"},
+      "sat": {"open": "10:30", "close": "21:00"},
+      "sun": null
+    },
+    "vibes": ["casual", "family-friendly", "historic"],
+    "cuisine": ["bbq", "american"],
+    "service_style": "casual_dine_in",
+    "price_level": 2,
+    "menu_highlights": [
+      {"name": "Beef BBQ Plate", "price": "$11.00", "category": "entree"},
+      {"name": "Rib Plate", "price": "$14.00", "category": "entree"},
+      {"name": "Rib Eye 12oz", "price": "$24.25", "category": "entree"},
+      {"name": "BBQ Chicken Half", "price": "$12.00", "category": "entree"},
+      {"name": "Pork Thrift Plate", "price": "$9.00", "category": "entree"}
+    ],
+    "menu_url": "http://www.wallacebarbecue.com/menu.html",
+    "reservation_url": null,
+    "phone": "(770) 739-1686",
+    "instagram": null,
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

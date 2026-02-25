@@ -1,0 +1,28 @@
+{
+  "venue_id": 3752,
+  "venue_slug": "willys-mexicana-grill-midtown",
+  "meta": {
+    "og_image": "https://willys.com/wp-content/uploads/2024/12/bajaburrito2.jpg",
+    "meta_description": "Mexican Restaurant: Enjoy fresh, flavorful Mexican food at Willy's Mexicana Grill. Visit us for burritos, tacos, and more. Order now!",
+    "reservation_links": [],
+    "menu_links": ["https://willys.com/menu/"],
+    "instagram": "willysmexicana",
+    "facebook_url": "https://www.facebook.com/WillysMexicana",
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["fast-casual", "casual", "counter-service", "family-friendly"],
+    "cuisine": ["mexican"],
+    "service_style": "counter-service",
+    "price_level": "$",
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "willysmexicana",
+    "dietary_options": ["vegetarian", "gluten-free"],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "venue_id": 4904,
+  "venue_slug": "kiosco-marietta-square",
+  "meta": {
+    "og_image": "https://static.spotapps.co/website_images/ab_websites/162180_website_v1/reservations_left.jpg",
+    "meta_description": "Kiosco Marietta Square is now open with a passion for hospitality and great Mediterranean food. Our menu tells the story of the dishes we know and love from our childhoods raised with Mediterranean Cuisine. Kiosco Marietta Square defines the quintessential Mediterranean Europe restaurant where people gather to eat with family, friends, and strangers alike. You can find us open all day, seven days a week. We can't wait to see you soon.",
+    "reservation_links": [],
+    "menu_links": [
+      "https://kioscomariettasquare.com/marietta-marietta-square-kiosco-marietta-square-food-menu"
+    ],
+    "instagram": "kioscomariettasquare",
+    "facebook_url": "https://www.facebook.com/107306002392361",
+    "phone": "(770) 485-5683"
+  },
+  "extracted": {
+    "hours": {
+      "mon": {"open": "11:00", "close": "22:00"},
+      "tue": {"open": "10:00", "close": "22:00"},
+      "wed": {"open": "10:00", "close": "22:00"},
+      "thu": {"open": "10:00", "close": "22:00"},
+      "fri": {"open": "10:00", "close": "22:00"},
+      "sat": {"open": "10:00", "close": "22:00"},
+      "sun": {"open": "10:00", "close": "22:00"}
+    },
+    "vibes": ["cozy", "date-spot", "outdoor-seating", "craft-cocktails"],
+    "cuisine": ["mediterranean", "turkish"],
+    "service_style": "full_service",
+    "price_level": 3,
+    "menu_highlights": [
+      {"name": "Turkish Breakfast - For Two", "price": "$45.00", "category": "entree"},
+      {"name": "Sun-Dried Tomato Salmon", "price": "$32.00", "category": "entree"},
+      {"name": "Chicken Kebab Skewers", "price": "$32.00", "category": "entree"},
+      {"name": "Mezze Trio", "price": "$20.00", "category": "appetizer"},
+      {"name": "Kiosco Mule", "price": "$16.00", "category": "cocktail"}
+    ],
+    "menu_url": "https://kioscomariettasquare.com/marietta-marietta-square-kiosco-marietta-square-food-menu",
+    "reservation_url": null,
+    "phone": "(770) 485-5683",
+    "instagram": "kioscomariettasquare",
+    "dietary_options": ["vegetarian-friendly"],
+    "specials": [
+      {
+        "day_of_week": 2,
+        "title": "Wine Down Tuesdays",
+        "description": "Half-off bottles of wine & bubbles, all day, every Tuesday",
+        "special_type": "daily_special",
+        "start_time": "10:00",
+        "end_time": "22:00"
+      },
+      {
+        "day_of_week": 6,
+        "title": "Weekend Turkish Brunch",
+        "description": "Rich, colorful Turkish breakfast spread to linger over",
+        "special_type": "daily_special",
+        "start_time": "10:00",
+        "end_time": "15:00"
+      },
+      {
+        "day_of_week": 7,
+        "title": "Weekend Turkish Brunch",
+        "description": "Authentic Turkish breakfast - fresh, vibrant, and made to share",
+        "special_type": "daily_special",
+        "start_time": "10:00",
+        "end_time": "15:00"
+      }
+    ],
+    "genres": [],
+    "parking": []
+  }
+}

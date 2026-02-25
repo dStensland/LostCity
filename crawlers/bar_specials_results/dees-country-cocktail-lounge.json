@@ -1,0 +1,21 @@
+{
+  "venue_id": 1518,
+  "venue_slug": "dees-country-cocktail-lounge",
+  "meta": {},
+  "extracted": {
+    "specials": [],
+    "hours": null,
+    "vibes": ["live-music", "dive-bar", "casual", "karaoke"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": null,
+    "reservation_url": null,
+    "phone": "(615) 852-8827",
+    "instagram": null,
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

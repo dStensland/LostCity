@@ -1,0 +1,30 @@
+{
+  "venue_id": 4133,
+  "venue_slug": "a-queens-tea-party",
+  "meta": {
+    "og_image": "https://static.wixstatic.com/media/b1930b_575eaf40728e468385e17eb30ebed062%7Emv2.png/v1/fit/w_2500,h_1330,al_c/b1930b_575eaf40728e468385e17eb30ebed062%7Emv2.png",
+    "meta_description": "A Queens Tea Party Atlanta - Premier tea parties, photo-worthy events. Book now!",
+    "reservation_links": [
+      "https://www.aqueensteapartyatl.com/book-online"
+    ],
+    "menu_links": [],
+    "instagram": "atlqueensteaparty",
+    "facebook_url": null,
+    "phone": "(404) 907-9660"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["upscale", "intimate", "trendy", "woman-owned"],
+    "cuisine": ["tea"],
+    "service_style": "full_service",
+    "price_level": 3,
+    "menu_highlights": null,
+    "reservation_url": "https://www.aqueensteapartyatl.com/book-online",
+    "phone": "(404) 907-9660",
+    "instagram": "atlqueensteaparty",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

@@ -24,15 +24,23 @@ async function getStats() {
   try {
     const supabase = await createClient();
     type NeighborhoodRow = { neighborhood: string | null };
-    const [eventsResult, venuesResult, artistsResult] = await Promise.all([
+    const today = new Date().toISOString().split("T")[0];
+    const [eventsResult, venuesResult] = await Promise.all([
       supabase
         .from("events")
         .select("*", { count: "exact", head: true })
-        .gte("start_date", new Date().toISOString().split("T")[0])
+        .gte("start_date", today)
         .or("is_sensitive.eq.false,is_sensitive.is.null"),
       supabase.from("venues").select("*", { count: "exact", head: true }),
-      supabase.from("artists").select("*", { count: "exact", head: true }),
     ]);
+    // Count distinct artists performing at upcoming events
+    const { data: artistRows } = await supabase
+      .from("event_artists")
+      .select("name, events!inner(start_date)")
+      .gte("events.start_date", today);
+    const uniqueArtists = new Set(
+      (artistRows ?? []).map((r: { name: string }) => r.name.toLowerCase().trim())
+    ).size;
     // Distinct neighborhood count via unique values
     const { data: hoodData } = await supabase
       .from("venues")
@@ -44,7 +52,7 @@ async function getStats() {
     return {
       events: eventsResult.count || 0,
       venues: venuesResult.count || 0,
-      artists: artistsResult.count || 0,
+      artists: uniqueArtists,
       neighborhoods,
     };
   } catch {
@@ -106,7 +114,7 @@ export default async function Home() {
       </div>
 
       {/* Portal entry with parallax depth */}
-      <ScrollReveal direction="up" className="px-4 pb-6 md:pb-8 relative z-10">
+      <div className="px-4 pb-6 md:pb-8 relative z-10">
         <div className="max-w-lg mx-auto">
           {/* Section header */}
           <div className="flex items-center justify-center gap-4 mb-6">
@@ -120,6 +128,7 @@ export default async function Home() {
           <FloatingElement speed={0.08} scale={0.02}>
             <Link
               href={`/${DEFAULT_PORTAL_SLUG}`}
+              prefetch
               className="group relative block w-full h-64 md:h-80 rounded-2xl overflow-hidden focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#00e5ff]/50 focus-visible:ring-offset-4 focus-visible:ring-offset-[#08080c]"
             >
               {/* Skyline background */}
@@ -182,7 +191,7 @@ export default async function Home() {
             </Link>
           </FloatingElement>
         </div>
-      </ScrollReveal>
+      </div>
 
       {/* Stats — staggered reveal */}
       <div className="px-4 pb-10 md:pb-14 relative z-10">
@@ -195,8 +204,8 @@ export default async function Home() {
               { value: formatStat(stats.neighborhoods), label: "hoods", colorClass: "home-stat-cyan" },
             ].map((stat, i) => (
               <ScrollReveal key={stat.label} direction="up" delay={i * 100}>
-                <div className="text-center p-4 md:p-6 rounded-lg border border-[#1a1a24] hover:border-[#2a2a34] home-stat-card transition-all duration-300 group">
-                  <div className={`text-[clamp(1.75rem,5vw,3.25rem)] font-semibold tracking-tight mb-1 leading-none tabular-nums whitespace-nowrap ${stat.colorClass}`}>
+                <div className="text-center p-4 md:p-6 rounded-lg border border-[#1a1a24] hover:border-[#2a2a34] home-stat-card transition-all duration-300 group overflow-hidden">
+                  <div className={`text-[clamp(1.5rem,4.5vw,3.25rem)] font-semibold tracking-tight mb-1 leading-none tabular-nums ${stat.colorClass}`}>
                     {stat.value}
                   </div>
                   <div className="text-xs md:text-sm uppercase tracking-[0.15em] text-[var(--cream)]/70 group-hover:text-[var(--cream)] transition-colors">
@@ -229,7 +238,7 @@ export default async function Home() {
               </p>
             </ScrollReveal>
             <ScrollReveal direction="up" delay={300}>
-              <p className="text-2xl md:text-3xl font-bold home-gradient-text-animated leading-relaxed">
+              <p className="text-2xl md:text-3xl font-bold text-[var(--cream)] leading-relaxed">
                 Everything gets better. It&apos;s just math.
               </p>
             </ScrollReveal>
@@ -280,16 +289,16 @@ export default async function Home() {
           </p>
           <div className="flex flex-wrap justify-center gap-2.5 md:gap-3 mb-8">
             {[
-              { label: "Music", icon: "music", href: `/${DEFAULT_PORTAL_SLUG}?view=find&categories=music`, color: "cyan" },
-              { label: "Comedy", icon: "comedy", href: `/${DEFAULT_PORTAL_SLUG}?view=find&categories=comedy`, color: "pink" },
-              { label: "Art", icon: "art", href: `/${DEFAULT_PORTAL_SLUG}?view=find&categories=art`, color: "purple" },
-              { label: "Theater", icon: "theater", href: `/${DEFAULT_PORTAL_SLUG}?view=find&categories=theater`, color: "cyan" },
-              { label: "Food & Drink", icon: "food_drink", href: `/${DEFAULT_PORTAL_SLUG}?view=find&categories=food_drink`, color: "pink" },
-              { label: "Nightlife", icon: "nightlife", href: `/${DEFAULT_PORTAL_SLUG}?view=find&categories=nightlife`, color: "purple" },
-              { label: "Sports", icon: "sports", href: `/${DEFAULT_PORTAL_SLUG}?view=find&categories=sports`, color: "cyan" },
-              { label: "Outdoors", icon: "outdoors", href: `/${DEFAULT_PORTAL_SLUG}?view=find&categories=outdoors`, color: "pink" },
-              { label: "Community", icon: "community", href: `/${DEFAULT_PORTAL_SLUG}?view=find&categories=community`, color: "purple" },
-              { label: "Free", icon: "other", href: `/${DEFAULT_PORTAL_SLUG}?view=find&free=1`, color: "cyan" },
+              { label: "Music", icon: "music", href: `/${DEFAULT_PORTAL_SLUG}?view=find&type=events&categories=music`, color: "cyan" },
+              { label: "Comedy", icon: "comedy", href: `/${DEFAULT_PORTAL_SLUG}?view=find&type=events&categories=comedy`, color: "pink" },
+              { label: "Art", icon: "art", href: `/${DEFAULT_PORTAL_SLUG}?view=find&type=events&categories=art`, color: "purple" },
+              { label: "Theater", icon: "theater", href: `/${DEFAULT_PORTAL_SLUG}?view=find&type=events&categories=theater`, color: "cyan" },
+              { label: "Food & Drink", icon: "food_drink", href: `/${DEFAULT_PORTAL_SLUG}?view=find&type=events&categories=food_drink`, color: "pink" },
+              { label: "Nightlife", icon: "nightlife", href: `/${DEFAULT_PORTAL_SLUG}?view=find&type=events&categories=nightlife`, color: "purple" },
+              { label: "Sports", icon: "sports", href: `/${DEFAULT_PORTAL_SLUG}?view=find&type=events&categories=sports`, color: "cyan" },
+              { label: "Outdoors", icon: "outdoors", href: `/${DEFAULT_PORTAL_SLUG}?view=find&type=events&categories=outdoors`, color: "pink" },
+              { label: "Community", icon: "community", href: `/${DEFAULT_PORTAL_SLUG}?view=find&type=events&categories=community`, color: "purple" },
+              { label: "Free", icon: "other", href: `/${DEFAULT_PORTAL_SLUG}?view=find&type=events&free=1`, color: "cyan" },
             ].map((cat, i) => (
               <ScrollReveal key={cat.label} direction="fade" delay={i * 40}>
                 <Link
@@ -321,8 +330,8 @@ export default async function Home() {
           </div>
           <ScrollReveal direction="up" delay={400}>
             <Link
-              href={`/${DEFAULT_PORTAL_SLUG}?view=find&date=today`}
-              className="inline-flex items-center gap-3 text-base font-medium transition-all duration-300 hover:gap-4 home-gradient-text-animated rounded-lg px-2 py-1 -mx-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00e5ff]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#08080c]"
+              href={`/${DEFAULT_PORTAL_SLUG}?view=find&type=events&date=today`}
+              className="inline-flex items-center gap-3 text-base font-medium text-[var(--cream)] transition-all duration-300 hover:gap-4 hover:text-[#00e5ff] rounded-lg px-2 py-1 -mx-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00e5ff]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#08080c]"
             >
               See what&apos;s happening today
               <span className="text-[#00e5ff] text-xl">→</span>
@@ -350,15 +359,15 @@ export default async function Home() {
                 <ul className="space-y-3 ml-4">
                   <li className="flex items-start gap-3">
                     <span className="text-[#00e5ff] mt-0.5">◆</span>
-                    <span>Find events and destinations that are worthy of checking out</span>
+                    <span>Find events and spots that are worthy of checking out</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <span className="text-[#00e5ff] mt-0.5">◆</span>
-                    <span>Keep a calendar going here, link with whatever your normal one is</span>
+                    <span>Keep a calendar going between portals, link with whatever your normal one is</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <span className="text-[#ff6b9d] mt-0.5">◆</span>
-                    <span>Add your friends, invite them out, see where they&apos;re interested</span>
+                    <span>Add your friends, invite them out, see what they&apos;re up to</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <span className="text-[#ff6b9d] mt-0.5">◆</span>
@@ -398,7 +407,7 @@ export default async function Home() {
               <p>
                 We&apos;ll continue to explore the latest tech, but always with the goal
                 of celebrating true blue human creators and getting people connected
-                in the real world.
+                in the real world. Our goal is to make it easier to find cool stuff to do, and to get people out and doing it - leave the computers to the computers.
               </p>
             </ExpandableSection>
           </ScrollReveal>
@@ -411,10 +420,10 @@ export default async function Home() {
               </p>
               <div className="mt-4 font-mono">
                 <a
-                  href="mailto:coach@lostcity.ai"
+                  href="mailto:info@lostcity.ai"
                   className="inline-flex items-center gap-2 hover:gap-3 transition-all duration-300 home-gradient-text-animated"
                 >
-                  coach@lostcity.ai →
+                  info@lostcity.ai →
                 </a>
               </div>
             </ExpandableSection>

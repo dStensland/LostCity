@@ -222,7 +222,7 @@ export default function VenueAutocomplete({
 
           {noResults && !showCreateOption && (
             <div className="px-4 py-3 text-[var(--muted)] font-mono text-sm">
-              No venues found
+              No spots found
             </div>
           )}
 

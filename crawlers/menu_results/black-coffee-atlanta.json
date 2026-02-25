@@ -1,0 +1,55 @@
+{
+  "venue_id": 4230,
+  "venue_slug": "black-coffee-atlanta",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Light Skin Keisha Latte",
+        "price": null,
+        "category": "cocktail"
+      },
+      {
+        "name": "Cash Money Matcha",
+        "price": null,
+        "category": "cocktail"
+      },
+      {
+        "name": "Killer Mike Double Espresso",
+        "price": null,
+        "category": "cocktail"
+      },
+      {
+        "name": "ATL Avocado Toast",
+        "price": null,
+        "category": "entree"
+      },
+      {
+        "name": "Bagel & Boujee",
+        "price": null,
+        "category": "entree"
+      }
+    ],
+    "dietary_options": [
+      "vegan-options"
+    ],
+    "price_level": 1,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

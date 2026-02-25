@@ -9,6 +9,7 @@
 
 import type { ViewMode, FindType, UserPreferences } from "./search-context";
 import type { SearchResult } from "./unified-search";
+import { ITP_NEIGHBORHOODS, NEIGHBORHOOD_ALIASES } from "@/config/neighborhoods";
 
 // ============================================
 // Types
@@ -326,43 +327,25 @@ export function detectQuickActions(
     }
   }
 
-  // Neighborhood detection (common Atlanta neighborhoods)
-  const NEIGHBORHOODS = [
-    "midtown",
-    "downtown",
-    "buckhead",
-    "east atlanta",
-    "little five",
-    "l5p",
-    "virginia highland",
-    "va-hi",
-    "inman park",
-    "grant park",
-    "west end",
-    "old fourth ward",
-    "o4w",
-    "decatur",
-    "kirkwood",
-    "east point",
-    "cabbagetown",
-    "reynoldstown",
-    "edgewood",
-    "poncey-highland",
+  // Neighborhood detection — uses canonical config instead of hardcoded list
+  // Build lookup entries: { pattern (lowercase), displayName (canonical) }
+  const neighborhoodLookup: { pattern: string; displayName: string }[] = [
+    ...ITP_NEIGHBORHOODS.map((n) => ({ pattern: n.name.toLowerCase(), displayName: n.name })),
+    ...Object.entries(NEIGHBORHOOD_ALIASES).map(([alias, canonical]) => ({
+      pattern: alias.toLowerCase(),
+      displayName: canonical,
+    })),
   ];
 
-  for (const neighborhood of NEIGHBORHOODS) {
-    if (trimmedQuery.includes(neighborhood)) {
-      const displayName = neighborhood
-        .split(" ")
-        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-        .join(" ");
+  for (const { pattern, displayName } of neighborhoodLookup) {
+    if (trimmedQuery.includes(pattern)) {
       actions.push({
-        id: `neighborhood-${neighborhood}`,
+        id: `neighborhood-${pattern}`,
         label: `Events in ${displayName}`,
         description: `Browse events in ${displayName}`,
         icon: "neighborhood",
-        params: { neighborhoods: neighborhood },
-        url: `${baseUrl}&neighborhoods=${encodeURIComponent(neighborhood)}`,
+        params: { neighborhoods: displayName },
+        url: `${baseUrl}&neighborhoods=${encodeURIComponent(displayName)}`,
       });
       break; // Only add one neighborhood action
     }

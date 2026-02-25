@@ -10,3 +10,9 @@ discovery:
   - http://www.starbar.net
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- specials
+- tickets
+- venue_hours

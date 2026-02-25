@@ -1,0 +1,28 @@
+{
+  "venue_id": 3712,
+  "venue_slug": "starbucks-perimeter-center",
+  "meta": {
+    "og_image": null,
+    "meta_description": null,
+    "reservation_links": [],
+    "menu_links": ["https://www.starbucks.com/menu"],
+    "instagram": "starbucks",
+    "facebook_url": "https://facebook.com/starbucks",
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["casual"],
+    "cuisine": ["coffee"],
+    "service_style": "counter_service",
+    "price_level": "$$",
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": null,
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

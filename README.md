@@ -49,8 +49,9 @@ npm install
 **Crawlers:**
 ```bash
 cd crawlers
-python main.py                    # Run all active crawlers
-python main.py --source eventbrite  # Run specific source
+python main.py --db-target staging --dry-run            # Safe validation crawl (no DB writes)
+python main.py --db-target production --allow-production-writes  # Live crawl
+python main.py --source eventbrite --db-target staging  # Run specific source on staging
 ```
 
 **Web app:**

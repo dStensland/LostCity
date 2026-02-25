@@ -1,0 +1,47 @@
+{
+  "venue_id": 4897,
+  "venue_slug": "7-acre-barngrill",
+  "meta": {
+    "og_image": "http://static1.squarespace.com/static/5a25b30ebe42d66519c0ef48/t/5dc5fa507aaa435f9b3d0928/1573255764834/7+Acre+Menu.png?format=1500w",
+    "meta_description": null,
+    "reservation_links": [],
+    "menu_links": [
+      "https://www.7acrebarngrill.com/menu",
+      "https://www.7acrebarngrill.com/menu",
+      "https://www.7acrebarngrill.com/s/JG-7-Acre-Dinner-20250910-print.pdf",
+      "https://www.7acrebarngrill.com/s/7-Acre-Kids-Menu-20250410.pdf",
+      "https://www.7acrebarngrill.com/s/7Acre-Dessert-20250410.pdf"
+    ],
+    "instagram": "7acrebarngrill",
+    "facebook_url": "https://www.facebook.com/7acrebarngrill",
+    "phone": "(770) 777-2273"
+  },
+  "extracted": {
+    "hours": {
+      "mon": {"open": "11:30", "close": "21:00"},
+      "tue": {"open": "11:30", "close": "21:00"},
+      "wed": {"open": "11:30", "close": "21:00"},
+      "thu": {"open": "11:30", "close": "21:00"},
+      "fri": {"open": "11:30", "close": "21:00"},
+      "sat": {"open": "11:30", "close": "21:00"},
+      "sun": {"open": "11:30", "close": "21:00"}
+    },
+    "vibes": ["casual", "family-friendly", "outdoor-seating", "patio"],
+    "cuisine": ["american", "southern"],
+    "service_style": "casual_dine_in",
+    "price_level": 2,
+    "menu_highlights": [
+      {"name": "Homemade Pies", "price": null, "category": "dessert"},
+      {"name": "Garden to Fork Comfort Foods", "price": null, "category": "entree"},
+      {"name": "77 Whiskeys Selection", "price": null, "category": "cocktail"}
+    ],
+    "menu_url": "https://www.7acrebarngrill.com/menu",
+    "reservation_url": null,
+    "phone": "(770) 777-2273",
+    "instagram": "7acrebarngrill",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": ["free-parking"]
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "venue_id": 1464,
+  "venue_slug": "st-vito-focacceria",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Classic Vito Sfincione",
+        "price": null,
+        "category": "entree"
+      },
+      {
+        "name": "Rigatoni Vaccinara",
+        "price": null,
+        "category": "entree"
+      },
+      {
+        "name": "Beef Milanese",
+        "price": null,
+        "category": "entree"
+      },
+      {
+        "name": "Dates with N'duja",
+        "price": null,
+        "category": "appetizer"
+      }
+    ],
+    "dietary_options": [],
+    "price_level": 3,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

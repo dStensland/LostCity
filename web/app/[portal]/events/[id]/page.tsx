@@ -13,8 +13,10 @@ import { format, parseISO } from "date-fns";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { isTicketingUrl } from "@/lib/card-utils";
 import DirectionsDropdown from "@/components/DirectionsDropdown";
 import VenueVibes from "@/components/VenueVibes";
+import GettingThereSection from "@/components/GettingThereSection";
 import LinkifyText from "@/components/LinkifyText";
 import { formatTime, formatTimeSplit, formatPriceDetailed, safeJsonLd, formatRelativeTime } from "@/lib/formats";
 import VenueTagList from "@/components/VenueTagList";
@@ -44,6 +46,10 @@ import { buildDisplayDescription } from "@/lib/event-description";
 import { deriveShowSignals } from "@/lib/show-signals";
 import ShowSignalsPanel from "@/components/ShowSignalsPanel";
 import { inferLineupGenreFallback } from "@/lib/artist-fallbacks";
+import {
+  suppressEventImageIfVenueFlagged,
+  suppressEventImagesIfVenueFlagged,
+} from "@/lib/image-quality-suppression";
 
 export const revalidate = 60;
 
@@ -51,8 +57,11 @@ type Props = {
   params: Promise<{ portal: string; id: string }>;
 };
 
-// Cache getEventById to prevent duplicate queries in generateMetadata and page component
-const getCachedEventById = cache(getEventById);
+// Cache event fetch + image suppression to avoid duplicate work in metadata + page render.
+const getCachedEventById = cache(async (id: number) => {
+  const event = await getEventById(id);
+  return event ? suppressEventImageIfVenueFlagged(event) : null;
+});
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id, portal: portalSlug } = await params;
@@ -101,7 +110,25 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 type EventWithOrganization = NonNullable<Awaited<ReturnType<typeof getEventById>>>;
 
+function getLocationDesignatorLabel(
+  designator:
+    | "standard"
+    | "private_after_signup"
+    | "virtual"
+    | "recovery_meeting"
+    | null
+    | undefined
+): string | null {
+  if (!designator || designator === "standard") return null;
+  if (designator === "private_after_signup") return "Location after RSVP";
+  if (designator === "virtual") return "Virtual event";
+  if (designator === "recovery_meeting") return "Recovery meeting";
+  return null;
+}
+
 function generateEventSchema(event: EventWithOrganization) {
+  const locationDesignator = event.venue?.location_designator || "standard";
+  const isVirtualLocation = locationDesignator === "virtual";
   const startDateTime = event.start_time
     ? `${event.start_date}T${event.start_time}:00`
     : event.start_date;
@@ -112,7 +139,9 @@ function generateEventSchema(event: EventWithOrganization) {
     name: event.title,
     startDate: startDateTime,
     eventStatus: "https://schema.org/EventScheduled",
-    eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+    eventAttendanceMode: isVirtualLocation
+      ? "https://schema.org/OnlineEventAttendanceMode"
+      : "https://schema.org/OfflineEventAttendanceMode",
   };
 
   // End date (Google wants this)
@@ -137,13 +166,26 @@ function generateEventSchema(event: EventWithOrganization) {
     schema.image = [event.image_url];
   }
 
-  if (event.venue) {
+  if (isVirtualLocation) {
+    const virtualUrl = event.ticket_url || event.source_url;
+    schema.location = virtualUrl
+      ? {
+          "@type": "VirtualLocation",
+          url: virtualUrl,
+        }
+      : {
+          "@type": "VirtualLocation",
+          name: "Online event",
+        };
+  } else if (event.venue) {
     schema.location = {
       "@type": "Place",
       name: event.venue.name,
       address: {
         "@type": "PostalAddress",
-        streetAddress: event.venue.address,
+        ...(locationDesignator === "private_after_signup"
+          ? {}
+          : { streetAddress: event.venue.address }),
         addressLocality: event.venue.city,
         addressRegion: event.venue.state,
         addressCountry: "US",
@@ -284,6 +326,8 @@ export default async function PortalEventPage({ params }: Props) {
     event.venue?.id ? getNearbySpots(event.venue.id) : Promise.resolve([]),
     getEventArtists(event.id),
   ]);
+  const sanitizedVenueEvents = suppressEventImagesIfVenueFlagged(venueEvents);
+  const sanitizedSameDateEvents = suppressEventImagesIfVenueFlagged(sameDateEvents);
   const displayParticipants = getDisplayParticipants(eventArtists, {
     eventTitle: event.title,
     eventCategory: event.category,
@@ -367,6 +411,23 @@ export default async function PortalEventPage({ params }: Props) {
           return `${time} ${period}`;
         })()
       : "Time TBA";
+  const locationDesignator = event.venue?.location_designator || "standard";
+  const locationDesignatorLabel = getLocationDesignatorLabel(locationDesignator);
+  const isVirtualLocation = locationDesignator === "virtual";
+  const isPrivateLocation = locationDesignator === "private_after_signup";
+  const showLocationSection = Boolean(event.venue);
+  const ticketUrl = event.ticket_url?.trim() || null;
+  const sourceUrl = event.source_url?.trim() || null;
+  const primaryCtaHref = ticketUrl || sourceUrl;
+  const primaryCtaIsTicketIntent =
+    Boolean(ticketUrl) || isTicketingUrl(sourceUrl) || Boolean(sourceUrl && !event.is_free);
+  const primaryCtaLabel = isLive
+    ? "Join Now"
+    : event.is_free
+      ? "RSVP Free"
+      : primaryCtaHref
+        ? "Get Tickets"
+        : null;
 
   return (
     <>
@@ -399,6 +460,7 @@ export default async function PortalEventPage({ params }: Props) {
             subtitle={event.venue?.name}
             categoryColor={categoryColor}
             backFallbackHref={`/${activePortalSlug}`}
+            portrait
             categoryIcon={<CategoryIcon type={event.category || "other"} size={48} />}
             badge={
               <div className="flex items-center gap-2">
@@ -500,18 +562,29 @@ export default async function PortalEventPage({ params }: Props) {
             )}
 
             {/* Location */}
-            {event.venue && event.venue.address && (
+            {showLocationSection && event.venue && (
               <>
                 <SectionHeader title="Location" />
                 <div className="mb-6">
-                  <div className="flex items-center justify-between mb-3">
-                    <DirectionsDropdown
-                      venueName={event.venue.name}
-                      address={event.venue.address}
-                      city={event.venue.city}
-                      state={event.venue.state}
-                    />
-                  </div>
+                  {locationDesignatorLabel && (
+                    <span className="inline-flex mb-3 items-center px-2.5 py-1 rounded-full border border-[var(--twilight)] bg-[var(--twilight)]/45 font-mono text-[0.62rem] uppercase tracking-[0.1em] text-[var(--soft)]">
+                      {locationDesignatorLabel}
+                    </span>
+                  )}
+
+                  {!isVirtualLocation &&
+                    !isPrivateLocation &&
+                    event.venue.address && (
+                      <div className="flex items-center justify-between mb-3">
+                        <DirectionsDropdown
+                          venueName={event.venue.name}
+                          address={event.venue.address}
+                          city={event.venue.city}
+                          state={event.venue.state}
+                        />
+                      </div>
+                    )}
+
                   <Link
                     href={`/${activePortalSlug}?venue=${event.venue.slug}`}
                     scroll={false}
@@ -526,16 +599,42 @@ export default async function PortalEventPage({ params }: Props) {
                       </svg>
                       <br />
                       <span className="text-sm text-[var(--muted)]">
-                        {event.venue.address} · {event.venue.city}, {event.venue.state}
+                        {isVirtualLocation
+                          ? "Online event"
+                          : isPrivateLocation
+                            ? `Exact location shared after RSVP${event.venue.city ? ` · ${event.venue.city}, ${event.venue.state}` : ""}`
+                            : event.venue.address
+                              ? `${event.venue.address} · ${event.venue.city}, ${event.venue.state}`
+                              : `${event.venue.city}, ${event.venue.state}`}
                       </span>
                     </p>
 
                     <VenueVibes vibes={event.venue.vibes} className="mt-3" />
+                    <GettingThereSection transit={event.venue} variant="compact" />
                   </Link>
 
-                  <div className="mt-3">
-                    <VenueTagList venueId={event.venue.id} />
-                  </div>
+                  {isVirtualLocation && (event.ticket_url || event.source_url) && (
+                    <div className="mt-3">
+                      <a
+                        href={event.ticket_url || event.source_url || "#"}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-[var(--twilight)] bg-[var(--dusk)]/70 text-[var(--cream)] text-sm hover:border-[var(--soft)] transition-colors"
+                      >
+                        Open join link
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 3h7v7m0-7L10 14" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10v8a1 1 0 001 1h8" />
+                        </svg>
+                      </a>
+                    </div>
+                  )}
+
+                  {!isVirtualLocation && !isPrivateLocation && (
+                    <div className="mt-3">
+                      <VenueTagList venueId={event.venue.id} />
+                    </div>
+                  )}
                 </div>
               </>
             )}
@@ -654,21 +753,25 @@ export default async function PortalEventPage({ params }: Props) {
             )}
 
             {/* Tags */}
-            {event.tags && event.tags.length > 0 && (
-              <>
-                <SectionHeader title="Also Featuring" count={event.tags.length} />
-                <div className="flex flex-wrap gap-2 mb-6">
-                  {event.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="px-2.5 py-1 text-[var(--soft)] rounded border border-[var(--twilight)] text-xs bg-[var(--void)]"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </>
-            )}
+            {(() => {
+              const INTERNAL_TAGS = new Set(["ticketed", "ticketmaster", "eventbrite", "meetup", "touring"]);
+              const displayTags = event.tags?.filter((t: string) => !INTERNAL_TAGS.has(t)) ?? [];
+              return displayTags.length > 0 ? (
+                <>
+                  <SectionHeader title="Tags" count={displayTags.length} />
+                  <div className="flex flex-wrap gap-2 mb-6">
+                    {displayTags.map((tag: string) => (
+                      <span
+                        key={tag}
+                        className="px-2.5 py-1 text-[var(--soft)] rounded border border-[var(--twilight)] text-xs bg-[var(--void)]"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </>
+              ) : null;
+            })()}
 
             {/* Community Tags */}
             <div className="mb-6">
@@ -730,14 +833,14 @@ export default async function PortalEventPage({ params }: Props) {
           )}
 
           {/* More at Venue */}
-          {venueEvents.length > 0 && event.venue && (
+          {sanitizedVenueEvents.length > 0 && event.venue && (
             <RelatedSection
               title={`More at ${event.venue.name}`}
-              count={venueEvents.length}
+              count={sanitizedVenueEvents.length}
               layout="content"
             >
               <VenueEventsByDay
-                events={venueEvents}
+                events={sanitizedVenueEvents}
                 portalSlug={activePortalSlug}
                 maxDates={5}
                 compact={true}
@@ -746,12 +849,12 @@ export default async function PortalEventPage({ params }: Props) {
           )}
 
           {/* Same Night */}
-          {sameDateEvents.length > 0 && (
+          {sanitizedSameDateEvents.length > 0 && (
             <RelatedSection
               title="That same night"
-              count={sameDateEvents.length}
+              count={sanitizedSameDateEvents.length}
             >
-              {sameDateEvents.map((relatedEvent) => {
+              {sanitizedSameDateEvents.map((relatedEvent) => {
                 const eventColor = relatedEvent.category ? getCategoryColor(relatedEvent.category) : "var(--coral)";
                 const subtitle = [
                   relatedEvent.venue?.name || "Venue TBA",
@@ -787,6 +890,7 @@ export default async function PortalEventPage({ params }: Props) {
           <>
             <SaveToListButton itemType="event" itemId={event.id} />
             <AddToCalendar
+              eventId={event.id}
               title={event.title}
               date={event.start_date}
               time={event.start_time}
@@ -806,13 +910,17 @@ export default async function PortalEventPage({ params }: Props) {
           </>
         }
         primaryAction={
-          event.ticket_url
+          primaryCtaHref && primaryCtaLabel
             ? {
-                label: isLive ? "Join Now" : "Get Tickets",
-                href: event.ticket_url,
-                icon: (
+                label: primaryCtaLabel,
+                href: primaryCtaHref,
+                icon: primaryCtaIsTicketIntent ? (
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                   </svg>
                 ),
               }

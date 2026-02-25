@@ -297,10 +297,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     title, description or ""
                 )
 
-                # Vision and hearing screenings are free; fundraising events may not be
-                is_free = True
-                if description and any(kw in description.lower() for kw in ["ticket", "admission", "$"]):
-                    is_free = False
+                # Only mark free if text explicitly says so
+                is_free = False
+                if description and any(kw in description.lower() for kw in ["free", "no cost", "no charge", "complimentary"]):
+                    is_free = True
 
                 # Build event record
                 event_record = {

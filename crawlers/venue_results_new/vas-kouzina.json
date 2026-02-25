@@ -1,0 +1,58 @@
+{
+  "venue_id": 4917,
+  "venue_slug": "vas-kouzina",
+  "meta": {
+    "og_image": "https://www.facebook.com/tr?id=445200528063864&ev=PageView&noscript=1",
+    "meta_description": null,
+    "reservation_links": [
+      "https://www.opentable.com/r/vas-kouzina-roswell-reservations-roswell?restref=1015192&lang=en-US&ot_source=Restaurant%20website",
+      "https://www.opentable.com/r/vas-kouzina-roswell-reservations-roswell?restref=1015192&lang=en-US&ot_source=Restaurant%20website"
+    ],
+    "menu_links": [
+      "http://www.vaskouzina.com/menu.html",
+      "http://www.vaskouzina.com/menu.html"
+    ],
+    "instagram": "vaskouzina",
+    "facebook_url": "https://www.facebook.com/vaskouzina",
+    "phone": "(678) 587-5888"
+  },
+  "extracted": {
+    "hours": {
+      "mon": null,
+      "tue": {"open": "16:00", "close": "21:00"},
+      "wed": {"open": "16:00", "close": "21:00"},
+      "thu": {"open": "16:00", "close": "21:00"},
+      "fri": {"open": "12:00", "close": "22:00"},
+      "sat": {"open": "12:00", "close": "22:00"},
+      "sun": {"open": "12:00", "close": "20:00"}
+    },
+    "vibes": ["upscale", "date-spot", "lively", "craft-cocktails"],
+    "cuisine": ["mediterranean"],
+    "service_style": "full_service",
+    "price_level": 3,
+    "menu_highlights": [
+      {"name": "Whole Fish", "price": null, "category": "entree"},
+      {"name": "Grilled Octopus", "price": null, "category": "appetizer"},
+      {"name": "Saganaki", "price": null, "category": "appetizer"},
+      {"name": "Gyro", "price": null, "category": "entree"},
+      {"name": "Greek 75 Cocktail", "price": null, "category": "cocktail"}
+    ],
+    "menu_url": "http://www.vaskouzina.com/menu.html",
+    "reservation_url": "https://www.opentable.com/r/vas-kouzina-roswell-reservations-roswell?restref=1015192&lang=en-US&ot_source=Restaurant%20website",
+    "phone": "(678) 587-5888",
+    "instagram": "vaskouzina",
+    "dietary_options": ["vegetarian-friendly"],
+    "specials": [
+      {
+        "day_of_week": 3,
+        "title": "Wine Down Wednesday",
+        "description": "Half price bottles of wine every Wednesday",
+        "special_type": "daily_special",
+        "start_time": "16:00",
+        "end_time": "21:00"
+      }
+    ],
+    "genres": [],
+    "parking": []
+  }
+}

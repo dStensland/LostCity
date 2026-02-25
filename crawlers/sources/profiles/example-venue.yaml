@@ -5,28 +5,32 @@ integration_method: html
 defaults:
   venue_name: Example Venue
   category: music
-  subcategory: concert
   tags:
-    - music
+  - music
 discovery:
-  enabled: false  # Template/example, not a real source — 2026-02-06 audit
+  enabled: false
   type: list
   urls:
-    - https://example.com/events
-  event_card: ".event-card"
+  - https://example.com/events
+  event_card: .event-card
   fields:
-    title: ".event-title"
-    date: ".event-date"
-    time: ".event-time"
-    detail_url: "a.event-link@href"
-    image_url: "img@src"
+    title: .event-title
+    date: .event-date
+    time: .event-time
+    detail_url: a.event-link@href
+    image_url: img@src
 detail:
   enabled: true
   selectors:
-    description: ".event-description"
-    ticket_url: "a:has-text('Tickets')@href"
-    image_url: ".event-hero img@src"
+    description: .event-description
+    ticket_url: a:has-text('Tickets')@href
+    image_url: .event-hero img@src
   use_jsonld: true
   use_open_graph: true
   use_heuristic: true
   use_llm: false
+data_goals:
+- events
+- images
+- lineup
+- tickets

@@ -139,7 +139,8 @@ export const GET = withOptionalAuth(async (request: NextRequest, { user, supabas
       supabase
         .from("venues")
         .select("id, name, slug, neighborhood, image_url, hero_image_url, venue_type")
-        .in("id", venueIdArr),
+        .in("id", venueIdArr)
+        .eq("active", true),
     ]);
 
     // Build lookup maps
@@ -240,7 +241,8 @@ export const GET = withOptionalAuth(async (request: NextRequest, { user, supabas
 
     let userVoteVenueId: number | null = null;
     if (userVoteResult.data) {
-      userVoteVenueId = (userVoteResult.data as unknown as { venue_id: number }).venue_id;
+      const votedVenueId = (userVoteResult.data as unknown as { venue_id: number }).venue_id;
+      userVoteVenueId = venues.has(votedVenueId) ? votedVenueId : null;
     }
 
     const authorProfiles = new Map<string, ProfileRow>();

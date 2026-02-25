@@ -51,6 +51,7 @@ export function useEventsList(options: UseEventsListOptions = {}) {
       "vibes",
       "neighborhoods",
       "price",
+      "free",
       "date",
       "mood",
     ];

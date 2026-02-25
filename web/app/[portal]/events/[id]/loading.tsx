@@ -1,6 +1,6 @@
 "use client";
 
-import UnifiedHeader from "@/components/UnifiedHeader";
+import { PortalHeader } from "@/components/headers";
 import Skeleton from "@/components/Skeleton";
 import { useParams } from "next/navigation";
 import { usePortalOptional } from "@/lib/portal-context";
@@ -77,14 +77,18 @@ export default function EventLoading() {
 
   return (
     <div data-skeleton-route="event-detail" data-skeleton-vertical="city" className="min-h-screen">
-      <UnifiedHeader portalSlug={portalSlug} />
+      <PortalHeader
+        portalSlug={portalSlug}
+        portalName={portal?.name || "Lost City"}
+        hideNav
+      />
 
       <main
         className="max-w-3xl mx-auto px-4 py-8 animate-fade-in"
         style={{ animationDelay: "100ms", animationFillMode: "backwards" }}
       >
         {/* Image skeleton */}
-        <div className="aspect-video bg-[var(--twilight)]/30 rounded-lg mb-6 skeleton-shimmer" />
+        <div className="aspect-[4/3] bg-[var(--twilight)]/30 rounded-lg mb-6 skeleton-shimmer" />
 
         {/* Main card skeleton */}
         <div className="border border-[var(--twilight)] rounded-lg p-6 sm:p-8 bg-[var(--card-bg)]">

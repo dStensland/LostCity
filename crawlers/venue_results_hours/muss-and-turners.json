@@ -1,0 +1,41 @@
+{
+  "venue_id": 4770,
+  "venue_slug": "muss-and-turners",
+  "meta": {
+    "og_image": "https://mussandturners.com/wp-content/uploads/2023/07/BirdseyeL31.webp",
+    "meta_description": "Welcome to Muss & Turners, a restaurant founded by 3 locals. We believe that people matter most. Click here to check out our exclusive menus.",
+    "reservation_links": [
+      "https://www.opentable.com/r/muss-and-turners-reservations-smyrna?restref=12106&lang=en-US&ot_source=Restaurant"
+    ],
+    "menu_links": [
+      "https://mussandturners.com/our-menus/"
+    ],
+    "instagram": "mussandturners",
+    "facebook_url": "https://www.facebook.com/mussandturners",
+    "phone": "(770) 434-1114"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": [
+      "casual",
+      "neighborhood-bar",
+      "cozy",
+      "happy-hour",
+      "craft-cocktails"
+    ],
+    "cuisine": [
+      "new_american",
+      "deli"
+    ],
+    "service_style": "full-service",
+    "price_level": "$$",
+    "menu_highlights": null,
+    "reservation_url": "https://www.opentable.com/r/muss-and-turners-reservations-smyrna?restref=12106&lang=en-US&ot_source=Restaurant",
+    "phone": "(770) 434-1114",
+    "instagram": "mussandturners",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

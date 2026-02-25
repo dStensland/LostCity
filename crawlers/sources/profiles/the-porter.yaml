@@ -5,7 +5,6 @@ integration_method: html
 defaults:
   venue_name: The Porter Beer Bar
   category: nightlife
-  subcategory: bar
   tags:
   - beer
   - bar
@@ -18,3 +17,9 @@ discovery:
   - https://www.theporterbeerbar.com/wordpress/elementor-1726/
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- specials
+- tickets
+- venue_hours

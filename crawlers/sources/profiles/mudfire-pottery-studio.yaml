@@ -1,0 +1,25 @@
+version: 1
+slug: mudfire-pottery-studio
+name: MudFire Pottery Studio
+integration_method: playwright
+defaults:
+  category: learning
+  tags:
+  - pottery
+  - classes
+  - learning
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.mudfire.com
+  fetch:
+    render_js: true
+detail:
+  enabled: true
+  fetch:
+    render_js: true
+data_goals:
+- classes
+- events
+- tickets

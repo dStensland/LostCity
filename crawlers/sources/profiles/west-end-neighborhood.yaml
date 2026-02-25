@@ -4,9 +4,11 @@ name: Historic West End Neighborhood
 integration_method: html
 defaults: {}
 discovery:
-  enabled: false  # Domain parked — 2026-02-06 audit
+  enabled: false
   type: list
   urls:
   - https://historicwestend.com
 detail:
   enabled: false
+data_goals:
+- events

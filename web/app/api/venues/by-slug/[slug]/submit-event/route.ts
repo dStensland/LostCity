@@ -223,7 +223,7 @@ export async function POST(request: NextRequest, { params }: Props) {
     end_date: body.end_date || null,
     end_time: body.end_time || null,
     description: body.description ? sanitizeString(body.description) : null,
-    category: body.category,
+    category_id: body.category,
     genres: body.genre ? [body.genre] : [],
     ticket_url: body.ticket_url || null,
     image_url: body.image_url || null,

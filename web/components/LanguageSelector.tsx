@@ -19,13 +19,9 @@ export default function LanguageSelector({
   className = "",
   onLocaleChange,
 }: LanguageSelectorProps) {
-  const [locale, setLocale] = useState<SupportedLocale>("en");
+  const [locale, setLocale] = useState<SupportedLocale>(() => getStoredLocale());
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setLocale(getStoredLocale());
-  }, []);
 
   // Close on outside click
   useEffect(() => {

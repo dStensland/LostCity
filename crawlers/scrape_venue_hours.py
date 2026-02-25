@@ -21,6 +21,7 @@ import time
 import logging
 import argparse
 import requests
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 from bs4 import BeautifulSoup
@@ -33,6 +34,7 @@ load_dotenv(env_path)
 # Add parent to path for db module
 sys.path.insert(0, str(Path(__file__).parent))
 from db import get_client
+from hours_utils import format_hours_display, prepare_hours_update, should_update_hours
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
@@ -405,96 +407,69 @@ def scrape_hours_from_website(url: str) -> Optional[dict]:
         return None
 
 
-def format_hours_display(hours: dict) -> str:
-    """Generate a human-readable hours display string."""
-    if not hours:
-        return ""
-
-    day_order = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
-    day_labels = {"mon": "Mon", "tue": "Tue", "wed": "Wed", "thu": "Thu",
-                  "fri": "Fri", "sat": "Sat", "sun": "Sun"}
-
-    lines = []
-
-    # Group consecutive days with same hours
-    i = 0
-    while i < len(day_order):
-        day = day_order[i]
-        if day not in hours:
-            i += 1
-            continue
-
-        times = hours[day]
-        start_day = day
-        end_day = day
-
-        # Find consecutive days with same hours
-        j = i + 1
-        while j < len(day_order):
-            next_day = day_order[j]
-            if next_day in hours and hours[next_day] == times:
-                end_day = next_day
-                j += 1
-            else:
-                break
-
-        # Format time range
-        open_time = times["open"]
-        close_time = times["close"]
-
-        # Convert to 12h format for display
-        def to_12h(t):
-            h, m = int(t[:2]), t[3:]
-            period = "am" if h < 12 else "pm"
-            h = h % 12 or 12
-            return f"{h}:{m}{period}" if m != "00" else f"{h}{period}"
-
-        time_str = f"{to_12h(open_time)}-{to_12h(close_time)}"
-
-        if start_day == end_day:
-            lines.append(f"{day_labels[start_day]}: {time_str}")
-        else:
-            lines.append(f"{day_labels[start_day]}-{day_labels[end_day]}: {time_str}")
-
-        i = j
-
-    return ", ".join(lines)
-
-
 def get_venues_needing_hours(
     venue_type: Optional[str] = None,
     limit: int = 50,
+    max_age_days: int = 30,
 ) -> list[dict]:
-    """Get venues that have websites but no hours."""
+    """Get venues with websites that need hours (missing, stale, or lower-confidence)."""
     client = get_client()
 
     query = client.table("venues").select(
-        "id, name, slug, website, hours, venue_type"
+        "id, name, slug, website, hours, venue_type, hours_source, hours_updated_at"
     ).eq("active", True)
 
     # Must have website
     query = query.not_.is_("website", "null")
 
-    # Must not have hours
-    query = query.is_("hours", "null")
-
     if venue_type:
         query = query.eq("venue_type", venue_type)
 
-    query = query.limit(limit)
+    query = query.limit(limit * 3)  # Over-fetch to filter client-side
 
     result = query.execute()
-    return result.data or []
+    venues = result.data or []
+
+    # Filter: no hours, or only social_bio hours (upgradeable), or stale website hours
+    now = datetime.now(timezone.utc)
+    filtered = []
+    for v in venues:
+        # No hours — always include
+        if not v.get("hours"):
+            filtered.append(v)
+            continue
+        # Skip venues with Google or Foursquare hours (higher confidence)
+        if v.get("hours_source") in ("google", "foursquare"):
+            continue
+        # Stale website hours — re-scrape
+        if v.get("hours_source") == "website" and v.get("hours_updated_at"):
+            try:
+                updated = datetime.fromisoformat(v["hours_updated_at"].replace("Z", "+00:00"))
+                if (now - updated).days >= max_age_days:
+                    filtered.append(v)
+            except (ValueError, TypeError):
+                pass
+            continue
+        # Lower-confidence source (social_bio) or no source — include for upgrade
+        if should_update_hours(v.get("hours_source"), "website"):
+            filtered.append(v)
+
+    return filtered[:limit]
 
 
 def update_venue_hours(venue_id: int, hours: dict, hours_display: str, dry_run: bool = False) -> bool:
-    """Update venue with scraped hours."""
+    """Update venue with scraped hours from website."""
     if dry_run:
         return True
 
     client = get_client()
     try:
-        updates = {"hours": hours}
+        now = datetime.now(timezone.utc).isoformat()
+        updates = {
+            "hours": hours,
+            "hours_source": "website",
+            "hours_updated_at": now,
+        }
         if hours_display:
             updates["hours_display"] = hours_display
 
@@ -510,14 +485,15 @@ def main():
     parser.add_argument("--venue-type", help="Filter by venue type (bar, restaurant, etc.)")
     parser.add_argument("--limit", type=int, default=50, help="Max venues to process")
     parser.add_argument("--dry-run", action="store_true", help="Preview without updating")
+    parser.add_argument("--max-age-days", type=int, default=30, help="Re-scrape hours older than this many days (default: 30)")
     args = parser.parse_args()
 
     logger.info("=" * 60)
     logger.info("Scraping Venue Hours from Websites")
     logger.info("=" * 60)
 
-    venues = get_venues_needing_hours(args.venue_type, args.limit)
-    logger.info(f"Found {len(venues)} venues with websites but no hours")
+    venues = get_venues_needing_hours(args.venue_type, args.limit, max_age_days=args.max_age_days)
+    logger.info(f"Found {len(venues)} venues needing website hours")
     logger.info("")
 
     scraped = 0
@@ -534,11 +510,16 @@ def main():
         if not website.startswith("http"):
             website = "https://" + website
 
-        hours = scrape_hours_from_website(website)
+        raw_hours = scrape_hours_from_website(website)
+
+        if raw_hours:
+            hours, hours_display = prepare_hours_update(
+                raw_hours, source="website", venue_type=venue.get("venue_type"),
+            )
+        else:
+            hours = None
 
         if hours:
-            hours_display = format_hours_display(hours)
-
             if args.dry_run:
                 logger.info(f"  FOUND: {name}")
                 logger.info(f"         {hours_display}")

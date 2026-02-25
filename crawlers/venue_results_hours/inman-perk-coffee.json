@@ -1,0 +1,30 @@
+{
+  "venue_id": 2530,
+  "venue_slug": "inman-perk-coffee",
+  "meta": {
+    "og_image": "https://s0.wp.com/i/blank.jpg",
+    "meta_description": null,
+    "reservation_links": [],
+    "menu_links": [
+      "https://inmanperkcoffee.com/gainesville-menu/"
+    ],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["cozy", "casual", "neighborhood-bar"],
+    "cuisine": ["coffee"],
+    "service_style": "cafe",
+    "price_level": 1,
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": null,
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

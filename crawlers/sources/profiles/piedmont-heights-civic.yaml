@@ -10,3 +10,5 @@ discovery:
   - https://piedmontheights.org
 detail:
   enabled: true
+data_goals:
+- events

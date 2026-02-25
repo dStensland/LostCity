@@ -1,0 +1,17 @@
+version: 1
+slug: terminus-mbt
+name: Terminus Modern Ballet Theatre
+integration_method: playwright
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.terminusmbt.com/
+detail:
+  enabled: true
+  fetch:
+    render_js: true
+data_goals:
+- events
+- tickets

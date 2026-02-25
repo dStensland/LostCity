@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "@/components/SmartImage";
 import Logo from "../Logo";
@@ -37,6 +38,8 @@ export default function MinimalHeader({
   headerConfig,
 }: MinimalHeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false);
+  const searchParams = useSearchParams();
+  const currentView = searchParams?.get("view");
 
   // Track scroll for glass effect
   useEffect(() => {
@@ -96,7 +99,7 @@ export default function MinimalHeader({
 
         {/* Right: Search (optional) + User menu */}
         <div className="flex items-center gap-2 flex-shrink-0">
-          {headerConfig.show_search_in_header && <HeaderSearchButton portalSlug={portalSlug} />}
+          {headerConfig.show_search_in_header && currentView !== "find" && <HeaderSearchButton portalSlug={portalSlug} />}
           <UserMenu />
         </div>
       </div>

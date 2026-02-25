@@ -10,3 +10,7 @@ discovery:
   - https://www.southernfriedqueerpride.com/all-events
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- tickets

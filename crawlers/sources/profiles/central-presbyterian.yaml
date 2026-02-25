@@ -1,0 +1,19 @@
+version: 1
+slug: central-presbyterian
+name: Central Presbyterian Church
+integration_method: html
+defaults:
+  category: community
+  tags:
+  - community
+  - religious
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.cpcatlanta.org/music/
+detail:
+  enabled: true
+data_goals:
+- events
+- tickets

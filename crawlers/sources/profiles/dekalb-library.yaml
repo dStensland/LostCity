@@ -10,3 +10,9 @@ discovery:
   - https://www.dekalblibrary.org
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- specials
+- tickets
+- venue_hours

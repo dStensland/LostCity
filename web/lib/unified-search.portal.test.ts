@@ -9,7 +9,7 @@ vi.mock("./supabase/service", () => ({
   createServiceClient: createServiceClientMock,
 }));
 
-vi.mock("@/lib/search", () => ({
+vi.mock("@/lib/social-proof", () => ({
   fetchSocialProofCounts: fetchSocialProofCountsMock,
 }));
 

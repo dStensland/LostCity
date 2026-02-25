@@ -1,0 +1,28 @@
+{
+  "venue_id": 4875,
+  "venue_slug": "bawarchi-biryanis-atlanta",
+  "meta": {
+    "og_image": "https://res.cloudinary.com/choose-pos/raw/upload/v1745150629/bba-logo.png",
+    "meta_description": "Best Indian Restaurant and Indian Catering in Sandy Springs serving delicious Indian food since 2014. Serving authentic Indian Curries, Authentic Biryanis, Indian Appetizers & Tandoor, Indian Chaat, Snacks and Indian Desserts.",
+    "reservation_links": [],
+    "menu_links": [],
+    "instagram": "bawarchibiryanisatlanta",
+    "facebook_url": "https://www.facebook.com/bawarchiatlanta",
+    "phone": "(470) 786-5134"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["casual", "family-friendly", "good-for-groups"],
+    "cuisine": ["indian"],
+    "service_style": "full_service",
+    "price_level": 2,
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": "(470) 786-5134",
+    "instagram": "bawarchibiryanisatlanta",
+    "dietary_options": ["vegetarian-friendly"],
+    "specials": [],
+    "genres": [],
+    "parking": ["free-parking"]
+  }
+}

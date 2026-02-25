@@ -43,8 +43,9 @@ const HIGH_EVENT_VENUE_TYPES = new Set([
   "cinema",
   "theater",
   "music_venue",
-  "arena",
-  "comedy_club",
+  "stadium",
+  "amphitheater",
+  "nightclub",
 ]);
 
 function isHighEventVenue(type: string | null | undefined): boolean {

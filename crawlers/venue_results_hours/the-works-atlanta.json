@@ -1,0 +1,28 @@
+{
+  "venue_id": 1730,
+  "venue_slug": "the-works-atlanta",
+  "meta": {
+    "og_image": null,
+    "meta_description": null,
+    "reservation_links": [],
+    "menu_links": [],
+    "instagram": "theworksatl",
+    "facebook_url": "https://www.facebook.com/theworksatl",
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["lively", "good-for-groups", "outdoor-seating", "family-friendly", "live-music"],
+    "cuisine": [],
+    "service_style": null,
+    "price_level": null,
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "theworksatl",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

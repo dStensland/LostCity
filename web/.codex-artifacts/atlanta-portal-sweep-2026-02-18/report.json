@@ -1,0 +1,2062 @@
+{
+  "generatedAt": "2026-02-18T01:15:43.745Z",
+  "baseUrl": "http://localhost:3000",
+  "routes": [
+    {
+      "name": "feed",
+      "path": "/atlanta"
+    },
+    {
+      "name": "feed_find",
+      "path": "/atlanta?view=find"
+    },
+    {
+      "name": "feed_community",
+      "path": "/atlanta?view=community"
+    },
+    {
+      "name": "happening_now",
+      "path": "/atlanta/happening-now"
+    },
+    {
+      "name": "festivals",
+      "path": "/atlanta/festivals"
+    },
+    {
+      "name": "showtimes",
+      "path": "/atlanta/showtimes"
+    },
+    {
+      "name": "calendar",
+      "path": "/atlanta/calendar"
+    },
+    {
+      "name": "community_hub",
+      "path": "/atlanta/community-hub"
+    },
+    {
+      "name": "parks",
+      "path": "/atlanta/parks"
+    },
+    {
+      "name": "services",
+      "path": "/atlanta/services"
+    },
+    {
+      "name": "venues",
+      "path": "/atlanta/venues"
+    },
+    {
+      "name": "partners",
+      "path": "/atlanta/partners"
+    }
+  ],
+  "runs": [
+    {
+      "viewport": "desktop",
+      "route": "/atlanta",
+      "name": "feed",
+      "finalUrl": "http://localhost:3000/atlanta",
+      "title": "Atlanta Events | Lost City",
+      "statusLikeIssues": [],
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "pageErrors": [],
+      "failedRequests": [
+        "POST http://localhost:3000/api/portals/atlanta/track :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/tonight?period=today :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/activities/popular?date_filter=week&portal_id=74c2f211-ee11-453d-8386-ac2861705695 :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/trending :: net::ERR_ABORTED"
+      ],
+      "screenshots": [
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/desktop_feed_top.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/desktop_feed_scroll_1.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/desktop_feed_scroll_2.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/desktop_feed_scroll_3.png"
+      ],
+      "perf": {
+        "domComplete": 4317.300000071526,
+        "loadEventEnd": 4317.899999976158,
+        "fcp": 3776,
+        "lcp": 5728,
+        "cls": 0.7916049836982765
+      },
+      "floatingUI": [
+        {
+          "tag": "A",
+          "className": "skip-link",
+          "aria": null,
+          "text": "Skip to main content",
+          "position": "fixed",
+          "zIndex": "10000",
+          "rect": {
+            "x": 653.0859375,
+            "y": -982,
+            "w": 205.828125,
+            "h": 49.59375
+          }
+        },
+        {
+          "tag": "DIV",
+          "className": "ambient-glow",
+          "aria": null,
+          "text": "",
+          "position": "fixed",
+          "zIndex": "-1",
+          "rect": {
+            "x": -302.3984375,
+            "y": -196.390625,
+            "w": 2116.796875,
+            "h": 491
+          }
+        },
+        {
+          "tag": "DIV",
+          "className": "rain-overlay",
+          "aria": null,
+          "text": "",
+          "position": "fixed",
+          "zIndex": "10",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1512,
+            "h": 982
+          }
+        },
+        {
+          "tag": "DIV",
+          "className": "pointer-events-none fixed inset-0 z-[9998] overflow-hidden",
+          "aria": null,
+          "text": "",
+          "position": "fixed",
+          "zIndex": "9998",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1512,
+            "h": 982
+          }
+        },
+        {
+          "tag": "DIV",
+          "className": "ambient-layer rain-overlay rain-z-0 rain-intensity-subtle",
+          "aria": null,
+          "text": "",
+          "position": "fixed",
+          "zIndex": "0",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1512,
+            "h": 2854.203125
+          }
+        },
+        {
+          "tag": "HEADER",
+          "className": "portal-feed-header sticky top-0 z-[100] border-b border-[var(--twilight)]/30 bg-[var(--void)]/95 backdrop-blur-sm relati",
+          "aria": null,
+          "text": "LOSTCITYATLBETAFeedFindCommunitySign inSign inFeedFindCommunity",
+          "position": "sticky",
+          "zIndex": "100",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1512,
+            "h": 72.546875
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "className": "fixed bottom-4 right-4 z-[9999] flex items-center gap-2 px-4 py-2.5 rounded-full bg-[var(--twilight)] border border-[var",
+          "aria": "Give feedback",
+          "text": "Give feedback",
+          "position": "fixed",
+          "zIndex": "9999",
+          "rect": {
+            "x": 1375.59375,
+            "y": 925.4375,
+            "w": 120.40625,
+            "h": 40.5625
+          }
+        },
+        {
+          "tag": "ASIDE",
+          "className": "pointer-events-none fixed right-5 top-[7rem] z-[120] hidden sm:block",
+          "aria": null,
+          "text": "Expand page index",
+          "position": "fixed",
+          "zIndex": "120",
+          "rect": {
+            "x": 1444,
+            "y": 112,
+            "w": 48,
+            "h": 48
+          }
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "route": "/atlanta?view=find",
+      "name": "feed_find",
+      "finalUrl": "http://localhost:3000/atlanta?view=find&date=today",
+      "title": "Atlanta Events | Lost City",
+      "statusLikeIssues": [],
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "pageErrors": [],
+      "failedRequests": [
+        "GET http://localhost:3000/api/timeline?portal_id=74c2f211-ee11-453d-8386-ac2861705695 :: net::ERR_ABORTED",
+        "POST http://localhost:3000/api/portals/atlanta/track :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/timeline?portal_id=74c2f211-ee11-453d-8386-ac2861705695 :: net::ERR_ABORTED"
+      ],
+      "screenshots": [
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/desktop_feed_find_top.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/desktop_feed_find_scroll_1.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/desktop_feed_find_scroll_2.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/desktop_feed_find_scroll_3.png"
+      ],
+      "perf": {
+        "domComplete": 1243.1999999284744,
+        "loadEventEnd": 1243.3999999761581,
+        "fcp": 856,
+        "lcp": 1164,
+        "cls": 1.029100529100529
+      },
+      "floatingUI": [
+        {
+          "tag": "A",
+          "className": "skip-link",
+          "aria": null,
+          "text": "Skip to main content",
+          "position": "fixed",
+          "zIndex": "10000",
+          "rect": {
+            "x": 653.0859375,
+            "y": -982,
+            "w": 205.828125,
+            "h": 49.59375
+          }
+        },
+        {
+          "tag": "DIV",
+          "className": "ambient-glow",
+          "aria": null,
+          "text": "",
+          "position": "fixed",
+          "zIndex": "-1",
+          "rect": {
+            "x": -302.3984375,
+            "y": -196.390625,
+            "w": 2116.796875,
+            "h": 491
+          }
+        },
+        {
+          "tag": "DIV",
+          "className": "rain-overlay",
+          "aria": null,
+          "text": "",
+          "position": "fixed",
+          "zIndex": "10",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1512,
+            "h": 982
+          }
+        },
+        {
+          "tag": "DIV",
+          "className": "pointer-events-none fixed inset-0 z-[9998] overflow-hidden",
+          "aria": null,
+          "text": "",
+          "position": "fixed",
+          "zIndex": "9998",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1512,
+            "h": 982
+          }
+        },
+        {
+          "tag": "DIV",
+          "className": "ambient-layer rain-overlay rain-z-0 rain-intensity-subtle",
+          "aria": null,
+          "text": "",
+          "position": "fixed",
+          "zIndex": "0",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1512,
+            "h": 3197.78125
+          }
+        },
+        {
+          "tag": "HEADER",
+          "className": "portal-feed-header sticky top-0 z-[100] border-b border-[var(--twilight)]/30 bg-[var(--void)]/95 backdrop-blur-sm relati",
+          "aria": null,
+          "text": "LOSTCITYATLBETAFeedFindCommunitySign inSign inFeedFindCommunity",
+          "position": "sticky",
+          "zIndex": "100",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1512,
+            "h": 72.546875
+          }
+        },
+        {
+          "tag": "DIV",
+          "className": "sticky z-20 -mx-4 px-4 py-2.5 sm:py-3 bg-[var(--void)]/90 backdrop-blur-md border-b border-[var(--twilight)]/45",
+          "aria": null,
+          "text": "TodayCurated timeline20 items",
+          "position": "sticky",
+          "zIndex": "20",
+          "rect": {
+            "x": 244,
+            "y": 337.546875,
+            "w": 1024,
+            "h": 65.90625
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "className": "fixed bottom-4 right-4 z-[9999] flex items-center gap-2 px-4 py-2.5 rounded-full bg-[var(--twilight)] border border-[var",
+          "aria": "Give feedback",
+          "text": "Give feedback",
+          "position": "fixed",
+          "zIndex": "9999",
+          "rect": {
+            "x": 1375.59375,
+            "y": 925.4375,
+            "w": 120.40625,
+            "h": 40.5625
+          }
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "route": "/atlanta?view=community",
+      "name": "feed_community",
+      "finalUrl": "http://localhost:3000/atlanta?view=community",
+      "title": "Atlanta Events | Lost City",
+      "statusLikeIssues": [],
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "pageErrors": [],
+      "failedRequests": [
+        "GET http://localhost:3000/api/timeline?date=today&cursor=eyJkIjoiMjAyNi0wMi0xNyIsInQiOiIyMDowMDowMCIsImkiOjIxOTIxfQ&portal_id=74c2f211-ee11-453d-8386-ac2861705695 :: net::ERR_ABORTED",
+        "POST http://localhost:3000/api/portals/atlanta/track :: net::ERR_ABORTED"
+      ],
+      "screenshots": [
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/desktop_feed_community_top.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/desktop_feed_community_scroll_1.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/desktop_feed_community_scroll_2.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/desktop_feed_community_scroll_3.png"
+      ],
+      "perf": {
+        "domComplete": 889.5,
+        "loadEventEnd": 889.5,
+        "fcp": 200,
+        "lcp": 1000,
+        "cls": 0
+      },
+      "floatingUI": [
+        {
+          "tag": "A",
+          "className": "skip-link",
+          "aria": null,
+          "text": "Skip to main content",
+          "position": "fixed",
+          "zIndex": "10000",
+          "rect": {
+            "x": 653.0859375,
+            "y": -982,
+            "w": 205.828125,
+            "h": 49.59375
+          }
+        },
+        {
+          "tag": "DIV",
+          "className": "ambient-glow",
+          "aria": null,
+          "text": "",
+          "position": "fixed",
+          "zIndex": "-1",
+          "rect": {
+            "x": -302.3984375,
+            "y": -196.390625,
+            "w": 2116.796875,
+            "h": 491
+          }
+        },
+        {
+          "tag": "DIV",
+          "className": "rain-overlay",
+          "aria": null,
+          "text": "",
+          "position": "fixed",
+          "zIndex": "10",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1512,
+            "h": 982
+          }
+        },
+        {
+          "tag": "DIV",
+          "className": "pointer-events-none fixed inset-0 z-[9998] overflow-hidden",
+          "aria": null,
+          "text": "",
+          "position": "fixed",
+          "zIndex": "9998",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1512,
+            "h": 982
+          }
+        },
+        {
+          "tag": "DIV",
+          "className": "ambient-layer rain-overlay rain-z-0 rain-intensity-subtle",
+          "aria": null,
+          "text": "",
+          "position": "fixed",
+          "zIndex": "0",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1512,
+            "h": 1227.984375
+          }
+        },
+        {
+          "tag": "HEADER",
+          "className": "portal-feed-header sticky top-0 z-[100] border-b border-[var(--twilight)]/30 bg-[var(--void)]/95 backdrop-blur-sm relati",
+          "aria": null,
+          "text": "LOSTCITYATLBETAFeedFindCommunitySign inSign inFeedFindCommunity",
+          "position": "sticky",
+          "zIndex": "100",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1512,
+            "h": 72.546875
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "className": "fixed bottom-4 right-4 z-[9999] flex items-center gap-2 px-4 py-2.5 rounded-full bg-[var(--twilight)] border border-[var",
+          "aria": "Give feedback",
+          "text": "Give feedback",
+          "position": "fixed",
+          "zIndex": "9999",
+          "rect": {
+            "x": 1375.59375,
+            "y": 925.4375,
+            "w": 120.40625,
+            "h": 40.5625
+          }
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "route": "/atlanta/happening-now",
+      "name": "happening_now",
+      "finalUrl": "http://localhost:3000/atlanta/happening-now",
+      "title": "Atlanta Events | Lost City",
+      "statusLikeIssues": [],
+      "consoleErrors": [
+        "Error: Map is not supported by this browser\n    at Map.useEffect (http://localhost:3000/_next/static/chunks/node_modules_react-map-gl_dist_esm_c1d70d39._.js:1066:31)"
+      ],
+      "consoleWarnings": [],
+      "pageErrors": [],
+      "failedRequests": [
+        "POST http://localhost:3000/api/portals/atlanta/track :: net::ERR_ABORTED"
+      ],
+      "screenshots": [
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/desktop_happening_now_top.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/desktop_happening_now_scroll_1.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/desktop_happening_now_scroll_2.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/desktop_happening_now_scroll_3.png"
+      ],
+      "perf": {
+        "domComplete": 7629.299999952316,
+        "loadEventEnd": 7629.399999976158,
+        "fcp": 6676,
+        "lcp": 7812,
+        "cls": 0
+      },
+      "floatingUI": [
+        {
+          "tag": "A",
+          "className": "skip-link",
+          "aria": null,
+          "text": "Skip to main content",
+          "position": "fixed",
+          "zIndex": "10000",
+          "rect": {
+            "x": 653.0859375,
+            "y": -982,
+            "w": 205.828125,
+            "h": 49.59375
+          }
+        },
+        {
+          "tag": "DIV",
+          "className": "ambient-glow",
+          "aria": null,
+          "text": "",
+          "position": "fixed",
+          "zIndex": "-1",
+          "rect": {
+            "x": -302.3984375,
+            "y": -196.390625,
+            "w": 2116.796875,
+            "h": 491
+          }
+        },
+        {
+          "tag": "DIV",
+          "className": "rain-overlay",
+          "aria": null,
+          "text": "",
+          "position": "fixed",
+          "zIndex": "10",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1512,
+            "h": 982
+          }
+        },
+        {
+          "tag": "DIV",
+          "className": "pointer-events-none fixed inset-0 z-[9998] overflow-hidden",
+          "aria": null,
+          "text": "",
+          "position": "fixed",
+          "zIndex": "9998",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1512,
+            "h": 982
+          }
+        },
+        {
+          "tag": "HEADER",
+          "className": "portal-feed-header sticky top-0 z-[100] border-b border-[var(--twilight)]/30 bg-[var(--void)]/95 backdrop-blur-sm relati",
+          "aria": null,
+          "text": "LOSTCITYATLBETAFeedFindCommunitySign inSign inFeedFindCommunity",
+          "position": "sticky",
+          "zIndex": "100",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1512,
+            "h": 72.546875
+          }
+        },
+        {
+          "tag": "DIV",
+          "className": "fixed inset-0 z-[1000] bg-black/80 flex items-center justify-center p-4",
+          "aria": null,
+          "text": "What's Open?Share your location to find what's open and happening nearby📍Use My",
+          "position": "fixed",
+          "zIndex": "1000",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1512,
+            "h": 1227.984375
+          }
+        },
+        {
+          "tag": "DIV",
+          "className": "sticky top-[52px] z-20 bg-[var(--night)]/95 backdrop-blur-sm border-b border-[var(--twilight)]/50",
+          "aria": null,
+          "text": "📍 Use my locationAll of AtlantaAdair ParkAnsley ParkAtlantic StationBrookwood H",
+          "position": "sticky",
+          "zIndex": "20",
+          "rect": {
+            "x": 0,
+            "y": 72.546875,
+            "w": 1512,
+            "h": 49.5625
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "className": "fixed bottom-4 right-4 z-[9999] flex items-center gap-2 px-4 py-2.5 rounded-full bg-[var(--twilight)] border border-[var",
+          "aria": "Give feedback",
+          "text": "Give feedback",
+          "position": "fixed",
+          "zIndex": "9999",
+          "rect": {
+            "x": 1375.59375,
+            "y": 925.4375,
+            "w": 120.40625,
+            "h": 40.5625
+          }
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "route": "/atlanta/festivals",
+      "name": "festivals",
+      "finalUrl": "http://localhost:3000/atlanta/festivals",
+      "title": "Festivals | Atlanta",
+      "statusLikeIssues": [],
+      "consoleErrors": [],
+      "consoleWarnings": [
+        "Image with src \"http://static1.squarespace.com/static/691f441767b2e80c514aab2f/t/69713043653b85088374a4ff/1769025603536/fodd_and_wine_ig-removebg-preview.png?format=1500w\" has \"fill\" but is missing \"sizes\" prop. Please add it to improve page performance. Read more: https://nextjs.org/docs/api-reference/next/image#sizes"
+      ],
+      "pageErrors": [],
+      "failedRequests": [
+        "POST http://localhost:3000/api/portals/atlanta/track :: net::ERR_ABORTED"
+      ],
+      "screenshots": [
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/desktop_festivals_top.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/desktop_festivals_scroll_1.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/desktop_festivals_scroll_2.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/desktop_festivals_scroll_3.png"
+      ],
+      "perf": {
+        "domComplete": 9246.399999976158,
+        "loadEventEnd": 9246.600000023842,
+        "fcp": 1908,
+        "lcp": 8504,
+        "cls": 0
+      },
+      "floatingUI": [
+        {
+          "tag": "A",
+          "className": "skip-link",
+          "aria": null,
+          "text": "Skip to main content",
+          "position": "fixed",
+          "zIndex": "10000",
+          "rect": {
+            "x": 653.0859375,
+            "y": -982,
+            "w": 205.828125,
+            "h": 49.59375
+          }
+        },
+        {
+          "tag": "DIV",
+          "className": "ambient-glow",
+          "aria": null,
+          "text": "",
+          "position": "fixed",
+          "zIndex": "-1",
+          "rect": {
+            "x": -302.3984375,
+            "y": -196.390625,
+            "w": 2116.796875,
+            "h": 491
+          }
+        },
+        {
+          "tag": "DIV",
+          "className": "rain-overlay",
+          "aria": null,
+          "text": "",
+          "position": "fixed",
+          "zIndex": "10",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1512,
+            "h": 982
+          }
+        },
+        {
+          "tag": "DIV",
+          "className": "pointer-events-none fixed inset-0 z-[9998] overflow-hidden",
+          "aria": null,
+          "text": "",
+          "position": "fixed",
+          "zIndex": "9998",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1512,
+            "h": 982
+          }
+        },
+        {
+          "tag": "HEADER",
+          "className": "portal-feed-header sticky top-0 z-[100] border-b border-[var(--twilight)]/30 bg-[var(--void)]/95 backdrop-blur-sm relati",
+          "aria": null,
+          "text": "BackLOSTCITYATLBETASign inSign in",
+          "position": "sticky",
+          "zIndex": "100",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1512,
+            "h": 72.546875
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "className": "fixed bottom-4 right-4 z-[9999] flex items-center gap-2 px-4 py-2.5 rounded-full bg-[var(--twilight)] border border-[var",
+          "aria": "Give feedback",
+          "text": "Give feedback",
+          "position": "fixed",
+          "zIndex": "9999",
+          "rect": {
+            "x": 1375.59375,
+            "y": 925.4375,
+            "w": 120.40625,
+            "h": 40.5625
+          }
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "route": "/atlanta/showtimes",
+      "name": "showtimes",
+      "finalUrl": "http://localhost:3000/atlanta/showtimes",
+      "title": "Atlanta Events | Lost City",
+      "statusLikeIssues": [
+        "415 http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fgameatl.com%2Fwp-content%2Fuploads%2F2023%2F02%2FSFGE-web-image.jpg",
+        "415 http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fwww.facebook.com%2Ftr%3Fid%3D140502359970341%26ev%3DPageView%26noscript%3D1"
+      ],
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 415 (Unsupported Media Type)",
+        "Failed to load resource: the server responded with a status of 415 (Unsupported Media Type)"
+      ],
+      "consoleWarnings": [
+        "Image with src \"https://images.squarespace-cdn.com/content/v1/5c77079177b903afcfd225ac/6b5cbf2f-aa53-472e-8813-04cc3219e67a/8th+Festival+Logo.png\" has \"fill\" but is missing \"sizes\" prop. Please add it to improve page performance. Read more: https://nextjs.org/docs/api-reference/next/image#sizes"
+      ],
+      "pageErrors": [],
+      "failedRequests": [
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fstatic.hugedomains.com%2Fimages%2Fhdv3-img%2Fog_hugedomains.png :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fserviceleague.net%2Fwp-content%2Fuploads%2F2021%2F02%2Fcropped-Logotype_Pantone_Spot_MED.jpg :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fimg1.wsimg.com%2Fisteam%2Fip%2Fd125131a-3a5d-41d9-a603-90bb23f6dcde%2F2026%2520banner%2520Atlanta%2520Horror%2520Film%2520Festival%2520.png :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fstorage.googleapis.com%2Fs.mkswft.com%2FRmlsZTozZmY4ZTBkNS0zYzQ3LTRjZDQtOWZhNC1iZWMwMjE1MDJlZTA%3D%2FBlue%2520Elegant%2520Business%2520Name%2520XTwitter%2520Header%2520(Facebook%2520Post).png :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fburiedalivefilmfest.com%2Fwp-content%2Fuploads%2F2025%2F11%2FBAFF-WEbImage-scaled.png :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Ffrolicon.com%2Fwp-content%2Fuploads%2F2025%2F06%2FFrolicon_Header2025-1024x315.png :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Ffurryweekend.com%2F_astro%2Fmedia-social.Np6dbXam.jpg :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fcdn.prod.website-files.com%2F66d6cc6f8f18c43737e385d3%2F680086a9189fe52ae88fdd88_6800867b03819edbed9a6263_Breakaway%252520Web.avif :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fimg1.wsimg.com%2Fisteam%2Fip%2Fe588a78f-5b3a-4e97-955b-d0ea89793582%2F20210416_161125.jpg :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fwww.supercrosslive.com%2Fwp-content%2Fuploads%2F2024%2F04%2Fsx-meta-2-Copy-scaled.jpg :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fwww.redhat.com%2Fthemes%2Fcustom%2Frhdc%2Fimg%2Fred-hat-social-share.jpg :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fwww.jordancon.org%2Fwp-content%2Fuploads%2F2020%2F04%2FWritersLogo-02.png :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fdogwood.org%2Fwp-content%2Fuploads%2F2018%2F02%2FArtistmarket.jpg :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fvahi.org%2Fwp-content%2Fuploads%2F021325-Summerfest-2025-Horizontal-Logo-01.png :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fstatic.wixstatic.com%2Fmedia%2F1e20e4_d4fcaa28edb042eeadb47aa125415fda~mv2.jpg%2Fv1%2Ffill%2Fw_147%2Ch_98%2Cal_c%2Cq_80%2Cusm_0.66_1.00_0.01%2Cblur_2%2Cenc_avif%2Cquality_auto%2F1e20e4_d4fcaa28edb042eeadb47aa125415fda~mv2.jpg :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fwww.creationent.com%2Fassets%2Fimg%2FceLogo.png :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Feastatlantastrut.com%2Fwp-content%2Fuploads%2F2025%2F05%2Fhome-hero.jpg :: net::ERR_ABORTED",
+        "GET http://localhost:3000/_next/image?url=https%3A%2F%2Fimages.squarespace-cdn.com%2Fcontent%2Fv1%2F657f76aa4f3eb55e522e3a61%2F28e0643a-a05e-4922-a8ee-04845560ae20%2FSmoke-on-the-Lake-BBQ-Festival_banner.png&w=1920&q=75 :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fwww.georgiacelebratesquilts.com%2Fwp-content%2Fuploads%2F2025%2F10%2FGCQTerrazzoHeaderTahomaFont.jpg :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fgeraniumfestival.com%2Fwp-content%2Fuploads%2F2021%2F10%2Fgeranium-festival-white.png :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Foctanecdn.com%2Fgarenfestnew%2Fgarenfestnew_460246634.png :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fwww.atlantamotorspeedway.com%2Fimages%2Feps-logo-header.png :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fsweetwater420fest.com%2Fwp-content%2Fuploads%2F2026%2F01%2FSWB-420Fest-Original-Art-260112-02-preview.jpg :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fwww.momocon.com%2Fwp-content%2Fuploads%2F2024%2F10%2Fmomocon-2024-deven-dong-001-scaled.jpg :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fcdn.saffire.com%2Fimages.ashx%3Ft%3Dig%26rid%3DGwinnettCountyFair%26i%3Dfooter-logo.png :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fimg1.wsimg.com%2Fisteam%2Fip%2F6c7c0571-5a83-4b83-8fcb-f0347753222e%2FMerry%2520Christmas%2520(1).jpg :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fcdn.prod.website-files.com%2F693c62b026ed2a5b150c0c3d%2F693c62b026ed2a5b150c0d4d_Open%2520Graph.jpg :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fjohnscreekga.b-cdn.net%2Fapp%2Fuploads%2F2024%2F01%2FJC_Search-Img.jpg :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fdigitalhub.fifa.com%2Ftransform%2F032a70c6-594c-4b5a-9545-0c96383708a0%2Ffifapls_fallbackimage_1200x630 :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fwww.juneteenthatl.com%2Fuploads%2F1%2F1%2F3%2F6%2F11367169%2Fpublished%2Ffreedom-site.png%3F1769872666 :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fawa-con.com%2Fwp-content%2Fuploads%2F2024%2F08%2FWHITE-Transparent-Logo-with-text.png :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fdecaturartsalliance.org%2Fwp-content%2Fuploads%2F2024%2F03%2FLittle-Amal-Cred-Julie-Yarbrough.webp :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fdunwoody.imgix.net%2Fimages%2Fblogs%2Fhome3_d934df09-639b-4ca2-a648-7be3975edb20.jpg%3Fauto%3Dcompress%252Cformat%26crop%3Dfocalpoint%26fit%3Dcrop%26fp-x%3D0.5%26fp-y%3D0.5%26h%3D630%26q%3D80%26w%3D1200%26s%3De97986e18334229a4db7c57ce1b226b1 :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fcdn.prod.website-files.com%2F64357f4ba4ca5207c9a01618%2F6440117ff8211f36ff20c379_AFWF%2520Hero-poster-00001.jpg :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fstatic.wixstatic.com%2Fmedia%2F515771_7ef15d672a96432e9cf857a00d3a30a7%257Emv2.jpg%2Fv1%2Ffit%2Fw_2500%2Ch_1330%2Cal_c%2F515771_7ef15d672a96432e9cf857a00d3a30a7%257Emv2.jpg :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fstatic.wixstatic.com%2Fmedia%2Fefb8d1_cb78b6477bbd4261a30196c99a5c81ba~mv2.jpg%2Fv1%2Ffill%2Fw_960%2Ch_960%2Cal_c%2Fefb8d1_cb78b6477bbd4261a30196c99a5c81ba~mv2.jpg :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fstatic.wixstatic.com%2Fmedia%2F1e3934_32a474b36dfa4d82ac2170212be9803e~mv2.png%2Fv1%2Ffill%2Fw_38%2Ch_25%2Cal_c%2Cq_85%2Cusm_0.66_1.00_0.01%2Cblur_2%2Cenc_avif%2Cquality_auto%2F1e3934_32a474b36dfa4d82ac2170212be9803e~mv2.png :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fatlantafringe.org%2Fwp-content%2Fuploads%2F2025%2F04%2F2025-Fringe-Logo-WP_1200.png :: net::ERR_ABORTED",
+        "GET http://localhost:3000/_next/image?url=http%3A%2F%2Fstatic1.squarespace.com%2Fstatic%2F604e59d5fdd7a73331ecb324%2Ft%2F604e68544760de444538b6d5%2F1615751257578%2FInverted%2Blogo%2Btranparent%2Bbackground.png%3Fformat%3D1500w&w=1920&q=75 :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fimg1.wsimg.com%2Fisteam%2Fip%2Fc8ecbeec-b16b-4c79-93e9-6f7316c168a9%2FAtlanta%2520Shortsfest%2520-%2520the%2520official%2520Atlanta%2520shor.png :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fwww.dragoncon.org%2Fwp-content%2Fuploads%2F2023%2F02%2FHomePage-1.jpg%3Fid%3D4395 :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fwww.kennesaw.com%2Fwp-content%2Fuploads%2Fbig-shanty-festival-featured.jpg :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Ftasteofalpharettaga.com%2Fwp-content%2Fuploads%2Fsites%2F28%2F2019%2F03%2Fmenu-icon.svg :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fcdn.prod.website-files.com%2F66fe48fc2c1be11475c025f0%2F69409d1047b94559d71ae759_SKopen26.png :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fatljazzfest.com%2Fwp-content%2Fuploads%2F2025%2F03%2FJOHNSTEPHENS-ATLJAZZFEST-FS-MAY2024-68.jpg :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fwww.smhg.org%2Fgraphics%2FSMHGBannerLogo2019(2).png :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Ffestival.inmanpark.org%2Fwp-content%2Fuploads%2F2024%2F03%2Ffestival_2024-683x1024.webp :: net::ERR_ABORTED"
+      ],
+      "screenshots": [
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/desktop_showtimes_top.png"
+      ],
+      "perf": {
+        "domComplete": 3918.1999999284744,
+        "loadEventEnd": 3918.2999999523163,
+        "fcp": 3660,
+        "lcp": 4244,
+        "cls": 0
+      },
+      "floatingUI": [
+        {
+          "tag": "A",
+          "className": "skip-link",
+          "aria": null,
+          "text": "Skip to main content",
+          "position": "fixed",
+          "zIndex": "10000",
+          "rect": {
+            "x": 654.1796875,
+            "y": -982,
+            "w": 203.640625,
+            "h": 49.59375
+          }
+        },
+        {
+          "tag": "DIV",
+          "className": "ambient-glow",
+          "aria": null,
+          "text": "",
+          "position": "fixed",
+          "zIndex": "-1",
+          "rect": {
+            "x": -302.3984375,
+            "y": -196.390625,
+            "w": 2116.796875,
+            "h": 491
+          }
+        },
+        {
+          "tag": "DIV",
+          "className": "rain-overlay",
+          "aria": null,
+          "text": "",
+          "position": "fixed",
+          "zIndex": "10",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1512,
+            "h": 982
+          }
+        },
+        {
+          "tag": "DIV",
+          "className": "pointer-events-none fixed inset-0 z-[9998] overflow-hidden",
+          "aria": null,
+          "text": "",
+          "position": "fixed",
+          "zIndex": "9998",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1512,
+            "h": 982
+          }
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "route": "/atlanta/calendar",
+      "name": "calendar",
+      "finalUrl": "http://localhost:3000/atlanta/calendar",
+      "title": "Atlanta Events | Lost City",
+      "statusLikeIssues": [],
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "pageErrors": [],
+      "failedRequests": [],
+      "screenshots": [
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/desktop_calendar_top.png"
+      ],
+      "perf": {
+        "domComplete": 2390.399999976158,
+        "loadEventEnd": 2390.5,
+        "fcp": 2240,
+        "lcp": 2704,
+        "cls": 0
+      },
+      "floatingUI": [
+        {
+          "tag": "A",
+          "className": "skip-link",
+          "aria": null,
+          "text": "Skip to main content",
+          "position": "fixed",
+          "zIndex": "10000",
+          "rect": {
+            "x": 654.1796875,
+            "y": -982,
+            "w": 203.640625,
+            "h": 49.59375
+          }
+        },
+        {
+          "tag": "DIV",
+          "className": "ambient-glow",
+          "aria": null,
+          "text": "",
+          "position": "fixed",
+          "zIndex": "-1",
+          "rect": {
+            "x": -302.3984375,
+            "y": -196.390625,
+            "w": 2116.796875,
+            "h": 491
+          }
+        },
+        {
+          "tag": "DIV",
+          "className": "rain-overlay",
+          "aria": null,
+          "text": "",
+          "position": "fixed",
+          "zIndex": "10",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1512,
+            "h": 982
+          }
+        },
+        {
+          "tag": "DIV",
+          "className": "pointer-events-none fixed inset-0 z-[9998] overflow-hidden",
+          "aria": null,
+          "text": "",
+          "position": "fixed",
+          "zIndex": "9998",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1512,
+            "h": 982
+          }
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "route": "/atlanta/community-hub",
+      "name": "community_hub",
+      "finalUrl": "http://localhost:3000/atlanta/community-hub",
+      "title": "Atlanta Events | Lost City",
+      "statusLikeIssues": [],
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "pageErrors": [],
+      "failedRequests": [],
+      "screenshots": [
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/desktop_community_hub_top.png"
+      ],
+      "perf": {
+        "domComplete": 3183.399999976158,
+        "loadEventEnd": 3183.600000023842,
+        "fcp": 3756,
+        "lcp": 0,
+        "cls": 0
+      },
+      "floatingUI": [
+        {
+          "tag": "A",
+          "className": "skip-link",
+          "aria": null,
+          "text": "Skip to main content",
+          "position": "fixed",
+          "zIndex": "10000",
+          "rect": {
+            "x": 654.1796875,
+            "y": -982,
+            "w": 203.640625,
+            "h": 49.59375
+          }
+        },
+        {
+          "tag": "DIV",
+          "className": "ambient-glow",
+          "aria": null,
+          "text": "",
+          "position": "fixed",
+          "zIndex": "-1",
+          "rect": {
+            "x": -302.3984375,
+            "y": -196.390625,
+            "w": 2116.796875,
+            "h": 491
+          }
+        },
+        {
+          "tag": "DIV",
+          "className": "rain-overlay",
+          "aria": null,
+          "text": "",
+          "position": "fixed",
+          "zIndex": "10",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1512,
+            "h": 982
+          }
+        },
+        {
+          "tag": "DIV",
+          "className": "pointer-events-none fixed inset-0 z-[9998] overflow-hidden",
+          "aria": null,
+          "text": "",
+          "position": "fixed",
+          "zIndex": "9998",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1512,
+            "h": 982
+          }
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "route": "/atlanta/parks",
+      "name": "parks",
+      "finalUrl": "http://localhost:3000/atlanta/parks",
+      "title": "Atlanta Events | Lost City",
+      "statusLikeIssues": [],
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "pageErrors": [],
+      "failedRequests": [
+        "GET http://localhost:3000/atlanta/community-hub?_rsc=xc7er :: net::ERR_ABORTED",
+        "GET http://localhost:3000/atlanta/community-hub?_rsc=xc7er :: net::ERR_ABORTED"
+      ],
+      "screenshots": [
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/desktop_parks_top.png"
+      ],
+      "perf": {
+        "domComplete": 3395.8000000715256,
+        "loadEventEnd": 3395.899999976158,
+        "fcp": 3252,
+        "lcp": 3296,
+        "cls": 0
+      },
+      "floatingUI": [
+        {
+          "tag": "A",
+          "className": "skip-link",
+          "aria": null,
+          "text": "Skip to main content",
+          "position": "fixed",
+          "zIndex": "10000",
+          "rect": {
+            "x": 654.1796875,
+            "y": -982,
+            "w": 203.640625,
+            "h": 49.59375
+          }
+        },
+        {
+          "tag": "DIV",
+          "className": "ambient-glow",
+          "aria": null,
+          "text": "",
+          "position": "fixed",
+          "zIndex": "-1",
+          "rect": {
+            "x": -302.3984375,
+            "y": -196.390625,
+            "w": 2116.796875,
+            "h": 491
+          }
+        },
+        {
+          "tag": "DIV",
+          "className": "rain-overlay",
+          "aria": null,
+          "text": "",
+          "position": "fixed",
+          "zIndex": "10",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1512,
+            "h": 982
+          }
+        },
+        {
+          "tag": "DIV",
+          "className": "pointer-events-none fixed inset-0 z-[9998] overflow-hidden",
+          "aria": null,
+          "text": "",
+          "position": "fixed",
+          "zIndex": "9998",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1512,
+            "h": 982
+          }
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "route": "/atlanta/services",
+      "name": "services",
+      "finalUrl": "http://localhost:3000/atlanta/services",
+      "title": "Atlanta Events | Lost City",
+      "statusLikeIssues": [],
+      "consoleErrors": [],
+      "consoleWarnings": [
+        "The resource http://localhost:3000/_next/static/chunks/%5Bnext%5D_internal_font_google_plus_jakarta_sans_2f8d85e_module_050b469e.css was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+      ],
+      "pageErrors": [],
+      "failedRequests": [],
+      "screenshots": [
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/desktop_services_top.png"
+      ],
+      "perf": {
+        "domComplete": 1948.5,
+        "loadEventEnd": 1948.5,
+        "fcp": 1712,
+        "lcp": 2264,
+        "cls": 0
+      },
+      "floatingUI": [
+        {
+          "tag": "A",
+          "className": "skip-link",
+          "aria": null,
+          "text": "Skip to main content",
+          "position": "fixed",
+          "zIndex": "10000",
+          "rect": {
+            "x": 654.1796875,
+            "y": -982,
+            "w": 203.640625,
+            "h": 49.59375
+          }
+        },
+        {
+          "tag": "DIV",
+          "className": "ambient-glow",
+          "aria": null,
+          "text": "",
+          "position": "fixed",
+          "zIndex": "-1",
+          "rect": {
+            "x": -302.3984375,
+            "y": -196.390625,
+            "w": 2116.796875,
+            "h": 491
+          }
+        },
+        {
+          "tag": "DIV",
+          "className": "rain-overlay",
+          "aria": null,
+          "text": "",
+          "position": "fixed",
+          "zIndex": "10",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1512,
+            "h": 982
+          }
+        },
+        {
+          "tag": "DIV",
+          "className": "pointer-events-none fixed inset-0 z-[9998] overflow-hidden",
+          "aria": null,
+          "text": "",
+          "position": "fixed",
+          "zIndex": "9998",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1512,
+            "h": 982
+          }
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "route": "/atlanta/venues",
+      "name": "venues",
+      "finalUrl": "http://localhost:3000/atlanta/venues",
+      "title": "Atlanta Events | Lost City",
+      "statusLikeIssues": [],
+      "consoleErrors": [],
+      "consoleWarnings": [
+        "The resource http://localhost:3000/_next/static/chunks/%5Bnext%5D_internal_font_google_plus_jakarta_sans_2f8d85e_module_050b469e.css was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+      ],
+      "pageErrors": [],
+      "failedRequests": [
+        "GET http://localhost:3000/atlanta/venues?_rsc=14t4j :: net::ERR_ABORTED"
+      ],
+      "screenshots": [
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/desktop_venues_top.png"
+      ],
+      "perf": {
+        "domComplete": 1469.8999999761581,
+        "loadEventEnd": 1469.8999999761581,
+        "fcp": 1316,
+        "lcp": 1764,
+        "cls": 0
+      },
+      "floatingUI": [
+        {
+          "tag": "A",
+          "className": "skip-link",
+          "aria": null,
+          "text": "Skip to main content",
+          "position": "fixed",
+          "zIndex": "10000",
+          "rect": {
+            "x": 654.1796875,
+            "y": -982,
+            "w": 203.640625,
+            "h": 49.59375
+          }
+        },
+        {
+          "tag": "DIV",
+          "className": "ambient-glow",
+          "aria": null,
+          "text": "",
+          "position": "fixed",
+          "zIndex": "-1",
+          "rect": {
+            "x": -302.3984375,
+            "y": -196.390625,
+            "w": 2116.796875,
+            "h": 491
+          }
+        },
+        {
+          "tag": "DIV",
+          "className": "rain-overlay",
+          "aria": null,
+          "text": "",
+          "position": "fixed",
+          "zIndex": "10",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1512,
+            "h": 982
+          }
+        },
+        {
+          "tag": "DIV",
+          "className": "pointer-events-none fixed inset-0 z-[9998] overflow-hidden",
+          "aria": null,
+          "text": "",
+          "position": "fixed",
+          "zIndex": "9998",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1512,
+            "h": 982
+          }
+        }
+      ]
+    },
+    {
+      "viewport": "desktop",
+      "route": "/atlanta/partners",
+      "name": "partners",
+      "finalUrl": "http://localhost:3000/atlanta/partners",
+      "title": "Atlanta Events | Lost City",
+      "statusLikeIssues": [],
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "pageErrors": [],
+      "failedRequests": [],
+      "screenshots": [
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/desktop_partners_top.png"
+      ],
+      "perf": {
+        "domComplete": 2095.2000000476837,
+        "loadEventEnd": 2095.2000000476837,
+        "fcp": 1852,
+        "lcp": 2276,
+        "cls": 0
+      },
+      "floatingUI": [
+        {
+          "tag": "A",
+          "className": "skip-link",
+          "aria": null,
+          "text": "Skip to main content",
+          "position": "fixed",
+          "zIndex": "10000",
+          "rect": {
+            "x": 654.1796875,
+            "y": -982,
+            "w": 203.640625,
+            "h": 49.59375
+          }
+        },
+        {
+          "tag": "DIV",
+          "className": "ambient-glow",
+          "aria": null,
+          "text": "",
+          "position": "fixed",
+          "zIndex": "-1",
+          "rect": {
+            "x": -302.3984375,
+            "y": -196.390625,
+            "w": 2116.796875,
+            "h": 491
+          }
+        },
+        {
+          "tag": "DIV",
+          "className": "rain-overlay",
+          "aria": null,
+          "text": "",
+          "position": "fixed",
+          "zIndex": "10",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1512,
+            "h": 982
+          }
+        },
+        {
+          "tag": "DIV",
+          "className": "pointer-events-none fixed inset-0 z-[9998] overflow-hidden",
+          "aria": null,
+          "text": "",
+          "position": "fixed",
+          "zIndex": "9998",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 1512,
+            "h": 982
+          }
+        }
+      ]
+    },
+    {
+      "viewport": "mobile",
+      "route": "/atlanta",
+      "name": "feed",
+      "finalUrl": "http://localhost:3000/atlanta",
+      "title": "Atlanta Events | Lost City",
+      "statusLikeIssues": [],
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "pageErrors": [],
+      "failedRequests": [
+        "POST http://localhost:3000/api/portals/atlanta/track :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/tonight?period=today :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/activities/popular?date_filter=week&portal_id=74c2f211-ee11-453d-8386-ac2861705695 :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/trending :: net::ERR_ABORTED"
+      ],
+      "screenshots": [
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/mobile_feed_top.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/mobile_feed_scroll_1.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/mobile_feed_scroll_2.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/mobile_feed_scroll_3.png"
+      ],
+      "perf": {
+        "domComplete": 2524.3000000715256,
+        "loadEventEnd": 2524.600000023842,
+        "fcp": 1796,
+        "lcp": 4776,
+        "cls": 0.6574395536557257
+      },
+      "floatingUI": [
+        {
+          "tag": "A",
+          "className": "skip-link",
+          "aria": null,
+          "text": "Skip to main content",
+          "position": "fixed",
+          "zIndex": "10000",
+          "rect": {
+            "x": 112.0859375,
+            "y": -932,
+            "w": 205.828125,
+            "h": 49.59375
+          }
+        },
+        {
+          "tag": "HEADER",
+          "className": "portal-feed-header sticky top-0 z-[100] border-b border-[var(--twilight)]/30 bg-[var(--void)]/95 backdrop-blur-sm relati",
+          "aria": null,
+          "text": "LOSTCITYATLBETAFeedFindCommunitySign inSign inFeedFindCommunity",
+          "position": "sticky",
+          "zIndex": "100",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 430,
+            "h": 109.1875
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "className": "fixed bottom-4 right-4 z-[9999] flex items-center gap-2 px-4 py-2.5 rounded-full bg-[var(--twilight)] border border-[var",
+          "aria": "Give feedback",
+          "text": "Give feedback",
+          "position": "fixed",
+          "zIndex": "9999",
+          "rect": {
+            "x": 293.59375,
+            "y": 875.4375,
+            "w": 120.40625,
+            "h": 40.5625
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "className": "sm:hidden fixed bottom-20 right-4 z-[10000] h-12 w-12 rounded-full border border-[var(--twilight)]/65 bg-[var(--night)]/",
+          "aria": "Open page index",
+          "text": "Open page index",
+          "position": "fixed",
+          "zIndex": "10000",
+          "rect": {
+            "x": 366,
+            "y": 804,
+            "w": 48,
+            "h": 48
+          }
+        }
+      ]
+    },
+    {
+      "viewport": "mobile",
+      "route": "/atlanta?view=find",
+      "name": "feed_find",
+      "finalUrl": "http://localhost:3000/atlanta?view=find&date=today",
+      "title": "Atlanta Events | Lost City",
+      "statusLikeIssues": [],
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "pageErrors": [],
+      "failedRequests": [
+        "GET http://localhost:3000/api/timeline?portal_id=74c2f211-ee11-453d-8386-ac2861705695 :: net::ERR_ABORTED",
+        "GET http://localhost:3000/atlanta?view=find&date=today&_rsc=c72en :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/timeline?portal_id=74c2f211-ee11-453d-8386-ac2861705695 :: net::ERR_ABORTED",
+        "POST http://localhost:3000/api/portals/atlanta/track :: net::ERR_ABORTED"
+      ],
+      "screenshots": [
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/mobile_feed_find_top.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/mobile_feed_find_scroll_1.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/mobile_feed_find_scroll_2.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/mobile_feed_find_scroll_3.png"
+      ],
+      "perf": {
+        "domComplete": 563.6000000238419,
+        "loadEventEnd": 563.6000000238419,
+        "fcp": 280,
+        "lcp": 800,
+        "cls": 0.02528076483008464
+      },
+      "floatingUI": [
+        {
+          "tag": "A",
+          "className": "skip-link",
+          "aria": null,
+          "text": "Skip to main content",
+          "position": "fixed",
+          "zIndex": "10000",
+          "rect": {
+            "x": 112.0859375,
+            "y": -932,
+            "w": 205.828125,
+            "h": 49.59375
+          }
+        },
+        {
+          "tag": "HEADER",
+          "className": "portal-feed-header sticky top-0 z-[100] border-b border-[var(--twilight)]/30 bg-[var(--void)]/95 backdrop-blur-sm relati",
+          "aria": null,
+          "text": "LOSTCITYATLBETAFeedFindCommunitySign inSign inFeedFindCommunity",
+          "position": "sticky",
+          "zIndex": "100",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 430,
+            "h": 109.1875
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "className": "fixed bottom-4 right-4 z-[9999] flex items-center gap-2 px-4 py-2.5 rounded-full bg-[var(--twilight)] border border-[var",
+          "aria": "Give feedback",
+          "text": "Give feedback",
+          "position": "fixed",
+          "zIndex": "9999",
+          "rect": {
+            "x": 293.59375,
+            "y": 875.4375,
+            "w": 120.40625,
+            "h": 40.5625
+          }
+        }
+      ]
+    },
+    {
+      "viewport": "mobile",
+      "route": "/atlanta?view=community",
+      "name": "feed_community",
+      "finalUrl": "http://localhost:3000/atlanta?view=community",
+      "title": "Atlanta Events | Lost City",
+      "statusLikeIssues": [],
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "pageErrors": [],
+      "failedRequests": [
+        "POST http://localhost:3000/api/portals/atlanta/track :: net::ERR_ABORTED"
+      ],
+      "screenshots": [
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/mobile_feed_community_top.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/mobile_feed_community_scroll_1.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/mobile_feed_community_scroll_2.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/mobile_feed_community_scroll_3.png"
+      ],
+      "perf": {
+        "domComplete": 495,
+        "loadEventEnd": 495.2000000476837,
+        "fcp": 224,
+        "lcp": 704,
+        "cls": 0
+      },
+      "floatingUI": [
+        {
+          "tag": "A",
+          "className": "skip-link",
+          "aria": null,
+          "text": "Skip to main content",
+          "position": "fixed",
+          "zIndex": "10000",
+          "rect": {
+            "x": 112.0859375,
+            "y": -932,
+            "w": 205.828125,
+            "h": 49.59375
+          }
+        },
+        {
+          "tag": "HEADER",
+          "className": "portal-feed-header sticky top-0 z-[100] border-b border-[var(--twilight)]/30 bg-[var(--void)]/95 backdrop-blur-sm relati",
+          "aria": null,
+          "text": "LOSTCITYATLBETAFeedFindCommunitySign inSign inFeedFindCommunity",
+          "position": "sticky",
+          "zIndex": "100",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 430,
+            "h": 109.1875
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "className": "fixed bottom-4 right-4 z-[9999] flex items-center gap-2 px-4 py-2.5 rounded-full bg-[var(--twilight)] border border-[var",
+          "aria": "Give feedback",
+          "text": "Give feedback",
+          "position": "fixed",
+          "zIndex": "9999",
+          "rect": {
+            "x": 293.59375,
+            "y": 875.4375,
+            "w": 120.40625,
+            "h": 40.5625
+          }
+        }
+      ]
+    },
+    {
+      "viewport": "mobile",
+      "route": "/atlanta/happening-now",
+      "name": "happening_now",
+      "finalUrl": "http://localhost:3000/atlanta/happening-now",
+      "title": "Atlanta Events | Lost City",
+      "statusLikeIssues": [],
+      "consoleErrors": [
+        "Error: Map is not supported by this browser\n    at Map.useEffect (http://localhost:3000/_next/static/chunks/node_modules_react-map-gl_dist_esm_c1d70d39._.js:1066:31)"
+      ],
+      "consoleWarnings": [],
+      "pageErrors": [],
+      "failedRequests": [
+        "POST http://localhost:3000/api/portals/atlanta/track :: net::ERR_ABORTED"
+      ],
+      "screenshots": [
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/mobile_happening_now_top.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/mobile_happening_now_scroll_1.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/mobile_happening_now_scroll_2.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/mobile_happening_now_scroll_3.png"
+      ],
+      "perf": {
+        "domComplete": 410.59999990463257,
+        "loadEventEnd": 410.6999999284744,
+        "fcp": 248,
+        "lcp": 672,
+        "cls": 0
+      },
+      "floatingUI": [
+        {
+          "tag": "A",
+          "className": "skip-link",
+          "aria": null,
+          "text": "Skip to main content",
+          "position": "fixed",
+          "zIndex": "10000",
+          "rect": {
+            "x": 112.0859375,
+            "y": -932,
+            "w": 205.828125,
+            "h": 49.59375
+          }
+        },
+        {
+          "tag": "HEADER",
+          "className": "portal-feed-header sticky top-0 z-[100] border-b border-[var(--twilight)]/30 bg-[var(--void)]/95 backdrop-blur-sm relati",
+          "aria": null,
+          "text": "LOSTCITYATLBETAFeedFindCommunitySign inSign inFeedFindCommunity",
+          "position": "sticky",
+          "zIndex": "100",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 430,
+            "h": 109.1875
+          }
+        },
+        {
+          "tag": "DIV",
+          "className": "fixed inset-0 z-[1000] bg-black/80 flex items-center justify-center p-4",
+          "aria": null,
+          "text": "What's Open?Share your location to find what's open and happening nearby📍Use My",
+          "position": "fixed",
+          "zIndex": "1000",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 430,
+            "h": 1177.984375
+          }
+        },
+        {
+          "tag": "DIV",
+          "className": "sticky top-[52px] z-20 bg-[var(--night)]/95 backdrop-blur-sm border-b border-[var(--twilight)]/50",
+          "aria": null,
+          "text": "📍 Use my locationAll of AtlantaAdair ParkAnsley ParkAtlantic StationBrookwood H",
+          "position": "sticky",
+          "zIndex": "20",
+          "rect": {
+            "x": 0,
+            "y": 109.1875,
+            "w": 430,
+            "h": 49.5625
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "className": "fixed bottom-4 right-4 z-[9999] flex items-center gap-2 px-4 py-2.5 rounded-full bg-[var(--twilight)] border border-[var",
+          "aria": "Give feedback",
+          "text": "Give feedback",
+          "position": "fixed",
+          "zIndex": "9999",
+          "rect": {
+            "x": 293.59375,
+            "y": 875.4375,
+            "w": 120.40625,
+            "h": 40.5625
+          }
+        }
+      ]
+    },
+    {
+      "viewport": "mobile",
+      "route": "/atlanta/festivals",
+      "name": "festivals",
+      "finalUrl": "http://localhost:3000/atlanta/festivals",
+      "title": "Festivals | Atlanta",
+      "statusLikeIssues": [
+        "415 http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fgameatl.com%2Fwp-content%2Fuploads%2F2023%2F02%2FSFGE-web-image.jpg",
+        "415 http://localhost:3000/api/image-proxy?url=https%3A%2F%2Ffestival.inmanpark.org%2Fwp-content%2Fuploads%2F2024%2F03%2Ffestival_2024-683x1024.webp"
+      ],
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 415 (Unsupported Media Type)",
+        "Failed to load resource: the server responded with a status of 415 (Unsupported Media Type)"
+      ],
+      "consoleWarnings": [
+        "Image with src \"/api/image-proxy?url=https%3A%2F%2Fbunny-wp-pullzone-2v7xwnunut.b-cdn.net%2Fwp-content%2Fuploads%2F2022%2F12%2FHorse-Fire-Drone-EDIT-scaled.jpg\" was detected as the Largest Contentful Paint (LCP). Please add the `loading=\"eager\"` property if this image is above the fold.\nRead more: https://nextjs.org/docs/app/api-reference/components/image#loading"
+      ],
+      "pageErrors": [],
+      "failedRequests": [
+        "POST http://localhost:3000/api/portals/atlanta/track :: net::ERR_ABORTED"
+      ],
+      "screenshots": [
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/mobile_festivals_top.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/mobile_festivals_scroll_1.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/mobile_festivals_scroll_2.png",
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/mobile_festivals_scroll_3.png"
+      ],
+      "perf": {
+        "domComplete": 1164.5,
+        "loadEventEnd": 1164.6000000238419,
+        "fcp": 312,
+        "lcp": 1216,
+        "cls": 0
+      },
+      "floatingUI": [
+        {
+          "tag": "A",
+          "className": "skip-link",
+          "aria": null,
+          "text": "Skip to main content",
+          "position": "fixed",
+          "zIndex": "10000",
+          "rect": {
+            "x": 112.0859375,
+            "y": -932,
+            "w": 205.828125,
+            "h": 49.59375
+          }
+        },
+        {
+          "tag": "HEADER",
+          "className": "portal-feed-header sticky top-0 z-[100] border-b border-[var(--twilight)]/30 bg-[var(--void)]/95 backdrop-blur-sm relati",
+          "aria": null,
+          "text": "BackLOSTCITYATLBETASign inSign in",
+          "position": "sticky",
+          "zIndex": "100",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 430,
+            "h": 64.546875
+          }
+        },
+        {
+          "tag": "BUTTON",
+          "className": "fixed bottom-4 right-4 z-[9999] flex items-center gap-2 px-4 py-2.5 rounded-full bg-[var(--twilight)] border border-[var",
+          "aria": "Give feedback",
+          "text": "Give feedback",
+          "position": "fixed",
+          "zIndex": "9999",
+          "rect": {
+            "x": 293.59375,
+            "y": 875.4375,
+            "w": 120.40625,
+            "h": 40.5625
+          }
+        }
+      ]
+    },
+    {
+      "viewport": "mobile",
+      "route": "/atlanta/showtimes",
+      "name": "showtimes",
+      "finalUrl": "http://localhost:3000/atlanta/showtimes",
+      "title": "Atlanta Events | Lost City",
+      "statusLikeIssues": [],
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "pageErrors": [],
+      "failedRequests": [
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fimg1.wsimg.com%2Fisteam%2Fip%2Fe588a78f-5b3a-4e97-955b-d0ea89793582%2F20210416_161125.jpg :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fstatic.wixstatic.com%2Fmedia%2F515771_7ef15d672a96432e9cf857a00d3a30a7%257Emv2.jpg%2Fv1%2Ffit%2Fw_2500%2Ch_1330%2Cal_c%2F515771_7ef15d672a96432e9cf857a00d3a30a7%257Emv2.jpg :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fstatic.wixstatic.com%2Fmedia%2Fefb8d1_cb78b6477bbd4261a30196c99a5c81ba~mv2.jpg%2Fv1%2Ffill%2Fw_960%2Ch_960%2Cal_c%2Fefb8d1_cb78b6477bbd4261a30196c99a5c81ba~mv2.jpg :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fwww.dragoncon.org%2Fwp-content%2Fuploads%2F2023%2F02%2FHomePage-1.jpg%3Fid%3D4395 :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Ftasteofalpharettaga.com%2Fwp-content%2Fuploads%2Fsites%2F28%2F2019%2F03%2Fmenu-icon.svg :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fvahi.org%2Fwp-content%2Fuploads%2F021325-Summerfest-2025-Horizontal-Logo-01.png :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fsummershadefestival.org%2Fwp-content%2Fuploads%2F2026%2F01%2F2026-GPSSF-logo-GPC.png :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fwww.smhg.org%2Fgraphics%2FSMHGBannerLogo2019(2).png :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fimg1.wsimg.com%2Fisteam%2Fip%2Fc2704e10-e556-4034-b6d5-b973a5e6e7d1%2FAtlanta%2520Underground%2520Film%2520Festival%25202026.png :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fdigitalhub.fifa.com%2Ftransform%2F032a70c6-594c-4b5a-9545-0c96383708a0%2Ffifapls_fallbackimage_1200x630 :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fesfna.org%2Fwp-content%2Fuploads%2F2025%2F06%2Fesfna-social-image.png :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fwww.facebook.com%2Ftr%3Fid%3D140502359970341%26ev%3DPageView%26noscript%3D1 :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fstorage.googleapis.com%2Fs.mkswft.com%2FRmlsZTozZmY4ZTBkNS0zYzQ3LTRjZDQtOWZhNC1iZWMwMjE1MDJlZTA%3D%2FBlue%2520Elegant%2520Business%2520Name%2520XTwitter%2520Header%2520(Facebook%2520Post).png :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fjohnscreekga.b-cdn.net%2Fapp%2Fuploads%2F2024%2F01%2FJC_Search-Img.jpg :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fwww.juneteenthatl.com%2Fuploads%2F1%2F1%2F3%2F6%2F11367169%2Fpublished%2Ffreedom-site.png%3F1769872666 :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fwww.iwfatlanta.com%2Fwp-content%2Fthemes%2Fiwfatlanta%2Fiwf-atlanta.png :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fwww.redhat.com%2Fthemes%2Fcustom%2Frhdc%2Fimg%2Fred-hat-social-share.jpg :: net::ERR_ABORTED",
+        "GET http://localhost:3000/_next/image?url=https%3A%2F%2Fimages.squarespace-cdn.com%2Fcontent%2Fv1%2F657f76aa4f3eb55e522e3a61%2F28e0643a-a05e-4922-a8ee-04845560ae20%2FSmoke-on-the-Lake-BBQ-Festival_banner.png&w=1920&q=75 :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fburiedalivefilmfest.com%2Fwp-content%2Fuploads%2F2025%2F11%2FBAFF-WEbImage-scaled.png :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fcdn.prod.website-files.com%2F64514235242a43f0b098fbe0%2F64514235242a4398f498fc35_Mask%2520group.png :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fawa-con.com%2Fwp-content%2Fuploads%2F2024%2F08%2FWHITE-Transparent-Logo-with-text.png :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fwww.tourchampionship.com%2Fmedia_11d0ca5686dbcf6effaa47c102252da318b7e26e1.jpg%3Fwidth%3D1200%26format%3Dpjpg%26optimize%3Dmedium :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fimg1.wsimg.com%2Fisteam%2Fip%2F6c7c0571-5a83-4b83-8fcb-f0347753222e%2FMerry%2520Christmas%2520(1).jpg :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fimg1.wsimg.com%2Fisteam%2Fip%2Fc8ecbeec-b16b-4c79-93e9-6f7316c168a9%2FAtlanta%2520Shortsfest%2520-%2520the%2520official%2520Atlanta%2520shor.png :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fmonsteramacon.com%2Fwp-content%2Fuploads%2F2026%2F01%2F2026mramaheaderB.jpg :: net::ERR_ABORTED",
+        "GET http://localhost:3000/api/image-proxy?url=https%3A%2F%2Fdecaturartsalliance.org%2Fwp-content%2Fuploads%2F2024%2F03%2FLittle-Amal-Cred-Julie-Yarbrough.webp :: net::ERR_ABORTED"
+      ],
+      "screenshots": [
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/mobile_showtimes_top.png"
+      ],
+      "perf": {
+        "domComplete": 2875.399999976158,
+        "loadEventEnd": 2875.399999976158,
+        "fcp": 2476,
+        "lcp": 2888,
+        "cls": 0
+      },
+      "floatingUI": [
+        {
+          "tag": "A",
+          "className": "skip-link",
+          "aria": null,
+          "text": "Skip to main content",
+          "position": "fixed",
+          "zIndex": "10000",
+          "rect": {
+            "x": 113.1796875,
+            "y": -932,
+            "w": 203.640625,
+            "h": 49.59375
+          }
+        }
+      ]
+    },
+    {
+      "viewport": "mobile",
+      "route": "/atlanta/calendar",
+      "name": "calendar",
+      "finalUrl": "http://localhost:3000/atlanta/calendar",
+      "title": "Atlanta Events | Lost City",
+      "statusLikeIssues": [],
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "pageErrors": [],
+      "failedRequests": [],
+      "screenshots": [
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/mobile_calendar_top.png"
+      ],
+      "perf": {
+        "domComplete": 241.39999997615814,
+        "loadEventEnd": 241.39999997615814,
+        "fcp": 100,
+        "lcp": 468,
+        "cls": 0
+      },
+      "floatingUI": [
+        {
+          "tag": "A",
+          "className": "skip-link",
+          "aria": null,
+          "text": "Skip to main content",
+          "position": "fixed",
+          "zIndex": "10000",
+          "rect": {
+            "x": 113.1796875,
+            "y": -932,
+            "w": 203.640625,
+            "h": 49.59375
+          }
+        }
+      ]
+    },
+    {
+      "viewport": "mobile",
+      "route": "/atlanta/community-hub",
+      "name": "community_hub",
+      "finalUrl": "http://localhost:3000/atlanta/community-hub",
+      "title": "Atlanta Events | Lost City",
+      "statusLikeIssues": [],
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "pageErrors": [],
+      "failedRequests": [],
+      "screenshots": [
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/mobile_community_hub_top.png"
+      ],
+      "perf": {
+        "domComplete": 332.7000000476837,
+        "loadEventEnd": 332.7000000476837,
+        "fcp": 136,
+        "lcp": 600,
+        "cls": 0
+      },
+      "floatingUI": [
+        {
+          "tag": "A",
+          "className": "skip-link",
+          "aria": null,
+          "text": "Skip to main content",
+          "position": "fixed",
+          "zIndex": "10000",
+          "rect": {
+            "x": 113.1796875,
+            "y": -932,
+            "w": 203.640625,
+            "h": 49.59375
+          }
+        }
+      ]
+    },
+    {
+      "viewport": "mobile",
+      "route": "/atlanta/parks",
+      "name": "parks",
+      "finalUrl": "http://localhost:3000/atlanta/parks",
+      "title": "Atlanta Events | Lost City",
+      "statusLikeIssues": [],
+      "consoleErrors": [],
+      "consoleWarnings": [
+        "The resource http://localhost:3000/_next/static/chunks/%5Bnext%5D_internal_font_google_plus_jakarta_sans_2f8d85e_module_050b469e.css was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally."
+      ],
+      "pageErrors": [],
+      "failedRequests": [],
+      "screenshots": [
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/mobile_parks_top.png"
+      ],
+      "perf": {
+        "domComplete": 963.3999999761581,
+        "loadEventEnd": 963.5,
+        "fcp": 108,
+        "lcp": 976,
+        "cls": 0
+      },
+      "floatingUI": [
+        {
+          "tag": "A",
+          "className": "skip-link",
+          "aria": null,
+          "text": "Skip to main content",
+          "position": "fixed",
+          "zIndex": "10000",
+          "rect": {
+            "x": 113.1796875,
+            "y": -932,
+            "w": 203.640625,
+            "h": 49.59375
+          }
+        }
+      ]
+    },
+    {
+      "viewport": "mobile",
+      "route": "/atlanta/services",
+      "name": "services",
+      "finalUrl": "http://localhost:3000/atlanta/services",
+      "title": "Atlanta Events | Lost City",
+      "statusLikeIssues": [],
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "pageErrors": [],
+      "failedRequests": [],
+      "screenshots": [
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/mobile_services_top.png"
+      ],
+      "perf": {
+        "domComplete": 362.6999999284744,
+        "loadEventEnd": 362.7999999523163,
+        "fcp": 92,
+        "lcp": 648,
+        "cls": 0
+      },
+      "floatingUI": [
+        {
+          "tag": "A",
+          "className": "skip-link",
+          "aria": null,
+          "text": "Skip to main content",
+          "position": "fixed",
+          "zIndex": "10000",
+          "rect": {
+            "x": 113.1796875,
+            "y": -932,
+            "w": 203.640625,
+            "h": 49.59375
+          }
+        }
+      ]
+    },
+    {
+      "viewport": "mobile",
+      "route": "/atlanta/venues",
+      "name": "venues",
+      "finalUrl": "http://localhost:3000/atlanta/venues",
+      "title": "Atlanta Events | Lost City",
+      "statusLikeIssues": [],
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "pageErrors": [],
+      "failedRequests": [],
+      "screenshots": [
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/mobile_venues_top.png"
+      ],
+      "perf": {
+        "domComplete": 670,
+        "loadEventEnd": 670,
+        "fcp": 204,
+        "lcp": 684,
+        "cls": 0
+      },
+      "floatingUI": [
+        {
+          "tag": "A",
+          "className": "skip-link",
+          "aria": null,
+          "text": "Skip to main content",
+          "position": "fixed",
+          "zIndex": "10000",
+          "rect": {
+            "x": 113.1796875,
+            "y": -932,
+            "w": 203.640625,
+            "h": 49.59375
+          }
+        }
+      ]
+    },
+    {
+      "viewport": "mobile",
+      "route": "/atlanta/partners",
+      "name": "partners",
+      "finalUrl": "http://localhost:3000/atlanta/partners",
+      "title": "Atlanta Events | Lost City",
+      "statusLikeIssues": [],
+      "consoleErrors": [],
+      "consoleWarnings": [],
+      "pageErrors": [],
+      "failedRequests": [],
+      "screenshots": [
+        "/Users/coach/Projects/LostCity/web/.codex-artifacts/atlanta-portal-sweep-2026-02-18/mobile_partners_top.png"
+      ],
+      "perf": {
+        "domComplete": 296,
+        "loadEventEnd": 296,
+        "fcp": 88,
+        "lcp": 460,
+        "cls": 0
+      },
+      "floatingUI": [
+        {
+          "tag": "A",
+          "className": "skip-link",
+          "aria": null,
+          "text": "Skip to main content",
+          "position": "fixed",
+          "zIndex": "10000",
+          "rect": {
+            "x": 113.1796875,
+            "y": -932,
+            "w": 203.640625,
+            "h": 49.59375
+          }
+        }
+      ]
+    }
+  ]
+}

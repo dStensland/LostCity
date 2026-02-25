@@ -21,7 +21,7 @@ type FilterOption = {
 
 type FilterGroup = {
   group: string;
-  options: FilterOption[];
+  options: readonly FilterOption[];
 };
 
 interface MobileFilterSheetProps {
@@ -30,12 +30,13 @@ interface MobileFilterSheetProps {
   currentCategories: string[];
   currentDateFilter: string;
   currentFreeOnly: boolean;
+  categoryOptions?: readonly FilterOption[];
   currentTags?: string[];
   currentVibes?: string[];
   currentMood?: string;
-  tagGroups?: FilterGroup[];
-  vibeGroups?: FilterGroup[];
-  moodOptions?: FilterOption[];
+  tagGroups?: readonly FilterGroup[];
+  vibeGroups?: readonly FilterGroup[];
+  moodOptions?: readonly FilterOption[];
   onToggleCategory: (category: string) => void;
   onSetDateFilter: (date: string) => void;
   onToggleFreeOnly: () => void;
@@ -52,6 +53,7 @@ export const MobileFilterSheet = memo(function MobileFilterSheet({
   currentCategories,
   currentDateFilter,
   currentFreeOnly,
+  categoryOptions = CATEGORIES,
   currentTags = [],
   currentVibes = [],
   currentMood = "",
@@ -266,7 +268,7 @@ export const MobileFilterSheet = memo(function MobileFilterSheet({
             <div>
               <h3 className="font-mono text-sm font-semibold text-[var(--cream)] mb-3">Categories</h3>
               <div className="grid grid-cols-2 gap-2">
-                {CATEGORIES.map((cat) => {
+                {categoryOptions.map((cat) => {
                   const isActive = currentCategories.includes(cat.value);
                   return (
                     <button
@@ -309,7 +311,7 @@ export const MobileFilterSheet = memo(function MobileFilterSheet({
                         onClick={() => handleSetMood(mood.value)}
                         className={`min-h-[44px] px-4 py-2.5 rounded-lg font-mono text-sm font-medium transition-all ${
                           isActive
-                            ? "bg-[#7C3AED] text-[var(--cream)]"
+                            ? "bg-[var(--mood-active)] text-[var(--cream)]"
                             : "bg-[var(--twilight)] text-[var(--cream)] hover:bg-[var(--dusk)]"
                         }`}
                       >

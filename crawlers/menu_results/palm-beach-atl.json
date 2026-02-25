@@ -1,0 +1,31 @@
+{
+  "venue_id": 74,
+  "venue_slug": "palm-beach-atl",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {"name": "Sunset on Edgewood", "price": "$19", "category": "cocktail"},
+      {"name": "Beach Bowl", "price": "$45", "category": "cocktail"},
+      {"name": "Mimosa Tower", "price": "$75", "category": "cocktail"}
+    ],
+    "dietary_options": [],
+    "price_level": 2,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

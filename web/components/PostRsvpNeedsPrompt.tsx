@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useRef, useState } from "react";
 import { TagVoteChip } from "./TagVoteChip";
 
 interface PostRsvpNeedsPromptProps {
@@ -51,6 +51,16 @@ const TAG_METADATA: Record<string, { label: string; group: string }> = {
 
 const DISMISS_STORAGE_KEY = "rsvp-needs-prompt-dismissed";
 
+function readDismissedVenueIds(): number[] {
+  try {
+    const dismissed = localStorage.getItem(DISMISS_STORAGE_KEY);
+    return dismissed ? (JSON.parse(dismissed) as number[]) : [];
+  } catch (err) {
+    console.error("Failed to load dismiss state:", err);
+    return [];
+  }
+}
+
 /**
  * PostRsvpNeedsPrompt - Shows after RSVP to collect accessibility/dietary/family needs data
  *
@@ -65,57 +75,33 @@ export function PostRsvpNeedsPrompt({
   venueType,
   onDismiss,
 }: PostRsvpNeedsPromptProps) {
-  const [isDismissed, setIsDismissed] = useState(true); // Start dismissed, show after mount check
-  const [votedTags, setVotedTags] = useState<Set<string>>(new Set());
-
-  // Check localStorage on mount
-  useEffect(() => {
-    try {
-      const dismissed = localStorage.getItem(DISMISS_STORAGE_KEY);
-      if (dismissed) {
-        const dismissedVenues: number[] = JSON.parse(dismissed);
-        if (dismissedVenues.includes(venueId)) {
-          return; // Keep dismissed
-        }
-      }
-      // Not dismissed for this venue, show the prompt
-      setIsDismissed(false);
-    } catch (err) {
-      console.error("Failed to load dismiss state:", err);
-      setIsDismissed(false); // Show on error to be safe
-    }
-  }, [venueId]);
+  const [dismissedVenueIds, setDismissedVenueIds] = useState<number[]>(() => readDismissedVenueIds());
+  const votedTagsRef = useRef<Set<string>>(new Set());
+  const isDismissed = dismissedVenueIds.includes(venueId);
 
   const handleDismiss = () => {
-    setIsDismissed(true);
     onDismiss?.();
-
-    // Save to localStorage
-    try {
-      const dismissed = localStorage.getItem(DISMISS_STORAGE_KEY);
-      const dismissedVenues: number[] = dismissed ? JSON.parse(dismissed) : [];
-      if (!dismissedVenues.includes(venueId)) {
-        dismissedVenues.push(venueId);
-        localStorage.setItem(DISMISS_STORAGE_KEY, JSON.stringify(dismissedVenues));
+    setDismissedVenueIds((prev) => {
+      if (prev.includes(venueId)) return prev;
+      const updated = [...prev, venueId];
+      try {
+        localStorage.setItem(DISMISS_STORAGE_KEY, JSON.stringify(updated));
+      } catch (err) {
+        console.error("Failed to save dismiss state:", err);
       }
-    } catch (err) {
-      console.error("Failed to save dismiss state:", err);
-    }
+      return updated;
+    });
   };
 
   const handleVoteChange = (tagSlug: string) => {
-    // Track voted tags to auto-dismiss after 2 votes
-    setVotedTags((prev) => {
-      const updated = new Set(prev);
-      updated.add(tagSlug);
+    const updated = new Set(votedTagsRef.current);
+    updated.add(tagSlug);
+    votedTagsRef.current = updated;
 
-      // Auto-dismiss after voting on 2 tags
-      if (updated.size >= 2) {
-        setTimeout(handleDismiss, 500); // Brief delay so user sees the vote register
-      }
-
-      return updated;
-    });
+    // Auto-dismiss after voting on 2 tags
+    if (updated.size >= 2) {
+      setTimeout(handleDismiss, 500); // Brief delay so user sees the vote register
+    }
   };
 
   // Don't render if dismissed

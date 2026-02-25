@@ -10,3 +10,7 @@ discovery:
   - https://www.piedmont.org/heart/services-and-programs/womens-heart/dottie-fuqua-womens-heart-support-network
 detail:
   enabled: true
+data_goals:
+- events
+- images
+- tickets

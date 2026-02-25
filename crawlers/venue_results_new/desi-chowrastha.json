@@ -1,0 +1,34 @@
+{
+  "venue_id": 4878,
+  "venue_slug": "desi-chowrastha",
+  "meta": {
+    "og_image": null,
+    "meta_description": null,
+    "reservation_links": [],
+    "menu_links": [],
+    "instagram": "desichowrastha",
+    "facebook_url": "https://www.facebook.com/Chowrastha-104748712131254",
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["casual", "family-friendly", "fast-casual"],
+    "cuisine": ["indian"],
+    "service_style": "fast_casual",
+    "price_level": 2,
+    "menu_highlights": [
+      {"name": "Chicken Dum Biryani", "price": null, "category": "entree"},
+      {"name": "Irani Chai", "price": null, "category": "cocktail"},
+      {"name": "Vegetable Pakora", "price": null, "category": "appetizer"},
+      {"name": "Butter Chicken", "price": null, "category": "entree"}
+    ],
+    "menu_url": null,
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "desichowrastha",
+    "dietary_options": ["vegetarian-friendly", "halal"],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

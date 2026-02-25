@@ -1,0 +1,53 @@
+{
+  "venue_id": 439,
+  "venue_slug": "johnnys-hideaway",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Sampler Platter",
+        "price": "$18.99",
+        "category": "appetizer"
+      },
+      {
+        "name": "Jumbo Wings (10 ct)",
+        "price": "$19.75",
+        "category": "appetizer"
+      },
+      {
+        "name": "Johnny's Cheesesteak",
+        "price": "$14.99",
+        "category": "entree"
+      },
+      {
+        "name": "Cheeseburger (8oz Angus)",
+        "price": "$15.99",
+        "category": "entree"
+      },
+      {
+        "name": "Taco Salad",
+        "price": "$16.99",
+        "category": "entree"
+      }
+    ],
+    "dietary_options": [],
+    "price_level": 2,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

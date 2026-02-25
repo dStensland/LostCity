@@ -1,0 +1,50 @@
+{
+  "venue_id": 1801,
+  "venue_slug": "susiecakes---nashville",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Southern Red Velvet Cake",
+        "price": null,
+        "category": "dessert"
+      },
+      {
+        "name": "Old-Fashioned Chocolate Cake",
+        "price": null,
+        "category": "dessert"
+      },
+      {
+        "name": "Flourless Chocolate Cake",
+        "price": null,
+        "category": "dessert"
+      },
+      {
+        "name": "Carrot Cake",
+        "price": null,
+        "category": "dessert"
+      }
+    ],
+    "dietary_options": [
+      "gluten-free-options"
+    ],
+    "price_level": 2,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

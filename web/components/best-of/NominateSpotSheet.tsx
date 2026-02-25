@@ -160,7 +160,7 @@ export default function NominateSpotSheet({
                 type="text"
                 value={query}
                 onChange={(e) => handleQueryChange(e.target.value)}
-                placeholder="Search venues..."
+                placeholder="Search spots..."
                 className="w-full pl-10 pr-4 py-2.5 bg-[var(--dusk)] border border-[var(--twilight)] rounded-xl text-sm text-[var(--cream)] placeholder-[var(--muted)] focus:outline-none transition-all"
                 onFocus={(e) => {
                   e.currentTarget.style.borderColor = `${accentColor}50`;
@@ -185,7 +185,7 @@ export default function NominateSpotSheet({
             <div className="flex-1 overflow-y-auto min-h-0 space-y-1">
               {results.length === 0 && query.length >= 2 && !isSearching && (
                 <div className="text-center py-8">
-                  <p className="text-xs text-[var(--muted)]">No venues found for &ldquo;{query}&rdquo;</p>
+                  <p className="text-xs text-[var(--muted)]">No spots found for &ldquo;{query}&rdquo;</p>
                   <p className="text-[10px] text-[var(--muted)] opacity-60 mt-1">
                     Try a different search term
                   </p>
@@ -265,7 +265,7 @@ export default function NominateSpotSheet({
                     }
               }
             >
-              {isNominating ? "Nominating..." : selected ? `Nominate ${selected.name}` : "Select a venue"}
+              {isNominating ? "Nominating..." : selected ? `Nominate ${selected.name}` : "Select a spot"}
             </button>
           </div>
         </div>

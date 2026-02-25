@@ -10,3 +10,8 @@ discovery:
   - https://www.fernbankmuseum.org
 detail:
   enabled: true
+data_goals:
+- events
+- exhibits
+- images
+- tickets

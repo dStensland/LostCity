@@ -58,7 +58,7 @@ export default function MomentsSection({ portalSlug, prefetchedData }: MomentsSe
           <FeedSectionHeader
             title="Upcoming Festivals and Conventions"
             priority="tertiary"
-            accentColor="var(--neon-cyan)"
+            accentColor="#65E8FF"
             seeAllHref={`/${portalSlug}/festivals`}
           />
           <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">

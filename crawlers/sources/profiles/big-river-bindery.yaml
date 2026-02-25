@@ -1,0 +1,19 @@
+version: 1
+slug: big-river-bindery
+name: "Big River Bindery"
+integration_method: llm_crawler
+data_goals:
+  - events
+discovery:
+  enabled: true
+  type: html
+  urls:
+    - "https://bigriverbindery.com"
+  fetch:
+    render_js: false
+detail:
+  enabled: true
+  use_jsonld: true
+  use_open_graph: true
+  use_heuristic: true
+  use_llm: true

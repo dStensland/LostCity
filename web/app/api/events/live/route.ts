@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createPortalScopedClient } from "@/lib/supabase/server";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
@@ -45,10 +45,11 @@ export async function GET(request: Request) {
         { status: 400 }
       );
     }
+    const portalClient = await createPortalScopedClient(portalContext.portalId);
     const portalCity = !portalExclusive ? portalContext.filters.city : undefined;
 
     // Get all currently live events with venue info
-    let query = supabase
+    let query = portalClient
       .from("events")
       .select(`
         id,

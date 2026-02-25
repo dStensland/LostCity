@@ -1,8 +1,6 @@
 "use client";
 
 import { useState, useEffect, use, useCallback } from "react";
-import Link from "next/link";
-import Logo from "@/components/Logo";
 import { CATEGORIES } from "@/lib/search-constants";
 
 type SectionItem = {
@@ -366,27 +364,7 @@ export default function PortalSectionsPage({ params }: { params: Promise<{ id: s
   }
 
   return (
-    <div className="min-h-screen bg-[var(--void)]">
-      {/* Header */}
-      <header className="border-b border-[var(--twilight)] px-6 py-4">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Logo href="/admin" size="sm" />
-            <span className="text-[var(--muted)]">/</span>
-            <Link href="/admin/portals" className="text-[var(--muted)] hover:text-[var(--cream)] font-mono text-sm">
-              Portals
-            </Link>
-            <span className="text-[var(--muted)]">/</span>
-            <Link href={`/admin/portals/${portalId}`} className="text-[var(--muted)] hover:text-[var(--cream)] font-mono text-sm">
-              Edit
-            </Link>
-            <span className="text-[var(--muted)]">/</span>
-            <span className="text-[var(--cream)] font-mono text-sm">Feed Sections</span>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-4xl mx-auto px-6 py-8">
+    <div>
         {error && (
           <div className="mb-4 px-4 py-2 bg-red-500/20 border border-red-500/50 rounded text-red-400 text-sm flex items-center justify-between">
             <span>{error}</span>
@@ -907,7 +885,6 @@ export default function PortalSectionsPage({ params }: { params: Promise<{ id: s
               ))}
           </div>
         )}
-      </main>
     </div>
   );
 }

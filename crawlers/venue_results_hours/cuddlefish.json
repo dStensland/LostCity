@@ -1,0 +1,32 @@
+{
+  "venue_id": 4798,
+  "venue_slug": "cuddlefish",
+  "meta": {
+    "og_image": "https://static.wixstatic.com/media/f1a40d_4c89fa1ec8a645228370fd1709989825%7Emv2.jpg/v1/fit/w_2500,h_1330,al_c/f1a40d_4c89fa1ec8a645228370fd1709989825%7Emv2.jpg",
+    "meta_description": "Cuddlefish, Temaki Bar, coffee shop in Dunwoody. within the new High Street development, is an innovative restaurant that brings together the best of Japanese and Taiwanese flavors, specializing in handcrafted sushi-style hand rolls made with the freshest ingredients. Hand Roll in Atlanta.",
+    "reservation_links": [
+      "https://www.opentable.com/r/cuddlefish-reservations-atlanta?restref=1432684&lang=en-US&ot_source=Restaurant%20website"
+    ],
+    "menu_links": [
+      "https://www.cuddlefishatl.com/menu"
+    ],
+    "instagram": "cuddlefishatl",
+    "facebook_url": null,
+    "phone": "(678) 994-2715"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["trendy", "upscale", "date-spot", "intimate"],
+    "cuisine": ["japanese", "sushi", "fusion", "coffee"],
+    "service_style": "full_service",
+    "price_level": 3,
+    "menu_highlights": null,
+    "reservation_url": "https://www.opentable.com/r/cuddlefish-reservations-atlanta?restref=1432684&lang=en-US&ot_source=Restaurant%20website",
+    "phone": "(678) 994-2715",
+    "instagram": "cuddlefishatl",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

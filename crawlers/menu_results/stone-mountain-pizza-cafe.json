@@ -1,0 +1,33 @@
+{
+  "venue_id": 2101,
+  "venue_slug": "stone-mountain-pizza-cafe",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {"name": "Chicken Wings", "price": "$15", "category": "appetizer"},
+      {"name": "Greek Salad", "price": "$7.50", "category": "entree"},
+      {"name": "Mozzarella Sticks", "price": "$9.50", "category": "appetizer"},
+      {"name": "Chicken Tenders", "price": "$12.50", "category": "entree"},
+      {"name": "Garlic Pretzel", "price": "$2.25", "category": "appetizer"}
+    ],
+    "dietary_options": ["vegetarian-friendly"],
+    "price_level": 1,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

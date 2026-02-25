@@ -51,19 +51,32 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
   const itineraryData = itinerary as { id: string };
 
-  // Fetch items with joined data
-  const { data: items } = await supabase
+  // Fetch items with joined data (events don't have lat/lng — join through venues)
+  const { data: rawItems } = await supabase
     .from("itinerary_items")
     .select(
       `
       *,
-      event:events(id, title, start_date, start_time, image_url, category, lat, lng),
+      event:events(id, title, start_date, start_time, image_url, category:category_id, venue:venues(name, lat, lng)),
       venue:venues(id, slug, name, image_url, neighborhood, venue_type, lat, lng)
     `
     )
     .eq("itinerary_id", itineraryData.id)
     .order("position", { ascending: true })
     .limit(100);
+
+  // Flatten event.venue into event-level fields for frontend compatibility
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const items = (rawItems || []).map((item: any) => {
+    if (item.event?.venue) {
+      const { venue: eventVenue, ...eventRest } = item.event;
+      return {
+        ...item,
+        event: { ...eventRest, lat: eventVenue.lat, lng: eventVenue.lng, venue_name: eventVenue.name },
+      };
+    }
+    return item;
+  });
 
   // Fetch portal info for branding
   const itineraryWithPortal = itinerary as { portal_id: string };

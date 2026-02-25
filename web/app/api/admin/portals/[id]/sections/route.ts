@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { canManagePortal } from "@/lib/supabase/server";
-import { adminErrorResponse } from "@/lib/api-utils";
+import { adminErrorResponse, checkBodySize, checkParsedBodySize } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 
 // GET /api/admin/portals/[id]/sections - List sections for a portal
@@ -48,6 +48,9 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const sizeCheck = checkBodySize(request);
+  if (sizeCheck) return sizeCheck;
+
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.write, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
 
@@ -57,12 +60,26 @@ export async function POST(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await request.json();
+  const body = await request.json().catch(() => ({} as Record<string, unknown>));
+  const parsedSizeCheck = checkParsedBodySize(body);
+  if (parsedSizeCheck) return parsedSizeCheck;
+
   const { title, slug, description, section_type, auto_filter, is_visible } = body;
 
   if (!title || !slug || !section_type) {
     return NextResponse.json(
       { error: "title, slug, and section_type are required" },
+      { status: 400 }
+    );
+  }
+
+  if (
+    typeof title !== "string" ||
+    typeof slug !== "string" ||
+    typeof section_type !== "string"
+  ) {
+    return NextResponse.json(
+      { error: "title, slug, and section_type must be strings" },
       { status: 400 }
     );
   }

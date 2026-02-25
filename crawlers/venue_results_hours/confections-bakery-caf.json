@@ -1,0 +1,28 @@
+{
+  "venue_id": 4863,
+  "venue_slug": "confections-bakery-caf",
+  "meta": {
+    "og_image": null,
+    "meta_description": null,
+    "reservation_links": [],
+    "menu_links": [],
+    "instagram": "bakeryconfections",
+    "facebook_url": "https://www.facebook.com/confectionssuwanee",
+    "phone": "(470) 915-8201"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["cozy", "casual", "family-friendly"],
+    "cuisine": ["bakery", "dessert", "coffee", "tea"],
+    "service_style": "cafe",
+    "price_level": 1,
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": "(470) 915-8201",
+    "instagram": "bakeryconfections",
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

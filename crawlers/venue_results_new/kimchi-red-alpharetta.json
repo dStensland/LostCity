@@ -1,0 +1,45 @@
+{
+  "venue_id": 4885,
+  "venue_slug": "kimchi-red-alpharetta",
+  "meta": {
+    "og_image": "https://static.spotapps.co/website_images/ab_websites/143550_website/specials_page.jpg",
+    "meta_description": "At Kimchi Red, we are committed to providing customers an enjoyable Korean dining experience, serving the finest quality meals. Our foundation is based on healthy eating with low-calorie, low-carb, and high-protein options.Our main goal is to provide the most delicious and healthiest premium Fried chicken, Rice plates, Tacos, etc… We use only the highest quality ingredients like fresh, never frozen chicken, marinated steak, pork, and Market Fresh vegetables.Here at Kimchi Red, we've created the perfect balance of delicious and nutritious Korean food on-the-go.",
+    "reservation_links": [],
+    "menu_links": [
+      "https://kimchiredusa.com/alpharetta-johns-creek-kimchi-red-food-menu"
+    ],
+    "instagram": "kimchiredofficial",
+    "facebook_url": "https://www.facebook.com/105025918973301",
+    "phone": "(470) 336-7222"
+  },
+  "extracted": {
+    "hours": {
+      "mon": {"open": "11:00", "close": "20:00"},
+      "tue": {"open": "11:00", "close": "20:00"},
+      "wed": {"open": "11:00", "close": "20:00"},
+      "thu": {"open": "11:00", "close": "20:00"},
+      "fri": {"open": "11:00", "close": "21:00"},
+      "sat": {"open": "11:00", "close": "21:00"},
+      "sun": null
+    },
+    "vibes": ["casual", "fast-casual", "family-friendly"],
+    "cuisine": ["korean"],
+    "service_style": "fast_casual",
+    "price_level": 2,
+    "menu_highlights": [
+      {"name": "Kimchi Fried Chicken", "price": "$37.99", "category": "entree"},
+      {"name": "Rose Chon", "price": "$34.99", "category": "entree"},
+      {"name": "KR Galbi", "price": "$29.99", "category": "entree"},
+      {"name": "Bulgogi Plate", "price": "$15.99", "category": "entree"},
+      {"name": "Cheesy Buldak", "price": "$34.99", "category": "entree"}
+    ],
+    "menu_url": "https://kimchiredusa.com/alpharetta-johns-creek-kimchi-red-food-menu",
+    "reservation_url": null,
+    "phone": "(470) 336-7222",
+    "instagram": "kimchiredofficial",
+    "dietary_options": ["halal"],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

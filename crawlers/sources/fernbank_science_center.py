@@ -236,12 +236,17 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         else:
                             event_url = f"{BASE_URL}/{href}"
 
-                # Check for "FREE" in button text
-                is_free = True
+                # Default to not-free; only set True when source text says "free"
+                is_free = False
                 button_elem = item.find("a", class_="btn")
                 if button_elem:
-                    button_text = button_elem.get_text(strip=True).upper()
-                    if "FREE" in button_text:
+                    button_text = button_elem.get_text(strip=True).lower()
+                    if "free" in button_text:
+                        is_free = True
+                # Also check description text for free keywords
+                if not is_free and description:
+                    desc_lower = description.lower()
+                    if any(kw in desc_lower for kw in ["free", "no cost", "no charge", "complimentary"]):
                         is_free = True
 
                 events_found += 1

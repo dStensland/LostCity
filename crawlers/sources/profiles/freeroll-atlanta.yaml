@@ -10,3 +10,6 @@ discovery:
   - https://www.freerollatlanta.com
 detail:
   enabled: true
+data_goals:
+- events
+- images

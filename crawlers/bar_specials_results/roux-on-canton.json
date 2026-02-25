@@ -1,0 +1,31 @@
+{
+  "venue_id": 4918,
+  "venue_slug": "roux-on-canton",
+  "meta": {},
+  "extracted": {
+    "specials": [
+      {
+        "title": "Oyster Happy Hour",
+        "type": "happy_hour",
+        "description": "Sunday oyster happy hour special",
+        "days_of_week": [7],
+        "time_start": "15:00:00",
+        "time_end": "18:00:00",
+        "price_note": null
+      }
+    ],
+    "hours": null,
+    "vibes": ["live-music", "casual"],
+    "cuisine": [],
+    "genres": [],
+    "parking": [],
+    "menu_url": "http://rouxoncanton.com/menu20",
+    "reservation_url": null,
+    "phone": null,
+    "instagram": "rouxoncanton",
+    "price_level": null,
+    "menu_highlights": null,
+    "dietary_options": [],
+    "service_style": null
+  }
+}

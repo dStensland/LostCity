@@ -1,0 +1,28 @@
+{
+  "venue_id": 3733,
+  "venue_slug": "aqua-blue-johns-creek",
+  "meta": {
+    "og_image": null,
+    "meta_description": "Seafood Wholesaler - We carry a full variety of fish and frozen seafood. Live Lobster & Live Crab. Serving Toronto and the surrounding areas.",
+    "reservation_links": [],
+    "menu_links": [],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": "(416) 746-6661"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": [],
+    "cuisine": ["seafood"],
+    "service_style": null,
+    "price_level": null,
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": "(416) 746-6661",
+    "instagram": null,
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

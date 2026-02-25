@@ -1,0 +1,30 @@
+{
+  "venue_id": 2453,
+  "venue_slug": "hayakawa",
+  "meta": {
+    "og_image": "http://static1.squarespace.com/static/6346bd524697f07222eef0db/t/63bc8b61b5fca52a0403fa96/1673300833350/Web+Icon.png?format=1500w",
+    "meta_description": "Hayakawa is an intimate and traditional sushiya in the mold of the finest \r\nsushi shops in Japan. Newly location in West Midtown Atlanta, our serenely \r\ndesigned space allows for guests to have a truly unique experience.",
+    "reservation_links": [
+      "https://resy.com/cities/atlanta-ga/venues/hayakawa"
+    ],
+    "menu_links": [],
+    "instagram": null,
+    "facebook_url": null,
+    "phone": null
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["upscale", "intimate", "date-spot"],
+    "cuisine": ["japanese", "sushi"],
+    "service_style": "full_service",
+    "price_level": 4,
+    "menu_highlights": null,
+    "reservation_url": "https://resy.com/cities/atlanta-ga/venues/hayakawa",
+    "phone": null,
+    "instagram": null,
+    "dietary_options": [],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

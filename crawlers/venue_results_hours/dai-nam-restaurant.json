@@ -1,0 +1,30 @@
+{
+  "venue_id": 4848,
+  "venue_slug": "dai-nam-restaurant",
+  "meta": {
+    "og_image": "http://static1.squarespace.com/static/65b8393c5baec340dec5e950/t/65c25ec1c47e3f0dc09971bb/1707237060637/IMG_6404.jpg?format=1500w",
+    "meta_description": "Experience authentic Vietnamese cuisine at Pho Dai Nam in Norcross & Duluth, GA - where fresh ingredients meet traditional Vietnamese dishes.",
+    "reservation_links": [],
+    "menu_links": [
+      "https://www.phodainam.com/menu"
+    ],
+    "instagram": "pho_dai_nam",
+    "facebook_url": "https://www.facebook.com/dainamrestaurantnorcross",
+    "phone": "(770) 864-5531"
+  },
+  "extracted": {
+    "hours": null,
+    "vibes": ["casual", "family-friendly"],
+    "cuisine": ["vietnamese"],
+    "service_style": "full_service",
+    "price_level": 2,
+    "menu_highlights": null,
+    "reservation_url": null,
+    "phone": "(770) 864-5531",
+    "instagram": "pho_dai_nam",
+    "dietary_options": ["vegetarian-friendly"],
+    "specials": [],
+    "genres": [],
+    "parking": ["free-parking"]
+  }
+}

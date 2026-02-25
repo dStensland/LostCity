@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 
 const EMOJI_SET = ["🔥", "❤️", "🎉", "😂", "💯", "👀"];
 
@@ -18,7 +18,6 @@ interface ReactionBarProps {
 }
 
 export function ReactionBar({ targetType, targetId, reactions: initialReactions }: ReactionBarProps) {
-  const queryClient = useQueryClient();
   const [reactions, setReactions] = useState<Reaction[]>(initialReactions);
   const [showPicker, setShowPicker] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);

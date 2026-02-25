@@ -1,0 +1,45 @@
+{
+  "venue_id": 4769,
+  "venue_slug": "spring-2nd-branch",
+  "meta": {
+    "og_image": null,
+    "meta_description": "See our latest menu, find our hours, and order online directly from us. Locations in Marietta, GA",
+    "reservation_links": [],
+    "menu_links": [
+      "https://www.spring2ndbranch.com/dine-in-menu"
+    ],
+    "instagram": "spring2ndbranch",
+    "facebook_url": null,
+    "phone": "(770) 575-3454"
+  },
+  "extracted": {
+    "hours": {
+      "mon": {"open": "11:00", "close": "21:00"},
+      "tue": {"open": "11:00", "close": "21:00"},
+      "wed": {"open": "11:00", "close": "21:00"},
+      "thu": {"open": "11:00", "close": "21:00"},
+      "fri": {"open": "11:00", "close": "22:00"},
+      "sat": {"open": "11:00", "close": "22:00"},
+      "sun": {"open": "11:00", "close": "21:00"}
+    },
+    "vibes": ["casual", "family-friendly", "cozy"],
+    "cuisine": ["korean"],
+    "service_style": "casual_dine_in",
+    "price_level": 2,
+    "menu_highlights": [
+      {"name": "Jeyuk Bokkeum (Spicy Stir-Fried Pork)", "price": null, "category": "entree"},
+      {"name": "Ttukbaegi Bulgogi", "price": null, "category": "entree"},
+      {"name": "Gochujang Yukhoe (Beef Tartare)", "price": null, "category": "appetizer"},
+      {"name": "Haemul Pajeon (Seafood Pancake)", "price": null, "category": "appetizer"},
+      {"name": "Gogi Mandu (Beef Dumplings)", "price": null, "category": "appetizer"}
+    ],
+    "menu_url": "https://www.spring2ndbranch.com/dine-in-menu",
+    "reservation_url": null,
+    "phone": "(770) 575-3454",
+    "instagram": "spring2ndbranch",
+    "dietary_options": ["vegetarian-friendly", "gluten-free-options"],
+    "specials": [],
+    "genres": [],
+    "parking": []
+  }
+}

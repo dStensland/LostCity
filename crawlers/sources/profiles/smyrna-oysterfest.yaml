@@ -1,0 +1,21 @@
+version: 1
+slug: smyrna-oysterfest
+name: "Smyrna Oysterfest"
+integration_method: playwright
+defaults:
+  venue_name: "Smyrna Oysterfest"
+discovery:
+  enabled: true
+  type: html
+  urls:
+    - "https://atkinspark.com"
+  fetch:
+    render_js: true
+detail:
+  enabled: true
+  fetch:
+    render_js: true
+data_goals:
+  - events
+  - images
+  - tickets

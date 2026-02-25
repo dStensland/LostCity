@@ -4,7 +4,7 @@ name: Second Self Beer Company
 integration_method: playwright
 defaults: {}
 discovery:
-  enabled: false  # Domain parked — 2026-02-06 audit
+  enabled: false
   type: list
   urls:
   - https://www.secondselfbeer.com
@@ -12,3 +12,9 @@ discovery:
     render_js: true
 detail:
   enabled: false
+data_goals:
+- events
+- images
+- specials
+- tickets
+- venue_hours

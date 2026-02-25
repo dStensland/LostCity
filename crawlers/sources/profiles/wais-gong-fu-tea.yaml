@@ -1,0 +1,21 @@
+version: 1
+slug: wais-gong-fu-tea
+name: "Wai's Gong Fu Tea House"
+integration_method: crawler
+data_goals:
+  - events
+discovery:
+  enabled: true
+  type: html
+  urls:
+    - "https://www.waisgongfutea.com/"
+  fetch:
+    render_js: true
+detail:
+  enabled: true
+  use_jsonld: true
+  use_open_graph: true
+  use_heuristic: true
+  use_llm: true
+defaults:
+  venue_name: "Wai's Gong Fu Tea House"

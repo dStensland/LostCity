@@ -12,6 +12,8 @@ import {
 } from "@/lib/search-ranking";
 import type { ViewMode, FindType } from "@/lib/search-context";
 import { logger } from "@/lib/logger";
+import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
+import { isNaturalLanguageQuery } from "@/lib/nl-detect";
 
 // Helper to safely parse integers with validation
 function safeParseInt(
@@ -25,6 +27,10 @@ function safeParseInt(
   if (isNaN(parsed)) return defaultValue;
   return Math.min(Math.max(parsed, min), max);
 }
+
+const INSTANT_SEARCH_CACHE_TTL_MS = 30 * 1000;
+const INSTANT_SEARCH_CACHE_MAX_ENTRIES = 200;
+const INSTANT_SEARCH_CACHE_NAMESPACE = "api:search-instant";
 
 /**
  * Instant search API endpoint.
@@ -101,44 +107,76 @@ export async function GET(request: NextRequest) {
     const portalSlug = portalContext.portalSlug || searchParams.get("portalSlug") || "atlanta";
     const viewMode = (searchParams.get("viewMode") as ViewMode) || "feed";
     const findType = (searchParams.get("findType") as FindType) || null;
+    const includeOrganizers = searchParams.get("include_organizers") === "true";
 
-    // Build search context
-    const context: SearchContext = {
-      viewMode,
-      findType,
+    const cacheKey = [
+      query.trim().toLowerCase(),
+      String(limit),
+      portalId || "",
       portalSlug,
-      portalId,
-    };
+      viewMode,
+      findType || "",
+      includeOrganizers ? "with-organizers" : "core-only",
+    ].join("|");
+    const response = await getOrSetSharedCacheJson<Record<string, unknown>>(
+      INSTANT_SEARCH_CACHE_NAMESPACE,
+      cacheKey,
+      INSTANT_SEARCH_CACHE_TTL_MS,
+      async () => {
+        // Build search context
+        const context: SearchContext = {
+          viewMode,
+          findType,
+          portalSlug,
+          portalId,
+        };
 
-    // Perform instant search
-    const result = await instantSearch(query, {
-      portalId,
-      limit: limit * 2, // Get more results for grouping
-    });
+        // Perform instant search
+        const trimmedQuery = query.trim();
+        const instantTypes: ("event" | "venue" | "organizer")[] = includeOrganizers
+          ? trimmedQuery.length >= 4
+            ? ["event", "venue", "organizer"]
+            : ["event", "venue"]
+          : ["event", "venue"];
+        const result = await instantSearch(query, {
+          portalId,
+          limit: Math.min(limit * 2, limit + 4), // Keep autocomplete lean
+          types: instantTypes,
+          includeSocialProof: false,
+          includeFacets: false,
+          includeDidYouMean: false,
+        });
 
-    // Apply context-aware ranking
-    const rankedResults = rankResults(result.suggestions, context);
+        // Apply context-aware ranking
+        const rankedResults = rankResults(result.suggestions, context);
 
-    // Detect quick actions based on query
-    const quickActions = detectQuickActions(query, portalSlug);
+        // Detect quick actions based on query
+        const quickActions = detectQuickActions(query, portalSlug);
 
-    // Group results by type
-    const groupedResults = groupResultsByType(rankedResults);
+        // Group results by type
+        const groupedResults = groupResultsByType(rankedResults);
 
-    // Get display order based on context
-    const groupOrder = getGroupDisplayOrder(context);
+        // Get display order based on context
+        const groupOrder = getGroupDisplayOrder(context);
 
-    // Build response with facet counts
-    const facets = result.facets ?? [];
-    const response = {
-      suggestions: rankedResults.slice(0, limit),
-      topResults: rankedResults.slice(limit, limit * 2),
-      quickActions,
-      groupedResults,
-      groupOrder,
-      facets,
-      intent: result.intent,
-    };
+        // Detect if this is a natural language query
+        const isNLQuery = isNaturalLanguageQuery(query);
+
+        // Build response with facet counts
+        const facets = result.facets ?? [];
+        return {
+          suggestions: rankedResults.slice(0, limit),
+          topResults: rankedResults.slice(limit, limit * 2),
+          quickActions,
+          groupedResults,
+          groupOrder,
+          facets,
+          intent: result.intent,
+          isNLQuery,
+        };
+      },
+      { maxEntries: INSTANT_SEARCH_CACHE_MAX_ENTRIES }
+    );
 
     // Return with aggressive caching for fast autocomplete
     return NextResponse.json(response, {

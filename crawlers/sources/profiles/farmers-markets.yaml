@@ -10,3 +10,5 @@ discovery:
   - https://lostcity.ai/farmers-markets
 detail:
   enabled: true
+data_goals:
+- events

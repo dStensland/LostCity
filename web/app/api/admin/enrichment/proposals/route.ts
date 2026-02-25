@@ -3,6 +3,7 @@ import { isAdmin, getUser } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { parseIntParam, validationError } from "@/lib/api-utils";
+import { normalizeNeighborhoodName } from "@/config/neighborhoods";
 
 export const dynamic = "force-dynamic";
 
@@ -113,7 +114,9 @@ export async function POST(request: NextRequest) {
       venue_id: p.venue_id,
       field_name: p.field_name,
       current_value: currentValue,
-      proposed_value: p.proposed_value,
+      proposed_value: p.field_name === "neighborhood"
+        ? normalizeNeighborhoodName(p.proposed_value)
+        : p.proposed_value,
       source: p.source ?? "agent",
       confidence: p.confidence ?? 0.8,
       reasoning: p.reasoning ?? "",

@@ -1,0 +1,56 @@
+{
+  "venue_id": 1451,
+  "venue_slug": "noko",
+  "meta": {},
+  "extracted": {
+    "menu_highlights": [
+      {
+        "name": "Wagyu Beef Cheeks",
+        "price": "$24",
+        "category": "entree"
+      },
+      {
+        "name": "Lobster Bao Buns",
+        "price": "$18",
+        "category": "appetizer"
+      },
+      {
+        "name": "Tomahawk Ribeye",
+        "price": "$145",
+        "category": "entree"
+      },
+      {
+        "name": "Noko Old Fashioned",
+        "price": "$15",
+        "category": "cocktail"
+      },
+      {
+        "name": "Coconut Cake",
+        "price": "$12",
+        "category": "dessert"
+      }
+    ],
+    "dietary_options": [
+      "vegetarian-friendly",
+      "gluten-free-options"
+    ],
+    "price_level": 3,
+    "specials": [],
+    "hours": null,
+    "menu_url": null,
+    "reservation_url": null,
+    "description": null,
+    "short_description": null,
+    "phone": null,
+    "instagram": null,
+    "vibes": [],
+    "cuisine": null,
+    "service_style": null,
+    "genres": [],
+    "accepts_reservations": null,
+    "is_event_venue": null,
+    "is_chain": null,
+    "parking": [],
+    "payment_notes": null
+  }
+}

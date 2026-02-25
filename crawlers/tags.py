@@ -108,7 +108,7 @@ VALID_CATEGORIES = {
     "other",
 }
 
-# Canonical valid venue types (union of CLAUDE.md + web spots-constants.ts)
+# Canonical valid venue types (union of web spots-constants.ts + explore types)
 VALID_VENUE_TYPES = {
     # Entertainment
     "music_venue",
@@ -120,6 +120,7 @@ VALID_VENUE_TYPES = {
     "attraction",
     "amphitheater",
     "stadium",
+    "nightclub",
     # Food & Drink
     "bar",
     "restaurant",
@@ -139,6 +140,7 @@ VALID_VENUE_TYPES = {
     "museum",
     "studio",
     "record_store",
+    "arts_center",
     # Education
     "college",
     "university",
@@ -155,6 +157,7 @@ VALID_VENUE_TYPES = {
     "venue",
     "organization",
     "festival",
+    "institution",
     # Recreation
     "games",
     "arcade",
@@ -163,13 +166,23 @@ VALID_VENUE_TYPES = {
     "garden",
     "outdoor_venue",
     "farmers_market",
+    "market",
     "fitness_center",
+    "fitness",
     "bowling",
     "pool_hall",
     "recreation",
     "plaza",
     "zoo",
     "aquarium",
+    # Sightseeing & Explore
+    "landmark",
+    "skyscraper",
+    "artifact",
+    "public_art",
+    "viewpoint",
+    "trail",
+    "historic_site",
     # Healthcare
     "healthcare",
     "hospital",
@@ -184,8 +197,8 @@ VALID_VENUE_TYPES = {
     "community_center_religious",
     # Identity
     "lgbtq",
-    # Nightlife-specific
-    "nightclub",
+    # Retail & Services
+    "retail",
     # Virtual
     "virtual",
 }
@@ -201,6 +214,17 @@ VALID_VIBES = {
     "casual",
     "artsy",
     "historic",
+    "trendy",
+    "cozy",
+    "lively",
+    # Venue style
+    "sports-bar",
+    "neighborhood-bar",
+    "dive-bar",
+    "pop-up",
+    "fast-casual",
+    "counter-service",
+    "happy-hour",
     # Amenities
     "outdoor-seating",
     "craft-cocktails",
@@ -209,6 +233,8 @@ VALID_VIBES = {
     "rooftop",
     "patio",
     "free-parking",
+    "games",
+    "karaoke",
     # Accessibility
     "all-ages",
     "family-friendly",
