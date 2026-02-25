@@ -6,6 +6,7 @@ import { SPOT_TYPE_CONFIG, SPOT_TYPE_ORDER, SPOTS_TABS, type Spot, type SpotsTab
 import { haversineKm } from "@/lib/distance";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
+import VenueListSkeleton from "@/components/find/VenueListSkeleton";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -202,6 +203,11 @@ export default function VenueListView({
         </button>
       </div>
     );
+  }
+
+  // ── Initial loading state ──────────────────────────────────────────────
+  if (loading && spots.length === 0) {
+    return <VenueListSkeleton />;
   }
 
   // ── Empty state ────────────────────────────────────────────────────────

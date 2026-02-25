@@ -11,6 +11,7 @@ import RecommendButton from "@/components/RecommendButton";
 import VenueTagList from "@/components/VenueTagList";
 import FlagButton from "@/components/FlagButton";
 import LinkifyText from "@/components/LinkifyText";
+import Skeleton from "@/components/Skeleton";
 import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
 import NearbySection from "@/components/NearbySection";
 import { VenueEventCard } from "@/components/VenueEventsByDay";
@@ -134,6 +135,37 @@ const NeonBackButton = ({ onClose }: { onClose: () => void }) => (
     </span>
   </button>
 );
+
+// Collapsible community tags — lazy-mounts VenueTagList to save API calls
+function CollapsibleVenueTags({ venueId }: { venueId: number }) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div>
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        className="w-full flex items-center justify-between group"
+      >
+        <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest group-hover:text-[var(--soft)] transition-colors">
+          Community Tags
+        </h2>
+        <svg
+          className={`w-4 h-4 text-[var(--muted)] transition-transform ${expanded ? "rotate-180" : ""}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {expanded && (
+        <div className="mt-3">
+          <VenueTagList venueId={venueId} />
+        </div>
+      )}
+    </div>
+  );
+}
 
 // Venue Events Section with day-by-day date selector
 function VenueEventsSection({
@@ -403,11 +435,59 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
 
   if (loading) {
     return (
-      <div className="pt-6">
+      <div className="pt-6 pb-8">
         <NeonBackButton onClose={onClose} />
-        <div className="space-y-4">
-          <div className="aspect-video skeleton-shimmer rounded-xl" />
-          <div className="h-48 skeleton-shimmer rounded-xl" />
+
+        {/* Hero image skeleton */}
+        <div className="aspect-video bg-[var(--night)] rounded-lg overflow-hidden mb-6 border border-[var(--twilight)] relative">
+          <Skeleton className="absolute inset-0" />
+        </div>
+
+        {/* Info card skeleton */}
+        <div className="border border-[var(--twilight)] rounded-xl p-6 bg-[var(--dusk)]">
+          {/* Type badge */}
+          <Skeleton className="h-7 w-28 rounded-full mb-4" delay="0.06s" />
+
+          {/* Name + follow/recommend */}
+          <div className="flex items-start justify-between gap-4">
+            <Skeleton className="h-7 w-[60%] rounded" delay="0.1s" />
+            <div className="flex gap-2 flex-shrink-0">
+              <Skeleton className="w-9 h-9 rounded-lg" delay="0.14s" />
+              <Skeleton className="w-9 h-9 rounded-lg" delay="0.16s" />
+            </div>
+          </div>
+
+          {/* Neighborhood + price */}
+          <Skeleton className="h-5 w-[35%] rounded mt-2" delay="0.18s" />
+
+          {/* Vibe pills */}
+          <div className="flex gap-2 mt-3">
+            <Skeleton className="h-6 w-16 rounded-full" delay="0.22s" />
+            <Skeleton className="h-6 w-20 rounded-full" delay="0.24s" />
+            <Skeleton className="h-6 w-14 rounded-full" delay="0.26s" />
+          </div>
+
+          {/* Quick actions */}
+          <div className="flex flex-wrap gap-2 mt-4">
+            <Skeleton className="h-8 w-24 rounded-lg" delay="0.3s" />
+            <Skeleton className="h-8 w-28 rounded-lg" delay="0.32s" />
+            <Skeleton className="h-8 w-24 rounded-lg" delay="0.34s" />
+          </div>
+
+          {/* Hours section */}
+          <div className="mt-6 pt-6 border-t border-[var(--twilight)]">
+            <Skeleton className="h-3 w-12 rounded mb-3" delay="0.4s" />
+            <Skeleton className="h-4 w-[50%] rounded" delay="0.44s" />
+            <Skeleton className="h-4 w-[45%] rounded mt-1.5" delay="0.46s" />
+          </div>
+
+          {/* Description section */}
+          <div className="mt-6 pt-6 border-t border-[var(--twilight)]">
+            <Skeleton className="h-3 w-14 rounded mb-3" delay="0.5s" />
+            <Skeleton className="h-4 w-full rounded" delay="0.54s" />
+            <Skeleton className="h-4 w-[90%] rounded mt-1.5" delay="0.56s" />
+            <Skeleton className="h-4 w-[75%] rounded mt-1.5" delay="0.58s" />
+          </div>
         </div>
       </div>
     );
@@ -453,7 +533,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
       {showImage && (
         <div className="aspect-video bg-[var(--night)] rounded-lg overflow-hidden mb-6 border border-[var(--twilight)] relative">
           {!imageLoaded && (
-            <div className="absolute inset-0 skeleton-shimmer" />
+            <Skeleton className="absolute inset-0" />
           )}
           <Image
             src={spot.image_url!}
@@ -510,6 +590,20 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
           )}
         </p>
 
+        {/* Top vibes — instant characterization */}
+        {spot.vibes && spot.vibes.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-2.5">
+            {spot.vibes.slice(0, 3).map((vibe) => (
+              <span
+                key={vibe}
+                className="px-2 py-0.5 rounded-full text-[0.65rem] font-mono font-medium bg-[var(--coral)]/10 text-[var(--coral)] border border-[var(--coral)]/20"
+              >
+                {vibe.replace(/-/g, " ")}
+              </span>
+            ))}
+          </div>
+        )}
+
         {/* Quick Actions */}
         <div className="flex flex-wrap gap-2 mt-4">
           {spot.website && (
@@ -538,21 +632,24 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
               Instagram
             </a>
           )}
-          {spot.address && (
+          {spot.phone && (
             <a
-              href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
-                `${spot.address}, ${spot.city}, ${spot.state}`
-              )}`}
-              target="_blank"
-              rel="noopener noreferrer"
+              href={`tel:${spot.phone}`}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[var(--twilight)]/50 text-[var(--soft)] hover:text-[var(--cream)] rounded-lg text-sm transition-colors"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
               </svg>
-              Directions
+              Call
             </a>
+          )}
+          {spot.address && (
+            <DirectionsDropdown
+              venueName={spot.name}
+              address={spot.address}
+              city={spot.city}
+              state={spot.state}
+            />
           )}
         </div>
 
@@ -718,9 +815,9 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
           </div>
         )}
 
-        {/* Community Tags */}
+        {/* Community Tags — collapsed by default to save API calls */}
         <div className="mt-6 pt-6 border-t border-[var(--twilight)]">
-          <VenueTagList venueId={spot.id} />
+          <CollapsibleVenueTags venueId={spot.id} />
         </div>
 
         {/* Getting There — transit, parking, walkable neighbors */}

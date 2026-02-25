@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Image from "@/components/SmartImage";
 import { format, parseISO } from "date-fns";
 import LinkifyText from "../LinkifyText";
+import Skeleton from "@/components/Skeleton";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
 import { usePortalOptional } from "@/lib/portal-context";
@@ -185,20 +186,49 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
 
   if (loading) {
     return (
-      <div className="pt-6">
+      <div className="pt-6 pb-8">
         {/* Hero skeleton with floating back button */}
-        <div className="relative rounded-xl overflow-hidden mb-6 bg-[var(--dusk)]">
+        <div className="relative rounded-xl overflow-hidden mb-6 border border-[var(--twilight)] bg-[var(--dusk)]">
           <NeonFloatingBackButton onClose={onClose} />
           <div className="p-6 flex items-start gap-4">
-            <div className="w-28 h-40 skeleton-shimmer rounded-lg" />
-            <div className="flex-1 space-y-3 pt-2">
-              <div className="h-5 skeleton-shimmer rounded w-20" />
-              <div className="h-7 skeleton-shimmer rounded w-3/4" />
-              <div className="h-4 skeleton-shimmer rounded w-1/2" />
+            {/* Poster */}
+            <Skeleton className="w-28 h-40 rounded-lg flex-shrink-0" />
+
+            {/* Info */}
+            <div className="flex-1 min-w-0 pt-1">
+              {/* Type badge */}
+              <Skeleton className="h-5 w-20 rounded" delay="0.06s" />
+              {/* Title */}
+              <Skeleton className="h-7 w-[75%] rounded mt-2" delay="0.1s" />
+              {/* Metadata (year, rating, runtime) */}
+              <div className="flex items-center gap-2 mt-3">
+                <Skeleton className="h-4 w-10 rounded" delay="0.16s" />
+                <Skeleton className="h-4 w-8 rounded" delay="0.18s" />
+                <Skeleton className="h-4 w-14 rounded" delay="0.2s" />
+              </div>
+              {/* Genre pills */}
+              <div className="flex gap-1.5 mt-3">
+                <Skeleton className="h-5 w-16 rounded-full" delay="0.24s" />
+                <Skeleton className="h-5 w-14 rounded-full" delay="0.26s" />
+                <Skeleton className="h-5 w-18 rounded-full" delay="0.28s" />
+              </div>
             </div>
           </div>
         </div>
-        <div className="h-32 skeleton-shimmer rounded-xl" />
+
+        {/* Description skeleton */}
+        <div className="border border-[var(--twilight)] rounded-xl p-4 bg-[var(--dusk)] mb-6">
+          <Skeleton className="h-3 w-12 rounded mb-2" delay="0.32s" />
+          <Skeleton className="h-4 w-full rounded" delay="0.36s" />
+          <Skeleton className="h-4 w-[80%] rounded mt-1.5" delay="0.38s" />
+        </div>
+
+        {/* Showtimes section skeleton */}
+        <Skeleton className="h-3 w-32 rounded mb-4" delay="0.42s" />
+        <div className="space-y-3">
+          <Skeleton className="h-24 w-full rounded-xl" delay="0.46s" />
+          <Skeleton className="h-24 w-full rounded-xl" delay="0.5s" />
+        </div>
       </div>
     );
   }
@@ -240,7 +270,7 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
             {showImage ? (
               <div className="relative w-28 h-40 rounded-lg overflow-hidden border border-[var(--twilight)]">
                 {!imageLoaded && (
-                  <div className="absolute inset-0 skeleton-shimmer" />
+                  <Skeleton className="absolute inset-0" />
                 )}
                 <Image
                   src={series.image_url!}

@@ -8,6 +8,7 @@ import ScopedStyles from "@/components/ScopedStyles";
 import RSVPButton from "@/components/RSVPButton";
 import AddToCalendar from "@/components/AddToCalendar";
 import { createCssVarClass } from "@/lib/css-utils";
+import Skeleton from "@/components/Skeleton";
 import GettingThereSection from "@/components/GettingThereSection";
 import { format, parseISO } from "date-fns";
 import { decodeHtmlEntities, formatTimeSplit } from "@/lib/formats";
@@ -185,19 +186,56 @@ export default function FestivalDetailView({
 
   if (loading) {
     return (
-      <div className="pt-6">
-        <div className="relative rounded-xl overflow-hidden mb-6 bg-[var(--dusk)]">
+      <div className="pt-6 pb-8">
+        {/* Hero skeleton with floating back button */}
+        <div className="relative rounded-xl overflow-hidden mb-6 border border-[var(--twilight)] bg-[var(--dusk)]">
           <NeonFloatingBackButton onClose={onClose} />
           <div className="p-6 flex items-start gap-4">
-            <div className="w-28 aspect-[4/5] skeleton-shimmer rounded-lg" />
-            <div className="flex-1 space-y-3 pt-2">
-              <div className="h-5 skeleton-shimmer rounded w-20" />
-              <div className="h-7 skeleton-shimmer rounded w-3/4" />
-              <div className="h-4 skeleton-shimmer rounded w-1/2" />
+            {/* Poster */}
+            <Skeleton className="w-28 aspect-[4/5] rounded-lg flex-shrink-0" />
+
+            {/* Info */}
+            <div className="flex-1 min-w-0 pt-1">
+              {/* Festival badge */}
+              <Skeleton className="h-6 w-16 rounded-full" delay="0.06s" />
+              {/* Title */}
+              <Skeleton className="h-7 w-[70%] rounded mt-2" delay="0.1s" />
+              {/* Date range */}
+              <Skeleton className="h-4 w-[40%] rounded mt-2" delay="0.16s" />
+              {/* Location */}
+              <Skeleton className="h-4 w-[35%] rounded mt-1" delay="0.18s" />
+              {/* Stats (programs, sessions, venues) */}
+              <div className="flex gap-2 mt-3">
+                <Skeleton className="h-6 w-20 rounded" delay="0.24s" />
+                <Skeleton className="h-6 w-20 rounded" delay="0.26s" />
+                <Skeleton className="h-6 w-16 rounded" delay="0.28s" />
+              </div>
             </div>
           </div>
         </div>
-        <div className="h-32 skeleton-shimmer rounded-xl" />
+
+        {/* Description skeleton */}
+        <div className="mb-6 p-4 rounded-lg border border-[var(--twilight)] bg-[var(--void)]">
+          <Skeleton className="h-4 w-full rounded" delay="0.32s" />
+          <Skeleton className="h-4 w-[75%] rounded mt-1.5" delay="0.34s" />
+        </div>
+
+        {/* Program cards skeleton */}
+        <div className="space-y-4">
+          <div className="rounded-xl border border-[var(--twilight)] p-4 bg-[var(--dusk)]">
+            <Skeleton className="h-5 w-[50%] rounded" delay="0.4s" />
+            <Skeleton className="h-3 w-20 rounded mt-2" delay="0.42s" />
+            <Skeleton className="h-4 w-[80%] rounded mt-3" delay="0.46s" />
+            <div className="mt-3 space-y-2">
+              <Skeleton className="h-10 w-full rounded-lg" delay="0.5s" />
+              <Skeleton className="h-10 w-full rounded-lg" delay="0.54s" />
+            </div>
+          </div>
+          <div className="rounded-xl border border-[var(--twilight)] p-4 bg-[var(--dusk)]">
+            <Skeleton className="h-5 w-[45%] rounded" delay="0.58s" />
+            <Skeleton className="h-3 w-16 rounded mt-2" delay="0.6s" />
+          </div>
+        </div>
       </div>
     );
   }
@@ -237,7 +275,7 @@ export default function FestivalDetailView({
             {showImage ? (
               <div className="relative w-28 aspect-[4/5] rounded-lg overflow-hidden border border-[var(--twilight)]">
                 {!imageLoaded && (
-                  <div className="absolute inset-0 skeleton-shimmer" />
+                  <Skeleton className="absolute inset-0" />
                 )}
                 <Image
                   src={festival.image_url!}

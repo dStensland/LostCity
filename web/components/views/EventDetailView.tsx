@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "@/components/SmartImage";
+import Skeleton from "@/components/Skeleton";
 import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
 import FollowButton from "@/components/FollowButton";
 import FriendsGoing from "@/components/FriendsGoing";
@@ -183,6 +184,90 @@ function isExhibition(event: EventData): boolean {
   return event.genres?.includes("exhibition") || event.series?.series_type === "exhibition";
 }
 
+function CommunityTagsSection({
+  eventId,
+  venue,
+  producer,
+}: {
+  eventId: number;
+  venue: EventData["venue"];
+  producer: EventData["producer"];
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div>
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        className="flex items-center gap-2 w-full text-left group"
+      >
+        <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest">
+          Community Tags
+        </h2>
+        <svg
+          className={`w-3.5 h-3.5 text-[var(--muted)] transition-transform ${expanded ? "rotate-180" : ""}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+        {!expanded && (
+          <span className="text-[0.55rem] font-mono text-[var(--muted)]/60">Tap to expand</span>
+        )}
+      </button>
+      {expanded && (
+        <div className="mt-3 space-y-4">
+          <div>
+            <p className="text-[0.6rem] text-[var(--muted)] font-mono uppercase tracking-wider mb-2">
+              This Event
+            </p>
+            <EntityTagList entityType="event" entityId={eventId} />
+          </div>
+          {venue && (
+            <div>
+              <p className="text-[0.6rem] text-[var(--muted)] font-mono uppercase tracking-wider mb-2">
+                {venue.name}
+              </p>
+              <EntityTagList entityType="venue" entityId={venue.id} />
+            </div>
+          )}
+          {producer && (
+            <div>
+              <p className="text-[0.6rem] text-[var(--muted)] font-mono uppercase tracking-wider mb-2">
+                {producer.name}
+              </p>
+              <EntityTagList entityType="org" entityId={Number(producer.id)} />
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NeonBackButton({ onClose }: { onClose: () => void }) {
+  return (
+    <button
+      onClick={onClose}
+      aria-label="Back to event list"
+      className="group absolute top-3 left-3 flex items-center gap-2 px-4 py-3 rounded-full font-mono text-xs font-semibold tracking-wide uppercase transition-all duration-300 z-10 hover:scale-110 hover:brightness-110 active:scale-105 neon-back-btn"
+    >
+      <svg
+        className="w-4 h-4 transition-transform duration-300 group-hover:-translate-x-0.5 neon-back-icon"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+      </svg>
+      <span className="transition-all duration-300 group-hover:text-[var(--coral)] neon-back-text">
+        Back
+      </span>
+    </button>
+  );
+}
+
 export default function EventDetailView({ eventId, portalSlug, onClose }: EventDetailViewProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -255,38 +340,68 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
   const handleSeriesClick = (slug: string) => navigateToDetail("series", slug);
   const handleFestivalClick = (slug: string) => navigateToDetail("festival", slug);
 
-  // Reusable neon back button with 48x48px minimum touch target
-  const NeonBackButton = () => (
-    <button
-      onClick={onClose}
-      aria-label="Back to event list"
-      className="group absolute top-3 left-3 flex items-center gap-2 px-4 py-3 rounded-full font-mono text-xs font-semibold tracking-wide uppercase transition-all duration-300 z-10 hover:scale-110 hover:brightness-110 active:scale-105 neon-back-btn"
-    >
-      <svg
-        className="w-4 h-4 transition-transform duration-300 group-hover:-translate-x-0.5 neon-back-icon"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
-      </svg>
-      <span
-        className="transition-all duration-300 group-hover:text-[var(--coral)] neon-back-text"
-      >
-        Back
-      </span>
-    </button>
-  );
-
   if (loading) {
     return (
-      <div className="pt-6">
-        {/* Loading skeleton with back button integrated */}
-        <div className="relative aspect-[4/3] skeleton-shimmer rounded-xl mb-4">
-          <NeonBackButton />
+      <div className="pt-6 pb-8">
+        {/* Hero skeleton with back button */}
+        <div className="relative aspect-[4/3] rounded-xl overflow-hidden mb-4 bg-[var(--night)]">
+          <Skeleton className="absolute inset-0" />
+          <NeonBackButton onClose={onClose} />
+          {/* Title overlay skeleton */}
+          <div className="absolute bottom-0 left-0 right-0 p-4">
+            <Skeleton className="h-7 w-[70%] rounded" delay="0.1s" />
+            <Skeleton className="h-4 w-[45%] rounded mt-2" delay="0.15s" />
+          </div>
         </div>
-        <div className="h-24 skeleton-shimmer rounded-xl mb-4" />
-        <div className="h-48 skeleton-shimmer rounded-xl" />
+
+        {/* Quick actions skeleton */}
+        <div className="rounded-xl border border-[var(--twilight)] bg-[var(--card-bg)] mb-6">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--twilight)]">
+            <div className="flex items-center gap-4">
+              <Skeleton className="h-5 w-14 rounded" delay="0.2s" />
+              <Skeleton className="h-4 w-20 rounded" delay="0.25s" />
+              <Skeleton className="h-4 w-16 rounded" delay="0.3s" />
+            </div>
+            <div className="hidden sm:flex items-center gap-2">
+              <Skeleton className="h-8 w-8 rounded-lg" delay="0.3s" />
+              <Skeleton className="h-8 w-8 rounded-lg" delay="0.35s" />
+            </div>
+          </div>
+          <div className="p-3 flex items-center gap-3">
+            <Skeleton className="flex-1 h-12 rounded-lg" delay="0.35s" />
+            <Skeleton className="h-12 w-12 rounded-lg" delay="0.4s" />
+          </div>
+        </div>
+
+        {/* Info card skeleton */}
+        <div className="border border-[var(--twilight)] rounded-xl p-5 sm:p-6 bg-[var(--dusk)]">
+          {/* Description skeleton */}
+          <Skeleton className="h-3 w-16 rounded mb-3" delay="0.4s" />
+          <div className="space-y-2 mb-5">
+            <Skeleton className="h-4 w-full rounded" delay="0.45s" />
+            <Skeleton className="h-4 w-[90%] rounded" delay="0.5s" />
+            <Skeleton className="h-4 w-[75%] rounded" delay="0.55s" />
+          </div>
+
+          {/* Location skeleton */}
+          <div className="pt-5 border-t border-[var(--twilight)] mb-5">
+            <Skeleton className="h-3 w-16 rounded mb-3" delay="0.6s" />
+            <div className="p-3 rounded-lg border border-[var(--twilight)] bg-[var(--void)]">
+              <Skeleton className="h-5 w-[50%] rounded mb-2" delay="0.65s" />
+              <Skeleton className="h-3 w-[70%] rounded" delay="0.7s" />
+            </div>
+          </div>
+
+          {/* Social proof skeleton */}
+          <div className="pt-5 border-t border-[var(--twilight)]">
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-8 w-8 rounded-full" delay="0.75s" />
+              <Skeleton className="h-8 w-8 rounded-full" delay="0.8s" />
+              <Skeleton className="h-8 w-8 rounded-full" delay="0.85s" />
+              <Skeleton className="h-4 w-24 rounded ml-1" delay="0.9s" />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -295,7 +410,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
     return (
       <div className="pt-6">
         <div className="relative aspect-[4/3] bg-[var(--dusk)] rounded-xl mb-4 flex items-center justify-center">
-          <NeonBackButton />
+          <NeonBackButton onClose={onClose} />
           <p className="text-[var(--muted)]">{error || "Event not found"}</p>
         </div>
       </div>
@@ -389,18 +504,21 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
             {!imageLoaded && (
               <div className="absolute inset-0 skeleton-shimmer" />
             )}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <Image
               src={event.image_url!}
               alt={event.title}
-              className={`absolute inset-0 w-full h-full ${isLowRes ? "object-contain" : "object-cover"} transition-opacity duration-300 ${
+              fill
+              sizes="(max-width: 640px) 100vw, 640px"
+              className={`${isLowRes ? "object-contain" : "object-cover"} transition-opacity duration-300 ${
                 imageLoaded ? "opacity-100" : "opacity-0"
               }`}
               onLoad={(e) => {
                 setImageLoaded(true);
-                if (e.currentTarget.naturalWidth < 600) setIsLowRes(true);
+                const img = e.currentTarget as HTMLImageElement;
+                if (img.naturalWidth > 0 && img.naturalWidth < 600) setIsLowRes(true);
               }}
               onError={() => setImageError(true)}
+              priority
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
           </>
@@ -425,7 +543,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
         )}
 
         {/* Back button - neon styled */}
-        <NeonBackButton />
+        <NeonBackButton onClose={onClose} />
 
         {/* Live badge - positioned on the right to avoid overlapping back button */}
         {isLive && (
@@ -466,6 +584,18 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
               </button>
               {event.venue.neighborhood && ` · ${event.venue.neighborhood}`}
             </p>
+          )}
+          {event.genres && event.genres.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {event.genres.slice(0, 4).map((genre) => (
+                <span
+                  key={genre}
+                  className="px-2 py-0.5 rounded-full text-[0.6rem] font-mono font-medium bg-white/15 text-white/90 backdrop-blur-sm border border-white/10"
+                >
+                  {genre.replace(/-/g, " ")}
+                </span>
+              ))}
+            </div>
           )}
         </div>
       </div>
@@ -732,16 +862,15 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
           </div>
         )}
 
-        {/* Tags Section - Event tags + Venue tags + Org tags */}
+        {/* Tags Section */}
         <div className="pt-5 border-t border-[var(--twilight)]">
-          <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
-            Community Tags
-          </h2>
-
-          {/* Event system tags (from crawlers) */}
+          {/* System tags (from crawlers) — always visible */}
           {event.tags && event.tags.length > 0 && (
             <div className="mb-4">
-              <div className="flex flex-wrap gap-2 mb-2">
+              <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
+                Tags
+              </h2>
+              <div className="flex flex-wrap gap-2">
                 {event.tags.map((tag) => (
                   <span
                     key={tag}
@@ -754,33 +883,12 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
             </div>
           )}
 
-          {/* Event community tags */}
-          <div className="mb-4">
-            <p className="text-[0.6rem] text-[var(--muted)] font-mono uppercase tracking-wider mb-2">
-              This Event
-            </p>
-            <EntityTagList entityType="event" entityId={event.id} />
-          </div>
-
-          {/* Venue community tags */}
-          {event.venue && (
-            <div className="mb-4">
-              <p className="text-[0.6rem] text-[var(--muted)] font-mono uppercase tracking-wider mb-2">
-                {event.venue.name}
-              </p>
-              <EntityTagList entityType="venue" entityId={event.venue.id} />
-            </div>
-          )}
-
-          {/* Org community tags */}
-          {event.producer && (
-            <div>
-              <p className="text-[0.6rem] text-[var(--muted)] font-mono uppercase tracking-wider mb-2">
-                {event.producer.name}
-              </p>
-              <EntityTagList entityType="org" entityId={Number(event.producer.id)} />
-            </div>
-          )}
+          {/* Community tags — collapsed by default to reduce scroll depth + API calls */}
+          <CommunityTagsSection
+            eventId={event.id}
+            venue={event.venue}
+            producer={event.producer}
+          />
         </div>
 
         {/* Flag */}
