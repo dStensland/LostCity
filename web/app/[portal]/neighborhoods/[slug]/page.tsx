@@ -176,7 +176,7 @@ export default async function NeighborhoodPage({ params }: Props) {
             {neighborhood.name}
           </h1>
           {neighborhood.tier === 1 && (
-            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[0.6rem] font-mono font-semibold uppercase tracking-wider bg-[var(--neon-amber)]/15 text-[var(--neon-amber)] border border-[var(--neon-amber)]/30">
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-2xs font-mono font-semibold uppercase tracking-wider bg-[var(--neon-amber)]/15 text-[var(--neon-amber)] border border-[var(--neon-amber)]/30">
               Active
             </span>
           )}
@@ -255,7 +255,7 @@ export default async function NeighborhoodPage({ params }: Props) {
                 <div className="font-mono text-xs font-medium text-[var(--cream)] truncate">
                   {n.name}
                 </div>
-                <div className="font-mono text-[0.55rem] text-[var(--muted)] mt-0.5">
+                <div className="font-mono text-2xs text-[var(--muted)] mt-0.5">
                   {getTierLabel(n.tier)}
                 </div>
               </Link>

@@ -97,7 +97,7 @@ export default function FilmWatchlist({ portalSlug }: FilmWatchlistProps) {
     return (
       <section className="space-y-4">
         <header>
-          <p className="text-[0.62rem] uppercase tracking-[0.18em] text-[#95a8cb]">My Watchlist</p>
+          <p className="text-xs uppercase tracking-[0.18em] text-[#95a8cb]">My Watchlist</p>
           <h2 className="mt-1 font-[var(--font-film-editorial)] text-3xl text-[#f7f8fd]">Saved films</h2>
         </header>
         <div className="flex items-center gap-4 rounded-2xl border border-[#2f3a56] bg-[#0c1322] p-5">
@@ -125,7 +125,7 @@ export default function FilmWatchlist({ portalSlug }: FilmWatchlistProps) {
   return (
     <section className="space-y-4">
       <header>
-        <p className="text-[0.62rem] uppercase tracking-[0.18em] text-[#95a8cb]">My Watchlist</p>
+        <p className="text-xs uppercase tracking-[0.18em] text-[#95a8cb]">My Watchlist</p>
         <h2 className="mt-1 font-[var(--font-film-editorial)] text-3xl text-[#f7f8fd]">Saved films</h2>
       </header>
       <div className="space-y-3">
@@ -160,7 +160,7 @@ export default function FilmWatchlist({ portalSlug }: FilmWatchlistProps) {
                 <h3 className="line-clamp-1 text-sm font-semibold text-[#f5f7fc]">
                   {event.series?.title || event.title}
                 </h3>
-                <p className="mt-1 text-[0.68rem] text-[#9fb0cf]">
+                <p className="mt-1 text-xs text-[#9fb0cf]">
                   {event.venue?.name && `Showing at ${event.venue.name}`}
                   {event.start_time && ` ${formatShortDate(event.start_date)} ${formatTimeLabel(event.start_time)}`}
                   {!event.start_time && ` ${formatShortDate(event.start_date)}`}

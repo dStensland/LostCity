@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase";
 import type { Portal } from "@/lib/portal-context";
 import { getCachedDomain, setCachedDomain } from "@/lib/domain-cache";
 import { normalizePortalSlug, resolvePortalSlugAlias } from "@/lib/portal-aliases";
+import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
 import crypto from "crypto";
 
 export type PortalVertical = "city" | "hotel" | "film" | "hospital" | "community" | "marketplace" | "dog";
@@ -307,42 +308,54 @@ export async function getPortalBySlug(slug: string): Promise<Portal | null> {
   const normalizedSlug = normalizePortalSlug(slug);
   const lookupSlug = resolvePortalSlugAlias(normalizedSlug);
 
-  // Try with all columns first (including B2B columns)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let result = await (supabase as any)
-    .from("portals")
-    .select(`${BASE_PORTAL_COLUMNS},${B2B_PORTAL_COLUMNS}`)
-    .eq("slug", lookupSlug)
-    .eq("status", "active")
-    .maybeSingle();
+  const basePortal = await getOrSetSharedCacheJson<Portal | null>(
+    "portal",
+    `slug:${lookupSlug}`,
+    5 * 60 * 1000,
+    async () => {
+      // Try with all columns first (including B2B columns)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let result = await (supabase as any)
+        .from("portals")
+        .select(`${BASE_PORTAL_COLUMNS},${B2B_PORTAL_COLUMNS}`)
+        .eq("slug", lookupSlug)
+        .eq("status", "active")
+        .maybeSingle();
 
-  // If error mentions missing columns, retry with just base columns
-  if (result.error && result.error.message?.includes("column")) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    result = await (supabase as any)
-      .from("portals")
-      .select(BASE_PORTAL_COLUMNS)
-      .eq("slug", lookupSlug)
-      .eq("status", "active")
-      .maybeSingle();
-  }
+      // If error mentions missing columns, retry with just base columns
+      if (result.error && result.error.message?.includes("column")) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        result = await (supabase as any)
+          .from("portals")
+          .select(BASE_PORTAL_COLUMNS)
+          .eq("slug", lookupSlug)
+          .eq("status", "active")
+          .maybeSingle();
+      }
 
-  if (result.error || !result.data) {
+      if (result.error || !result.data) {
+        return null;
+      }
+
+      return result.data as Portal;
+    },
+  );
+
+  if (!basePortal) {
     return null;
   }
 
-  const portal = result.data as Portal;
   if (normalizedSlug === lookupSlug) {
-    return portal;
+    return basePortal;
   }
 
   const aliasOverride = PORTAL_ALIAS_OVERRIDES[normalizedSlug];
   if (aliasOverride && aliasOverride.sourceSlug === lookupSlug) {
-    return applyPortalAliasOverride(portal, normalizedSlug, aliasOverride);
+    return applyPortalAliasOverride(basePortal, normalizedSlug, aliasOverride);
   }
 
   return {
-    ...portal,
+    ...basePortal,
     slug: normalizedSlug,
   };
 }

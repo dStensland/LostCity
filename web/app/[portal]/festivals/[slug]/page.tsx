@@ -342,7 +342,7 @@ export default async function PortalFestivalPage({ params }: Props) {
                   </svg>
                 </div>
                 <div>
-                  <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-2">
+                  <h2 className="font-mono text-xs font-medium text-[var(--muted)] uppercase tracking-widest mb-2">
                     Schedule Coming Soon
                   </h2>
                   <p className="text-sm text-[var(--soft)] leading-relaxed">

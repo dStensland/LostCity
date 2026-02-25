@@ -133,7 +133,7 @@ export default function FriendRequestCard({
     <div className="flex items-center gap-4 p-4 bg-[var(--dusk)] rounded-lg">
       {/* Avatar - always show initials for now */}
       <Link href={`/profile/${otherUser.username}`}>
-        <div className="w-12 h-12 rounded-full bg-[var(--coral)] flex items-center justify-center text-[var(--night)] font-bold">
+        <div className="w-12 h-12 rounded-full bg-[var(--coral)] flex items-center justify-center text-[var(--void)] font-bold">
           {getInitials(otherUser.display_name, otherUser.username)}
         </div>
       </Link>

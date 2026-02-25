@@ -465,7 +465,7 @@ export default function ExploreTrackDetail({
                 label="Tonight"
                 value={track.activity.tonightCount > 0 ? String(track.activity.tonightCount) : "None"}
                 detail={track.activity.tonightCount > 0 ? "Events live now" : "No events tonight"}
-                accent={track.activity.tonightCount > 0 ? "#E03A3E" : accent}
+                accent={track.activity.tonightCount > 0 ? "var(--explore-tonight)" : accent}
               />
               <LiveFact
                 label="Next up"
@@ -477,7 +477,7 @@ export default function ExploreTrackDetail({
                 label="Free"
                 value={track.activity.freeCount > 0 ? String(track.activity.freeCount) : "0"}
                 detail={track.activity.freeCount > 0 ? "Free events this week" : "No free events listed"}
-                accent="#34D399"
+                accent="var(--neon-green)"
               />
             </div>
           </div>
@@ -497,11 +497,11 @@ export default function ExploreTrackDetail({
             <div className="flex items-center gap-2 py-2 mb-3">
               <div
                 className="h-[2px] w-8 rounded-full"
-                style={{ background: "#E03A3E" }}
+                style={{ background: "var(--explore-tonight)" }}
               />
               <p
                 className="font-mono text-[10px] font-semibold uppercase tracking-[0.1em]"
-                style={{ color: "#E03A3E" }}
+                style={{ color: "var(--explore-tonight)" }}
               >
                 Active this week · {happeningNow.length}
               </p>
@@ -759,9 +759,9 @@ function ActivityBar({
   }
 
   const valueColors: Record<string, string> = {
-    tonight: "#E03A3E",
-    weekend: "#C1D32F",
-    free: "#34D399",
+    tonight: "var(--explore-tonight)",
+    weekend: "var(--explore-weekend)",
+    free: "var(--neon-green)",
     default: "var(--cream)",
   };
 

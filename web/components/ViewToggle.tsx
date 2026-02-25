@@ -121,7 +121,7 @@ export default function ViewToggle({ className = "" }: Props) {
           }`}
         >
           {view.icon}
-          <span className="sm:hidden text-[0.65rem]">{view.shortLabel}</span>
+          <span className="sm:hidden text-xs">{view.shortLabel}</span>
           <span className="hidden sm:inline">{view.label}</span>
         </button>
       ))}

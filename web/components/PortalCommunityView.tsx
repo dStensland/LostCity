@@ -124,7 +124,7 @@ function OrganizationCard({
             <div className="flex items-center gap-2 mt-1">
               <span
                 data-org-type={organization.org_type}
-                className="inline-flex items-center px-2 py-0.5 rounded-md text-[0.65rem] font-mono font-medium uppercase tracking-wider org-type-badge"
+                className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-mono font-medium uppercase tracking-wider org-type-badge"
               >
                 {orgConfig?.label || organization.org_type.replace(/_/g, " ")}
               </span>
@@ -146,7 +146,7 @@ function OrganizationCard({
           )}
 
           {hasSocialProof && (
-            <div className="mt-3 flex items-center gap-2 flex-wrap text-[0.65rem] font-mono text-[var(--muted)]">
+            <div className="mt-3 flex items-center gap-2 flex-wrap text-xs font-mono text-[var(--muted)]">
               {followerCount > 0 && (
                 <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-[var(--twilight)]/40 text-[var(--soft)]">
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -173,7 +173,7 @@ function OrganizationCard({
                   <span
                     key={cat}
                     data-category={cat}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[0.6rem] font-mono uppercase tracking-wider org-category-chip"
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-mono uppercase tracking-wider org-category-chip"
                   >
                     <CategoryIcon type={cat} size={10} glow="none" />
                     {cat.replace(/_/g, " ")}
@@ -352,12 +352,12 @@ export default function PortalCommunityView({ portalId, portalSlug, portalName }
             </p>
           </div>
           <div className="flex items-center gap-1">
-            <span className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider mr-2 hidden sm:inline">
+            <span className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider mr-2 hidden sm:inline">
               Sort:
             </span>
             <button
               onClick={() => setSortBy("category")}
-              className={`px-2 py-1 rounded font-mono text-[0.65rem] transition-all ${
+              className={`px-2 py-1 rounded font-mono text-xs transition-all ${
                 sortBy === "category"
                   ? "bg-[var(--coral)] text-[var(--void)]"
                   : "bg-[var(--twilight)]/50 text-[var(--muted)] hover:text-[var(--cream)]"
@@ -367,7 +367,7 @@ export default function PortalCommunityView({ portalId, portalSlug, portalName }
             </button>
             <button
               onClick={() => setSortBy("alphabetical")}
-              className={`px-2 py-1 rounded font-mono text-[0.65rem] transition-all ${
+              className={`px-2 py-1 rounded font-mono text-xs transition-all ${
                 sortBy === "alphabetical"
                   ? "bg-[var(--coral)] text-[var(--void)]"
                   : "bg-[var(--twilight)]/50 text-[var(--muted)] hover:text-[var(--cream)]"
@@ -464,7 +464,7 @@ export default function PortalCommunityView({ portalId, portalSlug, portalName }
                   >
                     {orgConfig?.label || type.replace(/_/g, " ")}
                   </h3>
-                  <span className="font-mono text-[0.6rem] text-[var(--muted)] mr-2">
+                  <span className="font-mono text-xs text-[var(--muted)] mr-2">
                     {groupOrganizations.length}
                   </span>
                   <svg

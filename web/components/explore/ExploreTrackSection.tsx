@@ -72,7 +72,7 @@ export default function ExploreTrackSection({
           {/* Venue count pill */}
           <div className="mt-2 flex items-center gap-2">
             <span
-              className="text-[0.6rem] font-mono px-2 py-0.5 rounded-full"
+              className="text-xs font-mono px-2 py-0.5 rounded-full"
               style={{
                 color: EXPLORE_THEME.primary,
                 background: `${EXPLORE_THEME.primary}15`,
@@ -112,7 +112,7 @@ export default function ExploreTrackSection({
             >
               <div className="text-center px-2">
                 <span
-                  className="text-[0.65rem] font-mono block"
+                  className="text-xs font-mono block"
                   style={{ color: EXPLORE_THEME.primary }}
                 >
                   +{track.venueCount - track.previewVenues.length} more
@@ -192,7 +192,7 @@ function VenueThumb({
         {/* Alive badge — upcoming events */}
         {hasEvents && (
           <div
-            className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-full text-[0.5rem] font-mono font-bold"
+            className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-full text-2xs font-mono font-bold"
             style={{
               background: EXPLORE_THEME.primary,
               color: EXPLORE_THEME.bg,
@@ -206,14 +206,14 @@ function VenueThumb({
       {/* Info */}
       <div className="px-2 py-1.5">
         <h4
-          className="text-[0.7rem] font-semibold truncate leading-tight"
+          className="text-xs font-semibold truncate leading-tight"
           style={{ color: EXPLORE_THEME.text }}
         >
           {venue.name}
         </h4>
         {venue.neighborhood && (
           <p
-            className="text-[0.55rem] font-mono mt-0.5 truncate"
+            className="text-2xs font-mono mt-0.5 truncate"
             style={{ color: EXPLORE_THEME.muted }}
           >
             {venue.neighborhood}

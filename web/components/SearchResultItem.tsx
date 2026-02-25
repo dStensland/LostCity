@@ -56,12 +56,12 @@ export default function SearchResultItem({
       <div className="flex-1 min-w-0">
         <p
           className={`font-medium text-[var(--cream)] truncate group-hover:${config.hoverClass} transition-colors ${
-            compact ? "text-sm" : "text-[0.9375rem]"
+            compact ? "text-sm" : "text-base"
           }`}
         >
           {result.title}
         </p>
-        <p className={`text-[var(--muted)] truncate ${compact ? "text-xs" : "text-[0.8125rem]"}`}>
+        <p className={`text-[var(--muted)] truncate ${compact ? "text-xs" : "text-sm"}`}>
           {getSubtitle(result)}
         </p>
       </div>
@@ -69,7 +69,7 @@ export default function SearchResultItem({
       {/* Badge */}
       {getBadge(result) && (
         <span
-          className={`text-[0.6rem] font-mono uppercase tracking-wide px-2 py-0.5 rounded-full flex-shrink-0 ${getBadgeClasses(
+          className={`text-xs font-mono uppercase tracking-wide px-2 py-0.5 rounded-full flex-shrink-0 ${getBadgeClasses(
             result
           )}`}
         >
@@ -388,7 +388,7 @@ function getBadgeClasses(result: SearchResult): string {
 
   if (result.type === "list") {
     // Use soft/neutral color to distinguish from "Free" badge
-    return "bg-[var(--soft)]/20 text-[var(--soft)] border border-[var(--soft)]/30";
+    return "bg-[var(--soft)]/20 text-[var(--soft)] border border-[var(--twilight)]/30";
   }
 
   return "bg-[var(--dusk)] text-[var(--soft)] border border-[var(--twilight)]";
@@ -432,7 +432,7 @@ export function SearchResultSection({
           {labels[type] || type}
         </span>
         {count !== undefined && (
-          <span className="text-[0.62rem] px-1.5 py-0.5 rounded-full bg-[var(--night)]/60 border border-[var(--twilight)] text-[var(--muted)]/90">
+          <span className="text-xs px-1.5 py-0.5 rounded-full bg-[var(--night)]/60 border border-[var(--twilight)] text-[var(--muted)]/90">
             {count}
           </span>
         )}

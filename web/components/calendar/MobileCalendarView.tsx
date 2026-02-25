@@ -241,7 +241,7 @@ export default function MobileCalendarView({
           {!isToday(selectedDate) && (
             <button
               onClick={goToToday}
-              className="px-2 py-1 rounded-full font-mono text-[0.65rem] font-medium bg-[var(--coral)] text-[var(--void)] hover:bg-[var(--rose)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]/70"
+              className="px-2 py-1 rounded-full font-mono text-xs font-medium bg-[var(--coral)] text-[var(--void)] hover:bg-[var(--rose)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]/70"
             >
               Today
             </button>
@@ -278,7 +278,7 @@ export default function MobileCalendarView({
           {/* Week day headers */}
           <div className="grid grid-cols-7 mb-1">
             {weekDayLabels.map((day, i) => (
-              <div key={i} className="py-1 text-center font-mono text-[0.6rem] text-[var(--muted)] uppercase">
+              <div key={i} className="py-1 text-center font-mono text-xs text-[var(--muted)] uppercase">
                 {day}
               </div>
             ))}
@@ -343,7 +343,7 @@ export default function MobileCalendarView({
           </div>
         </div>
         {isToday(selectedDate) && (
-          <span className="px-2 py-0.5 rounded-full bg-[var(--gold)] text-[var(--void)] font-mono text-[0.6rem] font-medium">
+          <span className="px-2 py-0.5 rounded-full bg-[var(--gold)] text-[var(--void)] font-mono text-xs font-medium">
             TODAY
           </span>
         )}
@@ -449,7 +449,7 @@ function EventCard({
           {period && <span className="text-xs ml-0.5 opacity-60">{period}</span>}
         </span>
         {event.is_free && (
-          <span className="px-1.5 py-0.5 rounded-full bg-[var(--neon-green)]/20 text-[var(--neon-green)] font-mono text-[0.55rem] font-medium">
+          <span className="px-1.5 py-0.5 rounded-full bg-[var(--neon-green)]/20 text-[var(--neon-green)] font-mono text-2xs font-medium">
             FREE
           </span>
         )}

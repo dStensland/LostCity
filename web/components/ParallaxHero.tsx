@@ -97,12 +97,12 @@ export default function ParallaxHero({ src, alt, width, height }: ParallaxHeroPr
 
       {/* Bottom fade - deeper, more dramatic */}
       <div
-        className="absolute bottom-0 left-0 right-0 h-40 z-10 pointer-events-none bg-[linear-gradient(to_top,_#08080c_0%,_rgba(8,8,12,0.8)_40%,_transparent_100%)]"
+        className="absolute bottom-0 left-0 right-0 h-40 z-10 pointer-events-none bg-[linear-gradient(to_top,_var(--void)_0%,_color-mix(in_srgb,var(--void)_80%,transparent)_40%,_transparent_100%)]"
       />
 
       {/* Top subtle fade */}
       <div
-        className="absolute top-0 left-0 right-0 h-20 z-10 pointer-events-none bg-[linear-gradient(to_bottom,_rgba(8,8,12,0.4)_0%,_transparent_100%)]"
+        className="absolute top-0 left-0 right-0 h-20 z-10 pointer-events-none bg-[linear-gradient(to_bottom,_color-mix(in_srgb,var(--void)_40%,transparent)_0%,_transparent_100%)]"
       />
 
       {/* Vignette */}

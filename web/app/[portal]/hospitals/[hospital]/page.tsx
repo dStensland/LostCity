@@ -921,7 +921,7 @@ export default async function HospitalLandingPage({ params, searchParams }: Prop
                     <img src={eventCard.imageUrl || getEventFallbackImage(null, eventCard.title)} alt={eventCard.title} className="h-32 w-full object-cover" />
                     <div className="p-3">
                       <p className="text-[10.5px] font-bold uppercase tracking-[0.07em] text-[#8094b3]">Event</p>
-                      <h3 className="mt-0.5 text-[1rem] leading-[1.08] text-[#002f6c] font-semibold">{eventCard.title}</h3>
+                      <h3 className="mt-0.5 text-base leading-[1.08] text-[#002f6c] font-semibold">{eventCard.title}</h3>
                       <p className="mt-1 text-xs text-[#4b5563]">{eventCard.schedule}</p>
                       <p className="mt-0.5 text-[11px] text-[#6b7280]">{eventCard.subtitle}</p>
 

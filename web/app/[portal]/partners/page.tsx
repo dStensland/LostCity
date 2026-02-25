@@ -86,7 +86,7 @@ export default async function FilmPartnersPage({ params }: Props) {
       <main className="mx-auto max-w-6xl px-4 pb-16 pt-6 space-y-6">
         <FilmPortalNav portalSlug={portal.slug} />
         <header>
-          <p className="text-[0.64rem] uppercase tracking-[0.18em] text-[#8fa2c4]">Atlanta Film</p>
+          <p className="text-xs uppercase tracking-[0.18em] text-[#8fa2c4]">Atlanta Film</p>
           <h1 className="mt-1 font-[var(--font-film-editorial)] text-4xl text-[#f7f7fb]">Partner Programs</h1>
           <p className="mt-2 max-w-3xl text-sm text-[#b8c7e3]">
             Partnerships are designed as native storytelling placements that support Atlanta&apos;s film culture and vendor outcomes.
@@ -108,12 +108,12 @@ export default async function FilmPartnersPage({ params }: Props) {
         </section>
 
         <section className="rounded-2xl border border-[#2a3349] bg-[#0d1424] p-4 md:p-5">
-          <p className="text-[0.62rem] uppercase tracking-[0.18em] text-[#9ab0d8]">Lost City Strategy Track</p>
+          <p className="text-xs uppercase tracking-[0.18em] text-[#9ab0d8]">Lost City Strategy Track</p>
           <h2 className="mt-1 font-[var(--font-film-editorial)] text-2xl text-[#f7f7fb]">How we sequence growth</h2>
           <div className="mt-3 grid gap-3 md:grid-cols-3">
             {strategyTrack.map((item) => (
               <article key={item.phase} className="rounded-xl border border-[#32405f] bg-[#0f182c] p-3">
-                <p className="text-[0.62rem] uppercase tracking-[0.13em] text-[#b9c9ea]">{item.phase}</p>
+                <p className="text-xs uppercase tracking-[0.13em] text-[#b9c9ea]">{item.phase}</p>
                 <h3 className="mt-1 text-sm font-semibold text-[#e5edff]">{item.focus}</h3>
                 <p className="mt-1.5 text-xs text-[#b3c4e4]">{item.detail}</p>
               </article>
@@ -123,7 +123,7 @@ export default async function FilmPartnersPage({ params }: Props) {
 
         <section className="space-y-3">
           <div>
-            <p className="text-[0.62rem] uppercase tracking-[0.18em] text-[#9ab0d8]">Sales Traction Signals</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-[#9ab0d8]">Sales Traction Signals</p>
             <h2 className="mt-1 font-[var(--font-film-editorial)] text-2xl text-[#f7f7fb]">Current proof for interested vendors</h2>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -131,7 +131,7 @@ export default async function FilmPartnersPage({ params }: Props) {
               <article key={signal.label} className="rounded-xl border border-[#2e3a57] bg-[#0d1426] p-3.5">
                 <p className="text-xl font-semibold text-[#ecf2ff]">{signal.metric}</p>
                 <p className="mt-1 text-sm text-[#d3def3]">{signal.label}</p>
-                <p className="mt-1.5 text-[0.66rem] leading-relaxed text-[#9fb1d4]">{signal.context}</p>
+                <p className="mt-1.5 text-xs leading-relaxed text-[#9fb1d4]">{signal.context}</p>
               </article>
             ))}
           </div>

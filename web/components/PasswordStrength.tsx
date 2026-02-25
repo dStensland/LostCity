@@ -146,11 +146,11 @@ export const PasswordStrength = memo(function PasswordStrength({ password }: Pas
 
       {/* Label and feedback */}
       <div className="flex justify-between items-center">
-        <span className={`font-mono text-[0.65rem] ${textColors[strength.level]}`}>
+        <span className={`font-mono text-xs ${textColors[strength.level]}`}>
           {labels[strength.level]}
         </span>
         {strength.feedback && (
-          <span className="font-mono text-[0.65rem] text-[var(--muted)]">
+          <span className="font-mono text-xs text-[var(--muted)]">
             {strength.feedback}
           </span>
         )}

@@ -432,7 +432,7 @@ export default function CalendarPage() {
                 </svg>
                 Friends
                 {selectedFriendIds.size > 0 && (
-                  <span className="px-1.5 py-0.5 rounded-full bg-[var(--neon-magenta)] text-[var(--void)] text-[0.6rem] font-bold">
+                  <span className="px-1.5 py-0.5 rounded-full bg-[var(--neon-magenta)] text-[var(--void)] text-2xs font-bold">
                     {selectedFriendIds.size}
                   </span>
                 )}
@@ -544,7 +544,7 @@ export default function CalendarPage() {
                         className="w-[18px] h-[18px] rounded-full object-cover"
                       />
                     ) : (
-                      <span className="w-[18px] h-[18px] rounded-full bg-[var(--cosmic-blue)] flex items-center justify-center text-[0.5rem]">
+                      <span className="w-[18px] h-[18px] rounded-full bg-[var(--cosmic-blue)] flex items-center justify-center text-2xs">
                         {(friend.display_name || friend.username)[0].toUpperCase()}
                       </span>
                     )}
@@ -623,7 +623,7 @@ export default function CalendarPage() {
 
             <div className="sm:hidden mb-3 px-0.5">
               <WeekStrip days={mobileWeekStripDays} onSelect={setSelectedDate} />
-              <div className="mt-2 text-[0.65rem] font-mono text-[var(--muted)]">
+              <div className="mt-2 text-xs font-mono text-[var(--muted)]">
                 Week focus on mobile. Use arrows to move month.
               </div>
             </div>
@@ -632,7 +632,7 @@ export default function CalendarPage() {
               {weekDays.map((day) => (
                 <div
                   key={day}
-                  className="py-1.5 text-center font-mono text-[0.58rem] text-[var(--muted)] uppercase tracking-[0.14em]"
+                  className="py-1.5 text-center font-mono text-2xs text-[var(--muted)] uppercase tracking-[0.14em]"
                 >
                   {day}
                 </div>
@@ -655,7 +655,7 @@ export default function CalendarPage() {
               ))}
             </div>
 
-            <div className="mt-4 pt-3 border-t border-[var(--twilight)]/65 hidden sm:flex flex-wrap items-center gap-3 text-[0.65rem] text-[var(--muted)] font-mono">
+            <div className="mt-4 pt-3 border-t border-[var(--twilight)]/65 hidden sm:flex flex-wrap items-center gap-3 text-xs text-[var(--muted)] font-mono">
               <span className="flex items-center gap-1.5">
                 <span className="w-3 h-3 rounded border-2 border-[var(--gold)]" />
                 Today
@@ -684,23 +684,23 @@ export default function CalendarPage() {
                   <div className="font-mono text-[11px] text-[var(--muted)] uppercase tracking-widest">
                     {format(selectedDate, "EEEE")}
                   </div>
-                  <div className="font-mono text-[1.4rem] leading-none font-bold text-[var(--cream)] mt-1">
+                  <div className="font-mono text-2xl leading-none font-bold text-[var(--cream)] mt-1">
                     {format(selectedDate, "MMMM d, yyyy")}
                   </div>
                   <div className="mt-2 flex items-center gap-1.5">
                     {isToday(selectedDate) && (
-                      <span className="inline-block px-2 py-0.5 rounded-full bg-[var(--gold)] text-[var(--void)] font-mono text-[0.6rem] font-medium">
+                      <span className="inline-block px-2 py-0.5 rounded-full bg-[var(--gold)] text-[var(--void)] font-mono text-2xs font-medium">
                         TODAY
                       </span>
                     )}
-                    <span className="inline-block px-2 py-0.5 rounded-full border border-[var(--twilight)]/75 bg-[var(--dusk)]/70 text-[var(--soft)] font-mono text-[0.6rem] font-medium">
+                    <span className="inline-block px-2 py-0.5 rounded-full border border-[var(--twilight)]/75 bg-[var(--dusk)]/70 text-[var(--soft)] font-mono text-2xs font-medium">
                       {selectedDayEvents.length + selectedDayFriendEvents.length} planned
                     </span>
                   </div>
                   <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
                     <Link
                       href={buildFindHref(selectedDate)}
-                      className="inline-flex items-center px-2 py-1 rounded-full border border-[var(--coral)]/45 bg-[var(--coral)]/15 text-[var(--coral)] hover:bg-[var(--coral)]/24 transition-colors font-mono text-[0.62rem] font-medium"
+                      className="inline-flex items-center px-2 py-1 rounded-full border border-[var(--coral)]/45 bg-[var(--coral)]/15 text-[var(--coral)] hover:bg-[var(--coral)]/24 transition-colors font-mono text-xs font-medium"
                     >
                       Add from Find
                     </Link>
@@ -708,7 +708,7 @@ export default function CalendarPage() {
                       <Link
                         key={category}
                         href={buildFindHref(selectedDate, category)}
-                        className="inline-flex items-center px-2 py-1 rounded-full border border-[var(--twilight)]/70 bg-[var(--void)]/70 text-[var(--soft)] hover:text-[var(--cream)] hover:border-[var(--coral)]/40 transition-colors font-mono text-[0.62rem]"
+                        className="inline-flex items-center px-2 py-1 rounded-full border border-[var(--twilight)]/70 bg-[var(--void)]/70 text-[var(--soft)] hover:text-[var(--cream)] hover:border-[var(--coral)]/40 transition-colors font-mono text-xs"
                       >
                         {formatCategoryLabel(category)}
                       </Link>
@@ -749,9 +749,9 @@ export default function CalendarPage() {
                                   <div className="flex items-center justify-between gap-2 mb-1.5">
                                     <span className="font-mono text-xs text-[var(--soft)]">
                                       {time}
-                                      {period && <span className="text-[0.6rem] ml-0.5 opacity-60">{period}</span>}
+                                      {period && <span className="text-2xs ml-0.5 opacity-60">{period}</span>}
                                     </span>
-                                    <span className={`px-1.5 py-0.5 rounded-full font-mono text-[0.55rem] font-medium ${
+                                    <span className={`px-1.5 py-0.5 rounded-full font-mono text-2xs font-medium ${
                                       event.rsvp_status === "going"
                                         ? "bg-[var(--coral)]/20 text-[var(--coral)]"
                                         : "bg-[var(--gold)]/20 text-[var(--gold)]"
@@ -805,14 +805,14 @@ export default function CalendarPage() {
                                     className="w-[18px] h-[18px] rounded-full object-cover"
                                   />
                                 ) : (
-                                  <span className="w-[18px] h-[18px] rounded-full bg-[var(--cosmic-blue)] flex items-center justify-center text-[0.5rem] text-[var(--muted)]">
+                                  <span className="w-[18px] h-[18px] rounded-full bg-[var(--cosmic-blue)] flex items-center justify-center text-2xs text-[var(--muted)]">
                                     {(event.friend.display_name || event.friend.username)[0].toUpperCase()}
                                   </span>
                                 )}
                                 <span className="font-mono text-xs text-[var(--soft)] truncate">
                                   {event.friend.display_name || event.friend.username}
                                 </span>
-                                <span className={`ml-auto px-1.5 py-0.5 rounded-full font-mono text-[0.55rem] font-medium ${
+                                <span className={`ml-auto px-1.5 py-0.5 rounded-full font-mono text-2xs font-medium ${
                                   event.rsvp_status === "going"
                                     ? "bg-[var(--coral)]/20 text-[var(--coral)]"
                                     : "bg-[var(--gold)]/20 text-[var(--gold)]"
@@ -823,7 +823,7 @@ export default function CalendarPage() {
 
                               <div className="font-mono text-xs text-[var(--muted)] mb-1">
                                 {time}
-                                {period && <span className="text-[0.6rem] ml-0.5 opacity-60">{period}</span>}
+                                {period && <span className="text-2xs ml-0.5 opacity-60">{period}</span>}
                               </div>
 
                               <span className="text-sm text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors line-clamp-2">

@@ -105,7 +105,7 @@ function ReasonBadge({ reason, size = "sm" }: ReasonBadgeProps) {
   const style = REASON_STYLES[reason.type] || REASON_STYLES.category;
 
   const sizeClasses = size === "sm"
-    ? "text-[0.6rem] px-1.5 py-0.5 gap-1"
+    ? "text-xs px-1.5 py-0.5 gap-1"
     : "text-xs px-2 py-1 gap-1.5";
 
   return (

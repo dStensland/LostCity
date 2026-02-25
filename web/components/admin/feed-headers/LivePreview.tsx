@@ -91,7 +91,7 @@ export default function LivePreview({
 
   return (
     <div className="space-y-2">
-      <h3 className="font-mono text-[0.5625rem] uppercase tracking-wider text-[var(--muted)]">
+      <h3 className="font-mono text-2xs uppercase tracking-wider text-[var(--muted)]">
         Live Preview
       </h3>
       <div

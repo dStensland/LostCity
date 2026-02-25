@@ -217,7 +217,7 @@ export default function PortalHappeningNow({ portalId, portalSlug, isExclusive =
             {events.length} LIVE NOW
           </p>
         </div>
-        <span className="font-mono text-[0.6rem] text-[var(--muted)] opacity-60">
+        <span className="font-mono text-xs text-[var(--muted)] opacity-60">
           Auto-updates every minute
         </span>
       </div>

@@ -149,7 +149,7 @@ export function CategoryPicker({
       <div className="mx-auto w-full max-w-4xl animate-fadeIn">
         {/* Header */}
         <div className="mb-8 text-center">
-          <p className="mb-2 font-mono text-[0.65rem] uppercase tracking-[0.24em] text-[var(--soft)]">
+          <p className="mb-2 font-mono text-xs uppercase tracking-[0.24em] text-[var(--soft)]">
             Step 1 · Signal Your Taste
           </p>
           <h1 className="mb-2 text-2xl font-semibold text-[var(--cream)] sm:text-3xl">
@@ -170,10 +170,10 @@ export function CategoryPicker({
         {/* Category grid */}
         <div className="relative mb-8 overflow-hidden rounded-2xl border border-[var(--twilight)]/45 bg-[linear-gradient(155deg,rgba(14,18,31,0.9),rgba(8,11,20,0.95))] p-4 sm:p-5">
           <div className="mb-4 flex items-center justify-between">
-            <p className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-[var(--muted)]">
+            <p className="font-mono text-xs uppercase tracking-[0.2em] text-[var(--muted)]">
               {loadingCategories ? "Loading live categories..." : `${displayCategories.length} categories available`}
             </p>
-            <p className="font-mono text-[0.7rem] text-[var(--soft)]">
+            <p className="font-mono text-xs text-[var(--soft)]">
               {selectedCategories.length} selected
             </p>
           </div>

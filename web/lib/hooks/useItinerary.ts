@@ -296,6 +296,11 @@ export function useItinerary(portalId: string, portalSlug: string): UseItinerary
           walk_distance_meters: walkDistance,
           walk_time_minutes: walkTime,
           notes: input.notes || null,
+          // Cached display data so anonymous items render correctly
+          venue_name: input.venue_name,
+          venue_image: input.venue_image ?? null,
+          event_title: input.event_title,
+          event_image: input.event_image ?? null,
         };
 
         const updatedItems = [...items, newItem];

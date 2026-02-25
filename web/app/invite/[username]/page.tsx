@@ -136,7 +136,7 @@ export default function InvitePage({ params }: Props) {
           </p>
           <Link
             href={`/${DEFAULT_PORTAL_SLUG}`}
-            className="inline-block bg-[var(--coral)] text-[var(--night)] px-6 py-3 rounded font-medium hover:opacity-90"
+            className="inline-block bg-[var(--coral)] text-[var(--void)] px-6 py-3 rounded font-medium hover:opacity-90"
           >
             Go to Home
           </Link>
@@ -163,7 +163,7 @@ export default function InvitePage({ params }: Props) {
                 className="w-24 h-24 rounded-full mx-auto mb-4 object-cover"
               />
             ) : (
-              <div className="w-24 h-24 rounded-full mx-auto mb-4 bg-[var(--coral)] flex items-center justify-center text-[var(--night)] text-2xl font-bold">
+              <div className="w-24 h-24 rounded-full mx-auto mb-4 bg-[var(--coral)] flex items-center justify-center text-[var(--void)] text-2xl font-bold">
                 {getInitials(inviter.display_name, inviter.username)}
               </div>
             )}
@@ -200,7 +200,7 @@ export default function InvitePage({ params }: Props) {
           <div className="space-y-3">
             <Link
               href={`/auth/signup?redirect=/invite/${username}/complete&inviter=${username}${autoFriend ? "&auto=1" : ""}`}
-              className="block w-full bg-[var(--coral)] text-[var(--night)] py-3 rounded font-medium text-center hover:opacity-90"
+              className="block w-full bg-[var(--coral)] text-[var(--void)] py-3 rounded font-medium text-center hover:opacity-90"
             >
               Sign Up
             </Link>
@@ -242,7 +242,7 @@ export default function InvitePage({ params }: Props) {
             </p>
             <Link
               href="/settings"
-              className="inline-block bg-[var(--coral)] text-[var(--night)] px-6 py-3 rounded font-medium hover:opacity-90"
+              className="inline-block bg-[var(--coral)] text-[var(--void)] px-6 py-3 rounded font-medium hover:opacity-90"
             >
               Copy Your Invite Link
             </Link>
@@ -268,7 +268,7 @@ export default function InvitePage({ params }: Props) {
                 className="w-24 h-24 rounded-full mx-auto mb-4 object-cover"
               />
             ) : (
-              <div className="w-24 h-24 rounded-full mx-auto mb-4 bg-[var(--coral)] flex items-center justify-center text-[var(--night)] text-2xl font-bold">
+              <div className="w-24 h-24 rounded-full mx-auto mb-4 bg-[var(--coral)] flex items-center justify-center text-[var(--void)] text-2xl font-bold">
                 {getInitials(inviter.display_name, inviter.username)}
               </div>
             )}
@@ -295,7 +295,7 @@ export default function InvitePage({ params }: Props) {
                 </p>
                 <Link
                   href={`/profile/${inviter.username}`}
-                  className="inline-block bg-[var(--coral)] text-[var(--night)] px-6 py-3 rounded font-medium hover:opacity-90"
+                  className="inline-block bg-[var(--coral)] text-[var(--void)] px-6 py-3 rounded font-medium hover:opacity-90"
                 >
                   View Profile
                 </Link>
@@ -310,7 +310,7 @@ export default function InvitePage({ params }: Props) {
                 </p>
                 <Link
                   href={`/${DEFAULT_PORTAL_SLUG}`}
-                  className="inline-block bg-[var(--coral)] text-[var(--night)] px-6 py-3 rounded font-medium hover:opacity-90"
+                  className="inline-block bg-[var(--coral)] text-[var(--void)] px-6 py-3 rounded font-medium hover:opacity-90"
                 >
                   Explore Events
                 </Link>
@@ -325,7 +325,7 @@ export default function InvitePage({ params }: Props) {
                 <button
                   onClick={handleAddFriend}
                   disabled={actionLoading}
-                  className="w-full bg-[var(--coral)] text-[var(--night)] py-3 rounded font-medium hover:opacity-90 disabled:opacity-50"
+                  className="w-full bg-[var(--coral)] text-[var(--void)] py-3 rounded font-medium hover:opacity-90 disabled:opacity-50"
                 >
                   {actionLoading ? "Accepting..." : "Accept Friend Request"}
                 </button>
@@ -340,7 +340,7 @@ export default function InvitePage({ params }: Props) {
                 <button
                   onClick={handleAddFriend}
                   disabled={actionLoading}
-                  className="w-full bg-[var(--coral)] text-[var(--night)] py-3 rounded font-medium hover:opacity-90 disabled:opacity-50"
+                  className="w-full bg-[var(--coral)] text-[var(--void)] py-3 rounded font-medium hover:opacity-90 disabled:opacity-50"
                 >
                   {actionLoading ? "Sending..." : "Add as Friend"}
                 </button>

@@ -92,7 +92,7 @@ export default function ContextPanel({
       <h3 className="font-mono text-xs uppercase tracking-wider text-[var(--muted)] mb-3">
         City Context
       </h3>
-      <p className="font-mono text-[0.6875rem] text-[var(--soft)] mb-3">
+      <p className="font-mono text-xs text-[var(--soft)] mb-3">
         {dayLabel} {slotLabel}
       </p>
 
@@ -122,7 +122,7 @@ export default function ContextPanel({
           {/* Day theme */}
           {stats.day_theme && (
             <div>
-              <span className="font-mono text-[0.5625rem] uppercase tracking-wider text-[var(--muted)]">
+              <span className="font-mono text-2xs uppercase tracking-wider text-[var(--muted)]">
                 Theme
               </span>
               <p className="font-mono text-xs text-[var(--cream)] mt-0.5">
@@ -134,7 +134,7 @@ export default function ContextPanel({
           {/* Weather */}
           {stats.weather && (
             <div>
-              <span className="font-mono text-[0.5625rem] uppercase tracking-wider text-[var(--muted)]">
+              <span className="font-mono text-2xs uppercase tracking-wider text-[var(--muted)]">
                 Weather
               </span>
               <p className="font-mono text-xs text-[var(--cream)] mt-0.5">
@@ -146,14 +146,14 @@ export default function ContextPanel({
           {/* Holidays / Festivals */}
           {stats.active_holidays.length > 0 && (
             <div>
-              <span className="font-mono text-[0.5625rem] uppercase tracking-wider text-[var(--muted)]">
+              <span className="font-mono text-2xs uppercase tracking-wider text-[var(--muted)]">
                 Holidays
               </span>
               <div className="flex flex-wrap gap-1 mt-1">
                 {stats.active_holidays.map((h) => (
                   <span
                     key={h}
-                    className="px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 font-mono text-[0.5625rem]"
+                    className="px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 font-mono text-2xs"
                   >
                     {h}
                   </span>
@@ -164,14 +164,14 @@ export default function ContextPanel({
 
           {stats.active_festivals.length > 0 && (
             <div>
-              <span className="font-mono text-[0.5625rem] uppercase tracking-wider text-[var(--muted)]">
+              <span className="font-mono text-2xs uppercase tracking-wider text-[var(--muted)]">
                 Festivals
               </span>
               <div className="flex flex-wrap gap-1 mt-1">
                 {stats.active_festivals.map((f) => (
                   <span
                     key={f}
-                    className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono text-[0.5625rem]"
+                    className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono text-2xs"
                   >
                     {f}
                   </span>
@@ -183,14 +183,14 @@ export default function ContextPanel({
           {/* Top categories */}
           {stats.top_categories.length > 0 && (
             <div>
-              <span className="font-mono text-[0.5625rem] uppercase tracking-wider text-[var(--muted)]">
+              <span className="font-mono text-2xs uppercase tracking-wider text-[var(--muted)]">
                 Top Categories
               </span>
               <div className="flex flex-wrap gap-1 mt-1">
                 {stats.top_categories.slice(0, 5).map((cat) => (
                   <span
                     key={cat}
-                    className="px-1.5 py-0.5 rounded bg-[var(--twilight)] text-[var(--soft)] font-mono text-[0.5625rem]"
+                    className="px-1.5 py-0.5 rounded bg-[var(--twilight)] text-[var(--soft)] font-mono text-2xs"
                   >
                     {cat}
                   </span>

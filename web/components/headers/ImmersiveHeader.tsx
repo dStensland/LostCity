@@ -207,7 +207,7 @@ export default function ImmersiveHeader({
                     />
                   </Link>
                   {!branding?.hide_attribution && scrollProgress > 0.5 && (
-                    <div className="hidden lg:flex items-center gap-1 text-[0.6rem] text-white/60 font-mono">
+                    <div className="hidden lg:flex items-center gap-1 text-xs text-white/60 font-mono">
                       <span>powered by</span>
                       <Link href={`/${DEFAULT_PORTAL_SLUG}`} className="text-[var(--coral)] hover:opacity-80 transition-opacity">
                         Lost City
@@ -282,7 +282,7 @@ export default function ImmersiveHeader({
 
               {mobileMenuOpen && (
                 <div className="absolute right-0 top-full mt-2 w-56 py-2 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg shadow-xl z-[200]">
-                  <div className="px-3 py-1.5 text-[0.65rem] font-mono text-[var(--muted)] uppercase tracking-wider">
+                  <div className="px-3 py-1.5 text-xs font-mono text-[var(--muted)] uppercase tracking-wider">
                     Navigate
                   </div>
                   {TABS.map((tab) => (

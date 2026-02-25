@@ -266,7 +266,7 @@ export default function SubmitOrgPage() {
               >
                 {index + 1}. {label}
               </span>
-              {index < 2 && <span className="text-[var(--twilight)]">—</span>}
+              {index < 2 && <span className="text-[var(--muted)]">—</span>}
             </div>
           ))}
         </div>

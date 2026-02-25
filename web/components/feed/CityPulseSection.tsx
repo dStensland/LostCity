@@ -15,6 +15,7 @@ import type {
 import WeatherDiscoverySection from "./sections/WeatherDiscoverySection";
 import TrendingSection from "./sections/TrendingSection";
 import ComingUpSection from "./sections/ComingUpSection";
+import TheSceneSection from "./sections/TheSceneSection";
 import BrowseSection from "./sections/BrowseSection";
 import ConversionCard from "./ConversionCard";
 
@@ -42,6 +43,9 @@ export default function CityPulseSection({
         return <TrendingSection section={section} portalSlug={portalSlug} />;
       case "coming_up":
         return <ComingUpSection section={section} portalSlug={portalSlug} excludeEventIds={excludeEventIds} />;
+      case "the_scene":
+      case "tonights_regulars":
+        return <TheSceneSection section={section} portalSlug={portalSlug} excludeEventIds={excludeEventIds} />;
       case "browse":
         return <BrowseSection section={section} portalSlug={portalSlug} />;
       default:

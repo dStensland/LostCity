@@ -201,7 +201,7 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
   const setDateFilter = useCallback(
     (date: string) => {
       updateParams({
-        date: currentDateFilter === date ? null : date,
+        date: !date || currentDateFilter === date ? null : date,
       });
       setDateDropdownOpen(false);
     },
@@ -265,10 +265,10 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
 
   // Get display label for current date filter
   const dateFilterLabel = !currentDateFilter
-    ? "When"
+    ? "Upcoming"
     : isSpecificDate
     ? formatDateLabel(currentDateFilter)
-    : SIMPLE_DATE_FILTERS.find(d => d.value === currentDateFilter)?.label || "When";
+    : SIMPLE_DATE_FILTERS.find(d => d.value === currentDateFilter)?.label || "Upcoming";
 
   // Get display label for categories
   const categoryLabel = currentCategories.length === 0
@@ -309,7 +309,7 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
                     {Object.entries(CATEGORY_GROUPS).map(([groupName, categoryValues], groupIdx) => (
                       <div key={groupName}>
                         {/* Section Header */}
-                        <div className="px-3 py-1.5 text-[0.6rem] font-mono uppercase tracking-wider text-[var(--muted)]">
+                        <div className="px-3 py-1.5 text-xs font-mono uppercase tracking-wider text-[var(--muted)]">
                           {groupName}
                         </div>
 
@@ -355,7 +355,7 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
                     {UNGROUPED_CATEGORIES.length > 0 && (
                       <div>
                         <div className="h-px bg-[var(--twilight)] my-1" />
-                        <div className="px-3 py-1.5 text-[0.6rem] font-mono uppercase tracking-wider text-[var(--muted)]">
+                        <div className="px-3 py-1.5 text-xs font-mono uppercase tracking-wider text-[var(--muted)]">
                           Other
                         </div>
                         {UNGROUPED_CATEGORIES.map((cat) => {
@@ -415,6 +415,26 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
               {dateDropdownOpen && (
                 <div className="absolute top-full left-0 mt-1 w-40 rounded-lg border border-[var(--twilight)] shadow-xl z-[100] bg-[var(--void)]">
                   <div className="p-2">
+                    {/* Upcoming = no date filter, browse all */}
+                    <button
+                      onClick={() => {
+                        updateParams({ date: null });
+                        setDateDropdownOpen(false);
+                      }}
+                      className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg font-mono text-xs font-medium transition-colors ${
+                        !currentDateFilter
+                          ? "bg-[var(--gold)] text-[var(--void)]"
+                          : "text-[var(--cream)] hover:bg-[var(--twilight)]"
+                      }`}
+                    >
+                      Upcoming
+                      {!currentDateFilter && (
+                        <svg className="w-3 h-3 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </button>
+                    <div className="h-px bg-[var(--twilight)] my-1" />
                     {SIMPLE_DATE_FILTERS.map((df) => {
                       const isActive = currentDateFilter === df.value;
                       return (
@@ -595,7 +615,7 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
             {hasFilters && (
               <button
                 onClick={clearAll}
-                className="px-2 py-1 font-mono text-[0.65rem] text-[var(--action-primary)] hover:text-[var(--action-primary-hover)] whitespace-nowrap"
+                className="px-2 py-1 font-mono text-xs text-[var(--action-primary)] hover:text-[var(--action-primary-hover)] whitespace-nowrap"
               >
                 Clear
               </button>
@@ -655,7 +675,7 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
         <div className="hidden sm:block sticky top-[calc(3.5rem+2.75rem)] z-39 bg-[var(--night)]/95 backdrop-blur-sm border-b border-[var(--twilight)]/50">
           <div className="max-w-5xl mx-auto px-4 py-1.5">
             <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
-              <span className="flex-shrink-0 text-[0.6rem] font-mono uppercase tracking-wider text-[var(--muted)] mr-1">Genre</span>
+              <span className="flex-shrink-0 text-xs font-mono uppercase tracking-wider text-[var(--muted)] mr-1">Genre</span>
               {visibleGenreOptions.map((opt) => {
                 const isActive = currentGenres.includes(opt.genre);
                 return (
@@ -687,7 +707,7 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
               scrollSnapType: 'x proximity'
             }}
           >
-            <span className="flex-shrink-0 text-[0.6rem] font-mono uppercase tracking-wider text-[var(--muted)]">Genre</span>
+            <span className="flex-shrink-0 text-xs font-mono uppercase tracking-wider text-[var(--muted)]">Genre</span>
             {visibleGenreOptions.map((opt) => {
               const isActive = currentGenres.includes(opt.genre);
               return (
@@ -818,7 +838,7 @@ export default function SimpleFilterBar({ variant = "full" }: SimpleFilterBarPro
               </svg>
               More
               {hasFilters && (
-                <span className="ml-1.5 flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-[var(--action-primary)] text-[var(--btn-primary-text)] text-[0.6rem] font-bold animate-pulse">
+                <span className="ml-1.5 flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-[var(--action-primary)] text-[var(--btn-primary-text)] text-xs font-bold animate-pulse">
                   {currentCategories.length + (currentDateFilter ? 1 : 0) + (currentFreeOnly ? 1 : 0)}
                 </span>
               )}

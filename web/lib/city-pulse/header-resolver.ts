@@ -8,6 +8,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getLocalDateString } from "@/lib/formats";
+import { sanitizeCssColor } from "@/lib/css-utils";
 import { getEditorialHeadline, getCityPhoto, getDefaultAccentColor, getTimeLabel } from "./header-defaults";
 import { getDashboardCards } from "./dashboard-cards";
 import type {
@@ -75,7 +76,8 @@ export async function resolveHeader(opts: ResolveHeaderOpts): Promise<ResolvedHe
   const rawHeadline = winner?.headline ?? defaultHeadline;
   const rawSubtitle = winner?.subtitle ?? undefined;
   const heroImage = winner?.hero_image_url ?? defaultPhoto;
-  const accentColor = winner?.accent_color ?? defaultAccent;
+  const rawAccent = winner?.accent_color;
+  const accentColor = (rawAccent ? sanitizeCssColor(rawAccent) : null) ?? defaultAccent;
   const layoutVariant = winner?.layout_variant ?? null;
   const textTreatment = winner?.text_treatment ?? null;
   const cta = winner?.cta ?? undefined;
@@ -315,7 +317,7 @@ async function countEvents(
     q = q.gte("start_date", today);
   }
 
-  if (query.category) q = q.eq("category", query.category);
+  if (query.category) q = q.eq("category_id", query.category);
   if (query.time_after) q = q.gte("start_time", query.time_after);
   if (query.is_free) q = q.eq("is_free", true);
 

@@ -174,7 +174,7 @@ export default function NearbySection({
                   </span>
                   {TAB_LABELS[tab.key]}
                   <span
-                    className={`font-mono text-[0.65rem] ${isActive ? "opacity-80" : "opacity-60"}`}
+                    className={`font-mono text-xs ${isActive ? "opacity-80" : "opacity-60"}`}
                   >
                     {tab.count}
                   </span>
@@ -262,24 +262,24 @@ function NearbySpotCard({ spot, onClick }: { spot: NearbySpot; onClick: () => vo
 
           <div className="flex items-center gap-1.5 mt-0.5">
             {typeLabel && (
-              <span className="text-[0.65rem] text-[var(--muted)] font-mono uppercase tracking-wider">
+              <span className="text-xs text-[var(--muted)] font-mono uppercase tracking-wider">
                 {typeLabel}
               </span>
             )}
             {spot.distance !== undefined && (
-              <span className="text-[0.65rem] text-[var(--muted)] font-mono">
+              <span className="text-xs text-[var(--muted)] font-mono">
                 · {spot.distance < 0.1 ? "Nearby" : `${spot.distance.toFixed(1)} mi`}
               </span>
             )}
             {spot.closesAt && spot.distance === undefined && (
-              <span className="text-[0.6rem] text-[var(--neon-amber)] font-mono">
+              <span className="text-xs text-[var(--neon-amber)] font-mono">
                 · til {formatCloseTime(spot.closesAt)}
               </span>
             )}
           </div>
 
           {spot.vibes && spot.vibes.length > 0 && (
-            <span className="text-[0.65rem] text-[var(--soft)] mt-0.5 block truncate">
+            <span className="text-xs text-[var(--soft)] mt-0.5 block truncate">
               {spot.vibes
                 .slice(0, 2)
                 .map((v) => v.replace(/-/g, " "))
@@ -383,7 +383,7 @@ function NearbyEventCard({
             (event.recommendation_count ?? 0) > 0) && (
             <div className="flex items-center gap-1.5 mt-1 flex-wrap">
               {(event.going_count ?? 0) > 0 && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)]/20 font-mono text-[0.6rem] font-medium text-[var(--coral)]">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)]/20 font-mono text-xs font-medium text-[var(--coral)]">
                   <svg
                     className="w-3 h-3"
                     fill="none"
@@ -401,12 +401,12 @@ function NearbyEventCard({
                 </span>
               )}
               {(event.interested_count ?? 0) > 0 && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--gold)]/15 border border-[var(--gold)]/30 font-mono text-[0.6rem] font-medium text-[var(--gold)]">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--gold)]/15 border border-[var(--gold)]/30 font-mono text-xs font-medium text-[var(--gold)]">
                   {formatCompactCount(event.interested_count ?? 0)} maybe
                 </span>
               )}
               {(event.recommendation_count ?? 0) > 0 && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--lavender)]/15 border border-[var(--lavender)]/30 font-mono text-[0.6rem] font-medium text-[var(--lavender)]">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--lavender)]/15 border border-[var(--lavender)]/30 font-mono text-xs font-medium text-[var(--lavender)]">
                   <svg
                     className="w-3 h-3"
                     fill="none"

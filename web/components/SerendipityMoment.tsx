@@ -5,6 +5,7 @@ import Link from "next/link";
 import { formatTimeSplit } from "@/lib/formats";
 import CategoryIcon from "./CategoryIcon";
 import { getSmartDateLabel } from "@/lib/card-utils";
+import Dot from "@/components/ui/Dot";
 
 type SerendipityEvent = {
   id: number;
@@ -145,7 +146,7 @@ export default function SerendipityMoment({ type, event, portalSlug, onDismiss }
             <h3 className="font-mono text-xs font-medium text-[var(--cream)] uppercase tracking-wider">
               {config.title}
             </h3>
-            <p className="text-[0.65rem] text-[var(--muted)]">{config.subtitle}</p>
+            <p className="text-xs text-[var(--muted)]">{config.subtitle}</p>
           </div>
         </div>
 
@@ -160,7 +161,7 @@ export default function SerendipityMoment({ type, event, portalSlug, onDismiss }
             {/* Time block */}
             <div className="flex-shrink-0 w-12 text-center">
               <div className="font-mono text-xs text-[var(--soft)]">{time}</div>
-              {period && <div className="font-mono text-[0.5rem] text-[var(--muted)]">{period}</div>}
+              {period && <div className="font-mono text-2xs text-[var(--muted)]">{period}</div>}
             </div>
 
             {/* Content */}
@@ -174,17 +175,17 @@ export default function SerendipityMoment({ type, event, portalSlug, onDismiss }
                 </span>
               </div>
 
-              <div className="flex items-center gap-1.5 text-[0.65rem] text-[var(--muted)] font-mono">
+              <div className="flex items-center gap-1.5 text-xs text-[var(--muted)] font-mono">
                 <span>{getSmartDateLabel(event.start_date)}</span>
                 {event.venue && (
                   <>
-                    <span className="opacity-40">·</span>
+                    <Dot />
                     <span className="truncate">{event.venue.name}</span>
                   </>
                 )}
                 {event.is_free && (
                   <>
-                    <span className="opacity-40">·</span>
+                    <Dot />
                     <span className="text-[var(--neon-green)]">Free</span>
                   </>
                 )}

@@ -115,10 +115,10 @@ export default function AnalyticsChart({
       <div className={`relative ${heightClasses.inner}`}>
         {/* Y-axis labels */}
         <div className="absolute left-0 top-0 bottom-0 w-8 flex flex-col justify-between text-right pr-2">
-          <span className="font-mono text-[0.6rem] text-[var(--muted)]">
+          <span className="font-mono text-xs text-[var(--muted)]">
             {formatValue(maxValue)}
           </span>
-          <span className="font-mono text-[0.6rem] text-[var(--muted)]">
+          <span className="font-mono text-xs text-[var(--muted)]">
             {formatValue(minValue)}
           </span>
         </div>
@@ -180,7 +180,7 @@ export default function AnalyticsChart({
 
       {/* X-axis labels */}
       {showLabels && labels.length > 0 && (
-        <div className="grid grid-cols-3 h-4 ml-8 font-mono text-[0.6rem] text-[var(--muted)]">
+        <div className="grid grid-cols-3 h-4 ml-8 font-mono text-xs text-[var(--muted)]">
           <span className="text-left whitespace-nowrap">
             {labels.find((label) => label.position === "start")?.date || ""}
           </span>

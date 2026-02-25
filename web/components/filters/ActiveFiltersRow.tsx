@@ -3,9 +3,8 @@
 import { useCallback, useMemo } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import FilterChip, { getTagVariant, type FilterChipVariant } from "./FilterChip";
-import { CATEGORIES, SUBCATEGORIES, TAG_GROUPS, PRICE_FILTERS } from "@/lib/search-constants";
+import { CATEGORIES, TAG_GROUPS, PRICE_FILTERS } from "@/lib/search-constants";
 import { VIBE_GROUPS } from "@/lib/spots-constants";
-import { MOODS } from "@/lib/moods";
 import { formatGenre } from "@/lib/series-utils";
 
 // Date filter display labels
@@ -17,7 +16,7 @@ const DATE_LABELS: Record<string, string> = {
 };
 
 interface ActiveFilter {
-  type: "search" | "category" | "subcategory" | "tag" | "genre" | "date" | "free" | "price" | "vibe" | "mood" | "neighborhood";
+  type: "search" | "category" | "tag" | "genre" | "date" | "free" | "price" | "vibe" | "neighborhood";
   value: string;
   label: string;
   variant: FilterChipVariant;
@@ -38,14 +37,6 @@ export default function ActiveFiltersRow({ className = "" }: ActiveFiltersRowPro
       for (const vibe of group) {
         map.set(vibe.value, vibe.label);
       }
-    }
-    return map;
-  }, []);
-
-  const moodLabelMap = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const mood of MOODS) {
-      map.set(mood.id, mood.name);
     }
     return map;
   }, []);
@@ -87,22 +78,6 @@ export default function ActiveFiltersRow({ className = "" }: ActiveFiltersRowPro
       }
     }
 
-    // Subcategories
-    const subcategoriesParam = searchParams.get("subcategories");
-    if (subcategoriesParam) {
-      const subcategoryValues = subcategoriesParam.split(",").filter(Boolean);
-      for (const value of subcategoryValues) {
-        const categoryKey = value.split(".")[0];
-        const subcategoryData = SUBCATEGORIES[categoryKey]?.find((s) => s.value === value);
-        filters.push({
-          type: "subcategory",
-          value,
-          label: subcategoryData?.label || value.split(".").slice(1).join(".") || value,
-          variant: "subcategory",
-        });
-      }
-    }
-
     // Tags
     const tagsParam = searchParams.get("tags");
     if (tagsParam) {
@@ -135,7 +110,7 @@ export default function ActiveFiltersRow({ className = "" }: ActiveFiltersRowPro
           type: "genre",
           value,
           label: formatGenre(value),
-          variant: "subcategory",
+          variant: "genre",
         });
       }
     }
@@ -208,19 +183,8 @@ export default function ActiveFiltersRow({ className = "" }: ActiveFiltersRowPro
       }
     }
 
-    // Mood
-    const moodParam = searchParams.get("mood");
-    if (moodParam) {
-      filters.push({
-        type: "mood",
-        value: moodParam,
-        label: moodLabelMap.get(moodParam) || moodParam,
-        variant: "vibe",
-      });
-    }
-
     return filters;
-  }, [searchParams, vibeLabelMap, moodLabelMap]);
+  }, [searchParams, vibeLabelMap]);
 
   // Remove a specific filter
   const removeFilter = useCallback(
@@ -238,16 +202,6 @@ export default function ActiveFiltersRow({ className = "" }: ActiveFiltersRowPro
             params.set("categories", newCategories.join(","));
           } else {
             params.delete("categories");
-          }
-          break;
-        }
-        case "subcategory": {
-          const subcategories = params.get("subcategories")?.split(",").filter(Boolean) || [];
-          const newSubcategories = subcategories.filter((s) => s !== filter.value);
-          if (newSubcategories.length > 0) {
-            params.set("subcategories", newSubcategories.join(","));
-          } else {
-            params.delete("subcategories");
           }
           break;
         }
@@ -301,9 +255,6 @@ export default function ActiveFiltersRow({ className = "" }: ActiveFiltersRowPro
           }
           break;
         }
-        case "mood":
-          params.delete("mood");
-          break;
       }
 
       // Reset pagination
@@ -321,7 +272,6 @@ export default function ActiveFiltersRow({ className = "" }: ActiveFiltersRowPro
 
     // Remove all filter params
     params.delete("categories");
-    params.delete("subcategories");
     params.delete("tags");
     params.delete("genres");
     params.delete("search");
@@ -367,7 +317,7 @@ export default function ActiveFiltersRow({ className = "" }: ActiveFiltersRowPro
       {activeFilters.length > 1 && (
         <button
           onClick={clearAllFilters}
-          className="shrink-0 ml-auto px-2 py-1 font-mono text-[0.6rem] text-[var(--coral)] hover:text-[var(--rose)] whitespace-nowrap transition-colors"
+          className="shrink-0 ml-auto px-2 py-1 font-mono text-xs text-[var(--coral)] hover:text-[var(--rose)] whitespace-nowrap transition-colors"
         >
           Clear all
         </button>

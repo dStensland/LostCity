@@ -39,7 +39,7 @@ export default function UserMenu() {
     ? `/auth/login?redirect=${encodeURIComponent(currentUrl)}`
     : "/auth/login";
   const signedOutClasses =
-    "inline-flex h-8 items-center gap-1.5 font-mono text-[0.7rem] font-medium text-[var(--muted)] uppercase tracking-wide transition-colors hover:text-[var(--cream)] sm:min-w-[78px] sm:justify-end";
+    "inline-flex h-8 items-center gap-1.5 font-mono text-xs font-medium text-[var(--muted)] uppercase tracking-wide transition-colors hover:text-[var(--cream)] sm:min-w-[78px] sm:justify-end";
 
   // Brief loading state during auth init only
   if (loading) {

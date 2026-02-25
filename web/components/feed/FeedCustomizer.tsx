@@ -159,13 +159,13 @@ export default function FeedCustomizer({
     <>
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--twilight)]/50">
-        <h3 className="font-mono text-[0.8125rem] font-semibold text-[var(--cream)]">
+        <h3 className="font-mono text-sm font-semibold text-[var(--cream)]">
           Customize Feed
         </h3>
         <div className="flex items-center gap-2">
           <button
             onClick={handleReset}
-            className="font-mono text-[0.625rem] text-[var(--muted)] hover:text-[var(--soft)] transition-colors"
+            className="font-mono text-2xs text-[var(--muted)] hover:text-[var(--soft)] transition-colors"
           >
             Reset
           </button>
@@ -181,16 +181,16 @@ export default function FeedCustomizer({
       {/* Scrollable content */}
       <div className="overflow-y-auto max-h-[60vh] lg:max-h-[50vh] px-5 py-3">
         {/* --- Section 1: Feed blocks --- */}
-        <span className="font-mono text-[0.5625rem] uppercase tracking-[0.12em] text-[var(--muted)] mb-1 block">
+        <span className="font-mono text-2xs uppercase tracking-[0.12em] text-[var(--muted)] mb-1 block">
           Sections
         </span>
 
         {/* Fixed: GreetingBar */}
         <div className="flex items-center gap-3 py-2.5 opacity-50">
-          <span className="font-mono text-[0.5625rem] w-5 text-center text-[var(--muted)]">1</span>
+          <span className="font-mono text-2xs w-5 text-center text-[var(--muted)]">1</span>
           <div className="flex-1">
-            <p className="text-[0.8125rem] font-medium text-[var(--soft)]">Greeting</p>
-            <p className="text-[0.625rem] text-[var(--muted)]">Always first</p>
+            <p className="text-sm font-medium text-[var(--soft)]">Greeting</p>
+            <p className="text-2xs text-[var(--muted)]">Always first</p>
           </div>
         </div>
 
@@ -200,14 +200,14 @@ export default function FeedCustomizer({
             key={blockId}
             className="flex items-center gap-3 py-2.5 border-t border-[var(--twilight)]/30"
           >
-            <span className="font-mono text-[0.5625rem] w-5 text-center text-[var(--muted)] tabular-nums">
+            <span className="font-mono text-2xs w-5 text-center text-[var(--muted)] tabular-nums">
               {idx + 2}
             </span>
             <div className="flex-1 min-w-0">
-              <p className="text-[0.8125rem] font-medium text-[var(--cream)]">
+              <p className="text-sm font-medium text-[var(--cream)]">
                 {BLOCK_LABELS[blockId]}
               </p>
-              <p className="text-[0.625rem] text-[var(--muted)] truncate">
+              <p className="text-2xs text-[var(--muted)] truncate">
                 {BLOCK_DESCRIPTIONS[blockId]}
               </p>
             </div>
@@ -241,14 +241,14 @@ export default function FeedCustomizer({
         {/* Hidden blocks */}
         {hiddenBlocks.length > 0 && (
           <div className="mt-4 pt-3 border-t border-[var(--twilight)]/50">
-            <span className="font-mono text-[0.5625rem] uppercase tracking-[0.12em] text-[var(--muted)] mb-2 block">
+            <span className="font-mono text-2xs uppercase tracking-[0.12em] text-[var(--muted)] mb-2 block">
               Hidden
             </span>
             {hiddenBlocks.map((blockId) => (
               <div key={blockId} className="flex items-center gap-3 py-2.5 opacity-60">
                 <span className="w-5" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-[0.8125rem] font-medium text-[var(--soft)]">
+                  <p className="text-sm font-medium text-[var(--soft)]">
                     {BLOCK_LABELS[blockId]}
                   </p>
                 </div>
@@ -265,10 +265,10 @@ export default function FeedCustomizer({
 
         {/* Fixed: Browse */}
         <div className="flex items-center gap-3 py-2.5 opacity-50 border-t border-[var(--twilight)]/30 mt-2">
-          <span className="font-mono text-[0.5625rem] w-5 text-center text-[var(--muted)]">&bull;</span>
+          <span className="font-mono text-2xs w-5 text-center text-[var(--muted)]">&bull;</span>
           <div className="flex-1">
-            <p className="text-[0.8125rem] font-medium text-[var(--soft)]">Browse</p>
-            <p className="text-[0.625rem] text-[var(--muted)]">Always last</p>
+            <p className="text-sm font-medium text-[var(--soft)]">Browse</p>
+            <p className="text-2xs text-[var(--muted)]">Always last</p>
           </div>
         </div>
       </div>
@@ -277,7 +277,7 @@ export default function FeedCustomizer({
       <div className="px-5 py-4 border-t border-[var(--twilight)]/50">
         <button
           onClick={handleSave}
-          className="w-full py-2.5 rounded-lg bg-[var(--action-primary)] text-[var(--btn-primary-text)] font-mono text-[0.75rem] font-medium hover:bg-[var(--action-primary-hover)] transition-colors"
+          className="w-full py-2.5 rounded-lg bg-[var(--action-primary)] text-[var(--btn-primary-text)] font-mono text-xs font-medium hover:bg-[var(--action-primary-hover)] transition-colors"
         >
           Save Layout
         </button>
@@ -295,7 +295,7 @@ export default function FeedCustomizer({
         aria-label="Customize feed"
       >
         <GearSix weight="bold" className="w-3.5 h-3.5" />
-        <span className="font-mono text-[0.5625rem] tracking-wide">Customize</span>
+        <span className="font-mono text-2xs tracking-wide">Customize</span>
       </button>
 
       {isOpen && (

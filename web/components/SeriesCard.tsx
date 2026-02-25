@@ -20,6 +20,7 @@ import RSVPButton from "./RSVPButton";
 import { isTicketingUrl, getLinkOutLabel } from "@/lib/card-utils";
 import Image from "@/components/SmartImage";
 import { useImageParallax } from "@/lib/hooks/useImageParallax";
+import Dot from "@/components/ui/Dot";
 
 export interface SeriesVenueGroup {
   venue: {
@@ -170,28 +171,28 @@ const SeriesCard = memo(function SeriesCard({
           <Link href={seriesUrl} scroll={false} data-row-primary-link="true" className="min-w-0">
             <div className="min-w-0">
               <div className="flex items-center gap-2.5 min-w-0">
-                <span className="flex-shrink-0 font-mono text-[0.72rem] font-semibold uppercase tracking-[0.1em] text-[var(--accent-color)] min-w-[76px] sm:min-w-[82px]">
+                <span className="flex-shrink-0 font-mono text-xs font-semibold uppercase tracking-[0.1em] text-[var(--accent-color)] min-w-[76px] sm:min-w-[82px]">
                   {compactTimeLabel}
                 </span>
-                <span className="truncate text-[0.94rem] sm:text-[0.98rem] font-medium text-[var(--cream)] group-hover:text-[var(--accent-color)] transition-colors">
+                <span className="truncate text-base sm:text-base font-medium text-[var(--cream)] group-hover:text-[var(--accent-color)] transition-colors">
                   {seriesTitle}
                 </span>
-                <span className="inline-block max-w-[84px] sm:max-w-[120px] truncate flex-shrink-0 font-mono text-[0.62rem] font-medium uppercase tracking-[0.08em] text-[var(--muted)]">
+                <span className="inline-block max-w-[84px] sm:max-w-[120px] truncate flex-shrink-0 font-mono text-2xs font-medium uppercase tracking-[0.08em] text-[var(--muted)]">
                   {compactSeriesTypeLabel}
                 </span>
               </div>
 
-              <div className="mt-1 flex items-center gap-1.5 font-mono text-[0.62rem] text-[var(--muted)] min-w-0">
+              <div className="mt-1 flex items-center gap-1.5 font-mono text-2xs text-[var(--muted)] min-w-0">
                 {recurrenceText && (
                   <>
                     <span className="truncate">{recurrenceText}</span>
-                    {(firstVenueName || totalShowtimes > 0) && <span className="opacity-40">·</span>}
+                    {(firstVenueName || totalShowtimes > 0) && <Dot />}
                   </>
                 )}
                 {firstVenueName && (
                   <>
                     <span className="truncate">{firstVenueName}</span>
-                    {firstVenueNeighborhood && <span className="opacity-40">·</span>}
+                    {firstVenueNeighborhood && <Dot />}
                   </>
                 )}
                 {firstVenueNeighborhood && <span className="truncate">{firstVenueNeighborhood}</span>}
@@ -203,19 +204,19 @@ const SeriesCard = memo(function SeriesCard({
 
                 {goingCount > 0 && (
                   <>
-                    <span className="opacity-40">·</span>
+                    <Dot />
                     <span className="text-[var(--coral)] font-medium">{formatCompactCount(goingCount)} going</span>
                   </>
                 )}
                 {interestedCount > 0 && (
                   <>
-                    <span className="opacity-40">·</span>
+                    <Dot />
                     <span className="text-[var(--gold)] font-medium">{formatCompactCount(interestedCount)} maybe</span>
                   </>
                 )}
                 {recommendationCount > 0 && (
                   <>
-                    <span className="opacity-40">·</span>
+                    <Dot />
                     <span className="text-[var(--lavender)] font-medium">{formatCompactCount(recommendationCount)} rec&apos;d</span>
                   </>
                 )}
@@ -302,16 +303,16 @@ const SeriesCard = memo(function SeriesCard({
                   </div>
                 )}
                 <div className="relative z-10 flex h-full flex-col items-start justify-center gap-1.5 pl-3 pr-2 py-3 sm:py-4 list-rail-caption">
-                  <span className="font-mono text-[0.62rem] font-semibold leading-none uppercase tracking-[0.12em] text-[var(--accent-color)]">
+                  <span className="font-mono text-2xs font-semibold leading-none uppercase tracking-[0.12em] text-[var(--accent-color)]">
                     {totalShowtimes} {series.series_type === "film" ? (totalShowtimes === 1 ? "show" : "shows") : (totalShowtimes === 1 ? "time" : "times")}
                   </span>
                   {timeParts && (
                     <>
-                      <span className={`font-mono text-[1.42rem] font-bold leading-none tabular-nums ${hasRailImage ? "text-white" : "text-[var(--cream)]"}`}>
+                      <span className={`font-mono text-2xl font-bold leading-none tabular-nums ${hasRailImage ? "text-white" : "text-[var(--cream)]"}`}>
                         {timeParts.time}
                       </span>
                       {timeParts.period && (
-                        <span className={`font-mono text-[0.58rem] font-medium uppercase tracking-[0.12em] ${hasRailImage ? "text-white/78" : "text-[var(--soft)]"}`}>
+                        <span className={`font-mono text-2xs font-medium uppercase tracking-[0.12em] ${hasRailImage ? "text-white/78" : "text-[var(--soft)]"}`}>
                           {timeParts.period}
                         </span>
                       )}
@@ -332,23 +333,23 @@ const SeriesCard = memo(function SeriesCard({
                         className="text-accent icon-neon-subtle"
                       />
                     </span>
-                    <span className="inline-flex items-baseline gap-1 font-mono text-[0.98rem] font-bold leading-none text-[var(--accent-color)]">
+                    <span className="inline-flex items-baseline gap-1 font-mono text-base font-bold leading-none text-[var(--accent-color)]">
                       {totalShowtimes} {totalShowtimes === 1 ? "show" : "times"}
                       {timeParts && (
                         <>
                           <span className="text-[var(--muted)] mx-0.5">@</span>
                           <span className="text-[var(--cream)]">{timeParts.time}</span>
-                          {timeParts.period && <span className="text-[0.58rem] font-medium text-[var(--soft)] uppercase tracking-[0.1em]">{timeParts.period}</span>}
+                          {timeParts.period && <span className="text-2xs font-medium text-[var(--soft)] uppercase tracking-[0.1em]">{timeParts.period}</span>}
                         </>
                       )}
                     </span>
                   </div>
                   {contextLabel && (
-                    <div className={`text-[0.6rem] font-mono uppercase tracking-wider ${contextLabelClass} mb-1`}>
+                    <div className={`text-xs font-mono uppercase tracking-wider ${contextLabelClass} mb-1`}>
                       {contextLabel}
                     </div>
                   )}
-                  <h3 className="text-[var(--cream)] font-semibold text-[1.03rem] leading-tight line-clamp-2 group-hover:text-[var(--accent-color)] transition-colors mb-1.5">
+                  <h3 className="text-[var(--cream)] font-semibold text-base leading-tight line-clamp-2 group-hover:text-[var(--accent-color)] transition-colors mb-1.5">
                     {seriesTitle}
                   </h3>
                 </div>
@@ -356,7 +357,7 @@ const SeriesCard = memo(function SeriesCard({
                 {/* Desktop: Inline layout matching EventCard */}
                 <div className="hidden sm:block">
                   {contextLabel && (
-                    <div className={`text-[0.6rem] font-mono uppercase tracking-wider ${contextLabelClass} mb-0.5`}>
+                    <div className={`text-xs font-mono uppercase tracking-wider ${contextLabelClass} mb-0.5`}>
                       {contextLabel}
                     </div>
                   )}
@@ -368,7 +369,7 @@ const SeriesCard = memo(function SeriesCard({
                         className="text-accent icon-neon-subtle"
                       />
                     </span>
-                    <span className="text-[var(--cream)] font-semibold text-[1.3rem] transition-colors line-clamp-1 group-hover:text-[var(--accent-color)] leading-tight">
+                    <span className="text-[var(--cream)] font-semibold text-xl transition-colors line-clamp-1 group-hover:text-[var(--accent-color)] leading-tight">
                       {seriesTitle}
                     </span>
                   </div>
@@ -377,24 +378,24 @@ const SeriesCard = memo(function SeriesCard({
                 {/* Details row - matches EventCard style */}
                 <div className="flex items-center gap-1.5 text-sm text-[var(--text-secondary)] mt-1.5 leading-relaxed flex-wrap">
                   {firstVenueName && (
-                    <span className="truncate max-w-[70%] sm:max-w-[45%] font-medium text-[var(--text-base)]" title={firstVenueName}>
+                    <span className="truncate max-w-[70%] sm:max-w-[45%] font-medium text-base" title={firstVenueName}>
                       {firstVenueName}
                     </span>
                   )}
                   {venueGroups.length > 1 && (
                     <>
-                      <span className="opacity-40">·</span>
+                      <Dot />
                       <span>+{venueGroups.length - 1} more venues</span>
                     </>
                   )}
                   {firstVenueNeighborhood && venueGroups.length === 1 && (
                     <>
-                      <span className="opacity-40">·</span>
+                      <Dot />
                       <span className="truncate text-[var(--text-tertiary)]">{firstVenueNeighborhood}</span>
                     </>
                   )}
                   <span className="hidden sm:contents">
-                    <span className="opacity-40">·</span>
+                    <Dot />
                     <SeriesBadge
                       seriesType={series.series_type}
                       frequency={series.frequency as Frequency}
@@ -408,7 +409,7 @@ const SeriesCard = memo(function SeriesCard({
                 {(recurrenceText || totalShowtimes > 1 || hasSocialProof) && (
                   <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                     {recurrenceText && (
-                      <span className="inline-flex items-center gap-1 font-mono text-[0.6rem] px-1.5 py-0.5 rounded font-medium bg-accent-20 text-accent">
+                      <span className="inline-flex items-center gap-1 font-mono text-xs px-1.5 py-0.5 rounded font-medium bg-accent-20 text-accent">
                         <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                         </svg>
@@ -416,7 +417,7 @@ const SeriesCard = memo(function SeriesCard({
                       </span>
                     )}
                     {totalShowtimes > 1 && (
-                      <span className="font-mono text-[0.6rem] px-1.5 py-0.5 rounded bg-[var(--twilight)]/40 text-[var(--soft)]">
+                      <span className="font-mono text-xs px-1.5 py-0.5 rounded bg-[var(--twilight)]/40 text-[var(--soft)]">
                         {totalShowtimes} showtimes
                       </span>
                     )}
@@ -431,7 +432,7 @@ const SeriesCard = memo(function SeriesCard({
                       const totalCount = goingCount + interestedCount + recommendationCount;
                       if (totalCount <= 0) return null;
                       return (
-                        <span className={`sm:hidden inline-flex items-center gap-1 font-mono text-[0.6rem] font-medium px-1.5 py-0.5 rounded-lg ${
+                        <span className={`sm:hidden inline-flex items-center gap-1 font-mono text-xs font-medium px-1.5 py-0.5 rounded-lg ${
                           dominant.color === "coral"
                             ? "bg-[var(--coral)]/10 border border-[var(--coral)]/20 text-[var(--coral)]"
                             : dominant.color === "gold"
@@ -455,7 +456,7 @@ const SeriesCard = memo(function SeriesCard({
                     {/* Desktop: separate pills */}
                     <span className="hidden sm:contents">
                       {goingCount > 0 && (
-                        <span className="inline-flex items-center gap-1 font-mono text-[0.6rem] font-medium px-1.5 py-0.5 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)]/20 text-[var(--coral)]">
+                        <span className="inline-flex items-center gap-1 font-mono text-xs font-medium px-1.5 py-0.5 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)]/20 text-[var(--coral)]">
                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                           </svg>
@@ -463,12 +464,12 @@ const SeriesCard = memo(function SeriesCard({
                         </span>
                       )}
                       {interestedCount > 0 && (
-                        <span className="inline-flex items-center gap-1 font-mono text-[0.6rem] font-medium px-1.5 py-0.5 rounded-lg bg-[var(--gold)]/15 border border-[var(--gold)]/30 text-[var(--gold)]">
+                        <span className="inline-flex items-center gap-1 font-mono text-xs font-medium px-1.5 py-0.5 rounded-lg bg-[var(--gold)]/15 border border-[var(--gold)]/30 text-[var(--gold)]">
                           {formatCompactCount(interestedCount)} maybe
                         </span>
                       )}
                       {recommendationCount > 0 && (
-                        <span className="inline-flex items-center gap-1 font-mono text-[0.6rem] font-medium px-1.5 py-0.5 rounded-lg bg-[var(--lavender)]/15 border border-[var(--lavender)]/30 text-[var(--lavender)]">
+                        <span className="inline-flex items-center gap-1 font-mono text-xs font-medium px-1.5 py-0.5 rounded-lg bg-[var(--lavender)]/15 border border-[var(--lavender)]/30 text-[var(--lavender)]">
                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
                           </svg>

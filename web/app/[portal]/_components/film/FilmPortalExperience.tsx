@@ -753,7 +753,7 @@ export default async function FilmPortalExperience({ portal }: FilmPortalExperie
         <div className="relative grid gap-5 p-5 sm:p-7 lg:grid-cols-[1.15fr_0.85fr] lg:p-8">
           <div className="flex flex-col justify-between">
             <div>
-              <p className="inline-flex items-center gap-2 rounded-full border border-[#90adeb66] bg-[#90adeb1f] px-3 py-1 text-[0.66rem] uppercase tracking-[0.18em] text-[#dde7ff]">
+              <p className="inline-flex items-center gap-2 rounded-full border border-[#90adeb66] bg-[#90adeb1f] px-3 py-1 text-xs uppercase tracking-[0.18em] text-[#dde7ff]">
                 <FilmSlate size={12} />
                 Atlanta Film Portal
               </p>
@@ -808,7 +808,7 @@ export default async function FilmPortalExperience({ portal }: FilmPortalExperie
           <div className="relative border-t border-[#2d3b5a] bg-[#0d1628cc] p-4 sm:p-5">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
-                <p className="text-[0.62rem] uppercase tracking-[0.17em] text-[#95acd9]">Festival Spotlight</p>
+                <p className="text-xs uppercase tracking-[0.17em] text-[#95acd9]">Festival Spotlight</p>
                 <h2 className="mt-1 font-[var(--font-film-editorial)] text-2xl text-[#f6f8ff]">{festivalSpotlight.name}</h2>
                 <p className="mt-1 text-xs text-[#c3d3ef]">{formatFestivalWindow(festivalSpotlight)} • {festivalSpotlight.location || "Atlanta"}</p>
               </div>
@@ -827,7 +827,7 @@ export default async function FilmPortalExperience({ portal }: FilmPortalExperie
       {openingFilms.length > 0 && (
         <section className="space-y-4">
           <header>
-            <p className="text-[0.62rem] uppercase tracking-[0.18em] text-[#95a8cb]">Opening This Week</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-[#95a8cb]">Opening This Week</p>
             <h2 className="mt-1 font-[var(--font-film-editorial)] text-3xl text-[#f7f8fd]">New to Atlanta screens</h2>
           </header>
           <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2">
@@ -851,12 +851,12 @@ export default async function FilmPortalExperience({ portal }: FilmPortalExperie
                 )}
                 <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(4,8,16,0.05)_0%,rgba(4,8,16,0.48)_46%,rgba(4,8,16,0.92)_100%)]" />
                 <div className="relative flex h-full flex-col justify-end p-3">
-                  <span className="mb-1 inline-flex w-fit rounded-full border border-[#4ade8066] bg-[#4ade801f] px-2 py-0.5 text-[0.52rem] uppercase tracking-[0.16em] text-[#a7f3d0]">
+                  <span className="mb-1 inline-flex w-fit rounded-full border border-[#4ade8066] bg-[#4ade801f] px-2 py-0.5 text-2xs uppercase tracking-[0.16em] text-[#a7f3d0]">
                     Opens {formatShortDate(film.opening_date).split(",")[0]}
                   </span>
                   <h3 className="line-clamp-2 text-sm font-semibold text-[#f6f8ff]">{film.title}</h3>
                   {film.venue_count > 1 && (
-                    <p className="mt-0.5 text-[0.62rem] text-[#c0d0ea]">{film.venue_count} venues</p>
+                    <p className="mt-0.5 text-xs text-[#c0d0ea]">{film.venue_count} venues</p>
                   )}
                 </div>
               </Link>
@@ -868,7 +868,7 @@ export default async function FilmPortalExperience({ portal }: FilmPortalExperie
       {lastChanceFilms.length > 0 && (
         <section className="space-y-4">
           <header>
-            <p className="text-[0.62rem] uppercase tracking-[0.18em] text-[#95a8cb]">Last Chance</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-[#95a8cb]">Last Chance</p>
             <h2 className="mt-1 font-[var(--font-film-editorial)] text-3xl text-[#f7f8fd]">Closing soon</h2>
           </header>
           <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2">
@@ -892,12 +892,12 @@ export default async function FilmPortalExperience({ portal }: FilmPortalExperie
                 )}
                 <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(4,8,16,0.05)_0%,rgba(4,8,16,0.48)_46%,rgba(4,8,16,0.92)_100%)]" />
                 <div className="relative flex h-full flex-col justify-end p-3">
-                  <span className="mb-1 inline-flex w-fit rounded-full border border-[#f59e0b66] bg-[#f59e0b1f] px-2 py-0.5 text-[0.52rem] uppercase tracking-[0.16em] text-[#fcd34d]">
+                  <span className="mb-1 inline-flex w-fit rounded-full border border-[#f59e0b66] bg-[#f59e0b1f] px-2 py-0.5 text-2xs uppercase tracking-[0.16em] text-[#fcd34d]">
                     Last showing {formatShortDate(film.last_date).split(",")[0]}
                   </span>
                   <h3 className="line-clamp-2 text-sm font-semibold text-[#f6f8ff]">{film.title}</h3>
                   {film.venue_count > 1 && (
-                    <p className="mt-0.5 text-[0.62rem] text-[#c0d0ea]">{film.venue_count} venues</p>
+                    <p className="mt-0.5 text-xs text-[#c0d0ea]">{film.venue_count} venues</p>
                   )}
                 </div>
               </Link>
@@ -909,7 +909,7 @@ export default async function FilmPortalExperience({ portal }: FilmPortalExperie
       <section className="space-y-4">
         <header className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="text-[0.62rem] uppercase tracking-[0.18em] text-[#95a8cb]">Now Showing</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-[#95a8cb]">Now Showing</p>
             <h2 className="mt-1 font-[var(--font-film-editorial)] text-3xl text-[#f7f8fd]">Tonight across Atlanta screens</h2>
             <p className="mt-1 text-sm text-[#b8c8e4]">A quick look at what&apos;s on now. Full schedules live on dedicated pages.</p>
           </div>
@@ -921,7 +921,7 @@ export default async function FilmPortalExperience({ portal }: FilmPortalExperie
 
         <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
           <article className="rounded-3xl border border-[#26324a] bg-[#0a111f] p-4 sm:p-5">
-            <p className="mb-2 text-[0.62rem] uppercase tracking-[0.16em] text-[#8ea4c8]">Citywide theater preview</p>
+            <p className="mb-2 text-xs uppercase tracking-[0.16em] text-[#8ea4c8]">Citywide theater preview</p>
             <FilmShowtimeBoard portalSlug={portal.slug} mode="by-theater" compact hideHeader hideDateRail hideGenreFilter />
           </article>
 
@@ -947,8 +947,8 @@ export default async function FilmPortalExperience({ portal }: FilmPortalExperie
 
                   <div className="space-y-1 p-3.5">
                     <p className="text-sm font-semibold text-[#f4f7ff]">{venue.venueName}</p>
-                    <p className="text-[0.68rem] uppercase tracking-[0.12em] text-[#cfe0ff]">{venue.screeningCount} upcoming screenings</p>
-                    <p className="text-[0.7rem] text-[#adbfdf]">{venue.nextTimeLabel || "Schedule soon"}</p>
+                    <p className="text-xs uppercase tracking-[0.12em] text-[#cfe0ff]">{venue.screeningCount} upcoming screenings</p>
+                    <p className="text-xs text-[#adbfdf]">{venue.nextTimeLabel || "Schedule soon"}</p>
                   </div>
                 </Link>
               ))
@@ -978,10 +978,10 @@ export default async function FilmPortalExperience({ portal }: FilmPortalExperie
       <section className="space-y-4">
         <header className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="text-[0.62rem] uppercase tracking-[0.18em] text-[#95a8cb]">Festival Circuit</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-[#95a8cb]">Festival Circuit</p>
             <h2 className="mt-1 font-[var(--font-film-editorial)] text-3xl text-[#f7f8fd]">Premieres, festivals, and special screenings</h2>
           </div>
-          <div className="flex gap-3 text-[0.68rem] uppercase tracking-[0.14em]">
+          <div className="flex gap-3 text-xs uppercase tracking-[0.14em]">
             <Link href={`/${portal.slug}/festivals`} className="text-[#c9d9ff] hover:text-[#e1eaff]">Festivals</Link>
             <Link href={`/${portal.slug}/calendar`} className="text-[#c9d9ff] hover:text-[#e1eaff]">Calendar</Link>
           </div>
@@ -1009,10 +1009,10 @@ export default async function FilmPortalExperience({ portal }: FilmPortalExperie
 
                   <div className="relative flex h-full flex-col justify-between p-4">
                     <div className="flex items-start justify-between gap-2">
-                      <span className="rounded-full border border-[#8ea9ec66] bg-[#8ea9ec1f] px-2 py-1 text-[0.58rem] uppercase tracking-[0.16em] text-[#d9e5ff]">
+                      <span className="rounded-full border border-[#8ea9ec66] bg-[#8ea9ec1f] px-2 py-1 text-2xs uppercase tracking-[0.16em] text-[#d9e5ff]">
                         {item.kind === "festival" ? "Festival" : "Event"}
                       </span>
-                      <span className="text-[0.62rem] text-[#d2ddf2]">{item.date_label}</span>
+                      <span className="text-xs text-[#d2ddf2]">{item.date_label}</span>
                     </div>
 
                     <div>
@@ -1033,7 +1033,7 @@ export default async function FilmPortalExperience({ portal }: FilmPortalExperie
 
       <section className="space-y-4">
         <header>
-          <p className="text-[0.62rem] uppercase tracking-[0.18em] text-[#95a8cb]">Atlanta Film Scene</p>
+          <p className="text-xs uppercase tracking-[0.18em] text-[#95a8cb]">Atlanta Film Scene</p>
           <h2 className="mt-1 font-[var(--font-film-editorial)] text-3xl text-[#f7f8fd]">Explore the scene</h2>
         </header>
         <Link
@@ -1052,14 +1052,14 @@ export default async function FilmPortalExperience({ portal }: FilmPortalExperie
             <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,11,19,0.06)_0%,rgba(7,11,19,0.82)_100%)]" />
           </div>
           <div className="relative p-4">
-            <span className="mb-2 inline-flex rounded-full border border-[#8ea9ec66] bg-[#8ea9ec1f] px-2 py-0.5 text-[0.58rem] uppercase tracking-[0.16em] text-[#d9e5ff]">
+            <span className="mb-2 inline-flex rounded-full border border-[#8ea9ec66] bg-[#8ea9ec1f] px-2 py-0.5 text-2xs uppercase tracking-[0.16em] text-[#d9e5ff]">
               Yallywood
             </span>
             <h3 className="mt-1 text-lg font-semibold text-[#f6f8ff]">Explore curated tracks</h3>
             <p className="mt-1 text-xs text-[#b9c8e5]">
               Indie circuits, film festival calendars, drive-in date nights, and more curated paths through Atlanta&apos;s film world.
             </p>
-            <span className="mt-3 inline-flex items-center gap-1 text-[0.66rem] uppercase tracking-[0.14em] text-[#c9d9ff] group-hover:text-[#e1eaff]">
+            <span className="mt-3 inline-flex items-center gap-1 text-xs uppercase tracking-[0.14em] text-[#c9d9ff] group-hover:text-[#e1eaff]">
               Explore tracks
               <ArrowRight size={11} />
             </span>
@@ -1070,7 +1070,7 @@ export default async function FilmPortalExperience({ portal }: FilmPortalExperie
       <section className="space-y-4">
         <header className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="text-[0.62rem] uppercase tracking-[0.18em] text-[#95a8cb]">Community</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-[#95a8cb]">Community</p>
             <h2 className="mt-1 font-[var(--font-film-editorial)] text-3xl text-[#f7f8fd]">Atlanta&apos;s film communities</h2>
           </div>
           <Link href={`/${portal.slug}/community-hub`} className="inline-flex items-center gap-1 text-xs uppercase tracking-[0.14em] text-[#c9d9ff] hover:text-[#e1eaff]">
@@ -1094,7 +1094,7 @@ export default async function FilmPortalExperience({ portal }: FilmPortalExperie
             <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(4,8,16,0.2)_0%,rgba(4,8,16,0.86)_100%)]" />
 
             <div className="relative flex min-h-[18rem] flex-col justify-end p-5 sm:min-h-[20rem]">
-              <p className="text-[0.62rem] uppercase tracking-[0.17em] text-[#d6e2fb]">Meetup Spotlight</p>
+              <p className="text-xs uppercase tracking-[0.17em] text-[#d6e2fb]">Meetup Spotlight</p>
               {communityGroups[0]?.next_meetup ? (
                 <>
                   <h3 className="mt-2 max-w-xl text-2xl font-semibold text-[#f6f8ff]">
@@ -1134,7 +1134,7 @@ export default async function FilmPortalExperience({ portal }: FilmPortalExperie
                           sizes="44px"
                         />
                       ) : (
-                        <div className="flex h-full w-full items-center justify-center text-[0.62rem] uppercase tracking-[0.14em] text-[#b9c9e9]">
+                        <div className="flex h-full w-full items-center justify-center text-xs uppercase tracking-[0.14em] text-[#b9c9e9]">
                           {group.name.slice(0, 2)}
                         </div>
                       )}
@@ -1147,18 +1147,18 @@ export default async function FilmPortalExperience({ portal }: FilmPortalExperie
                       </p>
 
                       {group.next_meetup ? (
-                        <p className="mt-2 text-[0.66rem] uppercase tracking-[0.14em] text-[#d5e2ff]">
+                        <p className="mt-2 text-xs uppercase tracking-[0.14em] text-[#d5e2ff]">
                           Next meetup: {formatShortDate(group.next_meetup.start_date)} • {formatTimeLabel(group.next_meetup.start_time)}
                         </p>
                       ) : (
-                        <p className="mt-2 text-[0.66rem] uppercase tracking-[0.14em] text-[#96abcf]">
+                        <p className="mt-2 text-xs uppercase tracking-[0.14em] text-[#96abcf]">
                           Neighborhood: {group.neighborhood || "Atlanta"}
                         </p>
                       )}
                     </div>
                   </div>
 
-                  <div className="mt-3 inline-flex items-center gap-1 text-[0.66rem] uppercase tracking-[0.14em] text-[#c9d9ff] group-hover:text-[#e1eaff]">
+                  <div className="mt-3 inline-flex items-center gap-1 text-xs uppercase tracking-[0.14em] text-[#c9d9ff] group-hover:text-[#e1eaff]">
                     View group
                     <ArrowRight size={11} />
                   </div>

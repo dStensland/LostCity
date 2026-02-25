@@ -122,10 +122,15 @@ export async function PortalTheme({ portal }: PortalThemeProps) {
 
       // Backwards compatibility
       cssVars.push(`--portal-secondary: ${safeSecondary};`);
-      // Secondary color maps to --neon-cyan (the highlight/focus color)
-      cssVars.push(`--neon-cyan: ${safeSecondary};`);
-      cssVars.push(`--neon-cyan-hsl: ${hexToHsl(safeSecondary)};`);
-      cssVars.push(`--focus-ring: ${safeSecondary};`);
+      // Only override --neon-cyan if the secondary is bright enough to read on dark backgrounds.
+      // Dark secondary colors (like #3D2A2A) make text invisible when used for --neon-cyan.
+      // Minimum contrast ratio of 3:1 against --night (#0F0F14) for large text readability.
+      const secondaryContrast = getContrastRatio(safeSecondary, "#0F0F14");
+      if (secondaryContrast >= 3) {
+        cssVars.push(`--neon-cyan: ${safeSecondary};`);
+        cssVars.push(`--neon-cyan-hsl: ${hexToHsl(safeSecondary)};`);
+        cssVars.push(`--focus-ring: ${safeSecondary};`);
+      }
       // Calendar/deep purple palette - derive from secondary color
       const secondaryDark = adjustBrightness(safeSecondary, -70);
       const secondaryMid = adjustBrightness(safeSecondary, -50);
@@ -338,8 +343,9 @@ export async function PortalTheme({ portal }: PortalThemeProps) {
   if (resolvedBranding.category_colors) {
     for (const [category, color] of Object.entries(resolvedBranding.category_colors)) {
       const safeCategoryColor = sanitizeCssColor(color as string);
-      if (safeCategoryColor) {
-        cssVars.push(`--cat-${category}: ${safeCategoryColor};`);
+      const safeKey = category.replace(/[^a-zA-Z0-9_-]/g, "");
+      if (safeCategoryColor && safeKey) {
+        cssVars.push(`--cat-${safeKey}: ${safeCategoryColor};`);
       }
     }
   }

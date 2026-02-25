@@ -5,7 +5,7 @@ import { forwardRef } from "react";
 export type FilterChipVariant =
   | "default"      // Gray/muted
   | "category"     // Cream
-  | "subcategory"  // Coral
+  | "genre"        // Coral
   | "date"         // Gold
   | "vibe"         // Lavender
   | "access"       // Cyan
@@ -36,7 +36,7 @@ const VARIANT_STYLES: Record<FilterChipVariant, { active: string; inactive: stri
     active: "bg-[var(--cream)] text-[var(--void)] border-[var(--cream)]",
     glowClass: "chip-glow-cream",
   },
-  subcategory: {
+  genre: {
     inactive: "border-[var(--twilight)] text-[var(--muted)] hover:text-[var(--coral)] hover:border-[var(--coral)]/50",
     active: "bg-[var(--coral)] text-[var(--void)] border-[var(--coral)]",
     glowClass: "chip-glow-coral",
@@ -47,7 +47,7 @@ const VARIANT_STYLES: Record<FilterChipVariant, { active: string; inactive: stri
     glowClass: "chip-glow-gold",
   },
   vibe: {
-    inactive: "border-[var(--twilight)] text-[var(--muted)] hover:text-[#A78BFA] hover:border-[#A78BFA]/50",
+    inactive: "border-[var(--twilight)] text-[var(--muted)] hover:text-[var(--vibe)] hover:border-[var(--vibe)]/50",
     active: "bg-[var(--mood-active)] text-[var(--cream)] border-[var(--mood-active)]",
     glowClass: "chip-glow-vibe",
   },
@@ -71,8 +71,8 @@ const VARIANT_STYLES: Record<FilterChipVariant, { active: string; inactive: stri
 const FilterChip = forwardRef<HTMLButtonElement, FilterChipProps>(
   ({ label, variant = "default", active = false, removable = false, size = "md", count, onClick, onRemove, className = "" }, ref) => {
     const sizeClasses = size === "sm"
-      ? "min-h-[44px] sm:min-h-[32px] px-3 sm:px-2.5 py-2 sm:py-1 text-[0.6rem]"
-      : "min-h-[44px] sm:min-h-[36px] px-3.5 sm:px-3 py-2.5 sm:py-1.5 text-[0.65rem]";
+      ? "min-h-[44px] sm:min-h-[32px] px-3 sm:px-2.5 py-2 sm:py-1 text-2xs"
+      : "min-h-[44px] sm:min-h-[36px] px-3.5 sm:px-3 py-2.5 sm:py-1.5 text-xs";
 
     const styles = VARIANT_STYLES[variant];
     const variantClasses = active ? styles.active : styles.inactive;
@@ -108,7 +108,7 @@ const FilterChip = forwardRef<HTMLButtonElement, FilterChipProps>(
         {count !== undefined && count > 0 && (
           <span
             className={`
-              flex items-center justify-center min-w-[1.25rem] h-[1.25rem] px-1 rounded-full text-[0.55rem] font-bold
+              flex items-center justify-center min-w-5 h-5 px-1 rounded-full text-2xs font-bold
               ${active ? "bg-black/20 text-inherit" : "bg-[var(--twilight)] text-[var(--muted)]"}
             `}
           >

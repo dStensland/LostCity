@@ -49,7 +49,7 @@ export default function TagChip({
     return (
       <span
         data-tag-group={tag.tag_group}
-        className="inline-flex items-center px-2 py-0.5 rounded-full text-[0.6rem] font-mono font-medium border tag-chip"
+        className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-mono font-medium border tag-chip"
       >
         {tag.tag_label}
         {tag.score > 0 && (
@@ -109,7 +109,7 @@ export default function TagChip({
 
           {/* Score */}
           <span
-            className="font-mono text-[0.65rem] min-w-[1.5rem] text-center tag-chip-text"
+            className="font-mono text-xs min-w-6 text-center tag-chip-text"
           >
             {tag.score}
           </span>
@@ -135,7 +135,7 @@ export default function TagChip({
       {/* User added indicator */}
       {tag.user_added && (
         <span
-          className="text-[0.55rem] text-[var(--muted)] ml-1"
+          className="text-2xs text-[var(--muted)] ml-1"
           title="You added this tag"
         >
           (you)

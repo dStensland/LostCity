@@ -47,14 +47,14 @@ export default function VenueTagBadges({ venueId, maxTags = 3 }: VenueTagBadgesP
           <span
             key={tag.tag_id}
             data-tag-group={tag.tag_group}
-            className="inline-flex items-center px-1.5 py-0.5 rounded text-[0.55rem] font-mono venue-tag-badge"
+            className="inline-flex items-center px-1.5 py-0.5 rounded text-2xs font-mono venue-tag-badge"
           >
             {tag.tag_label}
           </span>
         );
       })}
       {extraCount > 0 && (
-        <span className="text-[0.55rem] font-mono text-[var(--muted)]">
+        <span className="text-2xs font-mono text-[var(--muted)]">
           +{extraCount}
         </span>
       )}

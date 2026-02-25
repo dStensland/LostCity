@@ -15,7 +15,7 @@
 
 import OpenAI from "openai";
 import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
-import { CATEGORIES, SUBCATEGORIES, TAG_GROUPS } from "@/lib/search-constants";
+import { CATEGORIES, TAG_GROUPS } from "@/lib/search-constants";
 import { NEIGHBORHOOD_NAMES, NEIGHBORHOOD_ALIASES } from "@/config/neighborhoods";
 import { logger } from "@/lib/logger";
 import type { SearchOptions } from "@/lib/unified-search";
@@ -47,12 +47,21 @@ export interface ParsedNLFilters {
 
 const CATEGORY_VALUES = CATEGORIES.map((c) => c.value);
 
-const GENRE_VALUES: string[] = Object.values(SUBCATEGORIES).flatMap((subs) =>
-  subs.map((s) => {
-    const parts = s.value.split(".");
-    return parts.length > 1 ? parts.slice(1).join(".") : s.value;
-  })
-);
+// Common genres for NL search prompt — kept as static fallback.
+// Live data comes from taxonomy_definitions via /api/genres.
+const GENRE_VALUES: string[] = [
+  "rock", "pop", "hip-hop", "jazz", "blues", "country", "folk", "electronic",
+  "classical", "metal", "punk", "indie", "alternative", "soul", "funk", "reggae",
+  "latin", "r-and-b", "singer-songwriter", "stand-up", "improv", "open-mic",
+  "dj", "drag", "trivia", "karaoke", "dance-party", "burlesque",
+  "documentary", "horror", "comedy", "drama", "thriller", "sci-fi", "animation",
+  "yoga", "run", "cycling", "hike", "crossfit", "martial-arts",
+  "workshop", "lecture", "book-club", "volunteer", "meetup", "networking",
+  "exhibition", "gallery-opening", "photography", "storytime",
+  "brunch", "wine", "beer", "cocktails", "tasting",
+  "baseball", "basketball", "football", "soccer", "hockey",
+  "reading", "poetry", "storytelling",
+];
 
 const TAG_VALUES: string[] = [
   ...TAG_GROUPS.Vibe,
@@ -76,7 +85,7 @@ Given a natural language query, extract structured search filters. Return ONLY v
 VALID CATEGORIES (use these exact values):
 ${CATEGORY_VALUES.join(", ")}
 
-VALID GENRES (subcategories — use these exact values):
+VALID GENRES (use these exact values):
 ${GENRE_VALUES.join(", ")}
 
 VALID NEIGHBORHOODS (use these exact names):

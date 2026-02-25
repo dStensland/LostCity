@@ -19,22 +19,28 @@
  * Mobile stacks everything in main column order, then sidebar sections below.
  */
 
-import { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { useCityPulseFeed } from "@/lib/hooks/useCityPulseFeed";
+import { useFeedPreferences } from "@/lib/hooks/useFeedPreferences";
 import { getFeedThemeVars } from "@/lib/city-pulse/theme";
 import { useAuth } from "@/lib/auth-context";
+import { usePortal } from "@/lib/portal-context";
 import Link from "next/link";
 import GreetingBar from "./GreetingBar";
 import LineupSection from "./LineupSection";
 import QuickLinksBar from "./QuickLinksBar";
 import CityPulseSection from "./CityPulseSection";
+import TheSceneSection from "./sections/TheSceneSection";
 import LazySection from "./LazySection";
 import NetworkFeedSection from "./sections/NetworkFeedSection";
+import NowShowingSection from "./sections/NowShowingSection";
+
+import FestivalsSection from "./sections/FestivalsSection";
+
 import FeedTimeMachine from "./FeedTimeMachine";
 import FeedCustomizer from "./FeedCustomizer";
-import type { CityPulseSectionType, TimeSlot, FeedLayout } from "@/lib/city-pulse/types";
-import { DEFAULT_FEED_ORDER } from "@/lib/city-pulse/types";
+import type { CityPulseSectionType, TimeSlot } from "@/lib/city-pulse/types";
 import { SignIn } from "@phosphor-icons/react";
 
 /** Section types that LineupSection absorbs */
@@ -43,25 +49,21 @@ const TIMELINE_SECTION_TYPES = new Set<CityPulseSectionType>([
   "tonight",
   "this_weekend",
   "this_week",
-  "todays_specials",
   "coming_up",
 ]);
 
 /** The non-timeline sections we render, in order */
 const DEFAULT_SECTION_ORDER: CityPulseSectionType[] = [
-  "trending",
   "browse",
 ];
 
 /** Estimated heights per section type to reduce CLS when lazy loading */
 const SECTION_HEIGHT_ESTIMATES: Record<string, number> = {
-  trending: 500,
   browse: 400,
 };
 
 /** Map FeedBlockId → CityPulseSectionType for layout application */
 const BLOCK_TO_SECTION: Record<string, CityPulseSectionType> = {
-  trending: "trending",
   browse: "browse",
 };
 
@@ -122,77 +124,24 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
   const searchParams = useSearchParams();
   const showTimeMachine = searchParams.get("admin") !== null;
   const { user } = useAuth();
+  const { portal } = usePortal();
   const isAuthenticated = !!user;
 
   const [dayOverride, setDayOverride] = useState<string | undefined>();
   const [timeSlotOverride, setTimeSlotOverride] = useState<TimeSlot | undefined>();
-  const [feedLayout, setFeedLayout] = useState<FeedLayout | null>(null);
 
-  // Ref always holds the latest feedLayout — safe to read from callbacks
-  const feedLayoutRef = useRef<FeedLayout | null>(feedLayout);
-  useEffect(() => { feedLayoutRef.current = feedLayout; }, [feedLayout]);
-
-  // Gate: once user makes local changes, don't let prefs-load overwrite them
-  const hasLocalChanges = useRef(false);
+  const {
+    feedLayout,
+    savedInterests,
+    handleSaveLayout,
+    handleInterestsChange,
+    handleSaveInterests,
+  } = useFeedPreferences({ isAuthenticated });
 
   const handleOverride = useCallback((day: string | undefined, slot: TimeSlot | undefined) => {
     setDayOverride(day);
     setTimeSlotOverride(slot);
   }, []);
-
-  // Fetch user preferences (feed layout) on mount when authenticated
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch("/api/preferences");
-        if (!res.ok) return;
-        const prefs = await res.json();
-        if (!cancelled && prefs.feed_layout && !hasLocalChanges.current) {
-          setFeedLayout(prefs.feed_layout);
-        }
-      } catch {
-        // Preferences are optional — don't block the feed
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [isAuthenticated]);
-
-  const handleSaveLayout = useCallback(async (layout: FeedLayout | null) => {
-    // Optimistic update
-    setFeedLayout(layout);
-    try {
-      await fetch("/api/preferences", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ feed_layout: layout }),
-      });
-    } catch {
-      // Silently fail — layout is already applied locally
-    }
-  }, []);
-
-  const handleInterestsChange = useCallback(async (interests: string[]) => {
-    hasLocalChanges.current = true;
-    // Optimistic: update local feedLayout with new interests
-    setFeedLayout((prev) => {
-      const base = prev || { visible_blocks: [...DEFAULT_FEED_ORDER].filter((b) => b !== "browse"), hidden_blocks: [], version: 1 as const };
-      return { ...base, interests };
-    });
-    if (!isAuthenticated) return;
-    // Persist — read latest layout from ref to avoid stale closure
-    try {
-      const layout = feedLayoutRef.current || { visible_blocks: [...DEFAULT_FEED_ORDER].filter((b) => b !== "browse"), hidden_blocks: [], version: 1 as const };
-      await fetch("/api/preferences", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ feed_layout: { ...layout, interests } }),
-      });
-    } catch {
-      // Silently fail
-    }
-  }, [isAuthenticated]);
 
   const {
     data,
@@ -209,7 +158,7 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
     portalSlug,
     timeSlotOverride,
     dayOverride,
-    interests: feedLayout?.interests ?? undefined,
+    interests: savedInterests,
   });
 
   // Clean up legacy ?tab= param
@@ -221,11 +170,22 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
     }
   }, []);
 
-  // Split sections: lineup (timeline) vs non-timeline
-  const { lineupSections, orderedSections, lineupEventIds } = useMemo(() => {
+  // Split sections: lineup (timeline) vs non-timeline, extract Regular Hangs
+  const { lineupSections, orderedSections, lineupEventIds, sceneSection, sceneEventIds } = useMemo(() => {
     const lineup = sections.filter(
       (s) => TIMELINE_SECTION_TYPES.has(s.type),
     );
+
+    // Extract Regular Hangs section (rendered inline after Lineup, not in orderedSections)
+    const scene = sections.find((s) => s.type === "the_scene" || s.type === "tonights_regulars") ?? null;
+
+    // Collect scene event IDs so Lineup can exclude them
+    const sceneIds = new Set<number>();
+    if (scene) {
+      for (const item of scene.items) {
+        if (item.item_type === "event") sceneIds.add(item.event.id);
+      }
+    }
 
     // Collect all event IDs from lineup sections for dedup in downstream sections
     const eventIds = new Set<number>();
@@ -243,12 +203,10 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
 
     let sectionOrder: CityPulseSectionType[];
     if (feedLayout?.visible_blocks) {
-      // Map visible block IDs to section types, skip "timeline" (handled separately)
       sectionOrder = feedLayout.visible_blocks
         .filter((b) => b !== "timeline")
         .map((b) => BLOCK_TO_SECTION[b])
         .filter((t): t is CityPulseSectionType => !!t);
-      // Append "browse" at end if not already included (FIXED_POSITION)
       if (!sectionOrder.includes("browse")) {
         sectionOrder.push("browse");
       }
@@ -261,7 +219,7 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
       .map((type) => sectionMap.get(type))
       .filter(Boolean) as typeof sections;
 
-    return { lineupSections: lineup, orderedSections: ordered, lineupEventIds: eventIds };
+    return { lineupSections: lineup, orderedSections: ordered, lineupEventIds: eventIds, sceneSection: scene, sceneEventIds: sceneIds };
   }, [sections, feedLayout]);
 
   // Theme vars from context
@@ -323,7 +281,7 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[var(--muted)] hover:text-[var(--soft)] hover:bg-[var(--cream)]/5 transition-colors"
           >
             <SignIn weight="bold" className="w-3.5 h-3.5" />
-            <span className="font-mono text-[0.5625rem] tracking-wide">Sign in to customize</span>
+            <span className="font-mono text-2xs tracking-wide">Sign in to customize</span>
           </Link>
         )}
       </div>
@@ -354,7 +312,21 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
             categoryCounts={categoryCounts}
             fetchTab={fetchTab}
             activeInterests={feedLayout?.interests}
+            savedInterests={savedInterests}
             onInterestsChange={handleInterestsChange}
+            onSaveInterests={handleSaveInterests}
+            excludeEventIds={sceneEventIds}
+          />
+        </div>
+      )}
+
+      {/* 3b. Regular Hangs — recurring activities, directly after Lineup */}
+      {sceneSection && (
+        <div className="mt-6">
+          <TheSceneSection
+            section={sceneSection}
+            portalSlug={portalSlug}
+            excludeEventIds={lineupEventIds}
           />
         </div>
       )}
@@ -369,7 +341,27 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
         </div>
       </div>
 
-      {/* 5+. Trending → WeatherDiscovery → Browse (order customizable) */}
+      {/* 5. Now Showing — indie cinema showtimes */}
+      <div className="mt-8">
+        <div className="h-px bg-[var(--twilight)]" />
+        <div className="pt-6">
+          <LazySection minHeight={300}>
+            <NowShowingSection portalSlug={portalSlug} />
+          </LazySection>
+        </div>
+      </div>
+
+      {/* 6. Festivals — upcoming big events */}
+      <div className="mt-8">
+        <div className="h-px bg-[var(--twilight)]" />
+        <div className="pt-6">
+          <LazySection minHeight={200}>
+            <FestivalsSection portalSlug={portalSlug} portalId={portal.id} />
+          </LazySection>
+        </div>
+      </div>
+
+      {/* Browse by Category (order customizable) */}
       {orderedSections.map((section) => (
         <div key={section.id} className="mt-8">
           <div className="h-px bg-[var(--twilight)]" />

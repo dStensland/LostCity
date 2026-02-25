@@ -37,7 +37,7 @@ export default function DaySlotGrid({
           {DAYS_OF_WEEK.map((day) => (
             <div
               key={day}
-              className="text-center font-mono text-[0.625rem] uppercase tracking-wider text-[var(--muted)] py-1"
+              className="text-center font-mono text-2xs uppercase tracking-wider text-[var(--muted)] py-1"
             >
               {DAY_LABELS[day]}
             </div>
@@ -48,7 +48,7 @@ export default function DaySlotGrid({
         {TIME_SLOTS.map((slot) => (
           <div key={slot} className="grid grid-cols-[80px_repeat(7,1fr)] gap-1 mb-1">
             {/* Row label */}
-            <div className="flex items-center font-mono text-[0.5625rem] text-[var(--muted)] pr-2 justify-end">
+            <div className="flex items-center font-mono text-2xs text-[var(--muted)] pr-2 justify-end">
               {SLOT_LABELS[slot]}
             </div>
 
@@ -76,13 +76,13 @@ export default function DaySlotGrid({
                   `}
                 >
                   {hasCMS ? (
-                    <span className="font-mono text-[0.5rem] text-[var(--cream)]/70 line-clamp-2 leading-tight">
+                    <span className="font-mono text-2xs text-[var(--cream)]/70 line-clamp-2 leading-tight">
                       {header.headline
                         ? header.headline.slice(0, 30)
                         : header.name.slice(0, 20)}
                     </span>
                   ) : (
-                    <span className="font-mono text-[0.5rem] text-[var(--muted)]/50 italic">
+                    <span className="font-mono text-2xs text-[var(--muted)]/50 italic">
                       default
                     </span>
                   )}

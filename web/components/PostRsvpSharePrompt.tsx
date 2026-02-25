@@ -131,13 +131,13 @@ export function PostRsvpSharePrompt({
                   name={friend.display_name || friend.username}
                   size="sm"
                 />
-                <span className="font-mono text-[0.6rem] text-[var(--muted)] truncate w-full text-center">
+                <span className="font-mono text-xs text-[var(--muted)] truncate w-full text-center">
                   {friend.display_name?.split(" ")[0] || friend.username}
                 </span>
                 <button
                   onClick={() => handleInvite(friend.id)}
                   disabled={isInvited || isSending}
-                  className={`px-2.5 py-1 rounded-full font-mono text-[0.6rem] font-medium transition-all ${
+                  className={`px-2.5 py-1 rounded-full font-mono text-xs font-medium transition-all ${
                     isInvited
                       ? "bg-[var(--neon-green)]/20 text-[var(--neon-green)]"
                       : isSending

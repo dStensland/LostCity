@@ -59,11 +59,11 @@ interface SeriesDetailViewProps {
 
 // Series type config
 const SERIES_TYPE_CONFIG: Record<string, { label: string; color: string }> = {
-  film: { label: "Film", color: "#A5B4FC" },
-  recurring_show: { label: "Recurring Show", color: "#F472B6" },
-  festival_program: { label: "Program", color: "#FBBF24" },
-  convention: { label: "Convention", color: "#22D3EE" },
-  tour: { label: "Tour", color: "#4ADE80" },
+  film: { label: "Film", color: "var(--series-type-film, #A5B4FC)" },
+  recurring_show: { label: "Recurring Show", color: "var(--series-type-recurring, #F472B6)" },
+  festival_program: { label: "Program", color: "var(--series-type-festival, #FBBF24)" },
+  convention: { label: "Convention", color: "var(--series-type-convention, #22D3EE)" },
+  tour: { label: "Tour", color: "var(--series-type-tour, #4ADE80)" },
 };
 
 function getSeriesTypeLabel(type: string): string {
@@ -71,7 +71,7 @@ function getSeriesTypeLabel(type: string): string {
 }
 
 function getSeriesTypeColor(type: string): string {
-  return SERIES_TYPE_CONFIG[type]?.color || "#94A3B8";
+  return SERIES_TYPE_CONFIG[type]?.color || "var(--series-type-default, #94A3B8)";
 }
 
 function formatGenre(genre: string): string {
@@ -314,7 +314,7 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
               <div className="flex flex-wrap items-center gap-2 text-sm text-[var(--muted)] mb-3">
                 {series.year && <span>{series.year}</span>}
                 {series.rating && (
-                  <span className="px-1 py-0.5 border border-[var(--muted)] rounded text-[0.65rem]">
+                  <span className="px-1 py-0.5 border border-[var(--muted)] rounded text-xs">
                     {series.rating}
                   </span>
                 )}
@@ -349,7 +349,7 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
                 {series.genres.slice(0, 4).map((genre) => (
                   <span
                     key={genre}
-                    className="px-2 py-0.5 rounded-full text-[0.65rem] font-medium border border-[var(--twilight)] text-[var(--soft)]"
+                    className="px-2 py-0.5 rounded-full text-xs font-medium border border-[var(--twilight)] text-[var(--soft)]"
                   >
                     {formatGenre(genre)}
                   </span>
@@ -369,14 +369,14 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
             <p className="text-xs font-mono uppercase tracking-wider text-[var(--muted)]">Part of</p>
             <p className="text-[var(--cream)] font-medium truncate">{series.festival.name}</p>
           </div>
-          <span className="text-[0.65rem] font-mono text-[var(--soft)]">View festival</span>
+          <span className="text-xs font-mono text-[var(--soft)]">View festival</span>
         </button>
       )}
 
       {/* Description */}
       {series.description && (
         <div className="border border-[var(--twilight)] rounded-xl p-4 bg-[var(--dusk)] mb-6">
-          <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-2">
+          <h2 className="font-mono text-xs font-medium text-[var(--muted)] uppercase tracking-widest mb-2">
             About
           </h2>
           <p className="text-[var(--soft)] text-sm leading-relaxed whitespace-pre-wrap">
@@ -433,7 +433,7 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
 
       {/* Showtimes by venue */}
       <div>
-        <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-4">
+        <h2 className="font-mono text-xs font-medium text-[var(--muted)] uppercase tracking-widest mb-4">
           {totalEvents > 0 ? (
             <>
               {totalEvents} Upcoming {series.series_type === "film" ? "Showtime" : "Event"}

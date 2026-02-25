@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
         start_date,
         start_time,
         is_all_day,
-        category,
+        category_id,
         is_free,
         price_min,
         price_max,
@@ -131,7 +131,7 @@ export async function GET(request: NextRequest) {
 
     // Apply category filter
     if (categories && categories.length > 0) {
-      query = query.in("category", categories);
+      query = query.in("category_id", categories);
     }
 
     // Apply neighborhood filter via venue

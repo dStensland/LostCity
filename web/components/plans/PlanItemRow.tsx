@@ -28,7 +28,7 @@ export function PlanItemRow({ item, isCreator, onRemove }: PlanItemRowProps) {
         {timeStr ? (
           <span className="font-mono text-xs text-[var(--soft)]">{timeStr}</span>
         ) : (
-          <span className="font-mono text-xs text-[var(--twilight)]">#{item.sort_order + 1}</span>
+          <span className="font-mono text-xs text-[var(--muted)]">#{item.sort_order + 1}</span>
         )}
       </div>
 
@@ -38,12 +38,12 @@ export function PlanItemRow({ item, isCreator, onRemove }: PlanItemRowProps) {
           {item.title}
         </p>
         {item.venue && (
-          <p className="font-mono text-[0.6rem] text-[var(--muted)] truncate">
+          <p className="font-mono text-xs text-[var(--muted)] truncate">
             {item.venue.name}
           </p>
         )}
         {item.note && (
-          <p className="font-mono text-[0.6rem] text-[var(--muted)] mt-0.5 line-clamp-1">
+          <p className="font-mono text-xs text-[var(--muted)] mt-0.5 line-clamp-1">
             {item.note}
           </p>
         )}

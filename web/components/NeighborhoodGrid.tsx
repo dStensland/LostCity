@@ -77,7 +77,7 @@ function NeighborhoodGrid({
         {selectedNeighborhood && (
           <button
             onClick={() => onSelectNeighborhood(null)}
-            className="font-mono text-[0.6rem] text-[var(--neon-amber)] hover:text-[var(--cream)] transition-colors"
+            className="font-mono text-xs text-[var(--neon-amber)] hover:text-[var(--cream)] transition-colors"
           >
             Clear filter
           </button>

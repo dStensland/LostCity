@@ -214,7 +214,7 @@ export function GenrePicker({
       <div className="mx-auto w-full max-w-4xl animate-fadeIn">
         {/* Header */}
         <div className="mb-8 text-center">
-          <p className="mb-2 font-mono text-[0.65rem] uppercase tracking-[0.24em] text-[var(--soft)]">
+          <p className="mb-2 font-mono text-xs uppercase tracking-[0.24em] text-[var(--soft)]">
             Step 2 · Refine The Signal
           </p>
           <h1 className="mb-2 text-2xl font-semibold text-[var(--cream)] sm:text-3xl">

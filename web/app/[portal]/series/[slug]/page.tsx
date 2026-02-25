@@ -386,7 +386,7 @@ export default async function PortalSeriesPage({ params }: Props) {
                   </svg>
                 </div>
                 <div className="min-w-0">
-                  <div className="text-[0.65rem] font-mono uppercase tracking-wider text-[var(--muted)]">
+                  <div className="text-xs font-mono uppercase tracking-wider text-[var(--muted)]">
                     Festival
                   </div>
                   <div className="text-sm text-[var(--soft)] group-hover:text-[var(--accent-color)] transition-colors">

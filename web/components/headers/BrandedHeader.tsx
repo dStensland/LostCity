@@ -221,7 +221,7 @@ export default function BrandedHeader({
                   ? "bg-white border-gray-200"
                   : "bg-[var(--dusk)] border-[var(--twilight)]"
               }`}>
-                <div className="px-3 py-1.5 text-[0.65rem] font-mono text-[var(--muted)] uppercase tracking-wider">
+                <div className="px-3 py-1.5 text-xs font-mono text-[var(--muted)] uppercase tracking-wider">
                   Navigate
                 </div>
                 {TABS.map((tab) => (

@@ -146,7 +146,7 @@ function ExploreHero({ venue, portalSlug }: { venue: ExploreVenue; portalSlug: s
         {/* Content */}
         <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-6">
           <div className="flex items-center gap-2 mb-2">
-            <span className="px-2 py-0.5 rounded-full bg-[var(--coral)]/90 text-[var(--void)] font-mono text-[0.6rem] font-semibold uppercase tracking-wider">
+            <span className="px-2 py-0.5 rounded-full bg-[var(--coral)]/90 text-[var(--void)] font-mono text-xs font-semibold uppercase tracking-wider">
               Featured
             </span>
             {venue.neighborhood && (
@@ -211,7 +211,7 @@ function ExploreCategoryNav({
               {icon}
             </span>
             {collection.category.label}
-            <span className={`text-[0.6rem] ${isActive ? "text-[var(--void)]/60" : "text-[var(--muted)]"}`}>
+            <span className={`text-xs ${isActive ? "text-[var(--void)]/60" : "text-[var(--muted)]"}`}>
               {collection.venues.length}
             </span>
           </button>
@@ -304,7 +304,7 @@ function ExploreVenueCard({
               {venue.name}
             </h3>
             {venue.neighborhood && (
-              <p className="font-mono text-[0.65rem] text-[var(--muted)] mt-0.5">
+              <p className="font-mono text-xs text-[var(--muted)] mt-0.5">
                 {venue.neighborhood}
               </p>
             )}
@@ -320,12 +320,12 @@ function ExploreVenueCard({
         {/* Live data */}
         <div className="flex items-center gap-2 mt-2">
           {venue.next_event_title && (
-            <span className="font-mono text-[0.6rem] text-[var(--coral)] bg-[var(--coral)]/10 px-2 py-0.5 rounded-full truncate">
+            <span className="font-mono text-xs text-[var(--coral)] bg-[var(--coral)]/10 px-2 py-0.5 rounded-full truncate">
               Now: {venue.next_event_title}
             </span>
           )}
           {!venue.next_event_title && venue.upcoming_event_count > 0 && (
-            <span className="font-mono text-[0.6rem] text-[var(--muted)] bg-[var(--twilight)]/50 px-2 py-0.5 rounded-full">
+            <span className="font-mono text-xs text-[var(--muted)] bg-[var(--twilight)]/50 px-2 py-0.5 rounded-full">
               {venue.upcoming_event_count} upcoming
             </span>
           )}

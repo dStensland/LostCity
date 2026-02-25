@@ -46,12 +46,12 @@ export default function NeighborhoodCluster({
           </h3>
           <div className="flex items-center gap-1.5">
             {cluster.eventCount > 0 && (
-              <span className="font-mono text-[0.65rem] font-semibold px-1.5 py-0.5 rounded bg-[var(--neon-red)]/12 text-[var(--neon-red)]/80">
+              <span className="font-mono text-xs font-semibold px-1.5 py-0.5 rounded bg-[var(--neon-red)]/12 text-[var(--neon-red)]/80">
                 {cluster.eventCount} {cluster.eventCount === 1 ? "event" : "events"}
               </span>
             )}
             {cluster.spotCount > 0 && (
-              <span className="font-mono text-[0.65rem] font-semibold px-1.5 py-0.5 rounded bg-[var(--neon-green)]/12 text-[var(--neon-green)]/80">
+              <span className="font-mono text-xs font-semibold px-1.5 py-0.5 rounded bg-[var(--neon-green)]/12 text-[var(--neon-green)]/80">
                 {cluster.spotCount} open
               </span>
             )}

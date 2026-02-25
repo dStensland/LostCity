@@ -189,7 +189,7 @@ export default async function FilmVenuesPage({ params }: Props) {
         <FilmPortalNav portalSlug={portal.slug} />
 
         <header className="space-y-2">
-          <p className="text-[0.64rem] uppercase tracking-[0.18em] text-[#8fa2c4]">Atlanta Film</p>
+          <p className="text-xs uppercase tracking-[0.18em] text-[#8fa2c4]">Atlanta Film</p>
           <h1 className="font-[var(--font-film-editorial)] text-4xl text-[#f7f7fb]">Venues</h1>
           <p className="max-w-3xl text-sm text-[#b8c7e3]">
             A theater-by-theater guide to what is playing now, with Atlanta&apos;s indie houses in focus.
@@ -198,15 +198,15 @@ export default async function FilmVenuesPage({ params }: Props) {
 
         <section className="grid gap-3 sm:grid-cols-3">
           <article className="rounded-2xl border border-[#2a3349] bg-[#0d1424] p-4">
-            <p className="text-[0.62rem] uppercase tracking-[0.16em] text-[#9bb0d7]">Active Theaters</p>
+            <p className="text-xs uppercase tracking-[0.16em] text-[#9bb0d7]">Active Theaters</p>
             <p className="mt-1 text-2xl font-semibold text-[#f5f8ff]">{venues.length}</p>
           </article>
           <article className="rounded-2xl border border-[#2a3349] bg-[#0d1424] p-4">
-            <p className="text-[0.62rem] uppercase tracking-[0.16em] text-[#9bb0d7]">Indie Priority</p>
+            <p className="text-xs uppercase tracking-[0.16em] text-[#9bb0d7]">Indie Priority</p>
             <p className="mt-1 text-2xl font-semibold text-[#f5f8ff]">{indieVenues.length}</p>
           </article>
           <article className="rounded-2xl border border-[#2a3349] bg-[#0d1424] p-4">
-            <p className="text-[0.62rem] uppercase tracking-[0.16em] text-[#9bb0d7]">Upcoming Screenings</p>
+            <p className="text-xs uppercase tracking-[0.16em] text-[#9bb0d7]">Upcoming Screenings</p>
             <p className="mt-1 text-2xl font-semibold text-[#f5f8ff]">{venues.reduce((sum, venue) => sum + venue.screeningCount, 0)}</p>
           </article>
         </section>
@@ -214,7 +214,7 @@ export default async function FilmVenuesPage({ params }: Props) {
         <section className="space-y-4">
           <header className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <p className="text-[0.62rem] uppercase tracking-[0.18em] text-[#95a8cb]">Indie Spotlight</p>
+              <p className="text-xs uppercase tracking-[0.18em] text-[#95a8cb]">Indie Spotlight</p>
               <h2 className="mt-1 font-[var(--font-film-editorial)] text-3xl text-[#f7f8fd]">Indie houses in focus</h2>
             </div>
             <Link href={`/${portal.slug}/showtimes`} className="inline-flex items-center gap-1 text-xs uppercase tracking-[0.14em] text-[#c9d9ff] hover:text-[#e1eaff]">
@@ -244,7 +244,7 @@ export default async function FilmVenuesPage({ params }: Props) {
 
                 <div className="space-y-1.5 p-3.5">
                   <h3 className="text-lg font-semibold text-[#f4f7ff]">{venue.name}</h3>
-                  <p className="text-[0.68rem] uppercase tracking-[0.12em] text-[#c8d8f4]">{venue.screeningCount} upcoming • {venue.todayCount} today</p>
+                  <p className="text-xs uppercase tracking-[0.12em] text-[#c8d8f4]">{venue.screeningCount} upcoming • {venue.todayCount} today</p>
                   <p className="text-xs text-[#adbfdf]">{formatShortDate(venue.nextDate)} • {formatTimeLabel(venue.nextTime)}</p>
                 </div>
               </Link>
@@ -258,7 +258,7 @@ export default async function FilmVenuesPage({ params }: Props) {
 
         <section className="space-y-4">
           <header>
-            <p className="text-[0.62rem] uppercase tracking-[0.18em] text-[#95a8cb]">Venue Index</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-[#95a8cb]">Venue Index</p>
             <h2 className="mt-1 font-[var(--font-film-editorial)] text-3xl text-[#f7f8fd]">All active cinema venues</h2>
           </header>
 
@@ -268,17 +268,17 @@ export default async function FilmVenuesPage({ params }: Props) {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h3 className="text-base font-semibold text-[#f5f8ff]">{venue.name}</h3>
-                    <p className="mt-1 text-[0.72rem] text-[#9fb2d5]">{venue.neighborhood || "Atlanta"}</p>
+                    <p className="mt-1 text-xs text-[#9fb2d5]">{venue.neighborhood || "Atlanta"}</p>
                   </div>
-                  <span className="rounded-full border border-[#36507f] bg-[#12203a] px-2 py-0.5 text-[0.62rem] uppercase tracking-[0.12em] text-[#bad0f3]">
+                  <span className="rounded-full border border-[#36507f] bg-[#12203a] px-2 py-0.5 text-xs uppercase tracking-[0.12em] text-[#bad0f3]">
                     {venue.screeningCount}
                   </span>
                 </div>
 
-                <p className="mt-2 text-[0.68rem] text-[#c4d4f1]">Next: {formatShortDate(venue.nextDate)} • {formatTimeLabel(venue.nextTime)}</p>
+                <p className="mt-2 text-xs text-[#c4d4f1]">Next: {formatShortDate(venue.nextDate)} • {formatTimeLabel(venue.nextTime)}</p>
                 <p className="mt-2 line-clamp-2 text-xs text-[#aebfdf]">{venue.topTitles.join(" • ") || "New listings coming in."}</p>
 
-                <div className="mt-3 flex items-center gap-3 text-[0.66rem] uppercase tracking-[0.13em]">
+                <div className="mt-3 flex items-center gap-3 text-xs uppercase tracking-[0.13em]">
                   <Link href={venue.slug ? `/${portal.slug}/spots/${venue.slug}` : `/${portal.slug}/showtimes`} className="text-[#c9d9ff] hover:text-[#e1eaff]">
                     Venue page
                   </Link>

@@ -20,9 +20,7 @@ const DATE_OPTIONS = [
   { value: "week", label: "This Week" },
 ] as const;
 
-type DropdownId = "category" | "date" | "mood" | null;
-
-const MOOD_LABELS_CACHE = new Map<string, string>();
+type DropdownId = "category" | "date" | null;
 
 // ─── Mobile strip configuration ──────────────────────────────────────────────
 
@@ -210,7 +208,6 @@ export default function FindFilterBar({ variant = "full", portalId, portalExclus
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
   const categoryDropdownRef = useRef<HTMLDivElement>(null);
   const dateDropdownRef = useRef<HTMLDivElement>(null);
-  const moodDropdownRef = useRef<HTMLDivElement>(null);
   const dateInputRef = useRef<HTMLInputElement>(null);
 
   const toggleDropdown = useCallback((id: DropdownId) => {
@@ -223,8 +220,7 @@ export default function FindFilterBar({ variant = "full", portalId, portalExclus
       const target = event.target as Node;
       if (
         categoryDropdownRef.current?.contains(target) ||
-        dateDropdownRef.current?.contains(target) ||
-        moodDropdownRef.current?.contains(target)
+        dateDropdownRef.current?.contains(target)
       ) return;
       setActiveDropdown(null);
     };
@@ -242,10 +238,10 @@ export default function FindFilterBar({ variant = "full", portalId, portalExclus
 
   const dateFilterLabel =
     !f.effectiveDateFilter
-      ? "When"
+      ? "Upcoming"
       : isSpecificDate
       ? formatDateLabel(f.currentDateFilter)
-      : DATE_OPTIONS.find((d) => d.value === f.effectiveDateFilter)?.label || "When";
+      : DATE_OPTIONS.find((d) => d.value === f.effectiveDateFilter)?.label || "Upcoming";
 
   const categoryLabel =
     f.currentCategories.length === 0
@@ -254,25 +250,11 @@ export default function FindFilterBar({ variant = "full", portalId, portalExclus
       ? f.categoryOptions.find((c) => c.value === f.currentCategories[0])?.label || "Category"
       : `${f.currentCategories.length} categories`;
 
-  const moodLabel = useMemo(() => {
-    if (!f.currentMood) return "Mood";
-    if (!MOOD_LABELS_CACHE.has(f.currentMood)) {
-      const found = f.moodOptions.find((m) => m.value === f.currentMood);
-      if (found) MOOD_LABELS_CACHE.set(f.currentMood, found.label);
-    }
-    return MOOD_LABELS_CACHE.get(f.currentMood) || f.currentMood;
-  }, [f.currentMood, f.moodOptions]);
-
   const visibleGenreOptions = f.currentCategories.length === 1 ? f.genreOptions : [];
 
   // Wrap date/mood setters to also close dropdown
   const handleSetDate = useCallback((date: string) => {
     f.setDateFilter(date);
-    setActiveDropdown(null);
-  }, [f]);
-
-  const handleSetMood = useCallback((mood: string) => {
-    f.setMoodFilter(mood);
     setActiveDropdown(null);
   }, [f]);
 
@@ -354,6 +336,17 @@ export default function FindFilterBar({ variant = "full", portalId, portalExclus
                 {activeDropdown === "date" && (
                   <div className="absolute top-full left-0 mt-1 w-44 rounded-xl border border-[var(--twilight)] shadow-xl z-50 bg-[var(--void)]/95 backdrop-blur-md animate-dropdown-in">
                     <div className="p-2">
+                      <button
+                        onClick={() => handleSetDate("")}
+                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg font-mono text-xs font-medium transition-colors ${
+                          !f.effectiveDateFilter
+                            ? "bg-[var(--gold)] text-[var(--void)]"
+                            : "text-[var(--cream)] hover:bg-[var(--twilight)]"
+                        }`}
+                      >
+                        Upcoming
+                      </button>
+                      <div className="h-px bg-[var(--twilight)] my-1" />
                       {DATE_OPTIONS.map((df) => {
                         const isActive = f.effectiveDateFilter === df.value;
                         return (
@@ -400,51 +393,6 @@ export default function FindFilterBar({ variant = "full", portalId, portalExclus
               </div>
             )}
 
-            {/* Mood dropdown */}
-            <div className="relative" ref={moodDropdownRef}>
-              <button
-                onClick={() => toggleDropdown("mood")}
-                className={`btn-press flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]/70 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--void)] ${
-                  f.currentMood
-                    ? "bg-[var(--mood-active)] text-[var(--cream)] border-[var(--mood-active)]/40 shadow-sm"
-                    : "bg-[var(--dusk)]/80 text-[var(--cream)]/80 border-[var(--twilight)]/80 hover:text-[var(--cream)] hover:bg-[var(--twilight)]/40 hover:border-[var(--twilight)]"
-                }`}
-              >
-                {moodLabel}
-                <svg className={`w-3 h-3 transition-transform ${activeDropdown === "mood" ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-
-              {activeDropdown === "mood" && (
-                <div className="absolute top-full left-0 mt-1 w-48 rounded-xl border border-[var(--twilight)] shadow-xl z-50 bg-[var(--void)]/95 backdrop-blur-md animate-dropdown-in">
-                  <div className="p-2">
-                    {f.moodOptions.map((mood) => {
-                      const isActive = f.currentMood === mood.value;
-                      return (
-                        <button
-                          key={mood.value}
-                          onClick={() => handleSetMood(mood.value)}
-                          className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg font-mono text-xs font-medium transition-colors ${
-                            isActive
-                              ? "bg-[var(--mood-active)] text-[var(--cream)]"
-                              : "text-[var(--cream)] hover:bg-[var(--twilight)]"
-                          }`}
-                        >
-                          {mood.label}
-                          {isActive && (
-                            <svg className="w-3 h-3 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-
             {/* Filters button (opens mobile sheet) */}
             <button
               onClick={() => setMobileSheetOpen(true)}
@@ -482,7 +430,7 @@ export default function FindFilterBar({ variant = "full", portalId, portalExclus
         <div className="hidden sm:block">
           <div className="py-1.5">
             <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide">
-              <span className="flex-shrink-0 text-[0.6rem] font-mono uppercase tracking-wider text-[var(--muted)] mr-1">Genre</span>
+              <span className="flex-shrink-0 text-xs font-mono uppercase tracking-wider text-[var(--muted)] mr-1">Genre</span>
               {visibleGenreOptions.map((opt) => {
                 const isActive = f.currentGenres.includes(opt.genre);
                 return (
@@ -521,17 +469,14 @@ export default function FindFilterBar({ variant = "full", portalId, portalExclus
         currentFreeOnly={f.currentFreeOnly}
         currentTags={f.currentTags}
         currentVibes={f.currentVibes}
-        currentMood={f.currentMood}
         categoryOptions={f.categoryOptions}
         tagGroups={f.tagGroupOptions}
         vibeGroups={f.vibeGroupOptions}
-        moodOptions={f.moodOptions}
         onToggleCategory={f.toggleCategory}
         onSetDateFilter={handleSetDate}
         onToggleFreeOnly={f.toggleFreeOnly}
         onToggleTag={f.toggleTag}
         onToggleVibe={f.toggleVibe}
-        onSetMood={handleSetMood}
         onClearAll={f.clearAll}
       />
     </>

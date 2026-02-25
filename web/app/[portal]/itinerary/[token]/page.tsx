@@ -54,7 +54,7 @@ export default async function SharedItineraryPage({ params }: Props) {
     .select(
       `
       *,
-      event:events(id, title, start_date, start_time, image_url, category, lat, lng, venue_name:venues(name)),
+      event:events(id, title, start_date, start_time, image_url, category_id, venue_name:venues(name, lat, lng)),
       venue:venues(id, slug, name, image_url, neighborhood, venue_type, lat, lng)
     `
     )

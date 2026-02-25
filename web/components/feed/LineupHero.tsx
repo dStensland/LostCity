@@ -90,7 +90,7 @@ export default function LineupHero({ event, portalSlug }: LineupHeroProps) {
         {/* Time badge — top-left, glassmorphic */}
         <span
           className={[
-            "absolute top-3 left-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono text-[0.75rem] font-bold leading-none",
+            "absolute top-3 left-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono text-xs font-bold leading-none",
             "bg-black/50 backdrop-blur-md border border-white/10",
             isLive && "!border-[var(--neon-red)]/40",
           ]
@@ -110,7 +110,7 @@ export default function LineupHero({ event, portalSlug }: LineupHeroProps) {
 
         {/* Category pill — top-right, with glow */}
         <span
-          className="absolute top-3 right-3 inline-flex items-center gap-1.5 bg-black/50 backdrop-blur-md px-2.5 py-1.5 rounded-lg font-mono text-[0.625rem] font-bold uppercase tracking-wider leading-none border border-white/10"
+          className="absolute top-3 right-3 inline-flex items-center gap-1.5 bg-black/50 backdrop-blur-md px-2.5 py-1.5 rounded-lg font-mono text-2xs font-bold uppercase tracking-wider leading-none border border-white/10"
           style={{
             color: catColor,
             boxShadow: `0 0 12px color-mix(in srgb, ${catColor} 25%, transparent)`,
@@ -127,7 +127,7 @@ export default function LineupHero({ event, portalSlug }: LineupHeroProps) {
 
         {/* FREE badge — below category pill */}
         {event.is_free && (
-          <span className="absolute top-12 right-3 inline-flex items-center gap-1 bg-[var(--neon-green)]/15 backdrop-blur-md px-2 py-1 rounded-md font-mono text-[0.5625rem] font-bold uppercase tracking-wider leading-none text-[var(--neon-green)] border border-[var(--neon-green)]/20">
+          <span className="absolute top-12 right-3 inline-flex items-center gap-1 bg-[var(--neon-green)]/15 backdrop-blur-md px-2 py-1 rounded-md font-mono text-2xs font-bold uppercase tracking-wider leading-none text-[var(--neon-green)] border border-[var(--neon-green)]/20">
             <Ticket weight="bold" className="w-2.5 h-2.5" />
             Free
           </span>
@@ -136,13 +136,13 @@ export default function LineupHero({ event, portalSlug }: LineupHeroProps) {
         {/* Bottom content — title, venue, social proof */}
         <div className="absolute bottom-0 left-0 right-0 px-4 pb-4">
           <p
-            className="font-masthead text-[1.625rem] sm:text-[2rem] font-bold text-[var(--cream)] leading-tight group-hover:text-white transition-colors line-clamp-2"
+            className="font-masthead text-2xl sm:text-3xl font-bold text-[var(--cream)] leading-tight group-hover:text-white transition-colors line-clamp-2"
             style={{ textShadow: "0 2px 12px rgba(0,0,0,0.7)" }}
           >
             {event.title}
           </p>
           <div className="flex items-center gap-2.5 mt-2">
-            <p className="text-[0.8125rem] text-[var(--soft)] truncate" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>
+            <p className="text-sm text-[var(--soft)] truncate" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>
               {event.venue?.name}
               {event.venue?.neighborhood && (
                 <span className="text-[var(--muted)]">
@@ -152,7 +152,7 @@ export default function LineupHero({ event, portalSlug }: LineupHeroProps) {
             </p>
             {goingCount > 0 && (
               <span
-                className="shrink-0 inline-flex items-center gap-1 bg-black/40 backdrop-blur-sm px-2 py-0.5 rounded-full font-mono text-[0.625rem] font-medium border border-white/10"
+                className="shrink-0 inline-flex items-center gap-1 bg-black/40 backdrop-blur-sm px-2 py-0.5 rounded-full font-mono text-2xs font-medium border border-white/10"
                 style={{ color: catColor }}
               >
                 <Users weight="bold" className="w-3 h-3" />

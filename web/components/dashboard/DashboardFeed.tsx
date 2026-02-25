@@ -284,13 +284,13 @@ function EventCard({ event }: { event: Event }) {
         return "text-[var(--coral)]";
       case "followed_venue":
       case "followed_organization":
-        return "text-[#A78BFA]";
+        return "text-[var(--vibe)]";
       case "neighborhood":
-        return "text-[#6EE7B7]";
+        return "text-[var(--neon-green)]";
       case "vibes":
-        return "text-[#F9A8D4]";
+        return "text-[var(--cat-music)]";
       case "price":
-        return "text-[#FBBF24]";
+        return "text-[var(--gold)]";
       default:
         return "text-[var(--muted)]";
     }

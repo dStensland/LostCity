@@ -1045,7 +1045,7 @@ async function searchSeries(
       .order("updated_at", { ascending: false })
       .limit(options.limit);
     if (options.categories?.length) {
-      fallbackQuery = fallbackQuery.in("category", options.categories);
+      fallbackQuery = fallbackQuery.in("category_id", options.categories);
     }
     const { data: fallbackRows, error: fallbackError } = await fallbackQuery;
     if (!fallbackError) {

@@ -222,7 +222,7 @@ export default function CommunityContent({
       <section className="py-3 border-b border-[var(--twilight)] overflow-x-auto scrollbar-hide">
         <div className="max-w-3xl mx-auto px-4">
           <div className="flex items-center gap-2">
-            <span className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider whitespace-nowrap">
+            <span className="font-mono text-2xs text-[var(--muted)] uppercase tracking-wider whitespace-nowrap">
               Creates:
             </span>
             <div className="flex gap-1.5">
@@ -234,7 +234,7 @@ export default function CommunityContent({
                   <button
                     key={cat}
                     onClick={() => handleCategoryToggle(cat)}
-                    className={`flex items-center gap-1 px-2 py-1 rounded-full font-mono text-[0.65rem] font-medium whitespace-nowrap transition-all ${
+                    className={`flex items-center gap-1 px-2 py-1 rounded-full font-mono text-xs font-medium whitespace-nowrap transition-all ${
                       isSelected
                         ? `bg-accent text-[var(--void)] ${accentClass?.className ?? ""}`
                         : "bg-[var(--twilight)]/50 text-[var(--muted)] hover:text-[var(--cream)]"
@@ -263,12 +263,12 @@ export default function CommunityContent({
             {searchQuery && ` matching "${searchQuery}"`}
           </p>
           <div className="flex items-center gap-1">
-            <span className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider mr-2">
+            <span className="font-mono text-2xs text-[var(--muted)] uppercase tracking-wider mr-2">
               Sort:
             </span>
             <button
               onClick={() => setSortBy("category")}
-              className={`px-2 py-1 rounded font-mono text-[0.65rem] transition-all ${
+              className={`px-2 py-1 rounded font-mono text-xs transition-all ${
                 sortBy === "category"
                   ? "bg-[var(--coral)] text-[var(--void)]"
                   : "bg-[var(--twilight)]/50 text-[var(--muted)] hover:text-[var(--cream)]"
@@ -278,7 +278,7 @@ export default function CommunityContent({
             </button>
             <button
               onClick={() => setSortBy("alphabetical")}
-              className={`px-2 py-1 rounded font-mono text-[0.65rem] transition-all ${
+              className={`px-2 py-1 rounded font-mono text-xs transition-all ${
                 sortBy === "alphabetical"
                   ? "bg-[var(--coral)] text-[var(--void)]"
                   : "bg-[var(--twilight)]/50 text-[var(--muted)] hover:text-[var(--cream)]"
@@ -366,14 +366,14 @@ export default function CommunityContent({
                           <div className="flex items-center gap-2 mt-1">
                             {/* Org Type Badge */}
                             <span
-                              className={`inline-flex items-center px-2 py-0.5 rounded-md text-[0.6rem] font-mono font-medium uppercase tracking-wider ${
+                              className={`inline-flex items-center px-2 py-0.5 rounded-md text-2xs font-mono font-medium uppercase tracking-wider ${
                                 orgConfig?.color ? "bg-accent-20 text-accent" : "bg-[var(--twilight)] text-[var(--muted)]"
                               }`}
                             >
                               {orgConfig?.label || producer.org_type.replace(/_/g, " ")}
                             </span>
                             {producer.neighborhood && (
-                              <span className="text-[0.6rem] text-[var(--muted)] font-mono">
+                              <span className="text-2xs text-[var(--muted)] font-mono">
                                 {producer.neighborhood}
                               </span>
                             )}
@@ -397,7 +397,7 @@ export default function CommunityContent({
                             return (
                               <span
                                 key={cat}
-                                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[0.55rem] font-mono uppercase tracking-wider bg-accent-15 text-accent ${tagAccentClass?.className ?? ""}`}
+                                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-2xs font-mono uppercase tracking-wider bg-accent-15 text-accent ${tagAccentClass?.className ?? ""}`}
                               >
                                 <ScopedStyles css={tagAccentClass?.css} />
                                 <CategoryIcon type={cat} size={9} />

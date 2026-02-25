@@ -47,7 +47,7 @@ export default function HealthTagBadge({ tag, size = "md", onRemove }: Props) {
   const label = getTagLabel(tag);
 
   const sizeClasses = {
-    sm: "px-1.5 py-0.5 text-[0.6rem]",
+    sm: "px-1.5 py-0.5 text-xs",
     md: "px-2 py-0.5 text-xs",
   };
 

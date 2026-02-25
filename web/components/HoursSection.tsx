@@ -157,7 +157,7 @@ export default function HoursSection({
                   <span className={isToday ? "font-medium" : ""}>
                     {DAY_LABELS[day]}
                     {isToday && (
-                      <span className="ml-1.5 text-[0.6rem] text-[var(--coral)]">
+                      <span className="ml-1.5 text-xs text-[var(--coral)]">
                         TODAY
                       </span>
                     )}
@@ -225,7 +225,7 @@ export function OpenStatusBadge({
 
   return (
     <span
-      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[0.6rem] font-mono uppercase tracking-wider ${
+      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-mono uppercase tracking-wider ${
         isOpen
           ? "bg-[var(--neon-green)]/15 text-[var(--neon-green)] border border-[var(--neon-green)]/25"
           : "bg-[var(--coral)]/15 text-[var(--coral)] border border-[var(--coral)]/25"

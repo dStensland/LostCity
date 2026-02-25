@@ -56,7 +56,7 @@ export default function FeedSectionHeader({
       case "primary":
         return {
           titleClass: "section-header-primary text-2xl",
-          subtitleClass: "font-mono text-[0.78rem] text-[var(--soft)] mt-0.5",
+          subtitleClass: "font-mono text-sm text-[var(--soft)] mt-0.5",
           containerClass: "mb-3 sm:mb-5 pb-2",
           iconSize: "w-6 h-6",
           defaultAccent: "var(--gold)",
@@ -65,7 +65,7 @@ export default function FeedSectionHeader({
       case "secondary":
         return {
           titleClass: "section-header-secondary text-xl",
-          subtitleClass: "font-mono text-[0.72rem] text-[var(--soft)] mt-0.5",
+          subtitleClass: "font-mono text-xs text-[var(--soft)] mt-0.5",
           containerClass: "mb-2 sm:mb-4",
           iconSize: "w-5 h-5",
           defaultAccent: accentColor || "var(--coral)",
@@ -73,8 +73,8 @@ export default function FeedSectionHeader({
         };
       case "tertiary":
         return {
-          titleClass: "section-header-tertiary text-[1.02rem]",
-          subtitleClass: "font-mono text-[0.68rem] text-[var(--soft)] mt-0.5 normal-case tracking-normal",
+          titleClass: "section-header-tertiary text-base",
+          subtitleClass: "font-mono text-xs text-[var(--soft)] mt-0.5 normal-case tracking-normal",
           containerClass: "mb-2.5 sm:mb-3.5",
           iconSize: "w-4 h-4",
           defaultAccent: "var(--muted)",
@@ -131,7 +131,7 @@ export default function FeedSectionHeader({
           {/* Badge (above title for primary) */}
           {badge && priority === "primary" && (
             <span
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.6rem] font-mono font-medium uppercase tracking-wider mb-1 bg-accent-20 text-accent border border-accent-40"
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-mono font-medium uppercase tracking-wider mb-1 bg-accent-20 text-accent border border-accent-40"
             >
               {badge}
             </span>
@@ -145,7 +145,7 @@ export default function FeedSectionHeader({
             {/* Inline badge for secondary/tertiary */}
             {badge && priority !== "primary" && (
               <span
-                className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[0.55rem] font-mono font-medium uppercase bg-accent-20 text-accent"
+                className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-2xs font-mono font-medium uppercase bg-accent-20 text-accent"
               >
                 {badge}
               </span>

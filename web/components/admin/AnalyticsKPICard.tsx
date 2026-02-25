@@ -66,7 +66,7 @@ export default function AnalyticsKPICard({
             {trend > 0 ? "+" : ""}
             {trend}%
           </span>
-          <span className="font-mono text-[0.65rem] text-[var(--muted)]">
+          <span className="font-mono text-xs text-[var(--muted)]">
             {trendLabel}
           </span>
         </div>

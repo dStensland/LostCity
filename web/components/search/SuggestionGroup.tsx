@@ -59,18 +59,18 @@ export default function SuggestionGroup({
       {/* Group header */}
       <div className="flex items-center gap-2 px-3 pb-2">
         <TypeIcon type={type} className={`h-3.5 w-3.5 ${typeColor}`} />
-        <span className={`text-[0.64rem] font-mono uppercase tracking-wider ${typeColor}`}>
+        <span className={`text-xs font-mono uppercase tracking-wider ${typeColor}`}>
           {typeLabel}
         </span>
         {displayCount > 0 && (
-          <span className="text-[0.58rem] text-[var(--muted)]">
+          <span className="text-2xs text-[var(--muted)]">
             ({displayCount})
           </span>
         )}
         {hasMore && onViewAll && (
           <button
             onMouseDown={onViewAll}
-            className="text-[0.58rem] text-[var(--coral)] hover:text-[var(--rose)] transition-colors ml-auto font-mono"
+            className="text-2xs text-[var(--coral)] hover:text-[var(--rose)] transition-colors ml-auto font-mono"
           >
             view all
           </button>
@@ -111,25 +111,25 @@ export default function SuggestionGroup({
 
               <div className="mt-0.5 flex items-center gap-1.5 min-w-0 flex-wrap">
                 {result.subtitle && (
-                  <span className="text-[0.67rem] text-[var(--muted)] truncate max-w-[180px]">
+                  <span className="text-xs text-[var(--muted)] truncate max-w-[180px]">
                     {result.subtitle}
                   </span>
                 )}
 
                 {result.type === "event" && result.metadata?.date && (
-                  <span className="text-[0.58rem] px-1.5 py-0.5 rounded-full bg-[var(--night)]/60 border border-[var(--twilight)] text-[var(--soft)]">
+                  <span className="text-2xs px-1.5 py-0.5 rounded-full bg-[var(--night)]/60 border border-[var(--twilight)] text-[var(--soft)]">
                     {formatEventDate(result.metadata.date)}
                   </span>
                 )}
 
                 {result.metadata?.isFree && (
-                  <span className="text-[0.58rem] font-medium px-1.5 py-0.5 rounded-full bg-[var(--neon-green)]/15 text-[var(--neon-green)] border border-[var(--neon-green)]/30">
+                  <span className="text-2xs font-medium px-1.5 py-0.5 rounded-full bg-[var(--neon-green)]/15 text-[var(--neon-green)] border border-[var(--neon-green)]/30">
                     Free
                   </span>
                 )}
 
                 {result.personalizationReason && (
-                  <span className="text-[0.58rem] font-medium px-1.5 py-0.5 rounded-full bg-[var(--coral)]/15 text-[var(--coral)] border border-[var(--coral)]/30">
+                  <span className="text-2xs font-medium px-1.5 py-0.5 rounded-full bg-[var(--coral)]/15 text-[var(--coral)] border border-[var(--coral)]/30">
                     {result.personalizationReason}
                   </span>
                 )}

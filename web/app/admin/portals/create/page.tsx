@@ -160,7 +160,7 @@ export default function CreatePortalWizard() {
                     >
                       {step.name}
                     </div>
-                    <div className="font-mono text-[0.65rem] text-[var(--muted)]">
+                    <div className="font-mono text-xs text-[var(--muted)]">
                       {step.description}
                     </div>
                   </div>

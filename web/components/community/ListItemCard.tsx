@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
 import CurationTipCard, { type CurationTipData } from "./CurationTipCard";
+import Dot from "@/components/ui/Dot";
 
 export type ListItem = {
   id: string;
@@ -253,11 +254,11 @@ export default function ListItemCard({
         </h4>
         <div className="flex items-center gap-2 text-xs text-[var(--muted)] mt-0.5">
           {display.subtitle && <span>{display.subtitle}</span>}
-          {display.subtitle && display.location && <span className="opacity-40">·</span>}
+          {display.subtitle && display.location && <Dot />}
           {display.location && <span>{display.location}</span>}
           {item.added_by_profile && (
             <>
-              {(display.subtitle || display.location) && <span className="opacity-40">·</span>}
+              {(display.subtitle || display.location) && <Dot />}
               <span className="text-[var(--soft)]">
                 Added by {item.added_by_profile.display_name || `@${item.added_by_profile.username}`}
               </span>
@@ -279,7 +280,7 @@ export default function ListItemCard({
               <CurationTipCard key={tip.id} tip={tip} />
             ))}
             {tips.length > 2 && (
-              <p className="text-[0.65rem] font-mono text-[var(--muted)]">
+              <p className="text-xs font-mono text-[var(--muted)]">
                 +{tips.length - 2} more tip{tips.length - 2 !== 1 ? "s" : ""}
               </p>
             )}
@@ -288,7 +289,7 @@ export default function ListItemCard({
 
         {/* Status badge for pending items */}
         {item.status === "pending" && (
-          <span className="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded text-[0.6rem] font-mono font-medium bg-[var(--amber)]/15 text-[var(--amber)] border border-[var(--amber)]/20">
+          <span className="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded text-xs font-mono font-medium bg-[var(--amber)]/15 text-[var(--amber)] border border-[var(--amber)]/20">
             Pending review
           </span>
         )}
@@ -406,7 +407,7 @@ export default function ListItemCard({
                   e.preventDefault();
                   if (onRemove) onRemove(item.id);
                 }}
-                className="px-2 py-1 text-[0.65rem] font-mono font-medium text-[var(--neon-red)] bg-[var(--neon-red)]/10 rounded hover:bg-[var(--neon-red)]/20 transition-colors"
+                className="px-2 py-1 text-xs font-mono font-medium text-[var(--neon-red)] bg-[var(--neon-red)]/10 rounded hover:bg-[var(--neon-red)]/20 transition-colors"
                 title="Confirm remove"
               >
                 Remove
@@ -416,7 +417,7 @@ export default function ListItemCard({
                   e.preventDefault();
                   if (onCancelRemove) onCancelRemove();
                 }}
-                className="px-2 py-1 text-[0.65rem] font-mono text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
+                className="px-2 py-1 text-xs font-mono text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
                 title="Cancel"
               >
                 Cancel

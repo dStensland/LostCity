@@ -140,13 +140,13 @@ export default function FilmWeekendPlanner({ portalSlug }: FilmWeekendPlannerPro
   return (
     <section className="space-y-4">
       <header>
-        <p className="text-[0.62rem] uppercase tracking-[0.18em] text-[#95a8cb]">Weekend Planner</p>
+        <p className="text-xs uppercase tracking-[0.18em] text-[#95a8cb]">Weekend Planner</p>
         <h2 className="mt-1 font-[var(--font-film-editorial)] text-3xl text-[#f7f8fd]">Plan your cinema weekend</h2>
       </header>
       <div className="space-y-5">
         {dayParts.map((dayPart) => (
           <div key={dayPart.key}>
-            <p className="mb-2 text-[0.66rem] uppercase tracking-[0.16em] text-[#8ea4c8]">{dayPart.label}</p>
+            <p className="mb-2 text-xs uppercase tracking-[0.16em] text-[#8ea4c8]">{dayPart.label}</p>
             <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-1">
               {dayPart.events.slice(0, 6).map((event) => (
                 <Link
@@ -171,12 +171,12 @@ export default function FilmWeekendPlanner({ portalSlug }: FilmWeekendPlannerPro
                   <div className="min-w-0">
                     <h3 className="line-clamp-2 text-xs font-semibold text-[#f5f7fc]">{event.title}</h3>
                     {event.start_time && (
-                      <p className="mt-1 text-[0.62rem] text-[#dbe4f7]">
+                      <p className="mt-1 text-xs text-[#dbe4f7]">
                         {formatTimeLabel(event.start_time)}
                       </p>
                     )}
                     {event.venue?.name && (
-                      <p className="text-[0.58rem] text-[#9fb0cf]">{event.venue.name}</p>
+                      <p className="text-2xs text-[#9fb0cf]">{event.venue.name}</p>
                     )}
                   </div>
                 </Link>

@@ -83,6 +83,11 @@ export interface AddItineraryItemInput {
   start_time?: string;
   duration_minutes?: number;
   notes?: string;
+  // Cached display data for localStorage (anonymous users)
+  venue_name?: string;
+  venue_image?: string | null;
+  event_title?: string;
+  event_image?: string | null;
 }
 
 export interface ReorderItemsInput {

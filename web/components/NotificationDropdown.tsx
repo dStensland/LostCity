@@ -182,7 +182,7 @@ export default function NotificationDropdown() {
 
         {/* Unread badge */}
         {unreadCount > 0 && (
-          <span className="absolute top-0.5 right-0.5 w-4 h-4 bg-[var(--coral)] text-[var(--void)] text-[0.6rem] font-bold rounded-full flex items-center justify-center">
+          <span className="absolute top-0.5 right-0.5 w-4 h-4 bg-[var(--coral)] text-[var(--void)] text-xs font-bold rounded-full flex items-center justify-center">
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
@@ -199,7 +199,7 @@ export default function NotificationDropdown() {
             {unreadCount > 0 && (
               <button
                 onClick={handleMarkAllRead}
-                className="font-mono text-[0.65rem] text-[var(--coral)] hover:text-[var(--rose)] transition-colors"
+                className="font-mono text-xs text-[var(--coral)] hover:text-[var(--rose)] transition-colors"
               >
                 Mark all read
               </button>
@@ -388,7 +388,7 @@ function NotificationItem({
           <p className="text-sm text-[var(--soft)] line-clamp-2">
             {getNotificationContent()}
           </p>
-          <p className="font-mono text-[0.6rem] text-[var(--muted)] mt-1">{timeAgo}</p>
+          <p className="font-mono text-xs text-[var(--muted)] mt-1">{timeAgo}</p>
         </div>
 
         {/* Unread indicator */}

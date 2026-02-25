@@ -184,8 +184,8 @@ function getTreatmentStyle(treatment: TextTreatment, variant: LayoutVariant): Tr
     default:
       return {
         overlay: getCleanGradient(variant),
-        mastheadShadow: "0 2px 12px rgba(0,0,0,0.7), 0 1px 3px rgba(0,0,0,0.9)",
-        bodyShadow: "0 1px 6px rgba(0,0,0,0.6), 0 0 2px rgba(0,0,0,0.8)",
+        mastheadShadow: "0 2px 16px rgba(0,0,0,0.85), 0 1px 4px rgba(0,0,0,0.95), 0 0 40px rgba(0,0,0,0.4)",
+        bodyShadow: "0 1px 8px rgba(0,0,0,0.75), 0 0 3px rgba(0,0,0,0.9)",
       };
   }
 }
@@ -194,10 +194,10 @@ function getTreatmentStyle(treatment: TextTreatment, variant: LayoutVariant): Tr
 
 function getCleanGradient(variant: LayoutVariant): React.CSSProperties {
   const gradients: Record<LayoutVariant, string> = {
-    centered: "linear-gradient(to bottom, rgba(9,9,11,0.25) 0%, rgba(9,9,11,0.12) 30%, rgba(9,9,11,0.5) 65%, #09090b 100%)",
-    "bottom-left": "linear-gradient(to bottom, rgba(9,9,11,0.2) 0%, rgba(9,9,11,0.08) 40%, rgba(9,9,11,0.7) 75%, #09090b 100%)",
-    split: "linear-gradient(170deg, rgba(9,9,11,0.12) 0%, rgba(9,9,11,0.25) 40%, rgba(9,9,11,0.85) 70%, #09090b 100%)",
-    editorial: "linear-gradient(to bottom, rgba(9,9,11,0.3) 0%, rgba(9,9,11,0.15) 35%, rgba(9,9,11,0.6) 65%, #09090b 100%)",
+    centered: "linear-gradient(to bottom, rgba(9,9,11,0.55) 0%, rgba(9,9,11,0.45) 30%, rgba(9,9,11,0.7) 65%, #09090b 100%)",
+    "bottom-left": "linear-gradient(to bottom, rgba(9,9,11,0.5) 0%, rgba(9,9,11,0.4) 40%, rgba(9,9,11,0.8) 75%, #09090b 100%)",
+    split: "linear-gradient(170deg, rgba(9,9,11,0.45) 0%, rgba(9,9,11,0.5) 40%, rgba(9,9,11,0.9) 70%, #09090b 100%)",
+    editorial: "linear-gradient(to bottom, rgba(9,9,11,0.55) 0%, rgba(9,9,11,0.45) 35%, rgba(9,9,11,0.75) 65%, #09090b 100%)",
   };
   return { background: gradients[variant] };
 }
@@ -205,10 +205,10 @@ function getCleanGradient(variant: LayoutVariant): React.CSSProperties {
 function getLightGradient(variant: LayoutVariant): React.CSSProperties {
   // Lighter gradient for frosted — the backdrop-blur does the heavy lifting
   const gradients: Record<LayoutVariant, string> = {
-    centered: "linear-gradient(to bottom, rgba(9,9,11,0.15) 0%, rgba(9,9,11,0.05) 40%, rgba(9,9,11,0.3) 70%, #09090b 100%)",
-    "bottom-left": "linear-gradient(to bottom, rgba(9,9,11,0.1) 0%, rgba(9,9,11,0.03) 40%, rgba(9,9,11,0.4) 75%, #09090b 100%)",
-    split: "linear-gradient(170deg, rgba(9,9,11,0.08) 0%, rgba(9,9,11,0.12) 40%, rgba(9,9,11,0.55) 70%, #09090b 100%)",
-    editorial: "linear-gradient(to bottom, rgba(9,9,11,0.15) 0%, rgba(9,9,11,0.05) 35%, rgba(9,9,11,0.35) 65%, #09090b 100%)",
+    centered: "linear-gradient(to bottom, rgba(9,9,11,0.45) 0%, rgba(9,9,11,0.35) 40%, rgba(9,9,11,0.6) 70%, #09090b 100%)",
+    "bottom-left": "linear-gradient(to bottom, rgba(9,9,11,0.4) 0%, rgba(9,9,11,0.3) 40%, rgba(9,9,11,0.65) 75%, #09090b 100%)",
+    split: "linear-gradient(170deg, rgba(9,9,11,0.35) 0%, rgba(9,9,11,0.4) 40%, rgba(9,9,11,0.75) 70%, #09090b 100%)",
+    editorial: "linear-gradient(to bottom, rgba(9,9,11,0.45) 0%, rgba(9,9,11,0.35) 35%, rgba(9,9,11,0.65) 65%, #09090b 100%)",
   };
   return { background: gradients[variant] };
 }
@@ -318,10 +318,10 @@ export default function GreetingBar({ header, context, portalSlug }: GreetingBar
           }}
         >
           <span className="flex-1 min-w-0">
-            <span className="font-mono text-[0.6875rem] font-medium text-[var(--cream)]">
+            <span className="font-mono text-xs font-medium text-[var(--cream)]">
               {context.active_festivals[0].name}
             </span>
-            <span className="font-mono text-[0.6875rem] text-[var(--muted)] ml-2">
+            <span className="font-mono text-xs text-[var(--muted)] ml-2">
               is happening today
             </span>
           </span>
@@ -356,9 +356,9 @@ function CenteredLayout({ masthead, headline, subtitle, accentColor, metaItems, 
     <div className="relative z-10 flex flex-col items-center justify-end text-center min-h-[260px] sm:min-h-[300px] px-6 pb-7 pt-5">
       {/* Top: weather pill */}
       {weather && (
-        <div className="absolute top-4 right-4 flex items-center gap-1.5 text-[var(--cream)]/50" style={{ textShadow: treatment.bodyShadow }}>
+        <div className="absolute top-4 right-4 flex items-center gap-1.5 text-[var(--cream)]/70" style={{ textShadow: treatment.bodyShadow }}>
           <WeatherIcon icon={weather.icon} className="w-3.5 h-3.5" />
-          <span className="font-mono text-[0.6rem] tracking-wide">
+          <span className="font-mono text-xs tracking-wide">
             {formatTemperature(weather.temperature_f)}
           </span>
         </div>
@@ -386,10 +386,10 @@ function CenteredLayout({ masthead, headline, subtitle, accentColor, metaItems, 
         )}
 
         {/* Editorial headline */}
-        <p className="text-[0.875rem] sm:text-[0.9375rem] text-[var(--cream)]/75 mt-3 max-w-[320px] leading-snug" style={{ textShadow: treatment.bodyShadow }}>
+        <p className="text-sm sm:text-base text-[var(--cream)]/90 mt-3 max-w-[320px] leading-snug" style={{ textShadow: treatment.bodyShadow }}>
           {headline}
           {subtitle && (
-            <span className="text-[var(--cream)]/45 ml-1">{subtitle}</span>
+            <span className="text-[var(--cream)]/65 ml-1">{subtitle}</span>
           )}
         </p>
 
@@ -409,9 +409,9 @@ function BottomLeftLayout({ masthead, headline, subtitle, accentColor, metaItems
     <div className="relative z-10 flex flex-col justify-end min-h-[260px] sm:min-h-[300px] px-6 pb-7 pt-5">
       {/* Top-right: weather */}
       {weather && (
-        <div className="absolute top-4 right-5 flex items-center gap-1.5 text-[var(--cream)]/40" style={{ textShadow: treatment.bodyShadow }}>
+        <div className="absolute top-4 right-5 flex items-center gap-1.5 text-[var(--cream)]/65" style={{ textShadow: treatment.bodyShadow }}>
           <WeatherIcon icon={weather.icon} className="w-3.5 h-3.5" />
-          <span className="font-mono text-[0.6rem] tracking-wide">
+          <span className="font-mono text-xs tracking-wide">
             {formatTemperature(weather.temperature_f)}
           </span>
         </div>
@@ -445,11 +445,11 @@ function BottomLeftLayout({ masthead, headline, subtitle, accentColor, metaItems
             style={{ backgroundColor: accentColor, opacity: 0.6 }}
           />
           <div>
-            <p className="text-[0.875rem] text-[var(--cream)]/70 leading-snug max-w-[280px]" style={{ textShadow: treatment.bodyShadow }}>
+            <p className="text-sm text-[var(--cream)]/70 leading-snug max-w-[280px]" style={{ textShadow: treatment.bodyShadow }}>
               {headline}
             </p>
             {subtitle && (
-              <p className="text-[0.75rem] text-[var(--cream)]/40 mt-0.5 leading-snug" style={{ textShadow: treatment.bodyShadow }}>
+              <p className="text-xs text-[var(--cream)]/65 mt-0.5 leading-snug" style={{ textShadow: treatment.bodyShadow }}>
                 {subtitle}
               </p>
             )}
@@ -495,7 +495,7 @@ function SplitLayout({ masthead, headline, subtitle, accentColor, metaItems, wea
         {weather && (
           <div className="flex items-center gap-1.5 text-[var(--cream)]/35 mt-2" style={{ textShadow: treatment.bodyShadow }}>
             <WeatherIcon icon={weather.icon} className="w-4 h-4" />
-            <span className="font-mono text-[0.6875rem]">
+            <span className="font-mono text-xs">
               {formatTemperature(weather.temperature_f)}
             </span>
           </div>
@@ -507,11 +507,11 @@ function SplitLayout({ masthead, headline, subtitle, accentColor, metaItems, wea
 
       {/* Bottom: headline + metadata */}
       <div className={treatment.contentClass || ""} style={treatment.contentStyle}>
-        <p className="text-[0.9375rem] text-[var(--cream)]/75 leading-snug max-w-[300px]" style={{ textShadow: treatment.bodyShadow }}>
+        <p className="text-base text-[var(--cream)]/90 leading-snug max-w-[300px]" style={{ textShadow: treatment.bodyShadow }}>
           {headline}
         </p>
         {subtitle && (
-          <p className="text-[0.75rem] text-[var(--cream)]/40 mt-1 leading-snug" style={{ textShadow: treatment.bodyShadow }}>
+          <p className="text-xs text-[var(--cream)]/65 mt-1 leading-snug" style={{ textShadow: treatment.bodyShadow }}>
             {subtitle}
           </p>
         )}
@@ -530,9 +530,9 @@ function EditorialLayout({ masthead, headline, subtitle, accentColor, metaItems,
     <div className="relative z-10 flex flex-col min-h-[260px] sm:min-h-[300px] px-6 pb-7 pt-5">
       {/* Top-left: weather */}
       {weather && (
-        <div className="flex items-center gap-1.5 text-[var(--cream)]/40" style={{ textShadow: treatment.bodyShadow }}>
+        <div className="flex items-center gap-1.5 text-[var(--cream)]/65" style={{ textShadow: treatment.bodyShadow }}>
           <WeatherIcon icon={weather.icon} className="w-3.5 h-3.5" />
-          <span className="font-mono text-[0.6rem] tracking-wide">
+          <span className="font-mono text-xs tracking-wide">
             {formatTemperature(weather.temperature_f)}
           </span>
         </div>
@@ -563,10 +563,10 @@ function EditorialLayout({ masthead, headline, subtitle, accentColor, metaItems,
       </div>
 
       {/* Left-aligned headline underneath — creates asymmetric tension */}
-      <p className="text-[0.875rem] text-[var(--cream)]/70 mt-3 leading-snug max-w-[260px]" style={{ textShadow: treatment.bodyShadow }}>
+      <p className="text-sm text-[var(--cream)]/70 mt-3 leading-snug max-w-[260px]" style={{ textShadow: treatment.bodyShadow }}>
         {headline}
         {subtitle && (
-          <span className="text-[var(--cream)]/40 ml-1">{subtitle}</span>
+          <span className="text-[var(--cream)]/65 ml-1">{subtitle}</span>
         )}
       </p>
 
@@ -603,7 +603,7 @@ function MetadataLine({
       style={bodyShadow ? { textShadow: bodyShadow } : undefined}
     >
       {items.map((item) => (
-        <span key={item} className="font-mono text-[0.625rem] tracking-wide text-[var(--cream)]/35 uppercase">
+        <span key={item} className="font-mono text-2xs tracking-wide text-[var(--cream)]/35 uppercase">
           {item}
         </span>
       ))}
@@ -612,7 +612,7 @@ function MetadataLine({
         <>
           <span className="w-px h-2.5 bg-[var(--cream)]/15" />
           <span
-            className="text-[0.6875rem] italic truncate max-w-[180px] sm:max-w-[220px]"
+            className="text-xs italic truncate max-w-[180px] sm:max-w-[220px]"
             style={{ color: `color-mix(in srgb, ${accentColor} 70%, var(--cream))` }}
           >
             {trending}
@@ -669,10 +669,10 @@ export function DashboardCardComponent({ card }: { card: DashboardCard }) {
             <CardIcon name={card.icon} className="w-4 h-4" />
           </span>
         </div>
-        <span className="font-mono text-[0.5625rem] uppercase tracking-[0.1em] text-[var(--muted)] group-hover:text-[var(--soft)] transition-colors">
+        <span className="font-mono text-2xs uppercase tracking-[0.1em] text-[var(--muted)] group-hover:text-[var(--soft)] transition-colors">
           {card.label}
         </span>
-        <span className="font-mono text-[0.75rem] font-bold text-[var(--cream)] ml-auto tabular-nums">
+        <span className="font-mono text-xs font-bold text-[var(--cream)] ml-auto tabular-nums">
           {card.value}
         </span>
       </div>

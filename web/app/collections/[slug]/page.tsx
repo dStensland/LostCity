@@ -199,7 +199,7 @@ export default async function CollectionPage({ params }: Props) {
                   <Image src={owner.avatar_url} alt={`${owner.display_name || owner.username}'s profile photo`} width={20} height={20} className="w-5 h-5 rounded-full" />
                 ) : (
                   <div className="w-5 h-5 rounded-full bg-[var(--coral)] flex items-center justify-center">
-                    <span className="text-[0.5rem] font-bold text-[var(--void)]">
+                    <span className="text-2xs font-bold text-[var(--void)]">
                       {(owner.display_name || owner.username)[0].toUpperCase()}
                     </span>
                   </div>
@@ -257,10 +257,10 @@ function CollectionEventCard({ item }: { item: CollectionItem }) {
 
         <div className="flex items-center gap-2 mt-1 text-[var(--muted)]">
           <span className="font-mono text-xs">{formattedDate}</span>
-          <span className="text-[var(--twilight)]">·</span>
+          <span className="text-[var(--muted)]">·</span>
           <span className="font-mono text-xs">
             {time}
-            <span className="text-[var(--twilight)]">{period}</span>
+            <span className="text-[var(--muted)]">{period}</span>
           </span>
         </div>
 

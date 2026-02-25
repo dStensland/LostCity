@@ -90,7 +90,7 @@ function TransitScoreBadge({ score }: { score: number }) {
 
   return (
     <span
-      className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[0.6rem] font-mono font-medium uppercase tracking-wider"
+      className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-mono font-medium uppercase tracking-wider"
       style={{
         background: `color-mix(in srgb, ${color} 15%, transparent)`,
         color,
@@ -162,7 +162,7 @@ function CompactTransit({ transit }: { transit: TransitData }) {
       {chips.map((chip, i) => (
         <span
           key={i}
-          className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[0.65rem] font-mono text-[var(--soft)] border border-[var(--twilight)] bg-[var(--night)]/40"
+          className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-mono text-[var(--soft)] border border-[var(--twilight)] bg-[var(--night)]/40"
         >
           <span className="text-[var(--muted)]">{chip.icon}</span>
           {chip.text}
@@ -202,7 +202,7 @@ function ExpandedTransit({
                 <span className="text-[var(--muted)]"> ({formatMartaLines(transit.marta_lines)})</span>
               )}
             </p>
-            <p className="text-[0.7rem] text-[var(--muted)] font-mono">
+            <p className="text-xs text-[var(--muted)] font-mono">
               {transit.marta_walk_minutes} min walk
             </p>
           </div>
@@ -222,7 +222,7 @@ function ExpandedTransit({
               )}
             </p>
             {transit.beltline_walk_minutes != null && transit.beltline_walk_minutes > 0 && (
-              <p className="text-[0.7rem] text-[var(--muted)] font-mono">
+              <p className="text-xs text-[var(--muted)] font-mono">
                 {transit.beltline_walk_minutes} min walk
               </p>
             )}
@@ -240,7 +240,7 @@ function ExpandedTransit({
               {formatParkingTypes(transit.parking_type!, transit.parking_free)}
             </p>
             {transit.parking_note && (
-              <p className="text-[0.7rem] text-[var(--muted)] font-mono">
+              <p className="text-xs text-[var(--muted)] font-mono">
                 {transit.parking_note}
               </p>
             )}
@@ -254,7 +254,7 @@ function ExpandedTransit({
             <WalkIcon className="w-4 h-4 text-[var(--coral)]" />
           </div>
           <div>
-            <p className="text-[0.7rem] text-[var(--muted)] font-mono uppercase tracking-wider mb-1.5">
+            <p className="text-xs text-[var(--muted)] font-mono uppercase tracking-wider mb-1.5">
               Walkable to
             </p>
             <div className="flex flex-wrap gap-1.5">
@@ -265,7 +265,7 @@ function ExpandedTransit({
                   className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs bg-[var(--twilight)]/50 text-[var(--soft)] hover:text-[var(--coral)] hover:bg-[var(--twilight)] transition-colors border border-[var(--twilight)]/60"
                 >
                   <span className="truncate max-w-[140px]">{neighbor.name}</span>
-                  <span className="text-[var(--muted)] font-mono text-[0.6rem]">{neighbor.walk_minutes}m</span>
+                  <span className="text-[var(--muted)] font-mono text-xs">{neighbor.walk_minutes}m</span>
                 </button>
               ))}
             </div>
@@ -293,7 +293,7 @@ export default function GettingThereSection({
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest">
+        <h2 className="font-mono text-xs font-medium text-[var(--muted)] uppercase tracking-widest">
           Getting There
         </h2>
         {transit.transit_score != null && (

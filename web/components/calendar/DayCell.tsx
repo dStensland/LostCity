@@ -94,7 +94,7 @@ export default function DayCell({
           {dayNumber}
         </span>
         {hasEvents && isCurrentMonth && (
-          <span className={`inline-flex items-center px-1.5 py-0.5 rounded-md font-mono text-[0.58rem] font-semibold border leading-none ${
+          <span className={`inline-flex items-center px-1.5 py-0.5 rounded-md font-mono text-2xs font-semibold border leading-none ${
             isSelected
               ? "text-[var(--cream)] border-[var(--gold)]/50 bg-[var(--twilight)]/88"
               : eventCount >= 6
@@ -123,14 +123,14 @@ export default function DayCell({
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <span className="w-full h-full flex items-center justify-center text-[0.4rem] text-[var(--muted)]">
+                <span className="w-full h-full flex items-center justify-center text-2xs text-[var(--muted)]">
                   {(friend.display_name || friend.username)[0].toUpperCase()}
                 </span>
               )}
             </div>
           ))}
           {friendEvents.length > 3 && (
-            <span className="w-4 h-4 rounded-full border border-[var(--void)] bg-[var(--twilight-purple)] flex items-center justify-center text-[0.4rem] text-[var(--muted)]">
+            <span className="w-4 h-4 rounded-full border border-[var(--void)] bg-[var(--twilight-purple)] flex items-center justify-center text-2xs text-[var(--muted)]">
               +{friendEvents.length - 3}
             </span>
           )}
@@ -146,7 +146,7 @@ export default function DayCell({
             />
           )}
           {extraCategoryCount > 0 && (
-            <span className="font-mono text-[0.5rem] text-[var(--muted)]/90">
+            <span className="font-mono text-2xs text-[var(--muted)]/90">
               +{extraCategoryCount}
             </span>
           )}

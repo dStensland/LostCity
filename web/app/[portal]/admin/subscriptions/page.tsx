@@ -204,7 +204,7 @@ export default function PortalSubscriptionsPage() {
                   <div className="flex items-center gap-3">
                     {sharingRule && (
                       <span
-                        className={`px-2 py-0.5 rounded font-mono text-[0.6rem] uppercase ${
+                        className={`px-2 py-0.5 rounded font-mono text-2xs uppercase ${
                           sharingRule.shareScope === "all"
                             ? "bg-green-500/20 text-green-400"
                             : "bg-yellow-500/20 text-yellow-400"
@@ -260,7 +260,7 @@ export default function PortalSubscriptionsPage() {
                   </div>
                   <div className="flex items-center gap-3">
                     <span
-                      className={`px-2 py-0.5 rounded font-mono text-[0.6rem] uppercase ${
+                      className={`px-2 py-0.5 rounded font-mono text-2xs uppercase ${
                         sharingRule.shareScope === "all"
                           ? "bg-green-500/20 text-green-400"
                           : "bg-yellow-500/20 text-yellow-400"

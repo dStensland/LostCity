@@ -70,7 +70,7 @@ function CardVariant({ moment, portalSlug }: Omit<FeaturedFestivalCardProps, "va
   return (
     <Link
       href={`/${portalSlug}/festivals/${festival.slug}`}
-      className="flex-shrink-0 w-[240px] rounded-xl overflow-hidden border border-[#65E8FF]/35 bg-[var(--void)] hover:border-[#8CF1FF]/70 hover:shadow-[0_0_20px_rgba(101,232,255,0.24)] hover:-translate-y-0.5 transition-all duration-200 group festival-glass-card"
+      className="flex-shrink-0 w-[240px] rounded-xl overflow-hidden border border-[var(--neon-cyan)]/35 bg-[var(--void)] hover:border-[var(--neon-cyan)]/70 hover:shadow-[0_0_20px_color-mix(in_srgb,var(--neon-cyan)_24%,transparent)] hover:-translate-y-0.5 transition-all duration-200 group festival-glass-card"
     >
       {/* Image */}
       <div className="relative aspect-[4/5] w-full overflow-hidden">
@@ -103,7 +103,7 @@ function CardVariant({ moment, portalSlug }: Omit<FeaturedFestivalCardProps, "va
           {festival.name}
         </h4>
         {dates && (
-          <p className="text-[0.7rem] font-mono text-[var(--soft)] mt-1">{dates}</p>
+          <p className="text-xs font-mono text-[var(--soft)] mt-1">{dates}</p>
         )}
       </div>
     </Link>
@@ -117,7 +117,7 @@ function CompactVariant({ moment, portalSlug }: Omit<FeaturedFestivalCardProps, 
   return (
     <Link
       href={`/${portalSlug}/festivals/${festival.slug}`}
-      className="flex items-center gap-3 flex-shrink-0 w-[280px] rounded-lg border border-[#65E8FF]/30 bg-[var(--void)] hover:border-[#8CF1FF]/60 hover:shadow-[0_0_12px_rgba(101,232,255,0.2)] hover:-translate-y-0.5 transition-all duration-200 p-2 group festival-glass-compact"
+      className="flex items-center gap-3 flex-shrink-0 w-[280px] rounded-lg border border-[var(--neon-cyan)]/30 bg-[var(--void)] hover:border-[var(--neon-cyan)]/60 hover:shadow-[0_0_12px_color-mix(in_srgb,var(--neon-cyan)_20%,transparent)] hover:-translate-y-0.5 transition-all duration-200 p-2 group festival-glass-compact"
     >
       {/* Thumbnail */}
       <div className="relative w-14 h-14 rounded-md overflow-hidden flex-shrink-0">
@@ -144,7 +144,7 @@ function CompactVariant({ moment, portalSlug }: Omit<FeaturedFestivalCardProps, 
           {festival.name}
         </h4>
         {dates && (
-          <p className="text-[0.6rem] font-mono text-[var(--muted)] mt-0.5">{dates}</p>
+          <p className="text-xs font-mono text-[var(--muted)] mt-0.5">{dates}</p>
         )}
         <div className="mt-1">
           <CountdownBadge countdown={countdown} size="sm" />

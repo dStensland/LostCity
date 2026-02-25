@@ -247,7 +247,7 @@ export default function VenueEventsByDay({
               >
                 <span
                   className={`font-mono uppercase tracking-wider ${
-                    compact ? "text-[0.55rem]" : "text-[0.65rem]"
+                    compact ? "text-2xs" : "text-xs"
                   }`}
                 >
                   {formatDateLabel(date)}
@@ -261,7 +261,7 @@ export default function VenueEventsByDay({
                 </span>
                 <span
                   className={`font-mono text-[var(--muted)] uppercase ${
-                    compact ? "text-[0.45rem]" : "text-[0.55rem]"
+                    compact ? "text-2xs" : "text-2xs"
                   }`}
                 >
                   {format(date, "MMM")}
@@ -269,7 +269,7 @@ export default function VenueEventsByDay({
                 {eventsOnDay > 1 && (
                   <span
                     className={`mt-0.5 px-1 py-0.5 bg-[var(--twilight)] rounded font-mono ${
-                      compact ? "text-[0.45rem]" : "text-[0.5rem]"
+                      compact ? "text-2xs" : "text-2xs"
                     }`}
                   >
                     {eventsOnDay}
@@ -282,7 +282,7 @@ export default function VenueEventsByDay({
           {/* Show more indicator if there are more dates */}
           {availableDates.length > maxDates && !showDatePicker && (
             <div className="flex-shrink-0 flex items-center px-2 text-[var(--muted)]">
-              <span className="font-mono text-[0.6rem]">
+              <span className="font-mono text-xs">
                 +{availableDates.length - maxDates}
               </span>
             </div>
@@ -314,7 +314,7 @@ export default function VenueEventsByDay({
                 </svg>
                 <span
                   className={`font-mono mt-0.5 uppercase ${
-                    compact ? "text-[0.4rem]" : "text-[0.5rem]"
+                    compact ? "text-2xs" : "text-2xs"
                   }`}
                 >
                   Jump
@@ -428,20 +428,20 @@ export function VenueEventCard({
           </h3>
         </div>
         {lineupSummary && (
-          <p className="mt-1 text-[0.72rem] sm:text-xs text-[var(--cream)]/80 truncate">
+          <p className="mt-1 text-xs sm:text-xs text-[var(--cream)]/80 truncate">
             {lineupSummary}
           </p>
         )}
         <div
           className={`flex items-center gap-2 mt-1 text-[var(--muted)] ${
-            compact ? "text-[0.72rem]" : "text-sm"
+            compact ? "text-xs" : "text-sm"
           }`}
         >
           {event.start_time && (
             <span className="font-mono tabular-nums">
               {time}
               {period && (
-                <span className="ml-0.5 text-[0.55rem] uppercase tracking-[0.1em] text-[var(--muted)]">
+                <span className="ml-0.5 text-2xs uppercase tracking-[0.1em] text-[var(--muted)]">
                   {period}
                 </span>
               )}
@@ -450,7 +450,7 @@ export function VenueEventCard({
           {event.is_free ? (
             <FreeBadge />
           ) : event.price_min ? (
-            <span className="font-mono text-[0.65rem] text-[var(--muted)]">From ${event.price_min}</span>
+            <span className="font-mono text-xs text-[var(--muted)]">From ${event.price_min}</span>
           ) : null}
         </div>
         {hasSocialProof && (
@@ -466,7 +466,7 @@ export function VenueEventCard({
               const totalCount = goingCount + interestedCount + recommendationCount;
               if (totalCount <= 0) return null;
               return (
-                <span className={`sm:hidden inline-flex items-center gap-1 px-2 py-0.5 rounded-lg font-mono text-[0.6rem] font-medium ${
+                <span className={`sm:hidden inline-flex items-center gap-1 px-2 py-0.5 rounded-lg font-mono text-xs font-medium ${
                   dominant.color === "coral"
                     ? "bg-[var(--coral)]/10 border border-[var(--coral)]/20 text-[var(--coral)]"
                     : dominant.color === "gold"
@@ -491,7 +491,7 @@ export function VenueEventCard({
             {/* Desktop: separate pills */}
             <span className="hidden sm:contents">
               {goingCount > 0 && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)]/20 font-mono text-[0.6rem] font-medium text-[var(--coral)]">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)]/20 font-mono text-xs font-medium text-[var(--coral)]">
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
@@ -499,12 +499,12 @@ export function VenueEventCard({
                 </span>
               )}
               {interestedCount > 0 && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--gold)]/15 border border-[var(--gold)]/30 font-mono text-[0.6rem] font-medium text-[var(--gold)]">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--gold)]/15 border border-[var(--gold)]/30 font-mono text-xs font-medium text-[var(--gold)]">
                   {formatCompactCount(interestedCount)} maybe
                 </span>
               )}
               {recommendationCount > 0 && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--lavender)]/15 border border-[var(--lavender)]/30 font-mono text-[0.6rem] font-medium text-[var(--lavender)]">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--lavender)]/15 border border-[var(--lavender)]/30 font-mono text-xs font-medium text-[var(--lavender)]">
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
                   </svg>

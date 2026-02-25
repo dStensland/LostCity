@@ -33,13 +33,13 @@ export default function ComingUpSection({ section, portalSlug, excludeEventIds }
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <CalendarBlank weight="duotone" className="w-3.5 h-3.5 text-[var(--neon-green)]" />
-          <h2 className="font-mono text-[0.6875rem] font-bold tracking-[0.12em] uppercase text-[var(--neon-green)]">
+          <h2 className="font-mono text-xs font-bold tracking-[0.12em] uppercase text-[var(--neon-green)]">
             {section.title || "Coming Up"}
           </h2>
         </div>
         <Link
           href={`/${portalSlug}?view=find&type=events&date=next_7_days`}
-          className="text-[0.6875rem] flex items-center gap-1 text-[var(--neon-green)] transition-colors hover:opacity-80"
+          className="text-xs flex items-center gap-1 text-[var(--neon-green)] transition-colors hover:opacity-80"
         >
           This week <ArrowRight className="w-3 h-3" />
         </Link>
@@ -60,7 +60,7 @@ export default function ComingUpSection({ section, portalSlug, excludeEventIds }
       {events.length > 6 && (
         <Link
           href={`/${portalSlug}?view=find&type=events&date=next_7_days`}
-          className="mt-2 w-full flex items-center justify-center gap-1.5 text-[0.6875rem] font-mono font-medium py-2 rounded-lg transition-all hover:bg-white/[0.02] text-[var(--neon-green)]"
+          className="mt-2 w-full flex items-center justify-center gap-1.5 text-xs font-mono font-medium py-2 rounded-lg transition-all hover:bg-white/[0.02] text-[var(--neon-green)]"
         >
           +{events.length - 6} more this week
           <ArrowRight className="w-3 h-3" />

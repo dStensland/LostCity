@@ -267,7 +267,7 @@ export default function WhatsOpenPage() {
             </button>
 
             {locationDenied && (
-              <span className="font-mono text-[0.6rem] text-[var(--neon-red)]/80">
+              <span className="font-mono text-2xs text-[var(--neon-red)]/80">
                 Location denied
               </span>
             )}

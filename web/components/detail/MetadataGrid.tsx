@@ -27,7 +27,7 @@ export function MetadataGrid({ items, className = "" }: MetadataGridProps) {
     <div className={`grid grid-cols-2 sm:grid-cols-3 gap-4 ${className}`}>
       {items.map((item, index) => (
         <div key={index} className="flex flex-col gap-1">
-          <span className="font-mono text-[0.65rem] uppercase tracking-widest text-[var(--muted)]">
+          <span className="font-mono text-xs uppercase tracking-widest text-[var(--muted)]">
             {item.label}
           </span>
           <span

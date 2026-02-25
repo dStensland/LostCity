@@ -49,6 +49,17 @@
 --muted: #8B8B94      /* Tertiary text */
 ```
 
+### Accents
+```css
+--coral: #FF6B7A       /* Brand primary / CTA */
+--gold: #FFD93D        /* Accent / date filters */
+--vibe: #A78BFA        /* Vibe/mood filter accent */
+--neon-cyan: #00D4E8   /* Secondary neon */
+--neon-green: #00D9A0  /* Success / free */
+--neon-magenta: #E855A0 /* Nightlife neon */
+--neon-red: #FF5A5A    /* Live / error */
+```
+
 ### Semantic Text
 ```css
 --text-primary: var(--cream)

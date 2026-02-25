@@ -138,7 +138,7 @@ function isFilmMeetup(row: RawMeetupEventRow): boolean {
   const searchable = `${row.title} ${tags.join(" ")} ${row.organization?.name || ""}`.toLowerCase();
 
   return (
-    row.category === "community" ||
+    (row as any).category_id === "community" ||
     /film|cinema|movie|society|club|collective|meetup|workshop|filmmaker|screenwriter|discussion/.test(searchable)
   );
 }
@@ -161,12 +161,12 @@ async function getFilmCommunityData() {
         start_date,
         start_time,
         image_url,
-        category,
+        category_id,
         tags,
         organization:organizations!events_organization_id_fkey(name,slug),
         venue:venues!events_venue_id_fkey(name,slug,neighborhood)
       `)
-      .in("category", ["community", "film"])
+      .in("category_id", ["community", "film"])
       .gte("start_date", today)
       .or("is_sensitive.eq.false,is_sensitive.is.null")
       .order("start_date", { ascending: true })
@@ -292,7 +292,7 @@ export default async function CommunityHubPage({ params, searchParams }: Props) 
         <FilmPortalNav portalSlug={portal.slug} />
 
         <header className="space-y-2">
-          <p className="text-[0.64rem] uppercase tracking-[0.18em] text-[#8fa2c4]">Atlanta Film</p>
+          <p className="text-xs uppercase tracking-[0.18em] text-[#8fa2c4]">Atlanta Film</p>
           <h1 className="font-[var(--font-film-editorial)] text-4xl text-[#f7f7fb]">Community</h1>
           <p className="max-w-3xl text-sm text-[#b8c7e3]">
             Film clubs, filmmaker circles, and recurring meetups across the city.
@@ -301,15 +301,15 @@ export default async function CommunityHubPage({ params, searchParams }: Props) 
 
         <section className="grid gap-3 sm:grid-cols-3">
           <article className="rounded-2xl border border-[#2a3349] bg-[#0d1424] p-4">
-            <p className="text-[0.62rem] uppercase tracking-[0.16em] text-[#9bb0d7]">Active Groups</p>
+            <p className="text-xs uppercase tracking-[0.16em] text-[#9bb0d7]">Active Groups</p>
             <p className="mt-1 text-2xl font-semibold text-[#f5f8ff]">{groups.length}</p>
           </article>
           <article className="rounded-2xl border border-[#2a3349] bg-[#0d1424] p-4">
-            <p className="text-[0.62rem] uppercase tracking-[0.16em] text-[#9bb0d7]">Upcoming Meetups</p>
+            <p className="text-xs uppercase tracking-[0.16em] text-[#9bb0d7]">Upcoming Meetups</p>
             <p className="mt-1 text-2xl font-semibold text-[#f5f8ff]">{upcomingMeetups.length}</p>
           </article>
           <article className="rounded-2xl border border-[#2a3349] bg-[#0d1424] p-4">
-            <p className="text-[0.62rem] uppercase tracking-[0.16em] text-[#9bb0d7]">Groups With Events</p>
+            <p className="text-xs uppercase tracking-[0.16em] text-[#9bb0d7]">Groups With Events</p>
             <p className="mt-1 text-2xl font-semibold text-[#f5f8ff]">{groups.filter((group) => group.upcoming_count > 0).length}</p>
           </article>
         </section>
@@ -317,7 +317,7 @@ export default async function CommunityHubPage({ params, searchParams }: Props) 
         <section className="space-y-4">
           <header className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <p className="text-[0.62rem] uppercase tracking-[0.18em] text-[#95a8cb]">Spotlight Meetup</p>
+              <p className="text-xs uppercase tracking-[0.18em] text-[#95a8cb]">Spotlight Meetup</p>
               <h2 className="mt-1 font-[var(--font-film-editorial)] text-3xl text-[#f7f8fd]">Where Atlanta&apos;s film scene meets</h2>
             </div>
             <Link href={`/${portal.slug}?view=community&tab=groups`} className="inline-flex items-center gap-1 text-xs uppercase tracking-[0.14em] text-[#c9d9ff] hover:text-[#e1eaff]">
@@ -341,7 +341,7 @@ export default async function CommunityHubPage({ params, searchParams }: Props) 
               <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(4,8,16,0.2)_0%,rgba(4,8,16,0.88)_100%)]" />
 
               <div className="relative p-5 sm:p-6">
-                <p className="text-[0.62rem] uppercase tracking-[0.16em] text-[#d6e2fb]">{spotlight.org_name || "Film community"}</p>
+                <p className="text-xs uppercase tracking-[0.16em] text-[#d6e2fb]">{spotlight.org_name || "Film community"}</p>
                 <h3 className="mt-2 max-w-3xl text-2xl font-semibold text-[#f6f8ff]">{spotlight.title}</h3>
                 <p className="mt-2 text-sm text-[#d4def2]">
                   {formatShortDate(spotlight.start_date)} • {formatTimeLabel(spotlight.start_time)}
@@ -367,7 +367,7 @@ export default async function CommunityHubPage({ params, searchParams }: Props) 
 
         <section className="space-y-4">
           <header>
-            <p className="text-[0.62rem] uppercase tracking-[0.18em] text-[#95a8cb]">Film Groups</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-[#95a8cb]">Film Groups</p>
             <h2 className="mt-1 font-[var(--font-film-editorial)] text-3xl text-[#f7f8fd]">Who is organizing in Atlanta</h2>
           </header>
 
@@ -407,18 +407,18 @@ export default async function CommunityHubPage({ params, searchParams }: Props) 
                       {group.description || "Film community, screenings, and discussion events in Atlanta."}
                     </p>
                     {group.next_meetup ? (
-                      <p className="mt-2 text-[0.66rem] uppercase tracking-[0.14em] text-[#d5e2ff]">
+                      <p className="mt-2 text-xs uppercase tracking-[0.14em] text-[#d5e2ff]">
                         {formatShortDate(group.next_meetup.start_date)} • {formatTimeLabel(group.next_meetup.start_time)}
                       </p>
                     ) : (
-                      <p className="mt-2 text-[0.66rem] uppercase tracking-[0.14em] text-[#96abcf]">
+                      <p className="mt-2 text-xs uppercase tracking-[0.14em] text-[#96abcf]">
                         {group.neighborhood || "Atlanta"}
                       </p>
                     )}
                   </div>
                 </div>
 
-                <div className="mt-3 inline-flex items-center gap-1 text-[0.66rem] uppercase tracking-[0.14em] text-[#c9d9ff] group-hover:text-[#e1eaff]">
+                <div className="mt-3 inline-flex items-center gap-1 text-xs uppercase tracking-[0.14em] text-[#c9d9ff] group-hover:text-[#e1eaff]">
                   View group
                   <ArrowRight size={11} />
                 </div>
@@ -433,7 +433,7 @@ export default async function CommunityHubPage({ params, searchParams }: Props) 
 
         <section className="space-y-4">
           <header>
-            <p className="text-[0.62rem] uppercase tracking-[0.18em] text-[#95a8cb]">Upcoming Meetups</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-[#95a8cb]">Upcoming Meetups</p>
             <h2 className="mt-1 font-[var(--font-film-editorial)] text-3xl text-[#f7f8fd]">Next sessions and gatherings</h2>
           </header>
 
@@ -443,15 +443,15 @@ export default async function CommunityHubPage({ params, searchParams }: Props) 
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <h3 className="text-base font-semibold text-[#f4f7ff]">{event.title}</h3>
-                    <p className="mt-1 text-[0.72rem] text-[#adc0e3]">{event.org_name || "Film group"}</p>
-                    <p className="mt-1 text-[0.7rem] uppercase tracking-[0.12em] text-[#c8d8f4]">
+                    <p className="mt-1 text-xs text-[#adc0e3]">{event.org_name || "Film group"}</p>
+                    <p className="mt-1 text-xs uppercase tracking-[0.12em] text-[#c8d8f4]">
                       {formatShortDate(event.start_date)} • {formatTimeLabel(event.start_time)}
                       {event.venue_name ? ` • ${event.venue_name}` : ""}
                     </p>
                   </div>
 
                   {event.org_slug ? (
-                    <Link href={`/${portal.slug}/community/${event.org_slug}`} className="inline-flex items-center gap-1 text-[0.66rem] uppercase tracking-[0.14em] text-[#c9d9ff] hover:text-[#e1eaff]">
+                    <Link href={`/${portal.slug}/community/${event.org_slug}`} className="inline-flex items-center gap-1 text-xs uppercase tracking-[0.14em] text-[#c9d9ff] hover:text-[#e1eaff]">
                       Group
                       <ArrowRight size={11} />
                     </Link>

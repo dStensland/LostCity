@@ -63,16 +63,18 @@ export function buildCsp(nonce: string, options: CspOptions = {}): string {
   // In development (and for report-only troubleshooting), allow inline style tags.
   // If a nonce is present, browsers ignore 'unsafe-inline' for style-src directives.
   // So when inline styles are allowed, omit nonce and use an inline-friendly policy.
-  const staticStyleSources = [STATIC_STYLE_SRC_BASE, STATIC_STYLE_HASHES]
+  const staticStyleSourcesWithHashes = [STATIC_STYLE_SRC_BASE, STATIC_STYLE_HASHES]
     .filter(Boolean)
     .join(" ");
+  // When using 'unsafe-inline', omit hashes — browsers ignore 'unsafe-inline'
+  // when any hash or nonce is present in the source list.
   const styleSrc = isDev || allowInlineStyles
-    ? `style-src ${staticStyleSources} 'unsafe-inline'`
-    : `style-src ${staticStyleSources} 'nonce-${nonce}'`;
+    ? `style-src ${STATIC_STYLE_SRC_BASE} 'unsafe-inline'`
+    : `style-src ${staticStyleSourcesWithHashes} 'nonce-${nonce}'`;
   // style-src-elem: Always allow 'unsafe-inline' because runtime icon libraries
   // (Phosphor, Lucide) and CSS-in-JS inject <style> tags without nonces.
   // Inline styles can't execute scripts, so security impact is minimal.
-  const styleSrcElem = `style-src-elem ${staticStyleSources} 'unsafe-inline'`;
+  const styleSrcElem = `style-src-elem ${STATIC_STYLE_SRC_BASE} 'unsafe-inline'`;
   // Always allow inline style attributes — React components use style={{ }} extensively
   // (Mapbox, skeletons, progress bars, dynamic layouts). style-src-attr doesn't enable
   // script execution, so 'unsafe-inline' here has minimal security impact.

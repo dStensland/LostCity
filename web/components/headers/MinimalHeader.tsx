@@ -84,7 +84,7 @@ export default function MinimalHeader({
               </Link>
               {/* Only show "powered by" if attribution is not hidden */}
               {!branding?.hide_attribution && (
-                <div className="hidden lg:flex items-center gap-1 text-[0.6rem] text-[var(--muted)] font-mono">
+                <div className="hidden lg:flex items-center gap-1 text-xs text-[var(--muted)] font-mono">
                   <span>powered by</span>
                   <Link href={`/${DEFAULT_PORTAL_SLUG}`} className="text-[var(--coral)] hover:opacity-80 transition-opacity">
                     Lost City

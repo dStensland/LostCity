@@ -28,6 +28,8 @@ import GettingThereSection from "@/components/GettingThereSection";
 import { deriveShowSignals } from "@/lib/show-signals";
 import ShowSignalsPanel from "@/components/ShowSignalsPanel";
 import { inferLineupGenreFallback } from "@/lib/artist-fallbacks";
+import { Notebook } from "@phosphor-icons/react/dist/ssr";
+import { useCreateOuting } from "@/lib/hooks/useCreateOuting";
 
 type EventData = {
   id: number;
@@ -76,6 +78,8 @@ type EventData = {
     parking_type?: string[] | null;
     parking_free?: boolean | null;
     transit_score?: number | null;
+    lat?: number | null;
+    lng?: number | null;
   } | null;
   producer: {
     id: string;
@@ -201,7 +205,7 @@ function CommunityTagsSection({
         onClick={() => setExpanded((v) => !v)}
         className="flex items-center gap-2 w-full text-left group"
       >
-        <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest">
+        <h2 className="font-mono text-xs font-medium text-[var(--muted)] uppercase tracking-widest">
           Community Tags
         </h2>
         <svg
@@ -213,20 +217,20 @@ function CommunityTagsSection({
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
         {!expanded && (
-          <span className="text-[0.55rem] font-mono text-[var(--muted)]/60">Tap to expand</span>
+          <span className="text-2xs font-mono text-[var(--muted)]/60">Tap to expand</span>
         )}
       </button>
       {expanded && (
         <div className="mt-3 space-y-4">
           <div>
-            <p className="text-[0.6rem] text-[var(--muted)] font-mono uppercase tracking-wider mb-2">
+            <p className="text-xs text-[var(--muted)] font-mono uppercase tracking-wider mb-2">
               This Event
             </p>
             <EntityTagList entityType="event" entityId={eventId} />
           </div>
           {venue && (
             <div>
-              <p className="text-[0.6rem] text-[var(--muted)] font-mono uppercase tracking-wider mb-2">
+              <p className="text-xs text-[var(--muted)] font-mono uppercase tracking-wider mb-2">
                 {venue.name}
               </p>
               <EntityTagList entityType="venue" entityId={venue.id} />
@@ -234,7 +238,7 @@ function CommunityTagsSection({
           )}
           {producer && (
             <div>
-              <p className="text-[0.6rem] text-[var(--muted)] font-mono uppercase tracking-wider mb-2">
+              <p className="text-xs text-[var(--muted)] font-mono uppercase tracking-wider mb-2">
                 {producer.name}
               </p>
               <EntityTagList entityType="org" entityId={Number(producer.id)} />
@@ -272,6 +276,8 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
   const router = useRouter();
   const searchParams = useSearchParams();
   const { portal } = usePortal();
+  const portalId = portal?.id || "";
+  const { createOutingFromEvent } = useCreateOuting(portalId, portalSlug);
   const [event, setEvent] = useState<EventData | null>(null);
   const [eventArtists, setEventArtists] = useState<EventArtist[]>([]);
   const [venueEvents, setVenueEvents] = useState<RelatedEvent[]>([]);
@@ -559,7 +565,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
             href={event.source_url}
             target="_blank"
             rel="noopener noreferrer"
-            className={`absolute top-3 right-3 px-2 py-1 bg-black/60 backdrop-blur-sm rounded text-[0.55rem] font-mono text-[var(--muted)] hover:text-[var(--soft)] transition-colors z-10 ${isLive ? "hidden" : ""}`}
+            className={`absolute top-3 right-3 px-2 py-1 bg-black/60 backdrop-blur-sm rounded text-2xs font-mono text-[var(--muted)] hover:text-[var(--soft)] transition-colors z-10 ${isLive ? "hidden" : ""}`}
             title="View original source"
           >
             <svg className="w-3 h-3 inline-block mr-1 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -590,7 +596,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
               {event.genres.slice(0, 4).map((genre) => (
                 <span
                   key={genre}
-                  className="px-2 py-0.5 rounded-full text-[0.6rem] font-mono font-medium bg-white/15 text-white/90 backdrop-blur-sm border border-white/10"
+                  className="px-2 py-0.5 rounded-full text-xs font-mono font-medium bg-white/15 text-white/90 backdrop-blur-sm border border-white/10"
                 >
                   {genre.replace(/-/g, " ")}
                 </span>
@@ -603,6 +609,30 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
       {/* Quick Actions */}
       <EventQuickActions event={event} isLive={isLive} className="mb-6" />
 
+      {/* Plan around this — tertiary action, doesn't compete with primary CTAs */}
+      {event.venue && (
+        <div className="flex justify-center mb-6">
+          <button
+            onClick={async () => {
+              const itinId = await createOutingFromEvent(portalId, {
+                id: event.id,
+                title: event.title,
+                start_date: event.start_date,
+                start_time: event.start_time,
+              });
+              if (itinId) {
+                router.push(`/${portalSlug}/playbook/${itinId}`);
+              }
+            }}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border border-[var(--twilight)]/40 hover:border-[var(--twilight)]/70 hover:bg-white/[0.06]"
+            style={{ color: "var(--soft)" }}
+          >
+            <Notebook size={14} weight="light" />
+            Plan around this
+          </button>
+        </div>
+      )}
+
       {/* Dog-friendly event highlights (dog portal only) */}
       {isDog && dogTags.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-6">
@@ -612,7 +642,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold"
               style={{
                 background: "rgba(255, 107, 53, 0.1)",
-                color: "#FF6B35",
+                color: "var(--coral)",
                 border: "1px solid rgba(255, 107, 53, 0.25)",
               }}
             >
@@ -628,9 +658,9 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
 
       {/* Exhibition Info Card */}
       {isExhibition(event) && (
-        <div className="flex items-center gap-3 p-4 rounded-lg border border-[#F59E0B]/30 mb-6 bg-[#F59E0B]/5">
-          <div className="w-10 h-10 rounded-full bg-[#F59E0B]/15 flex items-center justify-center flex-shrink-0">
-            <svg className="w-5 h-5 text-[#F59E0B]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="flex items-center gap-3 p-4 rounded-lg border border-[var(--neon-amber)]/30 mb-6 bg-[var(--neon-amber)]/5">
+          <div className="w-10 h-10 rounded-full bg-[var(--neon-amber)]/15 flex items-center justify-center flex-shrink-0">
+            <svg className="w-5 h-5 text-[var(--neon-amber)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4-4 2 2 4-4 6 6" />
             </svg>
@@ -685,7 +715,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
         {/* Description */}
         {descriptionText && (
           <div className="mb-5">
-            <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
+            <h2 className="font-mono text-xs font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
               About
             </h2>
             <p className="text-[var(--soft)] whitespace-pre-wrap leading-relaxed">
@@ -713,7 +743,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
 
         {hasShowSignals && (
           <div className={`mb-5 ${hasAboutContent ? "pt-5 border-t border-[var(--twilight)]" : ""}`}>
-            <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
+            <h2 className="font-mono text-xs font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
               Show Details
             </h2>
             <ShowSignalsPanel signals={showSignals} ticketUrl={event.ticket_url} />
@@ -724,7 +754,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
         {event.venue && event.venue.address && (
           <div className={`mb-5 ${hasIntroContent ? "pt-5 border-t border-[var(--twilight)]" : ""}`}>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest">
+              <h2 className="font-mono text-xs font-medium text-[var(--muted)] uppercase tracking-widest">
                 Location
               </h2>
               <DirectionsDropdown
@@ -786,7 +816,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
                     Part of <span className="text-[var(--cream)] font-medium">{event.series.festival.name}</span>
                   </span>
                   <span
-                    className="ml-2 text-[0.6rem] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded series-bg-20 series-accent"
+                    className="ml-2 text-xs font-mono uppercase tracking-wider px-1.5 py-0.5 rounded series-bg-20 series-accent"
                   >
                     Festival
                   </span>
@@ -813,7 +843,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
                   Part of <span className="text-[var(--cream)] font-medium">{event.series.title}</span>
                 </span>
                 <span
-                  className="ml-2 text-[0.6rem] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded series-bg-20 series-accent"
+                  className="ml-2 text-xs font-mono uppercase tracking-wider px-1.5 py-0.5 rounded series-bg-20 series-accent"
                 >
                   {getSeriesTypeLabel(event.series.series_type)}
                 </span>
@@ -828,7 +858,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
         {/* Producer */}
         {event.producer && (
           <div className="pt-5 border-t border-[var(--twilight)]">
-            <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
+            <h2 className="font-mono text-xs font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
               Presented by
             </h2>
             <div className="flex items-center justify-between gap-4 p-3 rounded-lg border border-[var(--twilight)] bg-[var(--void)]">
@@ -852,7 +882,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
                   <h3 className="text-[var(--cream)] font-medium truncate text-sm">
                     {event.producer.name}
                   </h3>
-                  <p className="text-[0.65rem] text-[var(--muted)] font-mono uppercase tracking-wider">
+                  <p className="text-xs text-[var(--muted)] font-mono uppercase tracking-wider">
                     {event.producer.org_type.replace(/_/g, " ")}
                   </p>
                 </div>
@@ -867,7 +897,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
           {/* System tags (from crawlers) — always visible */}
           {event.tags && event.tags.length > 0 && (
             <div className="mb-4">
-              <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
+              <h2 className="font-mono text-xs font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
                 Tags
               </h2>
               <div className="flex flex-wrap gap-2">

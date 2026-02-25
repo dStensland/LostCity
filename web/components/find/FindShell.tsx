@@ -34,7 +34,6 @@ import {
 } from "@/lib/analytics/find-tracking";
 
 type DisplayMode = "list" | "map" | "calendar";
-type ListDensity = "comfortable" | "compact";
 
 // ─── Tab & Display Config ─────────────────────────────────────────────────────
 
@@ -214,9 +213,6 @@ function FindShellInner({
     return [];
   }, [findType]);
 
-  const listDensity: ListDensity = searchParams?.get("density") === "compact" ? "compact" : "comfortable";
-  const showDensityToggle = findType === "events" && displayMode === "list";
-
   const handleDisplayModeChange = useCallback((mode: DisplayMode) => {
     const params = new URLSearchParams(searchParams?.toString() || "");
     params.set("view", "find");
@@ -228,23 +224,6 @@ function FindShellInner({
     }
     router.push(`/${portalSlug}?${params.toString()}`, { scroll: false });
   }, [findType, portalSlug, router, searchParams]);
-
-  const handleDensityChange = useCallback((density: ListDensity) => {
-    const params = new URLSearchParams(searchParams?.toString() || "");
-    params.set("view", "find");
-    params.set("type", findType);
-    if (displayMode !== "list") {
-      params.set("display", displayMode);
-    } else {
-      params.delete("display");
-    }
-    if (density === "compact") {
-      params.set("density", "compact");
-    } else {
-      params.delete("density");
-    }
-    router.push(`/${portalSlug}?${params.toString()}`, { scroll: false });
-  }, [displayMode, findType, portalSlug, router, searchParams]);
 
   // ─── Analytics ──────────────────────────────────────────────────────────────
 
@@ -406,32 +385,6 @@ function FindShellInner({
                 })}
               </div>
             )}
-            {showDensityToggle && (
-              <div className="flex rounded-full bg-[var(--void)]/70 border border-[var(--twilight)]/80 p-0.5">
-                <button
-                  onClick={() => handleDensityChange("comfortable")}
-                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full font-mono text-xs font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]/70 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--void)] ${
-                    listDensity === "comfortable"
-                      ? "bg-[var(--cream)] text-[var(--void)] shadow-[0_6px_16px_rgba(0,0,0,0.2)]"
-                      : "text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/45"
-                  }`}
-                  aria-label="Full density"
-                >
-                  Full
-                </button>
-                <button
-                  onClick={() => handleDensityChange("compact")}
-                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full font-mono text-xs font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]/70 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--void)] ${
-                    listDensity === "compact"
-                      ? "bg-[var(--cream)] text-[var(--void)] shadow-[0_6px_16px_rgba(0,0,0,0.2)]"
-                      : "text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/45"
-                  }`}
-                  aria-label="Compact density"
-                >
-                  Compact
-                </button>
-              </div>
-            )}
             <AddNewChooser portalSlug={portalSlug} />
           </div>
         </div>
@@ -460,33 +413,6 @@ function FindShellInner({
             })}
           </div>
         )}
-        {showDensityToggle && (
-          <div className="sm:hidden mt-2 flex rounded-full bg-[var(--void)]/72 border border-[var(--twilight)]/80 p-0.5">
-            <button
-              onClick={() => handleDensityChange("comfortable")}
-              className={`flex-1 px-2.5 py-2 rounded-full font-mono text-xs font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]/70 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--void)] ${
-                listDensity === "comfortable"
-                  ? "bg-[var(--cream)] text-[var(--void)] shadow-[0_6px_16px_rgba(0,0,0,0.2)]"
-                  : "text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/45"
-              }`}
-              aria-label="Full density"
-            >
-              Full
-            </button>
-            <button
-              onClick={() => handleDensityChange("compact")}
-              className={`flex-1 px-2.5 py-2 rounded-full font-mono text-xs font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]/70 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--void)] ${
-                listDensity === "compact"
-                  ? "bg-[var(--cream)] text-[var(--void)] shadow-[0_6px_16px_rgba(0,0,0,0.2)]"
-                  : "text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/45"
-              }`}
-              aria-label="Compact density"
-            >
-              Compact
-            </button>
-          </div>
-        )}
-
         {/* Mobile: Add button */}
         <div className="sm:hidden mt-3 flex items-center gap-2">
           <div className="flex-1 min-w-0">
@@ -515,7 +441,6 @@ function FindShellInner({
           portalExclusive={portalExclusive}
           displayMode={displayMode}
           hasActiveFilters={hasActiveFilters}
-          listDensity={listDensity}
         />
       )}
 

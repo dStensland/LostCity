@@ -406,7 +406,7 @@ function NotificationCard({
         {/* Content */}
         <div className="flex-1 min-w-0">
           <p className="text-sm text-[var(--soft)]">{getNotificationContent()}</p>
-          <p className="font-mono text-[0.65rem] text-[var(--muted)] mt-1">{timeAgo}</p>
+          <p className="font-mono text-xs text-[var(--muted)] mt-1">{timeAgo}</p>
         </div>
 
         {/* Unread indicator */}

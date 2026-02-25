@@ -206,7 +206,7 @@ export default function CreateCollectionModal({ isOpen, onClose }: CreateCollect
                 </button>
               ))}
             </div>
-            <p className="font-mono text-[0.65rem] text-[var(--muted)] mt-1.5">
+            <p className="font-mono text-xs text-[var(--muted)] mt-1.5">
               {visibility === "public" && "Anyone can find and view this collection"}
               {visibility === "unlisted" && "Only people with the link can view"}
               {visibility === "private" && "Only you can see this collection"}

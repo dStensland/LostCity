@@ -76,7 +76,7 @@ export default async function HospitalDirectoryPage({ params, searchParams }: Pr
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={cardImage} alt={hospital.short_name || hospital.name} className="h-44 w-full object-cover" />
                   <div className="p-4 sm:p-5">
-                  <h2 className={`text-[1.55rem] leading-[0.98] text-[var(--cream)] ${hospitalDisplayFont.className}`}>
+                  <h2 className={`text-2xl leading-[0.98] text-[var(--cream)] ${hospitalDisplayFont.className}`}>
                     {hospital.short_name || hospital.name}
                   </h2>
                   <p className="mt-1 text-sm text-[var(--muted)]">{hospital.address}</p>

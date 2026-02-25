@@ -59,7 +59,7 @@ export default function SaveTheDateRow({ portalSlug }: SaveTheDateRowProps) {
       {/* Save-the-date by month (further out) */}
       {saveTheDate.map(({ month, festivals }) => (
         <div key={month} className="mt-3">
-          <p className="text-[0.65rem] font-mono text-[var(--muted)] uppercase tracking-wider mb-2">
+          <p className="text-xs font-mono text-[var(--muted)] uppercase tracking-wider mb-2">
             {month}
           </p>
           <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">

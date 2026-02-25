@@ -70,7 +70,7 @@ export default function ShowSignalsPanel({ signals, className = "", ticketUrl = 
           key={`${item.label}-${item.value}`}
           className="rounded-lg border border-[var(--twilight)] bg-[var(--void)]/70 px-3 py-2"
         >
-          <div className="font-mono text-[0.58rem] uppercase tracking-widest text-[var(--muted)]">
+          <div className="font-mono text-2xs uppercase tracking-widest text-[var(--muted)]">
             {item.label}
           </div>
           {item.href ? (

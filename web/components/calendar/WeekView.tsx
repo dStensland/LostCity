@@ -181,7 +181,7 @@ export default function WeekView({
               ${day.isToday ? "bg-[var(--twilight)]/24" : ""}
             `}
           >
-            <div className="font-mono text-[0.65rem] text-[var(--muted)] uppercase">
+            <div className="font-mono text-xs text-[var(--muted)] uppercase">
               {format(day.date, "EEE")}
             </div>
             <div
@@ -201,7 +201,7 @@ export default function WeekView({
       {/* All-day events row */}
       {Array.from(allDayEventsByDate.values()).some((e) => e.length > 0) && (
         <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-[var(--twilight)]/75">
-          <div className="p-2 font-mono text-[0.6rem] text-[var(--muted)]">ALL DAY</div>
+          <div className="p-2 font-mono text-xs text-[var(--muted)]">ALL DAY</div>
           {weekDays.map((day) => {
             const allDayEvents = allDayEventsByDate.get(day.dateKey) || [];
             return (
@@ -215,14 +215,14 @@ export default function WeekView({
                     href={`/${portalSlug}?event=${event.id}`}
                     scroll={false}
                     data-category={event.category || "other"}
-                    className="block mb-1 px-2 py-1 rounded text-[0.6rem] truncate transition-colors hover:opacity-80 calendar-all-day"
+                    className="block mb-1 px-2 py-1 rounded text-xs truncate transition-colors hover:opacity-80 calendar-all-day"
                     title={event.title}
                   >
                     <span className="text-[var(--cream)]">{event.title}</span>
                   </Link>
                 ))}
                 {allDayEvents.length > 2 && (
-                  <span className="text-[0.55rem] text-[var(--muted)]">
+                  <span className="text-2xs text-[var(--muted)]">
                     +{allDayEvents.length - 2} more
                   </span>
                 )}
@@ -239,7 +239,7 @@ export default function WeekView({
           {HOURS.map((hour) => (
             <div
               key={hour}
-              className={`absolute right-2 font-mono text-[0.6rem] text-[var(--muted)] -translate-y-1/2 calendar-hour-label ${
+              className={`absolute right-2 font-mono text-xs text-[var(--muted)] -translate-y-1/2 calendar-hour-label ${
                 hourTopClasses[hour - 6]?.className ?? ""
               }`}
             >
@@ -346,12 +346,12 @@ export default function WeekView({
                             className="flex-shrink-0 opacity-70"
                           />
                         )}
-                        <span className="text-[0.6rem] text-[var(--cream)] font-medium truncate group-hover:text-white">
+                        <span className="text-xs text-[var(--cream)] font-medium truncate group-hover:text-white">
                           {event.title}
                         </span>
                       </div>
                       {height > 50 && event.venue && (
-                        <span className="text-[0.55rem] text-[var(--muted)] truncate mt-0.5">
+                        <span className="text-2xs text-[var(--muted)] truncate mt-0.5">
                           {event.venue.name}
                         </span>
                       )}

@@ -17,18 +17,18 @@ export default function ExpandableSection({
   const sectionId = `section-${title.toLowerCase().replace(/\s+/g, "-")}`;
 
   return (
-    <div className="border-b border-[#1a1a24]">
+    <div className="border-b border-[var(--twilight)]">
       <button
         onClick={() => setIsOpen(!isOpen)}
         aria-expanded={isOpen}
         aria-controls={sectionId}
         className="w-full flex items-center justify-between py-5 px-2 text-left group rounded-lg hover:bg-[rgba(0,229,255,0.02)] transition-colors duration-300"
       >
-        <h2 className="font-mono text-sm uppercase tracking-widest text-[var(--cream)] group-hover:text-[#00e5ff] transition-colors">
+        <h2 className="font-mono text-sm uppercase tracking-widest text-[var(--cream)] group-hover:text-[var(--neon-cyan)] transition-colors">
           {title}
         </h2>
         <svg
-          className={`w-5 h-5 text-[#5a5a6a] group-hover:text-[#00e5ff] transition-all duration-300 ${
+          className={`w-5 h-5 text-[var(--muted)] group-hover:text-[var(--neon-cyan)] transition-all duration-300 ${
             isOpen ? "rotate-180" : ""
           }`}
           fill="none"

@@ -33,16 +33,13 @@ interface MobileFilterSheetProps {
   categoryOptions?: readonly FilterOption[];
   currentTags?: string[];
   currentVibes?: string[];
-  currentMood?: string;
   tagGroups?: readonly FilterGroup[];
   vibeGroups?: readonly FilterGroup[];
-  moodOptions?: readonly FilterOption[];
   onToggleCategory: (category: string) => void;
   onSetDateFilter: (date: string) => void;
   onToggleFreeOnly: () => void;
   onToggleTag?: (tag: string) => void;
   onToggleVibe?: (vibe: string) => void;
-  onSetMood?: (mood: string) => void;
   onClearAll: () => void;
   resultCount?: number;
 }
@@ -56,16 +53,13 @@ export const MobileFilterSheet = memo(function MobileFilterSheet({
   categoryOptions = CATEGORIES,
   currentTags = [],
   currentVibes = [],
-  currentMood = "",
   tagGroups = [],
   vibeGroups = [],
-  moodOptions = [],
   onToggleCategory,
   onSetDateFilter,
   onToggleFreeOnly,
   onToggleTag,
   onToggleVibe,
-  onSetMood,
   onClearAll,
   resultCount,
 }: MobileFilterSheetProps) {
@@ -137,12 +131,6 @@ export const MobileFilterSheet = memo(function MobileFilterSheet({
     onToggleVibe(vibe);
   };
 
-  const handleSetMood = (mood: string) => {
-    if (!onSetMood) return;
-    triggerHaptic("selection");
-    onSetMood(mood);
-  };
-
   const handleClearAll = () => {
     triggerHaptic("medium");
     onClearAll();
@@ -171,8 +159,7 @@ export const MobileFilterSheet = memo(function MobileFilterSheet({
     currentDateFilter ||
     currentFreeOnly ||
     currentTags.length > 0 ||
-    currentVibes.length > 0 ||
-    Boolean(currentMood);
+    currentVibes.length > 0;
 
   return createPortal(
     <div
@@ -217,6 +204,20 @@ export const MobileFilterSheet = memo(function MobileFilterSheet({
             <div>
               <h3 className="font-mono text-sm font-semibold text-[var(--cream)] mb-3">When</h3>
               <div className="grid grid-cols-2 gap-2">
+                {/* Upcoming = no date filter, browse all */}
+                <button
+                  onClick={() => {
+                    triggerHaptic("selection");
+                    onSetDateFilter("");
+                  }}
+                  className={`min-h-[44px] px-4 py-2.5 rounded-lg font-mono text-sm font-medium transition-all col-span-2 ${
+                    !currentDateFilter
+                      ? "bg-[var(--gold)] text-[var(--void)]"
+                      : "bg-[var(--twilight)] text-[var(--cream)] hover:bg-[var(--dusk)]"
+                  }`}
+                >
+                  Upcoming
+                </button>
                 {SIMPLE_DATE_FILTERS.map((df) => {
                   const isActive = currentDateFilter === df.value;
                   return (
@@ -297,31 +298,6 @@ export const MobileFilterSheet = memo(function MobileFilterSheet({
                 })}
               </div>
             </div>
-
-            {/* Mood Section */}
-            {moodOptions.length > 0 && onSetMood && (
-              <div>
-                <h3 className="font-mono text-sm font-semibold text-[var(--cream)] mb-3">Mood</h3>
-                <div className="grid grid-cols-2 gap-2">
-                  {moodOptions.map((mood) => {
-                    const isActive = currentMood === mood.value;
-                    return (
-                      <button
-                        key={mood.value}
-                        onClick={() => handleSetMood(mood.value)}
-                        className={`min-h-[44px] px-4 py-2.5 rounded-lg font-mono text-sm font-medium transition-all ${
-                          isActive
-                            ? "bg-[var(--mood-active)] text-[var(--cream)]"
-                            : "bg-[var(--twilight)] text-[var(--cream)] hover:bg-[var(--dusk)]"
-                        }`}
-                      >
-                        {mood.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
 
             {/* Tags Section */}
             {tagGroups.length > 0 && onToggleTag && (

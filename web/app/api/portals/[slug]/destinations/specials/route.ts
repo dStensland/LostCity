@@ -72,7 +72,7 @@ type EventRow = {
   start_time: string | null;
   venue_id: number | null;
   source_id: number | null;
-  category: string | null;
+  category_id: string | null;
 };
 
 type FollowRow = { followed_venue_id: number | null };
@@ -404,7 +404,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     let eventsQuery = portalClient
       .from("events")
-      .select("id, title, start_date, start_time, venue_id, source_id, category")
+      .select("id, title, start_date, start_time, venue_id, source_id, category_id")
       .in("venue_id", venueIds)
       .gte("start_date", today)
       .is("canonical_event_id", null)
@@ -429,7 +429,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       if (!event.venue_id) continue;
       if (event.source_id && federationAccess.categoryConstraints.has(event.source_id)) {
         const allowed = federationAccess.categoryConstraints.get(event.source_id);
-        if (allowed !== null && allowed !== undefined && event.category && !allowed.includes(event.category)) {
+        if (allowed !== null && allowed !== undefined && event.category_id && !allowed.includes(event.category_id)) {
           continue;
         }
       }

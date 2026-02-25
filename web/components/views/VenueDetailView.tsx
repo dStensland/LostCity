@@ -146,7 +146,7 @@ function CollapsibleVenueTags({ venueId }: { venueId: number }) {
         onClick={() => setExpanded((v) => !v)}
         className="w-full flex items-center justify-between group"
       >
-        <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest group-hover:text-[var(--soft)] transition-colors">
+        <h2 className="font-mono text-xs font-medium text-[var(--muted)] uppercase tracking-widest group-hover:text-[var(--soft)] transition-colors">
           Community Tags
         </h2>
         <svg
@@ -279,17 +279,17 @@ function VenueEventsSection({
                     : "bg-[var(--dusk)] border-[var(--twilight)] text-[var(--soft)] hover:border-[var(--coral)]/30"
                 }`}
               >
-                <span className="font-mono text-[0.65rem] uppercase tracking-wider">
+                <span className="font-mono text-xs uppercase tracking-wider">
                   {formatDateLabel(date)}
                 </span>
                 <span className="font-mono text-lg font-bold leading-tight">
                   {format(date, "d")}
                 </span>
-                <span className="font-mono text-[0.55rem] text-[var(--muted)] uppercase">
+                <span className="font-mono text-2xs text-[var(--muted)] uppercase">
                   {format(date, "MMM")}
                 </span>
                 {eventsOnDay > 1 && (
-                  <span className="mt-1 px-1.5 py-0.5 bg-[var(--twilight)] rounded text-[0.5rem] font-mono">
+                  <span className="mt-1 px-1.5 py-0.5 bg-[var(--twilight)] rounded text-2xs font-mono">
                     {eventsOnDay}
                   </span>
                 )}
@@ -316,7 +316,7 @@ function VenueEventsSection({
                   d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                 />
               </svg>
-              <span className="font-mono text-[0.5rem] mt-1 uppercase">Jump</span>
+              <span className="font-mono text-2xs mt-1 uppercase">Jump</span>
             </button>
             {showDatePicker && (
               <input
@@ -596,7 +596,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
             {spot.vibes.slice(0, 3).map((vibe) => (
               <span
                 key={vibe}
-                className="px-2 py-0.5 rounded-full text-[0.65rem] font-mono font-medium bg-[var(--coral)]/10 text-[var(--coral)] border border-[var(--coral)]/20"
+                className="px-2 py-0.5 rounded-full text-xs font-mono font-medium bg-[var(--coral)]/10 text-[var(--coral)] border border-[var(--coral)]/20"
               >
                 {vibe.replace(/-/g, " ")}
               </span>
@@ -662,7 +662,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold"
                 style={{
                   background: "rgba(255, 107, 53, 0.1)",
-                  color: "#FF6B35",
+                  color: "var(--coral)",
                   border: "1px solid rgba(255, 107, 53, 0.25)",
                 }}
               >
@@ -686,7 +686,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
             className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-colors"
             style={{
               background: "rgba(255, 107, 53, 0.08)",
-              color: "#FF6B35",
+              color: "var(--coral)",
               border: "1px solid rgba(255, 107, 53, 0.2)",
             }}
           >
@@ -701,7 +701,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
         {/* Hours */}
         {(spot.hours || spot.hours_display || spot.is_24_hours) && (
           <div className="mt-6 pt-6 border-t border-[var(--twilight)]">
-            <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
+            <h2 className="font-mono text-xs font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
               Hours
             </h2>
             <HoursSection
@@ -715,7 +715,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
         {/* Description */}
         {spot.description && (
           <div className="mt-6 pt-6 border-t border-[var(--twilight)]">
-            <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
+            <h2 className="font-mono text-xs font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
               About
             </h2>
             <p className="text-[var(--soft)] whitespace-pre-wrap leading-relaxed">
@@ -727,7 +727,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
         {/* While You're Here — venue highlights */}
         {highlights.length > 0 && (
           <div className="mt-6 pt-6 border-t border-[var(--twilight)]">
-            <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
+            <h2 className="font-mono text-xs font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
               While You&apos;re Here
             </h2>
             <div className="space-y-3">
@@ -747,7 +747,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-[var(--cream)]">{h.title}</span>
-                        <span className="text-[0.6rem] font-mono uppercase text-[var(--muted)]">
+                        <span className="text-xs font-mono uppercase text-[var(--muted)]">
                           {config?.label}
                         </span>
                       </div>
@@ -765,7 +765,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
         {/* Artifacts housed at this venue */}
         {artifacts.length > 0 && (
           <div className="mt-6 pt-6 border-t border-[var(--twilight)]">
-            <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
+            <h2 className="font-mono text-xs font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
               Artifacts
             </h2>
             <div className="space-y-2">
@@ -799,7 +799,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
         {/* Vibes */}
         {spot.vibes && spot.vibes.length > 0 && (
           <div className="mt-6 pt-6 border-t border-[var(--twilight)]">
-            <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
+            <h2 className="font-mono text-xs font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
               Vibes
             </h2>
             <div className="flex flex-wrap gap-2">
@@ -836,7 +836,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
         {spot.address && (
           <div className="mt-6 pt-6 border-t border-[var(--twilight)]">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest">
+              <h2 className="font-mono text-xs font-medium text-[var(--muted)] uppercase tracking-widest">
                 Location
               </h2>
               <DirectionsDropdown
@@ -996,12 +996,12 @@ function DogNearbySection({
                 {s.vibes && s.vibes.some((v) => v === "off-leash" || v === "pup-cup") && (
                   <div className="flex gap-1.5 mt-1">
                     {s.vibes.includes("off-leash") && (
-                      <span className="text-[0.6rem] font-semibold px-1.5 py-0.5 rounded" style={{ background: `${DOG_CONTENT_COLORS.parks}20`, color: DOG_CONTENT_COLORS.parks }}>
+                      <span className="text-xs font-semibold px-1.5 py-0.5 rounded" style={{ background: `${DOG_CONTENT_COLORS.parks}20`, color: DOG_CONTENT_COLORS.parks }}>
                         Off-Leash
                       </span>
                     )}
                     {s.vibes.includes("pup-cup") && (
-                      <span className="text-[0.6rem] font-semibold px-1.5 py-0.5 rounded" style={{ background: `${DOG_CONTENT_COLORS.food}20`, color: DOG_CONTENT_COLORS.food }}>
+                      <span className="text-xs font-semibold px-1.5 py-0.5 rounded" style={{ background: `${DOG_CONTENT_COLORS.food}20`, color: DOG_CONTENT_COLORS.food }}>
                         Pup Cup
                       </span>
                     )}

@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 from typing import Optional, Tuple
 from supabase import create_client, Client
 from config import get_config
-from tags import VALID_CATEGORIES, VALID_VENUE_TYPES, VALID_VIBES
+from tags import VALID_CATEGORIES, VALID_VENUE_TYPES, VALID_VIBES, ALL_TAGS
 from tag_inference import (
     infer_tags,
     infer_is_class,
@@ -59,15 +59,9 @@ _SPECIALS_SOURCE_SLUGS = {
     "sweetwater",
     "wrecking-bar",
 }
-_DEPRECATED_EVENT_FIELDS = ("subcategory", "subcategory_id")
-
-# Nightlife subcategories that never have real performers (participatory events).
-# Subcategories like "club", "dj", "drag" CAN have performers and are NOT skipped.
-_NIGHTLIFE_SKIP_SUBCATEGORIES = {
-    "karaoke", "trivia", "bar_event", "poker", "bingo",
-    "nightlife.karaoke", "nightlife.trivia", "nightlife.bar_event",
-    "nightlife.poker", "nightlife.bingo",
-}
+# Nightlife genres that never have real performers (participatory events).
+# Genres like "dj", "drag" CAN have performers and are NOT skipped.
+_NIGHTLIFE_SKIP_GENRES = {"karaoke", "trivia", "bar-games", "poker", "bingo"}
 
 # ===== TITLE CASE HELPER =====
 # Python's .title() breaks on apostrophes: "JOHN'S" -> "John'S" (wrong)
@@ -110,6 +104,49 @@ def smart_title_case(text: str) -> str:
         else:
             result.append(word)
     return " ".join(result)
+
+
+# ===== IMAGE URL NORMALIZER =====
+# Catches malformed URLs at ingestion time so broken data never reaches the DB.
+_DOUBLED_HOSTNAME_RE = re.compile(
+    r"^https?://[^/]+(?:https?://.*)", re.IGNORECASE
+)
+
+
+def _normalize_image_url(url: Optional[str]) -> Optional[str]:
+    """Normalize an image URL before DB insert/update.
+
+    Returns a cleaned URL or None if the URL is clearly invalid.
+    """
+    if not url or not url.strip():
+        return None
+
+    url = url.strip()
+
+    # Protocol-relative -> https
+    if url.startswith("//"):
+        url = "https:" + url
+
+    # Doubled hostname (e.g. "https://foo.comhttps://real.com/img.jpg")
+    m = _DOUBLED_HOSTNAME_RE.match(url)
+    if m:
+        # Extract the second URL (the real one)
+        idx = url.index("http", 1)
+        url = url[idx:]
+
+    # Must start with http after fixes
+    if not url.startswith("http"):
+        return None
+
+    # Shopify template placeholders
+    if "{width}" in url or "{height}" in url:
+        return None
+
+    # Tracking pixels
+    if "bping.php" in url:
+        return None
+
+    return url
 
 
 # ===== VALIDATION STATISTICS TRACKING =====
@@ -1068,6 +1105,12 @@ def get_or_create_venue(venue_data: dict) -> int:
         except Exception:
             pass  # Never block venue creation on parking fetch
 
+    # Normalize image URLs before DB insert
+    if "image_url" in venue_data:
+        venue_data["image_url"] = _normalize_image_url(venue_data.get("image_url"))
+    if "hero_image_url" in venue_data:
+        venue_data["hero_image_url"] = _normalize_image_url(venue_data.get("hero_image_url"))
+
     # Validate venue_type (warn, don't reject)
     vtype = venue_data.get("venue_type")
     if vtype and vtype not in VALID_VENUE_TYPES:
@@ -1780,6 +1823,9 @@ def insert_event(
                 logger.warning(f"Event rejected: {msg}")
                 raise ValueError(msg)
 
+    # Normalize image URL before any enrichment or DB insert
+    event_data["image_url"] = _normalize_image_url(event_data.get("image_url"))
+
     # Auto-fetch movie metadata (poster, director, runtime, etc.) for film events
     film_metadata = None
     if event_data.get("category") == "film":
@@ -1833,8 +1879,8 @@ def insert_event(
 
     # Parse lineup from title for event_artists population (music, comedy, nightlife)
     if event_data.get("category") in ("music", "comedy", "nightlife"):
-        sub = (event_data.get("subcategory") or "").strip().lower()
-        skip = event_data.get("category") == "nightlife" and sub in _NIGHTLIFE_SKIP_SUBCATEGORIES
+        event_genres = set(event_data.get("genres") or [])
+        skip = event_data.get("category") == "nightlife" and bool(event_genres & _NIGHTLIFE_SKIP_GENRES)
         if not skip and not event_data.get("_parsed_artists"):
             parsed = parse_lineup_from_title(event_data.get("title", ""))
             if parsed:
@@ -1946,12 +1992,16 @@ def insert_event(
         merged_genres.append("activism")
 
     # Infer and merge tags (now with genre context)
-    event_data["tags"] = infer_tags(
+    # Preserve crawler-supplied tags that are in ALL_TAGS, then add inferred ones
+    crawler_tags = {str(t).strip().lower() for t in (event_data.get("tags") or [])}
+    valid_crawler_tags = {t for t in crawler_tags if t in ALL_TAGS}
+    inferred = infer_tags(
         event_data,
         venue_vibes,
         venue_type=venue_type,
         genres=merged_genres,
     )
+    event_data["tags"] = list(dict.fromkeys(inferred + sorted(valid_crawler_tags - set(inferred))))
     if source_slug in _SPECIALS_SOURCE_SLUGS:
         tags = {str(tag).lower() for tag in (event_data.get("tags") or [])}
         if "specials" not in tags:
@@ -1960,6 +2010,16 @@ def insert_event(
     # Update genres variable for downstream use
     if merged_genres:
         genres = merged_genres
+
+    # Warn about genre/tag/vibe values not in taxonomy_definitions (discovery, not rejection)
+    from genre_normalize import VALID_GENRES
+    final_tags = set(event_data.get("tags") or [])
+    unknown_genres = set(genres or []) - VALID_GENRES
+    unknown_tags = final_tags - ALL_TAGS
+    if unknown_genres:
+        logger.debug(f"Unknown genres for '{event_data.get('title', '')[:50]}': {unknown_genres}")
+    if unknown_tags:
+        logger.debug(f"Unknown tags for '{event_data.get('title', '')[:50]}': {unknown_tags}")
 
     # Enrich series_hint with OMDB metadata for film events
     if film_metadata and series_hint and series_hint.get("series_type") == "film":
@@ -2130,10 +2190,16 @@ def insert_event(
         event_data.pop("field_provenance", None)
         event_data.pop("field_confidence", None)
 
-    # Pop transient and deprecated fields before DB insert
+    # Unify category → category_id (single canonical column)
+    if "category" in event_data and "category_id" not in event_data:
+        event_data["category_id"] = event_data.pop("category")
+    elif "category" in event_data:
+        event_data.pop("category")
+
+    # Pop transient fields before DB insert
     parsed_artists_for_insert = event_data.pop("_parsed_artists", None)
-    for field_name in _DEPRECATED_EVENT_FIELDS:
-        event_data.pop(field_name, None)
+    event_data.pop("subcategory", None)
+    event_data.pop("subcategory_id", None)
 
     # Final defense-in-depth dedupe before insert:
     # - checks current + legacy content_hash variants
@@ -2698,7 +2764,7 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
 
     # --- Image: fill missing, or replace venue-fallback with event-specific ---
     existing_img = existing.get("image_url") or ""
-    incoming_img = incoming.get("image_url") or ""
+    incoming_img = _normalize_image_url(incoming.get("image_url")) or ""
     if _should_use_incoming_image(existing_img, incoming_img):
         updates["image_url"] = incoming_img
 
@@ -2745,7 +2811,7 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
                 updates["content_kind"] = incoming_kind
 
     # --- Film identity: preserve venue title, enrich canonical movie identity separately ---
-    if events_support_film_identity_columns() and existing.get("category") == "film":
+    if events_support_film_identity_columns() and existing.get("category_id") == "film":
         if incoming.get("film_title") and not existing.get("film_title"):
             updates["film_title"] = incoming["film_title"]
         if incoming.get("film_release_year") and not existing.get("film_release_year"):
@@ -2799,9 +2865,9 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
                 return False
 
     # --- Backfill event_artists if missing (music/comedy/nightlife) ---
-    category = existing.get("category") or incoming.get("category") or ""
-    sub = (incoming.get("subcategory") or existing.get("subcategory") or "").strip().lower()
-    _skip_nightlife = category == "nightlife" and sub in _NIGHTLIFE_SKIP_SUBCATEGORIES
+    category = existing.get("category_id") or incoming.get("category") or ""
+    event_genres = set(incoming.get("genres") or existing.get("genres") or [])
+    _skip_nightlife = category == "nightlife" and bool(event_genres & _NIGHTLIFE_SKIP_GENRES)
     if category in ("music", "comedy", "nightlife") and not _skip_nightlife:
         try:
             client = get_client()
@@ -2839,13 +2905,13 @@ def upsert_event_artists(
     client = get_client()
     event_row = (
         client.table("events")
-        .select("title, category")
+        .select("title, category_id")
         .eq("id", event_id)
         .maybe_single()
         .execute()
     ).data or {}
     event_title = event_row.get("title")
-    event_category = event_row.get("category")
+    event_category = event_row.get("category_id")
 
     cleaned = sanitize_event_artists(event_title, event_category, artists)
 
@@ -3175,7 +3241,7 @@ def compute_event_update(
 
     # Image quality-aware updates.
     existing_img = existing.get("image_url")
-    incoming_img = incoming_with_signals.get("image_url")
+    incoming_img = _normalize_image_url(incoming_with_signals.get("image_url"))
     if _should_use_incoming_image(existing_img, incoming_img):
         update_data["image_url"] = incoming_img
 

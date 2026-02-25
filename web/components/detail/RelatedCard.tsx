@@ -46,9 +46,9 @@ export function RelatedCard({
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <h3 className="text-[0.95rem] leading-tight font-semibold text-[var(--cream)] line-clamp-2">{title}</h3>
+            <h3 className="text-base leading-tight font-semibold text-[var(--cream)] line-clamp-2">{title}</h3>
             {subtitle && (
-              <p className="mt-1 text-[0.72rem] text-[var(--muted)] line-clamp-1">{subtitle}</p>
+              <p className="mt-1 text-xs text-[var(--muted)] line-clamp-1">{subtitle}</p>
             )}
           </div>
           <svg className="w-4 h-4 text-[var(--muted)] flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -60,16 +60,7 @@ VENUES = {
         "zip": "30324",
         "venue_type": "restaurant",
     },
-    "boggs": {
-        "name": "Boggs Social & Supply",
-        "slug": "boggs-social-supply",
-        "address": "1310 White St SW",
-        "neighborhood": "West End",
-        "city": "Atlanta",
-        "state": "GA",
-        "zip": "30310",
-        "venue_type": "bar",
-    },
+    # "boggs" — handled by dedicated source (sources/boggs_social.py)
     "ten-atl": {
         "name": "TEN ATL",
         "slug": "ten-atl",
@@ -162,17 +153,7 @@ VENUES = {
         "zip": "30316",
         "venue_type": "bar",
     },
-    "laughing-skull": {
-        "name": "Laughing Skull Lounge",
-        "slug": "laughing-skull-lounge",
-        "address": "878 Peachtree St NE",
-        "neighborhood": "Midtown",
-        "city": "Atlanta",
-        "state": "GA",
-        "zip": "30309",
-        "venue_type": "comedy_club",
-        "website": "https://laughingskulllounge.com",
-    },
+    # "laughing-skull" — handled by dedicated source (sources/laughing_skull.py)
     "limerick-junction": {
         "name": "Limerick Junction",
         "slug": "limerick-junction",
@@ -453,6 +434,789 @@ VENUES = {
         "zip": "30312",
         "venue_type": "bar",
     },
+    # ========== Phase 0b: New recurring venue additions ==========
+    # Trivia venues
+    "thinking-man": {
+        "name": "Thinking Man Tavern",
+        "slug": "thinking-man-tavern",
+        "address": "537 W Howard Ave",
+        "neighborhood": "Decatur",
+        "city": "Decatur",
+        "state": "GA",
+        "zip": "30030",
+        "venue_type": "bar",
+    },
+    "righteous-room": {
+        "name": "Righteous Room",
+        "slug": "righteous-room",
+        "address": "1051 Ponce De Leon Ave NE",
+        "neighborhood": "Virginia Highland",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30306",
+        "venue_type": "bar",
+    },
+    "the-local": {
+        "name": "The Local",
+        "slug": "the-local-ponce-city-market",
+        "address": "675 Ponce De Leon Ave NE",
+        "neighborhood": "Poncey-Highland",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30308",
+        "venue_type": "bar",
+    },
+    "twains": {
+        "name": "Twain's Billiards & Tap",
+        "slug": "twains-billiards-tap",
+        "address": "211 E Trinity Pl",
+        "neighborhood": "Decatur",
+        "city": "Decatur",
+        "state": "GA",
+        "zip": "30030",
+        "venue_type": "bar",
+        "website": "https://twains.net",
+    },
+    # DJ / nightclub venues
+    "mjq-concourse": {
+        "name": "MJQ Concourse",
+        "slug": "mjq-concourse",
+        "address": "736 Ponce De Leon Ave NE",
+        "neighborhood": "Poncey-Highland",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30306",
+        "venue_type": "nightclub",
+    },
+    "music-room": {
+        "name": "The Music Room",
+        "slug": "the-music-room",
+        "address": "327 Edgewood Ave SE",
+        "neighborhood": "Old Fourth Ward",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30312",
+        "venue_type": "music_venue",
+    },
+    "johnny-hideaway": {
+        "name": "Johnny's Hideaway",
+        "slug": "johnnys-hideaway",
+        "address": "3771 Roswell Rd NE",
+        "neighborhood": "Buckhead",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30342",
+        "venue_type": "nightclub",
+        "website": "https://johnnyshideaway.com",
+    },
+    # Drag venues
+    "burkharts": {
+        "name": "Burkhart's Pub",
+        "slug": "burkharts-pub",
+        "address": "1492 Piedmont Ave NE",
+        "neighborhood": "Ansley Park",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30309",
+        "venue_type": "bar",
+    },
+    "my-sisters-room": {
+        "name": "My Sister's Room",
+        "slug": "my-sisters-room",
+        "address": "222 E Howard Ave",
+        "neighborhood": "Decatur",
+        "city": "Decatur",
+        "state": "GA",
+        "zip": "30030",
+        "venue_type": "bar",
+    },
+    # Live music / residency venues
+    "fontaines": {
+        "name": "Fontaine's Oyster House",
+        "slug": "fontaines-oyster-house",
+        "address": "1026 N Highland Ave NE",
+        "neighborhood": "Virginia Highland",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30306",
+        "venue_type": "restaurant",
+        "website": "https://fontainesoysterhouse.com",
+    },
+    "apache-cafe": {
+        "name": "Apache Cafe",
+        "slug": "apache-cafe",
+        "address": "64 3rd St NW",
+        "neighborhood": "Midtown",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30308",
+        "venue_type": "bar",
+    },
+    "dieselfillingstation": {
+        "name": "Diesel Filling Station",
+        "slug": "diesel-filling-station",
+        "address": "870 N Highland Ave NE",
+        "neighborhood": "Virginia Highland",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30306",
+        "venue_type": "bar",
+    },
+    # Farmers markets
+    "piedmont-park-green-market": {
+        "name": "Piedmont Park Green Market",
+        "slug": "piedmont-park-green-market",
+        "address": "400 Park Dr NE",
+        "neighborhood": "Midtown",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30309",
+        "venue_type": "farmers_market",
+        "website": "https://piedmontpark.org/green-market",
+    },
+    "peachtree-road-farmers-market": {
+        "name": "Peachtree Road Farmers Market",
+        "slug": "peachtree-road-farmers-market",
+        "address": "2744 Peachtree Rd NW",
+        "neighborhood": "Buckhead",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30305",
+        "venue_type": "farmers_market",
+    },
+    # Brunch / food-scene venues
+    "ladybird": {
+        "name": "Ladybird Grove & Mess Hall",
+        "slug": "ladybird-grove-mess-hall",
+        "address": "684 John Wesley Dobbs Ave NE",
+        "neighborhood": "Old Fourth Ward",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30312",
+        "venue_type": "bar",
+    },
+
+    # ========== Phase 2: Neighborhood + day gap fills ==========
+
+    # Little Five Points
+    "the-porter": {
+        "name": "The Porter Beer Bar",
+        "slug": "the-porter-beer-bar",
+        "address": "1156 Euclid Ave NE",
+        "neighborhood": "Little Five Points",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30307",
+        "venue_type": "bar",
+        "website": "https://theporterbeerbar.com",
+    },
+    "wrecking-bar": {
+        "name": "Wrecking Bar Brewpub",
+        "slug": "wrecking-bar-brewpub",
+        "address": "292 Moreland Ave NE",
+        "neighborhood": "Little Five Points",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30307",
+        "venue_type": "brewery",
+        "website": "https://wreckingbarbrewpub.com",
+    },
+    "elmyr": {
+        "name": "Elmyr",
+        "slug": "elmyr",
+        "address": "1091 Euclid Ave NE",
+        "neighborhood": "Little Five Points",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30307",
+        "venue_type": "restaurant",
+    },
+
+    # Inman Park
+    "barcelona-wine-bar": {
+        "name": "Barcelona Wine Bar",
+        "slug": "barcelona-wine-bar-inman-park",
+        "address": "240 N Highland Ave NE",
+        "neighborhood": "Inman Park",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30307",
+        "venue_type": "bar",
+        "website": "https://barcelonawinebar.com",
+    },
+    "victory-sandwich-bar": {
+        "name": "Victory Sandwich Bar",
+        "slug": "victory-sandwich-bar",
+        "address": "913 Bernina Ave NE",
+        "neighborhood": "Inman Park",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30307",
+        "venue_type": "bar",
+    },
+    "new-realm-brewing": {
+        "name": "New Realm Brewing",
+        "slug": "new-realm-brewing",
+        "address": "550 Somerset Terrace NE",
+        "neighborhood": "Inman Park",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30306",
+        "venue_type": "brewery",
+        "website": "https://newrealmbrewing.com",
+    },
+    "krog-street-market": {
+        "name": "Krog Street Market",
+        "slug": "krog-street-market",
+        "address": "99 Krog St NE",
+        "neighborhood": "Inman Park",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30307",
+        "venue_type": "food_hall",
+        "website": "https://krogstreetmarket.com",
+    },
+
+    # East Atlanta Village (expanding existing thin coverage)
+    "the-glenwood": {
+        "name": "The Glenwood",
+        "slug": "the-glenwood",
+        "address": "1263 Glenwood Ave SE",
+        "neighborhood": "East Atlanta Village",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30316",
+        "venue_type": "bar",
+    },
+    "flatiron": {
+        "name": "Flatiron",
+        "slug": "flatiron-eav",
+        "address": "520 Flat Shoals Ave SE",
+        "neighborhood": "East Atlanta Village",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30316",
+        "venue_type": "bar",
+    },
+    "marys-bar": {
+        "name": "Mary's Bar",
+        "slug": "marys-bar-atlanta",
+        "address": "1287 Glenwood Ave SE",
+        "neighborhood": "East Atlanta Village",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30316",
+        "venue_type": "bar",
+    },
+
+    # Sunday gap fills
+    "northside-tavern": {
+        "name": "Northside Tavern",
+        "slug": "northside-tavern",
+        "address": "1058 Howell Mill Rd NW",
+        "neighborhood": "West Midtown",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30318",
+        "venue_type": "bar",
+        "website": "https://northsidetavern.com",
+    },
+    "park-tavern": {
+        "name": "Park Tavern",
+        "slug": "park-tavern",
+        "address": "500 10th St NE",
+        "neighborhood": "Midtown",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30309",
+        "venue_type": "bar",
+        "website": "https://parktavern.com",
+    },
+    "the-painted-pin": {
+        "name": "The Painted Pin",
+        "slug": "the-painted-pin",
+        "address": "737 Miami Cir NE",
+        "neighborhood": "Buckhead",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30324",
+        "venue_type": "bar",
+        "website": "https://thepaintedpin.com",
+    },
+    # star-community-bar: handled by dedicated source (id=456) with recurring upgrade
+    "fado-irish-pub": {
+        "name": "Fado Irish Pub",
+        "slug": "fado-irish-pub-buckhead",
+        "address": "273 Buckhead Ave NE",
+        "neighborhood": "Buckhead",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30305",
+        "venue_type": "bar",
+        "website": "https://fadoirishpub.com/atlanta",
+    },
+    "steady-hand-beer": {
+        "name": "Steady Hand Beer Co.",
+        "slug": "steady-hand-beer",
+        "address": "1611 Ellsworth Industrial Blvd NW",
+        "neighborhood": "West Midtown",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30318",
+        "venue_type": "brewery",
+        "website": "https://www.steadyhandbeer.com",
+    },
+    "cherry-street-brewing": {
+        "name": "Cherry Street Brewing",
+        "slug": "cherry-street-brewing-west-midtown",
+        "address": "1397 Ellsworth Industrial Blvd NW",
+        "neighborhood": "West Midtown",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30318",
+        "venue_type": "brewery",
+        "website": "https://www.cherrystreetbrewing.com",
+    },
+    "three-taverns": {
+        "name": "Three Taverns Imaginarium",
+        "slug": "three-taverns-imaginarium",
+        "address": "575 Memorial Dr SE",
+        "neighborhood": "Reynoldstown",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30312",
+        "venue_type": "brewery",
+        "website": "https://www.threetavernsbrewery.com",
+    },
+    "genes-bbq": {
+        "name": "Gene's BBQ",
+        "slug": "genes-bbq-kirkwood",
+        "address": "1802 Hosea L Williams Dr NE",
+        "neighborhood": "Kirkwood",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30317",
+        "venue_type": "bar",
+        "website": "https://www.genesgenesgenes.com",
+    },
+    "brewhouse-cafe": {
+        "name": "Brewhouse Cafe",
+        "slug": "brewhouse-cafe",
+        "address": "401 Moreland Ave NE",
+        "neighborhood": "Little Five Points",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30307",
+        "venue_type": "bar",
+        "website": "https://www.brewhousecafe.com",
+    },
+    "whitehall-tavern": {
+        "name": "Whitehall Tavern",
+        "slug": "whitehall-tavern",
+        "address": "3180 Roswell Rd NW",
+        "neighborhood": "Buckhead",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30305",
+        "venue_type": "bar",
+        "website": "https://whitehall-tavern.com",
+    },
+    "irbys-tavern": {
+        "name": "Irby's Tavern",
+        "slug": "irbys-tavern",
+        "address": "3556 Roswell Rd NE",
+        "neighborhood": "Buckhead",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30305",
+        "venue_type": "bar",
+        "website": "https://irbystavern.com",
+    },
+    "woofs-atlanta": {
+        "name": "Woofs Atlanta",
+        "slug": "woofs-atlanta",
+        "address": "494 Plasters Ave NE",
+        "neighborhood": "Midtown",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30308",
+        "venue_type": "bar",
+        "website": "https://woofsatlanta.com",
+    },
+    # atlanta-eagle: handled by dedicated source (id=138) with recurring upgrade
+
+    # ========== GAMING / TABLETOP VENUES ==========
+    # "battle-and-brew": handled by dedicated source (sources/battle_and_brew.py)
+    "east-atlanta-comics": {
+        "name": "East Atlanta Comics",
+        "slug": "east-atlanta-comics",
+        "address": "508 Flat Shoals Ave SE",
+        "neighborhood": "East Atlanta",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30316",
+        "venue_type": "record_store",
+        "website": "https://www.eastatlantacomics.com",
+    },
+    "giga-bites-cafe": {
+        "name": "Giga-Bites Cafe",
+        "slug": "giga-bites-cafe",
+        "address": "1851 Roswell Rd",
+        "neighborhood": "Marietta",
+        "city": "Marietta",
+        "state": "GA",
+        "zip": "30062",
+        "venue_type": "gaming",
+    },
+    "bone-lick-bbq": {
+        "name": "Bone Lick BBQ",
+        "slug": "bone-lick-bbq",
+        "address": "318 Memorial Dr SE",
+        "neighborhood": "Grant Park",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30312",
+        "venue_type": "restaurant",
+    },
+    "my-parents-basement": {
+        "name": "My Parents' Basement",
+        "slug": "my-parents-basement",
+        "address": "22 N Avondale Rd",
+        "neighborhood": "Avondale Estates",
+        "city": "Avondale Estates",
+        "state": "GA",
+        "zip": "30002",
+        "venue_type": "bar",
+    },
+
+    # ========== RUN CLUB VENUES ==========
+    # "ponce-city-market": handled by dedicated source (sources/ponce_city_market.py)
+    "big-peach-running-midtown": {
+        "name": "Big Peach Running Co - Midtown",
+        "slug": "big-peach-running-midtown",
+        "address": "800 Peachtree St NE Ste B",
+        "neighborhood": "Midtown",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30308",
+        "venue_type": "organization",
+    },
+    "milltown-arms-tavern": {
+        "name": "Milltown Arms Tavern",
+        "slug": "milltown-arms-tavern",
+        "address": "180 Carroll St SE",
+        "neighborhood": "Cabbagetown",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30312",
+        "venue_type": "bar",
+    },
+    "elbow-room-buckhead": {
+        "name": "Elbow Room",
+        "slug": "elbow-room-buckhead",
+        "address": "248 Pharr Rd NE",
+        "neighborhood": "Buckhead",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30305",
+        "venue_type": "bar",
+    },
+
+    # ========== DANCE VENUES ==========
+    "tongue-and-groove": {
+        "name": "Tongue and Groove",
+        "slug": "tongue-and-groove",
+        "address": "565 Main St NE",
+        "neighborhood": "Buckhead",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30324",
+        "venue_type": "nightclub",
+    },
+    # "the-heretic": handled by dedicated source (sources/the_heretic.py)
+    "hot-jam-atlanta": {
+        "name": "Hot Jam Atlanta",
+        "slug": "hot-jam-atlanta",
+        "address": "585 Wells St SW",
+        "neighborhood": "Castleberry Hill",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30312",
+        "venue_type": "event_space",
+    },
+
+    # ========== SPORTS / WELLNESS VENUES ==========
+    # "piedmont-park": handled by dedicated source (sources/piedmont_park.py)
+    "woodruff-park": {
+        "name": "Woodruff Park",
+        "slug": "woodruff-park",
+        "address": "91 Peachtree St NW",
+        "neighborhood": "Downtown",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30303",
+        "venue_type": "park",
+    },
+
+    # ========== CYCLING / OUTDOOR VENUES ==========
+    "inman-park-station": {
+        "name": "Inman Park Station",
+        "slug": "inman-park-station",
+        "address": "133 Hurt St NE",
+        "neighborhood": "Inman Park",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30307",
+        "venue_type": "park",
+    },
+    "97-estoria": {
+        "name": "97 Estoria",
+        "slug": "97-estoria",
+        "address": "727 Wylie St SE",
+        "neighborhood": "Reynoldstown",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30316",
+        "venue_type": "bar",
+        "website": "https://www.97estoria.com",
+    },
+    "avondale-estates-art-lot": {
+        "name": "Avondale Estates Art Lot",
+        "slug": "avondale-estates-art-lot",
+        "address": "64 N Avondale Rd",
+        "neighborhood": "Avondale Estates",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30002",
+        "venue_type": "park",
+    },
+    "glenlake-tennis-center": {
+        "name": "Glenlake Tennis Center",
+        "slug": "glenlake-tennis-center",
+        "address": "1121 Church St",
+        "neighborhood": "Decatur",
+        "city": "Decatur",
+        "state": "GA",
+        "zip": "30030",
+        "venue_type": "fitness_center",
+    },
+    "broad-street-boardwalk": {
+        "name": "Broad Street Boardwalk",
+        "slug": "broad-street-boardwalk",
+        "address": "Broad St NW",
+        "neighborhood": "Downtown",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30303",
+        "venue_type": "park",
+    },
+    "grant-park": {
+        "name": "Grant Park",
+        "slug": "grant-park-park",
+        "address": "625 Park Ave SE",
+        "neighborhood": "Grant Park",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30315",
+        "venue_type": "park",
+    },
+
+    # ========== FOOD & DRINK SPECIALS VENUES ==========
+    "the-optimist": {
+        "name": "The Optimist",
+        "slug": "the-optimist",
+        "address": "914 Howell Mill Rd",
+        "neighborhood": "West Midtown",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30318",
+        "venue_type": "restaurant",
+        "website": "https://www.theoptimistrestaurant.com",
+    },
+    "watchmans-seafood": {
+        "name": "Watchman's Seafood & Spirits",
+        "slug": "watchmans-seafood-spirits",
+        "address": "99 Krog St NE, Suite Y",
+        "neighborhood": "Inman Park",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30307",
+        "venue_type": "restaurant",
+        "website": "https://www.watchmans.com",
+    },
+    "iberian-pig-decatur": {
+        "name": "The Iberian Pig",
+        "slug": "iberian-pig-decatur",
+        "address": "121 Sycamore St",
+        "neighborhood": "Decatur",
+        "city": "Decatur",
+        "state": "GA",
+        "zip": "30030",
+        "venue_type": "restaurant",
+        "website": "https://www.iberianpig.com",
+    },
+    "lloyds-atl": {
+        "name": "Lloyd's Restaurant & Lounge",
+        "slug": "lloyds-restaurant-lounge",
+        "address": "900 DeKalb Ave NE, Unit 100",
+        "neighborhood": "Inman Park",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30307",
+        "venue_type": "restaurant",
+    },
+    "antico-pizza": {
+        "name": "Antico Pizza Napoletana",
+        "slug": "antico-pizza",
+        "address": "1093 Hemphill Ave NW",
+        "neighborhood": "West Midtown",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30318",
+        "venue_type": "restaurant",
+        "website": "https://www.anticopizza.it",
+    },
+    "bartaco-inman-park": {
+        "name": "Bartaco",
+        "slug": "bartaco-inman-park",
+        "address": "299 N Highland Ave NE",
+        "neighborhood": "Inman Park",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30307",
+        "venue_type": "restaurant",
+        "website": "https://www.bartaco.com",
+    },
+    "taverna-buckhead": {
+        "name": "Taverna",
+        "slug": "taverna-buckhead",
+        "address": "280 Buckhead Ave NE",
+        "neighborhood": "Buckhead",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30305",
+        "venue_type": "restaurant",
+    },
+    "pure-taqueria-inman-park": {
+        "name": "Pure Taqueria",
+        "slug": "pure-taqueria-inman-park",
+        "address": "3589 Durden Dr",
+        "neighborhood": "Inman Park",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30307",
+        "venue_type": "restaurant",
+        "website": "https://www.puretaqueria.com",
+    },
+    "tin-lizzys-midtown": {
+        "name": "Tin Lizzy's Cantina",
+        "slug": "tin-lizzys-midtown",
+        "address": "77 12th St NE",
+        "neighborhood": "Midtown",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30309",
+        "venue_type": "restaurant",
+    },
+    "forza-storico": {
+        "name": "Forza Storico",
+        "slug": "forza-storico",
+        "address": "1198 Howell Mill Rd",
+        "neighborhood": "West Midtown",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30318",
+        "venue_type": "restaurant",
+        "website": "https://forzastorico.com",
+    },
+    "cypress-street-pint": {
+        "name": "Cypress Street Pint & Plate",
+        "slug": "cypress-street-pint-plate",
+        "address": "817 W Peachtree St NE",
+        "neighborhood": "Midtown",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30308",
+        "venue_type": "bar",
+    },
+    "beso-buckhead": {
+        "name": "Beso Buckhead",
+        "slug": "beso-buckhead",
+        "address": "3035 Peachtree Rd NE",
+        "neighborhood": "Buckhead",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30305",
+        "venue_type": "restaurant",
+        "website": "https://besoatl.com",
+    },
+    # "fontaines-oyster-house" — use existing key "fontaines" (added in Phase 0b)
+    "beetlecat": {
+        "name": "BeetleCat",
+        "slug": "beetlecat",
+        "address": "299 N Highland Ave NE",
+        "neighborhood": "Inman Park",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30307",
+        "venue_type": "restaurant",
+        "website": "https://beetlecatatl.com",
+    },
+    "pielands": {
+        "name": "Pielands Sub & Slice",
+        "slug": "pielands-virginia-highland",
+        "address": "1021 Virginia Ave NE",
+        "neighborhood": "Virginia-Highland",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30306",
+        "venue_type": "restaurant",
+        "website": "https://www.pielands.com",
+    },
+    "wild-heaven-avondale": {
+        "name": "Wild Heaven Beer (Avondale)",
+        "slug": "wild-heaven-avondale",
+        "address": "135 Maple St",
+        "neighborhood": "Avondale Estates",
+        "city": "Decatur",
+        "state": "GA",
+        "zip": "30002",
+        "venue_type": "brewery",
+        "website": "https://wildheavenbeer.com",
+    },
+    "wild-heaven-toco-hills": {
+        "name": "Wild Heaven x Fox Bros (Toco Hills)",
+        "slug": "wild-heaven-toco-hills",
+        "address": "2935B N Druid Hills Rd NE",
+        "neighborhood": "Toco Hills",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30329",
+        "venue_type": "brewery",
+        "website": "https://wildheavenbeer.com",
+    },
+    "superica-krog": {
+        "name": "Superica",
+        "slug": "superica-krog-street",
+        "address": "99 Krog St NE",
+        "neighborhood": "Inman Park",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30307",
+        "venue_type": "restaurant",
+        "website": "https://superica.com",
+    },
+    # "fado-irish-pub" key = Buckhead location (273 Buckhead Ave NE) — already exists
+    "fado-midtown": {
+        "name": "Fado Irish Pub",
+        "slug": "fado-irish-pub-midtown",
+        "address": "933 Peachtree St NE",
+        "neighborhood": "Midtown",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30309",
+        "venue_type": "bar",
+    },
 }
 
 # ============================================
@@ -482,16 +1246,7 @@ WEEKLY_EVENTS = [
         "subcategory": "nightlife.karaoke",
         "tags": ["karaoke", "nightlife", "weekly"],
     },
-    {
-        "venue_key": "boggs",
-        "day": 2,  # Wednesday
-        "title": "Karaoke Night W/ Music Mike",
-        "description": "Weekly karaoke night with Music Mike at Boggs Social & Supply in West End.",
-        "start_time": "19:00",
-        "category": "nightlife",
-        "subcategory": "nightlife.karaoke",
-        "tags": ["karaoke", "nightlife", "weekly"],
-    },
+    # Boggs Social: handled by dedicated source (sources/boggs_social.py) with recurring schedule
     # TEN ATL verified events (not karaoke as badslava listed)
     {
         "venue_key": "ten-atl",
@@ -601,47 +1356,11 @@ WEEKLY_EVENTS = [
         "title": "Open Mic Night",
         "description": "Tuesday open mic at Southern Feed Store in East Atlanta. Comedy, music, and poetry welcome.",
         "start_time": "19:00",
-        "category": "community",
+        "category": "nightlife",
         "subcategory": None,
         "tags": ["open-mic", "comedy", "music", "poetry", "weekly"],
     },
-    # Laughing Skull verified: Open mics Mon-Wed at 8PM, $15
-    {
-        "venue_key": "laughing-skull",
-        "day": 0,  # Monday
-        "title": "Open Mic Comedy Night",
-        "description": "Weekly comedy open mic at Laughing Skull Lounge, Atlanta's premier comedy club in Midtown. $15 cover.",
-        "start_time": "20:00",
-        "category": "comedy",
-        "subcategory": "comedy.standup",
-        "tags": ["open-mic", "comedy", "standup", "weekly"],
-        "price_min": 15,
-        "price_max": 15,
-    },
-    {
-        "venue_key": "laughing-skull",
-        "day": 1,  # Tuesday
-        "title": "Open Mic Comedy Night",
-        "description": "Weekly comedy open mic at Laughing Skull Lounge, Atlanta's premier comedy club in Midtown. $15 cover.",
-        "start_time": "20:00",
-        "category": "comedy",
-        "subcategory": "comedy.standup",
-        "tags": ["open-mic", "comedy", "standup", "weekly"],
-        "price_min": 15,
-        "price_max": 15,
-    },
-    {
-        "venue_key": "laughing-skull",
-        "day": 2,  # Wednesday
-        "title": "Open Mic Comedy Night",
-        "description": "Weekly comedy open mic at Laughing Skull Lounge, Atlanta's premier comedy club in Midtown. $15 cover.",
-        "start_time": "20:00",
-        "category": "comedy",
-        "subcategory": "comedy.standup",
-        "tags": ["open-mic", "comedy", "standup", "weekly"],
-        "price_min": 15,
-        "price_max": 15,
-    },
+    # Laughing Skull: handled by dedicated source (sources/laughing_skull.py) with full 7-day recurring schedule
     {
         "venue_key": "limerick-junction",
         "day": 1,  # Tuesday
@@ -709,9 +1428,9 @@ WEEKLY_EVENTS = [
         "title": "Team Trivia",
         "description": "Thursday Team Trivia night at Smith's Olde Bar. Test your knowledge before karaoke starts at 10PM.",
         "start_time": "19:30",
-        "category": "community",
-        "subcategory": None,
-        "tags": ["trivia", "games", "weekly"],
+        "category": "nightlife",
+        "subcategory": "nightlife.trivia",
+        "tags": ["trivia", "games", "nightlife", "weekly"],
     },
     {
         "venue_key": "pullman-yards",
@@ -729,9 +1448,9 @@ WEEKLY_EVENTS = [
         "title": "Open Mic Night",
         "description": "Thursday open mic at ASW Whiskey Exchange in West End.",
         "start_time": "18:00",
-        "category": "community",
+        "category": "nightlife",
         "subcategory": None,
-        "tags": ["open-mic", "comedy", "music", "weekly"],
+        "tags": ["open-mic", "comedy", "music", "nightlife", "weekly"],
     },
     {
         "venue_key": "atlantucky",
@@ -739,9 +1458,9 @@ WEEKLY_EVENTS = [
         "title": "Open Mic Night",
         "description": "Thursday open mic at Atlantucky Brewing.",
         "start_time": "18:30",
-        "category": "community",
+        "category": "nightlife",
         "subcategory": None,
-        "tags": ["open-mic", "comedy", "music", "weekly", "brewery"],
+        "tags": ["open-mic", "comedy", "music", "nightlife", "weekly", "brewery"],
     },
     {
         "venue_key": "urban-grind",
@@ -780,9 +1499,9 @@ WEEKLY_EVENTS = [
         "title": "Press Start Gaming Night",
         "description": "Wednesday gaming night at Joystick Gamebar. Rotating video games each week including Rock Band, fighting games, and more. 7PM-11PM.",
         "start_time": "19:00",
-        "category": "community",
-        "subcategory": None,
-        "tags": ["games", "video-games", "arcade", "weekly"],
+        "category": "nightlife",
+        "subcategory": "nightlife.bar_games",
+        "tags": ["games", "video-games", "arcade", "nightlife", "weekly"],
     },
     {
         "venue_key": "joystick",
@@ -800,9 +1519,9 @@ WEEKLY_EVENTS = [
         "title": "Open Mic Night",
         "description": "Thursday open mic at Peters Street Station in Castleberry Hill.",
         "start_time": "20:30",
-        "category": "community",
+        "category": "nightlife",
         "subcategory": None,
-        "tags": ["open-mic", "comedy", "music", "weekly"],
+        "tags": ["open-mic", "comedy", "music", "nightlife", "weekly"],
     },
     {
         "venue_key": "dynamic-el-dorado",
@@ -844,9 +1563,9 @@ WEEKLY_EVENTS = [
         "title": "Team Trivia",
         "description": "Sunday Team Trivia at Manuel's Tavern, Atlanta's legendary political bar since 1956. Categories include Sports, History, Music, Science, TV, and Movies.",
         "start_time": "19:00",
-        "category": "community",
-        "subcategory": None,
-        "tags": ["trivia", "games", "weekly"],
+        "category": "nightlife",
+        "subcategory": "nightlife.trivia",
+        "tags": ["trivia", "games", "nightlife", "weekly"],
     },
     {
         "venue_key": "church-epiphany",
@@ -952,9 +1671,9 @@ WEEKLY_EVENTS = [
         "title": "Trivia Night",
         "description": "Tuesday trivia at Brick Store Pub in downtown Decatur. Award-winning beer selection and pub trivia.",
         "start_time": "20:00",
-        "category": "community",
-        "subcategory": None,
-        "tags": ["trivia", "games", "weekly", "craft-beer"],
+        "category": "nightlife",
+        "subcategory": "nightlife.trivia",
+        "tags": ["trivia", "games", "nightlife", "weekly", "craft-beer"],
     },
     {
         "venue_key": "the-porter",
@@ -962,9 +1681,9 @@ WEEKLY_EVENTS = [
         "title": "Trivia Night",
         "description": "Wednesday trivia at The Porter Beer Bar in Little Five Points.",
         "start_time": "20:00",
-        "category": "community",
-        "subcategory": None,
-        "tags": ["trivia", "games", "weekly", "craft-beer"],
+        "category": "nightlife",
+        "subcategory": "nightlife.trivia",
+        "tags": ["trivia", "games", "nightlife", "weekly", "craft-beer"],
     },
     {
         "venue_key": "wrecking-bar",
@@ -972,9 +1691,1317 @@ WEEKLY_EVENTS = [
         "title": "Trivia Night",
         "description": "Wednesday trivia at Wrecking Bar Brewpub in Little Five Points. House-brewed beers and pub trivia.",
         "start_time": "19:30",
+        "category": "nightlife",
+        "subcategory": "nightlife.trivia",
+        "tags": ["trivia", "games", "nightlife", "weekly", "brewery"],
+    },
+
+    # ==================================================================
+    # Phase 0b: NEW RECURRING EVENTS
+    # ==================================================================
+
+    # ========== ADDITIONAL TRIVIA ==========
+    {
+        "venue_key": "thinking-man",
+        "day": 1,  # Tuesday
+        "title": "Trivia Night",
+        "description": "Tuesday trivia at Thinking Man Tavern in Decatur. Neighborhood bar vibes and solid pub trivia.",
+        "start_time": "20:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.trivia",
+        "tags": ["trivia", "games", "nightlife", "weekly"],
+    },
+    {
+        "venue_key": "righteous-room",
+        "day": 3,  # Thursday
+        "title": "Trivia Night",
+        "description": "Thursday trivia at Righteous Room on Ponce. Dive bar trivia in Virginia Highland.",
+        "start_time": "20:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.trivia",
+        "tags": ["trivia", "games", "nightlife", "weekly"],
+    },
+    {
+        "venue_key": "the-local",
+        "day": 2,  # Wednesday
+        "title": "Trivia Night",
+        "description": "Wednesday trivia at The Local in Ponce City Market.",
+        "start_time": "19:30",
+        "category": "nightlife",
+        "subcategory": "nightlife.trivia",
+        "tags": ["trivia", "games", "nightlife", "weekly"],
+    },
+    {
+        "venue_key": "twains",
+        "day": 2,  # Wednesday
+        "title": "Team Trivia",
+        "description": "Wednesday team trivia at Twain's Billiards & Tap in Decatur. Pool tables, craft beer, and pub trivia.",
+        "start_time": "20:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.trivia",
+        "tags": ["trivia", "games", "nightlife", "weekly"],
+    },
+    {
+        "venue_key": "dieselfillingstation",
+        "day": 1,  # Tuesday
+        "title": "Trivia Night",
+        "description": "Tuesday trivia at Diesel Filling Station in Virginia Highland. Patio-friendly pub trivia.",
+        "start_time": "20:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.trivia",
+        "tags": ["trivia", "games", "nightlife", "weekly"],
+    },
+
+    # ========== DJ NIGHTS / DANCE ==========
+    {
+        "venue_key": "mjq-concourse",
+        "day": 3,  # Thursday
+        "title": "MJQ Thursday",
+        "description": "Thursday DJ night at MJQ Concourse. Underground dance vibes below Ponce De Leon. One of Atlanta's longest-running dance nights.",
+        "start_time": "22:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.dj",
+        "tags": ["dj", "dance", "nightlife", "weekly", "late-night", "high-energy"],
+    },
+    {
+        "venue_key": "mjq-concourse",
+        "day": 4,  # Friday
+        "title": "MJQ Friday",
+        "description": "Friday DJ night at MJQ Concourse. Atlanta's legendary underground dance club.",
+        "start_time": "22:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.dj",
+        "tags": ["dj", "dance", "nightlife", "weekly", "late-night", "high-energy"],
+    },
+    {
+        "venue_key": "mjq-concourse",
+        "day": 5,  # Saturday
+        "title": "MJQ Saturday",
+        "description": "Saturday DJ night at MJQ Concourse. The best dance floor in Atlanta, underground on Ponce.",
+        "start_time": "22:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.dj",
+        "tags": ["dj", "dance", "nightlife", "weekly", "late-night", "high-energy"],
+    },
+    {
+        "venue_key": "music-room",
+        "day": 4,  # Friday
+        "title": "Friday Night DJ Set",
+        "description": "Friday DJ set at The Music Room on Edgewood Ave. Rotating DJs, cocktails, and late-night vibes.",
+        "start_time": "22:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.dj",
+        "tags": ["dj", "dance", "nightlife", "weekly", "late-night"],
+    },
+    {
+        "venue_key": "music-room",
+        "day": 5,  # Saturday
+        "title": "Saturday Night DJ Set",
+        "description": "Saturday DJ set at The Music Room on Edgewood Ave.",
+        "start_time": "22:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.dj",
+        "tags": ["dj", "dance", "nightlife", "weekly", "late-night"],
+    },
+    {
+        "venue_key": "johnny-hideaway",
+        "day": 4,  # Friday
+        "title": "Dance Night",
+        "description": "Friday dance night at Johnny's Hideaway in Buckhead. Atlanta's iconic dance club since 1979, spinning everything from Motown to Top 40.",
+        "start_time": "20:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.party",
+        "tags": ["dance", "dj", "nightlife", "weekly", "high-energy"],
+    },
+    {
+        "venue_key": "johnny-hideaway",
+        "day": 5,  # Saturday
+        "title": "Dance Night",
+        "description": "Saturday dance night at Johnny's Hideaway in Buckhead. Motown, Top 40, and classic hits.",
+        "start_time": "20:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.party",
+        "tags": ["dance", "dj", "nightlife", "weekly", "high-energy"],
+    },
+
+    # ========== DRAG SHOWS ==========
+    {
+        "venue_key": "burkharts",
+        "day": 4,  # Friday
+        "title": "Drag Show Friday",
+        "description": "Friday drag show at Burkhart's Pub in Ansley Park. One of Atlanta's longest-running LGBTQ bars.",
+        "start_time": "22:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.drag",
+        "tags": ["drag", "nightlife", "weekly", "lgbtq-friendly"],
+    },
+    {
+        "venue_key": "burkharts",
+        "day": 5,  # Saturday
+        "title": "Drag Show Saturday",
+        "description": "Saturday drag show at Burkhart's Pub. Multiple performers, no cover before 10PM.",
+        "start_time": "22:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.drag",
+        "tags": ["drag", "nightlife", "weekly", "lgbtq-friendly"],
+    },
+    {
+        "venue_key": "my-sisters-room",
+        "day": 4,  # Friday
+        "title": "Friday Night Show",
+        "description": "Friday night drag and live entertainment at My Sister's Room in Decatur. Atlanta's welcoming LGBTQ neighborhood bar.",
+        "start_time": "21:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.drag",
+        "tags": ["drag", "nightlife", "weekly", "lgbtq-friendly"],
+    },
+    {
+        "venue_key": "my-sisters-room",
+        "day": 5,  # Saturday
+        "title": "Saturday Night Show",
+        "description": "Saturday night drag and entertainment at My Sister's Room in Decatur.",
+        "start_time": "21:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.drag",
+        "tags": ["drag", "nightlife", "weekly", "lgbtq-friendly"],
+    },
+
+    # ========== LIVE MUSIC RESIDENCIES ==========
+    {
+        "venue_key": "fontaines",
+        "day": 0,  # Monday
+        "title": "Motown Monday",
+        "description": "Monday Motown night at Fontaine's Oyster House in Virginia Highland. Live soul and Motown with craft cocktails.",
+        "start_time": "20:00",
+        "category": "music",
+        "subcategory": "music.soul",
+        "tags": ["soul", "motown", "live-music", "weekly", "date-night"],
+    },
+    {
+        "venue_key": "fontaines",
+        "day": 2,  # Wednesday
+        "title": "Open Jam Wednesday",
+        "description": "Wednesday open jam session at Fontaine's Oyster House. Musicians welcome to sit in.",
+        "start_time": "20:00",
+        "category": "music",
+        "subcategory": "music.rock",
+        "tags": ["jam-session", "live-music", "open-mic", "weekly"],
+    },
+    {
+        "venue_key": "apache-cafe",
+        "day": 3,  # Thursday
+        "title": "Open Mic & Poetry Slam",
+        "description": "Thursday open mic and poetry slam at Apache Cafe in Midtown. Atlanta's creative arts and spoken word staple.",
+        "start_time": "20:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["open-mic", "poetry", "spoken-word", "nightlife", "weekly"],
+    },
+    {
+        "venue_key": "ladybird",
+        "day": 5,  # Saturday
+        "title": "DJ Brunch",
+        "description": "Saturday DJ brunch at Ladybird Grove & Mess Hall on the BeltLine. DJs, brunch cocktails, and outdoor vibes.",
+        "start_time": "11:00",
+        "category": "food_drink",
+        "subcategory": None,
+        "tags": ["brunch", "dj", "outdoor", "weekly"],
+    },
+
+    # ========== FARMERS MARKETS ==========
+    {
+        "venue_key": "piedmont-park-green-market",
+        "day": 5,  # Saturday
+        "title": "Piedmont Park Green Market",
+        "description": "Saturday green market at Piedmont Park. Year-round farmers market with local produce, artisan goods, and prepared foods.",
+        "start_time": "09:00",
+        "category": "markets",
+        "subcategory": None,
+        "tags": ["farmers-market", "outdoor", "weekly", "family-friendly"],
+    },
+    {
+        "venue_key": "peachtree-road-farmers-market",
+        "day": 5,  # Saturday
+        "title": "Peachtree Road Farmers Market",
+        "description": "Saturday farmers market at Cathedral of St. Philip in Buckhead. Seasonal produce, baked goods, and local vendors.",
+        "start_time": "08:30",
+        "category": "markets",
+        "subcategory": None,
+        "tags": ["farmers-market", "outdoor", "weekly", "family-friendly", "seasonal"],
+    },
+
+    # ==================================================================
+    # Phase 2: NEIGHBORHOOD + DAY GAP FILLS
+    # ==================================================================
+
+    # ========== LITTLE FIVE POINTS ==========
+    {
+        "venue_key": "elmyr",
+        "day": 1,  # Tuesday
+        "title": "Taco Tuesday",
+        "description": "Taco Tuesday specials at Elmyr in Little Five Points. Cheap tacos and margaritas in L5P's favorite late-night taqueria.",
+        "start_time": "17:00",
+        "category": "food_drink",
+        "subcategory": None,
+        "tags": ["food-specials", "tacos", "weekly", "budget-friendly"],
+    },
+
+    # ========== INMAN PARK ==========
+    {
+        "venue_key": "barcelona-wine-bar",
+        "day": 2,  # Wednesday
+        "title": "Wine Wednesday",
+        "description": "Wednesday wine specials at Barcelona Wine Bar in Inman Park. Half-off select bottles and tapas pairings.",
+        "start_time": "17:00",
+        "category": "food_drink",
+        "subcategory": None,
+        "tags": ["wine", "food-specials", "weekly", "date-night"],
+    },
+    {
+        "venue_key": "barcelona-wine-bar",
+        "day": 3,  # Thursday
+        "title": "Live Music Thursday",
+        "description": "Thursday live music at Barcelona Wine Bar in Inman Park. Acoustic sets, tapas, and cocktails on the patio.",
+        "start_time": "20:00",
+        "category": "music",
+        "subcategory": "music.acoustic",
+        "tags": ["live-music", "acoustic", "weekly", "date-night", "patio"],
+    },
+    {
+        "venue_key": "victory-sandwich-bar",
+        "day": 1,  # Tuesday
+        "title": "Trivia Night",
+        "description": "Tuesday trivia at Victory Sandwich Bar in Inman Park. Craft cocktails, sandwiches, and pub trivia.",
+        "start_time": "20:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.trivia",
+        "tags": ["trivia", "games", "nightlife", "weekly"],
+    },
+    {
+        "venue_key": "new-realm-brewing",
+        "day": 3,  # Thursday
+        "title": "Trivia Night",
+        "description": "Thursday trivia at New Realm Brewing on the BeltLine. Craft beer, rooftop views, and pub trivia.",
+        "start_time": "19:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.trivia",
+        "tags": ["trivia", "games", "nightlife", "weekly", "brewery", "beltline"],
+    },
+    {
+        "venue_key": "new-realm-brewing",
+        "day": 4,  # Friday
+        "title": "Live Music Friday",
+        "description": "Friday live music at New Realm Brewing on the BeltLine. Local bands on the rooftop patio.",
+        "start_time": "19:00",
+        "category": "music",
+        "subcategory": None,
+        "tags": ["live-music", "weekly", "brewery", "beltline", "patio"],
+    },
+    {
+        "venue_key": "krog-street-market",
+        "day": 5,  # Saturday
+        "title": "Saturday Live Music",
+        "description": "Saturday live music at Krog Street Market in Inman Park. Local performers in the food hall courtyard.",
+        "start_time": "12:00",
+        "category": "music",
+        "subcategory": None,
+        "tags": ["live-music", "weekly", "family-friendly", "food-hall"],
+    },
+
+    # ========== EAST ATLANTA VILLAGE ==========
+    {
+        "venue_key": "the-glenwood",
+        "day": 2,  # Wednesday
+        "title": "Trivia Night",
+        "description": "Wednesday trivia at The Glenwood in East Atlanta Village. Neighborhood bar trivia with a loyal crowd.",
+        "start_time": "20:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.trivia",
+        "tags": ["trivia", "games", "nightlife", "weekly"],
+    },
+    {
+        "venue_key": "the-glenwood",
+        "day": 4,  # Friday
+        "title": "Friday DJ Night",
+        "description": "Friday DJ night at The Glenwood in East Atlanta Village.",
+        "start_time": "22:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.dj",
+        "tags": ["dj", "nightlife", "weekly", "late-night"],
+    },
+    {
+        "venue_key": "flatiron",
+        "day": 3,  # Thursday
+        "title": "Thursday DJ Night",
+        "description": "Thursday DJ night at Flatiron in East Atlanta Village. Rotating DJs and late-night vibes.",
+        "start_time": "22:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.dj",
+        "tags": ["dj", "nightlife", "weekly", "late-night"],
+    },
+    {
+        "venue_key": "marys-bar",
+        "day": 4,  # Friday
+        "title": "Friday Drag Show",
+        "description": "Friday drag show at Mary's in East Atlanta Village. Atlanta's beloved queer dive bar.",
+        "start_time": "22:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.drag",
+        "tags": ["drag", "nightlife", "weekly", "lgbtq-friendly"],
+    },
+    {
+        "venue_key": "marys-bar",
+        "day": 5,  # Saturday
+        "title": "Saturday DJ Night",
+        "description": "Saturday DJ night at Mary's in East Atlanta Village. Dance floor, cheap drinks, queer dive bar energy.",
+        "start_time": "22:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.dj",
+        "tags": ["dj", "dance", "nightlife", "weekly", "lgbtq-friendly"],
+    },
+
+    # ========== SUNDAY GAP FILLS ==========
+    {
+        "venue_key": "northside-tavern",
+        "day": 6,  # Sunday
+        "title": "Sunday Blues Jam",
+        "description": "Sunday blues jam at Northside Tavern in West Midtown. Atlanta's iconic juke joint — live blues every Sunday for decades.",
+        "start_time": "16:00",
+        "category": "music",
+        "subcategory": "music.blues",
+        "tags": ["blues", "live-music", "jam-session", "weekly"],
+    },
+    {
+        "venue_key": "northside-tavern",
+        "day": 4,  # Friday
+        "title": "Friday Night Blues",
+        "description": "Friday night live blues at Northside Tavern. Atlanta's legendary blues bar since 1973.",
+        "start_time": "21:30",
+        "category": "music",
+        "subcategory": "music.blues",
+        "tags": ["blues", "live-music", "nightlife", "weekly"],
+    },
+    {
+        "venue_key": "northside-tavern",
+        "day": 5,  # Saturday
+        "title": "Saturday Night Blues",
+        "description": "Saturday night live blues at Northside Tavern. The real deal — no frills, just blues.",
+        "start_time": "21:30",
+        "category": "music",
+        "subcategory": "music.blues",
+        "tags": ["blues", "live-music", "nightlife", "weekly"],
+    },
+    {
+        "venue_key": "park-tavern",
+        "day": 6,  # Sunday
+        "title": "Sunday Live Music",
+        "description": "Sunday live music at Park Tavern overlooking Piedmont Park. Outdoor stage, craft beer, and local bands.",
+        "start_time": "15:00",
+        "category": "music",
+        "subcategory": None,
+        "tags": ["live-music", "outdoor", "weekly", "family-friendly"],
+    },
+    {
+        "venue_key": "ladybird",
+        "day": 6,  # Sunday
+        "title": "Sunday DJ Brunch",
+        "description": "Sunday DJ brunch at Ladybird Grove on the BeltLine. DJs, brunch cocktails, and patio vibes.",
+        "start_time": "11:00",
+        "category": "food_drink",
+        "subcategory": None,
+        "tags": ["brunch", "dj", "outdoor", "weekly", "beltline"],
+    },
+    {
+        "venue_key": "the-painted-pin",
+        "day": 6,  # Sunday
+        "title": "Sunday Brunch & DJs",
+        "description": "Sunday brunch with DJ sets at The Painted Pin in Buckhead. Brunch cocktails, bowling, and beats.",
+        "start_time": "11:00",
+        "category": "food_drink",
+        "subcategory": None,
+        "tags": ["brunch", "dj", "weekly", "games"],
+    },
+    {
+        "venue_key": "apache-cafe",
+        "day": 6,  # Sunday
+        "title": "Sunday Open Mic",
+        "description": "Sunday open mic at Apache Cafe in Midtown. Poetry, spoken word, and acoustic sets.",
+        "start_time": "19:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["open-mic", "poetry", "spoken-word", "weekly"],
+    },
+    {
+        "venue_key": "wrecking-bar",
+        "day": 6,  # Sunday
+        "title": "Sunday Brunch",
+        "description": "Sunday brunch at Wrecking Bar Brewpub in Little Five Points. House-brewed beers and brunch favorites in a historic firehouse.",
+        "start_time": "10:00",
+        "category": "food_drink",
+        "subcategory": None,
+        "tags": ["brunch", "brewery", "weekly", "family-friendly"],
+    },
+
+    # NOTE: Sister Louisa's bingo + karaoke handled by dedicated sources
+    # (sister-louisas-church for Drag Bingo, sister-louisas for karaoke)
+
+    # ========== DISCOVERED FROM VENUE WEBSITES (Feb 2026) ==========
+
+    # Star Community Bar: handled by dedicated source upgrade (star_community_bar.py)
+
+    # Fado Irish Pub — Buckhead
+    {
+        "venue_key": "fado-irish-pub",
+        "day": 2,  # Wednesday
+        "title": "Pub Quiz with Dirty South Trivia",
+        "description": "Wednesday pub quiz at Fado Irish Pub hosted by Dirty South Trivia. Win prizes and pub cash.",
+        "start_time": "19:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["trivia", "games", "nightlife", "weekly", "dirty-south-trivia"],
+    },
+
+    # Steady Hand Beer — West Midtown
+    {
+        "venue_key": "steady-hand-beer",
+        "day": 2,  # Wednesday
+        "title": "Themed Trivia Night",
+        "description": "Wednesday themed trivia at Steady Hand Beer Co. hosted by Lights Up Entertainment. Rotating pop culture themes with prizes.",
+        "start_time": "19:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["trivia", "games", "nightlife", "weekly", "brewery"],
+    },
+
+    # Cherry Street Brewing — West Midtown
+    {
+        "venue_key": "cherry-street-brewing",
+        "day": 2,  # Wednesday
+        "title": "Open Mic Night",
+        "description": "Wednesday open mic at Cherry Street Brewing taproom. Live music from local performers.",
+        "start_time": "19:00",
+        "category": "music",
+        "subcategory": None,
+        "tags": ["open-mic", "live-music", "weekly", "brewery"],
+    },
+    {
+        "venue_key": "cherry-street-brewing",
+        "day": 4,  # Friday
+        "title": "Friday Live Music",
+        "description": "Live music every Friday at Cherry Street Brewing taproom.",
+        "start_time": "19:00",
+        "category": "music",
+        "subcategory": None,
+        "tags": ["live-music", "weekly", "brewery"],
+    },
+    {
+        "venue_key": "cherry-street-brewing",
+        "day": 5,  # Saturday
+        "title": "Saturday Live Music",
+        "description": "Live music every Saturday at Cherry Street Brewing taproom.",
+        "start_time": "19:00",
+        "category": "music",
+        "subcategory": None,
+        "tags": ["live-music", "weekly", "brewery"],
+    },
+
+    # Three Taverns Imaginarium — Reynoldstown
+    {
+        "venue_key": "three-taverns",
+        "day": 0,  # Monday
+        "title": "Mental Mondays Trivia",
+        "description": "Monday trivia night at Three Taverns Imaginarium in Reynoldstown.",
+        "start_time": "20:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["trivia", "games", "nightlife", "weekly", "brewery"],
+    },
+    {
+        "venue_key": "three-taverns",
+        "day": 1,  # Tuesday
+        "title": "Mario Kart Night",
+        "description": "Tuesday Mario Kart N64 gaming night at Three Taverns Imaginarium. Play in the upstairs loft.",
+        "start_time": "19:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["games", "game-night", "nightlife", "weekly", "brewery"],
+    },
+
+    # Gene's BBQ — Kirkwood
+    {
+        "venue_key": "genes-bbq",
+        "day": 1,  # Tuesday
+        "title": "Kiki Casino Bingo",
+        "description": "Tuesday bingo night at Gene's BBQ hosted by Kiki Casino with DJ. Free to play with prizes.",
+        "start_time": "20:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["bingo", "dj", "nightlife", "weekly", "free"],
+    },
+    {
+        "venue_key": "genes-bbq",
+        "day": 3,  # Thursday
+        "title": "Homestar Karaoke",
+        "description": "Thursday karaoke at Gene's BBQ. All classics, no filler.",
+        "start_time": "20:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["karaoke", "nightlife", "weekly"],
+    },
+
+    # Brewhouse Cafe — Little Five Points
+    {
+        "venue_key": "brewhouse-cafe",
+        "day": 4,  # Friday
+        "title": "DJ Jen $5 Fridays",
+        "description": "Friday DJ night at Brewhouse Cafe in Little Five Points. DJ Jen with $5 drafts and margaritas.",
+        "start_time": "19:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["dj", "nightlife", "weekly", "drink-specials"],
+    },
+
+    # Whitehall Tavern — Buckhead
+    {
+        "venue_key": "whitehall-tavern",
+        "day": 2,  # Wednesday
+        "title": "Trivia Night",
+        "description": "Wednesday trivia night at Whitehall Tavern in Buckhead.",
+        "start_time": "20:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["trivia", "games", "nightlife", "weekly"],
+    },
+    {
+        "venue_key": "whitehall-tavern",
+        "day": 3,  # Thursday
+        "title": "Trivia Night",
+        "description": "Thursday trivia night at Whitehall Tavern in Buckhead.",
+        "start_time": "20:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["trivia", "games", "nightlife", "weekly"],
+    },
+
+    # Irby's Tavern — Buckhead
+    {
+        "venue_key": "irbys-tavern",
+        "day": 2,  # Wednesday
+        "title": "Whiskey Wednesdays & Trivia",
+        "description": "Wednesday trivia with whiskey specials at Irby's Tavern in Buckhead.",
+        "start_time": "20:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["trivia", "games", "nightlife", "weekly", "drink-specials"],
+    },
+
+    # Woofs Atlanta — Midtown
+    {
+        "venue_key": "woofs-atlanta",
+        "day": 4,  # Friday
+        "title": "Drag Race Viewing Party",
+        "description": "Friday RuPaul's Drag Race viewing party at Woofs Atlanta.",
+        "start_time": "18:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["drag", "viewing-party", "nightlife", "weekly", "lgbtq-friendly"],
+    },
+
+    # Atlanta Eagle: handled by dedicated source upgrade (atlanta_eagle.py)
+
+    # ==================================================================
+    # GAMING / TABLETOP / D&D (Feb 2026)
+    # ==================================================================
+
+    # Joystick Gamebar — Edgewood (ITP)
+    # Note: uses "joystick" key (existing entry with slug "joystick-gamebar")
+    {
+        "venue_key": "joystick",
+        "day": 0,  # Monday
+        "title": "ATL D&D Drop-In",
+        "description": "Free drop-in D&D 5e at Joystick Gamebar on Edgewood Ave. New players welcome — free pre-gen characters and dice provided. All ages before 8pm.",
+        "start_time": "18:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["dnd", "tabletop", "games", "weekly", "free"],
+    },
+    {
+        "venue_key": "joystick",
+        "day": 1,  # Tuesday
+        "title": "ATL D&D Drop-In",
+        "description": "Free drop-in D&D 5e at Joystick Gamebar on Edgewood Ave. New players welcome — free pre-gen characters and dice provided. All ages before 8pm.",
+        "start_time": "18:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["dnd", "tabletop", "games", "weekly", "free"],
+    },
+
+    # Bone Lick BBQ — Grant Park (ITP)
+    {
+        "venue_key": "bone-lick-bbq",
+        "day": 3,  # Thursday
+        "title": "ATL D&D Drop-In",
+        "description": "Thursday D&D at Bone Lick BBQ. Happy hour at 6pm, official start at 7pm, games begin ~7:30. Free drop-in D&D 5e.",
+        "start_time": "18:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["dnd", "tabletop", "games", "weekly", "free"],
+    },
+
+    # Battle & Brew — handled by dedicated source (sources/battle_and_brew.py)
+
+    # Giga-Bites Cafe — Marietta (OTP but destination)
+    {
+        "venue_key": "giga-bites-cafe",
+        "day": 1,  # Tuesday
+        "title": "Open Board Game Night",
+        "description": "Tuesday open board game night at Giga-Bites Cafe. Large game library available. All welcome.",
+        "start_time": "18:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["board-games", "tabletop", "games", "weekly"],
+    },
+    {
+        "venue_key": "giga-bites-cafe",
+        "day": 2,  # Wednesday
+        "title": "D&D Adventurers League",
+        "description": "Official D&D Adventurers League play at Giga-Bites Cafe. Arrive by 6:30pm, tables assigned 6:45, games at 7.",
+        "start_time": "18:30",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["dnd", "tabletop", "games", "weekly"],
+    },
+    {
+        "venue_key": "giga-bites-cafe",
+        "day": 4,  # Friday
+        "title": "Warhammer 40k Friday Night Fights",
+        "description": "Friday night organized Warhammer 40k games at Giga-Bites Cafe. Competitive and casual tables available.",
+        "start_time": "18:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.bar_games",
+        "tags": ["warhammer", "40k", "miniatures", "tabletop", "weekly"],
+    },
+    {
+        "venue_key": "giga-bites-cafe",
+        "day": 0,  # Monday
+        "title": "Warhammer 40k Casual Night",
+        "description": "Monday evening casual Warhammer 40k games at Giga-Bites Cafe in Marietta. All skill levels welcome, terrain and tables provided.",
+        "start_time": "18:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.bar_games",
+        "tags": ["warhammer", "40k", "miniatures", "tabletop", "weekly"],
+    },
+    {
+        "venue_key": "giga-bites-cafe",
+        "day": 6,  # Sunday
+        "title": "Kids D&D at Giga-Bites",
+        "description": "Sunday afternoon youth D&D sessions at Giga-Bites Cafe in Marietta. Ages 8-16, beginner-friendly. Noon-3pm.",
+        "start_time": "12:00",
+        "category": "family",
+        "subcategory": None,
+        "tags": ["dnd", "kids", "family", "tabletop", "weekly"],
+    },
+
+    # My Parents' Basement — Avondale Estates
+    {
+        "venue_key": "my-parents-basement",
+        "day": 1,  # Tuesday
+        "title": "Geek Trivia Night",
+        "description": "Tuesday comic book and geek trivia at My Parents' Basement. 20 pinball machines and board games available.",
+        "start_time": "19:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.trivia",
+        "tags": ["trivia", "geek", "comics", "pinball", "games", "weekly"],
+    },
+    {
+        "venue_key": "my-parents-basement",
+        "day": 1,  # Tuesday
+        "title": "Comic Book Trivia Night",
+        "description": "Tuesday trivia night at My Parents Basement in Avondale Estates. Comics, sci-fi, pop culture. Free to play.",
+        "start_time": "19:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.trivia",
+        "tags": ["trivia", "comics", "geek", "weekly", "free"],
+        "is_free": True,
+    },
+
+    # East Atlanta Comics — MTG
+    {
+        "venue_key": "east-atlanta-comics",
+        "day": 0,  # Monday
+        "title": "MTG Commander League",
+        "description": "Monday evening Magic: The Gathering Commander League at East Atlanta Comics. All skill levels welcome.",
+        "start_time": "18:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.bar_games",
+        "tags": ["mtg", "magic-the-gathering", "commander", "card-games", "weekly"],
+    },
+    {
+        "venue_key": "east-atlanta-comics",
+        "day": 2,  # Wednesday
+        "title": "MTG Pauper League",
+        "description": "Wednesday evening Magic: The Gathering Pauper League at East Atlanta Comics.",
+        "start_time": "18:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.bar_games",
+        "tags": ["mtg", "magic-the-gathering", "pauper", "card-games", "weekly"],
+    },
+
+    # ==================================================================
+    # RUN CLUBS (Feb 2026)
+    # ==================================================================
+
+    # Atlanta Run Club at Ponce City Market — handled by dedicated source (sources/ponce_city_market.py)
+
+    # BeltLine Run Club at New Realm Brewing
+    # Note: uses "new-realm-brewing" key (existing entry)
+    {
+        "venue_key": "new-realm-brewing",
+        "day": 3,  # Thursday
+        "title": "Atlanta BeltLine Run Club",
+        "description": "Thursday BeltLine run/walk organized by Atlanta Track Club. 2 or 4 miles. Gather 6:15pm, start 6:30. Free. Post-run food and beer specials.",
+        "start_time": "18:15",
+        "category": "fitness",
+        "subcategory": None,
+        "tags": ["running", "run-club", "beltline", "free", "weekly", "brewery"],
+    },
+
+    # Big Peach Running Co — Midtown
+    {
+        "venue_key": "big-peach-running-midtown",
+        "day": 1,  # Tuesday
+        "title": "Big Peach Group Run",
+        "description": "Tuesday group run from Big Peach Running Co Midtown through Piedmont Park. Changing rooms and showers available.",
+        "start_time": "18:30",
+        "category": "fitness",
+        "subcategory": None,
+        "tags": ["running", "run-club", "free", "weekly"],
+    },
+    {
+        "venue_key": "big-peach-running-midtown",
+        "day": 5,  # Saturday
+        "title": "Big Peach Saturday Run",
+        "description": "Saturday morning group run from Big Peach Running Co Midtown. All levels welcome.",
+        "start_time": "07:30",
+        "category": "fitness",
+        "subcategory": None,
+        "tags": ["running", "run-club", "free", "weekly"],
+    },
+
+    # Cabbagetown Running Club
+    {
+        "venue_key": "milltown-arms-tavern",
+        "day": 3,  # Thursday
+        "title": "Cabbagetown Running Club",
+        "description": "Thursday group run from Milltown Arms Tavern in Cabbagetown. All levels welcome. Running continuously since December 2005.",
+        "start_time": "19:00",
+        "category": "fitness",
+        "subcategory": None,
+        "tags": ["running", "run-club", "weekly", "cabbagetown"],
+    },
+
+    # Running for Brews — Buckhead
+    {
+        "venue_key": "elbow-room-buckhead",
+        "day": 0,  # Monday
+        "title": "Running for Brews 5K",
+        "description": "Monday social 5K run from Elbow Room in Buckhead. Run a route through Buckhead then return for beers and socializing.",
+        "start_time": "19:00",
+        "category": "fitness",
+        "subcategory": None,
+        "tags": ["running", "run-club", "social", "weekly"],
+    },
+
+    # ==================================================================
+    # SOCIAL DANCE NIGHTS (Feb 2026)
+    # ==================================================================
+
+    # Latin Wednesdays — Tongue & Groove
+    {
+        "venue_key": "tongue-and-groove",
+        "day": 2,  # Wednesday
+        "title": "Latin Wednesdays",
+        "description": "Salsa and bachata night at Tongue & Groove. Free lesson 9-10pm. No cover before 10pm (mention Salsa ATL). Rotating DJs, 21+.",
+        "start_time": "21:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.latin_night",
+        "tags": ["salsa", "bachata", "latin", "dance", "free-lesson", "weekly"],
+    },
+
+    # Hot Jam Atlanta — Lindy Hop Monday
+    {
+        "venue_key": "hot-jam-atlanta",
+        "day": 0,  # Monday
+        "title": "Lindy Hop Social Dance",
+        "description": "Monday swing dance at Hot Jam Atlanta. Free beginner solo jazz class at 7pm, free intro swing class at 7:30, social dance after. $12 DJ nights, $20 live band.",
+        "start_time": "19:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.dance",
+        "tags": ["swing", "lindy-hop", "dance", "jazz", "weekly"],
+    },
+
+    # DanceOut — The Heretic (Country Dance) — handled by dedicated source (sources/the_heretic.py)
+
+    # ==================================================================
+    # PICKLEBALL & PICKUP SPORTS (Feb 2026)
+    # ==================================================================
+
+    # Piedmont Park events — handled by dedicated source (sources/piedmont_park.py)
+
+    # ==================================================================
+    # YOGA & WELLNESS (Feb 2026)
+    # ==================================================================
+
+    # Woodruff Park Free Yoga
+    {
+        "venue_key": "woodruff-park",
+        "day": 5,  # Saturday
+        "title": "Free Yoga in Woodruff Park",
+        "description": "Free Saturday morning vinyasa flow yoga in Woodruff Park downtown. All levels welcome. Bring your own mat.",
+        "start_time": "10:00",
+        "category": "wellness",
+        "subcategory": None,
+        "tags": ["yoga", "free", "outdoor", "weekly"],
+    },
+
+    # ==================================================================
+    # CYCLING GROUPS (Feb 2026)
+    # ==================================================================
+
+    # Bonafide Riders — Monday social ride
+    {
+        "venue_key": "inman-park-station",
+        "day": 0,  # Monday
+        "title": "Bonafide Riders — Monday Social Ride",
+        "description": "Monday evening social bike ride with Bonafide Riders from Inman Park Station. 20+ miles, beginner-friendly pace. Free, all welcome. Meet 6pm, roll 6:15pm.",
+        "start_time": "18:00",
+        "category": "fitness",
+        "subcategory": "fitness.cycling",
+        "tags": ["cycling", "bike-ride", "free", "social", "weekly", "beltline"],
+        "is_free": True,
+    },
+
+    # Pizza Ride — Thursday fast group ride
+    {
+        "venue_key": "avondale-estates-art-lot",
+        "day": 3,  # Thursday
+        "title": "The Pizza Ride",
+        "description": "Thursday evening fast-paced group bike ride from Avondale Estates. 40-50 riders, challenging hills. An Atlanta cycling institution. Free, experienced riders.",
+        "start_time": "18:00",
+        "category": "fitness",
+        "subcategory": "fitness.cycling",
+        "tags": ["cycling", "bike-ride", "free", "competitive", "weekly"],
+        "is_free": True,
+    },
+
+    # Midweek Roll — biweekly social ride (listed as weekly; description notes every other Wednesday)
+    {
+        "venue_key": "97-estoria",
+        "day": 2,  # Wednesday
+        "title": "Midweek Roll — Social Bike Ride",
+        "description": "Wednesday evening social-paced bike ride from 97 Estoria in Reynoldstown. 10-12 miles at 10-12 mph. Helmets and lights required. Ends back at the bar. Every other Wednesday.",
+        "start_time": "19:00",
+        "category": "fitness",
+        "subcategory": "fitness.cycling",
+        "tags": ["cycling", "bike-ride", "free", "social", "biweekly", "bar"],
+        "is_free": True,
+    },
+
+    # ==================================================================
+    # TENNIS (Feb 2026)
+    # ==================================================================
+
+    {
+        "venue_key": "glenlake-tennis-center",
+        "day": 5,  # Saturday
+        "title": "ATTA Open Play Tennis",
+        "description": "Saturday afternoon drop-in doubles tennis at Glenlake Tennis Center hosted by Atlanta Team Tennis Association. Mix-and-match partners, all skill levels. First visit free, then $5-$10.",
+        "start_time": "13:00",
+        "category": "fitness",
+        "subcategory": "fitness.tennis",
+        "tags": ["tennis", "drop-in", "social", "weekly"],
+        "price_min": 5,
+        "price_max": 10,
+    },
+
+    # ==================================================================
+    # MARKETS (Feb 2026)
+    # ==================================================================
+
+    {
+        "venue_key": "broad-street-boardwalk",
+        "day": 3,  # Thursday
+        "title": "Amateur Flea Market",
+        "description": "Thursday flea market on Broad Street Boardwalk in Downtown Atlanta. Curated vintage clothing, accessories, and goods. 11am-2:30pm. Free admission.",
+        "start_time": "11:00",
+        "category": "food_drink",
+        "subcategory": None,
+        "tags": ["market", "vintage", "shopping", "free", "weekly", "downtown"],
+        "is_free": True,
+    },
+
+    # ==================================================================
+    # VOLUNTEER (Feb 2026)
+    # ==================================================================
+
+    {
+        "venue_key": "grant-park",
+        "day": 5,  # Saturday (2nd Saturday each month; recurring template covers all Saturdays)
+        "title": "Grant Park Volunteer Workday",
+        "description": "Monthly Saturday morning volunteer workday at Grant Park. Mulching, weeding, and trail maintenance. 9-11am. Free, all ages welcome.",
+        "start_time": "09:00",
         "category": "community",
         "subcategory": None,
-        "tags": ["trivia", "games", "weekly", "brewery"],
+        "tags": ["volunteer", "park", "free", "outdoor", "morning", "monthly"],
+        "is_free": True,
+    },
+
+    # ==================================================================
+    # FOOD & DRINK SPECIALS (Feb 2026)
+    # ==================================================================
+
+    # --- MONDAY ---
+
+    # Lloyd's Monday Crab Night
+    {
+        "venue_key": "lloyds-atl",
+        "day": 0,  # Monday
+        "title": "Monday Crab Night",
+        "description": "Monday crab legs at Lloyd's in Inman Park. $35 snow crab plate with boiled potatoes, corn, and biscuit. An Atlanta institution.",
+        "start_time": "17:00",
+        "category": "food_drink",
+        "subcategory": None,
+        "tags": ["seafood", "crab", "specials", "weekly", "inman-park"],
+        "price_min": 35,
+        "price_max": 35,
+    },
+    # Taverna Monday Half-Price Wine
+    {
+        "venue_key": "taverna-buckhead",
+        "day": 0,  # Monday
+        "title": "Half-Price Wine Mondays",
+        "description": "All wine bottles under $90 are half price all day Monday at Taverna in Buckhead.",
+        "start_time": "17:00",
+        "category": "food_drink",
+        "subcategory": None,
+        "tags": ["wine", "specials", "half-price", "weekly", "buckhead"],
+    },
+    # Wild Heaven Avondale — Monday half-price margaritas
+    {
+        "venue_key": "wild-heaven-avondale",
+        "day": 0,  # Monday
+        "title": "Half-Price Margarita Mondays",
+        "description": "Half-price margaritas all day Monday at Wild Heaven Avondale. Plus Music Bingo.",
+        "start_time": "15:00",
+        "category": "food_drink",
+        "subcategory": None,
+        "tags": ["margaritas", "specials", "half-price", "brewery", "weekly"],
+    },
+
+    # --- TUESDAY (Taco Tuesday) ---
+
+    # Pure Taqueria Taco Tuesday
+    {
+        "venue_key": "pure-taqueria-inman-park",
+        "day": 1,  # Tuesday
+        "title": "Taco Tuesday",
+        "description": "Taco Tuesday at Pure Taqueria. $3.50 tacos (chipotle chicken, shredded pork, fish) and $2 Tecates all day.",
+        "start_time": "11:00",
+        "category": "food_drink",
+        "subcategory": None,
+        "tags": ["tacos", "taco-tuesday", "specials", "weekly", "inman-park"],
+    },
+    # Tin Lizzy's Taco Tuesday
+    {
+        "venue_key": "tin-lizzys-midtown",
+        "day": 1,  # Tuesday
+        "title": "Taco Tuesday",
+        "description": "$2 select tacos and $5 Patron shots all day at Tin Lizzy's Cantina Midtown.",
+        "start_time": "11:00",
+        "category": "food_drink",
+        "subcategory": None,
+        "tags": ["tacos", "taco-tuesday", "specials", "weekly", "midtown"],
+    },
+    # Forza Storico — Tuesday half-price wine
+    {
+        "venue_key": "forza-storico",
+        "day": 1,  # Tuesday
+        "title": "Half-Price Wine Tuesdays",
+        "description": "Half-price wine bottles from 5pm at Forza Storico in West Midtown.",
+        "start_time": "17:00",
+        "category": "food_drink",
+        "subcategory": None,
+        "tags": ["wine", "specials", "half-price", "weekly", "west-midtown"],
+    },
+
+    # --- WEDNESDAY (Wine + Wings + Oysters) ---
+
+    # Antico Wine Wednesday
+    {
+        "venue_key": "antico-pizza",
+        "day": 2,  # Wednesday
+        "title": "Wine Wednesday",
+        "description": "Half-price wine bottles with pizza purchase all day Wednesday at Antico Pizza in West Midtown.",
+        "start_time": "11:30",
+        "category": "food_drink",
+        "subcategory": None,
+        "tags": ["wine", "pizza", "specials", "half-price", "weekly", "west-midtown"],
+    },
+    # Pielands Wing Wednesday
+    {
+        "venue_key": "pielands",
+        "day": 2,  # Wednesday
+        "title": "Wing Wednesday — Half-Price Wings",
+        "description": "Half-price wings all day Wednesday at Pielands in Virginia-Highland.",
+        "start_time": "11:00",
+        "category": "food_drink",
+        "subcategory": None,
+        "tags": ["wings", "specials", "half-price", "weekly", "virginia-highland"],
+    },
+    # Beso $1 Oysters Wednesday
+    {
+        "venue_key": "beso-buckhead",
+        "day": 2,  # Wednesday
+        "title": "$1 Oyster Night",
+        "description": "Dollar oysters and half-price wine bottles at Beso Buckhead every Wednesday 10pm-2am.",
+        "start_time": "22:00",
+        "category": "food_drink",
+        "subcategory": None,
+        "tags": ["oysters", "specials", "late-night", "weekly", "buckhead"],
+    },
+    # Wild Heaven Toco Hills — Wednesday half-off pitchers
+    {
+        "venue_key": "wild-heaven-toco-hills",
+        "day": 2,  # Wednesday
+        "title": "Half-Off Pitchers + Music Bingo",
+        "description": "Half-off beer pitchers and Music Bingo at 7pm at Wild Heaven x Fox Bros Toco Hills.",
+        "start_time": "17:00",
+        "category": "food_drink",
+        "subcategory": None,
+        "tags": ["beer", "bingo", "specials", "half-price", "weekly"],
+    },
+
+    # --- THURSDAY ---
+
+    # Cypress Street Half-Price Wine Thursday
+    {
+        "venue_key": "cypress-street-pint",
+        "day": 3,  # Thursday
+        "title": "Half-Price Wine Night",
+        "description": "Half-price wine bottles all evening at Cypress Street Pint & Plate in Midtown.",
+        "start_time": "17:00",
+        "category": "food_drink",
+        "subcategory": None,
+        "tags": ["wine", "specials", "half-price", "weekly", "midtown"],
+    },
+    # Fontaine's Half-Price Seafood Thursday
+    # Note: uses existing "fontaines" key (slug: fontaines-oyster-house)
+    {
+        "venue_key": "fontaines",
+        "day": 3,  # Thursday
+        "title": "Half-Price Seafood Happy Hour",
+        "description": "Half-price peel & eat shrimp, crab legs, and raw dozen oysters at Fontaine's in Virginia-Highland. 4-7pm.",
+        "start_time": "16:00",
+        "category": "food_drink",
+        "subcategory": None,
+        "tags": ["oysters", "seafood", "specials", "half-price", "weekly", "virginia-highland"],
+    },
+
+    # --- DAILY HAPPY HOURS (Mon / Wed / Fri anchors) ---
+
+    # Watchman's $1 Oysters (Tue-Thu + Sun)
+    {
+        "venue_key": "watchmans-seafood",
+        "day": 1,  # Tuesday
+        "title": "$1 Oyster Happy Hour",
+        "description": "Dollar oysters from the full raw bar menu at Watchman's in Krog Street Market. 5-6pm Tuesday through Thursday, 4-6pm Sunday.",
+        "start_time": "17:00",
+        "category": "food_drink",
+        "subcategory": None,
+        "tags": ["oysters", "specials", "dollar-oysters", "weekly", "krog-street-market"],
+    },
+    {
+        "venue_key": "watchmans-seafood",
+        "day": 2,  # Wednesday
+        "title": "$1 Oyster Happy Hour",
+        "description": "Dollar oysters from the full raw bar menu at Watchman's in Krog Street Market. 5-6pm Tuesday through Thursday, 4-6pm Sunday.",
+        "start_time": "17:00",
+        "category": "food_drink",
+        "subcategory": None,
+        "tags": ["oysters", "specials", "dollar-oysters", "weekly", "krog-street-market"],
+    },
+    {
+        "venue_key": "watchmans-seafood",
+        "day": 3,  # Thursday
+        "title": "$1 Oyster Happy Hour",
+        "description": "Dollar oysters from the full raw bar menu at Watchman's in Krog Street Market. 5-6pm Tuesday through Thursday, 4-6pm Sunday.",
+        "start_time": "17:00",
+        "category": "food_drink",
+        "subcategory": None,
+        "tags": ["oysters", "specials", "dollar-oysters", "weekly", "krog-street-market"],
+    },
+    {
+        "venue_key": "watchmans-seafood",
+        "day": 6,  # Sunday
+        "title": "$1 Oyster Happy Hour",
+        "description": "Dollar oysters from the full raw bar menu at Watchman's in Krog Street Market. 4-6pm Sunday.",
+        "start_time": "16:00",
+        "category": "food_drink",
+        "subcategory": None,
+        "tags": ["oysters", "specials", "dollar-oysters", "weekly", "krog-street-market"],
+    },
+
+    # The Optimist $1 Oysters (Mon / Wed / Fri anchors for Mon-Fri run)
+    {
+        "venue_key": "the-optimist",
+        "day": 0,  # Monday
+        "title": "$1 Oyster Happy Hour",
+        "description": "Dollar select oysters at the raw bar during happy hour at The Optimist in West Midtown. 5-6pm weekdays.",
+        "start_time": "17:00",
+        "category": "food_drink",
+        "subcategory": None,
+        "tags": ["oysters", "specials", "dollar-oysters", "weekly", "west-midtown"],
+    },
+    {
+        "venue_key": "the-optimist",
+        "day": 2,  # Wednesday
+        "title": "$1 Oyster Happy Hour",
+        "description": "Dollar select oysters at the raw bar during happy hour at The Optimist in West Midtown. 5-6pm weekdays.",
+        "start_time": "17:00",
+        "category": "food_drink",
+        "subcategory": None,
+        "tags": ["oysters", "specials", "dollar-oysters", "weekly", "west-midtown"],
+    },
+    {
+        "venue_key": "the-optimist",
+        "day": 4,  # Friday
+        "title": "$1 Oyster Happy Hour",
+        "description": "Dollar select oysters at the raw bar during happy hour at The Optimist in West Midtown. 5-6pm weekdays.",
+        "start_time": "17:00",
+        "category": "food_drink",
+        "subcategory": None,
+        "tags": ["oysters", "specials", "dollar-oysters", "weekly", "west-midtown"],
+    },
+
+    # Iberian Pig Jamon Happy Hour (Mon / Wed / Fri anchors for Mon-Fri run)
+    {
+        "venue_key": "iberian-pig-decatur",
+        "day": 0,  # Monday
+        "title": "Jamon Happy Hour",
+        "description": "Discounted charcuterie boards, cheese, and $5 sangria/wine at The Iberian Pig Decatur. 5-7pm weekdays.",
+        "start_time": "17:00",
+        "category": "food_drink",
+        "subcategory": None,
+        "tags": ["tapas", "wine", "sangria", "specials", "weekly", "decatur"],
+    },
+    {
+        "venue_key": "iberian-pig-decatur",
+        "day": 2,  # Wednesday
+        "title": "Jamon Happy Hour",
+        "description": "Discounted charcuterie boards, cheese, and $5 sangria/wine at The Iberian Pig Decatur. 5-7pm weekdays.",
+        "start_time": "17:00",
+        "category": "food_drink",
+        "subcategory": None,
+        "tags": ["tapas", "wine", "sangria", "specials", "weekly", "decatur"],
+    },
+    {
+        "venue_key": "iberian-pig-decatur",
+        "day": 4,  # Friday
+        "title": "Jamon Happy Hour",
+        "description": "Discounted charcuterie boards, cheese, and $5 sangria/wine at The Iberian Pig Decatur. 5-7pm weekdays.",
+        "start_time": "17:00",
+        "category": "food_drink",
+        "subcategory": None,
+        "tags": ["tapas", "wine", "sangria", "specials", "weekly", "decatur"],
+    },
+
+    # Bartaco Happy Hour (Wed + Fri anchors for Mon-Fri run)
+    {
+        "venue_key": "bartaco-inman-park",
+        "day": 2,  # Wednesday
+        "title": "$3 Tacos & $5 Margaritas Happy Hour",
+        "description": "$3 tacos, $5 margaritas, and $2 sides at Bartaco Inman Park. 3-6pm Monday through Friday.",
+        "start_time": "15:00",
+        "category": "food_drink",
+        "subcategory": None,
+        "tags": ["tacos", "margaritas", "happy-hour", "specials", "weekly", "inman-park"],
+    },
+    {
+        "venue_key": "bartaco-inman-park",
+        "day": 4,  # Friday
+        "title": "$3 Tacos & $5 Margaritas Happy Hour",
+        "description": "$3 tacos, $5 margaritas, and $2 sides at Bartaco Inman Park. 3-6pm Monday through Friday.",
+        "start_time": "15:00",
+        "category": "food_drink",
+        "subcategory": None,
+        "tags": ["tacos", "margaritas", "happy-hour", "specials", "weekly", "inman-park"],
+    },
+
+    # Superica Happy Hour (Wed + Fri anchors for Mon-Fri run)
+    {
+        "venue_key": "superica-krog",
+        "day": 2,  # Wednesday
+        "title": "Happy Hour at the Bar",
+        "description": "Food and drink specials at the bar and patio at Superica in Krog Street Market. 3-6pm weekdays.",
+        "start_time": "15:00",
+        "category": "food_drink",
+        "subcategory": None,
+        "tags": ["happy-hour", "specials", "weekly", "krog-street-market"],
+    },
+    {
+        "venue_key": "superica-krog",
+        "day": 4,  # Friday
+        "title": "Happy Hour at the Bar",
+        "description": "Food and drink specials at the bar and patio at Superica in Krog Street Market. 3-6pm weekdays.",
+        "start_time": "15:00",
+        "category": "food_drink",
+        "subcategory": None,
+        "tags": ["happy-hour", "specials", "weekly", "krog-street-market"],
+    },
+
+    # BeetleCat Late Night Oysters (Fri + Sat)
+    {
+        "venue_key": "beetlecat",
+        "day": 4,  # Friday
+        "title": "Late-Night Oyster Happy Hour",
+        "description": "Late-night oyster and drink specials at BeetleCat in Inman Park. 11pm-2am Friday and Saturday.",
+        "start_time": "23:00",
+        "category": "food_drink",
+        "subcategory": None,
+        "tags": ["oysters", "late-night", "specials", "weekly", "inman-park"],
+    },
+    {
+        "venue_key": "beetlecat",
+        "day": 5,  # Saturday
+        "title": "Late-Night Oyster Happy Hour",
+        "description": "Late-night oyster and drink specials at BeetleCat in Inman Park. 11pm-2am Friday and Saturday.",
+        "start_time": "23:00",
+        "category": "food_drink",
+        "subcategory": None,
+        "tags": ["oysters", "late-night", "specials", "weekly", "inman-park"],
+    },
+
+    # Fado Midtown — Bottomless Mimosa Brunch (Sat + Sun)
+    # Note: "fado-irish-pub" key = Buckhead location; "fado-midtown" = Midtown/Peachtree St
+    {
+        "venue_key": "fado-midtown",
+        "day": 5,  # Saturday
+        "title": "Bottomless Mimosa Brunch",
+        "description": "$17 bottomless mimosas and $19 bottomless sangria at Fado Irish Pub Midtown. Until 3pm.",
+        "start_time": "10:00",
+        "category": "food_drink",
+        "subcategory": None,
+        "tags": ["brunch", "mimosas", "bottomless", "specials", "weekly", "midtown"],
+    },
+    {
+        "venue_key": "fado-midtown",
+        "day": 6,  # Sunday
+        "title": "Bottomless Mimosa Brunch",
+        "description": "$17 bottomless mimosas and $19 bottomless sangria at Fado Irish Pub Midtown. Until 3pm.",
+        "start_time": "10:00",
+        "category": "food_drink",
+        "subcategory": None,
+        "tags": ["brunch", "mimosas", "bottomless", "specials", "weekly", "midtown"],
     },
 ]
 

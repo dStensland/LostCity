@@ -4,8 +4,6 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useCallback, useMemo, useState, useEffect, useRef, useTransition } from "react";
 import { CATEGORIES, TAG_GROUPS } from "@/lib/search-constants";
 import { VIBE_GROUPS } from "@/lib/spots-constants";
-import { MOODS } from "@/lib/moods";
-import { getSmartDateDefault } from "@/lib/hooks/useEventFilters";
 import { FIND_TYPE_FILTER_KEYS, type FindType } from "@/lib/find-filter-schema";
 import {
   createFindFilterSnapshot,
@@ -92,8 +90,6 @@ const VIBE_GROUP_OPTIONS: GroupedOption[] = Object.entries(VIBE_GROUPS).map(([gr
   options: [...options],
 }));
 
-const MOOD_OPTIONS = MOODS.map((mood) => ({ value: mood.id, label: mood.name }));
-
 function humanize(value: string): string {
   return value
     .replace(/[_-]/g, " ")
@@ -142,8 +138,7 @@ export function useFilterEngine({
   );
   const currentMood = searchParams.get("mood") || "";
   const currentDateFilter = searchParams.get("date") || "";
-  const smartDateDefault = getSmartDateDefault();
-  const effectiveDateFilter = currentDateFilter || smartDateDefault || "";
+  const effectiveDateFilter = currentDateFilter;
   const currentFreeOnly = searchParams.get("free") === "1" || searchParams.get("price") === "free";
 
   const hasFilters =
@@ -151,7 +146,6 @@ export function useFilterEngine({
     currentGenres.length > 0 ||
     currentTags.length > 0 ||
     currentVibes.length > 0 ||
-    Boolean(currentMood) ||
     Boolean(currentDateFilter) ||
     currentFreeOnly;
 
@@ -160,7 +154,6 @@ export function useFilterEngine({
     currentGenres.length +
     currentTags.length +
     currentVibes.length +
-    (currentMood ? 1 : 0) +
     (currentDateFilter ? 1 : 0) +
     (currentFreeOnly ? 1 : 0);
 
@@ -297,7 +290,8 @@ export function useFilterEngine({
 
   const setDateFilter = useCallback(
     (date: string) => {
-      updateParams({ date: currentDateFilter === date ? null : date });
+      // Empty string = "Upcoming" (clear date filter)
+      updateParams({ date: !date || currentDateFilter === date ? null : date });
     },
     [currentDateFilter, updateParams]
   );
@@ -401,7 +395,7 @@ export function useFilterEngine({
     categoryOptions,
     tagGroupOptions,
     vibeGroupOptions: VIBE_GROUP_OPTIONS,
-    moodOptions: MOOD_OPTIONS,
+    moodOptions: [],
     genreOptions,
     updateParams,
     toggleCategory,

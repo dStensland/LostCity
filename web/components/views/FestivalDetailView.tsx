@@ -297,13 +297,13 @@ export default function FestivalDetailView({
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2 mb-2">
-              <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-[0.6rem] font-mono font-semibold uppercase tracking-wider bg-accent-20 text-accent">
+              <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-mono font-semibold uppercase tracking-wider bg-accent-20 text-accent">
                 Festival
               </div>
               {showOpenPageLink && (
                 <Link
                   href={`/${portalSlug}/festivals/${festival.slug}`}
-                  className="text-[0.6rem] font-mono uppercase tracking-wider px-2 py-1 rounded-full border border-[var(--twilight)] text-[var(--soft)] hover:text-[var(--cream)] hover:border-[var(--coral)]/40 transition-colors"
+                  className="text-xs font-mono uppercase tracking-wider px-2 py-1 rounded-full border border-[var(--twilight)] text-[var(--soft)] hover:text-[var(--cream)] hover:border-[var(--coral)]/40 transition-colors"
                 >
                   Open page
                 </Link>
@@ -320,14 +320,14 @@ export default function FestivalDetailView({
             </div>
             {summary && (
               <div className="flex flex-wrap gap-2 mt-3">
-                <span className="inline-flex items-center px-2 py-1 rounded font-mono text-[0.6rem] bg-[var(--twilight)]/40 text-[var(--soft)]">
+                <span className="inline-flex items-center px-2 py-1 rounded font-mono text-xs bg-[var(--twilight)]/40 text-[var(--soft)]">
                   {summary.programCount} program{summary.programCount !== 1 ? "s" : ""}
                 </span>
-                <span className="inline-flex items-center px-2 py-1 rounded font-mono text-[0.6rem] bg-[var(--twilight)]/40 text-[var(--soft)]">
+                <span className="inline-flex items-center px-2 py-1 rounded font-mono text-xs bg-[var(--twilight)]/40 text-[var(--soft)]">
                   {summary.sessionCount} session{summary.sessionCount !== 1 ? "s" : ""}
                 </span>
                 {summary.venueCount > 0 && (
-                  <span className="inline-flex items-center px-2 py-1 rounded font-mono text-[0.6rem] bg-[var(--twilight)]/40 text-[var(--soft)]">
+                  <span className="inline-flex items-center px-2 py-1 rounded font-mono text-xs bg-[var(--twilight)]/40 text-[var(--soft)]">
                     {summary.venueCount} venue{summary.venueCount !== 1 ? "s" : ""}
                   </span>
                 )}
@@ -400,7 +400,7 @@ export default function FestivalDetailView({
                 <div className="mt-3 space-y-3">
                   {sortedDates.map((date) => (
                     <div key={date} className="space-y-2">
-                      <div className="text-[0.65rem] font-mono uppercase tracking-wider text-[var(--muted)]">
+                      <div className="text-xs font-mono uppercase tracking-wider text-[var(--muted)]">
                         {format(parseISO(date), "EEE, MMM d")}
                       </div>
                       <div className="space-y-1">
@@ -417,7 +417,7 @@ export default function FestivalDetailView({
                                 className="flex-1 min-w-0 text-left"
                               >
                                 <div className="flex items-center gap-3 min-w-0">
-                                  <span className="font-mono text-[0.65rem] text-[var(--muted)] shrink-0">
+                                  <span className="font-mono text-xs text-[var(--muted)] shrink-0">
                                     {formatSessionTime(session.start_time)}
                                   </span>
                                   <span className="text-sm text-[var(--cream)] truncate">
@@ -425,7 +425,7 @@ export default function FestivalDetailView({
                                   </span>
                                 </div>
                                 {session.venue && (
-                                  <span className="block text-[0.65rem] text-[var(--muted)] mt-0.5 truncate">
+                                  <span className="block text-xs text-[var(--muted)] mt-0.5 truncate">
                                     {session.venue.name}
                                   </span>
                                 )}

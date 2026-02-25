@@ -17,6 +17,7 @@ import { useDebounce } from "@/lib/hooks/useDebounce";
 import CategoryIcon from "@/components/CategoryIcon";
 import type { AddItineraryItemInput } from "@/lib/itinerary-utils";
 import type { Suggestion } from "@/components/outing/OutingSuggestions";
+import { usePortalCity } from "@/lib/portal-context";
 import {
   MagnifyingGlass,
   Plus,
@@ -34,10 +35,10 @@ import {
 
 interface AddStopPanelProps {
   portalSlug: string;
-  anchorLat: number;
-  anchorLng: number;
-  anchorTime: string;
-  anchorDate: string;
+  anchorLat?: number;
+  anchorLng?: number;
+  anchorTime?: string;
+  anchorDate?: string;
   onAddItem: (input: AddItineraryItemInput) => Promise<void>;
 }
 
@@ -50,6 +51,9 @@ type VenueSearchResult = {
   address: string | null;
   neighborhood: string | null;
   venue_type: string | null;
+  lat: number | null;
+  lng: number | null;
+  image_url: string | null;
 };
 
 // ---------------------------------------------------------------------------
@@ -94,6 +98,8 @@ export default function AddStopPanel({
   anchorDate,
   onAddItem,
 }: AddStopPanelProps) {
+  const portalCity = usePortalCity();
+
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedQuery = useDebounce(searchQuery, 300);
@@ -118,8 +124,14 @@ export default function AddStopPanel({
   const [customAddress, setCustomAddress] = useState("");
   const [showCustomExtras, setShowCustomExtras] = useState(false);
 
-  // Fetch smart suggestions on mount
+  // Fetch smart suggestions on mount (only when we have anchor coords)
+  const hasAnchor = anchorLat != null && anchorLng != null && anchorTime != null && anchorDate != null;
   useEffect(() => {
+    if (!hasAnchor) {
+      setSuggestionsLoading(false);
+      return;
+    }
+
     let cancelled = false;
 
     async function fetchSuggestions() {
@@ -127,8 +139,8 @@ export default function AddStopPanel({
       const baseParams = new URLSearchParams({
         anchor_lat: String(anchorLat),
         anchor_lng: String(anchorLng),
-        anchor_time: anchorTime,
-        anchor_date: anchorDate,
+        anchor_time: String(anchorTime),
+        anchor_date: String(anchorDate),
         radius_km: "2",
       });
 
@@ -153,7 +165,7 @@ export default function AddStopPanel({
 
     fetchSuggestions();
     return () => { cancelled = true; };
-  }, [portalSlug, anchorLat, anchorLng, anchorTime, anchorDate]);
+  }, [portalSlug, anchorLat, anchorLng, anchorTime, anchorDate, hasAnchor]);
 
   // Derive current suggestions from slot
   const suggestions = useMemo(
@@ -171,7 +183,7 @@ export default function AddStopPanel({
 
     (async () => {
       try {
-        const res = await fetch(`/api/venues/search?q=${encodeURIComponent(debouncedQuery)}&limit=8`);
+        const res = await fetch(`/api/venues/search?q=${encodeURIComponent(debouncedQuery)}&limit=8&city=${encodeURIComponent(portalCity)}`);
         if (version !== searchVersionRef.current) return;
         if (res.ok) {
           const data = await res.json();
@@ -185,7 +197,7 @@ export default function AddStopPanel({
         }
       }
     })();
-  }, [debouncedQuery, isSearchActive]);
+  }, [debouncedQuery, isSearchActive, portalCity]);
 
   // Derive loading: searching but results haven't arrived for the current query
   const searchLoading = isSearchActive && fetchedQuery !== debouncedQuery;
@@ -214,10 +226,11 @@ export default function AddStopPanel({
       await onAddItem({
         item_type: suggestion.type === "event" ? "event" : "venue",
         ...(suggestion.type === "event"
-          ? { event_id: suggestion.id }
-          : { venue_id: suggestion.venue.id }),
+          ? { event_id: suggestion.id, event_title: suggestion.title }
+          : { venue_id: suggestion.venue.id, venue_name: suggestion.venue.name }),
         custom_lat: suggestion.venue.lat || undefined,
         custom_lng: suggestion.venue.lng || undefined,
+        venue_image: suggestion.image_url || null,
       });
     },
     [onAddItem],
@@ -228,6 +241,10 @@ export default function AddStopPanel({
       await onAddItem({
         item_type: "venue",
         venue_id: venue.id,
+        venue_name: venue.name,
+        venue_image: venue.image_url,
+        custom_lat: venue.lat || undefined,
+        custom_lng: venue.lng || undefined,
       });
     },
     [onAddItem],
@@ -363,8 +380,37 @@ export default function AddStopPanel({
           </div>
         )}
 
-        {/* Smart suggestions (shown when not searching) */}
-        {!isSearching && (
+        {/* Quick-start prompts (shown when no anchor and not searching) */}
+        {!isSearching && !hasAnchor && (
+          <div className="space-y-2 py-2">
+            <p className="text-[11px] text-white/25 font-mono px-1">Try searching for</p>
+            {[
+              { label: "Restaurants nearby", query: "restaurant" },
+              { label: "Bars & cocktail spots", query: "bar" },
+              { label: "Coffee shops", query: "coffee" },
+              { label: "Live music venues", query: "music" },
+            ].map((hint) => (
+              <button
+                key={hint.query}
+                onClick={() => setSearchQuery(hint.query)}
+                className="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-white/[0.04] transition-colors text-left"
+              >
+                <div
+                  className="shrink-0 w-7 h-7 rounded-md flex items-center justify-center"
+                  style={{ background: "rgba(255, 255, 255, 0.04)", border: "1px solid rgba(255, 255, 255, 0.06)" }}
+                >
+                  <MagnifyingGlass size={12} className="text-white/30" />
+                </div>
+                <span className="text-[12px] text-white/40" style={{ fontFamily: "var(--font-outfit)" }}>
+                  {hint.label}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Smart suggestions (shown when not searching and anchor exists) */}
+        {!isSearching && hasAnchor && (
           <>
             {/* Before / After toggle */}
             <div className="flex gap-1 p-0.5 bg-white/5 rounded-lg mb-2">

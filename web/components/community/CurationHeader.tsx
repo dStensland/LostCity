@@ -4,6 +4,7 @@ import Image from "@/components/SmartImage";
 import LinkifyText from "@/components/LinkifyText";
 import type { Curation } from "@/lib/curation-utils";
 import { CATEGORY_LABELS, CATEGORY_ICONS, CATEGORY_GRADIENTS, DEFAULT_GRADIENT } from "@/lib/curation-constants";
+import Dot from "@/components/ui/Dot";
 
 interface CurationHeaderProps {
   list: Curation;
@@ -125,7 +126,7 @@ export default function CurationHeader({
           </div>
         )}
 
-        <span className="opacity-40">·</span>
+        <Dot />
 
         {list.vote_count > 0 && (
           <>
@@ -135,7 +136,7 @@ export default function CurationHeader({
               </svg>
               <span className="font-mono">{list.vote_count} vote{list.vote_count !== 1 ? "s" : ""}</span>
             </div>
-            <span className="opacity-40">·</span>
+            <Dot />
           </>
         )}
 
@@ -143,14 +144,14 @@ export default function CurationHeader({
 
         {followerCount > 0 && (
           <>
-            <span className="opacity-40">·</span>
+            <Dot />
             <span className="font-mono">{followerCount} follower{followerCount !== 1 ? "s" : ""}</span>
           </>
         )}
 
         {(list.allow_contributions || list.submission_mode === "open") && (
           <>
-            <span className="opacity-40">·</span>
+            <Dot />
             <span className="flex items-center gap-1 text-[var(--soft)]">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />

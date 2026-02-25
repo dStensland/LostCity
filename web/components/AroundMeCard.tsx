@@ -102,9 +102,9 @@ function SpotCardContent({ spot, distance, portalSlug, showDistance = true, insi
       <div className="flex items-start gap-3 p-3">
         {/* Type badge + icon column */}
         <div className="flex-shrink-0 flex flex-col items-center gap-1">
-          <span className={`font-mono text-[0.5rem] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded ${
+          <span className={`font-mono text-2xs font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded ${
             closingSoon
-              ? "text-[#f59e0b] bg-[#f59e0b]/10"
+              ? "text-[var(--neon-amber)] bg-[var(--neon-amber)]/10"
               : "text-[var(--neon-green)] bg-[var(--neon-green)]/10"
           }`}>
             {closingSoon ? "Closing soon" : "Open"}
@@ -181,7 +181,7 @@ function EventCardContent({ event, distance, portalSlug, showDistance = true, in
         <div className="flex-shrink-0 flex flex-col items-center gap-1">
           <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[var(--neon-red)]/15 border border-[var(--neon-red)]/30">
             <span className="inline-flex rounded-full h-1.5 w-1.5 bg-[var(--neon-red)]" />
-            <span className="font-mono text-[0.5rem] font-semibold text-[var(--neon-red)] uppercase tracking-wider">
+            <span className="font-mono text-2xs font-semibold text-[var(--neon-red)] uppercase tracking-wider">
               Live
             </span>
           </span>
@@ -218,7 +218,7 @@ function EventCardContent({ event, distance, portalSlug, showDistance = true, in
           )}
           {/* Price badge */}
           {event.is_free && (
-            <span className="inline-flex items-center px-2 py-0.5 mt-1.5 rounded-full font-mono text-[0.6rem] font-semibold bg-[var(--neon-green)]/25 text-[var(--neon-green)] border border-[var(--neon-green)]/40">
+            <span className="inline-flex items-center px-2 py-0.5 mt-1.5 rounded-full font-mono text-xs font-semibold bg-[var(--neon-green)]/25 text-[var(--neon-green)] border border-[var(--neon-green)]/40">
               Free
             </span>
           )}

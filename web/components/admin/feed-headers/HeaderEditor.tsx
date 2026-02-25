@@ -39,7 +39,7 @@ export default function HeaderEditor({
     <div className="space-y-4">
       {/* Headline */}
       <div className="space-y-1">
-        <span className="font-mono text-[0.5625rem] uppercase tracking-wider text-[var(--muted)]">
+        <span className="font-mono text-2xs uppercase tracking-wider text-[var(--muted)]">
           Headline
         </span>
         <textarea
@@ -57,7 +57,7 @@ export default function HeaderEditor({
               onClick={() =>
                 onChange({ headline: formData.headline + v })
               }
-              className="px-1.5 py-0.5 font-mono text-[0.5625rem] rounded bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
+              className="px-1.5 py-0.5 font-mono text-2xs rounded bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
             >
               {v}
             </button>
@@ -67,7 +67,7 @@ export default function HeaderEditor({
 
       {/* Subtitle */}
       <div className="space-y-1">
-        <span className="font-mono text-[0.5625rem] uppercase tracking-wider text-[var(--muted)]">
+        <span className="font-mono text-2xs uppercase tracking-wider text-[var(--muted)]">
           Subtitle
         </span>
         <input
@@ -100,7 +100,7 @@ export default function HeaderEditor({
 
       {/* Accent color */}
       <div className="space-y-1">
-        <span className="font-mono text-[0.5625rem] uppercase tracking-wider text-[var(--muted)]">
+        <span className="font-mono text-2xs uppercase tracking-wider text-[var(--muted)]">
           Accent Color
         </span>
         <div className="flex items-center gap-1.5">
@@ -125,7 +125,7 @@ export default function HeaderEditor({
             value={formData.accent_color}
             onChange={(e) => onChange({ accent_color: e.target.value })}
             placeholder="var(--coral)"
-            className="flex-1 px-2 py-1 bg-[var(--void)] border border-[var(--twilight)] rounded font-mono text-[0.625rem] text-[var(--cream)] ml-2"
+            className="flex-1 px-2 py-1 bg-[var(--void)] border border-[var(--twilight)] rounded font-mono text-2xs text-[var(--cream)] ml-2"
           />
         </div>
       </div>
@@ -133,7 +133,7 @@ export default function HeaderEditor({
       {/* Identity (name / slug) */}
       <div className="grid grid-cols-2 gap-2">
         <div className="space-y-1">
-          <span className="font-mono text-[0.5625rem] uppercase tracking-wider text-[var(--muted)]">
+          <span className="font-mono text-2xs uppercase tracking-wider text-[var(--muted)]">
             Name
           </span>
           <input
@@ -144,7 +144,7 @@ export default function HeaderEditor({
           />
         </div>
         <div className="space-y-1">
-          <span className="font-mono text-[0.5625rem] uppercase tracking-wider text-[var(--muted)]">
+          <span className="font-mono text-2xs uppercase tracking-wider text-[var(--muted)]">
             Slug
           </span>
           <input

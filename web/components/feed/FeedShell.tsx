@@ -79,7 +79,7 @@ function ExploreFeedOutro({ portalSlug }: { portalSlug: string }) {
     <section className="mt-7 sm:mt-8 rounded-2xl overflow-hidden border border-[var(--twilight)]/50">
       <div className="h-[2px] bg-gradient-to-r from-[var(--coral)]/70 via-[var(--neon-amber)]/70 to-[var(--neon-cyan)]/70" />
       <div className="p-5 sm:p-6 bg-[linear-gradient(145deg,rgba(10,14,24,0.92),rgba(14,18,30,0.78))]">
-        <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">
+        <p className="font-mono text-2xs uppercase tracking-[0.16em] text-[var(--muted)]">
           Keep Exploring
         </p>
         <h3 className="text-lg sm:text-xl font-semibold text-[var(--cream)] mt-1">

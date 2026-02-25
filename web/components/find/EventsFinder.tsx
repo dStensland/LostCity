@@ -10,7 +10,6 @@ import CalendarView from "@/components/CalendarView";
 import MobileCalendarView from "@/components/calendar/MobileCalendarView";
 import { ActiveFiltersRow } from "@/components/filters";
 import { useMapEvents } from "@/lib/hooks/useMapEvents";
-import { getSmartDateDefault } from "@/lib/hooks/useEventFilters";
 import { useViewportFilter } from "@/lib/hooks/useViewportFilter";
 import { useMapLocation } from "@/lib/hooks/useMapLocation";
 import MapListDrawer from "@/components/map/MapListDrawer";
@@ -18,7 +17,6 @@ import MapBottomSheet from "@/components/map/MapBottomSheet";
 import MapDatePills from "@/components/map/MapDatePills";
 
 type DisplayMode = "list" | "map" | "calendar";
-type ListDensity = "comfortable" | "compact";
 
 const MAP_DESKTOP_HEIGHT = "clamp(460px, calc(100dvh - 290px), 900px)";
 const MAP_MOBILE_HEIGHT = "clamp(340px, calc(100dvh - 250px - env(safe-area-inset-bottom, 0px)), 700px)";
@@ -29,7 +27,6 @@ interface EventsFinderProps {
   portalExclusive: boolean;
   displayMode: DisplayMode;
   hasActiveFilters: boolean;
-  listDensity: ListDensity;
 }
 
 /**
@@ -41,7 +38,7 @@ export function EventsFinderFilters({
   portalExclusive,
   displayMode,
   hasActiveFilters,
-}: Omit<EventsFinderProps, "listDensity">) {
+}: EventsFinderProps) {
   return (
     <Suspense fallback={<div className="h-10 bg-[var(--night)] rounded-xl mt-3" />}>
       <div className="mt-2.5 pt-2.5 border-t border-[var(--twilight)]/65">
@@ -79,16 +76,11 @@ export default function EventsFinder({
   portalExclusive,
   displayMode,
   hasActiveFilters,
-  listDensity,
 }: EventsFinderProps) {
   const searchParams = useSearchParams();
 
   // ─── Shared location state (map-specific) ──────────────────────────────
   const loc = useMapLocation(portalSlug);
-
-  // ─── Smart date default ──────────────────────────────────────────────────
-  const smartDateDefault = getSmartDateDefault();
-  const effectiveDateOverride = searchParams?.get("date") ? undefined : smartDateDefault;
 
   // ─── Map data hooks ──────────────────────────────────────────────────────
   const isMapMode = displayMode === "map";
@@ -97,7 +89,7 @@ export default function EventsFinder({
     portalId,
     portalExclusive,
     enabled: isMapMode,
-    dateOverride: effectiveDateOverride,
+    dateOverride: undefined,
   });
 
   const { eventsInView, spotsInView, handleBoundsChange } = useViewportFilter({
@@ -129,7 +121,6 @@ export default function EventsFinder({
           portalId={portalId}
           portalExclusive={portalExclusive}
           portalSlug={portalSlug}
-          density={listDensity}
         />
       )}
 

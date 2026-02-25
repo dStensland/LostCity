@@ -51,7 +51,7 @@ export default function ScrollHeader({ threshold = 300 }: ScrollHeaderProps) {
         <nav className="flex items-center gap-6">
           <Link
             href="/atlanta"
-            className="text-sm text-[#8a8a9a] hover:text-[#00e5ff] transition-colors duration-300"
+            className="text-sm text-[var(--muted)] hover:text-[var(--neon-cyan)] transition-colors duration-300"
           >
             Atlanta
           </Link>

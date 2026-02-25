@@ -91,7 +91,7 @@ export default function EmptyState({
 
         {suggestions && suggestions.length > 0 && (
           <div className={`mt-4 text-left max-w-xs mx-auto ${atmospheric ? "animate-stagger-3" : ""}`}>
-            <p className="font-mono text-[0.65rem] text-[var(--muted)] uppercase tracking-wider mb-2">Try:</p>
+            <p className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-2">Try:</p>
             <ul className="space-y-1">
               {suggestions.map((suggestion, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm text-[var(--soft)]">

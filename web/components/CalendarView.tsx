@@ -418,7 +418,7 @@ export default function CalendarView({
               {weekDays.map((day) => (
                 <div
                   key={day}
-                  className="py-1.5 text-center font-mono text-[0.58rem] text-[var(--muted)] uppercase tracking-[0.14em]"
+                  className="py-1.5 text-center font-mono text-2xs text-[var(--muted)] uppercase tracking-[0.14em]"
                 >
                   {day}
                 </div>
@@ -488,7 +488,7 @@ export default function CalendarView({
 
                     {hasEvents && day.isCurrentMonth && (
                       <>
-                        <span className={`absolute top-1.5 right-1.5 px-1 py-0.5 rounded-md font-mono text-[0.58rem] font-semibold border ${
+                        <span className={`absolute top-1.5 right-1.5 px-1 py-0.5 rounded-md font-mono text-2xs font-semibold border ${
                       isSelected
                         ? "text-[var(--cream)] border-[var(--gold)]/45 bg-[var(--twilight)]/86"
                         : dayEventCount >= ultraVolumeCellThreshold
@@ -512,7 +512,7 @@ export default function CalendarView({
                             );
                           })()}
                           {categories.length > 1 && (
-                            <span className="font-mono text-[0.52rem] text-[var(--muted)]/90">
+                            <span className="font-mono text-2xs text-[var(--muted)]/90">
                               +{categories.length - 1}
                             </span>
                           )}
@@ -547,17 +547,17 @@ export default function CalendarView({
                     </div>
                     <div className="flex items-center gap-1.5 flex-shrink-0">
                       {hoveredDate && selectedDate && !isSameDay(hoveredDate, selectedDate) && (
-                        <span className="inline-block px-2 py-0.5 rounded-full border border-[var(--twilight)]/75 bg-[var(--void)]/70 text-[var(--muted)] font-mono text-[0.6rem] font-medium">
+                        <span className="inline-block px-2 py-0.5 rounded-full border border-[var(--twilight)]/75 bg-[var(--void)]/70 text-[var(--muted)] font-mono text-xs font-medium">
                           Preview
                         </span>
                       )}
                       {isToday(activeDate) && (
-                        <span className="inline-block px-2 py-0.5 rounded-full bg-[var(--gold)] text-[var(--void)] font-mono text-[0.6rem] font-medium">
+                        <span className="inline-block px-2 py-0.5 rounded-full bg-[var(--gold)] text-[var(--void)] font-mono text-xs font-medium">
                           TODAY
                         </span>
                       )}
                       {activeDayEvents.length > 0 && (
-                        <span className="inline-block px-2 py-0.5 rounded-full border border-[var(--twilight)]/75 bg-[var(--dusk)]/70 text-[var(--soft)] font-mono text-[0.6rem] font-medium">
+                        <span className="inline-block px-2 py-0.5 rounded-full border border-[var(--twilight)]/75 bg-[var(--dusk)]/70 text-[var(--soft)] font-mono text-xs font-medium">
                           {formatCompactCount(activeDayEvents.length)} events
                         </span>
                       )}
@@ -605,10 +605,10 @@ export default function CalendarView({
                               <div className="flex items-center gap-2 mb-1.5">
                                 <span className={`font-mono ${denseDay ? "text-[10px]" : "text-[11px]"} text-[var(--soft)]`}>
                                   {time}
-                                  {period && <span className="text-[0.6rem] ml-0.5 opacity-60">{period}</span>}
+                                  {period && <span className="text-xs ml-0.5 opacity-60">{period}</span>}
                                 </span>
                                 {event.is_free && (
-                                  <span className="px-1.5 py-0.5 rounded-full bg-[var(--neon-green)]/20 text-[var(--neon-green)] font-mono text-[0.55rem] font-semibold">
+                                  <span className="px-1.5 py-0.5 rounded-full bg-[var(--neon-green)]/20 text-[var(--neon-green)] font-mono text-2xs font-semibold">
                                     FREE
                                   </span>
                                 )}

@@ -8,12 +8,12 @@ from __future__ import annotations
 
 import re
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, find_existing_event_for_insert
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, extract_event_links, find_event_url
 
@@ -37,6 +37,105 @@ VENUE_DATA = {
     "website": BASE_URL,
     "vibes": ["lgbtq", "gay-club", "dancing", "dj", "drag", "late-night"],
 }
+
+WEEKS_AHEAD = 6
+DAY_CODES = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
+DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+RECURRING_SCHEDULE = [
+    {
+        "day": 5,
+        "title": "3 Legged Cowboy Country Dance Night",
+        "start_time": "20:00",
+        "description": "Saturday country dance night at The Heretic. Line dancing lessons 8pm, open dancing 9pm-2am. $5 cover.",
+        "category": "nightlife",
+        "subcategory": "nightlife.line_dancing",
+        "tags": ["country", "line-dancing", "dance", "lgbtq", "weekly"],
+        "price_min": 5,
+        "price_max": 5,
+    },
+]
+
+
+def _get_next_weekday(start_date: datetime, weekday: int) -> datetime:
+    """Return the next occurrence of weekday (0=Monday) on or after start_date."""
+    days_ahead = weekday - start_date.weekday()
+    if days_ahead < 0:
+        days_ahead += 7
+    return start_date + timedelta(days=days_ahead)
+
+
+def _generate_recurring_events(source_id: int, venue_id: int) -> tuple[int, int, int]:
+    """Generate recurring weekly events for The Heretic."""
+    events_found = events_new = events_updated = 0
+    today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+    for template in RECURRING_SCHEDULE:
+        next_date = _get_next_weekday(today, template["day"])
+        day_code = DAY_CODES[template["day"]]
+        day_name = DAY_NAMES[template["day"]]
+
+        series_hint = {
+            "series_type": "recurring_show",
+            "series_title": template["title"],
+            "frequency": "weekly",
+            "day_of_week": day_name,
+            "description": template["description"],
+        }
+
+        for week in range(WEEKS_AHEAD):
+            event_date = next_date + timedelta(weeks=week)
+            start_date = event_date.strftime("%Y-%m-%d")
+            events_found += 1
+
+            content_hash = generate_content_hash(
+                template["title"], VENUE_DATA["name"], start_date
+            )
+
+            is_free = template.get("is_free", False) or "free" in template["tags"]
+
+            event_record = {
+                "source_id": source_id,
+                "venue_id": venue_id,
+                "title": template["title"],
+                "description": template["description"],
+                "start_date": start_date,
+                "start_time": template["start_time"],
+                "end_date": None,
+                "end_time": None,
+                "is_all_day": False,
+                "category": template["category"],
+                "subcategory": template.get("subcategory"),
+                "tags": template["tags"],
+                "is_free": is_free,
+                "price_min": None if is_free else template.get("price_min"),
+                "price_max": None if is_free else template.get("price_max"),
+                "source_url": BASE_URL,
+                "ticket_url": None,
+                "image_url": None,
+                "raw_text": f"{template['title']} at {VENUE_DATA['name']} - {start_date}",
+                "extraction_confidence": 0.90,
+                "is_recurring": True,
+                "recurrence_rule": f"FREQ=WEEKLY;BYDAY={day_code}",
+                "content_hash": content_hash,
+            }
+
+            existing = find_existing_event_for_insert(event_record)
+            if existing:
+                smart_update_existing_event(existing, event_record)
+                events_updated += 1
+                continue
+
+            try:
+                insert_event(event_record, series_hint=series_hint)
+                events_new += 1
+            except Exception as exc:
+                logger.error(f"Failed to insert {template['title']} on {start_date}: {exc}")
+
+    logger.info(
+        f"The Heretic recurring: {events_found} found, {events_new} new, {events_updated} updated"
+    )
+    return events_found, events_new, events_updated
 
 
 def parse_time(time_text: str) -> Optional[str]:
@@ -219,5 +318,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
     except Exception as e:
         logger.error(f"Failed to crawl The Heretic: {e}")
         raise
+
+    try:
+        f, n, u = _generate_recurring_events(source_id, venue_id)
+        events_found += f
+        events_new += n
+        events_updated += u
+    except Exception as e:
+        logger.error(f"Failed to generate recurring events: {e}")
 
     return events_found, events_new, events_updated

@@ -251,8 +251,8 @@ export async function GET(request: NextRequest, { params }: Props) {
     // Apply category filter
     if (categoryFilter && !categoryFilter.has(category)) continue;
 
-    // Check if open at target time
-    const openCheck = isOpenAt(venue.hours, targetDate);
+    // Check if open at target time. Venues with no hours data are assumed open.
+    const openCheck = venue.hours ? isOpenAt(venue.hours, targetDate) : { isOpen: true };
     if (!openCheck.isOpen) continue;
 
     const special = specialsByVenue.get(venue.id) ?? null;

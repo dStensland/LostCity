@@ -299,7 +299,7 @@ export default function OrgDetailView({ slug, portalSlug, onClose }: OrgDetailVi
         {/* Description */}
         {producer.description && (
           <div className="mt-5 pt-5 border-t border-[var(--twilight)]">
-            <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-2">
+            <h2 className="font-mono text-xs font-medium text-[var(--muted)] uppercase tracking-widest mb-2">
               About
             </h2>
             <p className="text-[var(--soft)] text-sm leading-relaxed whitespace-pre-wrap">

@@ -80,7 +80,7 @@ const CATEGORY_MAP: Record<string, string> = {
 async function getEventsForCategories(
   categories: string[],
   limit: number
-): Promise<Array<{ id: number; category: string }>> {
+): Promise<Array<{ id: number; category_id: string }>> {
   const mappedCategories = categories
     .map((c) => CATEGORY_MAP[c.toLowerCase()] || c)
     .filter((v, i, a) => a.indexOf(v) === i);
@@ -89,8 +89,8 @@ async function getEventsForCategories(
 
   const { data, error } = await supabase
     .from("events")
-    .select("id, category")
-    .in("category", mappedCategories)
+    .select("id, category_id")
+    .in("category_id", mappedCategories)
     .gte("start_date", today)
     .order("start_date", { ascending: true })
     .limit(limit * 3);

@@ -309,7 +309,7 @@ function SignupForm() {
                 )}
               </div>
               {username && !isValidUsername(username) && (
-                <p id="username-error" role="alert" className="mt-1 font-mono text-[0.65rem] text-[var(--coral)]">
+                <p id="username-error" role="alert" className="mt-1 font-mono text-xs text-[var(--coral)]">
                   3-30 characters, lowercase letters, numbers, underscores
                 </p>
               )}

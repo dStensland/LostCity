@@ -11,6 +11,7 @@ import { decodeHtmlEntities, formatTimeSplit, getLocalDateString } from "@/lib/f
 import { computeCountdown, formatFestivalDates } from "@/lib/moments-utils";
 import Image from "@/components/SmartImage";
 import { useImageParallax } from "@/lib/hooks/useImageParallax";
+import Dot from "@/components/ui/Dot";
 
 interface Props {
   festival: FestivalInfo;
@@ -115,28 +116,28 @@ const FestivalCard = memo(function FestivalCard({
         >
           <div className="px-3 py-2.5">
             <div className="flex items-center gap-2.5 min-w-0">
-              <span className="flex-shrink-0 font-mono text-[0.72rem] font-semibold uppercase tracking-[0.1em] text-[var(--accent-color)] min-w-[76px] sm:min-w-[82px]">
+              <span className="flex-shrink-0 font-mono text-xs font-semibold uppercase tracking-[0.1em] text-[var(--accent-color)] min-w-[76px] sm:min-w-[82px]">
                 {compactTimeLabel}
               </span>
-              <span className="truncate text-[0.94rem] sm:text-[0.98rem] font-medium text-[var(--cream)] group-hover:text-[var(--accent-color)] transition-colors">
+              <span className="truncate text-base sm:text-base font-medium text-[var(--cream)] group-hover:text-[var(--accent-color)] transition-colors">
                 {festivalName}
               </span>
-              <span className="inline-block max-w-[84px] sm:max-w-[120px] truncate flex-shrink-0 font-mono text-[0.62rem] font-medium uppercase tracking-[0.08em] text-[var(--muted)]">
+              <span className="inline-block max-w-[84px] sm:max-w-[120px] truncate flex-shrink-0 font-mono text-2xs font-medium uppercase tracking-[0.08em] text-[var(--muted)]">
                 {typeLabel}
               </span>
             </div>
 
-            <div className="mt-1 flex items-center gap-1.5 font-mono text-[0.62rem] text-[var(--muted)] min-w-0">
+            <div className="mt-1 flex items-center gap-1.5 font-mono text-2xs text-[var(--muted)] min-w-0">
               <span className="truncate">{dateRangeLabel}</span>
               {locationLabel && (
                 <>
-                  <span className="opacity-40">·</span>
+                  <Dot />
                   <span className="truncate">{locationLabel}</span>
                 </>
               )}
               {!isStandalone && summary.eventCount > 0 && (
                 <>
-                  <span className="opacity-40">·</span>
+                  <Dot />
                   <span className="truncate">{summary.eventCount} events</span>
                 </>
               )}
@@ -178,14 +179,14 @@ const FestivalCard = memo(function FestivalCard({
             </div>
           )}
           <div className={`relative z-10 flex flex-col items-start justify-center gap-1.5 ${festival.image_url ? "h-full pl-3 pr-2 py-3 sm:py-4 list-rail-caption" : ""}`}>
-            <span className="font-mono text-[0.62rem] font-semibold text-[var(--accent-color)] leading-none uppercase tracking-[0.12em]">
+            <span className="font-mono text-2xs font-semibold text-[var(--accent-color)] leading-none uppercase tracking-[0.12em]">
               {format(startDate, "MMM")}
             </span>
-            <span className={`font-mono text-[1.42rem] font-bold leading-none tabular-nums ${festival.image_url ? "text-white" : "text-[var(--cream)]"}`}>
+            <span className={`font-mono text-2xl font-bold leading-none tabular-nums ${festival.image_url ? "text-white" : "text-[var(--cream)]"}`}>
               {format(startDate, "d")}
             </span>
             {dayCount > 1 && (
-              <span className={`font-mono text-[0.58rem] font-medium uppercase tracking-[0.1em] ${festival.image_url ? "text-white/78" : "text-[var(--soft)]"}`}>
+              <span className={`font-mono text-2xs font-medium uppercase tracking-[0.1em] ${festival.image_url ? "text-white/78" : "text-[var(--soft)]"}`}>
                 {dayCount} days
               </span>
             )}
@@ -204,16 +205,16 @@ const FestivalCard = memo(function FestivalCard({
                   {typeLabel.charAt(0)}
                 </span>
               </span>
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full border border-[var(--twilight)]/65 bg-[var(--dusk)]/75 font-mono text-[0.62rem] text-[var(--soft)]">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full border border-[var(--twilight)]/65 bg-[var(--dusk)]/75 font-mono text-2xs text-[var(--soft)]">
                 {format(startDate, "MMM d")}
               </span>
             </div>
             {contextLabel && (
-              <div className={`text-[0.6rem] font-mono uppercase tracking-wider ${contextLabelClass} mb-1`}>
+              <div className={`text-xs font-mono uppercase tracking-wider ${contextLabelClass} mb-1`}>
                 {contextLabel}
               </div>
             )}
-            <h3 className="text-[var(--cream)] font-semibold text-[1.03rem] leading-tight line-clamp-2 group-hover:text-[var(--accent-color)] transition-colors mb-1.5">
+            <h3 className="text-[var(--cream)] font-semibold text-base leading-tight line-clamp-2 group-hover:text-[var(--accent-color)] transition-colors mb-1.5">
               {festivalName}
             </h3>
           </div>
@@ -221,7 +222,7 @@ const FestivalCard = memo(function FestivalCard({
           {/* Desktop: Inline layout matching EventCard */}
           <div className="hidden sm:block">
             {contextLabel && (
-              <div className={`text-[0.6rem] font-mono uppercase tracking-wider ${contextLabelClass} mb-0.5`}>
+              <div className={`text-xs font-mono uppercase tracking-wider ${contextLabelClass} mb-0.5`}>
                 {contextLabel}
               </div>
             )}
@@ -229,11 +230,11 @@ const FestivalCard = memo(function FestivalCard({
               <span
                 className="flex-shrink-0 inline-flex items-center justify-center w-9 h-9 rounded-lg bg-accent-20 border border-[var(--twilight)]/55"
               >
-                <span className="text-sm font-bold text-accent">
+                <span className="text-xs font-bold text-accent">
                   {typeLabel.charAt(0)}
                 </span>
               </span>
-              <span className="text-[var(--cream)] font-semibold text-[1.3rem] transition-colors line-clamp-1 group-hover:text-[var(--accent-color)] leading-tight">
+              <span className="text-[var(--cream)] font-semibold text-xl transition-colors line-clamp-1 group-hover:text-[var(--accent-color)] leading-tight">
                 {festivalName}
               </span>
             </div>
@@ -311,38 +312,38 @@ function StandaloneDetails({
       )}
       {locationLabel && (
         <>
-          {!isSingleDay && dateRangeLabel && <span className="opacity-40">·</span>}
-          <span className="truncate max-w-[70%] sm:max-w-[45%] text-[var(--text-base)]" title={locationLabel}>{locationLabel}</span>
+          {!isSingleDay && dateRangeLabel && <Dot />}
+          <span className="truncate max-w-[70%] sm:max-w-[45%] text-base" title={locationLabel}>{locationLabel}</span>
         </>
       )}
       {countdown.urgency !== "tbd" && countdown.urgency !== "month-label" && (
         <>
-          <span className="opacity-40">·</span>
-          <span className="font-mono text-[0.7rem] text-[var(--coral)]">
+          <Dot />
+          <span className="font-mono text-xs text-[var(--coral)]">
             {countdown.text}
           </span>
         </>
       )}
       {festival.free && (
         <>
-          <span className="opacity-40">·</span>
-          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[0.6rem] font-mono font-medium bg-green-900/30 text-green-400">
+          <Dot />
+          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-mono font-medium bg-green-900/30 text-green-400">
             Free
           </span>
         </>
       )}
       {!isSingleDay && (
         <>
-          <span className="opacity-40">·</span>
-          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[0.6rem] font-mono font-medium bg-accent-20 text-accent">
+          <Dot />
+          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-mono font-medium bg-accent-20 text-accent">
             {typeLabel}
           </span>
         </>
       )}
       {summary.categories.length > 0 && (
         <>
-          <span className="opacity-40">·</span>
-          <span className="font-mono text-[0.65rem] text-[var(--muted)]">
+          <Dot />
+          <span className="font-mono text-xs text-[var(--muted)]">
             {summary.categories.slice(0, 2).join(", ")}
           </span>
         </>
@@ -369,27 +370,27 @@ function LinkedDetails({
     <>
       <div className="flex items-center gap-1.5 text-sm text-[var(--text-secondary)] mt-1.5 leading-relaxed flex-wrap">
         {locationLabel && (
-          <span className="truncate max-w-[70%] sm:max-w-[45%] font-medium text-[var(--text-base)]" title={locationLabel}>{locationLabel}</span>
+          <span className="truncate max-w-[70%] sm:max-w-[45%] font-medium text-base" title={locationLabel}>{locationLabel}</span>
         )}
         {summary.venues.length > 1 && (
           <>
-            <span className="opacity-40">·</span>
+            <Dot />
             <span>+{summary.venues.length - 1} venues</span>
           </>
         )}
-        <span className="opacity-40">·</span>
-        <span className="font-mono text-[0.7rem] text-[var(--muted)]">
+        <Dot />
+        <span className="font-mono text-xs text-[var(--muted)]">
           {timeRangeLabel || "Times vary"}
         </span>
-        <span className="opacity-40">·</span>
+        <Dot />
         <span>{summary.programCount} program{summary.programCount !== 1 ? "s" : ""}</span>
-        <span className="opacity-40">·</span>
+        <Dot />
         <span>{summary.eventCount} session{summary.eventCount !== 1 ? "s" : ""}</span>
         {!isSingleDay && (
           <>
-            <span className="opacity-40">·</span>
+            <Dot />
             <span
-              className="inline-flex items-center px-1.5 py-0.5 rounded text-[0.6rem] font-mono font-medium bg-accent-20 text-accent"
+              className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-mono font-medium bg-accent-20 text-accent"
             >
               {typeLabel}
             </span>
@@ -403,13 +404,13 @@ function LinkedDetails({
           {summary.venues.slice(0, 3).map((venue) => (
             <span
               key={venue.id}
-              className="font-mono text-[0.6rem] px-1.5 py-0.5 rounded bg-[var(--twilight)]/40 text-[var(--soft)]"
+              className="font-mono text-xs px-1.5 py-0.5 rounded bg-[var(--twilight)]/40 text-[var(--soft)]"
             >
               {venue.name}
             </span>
           ))}
           {summary.venues.length > 3 && (
-            <span className="font-mono text-[0.6rem] px-1.5 py-0.5 text-[var(--muted)]">
+            <span className="font-mono text-xs px-1.5 py-0.5 text-[var(--muted)]">
               +{summary.venues.length - 3} more
             </span>
           )}

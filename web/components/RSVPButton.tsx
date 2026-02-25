@@ -561,7 +561,7 @@ export default function RSVPButton({
               e.stopPropagation();
               setShowCompanionPicker(true);
             }}
-            className="mt-1 font-mono text-[0.6rem] text-[var(--muted)] hover:text-[var(--coral)] transition-colors"
+            className="mt-1 font-mono text-xs text-[var(--muted)] hover:text-[var(--coral)] transition-colors"
           >
             Going with...
           </button>
@@ -647,7 +647,7 @@ export default function RSVPButton({
                 <>
                   <div className="border-t border-[var(--twilight)]" />
                   <div className="p-1">
-                    <div className="px-3 py-1 font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider">
+                    <div className="px-3 py-1 font-mono text-xs text-[var(--muted)] uppercase tracking-wider">
                       Who can see
                     </div>
                     {VISIBILITY_OPTIONS.map((opt) => (

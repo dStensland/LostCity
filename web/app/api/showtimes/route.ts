@@ -315,7 +315,7 @@ export async function GET(request: NextRequest) {
     `,
         )
         .eq("start_date", date)
-        .eq("category", "film")
+        .eq("category_id", "film")
         .not("start_time", "is", null)
         .order("start_time", { ascending: true })
         .limit(SHOWTIMES_EVENT_LIMIT);
@@ -371,7 +371,7 @@ export async function GET(request: NextRequest) {
       const { data: dateRows } = await supabase
         .from("events")
         .select("start_date")
-        .eq("category", "film")
+        .eq("category_id", "film")
         .contains("tags", ["showtime"])
         .gte("start_date", date)
         .lte("start_date", dateWindowEnd)
@@ -398,7 +398,7 @@ export async function GET(request: NextRequest) {
           )
         `,
         )
-        .eq("category", "film")
+        .eq("category_id", "film")
         .contains("tags", ["showtime"])
         .gte("start_date", date)
         .lte("start_date", dateWindowEnd)

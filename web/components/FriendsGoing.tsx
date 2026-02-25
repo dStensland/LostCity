@@ -111,7 +111,7 @@ export default function FriendsGoing({ eventId, fallbackCount = 0, className = "
               />
             ) : (
               <div className="w-6 h-6 rounded-full bg-[var(--coral)] flex items-center justify-center border-2 border-[var(--night)] hover:border-[var(--rose)] hover:scale-110 transition-all duration-200">
-                <span className="font-mono text-[0.5rem] font-bold text-[var(--void)]">
+                <span className="font-mono text-2xs font-bold text-[var(--void)]">
                   {friend.user.display_name
                     ? friend.user.display_name[0].toUpperCase()
                     : friend.user.username[0].toUpperCase()}
@@ -124,7 +124,7 @@ export default function FriendsGoing({ eventId, fallbackCount = 0, className = "
           <div
             className="w-6 h-6 rounded-full bg-[var(--twilight)] flex items-center justify-center border-2 border-[var(--night)] animate-scale-in"
           >
-            <span className="font-mono text-[0.5rem] font-medium text-[var(--muted)]">
+            <span className="font-mono text-2xs font-medium text-[var(--muted)]">
               +{friends.length - 3}
             </span>
           </div>

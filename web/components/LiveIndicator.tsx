@@ -23,7 +23,7 @@ export default function LiveIndicator({
   if (!isLive) return null;
 
   const dotSize = size === "sm" ? "w-1.5 h-1.5" : "w-2 h-2";
-  const textSize = size === "sm" ? "text-[0.65rem]" : "text-xs";
+  const textSize = size === "sm" ? "text-xs" : "text-xs";
 
   return (
     <span

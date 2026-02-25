@@ -32,7 +32,7 @@ async function main() {
   // Show ALL events for next 3 days for debugging
   const { data: upcoming } = await supabase
     .from("events")
-    .select("id, title, category, start_date, start_time, venue:venues(name)")
+    .select("id, title, category_id, start_date, start_time, venue:venues(name)")
     .in("start_date", [today, tomorrow, dayAfter])
     .is("canonical_event_id", null)
     .is("portal_id", null)
@@ -45,13 +45,13 @@ async function main() {
     const venueName = ((e.venue as unknown as { name: string } | null)?.name || "?").slice(0, 30);
     // Skip painting with a twist for cleaner output
     if (venueName.toLowerCase().includes("painting with")) continue;
-    console.log(`  ${e.start_date} ${e.start_time || "all-day"} | ${(e.category || "?").padEnd(10)} | ${venueName}`);
+    console.log(`  ${e.start_date} ${e.start_time || "all-day"} | ${(e.category_id || "?").padEnd(10)} | ${venueName}`);
   }
   console.log("");
 
   const { data, count } = await supabase
     .from("events")
-    .select("id, title, category, start_time, image_url, description, venue_id, venue:venues(name)", { count: "exact" })
+    .select("id, title, category_id, start_time, image_url, description, venue_id, venue:venues(name)", { count: "exact" })
     .eq("start_date", today)
     .is("canonical_event_id", null)
     .is("portal_id", null)
@@ -113,7 +113,7 @@ async function main() {
   const scored = (data || []).map(e => {
     let score = 0;
     const venueName = (e.venue as unknown as { name: string } | null)?.name || "";
-    const cat = e.category || "";
+    const cat = e.category_id || "";
 
     // Hip venue +20
     if (HIP_VENUE_PATTERNS.some(p => p.test(venueName))) score += 20;
@@ -140,7 +140,7 @@ async function main() {
     const score = String(e.score).padStart(5);
     const rsvps = String(e.rsvps).padStart(5);
     const vRecs = String(e.venueRecs).padStart(9);
-    const cat = (e.category || "?").padEnd(10).slice(0, 10);
+    const cat = (e.category_id || "?").padEnd(10).slice(0, 10);
     const venue = ((e.venue as unknown as { name: string } | null)?.name || "?").padEnd(25).slice(0, 25);
     const title = e.title.slice(0, 40);
     console.log(`${score} | ${rsvps} | ${vRecs} | ${cat} | ${venue} | ${title}`);

@@ -68,11 +68,11 @@ function NeighborhoodIndexCard({
       </div>
       <div className="flex items-center gap-2 mt-1">
         {count > 0 ? (
-          <span className="font-mono text-[0.6rem] text-[var(--soft)]">
+          <span className="font-mono text-2xs text-[var(--soft)]">
             {count} {count === 1 ? "spot" : "spots"}
           </span>
         ) : (
-          <span className="font-mono text-[0.55rem] text-[var(--muted)]">
+          <span className="font-mono text-2xs text-[var(--muted)]">
             No spots yet
           </span>
         )}
@@ -121,10 +121,10 @@ export default async function NeighborhoodsIndexPage({ params }: Props) {
       {sections.map((section) => (
         <section key={section.title} className="mb-8">
           <div className="flex items-center gap-3 py-3 border-t border-[var(--twilight)]">
-            <h2 className="font-mono text-[0.65rem] uppercase tracking-widest text-[var(--muted)]">
+            <h2 className="font-mono text-xs uppercase tracking-widest text-[var(--muted)]">
               {section.title}
             </h2>
-            <span className="inline-flex items-center justify-center px-2 py-0.5 rounded text-[0.6rem] font-mono bg-[var(--twilight)] text-[var(--soft)]">
+            <span className="inline-flex items-center justify-center px-2 py-0.5 rounded text-2xs font-mono bg-[var(--twilight)] text-[var(--soft)]">
               {section.neighborhoods.length}
             </span>
           </div>
