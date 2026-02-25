@@ -222,8 +222,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     try:
         with sync_playwright() as p:
-            # Use non-headless to avoid Cloudflare blocking
-            browser = p.chromium.launch(headless=False)
+            browser = p.chromium.launch(headless=True)
             context = browser.new_context(
                 user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
                 viewport={"width": 1920, "height": 1080},
@@ -400,25 +399,30 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 # Try to click next page button
                 try:
-                    # Look for pagination next button
+                    # Look for pagination next button — only match
+                    # pagination controls, never tel:/mailto: links.
                     next_selectors = [
                         "a[aria-label='Next page']",
-                        "a:has-text('Next')",
-                        "button:has-text('Next')",
-                        f"a:has-text('{page_num + 1}')",  # Direct page number link
+                        "nav a:has-text('Next')",
+                        "nav button:has-text('Next')",
+                        f"nav a:has-text('{page_num + 1}')",
                     ]
 
                     clicked = False
                     for selector in next_selectors:
                         try:
-                            if page.locator(selector).count() > 0:
-                                page.click(selector, timeout=3000)
+                            loc = page.locator(selector)
+                            if loc.count() > 0:
+                                href = loc.first.get_attribute("href") or ""
+                                if href.startswith("tel:") or href.startswith("mailto:"):
+                                    continue
+                                loc.first.click(timeout=3000)
                                 page.wait_for_timeout(3000)
                                 page_num += 1
                                 clicked = True
                                 logger.info(f"Clicked next page, now on page {page_num}")
                                 break
-                        except:
+                        except Exception:
                             pass
 
                     if not clicked:
