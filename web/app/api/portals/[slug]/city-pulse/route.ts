@@ -1095,8 +1095,8 @@ export async function GET(request: NextRequest, { params }: Props) {
     let q = portalClient
       .from("events")
       .select(EVENT_SELECT)
-      .gte("start_date", tomorrow)
-      .lte("start_date", endOfWeek)
+      .gte("start_date", today)
+      .lte("start_date", weekAhead)
       .not("series_id", "is", null)
       .is("canonical_event_id", null)
       .or("is_class.eq.false,is_class.is.null")
@@ -1105,7 +1105,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     return q
       .order("start_date", { ascending: true })
       .order("start_time", { ascending: true })
-      .limit(100);
+      .limit(200);
   };
 
   const [
