@@ -29,8 +29,8 @@ export function getGradientForString(str: string): typeof NEON_GRADIENTS[0] {
 type AvatarSize = "xs" | "sm" | "md" | "lg" | "xl";
 
 const SIZE_CONFIG: Record<AvatarSize, { size: number; text: string; ring: string; glow: string }> = {
-  xs: { size: 20, text: "text-[0.5rem]", ring: "ring-1", glow: "8px" },
-  sm: { size: 28, text: "text-[0.6rem]", ring: "ring-[1.5px]", glow: "10px" },
+  xs: { size: 20, text: "text-2xs", ring: "ring-1", glow: "8px" },
+  sm: { size: 28, text: "text-xs", ring: "ring-[1.5px]", glow: "10px" },
   md: { size: 36, text: "text-xs", ring: "ring-2", glow: "12px" },
   lg: { size: 48, text: "text-sm", ring: "ring-2", glow: "16px" },
   xl: { size: 64, text: "text-base", ring: "ring-[3px]", glow: "20px" },

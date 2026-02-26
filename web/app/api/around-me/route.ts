@@ -113,7 +113,7 @@ type LiveEventRow = {
   start_time: string;
   end_time: string | null;
   is_all_day: boolean;
-  category: string | null;
+  category_id: string | null;
   price_min: number | null;
   price_max: number | null;
   is_free: boolean;
@@ -431,7 +431,7 @@ export async function GET(request: NextRequest) {
         start_time,
         end_time,
         is_all_day,
-        category,
+        category_id,
         price_min,
         price_max,
         is_free,
@@ -462,7 +462,7 @@ export async function GET(request: NextRequest) {
 
     // Filter events by category if specified
     if (categoryFilter && categoryFilter.eventCategories.length > 0) {
-      eventsQuery = eventsQuery.in("category", categoryFilter.eventCategories);
+      eventsQuery = eventsQuery.in("category_id", categoryFilter.eventCategories);
     }
     const eventCandidateLimit = radiusMiles !== null
       ? Math.max(140, Math.min(700, limit * 6))
@@ -583,7 +583,7 @@ export async function GET(request: NextRequest) {
           start_time: event.start_time,
           end_time: event.end_time,
           is_all_day: event.is_all_day,
-          category: event.category,
+          category: event.category_id,
           is_free: event.is_free,
           price_min: event.price_min,
           price_max: event.price_max,

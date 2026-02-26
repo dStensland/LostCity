@@ -175,7 +175,7 @@ export default function InlinePreferences({
       {/* Reason menu */}
       {showMenu && (
         <div className="absolute right-0 top-full mt-1 w-48 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg shadow-xl z-50 py-1 overflow-hidden">
-          <p className="px-3 py-1.5 text-[0.65rem] font-mono text-[var(--muted)] uppercase tracking-wider">
+          <p className="px-3 py-1.5 text-xs font-mono text-[var(--muted)] uppercase tracking-wider">
             Why?
           </p>
           <button

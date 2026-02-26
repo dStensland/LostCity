@@ -10,6 +10,7 @@ import CategoryIcon, { getCategoryColor, getCategoryLabel } from "./CategoryIcon
 import LazyImage from "./LazyImage";
 import { OpenStatusBadge } from "./HoursSection";
 import { EventsBadge } from "./Badge";
+import Dot from "@/components/ui/Dot";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -119,7 +120,11 @@ function DiscoveryCard({
                   />
                   <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/56 to-black/20 pointer-events-none" />
                 </>
-              ) : null}
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <CategoryIcon type={venue.venue_type || "venue"} size={28} glow="subtle" weight="light" />
+                </div>
+              )}
             </div>
 
             <div className="flex-1 min-w-0">
@@ -147,7 +152,7 @@ function DiscoveryCard({
                 <span className="hidden sm:inline-flex flex-shrink-0 items-center justify-center w-9 h-9 rounded-lg bg-accent-20 border border-[var(--twilight)]/55">
                   <CategoryIcon type={venue.venue_type || "venue"} size={18} glow="subtle" />
                 </span>
-                <span className="text-[var(--cream)] font-semibold text-[1.05rem] sm:text-[1.2rem] transition-colors line-clamp-1 group-hover:text-[var(--accent-color)] leading-tight">
+                <span className="text-[var(--cream)] font-semibold text-base sm:text-lg transition-colors line-clamp-1 group-hover:text-[var(--accent-color)] leading-tight">
                   {venue.name}
                 </span>
                 {venue.is_open !== undefined && (
@@ -156,12 +161,12 @@ function DiscoveryCard({
                   </span>
                 )}
                 {isFeatured && (
-                  <span className="inline-flex flex-shrink-0 px-1.5 py-0.5 rounded font-mono text-[0.5rem] font-medium uppercase bg-accent-25 text-accent border border-accent-40">
+                  <span className="inline-flex flex-shrink-0 px-1.5 py-0.5 rounded font-mono text-2xs font-medium uppercase bg-accent-25 text-accent border border-accent-40">
                     Hot
                   </span>
                 )}
                 {locationLabel && (
-                  <span className="inline-flex flex-shrink-0 px-1.5 py-0.5 rounded font-mono text-[0.5rem] font-medium uppercase bg-[var(--twilight)]/65 text-[var(--soft)] border border-[var(--twilight)]">
+                  <span className="inline-flex flex-shrink-0 px-1.5 py-0.5 rounded font-mono text-2xs font-medium uppercase bg-[var(--twilight)]/65 text-[var(--soft)] border border-[var(--twilight)]">
                     {locationLabel}
                   </span>
                 )}
@@ -171,30 +176,30 @@ function DiscoveryCard({
 
               <div className="flex items-center gap-1.5 text-sm text-[var(--text-secondary)] mt-1.5 leading-relaxed flex-wrap">
                 {distance !== null && (
-                  <span className="text-[var(--neon-cyan)] font-mono text-[0.72rem]">{formatDistanceMiles(distance)}</span>
+                  <span className="text-[var(--neon-cyan)] font-mono text-xs">{formatDistanceMiles(distance)}</span>
                 )}
                 {venue.neighborhood && (
                   <>
-                    {distance !== null && <span className="opacity-40">·</span>}
-                    <span className="truncate max-w-[65%] sm:max-w-[45%] font-medium text-[var(--text-base)]">{venue.neighborhood}</span>
+                    {distance !== null && <Dot />}
+                    <span className="truncate max-w-[65%] sm:max-w-[45%] font-medium text-base">{venue.neighborhood}</span>
                   </>
                 )}
                 {venue.price_level && (
                   <>
-                    <span className="opacity-40">·</span>
-                    <span className="text-[var(--gold)] font-mono text-[0.72rem]">{formatPriceLevel(venue.price_level)}</span>
+                    <Dot />
+                    <span className="text-[var(--gold)] font-mono text-xs">{formatPriceLevel(venue.price_level)}</span>
                   </>
                 )}
                 {venue.is_open && venue.closes_at && (
                   <>
-                    <span className="opacity-40">·</span>
-                    <span className="text-[var(--neon-green)] font-mono text-[0.72rem]">til {formatCloseTime(venue.closes_at)}</span>
+                    <Dot />
+                    <span className="text-[var(--neon-green)] font-mono text-xs">til {formatCloseTime(venue.closes_at)}</span>
                   </>
                 )}
                 {(venue.event_count ?? 0) > 0 && (
                   <>
-                    <span className="opacity-40">·</span>
-                    <span className="text-[var(--coral)] font-mono text-[0.72rem]">
+                    <Dot />
+                    <span className="text-[var(--coral)] font-mono text-xs">
                       {venue.event_count} event{venue.event_count !== 1 ? "s" : ""}
                     </span>
                   </>
@@ -271,23 +276,23 @@ function CompactCard({
         {(contextualLabel || isOpenNow || topSpecial) && (
           <div className="flex items-center gap-1.5 mt-1 flex-wrap">
             {isOpenNow && (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[0.58rem] font-mono font-medium text-[var(--neon-green)] bg-[var(--neon-green)]/10 border border-[var(--neon-green)]/25">
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-2xs font-mono font-medium text-[var(--neon-green)] bg-[var(--neon-green)]/10 border border-[var(--neon-green)]/25">
                 Open now
               </span>
             )}
-            {contextualLabel && <span className="text-[0.65rem] font-mono text-[var(--neon-cyan)]">{contextualLabel}</span>}
+            {contextualLabel && <span className="text-xs font-mono text-[var(--neon-cyan)]">{contextualLabel}</span>}
             {topSpecial && (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[0.58rem] font-mono font-medium text-[var(--neon-amber)] bg-[var(--neon-amber)]/10 border border-[var(--neon-amber)]/25">
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-2xs font-mono font-medium text-[var(--neon-amber)] bg-[var(--neon-amber)]/10 border border-[var(--neon-amber)]/25">
                 {topSpecial.title}
               </span>
             )}
           </div>
         )}
         <div className="flex items-center gap-1.5 text-sm text-[var(--text-secondary)] mt-1">
-          <span className="font-medium text-[var(--text-base)]">{getCategoryLabel(venueType)}</span>
+          <span className="font-medium text-base">{getCategoryLabel(venueType)}</span>
           {venue.neighborhood && (
             <>
-              <span className="opacity-40">·</span>
+              <Dot />
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[var(--surface-elevated)]/60 text-[var(--text-secondary)] text-xs font-medium">
                 {venue.neighborhood}
               </span>

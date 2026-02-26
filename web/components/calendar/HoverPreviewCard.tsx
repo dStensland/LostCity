@@ -247,7 +247,7 @@ export default function HoverPreviewCard({
           {price && (
             <span
               className={`
-                px-2 py-0.5 rounded-full font-mono text-[0.6rem] font-medium
+                px-2 py-0.5 rounded-full font-mono text-xs font-medium
                 ${priceResult.isFree
                   ? "bg-[var(--neon-green)]/20 text-[var(--neon-green)]"
                   : "bg-[var(--twilight-purple)] text-[var(--cream)]"
@@ -258,12 +258,12 @@ export default function HoverPreviewCard({
             </span>
           )}
           {event.category && (
-            <span className="px-2 py-0.5 rounded-full bg-[var(--twilight-purple)] font-mono text-[0.6rem] text-[var(--muted)]">
+            <span className="px-2 py-0.5 rounded-full bg-[var(--twilight-purple)] font-mono text-xs text-[var(--muted)]">
               {event.category}
             </span>
           )}
           {event.genres?.[0] && (
-            <span className="px-2 py-0.5 rounded-full bg-[var(--cosmic-blue)] font-mono text-[0.6rem] text-[var(--muted)]">
+            <span className="px-2 py-0.5 rounded-full bg-[var(--cosmic-blue)] font-mono text-xs text-[var(--muted)]">
               {event.genres[0]}
             </span>
           )}

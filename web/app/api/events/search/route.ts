@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
       start_date,
       end_date,
       is_all_day,
-      category,
+      category_id,
       tags,
       venue:venues(id, name, neighborhood, city, lat, lng, location_designator),
       organization:organizations(id, name)

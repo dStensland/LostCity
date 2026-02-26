@@ -24,15 +24,18 @@ function shouldDisableOptimizerForHost(src: string): boolean {
   }
 }
 
+/** Module-level cache: same blurhash string always produces the same data URL */
+const blurhashCache = new Map<string, string>();
+
 /**
  * Decode a blurhash string into a data URL for use as a placeholder.
- *
- * @param hash - BlurHash string
- * @param width - Width of the placeholder (default 32)
- * @param height - Height of the placeholder (default 32)
- * @returns Data URL of the blurred placeholder
+ * Results are cached to avoid redundant canvas decodes across mounts.
  */
 function blurhashToDataUrl(hash: string, width = 32, height = 32): string {
+  const key = `${hash}:${width}x${height}`;
+  const cached = blurhashCache.get(key);
+  if (cached) return cached;
+
   const pixels = decode(hash, width, height);
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -42,7 +45,9 @@ function blurhashToDataUrl(hash: string, width = 32, height = 32): string {
   const imageData = ctx.createImageData(width, height);
   imageData.data.set(pixels);
   ctx.putImageData(imageData, 0, 0);
-  return canvas.toDataURL();
+  const dataUrl = canvas.toDataURL();
+  blurhashCache.set(key, dataUrl);
+  return dataUrl;
 }
 
 /** Generic fallback shown when no custom fallback is provided */

@@ -9,6 +9,7 @@ import FollowButton from "@/components/FollowButton";
 import RecommendButton from "@/components/RecommendButton";
 import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
 import LinkifyText from "@/components/LinkifyText";
+import Skeleton from "@/components/Skeleton";
 import CollapsibleSection, { CategoryIcons, CATEGORY_COLORS } from "@/components/CollapsibleSection";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
@@ -144,17 +145,59 @@ export default function OrgDetailView({ slug, portalSlug, onClose }: OrgDetailVi
 
   if (loading) {
     return (
-      <div className="pt-6">
+      <div className="pt-6 pb-8">
         <NeonBackButton onClose={onClose} />
-        <div className="space-y-4">
-          <div className="flex gap-4">
-            <div className="w-20 h-20 skeleton-shimmer rounded-xl" />
-            <div className="flex-1 space-y-2">
-              <div className="h-6 skeleton-shimmer rounded w-1/2" />
-              <div className="h-4 skeleton-shimmer rounded w-1/3" />
+
+        {/* Info card skeleton */}
+        <div className="border border-[var(--twilight)] rounded-xl p-6 bg-[var(--dusk)]">
+          <div className="flex items-start gap-4">
+            {/* Logo */}
+            <Skeleton className="w-20 h-20 rounded-xl flex-shrink-0" />
+
+            {/* Name + type + neighborhood */}
+            <div className="flex-1 min-w-0">
+              <Skeleton className="h-6 w-[55%] rounded" delay="0.06s" />
+              <div className="flex items-center gap-2 mt-2">
+                <Skeleton className="h-5 w-20 rounded-md" delay="0.1s" />
+                <Skeleton className="h-4 w-24 rounded" delay="0.12s" />
+              </div>
+            </div>
+
+            {/* Follow/recommend */}
+            <div className="flex gap-2 flex-shrink-0">
+              <Skeleton className="w-9 h-9 rounded-lg" delay="0.14s" />
+              <Skeleton className="w-9 h-9 rounded-lg" delay="0.16s" />
             </div>
           </div>
-          <div className="h-32 skeleton-shimmer rounded-xl" />
+
+          {/* Description */}
+          <div className="mt-5 pt-5 border-t border-[var(--twilight)]">
+            <Skeleton className="h-3 w-12 rounded mb-3" delay="0.2s" />
+            <Skeleton className="h-4 w-full rounded" delay="0.24s" />
+            <Skeleton className="h-4 w-[85%] rounded mt-1.5" delay="0.26s" />
+            <Skeleton className="h-4 w-[60%] rounded mt-1.5" delay="0.28s" />
+          </div>
+
+          {/* Category tags */}
+          <div className="mt-4 flex gap-2">
+            <Skeleton className="h-6 w-20 rounded-lg" delay="0.32s" />
+            <Skeleton className="h-6 w-24 rounded-lg" delay="0.34s" />
+          </div>
+
+          {/* Links */}
+          <div className="mt-5 flex gap-2">
+            <Skeleton className="h-8 w-28 rounded-lg" delay="0.38s" />
+            <Skeleton className="h-8 w-24 rounded-lg" delay="0.4s" />
+          </div>
+        </div>
+
+        {/* Events section skeleton */}
+        <div className="mt-8">
+          <Skeleton className="h-5 w-36 rounded mb-4" delay="0.46s" />
+          <div className="space-y-2">
+            <Skeleton className="h-20 w-full rounded-xl" delay="0.5s" />
+            <Skeleton className="h-20 w-full rounded-xl" delay="0.54s" />
+          </div>
         </div>
       </div>
     );
@@ -194,7 +237,7 @@ export default function OrgDetailView({ slug, portalSlug, onClose }: OrgDetailVi
             {showLogo ? (
               <div className="w-20 h-20 rounded-xl bg-white flex items-center justify-center overflow-hidden relative">
                 {!imageLoaded && (
-                  <div className="absolute inset-0 skeleton-shimmer" />
+                  <Skeleton className="absolute inset-0" />
                 )}
                 <Image
                   src={producer.logo_url!}
@@ -256,7 +299,7 @@ export default function OrgDetailView({ slug, portalSlug, onClose }: OrgDetailVi
         {/* Description */}
         {producer.description && (
           <div className="mt-5 pt-5 border-t border-[var(--twilight)]">
-            <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-2">
+            <h2 className="font-mono text-xs font-medium text-[var(--muted)] uppercase tracking-widest mb-2">
               About
             </h2>
             <p className="text-[var(--soft)] text-sm leading-relaxed whitespace-pre-wrap">

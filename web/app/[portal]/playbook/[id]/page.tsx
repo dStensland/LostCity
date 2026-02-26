@@ -15,6 +15,7 @@ export default function PlaybookEditorPage() {
       itineraryId={itineraryId}
       portalId={portal?.id || ""}
       portalSlug={portalSlug}
+      portalName={portal?.name || "Home"}
     />
   );
 }

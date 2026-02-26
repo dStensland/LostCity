@@ -620,7 +620,7 @@ export default function PortalSectionsPage({ params }: { params: Promise<{ id: s
                           </button>
                         ))}
                       </div>
-                      <p className="font-mono text-[0.65rem] text-[var(--muted)] mt-1">
+                      <p className="font-mono text-xs text-[var(--muted)] mt-1">
                         Leave empty to show every day
                       </p>
                     </div>
@@ -723,7 +723,7 @@ export default function PortalSectionsPage({ params }: { params: Promise<{ id: s
                     <div className="flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="font-serif text-lg text-[var(--cream)]">{section.title}</h3>
-                        <span className={`px-2 py-0.5 rounded text-[0.6rem] font-mono uppercase ${
+                        <span className={`px-2 py-0.5 rounded text-xs font-mono uppercase ${
                           section.section_type === "curated"
                             ? "bg-[var(--coral)]/20 text-[var(--coral)]"
                             : section.section_type === "mixed"
@@ -732,11 +732,11 @@ export default function PortalSectionsPage({ params }: { params: Promise<{ id: s
                         }`}>
                           {section.section_type}
                         </span>
-                        <span className="px-2 py-0.5 rounded text-[0.6rem] font-mono bg-[var(--twilight)] text-[var(--muted)]">
+                        <span className="px-2 py-0.5 rounded text-xs font-mono bg-[var(--twilight)] text-[var(--muted)]">
                           {BLOCK_TYPES.find((bt) => bt.value === section.block_type)?.label || section.block_type}
                         </span>
                         {!section.is_visible && (
-                          <span className="px-2 py-0.5 rounded text-[0.6rem] font-mono bg-[var(--twilight)] text-[var(--muted)]">
+                          <span className="px-2 py-0.5 rounded text-xs font-mono bg-[var(--twilight)] text-[var(--muted)]">
                             hidden
                           </span>
                         )}
@@ -744,7 +744,7 @@ export default function PortalSectionsPage({ params }: { params: Promise<{ id: s
                       {section.description && (
                         <p className="font-mono text-xs text-[var(--muted)] mt-1">{section.description}</p>
                       )}
-                      <p className="font-mono text-[0.65rem] text-[var(--muted)] mt-1">
+                      <p className="font-mono text-xs text-[var(--muted)] mt-1">
                         /{section.slug} · {section.max_items || 5} max items
                         {section.auto_filter?.categories?.length
                           ? ` · ${section.auto_filter.categories.join(", ")}`

@@ -15,7 +15,7 @@ interface AvatarProps {
 }
 
 const sizeConfig: Record<AvatarSize, { px: number; text: string; ring: string }> = {
-  xs: { px: 24, text: "text-[0.5rem]", ring: "ring-1" },
+  xs: { px: 24, text: "text-2xs", ring: "ring-1" },
   sm: { px: 32, text: "text-xs", ring: "ring-2" },
   md: { px: 40, text: "text-sm", ring: "ring-2" },
   lg: { px: 48, text: "text-base", ring: "ring-2" },

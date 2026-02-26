@@ -26,7 +26,7 @@ export default async function FilmCalendarPage({ params }: Props) {
       <main className="mx-auto max-w-[1500px] px-4 pb-16 pt-6 space-y-6">
         <FilmPortalNav portalSlug={portal.slug} />
         <header>
-          <p className="text-[0.64rem] uppercase tracking-[0.18em] text-[#8fa2c4]">Atlanta Film</p>
+          <p className="text-xs uppercase tracking-[0.18em] text-[#8fa2c4]">Atlanta Film</p>
           <h1 className="mt-1 font-[var(--font-film-editorial)] text-4xl text-[#f7f7fb]">Calendar</h1>
           <p className="mt-2 text-sm text-[#b8c7e3]">Full month view of upcoming screenings, programs, and film events.</p>
         </header>

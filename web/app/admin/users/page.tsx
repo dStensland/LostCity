@@ -239,7 +239,7 @@ export default function AdminUsersPage() {
                       <p className="font-mono text-sm text-[var(--cream)] truncate">
                         {user.display_name || user.username}
                         {user.is_admin && (
-                          <span className="ml-2 px-1.5 py-0.5 bg-[var(--coral)] text-[var(--void)] text-[0.5rem] font-bold uppercase rounded">
+                          <span className="ml-2 px-1.5 py-0.5 bg-[var(--coral)] text-[var(--void)] text-2xs font-bold uppercase rounded">
                             Admin
                           </span>
                         )}
@@ -248,7 +248,7 @@ export default function AdminUsersPage() {
                         @{user.username}
                       </p>
                     </div>
-                    <p className="font-mono text-[0.6rem] text-[var(--muted)]">
+                    <p className="font-mono text-xs text-[var(--muted)]">
                       {formatDistanceToNow(new Date(user.created_at), {
                         addSuffix: true,
                       })}
@@ -353,7 +353,7 @@ export default function AdminUsersPage() {
                             placeholder="username"
                           />
                         </div>
-                        <p className="font-mono text-[0.6rem] text-[var(--muted)] mt-1">
+                        <p className="font-mono text-xs text-[var(--muted)] mt-1">
                           3-30 chars, lowercase letters, numbers, underscores only
                         </p>
                       </div>
@@ -374,7 +374,7 @@ export default function AdminUsersPage() {
                     <p className="font-mono text-lg font-bold text-[var(--cream)]">
                       {selectedUser.follower_count ?? "-"}
                     </p>
-                    <p className="font-mono text-[0.6rem] text-[var(--muted)] uppercase">
+                    <p className="font-mono text-xs text-[var(--muted)] uppercase">
                       Followers
                     </p>
                   </div>
@@ -382,7 +382,7 @@ export default function AdminUsersPage() {
                     <p className="font-mono text-lg font-bold text-[var(--cream)]">
                       {selectedUser.following_count ?? "-"}
                     </p>
-                    <p className="font-mono text-[0.6rem] text-[var(--muted)] uppercase">
+                    <p className="font-mono text-xs text-[var(--muted)] uppercase">
                       Following
                     </p>
                   </div>
@@ -390,7 +390,7 @@ export default function AdminUsersPage() {
                     <p className="font-mono text-lg font-bold text-[var(--cream)]">
                       {selectedUser.rsvp_count ?? "-"}
                     </p>
-                    <p className="font-mono text-[0.6rem] text-[var(--muted)] uppercase">
+                    <p className="font-mono text-xs text-[var(--muted)] uppercase">
                       RSVPs
                     </p>
                   </div>
@@ -399,7 +399,7 @@ export default function AdminUsersPage() {
                 {/* Editable Fields */}
                 <div className="space-y-3">
                   <div>
-                    <label className="block font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider mb-1">
+                    <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-1">
                       Display Name
                     </label>
                     {editMode ? (
@@ -422,7 +422,7 @@ export default function AdminUsersPage() {
                   </div>
 
                   <div>
-                    <label className="block font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider mb-1">
+                    <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-1">
                       Bio
                     </label>
                     {editMode ? (
@@ -445,7 +445,7 @@ export default function AdminUsersPage() {
                   </div>
 
                   <div>
-                    <label className="block font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider mb-1">
+                    <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-1">
                       Location
                     </label>
                     {editMode ? (

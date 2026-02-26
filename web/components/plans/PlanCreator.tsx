@@ -76,7 +76,7 @@ export function PlanCreator({ onClose, onCreated }: PlanCreatorProps) {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider mb-1">
+              <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-1">
                 Date
               </label>
               <input
@@ -88,7 +88,7 @@ export function PlanCreator({ onClose, onCreated }: PlanCreatorProps) {
               />
             </div>
             <div>
-              <label className="block font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider mb-1">
+              <label className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-1">
                 Time (optional)
               </label>
               <input

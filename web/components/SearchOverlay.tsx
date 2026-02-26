@@ -698,9 +698,9 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
             <div className="flex items-center justify-between px-6 py-3 border-b border-[var(--twilight)] bg-[var(--night)]/60">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-semibold text-[var(--cream)]">Search</span>
-                <span className="text-[0.65rem] font-mono text-[var(--muted)]">Events, venues, organizers</span>
+                <span className="text-xs font-mono text-[var(--muted)]">Events, venues, organizers</span>
               </div>
-              <div className="flex items-center gap-2 text-[0.6rem] font-mono text-[var(--soft)]">
+              <div className="flex items-center gap-2 text-xs font-mono text-[var(--soft)]">
                 <kbd className="px-1.5 py-0.5 rounded bg-[var(--twilight)] text-[var(--cream)]">ESC</kbd>
                 <span>to close</span>
               </div>
@@ -968,7 +968,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                             const term = colonIdx >= 0 ? chip.slice(colonIdx + 1).trim() : chip;
                             if (term) setQuery(term);
                           }}
-                          className="px-2 py-1 rounded-full bg-[var(--twilight)] text-[0.65rem] text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--dusk)] transition-colors font-mono"
+                          className="px-2 py-1 rounded-full bg-[var(--twilight)] text-xs text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--dusk)] transition-colors font-mono"
                         >
                           {chip}
                         </button>
@@ -981,7 +981,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
               {/* NL Fallback Notice */}
               {!isLoading && !error && nlContext?.fallback && (
                 <div className="px-4 py-2 border-b border-[var(--twilight)]">
-                  <p className="text-[0.65rem] text-[var(--soft)] font-mono">
+                  <p className="text-xs text-[var(--soft)] font-mono">
                     Showing keyword results
                   </p>
                 </div>
@@ -1007,7 +1007,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                         setQuickResultsError(null);
                         setQuickResultsLoading(false);
                       }}
-                      className="text-[0.65rem] text-[var(--muted)] hover:text-[var(--cream)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)] rounded px-1"
+                      className="text-xs text-[var(--muted)] hover:text-[var(--cream)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)] rounded px-1"
                     >
                       Clear
                     </button>
@@ -1058,7 +1058,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                         </h3>
                         <button
                           onClick={handleClearRecent}
-                          className="text-[0.65rem] text-[var(--muted)] hover:text-[var(--cream)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)] rounded px-1"
+                          className="text-xs text-[var(--muted)] hover:text-[var(--cream)] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)] rounded px-1"
                         >
                           Clear
                         </button>

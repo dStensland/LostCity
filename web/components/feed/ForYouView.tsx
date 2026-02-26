@@ -445,7 +445,7 @@ function ForYouViewInner({ portalSlug }: ForYouViewProps) {
         {events.length > 0 && (
           <>
             <div className="h-px bg-gradient-to-r from-transparent via-[var(--twilight)] to-transparent my-5" />
-            <p className="font-mono text-[0.65rem] uppercase tracking-[0.14em] text-[var(--muted)] mb-3">
+            <p className="font-mono text-xs uppercase tracking-[0.14em] text-[var(--muted)] mb-3">
               More for you
             </p>
             {(() => {

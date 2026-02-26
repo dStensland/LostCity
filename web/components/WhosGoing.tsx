@@ -160,7 +160,7 @@ export default function WhosGoing({ eventId, className = "" }: WhosGoingProps) {
 
   return (
     <div className={`${className}`}>
-      <h2 className="font-mono text-[0.65rem] font-medium text-[var(--muted)] uppercase tracking-widest mb-4">
+      <h2 className="font-mono text-xs font-medium text-[var(--muted)] uppercase tracking-widest mb-4">
         Who&apos;s in
       </h2>
 
@@ -169,7 +169,7 @@ export default function WhosGoing({ eventId, className = "" }: WhosGoingProps) {
         {goingCount > 0 && (
           <span className="flex items-center gap-1.5 text-sm">
             <span
-              className="w-4 h-4 rounded-full bg-[var(--neon-green)] flex items-center justify-center text-[0.55rem] font-bold text-[var(--void)]"
+              className="w-4 h-4 rounded-full bg-[var(--neon-green)] flex items-center justify-center text-2xs font-bold text-[var(--void)]"
               aria-label="Going indicator"
             >
               G
@@ -181,7 +181,7 @@ export default function WhosGoing({ eventId, className = "" }: WhosGoingProps) {
         {interestedCount > 0 && (
           <span className="flex items-center gap-1.5 text-sm">
             <span
-              className="w-4 h-4 rounded-full bg-[var(--neon-amber)] flex items-center justify-center text-[0.55rem] font-bold text-[var(--void)]"
+              className="w-4 h-4 rounded-full bg-[var(--neon-amber)] flex items-center justify-center text-2xs font-bold text-[var(--void)]"
               aria-label="Interested indicator"
             >
               I
@@ -226,7 +226,7 @@ export default function WhosGoing({ eventId, className = "" }: WhosGoingProps) {
             </div>
             {/* Status indicator with letter for accessibility */}
             <span
-              className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-[var(--dusk)] flex items-center justify-center text-[0.5rem] font-bold ${
+              className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-[var(--dusk)] flex items-center justify-center text-2xs font-bold ${
                 attendee.status === "going"
                   ? "bg-[var(--neon-green)] text-[var(--void)]"
                   : "bg-[var(--neon-amber)] text-[var(--void)]"

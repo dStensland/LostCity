@@ -39,7 +39,7 @@ export default async function AdminLayout({
           <Link href="/" className="gradient-text text-xl font-bold tracking-tight">
             Lost City
           </Link>
-          <span className="px-2 py-1 bg-[var(--coral)]/20 text-[var(--coral)] border border-[var(--coral)]/40 font-mono text-[0.6rem] font-medium uppercase tracking-wider rounded">
+          <span className="px-2 py-1 bg-[var(--coral)]/20 text-[var(--coral)] border border-[var(--coral)]/40 font-mono text-xs font-medium uppercase tracking-wider rounded">
             Admin
           </span>
         </div>

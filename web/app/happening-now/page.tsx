@@ -360,7 +360,7 @@ export default function HappeningNowPage() {
               <select
                 value={selectedNeighborhood || ""}
                 onChange={(e) => setSelectedNeighborhood(e.target.value || null)}
-                className="px-2 py-1 rounded-md bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-[0.65rem] focus:outline-none focus:border-[var(--neon-amber)] transition-colors appearance-none cursor-pointer select-chevron-sm"
+                className="px-2 py-1 rounded-md bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-xs focus:outline-none focus:border-[var(--neon-amber)] transition-colors appearance-none cursor-pointer select-chevron-sm"
               >
                 <option value="">Nearby</option>
                 {NEIGHBORHOODS.map((hood) => (
@@ -369,7 +369,7 @@ export default function HappeningNowPage() {
               </select>
 
               {userLocation ? (
-                <span className="flex items-center gap-1 font-mono text-[0.6rem] text-[var(--neon-cyan)]">
+                <span className="flex items-center gap-1 font-mono text-2xs text-[var(--neon-cyan)]">
                   <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24">
                     <circle cx="12" cy="12" r="4" />
                   </svg>
@@ -378,7 +378,7 @@ export default function HappeningNowPage() {
               ) : (
                 <button
                   onClick={requestLocation}
-                  className="flex items-center gap-1 px-1.5 py-0.5 rounded font-mono text-[0.6rem] text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/50 transition-colors"
+                  className="flex items-center gap-1 px-1.5 py-0.5 rounded font-mono text-2xs text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/50 transition-colors"
                   title="Use GPS location"
                 >
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">

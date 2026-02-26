@@ -7,6 +7,7 @@ import CategoryIcon, { getCategoryLabel } from "../CategoryIcon";
 import CategoryPlaceholder from "../CategoryPlaceholder";
 import FeedSectionHeader from "../feed/FeedSectionHeader";
 import HighlightsTabs, { type HighlightsPeriod } from "./HighlightsTabs";
+import Dot from "@/components/ui/Dot";
 
 type HighlightEvent = {
   id: number;
@@ -220,7 +221,7 @@ function HighlightsLayout({ events, period, portalSlug, heroIndex, onHeroChange 
                 {/* Category pill + time badge row */}
                 <div className="flex items-center gap-2 mb-3 drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]">
                   {heroEvent.category && (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[0.6rem] font-mono font-semibold tracking-wider uppercase bg-[color-mix(in_srgb,var(--category-color)_25%,rgba(0,0,0,0.45))] border border-[color-mix(in_srgb,var(--category-color)_45%,transparent)] text-[var(--category-color)] shadow-[0_0_14px_color-mix(in_srgb,var(--category-color)_20%,transparent)] backdrop-blur-[2px]">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono font-semibold tracking-wider uppercase bg-[color-mix(in_srgb,var(--category-color)_25%,rgba(0,0,0,0.45))] border border-[color-mix(in_srgb,var(--category-color)_45%,transparent)] text-[var(--category-color)] shadow-[0_0_14px_color-mix(in_srgb,var(--category-color)_20%,transparent)] backdrop-blur-[2px]">
                       <CategoryIcon type={heroEvent.category} size={12} glow="none" />
                       {getCategoryLabel(heroEvent.category)}
                     </span>
@@ -229,7 +230,7 @@ function HighlightsLayout({ events, period, portalSlug, heroIndex, onHeroChange 
                     (() => {
                       const badge = getTimeBadge(heroEvent.start_time, heroEvent.is_all_day);
                       return (
-                        <span className={`px-2.5 py-1 rounded-full text-[0.6rem] font-mono font-semibold tracking-wider uppercase backdrop-blur-[2px] ${
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-mono font-semibold tracking-wider uppercase backdrop-blur-[2px] ${
                           badge.isNow
                             ? "bg-[var(--neon-red)]/30 text-[var(--neon-red)] border border-[var(--neon-red)]/45 shadow-[0_0_14px_rgba(255,69,69,0.35)]"
                             : "bg-white/10 text-white/90 border border-white/20"
@@ -239,42 +240,42 @@ function HighlightsLayout({ events, period, portalSlug, heroIndex, onHeroChange 
                       );
                     })()
                   ) : (
-                    <span className="px-2.5 py-1 rounded-full text-[0.6rem] font-mono font-semibold tracking-wider uppercase backdrop-blur-[2px] bg-white/10 text-white/90 border border-white/20">
+                    <span className="px-2.5 py-1 rounded-full text-xs font-mono font-semibold tracking-wider uppercase backdrop-blur-[2px] bg-white/10 text-white/90 border border-white/20">
                       {formatShortDate(heroEvent.start_date)}
                     </span>
                   )}
                 </div>
 
                 {/* Title — larger, tighter tracking, category-color on hover */}
-                <h3 className="text-[1.5rem] sm:text-[1.85rem] font-bold text-white mb-2.5 tracking-[-0.02em] leading-[1.15] group-hover:text-[var(--category-color)] transition-colors duration-300 line-clamp-2 drop-shadow-[0_2px_12px_rgba(0,0,0,0.8)]">
+                <h3 className="text-2xl sm:text-3xl font-bold text-white mb-2.5 tracking-[-0.02em] leading-[1.15] group-hover:text-[var(--category-color)] transition-colors duration-300 line-clamp-2 drop-shadow-[0_2px_12px_rgba(0,0,0,0.8)]">
                   {heroEvent.title}
                 </h3>
 
                 {/* Metadata row — cleaner mono treatment */}
-                <div className="flex items-center gap-2.5 text-[0.78rem] text-white/85 font-mono tracking-[0.01em] drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)] group-hover:text-[color-mix(in_srgb,var(--category-color)_70%,white)] transition-colors duration-300">
+                <div className="flex items-center gap-2.5 text-sm text-white/85 font-mono tracking-[0.01em] drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)] group-hover:text-[color-mix(in_srgb,var(--category-color)_70%,white)] transition-colors duration-300">
                   {heroEvent.start_time && (
                     <span className="font-semibold tabular-nums">
                       {formatTimeSplit(heroEvent.start_time, heroEvent.is_all_day).time}
-                      <span className="opacity-65 ml-0.5 text-[0.65rem] font-medium">
+                      <span className="opacity-65 ml-0.5 text-xs font-medium">
                         {formatTimeSplit(heroEvent.start_time, heroEvent.is_all_day).period}
                       </span>
                     </span>
                   )}
                   {heroEvent.venue && (
                     <>
-                      <span className="opacity-40">·</span>
+                      <Dot />
                       <span className="font-medium">{heroEvent.venue.name}</span>
                     </>
                   )}
                   {heroEvent.is_free && (
                     <>
-                      <span className="opacity-40">·</span>
+                      <Dot />
                       <span className="text-[var(--neon-green)] font-semibold">Free</span>
                     </>
                   )}
                   {heroEvent.rsvp_count && heroEvent.rsvp_count >= 2 && (
                     <>
-                      <span className="opacity-40">·</span>
+                      <Dot />
                       <span className="text-[var(--neon-cyan)] flex items-center gap-1 font-medium">
                         <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                           <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
@@ -361,7 +362,7 @@ function HighlightsLayout({ events, period, portalSlug, heroIndex, onHeroChange 
                   {/* Category pill — uses category color */}
                   {event.category && (
                     <div className="mb-2">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[0.55rem] font-mono font-semibold tracking-wide uppercase bg-[color-mix(in_srgb,var(--category-color)_22%,rgba(0,0,0,0.5))] border border-[color-mix(in_srgb,var(--category-color)_40%,transparent)] text-[var(--category-color)] shadow-[0_0_10px_color-mix(in_srgb,var(--category-color)_15%,transparent)] backdrop-blur-[2px]">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-2xs font-mono font-semibold tracking-wide uppercase bg-[color-mix(in_srgb,var(--category-color)_22%,rgba(0,0,0,0.5))] border border-[color-mix(in_srgb,var(--category-color)_40%,transparent)] text-[var(--category-color)] shadow-[0_0_10px_color-mix(in_srgb,var(--category-color)_15%,transparent)] backdrop-blur-[2px]">
                         <CategoryIcon type={event.category} size={10} glow="none" />
                         <span className="truncate max-w-[5.5rem]">{getCategoryLabel(event.category)}</span>
                       </span>
@@ -369,12 +370,12 @@ function HighlightsLayout({ events, period, portalSlug, heroIndex, onHeroChange 
                   )}
 
                   {/* Title — bolder, hover transitions to category color */}
-                  <h4 className="text-[0.88rem] sm:text-[0.92rem] text-white font-semibold leading-[1.3] line-clamp-2 tracking-[-0.01em] group-hover:text-[var(--category-color)] transition-colors duration-300 drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)]">
+                  <h4 className="text-sm sm:text-base text-white font-semibold leading-[1.3] line-clamp-2 tracking-[-0.01em] group-hover:text-[var(--category-color)] transition-colors duration-300 drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)]">
                     {event.title}
                   </h4>
 
                   {/* Time/date — mono, hover transitions to category color */}
-                  <span className="mt-1.5 font-mono text-[0.6rem] font-medium tracking-[0.04em] text-white/70 group-hover:text-[color-mix(in_srgb,var(--category-color)_80%,white)] transition-colors duration-300 drop-shadow-[0_1px_4px_rgba(0,0,0,0.7)]">
+                  <span className="mt-1.5 font-mono text-xs font-medium tracking-[0.04em] text-white/70 group-hover:text-[color-mix(in_srgb,var(--category-color)_80%,white)] transition-colors duration-300 drop-shadow-[0_1px_4px_rgba(0,0,0,0.7)]">
                     {showDateOnCards
                       ? formatShortDate(event.start_date)
                       : event.start_time

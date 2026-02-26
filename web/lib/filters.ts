@@ -48,13 +48,13 @@ export async function getFilteredEvents(
 
   // Apply category filter
   if (filters.categories && filters.categories.length > 0) {
-    query = query.in("category", filters.categories);
+    query = query.in("category_id", filters.categories);
   }
 
   // Apply category exclusion
   if (filters.exclude_categories && filters.exclude_categories.length > 0) {
     for (const cat of filters.exclude_categories) {
-      query = query.neq("category", cat);
+      query = query.neq("category_id", cat);
     }
   }
 
@@ -152,7 +152,7 @@ export async function getAllFilteredEvents(
 
   // Apply category filter
   if (filters.categories && filters.categories.length > 0) {
-    query = query.in("category", filters.categories);
+    query = query.in("category_id", filters.categories);
   }
 
   const { data, error } = await query;

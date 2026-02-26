@@ -14,8 +14,49 @@ import {
   ArrowsDownUp,
   ShareNetwork,
   MapPin,
+  MoonStars,
+  Heart,
 } from "@phosphor-icons/react/dist/ssr";
+import { formatWalkDistance } from "@/lib/itinerary-utils";
 import type { Itinerary, LocalItinerary } from "@/lib/itinerary-utils";
+
+function getPlaybookTemplates(portalDisplayName: string) {
+  return [
+    {
+      key: "tonight" as const,
+      title: `Tonight in ${portalDisplayName}`,
+      description: "Start with what's happening tonight",
+      icon: "moon" as const,
+      getDate: () => new Date().toISOString().slice(0, 10),
+    },
+    {
+      key: "weekend" as const,
+      title: "Weekend Explorer",
+      description: "Plan ahead for Saturday",
+      icon: "calendar" as const,
+      getDate: () => {
+        const d = new Date();
+        const daysUntilSat = (6 - d.getDay() + 7) % 7 || 7;
+        d.setDate(d.getDate() + daysUntilSat);
+        return d.toISOString().slice(0, 10);
+      },
+    },
+    {
+      key: "date" as const,
+      title: "Date Night",
+      description: "Dinner, drinks, and a show",
+      icon: "heart" as const,
+      getDate: () => new Date().toISOString().slice(0, 10),
+    },
+    {
+      key: "custom" as const,
+      title: "Blank Playbook",
+      description: "Start from scratch",
+      icon: "plus" as const,
+      getDate: () => new Date().toISOString().slice(0, 10),
+    },
+  ];
+}
 
 export default function PlaybookListPage() {
   const params = useParams();
@@ -33,6 +74,8 @@ export default function PlaybookListPage() {
 
   const [creating, setCreating] = useState(false);
   const [sortNewest, setSortNewest] = useState(true);
+  const portalDisplayName = portal?.name || "Atlanta";
+  const templates = useMemo(() => getPlaybookTemplates(portalDisplayName), [portalDisplayName]);
 
   const sortedItineraries = useMemo(() => {
     const sorted = [...itineraries].sort((a, b) => {
@@ -88,43 +131,68 @@ export default function PlaybookListPage() {
           </div>
         )}
 
-        {/* Empty state — glassmorphism card */}
+        {/* Empty state — template cards */}
         {!loading && itineraries.length === 0 && (
-          <div
-            className="text-center py-14 px-6 rounded-2xl border"
-            style={{
-              background: "rgba(255, 255, 255, 0.02)",
-              backdropFilter: "blur(24px) saturate(150%)",
-              borderColor: "rgba(255, 255, 255, 0.06)",
-              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04)",
-            }}
-          >
-            <div
-              className="w-16 h-16 mx-auto mb-5 rounded-2xl flex items-center justify-center"
-              style={{
-                background: "linear-gradient(135deg, rgba(255, 217, 61, 0.1), rgba(0, 212, 232, 0.08))",
-                border: "1px solid rgba(255, 217, 61, 0.15)",
-              }}
-            >
-              <MapPin size={28} weight="light" className="text-[var(--gold)]" />
-            </div>
-            <h2
-              className="text-lg font-semibold mb-1.5"
-              style={{ color: "var(--cream)", fontFamily: "var(--font-outfit)" }}
-            >
-              Plan your perfect night out
-            </h2>
-            <p className="text-sm text-white/35 mb-6 max-w-xs mx-auto leading-relaxed">
-              Build a playbook with smart suggestions, walk times, and shareable links
+          <div>
+            <p className="text-sm text-white/40 mb-4 text-center">
+              Choose a starting point for your playbook
             </p>
-            <button
-              onClick={handleCreate}
-              disabled={creating}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[var(--gold)]/90 text-[var(--void)] text-sm font-semibold hover:bg-[var(--gold)] transition-all disabled:opacity-50"
-            >
-              <Plus size={16} weight="bold" />
-              Create your first playbook
-            </button>
+            <div className="grid grid-cols-2 gap-3">
+              {templates.map((tpl) => {
+                const iconConfig = {
+                  moon: {
+                    icon: <MoonStars size={22} weight="light" className="text-[var(--gold)]" />,
+                    bg: "rgba(255, 217, 61, 0.08)",
+                    border: "rgba(255, 217, 61, 0.15)",
+                  },
+                  calendar: {
+                    icon: <CalendarBlank size={22} weight="light" className="text-[var(--neon-cyan,#00d4e8)]" />,
+                    bg: "rgba(0, 212, 232, 0.08)",
+                    border: "rgba(0, 212, 232, 0.15)",
+                  },
+                  heart: {
+                    icon: <Heart size={22} weight="light" className="text-pink-400" />,
+                    bg: "rgba(244, 114, 182, 0.08)",
+                    border: "rgba(244, 114, 182, 0.15)",
+                  },
+                  plus: {
+                    icon: <Plus size={22} weight="light" className="text-white/60" />,
+                    bg: "rgba(255, 255, 255, 0.06)",
+                    border: "rgba(255, 255, 255, 0.10)",
+                  },
+                } as const;
+                const cfg = iconConfig[tpl.icon];
+                return (
+                  <button
+                    key={tpl.key}
+                    onClick={async () => {
+                      setCreating(true);
+                      const id = await createItinerary(portalId, tpl.title, tpl.getDate());
+                      setCreating(false);
+                      if (id) router.push(`/${portalSlug}/playbook/${id}`);
+                    }}
+                    disabled={creating}
+                    className="group flex flex-col items-start gap-3 p-4 rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/10 transition-all text-left disabled:opacity-50"
+                  >
+                    <div
+                      className="w-10 h-10 rounded-lg flex items-center justify-center"
+                      style={{
+                        background: cfg.bg,
+                        border: `1px solid ${cfg.border}`,
+                      }}
+                    >
+                      {cfg.icon}
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-medium text-white group-hover:text-[var(--gold)] transition-colors">
+                        {tpl.title}
+                      </h3>
+                      <p className="text-[11px] text-white/30 mt-0.5">{tpl.description}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
 
@@ -151,6 +219,10 @@ export default function PlaybookListPage() {
                 const itemCount = isServer
                   ? ((itin as Itinerary).items?.length ?? 0)
                   : ((itin as LocalItinerary).items?.length ?? 0);
+                const items = isServer
+                  ? (itin as Itinerary).items || []
+                  : (itin as LocalItinerary).items || [];
+                const totalWalkMeters = items.reduce((s, i) => s + ((i as { walk_distance_meters?: number | null }).walk_distance_meters || 0), 0);
 
                 return (
                   <Link
@@ -177,7 +249,7 @@ export default function PlaybookListPage() {
                         {itin.date && (
                           <span className="flex items-center gap-1 text-[11px] text-white/30 font-mono">
                             <CalendarBlank size={11} weight="light" />
-                            {itin.date}
+                            {new Date(itin.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
                           </span>
                         )}
                         {itemCount > 0 && (
@@ -185,8 +257,13 @@ export default function PlaybookListPage() {
                             {itemCount} stop{itemCount !== 1 ? "s" : ""}
                           </span>
                         )}
+                        {totalWalkMeters > 0 && (
+                          <span className="text-[11px] text-white/30 font-mono">
+                            {formatWalkDistance(totalWalkMeters)}
+                          </span>
+                        )}
                         {!isServer && (
-                          <span className="text-[10px] text-white/20 px-1.5 py-0.5 rounded bg-white/5">
+                          <span className="text-[10px] text-amber-400/70 px-1.5 py-0.5 rounded bg-amber-400/10 border border-amber-400/15">
                             Local
                           </span>
                         )}

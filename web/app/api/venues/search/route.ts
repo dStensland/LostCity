@@ -45,7 +45,10 @@ export async function GET(request: NextRequest) {
       city,
       state,
       venue_type,
-      aliases
+      aliases,
+      lat,
+      lng,
+      image_url
     `
     )
     .or(
@@ -82,6 +85,9 @@ export async function GET(request: NextRequest) {
     state: string | null;
     venue_type: string | null;
     aliases: string[] | null;
+    lat: number | null;
+    lng: number | null;
+    image_url: string | null;
   };
 
   const venues = venuesData as VenueResult[] | null;
@@ -115,6 +121,9 @@ export async function GET(request: NextRequest) {
     city: venue.city,
     state: venue.state,
     venue_type: venue.venue_type,
+    lat: venue.lat,
+    lng: venue.lng,
+    image_url: venue.image_url,
     // Include matching alias if search matched on alias
     matchedAlias: venue.aliases?.find((alias: string) =>
       alias.toLowerCase().includes(normalizedQuery)

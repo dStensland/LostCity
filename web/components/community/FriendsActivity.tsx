@@ -290,14 +290,14 @@ function GroupedEventCard({ group }: { group: GroupedActivity }) {
       <div className="flex gap-2 sm:gap-3 relative z-10">
         {/* Time cell - like EventCard */}
         <div className="flex-shrink-0 w-12 sm:w-14 flex flex-col items-center justify-center py-1">
-          <span className="font-mono text-[0.55rem] font-medium leading-none text-[var(--muted)]">
+          <span className="font-mono text-2xs font-medium leading-none text-[var(--muted)]">
             {dayLabel}
           </span>
           <span className="font-mono text-sm font-medium text-[var(--soft)] leading-none tabular-nums mt-0.5">
             {dateLabel}
           </span>
           {timeStr && (
-            <span className="font-mono text-[0.55rem] text-[var(--muted)] mt-0.5">{timeStr}</span>
+            <span className="font-mono text-2xs text-[var(--muted)] mt-0.5">{timeStr}</span>
           )}
         </div>
 
@@ -374,7 +374,7 @@ function GroupedEventCard({ group }: { group: GroupedActivity }) {
                 {event.venue.name}
               </p>
             )}
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[var(--coral)]/15 text-[var(--coral)] font-mono text-[0.65rem] font-medium flex-shrink-0 group-hover:bg-[var(--coral)]/25 transition-colors">
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[var(--coral)]/15 text-[var(--coral)] font-mono text-xs font-medium flex-shrink-0 group-hover:bg-[var(--coral)]/25 transition-colors">
               Join them
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
@@ -430,14 +430,14 @@ function ActivityCard({ activity }: { activity: ActivityItem }) {
         <div className="flex flex-col sm:flex-row gap-3 relative z-10">
           {/* Time cell - like EventCard */}
           <div className="flex-shrink-0 w-14 flex flex-col items-center justify-center py-1">
-            <span className="font-mono text-[0.55rem] font-medium leading-none text-[var(--muted)]">
+            <span className="font-mono text-2xs font-medium leading-none text-[var(--muted)]">
               {dayLabel}
             </span>
             <span className="font-mono text-sm font-medium text-[var(--soft)] leading-none tabular-nums mt-0.5">
               {dateLabel}
             </span>
             {timeStr && (
-              <span className="font-mono text-[0.55rem] text-[var(--muted)] mt-0.5">{timeStr}</span>
+              <span className="font-mono text-2xs text-[var(--muted)] mt-0.5">{timeStr}</span>
             )}
           </div>
 
@@ -456,7 +456,7 @@ function ActivityCard({ activity }: { activity: ActivityItem }) {
                 </span>
                 {" "}{activity.activity_type === "save" ? "saved" : "is interested in"} this
               </span>
-              <span className="ml-auto font-mono text-[0.55rem] text-[var(--muted)] flex-shrink-0">
+              <span className="ml-auto font-mono text-2xs text-[var(--muted)] flex-shrink-0">
                 {timeAgo}
               </span>
             </div>
@@ -482,7 +482,7 @@ function ActivityCard({ activity }: { activity: ActivityItem }) {
                   {activity.event.venue.name}
                 </p>
               )}
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[var(--neon-magenta)]/15 text-[var(--neon-magenta)] font-mono text-[0.65rem] font-medium flex-shrink-0 group-hover:bg-[var(--neon-magenta)]/25 transition-colors">
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[var(--neon-magenta)]/15 text-[var(--neon-magenta)] font-mono text-xs font-medium flex-shrink-0 group-hover:bg-[var(--neon-magenta)]/25 transition-colors">
                 Check it out
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
@@ -526,7 +526,7 @@ function ActivityCard({ activity }: { activity: ActivityItem }) {
             </span>
             {" "}now follows
           </span>
-          <span className="font-mono text-[0.55rem] text-[var(--muted)] flex-shrink-0">
+          <span className="font-mono text-2xs text-[var(--muted)] flex-shrink-0">
             {timeAgo}
           </span>
         </div>
@@ -568,7 +568,7 @@ function ActivityCard({ activity }: { activity: ActivityItem }) {
             </span>
             {" "}now follows
           </span>
-          <span className="font-mono text-[0.55rem] text-[var(--muted)] flex-shrink-0">
+          <span className="font-mono text-2xs text-[var(--muted)] flex-shrink-0">
             {timeAgo}
           </span>
         </div>

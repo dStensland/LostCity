@@ -75,12 +75,12 @@ export async function GET(request: NextRequest) {
     // Query activity dimensions with same filters as search
     let activityQuery = portalClient
       .from("events")
-      .select("category, genres")
+      .select("category_id, genres")
       .gte("start_date", today)
       .lte("start_date", endDate)
       .is("canonical_event_id", null)
       .or(timeFilter)
-      .not("category", "is", null)
+      .not("category_id", "is", null)
       .or("is_sensitive.eq.false,is_sensitive.is.null");
 
     activityQuery = applyFederatedPortalScopeToQuery(activityQuery, {
@@ -108,19 +108,19 @@ export async function GET(request: NextRequest) {
     // Keys are normalized to "category.genre" format for backwards compat.
     if (activityRows) {
       const typedActivityRows = activityRows as Array<{
-        category: string | null;
+        category_id: string | null;
         genres: string[] | null;
       }>;
       for (const row of typedActivityRows) {
-        if (row.category) {
-          counts[row.category] = (counts[row.category] || 0) + 1;
+        if (row.category_id) {
+          counts[row.category_id] = (counts[row.category_id] || 0) + 1;
 
           const rowGenres = Array.isArray(row.genres)
             ? row.genres.filter((genre): genre is string => typeof genre === "string" && genre.length > 0)
             : [];
 
           for (const genre of rowGenres) {
-            const subactivityKey = `${row.category}.${genre}`;
+            const subactivityKey = `${row.category_id}.${genre}`;
             subcategory_counts[subactivityKey] = (subcategory_counts[subactivityKey] || 0) + 1;
           }
         }

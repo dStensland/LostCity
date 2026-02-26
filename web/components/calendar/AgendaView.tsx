@@ -145,7 +145,7 @@ export default function AgendaView({
                   {dateLabel}
                 </span>
                 {isDateToday && (
-                  <span className="px-2 py-0.5 rounded-full bg-[var(--neon-magenta)]/20 text-[var(--neon-magenta)] font-mono text-[0.6rem] font-medium">
+                  <span className="px-2 py-0.5 rounded-full bg-[var(--neon-magenta)]/20 text-[var(--neon-magenta)] font-mono text-xs font-medium">
                     NOW
                   </span>
                 )}
@@ -203,7 +203,7 @@ export default function AgendaView({
                       {/* RSVP badge */}
                       <span
                         className={`
-                          absolute top-1 left-1 w-5 h-5 rounded-full flex items-center justify-center text-[0.5rem] font-bold
+                          absolute top-1 left-1 w-5 h-5 rounded-full flex items-center justify-center text-2xs font-bold
                           ${event.rsvp_status === "going"
                             ? "bg-[var(--coral)] text-[var(--void)]"
                             : "bg-[var(--gold)] text-[var(--void)]"
@@ -220,12 +220,12 @@ export default function AgendaView({
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-mono text-xs text-[var(--coral)]">
                           {time}
-                          {period && <span className="text-[0.6rem] ml-0.5 opacity-60">{period}</span>}
+                          {period && <span className="text-xs ml-0.5 opacity-60">{period}</span>}
                         </span>
                         {event.category && (
                           <>
                             <span className="text-[var(--muted)]">·</span>
-                            <span className="font-mono text-[0.65rem] text-[var(--muted)] uppercase">
+                            <span className="font-mono text-xs text-[var(--muted)] uppercase">
                               {event.category}
                             </span>
                           </>
@@ -252,7 +252,7 @@ export default function AgendaView({
                         {price && (
                           <span
                             className={`
-                              px-2 py-0.5 rounded-full font-mono text-[0.6rem] font-medium
+                              px-2 py-0.5 rounded-full font-mono text-xs font-medium
                               ${priceResult.isFree
                                 ? "bg-[var(--neon-green)]/20 text-[var(--neon-green)]"
                                 : "bg-[var(--twilight-purple)] text-[var(--cream)]"
@@ -281,14 +281,14 @@ export default function AgendaView({
                                       className="w-full h-full object-cover"
                                     />
                                   ) : (
-                                    <span className="w-full h-full flex items-center justify-center text-[0.4rem] text-[var(--muted)]">
+                                    <span className="w-full h-full flex items-center justify-center text-2xs text-[var(--muted)]">
                                       {(friend.display_name || friend.username)[0].toUpperCase()}
                                     </span>
                                   )}
                                 </div>
                               ))}
                             </div>
-                            <span className="font-mono text-[0.6rem] text-[var(--muted)]">
+                            <span className="font-mono text-xs text-[var(--muted)]">
                               {friendsGoing.length === 1
                                 ? `${friendsGoing[0].friend.display_name || friendsGoing[0].friend.username} going`
                                 : `${friendsGoing.length} friends going`}
@@ -358,7 +358,7 @@ export default function AgendaView({
                       {/* Event details */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="font-mono text-[0.65rem] text-[var(--muted)]">
+                          <span className="font-mono text-xs text-[var(--muted)]">
                             {friendEvent.friend.display_name || friendEvent.friend.username}
                             {otherFriends.length > 0 && ` +${otherFriends.length}`}
                             {" "}
@@ -369,7 +369,7 @@ export default function AgendaView({
                         <div className="flex items-center gap-2 mb-1">
                           <span className="font-mono text-xs text-[var(--muted)]">
                             {time}
-                            {period && <span className="text-[0.6rem] ml-0.5 opacity-60">{period}</span>}
+                            {period && <span className="text-xs ml-0.5 opacity-60">{period}</span>}
                           </span>
                         </div>
 

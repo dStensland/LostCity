@@ -6,6 +6,7 @@ import { formatTimeSplit } from "@/lib/formats";
 import CategoryIcon, { getCategoryLabel } from "./CategoryIcon";
 import CategoryPlaceholder from "./CategoryPlaceholder";
 import FeedSectionHeader from "./feed/FeedSectionHeader";
+import Dot from "@/components/ui/Dot";
 
 type TonightEvent = {
   id: number;
@@ -229,7 +230,7 @@ export default function TonightsPicks({ portalSlug }: { portalSlug?: string } = 
                   {(() => {
                     const badge = getTimeBadge(heroEvent.start_time, heroEvent.is_all_day);
                     return (
-                      <span className={`px-2 py-0.5 rounded-full text-[0.65rem] font-mono font-medium backdrop-blur-sm ${
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-mono font-medium backdrop-blur-sm ${
                         badge.isNow
                           ? "bg-[var(--neon-red)]/30 text-[var(--neon-red)]"
                           : "bg-[var(--neon-magenta)]/30 text-[var(--neon-magenta)]"
@@ -241,7 +242,7 @@ export default function TonightsPicks({ portalSlug }: { portalSlug?: string } = 
                   {heroEvent.category && (
                     <span
                       data-category={heroCategory}
-                      className="px-2 py-0.5 rounded-full text-[0.65rem] font-mono font-medium tonights-category-badge"
+                      className="px-2 py-0.5 rounded-full text-xs font-mono font-medium tonights-category-badge"
                     >
                       <CategoryIcon type={heroEvent.category} size={10} className="inline mr-1" glow="none" />
                       {heroEvent.category}
@@ -264,19 +265,19 @@ export default function TonightsPicks({ portalSlug }: { portalSlug?: string } = 
                   )}
                   {heroEvent.venue && (
                     <>
-                      <span className="opacity-40">·</span>
+                      <Dot />
                       <span>{heroEvent.venue.name}</span>
                     </>
                   )}
                   {heroEvent.is_free && (
                     <>
-                      <span className="opacity-40">·</span>
+                      <Dot />
                       <span className="text-[var(--neon-green)]">Free</span>
                     </>
                   )}
                   {heroEvent.rsvp_count && heroEvent.rsvp_count >= 2 && (
                     <>
-                      <span className="opacity-40">·</span>
+                      <Dot />
                       <span className="text-[var(--neon-cyan)] flex items-center gap-1">
                         <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                           <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
@@ -348,12 +349,12 @@ export default function TonightsPicks({ portalSlug }: { portalSlug?: string } = 
                   <div className="absolute inset-0 ring-1 ring-white/10 rounded-xl pointer-events-none" />
                   <div className="absolute inset-x-0 bottom-0 h-3/4 bg-gradient-to-t from-black/80 via-black/40 to-transparent pointer-events-none rounded-b-xl" />
                   <div className="relative p-3 pt-20">
-                    <div className="flex items-center justify-between text-[0.55rem] text-white/70 font-mono mb-1">
+                    <div className="flex items-center justify-between text-2xs text-white/70 font-mono mb-1">
                       <span>
                         {event.start_time ? formatTimeSplit(event.start_time, event.is_all_day).time : "Today"}
                       </span>
                       {event.category && (
-                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-black/60 border border-white/10 text-white/80 text-[0.5rem] max-w-[6.5rem]">
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-black/60 border border-white/10 text-white/80 text-2xs max-w-[6.5rem]">
                           <CategoryIcon type={event.category} size={10} glow="none" className="opacity-90" />
                           <span className="truncate">{getCategoryLabel(event.category)}</span>
                         </span>

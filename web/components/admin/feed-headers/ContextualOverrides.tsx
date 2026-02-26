@@ -100,7 +100,7 @@ export default function ContextualOverrides({
         </h3>
         <button
           onClick={() => setCreating(!creating)}
-          className="font-mono text-[0.625rem] text-[var(--coral)] hover:opacity-80"
+          className="font-mono text-2xs text-[var(--coral)] hover:opacity-80"
         >
           {creating ? "Cancel" : "+ New Override"}
         </button>
@@ -116,7 +116,7 @@ export default function ContextualOverrides({
                 setNewType(e.target.value as NewOverrideType);
                 setNewValue("");
               }}
-              className="px-2 py-1 bg-[var(--void)] border border-[var(--twilight)] rounded font-mono text-[0.625rem] text-[var(--cream)]"
+              className="px-2 py-1 bg-[var(--void)] border border-[var(--twilight)] rounded font-mono text-2xs text-[var(--cream)]"
             >
               <option value="weather">Weather</option>
               <option value="holiday">Holiday</option>
@@ -127,7 +127,7 @@ export default function ContextualOverrides({
               <select
                 value={newValue}
                 onChange={(e) => setNewValue(e.target.value)}
-                className="flex-1 px-2 py-1 bg-[var(--void)] border border-[var(--twilight)] rounded font-mono text-[0.625rem] text-[var(--cream)]"
+                className="flex-1 px-2 py-1 bg-[var(--void)] border border-[var(--twilight)] rounded font-mono text-2xs text-[var(--cream)]"
               >
                 <option value="">Select condition...</option>
                 {WEATHER_SIGNALS.map((w) => (
@@ -142,7 +142,7 @@ export default function ContextualOverrides({
               <select
                 value={newValue}
                 onChange={(e) => setNewValue(e.target.value)}
-                className="flex-1 px-2 py-1 bg-[var(--void)] border border-[var(--twilight)] rounded font-mono text-[0.625rem] text-[var(--cream)]"
+                className="flex-1 px-2 py-1 bg-[var(--void)] border border-[var(--twilight)] rounded font-mono text-2xs text-[var(--cream)]"
               >
                 <option value="">Select holiday...</option>
                 {HOLIDAYS.map((h) => (
@@ -154,7 +154,7 @@ export default function ContextualOverrides({
             )}
 
             {newType === "festival" && (
-              <span className="font-mono text-[0.625rem] text-[var(--muted)] flex-1">
+              <span className="font-mono text-2xs text-[var(--muted)] flex-1">
                 Triggers when any festival is active
               </span>
             )}
@@ -164,11 +164,11 @@ export default function ContextualOverrides({
             <button
               onClick={handleCreate}
               disabled={saving || (!newValue && newType !== "festival")}
-              className="px-3 py-1.5 bg-[var(--coral)] text-[var(--void)] font-mono text-[0.625rem] rounded hover:opacity-90 disabled:opacity-50"
+              className="px-3 py-1.5 bg-[var(--coral)] text-[var(--void)] font-mono text-2xs rounded hover:opacity-90 disabled:opacity-50"
             >
               {saving ? "Creating..." : "Create Override"}
             </button>
-            <span className="font-mono text-[0.5rem] text-[var(--muted)]">
+            <span className="font-mono text-2xs text-[var(--muted)]">
               Priority 5 (beats base at 10)
             </span>
           </div>
@@ -177,7 +177,7 @@ export default function ContextualOverrides({
 
       {/* Override cards by type */}
       {!hasOverrides && !creating && (
-        <p className="font-mono text-[0.625rem] text-[var(--muted)] italic py-2">
+        <p className="font-mono text-2xs text-[var(--muted)] italic py-2">
           No overrides for this cell. Overrides let you customize the header for
           weather, holidays, or festivals.
         </p>
@@ -185,7 +185,7 @@ export default function ContextualOverrides({
 
       {weatherOverrides.length > 0 && (
         <div className="space-y-1.5">
-          <span className="font-mono text-[0.5625rem] text-blue-300/70 uppercase tracking-wider">
+          <span className="font-mono text-2xs text-blue-300/70 uppercase tracking-wider">
             Weather
           </span>
           {weatherOverrides.map((h) => (
@@ -202,7 +202,7 @@ export default function ContextualOverrides({
 
       {holidayOverrides.length > 0 && (
         <div className="space-y-1.5">
-          <span className="font-mono text-[0.5625rem] text-purple-300/70 uppercase tracking-wider">
+          <span className="font-mono text-2xs text-purple-300/70 uppercase tracking-wider">
             Holidays
           </span>
           {holidayOverrides.map((h) => (
@@ -219,7 +219,7 @@ export default function ContextualOverrides({
 
       {festivalOverrides.length > 0 && (
         <div className="space-y-1.5">
-          <span className="font-mono text-[0.5625rem] text-amber-300/70 uppercase tracking-wider">
+          <span className="font-mono text-2xs text-amber-300/70 uppercase tracking-wider">
             Festivals
           </span>
           {festivalOverrides.map((h) => (

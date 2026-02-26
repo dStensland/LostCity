@@ -7,12 +7,12 @@ from __future__ import annotations
 
 import re
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_venue, insert_event, find_event_by_hash, find_existing_event_for_insert, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, extract_event_links, find_event_url, enrich_event_record
 
@@ -249,11 +249,130 @@ def crawl(source: dict) -> tuple[int, int, int]:
             browser.close()
 
         logger.info(
-            f"Laughing Skull crawl complete: {events_found} found, {events_new} new"
+            f"Laughing Skull website: {events_found} found, {events_new} new"
         )
 
     except Exception as e:
-        logger.error(f"Failed to crawl Laughing Skull: {e}")
-        raise
+        logger.error(f"Failed to crawl Laughing Skull website: {e}")
 
+    try:
+        venue_id = get_or_create_venue(VENUE_DATA)
+        f, n, u = _generate_recurring_events(source_id, venue_id)
+        events_found += f
+        events_new += n
+        events_updated += u
+    except Exception as e:
+        logger.error(f"Failed to generate Laughing Skull recurring events: {e}")
+
+    return events_found, events_new, events_updated
+
+
+WEEKS_AHEAD = 6
+DAY_CODES = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
+DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+RECURRING_SCHEDULE = [
+    {"day": 0, "title": "Open Mic Comedy Night", "start_time": "20:00",
+     "description": "Monday open mic at Laughing Skull Lounge. ~20 comics performing 4 minutes each. $15.",
+     "category": "comedy", "subcategory": "comedy.standup",
+     "tags": ["open-mic", "comedy", "standup", "weekly"], "price_min": 15, "price_max": 15},
+    {"day": 1, "title": "Open Mic Comedy Night", "start_time": "20:00",
+     "description": "Tuesday open mic at Laughing Skull Lounge. ~20 comics performing 4 minutes each. $15.",
+     "category": "comedy", "subcategory": "comedy.standup",
+     "tags": ["open-mic", "comedy", "standup", "weekly"], "price_min": 15, "price_max": 15},
+    {"day": 2, "title": "Open Mic Comedy Night", "start_time": "20:00",
+     "description": "Wednesday open mic at Laughing Skull Lounge. ~20 comics performing 4 minutes each. $15.",
+     "category": "comedy", "subcategory": "comedy.standup",
+     "tags": ["open-mic", "comedy", "standup", "weekly"], "price_min": 15, "price_max": 15},
+    {"day": 3, "title": "Best of Atlanta Comedy Showcase", "start_time": "20:00",
+     "description": "Thursday comedy showcase at Laughing Skull. 10 professional comics, 10 minutes each.",
+     "category": "comedy", "subcategory": "comedy.standup",
+     "tags": ["comedy", "standup", "showcase", "weekly"], "price_min": 20, "price_max": 25},
+    {"day": 4, "title": "Best of Atlanta Comedy Showcase", "start_time": "20:00",
+     "description": "Friday night comedy at Laughing Skull. Two shows: 8pm and 10:30pm.",
+     "category": "comedy", "subcategory": "comedy.standup",
+     "tags": ["comedy", "standup", "showcase", "weekly", "late-night"], "price_min": 25, "price_max": 35},
+    {"day": 5, "title": "Best of Atlanta Comedy Showcase", "start_time": "17:30",
+     "description": "Saturday comedy at Laughing Skull. Three shows: 5:30pm, 8pm, and 10:30pm.",
+     "category": "comedy", "subcategory": "comedy.standup",
+     "tags": ["comedy", "standup", "showcase", "weekly", "late-night"], "price_min": 30, "price_max": 55},
+    {"day": 6, "title": "Best of Atlanta Comedy Showcase", "start_time": "19:30",
+     "description": "Sunday evening comedy showcase at Laughing Skull Lounge. 7:30pm showtime.",
+     "category": "comedy", "subcategory": "comedy.standup",
+     "tags": ["comedy", "standup", "showcase", "weekly"], "price_min": 20, "price_max": 25},
+]
+
+
+def _get_next_weekday(start_date: datetime, weekday: int) -> datetime:
+    days_ahead = weekday - start_date.weekday()
+    if days_ahead < 0:
+        days_ahead += 7
+    return start_date + timedelta(days=days_ahead)
+
+
+def _generate_recurring_events(source_id: int, venue_id: int) -> tuple[int, int, int]:
+    events_found = events_new = events_updated = 0
+    today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+    for template in RECURRING_SCHEDULE:
+        next_date = _get_next_weekday(today, template["day"])
+        day_code = DAY_CODES[template["day"]]
+        day_name = DAY_NAMES[template["day"]]
+
+        series_hint = {
+            "series_type": "recurring_show",
+            "series_title": template["title"],
+            "frequency": "weekly",
+            "day_of_week": day_name,
+            "description": template["description"],
+        }
+
+        for week in range(WEEKS_AHEAD):
+            event_date = next_date + timedelta(weeks=week)
+            start_date = event_date.strftime("%Y-%m-%d")
+            events_found += 1
+
+            content_hash = generate_content_hash(
+                template["title"], VENUE_DATA["name"], start_date
+            )
+
+            event_record = {
+                "source_id": source_id,
+                "venue_id": venue_id,
+                "title": template["title"],
+                "description": template["description"],
+                "start_date": start_date,
+                "start_time": template["start_time"],
+                "end_date": None,
+                "end_time": None,
+                "is_all_day": False,
+                "category": template["category"],
+                "subcategory": template.get("subcategory"),
+                "tags": template["tags"],
+                "is_free": False,
+                "price_min": template.get("price_min"),
+                "price_max": template.get("price_max"),
+                "source_url": BASE_URL,
+                "ticket_url": None,
+                "image_url": None,
+                "raw_text": f"{template['title']} at Laughing Skull - {start_date}",
+                "extraction_confidence": 0.90,
+                "is_recurring": True,
+                "recurrence_rule": f"FREQ=WEEKLY;BYDAY={day_code}",
+                "content_hash": content_hash,
+            }
+
+            existing = find_existing_event_for_insert(event_record)
+            if existing:
+                smart_update_existing_event(existing, event_record)
+                events_updated += 1
+                continue
+
+            try:
+                insert_event(event_record, series_hint=series_hint)
+                events_new += 1
+            except Exception as exc:
+                logger.error(f"Failed to insert {template['title']} on {start_date}: {exc}")
+
+    logger.info(f"Laughing Skull recurring: {events_found} found, {events_new} new, {events_updated} updated")
     return events_found, events_new, events_updated

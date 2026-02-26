@@ -93,12 +93,16 @@ export default function DetailViewRouter({ portalSlug, children }: DetailViewRou
     navigateClose();
   }, [navigateClose]);
 
-  // If we have a detail param, show the detail view with animated wrapper
+  // If we have a detail param, show the detail view with animated wrapper.
+  // Each wrapper gets a unique key so React unmounts/remounts when switching
+  // between detail types (e.g. event → venue → back to event). Without keys,
+  // React reuses the AnimatedDetailWrapper instance and its stale closing state
+  // causes the content to stay invisible after the exit animation.
   if (eventId) {
     const id = parseInt(eventId, 10);
     if (!isNaN(id)) {
       return (
-        <AnimatedDetailWrapper onNavigateClose={navigateClose}>
+        <AnimatedDetailWrapper key={`event-${id}`} onNavigateClose={navigateClose}>
           <EventDetailView
             eventId={id}
             portalSlug={portalSlug}
@@ -111,7 +115,7 @@ export default function DetailViewRouter({ portalSlug, children }: DetailViewRou
 
   if (spotSlug) {
     return (
-      <AnimatedDetailWrapper onNavigateClose={navigateClose}>
+      <AnimatedDetailWrapper key={`spot-${spotSlug}`} onNavigateClose={navigateClose}>
         <VenueDetailView
           slug={spotSlug}
           portalSlug={portalSlug}
@@ -123,7 +127,7 @@ export default function DetailViewRouter({ portalSlug, children }: DetailViewRou
 
   if (seriesSlug) {
     return (
-      <AnimatedDetailWrapper onNavigateClose={navigateClose}>
+      <AnimatedDetailWrapper key={`series-${seriesSlug}`} onNavigateClose={navigateClose}>
         <SeriesDetailView
           slug={seriesSlug}
           portalSlug={portalSlug}
@@ -135,7 +139,7 @@ export default function DetailViewRouter({ portalSlug, children }: DetailViewRou
 
   if (festivalSlug) {
     return (
-      <AnimatedDetailWrapper onNavigateClose={navigateClose}>
+      <AnimatedDetailWrapper key={`festival-${festivalSlug}`} onNavigateClose={navigateClose}>
         <FestivalDetailView
           slug={festivalSlug}
           portalSlug={portalSlug}
@@ -147,7 +151,7 @@ export default function DetailViewRouter({ portalSlug, children }: DetailViewRou
 
   if (orgSlug) {
     return (
-      <AnimatedDetailWrapper onNavigateClose={navigateClose}>
+      <AnimatedDetailWrapper key={`org-${orgSlug}`} onNavigateClose={navigateClose}>
         <OrgDetailView
           slug={orgSlug}
           portalSlug={portalSlug}

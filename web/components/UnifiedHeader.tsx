@@ -233,7 +233,7 @@ function UnifiedHeaderInner({
                 </Link>
                 {/* Only show "powered by" if attribution is not hidden (Enterprise feature) */}
                 {!branding?.hide_attribution && (
-                  <div className="hidden lg:flex items-center gap-1 text-[0.6rem] text-[var(--muted)] font-mono">
+                  <div className="hidden lg:flex items-center gap-1 text-xs text-[var(--muted)] font-mono">
                     <span>powered by</span>
                     <Link href={`/${DEFAULT_PORTAL_SLUG}`} className="text-[var(--coral)] hover:opacity-80 transition-opacity">
                       Lost City
@@ -301,7 +301,7 @@ function UnifiedHeaderInner({
 
               {mobileMenuOpen && (
                 <div className="absolute right-0 top-full mt-2 w-56 py-2 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg shadow-xl z-[200]">
-                  <div className="px-3 py-1.5 text-[0.65rem] font-mono text-[var(--muted)] uppercase tracking-wider">
+                  <div className="px-3 py-1.5 text-xs font-mono text-[var(--muted)] uppercase tracking-wider">
                     Quick Links
                   </div>
                   <Link
@@ -338,7 +338,7 @@ function UnifiedHeaderInner({
 
                   <div className="my-2 border-t border-[var(--twilight)]" />
 
-                  <div className="px-3 py-1.5 text-[0.65rem] font-mono text-[var(--muted)] uppercase tracking-wider">
+                  <div className="px-3 py-1.5 text-xs font-mono text-[var(--muted)] uppercase tracking-wider">
                     Settings
                   </div>
                   <Link

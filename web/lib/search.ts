@@ -1,7 +1,6 @@
 import { supabase, type Event } from "./supabase";
 import {
   CATEGORIES,
-  SUBCATEGORIES,
   DATE_FILTERS,
   PRICE_FILTERS,
   TAG_GROUPS,
@@ -729,9 +728,10 @@ export async function getFilteredEventsWithSearch(
   let events = data as EventWithLocation[];
 
   // Compute is_live for each event based on current time
+  // Also alias category_id → category for downstream component compatibility
   events = events.map((event) => {
     const isLive = computeIsLive(event, now, today);
-    return isLive ? { ...event, is_live: true } : event;
+    return { ...event, ...(isLive ? { is_live: true } : {}), category: (event as any).category_id ?? (event as any).category ?? null };
   });
 
   // Sort by relevance when search is active
@@ -866,9 +866,10 @@ export async function getFilteredEventsWithCursor(
   }
 
   // Compute is_live for each event
+  // Also alias category_id → category for downstream component compatibility
   events = events.map((event) => {
     const isLive = computeIsLive(event, now, today);
-    return isLive ? { ...event, is_live: true } : event;
+    return { ...event, ...(isLive ? { is_live: true } : {}), category: (event as any).category_id ?? (event as any).category ?? null };
   });
 
   // Sort by relevance when search is active
@@ -934,7 +935,6 @@ export async function getEventsForMap(
       start_time,
       end_time,
       is_all_day,
-      category,
       category_id,
       is_free,
       is_live,
@@ -1001,7 +1001,7 @@ export async function getEventsForMap(
 
   const events = (data as EventWithLocation[]).map((event) => {
     const isLive = computeIsLive(event, now, currentDate);
-    return isLive ? { ...event, is_live: true } : event;
+    return { ...event, ...(isLive ? { is_live: true } : {}), category: (event as any).category_id ?? (event as any).category ?? null };
   });
 
   return events;
@@ -1027,35 +1027,43 @@ export interface AvailableFilter {
 
 export interface AvailableFilters {
   categories: { value: string; label: string; count: number }[];
-  subcategories: Record<string, { value: string; label: string; count: number }[]>;
+  genres: Record<string, { value: string; label: string; count: number; isFormat?: boolean }[]>;
   tags: { value: string; label: string; count: number }[];
+  vibes: { value: string; label: string; count: number }[];
+  occasions: { value: string; label: string; tab: string; filterOverrides: Record<string, unknown> }[];
   lastUpdated: string | null;
 }
 
 // Fetch available filters that have active events
 export async function getAvailableFilters(): Promise<AvailableFilters> {
-  const { data, error } = await supabase
-    .from("available_filters")
-    .select("*")
-    .order("event_count", { ascending: false });
+  // Fetch available_filters and occasions from taxonomy_definitions in parallel
+  const [filtersResult, occasionsResult] = await Promise.all([
+    supabase
+      .from("available_filters")
+      .select("*")
+      .order("event_count", { ascending: false }),
+    supabase
+      .from("taxonomy_definitions")
+      .select("id, label, taxonomy_group, filter_overrides")
+      .eq("taxonomy_type", "occasion")
+      .eq("is_active", true)
+      .order("display_order", { ascending: true }),
+  ]);
 
-  if (error || !data) {
-    logger.error("Failed to fetch available filters", error);
+  if (filtersResult.error || !filtersResult.data) {
+    logger.error("Failed to fetch available filters", filtersResult.error);
     // Fall back to static filters
     return {
       categories: CATEGORIES.map((c) => ({ ...c, count: 0 })),
-      subcategories: Object.fromEntries(
-        Object.entries(SUBCATEGORIES).map(([k, v]) => [
-          k,
-          v.map((s) => ({ ...s, count: 0 })),
-        ])
-      ),
+      genres: {},
       tags: ALL_TAGS.map((t) => ({ ...t, count: 0 })),
+      vibes: [],
+      occasions: [],
       lastUpdated: null,
     };
   }
 
-  const filters = data as AvailableFilter[];
+  const filters = filtersResult.data as AvailableFilter[];
   const lastUpdated = filters[0]?.updated_at || null;
 
   // Group by type
@@ -1068,17 +1076,18 @@ export async function getAvailableFilters(): Promise<AvailableFilters> {
       count: f.event_count,
     }));
 
-  const subcategoryFilters = filters.filter((f) => f.filter_type === "subcategory");
-  const subcategories: Record<string, { value: string; label: string; count: number }[]> = {};
-  for (const sub of subcategoryFilters) {
-    const parent = sub.parent_value || "other";
-    if (!subcategories[parent]) {
-      subcategories[parent] = [];
+  // Genres grouped by parent_value (category)
+  const genreFilters = filters.filter((f) => f.filter_type === "genre");
+  const genres: Record<string, { value: string; label: string; count: number; isFormat?: boolean }[]> = {};
+  for (const g of genreFilters) {
+    const parent = g.parent_value || "other";
+    if (!genres[parent]) {
+      genres[parent] = [];
     }
-    subcategories[parent].push({
-      value: sub.filter_value,
-      label: sub.display_label,
-      count: sub.event_count,
+    genres[parent].push({
+      value: g.filter_value,
+      label: g.display_label,
+      count: g.event_count,
     });
   }
 
@@ -1090,10 +1099,28 @@ export async function getAvailableFilters(): Promise<AvailableFilters> {
       count: f.event_count,
     }));
 
+  const vibes = filters
+    .filter((f) => f.filter_type === "vibe")
+    .map((f) => ({
+      value: f.filter_value,
+      label: f.display_label,
+      count: f.event_count,
+    }));
+
+  // Occasions from taxonomy_definitions
+  const occasions = (occasionsResult.data || []).map((row: { id: string; label: string; taxonomy_group: string; filter_overrides: Record<string, unknown> | null }) => ({
+    value: row.id,
+    label: row.label,
+    tab: row.taxonomy_group,
+    filterOverrides: row.filter_overrides || {},
+  }));
+
   return {
     categories,
-    subcategories,
+    genres,
     tags,
+    vibes,
+    occasions,
     lastUpdated,
   };
 }

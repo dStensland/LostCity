@@ -195,7 +195,7 @@ export default async function FilmProgramsPage({ params }: Props) {
         <FilmPortalNav portalSlug={portal.slug} />
 
         <header className="space-y-2">
-          <p className="text-[0.64rem] uppercase tracking-[0.18em] text-[#8fa2c4]">Atlanta Film</p>
+          <p className="text-xs uppercase tracking-[0.18em] text-[#8fa2c4]">Atlanta Film</p>
           <h1 className="font-[var(--font-film-editorial)] text-4xl text-[#f7f7fb]">Curated Programs</h1>
           <p className="max-w-3xl text-sm text-[#b8c7e3]">
             Repertory runs, festival programs, and recurring film series aggregated from across Atlanta screenings.
@@ -217,7 +217,7 @@ export default async function FilmProgramsPage({ params }: Props) {
                       sizes="(max-width: 1280px) 50vw, 32vw"
                     />
                     <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,11,19,0.08)_0%,rgba(7,11,19,0.86)_100%)]" />
-                    <div className="absolute left-3 top-3 rounded-full border border-[#8ea9ec66] bg-[#8ea9ec1f] px-2 py-1 text-[0.58rem] uppercase tracking-[0.14em] text-[#d9e5ff]">
+                    <div className="absolute left-3 top-3 rounded-full border border-[#8ea9ec66] bg-[#8ea9ec1f] px-2 py-1 text-2xs uppercase tracking-[0.14em] text-[#d9e5ff]">
                       {getProgramTypeLabel(program.series_type)}
                     </div>
                   </div>
@@ -225,7 +225,7 @@ export default async function FilmProgramsPage({ params }: Props) {
 
                 <div className="space-y-2 p-3.5">
                   <h2 className="line-clamp-2 text-lg font-semibold text-[#f3f7ff]">{program.title}</h2>
-                  <p className="text-[0.7rem] uppercase tracking-[0.12em] text-[#c5d6f4]">
+                  <p className="text-xs uppercase tracking-[0.12em] text-[#c5d6f4]">
                     {program.upcoming_count} upcoming • {formatShortDate(program.next_session_date || getLocalDateString())}
                     {program.next_session_time ? ` • ${formatTimeLabel(program.next_session_time)}` : ""}
                   </p>
@@ -242,7 +242,7 @@ export default async function FilmProgramsPage({ params }: Props) {
                     {program.festival_slug ? (
                       <Link
                         href={`/${portal.slug}/festivals/${program.festival_slug}`}
-                        className="text-[0.68rem] uppercase tracking-[0.12em] text-[#9db0d6] hover:text-[#d3e1ff]"
+                        className="text-xs uppercase tracking-[0.12em] text-[#9db0d6] hover:text-[#d3e1ff]"
                       >
                         {program.festival_name || "Festival"}
                       </Link>

@@ -37,7 +37,7 @@ import InlineSpecialRow from "./InlineSpecialRow";
 import { useAuth } from "@/lib/auth-context";
 import {
   ArrowRight, CaretDown, Lightning, CalendarBlank,
-  ListBullets, Plus, X, Check, SignIn,
+  ListBullets, Plus, X, Check, SignIn, FloppyDisk,
   // Interest chip icons
   Waveform, FilmSlate, Palette, PersonSimpleRun, MoonStars,
   UsersFour, MaskHappy, Barbell, Smiley, Martini,
@@ -53,7 +53,7 @@ import type { ComponentType } from "react";
 import type { IconProps } from "@phosphor-icons/react";
 import { triggerHaptic } from "@/lib/haptics";
 
-const INITIAL_ROWS = 8;
+const INITIAL_ROWS = 6;
 
 // ---------------------------------------------------------------------------
 // Icon resolver — maps iconName string → Phosphor component
@@ -151,8 +151,14 @@ interface LineupSectionProps {
   fetchTab?: (tab: "this_week" | "coming_up") => Promise<CityPulseResponse>;
   /** Active interest IDs from user preferences. null/undefined = defaults. */
   activeInterests?: string[] | null;
-  /** Callback when user edits their interest chips via the "+" picker. */
+  /** Last-saved interests (controls server-side per-category queries). */
+  savedInterests?: string[];
+  /** Callback when user edits their interest chips via the "+" picker (local only). */
   onInterestsChange?: (ids: string[]) => void;
+  /** Callback to persist interests + trigger API refetch with new categories. */
+  onSaveInterests?: (ids: string[]) => void;
+  /** Event IDs to exclude from the lineup (e.g. events shown in Regular Hangs) */
+  excludeEventIds?: Set<number>;
 }
 
 // ---------------------------------------------------------------------------
@@ -166,7 +172,10 @@ export default function LineupSection({
   categoryCounts,
   fetchTab,
   activeInterests,
+  savedInterests,
   onInterestsChange,
+  onSaveInterests,
+  excludeEventIds,
 }: LineupSectionProps) {
   const { user } = useAuth();
   const visibleTabs = useMemo(() => TABS, []);
@@ -206,6 +215,23 @@ export default function LineupSection({
       .map((id) => INTEREST_MAP.get(id))
       .filter((c): c is InterestChip => !!c);
   }, [localInterests]);
+
+  // Detect unsaved lineup changes — compare local vs saved (sorted for order-independence)
+  const hasUnsavedChanges = useMemo(() => {
+    const saved = savedInterests ?? [...DEFAULT_INTEREST_IDS];
+    if (localInterests.length !== saved.length) return true;
+    const sortedLocal = [...localInterests].sort();
+    const sortedSaved = [...saved].sort();
+    return sortedLocal.some((id, i) => id !== sortedSaved[i]);
+  }, [localInterests, savedInterests]);
+
+  const [isSaving, setIsSaving] = useState(false);
+  const handleSave = useCallback(async () => {
+    setIsSaving(true);
+    await onSaveInterests?.(localInterests);
+    setIsSaving(false);
+    setPickerOpen(false);
+  }, [localInterests, onSaveInterests]);
 
   const pendingInterestsRef = useRef<string[] | null>(null);
 
@@ -296,11 +322,13 @@ export default function LineupSection({
 
   // Per-tab event pools — kept separate so lazy-loading THIS WEEK doesn't
   // inflate TODAY's counts. Each tab only contains its own events.
+  // Events shown in Regular Hangs are excluded to avoid duplication.
   const tabEventPools = useMemo(() => {
     const pools: Record<string, CityPulseEventItem[]> = {};
     const dedup = (items: CityPulseEventItem[]) => {
       const seen = new Set<number>();
       return items.filter((e) => {
+        if (excludeEventIds?.has(e.event.id)) return false;
         if (seen.has(e.event.id)) return false;
         seen.add(e.event.id);
         return true;
@@ -322,7 +350,7 @@ export default function LineupSection({
     }
 
     return pools;
-  }, [sections, lazyData]);
+  }, [sections, lazyData, excludeEventIds]);
 
   // Events for the active tab only
   const tabDateEvents = useMemo(() => {
@@ -539,7 +567,7 @@ export default function LineupSection({
               {tab.label}
               {itemCount > 0 && (
                 <span
-                  className="font-mono text-[0.625rem] tabular-nums px-1.5 py-0.5 rounded-full leading-none min-w-[1.5rem] text-center inline-block"
+                  className="font-mono text-2xs tabular-nums px-1.5 py-0.5 rounded-full leading-none min-w-6 text-center inline-block"
                   style={
                     isActive
                       ? { backgroundColor: `color-mix(in srgb, ${tab.accent} 20%, transparent)`, color: tab.accent }
@@ -555,13 +583,26 @@ export default function LineupSection({
       </div>
 
       {/* Category chips — counts reflect active date tab */}
-      <div className="relative mb-3">
+      <div className={[
+        "relative mb-3 rounded-xl transition-all duration-300",
+        hasUnsavedChanges
+          ? "bg-[var(--coral)]/[0.03] ring-1 ring-[var(--coral)]/15 -mx-2 px-2 py-0.5"
+          : "",
+      ].join(" ")}>
+        {hasUnsavedChanges && (
+          <div className="flex items-center gap-1.5 pt-1.5 pb-0.5 px-1">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-[var(--coral)] animate-pulse" />
+            <span className="font-mono text-2xs uppercase tracking-[0.15em] text-[var(--coral)]/70 font-semibold">
+              Draft
+            </span>
+          </div>
+        )}
         <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1 py-1 pr-8">
           {/* "All" chip */}
           <ChipButton
             label="All"
             Icon={ListBullets}
-            color="var(--cream)"
+            color="var(--coral)"
             count={chipCounts["all"] || 0}
             isActive={activeChipId === "all"}
             onClick={() => handleChipTap("all")}
@@ -590,6 +631,7 @@ export default function LineupSection({
                 : "border-[var(--twilight)] text-[var(--muted)] hover:text-[var(--soft)] hover:border-[var(--soft)]/30",
             ].join(" ")}
             aria-label="Configure your lineup categories"
+            title="Customize categories"
           >
             {pickerOpen ? (
               <X weight="bold" className="w-3.5 h-3.5" />
@@ -602,16 +644,38 @@ export default function LineupSection({
         <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-10 bg-gradient-to-l from-[var(--void)] to-transparent" />
       </div>
 
+      {/* Unsaved lineup changes — prominent save bar */}
+      {hasUnsavedChanges && (
+        <div className="flex items-center gap-3 mb-3 px-4 py-3 rounded-xl bg-[var(--coral)]/[0.08] border border-[var(--coral)]/30 animate-[fadeInSave_0.25s_ease-out]">
+          <div className="flex-1 min-w-0">
+            <span className="block font-mono text-xs font-semibold text-[var(--cream)]">
+              Unsaved changes
+            </span>
+            <span className="block font-mono text-2xs text-[var(--muted)] mt-0.5">
+              Save to update your feed
+            </span>
+          </div>
+          <button
+            onClick={handleSave}
+            disabled={isSaving}
+            className="shrink-0 inline-flex items-center gap-2 px-5 py-2 rounded-full font-mono text-xs font-bold uppercase tracking-wider bg-[var(--coral)] text-[var(--void)] hover:brightness-110 transition-all active:scale-95 disabled:opacity-50 shadow-[0_0_12px_color-mix(in_srgb,var(--coral)_40%,transparent)]"
+          >
+            <FloppyDisk weight="bold" className="w-3.5 h-3.5" />
+            {isSaving ? "Saving…" : "Save lineup"}
+          </button>
+        </div>
+      )}
+
       {/* Login nudge (anonymous users, after 2nd filter interaction) */}
       {showLoginNudge && !user && !nudgeDismissed && (
         <div className="flex items-center gap-2 mb-3 px-3 py-2 rounded-lg bg-white/[0.02] border border-[var(--twilight)]/30">
           <SignIn weight="bold" className="w-3.5 h-3.5 text-[var(--muted)] shrink-0" />
-          <span className="font-mono text-[0.625rem] text-[var(--muted)] flex-1">
+          <span className="font-mono text-2xs text-[var(--muted)] flex-1">
             Sign in to save your filters
           </span>
           <Link
             href={`/auth/login?redirect=${encodeURIComponent(`/${portalSlug}`)}`}
-            className="font-mono text-[0.625rem] font-medium text-[var(--coral)] hover:underline shrink-0"
+            className="font-mono text-2xs font-medium text-[var(--coral)] hover:underline shrink-0"
           >
             Sign in
           </Link>
@@ -632,6 +696,9 @@ export default function LineupSection({
           onToggle={handleToggleInterest}
           onClose={() => setPickerOpen(false)}
           counts={chipCounts}
+          hasUnsavedChanges={hasUnsavedChanges}
+          isSaving={isSaving}
+          onSave={handleSave}
         />
       )}
 
@@ -662,7 +729,7 @@ export default function LineupSection({
         </>
       )}
 
-      {/* Event view: hero + compact rows */}
+      {/* Event view: hero + grid */}
       {loadingTab !== activeTabId && !isHappyHour && (
         <>
           {heroEvent && (
@@ -672,29 +739,17 @@ export default function LineupSection({
             />
           )}
 
-          {visibleItems.map((item, idx) => (
-            <CompactEventRow
-              key={`row-${item.event.id}`}
-              event={item.event as FeedEventData}
-              portalSlug={portalSlug}
-              isLast={idx === visibleItems.length - 1}
-            />
-          ))}
-
-          {hasMoreRows && (
-            <button
-              onClick={() => setShowAllRows(!showAllRows)}
-              className="mt-3 w-full flex items-center justify-center gap-1.5 text-[0.75rem] font-mono font-medium py-2.5 rounded-lg transition-all hover:bg-white/[0.02] text-[var(--muted)] hover:text-[var(--soft)]"
-            >
-              {showAllRows ? (
-                <>Show less</>
-              ) : (
-                <>
-                  +{hiddenCount} more
-                  <CaretDown className="w-3.5 h-3.5" />
-                </>
-              )}
-            </button>
+          {visibleItems.length > 0 && (
+            <div className="grid grid-cols-3 gap-2 mt-3">
+              {visibleItems.map((item) => (
+                <CompactEventRow
+                  key={`row-${item.event.id}`}
+                  event={item.event as FeedEventData}
+                  portalSlug={portalSlug}
+                  size="sm"
+                />
+              ))}
+            </div>
           )}
 
           {events.length === 0 && (
@@ -705,11 +760,16 @@ export default function LineupSection({
         </>
       )}
 
-      {/* See all link — contextual to active chip */}
-      <Link
-        href={(() => {
+      {/* See all — glow button, contextual to active chip */}
+      {(() => {
+        const chipMeta = INTEREST_MAP.get(activeChipId);
+        const ctaColor = chipMeta?.color || "var(--coral)";
+        const ctaLabel =
+          activeChipId !== "all" && activeChipId !== "free" && activeChipId !== "happy_hour"
+            ? `See all ${chipMeta?.label?.toLowerCase() || ""} events`
+            : "See all events";
+        const ctaHref = (() => {
           const base = activeTab.seeAllHref(portalSlug);
-          // Append category filter if a specific chip is active
           if (activeChipId !== "all" && activeChipId !== "free" && activeChipId !== "happy_hour") {
             const chip = INTEREST_MAP.get(activeChipId);
             if (chip && chip.type === "category") {
@@ -718,15 +778,24 @@ export default function LineupSection({
             }
           }
           return base;
-        })()}
-        className="mt-3 w-full flex items-center justify-center gap-2 text-[0.75rem] font-mono font-medium py-3 rounded-lg transition-all hover:bg-white/[0.02] text-[var(--coral)]"
-      >
-        {activeChipId !== "all" && activeChipId !== "free" && activeChipId !== "happy_hour"
-          ? `See all ${INTEREST_MAP.get(activeChipId)?.label?.toLowerCase() || ""} events`
-          : "See all events"
-        }
-        <ArrowRight className="w-3.5 h-3.5" />
-      </Link>
+        })();
+
+        return (
+          <Link
+            href={ctaHref}
+            className="mt-4 w-full flex items-center justify-center gap-2 text-sm font-mono font-bold py-3 rounded-xl transition-all active:scale-[0.98] hover:brightness-110 hover:shadow-[0_0_24px_var(--cta-glow)]"
+            style={{
+              backgroundColor: ctaColor,
+              color: "var(--void)",
+              boxShadow: `0 0 16px color-mix(in srgb, ${ctaColor} 35%, transparent)`,
+              "--cta-glow": `color-mix(in srgb, ${ctaColor} 50%, transparent)`,
+            } as React.CSSProperties}
+          >
+            {ctaLabel}
+            <ArrowRight weight="bold" className="w-3.5 h-3.5" />
+          </Link>
+        );
+      })()}
     </section>
   );
 }
@@ -754,18 +823,26 @@ function ChipButton({
     <button
       onClick={onClick}
       className={[
-        "shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-[0.6875rem] tracking-wide transition-all active:scale-95 border",
+        "shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs tracking-wide transition-all active:scale-95 border",
         isActive
-          ? "font-medium bg-white/[0.08] border-white/15"
+          ? "font-medium"
           : "border-transparent text-[var(--muted)] hover:bg-white/[0.03]",
       ].join(" ")}
-      style={isActive ? { color } : undefined}
+      style={
+        isActive
+          ? {
+              color,
+              backgroundColor: `color-mix(in srgb, ${color} 12%, transparent)`,
+              borderColor: `color-mix(in srgb, ${color} 30%, transparent)`,
+            }
+          : undefined
+      }
     >
       <Icon weight={isActive ? "fill" : "bold"} className="w-4 h-4" />
       {label}
       {count != null && count > 0 && (
         <span
-          className="font-mono text-[0.5625rem] tabular-nums min-w-[1.25rem] text-center"
+          className="font-mono text-2xs tabular-nums min-w-5 text-center"
           style={{ opacity: isActive ? 0.8 : 0.5 }}
         >
           {count}
@@ -784,11 +861,17 @@ function InterestPicker({
   onToggle,
   onClose,
   counts,
+  hasUnsavedChanges,
+  isSaving,
+  onSave,
 }: {
   activeIds: string[];
   onToggle: (id: string) => void;
   onClose: () => void;
   counts: Record<string, number>;
+  hasUnsavedChanges: boolean;
+  isSaving: boolean;
+  onSave: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -811,7 +894,7 @@ function InterestPicker({
       className="mb-4 p-3 rounded-xl bg-[var(--card-bg)] border border-[var(--twilight)]/50"
     >
       <div className="flex items-center justify-between mb-2.5">
-        <span className="font-mono text-[0.625rem] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
+        <span className="font-mono text-2xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
           Edit Filters
         </span>
         <button
@@ -831,7 +914,7 @@ function InterestPicker({
               key={chip.id}
               onClick={() => onToggle(chip.id)}
               className={[
-                "inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full font-mono text-[0.625rem] tracking-wide transition-all active:scale-95 border",
+                "inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full font-mono text-2xs tracking-wide transition-all active:scale-95 border",
                 isOn
                   ? "bg-white/[0.08] border-white/15 text-[var(--cream)]"
                   : "border-transparent text-[var(--muted)] hover:bg-white/[0.03]",
@@ -844,12 +927,29 @@ function InterestPicker({
               )}
               {chip.label}
               {count != null && count > 0 && chip.type !== "specials" && (
-                <span className="text-[0.5rem] tabular-nums min-w-[1rem] text-center opacity-50">{count}</span>
+                <span className="text-2xs tabular-nums min-w-4 text-center opacity-50">{count}</span>
               )}
             </button>
           );
         })}
       </div>
+
+      {/* Inline save footer — shown inside the picker when changes are pending */}
+      {hasUnsavedChanges && (
+        <div className="flex items-center gap-3 mt-3 pt-3 border-t border-[var(--twilight)]/30">
+          <span className="flex-1 font-mono text-2xs text-[var(--muted)]">
+            Tap save to update your feed
+          </span>
+          <button
+            onClick={onSave}
+            disabled={isSaving}
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full font-mono text-2xs font-bold uppercase tracking-wider bg-[var(--coral)] text-[var(--void)] hover:brightness-110 transition-all active:scale-95 disabled:opacity-50 shadow-[0_0_10px_color-mix(in_srgb,var(--coral)_35%,transparent)]"
+          >
+            <FloppyDisk weight="bold" className="w-3 h-3" />
+            {isSaving ? "Saving…" : "Save"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

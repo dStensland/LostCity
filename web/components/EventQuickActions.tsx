@@ -7,6 +7,7 @@ import AddToCalendar from "./AddToCalendar";
 import ShareEventButton from "./ShareEventButton";
 import InviteToEventButton from "./InviteToEventButton";
 import { isTicketingUrl } from "@/lib/card-utils";
+import Dot from "@/components/ui/Dot";
 
 interface EventQuickActionsProps {
   event: {
@@ -75,7 +76,7 @@ export default function EventQuickActions({ event, isLive, className = "" }: Eve
               >
                 {priceText}
               </span>
-              <span className="text-[var(--twilight)]">·</span>
+              <Dot className="text-[var(--muted)]" />
             </>
           )}
 
@@ -84,7 +85,7 @@ export default function EventQuickActions({ event, isLive, className = "" }: Eve
             {dateDisplay}
           </span>
 
-          <span className="text-[var(--twilight)]">·</span>
+          <Dot className="text-[var(--muted)]" />
 
           {/* Time */}
           <span className="text-[var(--soft)]">

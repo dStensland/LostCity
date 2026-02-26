@@ -864,7 +864,7 @@ function EventCards({
           <ScopedStyles css={communityAccentClass?.css} />
           <div className="mb-2">
             <div className="h-[2px] rounded-full bg-[linear-gradient(to_right,var(--community-accent),transparent)]" />
-            <p className="font-mono mt-1.5 text-[0.6rem] uppercase tracking-[0.2em] text-[var(--soft)]">
+            <p className="font-mono mt-1.5 text-xs uppercase tracking-[0.2em] text-[var(--soft)]">
               Get Involved
             </p>
           </div>
@@ -960,7 +960,7 @@ function EventCards({
               />
             ))}
             {displayCount > 8 && (
-              <span className="text-[0.5rem] text-[var(--muted)] ml-1">
+              <span className="text-2xs text-[var(--muted)] ml-1">
                 +{displayCount - 8}
               </span>
             )}
@@ -1318,7 +1318,7 @@ function EventList({
             >
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-[var(--muted)]">
+                  <p className="font-mono text-xs uppercase tracking-[0.2em] text-[var(--muted)]">
                     More in this section
                   </p>
                   <p className="text-sm text-[var(--cream)] font-medium">
@@ -1350,22 +1350,22 @@ const NIGHTLIFE_ACTIVITIES: Record<
   string,
   { neonOverride?: string; icon: ComponentType<IconProps> }
 > = {
-  karaoke: { neonOverride: "#FF6EB4", icon: MicrophoneStage },
-  trivia: { neonOverride: "#F5A623", icon: Question },
-  bar_games: { neonOverride: "#00D9A0", icon: Target },
-  poker: { neonOverride: "#FF5A5A", icon: Spade },
-  bingo: { neonOverride: "#C084FC", icon: GridFour },
-  dj: { neonOverride: "#00D4E8", icon: Headphones },
-  drag: { neonOverride: "#E855A0", icon: Crown },
-  latin_night: { neonOverride: "#FF8C42", icon: Guitar },
-  line_dancing: { neonOverride: "#FFD93D", icon: CowboyHat },
-  party: { neonOverride: "#818CF8", icon: Confetti },
-  pub_crawl: { neonOverride: "#86EFAC", icon: BeerStein },
-  specials: { neonOverride: "#38BDF8", icon: Tag },
+  karaoke: { neonOverride: "var(--neon-hot-pink)", icon: MicrophoneStage },
+  trivia: { neonOverride: "var(--neon-amber)", icon: Question },
+  bar_games: { neonOverride: "var(--neon-green)", icon: Target },
+  poker: { neonOverride: "var(--neon-red)", icon: Spade },
+  bingo: { neonOverride: "var(--neon-purple)", icon: GridFour },
+  dj: { neonOverride: "var(--neon-cyan)", icon: Headphones },
+  drag: { neonOverride: "var(--neon-magenta)", icon: Crown },
+  latin_night: { neonOverride: "var(--neon-tangerine)", icon: Guitar },
+  line_dancing: { neonOverride: "var(--gold)", icon: CowboyHat },
+  party: { neonOverride: "var(--neon-periwinkle)", icon: Confetti },
+  pub_crawl: { neonOverride: "var(--neon-mint)", icon: BeerStein },
+  specials: { neonOverride: "var(--neon-sky)", icon: Tag },
   live_music: { icon: Waveform }, // uses getCategoryColor("music")
   comedy: { icon: Smiley }, // uses getCategoryColor("comedy")
   dance: { icon: DiscoBall }, // uses getCategoryColor("dance")
-  other: { neonOverride: "#94A3B8", icon: MoonStars },
+  other: { neonOverride: "var(--soft)", icon: MoonStars },
 };
 
 // Resolve neon color: prefer CATEGORY_CONFIG color, then activity override, then fallback
@@ -1378,9 +1378,10 @@ function getNeonColor(activityId: string): string {
   const catKey = CATEGORY_COLOR_MAP[activityId];
   if (catKey) {
     const c = getCategoryColor(catKey);
-    if (c && c !== "#8B8B94") return c; // skip the "other" default gray
+    // Hex comparison needed: getCategoryColor() returns raw hex, can't compare CSS var strings
+    if (c && c !== "#8B8B94") return c; // skip the "other" default gray (--muted)
   }
-  return NIGHTLIFE_ACTIVITIES[activityId]?.neonOverride || "#94A3B8";
+  return NIGHTLIFE_ACTIVITIES[activityId]?.neonOverride || "var(--soft)";
 }
 
 function NightlifeCarousel({
@@ -1450,7 +1451,7 @@ function NightlifeCarousel({
           <h3
             className="text-xl sm:text-2xl font-bold tracking-tight"
             style={{
-              color: "#E855A0",
+              color: "var(--neon-magenta)",
               textShadow:
                 "0 0 7px rgba(232,85,160,0.6), 0 0 20px rgba(232,85,160,0.25)",
             }}
@@ -1462,7 +1463,7 @@ function NightlifeCarousel({
           href={`/${portalSlug}?view=find&type=events&categories=nightlife`}
           className="flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-mono transition-all group"
           style={{
-            color: "#E855A0",
+            color: "var(--neon-magenta)",
             textShadow: "0 0 8px rgba(232,85,160,0.4)",
           }}
         >
@@ -1495,36 +1496,36 @@ function NightlifeCarousel({
             className="relative overflow-hidden rounded-xl p-3.5 h-[110px] sm:h-[120px] flex flex-col justify-between transition-all duration-200 hover:scale-[1.04]"
             style={{
               background: "var(--night, #0F0F14)",
-              border: `1px solid color-mix(in srgb, #E855A0 ${selectedActivity === null ? "60%" : "20%"}, transparent)`,
+              border: `1px solid color-mix(in srgb, var(--neon-magenta) ${selectedActivity === null ? "60%" : "20%"}, transparent)`,
               boxShadow:
                 selectedActivity === null
-                  ? "inset 0 0 24px color-mix(in srgb, #E855A0 12%, transparent), 0 0 16px color-mix(in srgb, #E855A0 25%, transparent)"
-                  : "inset 0 0 20px color-mix(in srgb, #E855A0 4%, transparent)",
+                  ? "inset 0 0 24px color-mix(in srgb, var(--neon-magenta) 12%, transparent), 0 0 16px color-mix(in srgb, var(--neon-magenta) 25%, transparent)"
+                  : "inset 0 0 20px color-mix(in srgb, var(--neon-magenta) 4%, transparent)",
               opacity: selectedActivity !== null ? 0.5 : 1,
             }}
           >
             <div
               className="absolute -top-8 -right-8 w-24 h-24 rounded-full blur-2xl opacity-30 pointer-events-none"
-              style={{ background: "#E855A0" }}
+              style={{ background: "var(--neon-magenta)" }}
             />
             <MoonStars
               size={28}
               weight="light"
               className="relative z-10 icon-neon"
-              style={{ color: "#E855A0" }}
+              style={{ color: "var(--neon-magenta)" }}
             />
             <div className="relative z-10">
               <div
-                className="font-semibold text-[0.8rem] sm:text-sm leading-tight tracking-tight"
+                className="font-semibold text-sm sm:text-sm leading-tight tracking-tight"
                 style={{
-                  color: "#E855A0",
+                  color: "var(--neon-magenta)",
                   textShadow:
-                    "0 0 8px color-mix(in srgb, #E855A0 50%, transparent)",
+                    "0 0 8px color-mix(in srgb, var(--neon-magenta) 50%, transparent)",
                 }}
               >
                 All
               </div>
-              <div className="font-mono text-[0.6rem] text-[var(--muted)] mt-0.5">
+              <div className="font-mono text-xs text-[var(--muted)] mt-0.5">
                 {totalEvents} tonight
               </div>
             </div>
@@ -1578,7 +1579,7 @@ function NightlifeCarousel({
                 {/* Label + count */}
                 <div className="relative z-10">
                   <div
-                    className="font-semibold text-[0.8rem] sm:text-sm leading-tight tracking-tight"
+                    className="font-semibold text-sm sm:text-sm leading-tight tracking-tight"
                     style={{
                       color: neon,
                       textShadow: `0 0 8px color-mix(in srgb, ${neon} 50%, transparent)`,
@@ -1586,7 +1587,7 @@ function NightlifeCarousel({
                   >
                     {cat.label}
                   </div>
-                  <div className="font-mono text-[0.6rem] text-[var(--muted)] mt-0.5">
+                  <div className="font-mono text-xs text-[var(--muted)] mt-0.5">
                     {cat.count} tonight
                   </div>
                 </div>
@@ -1697,12 +1698,12 @@ function CategoryGrid({
               size={28}
               className="group-hover:scale-110 transition-transform"
             />
-            <span className="font-mono text-[0.65rem] text-[var(--muted)] group-hover:text-[var(--cream)] text-center leading-tight">
+            <span className="font-mono text-xs text-[var(--muted)] group-hover:text-[var(--cream)] text-center leading-tight">
               {cat.label}
             </span>
             {/* Event count badge - rendered if count is provided */}
             {cat.count !== undefined && cat.count > 0 && (
-              <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full bg-[var(--twilight)] text-[var(--muted)] text-[0.5rem] font-mono font-medium">
+              <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded-full bg-[var(--twilight)] text-[var(--muted)] text-2xs font-mono font-medium">
                 {cat.count > 99 ? "99+" : cat.count}
               </span>
             )}
@@ -1931,7 +1932,7 @@ function VenueList({
                   )}
                 </div>
                 {events.length > 0 && (
-                  <span className="font-mono text-[0.6rem] text-[var(--muted)] bg-[var(--twilight)]/50 px-1.5 py-0.5 rounded">
+                  <span className="font-mono text-xs text-[var(--muted)] bg-[var(--twilight)]/50 px-1.5 py-0.5 rounded">
                     {groupedEvents.length}{" "}
                     {groupedEvents.length === 1 ? "film" : "films"}
                   </span>
@@ -2011,7 +2012,7 @@ function VenueList({
                                       className="flex items-baseline gap-2"
                                     >
                                       {showDateLabel && (
-                                      <span className="font-mono text-[0.6rem] text-[var(--muted)] w-16 flex-shrink-0 truncate">
+                                      <span className="font-mono text-xs text-[var(--muted)] w-16 flex-shrink-0 truncate">
                                         {dg.dateLabel}
                                       </span>
                                       )}
@@ -2200,7 +2201,7 @@ function ExternalLink({ section }: { section: FeedSectionData }) {
             <h3 className="text-lg font-semibold tracking-tight text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors">
               {section.title}
             </h3>
-            <span className="px-1.5 py-0.5 rounded text-[0.55rem] font-mono bg-[var(--twilight)] text-[var(--muted)]">
+            <span className="px-1.5 py-0.5 rounded text-2xs font-mono bg-[var(--twilight)] text-[var(--muted)]">
               External
             </span>
           </div>

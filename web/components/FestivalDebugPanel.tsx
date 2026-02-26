@@ -149,19 +149,19 @@ export default function FestivalDebugPanel({ portalSlug }: { portalSlug: string 
           <h2 className="font-mono text-xs uppercase tracking-wider text-[var(--neon-amber)]">
             Festival Debug
           </h2>
-          <p className="text-[0.65rem] text-[var(--muted)]">
+          <p className="text-xs text-[var(--muted)]">
             Active festivals where announced_start ≤ {todayLabel} and (announced_end ≥ {todayLabel} or unset)
           </p>
         </div>
         <div className="ml-auto flex items-center gap-2">
           {lastUpdated && (
-            <span className="text-[0.6rem] font-mono text-[var(--muted)]">
+            <span className="text-xs font-mono text-[var(--muted)]">
               Updated {lastUpdated}
             </span>
           )}
           <button
             onClick={loadFestivals}
-            className="px-2.5 py-1 rounded-full text-[0.6rem] font-mono bg-[var(--twilight)]/60 text-[var(--soft)] hover:text-[var(--cream)] hover:bg-[var(--twilight)] transition-colors"
+            className="px-2.5 py-1 rounded-full text-xs font-mono bg-[var(--twilight)]/60 text-[var(--soft)] hover:text-[var(--cream)] hover:bg-[var(--twilight)] transition-colors"
           >
             Refresh
           </button>
@@ -169,17 +169,17 @@ export default function FestivalDebugPanel({ portalSlug }: { portalSlug: string 
       </div>
 
       {loading && (
-        <div className="text-[0.7rem] font-mono text-[var(--muted)]">Loading festivals…</div>
+        <div className="text-xs font-mono text-[var(--muted)]">Loading festivals…</div>
       )}
 
       {!loading && error && (
-        <div className="text-[0.7rem] font-mono text-[var(--neon-red)]">
+        <div className="text-xs font-mono text-[var(--neon-red)]">
           {error}
         </div>
       )}
 
       {!loading && !error && items.length === 0 && (
-        <div className="text-[0.7rem] font-mono text-[var(--muted)]">
+        <div className="text-xs font-mono text-[var(--muted)]">
           No active festivals found.
         </div>
       )}
@@ -195,7 +195,7 @@ export default function FestivalDebugPanel({ portalSlug }: { portalSlug: string 
                 <div className="text-sm text-[var(--cream)] font-medium">
                   {festival.name}
                 </div>
-                <div className="text-[0.65rem] text-[var(--muted)] font-mono">
+                <div className="text-xs text-[var(--muted)] font-mono">
                   {festival.announced_start || "TBA"} → {festival.announced_end || "TBA"}
                   {festival.festival_type && (
                     <span className="ml-2">· {festival.festival_type}</span>
@@ -208,13 +208,13 @@ export default function FestivalDebugPanel({ portalSlug }: { portalSlug: string 
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-3 text-[0.65rem] font-mono text-[var(--muted)]">
+              <div className="flex items-center gap-3 text-xs font-mono text-[var(--muted)]">
                 <span>{festival.programCount} programs</span>
                 <span>{festival.sessionCount} sessions</span>
               </div>
               <Link
                 href={`/${portalSlug}/festivals/${festival.slug}`}
-                className="ml-auto px-2.5 py-1 rounded-full text-[0.6rem] font-mono bg-[var(--neon-amber)]/20 text-[var(--neon-amber)] hover:bg-[var(--neon-amber)]/30 transition-colors"
+                className="ml-auto px-2.5 py-1 rounded-full text-xs font-mono bg-[var(--neon-amber)]/20 text-[var(--neon-amber)] hover:bg-[var(--neon-amber)]/30 transition-colors"
               >
                 Open
               </Link>

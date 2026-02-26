@@ -105,7 +105,7 @@ export function NeedsBadge({ venueId, compact = false }: NeedsBadgeProps) {
         title={`Verified ${verifiedTag.tag_label} (${verifiedTag.confirm_count} confirm)`}
       >
         <span className="text-xs">{getIcon(verifiedTag.tag_slug)}</span>
-        <span className="font-mono text-[0.65rem] text-[var(--neon-cyan)]">
+        <span className="font-mono text-xs text-[var(--neon-cyan)]">
           Verified
         </span>
       </div>

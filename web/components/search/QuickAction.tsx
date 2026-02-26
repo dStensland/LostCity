@@ -53,7 +53,7 @@ export function QuickAction({
 
       <span className="flex-1 min-w-0">
         <span className="block text-sm font-medium truncate">{action.label}</span>
-        <span className="block text-[0.66rem] text-[var(--muted)] truncate mt-0.5">
+        <span className="block text-xs text-[var(--muted)] truncate mt-0.5">
           {action.description}
         </span>
       </span>
@@ -104,7 +104,7 @@ export default function QuickActionsList({
             d="M13 10V3L4 14h7v7l9-11h-7z"
           />
         </svg>
-        <span className="text-[0.64rem] font-mono uppercase tracking-wider text-[var(--coral)]">
+        <span className="text-xs font-mono uppercase tracking-wider text-[var(--coral)]">
           Quick Actions
         </span>
       </div>

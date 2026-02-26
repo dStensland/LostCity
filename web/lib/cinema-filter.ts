@@ -48,6 +48,21 @@ export function isChainCinemaVenue(venue: VenueLike): boolean {
   return CHAIN_CINEMA_PATTERNS.some((pattern) => pattern.test(haystack));
 }
 
+export function isIndieCinemaVenue(venue: VenueLike): boolean {
+  if (!venue) return false;
+  const haystack = [venue.name ?? "", venue.slug ?? ""].join(" ").trim();
+  return INDIE_CINEMA_PATTERNS.some((p) => p.test(haystack));
+}
+
+export function getIndieCinemaPriority(name: string): number {
+  const n = name.toLowerCase();
+  if (n.includes("plaza")) return 0;
+  if (n.includes("tara")) return 1;
+  if (n.includes("starlight")) return 2;
+  if (n.includes("landmark")) return 3;
+  return 10;
+}
+
 export function shouldSuppressChainShowtime(
   tags: string[] | null | undefined,
   venue: VenueLike,

@@ -136,7 +136,6 @@ type Event = {
   price_max: number | null;
   category: string | null;
   genres?: string[] | null;
-  subcategory?: string | null;
   image_url: string | null;
   description: string | null;
   featured_blurb: string | null;
@@ -278,7 +277,6 @@ function classifyNightlifeActivity(event: {
   title: string;
   category: string | null;
   genres?: string[] | null;
-  subcategory?: string | null;
 }): string {
   // Genre values that map directly to nightlife activity keys
   const genreActivityMap: Record<string, string> = {
@@ -295,21 +293,6 @@ function classifyNightlifeActivity(event: {
     party: "party",
     pub_crawl: "pub_crawl",
     specials: "specials",
-  };
-  const nightlifeSubcatMap: Record<string, string> = {
-    "nightlife.karaoke": "karaoke",
-    "nightlife.trivia": "trivia",
-    "nightlife.bar_games": "bar_games",
-    "nightlife.poker": "poker",
-    "nightlife.bingo": "bingo",
-    "nightlife.dj": "dj",
-    "nightlife.drag": "drag",
-    "nightlife.burlesque": "drag",
-    "nightlife.latin_night": "latin_night",
-    "nightlife.line_dancing": "line_dancing",
-    "nightlife.party": "party",
-    "nightlife.pub_crawl": "pub_crawl",
-    "nightlife.specials": "specials",
   };
   const titlePatterns: [RegExp, string][] = [
     [/karaoke/i, "karaoke"],
@@ -333,17 +316,13 @@ function classifyNightlifeActivity(event: {
       if (genreActivityMap[genre]) return genreActivityMap[genre];
     }
   }
-  // 2. Fallback: check legacy subcategory
-  if (event.subcategory && nightlifeSubcatMap[event.subcategory]) {
-    return nightlifeSubcatMap[event.subcategory];
-  }
-  // 3. Infer from title
+  // 2. Infer from title
   for (const [pattern, key] of titlePatterns) {
     if (pattern.test(event.title)) {
       return key;
     }
   }
-  // 4. Fall back to cross-category mapping
+  // 3. Fall back to cross-category mapping
   if (event.category === "music") return "live_music";
   if (event.category === "comedy") return "comedy";
   if (event.category === "dance") return "dance";
@@ -642,7 +621,8 @@ export async function GET(request: NextRequest, { params }: Props) {
         is_free,
         price_min,
         price_max,
-        category,
+        category:category_id,
+        genres,
         image_url,
         description,
         featured_blurb,
@@ -791,7 +771,8 @@ export async function GET(request: NextRequest, { params }: Props) {
         is_free,
         price_min,
         price_max,
-        category,
+        category:category_id,
+        genres,
         image_url,
         description,
         featured_blurb,
@@ -931,7 +912,8 @@ export async function GET(request: NextRequest, { params }: Props) {
           is_free,
           price_min,
           price_max,
-          category,
+          category:category_id,
+          genres,
             image_url,
           description,
           featured_blurb,
@@ -1020,7 +1002,7 @@ export async function GET(request: NextRequest, { params }: Props) {
         .is("canonical_event_id", null)
         .or("is_class.eq.false,is_class.is.null")
         .or("is_sensitive.eq.false,is_sensitive.is.null")
-        .eq("category", "nightlife");
+        .eq("category_id", "nightlife");
       nightlifeCoreQuery = applyPortalFilter(nightlifeCoreQuery);
 
       // Pass 2: entertainment categories (music/comedy/dance) evening events
@@ -1032,7 +1014,7 @@ export async function GET(request: NextRequest, { params }: Props) {
         .is("canonical_event_id", null)
         .or("is_class.eq.false,is_class.is.null")
         .or("is_sensitive.eq.false,is_sensitive.is.null")
-        .in("category", ["music", "comedy", "dance"])
+        .in("category_id", ["music", "comedy", "dance"])
         .gte("start_time", "17:00:00");
       entertainmentQuery = applyPortalFilter(entertainmentQuery);
 
@@ -1500,7 +1482,8 @@ export async function GET(request: NextRequest, { params }: Props) {
             is_free,
             price_min,
             price_max,
-            category,
+            category:category_id,
+            genres,
               image_url,
             description,
             featured_blurb,
@@ -1771,7 +1754,7 @@ export async function GET(request: NextRequest, { params }: Props) {
           );
         }
 
-        // Apply subcategory filter (uses genres[] with subcategory fallback)
+        // Apply subcategory/genre filter (genres[] only — subcategory column removed)
         if (filter.subcategories?.length) {
           // Convert dotted subcategory values to genre values (strip prefix)
           const genreValues = filter.subcategories.map((sub) => {
@@ -1784,18 +1767,14 @@ export async function GET(request: NextRequest, { params }: Props) {
           );
 
           filtered = filtered.filter((e) => {
-            // Check genres first (preferred)
+            // Check genres (preferred)
             if (e.genres?.some((g: string) => genreValues.includes(g)))
               return true;
-            // Fallback: check legacy subcategory
-            if (e.subcategory && filter.subcategories!.includes(e.subcategory))
-              return true;
-            // If no genre/subcategory match, include if category matches a parent
+            // If no genre match, include if category matches a parent and has no genres
             return (
               e.category &&
               parentCategories.has(e.category) &&
-              !e.genres?.length &&
-              !e.subcategory
+              !e.genres?.length
             );
           });
         }

@@ -1,7 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
 import { logger } from "@/lib/logger";
+
+export const revalidate = 300;
 
 export async function GET(request: NextRequest) {
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
@@ -19,29 +22,42 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-      const supabase = await createClient();
+      const sortedKey = [...categoryList].sort().join(",");
+      const grouped = await getOrSetSharedCacheJson(
+        "genres",
+        `multi:${sortedKey}`,
+        5 * 60 * 1000,
+        async () => {
+          const supabase = await createClient();
+          const { data, error } = await supabase
+            .from("taxonomy_definitions")
+            .select("id, label, taxonomy_group, is_format, display_order, category_scope")
+            .eq("taxonomy_type", "genre")
+            .eq("is_active", true)
+            .overlaps("category_scope", categoryList)
+            .order("display_order", { ascending: true });
 
-      const { data, error } = await supabase
-        .from("genre_options")
-        .select("genre, display_order, is_format, category")
-        .in("category", categoryList)
-        .order("display_order", { ascending: true });
+          if (error) {
+            throw error;
+          }
 
-      if (error) {
-        logger.error("Failed to fetch genre options", error, { categories });
-        return NextResponse.json({ genres: {} }, { status: 500 });
-      }
-
-      // Group by category
-      type GenreRow = { genre: string; display_order: number; is_format: boolean; category: string };
-      const rows = (data || []) as GenreRow[];
-      const grouped: Record<string, { genre: string; display_order: number; is_format: boolean }[]> = {};
-      for (const row of rows) {
-        if (!grouped[row.category]) {
-          grouped[row.category] = [];
-        }
-        grouped[row.category].push(row);
-      }
+          type TaxRow = { id: string; label: string; taxonomy_group: string; is_format: boolean; display_order: number; category_scope: string[] };
+          const rows = (data || []) as TaxRow[];
+          const result: Record<string, { genre: string; display_order: number; is_format: boolean }[]> = {};
+          for (const row of rows) {
+            const group = row.taxonomy_group;
+            if (!result[group]) {
+              result[group] = [];
+            }
+            result[group].push({
+              genre: row.id,
+              display_order: row.display_order,
+              is_format: row.is_format,
+            });
+          }
+          return result;
+        },
+      );
 
       return NextResponse.json(
         { genres: grouped },
@@ -52,7 +68,7 @@ export async function GET(request: NextRequest) {
         }
       );
     } catch (error) {
-      logger.error("Genre options API error", error);
+      logger.error("Genre options API error", error, { categories });
       return NextResponse.json({ genres: {} }, { status: 500 });
     }
   }
@@ -63,21 +79,34 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const supabase = await createClient();
+    const genres = await getOrSetSharedCacheJson(
+      "genres",
+      `single:${category}`,
+      5 * 60 * 1000,
+      async () => {
+        const supabase = await createClient();
+        const { data, error } = await supabase
+          .from("taxonomy_definitions")
+          .select("id, label, is_format, display_order")
+          .eq("taxonomy_type", "genre")
+          .eq("is_active", true)
+          .contains("category_scope", [category])
+          .order("display_order", { ascending: true });
 
-    const { data, error } = await supabase
-      .from("genre_options")
-      .select("genre, display_order, is_format")
-      .eq("category", category)
-      .order("display_order", { ascending: true });
+        if (error) {
+          throw error;
+        }
 
-    if (error) {
-      logger.error("Failed to fetch genre options", error, { category });
-      return NextResponse.json({ genres: [] }, { status: 500 });
-    }
+        return (data || []).map((row: { id: string; label: string; is_format: boolean; display_order: number }) => ({
+          genre: row.id,
+          display_order: row.display_order,
+          is_format: row.is_format,
+        }));
+      },
+    );
 
     return NextResponse.json(
-      { genres: data || [] },
+      { genres },
       {
         headers: {
           "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
@@ -85,7 +114,7 @@ export async function GET(request: NextRequest) {
       }
     );
   } catch (error) {
-    logger.error("Genre options API error", error);
+    logger.error("Genre options API error", error, { category });
     return NextResponse.json({ genres: [] }, { status: 500 });
   }
 }

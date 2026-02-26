@@ -41,7 +41,7 @@ export default async function PortalAdminLayout({ children, params }: Props) {
           <Link href={`/${slug}`} className="gradient-text text-xl font-bold tracking-tight">
             {portal.name}
           </Link>
-          <span className="px-2 py-0.5 bg-[var(--coral)] text-[var(--void)] font-mono text-[0.6rem] font-bold uppercase rounded">
+          <span className="px-2 py-0.5 bg-[var(--coral)] text-[var(--void)] font-mono text-2xs font-bold uppercase rounded">
             Portal Admin
           </span>
         </div>

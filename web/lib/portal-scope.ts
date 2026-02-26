@@ -356,14 +356,14 @@ export function applyPortalCategoryFilters<T>(
 
   // Include categories (only if user hasn't set their own filter)
   if (!opts.userCategoriesActive && filters.categories?.length) {
-    query = q.in("category", filters.categories);
+    query = q.in("category_id", filters.categories);
   }
 
   // Exclude categories always apply
   if (filters.exclude_categories?.length) {
     // Supabase .not("column", "in", "(val1,val2)")
     query = (query as unknown as QueryLike).not(
-      "category",
+      "category_id",
       "in",
       `(${filters.exclude_categories.join(",")})`
     );

@@ -64,7 +64,7 @@ function EventPopupContent({
       <div className="flex items-center justify-between mb-2">
         {category && (
           <span
-            className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[0.6rem] font-mono font-medium uppercase tracking-wide rounded"
+            className="inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-mono font-medium uppercase tracking-wide rounded"
             style={{
               background: `${getCategoryColor(categoryKey)}20`,
               color: getCategoryColor(categoryKey),
@@ -74,7 +74,7 @@ function EventPopupContent({
           </span>
         )}
         {isLive && (
-          <span className="flex-shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 text-[0.6rem] font-mono font-medium bg-[var(--neon-red)]/20 text-[var(--neon-red)] rounded">
+          <span className="flex-shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-mono font-medium bg-[var(--neon-red)]/20 text-[var(--neon-red)] rounded">
             <span className="w-1.5 h-1.5 rounded-full bg-[var(--neon-red)] animate-pulse" />
             LIVE
           </span>
@@ -89,14 +89,14 @@ function EventPopupContent({
         {title}
       </Link>
 
-      <div className="flex items-center gap-1.5 text-[0.7rem] text-[var(--soft)] mb-1">
+      <div className="flex items-center gap-1.5 text-xs text-[var(--soft)] mb-1">
         <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
         </svg>
         <span className="truncate">{venueName}</span>
       </div>
 
-      <div className="flex items-center gap-1.5 font-mono text-[0.65rem] text-[var(--muted)]">
+      <div className="flex items-center gap-1.5 font-mono text-xs text-[var(--muted)]">
         <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
@@ -113,18 +113,18 @@ function EventPopupContent({
 
       <div className="mt-3 flex items-center gap-2">
         {isFree ? (
-          <span className="inline-block px-2 py-0.5 text-[0.65rem] font-mono font-medium bg-[var(--neon-green)]/20 text-[var(--neon-green)] rounded">
+          <span className="inline-block px-2 py-0.5 text-xs font-mono font-medium bg-[var(--neon-green)]/20 text-[var(--neon-green)] rounded">
             FREE
           </span>
         ) : priceMin !== null && (
-          <span className="inline-block px-2 py-0.5 text-[0.65rem] font-mono font-medium bg-[var(--gold)]/20 text-[var(--gold)] rounded">
+          <span className="inline-block px-2 py-0.5 text-xs font-mono font-medium bg-[var(--gold)]/20 text-[var(--gold)] rounded">
             ${priceMin}{priceMax && priceMax !== priceMin ? `\u2013$${priceMax}` : "+"}
           </span>
         )}
         <Link
           href={`/${portalSlug}?event=${id}`}
           scroll={false}
-          className="ml-auto inline-flex items-center px-2 py-1 rounded-full bg-[var(--coral)]/15 border border-[var(--coral)]/35 text-[0.65rem] font-mono text-[var(--coral)] hover:bg-[var(--coral)]/20"
+          className="ml-auto inline-flex items-center px-2 py-1 rounded-full bg-[var(--coral)]/15 border border-[var(--coral)]/35 text-xs font-mono text-[var(--coral)] hover:bg-[var(--coral)]/20"
         >
           View details &rarr;
         </Link>
@@ -160,7 +160,7 @@ function SpotPopupContent({
       <div className="flex items-center justify-between mb-2">
         {venueType && (
           <span
-            className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[0.6rem] font-mono font-medium uppercase tracking-wide rounded"
+            className="inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-mono font-medium uppercase tracking-wide rounded"
             style={{
               background: `${getCategoryColor(categoryKey)}20`,
               color: getCategoryColor(categoryKey),
@@ -169,7 +169,7 @@ function SpotPopupContent({
             {getCategoryLabel(categoryKey)}
           </span>
         )}
-        <span className="flex-shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 text-[0.6rem] font-mono font-medium bg-[var(--twilight)]/80 text-[var(--soft)] rounded">
+        <span className="flex-shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-mono font-medium bg-[var(--twilight)]/80 text-[var(--soft)] rounded">
           DESTINATION
         </span>
       </div>
@@ -182,7 +182,7 @@ function SpotPopupContent({
       </Link>
 
       {address && (
-        <div className="flex items-center gap-1.5 text-[0.7rem] text-[var(--soft)] mb-1">
+        <div className="flex items-center gap-1.5 text-xs text-[var(--soft)] mb-1">
           <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
           </svg>
@@ -191,14 +191,14 @@ function SpotPopupContent({
       )}
 
       {neighborhood && (
-        <div className="flex items-center gap-1.5 font-mono text-[0.65rem] text-[var(--muted)]">
+        <div className="flex items-center gap-1.5 font-mono text-xs text-[var(--muted)]">
           <span className="truncate">{neighborhood}</span>
         </div>
       )}
 
       {locationLabel && (
         <div className="mt-1.5">
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-[0.6rem] font-mono uppercase tracking-wide bg-[var(--twilight)]/70 text-[var(--soft)] border border-[var(--twilight)]">
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono uppercase tracking-wide bg-[var(--twilight)]/70 text-[var(--soft)] border border-[var(--twilight)]">
             {locationLabel}
           </span>
         </div>
@@ -207,7 +207,7 @@ function SpotPopupContent({
       <div className="mt-3">
         <Link
           href={`/${portalSlug}/spots/${slug}`}
-          className="inline-flex items-center px-2 py-1 rounded-full bg-[var(--coral)]/15 border border-[var(--coral)]/35 text-[0.65rem] font-mono text-[var(--coral)] hover:bg-[var(--coral)]/20"
+          className="inline-flex items-center px-2 py-1 rounded-full bg-[var(--coral)]/15 border border-[var(--coral)]/35 text-xs font-mono text-[var(--coral)] hover:bg-[var(--coral)]/20"
         >
           View details &rarr;
         </Link>

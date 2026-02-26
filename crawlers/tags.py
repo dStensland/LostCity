@@ -1,9 +1,18 @@
 """
 Canonical tag definitions for Lost City events.
 Tags are organized into three categories: experiential, practical, and content.
+
+Hardcoded values serve as offline fallbacks. Call load_taxonomy_from_db() at
+crawler startup to supplement these sets with DB-authoritative data from
+taxonomy_definitions.
 """
 
 from __future__ import annotations
+
+import logging
+from typing import Optional
+
+_logger = logging.getLogger(__name__)
 
 # Experiential tags (mood/vibe)
 EXPERIENTIAL_TAGS = {
@@ -63,6 +72,51 @@ CONTENT_TAGS = {
     "class",  # Class/workshop/lesson
     "showtime",  # Regular cinema showtime (filtered from curated feeds)
     "friday-13",  # Friday the 13th themed/spooky
+
+    # Activity types
+    "trivia",  # Trivia night
+    "karaoke",  # Karaoke
+    "open-mic",  # Open mic (comedy, music, poetry)
+    "dj",  # DJ set / dance night
+    "drag",  # Drag show
+    "bingo",  # Bingo night
+    "jam-session",  # Jam session
+    "jazz",  # Jazz performance
+    "blues",  # Blues performance
+    "poetry",  # Poetry reading / spoken word
+    "dance",  # Dance event
+    "comedy",  # Comedy show
+    "games",  # Games / gaming
+    "dnd",  # D&D / tabletop RPG
+    "tabletop",  # Tabletop gaming
+    "board-games",  # Board game night
+    "running",  # Running / run club
+    "cycling",  # Cycling / bike ride
+    "yoga",  # Yoga
+    "pickleball",  # Pickleball
+    "brunch",  # Brunch
+    "happy-hour",  # Happy hour
+    "food-specials",  # Food/drink specials
+    "nightlife",  # Nightlife event
+
+    # Deal/value tags
+    "specials",  # Venue specials / deals
+    "oysters",  # Oyster special
+    "dollar-oysters",  # $1 oysters
+    "tacos",  # Taco special
+    "wings",  # Wing special
+    "wine",  # Wine special
+    "bottomless",  # Bottomless drinks
+    "half-price",  # Half-price deal
+    "margaritas",  # Margarita special
+
+    # Vibe extensions
+    "late-night",  # Late-night event (after 10pm)
+    "lgbtq",  # LGBTQ+ event
+    "lgbtq-friendly",  # LGBTQ+ friendly
+    "weekly",  # Weekly recurring
+    "brewery",  # At a brewery
+    "beltline",  # Near the BeltLine
 }
 
 # Combined set of all valid tags
@@ -353,3 +407,54 @@ GENRE_TO_TAGS: dict[str, list[str]] = {
     "cocktail-night": ["date-night"],
     "burlesque": ["date-night"],
 }
+
+
+# ─── DB-backed taxonomy loading ──────────────────────────────────────────────
+
+def load_taxonomy_from_db(client: Optional[object] = None) -> bool:
+    """Load taxonomy values from taxonomy_definitions table at startup.
+
+    Supplements the hardcoded sets above with DB-authoritative data.
+    Falls back silently to hardcoded values if DB is unavailable (offline crawling).
+
+    Returns True if DB load succeeded, False if fell back to hardcoded.
+    """
+    global ALL_TAGS, VALID_VIBES
+
+    if client is None:
+        try:
+            from db import get_client
+            client = get_client()
+        except Exception:
+            _logger.debug("Could not connect to DB for taxonomy loading — using hardcoded fallbacks")
+            return False
+
+    try:
+        # Load genres
+        result = client.table("taxonomy_definitions").select("id").eq("taxonomy_type", "genre").eq("is_active", True).execute()
+        if result.data:
+            db_genres = {row["id"] for row in result.data}
+            # Supplement genre_normalize's VALID_GENRES at runtime
+            try:
+                from genre_normalize import VALID_GENRES
+                VALID_GENRES.update(db_genres)
+            except ImportError:
+                pass
+
+        # Load vibes
+        result = client.table("taxonomy_definitions").select("id").eq("taxonomy_type", "venue_vibe").eq("is_active", True).execute()
+        if result.data:
+            db_vibes = {row["id"] for row in result.data}
+            VALID_VIBES.update(db_vibes)
+
+        # Load event tags
+        result = client.table("taxonomy_definitions").select("id").eq("taxonomy_type", "event_tag").eq("is_active", True).execute()
+        if result.data:
+            db_tags = {row["id"] for row in result.data}
+            ALL_TAGS.update(db_tags)
+
+        _logger.debug("Loaded taxonomy definitions from DB")
+        return True
+    except Exception as e:
+        _logger.debug(f"Failed to load taxonomy from DB — using hardcoded fallbacks: {e}")
+        return False

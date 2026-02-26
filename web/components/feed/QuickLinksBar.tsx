@@ -94,7 +94,7 @@ export default function QuickLinksBar({ links, dashboardCards }: QuickLinksBarPr
           <Link
             key={link.label}
             href={link.href}
-            className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-full text-[0.875rem] font-semibold border transition-colors hover:brightness-125 active:brightness-90"
+            className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-full text-sm font-semibold border transition-colors hover:brightness-125 active:brightness-90"
             style={{
               color: link.accent_color,
               borderColor: `color-mix(in srgb, ${link.accent_color} 35%, transparent)`,
@@ -107,7 +107,7 @@ export default function QuickLinksBar({ links, dashboardCards }: QuickLinksBarPr
             {link.label}
             {badge && (
               <span
-                className="font-mono text-[0.625rem] font-bold tabular-nums px-1.5 py-0.5 rounded-full leading-none"
+                className="font-mono text-2xs font-bold tabular-nums px-1.5 py-0.5 rounded-full leading-none"
                 style={{
                   backgroundColor: `color-mix(in srgb, ${link.accent_color} 25%, transparent)`,
                 }}

@@ -77,12 +77,12 @@ export default function InlineSpecialRow({ special, portalSlug, isLast }: Inline
       {/* Special info — three lines */}
       <div className="min-w-0 flex-1 py-3 pl-3 pr-3 flex flex-col justify-center gap-0.5">
         {/* Line 1: Title */}
-        <p className="text-[0.875rem] font-semibold text-[var(--cream)] truncate group-hover:text-[var(--gold)] transition-colors leading-snug">
+        <p className="text-sm font-semibold text-[var(--cream)] truncate group-hover:text-[var(--gold)] transition-colors leading-snug">
           {special.title}
         </p>
 
         {/* Line 2: Venue · Neighborhood */}
-        <p className="text-[0.75rem] text-[var(--muted)] truncate">
+        <p className="text-xs text-[var(--muted)] truncate">
           {special.venue.name}
           {special.venue.neighborhood && (
             <span className="opacity-50">
@@ -93,7 +93,7 @@ export default function InlineSpecialRow({ special, portalSlug, isLast }: Inline
 
         {/* Line 3: Time + price */}
         <div className="flex items-center gap-2 mt-0.5">
-          <span className="inline-flex items-center gap-1 font-mono text-[0.6875rem] font-medium leading-none">
+          <span className="inline-flex items-center gap-1 font-mono text-xs font-medium leading-none">
             {isActive && (
               <span className="relative flex h-1.5 w-1.5">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--neon-green)] opacity-75" />
@@ -106,7 +106,7 @@ export default function InlineSpecialRow({ special, portalSlug, isLast }: Inline
           </span>
 
           {special.price_note && (
-            <span className="inline-flex items-center font-mono text-[0.5625rem] font-bold uppercase tracking-wider text-[var(--gold)]">
+            <span className="inline-flex items-center font-mono text-2xs font-bold uppercase tracking-wider text-[var(--gold)]">
               {special.price_note}
             </span>
           )}

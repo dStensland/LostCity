@@ -99,19 +99,19 @@ export default function OverrideCard({
       >
         {/* Type badge */}
         <span
-          className={`px-1.5 py-0.5 rounded font-mono text-[0.5625rem] ${style.bg} ${style.text}`}
+          className={`px-1.5 py-0.5 rounded font-mono text-2xs ${style.bg} ${style.text}`}
         >
           {style.label}
         </span>
 
         {/* Condition */}
-        <span className="font-mono text-[0.625rem] text-[var(--soft)] flex-1 truncate">
+        <span className="font-mono text-2xs text-[var(--soft)] flex-1 truncate">
           {conditionLabel}
         </span>
 
         {/* Headline preview */}
         {header.headline && (
-          <span className="font-mono text-[0.5625rem] text-[var(--muted)] truncate max-w-[120px]">
+          <span className="font-mono text-2xs text-[var(--muted)] truncate max-w-[120px]">
             {header.headline.slice(0, 25)}
           </span>
         )}
@@ -130,7 +130,7 @@ export default function OverrideCard({
         )}
 
         {/* Priority */}
-        <span className="font-mono text-[0.5rem] text-[var(--muted)]">
+        <span className="font-mono text-2xs text-[var(--muted)]">
           p{header.priority}
         </span>
 
@@ -143,7 +143,7 @@ export default function OverrideCard({
         <div className="px-3 pb-3 border-t border-[var(--twilight)] pt-3 space-y-3">
           {/* Headline */}
           <div className="space-y-1">
-            <span className="font-mono text-[0.5625rem] text-[var(--muted)]">
+            <span className="font-mono text-2xs text-[var(--muted)]">
               Headline Override
             </span>
             <textarea
@@ -158,7 +158,7 @@ export default function OverrideCard({
                   key={v}
                   type="button"
                   onClick={() => setForm((f) => ({ ...f, headline: f.headline + v }))}
-                  className="px-1 py-0.5 font-mono text-[0.5rem] rounded bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
+                  className="px-1 py-0.5 font-mono text-2xs rounded bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)]"
                 >
                   {v}
                 </button>
@@ -174,7 +174,7 @@ export default function OverrideCard({
 
           {/* Accent color */}
           <div className="space-y-1">
-            <span className="font-mono text-[0.5625rem] text-[var(--muted)]">
+            <span className="font-mono text-2xs text-[var(--muted)]">
               Accent Override
             </span>
             <div className="flex items-center gap-1">
@@ -196,7 +196,7 @@ export default function OverrideCard({
                 value={form.accent_color}
                 onChange={(e) => setForm((f) => ({ ...f, accent_color: e.target.value }))}
                 placeholder="var(--coral)"
-                className="flex-1 px-1.5 py-0.5 bg-[var(--void)] border border-[var(--twilight)] rounded font-mono text-[0.5rem] text-[var(--cream)] ml-1"
+                className="flex-1 px-1.5 py-0.5 bg-[var(--void)] border border-[var(--twilight)] rounded font-mono text-2xs text-[var(--cream)] ml-1"
               />
             </div>
           </div>
@@ -206,13 +206,13 @@ export default function OverrideCard({
             <button
               onClick={handleSave}
               disabled={saving}
-              className="px-3 py-1.5 bg-[var(--coral)] text-[var(--void)] font-mono text-[0.625rem] rounded hover:opacity-90 disabled:opacity-50"
+              className="px-3 py-1.5 bg-[var(--coral)] text-[var(--void)] font-mono text-2xs rounded hover:opacity-90 disabled:opacity-50"
             >
               {saving ? "Saving..." : "Save Override"}
             </button>
             <button
               onClick={handleDelete}
-              className="px-3 py-1.5 font-mono text-[0.625rem] text-red-400 hover:text-red-300"
+              className="px-3 py-1.5 font-mono text-2xs text-red-400 hover:text-red-300"
             >
               Delete
             </button>

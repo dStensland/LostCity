@@ -11,7 +11,7 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import type { CityPulseResponse, TimeSlot } from "@/lib/city-pulse/types";
 import { getTimeSlot, msUntilNextSlot } from "@/lib/city-pulse/time-slots";
 
@@ -25,10 +25,12 @@ interface UseCityPulseFeedOptions {
   timeSlotOverride?: TimeSlot;
   /** Admin override: force a specific day of week (e.g. "tuesday") */
   dayOverride?: string;
+  /** Active interest chip IDs — drives per-category server queries (6 each) */
+  interests?: string[];
 }
 
 export function useCityPulseFeed(options: UseCityPulseFeedOptions) {
-  const { portalSlug, enabled = true, timeSlotOverride, dayOverride } = options;
+  const { portalSlug, enabled = true, timeSlotOverride, dayOverride, interests } = options;
   const [timeSlot, setTimeSlot] = useState(() =>
     getTimeSlot(new Date().getHours()),
   );
@@ -53,8 +55,20 @@ export function useCityPulseFeed(options: UseCityPulseFeedOptions) {
   const effectiveTimeSlot = timeSlotOverride || timeSlot;
   const hasOverrides = !!(timeSlotOverride || dayOverride);
 
+  // Stable string key for interests so array reference changes don't trigger refetch
+  const interestsKey = interests?.slice().sort().join(",") || "";
+
+  // Ref always holds latest interests — safe to read from fetchTab callback
+  const interestsRef = useRef(interests);
+  useEffect(() => { interestsRef.current = interests; }, [interests]);
+
+  /** Append interests query param to a URL */
+  const appendInterests = (url: URL, ints?: string[]) => {
+    if (ints && ints.length > 0) url.searchParams.set("interests", ints.join(","));
+  };
+
   const query = useQuery<CityPulseResponse>({
-    queryKey: ["city-pulse", portalSlug, effectiveTimeSlot, dayOverride || ""],
+    queryKey: ["city-pulse", portalSlug, effectiveTimeSlot, dayOverride || "", interestsKey],
     queryFn: async () => {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10_000);
@@ -62,6 +76,7 @@ export function useCityPulseFeed(options: UseCityPulseFeedOptions) {
         const url = new URL(`/api/portals/${portalSlug}/city-pulse`, window.location.origin);
         if (timeSlotOverride) url.searchParams.set("time_slot", timeSlotOverride);
         if (dayOverride) url.searchParams.set("day", dayOverride);
+        appendInterests(url, interests);
 
         const res = await fetch(url.toString(), {
           credentials: "include",
@@ -93,6 +108,7 @@ export function useCityPulseFeed(options: UseCityPulseFeedOptions) {
     url.searchParams.set("tab", tab);
     if (timeSlotOverride) url.searchParams.set("time_slot", timeSlotOverride);
     if (dayOverride) url.searchParams.set("day", dayOverride);
+    appendInterests(url, interestsRef.current);
     const res = await fetch(url.toString(), { credentials: "include" });
     if (!res.ok) throw new Error(`Tab fetch failed: ${res.status}`);
     return res.json() as Promise<CityPulseResponse>;

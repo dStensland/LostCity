@@ -10,6 +10,7 @@ import {
   createFindFilterSnapshot,
   trackFindZeroResults,
 } from "@/lib/analytics/find-tracking";
+import Dot from "@/components/ui/Dot";
 
 interface ShowtimesViewProps {
   portalId: string;
@@ -138,7 +139,7 @@ function TimeChipLinks({ times, portalSlug, portalId }: { times: ShowtimeEntry[]
           href={`/${portalSlug}?event=${entry.event_id}`}
           scroll={false}
           onPointerDown={() => prefetchEventDetail(entry.event_id, portalId)}
-          className="inline-flex px-2.5 py-1 rounded-lg bg-[var(--twilight)]/25 border border-[var(--twilight)]/50 font-mono text-[0.72rem] font-medium text-[var(--soft)] tabular-nums hover:text-[var(--cream)] hover:border-[var(--coral)]/40 transition-colors"
+          className="inline-flex px-2.5 py-1 rounded-lg bg-[var(--twilight)]/25 border border-[var(--twilight)]/50 font-mono text-xs font-medium text-[var(--soft)] tabular-nums hover:text-[var(--cream)] hover:border-[var(--coral)]/40 transition-colors"
         >
           {formatShowtime(entry.time)}
         </Link>
@@ -189,20 +190,20 @@ function SingleTheaterCard({ film, portalSlug, portalId }: { film: Film; portalS
           <FilmTitle
             film={film}
             portalSlug={portalSlug}
-            className="font-semibold text-[0.95rem] sm:text-[1.05rem] text-[var(--cream)] leading-snug line-clamp-2"
+            className="font-semibold text-base sm:text-base text-[var(--cream)] leading-snug line-clamp-2"
           />
           <div className="flex items-center gap-1.5 mt-1">
             <Link
               href={`/${portalSlug}?spot=${theater.venue_slug}`}
               scroll={false}
-              className="font-mono text-[0.66rem] text-[var(--soft)] hover:text-[var(--coral)] transition-colors truncate"
+              className="font-mono text-xs text-[var(--soft)] hover:text-[var(--coral)] transition-colors truncate"
             >
               {theater.venue_name}
             </Link>
             {theater.neighborhood && (
               <>
-                <span className="text-[var(--twilight)]/60 flex-shrink-0">·</span>
-                <span className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-[0.06em] flex-shrink-0">
+                <Dot className="text-[var(--muted)]/40 flex-shrink-0" />
+                <span className="font-mono text-xs text-[var(--muted)] uppercase tracking-[0.06em] flex-shrink-0">
                   {theater.neighborhood}
                 </span>
               </>
@@ -235,13 +236,13 @@ function MultiTheaterCard({ film, portalSlug, portalId }: { film: Film; portalSl
             <FilmTitle
               film={film}
               portalSlug={portalSlug}
-              className="font-semibold text-[0.95rem] sm:text-[1.05rem] text-[var(--cream)] leading-snug line-clamp-2 group-hover:text-[var(--coral)] transition-colors"
+              className="font-semibold text-base sm:text-base text-[var(--cream)] leading-snug line-clamp-2 group-hover:text-[var(--coral)] transition-colors"
             />
             <div className="flex items-center gap-2 mt-1.5">
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--coral)]/10 border border-[var(--coral)]/25 font-mono text-[0.62rem] font-semibold text-[var(--coral)] uppercase tracking-[0.06em]">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--coral)]/10 border border-[var(--coral)]/25 font-mono text-xs font-semibold text-[var(--coral)] uppercase tracking-[0.06em]">
                 {theaterCount} {theaterCount === 1 ? "theater" : "theaters"}
               </span>
-              <span className="font-mono text-[0.6rem] text-[var(--muted)]">
+              <span className="font-mono text-xs text-[var(--muted)]">
                 {totalShowtimes} showtimes
               </span>
             </div>
@@ -262,14 +263,14 @@ function MultiTheaterCard({ film, portalSlug, portalId }: { film: Film; portalSl
                     href={`/${portalSlug}?spot=${theater.venue_slug}`}
                     scroll={false}
                     onClick={(e) => e.stopPropagation()}
-                    className="font-semibold text-[0.82rem] text-[var(--cream)] hover:text-[var(--coral)] transition-colors truncate"
+                    className="font-semibold text-sm text-[var(--cream)] hover:text-[var(--coral)] transition-colors truncate"
                   >
                     {theater.venue_name}
                   </Link>
                   {theater.neighborhood && (
                     <>
-                      <span className="text-[var(--twilight)]/60 flex-shrink-0">·</span>
-                      <span className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-[0.08em] flex-shrink-0">
+                      <Dot className="text-[var(--muted)]/40 flex-shrink-0" />
+                      <span className="font-mono text-xs text-[var(--muted)] uppercase tracking-[0.08em] flex-shrink-0">
                         {theater.neighborhood}
                       </span>
                     </>
@@ -309,24 +310,24 @@ function TheaterAccordionCard({ theater, portalSlug, portalId }: { theater: Thea
                 href={`/${portalSlug}?spot=${theater.venue_slug}`}
                 scroll={false}
                 onClick={(e) => e.stopPropagation()}
-                className="font-semibold text-[0.95rem] text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors truncate"
+                className="font-semibold text-base text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors truncate"
               >
                 {theater.venue_name}
               </Link>
               {theater.neighborhood && (
                 <>
-                  <span className="text-[var(--twilight)]/60 flex-shrink-0">·</span>
-                  <span className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-[0.08em] flex-shrink-0">
+                  <Dot className="text-[var(--muted)]/40 flex-shrink-0" />
+                  <span className="font-mono text-xs text-[var(--muted)] uppercase tracking-[0.08em] flex-shrink-0">
                     {theater.neighborhood}
                   </span>
                 </>
               )}
             </div>
             <div className="flex items-center gap-2 mt-1">
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--coral)]/10 border border-[var(--coral)]/25 font-mono text-[0.62rem] font-semibold text-[var(--coral)] uppercase tracking-[0.06em]">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--coral)]/10 border border-[var(--coral)]/25 font-mono text-xs font-semibold text-[var(--coral)] uppercase tracking-[0.06em]">
                 {filmCount} {filmCount === 1 ? "film" : "films"}
               </span>
-              <span className="font-mono text-[0.6rem] text-[var(--muted)]">
+              <span className="font-mono text-xs text-[var(--muted)]">
                 {totalShowtimes} showtimes
               </span>
             </div>
@@ -362,12 +363,12 @@ function TheaterAccordionCard({ theater, portalSlug, portalId }: { theater: Thea
                   {film.series_slug ? (
                     <Link
                       href={`/${portalSlug}/series/${film.series_slug}`}
-                      className="font-semibold text-[0.82rem] text-[var(--cream)] leading-snug line-clamp-1 hover:text-[var(--coral)] transition-colors"
+                      className="font-semibold text-sm text-[var(--cream)] leading-snug line-clamp-1 hover:text-[var(--coral)] transition-colors"
                     >
                       {film.title}
                     </Link>
                   ) : (
-                    <h4 className="font-semibold text-[0.82rem] text-[var(--cream)] leading-snug line-clamp-1">
+                    <h4 className="font-semibold text-sm text-[var(--cream)] leading-snug line-clamp-1">
                       {film.title}
                     </h4>
                   )}
@@ -665,11 +666,11 @@ export default function ShowtimesView({ portalId, portalSlug }: ShowtimesViewPro
 
         {!metaLoading && (filmCount > 0 || theaterCount > 0) && (
           <div className="flex flex-wrap items-center gap-3 mt-2.5 pt-2 border-t border-[var(--twilight)]/40">
-            <span className="font-mono text-[0.62rem] text-[var(--muted)] uppercase tracking-[0.1em]">
+            <span className="font-mono text-xs text-[var(--muted)] uppercase tracking-[0.1em]">
               {filmCount} {filmCount === 1 ? "film" : "films"}
             </span>
-            <span className="text-[var(--twilight)]/50">·</span>
-            <span className="font-mono text-[0.62rem] text-[var(--muted)] uppercase tracking-[0.1em]">
+            <Dot className="text-[var(--muted)]/40" />
+            <span className="font-mono text-xs text-[var(--muted)] uppercase tracking-[0.1em]">
               {theaterCount} {theaterCount === 1 ? "theater" : "theaters"}
             </span>
           </div>
@@ -681,7 +682,7 @@ export default function ShowtimesView({ portalId, portalSlug }: ShowtimesViewPro
         <div className="inline-flex rounded-lg border border-[var(--twilight)]/60 overflow-hidden">
           <button
             onClick={() => setViewMode("by-movie")}
-            className={`px-3 py-1.5 font-mono text-[0.68rem] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]/70 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--void)] ${
+            className={`px-3 py-1.5 font-mono text-xs transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]/70 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--void)] ${
               viewMode === "by-movie"
                 ? "bg-[var(--coral)]/20 text-[var(--coral)] font-semibold"
                 : "bg-[var(--night)]/40 text-[var(--muted)] hover:text-[var(--cream)]"
@@ -691,7 +692,7 @@ export default function ShowtimesView({ portalId, portalSlug }: ShowtimesViewPro
           </button>
           <button
             onClick={() => setViewMode("by-theater")}
-            className={`px-3 py-1.5 font-mono text-[0.68rem] border-l border-[var(--twilight)]/60 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]/70 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--void)] ${
+            className={`px-3 py-1.5 font-mono text-xs border-l border-[var(--twilight)]/60 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]/70 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--void)] ${
               viewMode === "by-theater"
                 ? "bg-[var(--coral)]/20 text-[var(--coral)] font-semibold"
                 : "bg-[var(--night)]/40 text-[var(--muted)] hover:text-[var(--cream)]"

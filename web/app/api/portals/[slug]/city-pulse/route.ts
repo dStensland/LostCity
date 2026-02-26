@@ -42,9 +42,15 @@ import { buildFeedContext } from "@/lib/city-pulse/context";
 import { getTimeSlot } from "@/lib/city-pulse/time-slots";
 import { getAllConversionPrompts } from "@/lib/city-pulse/conversion-prompts";
 import {
+  ALL_INTEREST_IDS,
+  DEFAULT_INTEREST_IDS,
+  getInterestQueryConfig,
+} from "@/lib/city-pulse/interests";
+import {
   buildBannerSection,
   buildRightNowSection,
   buildTonightSection,
+  buildTheSceneSection,
   buildThemedSpecialsSection,
   buildWeatherDiscoverySection,
   buildThisWeekendSection,
@@ -490,6 +496,12 @@ export async function GET(request: NextRequest, { params }: Props) {
   const dayOverride = searchParams.get("day") as string | null;
   const requestedTab = searchParams.get("tab") as "this_week" | "coming_up" | null;
 
+  // Parse interest chips for per-category fetching (6 events each)
+  const interestsParam = searchParams.get("interests");
+  const requestedInterests = interestsParam
+    ? interestsParam.split(",").filter((id) => ALL_INTEREST_IDS.includes(id))
+    : [...DEFAULT_INTEREST_IDS];
+
   const now = new Date();
   const timeSlot = timeSlotOverride || getTimeSlot(now.getHours());
 
@@ -691,6 +703,41 @@ export async function GET(request: NextRequest, { params }: Props) {
       }
     }
     return counts;
+  };
+
+  // Per-interest event queries — fetch 6 events per active interest chip
+  // to guarantee category representation in the event pool
+  const PER_INTEREST_LIMIT = 6;
+  const buildInterestQueries = (start: string, end: string) => {
+    const queries: Array<Promise<{ data: FeedEventData[] | null }>> = [];
+    for (const chipId of requestedInterests) {
+      const config = getInterestQueryConfig(chipId);
+      if (!config) continue;
+
+      let q = portalClient
+        .from("events")
+        .select(EVENT_SELECT)
+        .gte("start_date", start)
+        .lte("start_date", end)
+        .is("canonical_event_id", null)
+        .or("is_class.eq.false,is_class.is.null")
+        .or("is_sensitive.eq.false,is_sensitive.is.null");
+
+      if (config.type === "category") {
+        q = q.eq("category_id", config.categoryId);
+      } else {
+        q = q.or(config.filter);
+      }
+
+      q = applyPortalScope(q);
+      queries.push(
+        q
+          .order("start_date", { ascending: true })
+          .order("start_time", { ascending: true })
+          .limit(PER_INTEREST_LIMIT) as unknown as Promise<{ data: FeedEventData[] | null }>,
+      );
+    }
+    return queries;
   };
 
   // Weather venue filter
@@ -900,20 +947,38 @@ export async function GET(request: NextRequest, { params }: Props) {
   // ---------------------------------------------------------------------------
 
   if (requestedTab) {
-    const tabEventQuery =
+    const [tabStart, tabEnd] =
       requestedTab === "this_week"
-        ? buildEventQuery(tomorrow, weekAhead, 500)
-        : buildEventQuery(weekAhead, fourWeeksAhead, 500);
+        ? [tomorrow, weekAhead]
+        : [weekAhead, fourWeeksAhead];
 
-    const [tabEventsResult, countResults, categoryResults, tabUserSignals] = await Promise.all([
+    const tabEventQuery = buildEventQuery(tabStart, tabEnd, 500);
+    const tabInterestQueries = buildInterestQueries(tabStart, tabEnd);
+
+    const [tabEventsResult, tabInterestResults, countResults, categoryResults, tabUserSignals] = await Promise.all([
       tabEventQuery,
+      Promise.all(tabInterestQueries),
       countQueries,
       categoryQueries,
       loadUserSignals(),
     ]);
 
+    // Merge base pool + per-interest results, deduplicating by event ID
+    const baseEvents = (tabEventsResult.data || []) as FeedEventData[];
+    const seenTabIds = new Set(baseEvents.map((e) => e.id));
+    const interestExtras: FeedEventData[] = [];
+    for (const r of tabInterestResults) {
+      for (const e of (r.data || []) as FeedEventData[]) {
+        if (!seenTabIds.has(e.id)) {
+          seenTabIds.add(e.id);
+          interestExtras.push(e);
+        }
+      }
+    }
+    const mergedTabEvents = [...baseEvents, ...interestExtras];
+
     const tabEvents = suppressEventImagesIfVenueFlagged(
-      (tabEventsResult.data || []) as FeedEventData[],
+      mergedTabEvents,
     ) as FeedEventData[];
 
     // Social proof for tab events
@@ -1023,9 +1088,30 @@ export async function GET(request: NextRequest, { params }: Props) {
   // Fetches today events + counts. Skips week/coming-up event data.
   // ---------------------------------------------------------------------------
 
+  const todayInterestQueries = buildInterestQueries(today, today);
+
+  // Query for this week's recurring events (tomorrow → end of week, series_id not null)
+  const buildWeekRecurringQuery = () => {
+    let q = portalClient
+      .from("events")
+      .select(EVENT_SELECT)
+      .gte("start_date", tomorrow)
+      .lte("start_date", endOfWeek)
+      .not("series_id", "is", null)
+      .is("canonical_event_id", null)
+      .or("is_class.eq.false,is_class.is.null")
+      .or("is_sensitive.eq.false,is_sensitive.is.null");
+    q = applyPortalScope(q);
+    return q
+      .order("start_date", { ascending: true })
+      .order("start_time", { ascending: true })
+      .limit(100);
+  };
+
   const [
     todayEventsResult,
     eveningEventsResult,
+    todayInterestResults,
     trendingResult,
     weatherVenuesResult,
     specialsResult,
@@ -1035,9 +1121,11 @@ export async function GET(request: NextRequest, { params }: Props) {
     userSignals,
     countResults,
     categoryResults,
+    weekRecurringResult,
   ] = await Promise.all([
     buildEventQuery(today, today, 50),
     buildEveningQuery(),
+    Promise.all(todayInterestQueries),
     buildTrendingQuery(),
     buildWeatherVenueQuery(),
     buildSpecialsQuery(),
@@ -1047,6 +1135,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     loadUserSignals(),
     countQueries,
     categoryQueries,
+    buildWeekRecurringQuery(),
   ]);
 
   const tabCountResults = countResults.map((r) => r.count ?? 0);
@@ -1060,12 +1149,24 @@ export async function GET(request: NextRequest, { params }: Props) {
   // Process raw results
   // ---------------------------------------------------------------------------
 
-  // Merge today + evening events, deduplicating by ID
+  // Merge today + evening + per-interest events, deduplicating by ID
   const todayRaw = (todayEventsResult.data || []) as FeedEventData[];
   const eveningRaw = (eveningEventsResult.data || []) as FeedEventData[];
   const seenIds = new Set(todayRaw.map((e) => e.id));
-  const mergedToday = [...todayRaw, ...eveningRaw.filter((e) => !seenIds.has(e.id))];
-  const todayEvents = suppressEventImagesIfVenueFlagged(mergedToday) as FeedEventData[];
+  for (const e of eveningRaw) {
+    if (!seenIds.has(e.id)) { seenIds.add(e.id); todayRaw.push(e); }
+  }
+  // Merge per-interest results — guarantees ≤6 events per active category
+  for (const r of todayInterestResults) {
+    for (const e of (r.data || []) as FeedEventData[]) {
+      if (!seenIds.has(e.id)) { seenIds.add(e.id); todayRaw.push(e); }
+    }
+  }
+  const todayEvents = suppressEventImagesIfVenueFlagged(todayRaw) as FeedEventData[];
+
+  const weekRecurringEvents = suppressEventImagesIfVenueFlagged(
+    (weekRecurringResult.data || []) as FeedEventData[],
+  ) as FeedEventData[];
 
   const trendingEvents = suppressEventImagesIfVenueFlagged(
     (trendingResult.data || []) as FeedEventData[],
@@ -1259,6 +1360,13 @@ export async function GET(request: NextRequest, { params }: Props) {
   // Assemble sections — today + specials + sidebar only (no week/coming-up)
   // ---------------------------------------------------------------------------
 
+  const theSceneSection = buildTheSceneSection(
+    todayEventsWithProof,
+    weekRecurringEvents,
+    userSignals,
+    friendsGoingMap,
+  );
+
   const sections = [
     buildBannerSection(feedContext),
     buildRightNowSection(
@@ -1273,6 +1381,7 @@ export async function GET(request: NextRequest, { params }: Props) {
       userSignals,
       friendsGoingMap,
     ),
+    theSceneSection,
     buildThemedSpecialsSection(feedContext, activeSpecials),
     buildWeatherDiscoverySection(
       feedContext,

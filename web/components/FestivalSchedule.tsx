@@ -231,7 +231,7 @@ export default function FestivalSchedule({
                         }`}
                       >
                         <span>{formatShortDate(day)}</span>
-                        <span className="ml-1.5 text-[0.65rem] opacity-75">
+                        <span className="ml-1.5 text-xs opacity-75">
                           {daySessionCounts.get(day) || 0}
                         </span>
                         {isToday && (

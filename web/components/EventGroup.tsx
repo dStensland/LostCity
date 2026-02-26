@@ -166,16 +166,16 @@ export default function EventGroup({
           data-row-primary-link="true"
           className="w-full px-3 py-2.5 flex items-center gap-2.5 text-left"
         >
-          <span className="flex-shrink-0 font-mono text-[0.72rem] font-semibold uppercase tracking-[0.1em] text-[var(--accent-color)] min-w-[76px] sm:min-w-[82px]">
+          <span className="flex-shrink-0 font-mono text-xs font-semibold uppercase tracking-[0.1em] text-[var(--accent-color)] min-w-[76px] sm:min-w-[82px]">
             {compactTimeLabel}
           </span>
-          <span className="truncate text-[0.94rem] sm:text-[0.98rem] font-medium text-[var(--cream)] group-hover:text-[var(--accent-color)] transition-colors">
+          <span className="truncate text-base sm:text-base font-medium text-[var(--cream)] group-hover:text-[var(--accent-color)] transition-colors">
             {displayTitle}
           </span>
-          <span className="inline-block max-w-[76px] sm:max-w-[120px] truncate flex-shrink-0 font-mono text-[0.62rem] font-medium uppercase tracking-[0.08em] text-[var(--muted)]">
+          <span className="inline-block max-w-[76px] sm:max-w-[120px] truncate flex-shrink-0 font-mono text-xs font-medium uppercase tracking-[0.08em] text-[var(--muted)]">
             {compactChipLabel}
           </span>
-          <span className="flex-shrink-0 font-mono text-[0.62rem] font-medium uppercase tracking-[0.08em] text-[var(--muted)]">
+          <span className="flex-shrink-0 font-mono text-xs font-medium uppercase tracking-[0.08em] text-[var(--muted)]">
             {events.length} {events.length === 1 ? "event" : "events"}
           </span>
           <svg
@@ -270,14 +270,14 @@ export default function EventGroup({
                 </>
               )}
               <div className={`relative z-10 flex flex-col items-start justify-center gap-1.5 ${railImageUrl ? "h-full pl-3 pr-2 py-3 sm:py-4 list-rail-caption" : ""}`}>
-                <span className="font-mono text-[0.62rem] font-semibold text-[var(--accent-color)] leading-none uppercase tracking-[0.12em]">
+                <span className="font-mono text-xs font-semibold text-[var(--accent-color)] leading-none uppercase tracking-[0.12em]">
                   {events.length} {events.length === 1 ? "item" : "items"}
                 </span>
-                <span className={`font-mono text-[1.42rem] font-bold leading-none tabular-nums ${railImageUrl ? "text-white" : "text-[var(--cream)]"}`}>
+                <span className={`font-mono text-2xl font-bold leading-none tabular-nums ${railImageUrl ? "text-white" : "text-[var(--cream)]"}`}>
                   {time}
                 </span>
                 {period && (
-                  <span className={`font-mono text-[0.58rem] font-medium uppercase tracking-[0.12em] ${railImageUrl ? "text-white/78" : "text-[var(--soft)]"}`}>{period}</span>
+                  <span className={`font-mono text-2xs font-medium uppercase tracking-[0.12em] ${railImageUrl ? "text-white/78" : "text-[var(--soft)]"}`}>{period}</span>
                 )}
               </div>
             </div>
@@ -294,18 +294,18 @@ export default function EventGroup({
               href={portalSlug ? `/${portalSlug}?spot=${venueSlug}` : `/spots/${venueSlug}`}
               scroll={false}
               onClick={(e) => e.stopPropagation()}
-              className="font-semibold text-[1.24rem] text-[var(--cream)] hover:text-[var(--accent-color)] truncate block transition-colors leading-tight"
+              className="font-semibold text-xl text-[var(--cream)] hover:text-[var(--accent-color)] truncate block transition-colors leading-tight"
             >
               {displayTitle}
             </Link>
           ) : (
-            <span className="font-semibold text-[1.24rem] text-[var(--cream)] group-hover:text-[var(--accent-color)] truncate block transition-colors leading-tight">{displayTitle}</span>
+            <span className="font-semibold text-xl text-[var(--cream)] group-hover:text-[var(--accent-color)] truncate block transition-colors leading-tight">{displayTitle}</span>
           )}
           {displaySubtitle && <span className="text-sm text-[var(--text-tertiary)] mt-1 block truncate">{displaySubtitle}</span>}
         </div>
         {/* Event count badge - prominent styling */}
         <span
-          className={`font-mono text-[0.62rem] px-2.5 py-1 rounded-full flex-shrink-0 whitespace-nowrap font-medium ${
+          className={`font-mono text-xs px-2.5 py-1 rounded-full flex-shrink-0 whitespace-nowrap font-medium ${
             categoryColor ? "bg-accent-20 text-accent border border-[var(--twilight)]/45" : "bg-[var(--twilight)] text-[var(--cream)] border border-[var(--twilight)]/60"
           }`}
         >

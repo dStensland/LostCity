@@ -102,7 +102,7 @@ function LayoutWireframe({ variant }: { variant: LayoutVariant | "" }) {
 export default function LayoutPicker({ value, onChange }: LayoutPickerProps) {
   return (
     <div className="space-y-2">
-      <span className="font-mono text-[0.5625rem] uppercase tracking-wider text-[var(--muted)]">
+      <span className="font-mono text-2xs uppercase tracking-wider text-[var(--muted)]">
         Layout
       </span>
 
@@ -127,7 +127,7 @@ export default function LayoutPicker({ value, onChange }: LayoutPickerProps) {
             >
               <LayoutWireframe variant={v.id} />
               <div className="absolute inset-x-0 bottom-0 bg-black/70 px-1 py-0.5">
-                <span className="font-mono text-[0.4375rem] text-white/80 leading-none">
+                <span className="font-mono text-2xs text-white/80 leading-none">
                   {v.label}
                 </span>
               </div>

@@ -104,7 +104,7 @@ export default function SourceFiltersComponent({
           }`}
         >
           Tags {filters.healthTags.length > 0 && `(${filters.healthTags.length})`}
-          <span className="text-[0.6rem]">&#9660;</span>
+          <span className="text-xs">&#9660;</span>
         </button>
 
         {tagDropdownOpen && (

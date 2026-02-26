@@ -218,11 +218,11 @@ export default function SearchBar() {
                   <svg className="h-3 w-3 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <p className="text-[0.65rem] text-[var(--muted)] font-mono uppercase tracking-wider">Recent Searches</p>
+                  <p className="text-xs text-[var(--muted)] font-mono uppercase tracking-wider">Recent Searches</p>
                 </div>
                 <button
                   onMouseDown={search.clearRecent}
-                  className="text-[0.6rem] text-[var(--muted)] hover:text-[var(--coral)] transition-colors font-mono"
+                  className="text-xs text-[var(--muted)] hover:text-[var(--coral)] transition-colors font-mono"
                   title="Clear all"
                 >
                   Clear
@@ -272,10 +272,10 @@ export default function SearchBar() {
           {search.showSuggestions && (
             <div className="px-3 py-2 border-b border-[var(--twilight)] bg-[var(--night)]/45">
               <div className="flex items-center justify-between gap-2">
-                <p className="text-[0.65rem] font-mono uppercase tracking-wider text-[var(--soft)] truncate">
+                <p className="text-xs font-mono uppercase tracking-wider text-[var(--soft)] truncate">
                   Search: <span className="text-[var(--cream)] normal-case tracking-normal">&quot;{search.query}&quot;</span>
                 </p>
-                <span className="text-[0.62rem] px-2 py-0.5 rounded-full bg-[var(--twilight)] text-[var(--muted)]">
+                <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--twilight)] text-[var(--muted)]">
                   {search.totalResultCount} results
                 </span>
               </div>
@@ -351,17 +351,17 @@ export default function SearchBar() {
 
           {/* Keyboard hint — desktop only, no physical keyboard on mobile */}
           <div className="hidden sm:block px-3 py-2 border-t border-[var(--twilight)] bg-[var(--night)]/50">
-            <p className="text-[0.6rem] text-[var(--muted)] flex items-center gap-3">
+            <p className="text-xs text-[var(--muted)] flex items-center gap-3">
               <span className="flex items-center gap-1">
-                <kbd className="px-1.5 py-0.5 bg-[var(--twilight)] rounded text-[var(--soft)] text-[0.55rem]">&#8593;&#8595;</kbd>
+                <kbd className="px-1.5 py-0.5 bg-[var(--twilight)] rounded text-[var(--soft)] text-2xs">&#8593;&#8595;</kbd>
                 <span>navigate</span>
               </span>
               <span className="flex items-center gap-1">
-                <kbd className="px-1.5 py-0.5 bg-[var(--twilight)] rounded text-[var(--soft)] text-[0.55rem]">&#8629;</kbd>
+                <kbd className="px-1.5 py-0.5 bg-[var(--twilight)] rounded text-[var(--soft)] text-2xs">&#8629;</kbd>
                 <span>select</span>
               </span>
               <span className="flex items-center gap-1">
-                <kbd className="px-1.5 py-0.5 bg-[var(--twilight)] rounded text-[var(--soft)] text-[0.55rem]">esc</kbd>
+                <kbd className="px-1.5 py-0.5 bg-[var(--twilight)] rounded text-[var(--soft)] text-2xs">esc</kbd>
                 <span>close</span>
               </span>
             </p>

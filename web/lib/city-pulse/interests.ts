@@ -327,6 +327,41 @@ export function getServerChipCount(
   return categoryCounts[chipId] ?? 0;
 }
 
+// ---------------------------------------------------------------------------
+// Server-side query config (used by the API route for per-category fetching)
+// ---------------------------------------------------------------------------
+
+export type InterestQueryConfig =
+  | { type: "category"; categoryId: string }
+  | { type: "or_filter"; filter: string }
+  | null;
+
+/**
+ * Return the PostgREST filter config for fetching events matching a chip.
+ * Category chips → simple `category_id = X` filter.
+ * Genre/tag chips → OR filter across genres/tags arrays.
+ * Specials/unsupported → null (skip server-side query).
+ */
+export function getInterestQueryConfig(chipId: string): InterestQueryConfig {
+  const chip = INTEREST_MAP.get(chipId);
+  if (!chip || chip.type === "specials") return null;
+
+  const keys = CHIP_COUNT_KEYS[chipId];
+  if (keys) {
+    // Genre/tag-based chip — build PostgREST .or() filter
+    const genres = keys.filter((k) => k.startsWith("genre:")).map((k) => k.slice(6));
+    const tags = keys.filter((k) => k.startsWith("tag:")).map((k) => k.slice(4));
+    const parts: string[] = [];
+    if (genres.length) parts.push(`genres.ov.{${genres.join(",")}}`);
+    if (tags.length) parts.push(`tags.ov.{${tags.join(",")}}`);
+    if (chipId === "free") parts.push("is_free.eq.true");
+    return parts.length ? { type: "or_filter", filter: parts.join(",") } : null;
+  }
+
+  // Category-based chip — chip ID is the category_id column value
+  return { type: "category", categoryId: chipId };
+}
+
 /** All valid interest IDs */
 export const ALL_INTEREST_IDS = INTEREST_CHIPS.map((c) => c.id);
 

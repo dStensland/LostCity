@@ -40,7 +40,7 @@ export default function ImagePicker({ value, onChange, activeSlot }: ImagePicker
 
   return (
     <div className="space-y-2">
-      <span className="font-mono text-[0.5625rem] uppercase tracking-wider text-[var(--muted)]">
+      <span className="font-mono text-2xs uppercase tracking-wider text-[var(--muted)]">
         Hero Image
       </span>
 
@@ -55,7 +55,7 @@ export default function ImagePicker({ value, onChange, activeSlot }: ImagePicker
             sizes="320px"
           />
           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-2 py-1.5">
-            <span className="font-mono text-[0.5625rem] text-white/80">
+            <span className="font-mono text-2xs text-white/80">
               {selectedImage?.label || "Custom image"}
               {selectedImage?.credit && (
                 <span className="text-white/40 ml-1.5">{selectedImage.credit}</span>
@@ -86,10 +86,10 @@ export default function ImagePicker({ value, onChange, activeSlot }: ImagePicker
                 `}
               >
                 <span className="flex items-center gap-2">
-                  <span className={`font-mono text-[0.5625rem] uppercase tracking-wider ${isRelevant ? "text-[var(--coral)]" : "text-[var(--soft)]"}`}>
+                  <span className={`font-mono text-2xs uppercase tracking-wider ${isRelevant ? "text-[var(--coral)]" : "text-[var(--soft)]"}`}>
                     {group.label}
                   </span>
-                  <span className="font-mono text-[0.5rem] text-[var(--muted)]">
+                  <span className="font-mono text-2xs text-[var(--muted)]">
                     {images.length}
                   </span>
                   {hasSelected && (
@@ -130,7 +130,7 @@ export default function ImagePicker({ value, onChange, activeSlot }: ImagePicker
                           sizes="80px"
                         />
                         <div className="absolute inset-x-0 bottom-0 bg-black/60 px-1 py-0.5">
-                          <span className="font-mono text-[0.4375rem] text-white/80 leading-none">
+                          <span className="font-mono text-2xs text-white/80 leading-none">
                             {img.label}
                           </span>
                         </div>

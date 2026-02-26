@@ -188,7 +188,7 @@ export default function AdminEventsPage() {
                         <p className="text-xs text-[var(--muted)] mt-0.5">
                           {event.venue?.name || "Venue TBA"}
                           {event.category && (
-                            <span className="ml-2 px-1.5 py-0.5 bg-[var(--twilight)] rounded text-[0.6rem] uppercase">
+                            <span className="ml-2 px-1.5 py-0.5 bg-[var(--twilight)] rounded text-xs uppercase">
                               {event.category}
                             </span>
                           )}

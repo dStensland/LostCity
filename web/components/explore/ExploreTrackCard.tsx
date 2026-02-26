@@ -65,7 +65,7 @@ export default function ExploreTrackCard({
 
         {/* Attribution */}
         <p
-          className="text-[0.65rem] mt-1.5 font-mono uppercase tracking-wider"
+          className="text-xs mt-1.5 font-mono uppercase tracking-wider"
           style={{ color: EXPLORE_THEME.primary }}
         >
           {track.quoteSource}
@@ -80,7 +80,7 @@ export default function ExploreTrackCard({
             {track.name}
           </span>
           <span
-            className="text-[0.6rem] font-mono"
+            className="text-xs font-mono"
             style={{ color: EXPLORE_THEME.muted }}
           >
             {track.venueCount} places
@@ -113,7 +113,7 @@ export default function ExploreTrackCard({
                     style={{ background: EXPLORE_THEME.card }}
                   >
                     <span
-                      className="text-[0.5rem] font-mono truncate px-1"
+                      className="text-2xs font-mono truncate px-1"
                       style={{ color: EXPLORE_THEME.muted }}
                     >
                       {venue.name}

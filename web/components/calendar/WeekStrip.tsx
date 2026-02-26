@@ -38,7 +38,7 @@ export default function WeekStrip({ days, onSelect, className = "" }: WeekStripP
           aria-label={`${format(day.date, "EEEE, MMMM d")}${day.eventCount > 0 ? `, ${day.eventCount} events` : ", no events"}`}
         >
           <span className={`
-            font-mono text-[0.6rem] uppercase
+            font-mono text-xs uppercase
             ${day.isSelected ? "text-[var(--void)]" : "text-[var(--muted)]"}
           `}>
             {WEEK_DAY_LABELS[day.date.getDay()]}

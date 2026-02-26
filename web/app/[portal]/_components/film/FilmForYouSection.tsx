@@ -100,7 +100,7 @@ export default function FilmForYouSection({ portalSlug }: FilmForYouSectionProps
     return (
       <section className="space-y-4">
         <header>
-          <p className="text-[0.62rem] uppercase tracking-[0.18em] text-[#95a8cb]">For You</p>
+          <p className="text-xs uppercase tracking-[0.18em] text-[#95a8cb]">For You</p>
           <h2 className="mt-1 font-[var(--font-film-editorial)] text-3xl text-[#f7f8fd]">Your film picks</h2>
         </header>
         <div className="flex gap-3 overflow-hidden">
@@ -116,7 +116,7 @@ export default function FilmForYouSection({ portalSlug }: FilmForYouSectionProps
     return (
       <section className="space-y-4">
         <header>
-          <p className="text-[0.62rem] uppercase tracking-[0.18em] text-[#95a8cb]">For You</p>
+          <p className="text-xs uppercase tracking-[0.18em] text-[#95a8cb]">For You</p>
           <h2 className="mt-1 font-[var(--font-film-editorial)] text-3xl text-[#f7f8fd]">Personalized film picks</h2>
         </header>
         <Link
@@ -141,7 +141,7 @@ export default function FilmForYouSection({ portalSlug }: FilmForYouSectionProps
   return (
     <section className="space-y-4">
       <header>
-        <p className="text-[0.62rem] uppercase tracking-[0.18em] text-[#95a8cb]">For You</p>
+        <p className="text-xs uppercase tracking-[0.18em] text-[#95a8cb]">For You</p>
         <h2 className="mt-1 font-[var(--font-film-editorial)] text-3xl text-[#f7f8fd]">Your film picks</h2>
       </header>
       <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2">
@@ -166,17 +166,17 @@ export default function FilmForYouSection({ portalSlug }: FilmForYouSectionProps
             <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(4,8,16,0.05)_0%,rgba(4,8,16,0.48)_46%,rgba(4,8,16,0.92)_100%)]" />
             <div className="relative flex h-full flex-col justify-end p-3">
               {event.reasons && event.reasons.length > 0 && (
-                <span className="mb-1 inline-flex w-fit items-center gap-1 rounded-full border border-[#8ea9ec66] bg-[#8ea9ec1f] px-2 py-0.5 text-[0.52rem] uppercase tracking-[0.12em] text-[#d9e5ff]">
+                <span className="mb-1 inline-flex w-fit items-center gap-1 rounded-full border border-[#8ea9ec66] bg-[#8ea9ec1f] px-2 py-0.5 text-2xs uppercase tracking-[0.12em] text-[#d9e5ff]">
                   <Heart size={9} weight="fill" />
                   {event.reasons[0].label}
                 </span>
               )}
               <h3 className="line-clamp-2 text-sm font-semibold text-[#f6f8ff]">{event.title}</h3>
-              <p className="mt-0.5 text-[0.62rem] text-[#c0d0ea]">
+              <p className="mt-0.5 text-xs text-[#c0d0ea]">
                 {formatShortDate(event.start_date)} {event.start_time ? `• ${formatTimeLabel(event.start_time)}` : ""}
               </p>
               {event.venue?.name && (
-                <p className="text-[0.58rem] text-[#9fb0cf]">{event.venue.name}</p>
+                <p className="text-2xs text-[#9fb0cf]">{event.venue.name}</p>
               )}
             </div>
           </Link>

@@ -213,7 +213,7 @@ function TentpoleCountdownBadge({
   const color = getUrgencyColor(countdown.urgency);
   return (
     <span
-      className="inline-flex items-center rounded-full font-mono font-medium uppercase tracking-wider backdrop-blur-sm px-2 py-0.5 text-[0.6rem]"
+      className="inline-flex items-center rounded-full font-mono font-medium uppercase tracking-wider backdrop-blur-sm px-2 py-0.5 text-2xs"
       style={{
         color,
         backgroundColor: `color-mix(in srgb, ${color} 25%, transparent)`,
@@ -303,7 +303,7 @@ function TentpoleCard({
         )}
         {event.category && (
           <div className="flex flex-wrap gap-1 mt-2">
-            <span className="px-1.5 py-0.5 rounded text-[0.6rem] font-mono uppercase border border-[var(--twilight)] text-[var(--muted)]">
+            <span className="px-1.5 py-0.5 rounded text-2xs font-mono uppercase border border-[var(--twilight)] text-[var(--muted)]">
               {event.category.replace(/_/g, " ")}
             </span>
           </div>

@@ -350,6 +350,30 @@ export function getTabChips(tab: SpotsTab): readonly ChipDefinition[] {
   return getTabConfig(tab).chips;
 }
 
+/** Load occasions from /api/filters response, falling back to static chips.
+ *  Call this from components that consume occasion data to prefer DB-backed values. */
+export function getTabChipsFromApi(
+  tab: SpotsTab,
+  apiOccasions?: { value: string; label: string; tab: string; filterOverrides: ChipFilterOverrides }[]
+): readonly ChipDefinition[] {
+  if (!apiOccasions || apiOccasions.length === 0) {
+    return getTabChips(tab);
+  }
+
+  const tabOccasions = apiOccasions.filter((o) => o.tab === tab);
+  if (tabOccasions.length === 0) {
+    return getTabChips(tab);
+  }
+
+  // Convert API occasions to ChipDefinition shape
+  return tabOccasions.map((o) => ({
+    key: o.value,
+    label: o.label,
+    filterOverrides: o.filterOverrides,
+    color: "#A78BFA", // Default color; DB occasions can override via UI later
+  }));
+}
+
 export function getTabVenueTypes(tab: SpotsTab): string[] {
   return getTabConfig(tab).venueTypes;
 }

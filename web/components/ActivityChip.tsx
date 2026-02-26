@@ -105,7 +105,7 @@ export default function ActivityChip({
       <span>{label}</span>
       {count !== undefined && count > 0 && (
         <span className={`
-          font-mono text-[0.65rem] px-1.5 rounded-full
+          font-mono text-xs px-1.5 rounded-full
           ${isActive ? "bg-[var(--coral)]/30 text-[var(--coral)]" : "bg-[var(--night)] text-[var(--muted)]"}
         `}>
           {count}
@@ -161,7 +161,7 @@ export function GenreChip({
 
   return (
     <button
-      className="inline-flex items-center px-1.5 py-0.5 rounded text-[0.65rem] font-mono
+      className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-mono
         bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--dusk)]
         transition-colors border border-[var(--twilight)] min-h-[28px] sm:min-h-[24px]"
       style={{ touchAction: 'manipulation' }}

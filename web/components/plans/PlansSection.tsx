@@ -32,7 +32,7 @@ export function PlansSection() {
             Plans
           </h3>
           {plans.length > 0 && (
-            <span className="font-mono text-[0.65rem] px-1.5 py-0.5 rounded-full bg-[var(--neon-magenta)]/15 text-[var(--neon-magenta)]">
+            <span className="font-mono text-xs px-1.5 py-0.5 rounded-full bg-[var(--neon-magenta)]/15 text-[var(--neon-magenta)]">
               {plans.length}
             </span>
           )}

@@ -289,7 +289,7 @@ export default function RecommendButton({
                   maxLength={280}
                   className="w-full px-3 py-2.5 rounded-lg bg-[var(--night)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm focus:outline-none focus:border-[var(--coral)] transition-colors resize-none"
                 />
-                <p className="mt-1 font-mono text-[0.6rem] text-[var(--muted)] text-right">
+                <p className="mt-1 font-mono text-xs text-[var(--muted)] text-right">
                   {note.length}/280
                 </p>
               </div>

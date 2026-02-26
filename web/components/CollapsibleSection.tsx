@@ -4,13 +4,13 @@ import { useState, ReactNode } from "react";
 
 // Category accent colors - vibrant neon palette
 export const CATEGORY_COLORS = {
-  food: "#FFD700", // gold
-  drinks: "#FF6B6B", // coral/red
-  nightlife: "#FF00FF", // magenta
-  caffeine: "#FFA500", // orange/amber
-  fun: "#00FFFF", // cyan
-  events: "#FF6B6B", // coral
-  venue: "#FF00FF", // magenta
+  food: "var(--gold)", // gold
+  drinks: "var(--coral)", // coral/red
+  nightlife: "var(--neon-magenta)", // magenta
+  caffeine: "var(--neon-amber)", // orange/amber
+  fun: "var(--neon-cyan)", // cyan
+  events: "var(--coral)", // coral
+  venue: "var(--neon-magenta)", // magenta
 } as const;
 
 const ACCENT_COLOR_KEYS = Object.entries(CATEGORY_COLORS).reduce((acc, [key, value]) => {
@@ -110,7 +110,7 @@ export default function CollapsibleSection({
             {displayTitle}
           </h3>
           {title !== displayTitle && (
-            <p className="text-[0.65rem] text-[var(--muted)] font-mono uppercase tracking-wider mt-0.5">
+            <p className="text-xs text-[var(--muted)] font-mono uppercase tracking-wider mt-0.5">
               {title}
             </p>
           )}
@@ -119,7 +119,7 @@ export default function CollapsibleSection({
         {/* Count badge with subtle glow */}
         {count !== undefined && count > 0 && (
           <span
-            className="px-2.5 py-1 rounded-full text-[0.7rem] font-bold font-mono transition-all duration-300 collapsible-count"
+            className="px-2.5 py-1 rounded-full text-xs font-bold font-mono transition-all duration-300 collapsible-count"
           >
             {count}
           </span>

@@ -301,7 +301,7 @@ function ActivityCard({ activity, portalSlug }: { activity: ActivityItem; portal
           )}
 
           {/* Timestamp */}
-          <p className="mt-1 font-mono text-[0.65rem] text-[var(--muted)]">
+          <p className="mt-1 font-mono text-xs text-[var(--muted)]">
             {timeAgo}
           </p>
         </div>

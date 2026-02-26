@@ -27,7 +27,7 @@ import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import EmoryMobileBottomNav from "./_components/hospital/EmoryMobileBottomNav";
 
-export const revalidate = 60;
+export const revalidate = 300;
 
 type ViewMode = "feed" | "find" | "community";
 type FindType = "events" | "classes" | "destinations" | "showtimes";
@@ -224,9 +224,10 @@ export default async function PortalPage({ params, searchParams }: Props) {
 
   // Determine find type - support legacy view params
   // Note: "orgs" was moved to community view, redirect to events
+  // Note: "spots" is a URL alias for the "destinations" findType
   let findType: FindType = "events";
   if (findTypeParam && findTypeParam !== "orgs") {
-    findType = findTypeParam as FindType;
+    findType = (findTypeParam === "spots" ? "destinations" : findTypeParam) as FindType;
   } else if (viewParam === "spots") {
     findType = "destinations";
   }
@@ -311,6 +312,7 @@ export default async function PortalPage({ params, searchParams }: Props) {
           portalSlug={portal.slug}
           portalName={portal.name}
           hideNav={isFilm}
+          backLink={viewMode !== "feed" ? { label: "Dashboard", fallbackHref: `/${portal.slug}` } : undefined}
         />
       )}
 

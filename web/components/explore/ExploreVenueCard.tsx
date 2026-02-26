@@ -63,7 +63,7 @@ export default function ExploreVenueCard({
                 : "var(--twilight)"
         }`,
         borderLeft: hasTonight
-          ? "2px solid #E03A3E"
+          ? "2px solid var(--explore-tonight)"
           : eventCount > 0
             ? `2px solid ${accent}`
             : highlight
@@ -141,7 +141,7 @@ export default function ExploreVenueCard({
               className="font-mono text-[9px] font-semibold px-2 py-[3px] rounded-md"
               style={{
                 background: "rgba(0,0,0,0.7)",
-                color: hasTonight ? "#E03A3E" : "#C1D32F",
+                color: hasTonight ? "var(--explore-tonight)" : "var(--explore-weekend)",
                 border: `1px solid ${hasTonight ? "rgba(224,58,62,0.45)" : "rgba(193,211,47,0.35)"}`,
               }}
             >
@@ -159,7 +159,7 @@ export default function ExploreVenueCard({
           {hasTonight && (
             <span
               className="font-mono text-[9px] font-semibold px-2 py-[3px] rounded-md uppercase tracking-[0.03em] animate-pulse"
-              style={{ background: "#E03A3E", color: "#fff" }}
+              style={{ background: "var(--explore-tonight)", color: "var(--cream)" }}
             >
               Tonight
             </span>
@@ -167,7 +167,7 @@ export default function ExploreVenueCard({
           {!hasTonight && eventCount > 0 && (
             <span
               className="font-mono text-[9px] font-semibold px-2 py-[3px] rounded-md"
-              style={{ background: "#C1D32F", color: "var(--void)" }}
+              style={{ background: "var(--explore-weekend)", color: "var(--void)" }}
             >
               {eventCount} this week
             </span>
@@ -175,7 +175,7 @@ export default function ExploreVenueCard({
           {imageUncertain && (
             <span
               className="font-mono text-[10px] font-semibold px-2 py-[3px] rounded-md"
-              style={{ background: "#22C55E", color: "#052e16" }}
+              style={{ background: "var(--neon-green)", color: "var(--explore-free-text)" }}
               title="Image needs manual verification"
               aria-label="Image needs manual verification"
             >
@@ -341,7 +341,7 @@ function CompactVenueCard({
           {hasTonight && (
             <span
               className="font-mono text-[9px] font-semibold px-1.5 py-0.5 rounded uppercase animate-pulse"
-              style={{ background: "#E03A3E", color: "#fff" }}
+              style={{ background: "var(--explore-tonight)", color: "var(--cream)" }}
             >
               Tonight
             </span>
@@ -349,7 +349,7 @@ function CompactVenueCard({
           {!hasTonight && eventCount > 0 && (
             <span
               className="font-mono text-[9px] font-semibold px-1.5 py-0.5 rounded"
-              style={{ background: "#C1D32F", color: "var(--void)" }}
+              style={{ background: "var(--explore-weekend)", color: "var(--void)" }}
             >
               {eventCount} this week
             </span>
@@ -357,7 +357,7 @@ function CompactVenueCard({
           {imageUncertain && (
             <span
               className="font-mono text-[10px] font-semibold px-1.5 py-0.5 rounded"
-              style={{ background: "#22C55E", color: "#052e16" }}
+              style={{ background: "var(--neon-green)", color: "var(--explore-free-text)" }}
               title="Image needs manual verification"
               aria-label="Image needs manual verification"
             >
@@ -372,7 +372,7 @@ function CompactVenueCard({
               className="font-mono text-[8px] font-semibold px-1.5 py-0.5 rounded"
               style={{
                 background: "rgba(0,0,0,0.62)",
-                color: hasTonight ? "#E03A3E" : "#C1D32F",
+                color: hasTonight ? "var(--explore-tonight)" : "var(--explore-weekend)",
                 border: `1px solid ${hasTonight ? "rgba(224,58,62,0.45)" : "rgba(193,211,47,0.35)"}`,
               }}
             >
@@ -392,7 +392,7 @@ function CompactVenueCard({
           >
             <span
               className="font-mono text-[9px] font-semibold flex-shrink-0"
-              style={{ color: nextEvent.isTonight ? "#E03A3E" : "#C1D32F" }}
+              style={{ color: nextEvent.isTonight ? "var(--explore-tonight)" : "var(--explore-weekend)" }}
             >
               {nextEvent.isTonight
                 ? nextEvent.startTime
@@ -498,7 +498,7 @@ function EventRow({
       <div
         className="font-mono text-[12px] font-semibold min-w-[52px] flex-shrink-0 pt-0.5"
         style={{
-          color: event.isTonight ? "#E03A3E" : accent,
+          color: event.isTonight ? "var(--explore-tonight)" : accent,
         }}
       >
         {event.startTime
@@ -537,7 +537,7 @@ function EventRow({
               className="text-[9px] font-semibold px-1.5 py-0.5 rounded uppercase"
               style={{
                 background: "rgba(52,211,153,0.15)",
-                color: "#34D399",
+                color: "var(--neon-green)",
               }}
             >
               Free

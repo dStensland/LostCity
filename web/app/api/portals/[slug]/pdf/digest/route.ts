@@ -90,7 +90,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
   // Fetch events
   let eventsQuery = supabase
     .from("events")
-    .select("title, start_time, category, venue_name:venues(name)")
+    .select("title, start_time, category_id, venue_name:venues(name)")
     .eq("portal_id", portalData.id)
     .order("start_date", { ascending: true })
     .order("start_time", { ascending: true })
@@ -112,7 +112,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       e.venue_name && typeof e.venue_name === "object" && "name" in (e.venue_name as Record<string, unknown>)
         ? String((e.venue_name as Record<string, unknown>).name)
         : null,
-    category: typeof e.category === "string" ? e.category : null,
+    category: typeof (e as any).category_id === "string" ? (e as any).category_id : null,
   }));
 
   // Fetch nearby restaurants/venues for this portal's area

@@ -99,7 +99,7 @@ function CommunityViewInner({ portalId, portalSlug, portalName, activeTab }: Com
     <div className="py-6">
       {/* Tab navigation */}
       <div className="mb-6">
-        <div className="flex p-1 bg-[var(--night)] rounded-lg">
+        <div className="flex p-1 bg-[var(--night)] rounded-lg max-w-md mx-auto">
           {TABS.map((tab) => {
             const isActive = activeTab === tab.key;
             const isLocked = tab.authRequired && !user;
@@ -121,7 +121,7 @@ function CommunityViewInner({ portalId, portalSlug, portalName, activeTab }: Com
                 </span>
                 <span className="hidden sm:inline">{tab.label}</span>
                 {isLocked && (
-                  <span className="ml-1 px-1.5 py-0.5 rounded text-[0.55rem] bg-[var(--coral)]/20 text-[var(--coral)] font-semibold">
+                  <span className="ml-1 px-1.5 py-0.5 rounded text-2xs bg-[var(--coral)]/20 text-[var(--coral)] font-semibold">
                     Sign in
                   </span>
                 )}
@@ -130,7 +130,7 @@ function CommunityViewInner({ portalId, portalSlug, portalName, activeTab }: Com
           })}
         </div>
         {/* Tab description */}
-        <p className="text-center text-[0.7rem] text-[var(--soft)] mt-2 font-mono">
+        <p className="text-center text-xs text-[var(--soft)] mt-2 font-mono">
           {TABS.find(t => t.key === activeTab)?.description}
         </p>
       </div>

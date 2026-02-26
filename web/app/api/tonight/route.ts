@@ -624,7 +624,7 @@ function getDateRange(period: HighlightsPeriod, now: Date): { startDate: string;
 
 const EVENT_SELECT = `
   id, title, start_date, start_time, doors_time, end_date, end_time,
-  is_all_day, is_free, category, genres, image_url, description, venue_id,
+  is_all_day, is_free, category:category_id, genres, image_url, description, venue_id,
   source_url, ticket_url, age_policy, tags, series_id,
   series:series_id(
     id, slug, title, series_type, image_url, frequency, day_of_week, genres,
@@ -808,7 +808,7 @@ export async function GET(request: NextRequest) {
           baseFilters(portalClient.from("events").select(EVENT_SELECT))
             .gte("start_date", wStart)
             .lte("start_date", wEnd)
-            .neq("category", "film")
+            .neq("category_id", "film")
             .not("image_url", "is", null)
             .order("start_date", { ascending: true })
             .order("start_time", { ascending: true })
@@ -818,7 +818,7 @@ export async function GET(request: NextRequest) {
       // Also fetch indie film sample
       weekQueries.push(
         baseFilters(portalClient.from("events").select(EVENT_SELECT))
-          .eq("category", "film")
+          .eq("category_id", "film")
           .not("image_url", "is", null)
           .not("tags", "cs", "{showtime}")
           .order("start_date", { ascending: true })
@@ -836,14 +836,14 @@ export async function GET(request: NextRequest) {
       // Today/week: single fetch is fine
       const [nonFilmResult, filmResult] = await Promise.all([
         baseFilters(portalClient.from("events").select(EVENT_SELECT))
-          .neq("category", "film")
+          .neq("category_id", "film")
           .not("image_url", "is", null)
           .order("start_date", { ascending: true })
           .order("start_time", { ascending: true })
           .limit(config.candidateLimit),
         // Only fetch film events that AREN'T regular chain showtimes
         baseFilters(portalClient.from("events").select(EVENT_SELECT))
-          .eq("category", "film")
+          .eq("category_id", "film")
           .not("image_url", "is", null)
           .not("tags", "cs", "{showtime}")
           .order("start_date", { ascending: true })
@@ -873,7 +873,7 @@ export async function GET(request: NextRequest) {
       const backfillLimit = config.candidateLimit - allEvents.length;
 
       const { data: backfillData } = await baseFilters(portalClient.from("events").select(EVENT_SELECT))
-        .neq("category", "film")
+        .neq("category_id", "film")
         .is("image_url", null)
         .order("start_date", { ascending: true })
         .order("start_time", { ascending: true })

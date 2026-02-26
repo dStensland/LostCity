@@ -48,10 +48,10 @@ function SpecialCardComponent({ special, portalSlug }: SpecialCardProps) {
         {/* Content */}
         <div className="min-w-0 flex-1">
           {/* Venue name */}
-          <p className="text-[0.7rem] font-mono text-[var(--soft)] truncate">
+          <p className="text-xs font-mono text-[var(--soft)] truncate">
             {special.venue.name}
             {special.venue.neighborhood && (
-              <span className="text-[var(--twilight)]">
+              <span className="text-[var(--muted)]">
                 {" "}
                 &middot; {special.venue.neighborhood}
               </span>
@@ -66,14 +66,14 @@ function SpecialCardComponent({ special, portalSlug }: SpecialCardProps) {
           {/* Meta row: type + state badge */}
           <div className="flex items-center gap-2 mt-1.5">
             {/* Type badge */}
-            <span className="inline-flex items-center gap-1 text-[0.6rem] font-mono text-[var(--muted)]">
+            <span className="inline-flex items-center gap-1 text-xs font-mono text-[var(--muted)]">
               <Tag weight="fill" className="w-3 h-3" />
               {formatSpecialType(special.type)}
             </span>
 
             {/* State badge */}
             <span
-              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[0.58rem] font-mono font-medium"
+              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-2xs font-mono font-medium"
               style={{
                 color: badgeColor,
                 backgroundColor: `color-mix(in srgb, ${badgeColor} 12%, transparent)`,
@@ -91,7 +91,7 @@ function SpecialCardComponent({ special, portalSlug }: SpecialCardProps) {
 
             {/* Price note */}
             {special.price_note && (
-              <span className="text-[0.6rem] font-mono text-[var(--gold)]">
+              <span className="text-xs font-mono text-[var(--gold)]">
                 {special.price_note}
               </span>
             )}

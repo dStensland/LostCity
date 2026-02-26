@@ -44,7 +44,7 @@ export default function PageHeader({
     return pathname.startsWith(path);
   };
 
-  const linkBaseClass = "font-mono text-[0.7rem] font-medium uppercase tracking-wide transition-colors relative";
+  const linkBaseClass = "font-mono text-xs font-medium uppercase tracking-wide transition-colors relative";
   const activeClass = "text-[var(--neon-amber)]";
   const inactiveClass = "text-[var(--muted)] hover:text-[var(--cream)]";
 

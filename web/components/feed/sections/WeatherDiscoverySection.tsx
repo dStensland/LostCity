@@ -53,7 +53,7 @@ export default function WeatherDiscoverySection({
             style={{ color: accentColor }}
           />
           <h2
-            className="font-mono text-[0.6875rem] font-bold tracking-[0.12em] uppercase"
+            className="font-mono text-xs font-bold tracking-[0.12em] uppercase"
             style={{ color: accentColor }}
           >
             {title}
@@ -61,7 +61,7 @@ export default function WeatherDiscoverySection({
         </div>
         <Link
           href={`/${portalSlug}?view=find&type=destinations`}
-          className="text-[0.6875rem] flex items-center gap-1 transition-colors hover:opacity-80"
+          className="text-xs flex items-center gap-1 transition-colors hover:opacity-80"
           style={{ color: accentColor }}
         >
           All spots <ArrowRight className="w-3 h-3" />
@@ -108,7 +108,7 @@ export default function WeatherDiscoverySection({
                 {/* Open badge */}
                 {item.destination.is_open && (
                   <div className="absolute top-2 right-2">
-                    <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-md font-mono text-[0.5rem] font-bold uppercase tracking-wider bg-[var(--void)]/70 backdrop-blur-sm text-[var(--neon-green)]">
+                    <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-md font-mono text-2xs font-bold uppercase tracking-wider bg-[var(--void)]/70 backdrop-blur-sm text-[var(--neon-green)]">
                       <span className="w-1 h-1 rounded-full bg-[var(--neon-green)]" />
                       Open
                     </span>
@@ -118,13 +118,13 @@ export default function WeatherDiscoverySection({
 
               {/* Card body */}
               <div className="px-3 pb-3 -mt-1 relative">
-                <h3 className="text-[0.8125rem] font-semibold text-[var(--cream)] leading-snug truncate group-hover:text-[var(--coral)] transition-colors">
+                <h3 className="text-sm font-semibold text-[var(--cream)] leading-snug truncate group-hover:text-[var(--coral)] transition-colors">
                   {venue.name}
                 </h3>
 
                 {label && (
                   <p
-                    className="text-[0.6875rem] font-medium mt-0.5 leading-tight"
+                    className="text-xs font-medium mt-0.5 leading-tight"
                     style={{ color: accentColor }}
                   >
                     {label}
@@ -132,7 +132,7 @@ export default function WeatherDiscoverySection({
                 )}
 
                 {venue.neighborhood && (
-                  <p className="flex items-center gap-1 text-[0.625rem] text-[var(--muted)] mt-1">
+                  <p className="flex items-center gap-1 text-2xs text-[var(--muted)] mt-1">
                     <MapPin weight="fill" className="w-2.5 h-2.5 shrink-0 opacity-50" />
                     <span className="truncate">{venue.neighborhood}</span>
                   </p>

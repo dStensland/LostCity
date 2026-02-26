@@ -203,7 +203,7 @@ export default function ArtistChip({
       </span>
 
       {(roleLabel || hometown) && (
-        <div className="text-[0.58rem] uppercase tracking-widest text-[var(--muted)] font-mono leading-tight">
+        <div className="text-2xs uppercase tracking-widest text-[var(--muted)] font-mono leading-tight">
           {roleLabel}
           {roleLabel && hometown ? " · " : ""}
           {hometown}
@@ -216,7 +216,7 @@ export default function ArtistChip({
           {genres.slice(0, 2).map((genre) => (
             <span
               key={genre}
-              className="px-1.5 py-0.5 rounded-full text-[0.6rem] border border-[var(--twilight)] text-[var(--muted)] bg-[var(--void)]"
+              className="px-1.5 py-0.5 rounded-full text-xs border border-[var(--twilight)] text-[var(--muted)] bg-[var(--void)]"
             >
               {genre}
             </span>
@@ -225,7 +225,7 @@ export default function ArtistChip({
       )}
 
       {externalHref && (
-        <span className="text-[0.58rem] uppercase tracking-wide text-[var(--coral)]/85 font-mono">
+        <span className="text-2xs uppercase tracking-wide text-[var(--coral)]/85 font-mono">
           Official Site
         </span>
       )}

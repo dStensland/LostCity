@@ -182,14 +182,14 @@ export default function AnimatedEventList({
             >
               <div className="flex items-end justify-between gap-3">
                 <div className="min-w-0">
-                  <h2 className="font-mono text-[1.08rem] sm:text-[1.2rem] font-semibold text-[var(--cream)] tracking-tight truncate">
+                  <h2 className="font-mono text-lg sm:text-xl font-semibold text-[var(--cream)] tracking-tight truncate">
                     {getDateLabel(date)}
                   </h2>
-                  <p className="font-mono text-[0.62rem] text-[var(--muted)] uppercase tracking-[0.12em] mt-0.5">
+                  <p className="font-mono text-xs text-[var(--muted)] uppercase tracking-[0.12em] mt-0.5">
                     Curated timeline
                   </p>
                 </div>
-                <span className="inline-flex items-center px-2.5 py-1 rounded-full border border-[var(--twilight)]/70 bg-[var(--dusk)]/82 font-mono text-[0.62rem] text-[var(--soft)] whitespace-nowrap">
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full border border-[var(--twilight)]/70 bg-[var(--dusk)]/82 font-mono text-xs text-[var(--soft)] whitespace-nowrap">
                   {totalCount} {totalCount !== 1 ? "items" : "item"}
                 </span>
               </div>
@@ -205,11 +205,11 @@ export default function AnimatedEventList({
                       <span className="text-[var(--muted)]/55">
                         {TIME_PERIOD_ICONS[period]}
                       </span>
-                      <span className="font-mono text-[0.54rem] text-[var(--muted)]/80 uppercase tracking-[0.12em]">
+                      <span className="font-mono text-2xs text-[var(--muted)]/80 uppercase tracking-[0.12em]">
                         {TIME_PERIOD_LABELS[period]}
                       </span>
                       <div className="flex-1 h-px bg-[var(--twilight)]/35" />
-                      <span className="font-mono text-[0.52rem] text-[var(--muted)]/60">
+                      <span className="font-mono text-2xs text-[var(--muted)]/60">
                         {items.length}
                       </span>
                     </div>

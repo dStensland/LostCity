@@ -6,6 +6,7 @@ import { SPOT_TYPE_CONFIG, SPOT_TYPE_ORDER, SPOTS_TABS, type Spot, type SpotsTab
 import { haversineKm } from "@/lib/distance";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
+import VenueListSkeleton from "@/components/find/VenueListSkeleton";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -204,6 +205,11 @@ export default function VenueListView({
     );
   }
 
+  // ── Initial loading state ──────────────────────────────────────────────
+  if (loading && spots.length === 0) {
+    return <VenueListSkeleton />;
+  }
+
   // ── Empty state ────────────────────────────────────────────────────────
   if (filteredCount === 0 && !loading && !fetchError) {
     return (
@@ -245,19 +251,19 @@ export default function VenueListView({
                 setExpandedCategories(new Set(groupedSpots.map((g) => g.type)));
               }
             }}
-            className="px-2 py-1 rounded font-mono text-[0.65rem] text-[var(--muted)] hover:text-[var(--soft)] transition-colors bg-[var(--twilight)]/30 hover:bg-[var(--twilight)]/50"
+            className="px-2 py-1 rounded font-mono text-xs text-[var(--muted)] hover:text-[var(--soft)] transition-colors bg-[var(--twilight)]/30 hover:bg-[var(--twilight)]/50"
           >
             {expandedCategories.size === groupedSpots.length ? "Collapse all" : "Expand all"}
           </button>
         )}
 
         <div className="flex items-center gap-1">
-          <span className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider mr-2 hidden sm:inline">Sort:</span>
+          <span className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider mr-2 hidden sm:inline">Sort:</span>
           {(["category", "neighborhood", "alphabetical"] as const).map((option) => (
             <button
               key={option}
               onClick={() => setSortBy(option)}
-              className={`px-2 py-1 rounded font-mono text-[0.65rem] transition-all ${
+              className={`px-2 py-1 rounded font-mono text-xs transition-all ${
                 sortBy === option
                   ? "bg-[var(--coral)] text-[var(--void)]"
                   : "bg-[var(--twilight)]/50 text-[var(--muted)] hover:text-[var(--cream)]"
@@ -269,7 +275,7 @@ export default function VenueListView({
           {hasLocation && (
             <button
               onClick={() => setSortBy("distance")}
-              className={`px-2 py-1 rounded font-mono text-[0.65rem] transition-all ${
+              className={`px-2 py-1 rounded font-mono text-xs transition-all ${
                 sortBy === "distance"
                   ? "bg-[var(--coral)] text-[var(--void)]"
                   : "bg-[var(--twilight)]/50 text-[var(--muted)] hover:text-[var(--cream)]"
@@ -310,7 +316,7 @@ export default function VenueListView({
                   >
                     {config.label}
                   </h3>
-                  <span className="font-mono text-[0.6rem] text-[var(--muted)] mr-2">{groupSpots.length}</span>
+                  <span className="font-mono text-xs text-[var(--muted)] mr-2">{groupSpots.length}</span>
                   <svg
                     className={`w-4 h-4 text-[var(--muted)] transition-transform ${isExpanded ? "rotate-180" : ""}`}
                     fill="none"

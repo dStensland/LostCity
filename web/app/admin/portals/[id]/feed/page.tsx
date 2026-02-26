@@ -160,7 +160,7 @@ export default function PortalFeedPage() {
         {/* Categories */}
         <div className="mb-6">
           <h3 className="font-mono text-xs text-[var(--soft)] mb-3">Categories</h3>
-          <p className="font-mono text-[0.65rem] text-[var(--muted)] mb-2">
+          <p className="font-mono text-xs text-[var(--muted)] mb-2">
             Select categories to include. Leave all unchecked to include all categories.
           </p>
           <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
@@ -208,7 +208,7 @@ export default function PortalFeedPage() {
         {/* Date Range */}
         <div className="mb-6">
           <h3 className="font-mono text-xs text-[var(--soft)] mb-3">Date Range</h3>
-          <p className="font-mono text-[0.65rem] text-[var(--muted)] mb-2">
+          <p className="font-mono text-xs text-[var(--muted)] mb-2">
             Optional: Limit events to a specific date window.
           </p>
           <div className="grid grid-cols-2 gap-4">
@@ -252,7 +252,7 @@ export default function PortalFeedPage() {
               }}
               className="w-full h-2 bg-[var(--twilight)] rounded-lg appearance-none cursor-pointer accent-[var(--coral)]"
             />
-            <div className="flex justify-between font-mono text-[0.6rem] text-[var(--muted)] mt-1">
+            <div className="flex justify-between font-mono text-xs text-[var(--muted)] mt-1">
               <span>Any</span>
               <span>$50</span>
               <span>$100</span>
@@ -359,7 +359,7 @@ export default function PortalFeedPage() {
                         <div className="flex items-center gap-2">
                           <span className="font-mono text-sm text-[var(--cream)]">{section.title}</span>
                           <span
-                            className={`px-1.5 py-0.5 rounded text-[0.6rem] font-mono ${
+                            className={`px-1.5 py-0.5 rounded text-xs font-mono ${
                               section.section_type === "curated"
                                 ? "bg-[var(--coral)]/20 text-[var(--coral)]"
                                 : "bg-[var(--neon-cyan)]/20 text-[var(--neon-cyan)]"
@@ -368,12 +368,12 @@ export default function PortalFeedPage() {
                             {section.section_type}
                           </span>
                           {!section.is_visible && (
-                            <span className="px-1.5 py-0.5 rounded text-[0.6rem] font-mono bg-[var(--twilight)] text-[var(--muted)]">
+                            <span className="px-1.5 py-0.5 rounded text-xs font-mono bg-[var(--twilight)] text-[var(--muted)]">
                               hidden
                             </span>
                           )}
                         </div>
-                        <div className="font-mono text-[0.6rem] text-[var(--muted)]">/{section.slug}</div>
+                        <div className="font-mono text-xs text-[var(--muted)]">/{section.slug}</div>
                       </div>
                     </label>
                   );

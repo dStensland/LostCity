@@ -150,7 +150,7 @@ export default function QuickTagsRow({ className = "", showGroupLabels = false }
 
               {/* Optional group label */}
               {showGroupLabels && (
-                <span className="shrink-0 font-mono text-[0.55rem] text-[var(--muted)] uppercase tracking-wider px-1">
+                <span className="shrink-0 font-mono text-2xs text-[var(--muted)] uppercase tracking-wider px-1">
                   {GROUP_LABELS[groupKey]}
                 </span>
               )}
@@ -185,7 +185,7 @@ export default function QuickTagsRow({ className = "", showGroupLabels = false }
           className="absolute right-0 top-0 bottom-0 flex items-center pointer-events-none z-10 overflow-indicator"
         >
           <span
-            className="font-mono text-[0.6rem] text-[var(--soft)] bg-[var(--twilight)] px-2 py-1 rounded-full border border-[var(--muted)]/30"
+            className="font-mono text-xs text-[var(--soft)] bg-[var(--twilight)] px-2 py-1 rounded-full border border-[var(--muted)]/30"
             aria-live="polite"
             aria-atomic="true"
           >

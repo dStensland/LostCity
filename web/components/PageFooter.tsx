@@ -93,12 +93,12 @@ export default function PageFooter({
 
         {/* Copyright */}
         <div className="text-center">
-          <p className="font-mono text-[0.6rem] text-[var(--muted)] opacity-60">
+          <p className="font-mono text-xs text-[var(--muted)] opacity-60">
             {copyrightText}
           </p>
           {/* Only show "AI-powered" for LostCity branded portals */}
           {!hideAttribution && (
-            <p className="font-mono text-[0.5rem] text-[var(--muted)] mt-1 opacity-40">
+            <p className="font-mono text-2xs text-[var(--muted)] mt-1 opacity-40">
               AI-powered · Updated continuously
             </p>
           )}

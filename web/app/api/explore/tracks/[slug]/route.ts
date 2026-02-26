@@ -221,7 +221,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     const { data: rawEvents } = await supabase
       .from("events")
-      .select("id, venue_id, title, start_date, start_time, end_time, category, is_free, price_min, price_max")
+      .select("id, venue_id, title, start_date, start_time, end_time, category_id, is_free, price_min, price_max")
       .in("venue_id", venueIds)
       .gte("start_date", today)
       .lte("start_date", futureDateStr)
@@ -329,7 +329,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
           start_date: ev.start_date,
           start_time: ev.start_time,
           end_time: ev.end_time,
-          category: ev.category,
+          category: (ev as any).category_id ?? null,
           is_free: ev.is_free ?? false,
           price_min: ev.price_min,
           price_max: ev.price_max,

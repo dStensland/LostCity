@@ -197,7 +197,7 @@ export default function InviteCompletePage({ params }: Props) {
 
         <Link
           href={`/${DEFAULT_PORTAL_SLUG}`}
-          className="inline-block bg-[var(--coral)] text-[var(--night)] px-6 py-3 rounded font-medium hover:opacity-90"
+          className="inline-block bg-[var(--coral)] text-[var(--void)] px-6 py-3 rounded font-medium hover:opacity-90"
         >
           Explore Events
         </Link>

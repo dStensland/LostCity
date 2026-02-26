@@ -150,7 +150,7 @@ export default function NotificationsPanel() {
                         {category.channels.map((channel) => (
                           <span
                             key={channel}
-                            className="px-1.5 py-0.5 rounded text-[0.55rem] font-mono bg-[var(--twilight)] text-[var(--muted)]"
+                            className="px-1.5 py-0.5 rounded text-2xs font-mono bg-[var(--twilight)] text-[var(--muted)]"
                           >
                             {channel === "push" ? "Push" : channel === "email" ? "Email" : "In-app"}
                           </span>

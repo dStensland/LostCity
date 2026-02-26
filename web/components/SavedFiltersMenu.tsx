@@ -92,7 +92,7 @@ function SavedFiltersMenu({ variant = "compact" }: SavedFiltersMenuProps) {
         </svg>
         {variant === "full" && "Saved"}
         {savedFilters.length > 0 && (
-          <span className="px-1 py-0.5 rounded-full bg-[var(--coral)]/30 text-[0.55rem]">
+          <span className="px-1 py-0.5 rounded-full bg-[var(--coral)]/30 text-2xs">
             {savedFilters.length}
           </span>
         )}
@@ -152,7 +152,7 @@ function SavedFiltersMenu({ variant = "compact" }: SavedFiltersMenuProps) {
             {savedFilters.length === 0 ? (
               <div className="p-4 text-center">
                 <div className="text-[var(--muted)] font-mono text-xs mb-2">No saved filters</div>
-                <p className="text-[var(--muted)] text-[0.6rem]">
+                <p className="text-[var(--muted)] text-xs">
                   Apply some filters, then save them here for quick access later.
                 </p>
               </div>
@@ -168,7 +168,7 @@ function SavedFiltersMenu({ variant = "compact" }: SavedFiltersMenuProps) {
                       <div className="font-mono text-xs text-[var(--cream)] truncate">
                         {filter.name}
                       </div>
-                      <div className="font-mono text-[0.55rem] text-[var(--muted)] truncate">
+                      <div className="font-mono text-2xs text-[var(--muted)] truncate">
                         {[
                           filter.categories.length > 0 && `${filter.categories.length} cat`,
                           filter.neighborhoods.length > 0 && `${filter.neighborhoods.length} area`,

@@ -3,8 +3,8 @@ Crawler for AMC Theatres Atlanta-area locations.
 
 Navigates to amctheatres.com theater showtime pages for each location,
 extracts movie titles and showtimes using Playwright.
-6 locations: Phipps Plaza, North DeKalb, Southlake Pavilion,
-Sugarloaf Mills, Camp Creek, Mansell Crossing.
+7 locations: Phipps Plaza, North DeKalb, Southlake Pavilion,
+Sugarloaf Mills, Camp Creek, Mansell Crossing, Madison Yards.
 """
 
 from __future__ import annotations
@@ -127,6 +127,22 @@ class AMCAtlantaCrawler(ChainCinemaCrawler):
             },
             "url_slug": "amc-mansell-crossing-14",
         },
+        {
+            "venue_data": {
+                "name": "AMC Madison Yards 8",
+                "slug": "amc-madison-yards",
+                "address": "975 Memorial Dr SE",
+                "neighborhood": "Reynoldstown",
+                "city": "Atlanta",
+                "state": "GA",
+                "zip": "30316",
+                "venue_type": "cinema",
+                "website": "https://www.amctheatres.com/movie-theatres/atlanta/amc-madison-yards-8",
+                "lat": 33.7471,
+                "lng": -84.3567,
+            },
+            "url_slug": "amc-madison-yards-8",
+        },
     ]
 
     def get_showtime_url(self, location: dict, date: datetime) -> str:
@@ -143,7 +159,7 @@ class AMCAtlantaCrawler(ChainCinemaCrawler):
         venue_id: int,
         venue_name: str,
         seen_hashes: set[str],
-    ) -> tuple[int, int, int]:
+    ) -> tuple[int, int, int, int]:
         """Override: navigate to each date URL directly (no tab clicking)."""
         from db import insert_event, find_event_by_hash, smart_update_existing_event
         from dedupe import generate_content_hash
@@ -151,6 +167,7 @@ class AMCAtlantaCrawler(ChainCinemaCrawler):
         found = 0
         new = 0
         updated = 0
+        load_failures = 0
         probe_days = self.get_probe_days_for_location(location)
         today = datetime.now().date()
 
@@ -181,7 +198,7 @@ class AMCAtlantaCrawler(ChainCinemaCrawler):
             body_text = page.inner_text("body")
             if "gone off script" in body_text or "ERROR 404" in body_text:
                 logger.warning(f"  {venue_name}: 404 page — theater may have moved or closed")
-                return found, new, updated
+                return found, new, updated, load_failures
 
             movies = self.extract_showtimes(page, location, target_dt)
 
@@ -252,7 +269,7 @@ class AMCAtlantaCrawler(ChainCinemaCrawler):
 
             logger.info(f"  {venue_name} {date_str}: {len(movies)} movies found")
 
-        return found, new, updated
+        return found, new, updated, load_failures
 
     def extract_showtimes(self, page: Page, location: dict, target_date: datetime) -> list[dict]:
         """Extract movies and showtimes from AMC showtime page.

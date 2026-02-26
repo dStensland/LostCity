@@ -1,13 +1,10 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import Link from "next/link";
-import Map, { Marker, Source, Layer, NavigationControl } from "react-map-gl";
-import { MAPBOX_TOKEN, DARK_STYLE } from "@/lib/map-config";
-import MapPin from "@/components/map/MapPin";
+import dynamic from "next/dynamic";
 import {
   getItemTitle,
-  getItemCoords,
   formatItineraryTime,
   formatWalkTime,
   formatWalkDistance,
@@ -21,7 +18,27 @@ import {
   CaretDown,
   Notebook,
   NavigationArrow,
+  Copy,
 } from "@phosphor-icons/react/dist/ssr";
+import {
+  ZONE_COLORS,
+  getDangerLevel,
+  getBufferLabel,
+  getItemCategory,
+  WalkingPersonIcon,
+} from "@/lib/playbook-shared";
+import AddToCalendar from "@/components/AddToCalendar";
+
+const SharedPlaybookMap = dynamic(() => import("./SharedPlaybookMapInner"), {
+  ssr: false,
+  loading: () => (
+    <div className="relative overflow-hidden" style={{ background: "#07070C" }}>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div className="w-5 h-5 rounded-full border-2 border-white/20 border-t-white/60 animate-spin" />
+      </div>
+    </div>
+  ),
+});
 
 // ---------------------------------------------------------------------------
 // Types
@@ -39,163 +56,6 @@ interface SharedPlaybookViewProps {
   portalSlug: string;
 }
 
-type DangerLevel = "safe" | "warning" | "danger";
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-const ZONE_COLORS = {
-  safe: { dot: "#00D9A0", bg: "rgba(0, 217, 160, 0.08)", border: "rgba(0, 217, 160, 0.2)", text: "#00D9A0" },
-  warning: { dot: "#FFB800", bg: "rgba(255, 184, 0, 0.08)", border: "rgba(255, 184, 0, 0.25)", text: "#FFB800" },
-  danger: { dot: "#FF3366", bg: "rgba(255, 51, 102, 0.08)", border: "rgba(255, 51, 102, 0.25)", text: "#FF3366" },
-};
-
-const ROUTE_GLOW_LAYER = {
-  id: "route-glow",
-  type: "line" as const,
-  paint: { "line-color": "#00D4E8", "line-width": 8, "line-opacity": 0.06, "line-blur": 4 },
-};
-
-const ROUTE_LINE_LAYER = {
-  id: "route-line",
-  type: "line" as const,
-  paint: {
-    "line-color": "#00D4E8",
-    "line-width": 2,
-    "line-dasharray": [3, 2] as [number, number],
-    "line-opacity": 0.4,
-  },
-};
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function getDangerLevel(walkMinutes: number, bufferMinutes: number): DangerLevel {
-  if (bufferMinutes >= 15) return "safe";
-  if (bufferMinutes >= 5) return "warning";
-  return "danger";
-}
-
-function getBufferLabel(level: DangerLevel, bufferMinutes: number): string {
-  if (level === "safe") return `${bufferMinutes} min buffer`;
-  if (level === "warning") return `${bufferMinutes} min buffer — Cutting it close`;
-  return "You might be late";
-}
-
-function getItemCategory(item: ItineraryItem): string {
-  if (item.event?.category) return item.event.category;
-  if (item.venue?.venue_type) return item.venue.venue_type;
-  return "default";
-}
-
-// ---------------------------------------------------------------------------
-// SharedPlaybookMap
-// ---------------------------------------------------------------------------
-
-function SharedPlaybookMap({
-  items,
-  className = "",
-}: {
-  items: ItineraryItem[];
-  className?: string;
-}) {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-    // @ts-expect-error - Dynamic CSS import for Mapbox GL
-    import("mapbox-gl/dist/mapbox-gl.css");
-  }, []);
-
-  const coords = useMemo(
-    () =>
-      items
-        .map((item) => getItemCoords(item))
-        .filter((c): c is { lat: number; lng: number } => c !== null),
-    [items],
-  );
-
-  const center = useMemo(() => {
-    if (coords.length === 0) return { lat: 33.7725, lng: -84.3655 };
-    const avgLat = coords.reduce((s, c) => s + c.lat, 0) / coords.length;
-    const avgLng = coords.reduce((s, c) => s + c.lng, 0) / coords.length;
-    return { lat: avgLat, lng: avgLng };
-  }, [coords]);
-
-  const routeGeoJson = useMemo(
-    () => ({
-      type: "Feature" as const,
-      properties: {},
-      geometry: {
-        type: "LineString" as const,
-        coordinates: coords.map((c) => [c.lng, c.lat]),
-      },
-    }),
-    [coords],
-  );
-
-  if (!mounted) {
-    return (
-      <div className={`${className} relative overflow-hidden`} style={{ background: "#07070C" }}>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-5 h-5 rounded-full border-2 border-white/20 border-t-white/60 animate-spin" />
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className={`${className} relative overflow-hidden`}>
-      <Map
-        mapboxAccessToken={MAPBOX_TOKEN}
-        mapStyle={DARK_STYLE}
-        initialViewState={{ longitude: center.lng, latitude: center.lat, zoom: 13 }}
-        style={{ width: "100%", height: "100%" }}
-        attributionControl={false}
-      >
-        <NavigationControl position="top-right" showCompass={false} />
-
-        {coords.length >= 2 && (
-          <Source id="route" type="geojson" data={routeGeoJson}>
-            <Layer {...ROUTE_GLOW_LAYER} />
-            <Layer {...ROUTE_LINE_LAYER} />
-          </Source>
-        )}
-
-        {items.map((item, idx) => {
-          const c = getItemCoords(item);
-          if (!c) return null;
-          const isAnchor = idx === 0;
-          const category = getItemCategory(item);
-
-          return isAnchor ? (
-            <Marker key={item.id} longitude={c.lng} latitude={c.lat} anchor="center">
-              <div
-                className="flex items-center justify-center rounded-full"
-                style={{
-                  width: 34,
-                  height: 34,
-                  background: "rgba(255, 217, 61, 0.12)",
-                  border: "2.5px solid rgba(255, 217, 61, 0.6)",
-                  color: "#FFD93D",
-                  boxShadow: "0 0 24px rgba(255, 217, 61, 0.3)",
-                }}
-              >
-                <Star size={14} weight="fill" />
-              </div>
-            </Marker>
-          ) : (
-            <Marker key={item.id} longitude={c.lng} latitude={c.lat} anchor="bottom">
-              <MapPin category={category} />
-            </Marker>
-          );
-        })}
-      </Map>
-    </div>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Main Component
@@ -208,6 +68,17 @@ export default function SharedPlaybookView({
 }: SharedPlaybookViewProps) {
   const { items } = itinerary;
   const [mapExpanded, setMapExpanded] = useState(true);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyLink = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback: select-copy for older browsers
+    }
+  }, []);
 
   const totalWalkMeters = useMemo(
     () => items.reduce((s, item) => s + (item.walk_distance_meters || 0), 0),
@@ -514,22 +385,51 @@ export default function SharedPlaybookView({
             </div>
           )}
 
-          {/* CTA */}
-          <div className="mt-10 text-center">
-            <Link
-              href={`/${portalSlug}`}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-medium transition-all hover:brightness-110"
+          {/* CTAs */}
+          <div className="mt-10 space-y-3">
+            {/* Copy link */}
+            <button
+              onClick={handleCopyLink}
+              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl border text-sm font-medium transition-all hover:brightness-110"
               style={{
-                background: "var(--gold, #D4A843)",
-                color: "var(--void, #09090F)",
+                color: "var(--gold, #D4A843)",
+                borderColor: "rgba(212, 168, 67, 0.25)",
+                background: "rgba(212, 168, 67, 0.06)",
               }}
             >
-              <NavigationArrow size={16} />
-              Explore {portalName}
-            </Link>
-            <p className="text-xs text-white/20 mt-3">
-              Powered by LostCity
-            </p>
+              <Copy size={16} />
+              {copied ? "Copied!" : "Share this playbook"}
+            </button>
+
+            {/* Add to Calendar — uses first item's date/time */}
+            {itinerary.date && items.length > 0 && (
+              <div className="[&>div]:w-full">
+                <AddToCalendar
+                  title={itinerary.title}
+                  date={itinerary.date}
+                  time={items[0].start_time}
+                  venue={items[0].venue?.name || items[0].event?.venue_name || undefined}
+                />
+              </div>
+            )}
+
+            {/* Explore CTA */}
+            <div className="text-center pt-2">
+              <Link
+                href={`/${portalSlug}/playbook`}
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-medium transition-all hover:brightness-110"
+                style={{
+                  background: "var(--gold, #D4A843)",
+                  color: "var(--void, #09090F)",
+                }}
+              >
+                <NavigationArrow size={16} />
+                Start planning your own outing
+              </Link>
+              <p className="text-xs text-white/20 mt-3">
+                Powered by LostCity
+              </p>
+            </div>
           </div>
         </main>
 

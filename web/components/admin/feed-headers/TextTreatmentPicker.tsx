@@ -87,7 +87,7 @@ function TreatmentPreview({ treatment }: { treatment: TextTreatment | "" }) {
 export default function TextTreatmentPicker({ value, onChange }: TextTreatmentPickerProps) {
   return (
     <div className="space-y-2">
-      <span className="font-mono text-[0.5625rem] uppercase tracking-wider text-[var(--muted)]">
+      <span className="font-mono text-2xs uppercase tracking-wider text-[var(--muted)]">
         Text Treatment
       </span>
 
@@ -112,7 +112,7 @@ export default function TextTreatmentPicker({ value, onChange }: TextTreatmentPi
             >
               <TreatmentPreview treatment={t.id} />
               <div className="absolute inset-x-0 bottom-0 bg-black/70 px-1 py-0.5">
-                <span className="font-mono text-[0.4375rem] text-white/80 leading-none">
+                <span className="font-mono text-2xs text-white/80 leading-none">
                   {t.label}
                 </span>
               </div>

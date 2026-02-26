@@ -172,7 +172,7 @@ export default function EmoryConciergeFoodExplorer({
     <section className="rounded-xl border border-[#d7dce4] bg-white p-3 sm:p-4">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h3 className="text-[1.2rem] sm:text-[1.35rem] leading-[1.02] text-[#002f6c] font-semibold">What&apos;s nearby</h3>
+          <h3 className="text-xl sm:text-xl leading-[1.02] text-[#002f6c] font-semibold">What&apos;s nearby</h3>
           <p className="mt-1 text-xs sm:text-sm text-[#4b5563]">
             Showing <strong>{activeCategoryLabel.toLowerCase()}</strong> around this campus.
             {activeCategoryIsFood ? ` ${activeMomentOption.label.toLowerCase()} · ${activePreferenceOption.label.toLowerCase()}.` : ""}
@@ -255,7 +255,7 @@ export default function EmoryConciergeFoodExplorer({
               <p className="text-[10.5px] font-bold uppercase tracking-[0.07em] text-[#8094b3]">
                 {formatLabel(item.category)} · {formatLabel(item.venueType || "service")} · {item.distanceMiles.toFixed(1)} mi
               </p>
-              <h4 className="mt-1 text-[1.05rem] leading-[1.02] text-[#002f6c] font-semibold">{item.title}</h4>
+              <h4 className="mt-1 text-base leading-[1.02] text-[#002f6c] font-semibold">{item.title}</h4>
               <p className="mt-1 text-xs text-[#4b5563]">{item.summary}</p>
               <p className="mt-1 text-[11px] text-[#6b7280]">
                 {item.isOpenNow ? "Open now" : "Check hours"}

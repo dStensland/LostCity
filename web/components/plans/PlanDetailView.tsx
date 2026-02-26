@@ -213,7 +213,7 @@ export function PlanDetailView({ planId, onBack }: PlanDetailViewProps) {
         ) : (
           <div className="relative">
             {/* Timeline line */}
-            <div className="absolute left-[1.5rem] top-3 bottom-3 w-px bg-[var(--twilight)]" />
+            <div className="absolute left-6 top-3 bottom-3 w-px bg-[var(--twilight)]" />
             <div className="space-y-0.5">
               {sortedItems.map((item) => (
                 <PlanItemRow

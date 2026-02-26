@@ -178,6 +178,12 @@ const LINKS = {
     href: buildHref(p, { categories: "art" }),
     accent_color: "var(--neon-magenta)",
   }),
+  tacoTuesday: (p: string): QuickLink => ({
+    label: "Taco Spots",
+    icon: "ForkKnife",
+    href: buildVenueHref(p, { cuisine: "mexican,tex_mex", label: "Taco Spots", tab: "eat-drink" }),
+    accent_color: "var(--gold)",
+  }),
 } satisfies Record<string, LinkFactory>;
 
 // ---------------------------------------------------------------------------
@@ -295,6 +301,12 @@ export function getContextualQuickLinks(
 
   // Apply weather overrides
   linkKeys = applyWeatherOverrides(linkKeys, weatherSignal, timeSlot);
+
+  // Day-theme overrides: inject themed links for specific days
+  if (dayOfWeek === "tuesday" && !linkKeys.includes("tacoTuesday")) {
+    // On Tuesdays, inject Taco Spots as 2nd link
+    linkKeys.splice(1, 0, "tacoTuesday");
+  }
 
   // Deduplicate and cap at 6
   const seen = new Set<string>();

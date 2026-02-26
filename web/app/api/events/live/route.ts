@@ -57,7 +57,7 @@ export async function GET(request: Request) {
         start_time,
         end_time,
         is_all_day,
-        category,
+        category_id,
         tags,
         price_min,
         price_max,

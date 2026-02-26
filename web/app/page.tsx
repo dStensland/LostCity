@@ -119,7 +119,7 @@ export default async function Home() {
           {/* Section header */}
           <div className="flex items-center justify-center gap-4 mb-6">
             <div className="h-px flex-1 max-w-16 bg-gradient-to-r from-transparent to-[#00e5ff]/40" />
-            <span className="text-[0.65rem] uppercase tracking-[0.4em] text-[#00e5ff]/85">
+            <span className="text-xs uppercase tracking-[0.4em] text-[#00e5ff]/85">
               GO BE COMMUNITY
             </span>
             <div className="h-px flex-1 max-w-16 bg-gradient-to-l from-transparent to-[#00e5ff]/40" />
@@ -186,7 +186,7 @@ export default async function Home() {
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00e5ff] opacity-75" />
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00e5ff]" />
                 </span>
-                <span className="text-[0.6rem] font-mono uppercase tracking-wider text-[#00e5ff] hidden md:inline">Live</span>
+                <span className="text-2xs font-mono uppercase tracking-wider text-[#00e5ff] hidden md:inline">Live</span>
               </div>
             </Link>
           </FloatingElement>

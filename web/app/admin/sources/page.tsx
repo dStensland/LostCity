@@ -248,7 +248,7 @@ function SummaryCard({ label, value, color }: { label: string; value: number; co
 
   return (
     <div className="p-3 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg">
-      <p className="font-mono text-[0.65rem] text-[var(--muted)] uppercase">{label}</p>
+      <p className="font-mono text-xs text-[var(--muted)] uppercase">{label}</p>
       <p className={`font-mono text-2xl font-bold ${color ? colorClasses[color] : "text-[var(--cream)]"}`}>
         {value}
       </p>
@@ -298,7 +298,7 @@ function SourceRow({ source }: { source: SourceHealth }) {
               >
                 {source.name}
               </Link>
-              <p className="font-mono text-[0.6rem] text-[var(--muted)]">{source.slug}</p>
+              <p className="font-mono text-xs text-[var(--muted)]">{source.slug}</p>
             </div>
           </div>
         </td>

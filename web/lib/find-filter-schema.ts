@@ -4,7 +4,6 @@ export const FIND_TYPE_FILTER_KEYS: Record<FindType, readonly string[]> = {
   events: [
     "search",
     "categories",
-    "subcategories",
     "genres",
     "tags",
     "vibes",

@@ -256,7 +256,7 @@ export default function AddTagModal({ venueId, entityType = "venue", onClose, on
                       <div key={group}>
                         <h3
                           data-tag-group={group}
-                          className="font-mono text-[0.65rem] uppercase tracking-wider mb-2 tag-group-label"
+                          className="font-mono text-xs uppercase tracking-wider mb-2 tag-group-label"
                         >
                           {groupConfig?.label || group}
                         </h3>

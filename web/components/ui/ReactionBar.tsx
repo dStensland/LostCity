@@ -131,7 +131,7 @@ export function ReactionBar({ targetType, targetId, reactions: initialReactions 
           }`}
         >
           <span>{r.emoji}</span>
-          <span className={`font-mono text-[0.6rem] ${r.hasReacted ? "text-[var(--coral)]" : "text-[var(--muted)]"}`}>
+          <span className={`font-mono text-xs ${r.hasReacted ? "text-[var(--coral)]" : "text-[var(--muted)]"}`}>
             {r.count}
           </span>
         </button>

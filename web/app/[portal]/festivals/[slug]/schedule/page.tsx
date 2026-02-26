@@ -45,7 +45,7 @@ export default async function FestivalSchedulePage({ params }: Props) {
 
       <main className="max-w-3xl mx-auto px-4 py-4 sm:py-6 pb-12 space-y-5 sm:space-y-7">
         <section className="rounded-lg border border-[var(--twilight)] bg-[var(--card-bg)] p-4 sm:p-5">
-          <p className="text-[0.65rem] font-mono uppercase tracking-widest text-[var(--muted)] mb-2">
+          <p className="text-xs font-mono uppercase tracking-widest text-[var(--muted)] mb-2">
             Dedicated Schedule
           </p>
           <div className="flex flex-wrap items-center justify-between gap-3">

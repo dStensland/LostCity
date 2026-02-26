@@ -2,7 +2,8 @@
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useCallback, useMemo } from "react";
-import { CATEGORIES, SUBCATEGORIES } from "@/lib/search-constants";
+import { CATEGORIES } from "@/lib/search-constants";
+import { formatGenre } from "@/lib/series-utils";
 
 export default function ActiveFilters() {
   const router = useRouter();
@@ -14,10 +15,6 @@ export default function ActiveFilters() {
     () => searchParams.get("categories")?.split(",").filter(Boolean) || [],
     [searchParams]
   );
-  const subcategories = useMemo(
-    () => searchParams.get("subcategories")?.split(",").filter(Boolean) || [],
-    [searchParams]
-  );
   const genres = useMemo(
     () => searchParams.get("genres")?.split(",").filter(Boolean) || [],
     [searchParams]
@@ -26,7 +23,7 @@ export default function ActiveFilters() {
   const dateFilter = searchParams.get("date");
   const venueId = searchParams.get("venue");
 
-  const hasFilters = search || categories.length > 0 || subcategories.length > 0 || genres.length > 0 || isFree || dateFilter || venueId;
+  const hasFilters = search || categories.length > 0 || genres.length > 0 || isFree || dateFilter || venueId;
 
   const removeFilter = useCallback(
     (key: string, value?: string) => {
@@ -38,15 +35,6 @@ export default function ActiveFilters() {
           params.set("categories", newCats.join(","));
         } else {
           params.delete("categories");
-        }
-        // Also clear subcategories when removing category
-        params.delete("subcategories");
-      } else if (key === "subcategories" && value) {
-        const newSubs = subcategories.filter((s) => s !== value);
-        if (newSubs.length > 0) {
-          params.set("subcategories", newSubs.join(","));
-        } else {
-          params.delete("subcategories");
         }
       } else if (key === "genres" && value) {
         const newGenres = genres.filter((g) => g !== value);
@@ -63,7 +51,7 @@ export default function ActiveFilters() {
       const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
       router.push(newUrl, { scroll: false });
     },
-    [router, pathname, searchParams, categories, subcategories, genres]
+    [router, pathname, searchParams, categories, genres]
   );
 
   const clearAll = useCallback(() => {
@@ -78,14 +66,6 @@ export default function ActiveFilters() {
     return cat?.label || id;
   };
 
-  const getSubcategoryLabel = (id: string) => {
-    for (const [, subs] of Object.entries(SUBCATEGORIES)) {
-      const sub = subs.find((s) => s.value === id);
-      if (sub) return sub.label;
-    }
-    return id;
-  };
-
   const getDateLabel = (date: string) => {
     switch (date) {
       case "today": return "Today";
@@ -98,7 +78,7 @@ export default function ActiveFilters() {
 
   return (
     <div className="flex items-center gap-2 flex-wrap py-2">
-      <span className="font-mono text-[0.6rem] text-[var(--muted)] uppercase tracking-wider">Filters:</span>
+      <span className="font-mono text-xs text-[var(--muted)] uppercase tracking-wider">Filters:</span>
 
       {search && (
         <button
@@ -123,18 +103,6 @@ export default function ActiveFilters() {
         </button>
       ))}
 
-      {subcategories.map((sub) => (
-        <button
-          key={sub}
-          type="button"
-          onClick={() => removeFilter("subcategories", sub)}
-          className="active-filter-chip"
-        >
-          {getSubcategoryLabel(sub)}
-          <XIcon />
-        </button>
-      ))}
-
       {genres.map((genre) => (
         <button
           key={genre}
@@ -142,7 +110,7 @@ export default function ActiveFilters() {
           onClick={() => removeFilter("genres", genre)}
           className="active-filter-chip"
         >
-          {genre.replace(/_/g, " ")}
+          {formatGenre(genre)}
           <XIcon />
         </button>
       ))}
@@ -183,7 +151,7 @@ export default function ActiveFilters() {
       <button
         type="button"
         onClick={clearAll}
-        className="font-mono text-[0.65rem] text-[var(--coral)] hover:text-[var(--rose)] transition-colors ml-1"
+        className="font-mono text-xs text-[var(--coral)] hover:text-[var(--rose)] transition-colors ml-1"
       >
         Clear all
       </button>

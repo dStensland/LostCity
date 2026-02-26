@@ -488,7 +488,7 @@ export default async function PortalEventPage({ params }: Props) {
               <span className="text-sm text-[var(--soft)] group-hover:text-[var(--cream)] transition-colors">
                 <span className="text-accent font-medium">{event.series.festival.name}</span>
               </span>
-              <span className="ml-auto text-[0.6rem] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-accent-20 text-accent">
+              <span className="ml-auto text-2xs font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-accent-20 text-accent">
                 Festival
               </span>
             </Link>
@@ -567,7 +567,7 @@ export default async function PortalEventPage({ params }: Props) {
                 <SectionHeader title="Location" />
                 <div className="mb-6">
                   {locationDesignatorLabel && (
-                    <span className="inline-flex mb-3 items-center px-2.5 py-1 rounded-full border border-[var(--twilight)] bg-[var(--twilight)]/45 font-mono text-[0.62rem] uppercase tracking-[0.1em] text-[var(--soft)]">
+                    <span className="inline-flex mb-3 items-center px-2.5 py-1 rounded-full border border-[var(--twilight)] bg-[var(--twilight)]/45 font-mono text-xs uppercase tracking-[0.1em] text-[var(--soft)]">
                       {locationDesignatorLabel}
                     </span>
                   )}
@@ -671,7 +671,7 @@ export default async function PortalEventPage({ params }: Props) {
                         </span>
                       </span>
                       <span
-                        className="ml-2 text-[0.6rem] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-accent-20 text-accent"
+                        className="ml-2 text-2xs font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-accent-20 text-accent"
                       >
                         Festival
                       </span>
@@ -704,7 +704,7 @@ export default async function PortalEventPage({ params }: Props) {
                       Part of <span className="text-[var(--cream)] font-medium">{event.series.title}</span>
                     </span>
                     <span
-                      className="ml-2 text-[0.6rem] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-accent-20 text-accent"
+                      className="ml-2 text-2xs font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-accent-20 text-accent"
                     >
                       {getSeriesTypeLabel(event.series.series_type)}
                     </span>
@@ -742,7 +742,7 @@ export default async function PortalEventPage({ params }: Props) {
                       <h3 className="text-[var(--cream)] font-medium truncate text-sm">
                         {event.organization.name}
                       </h3>
-                      <p className="text-[0.65rem] text-[var(--muted)] font-mono uppercase tracking-wider">
+                      <p className="text-xs text-[var(--muted)] font-mono uppercase tracking-wider">
                         {event.organization.org_type.replace(/_/g, " ")}
                       </p>
                     </div>
@@ -780,7 +780,7 @@ export default async function PortalEventPage({ params }: Props) {
 
             {/* Data Freshness — subtle provenance hint */}
             {(event.source_url || event.updated_at) && (
-              <div className="flex items-center gap-2 text-[0.65rem] font-mono text-[var(--muted)] mb-4 pb-4 border-b border-[var(--twilight)]/30">
+              <div className="flex items-center gap-2 text-xs font-mono text-[var(--muted)] mb-4 pb-4 border-b border-[var(--twilight)]/30">
                 <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>

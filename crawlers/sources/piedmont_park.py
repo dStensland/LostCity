@@ -8,11 +8,11 @@ from __future__ import annotations
 
 import re
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 import httpx
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, find_existing_event_for_insert
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -34,6 +34,164 @@ VENUE_DATA = {
     "spot_type": "outdoor",
     "website": BASE_URL,
 }
+
+WEEKS_AHEAD = 6
+DAY_CODES = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
+DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+RECURRING_SCHEDULE = [
+    {
+        "day": 1,
+        "title": "Piedmont Park Walking Club",
+        "start_time": "10:00",
+        "description": "Tuesday morning guided walk through Piedmont Park led by Conservancy staff. 45 minutes, meets at Dockside. Free, all ages and fitness levels welcome.",
+        "category": "fitness",
+        "subcategory": "fitness.walking",
+        "tags": ["walking", "free", "outdoor", "morning", "weekly"],
+        "is_free": True,
+    },
+    {
+        "day": 4,
+        "title": "Piedmont Park Pickleball Open Play",
+        "start_time": "17:00",
+        "description": "Friday open pickleball at the Sharon Lester Tennis & Pickleball Center in Piedmont Park. 5-9pm, free, 2.5+ skill level.",
+        "category": "fitness",
+        "subcategory": "fitness.pickleball",
+        "tags": ["pickleball", "free", "outdoor", "pickup", "weekly"],
+        "is_free": True,
+    },
+    {
+        "day": 5,
+        "title": "Piedmont Park Pickleball Open Play",
+        "start_time": "14:00",
+        "description": "Saturday open pickleball at the Sharon Lester Tennis & Pickleball Center in Piedmont Park. 2-5pm, free, 2.5+ skill level.",
+        "category": "fitness",
+        "subcategory": "fitness.pickleball",
+        "tags": ["pickleball", "free", "outdoor", "pickup", "weekly"],
+        "is_free": True,
+    },
+    {
+        "day": 5,
+        "title": "Piedmont Park Ultimate Frisbee Pickup",
+        "start_time": "10:00",
+        "description": "Saturday morning pickup ultimate frisbee at the Active Oval in Piedmont Park. All levels welcome, free, cleats recommended.",
+        "category": "fitness",
+        "subcategory": "fitness.pickup_sports",
+        "tags": ["ultimate-frisbee", "free", "outdoor", "pickup", "weekly"],
+        "is_free": True,
+    },
+    {
+        "day": 6,
+        "title": "Piedmont Park Ultimate Frisbee Pickup",
+        "start_time": "10:00",
+        "description": "Sunday morning pickup ultimate frisbee at the Active Oval in Piedmont Park. All levels welcome, free, cleats recommended.",
+        "category": "fitness",
+        "subcategory": "fitness.pickup_sports",
+        "tags": ["ultimate-frisbee", "free", "outdoor", "pickup", "weekly"],
+        "is_free": True,
+    },
+    {
+        "day": 2,
+        "title": "Piedmont Park Ultimate Frisbee Pickup",
+        "start_time": "18:00",
+        "description": "Wednesday evening pickup ultimate frisbee at the Active Oval in Piedmont Park. All levels welcome, free, cleats recommended.",
+        "category": "fitness",
+        "subcategory": "fitness.pickup_sports",
+        "tags": ["ultimate-frisbee", "free", "outdoor", "pickup", "weekly"],
+        "is_free": True,
+    },
+    {
+        "day": 5,
+        "title": "Piedmont Park Pickup Soccer",
+        "start_time": "09:00",
+        "description": "Saturday morning pickup soccer at Piedmont Park. Free, all skill levels, just show up.",
+        "category": "fitness",
+        "subcategory": "fitness.pickup_sports",
+        "tags": ["soccer", "free", "outdoor", "pickup", "weekly"],
+        "is_free": True,
+    },
+]
+
+
+def _get_next_weekday(start_date: datetime, weekday: int) -> datetime:
+    """Return the next occurrence of weekday (0=Monday) on or after start_date."""
+    days_ahead = weekday - start_date.weekday()
+    if days_ahead < 0:
+        days_ahead += 7
+    return start_date + timedelta(days=days_ahead)
+
+
+def _generate_recurring_events(source_id: int, venue_id: int) -> tuple[int, int, int]:
+    """Generate recurring weekly events for Piedmont Park."""
+    events_found = events_new = events_updated = 0
+    today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+    for template in RECURRING_SCHEDULE:
+        next_date = _get_next_weekday(today, template["day"])
+        day_code = DAY_CODES[template["day"]]
+        day_name = DAY_NAMES[template["day"]]
+
+        series_hint = {
+            "series_type": "recurring_show",
+            "series_title": template["title"],
+            "frequency": "weekly",
+            "day_of_week": day_name,
+            "description": template["description"],
+        }
+
+        for week in range(WEEKS_AHEAD):
+            event_date = next_date + timedelta(weeks=week)
+            start_date = event_date.strftime("%Y-%m-%d")
+            events_found += 1
+
+            content_hash = generate_content_hash(
+                template["title"], VENUE_DATA["name"], start_date
+            )
+
+            is_free = template.get("is_free", False) or "free" in template["tags"]
+
+            event_record = {
+                "source_id": source_id,
+                "venue_id": venue_id,
+                "title": template["title"],
+                "description": template["description"],
+                "start_date": start_date,
+                "start_time": template["start_time"],
+                "end_date": None,
+                "end_time": None,
+                "is_all_day": False,
+                "category": template["category"],
+                "subcategory": template.get("subcategory"),
+                "tags": template["tags"],
+                "is_free": is_free,
+                "price_min": None if is_free else template.get("price_min"),
+                "price_max": None if is_free else template.get("price_max"),
+                "source_url": BASE_URL,
+                "ticket_url": None,
+                "image_url": None,
+                "raw_text": f"{template['title']} at {VENUE_DATA['name']} - {start_date}",
+                "extraction_confidence": 0.90,
+                "is_recurring": True,
+                "recurrence_rule": f"FREQ=WEEKLY;BYDAY={day_code}",
+                "content_hash": content_hash,
+            }
+
+            existing = find_existing_event_for_insert(event_record)
+            if existing:
+                smart_update_existing_event(existing, event_record)
+                events_updated += 1
+                continue
+
+            try:
+                insert_event(event_record, series_hint=series_hint)
+                events_new += 1
+            except Exception as exc:
+                logger.error(f"Failed to insert {template['title']} on {start_date}: {exc}")
+
+    logger.info(
+        f"Piedmont Park recurring: {events_found} found, {events_new} new, {events_updated} updated"
+    )
+    return events_found, events_new, events_updated
 
 
 def parse_datetime(dt_str: str) -> tuple[str, str]:
@@ -226,5 +384,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
     except Exception as e:
         logger.error(f"Failed to crawl Piedmont Park: {e}")
         raise
+
+    try:
+        f, n, u = _generate_recurring_events(source_id, venue_id)
+        events_found += f
+        events_new += n
+        events_updated += u
+    except Exception as e:
+        logger.error(f"Failed to generate recurring events: {e}")
 
     return events_found, events_new, events_updated

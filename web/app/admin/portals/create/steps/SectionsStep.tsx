@@ -180,7 +180,7 @@ export function SectionsStep({ draft, updateDraft, onNext, onBack }: Props) {
                   </div>
                   <div className="mt-2">
                     <span
-                      className={`inline-block px-2 py-0.5 rounded font-mono text-[0.65rem] ${
+                      className={`inline-block px-2 py-0.5 rounded font-mono text-xs ${
                         section.section_type === "auto"
                           ? "bg-blue-500/20 text-blue-400"
                           : "bg-purple-500/20 text-purple-400"

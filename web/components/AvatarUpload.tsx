@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import UserAvatar from "@/components/UserAvatar";
+import Dot from "@/components/ui/Dot";
 
 interface AvatarUploadProps {
   currentAvatarUrl: string | null;
@@ -145,7 +146,7 @@ export default function AvatarUpload({
         </button>
         {currentAvatarUrl && (
           <>
-            <span className="text-[var(--twilight)]">·</span>
+            <Dot className="text-[var(--muted)]" />
             <button
               type="button"
               onClick={handleRemove}

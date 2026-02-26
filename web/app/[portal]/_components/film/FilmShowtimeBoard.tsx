@@ -304,7 +304,7 @@ export default function FilmShowtimeBoard({
       {!hideHeader && (
         <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
           <div>
-            <p className="text-[0.62rem] uppercase tracking-[0.18em] text-[#96a7c5]">
+            <p className="text-xs uppercase tracking-[0.18em] text-[#96a7c5]">
               {mode === "by-film" ? "Showtimes by Film" : "Showtimes by Venue"}
             </p>
             <h2 className="mt-1 text-2xl text-[#f6f7fb]">
@@ -314,7 +314,7 @@ export default function FilmShowtimeBoard({
 
           <Link
             href={`/${portalSlug}?view=find&type=showtimes`}
-            className="text-[0.68rem] uppercase tracking-[0.14em] text-[#c9d9ff] hover:text-[#e1eaff]"
+            className="text-xs uppercase tracking-[0.14em] text-[#c9d9ff] hover:text-[#e1eaff]"
           >
             Open full finder
           </Link>
@@ -330,7 +330,7 @@ export default function FilmShowtimeBoard({
                 key={date}
                 type="button"
                 onClick={() => setSelectedDate(date)}
-                className={`rounded-full border px-2.5 py-1 text-[0.62rem] uppercase tracking-[0.14em] ${
+                className={`rounded-full border px-2.5 py-1 text-xs uppercase tracking-[0.14em] ${
                   active
                     ? "border-[#8da8ea66] bg-[#8da8ea1f] text-[#d9e4ff]"
                     : "border-[#33405f] bg-[#10182b] text-[#9eb0d1]"
@@ -352,7 +352,7 @@ export default function FilmShowtimeBoard({
                 key={genre}
                 type="button"
                 onClick={() => toggleGenre(genre)}
-                className={`rounded-full border px-2.5 py-1 text-[0.62rem] uppercase tracking-[0.14em] ${
+                className={`rounded-full border px-2.5 py-1 text-xs uppercase tracking-[0.14em] ${
                   active
                     ? "border-[#8da8ea66] bg-[#8da8ea1f] text-[#d9e4ff]"
                     : "border-[#33405f] bg-[#10182b] text-[#9eb0d1]"
@@ -398,29 +398,29 @@ export default function FilmShowtimeBoard({
                     <div className="min-w-0">
                       <h3 className="line-clamp-2 text-sm font-semibold text-[#f5f7fc]">{film.title}</h3>
                       {buildFilmCapsule({ genres: film.genres, director: film.director, year: film.year }) && (
-                        <p className="text-[0.62rem] italic text-[#8ea4c8]">
+                        <p className="text-xs italic text-[#8ea4c8]">
                           {buildFilmCapsule({ genres: film.genres, director: film.director, year: film.year })}
                         </p>
                       )}
                       {firstVenue && (
-                        <p className="mt-1 inline-flex items-center gap-1 text-[0.68rem] text-[#9fb0cf]">
+                        <p className="mt-1 inline-flex items-center gap-1 text-xs text-[#9fb0cf]">
                           <MapPin size={11} />
                           {firstVenue.venue_name}
                         </p>
                       )}
-                      <p className="mt-2 inline-flex items-center gap-1 text-[0.68rem] uppercase tracking-[0.12em] text-[#dbe4f7]">
+                      <p className="mt-2 inline-flex items-center gap-1 text-xs uppercase tracking-[0.12em] text-[#dbe4f7]">
                         <Clock size={11} />
                         {(firstVenue?.times || []).slice(0, 3).map(formatTimeLabel).join(" • ") || "Times pending"}
                       </p>
                       {hasMultipleVenues && (
-                        <p className="mt-1 text-[0.66rem] uppercase tracking-[0.12em] text-[#9fb0cf]">
+                        <p className="mt-1 text-xs uppercase tracking-[0.12em] text-[#9fb0cf]">
                           {film.theaters.length} venues today
                         </p>
                       )}
                       {hasMultipleVenues && film.series_slug && (
                         <Link
                           href={`/${portalSlug}/series/${film.series_slug}`}
-                          className="mt-2 inline-flex text-[0.66rem] uppercase tracking-[0.12em] text-[#c9d9ff] hover:text-[#e1eaff]"
+                          className="mt-2 inline-flex text-xs uppercase tracking-[0.12em] text-[#c9d9ff] hover:text-[#e1eaff]"
                         >
                           Open series page
                         </Link>
@@ -443,9 +443,9 @@ export default function FilmShowtimeBoard({
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h3 className="text-sm font-semibold text-[#f5f7fc]">{venue.venue_name}</h3>
-                  <p className="text-[0.68rem] text-[#9fb0cf]">{venue.neighborhood || "Atlanta"}</p>
+                  <p className="text-xs text-[#9fb0cf]">{venue.neighborhood || "Atlanta"}</p>
                 </div>
-                <span className="rounded-full border border-[#36507f] bg-[#12203a] px-2 py-0.5 text-[0.62rem] uppercase tracking-[0.12em] text-[#bad0f3]">
+                <span className="rounded-full border border-[#36507f] bg-[#12203a] px-2 py-0.5 text-xs uppercase tracking-[0.12em] text-[#bad0f3]">
                   {venue.films.length} films
                 </span>
               </div>
@@ -455,7 +455,7 @@ export default function FilmShowtimeBoard({
                   const capsule = buildFilmCapsule({ genres: film.genres, director: film.director, year: film.year });
                   return (
                     <div key={`${venue.venue_id}-${film.title}`}>
-                      <p className="text-[0.72rem] text-[#d7e1f6]">
+                      <p className="text-xs text-[#d7e1f6]">
                         {film.series_slug ? (
                           <Link href={`/${portalSlug}/series/${film.series_slug}`} className="font-medium hover:text-[#eef3ff]">
                             {film.title}
@@ -466,7 +466,7 @@ export default function FilmShowtimeBoard({
                         <span className="text-[#9fb0cf]"> • {film.times.slice(0, 3).map(formatTimeLabel).join(" • ") || "Times pending"}</span>
                       </p>
                       {capsule && !compact && (
-                        <p className="text-[0.58rem] italic text-[#8ea4c8]">{capsule}</p>
+                        <p className="text-2xs italic text-[#8ea4c8]">{capsule}</p>
                       )}
                     </div>
                   );

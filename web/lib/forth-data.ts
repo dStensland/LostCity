@@ -267,8 +267,7 @@ type DbEvent = {
   is_all_day: boolean;
   is_free: boolean;
   price_min: number | null;
-  category: string | null;
-  subcategory: string | null;
+  category_id: string | null;
   image_url: string | null;
   description: string | null;
   tags: string[] | null;
@@ -318,7 +317,7 @@ type DbNextEvent = {
   start_time: string | null;
   venue_id: number | null;
   source_id: number | null;
-  category: string | null;
+  category_id: string | null;
 };
 
 export type ForthFeedOptions = {
@@ -478,7 +477,7 @@ function scoreDestination(
 
 const EVENT_SELECT = `
   id, title, start_date, start_time, end_date, is_all_day, is_free, price_min,
-  category, subcategory, image_url, description, tags, source_id,
+  category_id, image_url, description, tags, source_id,
   venue:venues(id, name, neighborhood, slug, venue_type, city)
 `;
 
@@ -593,7 +592,7 @@ async function fetchFeedSectionsDirect(
       // Apply federation category constraints
       if (event.source_id && federationAccess.categoryConstraints.has(event.source_id)) {
         const allowed = federationAccess.categoryConstraints.get(event.source_id);
-        if (allowed !== null && allowed !== undefined && event.category && !allowed.includes(event.category)) continue;
+        if (allowed !== null && allowed !== undefined && event.category_id && !allowed.includes(event.category_id)) continue;
       }
       // City geo-filter
       if (portalCities.length > 0 && event.venue?.city) {
@@ -639,14 +638,14 @@ async function fetchFeedSectionsDirect(
         filtered = filtered.filter((e) => e.start_date >= start && e.start_date <= end);
       }
       if (filter.categories?.length) {
-        filtered = filtered.filter((e) => e.category && filter.categories!.includes(e.category));
+        filtered = filtered.filter((e) => e.category_id && filter.categories!.includes(e.category_id));
       }
       if (filter.tags?.length) {
         const tagSet = new Set(filter.tags);
         filtered = filtered.filter((e) => Array.isArray(e.tags) && e.tags.some((tag) => tagSet.has(tag)));
       }
       if (filter.exclude_categories?.length) {
-        filtered = filtered.filter((e) => !e.category || !filter.exclude_categories!.includes(e.category));
+        filtered = filtered.filter((e) => !e.category_id || !filter.exclude_categories!.includes(e.category_id));
       }
       if (filter.source_ids?.length) {
         const sourceSet = new Set(filter.source_ids);
@@ -693,7 +692,7 @@ async function fetchFeedSectionsDirect(
         image_url: e.image_url,
         description: e.description,
         venue_name: e.venue?.name || null,
-        category: e.category,
+        category: e.category_id,
         is_free: e.is_free,
         price_min: e.price_min,
         distance_km: null,
@@ -777,7 +776,7 @@ async function fetchDestinationsDirect(
     (() => {
       let q = supabase
         .from("events")
-        .select("id, title, start_date, start_time, venue_id, source_id, category")
+        .select("id, title, start_date, start_time, venue_id, source_id, category_id")
         .in("venue_id", venueIds)
         .gte("start_date", today)
         .is("canonical_event_id", null)
@@ -810,7 +809,7 @@ async function fetchDestinationsDirect(
     if (!event.venue_id) continue;
     if (event.source_id && federationAccess.categoryConstraints.has(event.source_id)) {
       const allowed = federationAccess.categoryConstraints.get(event.source_id);
-      if (allowed !== null && allowed !== undefined && event.category && !allowed.includes(event.category)) continue;
+      if (allowed !== null && allowed !== undefined && event.category_id && !allowed.includes(event.category_id)) continue;
     }
     if (!nextEventByVenue.has(event.venue_id)) nextEventByVenue.set(event.venue_id, event);
   }

@@ -65,9 +65,9 @@ export default function EventList({
   const loaderRef = useRef<HTMLDivElement>(null);
 
   // Unified timeline hook — events + festivals in one stream
-  // Enable smart defaults, but avoid cross-view filter persistence.
+  // No smart date defaults — "Upcoming" (no date param) = infinite scroll of all future events.
   const { hasActiveFilters, filters, effectiveDate } = useEventFilters({
-    enableSmartDefaults: true,
+    enableSmartDefaults: false,
     enablePersistence: false,
   });
   const {
@@ -310,10 +310,10 @@ export default function EventList({
                     className="absolute top-0 left-0 w-full flex items-end justify-between px-1 py-2 bg-[var(--void)]/90 backdrop-blur-md border-b border-[var(--twilight)]/45"
                     style={{ height: virtualRow.size, transform: `translateY(${virtualRow.start}px)` }}
                   >
-                    <h2 className="font-mono text-[1.08rem] font-semibold text-[var(--cream)] tracking-tight truncate">
+                    <h2 className="font-mono text-lg font-semibold text-[var(--cream)] tracking-tight truncate">
                       {getDateLabel(item.date)}
                     </h2>
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full border border-[var(--twilight)]/70 bg-[var(--dusk)]/82 font-mono text-[0.62rem] text-[var(--soft)]">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full border border-[var(--twilight)]/70 bg-[var(--dusk)]/82 font-mono text-xs text-[var(--soft)]">
                       {item.count}
                     </span>
                   </div>

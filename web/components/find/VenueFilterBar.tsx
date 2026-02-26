@@ -159,7 +159,7 @@ function TabChips({
             key={chip.key}
             onClick={() => onOccasionChange(isActive ? null : chip.key)}
             aria-pressed={isActive}
-            className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full font-mono text-[0.65rem] font-medium transition-all active:scale-[0.98] whitespace-nowrap border ${
+            className={`flex-shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all active:scale-[0.98] whitespace-nowrap border ${
               isActive
                 ? "font-semibold"
                 : "bg-[var(--dusk)]/80 text-[var(--soft)] border-[var(--twilight)]/80 hover:text-[var(--cream)] hover:border-[var(--twilight)]"
@@ -439,7 +439,7 @@ function FilterDeck({
         {hasActiveFilters && (
           <button
             onClick={() => setFilters(DEFAULT_FILTERS)}
-            className="font-mono text-[0.65rem] text-[var(--coral)] hover:text-[var(--rose)] transition-colors active:scale-95"
+            className="font-mono text-xs text-[var(--coral)] hover:text-[var(--rose)] transition-colors active:scale-95"
           >
             Clear
           </button>
@@ -453,11 +453,11 @@ function FilterDeck({
           className="rounded-xl border border-[var(--twilight)]/65 bg-[var(--night)]/55 p-2.5 space-y-2"
         >
           <div className="flex items-center justify-between gap-2">
-            <span className="font-mono text-[0.6rem] uppercase tracking-[0.12em] text-[var(--muted)]">Advanced filters</span>
+            <span className="font-mono text-xs uppercase tracking-[0.12em] text-[var(--muted)]">Advanced filters</span>
             {showAdvancedFilters && (
               <button
                 onClick={() => setShowAdvancedFilters(false)}
-                className="font-mono text-[0.62rem] text-[var(--muted)] hover:text-[var(--soft)] transition-colors"
+                className="font-mono text-xs text-[var(--muted)] hover:text-[var(--soft)] transition-colors"
               >
                 Hide
               </button>
@@ -495,7 +495,7 @@ function FilterDeck({
                       vibes: isActive ? f.vibes.filter((v) => v !== vibe.value) : [...f.vibes, vibe.value],
                     }))
                   }
-                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full font-mono text-[0.65rem] font-medium transition-all active:scale-[0.98] whitespace-nowrap ${
+                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full font-mono text-xs font-medium transition-all active:scale-[0.98] whitespace-nowrap ${
                     isActive
                       ? "text-[var(--cream)] border"
                       : "bg-[var(--dusk)]/80 text-[var(--muted)] border border-[var(--twilight)]/80 hover:text-[var(--soft)]"

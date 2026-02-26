@@ -19,17 +19,20 @@ function getSeriesTypeLabel(type: string): string {
   return labels[type] || "Series";
 }
 
+// Series type colors — CSS variable names that resolve at runtime
+// Actual values defined in globals.css under --series-type-* tokens
+const SERIES_TYPE_COLORS: Record<string, string> = {
+  film: "var(--series-type-film, #A5B4FC)",
+  recurring_show: "var(--series-type-recurring, #F9A8D4)",
+  class_series: "var(--series-type-class, #6EE7B7)",
+  festival_program: "var(--series-type-festival, #FBBF24)",
+  tour: "var(--series-type-tour, #C4B5FD)",
+  exhibition: "var(--series-type-exhibition, #F59E0B)",
+  other: "var(--series-type-default, #94A3B8)",
+};
+
 function getSeriesTypeColor(type: string): string {
-  const colors: Record<string, string> = {
-    film: "#A5B4FC", // indigo
-    recurring_show: "#F9A8D4", // pink
-    class_series: "#6EE7B7", // green
-    festival_program: "#FBBF24", // amber
-    tour: "#C4B5FD", // purple
-    exhibition: "#F59E0B", // amber
-    other: "#94A3B8", // slate
-  };
-  return colors[type] || "#94A3B8";
+  return SERIES_TYPE_COLORS[type] || SERIES_TYPE_COLORS.other;
 }
 
 interface SeriesBadgeProps {
@@ -55,7 +58,7 @@ function SeriesBadge({ seriesType, frequency, dayOfWeek, compact = true }: Serie
       <>
         <ScopedStyles css={seriesClass?.css} />
         <span
-          className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[0.6rem] font-mono font-medium series-bg-20 series-accent ${seriesClass?.className ?? ""}`}
+          className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-mono font-medium series-bg-20 series-accent ${seriesClass?.className ?? ""}`}
         >
         {/* Picture frame icon for exhibitions, repeat icon for recurring */}
         {isExhibition ? (

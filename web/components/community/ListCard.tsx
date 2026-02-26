@@ -12,6 +12,7 @@ import {
 } from "@/lib/curation-constants";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
+import Dot from "@/components/ui/Dot";
 
 interface ListCardProps {
   list: Curation;
@@ -61,7 +62,7 @@ export default function ListCard({ list, portalSlug, featured }: ListCardProps) 
 
             {/* Category badge — positioned over the cover */}
             {categoryLabel && (
-              <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[0.65rem] font-mono uppercase tracking-wider bg-[var(--void)]/70 backdrop-blur-sm text-accent border border-accent/20">
+              <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono uppercase tracking-wider bg-[var(--void)]/70 backdrop-blur-sm text-accent border border-accent/20">
                 {categoryIcon}
                 {categoryLabel}
               </div>
@@ -69,7 +70,7 @@ export default function ListCard({ list, portalSlug, featured }: ListCardProps) 
 
             {/* Editorial badge */}
             {list.owner_type === "editorial" && (
-              <div className="absolute top-3 right-3 inline-flex items-center gap-1 px-2 py-1 rounded-md text-[0.6rem] font-mono uppercase tracking-wider bg-accent/90 text-[var(--void)] font-bold">
+              <div className="absolute top-3 right-3 inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-mono uppercase tracking-wider bg-accent/90 text-[var(--void)] font-bold">
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
                 </svg>
@@ -90,7 +91,7 @@ export default function ListCard({ list, portalSlug, featured }: ListCardProps) 
                   </div>
                 ))}
                 {list.item_count > 4 && (
-                  <div className="w-8 h-8 rounded-full border-2 border-[var(--card-bg)] bg-[var(--twilight)] flex items-center justify-center text-[0.55rem] font-mono text-[var(--muted)]">
+                  <div className="w-8 h-8 rounded-full border-2 border-[var(--card-bg)] bg-[var(--twilight)] flex items-center justify-center text-2xs font-mono text-[var(--muted)]">
                     +{list.item_count - 4}
                   </div>
                 )}
@@ -118,7 +119,7 @@ export default function ListCard({ list, portalSlug, featured }: ListCardProps) 
                 {list.vibe_tags.map((tag) => (
                   <span
                     key={tag}
-                    className="px-2 py-0.5 rounded-full text-[0.65rem] font-mono bg-accent-10 text-accent"
+                    className="px-2 py-0.5 rounded-full text-xs font-mono bg-accent-10 text-accent"
                   >
                     {tag}
                   </span>
@@ -242,13 +243,13 @@ export default function ListCard({ list, portalSlug, featured }: ListCardProps) 
                   {list.vibe_tags.slice(0, 3).map((tag) => (
                     <span
                       key={tag}
-                      className="px-1.5 py-0.5 rounded text-[0.6rem] font-mono bg-accent-20 text-accent"
+                      className="px-1.5 py-0.5 rounded text-xs font-mono bg-accent-20 text-accent"
                     >
                       {tag}
                     </span>
                   ))}
                   {list.vibe_tags.length > 3 && (
-                    <span className="px-1.5 py-0.5 rounded text-[0.6rem] font-mono text-[var(--muted)]">
+                    <span className="px-1.5 py-0.5 rounded text-xs font-mono text-[var(--muted)]">
                       +{list.vibe_tags.length - 3}
                     </span>
                   )}
@@ -272,7 +273,7 @@ export default function ListCard({ list, portalSlug, featured }: ListCardProps) 
                     {list.vote_count}
                   </span>
                 ) : (
-                  <span className="px-1.5 py-0.5 rounded text-[0.6rem] font-medium bg-[var(--twilight)] text-[var(--soft)]">
+                  <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-[var(--twilight)] text-[var(--soft)]">
                     New
                   </span>
                 )}
@@ -297,7 +298,7 @@ export default function ListCard({ list, portalSlug, featured }: ListCardProps) 
 
                 {list.creator && (
                   <>
-                    <span className="opacity-40">·</span>
+                    <Dot />
                     <span className="flex items-center gap-1.5">
                       {list.creator.avatar_url ? (
                         <Image

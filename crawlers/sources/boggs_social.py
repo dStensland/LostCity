@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import re
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 import requests
@@ -238,10 +238,112 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 logger.debug(f"Request failed for {url}: {e}")
                 continue
 
-        logger.info(f"Boggs Social crawl complete: {events_found} found, {events_new} new, {events_updated} updated")
+        logger.info(f"Boggs Social website: {events_found} found, {events_new} new, {events_updated} updated")
 
     except Exception as e:
-        logger.error(f"Failed to crawl Boggs Social & Supply: {e}")
-        raise
+        logger.error(f"Failed to crawl Boggs Social website: {e}")
 
+    try:
+        f, n, u = _generate_recurring_events(source_id, venue_id)
+        events_found += f
+        events_new += n
+        events_updated += u
+    except Exception as e:
+        logger.error(f"Failed to generate Boggs Social recurring events: {e}")
+
+    return events_found, events_new, events_updated
+
+
+WEEKS_AHEAD = 6
+DAY_CODES = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
+DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+RECURRING_SCHEDULE = [
+    {"day": 1, "title": "Socially Awkward Comedy", "start_time": "19:00",
+     "description": "Tuesday open mic comedy at Boggs Social & Supply. Sign-up 7pm, show 7:30pm. Free with RSVP.",
+     "category": "comedy", "subcategory": None,
+     "tags": ["comedy", "open-mic", "standup", "weekly", "free"]},
+    {"day": 2, "title": "Karaoke Night w/ Music Mike", "start_time": "19:00",
+     "description": "Wednesday karaoke at Boggs Social & Supply in West End. Free. 7-11pm.",
+     "category": "nightlife", "subcategory": "nightlife.karaoke",
+     "tags": ["karaoke", "nightlife", "weekly", "free"]},
+    {"day": 4, "title": "Sputnik! Dark Alternative Music Video Night", "start_time": "20:00",
+     "description": "Friday alternative music video night at Boggs Social. Eighties, new wave, synthpop. $10 cover.",
+     "category": "nightlife", "subcategory": "nightlife.dj",
+     "tags": ["dj", "80s", "new-wave", "nightlife", "weekly"]},
+]
+
+
+def _get_next_weekday(start_date: datetime, weekday: int) -> datetime:
+    days_ahead = weekday - start_date.weekday()
+    if days_ahead < 0:
+        days_ahead += 7
+    return start_date + timedelta(days=days_ahead)
+
+
+def _generate_recurring_events(source_id: int, venue_id: int) -> tuple[int, int, int]:
+    events_found = events_new = events_updated = 0
+    today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+    for template in RECURRING_SCHEDULE:
+        next_date = _get_next_weekday(today, template["day"])
+        day_code = DAY_CODES[template["day"]]
+        day_name = DAY_NAMES[template["day"]]
+
+        series_hint = {
+            "series_type": "recurring_show",
+            "series_title": template["title"],
+            "frequency": "weekly",
+            "day_of_week": day_name,
+            "description": template["description"],
+        }
+
+        for week in range(WEEKS_AHEAD):
+            event_date = next_date + timedelta(weeks=week)
+            start_date = event_date.strftime("%Y-%m-%d")
+            events_found += 1
+
+            content_hash = generate_content_hash(
+                template["title"], VENUE_DATA["name"], start_date
+            )
+
+            event_record = {
+                "source_id": source_id,
+                "venue_id": venue_id,
+                "title": template["title"],
+                "description": template["description"],
+                "start_date": start_date,
+                "start_time": template["start_time"],
+                "end_date": None,
+                "end_time": None,
+                "is_all_day": False,
+                "category": template["category"],
+                "subcategory": template.get("subcategory"),
+                "tags": template["tags"],
+                "is_free": "free" in template["tags"],
+                "price_min": None,
+                "price_max": None,
+                "source_url": BASE_URL,
+                "ticket_url": None,
+                "image_url": None,
+                "raw_text": f"{template['title']} at Boggs Social - {start_date}",
+                "extraction_confidence": 0.90,
+                "is_recurring": True,
+                "recurrence_rule": f"FREQ=WEEKLY;BYDAY={day_code}",
+                "content_hash": content_hash,
+            }
+
+            existing = find_existing_event_for_insert(event_record)
+            if existing:
+                smart_update_existing_event(existing, event_record)
+                events_updated += 1
+                continue
+
+            try:
+                insert_event(event_record, series_hint=series_hint)
+                events_new += 1
+            except Exception as exc:
+                logger.error(f"Failed to insert {template['title']} on {start_date}: {exc}")
+
+    logger.info(f"Boggs Social recurring: {events_found} found, {events_new} new, {events_updated} updated")
     return events_found, events_new, events_updated

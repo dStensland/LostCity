@@ -37,6 +37,7 @@ import type { Frequency, DayOfWeek } from "@/lib/recurrence";
 import RSVPButton, { type RSVPStatus } from "./RSVPButton";
 import AnimatedCount from "./AnimatedCount";
 import { useImageParallax } from "@/lib/hooks/useImageParallax";
+import Dot from "@/components/ui/Dot";
 
 type LocationDesignator =
   | "standard"
@@ -294,19 +295,19 @@ function EventCard({
           >
             <div className="min-w-0 space-y-1.5 sm:space-y-1">
               <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-                <span className="flex-shrink-0 font-mono text-[0.7rem] sm:text-[0.72rem] font-semibold uppercase tracking-[0.1em] text-[var(--accent-color)] min-w-[68px] sm:min-w-[82px]">
+                <span className="flex-shrink-0 font-mono text-xs sm:text-xs font-semibold uppercase tracking-[0.1em] text-[var(--accent-color)] min-w-[68px] sm:min-w-[82px]">
                   {compactTimeLabel}
                 </span>
                 {compactCategoryLabel && (
-                  <span className="ml-auto inline-block max-w-[84px] sm:max-w-[120px] truncate flex-shrink-0 font-mono text-[0.58rem] sm:text-[0.62rem] font-medium uppercase tracking-[0.1em] text-[var(--muted)]">
+                  <span className="ml-auto inline-block max-w-[84px] sm:max-w-[120px] truncate flex-shrink-0 font-mono text-2xs sm:text-2xs font-medium uppercase tracking-[0.1em] text-[var(--muted)]">
                     {compactCategoryLabel}
                   </span>
                 )}
               </div>
-              <span className="block text-[0.98rem] sm:text-[0.98rem] font-medium leading-[1.2] line-clamp-2 sm:line-clamp-1 text-[var(--cream)] group-hover:text-[var(--accent-color)] transition-colors">
+              <span className="block text-base sm:text-base font-medium leading-[1.2] line-clamp-2 sm:line-clamp-1 text-[var(--cream)] group-hover:text-[var(--accent-color)] transition-colors">
                 {eventTitle}
               </span>
-              <div className="flex items-center gap-1.5 min-w-0 font-mono text-[0.72rem] leading-[1.2] sm:text-[0.67rem] text-[var(--soft)]">
+              <div className="flex items-center gap-1.5 min-w-0 font-mono text-xs leading-[1.2] sm:text-xs text-[var(--soft)]">
                 {venueName ? (
                   <>
                     <span className="truncate max-w-[62%]" title={venueName}>
@@ -314,7 +315,7 @@ function EventCard({
                     </span>
                     {venueNeighborhood && (
                       <>
-                        <span className="opacity-40">·</span>
+                        <Dot />
                         <span
                           className="truncate text-[var(--muted)]"
                           title={venueNeighborhood}
@@ -325,8 +326,8 @@ function EventCard({
                     )}
                     {locationLabel && (
                       <>
-                        <span className="opacity-40">·</span>
-                        <span className="inline-flex items-center px-1.5 py-0.5 rounded border border-[var(--twilight)]/70 bg-[var(--twilight)]/40 text-[0.62rem] uppercase tracking-[0.08em] text-[var(--soft)]">
+                        <Dot />
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded border border-[var(--twilight)]/70 bg-[var(--twilight)]/40 text-2xs uppercase tracking-[0.08em] text-[var(--soft)]">
                           {locationLabel}
                         </span>
                       </>
@@ -463,7 +464,7 @@ function EventCard({
               )}
               <div className="relative z-10 flex h-full flex-col items-start justify-center gap-1.5 pl-3 pr-2 py-3 sm:py-4 list-rail-caption">
                 <span
-                  className={`font-mono text-[0.62rem] font-semibold leading-none uppercase tracking-[0.12em] ${
+                  className={`font-mono text-2xs font-semibold leading-none uppercase tracking-[0.12em] ${
                     dateInfo.isHighlight
                       ? "text-[var(--accent-color)]"
                       : hasRailImage
@@ -475,20 +476,20 @@ function EventCard({
                 </span>
                 {event.is_all_day ? (
                   <span
-                    className={`font-mono text-[0.62rem] font-semibold leading-none uppercase tracking-[0.12em] ${hasRailImage ? "text-white/82" : "text-[var(--soft)]"}`}
+                    className={`font-mono text-2xs font-semibold leading-none uppercase tracking-[0.12em] ${hasRailImage ? "text-white/82" : "text-[var(--soft)]"}`}
                   >
                     All Day
                   </span>
                 ) : (
                   <>
                     <span
-                      className={`font-mono text-[1.42rem] font-bold leading-none tabular-nums ${hasRailImage ? "text-white" : "text-[var(--cream)]"}`}
+                      className={`font-mono text-2xl font-bold leading-none tabular-nums ${hasRailImage ? "text-white" : "text-[var(--cream)]"}`}
                     >
                       {time}
                     </span>
                     {period && (
                       <span
-                        className={`font-mono text-[0.58rem] font-medium uppercase tracking-[0.12em] ${hasRailImage ? "text-white/78" : "text-[var(--soft)]"}`}
+                        className={`font-mono text-2xs font-medium uppercase tracking-[0.12em] ${hasRailImage ? "text-white/78" : "text-[var(--soft)]"}`}
                       >
                         {period}
                       </span>
@@ -506,21 +507,21 @@ function EventCard({
                 <div className="flex items-center gap-2 mb-2">
                   {/* Inline time badge — replaces the hidden time column on mobile */}
                   <span
-                    className={`inline-flex items-baseline gap-1 font-mono text-[0.98rem] font-bold leading-none ${
+                    className={`inline-flex items-baseline gap-1 font-mono text-base font-bold leading-none ${
                       dateInfo.isHighlight
                         ? "text-[var(--accent-color)]"
                         : "text-[var(--cream)]"
                     }`}
                   >
                     {event.is_all_day ? (
-                      <span className="text-[0.62rem] font-semibold text-[var(--soft)] uppercase tracking-[0.12em]">
+                      <span className="text-2xs font-semibold text-[var(--soft)] uppercase tracking-[0.12em]">
                         All Day
                       </span>
                     ) : (
                       <>
                         {time}
                         {period && (
-                          <span className="text-[0.58rem] font-medium text-[var(--soft)] uppercase tracking-[0.1em]">
+                          <span className="text-2xs font-medium text-[var(--soft)] uppercase tracking-[0.1em]">
                             {period}
                           </span>
                         )}
@@ -542,26 +543,26 @@ function EventCard({
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--neon-red)] opacity-40" />
                         <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[var(--neon-red)]" />
                       </span>
-                      <span className="font-mono text-[0.55rem] font-medium text-[var(--neon-red)] uppercase tracking-wide">
+                      <span className="font-mono text-2xs font-medium text-[var(--neon-red)] uppercase tracking-wide">
                         Live
                       </span>
                     </span>
                   )}
                   {event.festival_id && (
-                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border bg-[#65E8FF]/15 border-[#65E8FF]/30">
-                      <svg className="w-2.5 h-2.5 text-[#65E8FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 4v16m0-12h9l-1.5 3L14 14H5" /></svg>
-                      <span className="font-mono text-[0.55rem] font-medium text-[#65E8FF] uppercase tracking-wide">Festival</span>
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border bg-[var(--neon-cyan)]/15 border-[var(--neon-cyan)]/30">
+                      <svg className="w-2.5 h-2.5 text-[var(--neon-cyan)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 4v16m0-12h9l-1.5 3L14 14H5" /></svg>
+                      <span className="font-mono text-2xs font-medium text-[var(--neon-cyan)] uppercase tracking-wide">Festival</span>
                     </span>
                   )}
                   {event.is_tentpole && (
                     <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border bg-[var(--gold)]/15 border-[var(--gold)]/30">
                       <svg className="w-2.5 h-2.5 text-[var(--gold)]" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
-                      <span className="font-mono text-[0.55rem] font-medium text-[var(--gold)] uppercase tracking-wide">Big Stuff</span>
+                      <span className="font-mono text-2xs font-medium text-[var(--gold)] uppercase tracking-wide">Big Stuff</span>
                     </span>
                   )}
                 </div>
                 {/* Title row: full width - larger and bolder */}
-                <h3 className="text-[var(--text-primary)] font-semibold text-[1.03rem] leading-tight line-clamp-2 group-hover:text-[var(--accent-color)] transition-colors mb-1.5">
+                <h3 className="text-[var(--text-primary)] font-semibold text-base leading-tight line-clamp-2 group-hover:text-[var(--accent-color)] transition-colors mb-1.5">
                   {eventTitle}
                 </h3>
               </div>
@@ -577,7 +578,7 @@ function EventCard({
                     />
                   </span>
                 )}
-                <span className="text-[var(--text-primary)] font-semibold text-[1.3rem] transition-colors line-clamp-1 group-hover:text-[var(--accent-color)] leading-tight">
+                <span className="text-[var(--text-primary)] font-semibold text-xl transition-colors line-clamp-1 group-hover:text-[var(--accent-color)] leading-tight">
                   {eventTitle}
                 </span>
                 {isLive && (
@@ -586,21 +587,21 @@ function EventCard({
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--neon-red)] opacity-40" />
                       <span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--neon-red)]" />
                     </span>
-                    <span className="font-mono text-[0.55rem] font-medium text-[var(--neon-red)] uppercase tracking-wide">
+                    <span className="font-mono text-2xs font-medium text-[var(--neon-red)] uppercase tracking-wide">
                       Live
                     </span>
                   </span>
                 )}
                 {event.festival_id && (
-                  <span className="flex-shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded border bg-[#65E8FF]/15 border-[#65E8FF]/30">
-                    <svg className="w-2.5 h-2.5 text-[#65E8FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 4v16m0-12h9l-1.5 3L14 14H5" /></svg>
-                    <span className="font-mono text-[0.55rem] font-medium text-[#65E8FF] uppercase tracking-wide">Festival</span>
+                  <span className="flex-shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded border bg-[var(--neon-cyan)]/15 border-[var(--neon-cyan)]/30">
+                    <svg className="w-2.5 h-2.5 text-[var(--neon-cyan)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 4v16m0-12h9l-1.5 3L14 14H5" /></svg>
+                    <span className="font-mono text-2xs font-medium text-[var(--neon-cyan)] uppercase tracking-wide">Festival</span>
                   </span>
                 )}
                 {event.is_tentpole && (
                   <span className="flex-shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded border bg-[var(--gold)]/15 border-[var(--gold)]/30">
                     <svg className="w-2.5 h-2.5 text-[var(--gold)]" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
-                    <span className="font-mono text-[0.55rem] font-medium text-[var(--gold)] uppercase tracking-wide">Big Stuff</span>
+                    <span className="font-mono text-2xs font-medium text-[var(--gold)] uppercase tracking-wide">Big Stuff</span>
                   </span>
                 )}
               </div>
@@ -611,14 +612,14 @@ function EventCard({
                 {venueName && (
                   <>
                     <span
-                      className="truncate max-w-[70%] sm:max-w-[45%] font-medium text-[var(--text-base)]"
+                      className="truncate max-w-[70%] sm:max-w-[45%] font-medium text-base"
                       title={venueName}
                     >
                       {venueName}
                     </span>
                     {venueNeighborhood && (
                       <>
-                        <span className="opacity-40">·</span>
+                        <Dot />
                         <span
                           className="truncate text-[var(--text-tertiary)]"
                           title={venueNeighborhood}
@@ -629,8 +630,8 @@ function EventCard({
                     )}
                     {locationLabel && (
                       <>
-                        <span className="opacity-40">·</span>
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full font-mono text-[0.62rem] uppercase tracking-[0.08em] bg-[var(--twilight)]/55 text-[var(--soft)] border border-[var(--twilight)]/75">
+                        <Dot />
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full font-mono text-2xs uppercase tracking-[0.08em] bg-[var(--twilight)]/55 text-[var(--soft)] border border-[var(--twilight)]/75">
                           {locationLabel}
                         </span>
                       </>
@@ -640,10 +641,10 @@ function EventCard({
                 {/* Genre or subcategory chips - desktop only for cleaner mobile */}
                 {price && price.text && (
                   <>
-                    <span className="opacity-40">·</span>
+                    <Dot />
                     {price.isFree ? (
                       <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full font-mono text-[0.65rem] font-semibold ${
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full font-mono text-xs font-semibold ${
                           price.isEstimate
                             ? "bg-[var(--neon-green)]/15 text-[var(--neon-green)] border border-[var(--neon-green)]/25"
                             : "bg-[var(--neon-green)]/25 text-[var(--neon-green)] border border-[var(--neon-green)]/40 shadow-[0_0_8px_var(--neon-green)/15]"
@@ -653,7 +654,7 @@ function EventCard({
                       </span>
                     ) : (
                       <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full font-mono text-[0.65rem] font-medium ${
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full font-mono text-xs font-medium ${
                           price.isEstimate
                             ? "bg-[var(--twilight)]/50 text-[var(--muted)]"
                             : "bg-[var(--twilight)] text-[var(--cream)] border border-[var(--twilight)]"
@@ -667,7 +668,7 @@ function EventCard({
                 {/* Series badge - desktop only */}
                 {event.series && (
                   <span className="hidden sm:contents">
-                    <span className="opacity-40">·</span>
+                    <Dot />
                     <SeriesBadge
                       seriesType={event.series.series_type}
                       frequency={event.series.frequency}
@@ -679,8 +680,8 @@ function EventCard({
                 {/* Class badge - desktop only */}
                 {event.is_class && (
                   <span className="hidden sm:contents">
-                    <span className="opacity-40">·</span>
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full font-mono text-[0.6rem] font-semibold bg-[var(--neon-blue,#60a5fa)]/15 text-[var(--neon-blue,#60a5fa)] border border-[var(--neon-blue,#60a5fa)]/25">
+                    <Dot />
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full font-mono text-xs font-semibold bg-[var(--neon-blue,#60a5fa)]/15 text-[var(--neon-blue,#60a5fa)] border border-[var(--neon-blue,#60a5fa)]/25">
                       Class
                     </span>
                   </span>
@@ -688,7 +689,7 @@ function EventCard({
                 {/* Instructor - desktop only */}
                 {instructorName && (
                   <span className="hidden sm:contents">
-                    <span className="opacity-40">·</span>
+                    <Dot />
                     <span
                       className="truncate text-[var(--muted)] text-xs"
                       title={instructorName}
@@ -700,8 +701,8 @@ function EventCard({
                 {/* Skill level - desktop only */}
                 {event.skill_level && (
                   <span className="hidden sm:contents">
-                    <span className="opacity-40">·</span>
-                    <span className="inline-flex items-center px-1.5 py-0.5 rounded font-mono text-[0.55rem] text-[var(--muted)] bg-[var(--twilight)]/40 capitalize">
+                    <Dot />
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded font-mono text-2xs text-[var(--muted)] bg-[var(--twilight)]/40 capitalize">
                       {event.skill_level}
                     </span>
                   </span>
@@ -1034,7 +1035,7 @@ function FeedSocialProofBadge({
 
   if (variant === "compact") {
     return (
-      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)]/20 font-mono text-[0.6rem] font-medium text-[var(--coral)]">
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)]/20 font-mono text-xs font-medium text-[var(--coral)]">
         <svg
           className="w-2.5 h-2.5"
           fill="none"
@@ -1199,12 +1200,12 @@ export const GridEventCard = memo(function GridEventCard({
         {/* Popular badge + contextual label */}
         <div className="flex items-center gap-2 mb-1.5">
           {(event as FeedEventData & { contextual_label?: string }).contextual_label && (
-            <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[0.56rem] font-mono font-medium text-[var(--neon-cyan)] bg-[var(--neon-cyan)]/10 border border-[var(--neon-cyan)]/25">
+            <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-full text-2xs font-mono font-medium text-[var(--neon-cyan)] bg-[var(--neon-cyan)]/10 border border-[var(--neon-cyan)]/25">
               {(event as FeedEventData & { contextual_label?: string }).contextual_label}
             </span>
           )}
           {isPopular && (
-            <span className="ml-auto flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[var(--coral)] text-[var(--void)] text-[0.56rem] font-mono font-medium">
+            <span className="ml-auto flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[var(--coral)] text-[var(--void)] text-2xs font-mono font-medium">
               <TrendingIcon className="w-2.5 h-2.5" /> Popular
             </span>
           )}
@@ -1217,7 +1218,7 @@ export const GridEventCard = memo(function GridEventCard({
 
         {/* Metadata order: Date • Time • Venue • Neighborhood • Price */}
         {gridMetadata.length > 0 && (
-          <p className="font-mono text-[0.67rem] text-[var(--soft)] mt-1.5 truncate">
+          <p className="font-mono text-xs text-[var(--soft)] mt-1.5 truncate">
             {gridMetadata.join(" · ")}
           </p>
         )}
@@ -1234,12 +1235,12 @@ export const GridEventCard = memo(function GridEventCard({
             />
           )}
           {interestedCount > 0 && (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-[var(--gold)]/15 border border-[var(--gold)]/30 font-mono text-[0.6rem] font-medium text-[var(--gold)]">
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-[var(--gold)]/15 border border-[var(--gold)]/30 font-mono text-xs font-medium text-[var(--gold)]">
               {interestedCount} maybe
             </span>
           )}
           {recommendationCount > 0 && (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-[var(--lavender)]/15 border border-[var(--lavender)]/30 font-mono text-[0.6rem] font-medium text-[var(--lavender)]">
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-[var(--lavender)]/15 border border-[var(--lavender)]/30 font-mono text-xs font-medium text-[var(--lavender)]">
               <svg
                 className="w-2.5 h-2.5"
                 fill="none"
@@ -1410,7 +1411,7 @@ export const CompactEventCard = memo(function CompactEventCard({
         >
           <div className="min-w-0 space-y-1.5 sm:space-y-1">
             <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-              <span className="flex-shrink-0 font-mono text-[0.7rem] sm:text-[0.72rem] font-semibold uppercase tracking-[0.1em] text-[var(--accent-color)] min-w-[68px] sm:min-w-[82px]">
+              <span className="flex-shrink-0 font-mono text-xs sm:text-xs font-semibold uppercase tracking-[0.1em] text-[var(--accent-color)] min-w-[68px] sm:min-w-[82px]">
                 {compactTimeLabel}
               </span>
               {isPopular && (
@@ -1419,25 +1420,25 @@ export const CompactEventCard = memo(function CompactEventCard({
                 </span>
               )}
             </div>
-            <h4 className="text-[0.98rem] sm:text-[0.98rem] font-medium leading-[1.2] line-clamp-2 sm:line-clamp-1 text-[var(--cream)] group-hover:text-[var(--accent-color)] transition-colors">
+            <h4 className="text-base sm:text-base font-medium leading-[1.2] line-clamp-2 sm:line-clamp-1 text-[var(--cream)] group-hover:text-[var(--accent-color)] transition-colors">
               {event.title}
             </h4>
           </div>
 
-          <div className="mt-1 sm:hidden flex items-center gap-1.5 font-mono text-[0.72rem] leading-[1.2] text-[var(--soft)] min-w-0">
+          <div className="mt-1 sm:hidden flex items-center gap-1.5 font-mono text-xs leading-[1.2] text-[var(--soft)] min-w-0">
             {compactMobileMetadataParts.map((part, idx) => (
               <Fragment key={`${event.id}-mobile-${part.key}`}>
-                {idx > 0 && <span className="opacity-40">·</span>}
+                {idx > 0 && <Dot />}
                 <span className={`truncate ${part.className ?? ""}`}>
                   {part.value}
                 </span>
               </Fragment>
             ))}
           </div>
-          <div className="mt-1 hidden sm:flex items-center gap-1.5 font-mono text-[0.67rem] text-[var(--soft)] min-w-0">
+          <div className="mt-1 hidden sm:flex items-center gap-1.5 font-mono text-xs text-[var(--soft)] min-w-0">
             {compactDesktopMetadataParts.map((part, idx) => (
               <Fragment key={`${event.id}-desktop-${part.key}`}>
-                {idx > 0 && <span className="opacity-40">·</span>}
+                {idx > 0 && <Dot />}
                 <span className={`truncate ${part.className ?? ""}`}>
                   {part.value}
                 </span>
@@ -1542,7 +1543,7 @@ export const HeroEventCard = memo(function HeroEventCard({
           <div
             className="absolute inset-0"
             style={{
-              background: `linear-gradient(135deg, var(--dusk) 0%, color-mix(in srgb, ${getCategoryColor(event.category)} 25%, var(--twilight)) 40%, color-mix(in srgb, ${getCategoryColor(event.category)} 15%, var(--void)) 100%)`,
+              background: `linear-gradient(135deg, var(--dusk) 0%, color-mix(in srgb, ${getCategoryColor(event.category)} 30%, var(--twilight)) 40%, color-mix(in srgb, ${getCategoryColor(event.category)} 18%, var(--void)) 100%)`,
             }}
           />
           {/* Subtle dot-grid texture to break up the flat gradient */}
@@ -1553,6 +1554,11 @@ export const HeroEventCard = memo(function HeroEventCard({
               backgroundSize: "24px 24px",
             }}
           />
+          {/* Centered category icon */}
+          <div className="absolute inset-0 flex items-center justify-center opacity-25">
+            <CategoryIcon type={event.category || "other"} size={64} glow="subtle" weight="light" />
+          </div>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
         </>
       )}
 
@@ -1579,7 +1585,7 @@ export const HeroEventCard = memo(function HeroEventCard({
         <div className="flex flex-wrap items-center gap-2 text-sm text-white/92 font-mono">
           {heroMetadata.map((value, idx) => (
             <Fragment key={`${event.id}-hero-meta-${idx}`}>
-              {idx > 0 && <span className="opacity-40">·</span>}
+              {idx > 0 && <Dot />}
               <span className={idx === 0 ? "font-medium" : ""}>{value}</span>
             </Fragment>
           ))}
@@ -1688,7 +1694,7 @@ export const TrendingEventCard = memo(function TrendingEventCard({
 
           <div className="flex items-center gap-1.5 mt-1 text-[var(--soft)]">
             <CategoryIcon type={event.category || "other"} size={12} />
-            <span className="font-mono text-[0.67rem] truncate">
+            <span className="font-mono text-xs truncate">
               {trendingMetadata.join(" · ")}
             </span>
           </div>
@@ -1696,7 +1702,7 @@ export const TrendingEventCard = memo(function TrendingEventCard({
           {/* Trending stats */}
           <div className="flex items-center gap-1.5 mt-2 flex-wrap">
             {goingCount > 0 && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)]/20 font-mono text-[0.6rem] font-medium text-[var(--coral)]">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)]/20 font-mono text-xs font-medium text-[var(--coral)]">
                 <svg
                   className="w-3 h-3"
                   fill="none"
@@ -1713,7 +1719,7 @@ export const TrendingEventCard = memo(function TrendingEventCard({
                 {goingCount} going
               </span>
             )}
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--gold)]/15 border border-[var(--gold)]/30 font-mono text-[0.6rem] font-medium text-[var(--gold)]">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--gold)]/15 border border-[var(--gold)]/30 font-mono text-xs font-medium text-[var(--gold)]">
               <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 23c-3.6 0-7-1.4-7-5 0-2.5 1.8-4.6 3.5-6.4.6-.6 1.1-1.2 1.5-1.8-1.5 3.2.5 4.7 1.5 3.2.8-1.2.5-3-.5-5C13 5 16 2 17 1c-.5 3 1 5 2.5 7.5C21 11 22 13 22 15c0 5-4.5 8-10 8z" />
               </svg>

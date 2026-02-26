@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAvailableFilters } from "@/lib/search";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
 import { logger } from "@/lib/logger";
 
 export const revalidate = 600; // Cache for 10 minutes
@@ -11,7 +12,12 @@ export async function GET(request: Request) {
   if (rateLimitResult) return rateLimitResult;
 
   try {
-    const filters = await getAvailableFilters();
+    const filters = await getOrSetSharedCacheJson(
+      "api-filters",
+      "available",
+      10 * 60 * 1000,
+      () => getAvailableFilters(),
+    );
     return NextResponse.json(filters, {
       headers: {
         // Filter options rarely change - cache for 10 minutes

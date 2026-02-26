@@ -28,7 +28,7 @@ export default async function FilmShowtimesPage({ params }: Props) {
       <main className="mx-auto max-w-6xl px-4 pb-16 pt-6 space-y-7">
         <FilmPortalNav portalSlug={portal.slug} />
         <header className="space-y-2">
-          <p className="text-[0.64rem] uppercase tracking-[0.18em] text-[#8fa2c4]">Atlanta Film</p>
+          <p className="text-xs uppercase tracking-[0.18em] text-[#8fa2c4]">Atlanta Film</p>
           <h1 className="mt-1 font-[var(--font-film-editorial)] text-4xl text-[#f7f7fb]">Showtimes</h1>
           <p className="mt-2 max-w-3xl text-sm text-[#b8c7e3]">
             Full schedule by film and by venue. Use this page when you are planning the week, then jump straight to calendar or venue deep dives.

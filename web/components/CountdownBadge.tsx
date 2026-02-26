@@ -30,8 +30,8 @@ function CalendarIcon({ className }: { className?: string }) {
 }
 
 const SIZE_STYLES = {
-  sm: { badge: "px-2 py-0.5 text-[0.6rem] gap-1", icon: "w-3 h-3", dot: "w-1.5 h-1.5" },
-  md: { badge: "px-2.5 py-1 text-[0.7rem] gap-1.5", icon: "w-3.5 h-3.5", dot: "w-2 h-2" },
+  sm: { badge: "px-2 py-0.5 text-xs gap-1", icon: "w-3 h-3", dot: "w-1.5 h-1.5" },
+  md: { badge: "px-2.5 py-1 text-xs gap-1.5", icon: "w-3.5 h-3.5", dot: "w-2 h-2" },
   lg: { badge: "px-3 py-1.5 text-xs gap-2", icon: "w-4 h-4", dot: "w-2.5 h-2.5" },
 } as const;
 

@@ -196,17 +196,17 @@ function ShowtimesByDate({
                     : "bg-[var(--dusk)] border-[var(--twilight)] text-[var(--soft)] hover:border-[var(--coral)]/30"
                 }`}
               >
-                <span className="font-mono uppercase tracking-wider text-[0.55rem]">
+                <span className="font-mono uppercase tracking-wider text-2xs">
                   {formatDateLabel(date)}
                 </span>
                 <span className="font-mono font-bold leading-tight text-sm">
                   {format(date, "d")}
                 </span>
-                <span className="font-mono text-[var(--muted)] uppercase text-[0.45rem]">
+                <span className="font-mono text-[var(--muted)] uppercase text-2xs">
                   {format(date, "MMM")}
                 </span>
                 {eventsOnDay > 1 && (
-                  <span className="mt-0.5 px-1 py-0.5 bg-[var(--twilight)] rounded font-mono text-[0.45rem]">
+                  <span className="mt-0.5 px-1 py-0.5 bg-[var(--twilight)] rounded font-mono text-2xs">
                     {eventsOnDay}
                   </span>
                 )}
@@ -307,7 +307,7 @@ function SeriesShowtimeRow({
             {series.title}
           </h3>
           {series.series_type === "film" && (
-            <span className="text-[0.6rem] font-mono uppercase text-[var(--muted)] tracking-wider">
+            <span className="text-xs font-mono uppercase text-[var(--muted)] tracking-wider">
               Film
             </span>
           )}
@@ -325,7 +325,7 @@ function SeriesShowtimeRow({
               >
                 <span className="font-semibold">{time}</span>
                 {period && (
-                  <span className="text-[0.6rem] text-[var(--muted)]">
+                  <span className="text-xs text-[var(--muted)]">
                     {period}
                   </span>
                 )}

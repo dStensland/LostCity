@@ -50,7 +50,7 @@ export function PlanCard({ plan, onClick }: PlanCardProps) {
             max={3}
             size="xs"
           />
-          <span className="font-mono text-[0.55rem] text-[var(--muted)]">
+          <span className="font-mono text-2xs text-[var(--muted)]">
             {acceptedCount} in{pendingCount > 0 ? ` · ${pendingCount} pending` : ""}
           </span>
         </div>

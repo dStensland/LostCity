@@ -45,6 +45,24 @@ WEEKLY_SCHEDULE = [
         ["bar-games", "skee-ball", "league", "21+", "retro"],
     ),
     (
+        1,  # Tuesday
+        "Dirty South Trivia at Ormsby's",
+        "19:00",
+        "Tuesday trivia hosted by Dirty South Trivia at Ormsby's. 1st, 2nd, and 3rd place prizes.",
+        "nightlife.trivia",
+        ["trivia"],
+        ["trivia", "games", "nightlife", "weekly", "dirty-south-trivia"],
+    ),
+    (
+        2,  # Wednesday
+        "Bluegrass Night at Ormsby's",
+        "18:00",
+        "Open bluegrass jam for all ability levels at Ormsby's. Beer and bourbon specials from Creature Comforts.",
+        "music",
+        ["bluegrass"],
+        ["bluegrass", "live-music", "open-jam", "weekly"],
+    ),
+    (
         2,  # Wednesday
         "Curling Night at Ormsby's",
         "19:30",

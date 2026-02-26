@@ -33,7 +33,7 @@ function NeighborhoodCard({ name, liveCount, openCount, isSelected, onClick }: N
             <span
               className="w-1.5 h-1.5 rounded-full bg-[var(--neon-red)] shadow-[0_0_4px_var(--neon-red)]"
             />
-            <span className="font-mono text-[0.6rem] text-[var(--neon-red)]">
+            <span className="font-mono text-xs text-[var(--neon-red)]">
               {liveCount}
             </span>
           </span>
@@ -41,13 +41,13 @@ function NeighborhoodCard({ name, liveCount, openCount, isSelected, onClick }: N
         {openCount > 0 && (
           <span className="flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-[var(--neon-green)]" />
-            <span className="font-mono text-[0.6rem] text-[var(--neon-green)]">
+            <span className="font-mono text-xs text-[var(--neon-green)]">
               {openCount}
             </span>
           </span>
         )}
         {!hasActivity && (
-          <span className="font-mono text-[0.55rem] text-[var(--muted)]">
+          <span className="font-mono text-2xs text-[var(--muted)]">
             quiet
           </span>
         )}

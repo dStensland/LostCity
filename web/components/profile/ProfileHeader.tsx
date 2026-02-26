@@ -6,6 +6,7 @@ import { getGradientForString } from "@/components/UserAvatar";
 import FriendButton from "@/components/FriendButton";
 import type { RelationshipStatus } from "@/lib/hooks/useFriendship";
 import { format } from "date-fns";
+import Dot from "@/components/ui/Dot";
 
 interface ProfileHeaderProps {
   profile: {
@@ -121,7 +122,7 @@ export default function ProfileHeader({
             <span className="font-semibold text-[var(--cream)]">{followerCount}</span>
             <span className="text-[var(--muted)] ml-1">followers</span>
           </Link>
-          <span className="text-[var(--twilight)]">·</span>
+          <Dot className="text-[var(--muted)]" />
           <Link
             href={`/profile/${profile.username}/following`}
             className="hover:text-[var(--cream)] transition-colors"
@@ -131,7 +132,7 @@ export default function ProfileHeader({
           </Link>
           {eventsAttended > 0 && (
             <>
-              <span className="text-[var(--twilight)]">·</span>
+              <Dot className="text-[var(--muted)]" />
               <div>
                 <span className="font-semibold text-[var(--cream)]">{eventsAttended}</span>
                 <span className="text-[var(--muted)] ml-1">events</span>

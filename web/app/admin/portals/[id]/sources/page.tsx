@@ -353,7 +353,7 @@ export default function PortalSourcesPage({ params }: { params: Promise<{ id: st
       >
         {label}
         {isActive && (
-          <span className="text-[0.6rem]">{sortDirection === "asc" ? "▲" : "▼"}</span>
+          <span className="text-xs">{sortDirection === "asc" ? "▲" : "▼"}</span>
         )}
       </button>
     );

@@ -335,7 +335,7 @@ export default function FeedView({ prefetchedSections, enableSectionIndex = true
             >
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="font-mono text-[0.62rem] uppercase tracking-[0.2em] text-[var(--muted)]">
+                  <p className="font-mono text-xs uppercase tracking-[0.2em] text-[var(--muted)]">
                     Continue Browsing
                   </p>
                   <p className="text-sm text-[var(--cream)] font-medium">
@@ -364,7 +364,7 @@ export default function FeedView({ prefetchedSections, enableSectionIndex = true
               aria-controls="feed-section-index"
             >
               <div>
-                <p className="font-mono text-[0.6rem] uppercase tracking-[0.2em] text-[var(--muted)]">Section Index</p>
+                <p className="font-mono text-xs uppercase tracking-[0.2em] text-[var(--muted)]">Section Index</p>
                 <p className="text-xs text-[var(--cream)]">{sectionIndex.length} anchors</p>
               </div>
               <span className="text-[var(--muted)] text-sm">{isIndexCollapsed ? "+" : "−"}</span>
@@ -426,7 +426,7 @@ export default function FeedView({ prefetchedSections, enableSectionIndex = true
               <div className="absolute inset-x-0 bottom-0 rounded-t-2xl border-t border-[var(--twilight)]/45 bg-[var(--night)] p-3 pb-5 max-h-[70vh] overflow-hidden">
                 <div className="flex items-center justify-between px-1 pb-2">
                   <div>
-                    <p className="font-mono text-[0.6rem] uppercase tracking-[0.2em] text-[var(--muted)]">Section Index</p>
+                    <p className="font-mono text-xs uppercase tracking-[0.2em] text-[var(--muted)]">Section Index</p>
                     <p className="text-xs text-[var(--cream)]">{sectionIndex.length} anchors</p>
                   </div>
                   <button

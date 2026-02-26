@@ -319,7 +319,7 @@ async function clearActivityData(userIds: string[]) {
 async function getEventsForCategories(
   categories: string[],
   limit: number
-): Promise<Array<{ id: number; category: string; start_date: string; title: string; venue_id: number | null }>> {
+): Promise<Array<{ id: number; category_id: string; start_date: string; title: string; venue_id: number | null }>> {
   const mapped = mapCategories(categories);
   const today = new Date().toISOString().split("T")[0];
   const monthFromNow = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
@@ -328,8 +328,8 @@ async function getEventsForCategories(
 
   const { data, error } = await supabase
     .from("events")
-    .select("id, category, start_date, title, venue_id")
-    .in("category", mapped)
+    .select("id, category_id, start_date, title, venue_id")
+    .in("category_id", mapped)
     .gte("start_date", today)
     .lte("start_date", monthFromNow)
     .order("start_date", { ascending: true })

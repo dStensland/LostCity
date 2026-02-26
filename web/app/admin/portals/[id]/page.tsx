@@ -146,7 +146,7 @@ export default function PortalOverviewPage() {
         </div>
 
         <div className="mt-4 p-3 bg-[var(--night)] rounded border border-[var(--twilight)]">
-          <div className="font-mono text-[0.65rem] text-[var(--muted)] uppercase mb-2">Preview</div>
+          <div className="font-mono text-xs text-[var(--muted)] uppercase mb-2">Preview</div>
           <div className="flex gap-2">
             {[
               { key: "feed" as const, default: "Feed" },

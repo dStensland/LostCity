@@ -88,7 +88,7 @@ export default function NewsletterSignup() {
         </button>
       </div>
       {status === "error" && errorMessage && (
-        <p className="mt-2 text-[0.7rem] text-[var(--neon-red)]">{errorMessage}</p>
+        <p className="mt-2 text-xs text-[var(--neon-red)]">{errorMessage}</p>
       )}
     </form>
   );

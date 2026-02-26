@@ -157,7 +157,9 @@ export type CityPulseSectionType =
   | "trending"
   | "coming_up"
   | "browse"
-  | "todays_specials";
+  | "todays_specials"
+  | "tonights_regulars"
+  | "the_scene";
 
 export type SectionLayout = "hero" | "carousel" | "list" | "grid";
 

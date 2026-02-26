@@ -79,7 +79,7 @@ export default function LineupSection({
         <>
           {displayHeadliners.length > 0 && (
             <>
-              <p className="text-[0.65rem] font-mono uppercase tracking-widest text-accent mb-3">
+              <p className="text-xs font-mono uppercase tracking-widest text-accent mb-3">
                 {resolvedHeadliner}
               </p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-6 justify-items-center mb-6">
@@ -104,7 +104,7 @@ export default function LineupSection({
               {displayHeadliners.length > 0 && (
                 <div className="border-t border-[var(--twilight)] my-4" />
               )}
-              <p className="text-[0.65rem] font-mono uppercase tracking-widest text-[var(--muted)] mb-3">
+              <p className="text-xs font-mono uppercase tracking-widest text-[var(--muted)] mb-3">
                 {resolvedSupport}
               </p>
               <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-4 justify-items-center">

@@ -1,14 +1,16 @@
 """
 Crawler for Park Tavern at Piedmont Park.
 Sports bar with outdoor patio overlooking Piedmont Park - UGA football watch party HQ.
+Also generates recurring Sunday live music events.
 """
 
 import json
 import logging
+from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
 import requests
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_venue, insert_event, find_event_by_hash, find_existing_event_for_insert, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -134,10 +136,114 @@ def crawl(source: dict) -> tuple[int, int, int]:
             except Exception as e:
                 logger.error(f"Failed to insert {title}: {e}")
 
-        logger.info(f"Park Tavern: Found {events_found} events, {events_new} new, {events_updated} existing")
+        logger.info(f"Park Tavern website: {events_found} found, {events_new} new, {events_updated} updated")
 
     except Exception as e:
-        logger.error(f"Failed to crawl Park Tavern: {e}")
-        raise
+        logger.error(f"Failed to crawl Park Tavern website: {e}")
 
+    # Generate recurring Sunday live music events
+    try:
+        f, n, u = _generate_recurring_events(source_id, venue_id)
+        events_found += f
+        events_new += n
+        events_updated += u
+    except Exception as e:
+        logger.error(f"Failed to generate Park Tavern recurring events: {e}")
+
+    return events_found, events_new, events_updated
+
+
+WEEKS_AHEAD = 6
+
+RECURRING_SCHEDULE = [
+    {
+        "day": 6,  # Sunday
+        "title": "Sunday Live Music",
+        "description": (
+            "Sunday live music at Park Tavern overlooking Piedmont Park. "
+            "Outdoor stage, craft beer, and local bands."
+        ),
+        "start_time": "15:00",
+        "category": "music",
+        "subcategory": None,
+        "tags": ["live-music", "outdoor", "weekly", "family-friendly", "piedmont-park"],
+    },
+]
+
+DAY_CODES = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
+DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+
+def _get_next_weekday(start_date: datetime, weekday: int) -> datetime:
+    days_ahead = weekday - start_date.weekday()
+    if days_ahead < 0:
+        days_ahead += 7
+    return start_date + timedelta(days=days_ahead)
+
+
+def _generate_recurring_events(source_id: int, venue_id: int) -> tuple[int, int, int]:
+    events_found = events_new = events_updated = 0
+    today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+    for template in RECURRING_SCHEDULE:
+        next_date = _get_next_weekday(today, template["day"])
+        day_code = DAY_CODES[template["day"]]
+        day_name = DAY_NAMES[template["day"]]
+
+        series_hint = {
+            "series_type": "recurring_show",
+            "series_title": template["title"],
+            "frequency": "weekly",
+            "day_of_week": day_name,
+            "description": template["description"],
+        }
+
+        for week in range(WEEKS_AHEAD):
+            event_date = next_date + timedelta(weeks=week)
+            start_date = event_date.strftime("%Y-%m-%d")
+            events_found += 1
+
+            content_hash = generate_content_hash(
+                template["title"], VENUE_DATA["name"], start_date
+            )
+
+            event_record = {
+                "source_id": source_id,
+                "venue_id": venue_id,
+                "title": template["title"],
+                "description": template["description"],
+                "start_date": start_date,
+                "start_time": template["start_time"],
+                "end_date": None,
+                "end_time": None,
+                "is_all_day": False,
+                "category": template["category"],
+                "subcategory": template.get("subcategory"),
+                "tags": template["tags"],
+                "is_free": True,
+                "price_min": None,
+                "price_max": None,
+                "source_url": EVENTS_URL,
+                "ticket_url": None,
+                "image_url": None,
+                "raw_text": f"{template['title']} at Park Tavern - {start_date}",
+                "extraction_confidence": 0.90,
+                "is_recurring": True,
+                "recurrence_rule": f"FREQ=WEEKLY;BYDAY={day_code}",
+                "content_hash": content_hash,
+            }
+
+            existing = find_existing_event_for_insert(event_record)
+            if existing:
+                smart_update_existing_event(existing, event_record)
+                events_updated += 1
+                continue
+
+            try:
+                insert_event(event_record, series_hint=series_hint)
+                events_new += 1
+            except Exception as exc:
+                logger.error(f"Failed to insert {template['title']} on {start_date}: {exc}")
+
+    logger.info(f"Park Tavern recurring: {events_found} found, {events_new} new, {events_updated} updated")
     return events_found, events_new, events_updated

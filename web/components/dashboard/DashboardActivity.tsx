@@ -133,56 +133,24 @@ function UnauthenticatedView() {
         </div>
       </div>
 
-      {/* Enhanced blurred preview with glass cards and coral accent glow */}
-      <div className="relative">
-        <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
-          <span className="px-3 py-1.5 rounded-full glass border border-[var(--twilight)] font-mono text-xs text-[var(--muted)]">
-            Sign in to see activity
-          </span>
-        </div>
-        <div className="space-y-3 blur-sm opacity-60 select-none" aria-hidden="true">
-          {/* Fake friend request - glass card */}
-          <div className="flex items-center gap-4 p-4 glass border border-[var(--coral)]/30 rounded-lg relative">
-            <div
-              className="absolute inset-0 rounded-lg opacity-30 blur-xl pointer-events-none dashboard-activity-glow"
-            />
-            <div className="w-10 h-10 rounded-full bg-[var(--coral)] relative z-10" />
-            <div className="flex-1 relative z-10">
-              <div className="h-4 w-32 bg-[var(--twilight)] rounded" />
-              <div className="h-3 w-20 bg-[var(--twilight)] rounded mt-1" />
-            </div>
-            <div className="flex gap-2 relative z-10">
-              <div className="px-3 py-1.5 bg-[var(--coral)] rounded-lg h-8 w-16" />
-              <div className="px-3 py-1.5 bg-[var(--twilight)] rounded-lg h-8 w-16" />
-            </div>
-          </div>
-
-          {/* Fake grouped activity - glass card */}
-          <div className="p-4 glass border border-[var(--twilight)] rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="flex -space-x-2">
-                <div className="w-8 h-8 rounded-full bg-[var(--coral)] border-2 border-[var(--dusk)]" />
-                <div className="w-8 h-8 rounded-full bg-[var(--coral)] border-2 border-[var(--dusk)]" />
-              </div>
-              <div className="h-3 w-24 bg-[var(--coral)]/30 rounded" />
-            </div>
-            <div className="h-5 w-48 bg-[var(--twilight)] rounded" />
-            <div className="h-3 w-32 bg-[var(--twilight)] rounded mt-2" />
-          </div>
-
-          {/* Fake activity items - glass cards */}
-          {[1, 2].map((i) => (
-            <div key={i} className="p-4 glass border border-[var(--twilight)] rounded-lg">
+      {/* Blurred preview hint */}
+      <div className="relative overflow-hidden rounded-xl">
+        <div className="space-y-3 blur-[6px] opacity-40 select-none" aria-hidden="true">
+          {/* Fake activity items - neutral tones only */}
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="p-4 border border-[var(--twilight)]/50 rounded-lg bg-[var(--dusk)]/50">
               <div className="flex items-start gap-3">
                 <div className="w-10 h-10 rounded-full bg-[var(--twilight)]" />
                 <div className="flex-1 space-y-2">
-                  <div className="h-4 w-3/4 bg-[var(--twilight)] rounded" />
-                  <div className="h-3 w-16 bg-[var(--twilight)] rounded" />
+                  <div className="h-4 bg-[var(--twilight)] rounded" style={{ width: `${55 + i * 12}%` }} />
+                  <div className="h-3 bg-[var(--twilight)]/70 rounded" style={{ width: `${30 + i * 8}%` }} />
                 </div>
               </div>
             </div>
           ))}
         </div>
+        {/* Fade overlay */}
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[var(--void)]" />
       </div>
     </div>
   );

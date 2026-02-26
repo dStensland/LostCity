@@ -376,11 +376,11 @@ export function buildRightNowSection(
     );
   }
 
-  // Remaining events (skip hero) — capped to keep response payload small
-  const MAX_SECTION_EVENTS = 25;
+  // Send full pool for chip filtering — the client limits display via
+  // INITIAL_ROWS and "See all". High cap prevents edge-case blowup.
   const remaining = scoredEvents
     .filter((e) => e.id !== heroEvent?.id)
-    .slice(0, MAX_SECTION_EVENTS);
+    .slice(0, 150);
   for (const e of remaining) {
     eventItems.push(
       makeEventItem(e, {
@@ -576,7 +576,7 @@ export function buildTonightSection(
 
   if (tonightEvents.length < 2) return null;
 
-  const scored = scoreAndSort(tonightEvents, signals, friendsGoingMap).slice(0, 20);
+  const scored = scoreAndSort(tonightEvents, signals, friendsGoingMap);
   const items: CityPulseItem[] = scored.map((e, idx) =>
     makeEventItem(e, {
       contextual_label: getEventContextLabel(e, context),
@@ -826,6 +826,162 @@ export function buildComingUpSection(
     priority: "tertiary",
     accent_color: "var(--soft)",
     items,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Tonight's Regulars section (recurring nightlife/music/comedy/food events today)
+// ---------------------------------------------------------------------------
+
+const REGULARS_CATEGORIES = new Set(["nightlife", "music", "comedy", "food_drink", "art"]);
+
+export function buildTonightsRegularsSection(
+  events: FeedEventData[],
+  signals: UserSignals | null,
+  friendsGoingMap: Record<number, FriendGoingInfo[]>,
+): CityPulseSection | null {
+  // Filter to only recurring events in the relevant categories
+  const recurring = events.filter((e) => {
+    const isRecurring = !!(e as Record<string, unknown>).is_recurring;
+    const hasSeries = !!((e as Record<string, unknown>).series_id);
+    if (!isRecurring && !hasSeries) return false;
+    return !e.category || REGULARS_CATEGORIES.has(e.category);
+  });
+
+  if (recurring.length < 3) return null;
+
+  // Deduplicate by series_id, then score and sort
+  const deduped = deduplicateSeries(recurring);
+  const scored = scoreAndSort(deduped, signals, friendsGoingMap);
+  const capped = scored.slice(0, 12);
+
+  const items: CityPulseItem[] = capped.map((e) =>
+    makeEventItem(e, {
+      friends_going: e.friends_going,
+      score: e.score,
+      reasons: e.reasons,
+      is_recurring: true,
+      recurrence_label: buildRecurrenceLabel(e),
+    }),
+  );
+
+  return {
+    id: "tonights-regulars",
+    type: "tonights_regulars",
+    title: "Tonight's Regulars",
+    subtitle: "Every week, rain or shine",
+    priority: "secondary",
+    accent_color: "var(--vibe)",
+    items,
+    layout: "list",
+  };
+}
+
+// ---------------------------------------------------------------------------
+// The Scene section (recurring activities — trivia, karaoke, open mic, etc.)
+// ---------------------------------------------------------------------------
+
+export interface SceneActivityType {
+  id: string;
+  label: string;
+  iconName: string;
+  color: string;
+  /** Genres to match (checked against event.genres and event.tags arrays) */
+  matchGenres?: string[];
+  /** Categories to match (checked against event.category) */
+  matchCategories?: string[];
+}
+
+export const SCENE_ACTIVITY_TYPES: SceneActivityType[] = [
+  { id: "trivia", label: "Trivia", iconName: "Question", color: "#93C5FD", matchGenres: ["trivia"] },
+  { id: "karaoke", label: "Karaoke", iconName: "MicrophoneStage", color: "#F9A8D4", matchGenres: ["karaoke"] },
+  { id: "open_mic", label: "Open Mic", iconName: "Microphone", color: "#FCD34D", matchGenres: ["open-mic", "openmic"] },
+  { id: "dj", label: "DJ Night", iconName: "Headphones", color: "#C4B5FD", matchGenres: ["dj", "electronic", "edm"] },
+  { id: "live_music", label: "Live Music", iconName: "Waveform", color: "#F9A8D4", matchCategories: ["music"] },
+  { id: "drag", label: "Drag", iconName: "Crown", color: "#E879F9", matchGenres: ["drag"] },
+  { id: "improv", label: "Improv", iconName: "Lightbulb", color: "#FDBA74", matchGenres: ["improv"] },
+  { id: "comedy", label: "Comedy", iconName: "Smiley", color: "#FCD34D", matchCategories: ["comedy"] },
+  { id: "game_night", label: "Game Night", iconName: "GameController", color: "#7DD3FC", matchGenres: ["game-night", "board-games"] },
+  { id: "dance", label: "Dance", iconName: "MusicNotes", color: "#F9A8D4", matchGenres: ["dance", "salsa", "swing"] },
+];
+
+/** Match a single event to its best activity type (first match wins: genres → category) */
+function matchActivityType(event: FeedEventData): string | null {
+  const genres = ((event as Record<string, unknown>).genres as string[] | null) ?? [];
+  const tags = ((event as Record<string, unknown>).tags as string[] | null) ?? [];
+  const category = event.category ?? "";
+
+  for (const act of SCENE_ACTIVITY_TYPES) {
+    if (act.matchGenres) {
+      const combined = [...genres, ...tags];
+      if (act.matchGenres.some((g) => combined.includes(g))) return act.id;
+    }
+    if (act.matchCategories) {
+      if (act.matchCategories.includes(category)) return act.id;
+    }
+  }
+  return null;
+}
+
+export function buildTheSceneSection(
+  todayEvents: FeedEventData[],
+  weekRecurringEvents: FeedEventData[],
+  signals: UserSignals | null,
+  friendsGoingMap: Record<number, FriendGoingInfo[]>,
+): CityPulseSection | null {
+  // 1. Combine today + week, filter to recurring only
+  const allEvents = [...todayEvents, ...weekRecurringEvents];
+  const recurringOnly = allEvents.filter((e) => {
+    const seriesId = (e as Record<string, unknown>).series_id as number | null;
+    const isRecurring = (e as Record<string, unknown>).is_recurring as boolean | undefined;
+    return !!seriesId || !!isRecurring;
+  });
+
+  // 2. Deduplicate by series_id (keeps earliest occurrence)
+  const deduped = deduplicateSeries(recurringOnly);
+
+  // 3. Match each event to an activity type, build per-event map + counts
+  const eventActivityMap: Record<number, string> = {};
+  const activityCounts: Record<string, number> = {};
+
+  for (const event of deduped) {
+    const actId = matchActivityType(event);
+    if (actId) {
+      eventActivityMap[event.id] = actId;
+      activityCounts[actId] = (activityCounts[actId] || 0) + 1;
+    }
+  }
+
+  // 4. Only keep events that matched an activity type
+  const matched = deduped.filter((e) => eventActivityMap[e.id]);
+  if (matched.length < 3) return null;
+
+  // 5. Score, sort, cap
+  const scored = scoreAndSort(matched, signals, friendsGoingMap).slice(0, 30);
+
+  const items: CityPulseItem[] = scored.map((e) =>
+    makeEventItem(e, {
+      friends_going: e.friends_going,
+      score: e.score,
+      reasons: e.reasons,
+      is_recurring: true,
+      recurrence_label: buildRecurrenceLabel(e),
+    }),
+  );
+
+  return {
+    id: "the-scene",
+    type: "the_scene",
+    title: "Regular Hangs",
+    subtitle: "Weekly regulars & recurring events",
+    priority: "secondary",
+    accent_color: "var(--neon-magenta)",
+    items,
+    layout: "list",
+    meta: {
+      activity_counts: activityCounts,
+      event_activity_map: eventActivityMap,
+    },
   };
 }
 

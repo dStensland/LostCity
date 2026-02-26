@@ -130,7 +130,7 @@ export default function FlagButton({
       )}
 
       <div className="flex items-center justify-between mt-3">
-        <span className="text-[0.6rem] text-[var(--muted)] font-mono">
+        <span className="text-xs text-[var(--muted)] font-mono">
           {message.length}/500
         </span>
         <button

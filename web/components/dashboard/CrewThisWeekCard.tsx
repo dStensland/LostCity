@@ -75,7 +75,7 @@ export default function CrewThisWeekCard() {
             <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-[var(--coral)]">
               Your crew this week
             </h3>
-            <span className="font-mono text-[0.65rem] px-1.5 py-0.5 rounded-full bg-[var(--coral)]/15 text-[var(--coral)]">
+            <span className="font-mono text-xs px-1.5 py-0.5 rounded-full bg-[var(--coral)]/15 text-[var(--coral)]">
               {data.totalFriendsWithPlans}
             </span>
           </div>
@@ -121,7 +121,7 @@ export default function CrewThisWeekCard() {
                       {nextEvent.title}
                     </span>
                   </div>
-                  <p className="font-mono text-[0.6rem] text-[var(--muted)]">
+                  <p className="font-mono text-xs text-[var(--muted)]">
                     {dateStr}{nextEvent.venue_name ? ` · ${nextEvent.venue_name}` : ""}
                     {member.events.length > 1 && ` +${member.events.length - 1} more`}
                   </p>

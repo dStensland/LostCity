@@ -618,13 +618,25 @@ def extract_special_events(
     return events_found, events_new, events_updated
 
 
+def _wait_for_movies(page: Page, timeout: int = 12000) -> bool:
+    """Wait for .movie-container elements to appear after SPA renders.
+
+    Returns True if at least one container was found, False on timeout.
+    """
+    try:
+        page.wait_for_selector(".movie-container", timeout=timeout)
+        return True
+    except Exception:
+        return False
+
+
 def _click_plaza_tab(page: Page) -> None:
-    """Click the 'Plaza Theatre Atlanta' tab if visible."""
+    """Click the 'Plaza Theatre Atlanta' tab if visible, then wait for re-render."""
     try:
         plaza_tab = page.locator("text=Plaza Theatre Atlanta").first
         if plaza_tab.is_visible(timeout=2000):
             plaza_tab.click()
-            page.wait_for_timeout(1500)
+            _wait_for_movies(page, timeout=8000)
     except Exception:
         pass
 
@@ -657,7 +669,15 @@ def crawl(source: dict) -> tuple[int, int, int]:
             now_showing_url = f"{BASE_URL}/now-showing"
             logger.info(f"Fetching: {now_showing_url}")
             page.goto(now_showing_url, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(4000)
+
+            # Wait for Vue/Quasar SPA to render movie containers.
+            # Fixed timeouts are unreliable — the SPA render time varies.
+            # Retry with a full page reload if the first attempt fails.
+            if not _wait_for_movies(page, timeout=15000):
+                logger.warning("No .movie-container on first load, retrying with reload")
+                page.reload(wait_until="domcontentloaded", timeout=30000)
+                if not _wait_for_movies(page, timeout=15000):
+                    logger.warning("No .movie-container after reload — will try text fallback")
 
             # Click "Plaza Theatre Atlanta" tab (site shows both Plaza and Tara)
             _click_plaza_tab(page)
@@ -738,7 +758,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     # Stop after first unavailable date (theater hasn't published further)
                     break
 
-                page.wait_for_timeout(2000)
+                # Wait for SPA to re-render with new date's movies
+                _wait_for_movies(page, timeout=10000)
 
                 # Re-select Plaza Theatre tab (may reset after date change)
                 _click_plaza_tab(page)

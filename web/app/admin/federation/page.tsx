@@ -191,7 +191,7 @@ export default function FederationDashboardPage() {
                 <div className="flex items-center gap-3">
                   {source.sharingRule && (
                     <span
-                      className={`px-2 py-0.5 rounded font-mono text-[0.6rem] uppercase ${
+                      className={`px-2 py-0.5 rounded font-mono text-xs uppercase ${
                         source.sharingRule.shareScope === "all"
                           ? "bg-green-500/20 text-green-400"
                           : source.sharingRule.shareScope === "selected"
@@ -203,7 +203,7 @@ export default function FederationDashboardPage() {
                     </span>
                   )}
                   {source.subscriberCount > 0 && (
-                    <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded font-mono text-[0.6rem]">
+                    <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded font-mono text-xs">
                       {source.subscriberCount} sub{source.subscriberCount !== 1 ? "s" : ""}
                     </span>
                   )}
@@ -270,7 +270,7 @@ function StatCard({
 
   return (
     <div className="p-3 bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg">
-      <p className="font-mono text-[0.6rem] text-[var(--muted)] uppercase">{label}</p>
+      <p className="font-mono text-xs text-[var(--muted)] uppercase">{label}</p>
       <p
         className={`font-mono text-2xl font-bold ${
           color ? colorClasses[color] : "text-[var(--cream)]"

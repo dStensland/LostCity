@@ -22,8 +22,8 @@ function CategoryIllustration({
   isHovered,
   className,
 }: IllustrationProps & { name: string; alt: string }) {
-  const normalSrc = `${BASE_PATH}/${name}.png`;
-  const hoverSrc = `${BASE_PATH}/${name}-hover.png`;
+  const normalSrc = `${BASE_PATH}/${name}.webp`;
+  const hoverSrc = `${BASE_PATH}/${name}-hover.webp`;
 
   return (
     <div

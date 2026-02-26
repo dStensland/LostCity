@@ -318,7 +318,7 @@ export default function BrowseByActivity({ portalSlug }: BrowseByActivityProps) 
         <h2 className="text-base font-display font-semibold text-[var(--cream)] mb-1 tracking-tight">
           What are you in the mood for?
         </h2>
-        <p className="font-mono text-[0.7rem] text-[var(--muted)]">
+        <p className="font-mono text-xs text-[var(--muted)]">
           Browse events by category and vibe
         </p>
       </div>
@@ -333,7 +333,7 @@ export default function BrowseByActivity({ portalSlug }: BrowseByActivityProps) 
               setIsLoading(true);
             }}
             className={`
-              px-2.5 py-1 rounded-full text-[0.7rem] font-mono font-medium transition-all duration-150
+              px-2.5 py-1 rounded-full text-xs font-mono font-medium transition-all duration-150
               ${dateFilter === option.value
                 ? "bg-[var(--coral)] text-[var(--void)] shadow-[0_0_8px_var(--coral)/25]"
                 : "bg-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/80"

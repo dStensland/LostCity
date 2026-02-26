@@ -37,6 +37,7 @@ export function formatGenre(genre: string): string {
   const special: Record<string, string> = {
     "sci-fi": "Sci-Fi",
     "r&b": "R&B",
+    "r-and-b": "R&B",
     "hip-hop": "Hip-Hop",
     "edm": "EDM",
     "mma": "MMA",

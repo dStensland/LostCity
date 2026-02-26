@@ -81,7 +81,7 @@ function getMomentumSignal(ev: EnrichedEvent): { label: string; color: string; i
 // Sub-components
 // ---------------------------------------------------------------------------
 
-/** Hero card for #1 popular event */
+/** Hero card for #1 popular event — full-bleed magazine style */
 function PopularHero({ ev, portalSlug }: { ev: EnrichedEvent; portalSlug: string }) {
   const timeLabel = getSmartTimeLabel(ev);
   const momentum = getMomentumSignal(ev);
@@ -91,95 +91,129 @@ function PopularHero({ ev, portalSlug }: { ev: EnrichedEvent; portalSlug: string
     <Link
       href={`/${portalSlug}?event=${ev.id}`}
       scroll={false}
-      className="flex gap-3.5 p-3.5 rounded-xl bg-[var(--night)] border border-[var(--twilight)]/40 hover:bg-white/[0.02] group transition-colors"
+      className="block relative rounded-xl overflow-hidden border border-[var(--twilight)]/40 group transition-all hover:border-[var(--coral)]/30 hover:shadow-[0_0_24px_-4px] hover:shadow-[var(--coral)]/15"
     >
-      {/* Image */}
-      <div className="relative w-20 h-20 rounded-lg overflow-hidden shrink-0 bg-[var(--twilight)]/30">
+      {/* Image background */}
+      <div className="relative aspect-[16/7] overflow-hidden">
         {ev.image_url ? (
           <Image
             src={ev.image_url}
             alt=""
             fill
-            className="object-cover"
-            sizes="80px"
+            className="object-cover transition-transform duration-700 group-hover:scale-105"
+            sizes="(max-width: 640px) 100vw, 50vw"
             blurhash={ev.blurhash}
             fallback={
-              <div className="absolute inset-0 flex items-center justify-center" style={{ background: `color-mix(in srgb, ${categoryColor} 15%, var(--night))` }}>
-                <CategoryIcon type={ev.category || "other"} size={28} glow="subtle" />
+              <div className="absolute inset-0" style={{ background: `linear-gradient(160deg, color-mix(in srgb, ${categoryColor} 25%, var(--night)), var(--void))` }}>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <CategoryIcon type={ev.category || "other"} size={48} glow="subtle" />
+                </div>
               </div>
             }
           />
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center" style={{ background: `color-mix(in srgb, ${categoryColor} 15%, var(--night))` }}>
-            <CategoryIcon type={ev.category || "other"} size={28} glow="subtle" />
+          <div className="absolute inset-0" style={{ background: `linear-gradient(160deg, color-mix(in srgb, ${categoryColor} 25%, var(--night)), var(--void))` }}>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <CategoryIcon type={ev.category || "other"} size={48} glow="subtle" />
+            </div>
           </div>
         )}
-      </div>
 
-      {/* Content */}
-      <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
-        <p className="text-[0.875rem] font-semibold text-[var(--cream)] truncate group-hover:text-[var(--coral)] transition-colors">
-          {ev.title}
-        </p>
-        <p className="text-[0.6875rem] text-[var(--muted)] truncate">
-          {ev.venue?.name}
-        </p>
-        <div className="flex items-center gap-2">
-          <span className="font-mono text-[0.625rem] text-[var(--soft)]">{timeLabel}</span>
-          {momentum && (
-            <span className="font-mono text-[0.5625rem] font-medium" style={{ color: momentum.color }}>
-              {momentum.icon && <momentum.icon weight="bold" className="inline w-2.5 h-2.5 mr-0.5 -mt-px" />}
-              {momentum.label}
+        {/* Gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+
+        {/* Content overlaid on image */}
+        <div className="absolute inset-x-0 bottom-0 p-4">
+          <div className="flex items-center gap-2 mb-1.5">
+            <span
+              className="inline-flex items-center gap-0.5 font-mono text-2xs font-bold uppercase tracking-wider"
+              style={{ color: categoryColor }}
+            >
+              <CategoryIcon type={ev.category || "other"} size={10} glow="none" weight="bold" />
+              #{1}
             </span>
-          )}
+            {momentum && (
+              <span className="font-mono text-2xs font-medium" style={{ color: momentum.color }}>
+                {momentum.icon && <momentum.icon weight="bold" className="inline w-2.5 h-2.5 mr-0.5 -mt-px" />}
+                {momentum.label}
+              </span>
+            )}
+          </div>
+          <p className="text-base font-bold text-white leading-tight line-clamp-2 group-hover:text-[var(--coral)] transition-colors">
+            {ev.title}
+          </p>
+          <div className="flex items-center gap-2 mt-1.5">
+            <span className="text-xs text-white/80 truncate">
+              {ev.venue?.name}
+            </span>
+            <span className="font-mono text-2xs text-white/65">{timeLabel}</span>
+          </div>
         </div>
       </div>
     </Link>
   );
 }
 
-/** Compact row for ranked items */
-function PopularRow({
+/** Compact card for ranked events (#2-5) */
+function PopularCard({
   ev,
   rank,
   portalSlug,
-  isLast,
 }: {
   ev: EnrichedEvent;
   rank: number;
   portalSlug: string;
-  isLast: boolean;
 }) {
   const timeLabel = getSmartTimeLabel(ev);
   const momentum = getMomentumSignal(ev);
+  const categoryColor = getCategoryColor(ev.category);
 
   return (
     <Link
       href={`/${portalSlug}?event=${ev.id}`}
       scroll={false}
-      className={`flex items-center gap-3 px-3 py-3 transition-colors hover:bg-white/[0.02] group ${
-        !isLast ? "border-b border-[var(--twilight)]/30" : ""
-      }`}
+      className="block rounded-lg overflow-hidden border border-[var(--twilight)]/30 bg-[var(--night)] group transition-all hover:border-[var(--twilight)]/50 hover:shadow-[0_0_12px_-4px] hover:shadow-[var(--coral)]/10"
     >
-      <span
-        className="font-mono text-sm font-black w-5 text-center shrink-0 tabular-nums"
-        style={{ color: rank === 2 ? "var(--gold)" : "var(--muted)" }}
-      >
-        {rank}
-      </span>
-      <div className="flex-1 min-w-0">
-        <p className="text-[0.8125rem] font-medium text-[var(--soft)] truncate group-hover:text-[var(--coral)] transition-colors">
+      {/* Image */}
+      <div className="relative aspect-[4/3] overflow-hidden">
+        {ev.image_url ? (
+          <Image
+            src={ev.image_url}
+            alt=""
+            fill
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
+            sizes="(max-width: 640px) 50vw, 25vw"
+            blurhash={ev.blurhash}
+          />
+        ) : (
+          <div
+            className="absolute inset-0 flex items-center justify-center"
+            style={{ background: `linear-gradient(160deg, color-mix(in srgb, ${categoryColor} 22%, var(--night)), var(--void))` }}
+          >
+            <CategoryIcon type={ev.category || "other"} size={24} glow="none" weight="light" />
+          </div>
+        )}
+        {/* Gradient + rank badge */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+        <span className="absolute top-1.5 left-1.5 font-mono text-2xs font-black tabular-nums px-1.5 py-0.5 rounded bg-black/50 backdrop-blur-sm text-white/85">
+          #{rank}
+        </span>
+      </div>
+
+      {/* Content */}
+      <div className="px-2.5 py-2 space-y-0.5">
+        <p className="text-xs font-semibold text-[var(--cream)] line-clamp-2 leading-snug group-hover:text-white transition-colors">
           {ev.title}
         </p>
-        <p className="text-[0.6875rem] text-[var(--muted)] truncate">{ev.venue?.name}</p>
-      </div>
-      <div className="shrink-0 text-right space-y-0.5">
-        <p className="font-mono text-[0.625rem] text-[var(--soft)]">{timeLabel}</p>
-        {momentum && (
-          <p className="font-mono text-[0.5625rem] font-medium" style={{ color: momentum.color }}>
-            {momentum.label}
-          </p>
-        )}
+        <p className="text-2xs text-[var(--soft)] truncate">{ev.venue?.name}</p>
+        <div className="flex items-center gap-1.5">
+          <span className="font-mono text-2xs text-[var(--soft)]">{timeLabel}</span>
+          {momentum && (
+            <span className="font-mono text-2xs font-medium" style={{ color: momentum.color }}>
+              {momentum.label}
+            </span>
+          )}
+        </div>
       </div>
     </Link>
   );
@@ -206,8 +240,8 @@ function FriendsZone({
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
-        <Users weight="bold" className="w-3.5 h-3.5 text-[var(--neon-cyan,#00d4e8)]" />
-        <h3 className="font-mono text-[0.625rem] font-bold tracking-[0.12em] uppercase text-[var(--neon-cyan,#00d4e8)]">
+        <Users weight="bold" className="w-4 h-4 text-[var(--cream)]" />
+        <h3 className="font-mono text-xs font-bold tracking-[0.1em] uppercase text-[var(--cream)]">
           Friends Are Going
         </h3>
       </div>
@@ -221,10 +255,10 @@ function FriendsZone({
             <SignIn weight="light" className="w-4 h-4 text-[var(--neon-cyan,#00d4e8)]" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[0.8125rem] font-medium text-[var(--cream)] group-hover:text-[var(--neon-cyan,#00d4e8)] transition-colors">
+            <p className="text-sm font-medium text-[var(--cream)] group-hover:text-[var(--neon-cyan,#00d4e8)] transition-colors">
               Sign in to see friends&apos; plans
             </p>
-            <p className="text-[0.625rem] text-[var(--muted)]">
+            <p className="text-2xs text-[var(--soft)]">
               See what your people are up to this week
             </p>
           </div>
@@ -239,10 +273,10 @@ function FriendsZone({
             <UserPlus weight="light" className="w-4 h-4 text-[var(--neon-cyan,#00d4e8)]" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[0.8125rem] font-medium text-[var(--cream)] group-hover:text-[var(--neon-cyan,#00d4e8)] transition-colors">
+            <p className="text-sm font-medium text-[var(--cream)] group-hover:text-[var(--neon-cyan,#00d4e8)] transition-colors">
               Add friends to see their plans
             </p>
-            <p className="text-[0.625rem] text-[var(--muted)]">
+            <p className="text-2xs text-[var(--soft)]">
               Follow people to see what they&apos;re going to
             </p>
           </div>
@@ -290,17 +324,17 @@ function FriendsZone({
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <p className="text-[0.8125rem] font-medium text-[var(--soft)] truncate group-hover:text-[var(--neon-cyan,#00d4e8)] transition-colors">
+                  <p className="text-sm font-medium text-[var(--soft)] truncate group-hover:text-[var(--neon-cyan,#00d4e8)] transition-colors">
                     {ev.title}
                   </p>
-                  <p className="text-[0.625rem] text-[var(--muted)] truncate">
+                  <p className="text-2xs text-[var(--soft)] truncate">
                     {friends.slice(0, 2).map((f) => f.display_name || f.username).join(", ")}
                     {friends.length > 2 && ` +${friends.length - 2}`}
                     {" going"}
                   </p>
                 </div>
 
-                <span className="font-mono text-[0.625rem] text-[var(--soft)] shrink-0">{timeLabel}</span>
+                <span className="font-mono text-2xs text-[var(--soft)] shrink-0">{timeLabel}</span>
               </Link>
             );
           })}
@@ -349,8 +383,8 @@ function UpcomingZone({
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
-        <CalendarBlank weight="bold" className="w-3.5 h-3.5 text-[var(--gold)]" />
-        <h3 className="font-mono text-[0.625rem] font-bold tracking-[0.12em] uppercase text-[var(--gold)]">
+        <CalendarBlank weight="bold" className="w-4 h-4 text-[var(--cream)]" />
+        <h3 className="font-mono text-xs font-bold tracking-[0.1em] uppercase text-[var(--cream)]">
           Your Upcoming
         </h3>
       </div>
@@ -361,10 +395,10 @@ function UpcomingZone({
             <CalendarBlank weight="light" className="w-4 h-4 text-[var(--gold)]" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[0.8125rem] font-medium text-[var(--cream)]">
+            <p className="text-sm font-medium text-[var(--cream)]">
               No upcoming plans yet
             </p>
-            <p className="text-[0.625rem] text-[var(--muted)]">
+            <p className="text-2xs text-[var(--soft)]">
               RSVP to events above to build your lineup
             </p>
           </div>
@@ -389,16 +423,16 @@ function UpcomingZone({
                 }`}
               >
                 <div className="flex-1 min-w-0">
-                  <p className="text-[0.8125rem] font-medium text-[var(--soft)] truncate group-hover:text-[var(--gold)] transition-colors">
+                  <p className="text-sm font-medium text-[var(--soft)] truncate group-hover:text-[var(--gold)] transition-colors">
                     {ev.title}
                   </p>
-                  <p className="text-[0.625rem] text-[var(--muted)] truncate">
+                  <p className="text-2xs text-[var(--soft)] truncate">
                     {ev.venue_name}
                   </p>
                 </div>
                 <div className="shrink-0 text-right space-y-0.5">
-                  <p className="font-mono text-[0.625rem] text-[var(--soft)]">{timeLabel}</p>
-                  <p className="font-mono text-[0.5rem] font-medium uppercase tracking-wider text-[var(--gold)]">
+                  <p className="font-mono text-2xs text-[var(--soft)]">{timeLabel}</p>
+                  <p className="font-mono text-2xs font-medium uppercase tracking-wider text-[var(--gold)]">
                     {ev.status === "going" ? "Going" : ev.status === "interested" ? "Maybe" : "Going"}
                   </p>
                 </div>
@@ -451,13 +485,13 @@ export default function TrendingSection({ section, portalSlug }: Props) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <TrendUp weight="bold" className="w-3.5 h-3.5 text-[var(--coral)]" />
-            <h2 className="font-mono text-[0.6875rem] font-bold tracking-[0.12em] uppercase text-[var(--coral)]">
+            <h2 className="font-mono text-xs font-bold tracking-[0.12em] uppercase text-[var(--coral)]">
               {headerLabel}
             </h2>
           </div>
           <Link
             href={`/${portalSlug}?view=find&type=events`}
-            className="text-[0.6875rem] flex items-center gap-1 text-[var(--coral)] transition-colors hover:opacity-80"
+            className="text-xs flex items-center gap-1 text-[var(--coral)] transition-colors hover:opacity-80"
           >
             All <ArrowRight className="w-3 h-3" />
           </Link>
@@ -466,16 +500,15 @@ export default function TrendingSection({ section, portalSlug }: Props) {
         {/* Hero (#1) */}
         {heroEvent && <PopularHero ev={heroEvent} portalSlug={portalSlug} />}
 
-        {/* List (#2-5) */}
+        {/* Grid (#2-5) — compact cards */}
         {listEvents.length > 0 && (
-          <div className="rounded-xl overflow-hidden border border-[var(--twilight)]/40 bg-[var(--night)]">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-2.5">
             {listEvents.map((ev, idx) => (
-              <PopularRow
+              <PopularCard
                 key={`pop-${ev.id}`}
                 ev={ev}
                 rank={idx + 2}
                 portalSlug={portalSlug}
-                isLast={idx === listEvents.length - 1}
               />
             ))}
           </div>

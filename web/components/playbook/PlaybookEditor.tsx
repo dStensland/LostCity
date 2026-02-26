@@ -7,14 +7,15 @@
  * calculations, drag-to-reorder, and an AddStopPanel for adding stops.
  */
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Map, { Marker, Source, Layer, NavigationControl } from "react-map-gl";
+import Map, { Marker, Source, Layer, NavigationControl, type MapRef } from "react-map-gl";
 import { MAPBOX_TOKEN, DARK_STYLE } from "@/lib/map-config";
 import MapPin from "@/components/map/MapPin";
 import AddStopPanel from "@/components/playbook/AddStopPanel";
 import { useItinerary } from "@/lib/hooks/useItinerary";
+import { useAuth } from "@/lib/auth-context";
 import {
   getItemTitle,
   getItemCoords,
@@ -54,7 +55,18 @@ import {
   PencilSimple,
   Check,
   DotsSixVertical,
+  Notebook,
 } from "@phosphor-icons/react/dist/ssr";
+
+import {
+  ZONE_COLORS,
+  ROUTE_GLOW_LAYER,
+  ROUTE_LINE_LAYER,
+  getDangerLevel,
+  getBufferLabel,
+  getItemCategory,
+  WalkingPersonIcon,
+} from "@/lib/playbook-shared";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -64,57 +76,7 @@ interface PlaybookEditorProps {
   itineraryId: string;
   portalId: string;
   portalSlug: string;
-}
-
-type DangerLevel = "safe" | "warning" | "danger";
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-const ZONE_COLORS = {
-  safe: { dot: "#00D9A0", bg: "rgba(0, 217, 160, 0.08)", border: "rgba(0, 217, 160, 0.2)", text: "#00D9A0" },
-  warning: { dot: "#FFB800", bg: "rgba(255, 184, 0, 0.08)", border: "rgba(255, 184, 0, 0.25)", text: "#FFB800" },
-  danger: { dot: "#FF3366", bg: "rgba(255, 51, 102, 0.08)", border: "rgba(255, 51, 102, 0.25)", text: "#FF3366" },
-};
-
-const ROUTE_GLOW_LAYER = {
-  id: "route-glow",
-  type: "line" as const,
-  paint: { "line-color": "#00D4E8", "line-width": 8, "line-opacity": 0.06, "line-blur": 4 },
-};
-
-const ROUTE_LINE_LAYER = {
-  id: "route-line",
-  type: "line" as const,
-  paint: {
-    "line-color": "#00D4E8",
-    "line-width": 2,
-    "line-dasharray": [3, 2] as [number, number],
-    "line-opacity": 0.4,
-  },
-};
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function getDangerLevel(walkMinutes: number, bufferMinutes: number): DangerLevel {
-  if (bufferMinutes >= 15) return "safe";
-  if (bufferMinutes >= 5) return "warning";
-  return "danger";
-}
-
-function getBufferLabel(level: DangerLevel, bufferMinutes: number): string {
-  if (level === "safe") return `${bufferMinutes} min buffer`;
-  if (level === "warning") return `${bufferMinutes} min buffer — Cutting it close`;
-  return "You might be late";
-}
-
-function getItemCategory(item: ItineraryItem | LocalItineraryItem): string {
-  if ("event" in item && item.event?.category) return item.event.category;
-  if ("venue" in item && item.venue?.venue_type) return item.venue.venue_type;
-  return "default";
+  portalName?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -129,11 +91,11 @@ function PlaybookMap({
   className?: string;
 }) {
   const [mounted, setMounted] = useState(false);
+  const mapRef = useRef<MapRef>(null);
 
   useEffect(() => {
-    setMounted(true);
     // @ts-expect-error - Dynamic CSS import for Mapbox GL
-    import("mapbox-gl/dist/mapbox-gl.css");
+    import("mapbox-gl/dist/mapbox-gl.css").then(() => setMounted(true));
   }, []);
 
   const coords = useMemo(
@@ -151,6 +113,25 @@ function PlaybookMap({
     return { lat: avgLat, lng: avgLng };
   }, [coords]);
 
+  // Re-center map when items change
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || coords.length === 0) return;
+    if (coords.length === 1) {
+      map.flyTo({ center: [coords[0].lng, coords[0].lat], zoom: 14, duration: 800 });
+    } else {
+      const lngs = coords.map((c) => c.lng);
+      const lats = coords.map((c) => c.lat);
+      map.fitBounds(
+        [
+          [Math.min(...lngs), Math.min(...lats)],
+          [Math.max(...lngs), Math.max(...lats)],
+        ],
+        { padding: 60, duration: 800 },
+      );
+    }
+  }, [coords]);
+
   const routeGeoJson = useMemo(
     () => ({
       type: "Feature" as const,
@@ -165,7 +146,7 @@ function PlaybookMap({
 
   if (!mounted) {
     return (
-      <div className={`${className} relative overflow-hidden`} style={{ background: "#07070C" }}>
+      <div className={`${className} relative overflow-hidden`} style={{ background: "var(--void)" }}>
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="w-5 h-5 rounded-full border-2 border-white/20 border-t-white/60 animate-spin" />
         </div>
@@ -176,6 +157,7 @@ function PlaybookMap({
   return (
     <div className={`${className} relative overflow-hidden`}>
       <Map
+        ref={mapRef}
         mapboxAccessToken={MAPBOX_TOKEN}
         mapStyle={DARK_STYLE}
         initialViewState={{ longitude: center.lng, latitude: center.lat, zoom: 13 }}
@@ -206,7 +188,7 @@ function PlaybookMap({
                   height: 34,
                   background: "rgba(255, 217, 61, 0.12)",
                   border: "2.5px solid rgba(255, 217, 61, 0.6)",
-                  color: "#FFD93D",
+                  color: "var(--gold)",
                   boxShadow: "0 0 24px rgba(255, 217, 61, 0.3)",
                 }}
               >
@@ -266,7 +248,7 @@ function SortableStop({
   const walkTime = formatWalkTime(item.walk_time_minutes);
   const walkDist = formatWalkDistance(item.walk_distance_meters);
   const category = getItemCategory(item);
-  const accentColor = isAnchor ? "#FFD93D" : getCategoryColor(category);
+  const accentColor = isAnchor ? "var(--gold)" : getCategoryColor(category);
 
   const walkMin = item.walk_time_minutes || 0;
   const duration = item.duration_minutes || 60;
@@ -436,8 +418,9 @@ function SortableStop({
 // Main Component
 // ---------------------------------------------------------------------------
 
-export default function PlaybookEditor({ itineraryId, portalId, portalSlug }: PlaybookEditorProps) {
+export default function PlaybookEditor({ itineraryId, portalId, portalSlug, portalName }: PlaybookEditorProps) {
   const router = useRouter();
+  const { user } = useAuth();
   const { showToast } = useToast();
   const {
     activeItinerary,
@@ -488,6 +471,10 @@ export default function PlaybookEditor({ itineraryId, portalId, portalSlug }: Pl
   const anchorTime = anchorItem && "start_time" in anchorItem ? anchorItem.start_time : null;
 
   const handleShare = useCallback(async () => {
+    if (!user) {
+      showToast("Sign in to share your playbook", "info");
+      return;
+    }
     const ok = await updateItinerary({ is_public: true });
     if (!ok) {
       showToast("Failed to share playbook", "error");
@@ -497,8 +484,10 @@ export default function PlaybookEditor({ itineraryId, portalId, portalSlug }: Pl
     if (url) {
       await navigator.clipboard.writeText(url);
       showToast("Share link copied!", "success");
+    } else {
+      showToast("Share link not available yet — try again", "error");
     }
-  }, [updateItinerary, getShareUrl, showToast]);
+  }, [user, updateItinerary, getShareUrl, showToast]);
 
   const handleDelete = useCallback(async () => {
     if (!activeItinerary) return;
@@ -604,7 +593,19 @@ export default function PlaybookEditor({ itineraryId, portalId, portalSlug }: Pl
           borderColor: "rgba(37, 37, 48, 0.6)",
         }}
       >
-        <div className="max-w-5xl mx-auto flex items-center gap-3 px-4 py-3">
+        {/* Portal back-link breadcrumb */}
+        <div className="max-w-5xl mx-auto px-4 pt-2 pb-0">
+          <Link
+            href={`/${portalSlug}`}
+            className="inline-flex items-center gap-1 text-[11px] transition-colors hover:text-white/60"
+            style={{ color: "rgba(255,255,255,0.28)", fontFamily: "var(--font-mono)" }}
+          >
+            <ArrowLeft size={10} weight="bold" />
+            {portalName || "Home"}
+          </Link>
+        </div>
+
+        <div className="max-w-5xl mx-auto flex items-center gap-3 px-4 py-2">
           <Link
             href={`/${portalSlug}/playbook`}
             className="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg transition-colors hover:bg-white/[0.04] text-[var(--muted)]"
@@ -652,11 +653,11 @@ export default function PlaybookEditor({ itineraryId, portalId, portalSlug }: Pl
 
           <button
             onClick={handleShare}
-            className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all"
+            className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all hover:bg-[var(--gold)]/15"
             style={{
-              color: "var(--neon-cyan)",
-              border: "1px solid rgba(0, 212, 232, 0.25)",
-              background: "rgba(0, 212, 232, 0.04)",
+              color: "var(--gold)",
+              border: "1px solid rgba(255, 217, 61, 0.25)",
+              background: "rgba(255, 217, 61, 0.06)",
             }}
           >
             <ShareNetwork size={13} />
@@ -690,13 +691,33 @@ export default function PlaybookEditor({ itineraryId, portalId, portalSlug }: Pl
             {mapExpanded && <PlaybookMap items={items} className="rounded-xl h-[180px] border border-white/[0.04]" />}
           </div>
 
-          {/* Empty timeline */}
+          {/* Cold start — guided onboarding when no stops */}
           {items.length === 0 && !loading && (
-            <div className="text-center py-16">
-              <p className="text-sm text-white/40 mb-2">No stops yet</p>
-              <p className="text-xs text-white/25">
-                Add events or venues to start building your playbook
-              </p>
+            <div className="py-6">
+              <div className="text-center mb-6">
+                <div
+                  className="w-14 h-14 mx-auto mb-4 rounded-2xl flex items-center justify-center"
+                  style={{
+                    background: "linear-gradient(135deg, rgba(255, 217, 61, 0.1), rgba(0, 212, 232, 0.08))",
+                    border: "1px solid rgba(255, 217, 61, 0.15)",
+                  }}
+                >
+                  <Notebook size={24} weight="light" className="text-[var(--gold)]" />
+                </div>
+                <h2
+                  className="text-base font-semibold mb-1"
+                  style={{ color: "var(--cream)", fontFamily: "var(--font-outfit)" }}
+                >
+                  Add your first stop
+                </h2>
+                <p className="text-xs text-white/35 max-w-xs mx-auto">
+                  Search for an event, venue, or add a custom stop to start building your playbook
+                </p>
+              </div>
+              <AddStopPanel
+                portalSlug={portalSlug}
+                onAddItem={handleAddItem}
+              />
             </div>
           )}
 
@@ -709,9 +730,9 @@ export default function PlaybookEditor({ itineraryId, portalId, portalSlug }: Pl
             >
               <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
                 <div className="relative">
-                  {/* Spine line */}
+                  {/* Spine line with shimmer */}
                   <div
-                    className="absolute left-[27px] top-4 bottom-4 w-px"
+                    className="absolute left-[27px] top-4 bottom-4 w-px overflow-hidden"
                     style={{
                       background: `linear-gradient(to bottom,
                         transparent 0%,
@@ -723,7 +744,16 @@ export default function PlaybookEditor({ itineraryId, portalId, portalSlug }: Pl
                         transparent 100%
                       )`,
                     }}
-                  />
+                  >
+                    <div
+                      className="absolute inset-0 w-full animate-pulse"
+                      style={{
+                        background: `linear-gradient(to bottom, transparent 0%, rgba(255, 217, 61, 0.3) 50%, transparent 100%)`,
+                        backgroundSize: "100% 200%",
+                        animation: "spine-shimmer 4s ease-in-out infinite",
+                      }}
+                    />
+                  </div>
 
                   {items.map((item, idx) => (
                     <SortableStop
@@ -740,31 +770,33 @@ export default function PlaybookEditor({ itineraryId, portalId, portalSlug }: Pl
             </DndContext>
           )}
 
-          {/* Add a Stop Panel */}
-          {anchorCoords && anchorTime && activeItinerary.date && (
-            <div className="mt-6">
+          {/* Add a Stop Panel (shown after at least one stop exists) */}
+          {items.length > 0 && (
+            <div className="mt-8 pt-4 border-t border-white/[0.06]">
               <button
                 onClick={() => setShowAddStop(!showAddStop)}
-                className="flex items-center gap-2 text-sm font-medium text-white/70 hover:text-white transition-colors mb-3"
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium text-white/50 hover:text-white/80 hover:bg-white/[0.03] transition-all mb-3"
+                style={{ border: "1px dashed rgba(255, 255, 255, 0.08)" }}
               >
+                <Plus size={15} className="text-[var(--gold)]" />
+                Add a stop
                 <CaretDown
-                  size={14}
+                  size={12}
+                  className="text-white/30"
                   style={{
                     transform: showAddStop ? "rotate(0)" : "rotate(-90deg)",
                     transition: "transform 0.2s ease",
                   }}
                 />
-                <Plus size={14} className="text-[var(--neon-cyan)]" />
-                Add a stop
               </button>
 
               {showAddStop && (
                 <AddStopPanel
                   portalSlug={portalSlug}
-                  anchorLat={anchorCoords.lat}
-                  anchorLng={anchorCoords.lng}
-                  anchorTime={anchorTime}
-                  anchorDate={activeItinerary.date}
+                  anchorLat={anchorCoords?.lat}
+                  anchorLng={anchorCoords?.lng}
+                  anchorTime={anchorTime || undefined}
+                  anchorDate={activeItinerary.date || undefined}
                   onAddItem={handleAddItem}
                 />
               )}
@@ -772,7 +804,7 @@ export default function PlaybookEditor({ itineraryId, portalId, portalSlug }: Pl
           )}
 
           {/* Danger zone: delete */}
-          <div className="mt-12 pt-6 border-t border-white/5">
+          <div className="mt-16 pt-6 border-t border-white/[0.08]">
             {!confirmDelete ? (
               <button
                 onClick={() => setConfirmDelete(true)}
