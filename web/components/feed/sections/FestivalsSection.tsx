@@ -23,6 +23,37 @@ interface FestivalsSectionProps {
   portalId: string;
 }
 
+type StandaloneTentpole = {
+  id: number;
+  title: string;
+  start_date: string;
+  end_date: string | null;
+  start_time: string | null;
+  end_time: string | null;
+  category: string | null;
+  image_url: string | null;
+  description: string | null;
+  source_id: number | null;
+  venue: {
+    id: number;
+    name: string;
+    slug: string;
+    neighborhood: string | null;
+  } | null;
+};
+
+type BigStuffItem = {
+  id: string;
+  kind: "festival" | "event";
+  title: string;
+  start: string | null;
+  end: string | null;
+  location: string | null;
+  href: string;
+  countdownText: string;
+  urgencyColor: string;
+};
+
 // ── Skeleton ─────────────────────────────────────────────────────────
 
 function FestivalsSkeleton() {
@@ -48,6 +79,7 @@ function FestivalsSkeleton() {
 
 export default function FestivalsSection({ portalSlug, portalId }: FestivalsSectionProps) {
   const [festivals, setFestivals] = useState<Festival[]>([]);
+  const [standaloneTentpoles, setStandaloneTentpoles] = useState<StandaloneTentpole[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -63,6 +95,7 @@ export default function FestivalsSection({ portalSlug, portalId }: FestivalsSect
       .then((data) => {
         if (controller.signal.aborted) return;
         setFestivals((data.festivals || []) as Festival[]);
+        setStandaloneTentpoles((data.standalone_tentpoles || []) as StandaloneTentpole[]);
         setLoading(false);
       })
       .catch((err) => {
@@ -75,14 +108,54 @@ export default function FestivalsSection({ portalSlug, portalId }: FestivalsSect
 
   // Filter out TBD festivals, compute countdowns, limit to top 4
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
-  const displayFestivals = useMemo(
-    () =>
-      festivals
-        .map((f) => ({ festival: f, countdown: computeCountdown(f, today) }))
-        .filter((item) => item.countdown.urgency !== "tbd")
-        .slice(0, 4),
-    [festivals, today]
-  );
+  const displayItems = useMemo(() => {
+    const festivalItems: BigStuffItem[] = festivals.flatMap((festival) => {
+      const countdown = computeCountdown(festival, today);
+      if (countdown.urgency === "tbd") return [];
+      return [{
+        id: `festival:${festival.id}`,
+        kind: "festival",
+        title: festival.name,
+        start: festival.announced_start,
+        end: festival.announced_end,
+        location: festival.neighborhood || festival.location,
+        href: festival.slug
+          ? `/${portalSlug}/festivals/${festival.slug}`
+          : `/${portalSlug}/festivals`,
+        countdownText: countdown.text,
+        urgencyColor: getUrgencyColor(countdown.urgency),
+      }];
+    });
+
+    const tentpoleItems: BigStuffItem[] = standaloneTentpoles.flatMap((event) => {
+      const pseudoFestival = {
+        announced_start: event.start_date,
+        announced_end: event.end_date,
+      } as Festival;
+      const countdown = computeCountdown(pseudoFestival, today);
+      if (countdown.urgency === "tbd") return [];
+      return [{
+        id: `event:${event.id}`,
+        kind: "event",
+        title: event.title,
+        start: event.start_date,
+        end: event.end_date,
+        location: event.venue?.name || event.venue?.neighborhood || null,
+        href: `/${portalSlug}?event=${event.id}`,
+        countdownText: countdown.text,
+        urgencyColor: getUrgencyColor(countdown.urgency),
+      }];
+    });
+
+    return [...festivalItems, ...tentpoleItems]
+      .sort((a, b) => {
+        const aStart = a.start || "9999-12-31";
+        const bStart = b.start || "9999-12-31";
+        if (aStart !== bStart) return aStart.localeCompare(bStart);
+        return a.title.localeCompare(b.title);
+      })
+      .slice(0, 4);
+  }, [festivals, standaloneTentpoles, today, portalSlug]);
 
   if (loading) {
     return (
@@ -93,33 +166,26 @@ export default function FestivalsSection({ portalSlug, portalId }: FestivalsSect
     );
   }
 
-  if (displayFestivals.length === 0) return null;
+  if (displayItems.length === 0) return null;
 
   return (
     <section>
       <SectionHeader portalSlug={portalSlug} />
 
       <div className="space-y-2.5">
-        {displayFestivals.map(({ festival, countdown }) => {
-          const urgencyColor = getUrgencyColor(countdown.urgency);
-          const dateStr = formatFestivalDates(
-            festival.announced_start,
-            festival.announced_end
-          );
-          const href = festival.slug
-            ? `/${portalSlug}/festivals/${festival.slug}`
-            : `/${portalSlug}/festivals`;
+        {displayItems.map((item) => {
+          const dateStr = formatFestivalDates(item.start, item.end);
 
           return (
             <Link
-              key={festival.id}
-              href={href}
+              key={item.id}
+              href={item.href}
               className="group flex items-center gap-3 rounded-xl border border-[var(--twilight)]/40 bg-[var(--night)] p-3 transition-all hover:border-[var(--twilight)]/60 hover:bg-white/[0.02]"
             >
               {/* Content */}
               <div className="flex-1 min-w-0">
                 <h3 className="text-sm font-semibold text-[var(--cream)] line-clamp-1 group-hover:text-white transition-colors">
-                  {festival.name}
+                  {item.title}
                 </h3>
                 <div className="flex items-center gap-1.5 mt-0.5">
                   {dateStr && (
@@ -127,14 +193,14 @@ export default function FestivalsSection({ portalSlug, portalId }: FestivalsSect
                       {dateStr}
                     </span>
                   )}
-                  {dateStr && (festival.location || festival.neighborhood) && (
+                  {dateStr && item.location && (
                     <span className="text-[var(--muted)] text-2xs">
                       &middot;
                     </span>
                   )}
-                  {(festival.location || festival.neighborhood) && (
+                  {item.location && (
                     <span className="text-2xs text-[var(--muted)] truncate">
-                      {festival.neighborhood || festival.location}
+                      {item.location}
                     </span>
                   )}
                 </div>
@@ -144,11 +210,11 @@ export default function FestivalsSection({ portalSlug, portalId }: FestivalsSect
               <span
                 className="shrink-0 px-2 py-1 rounded-full text-2xs font-mono font-medium tracking-wide whitespace-nowrap"
                 style={{
-                  backgroundColor: `color-mix(in srgb, ${urgencyColor} 20%, transparent)`,
-                  color: urgencyColor,
+                  backgroundColor: `color-mix(in srgb, ${item.urgencyColor} 20%, transparent)`,
+                  color: item.urgencyColor,
                 }}
               >
-                {countdown.text}
+                {item.countdownText}
               </span>
             </Link>
           );
@@ -173,7 +239,7 @@ function SectionHeader({ portalSlug }: { portalSlug: string }) {
         href={`/${portalSlug}/festivals`}
         className="text-xs flex items-center gap-1 text-[var(--gold)] transition-colors hover:opacity-80"
       >
-        All Festivals <ArrowRight className="w-3 h-3" />
+        All Big Stuff <ArrowRight className="w-3 h-3" />
       </Link>
     </div>
   );

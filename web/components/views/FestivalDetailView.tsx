@@ -13,6 +13,16 @@ import GettingThereSection from "@/components/GettingThereSection";
 import { format, parseISO } from "date-fns";
 import { decodeHtmlEntities, formatTimeSplit } from "@/lib/formats";
 import { usePortalOptional } from "@/lib/portal-context";
+import {
+  ArrowSquareOut,
+  Flag,
+  MapPin,
+  WarningCircle,
+} from "@phosphor-icons/react";
+import { InfoCard } from "@/components/detail/InfoCard";
+import { SectionHeader } from "@/components/detail/SectionHeader";
+import NeonBackButton from "@/components/detail/NeonBackButton";
+import Badge from "@/components/ui/Badge";
 
 interface FestivalData {
   id: string;
@@ -69,26 +79,7 @@ interface FestivalDetailViewProps {
   showOpenPageLink?: boolean;
 }
 
-const FESTIVAL_ACCENT = "#FBBF24";
-
-const NeonFloatingBackButton = ({ onClose }: { onClose: () => void }) => (
-  <button
-    onClick={onClose}
-    className="group absolute top-3 left-3 flex items-center gap-2 px-3.5 py-2 rounded-full font-mono text-xs font-semibold tracking-wide uppercase transition-all duration-300 z-10 hover:scale-105 neon-back-btn"
-  >
-    <svg
-      className="w-4 h-4 transition-transform duration-300 group-hover:-translate-x-0.5 neon-back-icon"
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
-    </svg>
-    <span className="transition-all duration-300 group-hover:text-[var(--coral)] neon-back-text">
-      Back
-    </span>
-  </button>
-);
+const FESTIVAL_ACCENT = "var(--cat-festival, #FBBF24)";
 
 function groupSessionsByDate(sessions: SessionData[]): Map<string, SessionData[]> {
   const map = new Map<string, SessionData[]>();
@@ -125,13 +116,19 @@ export default function FestivalDetailView({
   const [imageError, setImageError] = useState(false);
 
   useEffect(() => {
+    const controller = new AbortController();
+
     async function fetchFestival() {
       setLoading(true);
       setError(null);
+      setImageLoaded(false);
+      setImageError(false);
 
       try {
         const qs = portalId ? `?${new URLSearchParams({ portal_id: portalId }).toString()}` : "";
-        const res = await fetch(`/api/festivals/${slug}${qs}`);
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        const res = await fetch(`/api/festivals/${slug}${qs}`, { signal: controller.signal });
+        clearTimeout(timeoutId);
         if (!res.ok) {
           throw new Error("Festival not found");
         }
@@ -139,6 +136,7 @@ export default function FestivalDetailView({
         setFestival(data.festival);
         setPrograms(data.programs || []);
       } catch (err) {
+        if (controller.signal.aborted) return;
         setError(err instanceof Error ? err.message : "Failed to load festival");
       } finally {
         setLoading(false);
@@ -146,6 +144,7 @@ export default function FestivalDetailView({
     }
 
     fetchFestival();
+    return () => controller.abort();
   }, [slug, portalId]);
 
   const allSessions = useMemo(() => programs.flatMap((p) => p.sessions || []), [programs]);
@@ -170,6 +169,11 @@ export default function FestivalDetailView({
 
   const accentClass = createCssVarClass("--accent-color", FESTIVAL_ACCENT, "accent");
 
+  const singleVenue = useMemo(() => {
+    const venueIds = new Set(allSessions.filter((s) => s.venue).map((s) => s.venue!.id));
+    return venueIds.size === 1 ? allSessions.find((s) => s.venue)?.venue ?? null : null;
+  }, [allSessions]);
+
   const navigateToDetail = (param: string, value: string | number) => {
     const params = new URLSearchParams(searchParams?.toString() || "");
     params.delete("event");
@@ -186,10 +190,10 @@ export default function FestivalDetailView({
 
   if (loading) {
     return (
-      <div className="pt-6 pb-8">
+      <div className="pt-6 pb-8" role="status" aria-label="Loading festival details">
         {/* Hero skeleton with floating back button */}
         <div className="relative rounded-xl overflow-hidden mb-6 border border-[var(--twilight)] bg-[var(--dusk)]">
-          <NeonFloatingBackButton onClose={onClose} />
+          <NeonBackButton onClose={onClose} />
           <div className="p-6 flex items-start gap-4">
             {/* Poster */}
             <Skeleton className="w-28 aspect-[4/5] rounded-lg flex-shrink-0" />
@@ -215,14 +219,14 @@ export default function FestivalDetailView({
         </div>
 
         {/* Description skeleton */}
-        <div className="mb-6 p-4 rounded-lg border border-[var(--twilight)] bg-[var(--void)]">
+        <div className="mb-6 p-6 sm:p-8 rounded-lg border border-[var(--twilight)] bg-[var(--card-bg)]">
           <Skeleton className="h-4 w-full rounded" delay="0.32s" />
           <Skeleton className="h-4 w-[75%] rounded mt-1.5" delay="0.34s" />
         </div>
 
         {/* Program cards skeleton */}
         <div className="space-y-4">
-          <div className="rounded-xl border border-[var(--twilight)] p-4 bg-[var(--dusk)]">
+          <div className="rounded-xl border border-[var(--twilight)] p-4 bg-[var(--card-bg)]">
             <Skeleton className="h-5 w-[50%] rounded" delay="0.4s" />
             <Skeleton className="h-3 w-20 rounded mt-2" delay="0.42s" />
             <Skeleton className="h-4 w-[80%] rounded mt-3" delay="0.46s" />
@@ -231,7 +235,7 @@ export default function FestivalDetailView({
               <Skeleton className="h-10 w-full rounded-lg" delay="0.54s" />
             </div>
           </div>
-          <div className="rounded-xl border border-[var(--twilight)] p-4 bg-[var(--dusk)]">
+          <div className="rounded-xl border border-[var(--twilight)] p-4 bg-[var(--card-bg)]">
             <Skeleton className="h-5 w-[45%] rounded" delay="0.58s" />
             <Skeleton className="h-3 w-16 rounded mt-2" delay="0.6s" />
           </div>
@@ -242,14 +246,12 @@ export default function FestivalDetailView({
 
   if (error || !festival) {
     return (
-      <div className="pt-6">
+      <div className="pt-6" role="alert">
         <div className="relative rounded-xl overflow-hidden mb-6 bg-[var(--dusk)] border border-[var(--twilight)]">
-          <NeonFloatingBackButton onClose={onClose} />
+          <NeonBackButton onClose={onClose} />
           <div className="text-center py-16">
             <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-[var(--twilight)]/50 flex items-center justify-center">
-              <svg className="w-6 h-6 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+              <WarningCircle size={24} weight="light" className="text-[var(--muted)]" aria-hidden="true" />
             </div>
             <p className="text-[var(--muted)]">{error || "Festival not found"}</p>
           </div>
@@ -269,7 +271,7 @@ export default function FestivalDetailView({
     <div className={`pt-6 pb-8 ${accentClass?.className ?? ""}`}>
       <ScopedStyles css={accentClass?.css} />
       <div className="relative rounded-xl overflow-hidden mb-6 border border-[var(--twilight)] series-hero-bg">
-        <NeonFloatingBackButton onClose={onClose} />
+        <NeonBackButton onClose={onClose} />
         <div className="p-6 flex items-start gap-4">
           <div className="flex-shrink-0">
             {showImage ? (
@@ -289,47 +291,43 @@ export default function FestivalDetailView({
               </div>
             ) : (
               <div className="w-28 aspect-[4/5] rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] flex items-center justify-center">
-                <svg className="w-10 h-10 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 4v16m0-12h9l-1.5 3L14 14H5" />
-                </svg>
+                <Flag size={40} weight="light" className="text-[var(--muted)]" aria-hidden="true" />
               </div>
             )}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2 mb-2">
-              <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-mono font-semibold uppercase tracking-wider bg-accent-20 text-accent">
+              <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-mono font-semibold uppercase tracking-widest bg-accent-20 text-accent">
                 Festival
               </div>
               {showOpenPageLink && (
                 <Link
                   href={`/${portalSlug}/festivals/${festival.slug}`}
-                  className="text-xs font-mono uppercase tracking-wider px-2 py-1 rounded-full border border-[var(--twilight)] text-[var(--soft)] hover:text-[var(--cream)] hover:border-[var(--coral)]/40 transition-colors"
+                  className="inline-flex items-center gap-1 text-xs font-mono uppercase tracking-widest min-h-[44px] px-2 py-1 rounded-full border border-[var(--twilight)] text-[var(--soft)] hover:text-[var(--cream)] hover:border-[var(--coral)]/40 transition-colors focus-ring"
                 >
                   Open page
+                  <ArrowSquareOut size={12} weight="light" aria-hidden="true" />
                 </Link>
               )}
             </div>
-            <h1 className="text-[var(--cream)] text-2xl font-bold mb-2 leading-tight">
+            <h2 className="text-[var(--cream)] text-2xl font-bold mb-2 leading-tight">
               {festival.name}
-            </h1>
+            </h2>
             <div className="text-sm text-[var(--soft)] space-y-1">
               <div>{dateRange}</div>
               {festival.location && (
-                <div className="text-[var(--muted)]">{festival.location}</div>
+                <div className="flex items-center gap-1 text-[var(--muted)]">
+                  <MapPin size={14} weight="light" className="shrink-0" aria-hidden="true" />
+                  {festival.location}
+                </div>
               )}
             </div>
             {summary && (
               <div className="flex flex-wrap gap-2 mt-3">
-                <span className="inline-flex items-center px-2 py-1 rounded font-mono text-xs bg-[var(--twilight)]/40 text-[var(--soft)]">
-                  {summary.programCount} program{summary.programCount !== 1 ? "s" : ""}
-                </span>
-                <span className="inline-flex items-center px-2 py-1 rounded font-mono text-xs bg-[var(--twilight)]/40 text-[var(--soft)]">
-                  {summary.sessionCount} session{summary.sessionCount !== 1 ? "s" : ""}
-                </span>
+                <Badge variant="neutral">{summary.programCount} program{summary.programCount !== 1 ? "s" : ""}</Badge>
+                <Badge variant="neutral">{summary.sessionCount} session{summary.sessionCount !== 1 ? "s" : ""}</Badge>
                 {summary.venueCount > 0 && (
-                  <span className="inline-flex items-center px-2 py-1 rounded font-mono text-xs bg-[var(--twilight)]/40 text-[var(--soft)]">
-                    {summary.venueCount} venue{summary.venueCount !== 1 ? "s" : ""}
-                  </span>
+                  <Badge variant="neutral">{summary.venueCount} venue{summary.venueCount !== 1 ? "s" : ""}</Badge>
                 )}
               </div>
             )}
@@ -338,21 +336,20 @@ export default function FestivalDetailView({
       </div>
 
       {festival.description && (
-        <div className="mb-6 p-4 rounded-lg border border-[var(--twilight)] bg-[var(--void)] text-sm text-[var(--soft)]">
-          {festival.description}
+        <InfoCard className="mb-6">
+          <p className="text-sm text-[var(--soft)]">
+            {festival.description}
+          </p>
+        </InfoCard>
+      )}
+
+      {singleVenue && (
+        <div className="mb-6">
+          <GettingThereSection transit={singleVenue} variant="compact" />
         </div>
       )}
 
-      {/* Transit info for single-venue festivals */}
-      {(() => {
-        const venueIds = new Set(allSessions.filter((s) => s.venue).map((s) => s.venue!.id));
-        const singleVenue = venueIds.size === 1 ? allSessions.find((s) => s.venue)?.venue ?? null : null;
-        return singleVenue ? (
-          <div className="mb-6">
-            <GettingThereSection transit={singleVenue} variant="compact" />
-          </div>
-        ) : null;
-      })()}
+      <SectionHeader title="Programs" count={programs.length} />
 
       <div className="space-y-4">
         {programs.length === 0 && (
@@ -366,7 +363,7 @@ export default function FestivalDetailView({
           const sortedDates = Array.from(sessionsByDate.keys()).sort();
 
           return (
-            <div key={program.id} className="rounded-xl border border-[var(--twilight)] bg-[var(--card-bg)] p-4">
+            <InfoCard key={program.id} className="!p-4 !rounded-xl">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
                   <h3 className="text-[var(--cream)] text-lg font-semibold truncate">
@@ -378,7 +375,7 @@ export default function FestivalDetailView({
                 </div>
                 <button
                   onClick={() => handleProgramClick(program.slug)}
-                  className="shrink-0 text-xs font-mono px-3 py-1.5 rounded-full border border-[var(--twilight)] text-[var(--soft)] hover:text-[var(--cream)] hover:border-[var(--coral)]/40 transition-colors"
+                  className="shrink-0 text-xs font-mono px-3 py-1.5 min-h-[44px] items-center rounded-full border border-[var(--twilight)] text-[var(--soft)] hover:text-[var(--cream)] hover:border-[var(--coral)]/40 transition-colors focus-ring"
                 >
                   View program
                 </button>
@@ -400,7 +397,7 @@ export default function FestivalDetailView({
                 <div className="mt-3 space-y-3">
                   {sortedDates.map((date) => (
                     <div key={date} className="space-y-2">
-                      <div className="text-xs font-mono uppercase tracking-wider text-[var(--muted)]">
+                      <div className="font-mono text-xs uppercase tracking-widest text-[var(--muted)]">
                         {format(parseISO(date), "EEE, MMM d")}
                       </div>
                       <div className="space-y-1">
@@ -414,7 +411,7 @@ export default function FestivalDetailView({
                             >
                               <button
                                 onClick={() => handleSessionClick(session.id)}
-                                className="flex-1 min-w-0 text-left"
+                                className="flex-1 min-w-0 min-h-[44px] items-center text-left focus-ring"
                               >
                                 <div className="flex items-center gap-3 min-w-0">
                                   <span className="font-mono text-xs text-[var(--muted)] shrink-0">
@@ -456,7 +453,7 @@ export default function FestivalDetailView({
                   ))}
                 </div>
               )}
-            </div>
+            </InfoCard>
           );
         })}
       </div>
