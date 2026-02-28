@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "@/components/SmartImage";
 import Skeleton from "@/components/Skeleton";
@@ -17,7 +17,7 @@ import { format, parseISO } from "date-fns";
 import { EntityTagList } from "@/components/tags/EntityTagList";
 import FlagButton from "@/components/FlagButton";
 import { getSeriesTypeLabel, getSeriesTypeColor } from "@/lib/series-utils";
-import NearbySection from "@/components/NearbySection";
+import AroundHereSection, { type NearbyDestination } from "@/components/detail/AroundHereSection";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
 import { isDogPortal } from "@/lib/dog-art";
@@ -28,8 +28,32 @@ import GettingThereSection from "@/components/GettingThereSection";
 import { deriveShowSignals } from "@/lib/show-signals";
 import ShowSignalsPanel from "@/components/ShowSignalsPanel";
 import { inferLineupGenreFallback } from "@/lib/artist-fallbacks";
-import { Notebook } from "@phosphor-icons/react/dist/ssr";
-import { useCreateOuting } from "@/lib/hooks/useCreateOuting";
+import dynamic from "next/dynamic";
+import {
+  ForkKnife,
+
+  CaretRight,
+  CaretDown,
+  ArrowSquareOut,
+  FrameCorners,
+  Repeat,
+  Buildings,
+  Flag,
+} from "@phosphor-icons/react";
+
+const MakeANightSheet = dynamic(
+  () => import("@/components/detail/MakeANightSheet"),
+  { ssr: false },
+);
+import { DescriptionTeaser } from "@/components/detail/DescriptionTeaser";
+import { InfoCard } from "@/components/detail/InfoCard";
+import { SectionHeader } from "@/components/detail/SectionHeader";
+import { DetailStickyBar } from "@/components/detail/DetailStickyBar";
+import { GenreChip } from "@/components/ActivityChip";
+import { parseRecurrenceRule, parseRecurrenceDays } from "@/lib/recurrence";
+import { isTicketingUrl } from "@/lib/card-utils";
+import NeonBackButton from "@/components/detail/NeonBackButton";
+import Badge from "@/components/ui/Badge";
 
 type EventData = {
   id: number;
@@ -47,7 +71,6 @@ type EventData = {
   price_max: number | null;
   price_note?: string | null;
   category: string | null;
-  subcategory: string | null;
   tags: string[] | null;
   genres?: string[] | null;
   ticket_url: string | null;
@@ -112,76 +135,26 @@ type RelatedEvent = {
   start_date: string;
   end_date?: string | null;
   start_time: string | null;
-  venue: { id: number; name: string; slug: string } | null;
+  end_time?: string | null;
+  distance?: number;
+  proximity_label?: string;
+  venue: { id: number; name: string; slug: string; city?: string; location_designator?: string } | null;
   going_count?: number;
   interested_count?: number;
   recommendation_count?: number;
 };
 
-type NearbySpot = {
-  id: number;
-  name: string;
-  slug: string;
-  spot_type: string | null;
-  neighborhood: string | null;
-  closesAt?: string;
-};
-
 type NearbyDestinations = {
-  food: NearbySpot[];
-  drinks: NearbySpot[];
-  nightlife: NearbySpot[];
-  caffeine: NearbySpot[];
-  fun: NearbySpot[];
+  food: NearbyDestination[];
+  drinks: NearbyDestination[];
+  nightlife: NearbyDestination[];
+  fun: NearbyDestination[];
 };
 
 interface EventDetailViewProps {
   eventId: number;
   portalSlug: string;
   onClose: () => void;
-}
-
-function parseRecurrenceRule(rule: string | null | undefined): string | null {
-  if (!rule) return null;
-  const match = rule.match(/FREQ=(\w+)(?:;BYDAY=([\w,]+))?/i);
-  if (!match) return null;
-
-  const freq = match[1]?.toUpperCase();
-  const days = match[2];
-
-  const dayNames: Record<string, string> = {
-    MO: "Monday", TU: "Tuesday", WE: "Wednesday",
-    TH: "Thursday", FR: "Friday", SA: "Saturday", SU: "Sunday"
-  };
-
-  const shortDayNames: Record<string, string> = {
-    MO: "Mon", TU: "Tue", WE: "Wed",
-    TH: "Thu", FR: "Fri", SA: "Sat", SU: "Sun"
-  };
-
-  if (freq === "WEEKLY" && days) {
-    const dayList = days.split(",");
-    if (dayList.length === 1 && dayNames[dayList[0]]) {
-      return `Every ${dayNames[dayList[0]]}`;
-    }
-    const names = dayList.map(d => shortDayNames[d]).filter(Boolean);
-    if (names.length > 0) return names.join(", ");
-  }
-  if (freq === "WEEKLY") return "Weekly";
-  if (freq === "MONTHLY") return "Monthly";
-  if (freq === "DAILY") return "Daily";
-
-  return null;
-}
-
-function parseRecurrenceDays(rule: string | null | undefined): string[] {
-  if (!rule) return [];
-  const match = rule.match(/BYDAY=([\w,]+)/i);
-  if (!match) return [];
-  const dayNames: Record<string, string> = {
-    MO: "Mon", TU: "Tue", WE: "Wed", TH: "Thu", FR: "Fri", SA: "Sat", SU: "Sun"
-  };
-  return match[1].split(",").map(d => dayNames[d]).filter(Boolean);
 }
 
 function isExhibition(event: EventData): boolean {
@@ -203,19 +176,17 @@ function CommunityTagsSection({
     <div>
       <button
         onClick={() => setExpanded((v) => !v)}
-        className="flex items-center gap-2 w-full text-left group"
+        className="flex items-center gap-2 w-full text-left group min-h-[44px] focus-ring"
+        aria-expanded={expanded}
       >
-        <h2 className="font-mono text-xs font-medium text-[var(--muted)] uppercase tracking-widest">
+        <h2 className="font-mono text-xs text-[var(--muted)] uppercase tracking-widest">
           Community Tags
         </h2>
-        <svg
-          className={`w-3.5 h-3.5 text-[var(--muted)] transition-transform ${expanded ? "rotate-180" : ""}`}
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
+        <CaretDown
+          size={14}
+          weight="bold"
+          className={`text-[var(--muted)] transition-transform ${expanded ? "rotate-180" : ""}`}
+        />
         {!expanded && (
           <span className="text-2xs font-mono text-[var(--muted)]/60">Tap to expand</span>
         )}
@@ -223,14 +194,14 @@ function CommunityTagsSection({
       {expanded && (
         <div className="mt-3 space-y-4">
           <div>
-            <p className="text-xs text-[var(--muted)] font-mono uppercase tracking-wider mb-2">
+            <p className="text-xs text-[var(--muted)] font-mono uppercase tracking-widest mb-2">
               This Event
             </p>
             <EntityTagList entityType="event" entityId={eventId} />
           </div>
           {venue && (
             <div>
-              <p className="text-xs text-[var(--muted)] font-mono uppercase tracking-wider mb-2">
+              <p className="text-xs text-[var(--muted)] font-mono uppercase tracking-widest mb-2">
                 {venue.name}
               </p>
               <EntityTagList entityType="venue" entityId={venue.id} />
@@ -238,7 +209,7 @@ function CommunityTagsSection({
           )}
           {producer && (
             <div>
-              <p className="text-xs text-[var(--muted)] font-mono uppercase tracking-wider mb-2">
+              <p className="text-xs text-[var(--muted)] font-mono uppercase tracking-widest mb-2">
                 {producer.name}
               </p>
               <EntityTagList entityType="org" entityId={Number(producer.id)} />
@@ -250,34 +221,12 @@ function CommunityTagsSection({
   );
 }
 
-function NeonBackButton({ onClose }: { onClose: () => void }) {
-  return (
-    <button
-      onClick={onClose}
-      aria-label="Back to event list"
-      className="group absolute top-3 left-3 flex items-center gap-2 px-4 py-3 rounded-full font-mono text-xs font-semibold tracking-wide uppercase transition-all duration-300 z-10 hover:scale-110 hover:brightness-110 active:scale-105 neon-back-btn"
-    >
-      <svg
-        className="w-4 h-4 transition-transform duration-300 group-hover:-translate-x-0.5 neon-back-icon"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
-      </svg>
-      <span className="transition-all duration-300 group-hover:text-[var(--coral)] neon-back-text">
-        Back
-      </span>
-    </button>
-  );
-}
 
 export default function EventDetailView({ eventId, portalSlug, onClose }: EventDetailViewProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { portal } = usePortal();
-  const portalId = portal?.id || "";
-  const { createOutingFromEvent } = useCreateOuting(portalId, portalSlug);
+  const [showNightSheet, setShowNightSheet] = useState(false);
   const [event, setEvent] = useState<EventData | null>(null);
   const [eventArtists, setEventArtists] = useState<EventArtist[]>([]);
   const [venueEvents, setVenueEvents] = useState<RelatedEvent[]>([]);
@@ -286,7 +235,6 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
     food: [],
     drinks: [],
     nightlife: [],
-    caffeine: [],
     fun: [],
   });
   const [loading, setLoading] = useState(true);
@@ -296,17 +244,27 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
   const [isLowRes, setIsLowRes] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+    const controller = new AbortController();
+
     async function fetchEvent() {
       setLoading(true);
       setError(null);
+      setImageLoaded(false);
+      setImageError(false);
+      setIsLowRes(false);
 
       try {
         const eventUrl = portal?.id ? `/api/events/${eventId}?portal_id=${portal.id}` : `/api/events/${eventId}`;
-        const res = await fetch(eventUrl);
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        const res = await fetch(eventUrl, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        if (cancelled) return;
         if (!res.ok) {
           throw new Error("Event not found");
         }
         const data = await res.json();
+        if (cancelled) return;
         setEvent(data.event);
         setEventArtists(data.eventArtists || []);
         setVenueEvents(data.venueEvents || []);
@@ -315,17 +273,19 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
           food: [],
           drinks: [],
           nightlife: [],
-          caffeine: [],
           fun: [],
         });
       } catch (err) {
+        if (controller.signal.aborted) return;
+        if (cancelled) return;
         setError(err instanceof Error ? err.message : "Failed to load event");
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
 
     fetchEvent();
+    return () => { cancelled = true; controller.abort(); };
   }, [eventId, portal?.id]);
 
   // Navigate to another detail view, clearing all detail params first
@@ -346,9 +306,22 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
   const handleSeriesClick = (slug: string) => navigateToDetail("series", slug);
   const handleFestivalClick = (slug: string) => navigateToDetail("festival", slug);
 
+  // Merge all destination categories into a flat sorted list
+  const allDestinations = useMemo(() => {
+    const { food, drinks, nightlife, fun } = nearbyDestinations;
+    const merged = [...food, ...drinks, ...nightlife, ...fun];
+    // Open venues first, then by distance
+    return merged.sort((a, b) => {
+      const aOpen = a.closesAt !== undefined ? 1 : 0;
+      const bOpen = b.closesAt !== undefined ? 1 : 0;
+      if (aOpen !== bOpen) return bOpen - aOpen; // open first
+      return (a.distance ?? 99) - (b.distance ?? 99);
+    });
+  }, [nearbyDestinations]);
+
   if (loading) {
     return (
-      <div className="pt-6 pb-8">
+      <div className="pt-6 pb-8" role="status" aria-label="Loading event details">
         {/* Hero skeleton with back button */}
         <div className="relative aspect-[4/3] rounded-xl overflow-hidden mb-4 bg-[var(--night)]">
           <Skeleton className="absolute inset-0" />
@@ -380,7 +353,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
         </div>
 
         {/* Info card skeleton */}
-        <div className="border border-[var(--twilight)] rounded-xl p-5 sm:p-6 bg-[var(--dusk)]">
+        <div className="border border-[var(--twilight)] rounded-lg p-6 sm:p-8 bg-[var(--card-bg)]">
           {/* Description skeleton */}
           <Skeleton className="h-3 w-16 rounded mb-3" delay="0.4s" />
           <div className="space-y-2 mb-5">
@@ -414,7 +387,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
 
   if (error || !event) {
     return (
-      <div className="pt-6">
+      <div className="pt-6" role="alert">
         <div className="relative aspect-[4/3] bg-[var(--dusk)] rounded-xl mb-4 flex items-center justify-center">
           <NeonBackButton onClose={onClose} />
           <p className="text-[var(--muted)]">{error || "Event not found"}</p>
@@ -534,7 +507,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
             <div className="absolute inset-0 bg-[var(--void)]" />
             <div className="absolute inset-0 hero-fallback-ambient" />
             {/* Neon top line */}
-            <div className="absolute top-0 left-0 right-0 h-[2px] hero-fallback-topline" />
+            <div className="absolute top-0 left-0 right-0 h-0.5 hero-fallback-topline" />
             {/* Center icon */}
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="flex items-center justify-center w-20 h-20 rounded-2xl hero-fallback-icon">
@@ -565,12 +538,10 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
             href={event.source_url}
             target="_blank"
             rel="noopener noreferrer"
-            className={`absolute top-3 right-3 px-2 py-1 bg-black/60 backdrop-blur-sm rounded text-2xs font-mono text-[var(--muted)] hover:text-[var(--soft)] transition-colors z-10 ${isLive ? "hidden" : ""}`}
+            className={`absolute top-3 right-3 px-2 py-1 bg-black/60 backdrop-blur-sm rounded text-2xs font-mono text-[var(--muted)] hover:text-[var(--soft)] transition-colors z-10 focus-ring ${isLive ? "hidden" : ""}`}
             title="View original source"
           >
-            <svg className="w-3 h-3 inline-block mr-1 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-            </svg>
+            <ArrowSquareOut size={12} weight="light" className="inline-block mr-1 -mt-0.5" />
             Source
           </a>
         )}
@@ -584,7 +555,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
             <p className="text-sm text-white/80 mt-1">
               <button
                 onClick={() => handleSpotClick(event.venue!.slug)}
-                className="hover:text-white hover:underline transition-colors"
+                className="py-1 hover:text-white hover:underline transition-colors"
               >
                 {event.venue.name}
               </button>
@@ -607,28 +578,39 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
       </div>
 
       {/* Quick Actions */}
-      <EventQuickActions event={event} isLive={isLive} className="mb-6" />
+      <EventQuickActions event={event} isLive={isLive} className="mb-5" />
 
-      {/* Plan around this — tertiary action, doesn't compete with primary CTAs */}
-      {event.venue && (
+      {/* Above-the-fold: Description teaser */}
+      {event.description && event.description.length >= 50 && (
+        <div className="mb-5">
+          <DescriptionTeaser
+            description={event.description}
+            accentColor={getCategoryColor(event.category || "other")}
+          />
+        </div>
+      )}
+
+      {/* Above-the-fold: Social proof (promoted from info card) */}
+      <FriendsGoing eventId={event.id} className="mb-4" />
+
+      {/* Above-the-fold: Interactive genre pills */}
+      {event.genres && event.genres.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-5">
+          {event.genres.slice(0, 5).map((genre) => (
+            <GenreChip key={genre} genre={genre} category={event.category} portalSlug={portalSlug} />
+          ))}
+        </div>
+      )}
+
+      {/* Make a Night of It — inline bottom sheet, no page navigation */}
+      {event.venue && event.venue.lat != null && event.venue.lng != null && (
         <div className="flex justify-center mb-6">
           <button
-            onClick={async () => {
-              const itinId = await createOutingFromEvent(portalId, {
-                id: event.id,
-                title: event.title,
-                start_date: event.start_date,
-                start_time: event.start_time,
-              });
-              if (itinId) {
-                router.push(`/${portalSlug}/playbook/${itinId}`);
-              }
-            }}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border border-[var(--twilight)]/40 hover:border-[var(--twilight)]/70 hover:bg-white/[0.06]"
-            style={{ color: "var(--soft)" }}
+            onClick={() => setShowNightSheet(true)}
+            className="inline-flex items-center gap-2 px-4 min-h-[44px] rounded-lg text-sm font-mono font-medium text-[var(--gold)] bg-[var(--gold)]/8 border border-[var(--gold)]/25 hover:bg-[var(--gold)]/14 hover:border-[var(--gold)]/40 transition-all focus-ring"
           >
-            <Notebook size={14} weight="light" />
-            Plan around this
+            <ForkKnife size={16} weight="duotone" />
+            Make a Night of It
           </button>
         </div>
       )}
@@ -639,12 +621,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
           {dogTags.map((tag) => (
             <span
               key={tag}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold"
-              style={{
-                background: "rgba(255, 107, 53, 0.1)",
-                color: "var(--coral)",
-                border: "1px solid rgba(255, 107, 53, 0.25)",
-              }}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-semibold min-h-[44px] bg-[var(--coral)]/10 text-[var(--coral)] border border-[var(--coral)]/25"
             >
               {tag === "dog-friendly" && "🐾 Dog Friendly"}
               {tag === "pets" && "🐕 Pet Event"}
@@ -660,10 +637,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
       {isExhibition(event) && (
         <div className="flex items-center gap-3 p-4 rounded-lg border border-[var(--neon-amber)]/30 mb-6 bg-[var(--neon-amber)]/5">
           <div className="w-10 h-10 rounded-full bg-[var(--neon-amber)]/15 flex items-center justify-center flex-shrink-0">
-            <svg className="w-5 h-5 text-[var(--neon-amber)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4-4 2 2 4-4 6 6" />
-            </svg>
+            <FrameCorners size={20} weight="light" className="text-[var(--neon-amber)]" aria-hidden="true" />
           </div>
           <div>
             <p className="text-[var(--cream)] font-medium">
@@ -699,9 +673,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
       {!isExhibition(event) && event.is_recurring && recurrenceText && (
         <div className="flex items-center gap-3 p-4 rounded-lg border border-[var(--twilight)] mb-6 bg-[var(--dusk)]">
           <div className="w-10 h-10 rounded-full bg-[var(--twilight)] flex items-center justify-center flex-shrink-0">
-            <svg className="w-5 h-5 text-[var(--coral)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
+            <Repeat size={20} weight="light" className="text-[var(--coral)]" aria-hidden="true" />
           </div>
           <div>
             <p className="text-[var(--cream)] font-medium">This event repeats {recurrenceText.toLowerCase()}</p>
@@ -711,11 +683,11 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
       )}
 
       {/* Main event info card */}
-      <div className="border border-[var(--twilight)] rounded-xl p-5 sm:p-6 bg-[var(--dusk)]">
+      <InfoCard accentColor={getCategoryColor(event.category || "other")}>
         {/* Description */}
         {descriptionText && (
           <div className="mb-5">
-            <h2 className="font-mono text-xs font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
+            <h2 className="font-mono text-xs uppercase tracking-widest text-[var(--muted)] pb-3">
               About
             </h2>
             <p className="text-[var(--soft)] whitespace-pre-wrap leading-relaxed">
@@ -742,19 +714,17 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
         )}
 
         {hasShowSignals && (
-          <div className={`mb-5 ${hasAboutContent ? "pt-5 border-t border-[var(--twilight)]" : ""}`}>
-            <h2 className="font-mono text-xs font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
-              Show Details
-            </h2>
+          <div className="mb-5">
+            <SectionHeader title="Show Details" className={hasAboutContent ? "" : "border-t-0 pt-0"} />
             <ShowSignalsPanel signals={showSignals} ticketUrl={event.ticket_url} />
           </div>
         )}
 
         {/* Location */}
         {event.venue && event.venue.address && (
-          <div className={`mb-5 ${hasIntroContent ? "pt-5 border-t border-[var(--twilight)]" : ""}`}>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="font-mono text-xs font-medium text-[var(--muted)] uppercase tracking-widest">
+          <div className="mb-5">
+            <div className={`flex items-center justify-between py-4 ${hasIntroContent ? "border-t border-[var(--twilight)]" : ""}`}>
+              <h2 className="font-mono text-xs uppercase tracking-widest text-[var(--muted)]">
                 Location
               </h2>
               <DirectionsDropdown
@@ -766,15 +736,13 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
             </div>
             <button
               onClick={() => handleSpotClick(event.venue!.slug)}
-              className="block w-full text-left p-3 rounded-lg border border-[var(--twilight)] transition-colors hover:border-[var(--coral)]/50 group bg-[var(--void)]"
+              className="block w-full text-left p-3 rounded-lg border border-[var(--twilight)] transition-colors hover:border-[var(--coral)]/50 group bg-[var(--void)] focus-ring"
             >
               <p className="text-[var(--soft)]">
                 <span className="text-[var(--cream)] font-medium group-hover:text-[var(--coral)] transition-colors">
                   {event.venue.name}
                 </span>
-                <svg className="inline-block w-4 h-4 ml-1 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
+                <CaretRight size={16} weight="bold" className="inline-block ml-1 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors" />
                 <br />
                 <span className="text-sm text-[var(--muted)]">
                   {event.venue.address} · {event.venue.city}, {event.venue.state}
@@ -789,28 +757,21 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
           </div>
         )}
 
-        {/* Social proof */}
-        <div className="pt-5 border-t border-[var(--twilight)]">
-          <FriendsGoing eventId={event.id} className="mb-4" />
+        {/* Social proof — FriendsGoing promoted above the fold */}
+        <div>
+          <SectionHeader title="Who's Going" />
           <WhosGoing eventId={event.id} />
         </div>
 
         {/* Series link */}
         {event.series && (
-          <div className="pt-5 border-t border-[var(--twilight)] space-y-3">
+          <div className="pt-4 border-t border-[var(--twilight)] space-y-3">
             {event.series.festival && (
               <button
                 onClick={() => handleFestivalClick(event.series!.festival!.slug)}
-                className={`flex items-center gap-3 w-full p-3 rounded-lg border border-[var(--twilight)] transition-colors hover:border-[var(--coral)]/50 group bg-[var(--void)] text-left ${festivalColorClass?.className ?? ""}`}
+                className={`flex items-center gap-3 w-full p-3 rounded-lg border border-[var(--twilight)] transition-colors hover:border-[var(--coral)]/50 group bg-[var(--void)] text-left focus-ring ${festivalColorClass?.className ?? ""}`}
               >
-                <svg
-                  className="w-5 h-5 flex-shrink-0 series-accent"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 4v16m0-12h9l-1.5 3L14 14H5" />
-                </svg>
+                <Flag size={20} weight="light" className="flex-shrink-0 series-accent" aria-hidden="true" />
                 <div className="flex-1 min-w-0">
                   <span className="text-sm text-[var(--soft)] group-hover:text-[var(--coral)] transition-colors">
                     Part of <span className="text-[var(--cream)] font-medium">{event.series.festival.name}</span>
@@ -821,23 +782,14 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
                     Festival
                   </span>
                 </div>
-                <svg className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
+                <CaretRight size={16} weight="bold" className="text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0" />
               </button>
             )}
             <button
               onClick={() => handleSeriesClick(event.series!.slug)}
-              className={`flex items-center gap-3 w-full p-3 rounded-lg border border-[var(--twilight)] transition-colors hover:border-[var(--coral)]/50 group bg-[var(--void)] text-left ${seriesColorClass?.className ?? ""}`}
+              className={`flex items-center gap-3 w-full p-3 rounded-lg border border-[var(--twilight)] transition-colors hover:border-[var(--coral)]/50 group bg-[var(--void)] text-left focus-ring ${seriesColorClass?.className ?? ""}`}
             >
-              <svg
-                className="w-5 h-5 flex-shrink-0 series-accent"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
-              </svg>
+              <Repeat size={20} weight="light" className="flex-shrink-0 series-accent" />
               <div className="flex-1 min-w-0">
                 <span className="text-sm text-[var(--soft)] group-hover:text-[var(--coral)] transition-colors">
                   Part of <span className="text-[var(--cream)] font-medium">{event.series.title}</span>
@@ -848,19 +800,15 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
                   {getSeriesTypeLabel(event.series.series_type)}
                 </span>
               </div>
-              <svg className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
+              <CaretRight size={16} weight="bold" className="text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0" />
             </button>
           </div>
         )}
 
         {/* Producer */}
         {event.producer && (
-          <div className="pt-5 border-t border-[var(--twilight)]">
-            <h2 className="font-mono text-xs font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
-              Presented by
-            </h2>
+          <div>
+            <SectionHeader title="Presented by" />
             <div className="flex items-center justify-between gap-4 p-3 rounded-lg border border-[var(--twilight)] bg-[var(--void)]">
               <div className="flex items-center gap-3 min-w-0">
                 {event.producer.logo_url ? (
@@ -873,16 +821,14 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
                   />
                 ) : (
                   <div className="w-10 h-10 rounded-lg bg-[var(--twilight)] flex items-center justify-center flex-shrink-0">
-                    <svg className="w-5 h-5 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                    </svg>
+                    <Buildings size={20} weight="light" className="text-[var(--muted)]" aria-hidden="true" />
                   </div>
                 )}
                 <div className="min-w-0">
                   <h3 className="text-[var(--cream)] font-medium truncate text-sm">
                     {event.producer.name}
                   </h3>
-                  <p className="text-xs text-[var(--muted)] font-mono uppercase tracking-wider">
+                  <p className="text-xs text-[var(--muted)] font-mono uppercase tracking-widest">
                     {event.producer.org_type.replace(/_/g, " ")}
                   </p>
                 </div>
@@ -893,53 +839,92 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
         )}
 
         {/* Tags Section */}
-        <div className="pt-5 border-t border-[var(--twilight)]">
+        <div>
           {/* System tags (from crawlers) — always visible */}
           {event.tags && event.tags.length > 0 && (
             <div className="mb-4">
-              <h2 className="font-mono text-xs font-medium text-[var(--muted)] uppercase tracking-widest mb-3">
-                Tags
-              </h2>
+              <SectionHeader title="Tags" />
               <div className="flex flex-wrap gap-2">
                 {event.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="px-2.5 py-1 rounded-full text-xs font-mono bg-[var(--coral)]/10 text-[var(--coral)] border border-[var(--coral)]/20"
-                  >
-                    {tag.replace(/-/g, " ")}
-                  </span>
+                  <Badge key={tag} variant="alert">{tag.replace(/-/g, " ")}</Badge>
                 ))}
               </div>
             </div>
           )}
 
           {/* Community tags — collapsed by default to reduce scroll depth + API calls */}
-          <CommunityTagsSection
-            eventId={event.id}
-            venue={event.venue}
-            producer={event.producer}
-          />
+          <div className="mt-4">
+            <CommunityTagsSection
+              eventId={event.id}
+              venue={event.venue}
+              producer={event.producer}
+            />
+          </div>
         </div>
 
         {/* Flag */}
-        <div className="pt-5 border-t border-[var(--twilight)]">
+        <div className="pt-4 border-t border-[var(--twilight)]">
           <FlagButton
             entityType="event"
             entityId={event.id}
             entityName={event.title}
           />
         </div>
-      </div>
+      </InfoCard>
 
-      {/* Happening Around Here */}
-      <NearbySection
-        nearbySpots={nearbyDestinations}
+      {/* Sticky bottom CTA — appears on scroll */}
+      <DetailStickyBar
+        showShareButton
+        shareTracking={{ portalSlug, eventId: event.id }}
+        primaryAction={
+          event.ticket_url
+            ? {
+                label: isLive ? "Join Now" : isTicketingUrl(event.ticket_url) ? "Get Tickets" : event.is_free ? "RSVP Free" : "Learn More",
+                href: event.ticket_url,
+              }
+            : event.source_url
+              ? {
+                  label: event.is_free ? "RSVP Free" : "Get Tickets",
+                  href: event.source_url,
+                }
+              : undefined
+        }
+        scrollThreshold={400}
+      />
+
+      {/* Around Here */}
+      <AroundHereSection
         venueEvents={venueEvents}
         nearbyEvents={nearbyEvents}
+        destinations={allDestinations}
         venueName={event.venue?.name}
+        neighborhood={event.venue?.neighborhood}
+        portalSlug={portalSlug}
         onSpotClick={handleSpotClick}
         onEventClick={handleEventClick}
       />
+
+      {/* Make a Night of It — inline bottom sheet */}
+      {showNightSheet && event.venue && (
+        <MakeANightSheet
+          anchorEvent={{
+            id: event.id,
+            title: event.title,
+            start_date: event.start_date,
+            start_time: event.start_time,
+            end_time: event.end_time,
+            is_all_day: event.is_all_day,
+            venue: {
+              ...event.venue,
+              lat: event.venue.lat ?? null,
+              lng: event.venue.lng ?? null,
+            },
+          }}
+          portalSlug={portalSlug}
+          isOpen={showNightSheet}
+          onClose={() => setShowNightSheet(false)}
+        />
+      )}
     </div>
   );
 }
