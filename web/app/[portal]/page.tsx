@@ -22,15 +22,46 @@ import DogMapView from "./_components/dog/DogMapView";
 import DogSavedView from "./_components/dog/DogSavedView";
 import { isDogPortal, DOG_PORTAL_VAR_OVERRIDES, DOG_DETAIL_VIEW_CSS } from "@/lib/dog-art";
 import { safeJsonLd } from "@/lib/formats";
-import { toAbsoluteUrl } from "@/lib/site-url";
+import { toAbsoluteUrl, getSiteUrl } from "@/lib/site-url";
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import EmoryMobileBottomNav from "./_components/hospital/EmoryMobileBottomNav";
+import type { Metadata } from "next";
 
 export const revalidate = 300;
 
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ portal: string }>;
+}): Promise<Metadata> {
+  const { portal: slug } = await params;
+  const portal = await getCachedPortalBySlug(slug);
+  if (!portal) return {};
+
+  const description =
+    portal.tagline ||
+    `Find events, people, and community in ${portal.name}.`;
+
+  return {
+    title: `${portal.name} Events | Lost City`,
+    description,
+    alternates: {
+      canonical: `/${portal.slug}`,
+      types: {
+        "application/rss+xml": `${getSiteUrl()}/api/feed/rss?portal=${portal.slug}`,
+      },
+    },
+    openGraph: {
+      title: `${portal.name} Events | Lost City`,
+      description,
+      type: "website",
+    },
+  };
+}
+
 type ViewMode = "feed" | "find" | "community";
-type FindType = "events" | "classes" | "destinations" | "showtimes";
+type FindType = "events" | "classes" | "destinations" | "showtimes" | "playbook" | "regulars";
 type FindDisplay = "list" | "map" | "calendar";
 
 type PortalSearchParams = {
@@ -312,7 +343,6 @@ export default async function PortalPage({ params, searchParams }: Props) {
           portalSlug={portal.slug}
           portalName={portal.name}
           hideNav={isFilm}
-          backLink={viewMode !== "feed" ? { label: "Dashboard", fallbackHref: `/${portal.slug}` } : undefined}
         />
       )}
 

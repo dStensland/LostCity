@@ -25,6 +25,7 @@ import {
   DetailStickyBar,
 } from "@/components/detail";
 import { safeJsonLd } from "@/lib/formats";
+import { buildBreadcrumbSchema } from "@/lib/breadcrumb-schema";
 import type { Metadata } from "next";
 import ScopedStylesServer from "@/components/ScopedStylesServer";
 import { createCssVarClass } from "@/lib/css-utils";
@@ -321,6 +322,18 @@ export default async function PortalSeriesPage({ params }: Props) {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: safeJsonLd(seriesSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: safeJsonLd(
+            buildBreadcrumbSchema([
+              { name: activePortalName, href: `/${activePortalSlug}` },
+              { name: getSeriesTypeLabel(series.series_type), href: `/${activePortalSlug}?view=find` },
+              { name: series.title },
+            ])
+          ),
+        }}
       />
 
       <ScopedStylesServer css={[seriesAccentClass?.css, festivalAccentClass?.css].filter(Boolean).join("\n")} />

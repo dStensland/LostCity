@@ -26,6 +26,7 @@ import type { Metadata } from "next";
 import ScopedStylesServer from "@/components/ScopedStylesServer";
 import { createCssVarClass } from "@/lib/css-utils";
 import { getCategoryAccentColor } from "@/lib/moments-utils";
+import { buildBreadcrumbSchema } from "@/lib/breadcrumb-schema";
 
 export const revalidate = 300; // 5 minutes
 
@@ -64,13 +65,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: festival.name,
       description,
       type: "website",
-      images: festival.image_url ? [{ url: festival.image_url }] : [],
     },
     twitter: {
-      card: festival.image_url ? "summary_large_image" : "summary",
+      card: "summary_large_image",
       title: festival.name,
       description,
-      images: festival.image_url ? [festival.image_url] : [],
     },
   };
 }
@@ -245,6 +244,18 @@ export default async function PortalFestivalPage({ params }: Props) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: safeJsonLd(festivalSchema) }}
       />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: safeJsonLd(
+            buildBreadcrumbSchema([
+              { name: activePortalName, href: `/${activePortalSlug}` },
+              { name: "Festivals", href: `/${activePortalSlug}?view=find&type=events&categories=festivals` },
+              { name: festival.name },
+            ])
+          ),
+        }}
+      />
 
       <ScopedStylesServer css={festivalAccentClass?.css || ""} />
 
@@ -317,7 +328,7 @@ export default async function PortalFestivalPage({ params }: Props) {
 
           {/* Brief description above schedule so users get context first */}
           {festival.description && sessions.length > 0 && (
-            <p className="text-sm text-[var(--soft)] leading-relaxed line-clamp-3">
+            <p className="text-sm text-[var(--soft)] leading-relaxed whitespace-pre-wrap">
               {festival.description}
             </p>
           )}

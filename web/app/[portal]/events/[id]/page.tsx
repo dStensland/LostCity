@@ -8,8 +8,11 @@ import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
 import FollowButton from "@/components/FollowButton";
 import FriendsGoing from "@/components/FriendsGoing";
 import WhosGoing from "@/components/WhosGoing";
+import { fetchSocialProofCounts } from "@/lib/social-proof";
+import { GenreChip } from "@/components/ActivityChip";
 import { PortalHeader } from "@/components/headers";
 import { format, parseISO } from "date-fns";
+import { parseRecurrenceRule } from "@/lib/recurrence";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
@@ -37,12 +40,15 @@ import {
   RelatedSection,
   RelatedCard,
   DetailStickyBar,
+  DescriptionTeaser,
+  SocialProofStrip,
 } from "@/components/detail";
 import VenueEventsByDay from "@/components/VenueEventsByDay";
 import ScopedStylesServer from "@/components/ScopedStylesServer";
 import { createCssVarClass } from "@/lib/css-utils";
 import { cache } from "react";
 import { buildDisplayDescription } from "@/lib/event-description";
+import { buildBreadcrumbSchema } from "@/lib/breadcrumb-schema";
 import { deriveShowSignals } from "@/lib/show-signals";
 import ShowSignalsPanel from "@/components/ShowSignalsPanel";
 import { inferLineupGenreFallback } from "@/lib/artist-fallbacks";
@@ -96,13 +102,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: event.title,
       description,
       type: "website",
-      images: event.image_url ? [{ url: event.image_url }] : [],
     },
     twitter: {
-      card: event.image_url ? "summary_large_image" : "summary",
+      card: "summary_large_image",
       title: event.title,
       description,
-      images: event.image_url ? [event.image_url] : [],
     },
   };
 }
@@ -283,31 +287,6 @@ function withPerformerSchema(
 }
 
 // Parse recurrence rule to human-readable format
-function parseRecurrenceRule(rule: string | null | undefined): string | null {
-  if (!rule) return null;
-
-  // Simple RRULE parsing - handle common patterns
-  const match = rule.match(/FREQ=(\w+)(?:;BYDAY=(\w+))?/i);
-  if (!match) return null;
-
-  const freq = match[1]?.toUpperCase();
-  const day = match[2];
-
-  const dayNames: Record<string, string> = {
-    MO: "Monday", TU: "Tuesday", WE: "Wednesday",
-    TH: "Thursday", FR: "Friday", SA: "Saturday", SU: "Sunday"
-  };
-
-  if (freq === "WEEKLY" && day && dayNames[day]) {
-    return `Every ${dayNames[day]}`;
-  }
-  if (freq === "WEEKLY") return "Weekly";
-  if (freq === "MONTHLY") return "Monthly";
-  if (freq === "DAILY") return "Daily";
-
-  return null;
-}
-
 export default async function PortalEventPage({ params }: Props) {
   const { id, portal: portalSlug } = await params;
   const event = await getCachedEventById(parseInt(id, 10));
@@ -321,10 +300,11 @@ export default async function PortalEventPage({ params }: Props) {
   const activePortalSlug = portal?.slug || portalSlug;
   const activePortalName = portal?.name || portalSlug.charAt(0).toUpperCase() + portalSlug.slice(1);
 
-  const [{ venueEvents, sameDateEvents }, nearbySpots, eventArtists] = await Promise.all([
+  const [{ venueEvents, sameDateEvents }, nearbySpots, eventArtists, socialProofMap] = await Promise.all([
     getRelatedEvents(event, { portalId: portal?.id }),
     event.venue?.id ? getNearbySpots(event.venue.id) : Promise.resolve([]),
     getEventArtists(event.id),
+    fetchSocialProofCounts([event.id]),
   ]);
   const sanitizedVenueEvents = suppressEventImagesIfVenueFlagged(venueEvents);
   const sanitizedSameDateEvents = suppressEventImagesIfVenueFlagged(sameDateEvents);
@@ -398,6 +378,11 @@ export default async function PortalEventPage({ params }: Props) {
       )
     : null;
 
+  // Above-the-fold social proof
+  const socialProof = socialProofMap.get(event.id);
+  const goingCount = socialProof?.going ?? 0;
+  const interestedCount = socialProof?.interested ?? 0;
+
   // Format metadata
   const dateObj = parseISO(event.start_date);
   const formattedDate = format(dateObj, "EEEE, MMMM d, yyyy");
@@ -437,8 +422,18 @@ export default async function PortalEventPage({ params }: Props) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: safeJsonLd(eventSchema) }}
       />
-
-
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: safeJsonLd(
+            buildBreadcrumbSchema([
+              { name: activePortalName, href: `/${activePortalSlug}` },
+              { name: "Events", href: `/${activePortalSlug}?view=find` },
+              { name: event.title },
+            ])
+          ),
+        }}
+      />
 
       <ScopedStylesServer
         css={[categoryAccentClass?.css, seriesAccentClass?.css, festivalAccentClass?.css].filter(Boolean).join("\n")}
@@ -508,6 +503,31 @@ export default async function PortalEventPage({ params }: Props) {
                 <p className="text-[var(--cream)] font-medium">This event repeats {recurrenceText.toLowerCase()}</p>
                 <p className="text-sm text-[var(--muted)]">View all dates in the series</p>
               </div>
+            </div>
+          )}
+
+          {/* Description Teaser */}
+          <DescriptionTeaser
+            description={event.description}
+            accentColor={categoryColor}
+          />
+
+          {/* Social Proof Strip */}
+          <SocialProofStrip goingCount={goingCount} interestedCount={interestedCount}>
+            <FriendsGoing eventId={event.id} />
+          </SocialProofStrip>
+
+          {/* Genre Pills */}
+          {event.genres && event.genres.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {event.genres.slice(0, 5).map((genre: string) => (
+                <GenreChip
+                  key={genre}
+                  genre={genre}
+                  category={event.category}
+                  portalSlug={activePortalSlug}
+                />
+              ))}
             </div>
           )}
 
@@ -642,7 +662,6 @@ export default async function PortalEventPage({ params }: Props) {
             {/* Social Proof */}
             <SectionHeader title="Who's Going" />
             <div className="mb-6">
-              <FriendsGoing eventId={event.id} className="mb-4" />
               <WhosGoing eventId={event.id} />
             </div>
 
@@ -780,7 +799,7 @@ export default async function PortalEventPage({ params }: Props) {
 
             {/* Data Freshness — subtle provenance hint */}
             {(event.source_url || event.updated_at) && (
-              <div className="flex items-center gap-2 text-xs font-mono text-[var(--muted)] mb-4 pb-4 border-b border-[var(--twilight)]/30">
+              <div className="flex items-center gap-2 text-xs font-mono text-[var(--muted)] mb-4">
                 <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>

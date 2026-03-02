@@ -34,6 +34,7 @@ import {
 } from "@/components/detail";
 import VenueShowtimes from "@/components/VenueShowtimes";
 import GettingThereSection from "@/components/GettingThereSection";
+import { buildBreadcrumbSchema } from "@/lib/breadcrumb-schema";
 
 export const revalidate = 60;
 
@@ -117,6 +118,66 @@ function formatHours(hours: string | null): string | null {
   return hours;
 }
 
+// Map venue_type to schema.org type
+function mapVenueTypeToSchemaType(
+  type: string | null | undefined
+): string | undefined {
+  if (!type) return undefined;
+  const map: Record<string, string> = {
+    bar: "BarOrPub",
+    sports_bar: "BarOrPub",
+    brewery: "Brewery",
+    restaurant: "Restaurant",
+    food_hall: "Restaurant",
+    nightclub: "NightClub",
+    club: "NightClub",
+    museum: "Museum",
+    gallery: "ArtGallery",
+    library: "Library",
+    cinema: "MovieTheater",
+    theater: "PerformingArtsTheater",
+    stadium: "StadiumOrArena",
+    arena: "StadiumOrArena",
+    amphitheater: "StadiumOrArena",
+    music_venue: "MusicVenue",
+    coffee_shop: "CafeOrCoffeeShop",
+    winery: "Winery",
+    church: "Church",
+    convention_center: "ConventionCenter",
+  };
+  return map[type] || undefined;
+}
+
+const DAY_MAP: Record<string, string> = {
+  sun: "Sunday",
+  mon: "Monday",
+  tue: "Tuesday",
+  wed: "Wednesday",
+  thu: "Thursday",
+  fri: "Friday",
+  sat: "Saturday",
+};
+
+// Convert hours JSONB to OpeningHoursSpecification[]
+function buildOpeningHours(
+  hours: Record<string, { open: string; close: string } | null> | null | undefined
+): object[] | undefined {
+  if (!hours || typeof hours !== "object") return undefined;
+  const specs: object[] = [];
+  for (const [day, slot] of Object.entries(hours)) {
+    if (!slot) continue;
+    const dayOfWeek = DAY_MAP[day];
+    if (!dayOfWeek) continue;
+    specs.push({
+      "@type": "OpeningHoursSpecification",
+      dayOfWeek,
+      opens: slot.open,
+      closes: slot.close,
+    });
+  }
+  return specs.length > 0 ? specs : undefined;
+}
+
 // Inline type for the spot record coming out of SpotDetailPayload
 type SpotFromDetail = {
   id: number;
@@ -181,9 +242,17 @@ export default async function PortalSpotPage({ params }: Props) {
   );
 
   // Generate Schema.org LocalBusiness JSON-LD
+  const schemaType = mapVenueTypeToSchemaType(spot.venue_type) || "LocalBusiness";
+  const spotHours = (spot as Record<string, unknown>).hours as
+    | Record<string, { open: string; close: string } | null>
+    | null
+    | undefined;
+  const spotLat = (spot as Record<string, unknown>).lat as number | null | undefined;
+  const spotLng = (spot as Record<string, unknown>).lng as number | null | undefined;
+
   const schema = {
     "@context": "https://schema.org",
-    "@type": "LocalBusiness",
+    "@type": schemaType,
     name: spot.name,
     address: spot.address
       ? {
@@ -194,9 +263,19 @@ export default async function PortalSpotPage({ params }: Props) {
           addressCountry: "US",
         }
       : undefined,
+    geo:
+      spotLat && spotLng
+        ? {
+            "@type": "GeoCoordinates",
+            latitude: spotLat,
+            longitude: spotLng,
+          }
+        : undefined,
     url: spot.website || undefined,
     image: spot.image_url || undefined,
     description: spot.description || spot.short_description || undefined,
+    priceRange: spot.price_level ? "$".repeat(spot.price_level) : undefined,
+    openingHoursSpecification: buildOpeningHours(spotHours),
   };
 
   return (
@@ -206,6 +285,18 @@ export default async function PortalSpotPage({ params }: Props) {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: safeJsonLd(schema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: safeJsonLd(
+            buildBreadcrumbSchema([
+              { name: activePortalName, href: `/${activePortalSlug}` },
+              { name: "Spots", href: `/${activePortalSlug}?view=find&type=destinations` },
+              { name: spot.name },
+            ])
+          ),
+        }}
       />
 
       <ScopedStylesServer css={spotTypeAccentClass?.css} />
