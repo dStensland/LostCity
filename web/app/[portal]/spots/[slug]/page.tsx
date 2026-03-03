@@ -1,7 +1,6 @@
 import ScrollToTop from "@/components/ScrollToTop";
 import {
   getSpotBySlug,
-  formatPriceLevel,
   getSpotTypeLabel,
   getSpotTypeLabels,
   SPOT_TYPES,
@@ -26,15 +25,38 @@ import { SaveToListButton } from "@/components/SaveToListButton";
 import {
   DetailHero,
   InfoCard,
-  MetadataGrid,
   SectionHeader,
   RelatedSection,
   RelatedCard,
   DetailStickyBar,
+  DescriptionTeaser,
+  MetadataGrid,
+  type MetadataItem,
+  QuickActionLink,
+  CollapsibleSection,
+  VenueFeaturesSection,
 } from "@/components/detail";
+import Badge from "@/components/ui/Badge";
+import HoursSection from "@/components/HoursSection";
 import VenueShowtimes from "@/components/VenueShowtimes";
-import GettingThereSection from "@/components/GettingThereSection";
+import GettingThereSection, {
+  type TransitData,
+} from "@/components/GettingThereSection";
 import { buildBreadcrumbSchema } from "@/lib/breadcrumb-schema";
+import { isOpenAt, formatCloseTime } from "@/lib/hours";
+import type { VenueFeature } from "@/lib/venue-features";
+
+// Inline to avoid importing @phosphor-icons/react in server component
+const EVENT_HEAVY_TYPES = new Set([
+  "music_venue",
+  "theater",
+  "nightclub",
+  "comedy_club",
+  "cinema",
+]);
+function isEventHeavyType(venueType: string | null | undefined): boolean {
+  return !!venueType && EVENT_HEAVY_TYPES.has(venueType);
+}
 
 export const revalidate = 60;
 
@@ -79,20 +101,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-// Helper function to get spot type icon
+// ─── Helper functions ────────────────────────────────────────────────────
+
 function getSpotTypeIcon(type: string | null): string {
-  if (!type) return "📍";
+  if (!type) return "\u{1F4CD}";
   const typeInfo = SPOT_TYPES[type as SpotType];
-  return typeInfo?.icon || "📍";
+  return typeInfo?.icon || "\u{1F4CD}";
 }
 
-// Helper function to format spot type for display
 function formatSpotType(type: string | null): string {
   if (!type) return "Spot";
   return getSpotTypeLabel(type);
 }
 
-// Helper function to get spot type color
 function getSpotTypeColor(type: string | null): string {
   const colorMap: Record<string, string> = {
     music_venue: "var(--neon-magenta)",
@@ -112,13 +133,6 @@ function getSpotTypeColor(type: string | null): string {
   return type ? colorMap[type] || "var(--coral)" : "var(--coral)";
 }
 
-// Format hours for display
-function formatHours(hours: string | null): string | null {
-  if (!hours) return null;
-  return hours;
-}
-
-// Map venue_type to schema.org type
 function mapVenueTypeToSchemaType(
   type: string | null | undefined
 ): string | undefined {
@@ -158,9 +172,11 @@ const DAY_MAP: Record<string, string> = {
   sat: "Saturday",
 };
 
-// Convert hours JSONB to OpeningHoursSpecification[]
 function buildOpeningHours(
-  hours: Record<string, { open: string; close: string } | null> | null | undefined
+  hours:
+    | Record<string, { open: string; close: string } | null>
+    | null
+    | undefined
 ): object[] | undefined {
   if (!hours || typeof hours !== "object") return undefined;
   const specs: object[] = [];
@@ -178,7 +194,8 @@ function buildOpeningHours(
   return specs.length > 0 ? specs : undefined;
 }
 
-// Inline type for the spot record coming out of SpotDetailPayload
+// ─── Type-aware MetadataGrid builder ─────────────────────────────────────
+
 type SpotFromDetail = {
   id: number;
   name: string;
@@ -193,7 +210,11 @@ type SpotFromDetail = {
   short_description?: string | null;
   image_url?: string | null;
   website?: string | null;
+  phone?: string | null;
+  instagram?: string | null;
+  hours?: Record<string, { open: string; close: string } | null> | null;
   hours_display?: string | null;
+  is_24_hours?: boolean | null;
   price_level?: number | null;
   vibes?: string[] | null;
   claimed_by?: string | null;
@@ -201,12 +222,128 @@ type SpotFromDetail = {
   [key: string]: unknown;
 };
 
+function buildVenueMetadata(
+  spot: SpotFromDetail,
+  openStatus: { isOpen: boolean; closesAt?: string },
+  upcomingEventsCount: number,
+  featuresCount: number
+): MetadataItem[] {
+  const type = spot.venue_type;
+  const hasHoursData = !!(spot.hours || spot.is_24_hours);
+
+  // Reusable items
+  const statusItem: MetadataItem | null = hasHoursData
+    ? spot.is_24_hours
+      ? { label: "Status", value: "Open 24hrs", color: "var(--neon-green)" }
+      : openStatus.isOpen
+        ? {
+            label: "Status",
+            value: openStatus.closesAt
+              ? `Open til ${formatCloseTime(openStatus.closesAt)}`
+              : "Open Now",
+            color: "var(--neon-green)",
+          }
+        : { label: "Status", value: "Closed", color: "var(--coral)" }
+    : null;
+
+  const neighborhoodItem: MetadataItem = {
+    label: "Neighborhood",
+    value: spot.neighborhood || spot.city || "\u2014",
+  };
+
+  const priceItem: MetadataItem | null = spot.price_level
+    ? { label: "Price", value: "$".repeat(spot.price_level) }
+    : null;
+
+  const admissionItem: MetadataItem = spot.price_level
+    ? { label: "Admission", value: "$".repeat(spot.price_level) }
+    : { label: "Admission", value: "Free", color: "var(--neon-green)" };
+
+  const typeItem: MetadataItem = {
+    label: "Type",
+    value: formatSpotType(spot.venue_type ?? null),
+  };
+
+  const showsItem: MetadataItem = {
+    label: "Upcoming",
+    value:
+      upcomingEventsCount > 0
+        ? `${upcomingEventsCount} show${upcomingEventsCount !== 1 ? "s" : ""}`
+        : "None scheduled",
+    color: upcomingEventsCount > 0 ? "var(--neon-magenta)" : "var(--muted)",
+  };
+
+  const items: MetadataItem[] = [];
+
+  switch (type) {
+    case "park":
+    case "historic_site":
+      if (statusItem) items.push(statusItem);
+      items.push(admissionItem);
+      if (featuresCount > 0) {
+        items.push({
+          label: "Things to Do",
+          value: `${featuresCount}`,
+          color: "var(--neon-green)",
+        });
+      } else {
+        items.push(neighborhoodItem);
+      }
+      break;
+
+    case "bar":
+    case "restaurant":
+    case "brewery":
+    case "coffee_shop":
+      if (statusItem) items.push(statusItem);
+      if (priceItem) items.push(priceItem);
+      items.push(neighborhoodItem);
+      break;
+
+    case "music_venue":
+    case "theater":
+    case "nightclub":
+    case "comedy_club":
+      items.push(showsItem);
+      items.push(typeItem);
+      items.push(neighborhoodItem);
+      break;
+
+    case "museum":
+    case "gallery":
+      if (statusItem) items.push(statusItem);
+      items.push(admissionItem);
+      items.push(typeItem);
+      break;
+
+    case "cinema":
+      items.push(showsItem);
+      items.push(typeItem);
+      items.push(neighborhoodItem);
+      break;
+
+    default:
+      if (statusItem) items.push(statusItem);
+      items.push(neighborhoodItem);
+      if (priceItem) items.push(priceItem);
+      break;
+  }
+
+  // Ensure at least 2 items for visual balance
+  if (items.length < 2) {
+    if (!items.find((i) => i.label === "Neighborhood"))
+      items.push(neighborhoodItem);
+    if (items.length < 2) items.push(typeItem);
+  }
+
+  return items.slice(0, 3);
+}
+
+// ─── Page component ──────────────────────────────────────────────────────
+
 export default async function PortalSpotPage({ params }: Props) {
   const { portal: portalSlug, slug } = await params;
 
-  // Fetch portal and rich spot detail in parallel.
-  // getSpotDetail provides slot-deduped events with artists, highlights,
-  // artifacts, and 5-category nearby — the same data path as the drawer.
   const [portal, detail] = await Promise.all([
     getCachedPortalBySlug(portalSlug),
     getSpotDetail(slug),
@@ -217,9 +354,9 @@ export default async function PortalSpotPage({ params }: Props) {
   }
 
   const spot = detail.spot as SpotFromDetail;
-  const { upcomingEvents, nearbyDestinations, highlights, artifacts } = detail;
+  const { upcomingEvents, nearbyDestinations, highlights, artifacts, features } =
+    detail;
 
-  // Use the URL portal or fall back to spot's city
   const activePortalSlug = portal?.slug || portalSlug;
   const activePortalName =
     portal?.name ||
@@ -233,22 +370,49 @@ export default async function PortalSpotPage({ params }: Props) {
     spotTypeColor,
     "spot-type"
   );
-  const priceDisplay = formatPriceLevel(spot.price_level ?? null);
+  const hasHours = !!(spot.hours || spot.hours_display || spot.is_24_hours);
+  const hasVibes = spot.vibes && spot.vibes.length > 0;
+  const hasActions = !!(
+    spot.website ||
+    spot.instagram ||
+    spot.phone ||
+    spot.address
+  );
 
-  // Flatten nearby destinations into a single list preserving category order.
+  // Type-aware layout decisions
+  const isEventHeavy = isEventHeavyType(spot.venue_type);
+
+  // Open/close status for MetadataGrid (pure function, SSR-safe)
+  const now = new Date();
+  const openStatus = isOpenAt(spot.hours ?? null, now, spot.is_24_hours ?? false);
+  const metadataItems = buildVenueMetadata(
+    spot,
+    openStatus,
+    upcomingEvents.length,
+    features.length
+  );
+
+  // Flatten nearby destinations
   const categoryOrder = ["food", "drinks", "nightlife", "caffeine", "fun"];
   const nearbyFlat = categoryOrder.flatMap(
     (cat) => nearbyDestinations[cat] || []
   );
 
-  // Generate Schema.org LocalBusiness JSON-LD
-  const schemaType = mapVenueTypeToSchemaType(spot.venue_type) || "LocalBusiness";
+  // Schema.org JSON-LD
+  const schemaType =
+    mapVenueTypeToSchemaType(spot.venue_type) || "LocalBusiness";
   const spotHours = (spot as Record<string, unknown>).hours as
     | Record<string, { open: string; close: string } | null>
     | null
     | undefined;
-  const spotLat = (spot as Record<string, unknown>).lat as number | null | undefined;
-  const spotLng = (spot as Record<string, unknown>).lng as number | null | undefined;
+  const spotLat = (spot as Record<string, unknown>).lat as
+    | number
+    | null
+    | undefined;
+  const spotLng = (spot as Record<string, unknown>).lng as
+    | number
+    | null
+    | undefined;
 
   const schema = {
     "@context": "https://schema.org",
@@ -281,7 +445,6 @@ export default async function PortalSpotPage({ params }: Props) {
   return (
     <>
       <ScrollToTop />
-      {/* Schema.org JSON-LD */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: safeJsonLd(schema) }}
@@ -292,7 +455,10 @@ export default async function PortalSpotPage({ params }: Props) {
           __html: safeJsonLd(
             buildBreadcrumbSchema([
               { name: activePortalName, href: `/${activePortalSlug}` },
-              { name: "Spots", href: `/${activePortalSlug}?view=find&type=destinations` },
+              {
+                name: "Spots",
+                href: `/${activePortalSlug}?view=find&type=destinations`,
+              },
               { name: spot.name },
             ])
           ),
@@ -309,7 +475,7 @@ export default async function PortalSpotPage({ params }: Props) {
         />
 
         <main className="max-w-3xl mx-auto px-4 py-4 sm:py-6 pb-28 space-y-5 sm:space-y-8">
-          {/* Hero Section */}
+          {/* ── 1. HERO ────────────────────────────────────────────── */}
           <DetailHero
             mode={spot.image_url ? "image" : "fallback"}
             imageUrl={spot.image_url ?? undefined}
@@ -341,7 +507,6 @@ export default async function PortalSpotPage({ params }: Props) {
               )
             }
           >
-            {/* Follow/Recommend actions in hero */}
             <div className="flex items-center gap-2 mt-3">
               <FollowButton targetVenueId={spot.id} size="sm" />
               <RecommendButton venueId={spot.id} size="sm" />
@@ -372,136 +537,264 @@ export default async function PortalSpotPage({ params }: Props) {
             </div>
           </DetailHero>
 
-          {/* Main Content Card */}
-          <InfoCard accentColor={spotTypeColor}>
-            {/* Metadata Grid */}
-            <MetadataGrid
-              items={[
-                ...(spot.hours_display
-                  ? [
-                      {
-                        label: "Hours",
-                        value: formatHours(spot.hours_display)!,
-                      },
-                    ]
-                  : []),
-                {
-                  label: "Price",
-                  value: priceDisplay || "N/A",
-                  color: priceDisplay ? "var(--gold)" : "var(--muted)",
-                },
-                {
-                  label: "Type",
-                  value:
-                    spot.venue_types && spot.venue_types.length > 1
-                      ? getSpotTypeLabels(spot.venue_types)
-                      : formatSpotType(spot.venue_type ?? null),
-                },
-              ]}
-              className="mb-8"
-            />
+          {/* ── 2. EDITORIAL TEASER ────────────────────────────────── */}
+          <DescriptionTeaser
+            description={spot.description}
+            accentColor={spotTypeColor}
+          />
 
-            {/* Description */}
-            {spot.description && (
-              <>
-                <SectionHeader title="About" />
-                <p className="text-[var(--soft)] whitespace-pre-wrap leading-relaxed mb-6">
-                  {spot.description}
-                </p>
-              </>
-            )}
+          {/* ── 3. IDENTITY STRIP — vibes + quick actions ──────────── */}
+          {(hasVibes || hasActions) && (
+            <div className="flex flex-wrap items-center gap-2">
+              {spot.vibes?.slice(0, 4).map((vibe) => (
+                <Badge key={vibe} variant="neutral" size="md">
+                  {vibe.replace(/-/g, " ")}
+                </Badge>
+              ))}
+              {spot.website && (
+                <QuickActionLink
+                  href={spot.website}
+                  icon={
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1.5}
+                        d="M12 21a9 9 0 100-18 9 9 0 000 18zM3.6 9h16.8M3.6 15h16.8M12 3c2.5 2.8 3.9 6.5 3.9 9s-1.4 6.2-3.9 9c-2.5-2.8-3.9-6.5-3.9-9s1.4-6.2 3.9-9z"
+                      />
+                    </svg>
+                  }
+                  label="Website"
+                />
+              )}
+              {spot.instagram && (
+                <QuickActionLink
+                  href={`https://instagram.com/${(spot.instagram as string).replace("@", "")}`}
+                  icon={
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <rect
+                        x="2"
+                        y="2"
+                        width="20"
+                        height="20"
+                        rx="5"
+                        strokeWidth={1.5}
+                      />
+                      <circle cx="12" cy="12" r="5" strokeWidth={1.5} />
+                      <circle
+                        cx="17.5"
+                        cy="6.5"
+                        r="1"
+                        fill="currentColor"
+                      />
+                    </svg>
+                  }
+                  label="Instagram"
+                />
+              )}
+              {spot.phone && (
+                <QuickActionLink
+                  href={`tel:${spot.phone}`}
+                  icon={
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1.5}
+                        d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+                      />
+                    </svg>
+                  }
+                  label="Call"
+                  external={false}
+                />
+              )}
+              {spot.address && (
+                <QuickActionLink
+                  href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${spot.address}, ${spot.city}, ${spot.state}`)}`}
+                  icon={
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1.5}
+                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1.5}
+                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                    </svg>
+                  }
+                  label="Directions"
+                />
+              )}
+            </div>
+          )}
 
-            {/* Highlights — editorial/curated info cards from venue_highlights */}
-            {highlights.length > 0 && (
-              <>
-                <SectionHeader title="Highlights" count={highlights.length} />
-                <div className="space-y-3 mb-6">
+          {/* ── 4. AT A GLANCE — type-aware MetadataGrid ───────────── */}
+          <MetadataGrid items={metadataItems} />
+
+          {/* ── 5. PRIMARY — About + Highlights inline ─────────────── */}
+          {(spot.description || highlights.length > 0) && (
+            <InfoCard accentColor={spotTypeColor}>
+              {spot.description && (
+                <div>
+                  <SectionHeader title="About" variant="inline" />
+                  <p className="text-[var(--soft)] whitespace-pre-wrap leading-relaxed">
+                    {spot.description}
+                  </p>
+                </div>
+              )}
+
+              {highlights.length > 0 && (
+                <div
+                  className={`space-y-2 ${spot.description ? "mt-4 pt-4 border-t border-[var(--twilight)]/30" : ""}`}
+                >
+                  {!spot.description && (
+                    <SectionHeader title="Highlights" variant="inline" />
+                  )}
                   {highlights.map((h) => {
                     const hl = h as {
                       id: number;
                       highlight_type: string;
                       title: string;
                       description?: string | null;
-                      image_url?: string | null;
+                      url?: string | null;
                     };
                     return (
                       <div
                         key={hl.id}
-                        className="rounded-lg border border-[var(--twilight)] bg-[var(--dusk)] p-3"
+                        className="flex items-start gap-2.5 group"
                       >
-                        <p className="text-[var(--cream)] text-sm font-medium mb-1">
-                          {hl.title}
+                        <span
+                          className="shrink-0 mt-1.5 w-1.5 h-1.5 rounded-full"
+                          style={{ background: spotTypeColor }}
+                        />
+                        <p className="text-sm leading-relaxed">
+                          {hl.url ? (
+                            <a
+                              href={hl.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="font-medium text-[var(--cream)] underline decoration-[var(--twilight)] underline-offset-2 hover:decoration-[var(--soft)] transition-colors"
+                            >
+                              {hl.title}
+                            </a>
+                          ) : (
+                            <span className="font-medium text-[var(--cream)]">
+                              {hl.title}
+                            </span>
+                          )}
+                          {hl.description && (
+                            <span className="text-[var(--soft)]">
+                              {" "}
+                              &mdash; {hl.description}
+                            </span>
+                          )}
+                          {hl.url && (
+                            <svg className="inline-block w-3 h-3 ml-1 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                          )}
                         </p>
-                        {hl.description && (
-                          <p className="text-[var(--soft)] text-sm leading-relaxed">
-                            {hl.description}
-                          </p>
-                        )}
                       </div>
                     );
                   })}
                 </div>
-              </>
-            )}
+              )}
+            </InfoCard>
+          )}
 
-            {/* Vibes */}
-            {spot.vibes && spot.vibes.length > 0 && (
-              <>
-                <SectionHeader title="Vibes" count={spot.vibes.length} />
-                <div className="flex flex-wrap gap-2 mb-6">
-                  {spot.vibes.map((vibe) => (
-                    <span
-                      key={vibe}
-                      className="px-3 py-1.5 bg-[var(--neon-cyan)]/10 text-[var(--neon-cyan)] rounded-full border border-[var(--neon-cyan)]/20 text-sm font-mono"
-                    >
-                      {vibe.replace(/-/g, " ")}
-                    </span>
-                  ))}
-                </div>
-              </>
-            )}
-
-            {/* Community Verified Needs */}
-            <SectionHeader title="Community Verified" />
-            <div className="mb-6">
-              <NeedsTagList entityType="venue" entityId={spot.id} title="" />
-            </div>
-
-            {/* Community Tags */}
-            <SectionHeader title="Community Tags" />
-            <div className="mb-6">
-              <VenueTagList venueId={spot.id} />
-            </div>
-
-            {/* Location */}
-            {spot.address && (
-              <>
-                <SectionHeader title="Location" />
-                <p className="text-[var(--soft)] mb-6">
-                  {spot.address}
-                  <br />
-                  {spot.city}, {spot.state}
-                </p>
-              </>
-            )}
-
-            {/* Getting There — transit, parking, walkability */}
-            <div className="mb-6">
-              <GettingThereSection transit={spot as import("@/components/GettingThereSection").TransitData} />
-            </div>
-
-            {/* Flag for QA */}
-            <SectionHeader title="Report an Issue" />
-            <FlagButton
-              entityType="venue"
-              entityId={spot.id}
-              entityName={spot.name}
+          {/* ── 6. EVENTS (promoted for event-heavy venue types) ──── */}
+          {isEventHeavy && upcomingEvents.length > 0 && (
+            <VenueShowtimes
+              events={
+                upcomingEvents as Parameters<
+                  typeof VenueShowtimes
+                >[0]["events"]
+              }
+              portalSlug={activePortalSlug}
+              venueType={spot.venue_type ?? null}
             />
-          </InfoCard>
+          )}
 
-          {/* Sub-venues / artifacts (e.g. stages within a festival venue) */}
+          {/* ── 7. PRACTICAL — Hours + Location + Getting There ───── */}
+          {(hasHours || spot.address) && (
+            <InfoCard accentColor={spotTypeColor}>
+              {hasHours && (
+                <div>
+                  <SectionHeader title="Hours" variant="inline" />
+                  <HoursSection
+                    hours={spot.hours ?? null}
+                    hoursDisplay={spot.hours_display}
+                    is24Hours={spot.is_24_hours ?? false}
+                  />
+                </div>
+              )}
+
+              {spot.address && (
+                <div className={hasHours ? "mt-6" : ""}>
+                  <SectionHeader
+                    title="Location"
+                    variant={hasHours ? "divider" : "inline"}
+                  />
+                  <p className="text-[var(--soft)]">
+                    {spot.address}
+                    <br />
+                    {spot.city}, {spot.state}
+                  </p>
+                </div>
+              )}
+
+              <div
+                className={
+                  hasHours || spot.address ? "mt-6" : ""
+                }
+              >
+                <GettingThereSection
+                  transit={spot as TransitData}
+                />
+              </div>
+            </InfoCard>
+          )}
+
+          {/* ── 8. FEATURES — type-aware attractions/exhibits ──────── */}
+          {features.length > 0 && (
+            <VenueFeaturesSection
+              features={features as VenueFeature[]}
+              venueType={spot.venue_type ?? null}
+            />
+          )}
+
+          {/* ── 9. ARTIFACTS — sub-venues ──────────────────────────── */}
           {artifacts.length > 0 && (
-            <RelatedSection title="Inside This Venue" count={artifacts.length}>
+            <RelatedSection
+              title="Inside This Venue"
+              count={artifacts.length}
+            >
               {artifacts.map((a) => {
                 const artifact = a as {
                   id: number;
@@ -517,7 +810,9 @@ export default async function PortalSpotPage({ params }: Props) {
                     variant="image"
                     href={`/${activePortalSlug}/spots/${artifact.slug}`}
                     title={artifact.name}
-                    subtitle={getSpotTypeLabel(artifact.venue_type ?? null)}
+                    subtitle={getSpotTypeLabel(
+                      artifact.venue_type ?? null
+                    )}
                     imageUrl={artifact.image_url || undefined}
                     icon={
                       <div className="text-2xl" role="img">
@@ -530,8 +825,8 @@ export default async function PortalSpotPage({ params }: Props) {
             </RelatedSection>
           )}
 
-          {/* Upcoming Events / Showtimes */}
-          {upcomingEvents.length > 0 && (
+          {/* ── 10. EVENTS (standard position for non-event-heavy) ── */}
+          {!isEventHeavy && upcomingEvents.length > 0 && (
             <VenueShowtimes
               events={
                 upcomingEvents as Parameters<
@@ -543,7 +838,28 @@ export default async function PortalSpotPage({ params }: Props) {
             />
           )}
 
-          {/* Nearby Spots — 5-category nearby from rich data path */}
+          {/* ── 11. COMMUNITY — slim consolidated zone ─────────────── */}
+          <div className="space-y-4">
+            <NeedsTagList
+              entityType="venue"
+              entityId={spot.id}
+              title="Community Verified"
+            />
+            <div className="border-t border-[var(--twilight)]/60 pt-4">
+              <CollapsibleSection title="Community Tags">
+                <VenueTagList venueId={spot.id} />
+              </CollapsibleSection>
+            </div>
+            <div className="pt-2">
+              <FlagButton
+                entityType="venue"
+                entityId={spot.id}
+                entityName={spot.name}
+              />
+            </div>
+          </div>
+
+          {/* ── 12. NEARBY ─────────────────────────────────────────── */}
           {nearbyFlat.length > 0 && (
             <RelatedSection
               title={`Nearby in ${spot.neighborhood || spot.city}`}
@@ -569,7 +885,7 @@ export default async function PortalSpotPage({ params }: Props) {
         </main>
       </div>
 
-      {/* Sticky bottom bar with CTAs */}
+      {/* ── 13. STICKY BAR ──────────────────────────────────────── */}
       <DetailStickyBar
         shareLabel="Share Spot"
         secondaryActions={

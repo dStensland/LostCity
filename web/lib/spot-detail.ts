@@ -40,7 +40,7 @@ type UpcomingEventRow = {
   end_time: string | null;
   is_free: boolean | null;
   price_min: number | null;
-  category: string | null;
+  category_id: string | null;
   source_url: string | null;
   ticket_url: string | null;
 };
@@ -80,12 +80,28 @@ type VenueHighlightRow = {
   sort_order: number;
 };
 
+type VenueFeatureRow = {
+  id: number;
+  slug: string;
+  title: string;
+  feature_type: string;
+  description: string | null;
+  image_url: string | null;
+  is_seasonal: boolean;
+  start_date: string | null;
+  end_date: string | null;
+  price_note: string | null;
+  is_free: boolean;
+  sort_order: number;
+};
+
 export type SpotDetailPayload = {
   spot: Record<string, unknown>;
   upcomingEvents: Array<Record<string, unknown>>;
   nearbyDestinations: Record<string, NearbyDestination[]>;
   highlights: Array<Record<string, unknown>>;
   artifacts: Array<Record<string, unknown>>;
+  features: VenueFeatureRow[];
 };
 
 // ---------------------------------------------------------------------------
@@ -290,7 +306,7 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
   const nearbyDestinationsPromise = fetchNearbyDestinations(supabase, spot);
   const highlightsPromise = supabase
     .from("venue_highlights")
-    .select("id, highlight_type, title, description, image_url, sort_order")
+    .select("id, highlight_type, title, description, image_url, sort_order, url")
     .eq("venue_id", spot.id)
     .order("sort_order", { ascending: true });
   const artifactsPromise = supabase
@@ -299,12 +315,18 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
     .eq("parent_venue_id", spot.id)
     .eq("active", true)
     .order("name", { ascending: true });
+  const featuresPromise = supabase
+    .from("venue_features")
+    .select("id, slug, title, feature_type, description, image_url, is_seasonal, start_date, end_date, price_note, is_free, sort_order, url")
+    .eq("venue_id", spot.id)
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true });
 
   // Over-fetch to allow post-query slot dedupe and quality ranking.
   const { data: upcomingEvents } = await supabase
     .from("events")
     .select(`
-      id, title, start_date, end_date, start_time, end_time, is_free, price_min, category, source_url, ticket_url
+      id, title, start_date, end_date, start_time, end_time, is_free, price_min, category_id, source_url, ticket_url
     `)
     .eq("venue_id", spot.id)
     .is("canonical_event_id", null)
@@ -347,11 +369,13 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
     nearbyDestinations,
     { data: highlights },
     { data: artifacts },
+    { data: features },
   ] = await Promise.all([
     upcomingCountsPromise,
     nearbyDestinationsPromise,
     highlightsPromise,
     artifactsPromise,
+    featuresPromise,
   ]);
 
   const upcomingEventsWithCounts: Array<Record<string, unknown>> = dedupedRows.map((event) => {
@@ -363,6 +387,7 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
     }));
     return {
       ...event,
+      category: event.category_id,
       artists,
       lineup: artists.map((artist) => artist.name).join(", ") || null,
       going_count: counts?.going || 0,
@@ -379,5 +404,6 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
       (highlights as VenueHighlightRow[] | null) || []
     ) as unknown as Array<Record<string, unknown>>,
     artifacts: (artifacts || []) as Array<Record<string, unknown>>,
+    features: (features as VenueFeatureRow[] | null) || [],
   };
 }
