@@ -246,11 +246,11 @@ export default function TheSceneSection({ portalSlug }: Props) {
         <FeedSectionHeader
           title="Regular Hangs"
           priority="secondary"
-          accentColor="var(--neon-magenta)"
+          accentColor="var(--vibe)"
           icon={<MicrophoneStage weight="duotone" className="w-5 h-5" />}
         />
         <div className="flex items-center justify-center py-10">
-          <HorseSpinner color="var(--neon-magenta)" />
+          <HorseSpinner color="var(--vibe)" />
         </div>
       </section>
     );
@@ -263,7 +263,7 @@ export default function TheSceneSection({ portalSlug }: Props) {
         <FeedSectionHeader
           title="Regular Hangs"
           priority="secondary"
-          accentColor="var(--neon-magenta)"
+          accentColor="var(--vibe)"
           icon={<MicrophoneStage weight="duotone" className="w-5 h-5" />}
         />
         <div className="flex items-center justify-center gap-2 py-8 text-[var(--muted)]">
@@ -283,7 +283,7 @@ export default function TheSceneSection({ portalSlug }: Props) {
       <FeedSectionHeader
         title="Regular Hangs"
         priority="secondary"
-        accentColor="var(--neon-magenta)"
+        accentColor="var(--vibe)"
         icon={<MicrophoneStage weight="duotone" className="w-5 h-5" />}
         seeAllHref={`/${portalSlug}?view=find&type=regulars${activeChipId !== "all" ? `&activity=${activeChipId}` : ""}${activeDays.length > 0 ? `&weekday=${activeDays.join(",")}` : ""}`}
       />
@@ -294,7 +294,7 @@ export default function TheSceneSection({ portalSlug }: Props) {
           <SceneChip
             label="All"
             Icon={ListBullets}
-            color="var(--neon-magenta)"
+            color="var(--vibe)"
             count={chipCounts["all"] || 0}
             isActive={activeChipId === "all"}
             onClick={() => handleChipTap("all")}
@@ -369,7 +369,7 @@ export default function TheSceneSection({ portalSlug }: Props) {
       {!showAllRows && hasMoreRows && (
         <button
           onClick={() => setShowAllRows(true)}
-          className="mt-2 w-full flex items-center justify-center gap-1.5 text-sm font-mono font-medium py-2.5 rounded-lg transition-all hover:bg-[var(--neon-magenta)]/5 text-[var(--neon-magenta)]"
+          className="mt-2 w-full flex items-center justify-center gap-1.5 text-sm font-mono font-medium py-2.5 rounded-lg transition-all hover:bg-[var(--vibe)]/5 text-[var(--vibe)]"
         >
           Show {hiddenCount} more
           <ArrowRight weight="bold" className="w-3.5 h-3.5" />

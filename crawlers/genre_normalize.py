@@ -78,6 +78,7 @@ NIGHTLIFE_GENRES = {
     "poker", "bingo", "bar-games", "pub-crawl", "specials", "happy-hour",
     "latin-night", "line-dancing",
     "open-mic", "viewing-party", "nerd-stuff",
+    "vinyl", "listening-party", "hi-fi",
 }
 
 LEARNING_GENRES = {
@@ -103,7 +104,7 @@ OUTDOOR_GENRES = {
 
 WORDS_GENRES = {
     "reading", "poetry", "book-club", "storytelling", "writing",
-    "comics", "literary-festival",
+    "comics", "literary-festival", "spoken-word", "poetry-slam", "open-mic",
 }
 
 WELLNESS_GENRES = {

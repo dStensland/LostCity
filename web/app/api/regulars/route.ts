@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
     .is("canonical_event_id", null)
     .or("is_class.eq.false,is_class.is.null")
     .or("is_sensitive.eq.false,is_sensitive.is.null")
-    .not("category_id", "in", "(film,theater,community,wellness,family,learning,words)")
+    .not("category_id", "in", "(film,theater,community,wellness,family,learning)")
     .not("tags", "cs", '{"class"}'); // Exclude class-tagged events (paint-and-sip, workshops)
 
   // Apply portal scope (federation, city filter)

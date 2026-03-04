@@ -17,7 +17,7 @@ import {
   Waveform, Crown, Lightbulb, Smiley, GameController, MusicNotes,
   ForkKnife, PersonSimpleRun, NumberCircleNine, Coffee,
   Club, CowboyHat, Globe, Television, Wine, Disc,
-  Sword, BowlingBall, BeerStein, Barbell, Bicycle,
+  Sword, BowlingBall, BeerStein, Barbell, Bicycle, BookOpen, Leaf, VinylRecord,
 } from "@phosphor-icons/react";
 import type { CityPulseEventItem } from "@/lib/city-pulse/types";
 import type { SceneActivityType } from "@/lib/city-pulse/section-builders";
@@ -33,7 +33,7 @@ export const ICON_LOOKUP: Record<string, ComponentType<IconProps>> = {
   Waveform, Crown, Lightbulb, Smiley, GameController, MusicNotes,
   ForkKnife, PersonSimpleRun, NumberCircleNine, Coffee,
   Club, CowboyHat, Globe, Television, Wine, Disc,
-  Sword, BowlingBall, BeerStein, Barbell, Bicycle,
+  Sword, BowlingBall, BeerStein, Barbell, Bicycle, BookOpen, Leaf, VinylRecord,
 };
 
 export function getActivityIcon(act: SceneActivityType): ComponentType<IconProps> {

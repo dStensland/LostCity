@@ -1328,6 +1328,97 @@ VENUES = {
         "venue_type": "brewery",
         "website": "https://mondaynightbrewing.com",
     },
+    # ========== LISTENING BARS / VINYL ==========
+    "commune": {
+        "name": "Commune",
+        "slug": "commune",
+        "address": "100 N Avondale Rd",
+        "neighborhood": "Avondale Estates",
+        "city": "Avondale Estates",
+        "state": "GA",
+        "zip": "30002",
+        "venue_type": "bar",
+        "website": "https://www.communeatl.com",
+    },
+    "westside-motor-lounge": {
+        "name": "Westside Motor Lounge",
+        "slug": "westside-motor-lounge",
+        "address": "725 Echo St NW",
+        "neighborhood": "English Avenue",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30318",
+        "venue_type": "bar",
+        "website": "https://www.westsidemotorlounge.com",
+    },
+    "stereo-atl": {
+        "name": "Stereo",
+        "slug": "stereo-atl",
+        "address": "900 DeKalb Ave NE",
+        "neighborhood": "Inman Park",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30307",
+        "venue_type": "bar",
+        "website": "https://www.stereoatl.com",
+    },
+    # ========== PUB RUNS / CYCLING ==========
+    "midway-pub": {
+        "name": "Midway Pub",
+        "slug": "midway-pub",
+        "address": "552 Flat Shoals Ave SE",
+        "neighborhood": "East Atlanta",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30316",
+        "venue_type": "bar",
+    },
+    # ========== BOOKSTORES ==========
+    "charis-books": {
+        "name": "Charis Books & More",
+        "slug": "charis-books-and-more",
+        "address": "184 S Candler St",
+        "neighborhood": "Decatur",
+        "city": "Decatur",
+        "state": "GA",
+        "zip": "30030",
+        "venue_type": "bookstore",
+        "website": "https://www.charisbooksandmore.com",
+    },
+    "a-cappella-books": {
+        "name": "A Cappella Books",
+        "slug": "a-cappella-books",
+        "address": "484 Moreland Ave NE",
+        "neighborhood": "Little Five Points",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30307",
+        "venue_type": "bookstore",
+        "website": "https://www.acappellabooks.com",
+    },
+    # ========== OUTDOOR MOVIES ==========
+    "colony-square": {
+        "name": "Colony Square",
+        "slug": "colony-square",
+        "address": "1197 Peachtree St NE",
+        "neighborhood": "Midtown",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30361",
+        "venue_type": "event_space",
+        "website": "https://www.colonysquare.com",
+    },
+    "atlantic-station": {
+        "name": "Atlantic Station",
+        "slug": "atlantic-station",
+        "address": "1380 Atlantic Dr NW",
+        "neighborhood": "Atlantic Station",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30363",
+        "venue_type": "event_space",
+        "website": "https://www.atlanticstation.com",
+    },
 }
 
 # ============================================
@@ -1363,7 +1454,7 @@ WEEKLY_EVENTS = [
         "venue_key": "ten-atl",
         "day": 0,  # Monday
         "title": "Monday Night Jazz Jam",
-        "description": "Weekly jazz jam session at TEN ATL featuring the Churchill Grounds Trio. Keeping jazz alive one Monday at a time.",
+        "description": "Weekly jazz jam session at TEN ATL in East Atlanta Village. Live jazz every Monday night.",
         "start_time": "22:00",
         "category": "music",
         "subcategory": "music.jazz",
@@ -1444,42 +1535,42 @@ WEEKLY_EVENTS = [
         "venue_key": "joes-coffeehouse",
         "day": 0,  # Monday
         "title": "Open Mic Night",
-        "description": "Weekly open mic at Joe's Coffeehouse in East Atlanta. All performers welcome.",
+        "description": "Weekly open mic at Joe's Coffeehouse in East Atlanta. All performers welcome — music, poetry, spoken word.",
         "start_time": "17:00",
-        "category": "community",
+        "category": "words",
         "subcategory": None,
-        "tags": ["open-mic", "comedy", "poetry", "weekly"],
+        "tags": ["open-mic", "poetry", "spoken-word", "weekly"],
     },
     {
         "venue_key": "our-bar-atl",
         "day": 0,  # Monday
         "title": "Open Mic Night",
-        "description": "Monday open mic at Our Bar ATL on Edgewood Ave.",
+        "description": "Monday open mic at Our Bar ATL on Edgewood Ave. Music, comedy, and spoken word.",
         "start_time": "21:00",
         "category": "nightlife",
         "subcategory": None,
-        "tags": ["open-mic", "comedy", "weekly"],
+        "tags": ["open-mic", "nightlife", "weekly"],
     },
     {
         "venue_key": "southern-feed-store",
         "day": 1,  # Tuesday
         "title": "Open Mic Night",
-        "description": "Tuesday open mic at Southern Feed Store in East Atlanta. Comedy, music, and poetry welcome.",
+        "description": "Tuesday open mic at Southern Feed Store in East Atlanta. Music, comedy, and poetry welcome.",
         "start_time": "19:00",
         "category": "nightlife",
         "subcategory": None,
-        "tags": ["open-mic", "comedy", "poetry", "weekly"],
+        "tags": ["open-mic", "nightlife", "weekly"],
     },
     # Laughing Skull: handled by dedicated source (sources/laughing_skull.py) with full 7-day recurring schedule
     {
         "venue_key": "limerick-junction",
         "day": 1,  # Tuesday
         "title": "Open Mic Night",
-        "description": "Tuesday open mic at Limerick Junction in Virginia Highland.",
+        "description": "Tuesday open mic at Limerick Junction in Virginia Highland. Music and comedy.",
         "start_time": "21:00",
         "category": "nightlife",
         "subcategory": None,
-        "tags": ["open-mic", "comedy", "weekly"],
+        "tags": ["open-mic", "nightlife", "weekly"],
     },
     {
         "venue_key": "limelight-theater",
@@ -1491,16 +1582,7 @@ WEEKLY_EVENTS = [
         "subcategory": "comedy.standup",
         "tags": ["open-mic", "comedy", "weekly", "late-night"],
     },
-    {
-        "venue_key": "farm-burger",
-        "day": 2,  # Wednesday
-        "title": "Open Mic Night",
-        "description": "Wednesday open mic at Farm Burger Midtown.",
-        "start_time": "19:00",
-        "category": "community",
-        "subcategory": None,
-        "tags": ["open-mic", "comedy", "weekly"],
-    },
+    # Farm Burger Midtown — removed, implausible open mic venue (burger restaurant)
     {
         "venue_key": "red-light-cafe",
         "day": 2,  # Wednesday
@@ -1542,16 +1624,7 @@ WEEKLY_EVENTS = [
         "subcategory": "nightlife.trivia",
         "tags": ["trivia", "games", "nightlife", "weekly"],
     },
-    {
-        "venue_key": "pullman-yards",
-        "day": 2,  # Wednesday
-        "title": "Open Mic Night",
-        "description": "Wednesday open mic at Pullman Yards in Kirkwood.",
-        "start_time": "20:00",
-        "category": "community",
-        "subcategory": None,
-        "tags": ["open-mic", "comedy", "weekly"],
-    },
+    # Pullman Yards — removed, implausible weekly open mic (event space, not regular bar)
     {
         "venue_key": "asw-whiskey",
         "day": 3,  # Thursday
@@ -1560,7 +1633,7 @@ WEEKLY_EVENTS = [
         "start_time": "18:00",
         "category": "nightlife",
         "subcategory": None,
-        "tags": ["open-mic", "comedy", "nightlife", "weekly"],
+        "tags": ["open-mic", "nightlife", "weekly"],
     },
     {
         "venue_key": "atlantucky",
@@ -1570,27 +1643,27 @@ WEEKLY_EVENTS = [
         "start_time": "18:30",
         "category": "nightlife",
         "subcategory": None,
-        "tags": ["open-mic", "comedy", "nightlife", "weekly", "brewery"],
+        "tags": ["open-mic", "nightlife", "weekly", "brewery"],
     },
     {
         "venue_key": "urban-grind",
         "day": 3,  # Thursday
         "title": "Open Mic Night",
-        "description": "Thursday open mic at Urban Grind coffee shop.",
+        "description": "Thursday open mic at Urban Grind coffee shop. Poetry and spoken word.",
         "start_time": "19:00",
-        "category": "community",
+        "category": "words",
         "subcategory": None,
-        "tags": ["open-mic", "poetry", "weekly"],
+        "tags": ["open-mic", "poetry", "spoken-word", "weekly"],
     },
     {
         "venue_key": "kats-cafe",
         "day": 3,  # Thursday
         "title": "Open Mic Night",
-        "description": "Thursday open mic at Kat's Cafe in Midtown.",
+        "description": "Thursday open mic at Kat's Cafe in Midtown. Poetry and spoken word.",
         "start_time": "19:00",
-        "category": "community",
+        "category": "words",
         "subcategory": None,
-        "tags": ["open-mic", "poetry", "weekly"],
+        "tags": ["open-mic", "poetry", "spoken-word", "weekly"],
     },
     {
         "venue_key": "battery-atlanta",
@@ -1598,9 +1671,9 @@ WEEKLY_EVENTS = [
         "title": "Open Mic Night",
         "description": "Thursday open mic at The Battery Atlanta entertainment district.",
         "start_time": "19:00",
-        "category": "community",
+        "category": "nightlife",
         "subcategory": None,
-        "tags": ["open-mic", "comedy", "weekly"],
+        "tags": ["open-mic", "nightlife", "weekly"],
     },
     # Joystick verified from Instagram: Wednesday gaming, Thursday karaoke (NOT open mic as badslava listed)
     {
@@ -1631,7 +1704,7 @@ WEEKLY_EVENTS = [
         "start_time": "20:30",
         "category": "nightlife",
         "subcategory": None,
-        "tags": ["open-mic", "comedy", "nightlife", "weekly"],
+        "tags": ["open-mic", "nightlife", "weekly"],
     },
     {
         "venue_key": "dynamic-el-dorado",
@@ -1641,7 +1714,7 @@ WEEKLY_EVENTS = [
         "start_time": "23:00",
         "category": "nightlife",
         "subcategory": None,
-        "tags": ["open-mic", "comedy", "weekly", "late-night"],
+        "tags": ["open-mic", "nightlife", "weekly", "late-night"],
     },
     # 529 verified: Saturday 3PM Open Mic Comedy (website: 529atlanta.com, not 529atl.com which is hijacked)
     {
@@ -1728,26 +1801,7 @@ WEEKLY_EVENTS = [
         "subcategory": "music.jazz",
         "tags": ["jazz", "soul", "live-music", "nightlife", "weekly", "date-night"],
     },
-    {
-        "venue_key": "churchill-grounds",
-        "day": 3,  # Thursday
-        "title": "Jazz Night",
-        "description": "Weekly jazz night at Churchill Grounds, Midtown's intimate jazz cafe. Live performances in a cozy setting.",
-        "start_time": "20:00",
-        "category": "music",
-        "subcategory": "music.jazz",
-        "tags": ["jazz", "live-music", "weekly", "intimate", "date-night"],
-    },
-    {
-        "venue_key": "churchill-grounds",
-        "day": 5,  # Saturday
-        "title": "Saturday Jazz Sessions",
-        "description": "Saturday jazz sessions at Churchill Grounds in Midtown. Atlanta's longest-running jazz venue.",
-        "start_time": "20:00",
-        "category": "music",
-        "subcategory": "music.jazz",
-        "tags": ["jazz", "live-music", "weekly", "date-night"],
-    },
+    # Churchill Grounds — CLOSED permanently (removed Feb 2026)
     {
         "venue_key": "elliott-street-pub",
         "day": 4,  # Friday
@@ -1905,26 +1959,7 @@ WEEKLY_EVENTS = [
         "subcategory": "nightlife.dj",
         "tags": ["dj", "dance", "nightlife", "weekly", "late-night"],
     },
-    {
-        "venue_key": "johnny-hideaway",
-        "day": 4,  # Friday
-        "title": "Dance Night",
-        "description": "Friday dance night at Johnny's Hideaway in Buckhead. Atlanta's iconic dance club since 1979, spinning everything from Motown to Top 40.",
-        "start_time": "20:00",
-        "category": "nightlife",
-        "subcategory": "nightlife.party",
-        "tags": ["dance", "dj", "nightlife", "weekly", "high-energy"],
-    },
-    {
-        "venue_key": "johnny-hideaway",
-        "day": 5,  # Saturday
-        "title": "Dance Night",
-        "description": "Saturday dance night at Johnny's Hideaway in Buckhead. Motown, Top 40, and classic hits.",
-        "start_time": "20:00",
-        "category": "nightlife",
-        "subcategory": "nightlife.party",
-        "tags": ["dance", "dj", "nightlife", "weekly", "high-energy"],
-    },
+    # Johnny's Hideaway — Dance Night dupes removed; specific "Country & Line Dancing" events below
     # ========== DRAG SHOWS ==========
     {
         "venue_key": "burkharts",
@@ -1993,9 +2028,9 @@ WEEKLY_EVENTS = [
         "title": "Open Mic & Poetry Slam",
         "description": "Thursday open mic and poetry slam at Apache Cafe in Midtown. Atlanta's creative arts and spoken word staple.",
         "start_time": "20:00",
-        "category": "nightlife",
+        "category": "words",
         "subcategory": None,
-        "tags": ["open-mic", "poetry", "spoken-word", "nightlife", "weekly"],
+        "tags": ["open-mic", "poetry", "spoken-word", "poetry-slam", "weekly"],
     },
     {
         "venue_key": "ladybird",
@@ -2016,7 +2051,7 @@ WEEKLY_EVENTS = [
         "start_time": "09:00",
         "category": "markets",
         "subcategory": None,
-        "tags": ["outdoor", "weekly", "family-friendly"],
+        "tags": ["farmers-market", "outdoor", "weekly", "family-friendly"],
     },
     {
         "venue_key": "peachtree-road-farmers-market",
@@ -2026,7 +2061,7 @@ WEEKLY_EVENTS = [
         "start_time": "08:30",
         "category": "markets",
         "subcategory": None,
-        "tags": ["outdoor", "weekly", "family-friendly", "seasonal"],
+        "tags": ["farmers-market", "outdoor", "weekly", "family-friendly", "seasonal"],
     },
     # ==================================================================
     # Phase 2: NEIGHBORHOOD + DAY GAP FILLS
@@ -2221,7 +2256,7 @@ WEEKLY_EVENTS = [
         "title": "Sunday Open Mic",
         "description": "Sunday open mic at Apache Cafe in Midtown. Poetry, spoken word, and acoustic sets.",
         "start_time": "19:00",
-        "category": "nightlife",
+        "category": "words",
         "subcategory": None,
         "tags": ["open-mic", "poetry", "spoken-word", "weekly"],
     },
@@ -2694,17 +2729,8 @@ WEEKLY_EVENTS = [
     # ==================================================================
     # VOLUNTEER (Feb 2026)
     # ==================================================================
-    {
-        "venue_key": "grant-park",
-        "day": 5,  # Saturday (2nd Saturday each month; recurring template covers all Saturdays)
-        "title": "Grant Park Volunteer Workday",
-        "description": "Monthly Saturday morning volunteer workday at Grant Park. Mulching, weeding, and trail maintenance. 9-11am. Free, all ages welcome.",
-        "start_time": "09:00",
-        "category": "community",
-        "subcategory": None,
-        "tags": ["volunteer", "free", "outdoor", "morning", "monthly"],
-        "is_free": True,
-    },
+    # Grant Park Volunteer Workday — removed, monthly event (2nd Saturday only)
+    # can't be represented in weekly generator; would create 6x instances per month
     # ==================================================================
     # FOOD & DRINK SPECIALS (Feb 2026)
     # ==================================================================
@@ -3294,6 +3320,148 @@ WEEKLY_EVENTS = [
         "category": "nightlife",
         "subcategory": None,
         "tags": ["viewing-party", "sports", "football", "nfl", "nightlife", "weekly"],
+    },
+    # ==================================================================
+    # VINYL / LISTENING NIGHTS
+    # ==================================================================
+    {
+        "venue_key": "commune",
+        "day": 3,  # Thursday
+        "title": "Vinyl Listening Session",
+        "description": "Thursday evening vinyl listening session at Commune in Avondale Estates. Nationally recognized hi-fi listening bar with curated vinyl selections and rotating guest selectors.",
+        "start_time": "18:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["vinyl", "listening-party", "hi-fi", "nightlife", "weekly"],
+    },
+    {
+        "venue_key": "commune",
+        "day": 4,  # Friday
+        "title": "Friday Night Vinyl",
+        "description": "Friday vinyl session at Commune. Hi-fi listening bar with curated sound and craft cocktails.",
+        "start_time": "18:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["vinyl", "listening-party", "hi-fi", "nightlife", "weekly"],
+    },
+    {
+        "venue_key": "commune",
+        "day": 5,  # Saturday
+        "title": "Saturday Night Vinyl",
+        "description": "Saturday vinyl session at Commune. Rotating selectors on the hi-fi system.",
+        "start_time": "18:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["vinyl", "listening-party", "hi-fi", "nightlife", "weekly"],
+    },
+    {
+        "venue_key": "westside-motor-lounge",
+        "day": 4,  # Friday
+        "title": "Echo Room Vinyl Session",
+        "description": "Friday vinyl listening session at the Echo Room inside Westside Motor Lounge. Curated by Atlanta's top selectors including DJ Kemit and Kai Alce.",
+        "start_time": "18:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["vinyl", "listening-party", "dj", "nightlife", "weekly"],
+    },
+    {
+        "venue_key": "westside-motor-lounge",
+        "day": 5,  # Saturday
+        "title": "Echo Room Saturday Sessions",
+        "description": "Saturday evening vinyl and DJ showcase at the Echo Room inside Westside Motor Lounge.",
+        "start_time": "18:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["vinyl", "listening-party", "dj", "nightlife", "weekly"],
+    },
+    {
+        "venue_key": "stereo-atl",
+        "day": 3,  # Thursday
+        "title": "Vinyl Night",
+        "description": "Thursday vinyl night at Stereo in Inman Park. Coffee shop by day, listening bar by night. Curated vinyl on a hi-fi system with craft cocktails.",
+        "start_time": "18:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["vinyl", "listening-party", "hi-fi", "nightlife", "weekly"],
+    },
+    {
+        "venue_key": "stereo-atl",
+        "day": 5,  # Saturday
+        "title": "Saturday Vinyl Session",
+        "description": "Saturday evening vinyl session at Stereo in Inman Park. Rotating selectors and deep crate digs.",
+        "start_time": "18:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["vinyl", "listening-party", "hi-fi", "nightlife", "weekly"],
+    },
+    # ==================================================================
+    # PUB RUNS / SOCIAL CYCLING
+    # ==================================================================
+    {
+        "venue_key": "midway-pub",
+        "day": 2,  # Wednesday
+        "title": "Run! EAV",
+        "description": "Wednesday group run starting and ending at Midway Pub in East Atlanta Village. 3-mile route through the neighborhood followed by post-run beers.",
+        "start_time": "18:30",
+        "category": "fitness",
+        "subcategory": None,
+        "tags": ["run-club", "running", "weekly", "brewery"],
+    },
+    # ==================================================================
+    # BOOK CLUBS / LITERARY EVENTS
+    # ==================================================================
+    {
+        "venue_key": "charis-books",
+        "day": 3,  # Thursday
+        "title": "Charis Book Club",
+        "description": "Monthly book club at Charis Books & More in Decatur. Atlanta's oldest feminist bookstore and LGBTQ+ community hub. Open to all readers.",
+        "start_time": "19:00",
+        "category": "words",
+        "subcategory": None,
+        "tags": ["book-club", "reading", "monthly"],
+    },
+    {
+        "venue_key": "charis-books",
+        "day": 5,  # Saturday
+        "title": "Author Reading & Signing",
+        "description": "Saturday author events at Charis Books & More in Decatur. Readings, signings, and conversations with authors. Check website for schedule.",
+        "start_time": "14:00",
+        "category": "words",
+        "subcategory": None,
+        "tags": ["reading", "author-event", "weekly"],
+    },
+    {
+        "venue_key": "a-cappella-books",
+        "day": 6,  # Sunday
+        "title": "A Cappella Book Club",
+        "description": "Monthly book club at A Cappella Books in Little Five Points. Atlanta's beloved independent bookstore since 1989.",
+        "start_time": "15:00",
+        "category": "words",
+        "subcategory": None,
+        "tags": ["book-club", "reading", "monthly"],
+    },
+    # ==================================================================
+    # OUTDOOR MOVIES (seasonal May-October)
+    # ==================================================================
+    {
+        "venue_key": "colony-square",
+        "day": 3,  # Thursday
+        "title": "Movies on the Square",
+        "description": "Free outdoor movies at Colony Square in Midtown. Seasonal series running May through October on select Thursdays. Bring a blanket.",
+        "start_time": "20:00",
+        "category": "film",
+        "subcategory": None,
+        "tags": ["outdoor", "free", "family-friendly", "seasonal", "weekly"],
+    },
+    {
+        "venue_key": "atlantic-station",
+        "day": 3,  # Thursday
+        "title": "Screen on the Green",
+        "description": "Free outdoor movie screenings at Atlantic Station. Seasonal summer series with films on the Central Lawn. Bring chairs and blankets.",
+        "start_time": "20:30",
+        "category": "film",
+        "subcategory": None,
+        "tags": ["outdoor", "free", "family-friendly", "seasonal", "weekly"],
     },
 ]
 

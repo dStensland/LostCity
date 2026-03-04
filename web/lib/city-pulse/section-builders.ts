@@ -911,7 +911,7 @@ export const SCENE_ACTIVITY_TYPES: SceneActivityType[] = [
   // --- Specific nightlife (identity-first: what the event IS, not format) ---
   { id: "trivia", label: "Trivia", iconName: "Question", color: "#93C5FD", matchGenres: ["trivia"], matchTitle: /trivia|pub quiz|quizbastard/i },
   { id: "karaoke", label: "Karaoke", iconName: "MicrophoneStage", color: "#F9A8D4", matchGenres: ["karaoke"], matchTitle: /karaoke/i },
-  { id: "comedy", label: "Comedy", iconName: "Smiley", color: "#FCD34D", matchGenres: ["comedy", "stand-up", "standup", "improv", "open-mic"], matchCategories: ["comedy"], matchTitle: /comedy|stand.up|\bimprov\b|open mic/i },
+  { id: "comedy", label: "Comedy", iconName: "Smiley", color: "#FCD34D", matchGenres: ["comedy", "stand-up", "standup", "improv"], matchCategories: ["comedy"], matchTitle: /comedy|stand.up|\bimprov\b/i },
   { id: "bingo", label: "Bingo", iconName: "NumberCircleNine", color: "#FDBA74", matchGenres: ["bingo"], matchTitle: /bingo/i },
   // --- Nightlife (before gaming — drag/dj are more specific than broad "game-night") ---
   { id: "dj", label: "DJ Night", iconName: "Headphones", color: "#C4B5FD", matchGenres: ["dj", "electronic", "edm"] },
@@ -919,10 +919,10 @@ export const SCENE_ACTIVITY_TYPES: SceneActivityType[] = [
   // --- Gaming (before food so nerd genres beat the broad "specials" tag) ---
   { id: "nerd_stuff", label: "Nerd Stuff", iconName: "Sword", color: "#7DD3FC", matchGenres: ["dnd", "tabletop", "mtg", "magic-the-gathering", "warhammer", "board-games", "card-games", "video-games", "miniatures", "game-night"], matchTitle: /\bgame night\b|board game|d&d|dungeons|warhammer|magic.the.gathering/i },
   { id: "bar_games", label: "Bar Games", iconName: "BowlingBall", color: "#86EFAC", matchGenres: ["bar-games", "bowling", "bocce", "skee-ball", "curling", "darts", "shuffleboard", "pool", "billiards", "cornhole", "axe-throwing", "ping-pong"], matchTitle: /bowl|skee.?ball|darts|shuffleboard|bocce|cornhole|billiards|curling/i },
-  // --- Food & drink (happy_hour before food_specials — drink deals are more specific) ---
+  // --- Food & drink (happy_hour → brunch → food_specials: specific before broad) ---
   { id: "happy_hour", label: "Happy Hour", iconName: "Wine", color: "#C4B5FD", matchGenres: ["happy-hour", "drink-specials", "margaritas", "bottomless", "sangria", "mimosas"], matchTitle: /happy hour/i },
-  { id: "food_specials", label: "Food Specials", iconName: "ForkKnife", color: "#FCD34D", matchGenres: ["food-specials", "specials", "oysters", "dollar-oysters", "tacos", "taco-tuesday", "wings", "half-price", "pizza", "crab", "seafood", "tapas"] },
-  { id: "brunch", label: "Brunch", iconName: "Coffee", color: "#FDBA74", matchGenres: ["brunch"], matchTitle: /\bbrunch\b/i },
+  { id: "brunch", label: "Brunch", iconName: "Coffee", color: "#FDBA74", matchGenres: ["brunch", "bottomless-brunch"], matchTitle: /\bbrunch\b/i },
+  { id: "food_specials", label: "Food Specials", iconName: "ForkKnife", color: "#FCD34D", matchGenres: ["food-specials", "specials", "oysters", "dollar-oysters", "tacos", "taco-tuesday", "wings", "half-price", "pizza", "crab", "seafood", "tapas"], matchCategories: ["food_drink"], matchTitle: /taco (tuesday|night)|wing (night|wednesday)|oyster (night|monday)|half.price/i },
   // --- Music genre ---
   { id: "jazz_blues", label: "Jazz & Blues", iconName: "MusicNotes", color: "#93C5FD", matchGenres: ["jazz", "blues", "jam-session", "bluegrass"] },
   { id: "dance", label: "Dance", iconName: "MusicNotes", color: "#F9A8D4", matchGenres: ["dance", "salsa", "swing", "line-dancing", "latin-night", "dance-party", "two-step", "bachata", "reggaeton", "cumbia", "country-dance", "salsa-night"], matchTitle: /dance (night|party)|salsa night|swing night|line danc|two.step|country (night|dance)|latin[oa]?\s*(night|tuesday|saturday|friday)|bachata|reggaeton|noche latina/i },
@@ -936,6 +936,14 @@ export const SCENE_ACTIVITY_TYPES: SceneActivityType[] = [
   { id: "viewing_party", label: "Viewing Party", iconName: "Television", color: "#A78BFA", matchGenres: ["viewing-party"], matchTitle: /viewing party|watch party/i },
   { id: "tasting", label: "Tasting", iconName: "BeerStein", color: "#F9A8D4", matchGenres: ["wine-tasting", "whiskey-tasting", "bourbon-tasting", "craft-beer"], matchTitle: /wine (night|tasting|down|wednesday)|bourbon (brawl|tasting)|whiskey tasting|beer tasting/i },
   { id: "skate_night", label: "Skate Night", iconName: "Disc", color: "#7DD3FC", matchGenres: ["skating", "roller-skating"], matchTitle: /skate night|skating/i },
+  // --- Listening / vinyl ---
+  { id: "vinyl_night", label: "Vinyl Night", iconName: "VinylRecord", color: "#E879F9", matchGenres: ["vinyl", "listening-party", "hi-fi"], matchTitle: /vinyl|listening (session|party|night|bar)|hi.?fi|record (night|spin)/i },
+  // --- Markets ---
+  { id: "farmers_market", label: "Farmers Market", iconName: "Leaf", color: "#86EFAC", matchGenres: ["farmers-market"], matchCategories: ["markets"], matchTitle: /farmers.?market|green.?market/i },
+  // --- Words / spoken word (before open_mic so poetry slams match here, not generic open mic) ---
+  { id: "spoken_word", label: "Spoken Word", iconName: "BookOpen", color: "#C4B5FD", matchGenres: ["spoken-word", "poetry", "poetry-slam", "storytelling"], matchCategories: ["words"], matchTitle: /poetry|spoken word|poetry slam|book club|literary/i },
+  // --- Open mic (after comedy + spoken_word — events with those genres already matched above) ---
+  { id: "open_mic", label: "Open Mic", iconName: "Microphone", color: "#FDBA74", matchGenres: ["open-mic"], matchTitle: /open mic|open.mic/i },
   // --- Format-based catchalls (last — identity types above take priority) ---
   { id: "live_music", label: "Live Music", iconName: "Waveform", color: "#F9A8D4", matchCategories: ["music"] },
 ];
@@ -1078,7 +1086,7 @@ export function buildTheSceneSection(
     title: "Regular Hangs",
     subtitle: "Weekly regulars & recurring events",
     priority: "secondary",
-    accent_color: "var(--neon-magenta)",
+    accent_color: "var(--vibe)",
     items,
     layout: "list",
     meta: {
@@ -1158,7 +1166,7 @@ export function buildExperiencesSection(
     id: "experiences",
     type: "experiences",
     title: "Things to Do",
-    subtitle: "Parks, museums, trails & more",
+    subtitle: "Parks, museums, galleries, trails & more",
     priority: "tertiary",
     accent_color: "var(--neon-green)",
     items,
@@ -1181,7 +1189,7 @@ export function buildBrowseSection(
     title: "Browse",
     subtitle: "Explore by category or neighborhood",
     priority: "tertiary",
-    accent_color: "var(--muted)",
+    accent_color: "var(--neon-cyan)",
     items: [],
     layout: "grid",
     meta: { portal_slug: portalSlug },
