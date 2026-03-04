@@ -249,8 +249,12 @@ def get_or_create_series(client: Client, series_hint: dict, category: str = None
     if not series_type or not series_title:
         return None
 
-    # Decode HTML entities (e.g. "&amp;" → "&", "&#8211;" → "–")
-    series_title = html_module.unescape(series_title)
+    # Decode HTML entities, looping for double-encoded (e.g. "&amp;#8211;" → "–")
+    for _ in range(3):
+        decoded = html_module.unescape(series_title)
+        if decoded == series_title:
+            break
+        series_title = decoded
 
     # Resolve festival link if provided
     festival_id = series_hint.get("festival_id") or resolve_festival_id(

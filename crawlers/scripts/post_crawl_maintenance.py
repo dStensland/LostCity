@@ -549,78 +549,46 @@ def deactivate_ghost_series(*, dry_run: bool = False) -> int:
     mode = "dry-run" if dry_run else "apply"
     print(f"\n== Deactivate ghost series ({mode}) ==")
 
-    # Find series with zero future active events, created > 60 days ago
-    result = client.rpc(
-        "exec_sql",
-        {
-            "query": """
-                SELECT s.id, s.title, s.series_type, s.created_at
-                FROM series s
-                WHERE s.is_active = true
-                  AND s.created_at < NOW() - INTERVAL '60 days'
-                  AND s.id NOT IN (
-                      SELECT DISTINCT series_id
-                      FROM events
-                      WHERE start_date >= CURRENT_DATE
-                        AND is_active = true
-                        AND series_id IS NOT NULL
-                  )
-                LIMIT 5000
-            """
-        },
-    ).execute()
+    # Get all series IDs that have at least one future active event
+    active_series_ids: set[str] = set()
+    page_start = 0
+    page_size = 1000
+    while True:
+        q = client.table("events").select("series_id")
+        q = q.gte("start_date", date.today().isoformat())
+        q = q.filter("series_id", "not.is", "null")
+        events_page = q.range(page_start, page_start + page_size - 1).execute().data or []
+        for row in events_page:
+            if row.get("series_id"):
+                active_series_ids.add(row["series_id"])
+        if len(events_page) < page_size:
+            break
+        page_start += page_size
 
-    # Fallback: if RPC not available, use direct query approach
-    ghost_ids: list[str] = []
-    if result.data:
-        ghost_ids = [row["id"] for row in result.data if row.get("id")]
-    else:
-        # Manual approach: get all active series, then subtract those with future events
-        all_series = (
+    # Get all active series
+    all_series: list[dict] = []
+    page_start = 0
+    while True:
+        page = (
             client.table("series")
-            .select("id,title,series_type,created_at")
+            .select("id,title,series_type")
             .eq("is_active", True)
-            .lt("created_at", (datetime.now() - timedelta(days=60)).isoformat())
-            .limit(5000)
+            .range(page_start, page_start + page_size - 1)
             .execute()
             .data or []
         )
-        if not all_series:
-            print("[OK] No ghost series candidates found.")
-            return 0
+        all_series.extend(page)
+        if len(page) < page_size:
+            break
+        page_start += page_size
 
-        # Get series IDs that DO have future events
-        active_series_ids: set[str] = set()
-        page_start = 0
-        page_size = 1000
-        while True:
-            events_page = (
-                client.table("events")
-                .select("series_id")
-                .gte("start_date", date.today().isoformat())
-                .eq("is_active", True)
-                .not_("series_id", "is", "null")
-                .range(page_start, page_start + page_size - 1)
-                .execute()
-                .data or []
-            )
-            for row in events_page:
-                if row.get("series_id"):
-                    active_series_ids.add(row["series_id"])
-            if len(events_page) < page_size:
-                break
-            page_start += page_size
-
-        ghost_ids = [
-            s["id"] for s in all_series
-            if s["id"] not in active_series_ids
-        ]
+    ghost_ids = [s["id"] for s in all_series if s["id"] not in active_series_ids]
 
     if not ghost_ids:
         print("[OK] No ghost series found.")
         return 0
 
-    print(f"Found {len(ghost_ids)} ghost series (no future events, >60 days old).")
+    print(f"Found {len(ghost_ids)} ghost series (active but no future events).")
 
     if dry_run:
         for gid in ghost_ids[:10]:
@@ -680,7 +648,13 @@ def fix_html_entities_in_series(*, dry_run: bool = False) -> int:
     fixed = 0
     for row in candidates:
         old_title = row["title"]
-        new_title = html_mod.unescape(old_title)
+        # Loop to handle double-encoded entities like &amp;#8211;
+        new_title = old_title
+        for _ in range(3):  # max 3 passes
+            decoded = html_mod.unescape(new_title)
+            if decoded == new_title:
+                break
+            new_title = decoded
         if new_title == old_title:
             continue
         if dry_run:
