@@ -293,39 +293,46 @@ BEGIN
         AND e.start_date >= CURRENT_DATE
         AND e.canonical_event_id IS NULL
       GROUP BY e.series_id
+    ),
+    -- Series has no search_vector column; compute tsvector inline
+    series_with_tsv AS (
+      SELECT s.*,
+        setweight(to_tsvector('english', COALESCE(s.title, '')), 'A') ||
+        setweight(to_tsvector('english', COALESCE(s.description, '')), 'C') AS computed_vector
+      FROM series s
+      WHERE COALESCE(s.is_active, true) = true
     )
     SELECT
-      s.id,
-      s.title,
-      s.slug,
-      s.description,
-      s.series_type,
-      s.category,
-      s.image_url,
+      sw.id,
+      sw.title,
+      sw.slug,
+      sw.description,
+      sw.series_type,
+      sw.category,
+      sw.image_url,
       u.next_event_date,
       COALESCE(u.upcoming_event_count, 0) AS upcoming_event_count,
-      ts_rank_cd(s.search_vector, v_tsquery, 32)::REAL AS ts_rank,
-      similarity(s.title, p_query)::REAL AS similarity_score,
+      ts_rank_cd(sw.computed_vector, v_tsquery, 32)::REAL AS ts_rank,
+      similarity(sw.title, p_query)::REAL AS similarity_score,
       (
-        ts_rank_cd(s.search_vector, v_tsquery, 32) * 0.6 +
-        similarity(s.title, p_query) * 0.4 +
-        CASE WHEN lower(s.title) = lower(p_query) THEN 1.0 ELSE 0 END +
-        CASE WHEN lower(s.title) LIKE lower(p_query) || '%' THEN 0.5 ELSE 0 END
+        ts_rank_cd(sw.computed_vector, v_tsquery, 32) * 0.6 +
+        similarity(sw.title, p_query) * 0.4 +
+        CASE WHEN lower(sw.title) = lower(p_query) THEN 1.0 ELSE 0 END +
+        CASE WHEN lower(sw.title) LIKE lower(p_query) || '%' THEN 0.5 ELSE 0 END
       )::REAL AS combined_score
-    FROM series s
-    LEFT JOIN upcoming u ON u.series_id = s.id
+    FROM series_with_tsv sw
+    LEFT JOIN upcoming u ON u.series_id = sw.id
     WHERE
-      COALESCE(s.is_active, true) = true
-      AND (s.search_vector @@ v_tsquery OR similarity(s.title, p_query) > 0.2)
-      AND (p_categories IS NULL OR s.category = ANY(p_categories))
+      (sw.computed_vector @@ v_tsquery OR similarity(sw.title, p_query) > 0.2)
+      AND (p_categories IS NULL OR sw.category = ANY(p_categories))
       AND (p_portal_id IS NULL OR EXISTS (
         SELECT 1 FROM portal_source_access psa
         JOIN events e ON e.source_id = psa.source_id
         WHERE psa.portal_id = p_portal_id
-          AND e.series_id = s.id
+          AND e.series_id = sw.id
           AND e.start_date >= CURRENT_DATE
       ))
-    ORDER BY combined_score DESC, u.next_event_date ASC NULLS LAST, s.title ASC
+    ORDER BY combined_score DESC, u.next_event_date ASC NULLS LAST, sw.title ASC
     LIMIT p_limit
     OFFSET p_offset;
 END;
@@ -394,13 +401,13 @@ BEGIN
       AND (o.search_vector @@ v_tsquery OR similarity(o.name, p_query) > 0.2)
       AND (p_portal_id IS NULL OR o.portal_id = p_portal_id OR o.portal_id IS NULL);
 
-    -- Series (add portal filter via events)
+    -- Series (NO search_vector — use similarity + ILIKE)
     RETURN QUERY
     SELECT 'series'::TEXT AS entity_type, COUNT(*)::BIGINT
     FROM series s
     WHERE
       COALESCE(s.is_active, true) = true
-      AND (s.search_vector @@ v_tsquery OR similarity(s.title, p_query) > 0.2)
+      AND (similarity(s.title, p_query) > 0.2 OR s.title ILIKE '%' || p_query || '%')
       AND (p_portal_id IS NULL OR EXISTS (
         SELECT 1 FROM portal_source_access psa
         JOIN events e ON e.source_id = psa.source_id
@@ -409,22 +416,22 @@ BEGIN
           AND e.start_date >= CURRENT_DATE
       ));
 
-    -- Lists (already portal-scoped)
+    -- Lists (NO search_vector — use similarity + ILIKE)
     RETURN QUERY
     SELECT 'list'::TEXT AS entity_type, COUNT(*)::BIGINT
     FROM lists l
     WHERE
       COALESCE(l.is_public, true) = true
       AND COALESCE(l.status, 'active') = 'active'
-      AND (l.search_vector @@ v_tsquery OR similarity(l.title, p_query) > 0.2)
+      AND (similarity(l.title, p_query) > 0.2 OR l.title ILIKE '%' || p_query || '%')
       AND (p_portal_id IS NULL OR l.portal_id = p_portal_id);
 
-    -- Festivals (already portal-scoped)
+    -- Festivals (NO search_vector — use similarity + ILIKE)
     RETURN QUERY
     SELECT 'festival'::TEXT AS entity_type, COUNT(*)::BIGINT
     FROM festivals f
     WHERE
-      (f.search_vector @@ v_tsquery OR similarity(f.name, p_query) > 0.2)
+      (similarity(f.name, p_query) > 0.2 OR f.name ILIKE '%' || p_query || '%')
       AND (p_portal_id IS NULL OR f.portal_id = p_portal_id);
 END;
 $$ LANGUAGE plpgsql STABLE;
@@ -477,13 +484,13 @@ WITH
     GROUP BY v.neighborhood, v.city
   ),
 
-  -- Organizations (non-hidden)
+  -- Organizations (non-hidden) – orgs have city column
   producers AS (
     SELECT
       o.name AS text,
       'organizer' AS type,
       COALESCE(o.total_events_tracked, 1) AS frequency,
-      NULL::TEXT AS city
+      o.city AS city
     FROM organizations o
     WHERE o.hidden = false
   ),
@@ -491,14 +498,14 @@ WITH
   -- Distinct categories from events (global)
   categories AS (
     SELECT DISTINCT
-      category AS text,
+      category_id AS text,
       'category' AS type,
       COUNT(*) AS frequency,
       NULL::TEXT AS city
     FROM events
-    WHERE category IS NOT NULL
+    WHERE category_id IS NOT NULL
       AND start_date >= CURRENT_DATE
-    GROUP BY category
+    GROUP BY category_id
   ),
 
   -- Tags from upcoming events (global)
@@ -559,7 +566,7 @@ SELECT text, type, frequency, city FROM festival_names WHERE text IS NOT NULL AN
 CREATE INDEX idx_search_suggestions_text_trgm ON search_suggestions USING GIN(text gin_trgm_ops);
 CREATE INDEX idx_search_suggestions_type ON search_suggestions(type);
 CREATE INDEX idx_search_suggestions_frequency ON search_suggestions(frequency DESC);
-CREATE UNIQUE INDEX idx_search_suggestions_unique ON search_suggestions(text, type, COALESCE(city, ''));
+CREATE UNIQUE INDEX idx_search_suggestions_unique ON search_suggestions(text, type, COALESCE(city, '')) WHERE type NOT IN ('event', 'neighborhood');
 CREATE INDEX idx_search_suggestions_city ON search_suggestions(city);
 
 REFRESH MATERIALIZED VIEW search_suggestions;
