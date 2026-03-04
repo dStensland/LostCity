@@ -187,7 +187,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     continue
 
                 try:
-                    enrich_event_record(event_record, "District Atlanta")
+                    # Only enrich from detail page — skip if URL fell back to listing page
+                    if source_url and source_url != EVENTS_URL:
+                        enrich_event_record(event_record, "District Atlanta")
                     insert_event(event_record)
                     events_new += 1
                     logger.info(f"Added: {title} on {start_date} at {start_time}")

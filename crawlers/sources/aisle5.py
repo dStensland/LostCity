@@ -301,8 +301,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "content_hash": content_hash,
                     }
 
-                    # Enrich from detail page
-                    enrich_event_record(event_record, source_name="Aisle 5")
+                    # Only enrich from detail page — skip if URL fell back to listing page
+                    if event_url and event_url != EVENTS_URL:
+                        enrich_event_record(event_record, source_name="Aisle 5")
                     event_record["description"] = build_aisle5_description(
                         title=event_record["title"],
                         base_description=event_record.get("description"),

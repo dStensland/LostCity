@@ -282,7 +282,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         continue
 
                     try:
-                        enrich_event_record(event_record, "Schwartz Center")
+                        # Only enrich if source_url points to a real event page
+                        # (tickets.arts.emory.edu WAF blocks bots — skip enrichment for that domain)
+                        source_url = event_record.get("source_url", "")
+                        if source_url and "tickets.arts.emory.edu" not in source_url:
+                            enrich_event_record(event_record, "Schwartz Center")
                         insert_event(event_record)
                         events_new += 1
                         logger.debug(f"Added: {title} on {start_date}")

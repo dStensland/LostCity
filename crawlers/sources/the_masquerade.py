@@ -409,7 +409,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             continue
 
                         try:
-                            enrich_event_record(event_record, "The Masquerade")
+                            # Only enrich from detail page — skip if URL fell back to listing page
+                            if event_url and event_url != EVENTS_URL:
+                                enrich_event_record(event_record, "The Masquerade")
                             insert_event(event_record)
                             events_new += 1
                             logger.info(f"Added: {title} on {start_date}")

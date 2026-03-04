@@ -158,6 +158,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     excerpt_elem = card.query_selector(".summary-excerpt")
                     if excerpt_elem:
                         excerpt = excerpt_elem.inner_text().strip()
+                        # Strip Squarespace button text that leaks into excerpts
+                        excerpt = re.sub(r'\s*BUY TICKETS\s*', ' ', excerpt, flags=re.IGNORECASE).strip()
 
                     # Parse time from excerpt
                     start_time = parse_time(excerpt)

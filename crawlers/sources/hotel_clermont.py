@@ -218,12 +218,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     location_elem = item.query_selector("[class*='eapp-events-calendar-location-component']")
                     location_detail = location_elem.inner_text().strip() if location_elem else None
 
-                    # Build description
-                    description = "Event at Hotel Clermont"
-                    if location_detail:
-                        description += f" - {location_detail}"
-                    if event_type:
-                        description += f". Category: {event_type}"
+                    # Description: None — let enrichment or detail page provide it
+                    description = None
 
                     # Extract event URL
                     link_elem = item.query_selector("a")

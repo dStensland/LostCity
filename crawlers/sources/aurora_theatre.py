@@ -227,12 +227,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     description = None
                     body_text = page.inner_text("body")
 
-                    # Look for text after "ABOUT" section
-                    about_match = re.search(r'ABOUT\s+(.*?)(?:Buy Tickets|MEDIA|January|February|March|April|May|June|July|August|September|October|November|December|\n\n\n)', body_text, re.DOTALL)
+                    # Look for text after "ABOUT" heading — anchor to line start to avoid nav prefixes
+                    about_match = re.search(r'(?:^|\n)ABOUT\n+(.*?)(?:Buy Tickets|MEDIA|January|February|March|April|May|June|July|August|September|October|November|December|\n\n\n)', body_text, re.DOTALL)
                     if about_match:
                         desc = about_match.group(1).strip()
-                        # Remove program/runtime details
+                        # Remove program/runtime details and nav boilerplate
                         desc = re.sub(r'(Metro Waterproofing Main Stage|Runtime:.*|Content Advisory:.*)', '', desc, flags=re.DOTALL)
+                        desc = re.sub(r'^(FAQ|BUY TICKETS|DONATE|SUBSCRIBE|SEASON|HOME|ABOUT)\s*', '', desc, flags=re.IGNORECASE | re.MULTILINE)
                         desc = desc.strip()
                         if len(desc) > 30:
                             description = desc[:800]

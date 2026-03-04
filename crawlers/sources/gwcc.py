@@ -302,8 +302,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "content_hash": content_hash,
                     }
 
-                    # Enrich from detail page
-                    enrich_event_record(event_record, source_name="Georgia World Congress Center")
+                    # Only enrich from detail page — skip if URL fell back to listing page
+                    if source_url and source_url != CALENDAR_URL:
+                        enrich_event_record(event_record, source_name="Georgia World Congress Center")
 
                     # Determine is_free if still unknown after enrichment
                     if event_record.get("is_free") is None:
