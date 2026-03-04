@@ -52,6 +52,22 @@ BOILERPLATE_PATTERNS = [
 ]
 
 
+def _infer_showtime(start_date: str) -> str:
+    """Infer start_time from day-of-week per Punchline's published schedule.
+
+    Mon-Thu: 7:30PM (1 show)
+    Fri: 7:30PM (first of 2)
+    Sat: 6:00PM (first of 2-3)
+    Sun: 7:00PM (first of 1-2)
+    """
+    dow = datetime.strptime(start_date, "%Y-%m-%d").weekday()  # 0=Mon
+    if dow <= 4:  # Mon-Fri
+        return "19:30"
+    if dow == 5:  # Sat
+        return "18:00"
+    return "19:00"  # Sun
+
+
 def parse_date_range(date_text: str) -> tuple[Optional[str], Optional[str]]:
     """Parse date from 'Mar 15 - 17' or 'Mar 15' format."""
     try:
@@ -261,15 +277,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     title, "Punchline Comedy Club", start_date
                 )
 
-                # Punchline typically has 7:30pm shows (sometimes early/late shows too)
-                # but the website doesn't list times. Default to evening.
                 event_record = {
                     "source_id": source_id,
                     "venue_id": venue_id,
                     "title": title,
                     "description": show["description"],
                     "start_date": start_date,
-                    "start_time": "19:30",
+                    "start_time": _infer_showtime(start_date),
                     "end_date": end_date,
                     "end_time": None,
                     "is_all_day": False,
