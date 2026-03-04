@@ -259,6 +259,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 if not title or len(title) < 3:
                     continue
 
+                # Skip date-only labels scraped from calendar widgets (e.g. "14Aug", "20Mar")
+                if re.match(r"^\d{1,2}[A-Za-z]{3,9}$", title):
+                    continue
+                # Also skip "Mar20", "Jun07" patterns
+                if re.match(r"^[A-Za-z]{3,9}\d{1,2}$", title):
+                    continue
+
                 # Skip non-event items
                 skip_patterns = ["hours", "schedule", "contact us", "about", "services", "mission"]
                 if any(pattern in title.lower() for pattern in skip_patterns):
