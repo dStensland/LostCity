@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { useCallback, useEffect, useRef, useMemo } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { addRecentSearch, getRecentSearches } from "@/lib/searchHistory";
 import { useSearchContext } from "@/lib/search-context";
 import { useSearchPersonalization } from "@/lib/hooks/useSearchPersonalization";
@@ -9,8 +9,31 @@ import { useInstantSearch } from "@/lib/hooks/useInstantSearch";
 import { type SearchResult } from "@/lib/unified-search";
 import type { QuickAction } from "@/lib/search-ranking";
 import { buildSearchResultHref } from "@/lib/search-navigation";
+import { trackSearchResultClick } from "@/lib/analytics/find-tracking";
 import { SuggestionGroup, QuickActionsList } from "./search";
 import { TypeIcon } from "./SearchResultItem";
+
+// ============================================
+// Pre-search state: trending + category chips
+// ============================================
+
+const TRENDING_SEARCHES = ["Live Music", "Comedy", "Free", "Rooftop", "Late Night"];
+
+const SEARCH_PLACEHOLDERS = [
+  "Search events, venues, organizers...",
+  "Try 'live music tonight'",
+  "Try 'free outdoor events this weekend'",
+  "Try 'comedy shows near midtown'",
+  "Try 'rooftop bars'",
+];
+
+const CATEGORY_CHIPS = [
+  { value: "music", label: "Music" },
+  { value: "comedy", label: "Comedy" },
+  { value: "food_drink", label: "Food & Drink" },
+  { value: "art", label: "Arts" },
+  { value: "nightlife", label: "Nightlife" },
+] as const;
 
 // ============================================
 // Component
@@ -31,6 +54,9 @@ export default function SearchBar() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isInitialMount = useRef(true);
+
+  // Rotating placeholder
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
 
   // Prefer portal slug from search context; fall back to URL path.
   const portalSlug = useMemo(() => {
@@ -90,12 +116,28 @@ export default function SearchBar() {
     };
   }, [search.query, router, searchParams, pathname]);
 
+  // Rotating placeholder — cycles every 4s when query is empty
+  useEffect(() => {
+    if (search.query) return;
+    const timer = setInterval(() => {
+      setPlaceholderIndex((i) => (i + 1) % SEARCH_PLACEHOLDERS.length);
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [search.query]);
+
   // Derive isSearching from query vs URL mismatch
   const isSearching = search.query.trim() !== currentSearchParam || search.isLoading;
 
   // Handle selecting a suggestion — navigate to result
   const handleSelectSuggestion = useCallback(
-    (result: SearchResult) => {
+    (result: SearchResult, position?: number) => {
+      trackSearchResultClick({
+        portalSlug,
+        query: search.query,
+        resultType: result.type,
+        resultId: String(result.id),
+        resultPosition: position ?? search.selectedIndex,
+      });
       search.selectSuggestion(result);
       search.setQuery("");
       const url = buildSearchResultHref(result, { portalSlug });
@@ -125,7 +167,7 @@ export default function SearchBar() {
     [search]
   );
 
-  // Wrap handleKeyDown to intercept Enter for navigation
+  // Wrap handleKeyDown to intercept Enter for navigation + NL search
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === "Enter" && search.selectedIndex >= 0) {
@@ -149,8 +191,30 @@ export default function SearchBar() {
     [search, handleSelectSuggestion, handleSelectQuickAction, handleSelectRecent]
   );
 
+  // Handle trending search click
+  const handleTrendingSearch = useCallback(
+    (term: string) => {
+      search.setQuery(term);
+      addRecentSearch(term);
+    },
+    [search]
+  );
+
+  // Handle category chip click — navigate directly to filtered find view
+  const handleCategoryChip = useCallback(
+    (category: string) => {
+      search.setShowDropdown(false);
+      router.push(`/${portalSlug}?view=find&type=events&categories=${category}`, { scroll: false });
+    },
+    [portalSlug, router, search]
+  );
+
   const searchId = "event-search";
   const suggestionsId = "search-suggestions";
+
+  // Show dropdown: either has suggestions, recent, or is focused with empty query (pre-search)
+  const showPreSearch = search.showDropdown && search.query.length < 2;
+  const showDropdown = search.shouldShowDropdown || showPreSearch;
 
   // Calculate indices for grouped display
   let currentIndex = 0;
@@ -180,7 +244,7 @@ export default function SearchBar() {
         onFocus={search.handleFocus}
         onBlur={search.handleBlur}
         onKeyDown={handleKeyDown}
-        placeholder="Search events, venues, organizers..."
+        placeholder={SEARCH_PLACEHOLDERS[placeholderIndex]}
         className="block w-full pl-14 pr-12 py-3.5 border border-[var(--twilight)] rounded-xl bg-[var(--night)] text-[var(--cream)] placeholder-[var(--muted)] text-sm focus:outline-none focus:border-[var(--coral)] focus:ring-2 focus:ring-[var(--coral)]/30 focus:shadow-[0_0_0_4px_var(--coral)/10,0_0_20px_var(--coral)/15] transition-all duration-200"
         role="combobox"
         aria-expanded={search.shouldShowDropdown}
@@ -203,7 +267,7 @@ export default function SearchBar() {
       )}
 
       {/* Suggestions Dropdown */}
-      {search.shouldShowDropdown && (
+      {showDropdown && (
         <div
           id={suggestionsId}
           role="listbox"
@@ -266,6 +330,50 @@ export default function SearchBar() {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Trending searches — shown in pre-search state */}
+          {showPreSearch && (
+            <div className="p-2">
+              <div className="flex items-center gap-2 px-2 pb-2">
+                <svg className="h-3 w-3 text-[var(--coral)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>
+                <p className="text-xs text-[var(--muted)] font-mono uppercase tracking-wider">Trending</p>
+              </div>
+              <div className="flex flex-wrap gap-1.5 px-2">
+                {TRENDING_SEARCHES.map((term) => (
+                  <button
+                    key={term}
+                    onMouseDown={() => handleTrendingSearch(term)}
+                    className="px-3 py-1.5 rounded-full bg-[var(--twilight)]/70 text-[var(--soft)] hover:text-[var(--cream)] hover:bg-[var(--twilight)] transition-colors text-xs font-mono"
+                  >
+                    {term}
+                  </button>
+                ))}
+              </div>
+
+              {/* Category quick-start chips */}
+              <div className="mt-3 px-2">
+                <div className="flex items-center gap-2 pb-2">
+                  <svg className="h-3 w-3 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                  </svg>
+                  <p className="text-xs text-[var(--muted)] font-mono uppercase tracking-wider">Browse</p>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {CATEGORY_CHIPS.map((cat) => (
+                    <button
+                      key={cat.value}
+                      onMouseDown={() => handleCategoryChip(cat.value)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[var(--twilight)]/60 bg-white/5 text-[var(--soft)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/50 transition-colors text-xs font-mono"
+                    >
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
 

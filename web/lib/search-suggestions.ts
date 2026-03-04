@@ -50,7 +50,8 @@ interface SpellingSuggestionRow {
  */
 export async function getSearchSuggestions(
   prefix: string,
-  limit = 8
+  limit = 8,
+  city?: string
 ): Promise<SearchSuggestion[]> {
   const trimmed = prefix.trim();
   if (!trimmed || trimmed.length < 2) {
@@ -64,6 +65,7 @@ export async function getSearchSuggestions(
     p_query: trimmed,
     p_limit: limit,
     p_min_similarity: 0.2,
+    p_city: city || null,
   });
 
   if (error) {
@@ -91,7 +93,8 @@ export async function getSearchSuggestions(
  */
 export async function getTypoCorrectedSuggestions(
   query: string,
-  limit = 3
+  limit = 3,
+  city?: string
 ): Promise<SuggestionWithCorrection[]> {
   const trimmed = query.trim();
   if (!trimmed || trimmed.length < 3) {
@@ -104,6 +107,7 @@ export async function getTypoCorrectedSuggestions(
   const { data, error } = await (client.rpc as any)("get_spelling_suggestions", {
     p_query: trimmed,
     p_limit: limit,
+    p_city: city || null,
   });
 
   if (error) {
@@ -128,7 +132,8 @@ export async function getTypoCorrectedSuggestions(
  */
 export async function getGroupedSuggestions(
   prefix: string,
-  limits: Partial<Record<SearchSuggestion["type"], number>> = {}
+  limits: Partial<Record<SearchSuggestion["type"], number>> = {},
+  city?: string
 ): Promise<{
   events: SearchSuggestion[];
   venues: SearchSuggestion[];
@@ -139,7 +144,7 @@ export async function getGroupedSuggestions(
   vibes: SearchSuggestion[];
 }> {
   // Get more suggestions and group them
-  const allSuggestions = await getSearchSuggestions(prefix, 30);
+  const allSuggestions = await getSearchSuggestions(prefix, 30, city);
 
   const defaultLimit = 3;
   const result = {
@@ -198,14 +203,15 @@ export async function getGroupedSuggestions(
 export async function getSuggestionsWithCorrections(
   query: string,
   suggestionLimit = 8,
-  correctionLimit = 3
+  correctionLimit = 3,
+  city?: string
 ): Promise<{
   suggestions: SearchSuggestion[];
   corrections: SuggestionWithCorrection[];
 }> {
   const [suggestions, corrections] = await Promise.all([
-    getSearchSuggestions(query, suggestionLimit),
-    getTypoCorrectedSuggestions(query, correctionLimit),
+    getSearchSuggestions(query, suggestionLimit, city),
+    getTypoCorrectedSuggestions(query, correctionLimit, city),
   ]);
 
   return { suggestions, corrections };

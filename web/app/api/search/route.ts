@@ -4,8 +4,6 @@ import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limi
 import { createClient } from "@/lib/supabase/server";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
 import { logger } from "@/lib/logger";
-import { isNaturalLanguageQuery } from "@/lib/nl-detect";
-import { parseNaturalLanguageQuery, convertToSearchOptions, type ParsedNLFilters } from "@/lib/nl-search";
 
 // Helper to safely parse integers with validation
 function safeParseInt(
@@ -134,74 +132,32 @@ export async function GET(request: NextRequest) {
     const portalId = portalContext.portalId || undefined;
     const city = searchParams.get("city") || portalContext.filters.city || undefined;
 
-    // Check for natural language query and extract structured filters
-    let nlContext: ParsedNLFilters | undefined;
-    const hasExplicitFilters = categories || genres || tags || neighborhoods || dateFilter || isFree;
-
-    if (!hasExplicitFilters && isNaturalLanguageQuery(query)) {
-      try {
-        nlContext = await parseNaturalLanguageQuery(query);
-      } catch (err) {
-        // NL parse failed (timeout, API key missing, etc.) — fall back to standard search
-        logger.warn("NL search parse failed, falling back to standard search", { error: String(err) });
-      }
-    }
-
-    // Build search options — merge NL-extracted filters with explicit params
-    let options: SearchOptions;
-    if (nlContext) {
-      // NL parse succeeded — use extracted filters as the base, override with explicit params
-      options = convertToSearchOptions(nlContext, { portalId, types });
-      options.limit = limit;
-      options.offset = offset;
-      options.city = city;
-      // Explicit URL params take precedence over NL-extracted values
-      if (categories) options.categories = categories;
-      if (subcategories) options.subcategories = subcategories;
-      if (genres) options.genres = genres;
-      if (tags) options.tags = tags;
-      if (neighborhoods) options.neighborhoods = neighborhoods;
-      if (dateFilter) options.dateFilter = dateFilter;
-      if (isFree) options.isFree = isFree;
-    } else {
-      options = {
-        query,
-        types,
-        limit,
-        offset,
-        categories,
-        subcategories,
-        genres,
-        tags,
-        neighborhoods,
-        dateFilter,
-        isFree,
-        portalId,
-        city,
-      };
-    }
+    // Build search options
+    const options: SearchOptions = {
+      query,
+      types,
+      limit,
+      offset,
+      categories,
+      subcategories,
+      genres,
+      tags,
+      neighborhoods,
+      dateFilter,
+      isFree,
+      portalId,
+      city,
+    };
 
     // Perform search
     const result = await unifiedSearch(options);
 
     // Return with caching headers
-    return NextResponse.json(
-      {
-        ...result,
-        ...(nlContext ? {
-          nlContext: {
-            explanation: nlContext.explanation,
-            suggestedChips: nlContext.suggestedChips,
-            searchTerms: nlContext.searchTerms,
-          },
-        } : {}),
+    return NextResponse.json(result, {
+      headers: {
+        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
       },
-      {
-        headers: {
-          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
-        },
-      },
-    );
+    });
   } catch (error) {
     logger.error("Search API error", error, { component: "search" });
     return NextResponse.json(

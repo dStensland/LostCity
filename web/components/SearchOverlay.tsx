@@ -8,7 +8,6 @@ import type { SearchResult, SearchFacet } from "@/lib/unified-search";
 import SearchResultItem, { SearchResultSection, TypeIcon } from "./SearchResultItem";
 import { getRecentSearches, addRecentSearch, clearRecentSearches } from "@/lib/searchHistory";
 import { buildSearchResultHref } from "@/lib/search-navigation";
-import { isNaturalLanguageQuery, type NLSearchContext } from "@/lib/nl-detect";
 
 interface SearchOverlayProps {
   isOpen: boolean;
@@ -154,7 +153,6 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
   const [quickResultsLoading, setQuickResultsLoading] = useState(false);
   const [quickResultsError, setQuickResultsError] = useState<string | null>(null);
   const [quickFetchNonce, setQuickFetchNonce] = useState(0);
-  const [nlContext, setNlContext] = useState<NLSearchContext | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const previousPortalId = useRef<string | undefined>(portal?.id);
@@ -223,7 +221,6 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
       setDidYouMean([]);
       setActiveTypeFilter(null);
       setError(null);
-      setNlContext(null);
       setActiveQuickAction(null);
       setQuickResults([]);
       setQuickResultsLoading(false);
@@ -442,11 +439,8 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
     // Use ref to get latest filter value without recreating callback
     const currentTypeFilter = activeTypeFilterRef.current;
 
-    // Detect if this is a natural language query (before cache check so the key includes mode)
-    const useNLSearch = isNaturalLanguageQuery(searchQuery);
-
-    // Check cache first — include search mode in key to prevent NL/keyword overlap
-    const cacheKey = `${useNLSearch ? "nl" : "kw"}:${searchQuery}:${portal?.id || portal?.slug || ""}:${currentTypeFilter || "all"}`;
+    // Check cache first
+    const cacheKey = `${searchQuery}:${portal?.id || portal?.slug || ""}:${currentTypeFilter || "all"}`;
 
     // Clear cache if requested (e.g., when filter changes)
     if (clearCache) {
@@ -471,73 +465,26 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
     setError(null);
 
     try {
-      let data: { results?: SearchResult[]; facets?: SearchFacet[]; didYouMean?: string[]; nlContext?: NLSearchContext };
+      const params = new URLSearchParams({
+        q: searchQuery,
+        limit: "15",
+      });
 
-      if (useNLSearch) {
-        // NL search uses POST to /api/search/nl — falls back to keyword on any failure
-        try {
-          const nlBody: { query: string; portalId?: string; types?: string[] } = {
-            query: searchQuery,
-          };
-          if (portal?.id) nlBody.portalId = portal.id;
-          if (currentTypeFilter) nlBody.types = [currentTypeFilter];
-
-          const response = await fetch("/api/search/nl", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(nlBody),
-            signal: controller.signal,
-          });
-
-          if (response.ok) {
-            data = await response.json();
-          } else {
-            // NL endpoint failed (rate limited, disabled, error) — fall back to keyword search
-            data = null as unknown as typeof data;
-          }
-        } catch (nlErr) {
-          if (nlErr instanceof DOMException && nlErr.name === "AbortError") throw nlErr;
-          data = null as unknown as typeof data;
-        }
-
-        // Fallback: if NL search failed, try standard keyword search
-        if (!data) {
-          const params = new URLSearchParams({ q: searchQuery, limit: "15" });
-          if (currentTypeFilter) params.set("types", currentTypeFilter);
-          if (portal?.slug) params.set("portal", portal.slug);
-          if (portal?.id) params.set("portal_id", portal.id);
-
-          const fallbackResponse = await fetch(`/api/search?${params.toString()}`, {
-            signal: controller.signal,
-          });
-          if (!fallbackResponse.ok) throw new Error("Search request failed");
-          data = await fallbackResponse.json();
-          // Mark as fallback so UI shows subtle note
-          data.nlContext = { explanation: "", chips: [], parsedFilters: { searchTerms: searchQuery, explanation: "" }, fallback: true };
-        }
-      } else {
-        // Standard keyword search via GET /api/search
-        const params = new URLSearchParams({
-          q: searchQuery,
-          limit: "15",
-        });
-
-        if (currentTypeFilter) {
-          params.set("types", currentTypeFilter);
-        }
-        if (portal?.slug) {
-          params.set("portal", portal.slug);
-        }
-        if (portal?.id) {
-          params.set("portal_id", portal.id);
-        }
-
-        const response = await fetch(`/api/search?${params.toString()}`, {
-          signal: controller.signal,
-        });
-        if (!response.ok) throw new Error("Search request failed");
-        data = await response.json();
+      if (currentTypeFilter) {
+        params.set("types", currentTypeFilter);
       }
+      if (portal?.slug) {
+        params.set("portal", portal.slug);
+      }
+      if (portal?.id) {
+        params.set("portal_id", portal.id);
+      }
+
+      const response = await fetch(`/api/search?${params.toString()}`, {
+        signal: controller.signal,
+      });
+      if (!response.ok) throw new Error("Search request failed");
+      const data = await response.json();
 
       if (controller.signal.aborted || requestId !== searchRequestIdRef.current) {
         return;
@@ -546,7 +493,6 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
       const nextResults = dedupeSearchResults((data.results || []) as SearchResult[]);
       setResults(nextResults);
       setFacets((data.facets || []) as SearchFacet[]);
-      setNlContext(useNLSearch && data.nlContext ? data.nlContext : null);
 
       // Cache the results and prune if needed
       searchCache.set(cacheKey, {
@@ -573,7 +519,6 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
       setError("Search failed. Please try again.");
       setResults([]);
       setFacets([]);
-      setNlContext(null);
     } finally {
       if (!controller.signal.aborted && requestId === searchRequestIdRef.current) {
         setIsLoading(false);
@@ -949,43 +894,6 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
                 </div>
               )}
 
-              {/* NL Search Context Banner */}
-              {!isLoading && !error && nlContext && !nlContext.fallback && nlContext.explanation && (
-                <div className="px-4 py-2.5 border-b border-[var(--twilight)] bg-[var(--night)]/40">
-                  <p className="text-xs text-[var(--soft)] font-mono">
-                    <span className="text-[var(--coral)] mr-1.5">Showing:</span>
-                    {nlContext.explanation}
-                  </p>
-                  {nlContext.chips && nlContext.chips.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                      {nlContext.chips.map((chip) => (
-                        <button
-                          key={chip}
-                          onClick={() => {
-                            // Chips are LLM-generated suggestions like "Add: outdoor" or "Change: tonight"
-                            // Extract the term after the colon and use it to refine the query
-                            const colonIdx = chip.indexOf(":");
-                            const term = colonIdx >= 0 ? chip.slice(colonIdx + 1).trim() : chip;
-                            if (term) setQuery(term);
-                          }}
-                          className="px-2 py-1 rounded-full bg-[var(--twilight)] text-xs text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--dusk)] transition-colors font-mono"
-                        >
-                          {chip}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* NL Fallback Notice */}
-              {!isLoading && !error && nlContext?.fallback && (
-                <div className="px-4 py-2 border-b border-[var(--twilight)]">
-                  <p className="text-xs text-[var(--soft)] font-mono">
-                    Showing keyword results
-                  </p>
-                </div>
-              )}
 
               {/* Quick Action Results (filter-only) */}
               {!isLoading && !error && activeQuickAction && (

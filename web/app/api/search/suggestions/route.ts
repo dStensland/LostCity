@@ -4,6 +4,8 @@ import {
   getSuggestionsWithCorrections,
 } from "@/lib/search-suggestions";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
+import { createClient } from "@/lib/supabase/server";
+import { resolvePortalQueryContext } from "@/lib/portal-query-context";
 import { logger } from "@/lib/logger";
 
 // Helper to safely parse integers with validation
@@ -59,9 +61,14 @@ export async function GET(request: NextRequest) {
     const limit = safeParseInt(searchParams.get("limit"), 8, 1, 20);
     const includeCorrections = searchParams.get("corrections") === "true";
 
+    // Resolve portal context for city scoping
+    const supabase = await createClient();
+    const portalContext = await resolvePortalQueryContext(supabase, searchParams);
+    const city = searchParams.get("city") || portalContext.filters.city || undefined;
+
     // Get suggestions, optionally with corrections
     if (includeCorrections) {
-      const result = await getSuggestionsWithCorrections(query, limit, 3);
+      const result = await getSuggestionsWithCorrections(query, limit, 3, city);
       return NextResponse.json(result, {
         headers: {
           // Longer cache for suggestions since they're based on materialized view
@@ -69,7 +76,7 @@ export async function GET(request: NextRequest) {
         },
       });
     } else {
-      const suggestions = await getSearchSuggestions(query, limit);
+      const suggestions = await getSearchSuggestions(query, limit, city);
       return NextResponse.json(
         { suggestions },
         {

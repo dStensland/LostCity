@@ -306,6 +306,8 @@ function calculateRelevanceScore(
     eventCount?: number;
     followerCount?: number;
     itemCount?: number;
+    rsvpCount?: number;
+    recommendationCount?: number;
   }
 ): number {
   let score = baseScore;
@@ -329,16 +331,19 @@ function calculateRelevanceScore(
     score += SCORING.PARTIAL_MATCH;
   }
 
-  // Recency boost for events
-  if (metadata?.date) {
-    const daysUntil = getDaysUntilDate(metadata.date);
-    if (daysUntil >= 0 && daysUntil <= 30) {
-      // More boost for sooner events
-      score += SCORING.RECENCY_MAX * (1 - daysUntil / 30);
-    }
+  // Recency boost removed — handled by SQL time-decay multiplier in search_events_ranked v2
+
+  // Social proof popularity multiplier (logarithmic, uses live counts)
+  const rsvpCount = metadata?.rsvpCount || 0;
+  const recCount = metadata?.recommendationCount || 0;
+  if (rsvpCount > 0 || recCount > 0) {
+    const popularityMultiplier = 1.0
+      + Math.log(rsvpCount + 1) * 0.1
+      + Math.log(recCount + 1) * 0.05;
+    score *= popularityMultiplier;
   }
 
-  // Popularity boost
+  // Legacy popularity boost for non-event types (eventCount, followerCount, itemCount)
   if (metadata?.eventCount) {
     score += Math.min(metadata.eventCount / 5, SCORING.POPULARITY_MAX);
   }
@@ -372,12 +377,6 @@ function getDaysUntilDate(dateStr: string): number {
  */
 function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function isMissingRpcFunctionError(error: { message?: string } | null | undefined): boolean {
-  if (!error?.message) return false;
-  const message = error.message.toLowerCase();
-  return message.includes("function") && message.includes("does not exist");
 }
 
 /**
@@ -516,6 +515,7 @@ export async function unifiedSearch(
         limit: limitPerType,
         offset,
         categories,
+        portalId,
       })
     );
   }
@@ -527,6 +527,7 @@ export async function unifiedSearch(
         limit: limitPerType,
         offset,
         categories,
+        portalId,
       })
     );
   }
@@ -557,15 +558,41 @@ export async function unifiedSearch(
   const [searchResultsArrays, facets, didYouMean] = await Promise.all([
     Promise.all(searchPromises),
     includeFacets
-      ? getSearchFacets(client, effectiveQuery, portalId)
+      ? getSearchFacets(client, effectiveQuery, portalId, resolvedCity)
       : Promise.resolve([]),
     includeDidYouMean
-      ? getSpellingSuggestions(client, effectiveQuery)
+      ? getSpellingSuggestions(client, effectiveQuery, resolvedCity)
       : Promise.resolve([]),
   ]);
 
   // Combine all results
   let allResults: SearchResult[] = dedupeByTypeAndId(searchResultsArrays.flat());
+
+  // Always enrich events with basic social proof (rsvpCount, recommendationCount)
+  // so the popularity multiplier in calculateRelevanceScore has data to work with.
+  // The full social proof fanout (venue followers, etc.) is still gated on includeSocialProof.
+  {
+    const eventIds = allResults
+      .filter((r) => r.type === "event")
+      .map((r) => Number(r.id))
+      .filter((id) => !Number.isNaN(id));
+    if (eventIds.length > 0) {
+      const basicCounts = await fetchSocialProofCounts(eventIds);
+      allResults = allResults.map((result) => {
+        if (result.type !== "event") return result;
+        const counts = basicCounts.get(Number(result.id));
+        if (!counts) return result;
+        return {
+          ...result,
+          metadata: {
+            ...result.metadata,
+            rsvpCount: counts.going + counts.interested,
+            recommendationCount: counts.recommendations,
+          },
+        };
+      });
+    }
+  }
 
   // Apply enhanced scoring
   if (boostExactMatches || intent) {
@@ -579,6 +606,8 @@ export async function unifiedSearch(
           eventCount: result.metadata?.eventCount,
           followerCount: result.metadata?.followerCount,
           itemCount: result.metadata?.itemCount,
+          rsvpCount: result.metadata?.rsvpCount,
+          recommendationCount: result.metadata?.recommendationCount,
         });
       }
 
@@ -933,64 +962,18 @@ async function searchOrganizations(
     offset: number;
     orgTypes?: string[];
     categories?: string[];
+    portalId?: string;
   }
 ): Promise<SearchResult[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let { data, error } = await (client.rpc as any)("search_organizations_ranked", {
+  const { data, error } = await (client.rpc as any)("search_organizations_ranked", {
     p_query: query,
     p_limit: options.limit,
     p_offset: options.offset,
     p_org_types: options.orgTypes || null,
     p_categories: options.categories || null,
+    p_portal_id: options.portalId || null,
   });
-
-  if (error && isMissingRpcFunctionError(error)) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const legacyRpcResult = await (client.rpc as any)("search_producers_ranked", {
-      p_query: query,
-      p_limit: options.limit,
-      p_offset: options.offset,
-      p_org_types: options.orgTypes || null,
-      p_categories: options.categories || null,
-    });
-    data = legacyRpcResult.data;
-    error = legacyRpcResult.error;
-  }
-
-  if (error && isMissingRpcFunctionError(error)) {
-    const { data: fallbackRows, error: fallbackError } = await client
-      .from("organizations")
-      .select(
-        "id, name, slug, org_type, categories, neighborhood, total_events_tracked"
-      )
-      .eq("hidden", false)
-      .ilike("name", `%${query}%`)
-      .order("total_events_tracked", { ascending: false, nullsFirst: false })
-      .limit(options.limit);
-    if (!fallbackError) {
-      const typedRows = (fallbackRows || []) as Array<{
-        id: string;
-        name: string;
-        slug: string;
-        org_type: string | null;
-        neighborhood: string | null;
-        total_events_tracked: number | null;
-      }>;
-      return typedRows.map((row) => ({
-        id: row.id,
-        type: "organizer" as const,
-        title: row.name,
-        subtitle: row.org_type || undefined,
-        href: `/organizer/${row.slug}`,
-        score: 1,
-        metadata: {
-          orgType: row.org_type || undefined,
-          neighborhood: row.neighborhood || undefined,
-          eventCount: row.total_events_tracked || undefined,
-        },
-      }));
-    }
-  }
 
   if (error) {
     console.error("Error searching organizations:", error);
@@ -1024,6 +1007,7 @@ async function searchSeries(
     limit: number;
     offset: number;
     categories?: string[];
+    portalId?: string;
   }
 ): Promise<SearchResult[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1032,44 +1016,8 @@ async function searchSeries(
     p_limit: options.limit,
     p_offset: options.offset,
     p_categories: options.categories || null,
+    p_portal_id: options.portalId || null,
   });
-
-  if (error && isMissingRpcFunctionError(error)) {
-    let fallbackQuery = client
-      .from("series")
-      .select(
-        "id, title, slug, description, series_type, category, image_url, updated_at"
-      )
-      .eq("is_active", true)
-      .ilike("title", `%${query}%`)
-      .order("updated_at", { ascending: false })
-      .limit(options.limit);
-    if (options.categories?.length) {
-      fallbackQuery = fallbackQuery.in("category_id", options.categories);
-    }
-    const { data: fallbackRows, error: fallbackError } = await fallbackQuery;
-    if (!fallbackError) {
-      const typedRows = (fallbackRows || []) as Array<{
-        id: string;
-        title: string;
-        slug: string;
-        series_type: string | null;
-        category: string | null;
-      }>;
-      return typedRows.map((row) => ({
-        id: row.id,
-        type: "series" as const,
-        title: row.title,
-        subtitle: row.series_type || undefined,
-        href: `/series/${row.slug}`,
-        score: 1,
-        metadata: {
-          category: row.category || undefined,
-          seriesType: row.series_type || undefined,
-        },
-      }));
-    }
-  }
 
   if (error) {
     console.error("Error searching series:", error);
@@ -1114,40 +1062,6 @@ async function searchLists(
     p_portal_id: options.portalId || null,
   });
 
-  if (error && isMissingRpcFunctionError(error)) {
-    let fallbackQuery = client
-      .from("lists")
-      .select("id, title, slug, description, category, creator_id")
-      .eq("is_public", true)
-      .eq("status", "active")
-      .ilike("title", `%${query}%`)
-      .order("updated_at", { ascending: false })
-      .limit(options.limit);
-    if (options.portalId) {
-      fallbackQuery = fallbackQuery.eq("portal_id", options.portalId);
-    }
-    const { data: fallbackRows, error: fallbackError } = await fallbackQuery;
-    if (!fallbackError) {
-      const typedRows = (fallbackRows || []) as Array<{
-        id: string;
-        title: string;
-        slug: string;
-        category: string | null;
-      }>;
-      return typedRows.map((row) => ({
-        id: row.id,
-        type: "list" as const,
-        title: row.title,
-        subtitle: row.category || undefined,
-        href: `/list/${row.slug}`,
-        score: 1,
-        metadata: {
-          category: row.category || undefined,
-        },
-      }));
-    }
-  }
-
   if (error) {
     console.error("Error searching lists:", error);
     return [];
@@ -1189,47 +1103,6 @@ async function searchFestivals(
     p_offset: options.offset,
     p_portal_id: options.portalId || null,
   });
-
-  if (error && isMissingRpcFunctionError(error)) {
-    let fallbackQuery = client
-      .from("festivals")
-      .select(
-        "id, name, slug, description, image_url, announced_start, announced_end, primary_type, festival_type, last_year_start"
-      )
-      .ilike("name", `%${query}%`)
-      .order("announced_start", { ascending: true, nullsFirst: false })
-      .limit(options.limit);
-    if (options.portalId) {
-      fallbackQuery = fallbackQuery.eq("portal_id", options.portalId);
-    }
-    const { data: fallbackRows, error: fallbackError } = await fallbackQuery;
-    if (!fallbackError) {
-      const typedRows = (fallbackRows || []) as Array<{
-        id: string;
-        name: string;
-        slug: string;
-        announced_start: string | null;
-        announced_end: string | null;
-        primary_type: string | null;
-        festival_type: string | null;
-        last_year_start: string | null;
-      }>;
-      return typedRows.map((row) => ({
-        id: row.id,
-        type: "festival" as const,
-        title: row.name,
-        subtitle: row.announced_start
-          ? formatFestivalDateRange(row.announced_start, row.announced_end)
-          : undefined,
-        href: `/festivals/${row.slug}`,
-        score: 1,
-        metadata: {
-          category: row.primary_type || row.festival_type || undefined,
-          date: row.announced_start || row.last_year_start || undefined,
-        },
-      }));
-    }
-  }
 
   if (error) {
     console.error("Error searching festivals:", error);
@@ -1276,12 +1149,14 @@ function formatFestivalDateRange(start: string, end: string | null): string {
 async function getSearchFacets(
   client: ReturnType<typeof createServiceClient>,
   query: string,
-  portalId?: string
+  portalId?: string,
+  city?: string
 ): Promise<SearchFacet[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (client.rpc as any)("get_search_facets", {
     p_query: query,
     p_portal_id: portalId || null,
+    p_city: city || null,
   });
 
   if (error) {
@@ -1302,12 +1177,14 @@ async function getSearchFacets(
  */
 async function getSpellingSuggestions(
   client: ReturnType<typeof createServiceClient>,
-  query: string
+  query: string,
+  city?: string
 ): Promise<string[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (client.rpc as any)("get_spelling_suggestions", {
     p_query: query,
     p_limit: 3,
+    p_city: city || null,
   });
 
   if (error) {
@@ -1319,124 +1196,6 @@ async function getSpellingSuggestions(
 
   return rows.map((row) => row.suggestion);
 }
-
-// ============================================
-// Exported Search Functions for Components
-// ============================================
-
-/**
- * Search events only (for event-specific search contexts).
- * Returns full event data with venue information.
- */
-export async function searchEventsOnly(
-  query: string,
-  options: {
-    limit?: number;
-    offset?: number;
-    categories?: string[];
-    subcategories?: string[];
-    genres?: string[];
-    tags?: string[];
-    neighborhoods?: string[];
-    dateFilter?: "today" | "tomorrow" | "weekend" | "week";
-    isFree?: boolean;
-    portalId?: string;
-  } = {}
-): Promise<EventSearchRow[]> {
-  const client = createServiceClient();
-  const effectiveGenres = mergeSubcategoriesToGenres(options.subcategories, options.genres);
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (client.rpc as any)("search_events_ranked", {
-    p_query: query.trim(),
-    p_limit: options.limit || 20,
-    p_offset: options.offset || 0,
-    p_categories: options.categories || null,
-    p_neighborhoods: options.neighborhoods || null,
-    p_date_filter: mapDateFilter(options.dateFilter),
-    p_is_free: options.isFree ?? null,
-    p_portal_id: options.portalId || null,
-    p_subcategories: null, // deprecated
-    p_tags: options.tags || null,
-    p_genres: effectiveGenres || null,
-  });
-
-  if (error) {
-    console.error("Error searching events:", error);
-    return [];
-  }
-
-  return (data as EventSearchRow[]) || [];
-}
-
-/**
- * Search venues only (for venue-specific search contexts).
- */
-export async function searchVenuesOnly(
-  query: string,
-  options: {
-    limit?: number;
-    offset?: number;
-    neighborhoods?: string[];
-    spotTypes?: string[];
-    vibes?: string[];
-    city?: string;
-  } = {}
-): Promise<VenueSearchRow[]> {
-  const client = createServiceClient();
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (client.rpc as any)("search_venues_ranked", {
-    p_query: query.trim(),
-    p_limit: options.limit || 10,
-    p_offset: options.offset || 0,
-    p_neighborhoods: options.neighborhoods || null,
-    p_spot_types: options.spotTypes || null,
-    p_vibes: options.vibes || null,
-    p_city: options.city || null,
-  });
-
-  if (error) {
-    console.error("Error searching venues:", error);
-    return [];
-  }
-
-  return (data as VenueSearchRow[]) || [];
-}
-
-/**
- * Search organizations only (for organizer-specific search contexts).
- */
-export async function searchOrganizationsOnly(
-  query: string,
-  options: {
-    limit?: number;
-    offset?: number;
-    orgTypes?: string[];
-    categories?: string[];
-  } = {}
-): Promise<OrganizationSearchRow[]> {
-  const client = createServiceClient();
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (client.rpc as any)("search_organizations_ranked", {
-    p_query: query.trim(),
-    p_limit: options.limit || 10,
-    p_offset: options.offset || 0,
-    p_org_types: options.orgTypes || null,
-    p_categories: options.categories || null,
-  });
-
-  if (error) {
-    console.error("Error searching organizations:", error);
-    return [];
-  }
-
-  return (data as OrganizationSearchRow[]) || [];
-}
-
-// Re-export types for convenience
-export type { EventSearchRow, VenueSearchRow, OrganizationSearchRow };
 
 // ============================================
 // Quick Search (for instant endpoint)
