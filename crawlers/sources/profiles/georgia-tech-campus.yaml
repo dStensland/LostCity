@@ -1,0 +1,29 @@
+version: 1
+slug: georgia-tech-campus
+name: "Georgia Tech Campus"
+integration_method: llm_crawler
+defaults:
+  venue_name: "Georgia Tech Campus"
+  category: community
+  tags:
+  - atlanta-expansion-wave-w
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - "https://calendar.gatech.edu/"
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+detail:
+  enabled: true
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+data_goals:
+  - events
+  - lineup
+  - images
+  - tickets

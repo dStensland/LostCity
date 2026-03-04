@@ -12,6 +12,25 @@ import { OpenStatusBadge } from "./HoursSection";
 import { EventsBadge } from "./Badge";
 import Dot from "@/components/ui/Dot";
 
+function formatEventDate(dateStr: string): string {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const eventDate = new Date(dateStr + "T00:00:00");
+  const diffDays = Math.round((eventDate.getTime() - today.getTime()) / 86400000);
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Tomorrow";
+  if (diffDays < 7) return eventDate.toLocaleDateString("en-US", { weekday: "short" });
+  return eventDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function formatEventTime(time: string | null): string | null {
+  if (!time) return null;
+  const [h, m] = time.split(":").map(Number);
+  const period = h >= 12 ? "pm" : "am";
+  const hr = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return m === 0 ? `${hr}${period}` : `${hr}:${m.toString().padStart(2, "0")}${period}`;
+}
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -90,20 +109,18 @@ function DiscoveryCard({
       href={`/${portalSlug}?spot=${venue.slug}`}
       scroll={false}
       data-category={categoryKey}
-      className="find-row-card block rounded-2xl border border-[var(--twilight)]/75 border-l-[2px] border-l-[var(--accent-color)] overflow-hidden group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)]"
+      className="find-row-card find-row-card-bg block rounded-xl border border-[var(--twilight)]/75 border-l-[2px] border-l-[var(--accent-color)] overflow-hidden group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)]"
       style={
         {
           "--accent-color": accentColor,
-          background:
-            "linear-gradient(180deg, color-mix(in srgb, var(--night) 84%, transparent), color-mix(in srgb, var(--dusk) 72%, transparent))",
         } as CSSProperties
       }
     >
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2 sm:gap-3">
-        <div className="min-w-0 p-3.5 sm:p-4">
-          <div className="flex gap-3 sm:gap-4">
+        <div className="min-w-0 p-3 sm:p-3.5">
+          <div className="flex gap-2.5 sm:gap-3">
             <div
-              className={`hidden sm:flex flex-shrink-0 self-stretch relative w-[124px] -ml-3.5 sm:-ml-4 -my-3.5 sm:-my-4 overflow-hidden list-rail-media border-r border-[var(--twilight)]/60 ${
+              className={`hidden sm:flex flex-shrink-0 self-stretch relative w-[100px] -ml-3 sm:-ml-3.5 -my-3 sm:-my-3.5 overflow-hidden list-rail-media border-r border-[var(--twilight)]/60 ${
                 hasImage ? "" : "bg-[color-mix(in_srgb,var(--night)_84%,transparent)]"
               }`}
             >
@@ -113,7 +130,7 @@ function DiscoveryCard({
                     src={venue.image_url!}
                     alt={venue.name}
                     fill
-                    sizes="124px"
+                    sizes="100px"
                     className="w-full h-full object-cover scale-[1.03]"
                     placeholderColor="color-mix(in srgb, var(--accent-color) 15%, transparent)"
                     onError={() => setImageError(true)}
@@ -149,8 +166,8 @@ function DiscoveryCard({
               </div>
 
               <div className="flex items-center gap-2.5 mb-1">
-                <span className="hidden sm:inline-flex flex-shrink-0 items-center justify-center w-9 h-9 rounded-lg bg-accent-20 border border-[var(--twilight)]/55">
-                  <CategoryIcon type={venue.venue_type || "venue"} size={18} glow="subtle" />
+                <span className="hidden sm:inline-flex flex-shrink-0 items-center justify-center w-8 h-8 rounded-lg bg-accent-20 border border-[var(--twilight)]/55">
+                  <CategoryIcon type={venue.venue_type || "venue"} size={16} glow="subtle" />
                 </span>
                 <span className="text-[var(--cream)] font-semibold text-base sm:text-lg transition-colors line-clamp-1 group-hover:text-[var(--accent-color)] leading-tight">
                   {venue.name}
@@ -181,7 +198,7 @@ function DiscoveryCard({
                 {venue.neighborhood && (
                   <>
                     {distance !== null && <Dot />}
-                    <span className="truncate max-w-[65%] sm:max-w-[45%] font-medium text-base">{venue.neighborhood}</span>
+                    <span className="truncate max-w-[65%] sm:max-w-[45%] font-medium text-sm">{venue.neighborhood}</span>
                   </>
                 )}
                 {venue.price_level && (
@@ -205,11 +222,32 @@ function DiscoveryCard({
                   </>
                 )}
               </div>
+
+              {/* Upcoming events (enriched for Things to Do tab) */}
+              {venue.upcoming_events && venue.upcoming_events.length > 0 && (
+                <div className="mt-2 pt-2 border-t border-[var(--twilight)]/40 space-y-1.5">
+                  {venue.upcoming_events.map((evt) => (
+                    <div key={evt.id} className="flex items-center gap-2 min-w-0">
+                      <span className="flex-shrink-0 text-[var(--neon-green)] font-mono text-2xs font-medium w-12">
+                        {formatEventDate(evt.start_date)}
+                      </span>
+                      <span className="text-xs text-[var(--cream)] line-clamp-1 flex-1 min-w-0">
+                        {evt.title}
+                      </span>
+                      {evt.start_time && (
+                        <span className="flex-shrink-0 text-[var(--muted)] font-mono text-2xs">
+                          {formatEventTime(evt.start_time)}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        <div className="flex flex-col items-end gap-2 pt-3 pr-3 pb-3 sm:pt-4 sm:pr-4 sm:pb-4 flex-shrink-0">
+        <div className="flex flex-col items-end gap-2 pt-2.5 pr-2.5 pb-2.5 sm:pt-3 sm:pr-3.5 sm:pb-3 flex-shrink-0">
           {venue.is_open !== undefined && (
             <span className="sm:hidden inline-flex">
               <OpenStatusBadge hours={venue.hours || null} is24Hours={venue.is_24_hours || false} />

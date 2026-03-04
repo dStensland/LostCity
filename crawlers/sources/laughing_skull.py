@@ -88,6 +88,62 @@ def parse_price(price_text: str) -> tuple[Optional[float], Optional[float]]:
         return None, None
 
 
+def format_time_label(time_24: Optional[str]) -> Optional[str]:
+    if not time_24:
+        return None
+    raw = str(time_24).strip()
+    if not raw:
+        return None
+    for fmt in ("%H:%M", "%H:%M:%S"):
+        try:
+            return datetime.strptime(raw, fmt).strftime("%-I:%M %p")
+        except ValueError:
+            continue
+    return raw
+
+
+def build_comedy_description(
+    *,
+    title: str,
+    base_description: Optional[str],
+    start_date: str,
+    start_time: Optional[str],
+    event_url: str,
+    price_min: Optional[float],
+    price_max: Optional[float],
+) -> str:
+    desc = (base_description or "").strip()
+    parts: list[str] = []
+    if desc and len(desc) >= 120:
+        parts.append(desc if desc.endswith(".") else f"{desc}.")
+    elif desc:
+        parts.append(desc if desc.endswith(".") else f"{desc}.")
+        parts.append(f"Stand-up comedy event at Laughing Skull Lounge in Midtown Atlanta.")
+    else:
+        parts.append(f"{title} is a stand-up comedy event at Laughing Skull Lounge in Midtown Atlanta.")
+
+    parts.append("Location: Laughing Skull Lounge, Midtown, Atlanta, GA.")
+    time_label = format_time_label(start_time)
+    if start_date and time_label:
+        parts.append(f"Scheduled on {start_date} at {time_label}.")
+    elif start_date:
+        parts.append(f"Scheduled on {start_date}.")
+
+    if price_min is not None and price_max is not None:
+        if price_min == price_max:
+            parts.append(f"Typical ticket price: ${price_min:.0f}.")
+        else:
+            parts.append(f"Typical ticket range: ${price_min:.0f}-${price_max:.0f}.")
+    elif price_min is not None:
+        parts.append(f"Tickets from ${price_min:.0f}.")
+
+    if event_url:
+        parts.append(f"Check the official listing for lineup updates and ticket availability ({event_url}).")
+    else:
+        parts.append("Check the official listing for lineup updates and ticket availability.")
+    return " ".join(parts)[:1400]
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
     """Crawl Laughing Skull events."""
     source_id = source["id"]
@@ -195,7 +251,15 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "source_id": source_id,
                     "venue_id": venue_id,
                     "title": title,
-                    "description": description,
+                    "description": build_comedy_description(
+                        title=title,
+                        base_description=description,
+                        start_date=start_date,
+                        start_time=start_time,
+                        event_url=event_url,
+                        price_min=price_min,
+                        price_max=price_max,
+                    ),
                     "start_date": start_date,
                     "start_time": start_time,
                     "end_date": None,
@@ -240,7 +304,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     continue
 
                 try:
-                    insert_event(event_record)
+                    insert_event(event_record, genres=["comedy", "stand-up"])
                     events_new += 1
                     logger.info(f"Added: {title} on {start_date} at {start_time}")
                 except Exception as e:
@@ -324,7 +388,15 @@ def _generate_recurring_events(source_id: int, venue_id: int) -> tuple[int, int,
             "series_title": template["title"],
             "frequency": "weekly",
             "day_of_week": day_name,
-            "description": template["description"],
+            "description": build_comedy_description(
+                title=template["title"],
+                base_description=template["description"],
+                start_date=next_date.strftime("%Y-%m-%d"),
+                start_time=template["start_time"],
+                event_url=BASE_URL,
+                price_min=template.get("price_min"),
+                price_max=template.get("price_max"),
+            ),
         }
 
         for week in range(WEEKS_AHEAD):
@@ -340,7 +412,15 @@ def _generate_recurring_events(source_id: int, venue_id: int) -> tuple[int, int,
                 "source_id": source_id,
                 "venue_id": venue_id,
                 "title": template["title"],
-                "description": template["description"],
+                "description": build_comedy_description(
+                    title=template["title"],
+                    base_description=template["description"],
+                    start_date=start_date,
+                    start_time=template["start_time"],
+                    event_url=BASE_URL,
+                    price_min=template.get("price_min"),
+                    price_max=template.get("price_max"),
+                ),
                 "start_date": start_date,
                 "start_time": template["start_time"],
                 "end_date": None,
@@ -369,7 +449,7 @@ def _generate_recurring_events(source_id: int, venue_id: int) -> tuple[int, int,
                 continue
 
             try:
-                insert_event(event_record, series_hint=series_hint)
+                insert_event(event_record, series_hint=series_hint, genres=["comedy", "stand-up"])
                 events_new += 1
             except Exception as exc:
                 logger.error(f"Failed to insert {template['title']} on {start_date}: {exc}")

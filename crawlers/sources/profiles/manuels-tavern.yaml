@@ -2,14 +2,25 @@ version: 1
 slug: manuels-tavern
 name: Manuel's Tavern
 integration_method: html
-defaults: {}
+defaults:
+  venue_name: Manuel's Tavern
+  category: nightlife
 discovery:
-  enabled: false
-  type: html
+  enabled: true
+  type: list
   urls:
-  - https://manuelstavern.com
+  - https://manuelstavern.com/#events
+  - https://manuelstavern.com/
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
 detail:
   enabled: true
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
 data_goals:
 - events
 - images

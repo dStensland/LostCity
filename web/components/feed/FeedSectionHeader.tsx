@@ -17,6 +17,11 @@ export interface SectionHeaderProps {
   seeAllHref?: string;
   seeAllLabel?: string;
   className?: string;
+  /** Optional action button next to "See all" (e.g. gear icon for customization) */
+  actionIcon?: ReactNode;
+  onAction?: () => void;
+  actionActive?: boolean;
+  actionLabel?: string;
 }
 
 // Electric bolt icon for featured sections - punk energy, not corporate star
@@ -49,6 +54,10 @@ export default function FeedSectionHeader({
   seeAllHref,
   seeAllLabel = "See all",
   className = "",
+  actionIcon,
+  onAction,
+  actionActive,
+  actionLabel = "Customize",
 }: SectionHeaderProps) {
   // Priority-based styling
   const getPriorityStyles = () => {
@@ -64,9 +73,9 @@ export default function FeedSectionHeader({
         };
       case "secondary":
         return {
-          titleClass: "section-header-secondary text-xl",
-          subtitleClass: "font-mono text-xs text-[var(--soft)] mt-0.5",
-          containerClass: "mb-2 sm:mb-4",
+          titleClass: "font-mono text-sm font-bold tracking-[0.1em] uppercase",
+          subtitleClass: "font-mono text-xs text-[var(--soft)] mt-0.5 normal-case tracking-normal",
+          containerClass: "mb-4 py-1",
           iconSize: "w-5 h-5",
           defaultAccent: accentColor || "var(--coral)",
           showDefaultIcon: false,
@@ -102,7 +111,9 @@ export default function FeedSectionHeader({
     : "section-header-icon section-header-icon-secondary";
 
   // See-all button class
-  const seeAllClass = "section-header-see-all section-header-see-all-primary";
+  const seeAllClass = priority === "primary"
+    ? "section-header-see-all section-header-see-all-primary"
+    : "";
 
   return (
     <div
@@ -111,17 +122,25 @@ export default function FeedSectionHeader({
       }`}
     >
       <ScopedStyles css={accentClass?.css} />
-      <div className="flex items-center gap-3">
+      <div className={`flex items-center ${priority === "secondary" ? "gap-2.5" : "gap-3"}`}>
         {priority === "tertiary" && (
           <span
             aria-hidden="true"
             className="inline-flex h-6 w-1 rounded-full bg-[var(--section-accent)] shadow-[0_0_10px_var(--section-accent)]"
           />
         )}
-        {/* Icon with glow (for primary and secondary) */}
-        {displayIcon && priority !== "tertiary" && (
+        {/* Icon — tinted box for secondary, boxed+glow for primary */}
+        {displayIcon && priority === "secondary" && (
           <div
-            className={`flex items-center justify-center ${priority === "primary" ? "w-12 h-12" : "w-10 h-10"} rounded-lg ${iconGlowClass} text-[var(--section-accent)]`}
+            className="flex items-center justify-center w-7 h-7 rounded-lg text-[var(--section-accent)] [&>svg]:w-4 [&>svg]:h-4"
+            style={{ backgroundColor: `color-mix(in srgb, var(--section-accent) 12%, transparent)` }}
+          >
+            {displayIcon}
+          </div>
+        )}
+        {displayIcon && priority === "primary" && (
+          <div
+            className={`flex items-center justify-center w-12 h-12 rounded-lg ${iconGlowClass} text-[var(--section-accent)]`}
           >
             {displayIcon}
           </div>
@@ -159,23 +178,39 @@ export default function FeedSectionHeader({
         </div>
       </div>
 
-      {/* See All link */}
-      {seeAllHref && (
-        <Link
-          href={seeAllHref}
-          className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-mono transition-all group hover:scale-105 ${seeAllClass} text-accent`}
-        >
-          {seeAllLabel}
-          <svg
-            className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+      {/* Right side: action icon + See All link */}
+      <div className="flex items-center gap-2">
+        {actionIcon && onAction && (
+          <button
+            onClick={onAction}
+            className={`p-1.5 rounded-lg transition-colors ${
+              actionActive
+                ? "text-[var(--section-accent)]"
+                : "text-[var(--muted)] hover:text-[var(--soft)]"
+            }`}
+            aria-label={actionLabel}
+            title={actionLabel}
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </Link>
-      )}
+            {actionIcon}
+          </button>
+        )}
+        {seeAllHref && (
+          <Link
+            href={seeAllHref}
+            className={`flex items-center gap-1 ${priority === "secondary" ? "text-xs" : "px-3 py-1.5 rounded-full text-xs"} font-mono transition-all group hover:scale-105 ${seeAllClass} text-accent`}
+          >
+            {seeAllLabel}
+            <svg
+              className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </Link>
+        )}
+      </div>
     </div>
   );
 }

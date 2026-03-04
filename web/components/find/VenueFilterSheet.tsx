@@ -7,6 +7,7 @@ import { triggerHaptic } from "@/lib/haptics";
 import {
   QUICK_VENUE_TYPES,
   QUICK_VIBES,
+  CUISINE_TYPES,
   SPOTS_TABS,
   type SpotsTab,
 } from "@/lib/spots-constants";
@@ -203,6 +204,20 @@ export const VenueFilterSheet = memo(function VenueFilterSheet({
     [setFilters]
   );
 
+  // Cuisine handling
+  const handleCuisineToggle = useCallback(
+    (cuisine: string) => {
+      triggerHaptic("selection");
+      setFilters((f) => ({
+        ...f,
+        cuisine: f.cuisine.includes(cuisine)
+          ? f.cuisine.filter((c) => c !== cuisine)
+          : [...f.cuisine, cuisine],
+      }));
+    },
+    [setFilters]
+  );
+
   // Vibe handling
   const handleVibeToggle = useCallback(
     (vibe: string) => {
@@ -245,6 +260,7 @@ export const VenueFilterSheet = memo(function VenueFilterSheet({
     filters.venueTypes.length > 0 ||
     filters.priceLevel.length > 0 ||
     filters.vibes.length > 0 ||
+    filters.cuisine.length > 0 ||
     filters.withEvents;
 
   // Detect active neighborhood state for pills
@@ -379,6 +395,32 @@ export const VenueFilterSheet = memo(function VenueFilterSheet({
                 })}
               </div>
             </div>
+
+            {/* Cuisine Section — eat-drink tab only */}
+            {activeTab === "eat-drink" && (
+              <div role="group" aria-label="Cuisine filters">
+                <h3 className="font-mono text-sm font-semibold text-[var(--cream)] mb-3">Cuisine</h3>
+                <div className="flex flex-wrap gap-2">
+                  {CUISINE_TYPES.map((c) => {
+                    const isActive = filters.cuisine.includes(c.value);
+                    return (
+                      <button
+                        key={c.value}
+                        onClick={() => handleCuisineToggle(c.value)}
+                        aria-pressed={isActive}
+                        className={`min-h-[44px] px-3.5 py-2.5 rounded-full font-mono text-sm font-medium transition-all ${
+                          isActive
+                            ? "bg-[var(--coral)] text-[var(--void)]"
+                            : "bg-[var(--twilight)] text-[var(--cream)] hover:bg-[var(--dusk)]"
+                        }`}
+                      >
+                        {c.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Area Section */}
             <div role="group" aria-label="Area filters">

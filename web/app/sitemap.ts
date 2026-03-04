@@ -17,6 +17,7 @@ type EventRow = {
 };
 type SpotRow = { slug: string | null; updated_at: string | null; portal_id: string | null };
 type SeriesRow = { slug: string | null; updated_at: string | null; portal_id: string | null };
+type FestivalRow = { slug: string | null; updated_at: string | null; portal_id: string | null };
 type PortalRow = { id: string; slug: string | null; updated_at: string | null; status: string | null };
 
 function resolvePortalSlug(portalId: string | null, portalSlugById: Map<string, string>): string {
@@ -130,5 +131,52 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.7,
     }));
 
-  return [...staticPages, ...eventPages, ...spotPages, ...seriesPages];
+  // Fetch festivals
+  const { data: festivalsData } = await supabase
+    .from("series")
+    .select("slug, updated_at, portal_id")
+    .eq("series_type", "festival");
+
+  const festivals = ((festivalsData || []) as FestivalRow[]).slice(0, 200);
+  const festivalPages: MetadataRoute.Sitemap = festivals
+    .filter((f) => Boolean(f.slug))
+    .map((f) => ({
+      url: `${BASE_URL}/${resolvePortalSlug(f.portal_id, portalSlugById)}/festivals/${f.slug}`,
+      lastModified: f.updated_at ? new Date(f.updated_at) : new Date(),
+      changeFrequency: "weekly" as const,
+      priority: 0.8,
+    }));
+
+  // SEO landing pages (one per active portal)
+  const landingPages: MetadataRoute.Sitemap = portals
+    .filter((portal) => Boolean(portal.slug))
+    .flatMap((portal) => [
+      {
+        url: `${BASE_URL}/${portal.slug}/tonight`,
+        lastModified: new Date(),
+        changeFrequency: "hourly" as const,
+        priority: 0.85,
+      },
+      {
+        url: `${BASE_URL}/${portal.slug}/this-weekend`,
+        lastModified: new Date(),
+        changeFrequency: "daily" as const,
+        priority: 0.85,
+      },
+      {
+        url: `${BASE_URL}/${portal.slug}/free`,
+        lastModified: new Date(),
+        changeFrequency: "daily" as const,
+        priority: 0.8,
+      },
+    ]);
+
+  return [
+    ...staticPages,
+    ...eventPages,
+    ...spotPages,
+    ...seriesPages,
+    ...festivalPages,
+    ...landingPages,
+  ];
 }

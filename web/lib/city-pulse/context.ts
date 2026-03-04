@@ -10,7 +10,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getPortalWeather } from "@/lib/weather";
 import { getWeatherSignal } from "@/lib/weather-utils";
 import { getLocalDateString } from "@/lib/formats";
-import { getTimeSlot, getDayOfWeek } from "./time-slots";
+import { getTimeSlot, getDayOfWeek, getDayTheme } from "./time-slots";
 import { getContextualQuickLinks } from "./quick-links";
 import type { FeedContext, HolidayInfo, FestivalInfo, TimeSlot } from "./types";
 
@@ -233,29 +233,4 @@ export async function buildFeedContext(
   };
 }
 
-// ---------------------------------------------------------------------------
-// Day-of-week themes
-// ---------------------------------------------------------------------------
-
-function getDayTheme(dayOfWeek: string, timeSlot: TimeSlot): string | undefined {
-  switch (dayOfWeek) {
-    case "tuesday":
-      return "taco_tuesday";
-    case "wednesday":
-      return "wine_wednesday";
-    case "thursday":
-      return "thirsty_thursday";
-    case "friday":
-      return "friday_night";
-    case "saturday":
-      return timeSlot === "morning" || timeSlot === "midday"
-        ? "brunch_weekend"
-        : "saturday_night";
-    case "sunday":
-      return timeSlot === "morning" || timeSlot === "midday"
-        ? "brunch_weekend"
-        : "sunday_funday";
-    default:
-      return undefined;
-  }
-}
+// getDayTheme is imported from ./time-slots (shared with client-side shell)

@@ -28,7 +28,8 @@ import {
   ArrowsClockwise,
   CheckCircle,
   MagnifyingGlass,
-} from "@phosphor-icons/react/dist/ssr";
+} from "@phosphor-icons/react";
+import HorseSpinner from "@/components/ui/HorseSpinner";
 
 // Section visual identity - paired with API-driven titles
 const SECTION_CONFIG: Record<
@@ -72,31 +73,6 @@ interface ForYouViewProps {
   portalId: string;
 }
 
-// Loading skeleton for events
-function EventSkeleton({ hero }: { hero?: boolean }) {
-  if (hero) {
-    return (
-      <div className="rounded-2xl overflow-hidden border border-[var(--twilight)] bg-[var(--card-bg)]">
-        <div className="h-48 sm:h-56 skeleton-shimmer" />
-        <div className="p-4 space-y-2">
-          <div className="h-5 skeleton-shimmer rounded w-2/3" />
-          <div className="h-3 skeleton-shimmer rounded w-1/2" />
-        </div>
-      </div>
-    );
-  }
-  return (
-    <div className="p-3 rounded-lg border border-[var(--twilight)] bg-[var(--card-bg)]">
-      <div className="flex gap-3">
-        <div className="w-14 h-10 skeleton-shimmer rounded" />
-        <div className="flex-1 space-y-2">
-          <div className="h-4 skeleton-shimmer rounded w-3/4" />
-          <div className="h-3 skeleton-shimmer rounded w-1/2" />
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function ForYouSectionBlock({
   section,
@@ -288,11 +264,8 @@ function ForYouViewInner({ portalSlug }: ForYouViewProps) {
   // Loading state - includes auth loading and post-auth refetch
   if (authLoading || isLoading || isRefetching) {
     return (
-      <div className="space-y-4 pt-2">
-        <EventSkeleton hero />
-        {[1, 2, 3].map((i) => (
-          <EventSkeleton key={i} />
-        ))}
+      <div className="flex justify-center py-16">
+        <HorseSpinner />
       </div>
     );
   }
@@ -600,11 +573,8 @@ export default function ForYouView(props: ForYouViewProps) {
     <div className="pt-2">
       <Suspense
         fallback={
-          <div className="space-y-4 pt-2">
-            <EventSkeleton hero />
-            {[1, 2, 3].map((i) => (
-              <EventSkeleton key={i} />
-            ))}
+          <div className="flex justify-center py-16">
+            <HorseSpinner />
           </div>
         }
       >

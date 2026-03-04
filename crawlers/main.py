@@ -14,6 +14,7 @@ import logging
 import os
 import random
 import re
+import subprocess
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FuturesTimeoutError
@@ -82,6 +83,34 @@ CHAIN_CINEMA_TIMEOUT_SLUGS = {
 
 # Permanently closed sources that should never run, even if re-activated in DB.
 BLOCKED_SOURCE_SLUGS = set(CLOSED_SOURCE_SLUGS)
+
+
+def run_launch_post_crawl_maintenance(
+    *,
+    city: str = "Atlanta",
+    portal: Optional[str] = "atlanta",
+) -> bool:
+    """
+    Run launch maintenance + gate checks via scripts/post_crawl_maintenance.py.
+
+    Returns True on success, False otherwise.
+    """
+    script = os.path.join(os.path.dirname(__file__), "scripts", "post_crawl_maintenance.py")
+    cmd = [sys.executable, script, "--city", city, "--continue-on-error"]
+    if portal and portal.strip():
+        cmd.extend(["--portal", portal.strip()])
+
+    logger.info("Running launch maintenance sequence: %s", " ".join(cmd))
+    try:
+        result = subprocess.run(cmd)
+    except Exception as exc:
+        logger.error("Launch maintenance execution failed: %s", exc)
+        return False
+
+    if result.returncode != 0:
+        logger.error("Launch maintenance failed with exit code %s", result.returncode)
+        return False
+    return True
 
 
 def _run_profile_fallback(source: dict) -> Optional[tuple[int, int, int]]:
@@ -185,6 +214,18 @@ SOURCE_OVERRIDES = {
     # Support portal slug-to-filename mismatches
     "good-samaritan-health-center": "sources.good_samaritan_health",
     "red-cross-cpr-atlanta": "sources.red_cross_cpr",
+    # Annual tentpole/festival watchlist slugs (single shared module)
+    "piedmont-park-arts-festival": "sources.annual_tentpoles",
+    "national-black-arts-festival": "sources.annual_tentpoles",
+    "native-american-festival-and-pow-wow": "sources.annual_tentpoles",
+    "atlanta-greek-picnic": "sources.annual_tentpoles",
+    "taste-of-soul-atlanta": "sources.annual_tentpoles",
+    "ga-renaissance-festival": "sources.annual_tentpoles",
+    "blue-ridge-trout-fest": "sources.annual_tentpoles",
+    "breakaway-atlanta": "sources.annual_tentpoles",
+    "esfna-atlanta": "sources.annual_tentpoles",
+    "221b-con": "sources.annual_tentpoles",
+    "fifa-fan-festival-atlanta": "sources.annual_tentpoles",
 }
 
 
@@ -324,7 +365,7 @@ def run_source(slug: str, skip_circuit_breaker: bool = False) -> bool:
         return False
 
 
-def run_festival_schedules() -> dict:
+def run_festival_schedules(portal_slug: Optional[str] = None) -> dict:
     """
     Extract program sessions from festival schedule pages.
 
@@ -337,7 +378,7 @@ def run_festival_schedules() -> dict:
         sessions_found, sessions_inserted
     """
     from crawl_festival_schedule import crawl_festival_schedule
-    from db import get_client
+    from db import get_client, get_portal_id_by_slug
 
     client = get_client()
     result = (
@@ -361,10 +402,36 @@ def run_festival_schedules() -> dict:
         try:
             source_rows = (
                 client.table("sources")
-                .select("slug,url")
+                .select("slug,url,owner_portal_id")
                 .in_("slug", slugs)
                 .execute()
             ).data or []
+
+            if portal_slug:
+                portal_id = get_portal_id_by_slug(portal_slug)
+                if not portal_id:
+                    logger.warning(
+                        "Festival schedule extraction: portal '%s' not found; skipping scoped extraction.",
+                        portal_slug,
+                    )
+                    festivals = []
+                    source_rows = []
+                else:
+                    scoped_slugs = {
+                        row.get("slug")
+                        for row in source_rows
+                        if row.get("slug") and row.get("owner_portal_id") == portal_id
+                    }
+                    pre_count = len(festivals)
+                    festivals = [festival for festival in festivals if festival.get("slug") in scoped_slugs]
+                    logger.info(
+                        "Festival schedule extraction scoped to portal '%s': %s/%s festivals matched owned sources",
+                        portal_slug,
+                        len(festivals),
+                        pre_count,
+                    )
+                    source_rows = [row for row in source_rows if row.get("slug") in scoped_slugs]
+
             source_url_by_slug = {
                 row.get("slug"): row.get("url")
                 for row in source_rows
@@ -784,7 +851,13 @@ def get_festival_tier_summary() -> dict:
     return {"t1": t1, "t2": t2, "t3": t3}
 
 
-def run_post_crawl_tasks() -> None:
+def run_post_crawl_tasks(
+    *,
+    run_global_tasks: bool = True,
+    run_launch_maintenance: bool = True,
+    maintenance_city: str = "Atlanta",
+    maintenance_portal: Optional[str] = "atlanta",
+) -> None:
     """Run all post-crawl pipeline tasks (filters, logos, cleanup, festivals, etc.)."""
     if not writes_enabled():
         logger.info("Write mode disabled; skipping post-crawl tasks.")
@@ -819,6 +892,10 @@ def run_post_crawl_tasks() -> None:
     except Exception as e:
         logger.debug(f"Could not get health summary: {e}")
 
+    if not run_global_tasks:
+        logger.info("Skipping global post-crawl tasks for scoped run.")
+        return
+
     # ===== POST-CRAWL TASKS =====
 
     # 1. Clean up old events
@@ -841,7 +918,7 @@ def run_post_crawl_tasks() -> None:
     # 2. Festival schedule extraction (structured parsing, no LLM)
     logger.info("Extracting festival program sessions...")
     try:
-        festival_stats = run_festival_schedules()
+        festival_stats = run_festival_schedules(portal_slug=maintenance_portal)
         logger.info(
             f"Festival schedules: {festival_stats['sessions_found']} found, "
             f"{festival_stats['sessions_inserted']} new across "
@@ -947,8 +1024,23 @@ def run_post_crawl_tasks() -> None:
     except Exception as e:
         logger.warning(f"Report generation failed: {e}")
 
+    if run_launch_maintenance:
+        ok = run_launch_post_crawl_maintenance(
+            city=maintenance_city,
+            portal=maintenance_portal,
+        )
+        if not ok:
+            raise RuntimeError("Launch maintenance sequence failed")
 
-def run_all_sources(parallel: bool = True, max_workers: int = MAX_WORKERS, adaptive: bool = True) -> dict[str, bool]:
+
+def run_all_sources(
+    parallel: bool = True,
+    max_workers: int = MAX_WORKERS,
+    adaptive: bool = True,
+    run_launch_maintenance: bool = True,
+    maintenance_city: str = "Atlanta",
+    maintenance_portal: Optional[str] = "atlanta",
+) -> dict[str, bool]:
     """
     Run crawlers for all active sources.
 
@@ -1061,7 +1153,12 @@ def run_all_sources(parallel: bool = True, max_workers: int = MAX_WORKERS, adapt
     logger.info("Note: Per-source validation statistics are logged above for each crawler.")
 
     # Run all post-crawl pipeline tasks
-    run_post_crawl_tasks()
+    run_post_crawl_tasks(
+        run_global_tasks=run_launch_maintenance,
+        run_launch_maintenance=run_launch_maintenance,
+        maintenance_city=maintenance_city,
+        maintenance_portal=maintenance_portal,
+    )
 
     return results
 
@@ -1163,7 +1260,12 @@ def run_smart_crawl(args) -> dict[str, bool]:
     failed = len(results) - success
     logger.info(f"Smart crawl complete: {success} succeeded, {failed} failed")
 
-    run_post_crawl_tasks()
+    run_post_crawl_tasks(
+        run_global_tasks=not args.skip_launch_maintenance,
+        run_launch_maintenance=not args.skip_launch_maintenance,
+        maintenance_city=args.launch_maintenance_city,
+        maintenance_portal=args.launch_maintenance_portal,
+    )
     return results
 
 
@@ -1195,7 +1297,12 @@ def run_cadence_crawl(args) -> dict[str, bool]:
     failed = len(results) - success
     logger.info(f"Cadence crawl complete: {success} succeeded, {failed} failed")
 
-    run_post_crawl_tasks()
+    run_post_crawl_tasks(
+        run_global_tasks=not args.skip_launch_maintenance,
+        run_launch_maintenance=not args.skip_launch_maintenance,
+        maintenance_city=args.launch_maintenance_city,
+        maintenance_portal=args.launch_maintenance_portal,
+    )
     return results
 
 
@@ -1356,6 +1463,24 @@ def main():
         choices=["daily", "twice_weekly", "weekly", "monthly"],
         help="Force-run all sources with specific frequency"
     )
+    parser.add_argument(
+        "--skip-launch-maintenance",
+        action="store_true",
+        help=(
+            "Skip global post-crawl tasks and launch maintenance/gate sequence. "
+            "Use this for scoped source runs where broad cleanup/backfill jobs are not desired."
+        ),
+    )
+    parser.add_argument(
+        "--launch-maintenance-city",
+        default="Atlanta",
+        help="City passed to post-crawl launch maintenance. Default: Atlanta.",
+    )
+    parser.add_argument(
+        "--launch-maintenance-portal",
+        default="atlanta",
+        help="Portal passed to post-crawl launch maintenance. Default: atlanta.",
+    )
 
     args = parser.parse_args()
 
@@ -1489,6 +1614,13 @@ def main():
     # Single source
     if args.source:
         success = run_source(args.source, skip_circuit_breaker=args.force)
+        if success and should_write:
+            run_post_crawl_tasks(
+                run_global_tasks=not args.skip_launch_maintenance,
+                run_launch_maintenance=not args.skip_launch_maintenance,
+                maintenance_city=args.launch_maintenance_city,
+                maintenance_portal=args.launch_maintenance_portal,
+            )
         return 0 if success else 1
 
     # Smart mode: only crawl sources due based on cadence
@@ -1507,7 +1639,10 @@ def main():
     results = run_all_sources(
         parallel=not args.sequential,
         max_workers=args.workers,
-        adaptive=not args.no_adaptive
+        adaptive=not args.no_adaptive,
+        run_launch_maintenance=not args.skip_launch_maintenance,
+        maintenance_city=args.launch_maintenance_city,
+        maintenance_portal=args.launch_maintenance_portal,
     )
     failed = sum(1 for v in results.values() if not v)
     return 1 if failed > 0 else 0

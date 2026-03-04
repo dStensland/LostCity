@@ -1,6 +1,14 @@
-import { getTentpoleEvents, type TentpoleEvent } from "@/lib/festivals";
+import {
+  getAllFestivals,
+  getTentpoleEvents,
+  type TentpoleEvent,
+} from "@/lib/festivals";
 import { getCachedPortalBySlug, getPortalVertical } from "@/lib/portal";
-import { type CountdownLabel, getUrgencyColor } from "@/lib/moments-utils";
+import {
+  type CountdownLabel,
+  getUrgencyColor,
+  formatFestivalDates,
+} from "@/lib/moments-utils";
 import { getLocalDateString } from "@/lib/formats";
 import { PortalHeader } from "@/components/headers";
 import FilmPortalNav from "../_components/film/FilmPortalNav";
@@ -25,13 +33,26 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-function computeTentpoleCountdown(
-  event: TentpoleEvent,
+type BigStuffItem = {
+  id: string;
+  kind: "festival" | "event";
+  title: string;
+  href: string;
+  image_url: string | null;
+  location: string | null;
+  date_label: string;
+  category_label: string | null;
+  is_free: boolean;
+  start_date: string | null;
+  end_date: string | null;
+  countdown: CountdownLabel;
+};
+
+function computeDateCountdown(
+  start: string | null,
+  end: string | null,
   today: string
 ): CountdownLabel {
-  const start = event.start_date;
-  const end = event.end_date;
-
   if (!start) {
     return { urgency: "tbd", text: "TBD", daysUntil: null };
   }
@@ -104,20 +125,72 @@ export default async function BigStuffPage({ params }: Props) {
   const isFilmPortal = portal ? getPortalVertical(portal) === "film" : false;
   const today = getLocalDateString();
 
-  const events = await getTentpoleEvents(portal?.id);
+  const [festivals, tentpoleEvents] = await Promise.all([
+    getAllFestivals(portal?.id),
+    getTentpoleEvents(portal?.id),
+  ]);
 
-  // Split into happening now, upcoming, and past
-  const happeningNow: TentpoleEvent[] = [];
-  const upcoming: TentpoleEvent[] = [];
+  const festivalItems: BigStuffItem[] = festivals.flatMap((festival) => {
+    const countdown = computeDateCountdown(
+      festival.announced_start,
+      festival.announced_end,
+      today,
+    );
+    if (countdown.urgency === "tbd") return [];
+    return [{
+      id: `festival:${festival.id}`,
+      kind: "festival" as const,
+      title: festival.name,
+      href: festival.slug
+        ? `/${activePortalSlug}/festivals/${festival.slug}`
+        : `/${activePortalSlug}/festivals`,
+      image_url: festival.image_url,
+      location: festival.neighborhood || festival.location,
+      date_label:
+        formatFestivalDates(festival.announced_start, festival.announced_end) ||
+        "Dates TBA",
+      category_label: festival.festival_type || festival.categories?.[0] || null,
+      is_free: Boolean(festival.free),
+      start_date: festival.announced_start,
+      end_date: festival.announced_end,
+      countdown,
+    }];
+  });
 
-  for (const event of events) {
-    const countdown = computeTentpoleCountdown(event, today);
-    if (countdown.urgency === "happening-now") {
-      happeningNow.push(event);
-    } else if (countdown.urgency !== "tbd") {
-      upcoming.push(event);
-    }
-  }
+  const standaloneTentpoleItems: BigStuffItem[] = tentpoleEvents
+    .filter((event) => !event.festival_id)
+    .flatMap((event) => {
+      const countdown = computeDateCountdown(event.start_date, event.end_date, today);
+      if (countdown.urgency === "tbd") return [];
+      return [{
+        id: `event:${event.id}`,
+        kind: "event" as const,
+        title: event.title,
+        href: `/${activePortalSlug}?event=${event.id}`,
+        image_url: event.image_url,
+        location: event.venue?.name || event.venue?.neighborhood || null,
+        date_label: formatEventDates(event),
+        category_label: event.category || null,
+        is_free: Boolean(event.is_free),
+        start_date: event.start_date,
+        end_date: event.end_date,
+        countdown,
+      }];
+    });
+
+  const items = [...festivalItems, ...standaloneTentpoleItems].sort((a, b) => {
+    const aStart = a.start_date || "9999-12-31";
+    const bStart = b.start_date || "9999-12-31";
+    if (aStart !== bStart) return aStart.localeCompare(bStart);
+    return a.title.localeCompare(b.title);
+  });
+
+  const happeningNow = items.filter(
+    (item) => item.countdown.urgency === "happening-now",
+  );
+  const upcoming = items.filter(
+    (item) => item.countdown.urgency !== "happening-now",
+  );
 
   const totalCount = happeningNow.length + upcoming.length;
 
@@ -126,7 +199,6 @@ export default async function BigStuffPage({ params }: Props) {
       <PortalHeader
         portalSlug={activePortalSlug}
         portalName={activePortalName}
-        backLink={{ label: "Back", fallbackHref: `/${activePortalSlug}` }}
         hideNav
       />
 
@@ -140,7 +212,7 @@ export default async function BigStuffPage({ params }: Props) {
           </h1>
           <p className="text-[var(--soft)]">
             {totalCount > 0
-              ? `${totalCount} major event${totalCount !== 1 ? "s" : ""} coming to ${activePortalName}`
+              ? `${totalCount} major item${totalCount !== 1 ? "s" : ""} coming to ${activePortalName}`
               : `Major events in ${activePortalName}`}
           </p>
         </div>
@@ -153,13 +225,8 @@ export default async function BigStuffPage({ params }: Props) {
               Happening Now
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {happeningNow.map((event) => (
-                <TentpoleCard
-                  key={event.id}
-                  event={event}
-                  portalSlug={activePortalSlug}
-                  today={today}
-                />
+              {happeningNow.map((item) => (
+                <BigStuffCard key={item.id} item={item} />
               ))}
             </div>
           </section>
@@ -172,13 +239,8 @@ export default async function BigStuffPage({ params }: Props) {
               Coming Up
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {upcoming.map((event) => (
-                <TentpoleCard
-                  key={event.id}
-                  event={event}
-                  portalSlug={activePortalSlug}
-                  today={today}
-                />
+              {upcoming.map((item) => (
+                <BigStuffCard key={item.id} item={item} />
               ))}
             </div>
           </section>
@@ -200,14 +262,7 @@ export default async function BigStuffPage({ params }: Props) {
   );
 }
 
-function TentpoleCountdownBadge({
-  event,
-  today,
-}: {
-  event: TentpoleEvent;
-  today: string;
-}) {
-  const countdown = computeTentpoleCountdown(event, today);
+function BigStuffCountdownBadge({ countdown }: { countdown: CountdownLabel }) {
   if (countdown.urgency === "tbd" || countdown.text === "Past") return null;
 
   const color = getUrgencyColor(countdown.urgency);
@@ -227,30 +282,14 @@ function TentpoleCountdownBadge({
   );
 }
 
-function TentpoleCard({
-  event,
-  portalSlug,
-  today,
-}: {
-  event: TentpoleEvent;
-  portalSlug: string;
-  today: string;
-}) {
-  // Link to festival detail page if event is linked to a festival, otherwise link to event
-  const href = event.festival?.slug
-    ? `/${portalSlug}/festivals/${event.festival.slug}`
-    : `/${portalSlug}?event=${event.id}`;
-
-  const displayImage = event.image_url || event.festival?.image_url;
-  const displayName = event.festival?.name || event.title;
-  const displayLocation =
-    event.venue?.name ||
-    event.festival?.location ||
-    event.festival?.neighborhood;
+function BigStuffCard({ item }: { item: BigStuffItem }) {
+  const displayImage = item.image_url;
+  const displayName = item.title;
+  const displayLocation = item.location;
 
   return (
     <Link
-      href={href}
+      href={item.href}
       className="group block rounded-lg border border-[var(--twilight)] bg-[var(--card-bg)] overflow-hidden hover:bg-[var(--card-bg-hover)] hover:border-[var(--soft)] hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)]"
     >
       {/* Image */}
@@ -272,7 +311,7 @@ function TentpoleCard({
         )}
 
         {/* Free badge */}
-        {event.is_free && (
+        {item.is_free && (
           <span className="absolute top-2 right-2 px-2 py-0.5 rounded text-xs font-bold bg-[var(--neon-green)] text-[var(--void)]">
             FREE
           </span>
@@ -280,7 +319,7 @@ function TentpoleCard({
 
         {/* Countdown badge */}
         <div className="absolute top-2 left-2">
-          <TentpoleCountdownBadge event={event} today={today} />
+          <BigStuffCountdownBadge countdown={item.countdown} />
         </div>
       </div>
 
@@ -290,7 +329,7 @@ function TentpoleCard({
           {displayName}
         </h3>
         <p className="text-sm text-[var(--muted)] mb-2">
-          {formatEventDates(event)}
+          {item.date_label}
         </p>
         {displayLocation && (
           <p className="text-xs text-[var(--soft)] flex items-center gap-1">
@@ -301,10 +340,10 @@ function TentpoleCard({
             {displayLocation}
           </p>
         )}
-        {event.category && (
+        {item.category_label && (
           <div className="flex flex-wrap gap-1 mt-2">
             <span className="px-1.5 py-0.5 rounded text-2xs font-mono uppercase border border-[var(--twilight)] text-[var(--muted)]">
-              {event.category.replace(/_/g, " ")}
+              {item.category_label.replace(/_/g, " ")}
             </span>
           </div>
         )}

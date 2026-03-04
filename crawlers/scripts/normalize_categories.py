@@ -105,18 +105,18 @@ def main():
     # Step 1: Direct remaps
     print("=== Step 1: Direct category remaps ===")
     for old_cat, new_cat in DIRECT_REMAPS.items():
-        r = client.table("events").select("id", count="exact").gte("start_date", "2026-02-09").eq("category", old_cat).execute()
+        r = client.table("events").select("id", count="exact").gte("start_date", "2026-02-09").eq("category_id", old_cat).execute()
         count = r.count
         if count > 0:
             if not dry_run:
                 # Update in batches
                 updated = 0
                 while updated < count:
-                    batch = client.table("events").select("id").gte("start_date", "2026-02-09").eq("category", old_cat).limit(500).execute()
+                    batch = client.table("events").select("id").gte("start_date", "2026-02-09").eq("category_id", old_cat).limit(500).execute()
                     if not batch.data:
                         break
                     ids = [e["id"] for e in batch.data]
-                    client.table("events").update({"category": new_cat}).in_("id", ids).execute()
+                    client.table("events").update({"category_id": new_cat}).in_("id", ids).execute()
                     updated += len(ids)
                 print(f"  {old_cat:25s} -> {new_cat:15s}: {count} events updated")
             else:
@@ -125,40 +125,40 @@ def main():
 
     # Step 2: Remap 'meetup' -> 'community'
     print("\n=== Step 2: meetup -> community ===")
-    r = client.table("events").select("id", count="exact").gte("start_date", "2026-02-09").eq("category", "meetup").execute()
+    r = client.table("events").select("id", count="exact").gte("start_date", "2026-02-09").eq("category_id", "meetup").execute()
     if r.count > 0:
         if not dry_run:
-            batch = client.table("events").select("id").gte("start_date", "2026-02-09").eq("category", "meetup").limit(500).execute()
+            batch = client.table("events").select("id").gte("start_date", "2026-02-09").eq("category_id", "meetup").limit(500).execute()
             ids = [e["id"] for e in batch.data]
-            client.table("events").update({"category": "community"}).in_("id", ids).execute()
+            client.table("events").update({"category_id": "community"}).in_("id", ids).execute()
         print(f"  meetup -> community: {r.count} events {'updated' if not dry_run else '(dry run)'}")
         total_updated += r.count
 
     # Step 3: Remap 'business' -> 'community'
     print("\n=== Step 3: business -> community ===")
-    r = client.table("events").select("id", count="exact").gte("start_date", "2026-02-09").eq("category", "business").execute()
+    r = client.table("events").select("id", count="exact").gte("start_date", "2026-02-09").eq("category_id", "business").execute()
     if r.count > 0:
         if not dry_run:
-            batch = client.table("events").select("id").gte("start_date", "2026-02-09").eq("category", "business").limit(500).execute()
+            batch = client.table("events").select("id").gte("start_date", "2026-02-09").eq("category_id", "business").limit(500).execute()
             ids = [e["id"] for e in batch.data]
-            client.table("events").update({"category": "community"}).in_("id", ids).execute()
+            client.table("events").update({"category_id": "community"}).in_("id", ids).execute()
         print(f"  business -> community: {r.count} events {'updated' if not dry_run else '(dry run)'}")
         total_updated += r.count
 
     # Step 4: Remap 'dance' -> 'music'
     print("\n=== Step 4: dance -> music ===")
-    r = client.table("events").select("id", count="exact").gte("start_date", "2026-02-09").eq("category", "dance").execute()
+    r = client.table("events").select("id", count="exact").gte("start_date", "2026-02-09").eq("category_id", "dance").execute()
     if r.count > 0:
         if not dry_run:
-            batch = client.table("events").select("id").gte("start_date", "2026-02-09").eq("category", "dance").limit(500).execute()
+            batch = client.table("events").select("id").gte("start_date", "2026-02-09").eq("category_id", "dance").limit(500).execute()
             ids = [e["id"] for e in batch.data]
-            client.table("events").update({"category": "music"}).in_("id", ids).execute()
+            client.table("events").update({"category_id": "music"}).in_("id", ids).execute()
         print(f"  dance -> music: {r.count} events {'updated' if not dry_run else '(dry run)'}")
         total_updated += r.count
 
     # Step 5: Recategorize 'other' using venue type
     print("\n=== Step 5: Recategorize 'other' via venue type ===")
-    r = client.table("events").select("id,title,description,venue_id").gte("start_date", "2026-02-09").eq("category", "other").execute()
+    r = client.table("events").select("id,title,description,venue_id").gte("start_date", "2026-02-09").eq("category_id", "other").execute()
     other_events = r.data
     print(f"  Total 'other' events: {len(other_events)}")
 
@@ -188,7 +188,7 @@ def main():
         if not dry_run:
             for i in range(0, len(ids), 500):
                 batch = ids[i:i+500]
-                client.table("events").update({"category": new_cat}).in_("id", batch).execute()
+                client.table("events").update({"category_id": new_cat}).in_("id", batch).execute()
         print(f"  other -> {new_cat:15s}: {len(ids)} events {'updated' if not dry_run else '(dry run)'}")
         total_updated += len(ids)
 

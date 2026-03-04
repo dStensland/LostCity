@@ -6,6 +6,23 @@ type PortalScopedQuery<T> = {
   is: (column: string, value: null) => T;
 };
 
+// ---------------------------------------------------------------------------
+// Sensitive Content Filter
+// ---------------------------------------------------------------------------
+
+/**
+ * Exclude sensitive events (support groups, AA/NA meetings, etc.) from
+ * public-facing queries. Sensitive content is only visible in the
+ * atlanta-support portal.
+ *
+ * Use this on EVERY event query that feeds a public UI.
+ */
+export function excludeSensitiveEvents<T>(query: T): T {
+  return (query as unknown as PortalScopedQuery<T>).or(
+    "is_sensitive.eq.false,is_sensitive.is.null"
+  ) as T;
+}
+
 type PortalScopeOptions = {
   portalId?: string | null;
   portalExclusive?: boolean;

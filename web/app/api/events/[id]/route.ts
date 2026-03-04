@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest } from "next/server";
-import { getDistanceMiles } from "@/lib/geo";
+import { getDistanceMiles, getProximityLabel, haversineDistanceKm } from "@/lib/geo";
 import { doTimeRangesOverlap, isSpotOpenDuringEvent, HoursData } from "@/lib/hours";
 import { getLocalDateString } from "@/lib/formats";
 import { logger } from "@/lib/logger";
@@ -18,11 +18,11 @@ import {
   type VenueDiningProfile,
 } from "@/lib/planner/dining-timing";
 
-const NEARBY_RADIUS_MILES = 10;
+const NEARBY_RADIUS_MILES = 2;
 const EVENT_DETAIL_CACHE_TTL_MS = 60 * 1000;
 const EVENT_DETAIL_CACHE_NAMESPACE = "api:event-detail";
 const EVENT_DETAIL_CACHE_CONTROL = "public, max-age=30, s-maxage=60, stale-while-revalidate=120";
-const DESTINATION_SELECT_BASE = "id, name, slug, venue_type, neighborhood, lat, lng, hours";
+const DESTINATION_SELECT_BASE = "id, name, slug, venue_type, neighborhood, lat, lng, hours, image_url, vibes";
 const DESTINATION_SELECT_WITH_PLANNING = `${DESTINATION_SELECT_BASE}, service_style, meal_duration_min_minutes, meal_duration_max_minutes, walk_in_wait_minutes, payment_buffer_minutes, accepts_reservations, reservation_recommended`;
 
 type RawEventArtist = {
@@ -100,7 +100,7 @@ export async function GET(
 
   const fullSelect = `
     *,
-    venue:venues(id, name, slug, address, neighborhood, city, state, location_designator, vibes, description, lat, lng, nearest_marta_station, marta_walk_minutes, marta_lines, beltline_adjacent, beltline_segment, parking_type, parking_free, transit_score),
+    venue:venues(id, name, slug, address, neighborhood, city, state, location_designator, vibes, description, lat, lng, venue_type, nearest_marta_station, marta_walk_minutes, marta_lines, beltline_adjacent, beltline_segment, parking_type, parking_free, transit_score),
     series:series_id(
       id,
       title,
@@ -208,12 +208,15 @@ export async function GET(
       .from("events")
       .select(`
         id, title, start_date, end_date, start_time, end_time,
-        venue:venues(id, name, slug, city, location_designator)
+        series_id, image_url, category_id, is_free, price_min,
+        series:series!events_series_id_fkey(id, slug, title, series_type, image_url),
+        venue:venues(id, name, slug, city, location_designator, venue_type)
       `)
       .eq("venue_id", eventData.venue_id)
       .neq("id", eventId)
       .is("canonical_event_id", null)
-      .or(`start_date.gte.${today},end_date.gte.${today}`);
+      .or(`start_date.gte.${today},end_date.gte.${today}`)
+      .or("is_class.is.null,is_class.eq.false");
 
     venueEventsQuery = applyPortalScopeToQuery(venueEventsQuery, {
       portalId: portalContext.portalId,
@@ -223,7 +226,7 @@ export async function GET(
 
     const { data } = await venueEventsQuery
       .order("start_date", { ascending: true })
-      .limit(10);
+      .limit(30);
 
     venueEvents = data || [];
   }
@@ -243,7 +246,8 @@ export async function GET(
       `)
       .eq("start_date", eventData.start_date)
       .neq("id", eventId)
-      .is("canonical_event_id", null);
+      .is("canonical_event_id", null)
+      .or("is_class.is.null,is_class.eq.false");
 
     sameDateQuery = applyPortalScopeToQuery(sameDateQuery, {
       portalId: portalContext.portalId,
@@ -295,7 +299,8 @@ export async function GET(
       `)
       .eq("start_date", eventData.start_date)
       .neq("id", eventId)
-      .is("canonical_event_id", null);
+      .is("canonical_event_id", null)
+      .or("is_class.is.null,is_class.eq.false");
 
     fallbackQuery = applyPortalScopeToQuery(fallbackQuery, {
       portalId: portalContext.portalId,
@@ -328,20 +333,29 @@ export async function GET(
   ];
   const relatedCounts = await fetchSocialProofCounts(Array.from(new Set(relatedEventIds)));
 
-  venueEvents = (venueEvents as { id: number }[]).map((event) => {
+  venueEvents = (venueEvents as { id: number; category_id?: string | null }[]).map((event) => {
     const counts = relatedCounts.get(event.id);
     return {
       ...event,
+      category: (event as { category_id?: string | null }).category_id || null,
       going_count: counts?.going || 0,
       interested_count: counts?.interested || 0,
       recommendation_count: counts?.recommendations || 0,
     };
   });
 
-  nearbyEvents = (nearbyEvents as { id: number }[]).map((event) => {
+  nearbyEvents = (nearbyEvents as { id: number; venue?: { lat?: number | null; lng?: number | null } | null }[]).map((event) => {
     const counts = relatedCounts.get(event.id);
+    let distance: number | undefined;
+    let proximity_label: string | undefined;
+    if (venueLat && venueLng && event.venue?.lat && event.venue?.lng) {
+      distance = getDistanceMiles(venueLat, venueLng, event.venue.lat, event.venue.lng);
+      proximity_label = getProximityLabel(distance / 0.621371);
+    }
     return {
       ...event,
+      distance,
+      proximity_label,
       going_count: counts?.going || 0,
       interested_count: counts?.interested || 0,
       recommendation_count: counts?.recommendations || 0,
@@ -357,8 +371,11 @@ export async function GET(
     lat: number | null;
     lng: number | null;
     hours: HoursData | null;
+    image_url: string | null;
+    vibes: string[] | null;
     closesAt?: string;
     distance?: number;
+    proximity_label?: string;
     pre_show_timing?: PreShowDiningTimingResult;
   };
 
@@ -373,7 +390,6 @@ export async function GET(
     food: [],
     drinks: [],
     nightlife: [],
-    caffeine: [],
     fun: [],
   };
 
@@ -462,10 +478,15 @@ export async function GET(
                 })
               : undefined;
 
+          const proximityLabel = distance !== undefined
+            ? getProximityLabel(distance / 0.621371) // convert miles back to km for getProximityLabel
+            : undefined;
+
           nearbyDestinations[category].push({
             ...s,
             closesAt,
             distance,
+            proximity_label: proximityLabel,
             pre_show_timing: preShowTiming,
           });
         }
@@ -562,10 +583,15 @@ export async function GET(
                 })
               : undefined;
 
+          const proximityLabel = distance !== undefined
+            ? getProximityLabel(distance / 0.621371)
+            : undefined;
+
           nearbyDestinations[category].push({
             ...s,
             closesAt,
             distance,
+            proximity_label: proximityLabel,
             pre_show_timing: preShowTiming,
           });
         }

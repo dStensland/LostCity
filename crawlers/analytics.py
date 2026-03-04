@@ -25,11 +25,11 @@ def record_daily_snapshot():
     today = datetime.now().strftime("%Y-%m-%d")
 
     # Get event counts by category for upcoming events
-    result = client.table("events").select("category").gte("start_date", today).execute()
+    result = client.table("events").select("category_id").gte("start_date", today).execute()
 
     category_counts = {}
     for event in result.data or []:
-        cat = event.get("category") or "uncategorized"
+        cat = event.get("category_id") or "uncategorized"
         category_counts[cat] = category_counts.get(cat, 0) + 1
 
     total_events = sum(category_counts.values())
@@ -107,13 +107,13 @@ def get_events_per_day(start_date: str = None, end_date: str = None) -> list[dic
         end_date = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
 
     result = client.table("events").select(
-        "start_date, category"
+        "start_date, category_id"
     ).gte("start_date", start_date).lte("start_date", end_date).execute()
 
     daily_data = {}
     for event in result.data or []:
         date = event["start_date"]
-        cat = event.get("category") or "uncategorized"
+        cat = event.get("category_id") or "uncategorized"
 
         if date not in daily_data:
             daily_data[date] = {"total": 0, "categories": {}}
@@ -210,12 +210,12 @@ def get_category_distribution() -> dict:
     client = get_client()
     today = datetime.now().strftime("%Y-%m-%d")
 
-    result = client.table("events").select("category").gte("start_date", today).execute()
+    result = client.table("events").select("category_id").gte("start_date", today).execute()
 
     counts = {}
     total = 0
     for event in result.data or []:
-        cat = event.get("category") or "uncategorized"
+        cat = event.get("category_id") or "uncategorized"
         counts[cat] = counts.get(cat, 0) + 1
         total += 1
 

@@ -36,11 +36,14 @@ from bs4 import BeautifulSoup, Tag
 
 from config import get_config
 from db import (
+    get_client,
     get_or_create_venue,
     get_source_by_slug,
     get_venue_by_slug,
     insert_event,
     find_event_by_hash,
+    smart_update_existing_event,
+    update_event,
 )
 from dedupe import generate_content_hash
 from utils import setup_logging, slugify, is_likely_non_event_image
@@ -84,6 +87,7 @@ class SessionData:
         tags: Optional[list[str]] = None,
         artists: Optional[list[str]] = None,
         program_track: Optional[str] = None,
+        ticket_url: Optional[str] = None,
     ):
         self.title = title
         self.start_date = start_date
@@ -98,6 +102,7 @@ class SessionData:
         self.tags = tags or []
         self.artists = artists or []
         self.program_track = program_track
+        self.ticket_url = ticket_url
 
     def __repr__(self) -> str:
         return f"Session({self.title!r}, {self.start_date}, {self.start_time})"
@@ -348,6 +353,307 @@ def extract_sessions_wp_events_calendar(html: str, base_url: str) -> list[Sessio
 
     logger.info(f"WP Events Calendar: extracted {len(sessions)} sessions")
     return sessions
+
+
+def _parse_clock_time(value: str) -> Optional[str]:
+    """Parse 12-hour time token (e.g. '10:05am') into 24-hour HH:MM."""
+    if not value:
+        return None
+    cleaned = re.sub(r"\s+", "", value.strip().lower())
+    m = re.match(r"^(\d{1,2})(?::(\d{2}))?(am|pm)$", cleaned)
+    if not m:
+        return None
+
+    hour = int(m.group(1))
+    minute = int(m.group(2) or "00")
+    period = m.group(3)
+
+    if period == "am":
+        hour = 0 if hour == 12 else hour
+    else:
+        hour = 12 if hour == 12 else hour + 12
+
+    return f"{hour:02d}:{minute:02d}"
+
+
+def _parse_atl_science_festival_date_block(value: str) -> tuple[Optional[str], Optional[str], Optional[str], bool]:
+    """
+    Parse ASF list date text like:
+      'Saturday, 03/07/2026 - 10:00am to 2:00pm'
+    into (start_date, start_time, end_time, is_all_day).
+    """
+    text = re.sub(r"\s+", " ", (value or "").strip())
+    if not text:
+        return None, None, None, False
+
+    date_match = re.search(r"(\d{1,2})/(\d{1,2})/(\d{4})", text)
+    if not date_match:
+        return None, None, None, False
+
+    month = int(date_match.group(1))
+    day = int(date_match.group(2))
+    year = int(date_match.group(3))
+    start_date = f"{year:04d}-{month:02d}-{day:02d}"
+
+    if "all day" in text.lower():
+        return start_date, None, None, True
+
+    time_tokens = re.findall(r"(\d{1,2}(?::\d{2})?\s*(?:am|pm))", text, flags=re.IGNORECASE)
+    if not time_tokens:
+        return start_date, None, None, False
+
+    start_time = _parse_clock_time(time_tokens[0])
+    end_time = _parse_clock_time(time_tokens[1]) if len(time_tokens) > 1 else None
+    return start_date, start_time, end_time, False
+
+
+def extract_sessions_atl_science_festival_grid(html: str, base_url: str) -> list[SessionData]:
+    """
+    Extract sessions from Atlanta Science Festival's events grid (`.event-container` cards).
+    """
+    soup = BeautifulSoup(html, "lxml")
+    sessions: list[SessionData] = []
+    seen: set[tuple[str, str, Optional[str], str]] = set()
+
+    containers = soup.select(".event-container")
+    if not containers:
+        return []
+
+    for container in containers:
+        info = container.select_one(".event .info") or container.select_one(".info")
+        if not info:
+            continue
+
+        title_link = info.select_one("h3 a")
+        date_el = info.select_one("p.date")
+        if not title_link or not date_el:
+            continue
+
+        title = title_link.get_text(" ", strip=True)
+        if not title:
+            continue
+
+        date_text = date_el.get_text(" ", strip=True)
+        start_date, start_time, end_time, is_all_day = _parse_atl_science_festival_date_block(date_text)
+        if not start_date:
+            continue
+
+        href = (title_link.get("href") or "").strip()
+        source_url = urljoin(base_url, href) if href else base_url
+
+        desc_parts: list[str] = []
+        for p in info.select("p"):
+            classes = {c.lower() for c in (p.get("class") or [])}
+            if "date" in classes or "audience" in classes:
+                continue
+            text = p.get_text(" ", strip=True)
+            if text:
+                desc_parts.append(text)
+        description = " ".join(desc_parts)[:2000] if desc_parts else None
+
+        tags = ["science-festival"]
+        for audience in info.select("p.audience a"):
+            audience_tag = slugify(audience.get_text(" ", strip=True))
+            if audience_tag:
+                tags.append(f"audience-{audience_tag}")
+        tags = list(dict.fromkeys(tags))
+
+        image_url = None
+        img = container.select_one(".image img")
+        if img:
+            src = img.get("src") or img.get("data-src")
+            if not src:
+                srcset = img.get("srcset")
+                if srcset:
+                    src = srcset.split(",")[0].strip().split(" ")[0]
+            image_url = _normalize_image_url(src, base_url)
+
+        detail_payload = _extract_atl_science_festival_detail_payload(source_url)
+        if detail_payload.get("description") and (
+            not description
+            or len(detail_payload["description"]) > len(description)
+            or "[..]" in description
+        ):
+            description = detail_payload["description"]
+
+        venue_name = detail_payload.get("venue_name")
+        ticket_url = detail_payload.get("ticket_url")
+        if detail_payload.get("image_url"):
+            image_url = detail_payload["image_url"]
+
+        dedupe_key = (title.lower(), start_date, start_time, source_url)
+        if dedupe_key in seen:
+            continue
+        seen.add(dedupe_key)
+
+        sessions.append(
+            SessionData(
+                title=title,
+                start_date=start_date,
+                start_time=start_time,
+                end_time=end_time,
+                description=description,
+                venue_name=venue_name,
+                category="community",
+                image_url=image_url,
+                source_url=source_url,
+                is_all_day=is_all_day,
+                tags=tags,
+                ticket_url=ticket_url,
+            )
+        )
+
+    # Defensive: only accept this strategy when the page clearly looks like ASF's event grid.
+    if len(sessions) < 5:
+        return []
+
+    logger.info("Atlanta Science Festival grid: extracted %s sessions", len(sessions))
+    return sessions
+
+
+def _asf_normalize_text(value: str) -> str:
+    return re.sub(r"\s+", " ", (value or "").strip())
+
+
+def _extract_asf_labeled_block(container: Tag, label: str) -> str:
+    target = label.strip().lower()
+    for h3 in container.find_all("h3"):
+        heading = _asf_normalize_text(h3.get_text(" ", strip=True)).lower()
+        if heading != target:
+            continue
+
+        parts: list[str] = []
+        for sibling in h3.next_siblings:
+            if isinstance(sibling, Tag) and sibling.name == "h3":
+                break
+            if isinstance(sibling, Tag):
+                text = sibling.get_text("\n", strip=True)
+            else:
+                text = str(sibling)
+            normalized = _asf_normalize_text(text)
+            if normalized:
+                parts.append(normalized)
+        return "\n".join(parts)
+    return ""
+
+
+def _extract_asf_ticket_url(container: Tag) -> Optional[str]:
+    for h3 in container.find_all("h3"):
+        heading = _asf_normalize_text(h3.get_text(" ", strip=True)).lower()
+        if heading != "ticket link":
+            continue
+        for sibling in h3.next_siblings:
+            if isinstance(sibling, Tag) and sibling.name == "h3":
+                break
+            if not isinstance(sibling, Tag):
+                continue
+            link = sibling.find("a", href=True)
+            if link:
+                href = (link.get("href") or "").strip()
+                if href:
+                    return href
+    return None
+
+
+def _extract_asf_venue_name(raw_venue_block: str) -> Optional[str]:
+    if not raw_venue_block:
+        return None
+
+    lines: list[str] = []
+    for chunk in re.split(r"[\n\r]+", raw_venue_block):
+        normalized = _asf_normalize_text(chunk)
+        if not normalized:
+            continue
+        for part in normalized.split("|"):
+            candidate = _asf_normalize_text(part)
+            if candidate:
+                lines.append(candidate)
+
+    skip_values = {
+        "indoor event",
+        "outdoor event",
+        "indoor/outdoor event",
+        "indoor outdoor event",
+        "virtual event",
+        "virtual",
+        "tba",
+        "to be announced",
+        "unknown venue",
+    }
+
+    for line in lines:
+        lowered = line.lower()
+        if lowered in skip_values:
+            continue
+        if re.match(r"^\d{1,5}\s", line):
+            continue
+        if len(line) < 3:
+            continue
+        return line
+    return None
+
+
+def _extract_asf_description_from_detail(soup: BeautifulSoup) -> Optional[str]:
+    skip_tokens = (
+        "sign up for our newsletter",
+        "interested in subscribing to our mailing list",
+        "register for event",
+        "all events",
+        "date and time venue audience",
+    )
+
+    for block in soup.select(".entry-content-wrapper .avia_textblock"):
+        text = _asf_normalize_text(block.get_text(" ", strip=True))
+        if len(text) < 120:
+            continue
+        lowered = text.lower()
+        if any(token in lowered for token in skip_tokens):
+            continue
+        return text[:2500]
+
+    return None
+
+
+def _extract_atl_science_festival_detail_payload(source_url: Optional[str]) -> dict[str, Optional[str]]:
+    payload: dict[str, Optional[str]] = {
+        "description": None,
+        "venue_name": None,
+        "ticket_url": None,
+        "image_url": None,
+    }
+    if not source_url or "atlantasciencefestival.org/events-2026/" not in source_url:
+        return payload
+
+    try:
+        detail_html = fetch_html(source_url, render_js=False)
+    except Exception as exc:
+        logger.debug("ASF detail hydration failed for %s: %s", source_url, exc)
+        return payload
+
+    soup = BeautifulSoup(detail_html, "lxml")
+
+    description = _extract_asf_description_from_detail(soup)
+    if description:
+        payload["description"] = description
+
+    sidebar = soup.select_one("#sidebarEvents .avia_textblock")
+    if sidebar:
+        venue_block = _extract_asf_labeled_block(sidebar, "Venue")
+        venue_name = _extract_asf_venue_name(venue_block)
+        if venue_name:
+            payload["venue_name"] = venue_name
+
+        ticket_url = _extract_asf_ticket_url(sidebar)
+        if ticket_url:
+            payload["ticket_url"] = ticket_url
+
+    event_image = soup.select_one(".event-image img")
+    if event_image:
+        img_src = event_image.get("src") or event_image.get("data-src")
+        if img_src:
+            payload["image_url"] = _normalize_image_url(img_src, source_url)
+
+    return payload
 
 
 def _parse_wp_event_element(el: Tag, base_url: str) -> Optional[SessionData]:
@@ -828,6 +1134,7 @@ def _find_column(headers: list[str], keywords: list[str]) -> Optional[int]:
 def resolve_session_venue(
     session: SessionData,
     festival_slug: str,
+    festival_name: Optional[str] = None,
     default_venue_id: Optional[int] = None,
 ) -> int:
     """Map a session's venue name to an existing venue ID, or use the festival's default."""
@@ -840,7 +1147,7 @@ def resolve_session_venue(
     if default_venue_id:
         return default_venue_id
 
-    # Last resort: create a minimal placeholder venue
+    # Last resort: create a minimal placeholder venue.
     if session.venue_name:
         venue_data = {
             "name": session.venue_name,
@@ -850,7 +1157,56 @@ def resolve_session_venue(
         }
         return get_or_create_venue(venue_data)
 
-    raise ValueError(f"Cannot resolve venue for session: {session.title}")
+    fallback_name = (festival_name or festival_slug.replace("-", " ").title()).strip()
+    if not fallback_name:
+        fallback_name = "Festival Program Venue"
+
+    fallback_venue = {
+        "name": fallback_name,
+        "slug": slugify(fallback_name),
+        "city": "Atlanta",
+        "state": "GA",
+    }
+    return get_or_create_venue(fallback_venue)
+
+
+def _find_existing_festival_session(
+    source_id: int,
+    title: str,
+    start_date: str,
+    start_time: Optional[str],
+    source_url: Optional[str],
+) -> Optional[dict]:
+    """Find an existing same-source session by stable logical key."""
+    client = get_client()
+    query = (
+        client.table("events")
+        .select("*")
+        .eq("source_id", source_id)
+        .eq("title", title)
+        .eq("start_date", start_date)
+    )
+
+    if start_time:
+        query = query.eq("start_time", start_time)
+    else:
+        query = query.is_("start_time", "null")
+
+    if source_url:
+        query = query.eq("source_url", source_url)
+
+    rows = query.execute().data or []
+    if not rows:
+        return None
+
+    rows.sort(
+        key=lambda row: (
+            row.get("canonical_event_id") is not None,
+            row.get("is_active") is not True,
+            int(row.get("id") or 0),
+        )
+    )
+    return rows[0]
 
 
 # ---------------------------------------------------------------------------
@@ -872,17 +1228,35 @@ def insert_sessions(
 
     for session in sessions:
         # Resolve venue name
-        venue_name_for_hash = session.venue_name or festival_name
+        hash_scope = session.source_url or festival_name
+        hash_title = session.title
+        # Festival programs can repeat with identical title/date at different times.
+        if session.start_time:
+            hash_title = f"{hash_title} {session.start_time}"
         content_hash = generate_content_hash(
-            session.title, venue_name_for_hash, session.start_date
+            hash_title, hash_scope, session.start_date
         )
 
-        if find_event_by_hash(content_hash):
-            skipped += 1
-            logger.debug(f"Duplicate: {session.title} on {session.start_date}")
-            continue
+        existing = find_event_by_hash(content_hash)
+        if existing and existing.get("canonical_event_id") is not None:
+            existing = None
+        if not existing:
+            existing = _find_existing_festival_session(
+                source_id=source_id,
+                title=session.title,
+                start_date=session.start_date,
+                start_time=session.start_time,
+                source_url=session.source_url,
+            )
 
         if dry_run:
+            if existing:
+                logger.info(
+                    f"[DRY RUN] Would update existing: {session.title} | "
+                    f"{session.start_date} {session.start_time or '??:??'}"
+                )
+                skipped += 1
+                continue
             logger.info(
                 f"[DRY RUN] Would insert: {session.title} | "
                 f"{session.start_date} {session.start_time or '??:??'} | "
@@ -893,7 +1267,12 @@ def insert_sessions(
             continue
 
         try:
-            venue_id = resolve_session_venue(session, festival_slug, default_venue_id)
+            venue_id = resolve_session_venue(
+                session,
+                festival_slug,
+                festival_name=festival_name,
+                default_venue_id=default_venue_id,
+            )
         except ValueError as e:
             logger.warning(f"Skipping session (no venue): {e}")
             skipped += 1
@@ -920,10 +1299,30 @@ def insert_sessions(
             "tags": session.tags,
             "is_free": False,
             "source_url": session.source_url,
+            "ticket_url": session.ticket_url,
             "image_url": session.image_url,
             "content_hash": content_hash,
             "is_recurring": False,
         }
+
+        if existing:
+            incoming_update = dict(event_record)
+            incoming_update["category_id"] = incoming_update.pop("category")
+            incoming_update["id"] = existing["id"]
+
+            smart_update_existing_event(existing, incoming_update)
+
+            if session.venue_name and existing.get("venue_id") != venue_id:
+                update_event(existing["id"], {"venue_id": venue_id})
+                logger.info(
+                    "Updated venue for existing session: %s (%s -> %s)",
+                    session.title,
+                    existing.get("venue_id"),
+                    venue_id,
+                )
+
+            skipped += 1
+            continue
 
         try:
             insert_event(event_record, series_hint=series_hint)
@@ -1004,6 +1403,9 @@ def crawl_festival_schedule(
 
         if not sessions:
             sessions = extract_sessions_wp_events_calendar(html, url)
+
+        if not sessions:
+            sessions = extract_sessions_atl_science_festival_grid(html, url)
 
         if not sessions:
             sessions = extract_sessions_html_table(html, url)

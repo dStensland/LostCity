@@ -16,7 +16,7 @@ import {
   MapPin,
   MoonStars,
   Heart,
-} from "@phosphor-icons/react/dist/ssr";
+} from "@phosphor-icons/react";
 import { formatWalkDistance } from "@/lib/itinerary-utils";
 import type { Itinerary, LocalItinerary } from "@/lib/itinerary-utils";
 

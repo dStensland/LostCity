@@ -10,12 +10,19 @@ from __future__ import annotations
 
 import re
 import logging
-from datetime import datetime
+from datetime import datetime, date
 from typing import Optional
+from urllib.parse import urlparse
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    get_client,
+    get_or_create_venue,
+    insert_event,
+    find_event_by_hash,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, extract_event_links, find_event_url, enrich_event_record
 
@@ -53,6 +60,144 @@ def parse_time(time_text: str) -> Optional[str]:
 
 MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]
 DAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
+
+_SPECIAL_EVENT_SLUG_ARTIST_OVERRIDES = {
+    "theartit": "TheARTI$T",
+}
+_NON_ARTIST_SLUG_TERMS = (
+    "karaoke",
+    "open-mic",
+    "trivia",
+    "party",
+)
+
+
+def _normalize_slug_phrase(value: str) -> str:
+    cleaned = re.sub(r"-(?:\d+)$", "", (value or "").strip().lower())
+    cleaned = re.sub(r"[-_]+", " ", cleaned)
+    return " ".join(cleaned.split()).strip()
+
+
+def _to_display_name(value: str) -> str:
+    words = []
+    for token in value.split():
+        if token.upper() in {"DJ", "MC"}:
+            words.append(token.upper())
+        elif re.fullmatch(r"[a-z]\.", token):
+            words.append(token.upper())
+        else:
+            words.append(token.capitalize())
+    return " ".join(words).strip()
+
+
+def _title_needs_slug_artist_fallback(title: str) -> bool:
+    text = (title or "").strip().lower()
+    if not text:
+        return False
+    return bool(re.search(r"\b(tour|experience|anniversary|celebrating)\b", text))
+
+
+def _extract_artist_from_event_url(event_url: str) -> Optional[str]:
+    url = (event_url or "").strip()
+    if not url:
+        return None
+
+    parsed = urlparse(url)
+    parts = [part for part in parsed.path.split("/") if part]
+    if len(parts) < 2 or parts[0] != "events":
+        return None
+
+    slug_part = _normalize_slug_phrase(parts[1])
+    if not slug_part:
+        return None
+    if any(term in slug_part for term in _NON_ARTIST_SLUG_TERMS):
+        return None
+
+    if slug_part in _SPECIAL_EVENT_SLUG_ARTIST_OVERRIDES:
+        return _SPECIAL_EVENT_SLUG_ARTIST_OVERRIDES[slug_part]
+    return _to_display_name(slug_part)
+
+
+def _is_listing_events_url(url: str) -> bool:
+    value = (url or "").strip().rstrip("/")
+    return bool(value) and value == EVENTS_URL.rstrip("/")
+
+
+def _resolve_better_event_url(
+    title: str,
+    event_links: dict[str, str],
+    current_url: str,
+) -> Optional[str]:
+    if not _is_listing_events_url(current_url):
+        return None
+    candidate = find_event_url(title, event_links, EVENTS_URL)
+    if _is_listing_events_url(candidate):
+        return None
+    if candidate.strip().rstrip("/") == current_url.strip().rstrip("/"):
+        return None
+    return candidate
+
+
+def _repair_listing_url_events(source_id: int, event_links: dict[str, str]) -> tuple[int, int]:
+    """
+    Upgrade lingering listing-page URLs to event-detail URLs for upcoming rows.
+    Also supplies parsed artists for promo-style titles when URL-derived fallback exists.
+    """
+    client = get_client()
+    today = date.today().isoformat()
+    rows = (
+        client.table("events")
+        .select(
+            "id,title,category_id,source_id,source_url,ticket_url,start_date,is_sensitive"
+        )
+        .eq("source_id", source_id)
+        .gte("start_date", today)
+        .execute()
+    ).data or []
+
+    url_repairs = 0
+    artist_fallback_attempts = 0
+
+    for row in rows:
+        title = str(row.get("title") or "").strip()
+        source_url = str(row.get("source_url") or "").strip()
+        if not title or not source_url:
+            continue
+
+        better_url = _resolve_better_event_url(title, event_links, source_url)
+
+        incoming = {
+            "title": title,
+            "source_id": row.get("source_id"),
+            "category_id": row.get("category_id"),
+        }
+        if better_url:
+            incoming["source_url"] = better_url
+            incoming["ticket_url"] = better_url
+
+        if _title_needs_slug_artist_fallback(title):
+            fallback_url = better_url or source_url
+            fallback_artist = _extract_artist_from_event_url(fallback_url)
+            if fallback_artist:
+                incoming["_parsed_artists"] = [
+                    {
+                        "name": fallback_artist,
+                        "role": "headliner",
+                        "billing_order": 1,
+                        "is_headliner": True,
+                    }
+                ]
+                artist_fallback_attempts += 1
+
+        # Skip rows where no repair payload was generated.
+        if len(incoming) <= 3:
+            continue
+
+        smart_update_existing_event(row, incoming)
+        if better_url:
+            url_repairs += 1
+
+    return url_repairs, artist_fallback_attempts
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
@@ -244,6 +389,18 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "content_hash": content_hash,
                         }
 
+                        if _title_needs_slug_artist_fallback(title):
+                            fallback_artist = _extract_artist_from_event_url(event_url)
+                            if fallback_artist:
+                                event_record["_parsed_artists"] = [
+                                    {
+                                        "name": fallback_artist,
+                                        "role": "headliner",
+                                        "billing_order": 1,
+                                        "is_headliner": True,
+                                    }
+                                ]
+
                         existing = find_event_by_hash(content_hash)
                         if existing:
                             smart_update_existing_event(existing, event_record)
@@ -260,6 +417,20 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             logger.error(f"Failed to insert: {title}: {e}")
 
                 i += 1
+
+            repaired_urls, repaired_artist_attempts = _repair_listing_url_events(
+                source_id, event_links
+            )
+            if repaired_urls > 0:
+                logger.info(
+                    "The Masquerade URL repair pass: %s listing URLs upgraded%s",
+                    repaired_urls,
+                    (
+                        f", {repaired_artist_attempts} artist fallback attempts"
+                        if repaired_artist_attempts
+                        else ""
+                    ),
+                )
 
             browser.close()
 

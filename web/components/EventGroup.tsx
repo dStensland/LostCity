@@ -233,16 +233,12 @@ export default function EventGroup({
 
   return (
     <div
-      className={`find-row-card rounded-2xl border border-[var(--twilight)]/75 mb-3 sm:mb-4 overflow-hidden group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)] ${reflectionClass} ${skipAnimation ? "" : "animate-fade-in"} ${accentClass?.className ?? ""} ${
+      className={`find-row-card find-row-card-bg rounded-xl border border-[var(--twilight)]/75 mb-2.5 sm:mb-3 overflow-hidden group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)] ${reflectionClass} ${skipAnimation ? "" : "animate-fade-in"} ${accentClass?.className ?? ""} ${
         categoryColor ? "border-l-[2px] border-l-[var(--accent-color)]" : ""
       }`}
       tabIndex={0}
       data-list-row="true"
       aria-label={displayTitle}
-      style={{
-        background:
-          "linear-gradient(180deg, color-mix(in srgb, var(--night) 84%, transparent), color-mix(in srgb, var(--dusk) 72%, transparent))",
-      }}
     >
       <ScopedStyles css={accentClass?.css} />
       {/* Header - clickable to expand/collapse */}
@@ -250,30 +246,30 @@ export default function EventGroup({
         type="button"
         onClick={() => setIsExpanded(!isExpanded)}
         data-row-primary-link="true"
-        className="w-full p-3.5 sm:p-4 flex items-start gap-3 sm:gap-4 hover:bg-[var(--twilight)]/20 transition-colors"
+        className="w-full p-3 sm:p-3.5 flex items-start gap-2.5 sm:gap-3 hover:bg-[var(--twilight)]/20 transition-colors"
       >
         {/* Time of earliest event - matches EventCard format */}
         {(() => {
           const { time, period } = formatTimeSplit(events[0]?.start_time);
           return (
-            <div className={`hidden sm:flex flex-shrink-0 self-stretch ${railImageUrl ? "relative w-[124px] -ml-3.5 sm:-ml-4 -my-3.5 sm:-my-4 overflow-hidden list-rail-media border-r border-[var(--twilight)]/60" : "w-[72px] flex-col items-start justify-center gap-1.5 pr-3 border-r border-[var(--twilight)]/60"}`}>
+            <div className={`hidden sm:flex flex-shrink-0 self-stretch ${railImageUrl ? "relative w-[100px] -ml-3 sm:-ml-3.5 -my-3 sm:-my-3.5 overflow-hidden list-rail-media border-r border-[var(--twilight)]/60" : "w-[72px] flex-col items-start justify-center gap-1.5 pr-3 border-r border-[var(--twilight)]/60"}`}>
               {railImageUrl && (
                 <>
                   <Image
                     src={railImageUrl}
                     alt={displayTitle}
                     fill
-                    sizes="124px"
+                    sizes="100px"
                     className="object-cover scale-[1.03]"
                   />
                   <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/56 to-black/20 pointer-events-none" />
                 </>
               )}
-              <div className={`relative z-10 flex flex-col items-start justify-center gap-1.5 ${railImageUrl ? "h-full pl-3 pr-2 py-3 sm:py-4 list-rail-caption" : ""}`}>
+              <div className={`relative z-10 flex flex-col items-start justify-center gap-1.5 ${railImageUrl ? "h-full pl-2.5 pr-1.5 py-2.5 sm:py-3 list-rail-caption" : ""}`}>
                 <span className="font-mono text-xs font-semibold text-[var(--accent-color)] leading-none uppercase tracking-[0.12em]">
                   {events.length} {events.length === 1 ? "item" : "items"}
                 </span>
-                <span className={`font-mono text-2xl font-bold leading-none tabular-nums ${railImageUrl ? "text-white" : "text-[var(--cream)]"}`}>
+                <span className={`font-mono text-xl font-bold leading-none tabular-nums ${railImageUrl ? "text-white" : "text-[var(--cream)]"}`}>
                   {time}
                 </span>
                 {period && (
@@ -284,8 +280,8 @@ export default function EventGroup({
           );
         })()}
         {dominantCategory && (
-          <span className="flex-shrink-0 inline-flex items-center justify-center w-9 h-9 rounded-lg bg-accent-20 border border-[var(--twilight)]/55">
-            <CategoryIcon type={dominantCategory} size={18} glow="subtle" />
+          <span className="flex-shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-lg bg-accent-20 border border-[var(--twilight)]/55">
+            <CategoryIcon type={dominantCategory} size={16} glow="subtle" />
           </span>
         )}
         <div className="flex-1 min-w-0 text-left">
@@ -294,12 +290,12 @@ export default function EventGroup({
               href={portalSlug ? `/${portalSlug}?spot=${venueSlug}` : `/spots/${venueSlug}`}
               scroll={false}
               onClick={(e) => e.stopPropagation()}
-              className="font-semibold text-xl text-[var(--cream)] hover:text-[var(--accent-color)] truncate block transition-colors leading-tight"
+              className="font-semibold text-lg text-[var(--cream)] hover:text-[var(--accent-color)] truncate block transition-colors leading-tight"
             >
               {displayTitle}
             </Link>
           ) : (
-            <span className="font-semibold text-xl text-[var(--cream)] group-hover:text-[var(--accent-color)] truncate block transition-colors leading-tight">{displayTitle}</span>
+            <span className="font-semibold text-lg text-[var(--cream)] group-hover:text-[var(--accent-color)] truncate block transition-colors leading-tight">{displayTitle}</span>
           )}
           {displaySubtitle && <span className="text-sm text-[var(--text-tertiary)] mt-1 block truncate">{displaySubtitle}</span>}
         </div>

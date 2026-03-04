@@ -96,8 +96,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
             start_date = event_date.strftime("%Y-%m-%d")
             events_found += 1
 
+            hash_key = f"{start_date}|{template['start_time']}"
             content_hash = generate_content_hash(
-                template["title"], VENUE_DATA["name"], start_date
+                template["title"], VENUE_DATA["name"], hash_key
             )
 
             event_record = {
@@ -133,7 +134,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 continue
 
             try:
-                insert_event(event_record, series_hint=series_hint)
+                insert_event(event_record, series_hint=series_hint, genres=["open-mic"])
                 events_new += 1
             except Exception as exc:
                 logger.error(f"Failed to insert {template['title']} on {start_date}: {exc}")

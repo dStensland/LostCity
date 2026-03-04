@@ -165,7 +165,7 @@ def run_diagnostics():
             # Get events with their categories
             events = (
                 client.table("events")
-                .select("id, category")
+                .select("id, category_id")
                 .eq("portal_id", atlanta_id)
                 .gte("start_date", today)
                 .lte("start_date", in_30_days)
@@ -175,7 +175,7 @@ def run_diagnostics():
             # Count by category
             category_counts = {}
             for event in events:
-                cat = event.get("category") or "uncategorized"
+                cat = event.get("category_id") or "uncategorized"
                 category_counts[cat] = category_counts.get(cat, 0) + 1
             
             query_results = [

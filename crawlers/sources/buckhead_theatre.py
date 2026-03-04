@@ -184,14 +184,15 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             continue
 
                         # Check for duplicates
-                        event_key = f"{title}|{start_date}"
+                        event_key = f"{title}|{start_date}|{start_time or ''}"
                         if event_key in seen_events:
                             continue
                         seen_events.add(event_key)
 
                         events_found += 1
 
-                        content_hash = generate_content_hash(title, "Buckhead Theatre", start_date)
+                        hash_key = f"{start_date}|{start_time}" if start_time else start_date
+                        content_hash = generate_content_hash(title, "Buckhead Theatre", hash_key)
 
 
                         category, subcategory, tags = determine_category(title)
@@ -345,7 +346,7 @@ def parse_text_events(page, source_id: int, venue_id: int) -> tuple[int, int, in
                     break
 
             # Check for duplicates
-            event_key = f"{title}|{start_date}"
+            event_key = f"{title}|{start_date}|{start_time or ''}"
             if event_key in seen_events:
                 i += 1
                 continue
@@ -353,14 +354,8 @@ def parse_text_events(page, source_id: int, venue_id: int) -> tuple[int, int, in
 
             events_found += 1
 
-            content_hash = generate_content_hash(title, "Buckhead Theatre", start_date)
-
-            existing = find_event_by_hash(content_hash)
-            if existing:
-                smart_update_existing_event(existing, event_record)
-                events_updated += 1
-                i += 1
-                continue
+            hash_key = f"{start_date}|{start_time}" if start_time else start_date
+            content_hash = generate_content_hash(title, "Buckhead Theatre", hash_key)
 
             category, subcategory, tags = determine_category(title)
 
@@ -390,6 +385,13 @@ def parse_text_events(page, source_id: int, venue_id: int) -> tuple[int, int, in
                 "recurrence_rule": None,
                 "content_hash": content_hash,
             }
+
+            existing = find_event_by_hash(content_hash)
+            if existing:
+                smart_update_existing_event(existing, event_record)
+                events_updated += 1
+                i += 1
+                continue
 
             # Enrich from detail page
             enrich_event_record(event_record, source_name="Buckhead Theatre")

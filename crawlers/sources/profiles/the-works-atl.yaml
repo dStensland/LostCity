@@ -1,0 +1,29 @@
+version: 1
+slug: the-works-atl
+name: "The Works ATL"
+integration_method: llm_crawler
+defaults:
+  venue_name: "The Works ATL"
+  category: community
+  tags:
+  - atlanta-expansion-wave-y
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - "https://theworksatl.com/events/"
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+detail:
+  enabled: true
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+data_goals:
+  - events
+  - lineup
+  - images
+  - tickets

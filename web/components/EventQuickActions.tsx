@@ -8,6 +8,7 @@ import ShareEventButton from "./ShareEventButton";
 import InviteToEventButton from "./InviteToEventButton";
 import { isTicketingUrl } from "@/lib/card-utils";
 import Dot from "@/components/ui/Dot";
+import { Ticket, ArrowSquareOut } from "@phosphor-icons/react";
 
 interface EventQuickActionsProps {
   event: {
@@ -35,12 +36,14 @@ interface EventQuickActionsProps {
   };
   isLive?: boolean;
   className?: string;
+  /** Extra actions rendered in the CTA row (e.g. "Make a Night of It") */
+  extraActions?: React.ReactNode;
 }
 
-export default function EventQuickActions({ event, isLive, className = "" }: EventQuickActionsProps) {
+export default function EventQuickActions({ event, isLive, className = "", extraActions }: EventQuickActionsProps) {
   const { text: priceText, isFree } = formatPriceDetailed(event);
   const dateObj = parseISO(event.start_date);
-  const dateDisplay = event.end_date
+  const dateDisplay = event.end_date && event.end_date !== event.start_date
     ? `${format(dateObj, "MMM d")} – ${format(parseISO(event.end_date), "MMM d")}`
     : format(dateObj, "EEE, MMM d");
   const isActuallyTicketed = isTicketingUrl(event.ticket_url);
@@ -124,13 +127,9 @@ export default function EventQuickActions({ event, isLive, className = "" }: Eve
             }`}
           >
             {isActuallyTicketed ? (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-              </svg>
+              <Ticket size={20} weight="bold" />
             ) : (
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-              </svg>
+              <ArrowSquareOut size={20} weight="bold" />
             )}
             {isLive ? "Join Now" : isActuallyTicketed ? "Get Tickets" : event.is_free ? "RSVP Free" : "Learn More"}
           </a>
@@ -141,13 +140,11 @@ export default function EventQuickActions({ event, isLive, className = "" }: Eve
             rel="noopener noreferrer"
             className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-[var(--coral)] text-[var(--void)] text-base font-semibold rounded-lg hover:bg-[var(--rose)] transition-all shadow-[0_0_20px_rgba(255,107,122,0.3)] hover:shadow-[0_0_30px_rgba(255,107,122,0.5)]"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              {sourceLooksTicketed || !event.is_free ? (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-              )}
-            </svg>
+            {sourceLooksTicketed || !event.is_free ? (
+              <Ticket size={20} weight="bold" />
+            ) : (
+              <ArrowSquareOut size={20} weight="bold" />
+            )}
             {event.is_free ? "RSVP Free" : "Get Tickets"}
           </a>
         ) : (
@@ -178,6 +175,13 @@ export default function EventQuickActions({ event, isLive, className = "" }: Eve
           <ShareEventButton eventId={event.id} eventTitle={event.title} variant="icon" />
         </div>
       </div>
+
+      {/* Extra actions (e.g. Make a Night of It) */}
+      {extraActions && (
+        <div className="px-3 pb-3 flex items-center">
+          {extraActions}
+        </div>
+      )}
     </div>
   );
 }

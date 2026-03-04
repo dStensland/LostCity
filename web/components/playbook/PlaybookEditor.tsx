@@ -56,7 +56,7 @@ import {
   Check,
   DotsSixVertical,
   Notebook,
-} from "@phosphor-icons/react/dist/ssr";
+} from "@phosphor-icons/react";
 
 import {
   ZONE_COLORS,

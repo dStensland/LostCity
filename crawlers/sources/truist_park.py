@@ -1,26 +1,27 @@
 """
 Crawler for Truist Park / The Battery Atlanta.
 
-Site uses JavaScript rendering - must use Playwright.
+Uses MLB schedule API for deterministic Atlanta Braves home game extraction.
 """
 
 from __future__ import annotations
 
 import re
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta, date
 from typing import Optional
+from zoneinfo import ZoneInfo
 
-from playwright.sync_api import sync_playwright
+import requests
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
-from utils import extract_images_from_page, extract_event_links, find_event_url
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.mlb.com/braves/ballpark"
-EVENTS_URL = "https://www.batteryatl.com/events"
+SCHEDULE_API_URL = "https://statsapi.mlb.com/api/v1/schedule"
+BRAVES_TEAM_ID = 144
 
 VENUE_DATA = {
     "name": "Truist Park",
@@ -52,173 +53,170 @@ def parse_time(time_text: str) -> Optional[str]:
     return None
 
 
+def format_time_label(time_24: Optional[str]) -> Optional[str]:
+    if not time_24:
+        return None
+    raw = str(time_24).strip()
+    if not raw:
+        return None
+    for fmt in ("%H:%M", "%H:%M:%S"):
+        try:
+            return datetime.strptime(raw, fmt).strftime("%-I:%M %p")
+        except ValueError:
+            continue
+    return raw
+
+
+def build_truist_description(
+    *,
+    title: str,
+    start_date: str,
+    start_time: Optional[str],
+    source_url: str,
+) -> str:
+    lowered = title.lower()
+    if any(k in lowered for k in ("braves", "baseball", "vs.", "vs ")):
+        lead = f"{title} at Truist Park."
+        context = "Live baseball experience at the Atlanta Braves' home stadium in The Battery."
+    elif any(k in lowered for k in ("tour", "tours")):
+        lead = f"{title} at Truist Park."
+        context = "Stadium tour experience with ballpark access details listed by the organizer."
+    elif any(k in lowered for k in ("concert", "show", "festival")):
+        lead = f"{title} at Truist Park."
+        context = "Live event in The Battery entertainment district at Truist Park."
+    else:
+        lead = f"{title} at Truist Park."
+        context = "Live event in The Battery entertainment district."
+
+    parts = [lead, context, "Location: Truist Park, The Battery, Atlanta, GA."]
+    time_label = format_time_label(start_time)
+    if start_date and time_label:
+        parts.append(f"Scheduled on {start_date} at {time_label}.")
+    elif start_date:
+        parts.append(f"Scheduled on {start_date}.")
+
+    if source_url:
+        parts.append(f"Check the official listing for latest entry rules, parking, and ticket availability ({source_url}).")
+    else:
+        parts.append("Check the official listing for latest entry rules, parking, and ticket availability.")
+    return " ".join(parts)[:1200]
+
+
+def _parse_game_datetime(game_date: str) -> tuple[str, Optional[str]]:
+    """Parse MLB API gameDate into local Atlanta date/time."""
+    dt_utc = datetime.fromisoformat(game_date.replace("Z", "+00:00"))
+    dt_local = dt_utc.astimezone(ZoneInfo("America/New_York"))
+    return dt_local.strftime("%Y-%m-%d"), dt_local.strftime("%H:%M")
+
+
+def _fetch_schedule(start: date, end: date) -> list[dict]:
+    params = {
+        "sportId": 1,
+        "teamId": BRAVES_TEAM_ID,
+        "startDate": start.isoformat(),
+        "endDate": end.isoformat(),
+    }
+    response = requests.get(
+        SCHEDULE_API_URL,
+        params=params,
+        timeout=30,
+        headers={"User-Agent": "Mozilla/5.0"},
+    )
+    response.raise_for_status()
+    payload = response.json()
+    games: list[dict] = []
+    for d in payload.get("dates", []):
+        games.extend(d.get("games", []))
+    return games
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Truist Park events using Playwright."""
+    """Crawl Truist Park home games via MLB schedule API."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
 
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                viewport={"width": 1920, "height": 1080},
+        venue_id = get_or_create_venue(VENUE_DATA)
+        today = datetime.now().date()
+        end_date = today + timedelta(days=240)
+        games = _fetch_schedule(today, end_date)
+        logger.info("Fetched %s Braves schedule games in window", len(games))
+
+        for game in games:
+            venue = game.get("venue") or {}
+            if venue.get("name") != "Truist Park":
+                continue
+
+            teams = game.get("teams") or {}
+            home = ((teams.get("home") or {}).get("team") or {}).get("name", "")
+            away = ((teams.get("away") or {}).get("team") or {}).get("name", "")
+            if not home or not away:
+                continue
+
+            # We only keep Atlanta home games at Truist.
+            if "Atlanta Braves" not in home:
+                continue
+
+            start_date, start_time = _parse_game_datetime(game.get("gameDate", ""))
+            if not start_date:
+                continue
+
+            title = f"Atlanta Braves vs {away}"
+            game_pk = game.get("gamePk")
+            event_url = f"https://www.mlb.com/gameday/{game_pk}" if game_pk else BASE_URL
+            image_url = (
+                "https://www.mlbstatic.com/team-logos/share/144.jpg"
+                if game_pk
+                else None
             )
-            page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            events_found += 1
+            content_hash = generate_content_hash(title, "Truist Park", start_date)
+            event_record = {
+                "source_id": source_id,
+                "venue_id": venue_id,
+                "title": title,
+                "description": build_truist_description(
+                    title=title,
+                    start_date=start_date,
+                    start_time=start_time,
+                    source_url=event_url,
+                ),
+                "start_date": start_date,
+                "start_time": start_time,
+                "end_date": None,
+                "end_time": None,
+                "is_all_day": False,
+                "category": "sports",
+                "subcategory": "baseball",
+                "tags": ["atlanta-braves", "mlb", "baseball", "truist-park"],
+                "price_min": None,
+                "price_max": None,
+                "price_note": "Ticketed MLB game",
+                "is_free": False,
+                "source_url": event_url,
+                "ticket_url": event_url,
+                "image_url": image_url,
+                "raw_text": f"{title} - {start_date}",
+                "extraction_confidence": 0.93,
+                "is_recurring": False,
+                "recurrence_rule": None,
+                "content_hash": content_hash,
+            }
 
-            logger.info(f"Fetching Truist Park: {EVENTS_URL}")
-            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)
+            existing = find_event_by_hash(content_hash)
+            if existing:
+                smart_update_existing_event(existing, event_record)
+                events_updated += 1
+                continue
 
-            # Extract images from page
-            image_map = extract_images_from_page(page)
-
-            # Extract event links for specific URLs
-            event_links = extract_event_links(page, BASE_URL)
-
-            # Scroll to load all content
-            for _ in range(5):
-                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                page.wait_for_timeout(1000)
-
-            # Get page text and parse line by line
-            body_text = page.inner_text("body")
-            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
-
-            # Parse events - look for date patterns
-            i = 0
-            while i < len(lines):
-                line = lines[i]
-
-                # Skip navigation items
-                if len(line) < 3:
-                    i += 1
-                    continue
-
-                # Look for date patterns
-                date_match = re.match(
-                    r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)?,?\s*(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})(?:,?\s+(\d{4}))?",
-                    line,
-                    re.IGNORECASE
-                )
-
-                if date_match:
-                    month = date_match.group(1)
-                    day = date_match.group(2)
-                    year = date_match.group(3) if date_match.group(3) else str(datetime.now().year)
-
-                    # Look for title in surrounding lines
-                    title = None
-                    start_time = None
-
-                    for offset in [-2, -1, 1, 2, 3]:
-                        idx = i + offset
-                        if 0 <= idx < len(lines):
-                            check_line = lines[idx]
-                            if re.match(r"(January|February|March)", check_line, re.IGNORECASE):
-                                continue
-                            if not start_time:
-                                time_result = parse_time(check_line)
-                                if time_result:
-                                    start_time = time_result
-                                    continue
-                            if not title and len(check_line) > 5:
-                                if not re.match(r"\d{1,2}[:/]", check_line):
-                                    if not re.match(r"(free|tickets|register|\$|more info)", check_line.lower()):
-                                        title = check_line
-                                        break
-
-                    if not title:
-                        i += 1
-                        continue
-
-                    # Skip UI elements and junk titles
-                    skip_titles = [
-                        "select date", "select time", "buy tickets", "learn more",
-                        "view all", "load more", "see more", "read more",
-                        "filter", "sort by", "calendar", "upcoming events"
-                    ]
-                    if any(skip in title.lower() for skip in skip_titles):
-                        i += 1
-                        continue
-
-                    # Skip events without times - they show as TBA which looks bad
-                    if not start_time:
-                        logger.debug(f"Skipping event without time: {title}")
-                        i += 1
-                        continue
-
-                    # Parse date
-                    try:
-                        month_str = month[:3] if len(month) > 3 else month
-                        dt = datetime.strptime(f"{month_str} {day} {year}", "%b %d %Y")
-                        if dt.date() < datetime.now().date():
-                            dt = datetime.strptime(f"{month_str} {day} {int(year) + 1}", "%b %d %Y")
-                        start_date = dt.strftime("%Y-%m-%d")
-                    except ValueError:
-                        i += 1
-                        continue
-
-                    events_found += 1
-
-                    content_hash = generate_content_hash(title, "Truist Park", start_date)
-
-
-                    # Get specific event URL
-
-
-                    event_url = find_event_url(title, event_links, EVENTS_URL)
-
-
-
-                    event_record = {
-                        "source_id": source_id,
-                        "venue_id": venue_id,
-                        "title": title,
-                        "description": "Event at Truist Park",
-                        "start_date": start_date,
-                        "start_time": start_time,
-                        "end_date": None,
-                        "end_time": None,
-                        "is_all_day": False,
-                        "category": "community",
-                        "subcategory": None,
-                        "tags": ["event"],
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": None,
-                        "is_free": False,
-                        "source_url": event_url,
-                        "ticket_url": event_url,
-                        "image_url": image_map.get(title),
-                        "raw_text": f"{title} - {start_date}",
-                        "extraction_confidence": 0.80,
-                        "is_recurring": False,
-                        "recurrence_rule": None,
-                        "content_hash": content_hash,
-                    }
-
-                    existing = find_event_by_hash(content_hash)
-                    if existing:
-                        smart_update_existing_event(existing, event_record)
-                        events_updated += 1
-                        i += 1
-                        continue
-
-                    try:
-                        insert_event(event_record)
-                        events_new += 1
-                        logger.info(f"Added: {title} on {start_date}")
-                    except Exception as e:
-                        logger.error(f"Failed to insert: {title}: {e}")
-
-                i += 1
-
-            browser.close()
+            try:
+                insert_event(event_record)
+                events_new += 1
+            except Exception as e:
+                logger.error(f"Failed to insert: {title}: {e}")
 
         logger.info(
             f"Truist Park crawl complete: {events_found} found, {events_new} new, {events_updated} updated"

@@ -1,0 +1,29 @@
+version: 1
+slug: beetlecat
+name: "BeetleCat"
+integration_method: llm_crawler
+defaults:
+  venue_name: "BeetleCat"
+  category: food_drink
+  tags:
+  - atlanta-expansion-wave-w
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - "https://beetlecatatl.com/events/"
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+detail:
+  enabled: true
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+data_goals:
+  - events
+  - lineup
+  - images
+  - tickets

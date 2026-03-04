@@ -25,17 +25,17 @@ def main():
 
     # Fix outdoor → outdoors
     print("\n1. Fixing 'outdoor' → 'outdoors'...")
-    result = supabase.table("events").update({"category": "outdoors"}).eq("category", "outdoor").execute()
+    result = supabase.table("events").update({"category_id": "outdoors"}).eq("category_id", "outdoor").execute()
     print(f"   ✓ Fixed outdoor→outdoors: {len(result.data)} events")
 
     # Fix museums → art
     print("\n2. Fixing 'museums' → 'art'...")
-    result = supabase.table("events").update({"category": "art"}).eq("category", "museums").execute()
+    result = supabase.table("events").update({"category_id": "art"}).eq("category_id", "museums").execute()
     print(f"   ✓ Fixed museums→art: {len(result.data)} events")
 
     # Fix shopping → community
     print("\n3. Fixing 'shopping' → 'community'...")
-    result = supabase.table("events").update({"category": "community"}).eq("category", "shopping").execute()
+    result = supabase.table("events").update({"category_id": "community"}).eq("category_id", "shopping").execute()
     print(f"   ✓ Fixed shopping→community: {len(result.data)} events")
 
     # Delete "Calendar" garbage event
@@ -54,7 +54,7 @@ def main():
 
     # Verify by checking for any remaining invalid categories
     print("\nVerifying fixes...")
-    invalid_check = supabase.table("events").select("category").in_("category", ["outdoor", "museums", "shopping"]).execute()
+    invalid_check = supabase.table("events").select("category_id").in_("category_id", ["outdoor", "museums", "shopping"]).execute()
     if invalid_check.data and len(invalid_check.data) > 0:
         print(f"\n⚠️  WARNING: Still have {len(invalid_check.data)} events with invalid categories")
     else:

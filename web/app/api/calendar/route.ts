@@ -5,8 +5,10 @@ import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-lim
 import { logger } from "@/lib/logger";
 import { parseIntParam } from "@/lib/api-utils";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
+import { fetchSocialProofCounts } from "@/lib/social-proof";
 import {
   applyPortalScopeToQuery,
+  excludeSensitiveEvents,
   filterByPortalCity,
   parsePortalContentFilters,
   applyPortalCategoryFilters,
@@ -79,7 +81,7 @@ export async function GET(request: NextRequest) {
   const portalCity = !portalExclusive ? portalContext.filters.city : undefined;
   const portalContentFilters = parsePortalContentFilters(portalContext.filters as Record<string, unknown> | null);
 
-  // Type for calendar events (minimal fields)
+  // Type for calendar events
   type CalendarEvent = {
     id: number;
     title: string;
@@ -92,6 +94,10 @@ export async function GET(request: NextRequest) {
     price_max: number | null;
     tags?: string[] | null;
     genres?: string[] | null;
+    image_url: string | null;
+    blurhash: string | null;
+    is_tentpole: boolean;
+    featured_blurb: string | null;
     venue: { id: number; name: string; neighborhood: string | null; city: string | null; lat: number | null; lng: number | null } | null;
     series: { genres: string[] | null } | null;
   };
@@ -106,11 +112,15 @@ export async function GET(request: NextRequest) {
         start_date,
         start_time,
         is_all_day,
-        category_id,
+        category:category_id,
         is_free,
         price_min,
         price_max,
         tags,
+        image_url,
+        blurhash,
+        is_tentpole,
+        featured_blurb,
         venue:venues!events_venue_id_fkey (
           id,
           name,
@@ -155,6 +165,8 @@ export async function GET(request: NextRequest) {
       portalExclusive,
       publicOnlyWhenNoPortal: true,
     });
+
+    query = excludeSensitiveEvents(query);
 
     query = applyPortalCategoryFilters(query, portalContentFilters, {
       userCategoriesActive: !!(categories && categories.length > 0),
@@ -213,12 +225,26 @@ export async function GET(request: NextRequest) {
     };
   });
 
+  // Fetch social proof counts in a single batch RPC call
+  const eventIds = eventsWithGenres.map((e) => e.id);
+  const socialProofCounts = await fetchSocialProofCounts(eventIds);
+
+  // Merge social proof onto events
+  const eventsWithSocialProof = eventsWithGenres.map((event) => {
+    const counts = socialProofCounts.get(event.id);
+    return {
+      ...event,
+      going_count: counts?.going || 0,
+      interested_count: counts?.interested || 0,
+    };
+  });
+
   // Group events by date
-  type EventWithGenres = Omit<CalendarEvent, "series"> & { genres: string[] | null };
-  const eventsByDate: Record<string, EventWithGenres[]> = {};
+  type EventWithSocialProof = (typeof eventsWithSocialProof)[number];
+  const eventsByDate: Record<string, EventWithSocialProof[]> = {};
   const categoryCounts: Record<string, number> = {};
 
-  eventsWithGenres.forEach((event) => {
+  eventsWithSocialProof.forEach((event) => {
     const dateKey = event.start_date;
     if (!eventsByDate[dateKey]) {
       eventsByDate[dateKey] = [];
@@ -232,7 +258,7 @@ export async function GET(request: NextRequest) {
   });
 
   // Calculate summary stats
-  const totalEvents = eventsWithGenres.length;
+  const totalEvents = eventsWithSocialProof.length;
   const daysWithEvents = Object.keys(eventsByDate).length;
 
   return NextResponse.json({

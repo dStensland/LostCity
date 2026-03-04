@@ -8,60 +8,21 @@ import NeonDivider from "@/components/home/NeonDivider";
 import GlowOrb from "@/components/home/GlowOrb";
 import CategoryIcon from "@/components/CategoryIcon";
 import { DEFAULT_PORTAL_SLUG, DEFAULT_PORTAL_NAME } from "@/lib/constants";
-import { createClient } from "@/lib/supabase/server";
-import { formatCompactCount, safeJsonLd } from "@/lib/formats";
+import { safeJsonLd } from "@/lib/formats";
 import { getSiteUrl } from "@/lib/site-url";
 
-function formatStat(n: number): string {
-  if (n >= 1000) {
-    // Keep it short so it fits the 3-up stat cards on mobile (e.g. "10k+")
-    return `${formatCompactCount(Math.floor(n / 100) * 100)}+`;
-  }
-  return n.toLocaleString();
-}
+// Static brag stats — updated periodically, not worth blocking page render.
+// Last verified: 2026-03-02 against Supabase.
+// Real counts: 18,505 future events, 1,054 total sources, 810 active venues,
+// 113 neighborhoods. 470 sources active, 128 producing events.
+const STATS = [
+  { value: "18k+", label: "events", colorClass: "home-stat-cyan" },
+  { value: "1k+", label: "sources", colorClass: "home-stat-pink" },
+  { value: "800+", label: "venues", colorClass: "home-stat-purple" },
+  { value: "110+", label: "hoods", colorClass: "home-stat-cyan" },
+];
 
-async function getStats() {
-  try {
-    const supabase = await createClient();
-    type NeighborhoodRow = { neighborhood: string | null };
-    const today = new Date().toISOString().split("T")[0];
-    const [eventsResult, venuesResult] = await Promise.all([
-      supabase
-        .from("events")
-        .select("*", { count: "exact", head: true })
-        .gte("start_date", today)
-        .or("is_sensitive.eq.false,is_sensitive.is.null"),
-      supabase.from("venues").select("*", { count: "exact", head: true }),
-    ]);
-    // Count distinct artists performing at upcoming events
-    const { data: artistRows } = await supabase
-      .from("event_artists")
-      .select("name, events!inner(start_date)")
-      .gte("events.start_date", today);
-    const uniqueArtists = new Set(
-      (artistRows ?? []).map((r: { name: string }) => r.name.toLowerCase().trim())
-    ).size;
-    // Distinct neighborhood count via unique values
-    const { data: hoodData } = await supabase
-      .from("venues")
-      .select("neighborhood")
-      .not("neighborhood", "is", null) as { data: { neighborhood: string }[] | null };
-    const neighborhoods = new Set(
-      ((hoodData as NeighborhoodRow[] | null) ?? []).map((v) => v.neighborhood).filter(Boolean)
-    ).size;
-    return {
-      events: eventsResult.count || 0,
-      venues: venuesResult.count || 0,
-      artists: uniqueArtists,
-      neighborhoods,
-    };
-  } catch {
-    return { events: 5000, venues: 500, artists: 500, neighborhoods: 100 };
-  }
-}
-
-export default async function Home() {
-  const stats = await getStats();
+export default function Home() {
   const siteUrl = getSiteUrl();
   const homepageSchema = {
     "@context": "https://schema.org",
@@ -197,12 +158,7 @@ export default async function Home() {
       <div className="px-4 pb-10 md:pb-14 relative z-10">
         <div className="max-w-2xl mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5">
-            {[
-              { value: formatStat(stats.events), label: "events", colorClass: "home-stat-cyan" },
-              { value: formatStat(stats.venues), label: "venues", colorClass: "home-stat-pink" },
-              { value: formatStat(stats.artists), label: "artists", colorClass: "home-stat-purple" },
-              { value: formatStat(stats.neighborhoods), label: "hoods", colorClass: "home-stat-cyan" },
-            ].map((stat, i) => (
+            {STATS.map((stat, i) => (
               <ScrollReveal key={stat.label} direction="up" delay={i * 100}>
                 <div className="text-center p-4 md:p-6 rounded-lg border border-[#1a1a24] hover:border-[#2a2a34] home-stat-card transition-all duration-300 group overflow-hidden">
                   <div className={`text-[clamp(1.5rem,4.5vw,3.25rem)] font-semibold tracking-tight mb-1 leading-none tabular-nums ${stat.colorClass}`}>

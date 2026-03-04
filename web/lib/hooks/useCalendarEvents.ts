@@ -18,6 +18,12 @@ export interface CalendarEvent {
   price_min: number | null;
   price_max: number | null;
   genres?: string[] | null;
+  image_url?: string | null;
+  blurhash?: string | null;
+  going_count?: number;
+  interested_count?: number;
+  is_tentpole?: boolean;
+  featured_blurb?: string | null;
   venue?: {
     name: string;
     neighborhood: string | null;

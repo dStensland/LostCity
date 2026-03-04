@@ -164,10 +164,10 @@ def check_time_issues():
     print()
     
     result = client.table("events") \
-        .select("id, title, start_date, start_time, category, description, sources(name, slug), raw_text") \
+        .select("id, title, start_date, start_time, category_id, description, sources(name, slug), raw_text") \
         .eq("start_time", "00:00:00") \
         .eq("is_all_day", False) \
-        .not_.in_("category", ["nightlife", "music", "dance"]) \
+        .not_.in_("category_id", ["nightlife", "music", "dance"]) \
         .limit(5) \
         .execute()
     
@@ -176,7 +176,7 @@ def check_time_issues():
             print(f"\nEvent ID: {event['id']}")
             print(f"  Title: {event['title']}")
             print(f"  Date/Time: {event['start_date']} at {event['start_time']}")
-            print(f"  Category: {event.get('category')}")
+            print(f"  Category: {event.get('category_id')}")
             print(f"  Source: {event.get('sources', {}).get('name')}")
             desc = event.get('description', '')
             if desc:

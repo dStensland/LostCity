@@ -6,6 +6,7 @@ import CategoryIcon from "@/components/CategoryIcon";
 import {
   QUICK_VENUE_TYPES,
   QUICK_VIBES,
+  CUISINE_TYPES,
   SPOTS_TABS,
   getTabChips,
   type SpotsTab,
@@ -310,7 +311,7 @@ function FilterDeck({
     filters.occasion != null;
 
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
-  const advancedFilterCount = (filters.priceLevel.length > 0 ? 1 : 0) + filters.vibes.length;
+  const advancedFilterCount = (filters.priceLevel.length > 0 ? 1 : 0) + filters.vibes.length + filters.cuisine.length;
   const hasAdvancedFiltersActive = advancedFilterCount > 0;
 
   return (
@@ -480,6 +481,39 @@ function FilterDeck({
             />
           </div>
 
+          {/* Cuisine chips — eat-drink tab only */}
+          {activeTab === "eat-drink" && (
+            <div>
+              <span className="font-mono text-xs uppercase tracking-[0.12em] text-[var(--muted)] mb-1.5 block">Cuisine</span>
+              <div className="flex flex-wrap gap-1.5">
+                {CUISINE_TYPES.map((c) => {
+                  const isActive = filters.cuisine.includes(c.value);
+                  return (
+                    <button
+                      key={c.value}
+                      role="checkbox"
+                      aria-checked={isActive}
+                      aria-label={`Filter by ${c.label} cuisine`}
+                      onClick={() =>
+                        setFilters((f) => ({
+                          ...f,
+                          cuisine: isActive ? f.cuisine.filter((v) => v !== c.value) : [...f.cuisine, c.value],
+                        }))
+                      }
+                      className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full font-mono text-xs font-medium transition-all active:scale-[0.98] whitespace-nowrap ${
+                        isActive
+                          ? "bg-[var(--coral)]/20 text-[var(--coral)] border border-[var(--coral)]/50"
+                          : "bg-[var(--dusk)]/80 text-[var(--muted)] border border-[var(--twilight)]/80 hover:text-[var(--soft)]"
+                      }`}
+                    >
+                      {c.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-wrap gap-1.5">
             {QUICK_VIBES.map((vibe) => {
               const isActive = filters.vibes.includes(vibe.value);
@@ -570,12 +604,13 @@ function MobileFilterStrip({
 }) {
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  // Count active filter *sections* inside the sheet (max 5, bounded and predictable)
+  // Count active filter *sections* inside the sheet (max 6, bounded and predictable)
   const activeFilterCount =
     (filters.neighborhoods.length > 0 ? 1 : 0) +
     (filters.venueTypes.length > 0 ? 1 : 0) +
     (filters.priceLevel.length > 0 ? 1 : 0) +
     (filters.vibes.length > 0 ? 1 : 0) +
+    (filters.cuisine.length > 0 ? 1 : 0) +
     (filters.withEvents ? 1 : 0);
 
   return (

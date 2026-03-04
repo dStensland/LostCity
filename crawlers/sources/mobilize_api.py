@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 import time
 import requests
+import re
 from datetime import datetime
 from typing import Optional
 from urllib.parse import urljoin
@@ -67,6 +68,40 @@ def parse_datetime(unix_timestamp: Optional[int]) -> tuple[Optional[str], Option
 def get_event_type_mapping(event_type: str) -> tuple[str, list[str]]:
     """Map Mobilize event type to category and tags."""
     return EVENT_TYPE_MAP.get(event_type, ("community", ["activism"]))
+
+
+_MOBILIZE_PLACEHOLDER_VENUE_RE = re.compile(
+    r"(meet\s+us\s+in\s+the\s+parking\s+lot|located\s+at\s*$|^parking\s+lot$)",
+    re.I,
+)
+
+
+def _normalize_mobilize_venue_name(
+    venue_name: str,
+    *,
+    title: str = "",
+    address: Optional[str] = None,
+) -> str:
+    """Normalize obvious placeholder location text into a usable venue label."""
+    cleaned = (venue_name or "").strip()
+    if cleaned:
+        cleaned = re.sub(r"\s+", " ", cleaned)
+
+    if not cleaned or cleaned.lower() in {"tbd", "tba", "online", "virtual"}:
+        return "Community Location"
+
+    if _MOBILIZE_PLACEHOLDER_VENUE_RE.search(cleaned):
+        title_clean = (title or "").strip()
+        near_match = re.search(r"\bnear\s+(.+)$", title_clean, re.I)
+        if near_match:
+            inferred = re.sub(r"\s+", " ", near_match.group(1)).strip(" .,-")
+            if inferred:
+                return inferred
+        if address:
+            return address.strip()
+        return "Community Location"
+
+    return cleaned
 
 
 def fetch_events_page(page: int = 1) -> Optional[dict]:
@@ -129,17 +164,18 @@ def discover_events(max_events: int = MAX_EVENTS) -> list[dict]:
     return all_events[:max_events]
 
 
-def process_location(location_data: dict) -> Optional[dict]:
+def process_location(location_data: dict, *, event_title: str = "") -> Optional[dict]:
     """Convert Mobilize location to venue data."""
     if not location_data:
         return None
 
-    venue_name = location_data.get("venue", "").strip()
-    if not venue_name or venue_name.lower() in ["tbd", "tba", "online", "virtual"]:
-        venue_name = "Community Location"
-
     address_lines = location_data.get("address_lines", [])
     address = address_lines[0] if address_lines else None
+    venue_name = _normalize_mobilize_venue_name(
+        location_data.get("venue", ""),
+        title=event_title,
+        address=address,
+    )
 
     city = location_data.get("locality", "").strip()
     state = location_data.get("region", "").strip()
@@ -306,7 +342,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             venue_id = get_or_create_virtual_venue()
                             venue_name = "Online / Virtual Event"
                         elif event_occurrence["location"]:
-                            venue_data = process_location(event_occurrence["location"])
+                            venue_data = process_location(
+                                event_occurrence["location"],
+                                event_title=title,
+                            )
                             if venue_data:
                                 venue_name = venue_data["name"]
                                 venue_id = get_or_create_venue(venue_data)

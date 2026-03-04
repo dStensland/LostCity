@@ -172,25 +172,35 @@ def parse_venue_from_text(location_text: str) -> dict:
     return default_venue
 
 
+def _has_word(combined: str, words: list[str]) -> bool:
+    """Check for whole-word matches to avoid substring false positives."""
+    import re
+    return any(re.search(rf"\b{w}\b", combined) for w in words)
+
+
 def infer_category(title: str, description: str) -> str:
     """Infer category from event title and description."""
     combined = (title + " " + description).lower()
 
-    if any(word in combined for word in ["concert", "music", "band", "jazz", "tribute", "singer"]):
+    if _has_word(combined, ["concert", "music", "band", "jazz", "tribute", "singer"]):
         return "music"
-    elif any(word in combined for word in ["theater", "play", "musical", "performance"]):
+    elif _has_word(combined, ["theater", "play", "musical", "performance"]):
         return "performing-arts"
-    elif any(word in combined for word in ["workshop", "class", "learn", "training"]):
+    elif _has_word(combined, ["volleyball", "basketball", "soccer", "softball", "baseball",
+                              "football", "tennis", "pickleball", "rugby", "lacrosse",
+                              "swimming", "track and field", "tournament", "athletics"]):
+        return "sports"
+    elif _has_word(combined, ["workshop", "class", "learn", "training"]):
         return "community"
-    elif any(word in combined for word in ["worship", "service", "church", "prayer"]):
+    elif _has_word(combined, ["worship", "service", "church", "prayer"]):
         return "community"
-    elif any(word in combined for word in ["documentary", "film", "movie"]):
+    elif _has_word(combined, ["documentary", "film", "movie"]):
         return "film"
-    elif any(word in combined for word in ["art", "gallery", "exhibition", "museum"]):
+    elif _has_word(combined, ["art", "gallery", "exhibition", "museum", "sculpture"]):
         return "art"
-    elif any(word in combined for word in ["kids", "children", "family", "youth"]):
+    elif _has_word(combined, ["kids", "children", "family", "youth"]):
         return "community"
-    elif any(word in combined for word in ["festival", "celebration", "commemoration"]):
+    elif _has_word(combined, ["festival", "celebration", "commemoration"]):
         return "community"
 
     return "community"

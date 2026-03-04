@@ -1,0 +1,29 @@
+version: 1
+slug: diesel-filling-station
+name: "Diesel Filling Station"
+integration_method: llm_crawler
+defaults:
+  venue_name: "Diesel Filling Station"
+  category: nightlife
+  tags:
+  - atlanta-expansion-wave-w
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - "https://www.dieselfillingstation.com"
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+detail:
+  enabled: true
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+data_goals:
+  - events
+  - lineup
+  - images
+  - tickets

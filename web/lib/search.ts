@@ -592,7 +592,7 @@ async function applySearchFilters(
     const latDelta = radiusKm / 111;
     const lngDelta = radiusKm / (111 * Math.cos(lat * Math.PI / 180));
 
-    const { data: nearbyVenues } = await supabase
+    const { data: nearbyVenues, error: geoError } = await supabase
       .from("venues")
       .select("id")
       .gte("lat", lat - latDelta)
@@ -600,34 +600,25 @@ async function applySearchFilters(
       .gte("lng", lng - lngDelta)
       .lte("lng", lng + lngDelta);
 
-    const venueIds = (nearbyVenues as { id: number }[] | null)?.map((v) => v.id) || [];
-    if (venueIds.length > 0) {
-      query = query.in("venue_id", venueIds);
+    if (geoError) {
+      logger.error("geo_center venue query failed, skipping geo filter", geoError);
     } else {
-      // No venues in range, return empty results
-      return { query, shouldReturnEmpty: true };
+      const venueIds = (nearbyVenues as { id: number }[] | null)?.map((v) => v.id) || [];
+      if (venueIds.length > 0) {
+        query = query.in("venue_id", venueIds);
+      } else {
+        return { query, shouldReturnEmpty: true };
+      }
     }
   }
 
-  // Apply map viewport bounds filter (for map view performance)
+  // Note: geo_bounds viewport filtering is handled client-side by useMapEvents.
+  // Server-side pre-fetch of venue IDs within bounds was removed because metro-area
+  // queries return thousands of venue IDs, exceeding PostgREST's URL length limit
+  // when passed to .in("venue_id", [...]). We still exclude venue-less events since
+  // they can't be plotted on a map.
   if (filters.geo_bounds) {
-    const { sw_lat, sw_lng, ne_lat, ne_lng } = filters.geo_bounds;
-
-    const { data: boundsVenues } = await supabase
-      .from("venues")
-      .select("id")
-      .gte("lat", sw_lat)
-      .lte("lat", ne_lat)
-      .gte("lng", sw_lng)
-      .lte("lng", ne_lng);
-
-    const venueIds = (boundsVenues as { id: number }[] | null)?.map((v) => v.id) || [];
-    if (venueIds.length > 0) {
-      query = query.in("venue_id", venueIds);
-    } else {
-      // No venues in viewport, return empty results
-      return { query, shouldReturnEmpty: true };
-    }
+    query = query.not("venue_id", "is", null);
   }
 
   return { query, shouldReturnEmpty: false };

@@ -64,24 +64,28 @@ export function RelatedCard({
       <ScopedStyles css={accentClass?.css} />
       <Link
         href={href}
-        className={`group block rounded-lg border border-[var(--twilight)] bg-[var(--card-bg)] overflow-hidden transition-all hover:bg-[var(--card-bg-hover)] hover:border-[var(--soft)] snap-start min-w-[280px] sm:min-w-0 related-card-accent ${
+        className={`group block rounded-xl overflow-hidden border border-[var(--twilight)]/60 bg-[var(--night)] transition-all hover:border-[var(--soft)] snap-start min-w-[200px] sm:min-w-0 related-card-accent ${
           accentClass?.className ?? ""
         }`}
       >
-        <div className="relative w-full aspect-[4/5] bg-[var(--night)] overflow-hidden">
+        <div className="relative w-full aspect-[3/2] bg-[var(--twilight)]/30 overflow-hidden">
           {imageUrl ? (
             <Image
               src={imageUrl}
               alt={title}
               fill
-              className="object-cover"
+              sizes="(max-width: 640px) 200px, 220px"
+              className="object-cover transition-transform duration-500 group-hover:scale-105"
             />
           ) : (
             <CategoryPlaceholder category={category} color={accentColor} size="sm" />
           )}
+          {imageUrl && (
+            <div className="absolute inset-0 bg-gradient-to-t from-[var(--night)] via-transparent to-transparent" />
+          )}
         </div>
-        <div className="p-4">
-          <h3 className="text-sm font-semibold text-[var(--cream)] mb-1 line-clamp-2 group-hover:text-glow related-card-title">
+        <div className="px-3 py-2.5">
+          <h3 className="text-sm font-semibold text-[var(--cream)] mb-0.5 line-clamp-2 leading-tight">
             {title}
           </h3>
           {subtitle && (

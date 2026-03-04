@@ -176,7 +176,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 time_display = format_time_display(time_24h)
 
                 title = f"Free Poker Night at {venue_name}"
-                description = f"Free Texas Hold'em poker tournament hosted by Freeroll Atlanta at {venue_name}. No buy-in required. Registration cut-off is one hour after start time. All skill levels welcome!"
+                description = f"Free Texas Hold'em poker night hosted by Freeroll Atlanta at {venue_name}. No buy-in required. Registration cut-off is one hour after start time. All skill levels welcome!"
                 events_found += 1
 
                 content_hash = generate_content_hash(title, venue_name, start_date)
@@ -198,8 +198,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "poker",
                         "free",
                         "texas-holdem",
-                        "tournament",
                         "freeroll",
+                        "bar-poker",
                         neighborhood.lower().replace(" ", "-"),
                     ],
                     "price_min": None,
@@ -232,7 +232,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 }
 
                 try:
-                    insert_event(event_record, series_hint=series_hint)
+                    insert_event(event_record, series_hint=series_hint, genres=["poker"])
                     events_new += 1
                     logger.info(f"Added: {title} on {start_date} at {time_display}")
                 except Exception as e:

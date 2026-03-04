@@ -1,0 +1,29 @@
+version: 1
+slug: irbys-tavern
+name: "Irby's Tavern"
+integration_method: llm_crawler
+defaults:
+  venue_name: "Irby's Tavern"
+  category: nightlife
+  tags:
+  - atlanta-expansion-wave-x
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - "https://irbystavern.com/atlanta-buckhead-irby-s-tavern-events"
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+detail:
+  enabled: true
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+data_goals:
+  - events
+  - lineup
+  - images
+  - tickets

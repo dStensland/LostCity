@@ -9,7 +9,7 @@ import {
   Lightning,
   Bank,
   MapPin,
-} from "@phosphor-icons/react/dist/ssr";
+} from "@phosphor-icons/react";
 
 export type Suggestion = {
   type: "venue" | "event" | "special";

@@ -21,6 +21,7 @@ import type {
 } from "./types";
 import type { FeedEventData } from "@/components/EventCard";
 import type { Spot } from "@/lib/spots-constants";
+import { THINGS_TO_DO_TILES } from "@/lib/spots-constants";
 import { getTimeSlotLabel, isNightlifeTime } from "./time-slots";
 import { scoreEvent, scoreDestination, applyWildCardSorting } from "./scoring";
 import { getWeatherContextLabel } from "./weather-mapping";
@@ -96,14 +97,30 @@ type EventWithScore = FeedEventData & {
 /**
  * Build a human-readable recurrence label from series data.
  * E.g., "Every Monday", "Weekly", "Monthly"
+ *
+ * Derives the day name from the event's own start_date rather than
+ * trusting series.day_of_week, which can be stale when a series
+ * spans multiple days (e.g. Improv Night on both Fri and Sat).
  */
-function buildRecurrenceLabel(event: FeedEventData): string | undefined {
+export function buildRecurrenceLabel(event: FeedEventData): string | undefined {
   const series = (event as Record<string, unknown>).series as {
     frequency?: string | null;
     day_of_week?: string | null;
   } | null;
   if (!series) return undefined;
 
+  // Prefer deriving the day from the event's actual date — always accurate.
+  if (event.start_date) {
+    try {
+      const dayName = new Date(event.start_date + "T00:00:00")
+        .toLocaleDateString("en-US", { weekday: "long" });
+      return `Every ${dayName}`;
+    } catch {
+      // Fall through to series metadata
+    }
+  }
+
+  // Fallback to series metadata when start_date is unavailable
   if (series.day_of_week) {
     const day = series.day_of_week.charAt(0).toUpperCase() + series.day_of_week.slice(1);
     return `Every ${day}`;
@@ -120,11 +137,11 @@ function buildRecurrenceLabel(event: FeedEventData): string | undefined {
  * Marks kept events with is_recurring + recurrence_label.
  */
 function deduplicateSeries<T extends FeedEventData>(events: T[]): T[] {
-  const seriesSeen = new Map<number, number>(); // series_id → index in result
+  const seriesSeen = new Map<string, number>(); // series_id (UUID) → index in result
   const result: T[] = [];
 
   for (const event of events) {
-    const seriesId = (event as Record<string, unknown>).series_id as number | null;
+    const seriesId = (event as Record<string, unknown>).series_id as string | null;
     if (!seriesId) {
       result.push(event);
       continue;
@@ -140,6 +157,38 @@ function deduplicateSeries<T extends FeedEventData>(events: T[]): T[] {
       if (event.start_date < existing.start_date) {
         result[existingIdx] = event;
       }
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Deduplicate recurring events by series + venue + date.
+ * Unlike deduplicateSeries (which keeps 1 per series), this preserves every
+ * distinct venue+day occurrence. "Dirty South Trivia" at 6 venues across
+ * the week = 6 events, not 1.
+ */
+function deduplicateByVenueDay<T extends FeedEventData>(events: T[]): T[] {
+  const seen = new Set<string>();
+  const result: T[] = [];
+
+  for (const event of events) {
+    const seriesId = (event as Record<string, unknown>).series_id as string | null;
+    const venueId = event.venue?.id;
+    const date = event.start_date;
+
+    // No series? Keep as-is (non-recurring events pass through)
+    if (!seriesId) {
+      result.push(event);
+      continue;
+    }
+
+    // Key = series + venue + date. Same trivia night at same bar on same day = dup.
+    const key = `${seriesId}:${venueId ?? "no-venue"}:${date}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      result.push(event);
     }
   }
 
@@ -193,7 +242,9 @@ export function buildTabEventPool(
   _signals: UserSignals | null,
   friendsGoingMap: Record<number, FriendGoingInfo[]>,
 ): CityPulseSection {
-  const deduped = deduplicateSeries(events);
+  // Exclude Regular Hangs events — they belong in The Scene, not the Lineup
+  const nonScene = events.filter((e) => !isSceneEvent(e));
+  const deduped = deduplicateSeries(nonScene);
 
   const items: CityPulseItem[] = deduped.map((event) => {
     const seriesId = (event as Record<string, unknown>).series_id as number | null;
@@ -345,9 +396,12 @@ export function buildRightNowSection(
 ): CityPulseSection | null {
   const items: CityPulseItem[] = [];
 
+  // Exclude Regular Hangs — they belong in The Scene section
+  const lineupEvents = input.todayEvents.filter((e) => !isSceneEvent(e));
+
   // Score and sort events
   const scoredEvents = scoreAndSort(
-    input.todayEvents,
+    lineupEvents,
     signals,
     friendsGoingMap,
   );
@@ -568,8 +622,9 @@ export function buildTonightSection(
   const planningSlots: TimeSlot[] = ["morning", "midday", "happy_hour"];
   if (!planningSlots.includes(context.time_slot)) return null;
 
-  // Filter to events starting after 5pm
+  // Filter to events starting after 5pm, excluding Regular Hangs
   const tonightEvents = input.todayEvents.filter((e) => {
+    if (isSceneEvent(e)) return false;
     if (!e.start_time) return false;
     return e.start_time >= "17:00";
   });
@@ -628,10 +683,12 @@ export function buildThisWeekSection(
   friendsGoingMap: Record<number, FriendGoingInfo[]>,
 ): CityPulseSection | null {
   // Always build — the THIS WEEK tab needs data every day
-  if (weekEvents.length < 2) return null;
+  // Exclude Regular Hangs — they belong in The Scene section
+  const nonScene = weekEvents.filter((e) => !isSceneEvent(e));
+  if (nonScene.length < 2) return null;
 
   // Distribute across days so one busy day doesn't dominate, cap total
-  const distributed = distributeByDate(weekEvents, 25);
+  const distributed = distributeByDate(nonScene, 25);
   const scored = scoreAndSort(distributed, signals, friendsGoingMap).slice(0, 30);
   const items: CityPulseItem[] = scored.map((e) =>
     makeEventItem(e, {
@@ -647,11 +704,11 @@ export function buildThisWeekSection(
     id: "this-week",
     type: "this_week",
     title: "This Week",
-    subtitle: `${weekEvents.length} event${weekEvents.length !== 1 ? "s" : ""} through Friday`,
+    subtitle: `${nonScene.length} event${nonScene.length !== 1 ? "s" : ""} through Friday`,
     priority: "secondary",
     accent_color: "var(--neon-cyan)",
     items,
-    meta: { total_this_week: weekEvents.length },
+    meta: { total_this_week: nonScene.length },
   };
 }
 
@@ -666,9 +723,11 @@ export function buildThisWeekendSection(
   friendsGoingMap: Record<number, FriendGoingInfo[]>,
 ): CityPulseSection | null {
   // Always build — feeds into the THIS WEEK tab alongside this_week
-  if (weekendEvents.length < 2) return null;
+  // Exclude Regular Hangs — they belong in The Scene section
+  const nonScene = weekendEvents.filter((e) => !isSceneEvent(e));
+  if (nonScene.length < 2) return null;
 
-  const distributed = distributeByDate(weekendEvents, 25);
+  const distributed = distributeByDate(nonScene, 25);
   const scored = scoreAndSort(distributed, signals, friendsGoingMap);
   const items: CityPulseItem[] = scored.map((e) =>
     makeEventItem(e, {
@@ -805,10 +864,12 @@ export function buildComingUpSection(
   signals: UserSignals | null,
   friendsGoingMap: Record<number, FriendGoingInfo[]>,
 ): CityPulseSection | null {
-  if (events.length === 0) return null;
+  // Exclude Regular Hangs — they belong in The Scene section
+  const nonScene = events.filter((e) => !isSceneEvent(e));
+  if (nonScene.length === 0) return null;
 
   // Distribute across days so one busy weekend doesn't dominate, cap total
-  const distributed = distributeByDate(events, 15);
+  const distributed = distributeByDate(nonScene, 15);
   const scored = scoreAndSort(distributed, signals, friendsGoingMap).slice(0, 25);
   const items: CityPulseItem[] = scored.map((e) =>
     makeEventItem(e, {
@@ -830,54 +891,6 @@ export function buildComingUpSection(
 }
 
 // ---------------------------------------------------------------------------
-// Tonight's Regulars section (recurring nightlife/music/comedy/food events today)
-// ---------------------------------------------------------------------------
-
-const REGULARS_CATEGORIES = new Set(["nightlife", "music", "comedy", "food_drink", "art"]);
-
-export function buildTonightsRegularsSection(
-  events: FeedEventData[],
-  signals: UserSignals | null,
-  friendsGoingMap: Record<number, FriendGoingInfo[]>,
-): CityPulseSection | null {
-  // Filter to only recurring events in the relevant categories
-  const recurring = events.filter((e) => {
-    const isRecurring = !!(e as Record<string, unknown>).is_recurring;
-    const hasSeries = !!((e as Record<string, unknown>).series_id);
-    if (!isRecurring && !hasSeries) return false;
-    return !e.category || REGULARS_CATEGORIES.has(e.category);
-  });
-
-  if (recurring.length < 3) return null;
-
-  // Deduplicate by series_id, then score and sort
-  const deduped = deduplicateSeries(recurring);
-  const scored = scoreAndSort(deduped, signals, friendsGoingMap);
-  const capped = scored.slice(0, 12);
-
-  const items: CityPulseItem[] = capped.map((e) =>
-    makeEventItem(e, {
-      friends_going: e.friends_going,
-      score: e.score,
-      reasons: e.reasons,
-      is_recurring: true,
-      recurrence_label: buildRecurrenceLabel(e),
-    }),
-  );
-
-  return {
-    id: "tonights-regulars",
-    type: "tonights_regulars",
-    title: "Tonight's Regulars",
-    subtitle: "Every week, rain or shine",
-    priority: "secondary",
-    accent_color: "var(--vibe)",
-    items,
-    layout: "list",
-  };
-}
-
-// ---------------------------------------------------------------------------
 // The Scene section (recurring activities — trivia, karaoke, open mic, etc.)
 // ---------------------------------------------------------------------------
 
@@ -890,27 +903,50 @@ export interface SceneActivityType {
   matchGenres?: string[];
   /** Categories to match (checked against event.category) */
   matchCategories?: string[];
+  /** Title regex fallback — checked last, after genres and category */
+  matchTitle?: RegExp;
 }
 
 export const SCENE_ACTIVITY_TYPES: SceneActivityType[] = [
-  { id: "trivia", label: "Trivia", iconName: "Question", color: "#93C5FD", matchGenres: ["trivia"] },
-  { id: "karaoke", label: "Karaoke", iconName: "MicrophoneStage", color: "#F9A8D4", matchGenres: ["karaoke"] },
-  { id: "open_mic", label: "Open Mic", iconName: "Microphone", color: "#FCD34D", matchGenres: ["open-mic", "openmic"] },
+  // --- Specific nightlife (identity-first: what the event IS, not format) ---
+  { id: "trivia", label: "Trivia", iconName: "Question", color: "#93C5FD", matchGenres: ["trivia"], matchTitle: /trivia|pub quiz|quizbastard/i },
+  { id: "karaoke", label: "Karaoke", iconName: "MicrophoneStage", color: "#F9A8D4", matchGenres: ["karaoke"], matchTitle: /karaoke/i },
+  { id: "comedy", label: "Comedy", iconName: "Smiley", color: "#FCD34D", matchGenres: ["comedy", "stand-up", "standup", "improv", "open-mic"], matchCategories: ["comedy"], matchTitle: /comedy|stand.up|\bimprov\b|open mic/i },
+  { id: "bingo", label: "Bingo", iconName: "NumberCircleNine", color: "#FDBA74", matchGenres: ["bingo"], matchTitle: /bingo/i },
+  // --- Nightlife (before gaming — drag/dj are more specific than broad "game-night") ---
   { id: "dj", label: "DJ Night", iconName: "Headphones", color: "#C4B5FD", matchGenres: ["dj", "electronic", "edm"] },
+  { id: "drag", label: "Drag", iconName: "Crown", color: "#E879F9", matchGenres: ["drag"], matchTitle: /drag (show|brunch|bingo|night)/i },
+  // --- Gaming (before food so nerd genres beat the broad "specials" tag) ---
+  { id: "nerd_stuff", label: "Nerd Stuff", iconName: "Sword", color: "#7DD3FC", matchGenres: ["dnd", "tabletop", "mtg", "magic-the-gathering", "warhammer", "board-games", "card-games", "video-games", "miniatures", "game-night"], matchTitle: /\bgame night\b|board game|d&d|dungeons|warhammer|magic.the.gathering/i },
+  { id: "bar_games", label: "Bar Games", iconName: "BowlingBall", color: "#86EFAC", matchGenres: ["bar-games", "bowling", "bocce", "skee-ball", "curling", "darts", "shuffleboard", "pool", "billiards", "cornhole", "axe-throwing", "ping-pong"], matchTitle: /bowl|skee.?ball|darts|shuffleboard|bocce|cornhole|billiards|curling/i },
+  // --- Food & drink (happy_hour before food_specials — drink deals are more specific) ---
+  { id: "happy_hour", label: "Happy Hour", iconName: "Wine", color: "#C4B5FD", matchGenres: ["happy-hour", "drink-specials", "margaritas", "bottomless", "sangria", "mimosas"], matchTitle: /happy hour/i },
+  { id: "food_specials", label: "Food Specials", iconName: "ForkKnife", color: "#FCD34D", matchGenres: ["food-specials", "specials", "oysters", "dollar-oysters", "tacos", "taco-tuesday", "wings", "half-price", "pizza", "crab", "seafood", "tapas"] },
+  { id: "brunch", label: "Brunch", iconName: "Coffee", color: "#FDBA74", matchGenres: ["brunch"], matchTitle: /\bbrunch\b/i },
+  // --- Music genre ---
+  { id: "jazz_blues", label: "Jazz & Blues", iconName: "MusicNotes", color: "#93C5FD", matchGenres: ["jazz", "blues", "jam-session", "bluegrass"] },
+  { id: "dance", label: "Dance", iconName: "MusicNotes", color: "#F9A8D4", matchGenres: ["dance", "salsa", "swing", "line-dancing", "latin-night", "dance-party", "two-step", "bachata", "reggaeton", "cumbia", "country-dance", "salsa-night"], matchTitle: /dance (night|party)|salsa night|swing night|line danc|two.step|country (night|dance)|latin[oa]?\s*(night|tuesday|saturday|friday)|bachata|reggaeton|noche latina/i },
+  // --- Other specific types ---
+  { id: "poker", label: "Poker", iconName: "Club", color: "#86EFAC", matchGenres: ["poker", "texas-holdem", "freeroll"], matchTitle: /poker/i },
+  // line_dancing and latin_night consolidated into "dance" above (their genres already match there first)
+  // --- Fitness (run_club before fitness — outdoor group activities are more specific) ---
+  { id: "run_club", label: "Run Club", iconName: "PersonSimpleRun", color: "#5EEAD4", matchGenres: ["run-club", "running", "cycling", "bike-ride"], matchTitle: /run club|running club|bike ride|cycling/i },
+  { id: "fitness", label: "Fitness", iconName: "Barbell", color: "#86EFAC", matchGenres: ["yoga", "pickleball", "tennis", "hiking"], matchCategories: ["fitness"] },
+  // --- Social / community ---
+  { id: "viewing_party", label: "Viewing Party", iconName: "Television", color: "#A78BFA", matchGenres: ["viewing-party"], matchTitle: /viewing party|watch party/i },
+  { id: "tasting", label: "Tasting", iconName: "BeerStein", color: "#F9A8D4", matchGenres: ["wine-tasting", "whiskey-tasting", "bourbon-tasting", "craft-beer"], matchTitle: /wine (night|tasting|down|wednesday)|bourbon (brawl|tasting)|whiskey tasting|beer tasting/i },
+  { id: "skate_night", label: "Skate Night", iconName: "Disc", color: "#7DD3FC", matchGenres: ["skating", "roller-skating"], matchTitle: /skate night|skating/i },
+  // --- Format-based catchalls (last — identity types above take priority) ---
   { id: "live_music", label: "Live Music", iconName: "Waveform", color: "#F9A8D4", matchCategories: ["music"] },
-  { id: "drag", label: "Drag", iconName: "Crown", color: "#E879F9", matchGenres: ["drag"] },
-  { id: "improv", label: "Improv", iconName: "Lightbulb", color: "#FDBA74", matchGenres: ["improv"] },
-  { id: "comedy", label: "Comedy", iconName: "Smiley", color: "#FCD34D", matchCategories: ["comedy"] },
-  { id: "game_night", label: "Game Night", iconName: "GameController", color: "#7DD3FC", matchGenres: ["game-night", "board-games"] },
-  { id: "dance", label: "Dance", iconName: "MusicNotes", color: "#F9A8D4", matchGenres: ["dance", "salsa", "swing"] },
 ];
 
-/** Match a single event to its best activity type (first match wins: genres → category) */
-function matchActivityType(event: FeedEventData): string | null {
+/** Match a single event to its best activity type (first match wins: genres → category → title) */
+export function matchActivityType(event: FeedEventData): string | null {
   const genres = ((event as Record<string, unknown>).genres as string[] | null) ?? [];
   const tags = ((event as Record<string, unknown>).tags as string[] | null) ?? [];
   const category = event.category ?? "";
 
+  // Pass 1 & 2: match on genres/tags and category
   for (const act of SCENE_ACTIVITY_TYPES) {
     if (act.matchGenres) {
       const combined = [...genres, ...tags];
@@ -920,7 +956,45 @@ function matchActivityType(event: FeedEventData): string | null {
       if (act.matchCategories.includes(category)) return act.id;
     }
   }
+
+  // Pass 3: title regex fallback for events with missing/empty genres
+  const title = (event.title ?? "").toLowerCase();
+  for (const act of SCENE_ACTIVITY_TYPES) {
+    if (act.matchTitle?.test(title)) return act.id;
+  }
+
   return null;
+}
+
+/** Premium tags that keep recurring events in the Lineup */
+const LINEUP_OVERRIDE_TAGS = new Set(["touring", "album-release", "one-night-only"]);
+const LINEUP_SERIES_TYPES = new Set(["film", "tour", "festival_program"]);
+
+/**
+ * Deterministic event router: true = Regular Hangs (The Scene), false = Lineup.
+ * Uses multi-signal decision tree so the same function works identically on
+ * both server (section builder) and client (LineupSection dedup).
+ */
+export function isSceneEvent(event: FeedEventData): boolean {
+  const seriesId = (event as Record<string, unknown>).series_id as number | null;
+  const isRecurring = (event as Record<string, unknown>).is_recurring as boolean | undefined;
+  const isTentpole = (event as Record<string, unknown>).is_tentpole as boolean | undefined;
+  const festivalId = (event as Record<string, unknown>).festival_id as number | null;
+  const tags = ((event as Record<string, unknown>).tags as string[] | null) ?? [];
+  const series = (event as Record<string, unknown>).series as
+    | { series_type?: string | null } | null;
+
+  // Must be recurring to be a Regular Hang
+  if (!seriesId && !isRecurring) return false;
+
+  // Premium overrides → always Lineup
+  if (isTentpole) return false;
+  if (festivalId) return false;
+  if (tags.some((t) => LINEUP_OVERRIDE_TAGS.has(t))) return false;
+  if (series?.series_type && LINEUP_SERIES_TYPES.has(series.series_type)) return false;
+
+  // Activity type match = the core Scene router
+  return matchActivityType(event) !== null;
 }
 
 export function buildTheSceneSection(
@@ -929,37 +1003,66 @@ export function buildTheSceneSection(
   signals: UserSignals | null,
   friendsGoingMap: Record<number, FriendGoingInfo[]>,
 ): CityPulseSection | null {
-  // 1. Combine today + week, filter to recurring only
-  const allEvents = [...todayEvents, ...weekRecurringEvents];
-  const recurringOnly = allEvents.filter((e) => {
-    const seriesId = (e as Record<string, unknown>).series_id as number | null;
-    const isRecurring = (e as Record<string, unknown>).is_recurring as boolean | undefined;
-    return !!seriesId || !!isRecurring;
+  // 1. Combine today + week, dedup by event ID (same event can appear in
+  //    both inputs), then filter through deterministic Scene router
+  const combined = [...todayEvents, ...weekRecurringEvents];
+  const seenIds = new Set<number>();
+  const allEvents = combined.filter((e) => {
+    if (seenIds.has(e.id)) return false;
+    seenIds.add(e.id);
+    return true;
   });
+  const recurringOnly = allEvents.filter(isSceneEvent);
 
-  // 2. Deduplicate by series_id (keeps earliest occurrence)
-  const deduped = deduplicateSeries(recurringOnly);
+  // 2. Deduplicate by series + venue + date. A series like "Dirty South Trivia"
+  //    runs at 6 different venues across the week — each is a distinct event the
+  //    user cares about. Only collapse true duplicates (same series, same venue,
+  //    same day). Do NOT use deduplicateSeries here — that collapses to 1 per
+  //    series, destroying the weekly schedule.
+  const deduped = deduplicateByVenueDay(recurringOnly);
 
-  // 3. Match each event to an activity type, build per-event map + counts
-  const eventActivityMap: Record<number, string> = {};
-  const activityCounts: Record<string, number> = {};
-
+  // 3. Match each event to an activity type
+  const allActivityMap: Record<number, string> = {};
   for (const event of deduped) {
     const actId = matchActivityType(event);
+    if (actId) {
+      allActivityMap[event.id] = actId;
+    }
+  }
+
+  // 4. Only keep events that matched an activity type
+  const matched = deduped.filter((e) => allActivityMap[e.id]);
+
+  if (matched.length < 3) return null;
+
+  // 5. Score individually, then sort. No cap — these are compact text rows and
+  //    the client handles chip filtering + expand/collapse. Do NOT call
+  //    scoreAndSort() which has series-only dedup baked in.
+  const scored = matched.map((event) => {
+    const result = scoreEvent(event as never, signals, friendsGoingMap);
+    return {
+      ...event,
+      score: result.score,
+      reasons: result.reasons,
+      friends_going: result.friends_going,
+      is_recurring: true as const,
+      recurrence_label: buildRecurrenceLabel(event),
+    };
+  });
+  const sorted = interleaveByVenue(applyWildCardSorting(scored));
+
+  // Build counts + map from the full set (every activity is represented)
+  const eventActivityMap: Record<number, string> = {};
+  const activityCounts: Record<string, number> = {};
+  for (const event of sorted) {
+    const actId = allActivityMap[event.id];
     if (actId) {
       eventActivityMap[event.id] = actId;
       activityCounts[actId] = (activityCounts[actId] || 0) + 1;
     }
   }
 
-  // 4. Only keep events that matched an activity type
-  const matched = deduped.filter((e) => eventActivityMap[e.id]);
-  if (matched.length < 3) return null;
-
-  // 5. Score, sort, cap
-  const scored = scoreAndSort(matched, signals, friendsGoingMap).slice(0, 30);
-
-  const items: CityPulseItem[] = scored.map((e) =>
+  const items: CityPulseItem[] = sorted.map((e) =>
     makeEventItem(e, {
       friends_going: e.friends_going,
       score: e.score,
@@ -982,6 +1085,84 @@ export function buildTheSceneSection(
       activity_counts: activityCounts,
       event_activity_map: eventActivityMap,
     },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Experiences section (always-on venue destinations)
+// ---------------------------------------------------------------------------
+
+/** Category mapping derived from THINGS_TO_DO_TILES (single source of truth) */
+const EXPERIENCE_CATEGORIES: Record<string, string[]> = {};
+for (const tile of THINGS_TO_DO_TILES) {
+  EXPERIENCE_CATEGORIES[tile.key] = [...tile.venueTypes];
+}
+// Extra venue types that qualify but aren't in tiles
+EXPERIENCE_CATEGORIES["parks"]?.push("outdoor_venue");
+EXPERIENCE_CATEGORIES["entertainment-games"]?.push("entertainment");
+EXPERIENCE_CATEGORIES["markets"]?.push("market");
+EXPERIENCE_CATEGORIES["fitness"]?.push("fitness_center");
+
+function categorizeVenueType(venueType: string | null): string {
+  if (!venueType) return "museums";
+  for (const [cat, types] of Object.entries(EXPERIENCE_CATEGORIES)) {
+    if (types.includes(venueType)) return cat;
+  }
+  return "museums";
+}
+
+/**
+ * Build experiences section from real venue data.
+ * Returns null when no qualifying venues exist (graceful degradation).
+ */
+export function buildExperiencesSection(
+  venues: Spot[],
+  eventCountMap: Map<number, number>,
+): CityPulseSection | null {
+  if (venues.length === 0) return null;
+
+  // Deduplicate by venue ID (data can have dupes from slug conflicts)
+  const seen = new Set<number>();
+  const unique = venues.filter((v) => {
+    if (seen.has(v.id)) return false;
+    seen.add(v.id);
+    return true;
+  });
+
+  // Sort: venues with events first (by count desc), then alphabetical
+  const sorted = [...unique].sort((a, b) => {
+    const aCount = eventCountMap.get(a.id) ?? 0;
+    const bCount = eventCountMap.get(b.id) ?? 0;
+    if (bCount !== aCount) return bCount - aCount;
+    return a.name.localeCompare(b.name);
+  });
+
+  const items: CityPulseItem[] = sorted.map((venue) =>
+    makeDestinationItem(venue, {
+      contextual_label: categorizeVenueType(venue.venue_type),
+    }),
+  );
+
+  // Attach per-category counts + per-venue event counts as meta
+  // so the client can filter without refetching
+  const categoryCounts: Record<string, number> = {};
+  const venueEventCounts: Record<number, number> = {};
+  for (const venue of unique) {
+    const cat = categorizeVenueType(venue.venue_type);
+    categoryCounts[cat] = (categoryCounts[cat] ?? 0) + 1;
+    const evCount = eventCountMap.get(venue.id) ?? 0;
+    if (evCount > 0) venueEventCounts[venue.id] = evCount;
+  }
+
+  return {
+    id: "experiences",
+    type: "experiences",
+    title: "Things to Do",
+    subtitle: "Parks, museums, trails & more",
+    priority: "tertiary",
+    accent_color: "var(--neon-green)",
+    items,
+    meta: { category_counts: categoryCounts, venue_event_counts: venueEventCounts },
   };
 }
 

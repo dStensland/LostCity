@@ -12,9 +12,8 @@ from datetime import datetime
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
-from utils import extract_event_links, find_event_url
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +66,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     year = now.year
 
     try:
+        body_text = ""
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             context = browser.new_context(
@@ -76,38 +76,39 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page = context.new_page()
 
             logger.info(f"Fetching BronzeLens: {BASE_URL}")
-            page.goto(BASE_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(2000)
-
-            body_text = page.inner_text("body")
-
-            # Try to find dates on the page
-            start_date, end_date = parse_dates(body_text)
-
-            # Fall back to known dates
-            if not start_date:
-                if year in KNOWN_DATES:
-                    start_date, end_date = KNOWN_DATES[year]
-                elif year + 1 in KNOWN_DATES:
-                    year = year + 1
-                    start_date, end_date = KNOWN_DATES[year]
-
-            if not start_date:
-                logger.warning("Could not determine BronzeLens dates")
-                browser.close()
-                return 0, 0, 0
-
-            # Check if past
-            if datetime.strptime(end_date, "%Y-%m-%d") < now:
-                year += 1
-                if year in KNOWN_DATES:
-                    start_date, end_date = KNOWN_DATES[year]
-                else:
-                    logger.warning(f"No known dates for BronzeLens {year}")
-                    browser.close()
-                    return 0, 0, 0
-
+            try:
+                page.goto(BASE_URL, wait_until="domcontentloaded", timeout=30000)
+                page.wait_for_timeout(2000)
+                body_text = page.inner_text("body")
+            except Exception as exc:
+                logger.warning(
+                    "BronzeLens site fetch failed; using known-date fallback: %s", exc
+                )
             browser.close()
+
+        # Try to find dates on the page
+        start_date, end_date = parse_dates(body_text) if body_text else (None, None)
+
+        # Fall back to known dates
+        if not start_date:
+            if year in KNOWN_DATES:
+                start_date, end_date = KNOWN_DATES[year]
+            elif year + 1 in KNOWN_DATES:
+                year = year + 1
+                start_date, end_date = KNOWN_DATES[year]
+
+        if not start_date:
+            logger.warning("Could not determine BronzeLens dates")
+            return 0, 0, 0
+
+        # Check if past
+        if datetime.strptime(end_date, "%Y-%m-%d") < now:
+            year += 1
+            if year in KNOWN_DATES:
+                start_date, end_date = KNOWN_DATES[year]
+            else:
+                logger.warning(f"No known dates for BronzeLens {year}")
+                return 0, 0, 0
 
         venue_id = get_or_create_venue(VENUE_DATA)
         events_found = 1
@@ -119,13 +120,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
             events_updated = 1
             logger.info(f"BronzeLens {year} already exists")
             return events_found, events_new, events_updated
-
-        # Get specific event URL
-
-
-        event_url = find_event_url(title, event_links, EVENTS_URL)
-
-
 
         event_record = {
             "source_id": source_id,
@@ -144,7 +138,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             "price_max": None,
             "price_note": "Various pass options available",
             "is_free": False,
-            "source_url": event_url,
+            "source_url": BASE_URL,
             "ticket_url": EVENTIVE_URL,
             "image_url": None,
             "raw_text": None,

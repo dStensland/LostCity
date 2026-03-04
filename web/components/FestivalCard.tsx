@@ -153,36 +153,32 @@ const FestivalCard = memo(function FestivalCard({
       <ScopedStyles css={scopedCss} />
       <Link
         href={festivalUrl}
-        className={`find-row-card block ${disableMargin ? "" : "mb-3 sm:mb-4"} rounded-2xl border border-[var(--twilight)]/75 group overflow-hidden border-l-[2px] border-l-[var(--accent-color)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)] ${accentClass?.className ?? ""} ${contextAccentClass?.className ?? ""} ${skipAnimation ? "" : "animate-card-emerge"} ${className ?? ""}`}
+        className={`find-row-card find-row-card-bg block ${disableMargin ? "" : "mb-2.5 sm:mb-3"} rounded-xl border border-[var(--twilight)]/75 group overflow-hidden border-l-[2px] border-l-[var(--accent-color)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)] ${accentClass?.className ?? ""} ${contextAccentClass?.className ?? ""} ${skipAnimation ? "" : "animate-card-emerge"} ${className ?? ""}`}
         tabIndex={0}
         data-list-row="true"
         data-row-primary-link="true"
         aria-label={festivalName}
-        style={{
-          background:
-            "linear-gradient(180deg, color-mix(in srgb, var(--night) 84%, transparent), color-mix(in srgb, var(--dusk) 72%, transparent))",
-        }}
       >
-      <div className="p-3.5 sm:p-4 flex gap-3 sm:gap-4">
+      <div className="p-3 sm:p-3.5 flex gap-2.5 sm:gap-3">
         {/* Date cell - matches EventCard time cell */}
-        <div ref={parallaxContainerRef} className={`hidden sm:flex flex-shrink-0 self-stretch ${festival.image_url ? "relative w-[124px] -ml-3.5 sm:-ml-4 -my-3.5 sm:-my-4 overflow-hidden list-rail-media border-r border-[var(--twilight)]/60" : "w-[72px] flex-col items-start justify-center gap-1.5 pr-3 border-r border-[var(--twilight)]/60"}`}>
+        <div ref={parallaxContainerRef} className={`hidden sm:flex flex-shrink-0 self-stretch ${festival.image_url ? "relative w-[100px] -ml-3 sm:-ml-3.5 -my-3 sm:-my-3.5 overflow-hidden list-rail-media border-r border-[var(--twilight)]/60" : "w-[72px] flex-col items-start justify-center gap-1.5 pr-3 border-r border-[var(--twilight)]/60"}`}>
           {festival.image_url && (
             <div ref={parallaxImageRef} className="absolute inset-0 transform-gpu will-change-transform">
               <Image
                 src={festival.image_url}
                 alt={festivalName}
                 fill
-                sizes="124px"
+                sizes="100px"
                 className="object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/56 to-black/20 pointer-events-none" />
             </div>
           )}
-          <div className={`relative z-10 flex flex-col items-start justify-center gap-1.5 ${festival.image_url ? "h-full pl-3 pr-2 py-3 sm:py-4 list-rail-caption" : ""}`}>
+          <div className={`relative z-10 flex flex-col items-start justify-center gap-1.5 ${festival.image_url ? "h-full pl-2.5 pr-1.5 py-2.5 sm:py-3 list-rail-caption" : ""}`}>
             <span className="font-mono text-2xs font-semibold text-[var(--accent-color)] leading-none uppercase tracking-[0.12em]">
               {format(startDate, "MMM")}
             </span>
-            <span className={`font-mono text-2xl font-bold leading-none tabular-nums ${festival.image_url ? "text-white" : "text-[var(--cream)]"}`}>
+            <span className={`font-mono text-xl font-bold leading-none tabular-nums ${festival.image_url ? "text-white" : "text-[var(--cream)]"}`}>
               {format(startDate, "d")}
             </span>
             {dayCount > 1 && (
@@ -228,13 +224,13 @@ const FestivalCard = memo(function FestivalCard({
             )}
             <div className="flex items-center gap-2.5 mb-1">
               <span
-                className="flex-shrink-0 inline-flex items-center justify-center w-9 h-9 rounded-lg bg-accent-20 border border-[var(--twilight)]/55"
+                className="flex-shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-lg bg-accent-20 border border-[var(--twilight)]/55"
               >
                 <span className="text-xs font-bold text-accent">
                   {typeLabel.charAt(0)}
                 </span>
               </span>
-              <span className="text-[var(--cream)] font-semibold text-xl transition-colors line-clamp-1 group-hover:text-[var(--accent-color)] leading-tight">
+              <span className="text-[var(--cream)] font-semibold text-lg transition-colors line-clamp-1 group-hover:text-[var(--accent-color)] leading-tight">
                 {festivalName}
               </span>
             </div>
@@ -313,7 +309,7 @@ function StandaloneDetails({
       {locationLabel && (
         <>
           {!isSingleDay && dateRangeLabel && <Dot />}
-          <span className="truncate max-w-[70%] sm:max-w-[45%] text-base" title={locationLabel}>{locationLabel}</span>
+          <span className="truncate max-w-[70%] sm:max-w-[45%] text-sm" title={locationLabel}>{locationLabel}</span>
         </>
       )}
       {countdown.urgency !== "tbd" && countdown.urgency !== "month-label" && (
@@ -370,7 +366,7 @@ function LinkedDetails({
     <>
       <div className="flex items-center gap-1.5 text-sm text-[var(--text-secondary)] mt-1.5 leading-relaxed flex-wrap">
         {locationLabel && (
-          <span className="truncate max-w-[70%] sm:max-w-[45%] font-medium text-base" title={locationLabel}>{locationLabel}</span>
+          <span className="truncate max-w-[70%] sm:max-w-[45%] font-medium text-sm" title={locationLabel}>{locationLabel}</span>
         )}
         {summary.venues.length > 1 && (
           <>

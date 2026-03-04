@@ -6,7 +6,7 @@ import Image from "@/components/SmartImage";
 import { usePortal } from "@/lib/portal-context";
 import { getCategoryColor, RANK_COLORS } from "@/lib/best-of";
 import type { BestOfVenuePreview } from "@/lib/best-of";
-import { TrendUp, Fire } from "@phosphor-icons/react/dist/ssr";
+import { TrendUp, Fire } from "@phosphor-icons/react";
 import { BEST_OF_ICONS, DEFAULT_BEST_OF_ICON } from "./best-of-icons";
 
 type CategorySummary = {

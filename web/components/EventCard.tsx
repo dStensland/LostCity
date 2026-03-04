@@ -403,7 +403,7 @@ function EventCard({
 
   return (
     <div
-      className={`find-row-card mb-3 sm:mb-4 rounded-2xl border border-[var(--twilight)]/75 ${reflectionClass} ${animationClass} ${staggerClass} overflow-hidden group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)] ${
+      className={`find-row-card find-row-card-bg mb-2.5 sm:mb-3 rounded-xl border border-[var(--twilight)]/75 ${reflectionClass} ${animationClass} ${staggerClass} overflow-hidden group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)] ${
         event.category ? "border-l-[2px] border-l-[var(--accent-color)]" : ""
       }`}
       tabIndex={0}
@@ -416,8 +416,6 @@ function EventCard({
             "color-mix(in srgb, var(--accent-color) 70%, transparent)",
           "--cta-glow":
             "color-mix(in srgb, var(--accent-color) 35%, transparent)",
-          background:
-            "linear-gradient(180deg, color-mix(in srgb, var(--night) 84%, transparent), color-mix(in srgb, var(--dusk) 72%, transparent))",
         } as CSSProperties
       }
     >
@@ -426,13 +424,13 @@ function EventCard({
           href={eventHref}
           scroll={false}
           data-row-primary-link="true"
-          className="block min-w-0 p-3.5 sm:p-4"
+          className="block min-w-0 p-3 sm:p-3.5"
         >
-          <div className="flex gap-3 sm:gap-4">
+          <div className="flex gap-2.5 sm:gap-3">
             {/* Time cell - hidden on mobile (inlined instead), visible on desktop */}
             <div
               ref={parallaxContainerRef}
-              className={`hidden sm:flex flex-shrink-0 self-stretch relative w-[124px] -ml-3.5 sm:-ml-4 -my-3.5 sm:-my-4 overflow-hidden border-r border-[var(--twilight)]/60 ${
+              className={`hidden sm:flex flex-shrink-0 self-stretch relative w-[100px] -ml-3 sm:-ml-3.5 -my-3 sm:-my-3.5 overflow-hidden border-r border-[var(--twilight)]/60 ${
                 hasRailImage ? "list-rail-media" : "bg-[var(--night)]/44"
               }`}
               style={{
@@ -450,7 +448,7 @@ function EventCard({
                     alt={eventTitle}
                     fill
                     blurhash={railBlurhash}
-                    sizes="124px"
+                    sizes="100px"
                     className="object-cover"
                     fallback={
                       <div className="absolute inset-0 flex items-center justify-center bg-[var(--night)]"
@@ -462,7 +460,7 @@ function EventCard({
                   <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/56 to-black/20 pointer-events-none" />
                 </div>
               )}
-              <div className="relative z-10 flex h-full flex-col items-start justify-center gap-1.5 pl-3 pr-2 py-3 sm:py-4 list-rail-caption">
+              <div className="relative z-10 flex h-full flex-col items-start justify-center gap-1.5 pl-2.5 pr-1.5 py-2.5 sm:py-3 list-rail-caption">
                 <span
                   className={`font-mono text-2xs font-semibold leading-none uppercase tracking-[0.12em] ${
                     dateInfo.isHighlight
@@ -483,7 +481,7 @@ function EventCard({
                 ) : (
                   <>
                     <span
-                      className={`font-mono text-2xl font-bold leading-none tabular-nums ${hasRailImage ? "text-white" : "text-[var(--cream)]"}`}
+                      className={`font-mono text-xl font-bold leading-none tabular-nums ${hasRailImage ? "text-white" : "text-[var(--cream)]"}`}
                     >
                       {time}
                     </span>
@@ -570,15 +568,15 @@ function EventCard({
               {/* Desktop: Inline layout */}
               <div className="hidden sm:flex items-center gap-2.5 mb-1">
                 {event.category && (
-                  <span className="flex-shrink-0 inline-flex items-center justify-center w-9 h-9 rounded-lg bg-accent-20 border border-[var(--twilight)]/55">
+                  <span className="flex-shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-lg bg-accent-20 border border-[var(--twilight)]/55">
                     <CategoryIcon
                       type={event.category}
-                      size={18}
+                      size={16}
                       glow="subtle"
                     />
                   </span>
                 )}
-                <span className="text-[var(--text-primary)] font-semibold text-xl transition-colors line-clamp-1 group-hover:text-[var(--accent-color)] leading-tight">
+                <span className="text-[var(--text-primary)] font-semibold text-lg transition-colors line-clamp-1 group-hover:text-[var(--accent-color)] leading-tight">
                   {eventTitle}
                 </span>
                 {isLive && (
@@ -612,7 +610,7 @@ function EventCard({
                 {venueName && (
                   <>
                     <span
-                      className="truncate max-w-[70%] sm:max-w-[45%] font-medium text-base"
+                      className="truncate max-w-[70%] sm:max-w-[45%] font-medium text-sm"
                       title={venueName}
                     >
                       {venueName}
@@ -944,7 +942,7 @@ function EventCard({
           </div>
         </Link>
 
-        <div className="flex flex-col items-end gap-2 pt-3 pr-3 pb-3 sm:pt-4 sm:pr-4 sm:pb-4 flex-shrink-0">
+        <div className="flex flex-col items-end gap-2 pt-2.5 pr-2.5 pb-2.5 sm:pt-3 sm:pr-3.5 sm:pb-3 flex-shrink-0">
           <div className="flex items-start gap-1.5 sm:gap-2">
             <div data-row-save-action="true">
               <RSVPButton
@@ -1225,6 +1223,7 @@ export const GridEventCard = memo(function GridEventCard({
 
         {/* Status + Social badges */}
         <div className="mt-2.5 flex items-center gap-2 flex-wrap">
+          <RSVPButton eventId={event.id} variant="compact" size="sm" />
           {eventStatus === "live" && <LiveBadge />}
           {eventStatus === "soon" && <SoonBadge />}
           {goingCount > 0 && (
@@ -1600,6 +1599,7 @@ export const HeroEventCard = memo(function HeroEventCard({
 
         {/* Social Proof badges */}
         <div className="mt-4 flex flex-wrap items-center gap-2">
+          <RSVPButton eventId={event.id} variant="compact" size="sm" />
           {goingCount > 0 && (
             <FeedSocialProofBadge count={goingCount} label="going" />
           )}
@@ -1701,6 +1701,7 @@ export const TrendingEventCard = memo(function TrendingEventCard({
 
           {/* Trending stats */}
           <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+            <RSVPButton eventId={event.id} variant="compact" size="sm" />
             {goingCount > 0 && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)]/20 font-mono text-xs font-medium text-[var(--coral)]">
                 <svg

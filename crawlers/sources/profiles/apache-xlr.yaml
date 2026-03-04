@@ -1,16 +1,29 @@
 version: 1
 slug: apache-xlr
-name: Apache Cafe
-integration_method: html
-defaults: {}
+name: "Apache XLR"
+integration_method: llm_crawler
+defaults:
+  venue_name: "Apache XLR"
+  category: music
+  tags:
+  - atlanta-expansion-wave-z
 discovery:
   enabled: true
   type: list
   urls:
-  - https://apachexlr.com/
+  - "https://www.apachexlr.com/events"
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 25000
 detail:
   enabled: true
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 25000
 data_goals:
-- events
-- images
-- tickets
+  - events
+  - lineup
+  - images
+  - tickets

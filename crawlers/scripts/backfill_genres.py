@@ -44,6 +44,17 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def has_column(client, table: str, column: str) -> bool:
+    try:
+        client.table(table).select(column).limit(1).execute()
+        return True
+    except Exception as exc:
+        text = str(exc).lower()
+        if "does not exist" in text or "42703" in text or "pgrst205" in text:
+            return False
+        raise
+
+
 def backfill_events(
     limit: int = 5000,
     category: str | None = None,
@@ -73,10 +84,20 @@ def backfill_events(
     }
 
     # Fetch events in batches — include fields needed for tag inference
-    select_fields = (
-        "id,title,description,category,subcategory,genres,tags,"
-        "is_free,price_min,ticket_url,is_class"
-    )
+    select_fields = [
+        "id",
+        "title",
+        "description",
+        "category_id",
+        "genres",
+        "tags",
+        "is_free",
+        "price_min",
+        "ticket_url",
+        "is_class",
+    ]
+    if has_column(client, "events", "subcategory"):
+        select_fields.append("subcategory")
     batch_size = 500
     offset = 0
     processed = 0
@@ -84,11 +105,11 @@ def backfill_events(
     while processed < limit:
         query = (
             client.table("events")
-            .select(select_fields)
+            .select(",".join(select_fields))
             .order("id")
         )
         if category:
-            query = query.eq("category", category)
+            query = query.eq("category_id", category)
 
         result = query.range(offset, offset + batch_size - 1).execute()
         events = result.data or []
@@ -102,6 +123,8 @@ def backfill_events(
             stats["total"] += 1
 
             event_id = event["id"]
+            if event.get("category_id") and not event.get("category"):
+                event["category"] = event.get("category_id")
             existing_genres = event.get("genres") or []
             existing_tags = event.get("tags") or []
             subcategory = event.get("subcategory") or ""

@@ -101,13 +101,13 @@ def main():
     print("=" * 80, flush=True)
 
     try:
-        result = supabase.table("events").select("id, title, start_date, category, source_url").is_("venue_id", None).execute()
+        result = supabase.table("events").select("id, title, start_date, category_id, source_url").is_("venue_id", None).execute()
         null_venue = result.data
         print(f"\nFound {len(null_venue)} events with NULL venue_id", flush=True)
 
         # Analyze patterns
         from collections import Counter
-        categories = Counter(e.get("category") for e in null_venue)
+        categories = Counter(e.get("category_id") for e in null_venue)
         print(f"\nBy category:")
         for cat, count in categories.most_common(10):
             print(f"  {cat}: {count}")
@@ -115,7 +115,7 @@ def main():
         # Sample events
         print(f"\nSample events:")
         for e in null_venue[:15]:
-            print(f"  - [{e.get('category')}] '{e['title']}' on {e['start_date']}")
+            print(f"  - [{e.get('category_id')}] '{e['title']}' on {e['start_date']}")
 
         # Check for GSU sports (likely should be at Center Parc Stadium or away)
         gsu_events = [e for e in null_venue if e['title'].startswith('GSU')]

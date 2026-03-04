@@ -1,6 +1,6 @@
 from extractors.lineup import dedupe_artist_entries, split_lineup_text_with_roles
 from artist_images import extract_artist_from_title
-from db import parse_lineup_from_title
+from db import parse_lineup_from_title, sanitize_event_artists
 
 
 def test_split_lineup_with_roles_support_clause() -> None:
@@ -17,6 +17,28 @@ def test_split_lineup_with_roles_openers() -> None:
     assert entries[0] == {"name": "Main Act", "role": "headliner"}
     assert entries[1] == {"name": "Band Two", "role": "opener"}
     assert entries[2] == {"name": "Band Three", "role": "opener"}
+
+
+def test_split_lineup_preserves_plus_band_name_for_headliner() -> None:
+    entries = split_lineup_text_with_roles("Florence + The Machine")
+    assert entries == [{"name": "Florence + The Machine", "role": "headliner"}]
+
+
+def test_split_lineup_headliner_comma_list_splits_into_multiple_artists() -> None:
+    entries = split_lineup_text_with_roles(
+        "Confessions of a Traitor, Fight From Within, Exit Wounds, Spiritless"
+    )
+    assert entries == [
+        {"name": "Confessions of a Traitor", "role": "headliner"},
+        {"name": "Fight From Within", "role": "support"},
+        {"name": "Exit Wounds", "role": "support"},
+        {"name": "Spiritless", "role": "support"},
+    ]
+
+
+def test_split_lineup_does_not_split_earth_wind_and_fire() -> None:
+    entries = split_lineup_text_with_roles("Earth, Wind & Fire")
+    assert entries == [{"name": "Earth, Wind & Fire", "role": "headliner"}]
 
 
 def test_dedupe_artist_entries_prefers_stronger_role() -> None:
@@ -51,7 +73,26 @@ def test_bracket_sold_out_stripped() -> None:
     assert entries[0]["name"] == "Billy Strings"
 
 
-# ── Bug class 2: Ampersand in band names ──────────────────────────────
+# ── Bug class 2: "An Evening With" prefix + ampersand co-headliners ──
+
+
+def test_evening_with_ampersand_coheadliners() -> None:
+    """'An Evening With Ben Strawn & Rolling Jane' → two co-headliners."""
+    entries = split_lineup_text_with_roles("An Evening With Ben Strawn & Rolling Jane")
+    assert entries == [
+        {"name": "Ben Strawn", "role": "headliner"},
+        {"name": "Rolling Jane", "role": "headliner"},
+    ]
+
+
+def test_night_with_single_headliner() -> None:
+    entries = split_lineup_text_with_roles("A Night With The Whispers")
+    assert entries == [{"name": "The Whispers", "role": "headliner"}]
+
+
+def test_evening_with_plus_band_preserved() -> None:
+    entries = split_lineup_text_with_roles("An Evening With Florence + The Machine")
+    assert entries == [{"name": "Florence + The Machine", "role": "headliner"}]
 
 
 def test_ampersand_not_split_in_extract() -> None:
@@ -85,6 +126,55 @@ def test_productions_prefix_stripped() -> None:
     assert result is not None
     assert "Big Boi" in result
     assert "Productions" not in result
+
+
+def test_parse_colon_artist_tour_pattern() -> None:
+    entries = parse_lineup_from_title("Home Free: Highways & High Seas Tour")
+    assert len(entries) == 1
+    assert entries[0]["name"] == "Home Free"
+
+
+def test_parse_colon_presents_pattern() -> None:
+    entries = parse_lineup_from_title("ASO Education Presents: Georgia Brass Band")
+    assert len(entries) == 1
+    assert entries[0]["name"] == "Georgia Brass Band"
+
+
+def test_parse_colon_presents_with_trailing_descriptor() -> None:
+    entries = parse_lineup_from_title("Monster Outbreak Tour Presents: Che: Encore")
+    assert len(entries) == 1
+    assert entries[0]["name"] == "Che"
+
+
+def test_parse_colon_experience_pattern_uses_left_side_artist() -> None:
+    entries = parse_lineup_from_title("KVS Tabla: The KVS Experience Atlanta")
+    assert len(entries) == 1
+    assert entries[0]["name"] == "KVS Tabla"
+
+
+def test_parse_colon_orchestra_program_pattern_uses_left_side_artist() -> None:
+    entries = parse_lineup_from_title("Atlanta Symphony Orchestra: Star Wars and More")
+    assert len(entries) == 1
+    assert entries[0]["name"] == "Atlanta Symphony Orchestra"
+
+
+def test_parse_colon_show_with_ms_prefix_uses_right_side_artist() -> None:
+    entries = parse_lineup_from_title("The Christi Show: Ms. Shirleen")
+    assert len(entries) == 1
+    assert entries[0]["name"] == "Ms. Shirleen"
+
+
+def test_parse_colon_show_program_descriptor_uses_left_side_artist() -> None:
+    entries = parse_lineup_from_title(
+        "The Australian Pink Floyd Show: The Happiest Days Of Our Lives"
+    )
+    assert len(entries) == 1
+    assert entries[0]["name"] == "The Australian Pink Floyd Show"
+
+
+def test_parse_colon_session_jam_not_treated_as_artist() -> None:
+    entries = parse_lineup_from_title("The Session: R&B Jam")
+    assert entries == []
 
 
 # ── Bug class 4: Generic recurring event titles ───────────────────────
@@ -149,11 +239,70 @@ def test_regression_single_artist() -> None:
     assert entries[0]["is_headliner"] is True
 
 
+def test_regression_single_word_acronym_artist() -> None:
+    entries = parse_lineup_from_title("KWN")
+    assert len(entries) == 1
+    assert entries[0]["name"] == "KWN"
+
+
+def test_regression_artist_name_with_suite_suffix() -> None:
+    entries = parse_lineup_from_title("JOHNNY SUITE")
+    assert len(entries) == 1
+    assert entries[0]["name"] == "JOHNNY SUITE"
+
+
 def test_regression_and_in_band_name() -> None:
     """'MARTY STUART AND HIS FABULOUS SUPERLATIVES' is a single act."""
     entries = parse_lineup_from_title("MARTY STUART AND HIS FABULOUS SUPERLATIVES")
     names = [e["name"] for e in entries]
     assert any("MARTY STUART" in n for n in names)
+
+
+def test_regression_florence_plus_the_machine_not_split() -> None:
+    entries = parse_lineup_from_title("Florence + The Machine")
+    assert len(entries) == 1
+    assert entries[0]["name"] == "Florence + The Machine"
+
+
+def test_regression_earth_wind_and_fire_not_fragmented() -> None:
+    entries = parse_lineup_from_title("Lionel Richie and Earth, Wind & Fire")
+    names = [e["name"] for e in entries]
+    assert "Wind & Fire" not in names
+    assert "Lionel Richie and Earth" not in names
+
+
+def test_sanitize_splits_title_mirror_comma_lineup() -> None:
+    rows = sanitize_event_artists(
+        "Confessions of a Traitor, Fight From Within, Exit Wounds, Spiritless",
+        "music",
+        [
+            {
+                "name": "Confessions of a Traitor, Fight From Within, Exit Wounds, Spiritless",
+                "role": "headliner",
+                "billing_order": 1,
+                "is_headliner": True,
+            }
+        ],
+    )
+    assert [r["name"] for r in rows] == [
+        "Confessions of a Traitor",
+        "Fight From Within",
+        "Exit Wounds",
+        "Spiritless",
+    ]
+
+
+def test_sports_premium_seating_suffix_removed() -> None:
+    rows = sanitize_event_artists(
+        "Atlanta Braves v. Kansas City Royals * Premium Seating *",
+        "sports",
+        [],
+    )
+    assert [r["name"] for r in rows] == [
+        "Atlanta Braves",
+        "Kansas City Royals",
+    ]
+    assert [r["role"] for r in rows] == ["home", "away"]
 
 
 def test_regression_ellipsis_title() -> None:

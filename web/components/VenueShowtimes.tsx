@@ -2,7 +2,7 @@
 
 import { useState, useRef, useMemo } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import Image from "@/components/SmartImage";
 import {
   format,
   parseISO,
@@ -13,14 +13,14 @@ import {
 import { formatTimeSplit } from "@/lib/formats";
 import { getEffectiveDate } from "@/lib/event-grouping";
 import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
-import { SectionHeader } from "@/components/detail";
+import { InfoCard, SectionHeader } from "@/components/detail";
 import VenueEventsByDay, {
   VenueEventCard,
   type VenueEvent,
 } from "@/components/VenueEventsByDay";
 
 // Extended event type that includes series info from the joined query
-type ShowtimeEvent = VenueEvent & {
+export type ShowtimeEvent = VenueEvent & {
   series_id?: string | null;
   series?: {
     id: string;
@@ -36,6 +36,11 @@ interface VenueShowtimesProps {
   events: ShowtimeEvent[];
   portalSlug: string;
   venueType?: string | null;
+  accentColor?: string;
+  title?: string;
+  onEventClick?: (eventId: number) => void;
+  /** When true, renders without the InfoCard wrapper (caller provides context). */
+  bare?: boolean;
 }
 
 // Venue types that tend to have many repeat screenings/shows
@@ -56,32 +61,50 @@ export default function VenueShowtimes({
   events,
   portalSlug,
   venueType,
+  accentColor,
+  title,
+  onEventClick,
+  bare,
 }: VenueShowtimesProps) {
   if (events.length === 0) return null;
 
   // Mode B: Simple list for venues with few events
   const useShowtimeMode = events.length > 8 && isHighEventVenue(venueType);
 
-  if (!useShowtimeMode) {
+  const header = (
+    <SectionHeader
+      title={title || (useShowtimeMode ? "Showtimes" : "Upcoming Events")}
+      count={events.length}
+      variant="inline"
+    />
+  );
+
+  const content = useShowtimeMode ? (
+    <ShowtimesByDate events={events} portalSlug={portalSlug} onEventClick={onEventClick} />
+  ) : (
+    <VenueEventsByDay
+      events={events}
+      portalSlug={portalSlug}
+      onEventClick={onEventClick}
+      compact
+      maxDates={7}
+    />
+  );
+
+  if (bare) {
     return (
-      <div>
-        <SectionHeader title="Upcoming Events" count={events.length} />
-        <VenueEventsByDay
-          events={events}
-          portalSlug={portalSlug}
-          compact
-          maxDates={7}
-        />
-      </div>
+      <>
+        {header}
+        {content}
+      </>
     );
   }
 
-  // Mode A: Date-grouped showtimes
   return (
-    <div>
-      <SectionHeader title="Showtimes" count={events.length} />
-      <ShowtimesByDate events={events} portalSlug={portalSlug} />
-    </div>
+    <InfoCard accentColor={accentColor}>
+      {header}
+      {content}
+    </InfoCard>
   );
 }
 
@@ -89,12 +112,24 @@ export default function VenueShowtimes({
 // Mode A: Date tabs + series-grouped showtimes
 // ============================================================================
 
+// Normalize film title — strip year/format suffixes for fuzzy grouping
+const normalizeFilmTitle = (title: string): string =>
+  title
+    .toLowerCase()
+    .replace(/\s*\(\d{4}\)\s*$/, "") // strip (2024) suffix
+    .replace(/\s*-\s*(imax|3d|dolby|atmos|4dx|dbox|screenx)\s*$/i, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
 function ShowtimesByDate({
   events,
   portalSlug,
+  onEventClick,
 }: {
   events: ShowtimeEvent[];
   portalSlug: string;
+  onEventClick?: (eventId: number) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -126,7 +161,7 @@ function ShowtimesByDate({
     return eventsByDate.get(dateKey) || [];
   }, [selectedDate, eventsByDate]);
 
-  // Group selected events by series
+  // Group selected events by series_id or fuzzy title match
   const { seriesGroups, standaloneEvents } = useMemo(() => {
     const seriesMap = new Map<
       string,
@@ -135,13 +170,37 @@ function ShowtimesByDate({
     const standalone: ShowtimeEvent[] = [];
 
     for (const event of selectedEvents) {
+      // Use series_id if available, otherwise group by normalized title
+      const groupKey = event.series_id
+        ? event.series_id
+        : `title:${normalizeFilmTitle(event.title)}`;
+
       if (event.series_id && event.series) {
-        const existing = seriesMap.get(event.series_id);
+        const existing = seriesMap.get(groupKey);
         if (existing) {
           existing.events.push(event);
         } else {
-          seriesMap.set(event.series_id, {
+          seriesMap.set(groupKey, {
             series: event.series,
+            events: [event],
+          });
+        }
+      } else if (groupKey.startsWith("title:")) {
+        // Fuzzy title grouping — create synthetic series from title
+        const existing = seriesMap.get(groupKey);
+        if (existing) {
+          existing.events.push(event);
+        } else {
+          // Only group if this is a showtime-style venue (will have multiple)
+          // We'll check after gathering all events for this title key
+          seriesMap.set(groupKey, {
+            series: {
+              id: groupKey,
+              slug: "",
+              title: event.title,
+              series_type: "film",
+              image_url: event.image_url || null,
+            },
             events: [event],
           });
         }
@@ -150,15 +209,25 @@ function ShowtimesByDate({
       }
     }
 
+    // Title-grouped entries with only 1 event aren't useful as groups — make them standalone
+    const finalGroups: typeof seriesMap = new Map();
+    for (const [key, group] of seriesMap) {
+      if (key.startsWith("title:") && group.events.length === 1) {
+        standalone.push(group.events[0]);
+      } else {
+        finalGroups.set(key, group);
+      }
+    }
+
     // Sort events within each series by time
-    for (const group of seriesMap.values()) {
+    for (const group of finalGroups.values()) {
       group.events.sort((a, b) =>
         (a.start_time || "").localeCompare(b.start_time || "")
       );
     }
 
     // Sort series groups by earliest showtime
-    const sorted = [...seriesMap.values()].sort((a, b) => {
+    const sorted = [...finalGroups.values()].sort((a, b) => {
       const aTime = a.events[0]?.start_time || "";
       const bTime = b.events[0]?.start_time || "";
       return aTime.localeCompare(bTime);
@@ -231,6 +300,7 @@ function ShowtimesByDate({
                 series={series}
                 events={seriesEvents}
                 portalSlug={portalSlug}
+                onEventClick={onEventClick}
               />
             ))}
 
@@ -239,7 +309,8 @@ function ShowtimesByDate({
               <VenueEventCard
                 key={event.id}
                 event={event}
-                href={`/${portalSlug}/events/${event.id}`}
+                onClick={onEventClick ? () => onEventClick(event.id) : undefined}
+                href={onEventClick ? undefined : `/${portalSlug}/events/${event.id}`}
                 compact
               />
             ))}
@@ -254,14 +325,16 @@ function ShowtimesByDate({
 // Series Showtime Row — poster + title + time chips
 // ============================================================================
 
-function SeriesShowtimeRow({
+export function SeriesShowtimeRow({
   series,
   events,
   portalSlug,
+  onEventClick,
 }: {
   series: NonNullable<ShowtimeEvent["series"]>;
   events: ShowtimeEvent[];
   portalSlug: string;
+  onEventClick?: (eventId: number) => void;
 }) {
   const seriesHref = `/${portalSlug}?series=${series.slug}`;
   const posterUrl = series.image_url || events[0]?.image_url;
@@ -317,11 +390,25 @@ function SeriesShowtimeRow({
         <div className="flex flex-wrap gap-1.5">
           {events.map((event) => {
             const { time, period } = formatTimeSplit(event.start_time);
-            return (
+            const chipClass = "inline-flex items-baseline gap-0.5 font-mono text-xs px-2.5 py-1 rounded-md bg-[var(--twilight)] hover:bg-[var(--coral)]/20 hover:text-[var(--coral)] text-[var(--soft)] transition-colors";
+            return onEventClick ? (
+              <button
+                key={event.id}
+                onClick={() => onEventClick(event.id)}
+                className={chipClass}
+              >
+                <span className="font-semibold">{time}</span>
+                {period && (
+                  <span className="text-xs text-[var(--muted)]">
+                    {period}
+                  </span>
+                )}
+              </button>
+            ) : (
               <Link
                 key={event.id}
                 href={`/${portalSlug}/events/${event.id}`}
-                className="inline-flex items-baseline gap-0.5 font-mono text-xs px-2.5 py-1 rounded-md bg-[var(--twilight)] hover:bg-[var(--coral)]/20 hover:text-[var(--coral)] text-[var(--soft)] transition-colors"
+                className={chipClass}
               >
                 <span className="font-semibold">{time}</span>
                 {period && (

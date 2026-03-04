@@ -1,0 +1,27 @@
+version: 1
+slug: sweet-auburn-bbq
+name: "Sweet Auburn BBQ"
+integration_method: llm_crawler
+defaults:
+  venue_name: "Sweet Auburn BBQ"
+  category: food_drink
+  tags:
+  - atlanta-expansion-wave-t
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - "http://sweetauburnbbq.com"
+  fetch:
+    render_js: true
+    wait_until: domcontentloaded
+detail:
+  enabled: true
+  fetch:
+    render_js: true
+    wait_until: domcontentloaded
+data_goals:
+  - events
+  - lineup
+  - images
+  - tickets

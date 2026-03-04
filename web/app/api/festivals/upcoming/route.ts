@@ -3,6 +3,7 @@ import { getLocalDateString } from "@/lib/formats";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { apiResponse, escapeSQLPattern } from "@/lib/api-utils";
 import { startOfDay, addDays, isSaturday, isSunday, nextSaturday, nextSunday, format } from "date-fns";
+import { getPortalSourceAccess } from "@/lib/federation";
 
 function getDateRange(filter: string): { start: string; end: string } | null {
   const now = new Date();
@@ -112,8 +113,88 @@ export async function GET(request: Request) {
       );
     }
 
+    let standaloneTentpoles: Array<{
+      id: number;
+      title: string;
+      start_date: string;
+      end_date: string | null;
+      start_time: string | null;
+      end_time: string | null;
+      category: string | null;
+      image_url: string | null;
+      description: string | null;
+      source_id: number | null;
+      venue: {
+        id: number;
+        name: string;
+        slug: string;
+        neighborhood: string | null;
+      } | null;
+    }> = [];
+
+    let allowedSourceIds: number[] | null = null;
+    let categoryConstraints: Map<number, string[] | null> | null = null;
+    if (portalId) {
+      const sourceAccess = await getPortalSourceAccess(portalId);
+      allowedSourceIds = sourceAccess.sourceIds;
+      categoryConstraints = sourceAccess.categoryConstraints;
+    }
+
+    if (!portalId || (allowedSourceIds && allowedSourceIds.length > 0)) {
+      let tentpoleQuery = supabase
+        .from("events")
+        .select(`
+          id,
+          title,
+          start_date,
+          end_date,
+          start_time,
+          end_time,
+          category:category_id,
+          image_url,
+          description,
+          source_id,
+          venue:venues(id, name, slug, neighborhood)
+        `)
+        .eq("is_tentpole", true)
+        .eq("is_active", true)
+        .is("festival_id", null)
+        .or(`start_date.gte.${today},end_date.gte.${today}`)
+        .is("canonical_event_id", null)
+        .order("start_date", { ascending: true })
+        .order("start_time", { ascending: true })
+        .limit(30);
+
+      if (allowedSourceIds && allowedSourceIds.length > 0) {
+        tentpoleQuery = tentpoleQuery.in("source_id", allowedSourceIds);
+      }
+
+      const { data: tentpoleData, error: tentpoleError } = await tentpoleQuery;
+      if (tentpoleError) {
+        console.error("Festivals upcoming tentpoles API error:", tentpoleError);
+      } else {
+        const rawTentpoles = (tentpoleData || []) as typeof standaloneTentpoles;
+        standaloneTentpoles = rawTentpoles.filter((event) => {
+          if (!categoryConstraints || event.source_id == null) return true;
+          if (!categoryConstraints.has(event.source_id)) return true;
+          const allowed = categoryConstraints.get(event.source_id);
+          if (allowed == null) return true;
+          return !!event.category && allowed.includes(event.category);
+        });
+      }
+    }
+
+    // Server-side dedup: remove tentpoles whose title matches a festival name
+    const festivals = data || [];
+    const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const festivalNorms = festivals.map((f: { name: string }) => normalize(f.name));
+    const dedupedTentpoles = standaloneTentpoles.filter((t) => {
+      const normTitle = normalize(t.title);
+      return !festivalNorms.some((fn: string) => fn.includes(normTitle) || normTitle.includes(fn));
+    });
+
     return apiResponse(
-      { festivals: data || [] },
+      { festivals, standalone_tentpoles: dedupedTentpoles },
       {
         headers: {
           "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",

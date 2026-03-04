@@ -41,33 +41,20 @@ def crawl(source: dict) -> tuple[int, int, int]:
     now = datetime.now()
     year = now.year
 
-    # RenderATL is typically mid-June
-    # 2026 dates estimated as June 10-12
+    # RenderATL 2026 moved to August (confirmed via renderatl.com)
     if year == 2026:
-        start_date = datetime(2026, 6, 10)
-        end_date = datetime(2026, 6, 12)
+        start_date = datetime(2026, 8, 12)
+        end_date = datetime(2026, 8, 14)
     else:
-        # Second Wednesday-Friday of June
-        june_1 = datetime(year, 6, 1)
-        days_until_wed = (2 - june_1.weekday()) % 7
-        first_wed = june_1 + __import__("datetime").timedelta(days=days_until_wed)
-        second_wed = first_wed + __import__("datetime").timedelta(days=7)
-        start_date = second_wed
-        end_date = second_wed + __import__("datetime").timedelta(days=2)
+        # Default: mid-August (historically June, shifted to August starting 2026)
+        start_date = datetime(year, 8, 12)
+        end_date = datetime(year, 8, 14)
 
     # If past, use next year
     if end_date < now:
         year += 1
-        if year == 2026:
-            start_date = datetime(2026, 6, 10)
-            end_date = datetime(2026, 6, 12)
-        else:
-            june_1 = datetime(year, 6, 1)
-            days_until_wed = (2 - june_1.weekday()) % 7
-            first_wed = june_1 + __import__("datetime").timedelta(days=days_until_wed)
-            second_wed = first_wed + __import__("datetime").timedelta(days=7)
-            start_date = second_wed
-            end_date = second_wed + __import__("datetime").timedelta(days=2)
+        start_date = datetime(year, 8, 12)
+        end_date = datetime(year, 8, 14)
 
     venue_id = get_or_create_venue(VENUE_DATA)
     events_found = 1

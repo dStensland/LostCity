@@ -29,8 +29,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const supabase = await createClient();
 
     // Build query: network_posts joined with network_sources
-    // NOTE: categories lives on network_sources (post-level categories column
-    // exists but PostgREST schema cache may be stale after migration 265)
+    // Post-level categories (migration 265) are used for filtering;
+    // source-level categories kept on the join for fallback display.
     let query = supabase
       .from("network_posts")
       .select(`
@@ -41,6 +41,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         author,
         image_url,
         published_at,
+        categories,
         source:network_sources!inner(
           name,
           slug,
@@ -53,9 +54,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
       .order("published_at", { ascending: false, nullsFirst: false })
       .range(offset, offset + limit - 1);
 
-    // Filter on source-level categories via the inner join
+    // Filter on post-level categories (keyword-classified per article)
     if (category) {
-      query = query.contains("network_sources.categories", [category]);
+      query = query.contains("categories", [category]);
     }
 
     const { data, error } = await query;

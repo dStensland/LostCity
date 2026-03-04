@@ -1,0 +1,29 @@
+version: 1
+slug: thinking-man-tavern
+name: "Thinking Man Tavern"
+integration_method: llm_crawler
+defaults:
+  venue_name: "Thinking Man Tavern"
+  category: nightlife
+  tags:
+  - atlanta-expansion-wave-v
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - "https://thinkingmantavern.com"
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+detail:
+  enabled: true
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+data_goals:
+  - events
+  - lineup
+  - images
+  - tickets

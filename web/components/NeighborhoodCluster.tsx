@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MapPin, CaretDown } from "@phosphor-icons/react/dist/ssr";
+import { MapPin, CaretDown } from "@phosphor-icons/react";
 import AroundMeCard from "@/components/AroundMeCard";
 import type { NeighborhoodCluster as ClusterType } from "@/lib/neighborhood-grouping";
 

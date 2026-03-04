@@ -2,12 +2,13 @@
 Crawler for Whole World Improv Theatre (wholeworldtheatre.com).
 Improv comedy theater near Atlantic Station.
 
-Site structure: Shows listed on homepage with /show/[slug]/ URLs.
-Uses OvationTix for ticketing.
+Site structure: Shows listed on homepage with /show/[slug]/[date]/ URLs.
+Each show page has JSON-LD structured data with Event schema.
 """
 
 from __future__ import annotations
 
+import json
 import re
 import logging
 from datetime import datetime
@@ -38,74 +39,40 @@ VENUE_DATA = {
     "website": BASE_URL,
 }
 
-SKIP_PATTERNS = [
-    r"^(home|about|contact|donate|support|subscribe|tickets?|buy|cart|menu)$",
-    r"^(login|sign in|register|account)$",
-    r"^(facebook|twitter|instagram|youtube)$",
-    r"^(privacy|terms|policy|copyright)$",
-    r"^(classes|workshops|private events)$",
-    r"^\d+$",
-    r"^[a-z]{1,3}$",
-]
+
+def goto_with_retry(page, url: str, *, attempts: int = 3, timeout_ms: int = 45000) -> None:
+    """Navigate with simple retry/backoff for transient renderer/network failures."""
+    last_exc: Exception | None = None
+    for attempt in range(1, attempts + 1):
+        try:
+            page.goto(url, wait_until="domcontentloaded", timeout=timeout_ms)
+            return
+        except Exception as exc:  # noqa: BLE001 - source-level crawler retry guard
+            last_exc = exc
+            if attempt >= attempts:
+                raise
+            page.wait_for_timeout(1500 * attempt)
+    if last_exc:
+        raise last_exc
 
 
-def is_valid_title(title: str) -> bool:
-    """Check if a string looks like a valid show title."""
-    if not title or len(title) < 3 or len(title) > 200:
-        return False
-    title_lower = title.lower().strip()
-    for pattern in SKIP_PATTERNS:
-        if re.match(pattern, title_lower, re.IGNORECASE):
-            return False
-    return True
-
-
-def parse_datetime(date_text: str, time_text: str = "") -> tuple[Optional[str], Optional[str]]:
-    """Parse date and time from Whole World format."""
-    start_date = None
-    start_time = None
-
-    if not date_text:
+def parse_jsonld_datetime(iso_str: str) -> tuple[Optional[str], Optional[str]]:
+    """Parse ISO datetime string from JSON-LD into (date, time) strings."""
+    if not iso_str:
         return None, None
-
-    # Parse date patterns like "Jan 23" or "January 23, 2026"
-    date_patterns = [
-        (r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2}),?\s*(\d{4})?", "%b"),
-        (r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s*(\d{4})?", "%B"),
-    ]
-
-    for pattern, month_fmt in date_patterns:
-        match = re.search(pattern, date_text, re.IGNORECASE)
-        if match:
-            month, day, year = match.groups()
-            year = year or str(datetime.now().year)
-            try:
-                dt = datetime.strptime(f"{month} {day} {year}", f"{month_fmt} %d %Y")
-                # If date is in past, assume next year
-                if dt.date() < datetime.now().date():
-                    dt = datetime(dt.year + 1, dt.month, dt.day)
-                start_date = dt.strftime("%Y-%m-%d")
-                break
-            except ValueError:
-                continue
-
-    # Parse time
-    combined_text = f"{date_text} {time_text}"
-    time_match = re.search(r"(\d{1,2}):(\d{2})\s*(AM|PM)", combined_text, re.IGNORECASE)
-    if time_match:
-        hour, minute, period = time_match.groups()
-        hour = int(hour)
-        if period.upper() == "PM" and hour != 12:
-            hour += 12
-        elif period.upper() == "AM" and hour == 12:
-            hour = 0
-        start_time = f"{hour:02d}:{minute}"
-
-    return start_date, start_time
+    try:
+        # Handle "2026-02-27T20:00:00-05:00" format
+        # Strip timezone offset for parsing
+        clean = re.sub(r"[+-]\d{2}:\d{2}$", "", iso_str)
+        clean = clean.replace("Z", "")
+        dt = datetime.fromisoformat(clean)
+        return dt.strftime("%Y-%m-%d"), dt.strftime("%H:%M")
+    except (ValueError, TypeError):
+        return None, None
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Whole World Improv shows."""
+    """Crawl Whole World Improv shows via JSON-LD structured data."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
@@ -123,7 +90,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             venue_id = get_or_create_venue(VENUE_DATA)
 
             logger.info(f"Fetching Whole World Improv: {BASE_URL}")
-            page.goto(BASE_URL, wait_until="domcontentloaded", timeout=30000)
+            goto_with_retry(page, BASE_URL, attempts=3, timeout_ms=45000)
             page.wait_for_timeout(4000)
 
             # Scroll to load content
@@ -134,7 +101,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             # Extract image map for event images
             image_map = extract_images_from_page(page)
 
-            # Find show links - uses /show/[slug]/ pattern
+            # Find show links - uses /show/[slug]/[date]/ pattern
             show_links = page.query_selector_all('a[href*="/show/"]')
 
             show_urls = set()
@@ -149,128 +116,162 @@ def crawl(source: dict) -> tuple[int, int, int]:
             # Process show pages
             for show_url in show_urls:
                 try:
-                    page.goto(show_url, wait_until="domcontentloaded", timeout=20000)
-                    page.wait_for_timeout(3000)
+                    goto_with_retry(page, show_url, attempts=2, timeout_ms=30000)
+                    page.wait_for_timeout(2000)
 
-                    # Get title
-                    title = None
-                    for selector in ["h1", ".show-title", ".entry-title"]:
-                        el = page.query_selector(selector)
-                        if el:
-                            title = el.inner_text().strip()
-                            if is_valid_title(title):
+                    # Extract JSON-LD structured data
+                    ld_scripts = page.query_selector_all('script[type="application/ld+json"]')
+
+                    event_data = None
+                    for script in ld_scripts:
+                        try:
+                            raw = script.inner_text()
+                            data = json.loads(raw)
+                            # Handle both single object and array
+                            items = data if isinstance(data, list) else [data]
+                            for item in items:
+                                if item.get("@type") == "Event":
+                                    event_data = item
+                                    break
+                            if event_data:
                                 break
-                            title = None
+                        except (json.JSONDecodeError, AttributeError):
+                            continue
 
-                    if not title:
-                        # Extract from URL
-                        match = re.search(r"/show/([^/]+)/?", show_url)
-                        if match:
-                            title = match.group(1).replace("-", " ").title()
+                    if not event_data:
+                        # Fallback: try extracting date from URL pattern /show/slug/YYYY-MM-DD/
+                        url_date_match = re.search(r"/show/[^/]+/(\d{4}-\d{2}-\d{2})", show_url)
+                        if not url_date_match:
+                            logger.debug(f"No JSON-LD or URL date found: {show_url}")
+                            continue
 
-                    if not title or not is_valid_title(title):
+                        # Build event data from URL + page content
+                        start_date = url_date_match.group(1)
+
+                        # Get title from h1
+                        title = None
+                        h1 = page.query_selector("h1")
+                        if h1:
+                            title = h1.inner_text().strip()
+                        if not title:
+                            slug_match = re.search(r"/show/([^/]+)/", show_url)
+                            if slug_match:
+                                title = slug_match.group(1).replace("-", " ").title()
+                        if not title:
+                            continue
+
+                        # Get time from body text ("FROM 8:00 PM TO 9:30 PM")
+                        body_text = page.inner_text("body")
+                        time_match = re.search(r"FROM\s+(\d{1,2}:\d{2})\s*(AM|PM)", body_text, re.IGNORECASE)
+                        start_time = None
+                        if time_match:
+                            hour_min, period = time_match.groups()
+                            h, m = hour_min.split(":")
+                            h = int(h)
+                            if period.upper() == "PM" and h != 12:
+                                h += 12
+                            elif period.upper() == "AM" and h == 12:
+                                h = 0
+                            start_time = f"{h:02d}:{m}"
+
+                        price_match = re.search(r"\$(\d+)", body_text)
+                        price = int(price_match.group(1)) if price_match else None
+
+                        event_data = {
+                            "name": title,
+                            "startDate": f"{start_date}T{start_time or '20:00'}:00",
+                            "description": None,
+                            "offers": {"price": str(price)} if price else {},
+                        }
+
+                    # Extract fields from JSON-LD
+                    title = event_data.get("name", "").strip()
+                    if not title or len(title) < 3:
                         continue
 
-                    # Get show info from page
-                    show_text = page.inner_text("body")
+                    start_date, start_time = parse_jsonld_datetime(event_data.get("startDate"))
+                    end_date, end_time = parse_jsonld_datetime(event_data.get("endDate"))
 
-                    # Look for upcoming dates
-                    date_matches = re.findall(
-                        r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2}).*?(\d{1,2}:\d{2}\s*(?:AM|PM))",
-                        show_text,
-                        re.IGNORECASE
-                    )
+                    if not start_date:
+                        continue
 
-                    if not date_matches:
-                        # Try full month names
-                        date_matches = re.findall(
-                            r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}).*?(\d{1,2}:\d{2}\s*(?:AM|PM))",
-                            show_text,
-                            re.IGNORECASE
-                        )
-
-                    # Get price if available
-                    price_match = re.search(r"\$(\d+)", show_text)
-                    price = int(price_match.group(1)) if price_match else None
-
-                    # Get description
-                    description = None
-                    for selector in [".show-description", "article p", ".entry-content p"]:
-                        el = page.query_selector(selector)
-                        if el:
-                            desc = el.inner_text().strip()
-                            if desc and len(desc) > 20:
-                                description = desc[:500]
-                                break
-
-                    # Process each date found
-                    for date_match in date_matches[:5]:  # Limit to next 5 dates
-                        month, day, time_str = date_match
-                        date_text = f"{month} {day}"
-                        start_date, start_time = parse_datetime(date_text, time_str)
-
-                        if not start_date:
+                    # Skip past events
+                    try:
+                        if datetime.strptime(start_date, "%Y-%m-%d").date() < datetime.now().date():
                             continue
+                    except ValueError:
+                        continue
 
-                        # Skip past events
+                    # Extract price from offers
+                    price = None
+                    offers = event_data.get("offers", {})
+                    if isinstance(offers, list):
+                        offers = offers[0] if offers else {}
+                    price_str = offers.get("price")
+                    if price_str:
                         try:
-                            if datetime.strptime(start_date, "%Y-%m-%d").date() < datetime.now().date():
-                                continue
-                        except ValueError:
-                            continue
+                            price = int(float(price_str))
+                        except (ValueError, TypeError):
+                            pass
 
-                        events_found += 1
+                    description = event_data.get("description")
+                    if description:
+                        description = description[:500]
 
-                        content_hash = generate_content_hash(title, "Whole World Improv", start_date)
+                    events_found += 1
 
+                    event_start_time = start_time or "20:00"
+                    hash_key = f"{start_date}|{event_start_time}"
+                    content_hash = generate_content_hash(title, "Whole World Improv", hash_key)
 
-                        # Find image by title match
-                        event_image = None
+                    # Find image by title match
+                    event_image = event_data.get("image")
+                    if not event_image:
                         title_lower = title.lower()
                         for img_alt, img_url in image_map.items():
                             if img_alt.lower() == title_lower or title_lower in img_alt.lower() or img_alt.lower() in title_lower:
                                 event_image = img_url
                                 break
 
-                        event_record = {
-                            "source_id": source_id,
-                            "venue_id": venue_id,
-                            "title": title,
-                            "description": description or f"{title} at Whole World Improv Theatre",
-                            "start_date": start_date,
-                            "start_time": start_time or "20:00",
-                            "end_date": None,
-                            "end_time": None,
-                            "is_all_day": False,
-                            "category": "comedy",
-                            "subcategory": "improv",
-                            "tags": ["whole-world-improv", "comedy", "improv", "midtown"],
-                            "price_min": price,
-                            "price_max": price,
-                            "price_note": f"${price}" if price else None,
-                            "is_free": False,
-                            "source_url": show_url,
-                            "ticket_url": show_url,
-                            "image_url": event_image,
-                            "raw_text": f"{title} - {date_text} {time_str}",
-                            "extraction_confidence": 0.85,
-                            "is_recurring": False,
-                            "recurrence_rule": None,
-                            "content_hash": content_hash,
-                        }
+                    event_record = {
+                        "source_id": source_id,
+                        "venue_id": venue_id,
+                        "title": title,
+                        "description": description or f"{title} at Whole World Improv Theatre",
+                        "start_date": start_date,
+                        "start_time": event_start_time,
+                        "end_date": end_date,
+                        "end_time": end_time,
+                        "is_all_day": False,
+                        "category": "comedy",
+                        "subcategory": "improv",
+                        "tags": ["whole-world-improv", "comedy", "improv", "midtown"],
+                        "price_min": price,
+                        "price_max": price,
+                        "price_note": f"${price}" if price else None,
+                        "is_free": price == 0 if price is not None else False,
+                        "source_url": show_url,
+                        "ticket_url": show_url,
+                        "image_url": event_image,
+                        "raw_text": f"{title} - {start_date} {start_time}",
+                        "extraction_confidence": 0.92,
+                        "is_recurring": False,
+                        "recurrence_rule": None,
+                        "content_hash": content_hash,
+                    }
 
-                        existing = find_event_by_hash(content_hash)
-                        if existing:
-                            smart_update_existing_event(existing, event_record)
-                            events_updated += 1
-                            continue
+                    existing = find_event_by_hash(content_hash)
+                    if existing:
+                        smart_update_existing_event(existing, event_record)
+                        events_updated += 1
+                        continue
 
-                        try:
-                            insert_event(event_record)
-                            events_new += 1
-                            logger.info(f"Added: {title} on {start_date} at {start_time}")
-                        except Exception as e:
-                            logger.error(f"Failed to insert: {title}: {e}")
+                    try:
+                        insert_event(event_record, genres=["improv", "comedy"])
+                        events_new += 1
+                        logger.info(f"Added: {title} on {start_date} at {start_time}")
+                    except Exception as e:
+                        logger.error(f"Failed to insert: {title}: {e}")
 
                 except Exception as e:
                     logger.warning(f"Failed to process {show_url}: {e}")

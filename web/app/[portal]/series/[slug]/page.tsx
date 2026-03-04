@@ -25,6 +25,7 @@ import {
   DetailStickyBar,
 } from "@/components/detail";
 import { safeJsonLd } from "@/lib/formats";
+import { buildBreadcrumbSchema } from "@/lib/breadcrumb-schema";
 import type { Metadata } from "next";
 import ScopedStylesServer from "@/components/ScopedStylesServer";
 import { createCssVarClass } from "@/lib/css-utils";
@@ -308,6 +309,14 @@ export default async function PortalSeriesPage({ params }: Props) {
     : null;
   const relatedSeries = await getRelatedSeries(series.id, series.series_type, series.genres);
   const seriesSchema = generateSeriesSchema(series, events);
+  const previewEvents = events.slice(0, 8);
+  const remainingPreviewCount = Math.max(0, events.length - previewEvents.length);
+  const listingLabel =
+    series.series_type === "film"
+      ? "showtime"
+      : series.series_type === "festival_program"
+        ? "session"
+        : "event";
 
   // Build subtitle for hero
   const heroSubtitle = series.series_type === "film"
@@ -322,6 +331,18 @@ export default async function PortalSeriesPage({ params }: Props) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: safeJsonLd(seriesSchema) }}
       />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: safeJsonLd(
+            buildBreadcrumbSchema([
+              { name: activePortalName, href: `/${activePortalSlug}` },
+              { name: getSeriesTypeLabel(series.series_type), href: `/${activePortalSlug}?view=find` },
+              { name: series.title },
+            ])
+          ),
+        }}
+      />
 
       <ScopedStylesServer css={[seriesAccentClass?.css, festivalAccentClass?.css].filter(Boolean).join("\n")} />
 
@@ -334,7 +355,7 @@ export default async function PortalSeriesPage({ params }: Props) {
           hideNav
         />
 
-        <main className="max-w-3xl mx-auto px-4 py-4 sm:py-6 pb-28 space-y-5 sm:space-y-8">
+        <main data-clean-detail="true" className="max-w-5xl mx-auto px-4 py-4 sm:py-6 pb-32 md:pb-16 space-y-6 sm:space-y-9">
           {/* Hero Section - Poster Mode */}
           <DetailHero
             mode="poster"
@@ -407,7 +428,11 @@ export default async function PortalSeriesPage({ params }: Props) {
           )}
 
           {/* Main Content Card */}
-          <InfoCard accentColor={typeColor}>
+          <InfoCard accentColor={typeColor} className="!bg-[var(--night)] !border-[var(--twilight)]/90">
+            <SectionHeader title="At a Glance" className="border-t-0 pt-0 pb-2" />
+            <p className="text-sm text-[var(--muted)] mb-4">
+              Quick summary first. Use next up for immediate planning, then open detailed venue breakdown if needed.
+            </p>
             {/* Metadata Grid */}
             {series.series_type === "film" ? (
               <MetadataGrid
@@ -415,8 +440,10 @@ export default async function PortalSeriesPage({ params }: Props) {
                   { label: "Year", value: series.year?.toString() || "Unknown" },
                   { label: "Runtime", value: formatRuntime(series.runtime_minutes) },
                   { label: "Rating", value: series.rating || "NR" },
+                  { label: "Showtimes", value: `${events.length}` },
+                  { label: "Venues", value: `${venueShowtimes.length}` },
                 ]}
-                className="mb-8"
+                className="mb-6"
               />
             ) : series.series_type === "festival_program" ? (
               <MetadataGrid
@@ -431,8 +458,9 @@ export default async function PortalSeriesPage({ params }: Props) {
                         : `${formatDate(events[0].start_date)} – ${formatDate(events[events.length - 1].start_date)}`,
                   },
                   { label: "Sessions", value: `${events.length} session${events.length !== 1 ? "s" : ""}` },
+                  { label: "Venues", value: `${venueShowtimes.length}` },
                 ]}
-                className="mb-8"
+                className="mb-6"
               />
             ) : (
               <MetadataGrid
@@ -440,8 +468,9 @@ export default async function PortalSeriesPage({ params }: Props) {
                   { label: "Frequency", value: series.frequency || "Varies" },
                   { label: "Day", value: series.day_of_week || "Various" },
                   { label: "Shows", value: `${events.length} event${events.length !== 1 ? "s" : ""}` },
+                  { label: "Venues", value: `${venueShowtimes.length}` },
                 ]}
-                className="mb-8"
+                className="mb-6"
               />
             )}
 
@@ -526,211 +555,281 @@ export default async function PortalSeriesPage({ params }: Props) {
             </div>
           )}
 
-          {/* Showtimes Section - Venue First Layout */}
-          <div id="showtimes">
-            <SectionHeader
-              title={
-                events.length > 0
-                  ? `${events.length} Upcoming ${
-                      series.series_type === "film"
-                        ? "Showtime"
-                        : series.series_type === "festival_program"
-                          ? "Session"
-                          : "Event"
-                    }${events.length !== 1 ? "s" : ""}${venueShowtimes.length > 0 ? ` at ${venueShowtimes.length} ${venueShowtimes.length === 1 ? "Spot" : "Spots"}` : ""}`
-                  : series.series_type === "festival_program"
-                    ? "No Scheduled Sessions"
-                    : "No Upcoming Events"
-              }
-              count={events.length}
-            />
+          {/* Next Up */}
+          {events.length > 0 && (
+            <section id="showtimes" className="rounded-xl border border-[var(--twilight)]/85 bg-[var(--night)] px-4 py-4 sm:px-5 sm:py-5">
+              <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
+                <div>
+                  <p className="font-mono text-[10px] uppercase tracking-[0.13em] text-[var(--muted)] mb-1">
+                    Next Up
+                  </p>
+                  <h2 className="text-lg font-semibold text-[var(--cream)]">
+                    {previewEvents.length} upcoming {listingLabel}{previewEvents.length !== 1 ? "s" : ""}
+                  </h2>
+                  <p className="text-sm text-[var(--muted)] mt-1">
+                    Across {venueShowtimes.length} venue{venueShowtimes.length !== 1 ? "s" : ""}.
+                  </p>
+                </div>
+                <a
+                  href="#showtimes-full"
+                  className="inline-flex items-center gap-1 text-sm text-accent hover:text-[var(--cream)] transition-colors"
+                >
+                  Open Detailed Schedule
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                </a>
+              </div>
 
-            {venueShowtimes.length > 0 ? (
-              <div className="space-y-6">
-                {/* Compact single-venue layout for recurring shows */}
-                {series.series_type === "recurring_show" && venueShowtimes.length === 1 ? (
-                  <div
-                    className="rounded-lg border border-[var(--twilight)] overflow-hidden bg-[var(--card-bg)]"
-                  >
-                    {/* Venue header */}
-                    <div className="p-4 border-b border-[var(--twilight)]/50">
-                      <Link
-                        href={`/${activePortalSlug}/spots/${venueShowtimes[0].venue.slug}`}
-                        className="group flex items-center gap-2"
-                      >
-                        <svg className="w-5 h-5 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        <span className="font-semibold text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors">
-                          {venueShowtimes[0].venue.name}
+              <div className="rounded-lg border border-[var(--twilight)]/80 bg-[var(--night)]/95">
+                <div className="divide-y divide-[var(--twilight)]/35">
+                  {previewEvents.map((event) => (
+                    <div key={event.id} className="grid grid-cols-[6.5rem_1fr_auto] items-start gap-3 px-3.5 py-3.5 sm:px-4 sm:py-4">
+                      <div className="pt-0.5">
+                        <span className="block font-mono text-[11px] sm:text-xs text-[var(--soft)]">
+                          {formatDate(event.start_date)}
                         </span>
-                        {venueShowtimes[0].venue.neighborhood && (
-                          <span className="text-sm text-[var(--muted)] font-mono">
-                            ({venueShowtimes[0].venue.neighborhood})
-                          </span>
+                        <span className="inline-flex rounded px-1.5 py-0.5 mt-1 font-mono text-[11px] sm:text-xs text-[var(--soft)] bg-[var(--night)]/95 border border-[var(--twilight)]/40">
+                          {formatTime(event.start_time) || "TBA"}
+                        </span>
+                      </div>
+                      <div className="min-w-0">
+                        <Link
+                          href={`/${activePortalSlug}/events/${event.id}`}
+                          className="font-medium text-sm sm:text-[15px] text-[var(--cream)] hover:text-accent transition-colors line-clamp-2"
+                        >
+                          {event.title}
+                        </Link>
+                        {event.venue && (
+                          <Link
+                            href={`/${activePortalSlug}/spots/${event.venue.slug}`}
+                            className="text-xs text-[var(--soft)] hover:text-[var(--coral)] transition-colors mt-1 inline-block"
+                          >
+                            {event.venue.name}
+                          </Link>
                         )}
-                        <svg className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      </div>
+                      <Link
+                        href={`/${activePortalSlug}/events/${event.id}`}
+                        aria-label={`Open ${event.title}`}
+                        className="text-[var(--muted)] hover:text-[var(--soft)] transition-colors pt-1"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                         </svg>
                       </Link>
                     </div>
+                  ))}
+                </div>
+              </div>
 
-                    {/* Compact date list */}
-                    <div className="p-4">
-                      {venueShowtimes[0].events.length > 0 && (
-                        <div className="space-y-2">
-                          {/* Next date highlighted */}
-                          <Link
-                            href={`/${activePortalSlug}/events/${venueShowtimes[0].events[0].id}`}
-                            className="flex items-center gap-3 px-3 py-2 rounded-lg bg-[var(--twilight)]/30 hover:bg-[var(--coral)] hover:text-[var(--void)] transition-colors group/next"
-                          >
-                            <span className="text-xs font-medium text-accent">Next</span>
-                            <span className="text-sm font-medium text-[var(--cream)] group-hover/next:text-inherit">
-                              {formatDate(venueShowtimes[0].events[0].date)}
-                            </span>
-                            {venueShowtimes[0].events[0].time && (
-                              <span className="font-mono text-sm text-[var(--muted)] group-hover/next:text-inherit">
-                                {formatTime(venueShowtimes[0].events[0].time)}
-                              </span>
-                            )}
-                          </Link>
-                          {/* Future dates */}
-                          {venueShowtimes[0].events.slice(1).map((event) => (
-                            <Link
-                              key={event.id}
-                              href={`/${activePortalSlug}/events/${event.id}`}
-                              className="flex items-center gap-3 px-3 py-1.5 rounded hover:bg-[var(--twilight)]/30 transition-colors"
-                            >
-                              <span className="text-sm text-[var(--soft)]">{formatDate(event.date)}</span>
-                              {event.time && (
-                                <span className="font-mono text-sm text-[var(--muted)]">{formatTime(event.time)}</span>
-                              )}
-                            </Link>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  /* Standard multi-venue layout */
-                  venueShowtimes.map((vs) => {
-                    const eventsByDate = groupEventsByDate(vs.events);
-
-                    return (
-                      <div
-                        key={vs.venue.id}
-                        className="rounded-lg border border-[var(--twilight)] overflow-hidden bg-[var(--card-bg)]"
-                      >
-                        {/* Venue header */}
-                        <div className="p-4 border-b border-[var(--twilight)]/50">
-                          <Link
-                            href={`/${activePortalSlug}/spots/${vs.venue.slug}`}
-                            className="group flex items-center gap-2"
-                          >
-                            <svg
-                              className="w-5 h-5 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                              />
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                              />
-                            </svg>
-                            <span className="font-semibold text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors">
-                              {vs.venue.name}
-                            </span>
-                            {vs.venue.neighborhood && (
-                              <span className="text-sm text-[var(--muted)] font-mono">
-                                ({vs.venue.neighborhood})
-                              </span>
-                            )}
-                            <svg
-                              className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors ml-auto"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M9 5l7 7-7 7"
-                              />
-                            </svg>
-                          </Link>
-                        </div>
-
-                        {/* Dates and times for this venue */}
-                        <div className="divide-y divide-[var(--twilight)]/30">
-                          {Array.from(eventsByDate.entries()).map(([date, dateEvents]) => (
-                            <div key={date} className="px-4 py-3">
-                              <div className="flex items-center gap-3">
-                                {/* Date */}
-                                <div className="flex-shrink-0 w-28">
-                                  <span className="text-sm font-medium text-[var(--soft)]">
-                                    {formatDate(date)}
-                                  </span>
-                                </div>
-
-                                {/* Times */}
-                                <div className="flex flex-wrap items-center gap-2">
-                                  {dateEvents.map((event) => (
-                                    <div key={event.id} className="flex items-center gap-1">
-                                      <Link
-                                        href={`/${activePortalSlug}/events/${event.id}`}
-                                        className="font-mono text-sm px-2 py-1 rounded bg-[var(--twilight)]/50 text-[var(--cream)] hover:bg-[var(--coral)] hover:text-[var(--void)] transition-colors"
-                                      >
-                                        {formatTime(event.time)}
-                                      </Link>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-[var(--muted)]">
+                <span>
+                  Showing {previewEvents.length} of {events.length} upcoming {listingLabel}{events.length !== 1 ? "s" : ""}.
+                </span>
+                {remainingPreviewCount > 0 && (
+                  <span>+{remainingPreviewCount} more in detailed schedule.</span>
                 )}
               </div>
-            ) : (
-              <div className="py-12 text-center">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[var(--twilight)]/30 flex items-center justify-center">
-                  <svg
-                    className="w-8 h-8 text-[var(--muted)]"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1.5}
-                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                    />
+            </section>
+          )}
+
+          {/* Detailed Venue Breakdown */}
+          <section id="showtimes-full" className="rounded-xl border border-[var(--twilight)]/85 bg-[var(--night)] px-4 py-4 sm:px-5 sm:py-5">
+            <details className="group" open={events.length <= 12}>
+              <summary className="list-none cursor-pointer">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="font-mono text-[10px] uppercase tracking-[0.13em] text-[var(--muted)] mb-1">
+                      Detailed View
+                    </p>
+                    <h2 className="text-lg font-semibold text-[var(--cream)]">
+                      Venue-by-venue schedule
+                    </h2>
+                  </div>
+                  <svg className="w-4 h-4 text-[var(--muted)] transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </div>
-                <p className="text-[var(--muted)]">
-                  No upcoming showtimes scheduled
-                </p>
-                <p className="text-sm text-[var(--muted)] mt-2">
-                  Check back later for new dates
-                </p>
+              </summary>
+
+              <div className="mt-4">
+                {venueShowtimes.length > 0 ? (
+                  <div className="space-y-6">
+                    {/* Compact single-venue layout for recurring shows */}
+                    {series.series_type === "recurring_show" && venueShowtimes.length === 1 ? (
+                      <div className="rounded-lg border border-[var(--twilight)] overflow-hidden bg-[var(--card-bg)]">
+                        <div className="p-4 border-b border-[var(--twilight)]/50">
+                          <Link
+                            href={`/${activePortalSlug}/spots/${venueShowtimes[0].venue.slug}`}
+                            className="group flex items-center gap-2"
+                          >
+                            <svg className="w-5 h-5 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            <span className="font-semibold text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors">
+                              {venueShowtimes[0].venue.name}
+                            </span>
+                            {venueShowtimes[0].venue.neighborhood && (
+                              <span className="text-sm text-[var(--muted)] font-mono">
+                                ({venueShowtimes[0].venue.neighborhood})
+                              </span>
+                            )}
+                            <svg className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </Link>
+                        </div>
+
+                        <div className="p-4">
+                          {venueShowtimes[0].events.length > 0 && (
+                            <div className="space-y-2">
+                              <Link
+                                href={`/${activePortalSlug}/events/${venueShowtimes[0].events[0].id}`}
+                                className="flex items-center gap-3 px-3 py-2 rounded-lg bg-[var(--twilight)]/30 hover:bg-[var(--coral)] hover:text-[var(--void)] transition-colors group/next"
+                              >
+                                <span className="text-xs font-medium text-accent">Next</span>
+                                <span className="text-sm font-medium text-[var(--cream)] group-hover/next:text-inherit">
+                                  {formatDate(venueShowtimes[0].events[0].date)}
+                                </span>
+                                {venueShowtimes[0].events[0].time && (
+                                  <span className="font-mono text-sm text-[var(--muted)] group-hover/next:text-inherit">
+                                    {formatTime(venueShowtimes[0].events[0].time)}
+                                  </span>
+                                )}
+                              </Link>
+                              {venueShowtimes[0].events.slice(1).map((event) => (
+                                <Link
+                                  key={event.id}
+                                  href={`/${activePortalSlug}/events/${event.id}`}
+                                  className="flex items-center gap-3 px-3 py-1.5 rounded hover:bg-[var(--twilight)]/30 transition-colors"
+                                >
+                                  <span className="text-sm text-[var(--soft)]">{formatDate(event.date)}</span>
+                                  {event.time && (
+                                    <span className="font-mono text-sm text-[var(--muted)]">{formatTime(event.time)}</span>
+                                  )}
+                                </Link>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      venueShowtimes.map((vs) => {
+                        const eventsByDate = groupEventsByDate(vs.events);
+                        return (
+                          <div
+                            key={vs.venue.id}
+                            className="rounded-lg border border-[var(--twilight)] overflow-hidden bg-[var(--card-bg)]"
+                          >
+                            <div className="p-4 border-b border-[var(--twilight)]/50">
+                              <Link
+                                href={`/${activePortalSlug}/spots/${vs.venue.slug}`}
+                                className="group flex items-center gap-2"
+                              >
+                                <svg
+                                  className="w-5 h-5 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                                  />
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                                  />
+                                </svg>
+                                <span className="font-semibold text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors">
+                                  {vs.venue.name}
+                                </span>
+                                {vs.venue.neighborhood && (
+                                  <span className="text-sm text-[var(--muted)] font-mono">
+                                    ({vs.venue.neighborhood})
+                                  </span>
+                                )}
+                                <svg
+                                  className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors ml-auto"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M9 5l7 7-7 7"
+                                  />
+                                </svg>
+                              </Link>
+                            </div>
+
+                            <div className="divide-y divide-[var(--twilight)]/30">
+                              {Array.from(eventsByDate.entries()).map(([date, dateEvents]) => (
+                                <div key={date} className="px-4 py-3">
+                                  <div className="flex items-center gap-3">
+                                    <div className="flex-shrink-0 w-28">
+                                      <span className="text-sm font-medium text-[var(--soft)]">
+                                        {formatDate(date)}
+                                      </span>
+                                    </div>
+
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      {dateEvents.map((event) => (
+                                        <div key={event.id} className="flex items-center gap-1">
+                                          <Link
+                                            href={`/${activePortalSlug}/events/${event.id}`}
+                                            className="font-mono text-sm px-2 py-1 rounded bg-[var(--twilight)]/50 text-[var(--cream)] hover:bg-[var(--coral)] hover:text-[var(--void)] transition-colors"
+                                          >
+                                            {formatTime(event.time)}
+                                          </Link>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                ) : (
+                  <div className="py-12 text-center">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[var(--twilight)]/30 flex items-center justify-center">
+                      <svg
+                        className="w-8 h-8 text-[var(--muted)]"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={1.5}
+                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        />
+                      </svg>
+                    </div>
+                    <p className="text-[var(--muted)]">
+                      No upcoming showtimes scheduled
+                    </p>
+                    <p className="text-sm text-[var(--muted)] mt-2">
+                      Check back later for new dates
+                    </p>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </details>
+          </section>
 
           {/* Related Series Section */}
           {relatedSeries.length > 0 && (
@@ -759,6 +858,8 @@ export default async function PortalSeriesPage({ params }: Props) {
       {/* Sticky bar with actions */}
       <DetailStickyBar
         shareLabel="Share"
+        className="md:hidden"
+        containerClassName="max-w-5xl"
         secondaryActions={
           series.trailer_url ? (
             <a

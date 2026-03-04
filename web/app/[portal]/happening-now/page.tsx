@@ -9,7 +9,7 @@ import { PortalHeader } from "@/components/headers";
 import CategoryFilterChips, { type FilterCategory } from "@/components/CategoryFilterChips";
 import AroundMeCard from "@/components/AroundMeCard";
 import { getDayPart, getHappeningNowGreeting } from "@/lib/time-greeting";
-import { Crosshair, MapTrifold, Clock, WarningCircle } from "@phosphor-icons/react/dist/ssr";
+import { Crosshair, MapTrifold, Clock, WarningCircle } from "@phosphor-icons/react";
 import type { AroundMeItem, AroundMeSpot, AroundMeEvent } from "@/app/api/around-me/route";
 
 // Client-side category filter mapping (mirrors API CATEGORY_FILTERS)

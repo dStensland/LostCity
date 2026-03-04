@@ -235,43 +235,23 @@ export default function VenueEventsByDay({
                 key={date.toISOString()}
                 onClick={() => {
                   setSelectedDate(date);
-                  setExpanded(false); // Reset expanded state when switching dates
+                  setExpanded(false);
                 }}
-                className={`flex-shrink-0 flex flex-col items-center rounded-lg border transition-all ${
-                  compact ? "px-2 py-1.5" : "px-3 py-2"
-                } ${
+                className={[
+                  "shrink-0 inline-flex items-center gap-1.5 rounded-full font-mono text-xs tracking-wide transition-all active:scale-95 border",
+                  compact ? "px-2.5 py-1" : "px-3 py-1.5",
                   isSelected
-                    ? "bg-[var(--coral)]/20 border-[var(--coral)]/50 text-[var(--coral)]"
-                    : "bg-[var(--dusk)] border-[var(--twilight)] text-[var(--soft)] hover:border-[var(--coral)]/30"
-                }`}
+                    ? "bg-[var(--coral)]/15 border-[var(--coral)]/40 text-[var(--coral)] font-semibold"
+                    : "border-[var(--twilight)] text-[var(--soft)] hover:border-[var(--coral)]/30 hover:bg-white/[0.02]",
+                ].join(" ")}
               >
-                <span
-                  className={`font-mono uppercase tracking-wider ${
-                    compact ? "text-2xs" : "text-xs"
-                  }`}
-                >
-                  {formatDateLabel(date)}
-                </span>
-                <span
-                  className={`font-mono font-bold leading-tight ${
-                    compact ? "text-sm" : "text-lg"
-                  }`}
-                >
-                  {format(date, "d")}
-                </span>
-                <span
-                  className={`font-mono text-[var(--muted)] uppercase ${
-                    compact ? "text-2xs" : "text-2xs"
-                  }`}
-                >
-                  {format(date, "MMM")}
-                </span>
+                <span>{formatDateLabel(date)}</span>
+                <span className="tabular-nums font-semibold">{format(date, "d")}</span>
                 {eventsOnDay > 1 && (
-                  <span
-                    className={`mt-0.5 px-1 py-0.5 bg-[var(--twilight)] rounded font-mono ${
-                      compact ? "text-2xs" : "text-2xs"
-                    }`}
-                  >
+                  <span className={[
+                    "text-2xs tabular-nums",
+                    isSelected ? "opacity-70" : "opacity-40",
+                  ].join(" ")}>
                     {eventsOnDay}
                   </span>
                 )}
@@ -281,26 +261,20 @@ export default function VenueEventsByDay({
 
           {/* Show more indicator if there are more dates */}
           {availableDates.length > maxDates && !showDatePicker && (
-            <div className="flex-shrink-0 flex items-center px-2 text-[var(--muted)]">
-              <span className="font-mono text-xs">
-                +{availableDates.length - maxDates}
-              </span>
-            </div>
+            <span className="shrink-0 inline-flex items-center px-2 text-[var(--muted)] font-mono text-xs">
+              +{availableDates.length - maxDates}
+            </span>
           )}
 
           {/* Date Picker Button */}
           {showDatePicker && (
-            <div className="flex-shrink-0 relative">
+            <div className="shrink-0 relative">
               <button
                 onClick={() => setShowDatePickerInput(!showDatePickerInput)}
-                className={`flex flex-col items-center justify-center rounded-lg border border-dashed border-[var(--twilight)] text-[var(--muted)] hover:border-[var(--coral)]/50 hover:text-[var(--coral)] transition-all ${
-                  compact
-                    ? "px-2 py-1.5 min-h-[52px]"
-                    : "px-3 py-2 min-h-[72px]"
-                }`}
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full border border-[var(--twilight)] text-[var(--muted)] hover:border-[var(--coral)]/30 hover:text-[var(--coral)] transition-all font-mono text-xs"
               >
                 <svg
-                  className={compact ? "w-4 h-4" : "w-5 h-5"}
+                  className="w-3.5 h-3.5"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -312,13 +286,6 @@ export default function VenueEventsByDay({
                     d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                   />
                 </svg>
-                <span
-                  className={`font-mono mt-0.5 uppercase ${
-                    compact ? "text-2xs" : "text-2xs"
-                  }`}
-                >
-                  Jump
-                </span>
               </button>
               {showDatePickerInput && (
                 <input
@@ -534,7 +501,7 @@ export function VenueEventCard({
   );
 
   const cardClassName = `block w-full text-left find-row-card border border-[var(--twilight)]/75 ${reflectionClass} overflow-hidden group supports-[backdrop-filter]:backdrop-blur-[8px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)] ${
-    compact ? "rounded-xl px-3 py-2.5" : "rounded-2xl p-3.5 sm:p-4"
+    compact ? "rounded-xl px-3 py-2.5" : "rounded-xl p-3 sm:p-3.5"
   } ${accentClass?.className ?? ""} ${event.category ? "border-l-[2px] border-l-[var(--accent-color)]" : ""}`;
 
   const cardStyle = {

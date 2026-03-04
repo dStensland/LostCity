@@ -1,0 +1,31 @@
+version: 1
+slug: giga-bites-cafe
+name: "Giga-Bites Cafe"
+integration_method: llm_crawler
+defaults:
+  venue_name: "Giga-Bites Cafe"
+  category: community
+  tags:
+  - atlanta-expansion-wave-t
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - "https://www.giga-bitescafe.com/events"
+  - "https://www.giga-bitescafe.com/calendarofevents"
+  - "https://www.giga-bitescafe.com/"
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+detail:
+  enabled: true
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+data_goals:
+  - events
+  - lineup
+  - images
+  - tickets

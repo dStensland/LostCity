@@ -1,0 +1,27 @@
+version: 1
+slug: sparkles-family-fun-center-kennesaw
+name: "Sparkles Family Fun Center (Kennesaw)"
+integration_method: llm_crawler
+defaults:
+  venue_name: "Sparkles Family Fun Center (Kennesaw)"
+  category: family
+  tags:
+  - atlanta-expansion-wave-t
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - "https://www.sparkles.com"
+  fetch:
+    render_js: true
+    wait_until: domcontentloaded
+detail:
+  enabled: true
+  fetch:
+    render_js: true
+    wait_until: domcontentloaded
+data_goals:
+  - events
+  - lineup
+  - images
+  - tickets

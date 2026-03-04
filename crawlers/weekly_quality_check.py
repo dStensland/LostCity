@@ -33,7 +33,7 @@ def main():
     result_price = client.table("events").select("id", count="exact").gte("start_date", today).is_("price_min", "null").eq("is_free", False).execute()
     null_price = result_price.count
     
-    result_cat = client.table("events").select("id", count="exact").gte("start_date", today).is_("category", "null").execute()
+    result_cat = client.table("events").select("id", count="exact").gte("start_date", today).is_("category_id", "null").execute()
     null_cat = result_cat.count
     
     # Calculate percentages

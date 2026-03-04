@@ -85,29 +85,19 @@ def get_photo_url(photo_name: str) -> Optional[str]:
     """
     Get the actual photo URL from a Google Places photo reference.
 
-    The media endpoint returns a redirect to the image. We follow
-    the redirect and return the final URL.
+    Uses skipHttpRedirect to get the photoUri from the JSON response.
     """
     url = f"https://places.googleapis.com/v1/{photo_name}/media"
     params = {
         "maxWidthPx": PHOTO_MAX_WIDTH,
         "key": GOOGLE_API_KEY,
+        "skipHttpRedirect": "true",
     }
 
     try:
-        # Don't follow redirects — we want the final URL
-        resp = requests.get(url, params=params, timeout=10, allow_redirects=False)
-
-        if resp.status_code in (301, 302, 303, 307, 308):
-            photo_url = resp.headers.get("Location")
-            if photo_url:
-                return photo_url
-
-        # If no redirect, try following redirects and getting final URL
-        resp = requests.get(url, params=params, timeout=10, allow_redirects=True)
+        resp = requests.get(url, params=params, timeout=10)
         if resp.status_code == 200:
-            return resp.url
-
+            return resp.json().get("photoUri")
         return None
 
     except Exception as e:
@@ -172,11 +162,9 @@ def fetch_venue_photos(
         city = venue.get("city", "Atlanta")
         state = venue.get("state", "GA")
 
-        # Build search query
-        if address:
-            search_query = f"{name}, {address}"
-        else:
-            search_query = f"{name}, {city}, {state}"
+        # Always use name + city — full addresses cause Google to match the
+        # address itself (which has no photos) instead of the business.
+        search_query = f"{name}, {city}, {state}"
 
         print(f"\n[{i}/{len(venues)}] {name}")
 

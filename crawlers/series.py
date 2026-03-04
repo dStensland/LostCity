@@ -152,26 +152,54 @@ def find_series_by_title(
     title: str,
     series_type: str,
     festival_id: Optional[str] = None,
+    day_of_week: Optional[str] = None,
 ) -> Optional[dict]:
-    """Find an existing series by title and type."""
+    """Find an existing series by title and type.
+
+    For recurring_show / class_series, also matches on day_of_week when
+    provided so that "Team Trivia" on Wednesday is a separate series from
+    "Team Trivia" on Sunday (different venues, different nights).
+    """
     normalized = normalize_title(title)
-    query = client.table("series").select("*").eq("series_type", series_type)
-    if series_type == "festival_program" and festival_id:
-        query = query.eq("festival_id", festival_id)
+    use_day = (
+        day_of_week
+        and series_type in ("recurring_show", "class_series")
+    )
+
+    def _build_query():
+        q = client.table("series").select("*").eq("series_type", series_type)
+        if series_type == "festival_program" and festival_id:
+            q = q.eq("festival_id", festival_id)
+        if use_day:
+            q = q.eq("day_of_week", day_of_week.strip().lower())
+        return q
 
     # Try exact match first
-    result = query.eq("title", title).execute()
+    result = _build_query().eq("title", title).execute()
     if result.data:
         return result.data[0]
 
     # Try normalized match via slug
     slug = slugify(normalized)
-    query = client.table("series").select("*").eq("series_type", series_type)
-    if series_type == "festival_program" and festival_id:
-        query = query.eq("festival_id", festival_id)
-    result = query.eq("slug", slug).execute()
+    result = _build_query().eq("slug", slug).execute()
     if result.data:
         return result.data[0]
+
+    # Fallback: if day_of_week was specified but no match found,
+    # also check for a series with NULL day_of_week (auto-created without day info).
+    # Claim it by backfilling the day later.
+    if use_day:
+        q = client.table("series").select("*").eq("series_type", series_type)
+        if series_type == "festival_program" and festival_id:
+            q = q.eq("festival_id", festival_id)
+        q = q.is_("day_of_week", "null")
+        result = q.eq("title", title).execute()
+        if result.data:
+            return result.data[0]
+        slug = slugify(normalized)
+        result = q.eq("slug", slug).execute()
+        if result.data:
+            return result.data[0]
 
     return None
 
@@ -229,11 +257,15 @@ def get_or_create_series(client: Client, series_hint: dict, category: str = None
     )
 
     # Check for existing series
+    # For recurring shows, include day_of_week so "Team Trivia" on Wednesday
+    # is a separate series from "Team Trivia" on Sunday.
+    hint_day = series_hint.get("day_of_week")
     existing = find_series_by_title(
         client,
         series_title,
         series_type,
         festival_id=festival_id,
+        day_of_week=hint_day,
     )
     if existing:
         # Backfill festival_id if missing

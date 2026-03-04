@@ -1,0 +1,31 @@
+version: 1
+slug: east-atlanta-comics
+name: "East Atlanta Comics"
+integration_method: llm_crawler
+defaults:
+  venue_name: "East Atlanta Comics"
+  category: community
+  tags:
+  - atlanta-expansion-wave-t
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - "https://www.eastatlantacomics.com/events/"
+  - "https://www.eastatlantacomics.com/eac-events/"
+  - "https://www.eastatlantacomics.com/"
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+detail:
+  enabled: true
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+data_goals:
+  - events
+  - lineup
+  - images
+  - tickets

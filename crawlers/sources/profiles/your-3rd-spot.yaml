@@ -1,0 +1,31 @@
+version: 1
+slug: your-3rd-spot
+name: "Your 3rd Spot"
+integration_method: llm_crawler
+defaults:
+  venue_name: "Your 3rd Spot"
+  category: community
+  tags:
+  - atlanta-expansion-wave-t
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - "https://your3rdspot.com/events"
+  - "https://your3rdspot.com/booking"
+  - "https://your3rdspot.com/"
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+detail:
+  enabled: true
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+data_goals:
+  - events
+  - lineup
+  - images
+  - tickets

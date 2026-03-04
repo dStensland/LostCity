@@ -1,0 +1,764 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lost City Feed Comp - Editorial Contrast</title>
+    <style>
+      @font-face {
+        font-family: "Instrument Sans Local";
+        src: url("file:///Users/coach/.codex/skills/canvas-design/canvas-fonts/InstrumentSans-Regular.ttf")
+          format("truetype");
+        font-weight: 400;
+      }
+
+      @font-face {
+        font-family: "Instrument Sans Local";
+        src: url("file:///Users/coach/.codex/skills/canvas-design/canvas-fonts/InstrumentSans-Bold.ttf")
+          format("truetype");
+        font-weight: 700;
+      }
+
+      @font-face {
+        font-family: "Big Shoulders Local";
+        src: url("file:///Users/coach/.codex/skills/canvas-design/canvas-fonts/BigShoulders-Bold.ttf")
+          format("truetype");
+        font-weight: 700;
+      }
+
+      :root {
+        color-scheme: dark;
+        --bg-0: #06070d;
+        --bg-1: #0f1220;
+        --bg-2: #171b2a;
+        --surface: #131724;
+        --surface-alt: #191f30;
+        --line: #2a3348;
+        --text: #f4f7ff;
+        --muted: #a6aec4;
+        --accent: #3de2d8;
+        --accent-soft: rgba(61, 226, 216, 0.18);
+        --rose: #ff5b93;
+        --amber: #ffc873;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Instrument Sans Local", "Segoe UI", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(1000px 540px at 84% -6%, rgba(80, 129, 255, 0.2), transparent 52%),
+          radial-gradient(900px 600px at 0% 4%, rgba(255, 70, 131, 0.15), transparent 50%),
+          linear-gradient(180deg, var(--bg-1), var(--bg-0) 52%, #05060a 100%);
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+        background-size: 3px 3px;
+        opacity: 0.14;
+      }
+
+      .page {
+        width: min(1160px, calc(100% - 2.5rem));
+        margin: 0 auto;
+        padding: 1rem 0 2.5rem;
+      }
+
+      .topbar {
+        position: sticky;
+        top: 0.5rem;
+        z-index: 10;
+        background: rgba(10, 12, 20, 0.86);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 0.7rem 0.9rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        backdrop-filter: blur(14px);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+      }
+
+      .brand-badge {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        display: grid;
+        place-items: center;
+        font-weight: 700;
+        background: linear-gradient(140deg, var(--rose), #ff8f68);
+      }
+
+      .brand-copy strong {
+        display: block;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        font-size: 0.72rem;
+      }
+
+      .brand-copy span {
+        display: block;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+        font-size: 0.62rem;
+      }
+
+      .nav {
+        display: flex;
+        gap: 0.5rem;
+      }
+
+      .nav-item {
+        border-radius: 999px;
+        padding: 0.4rem 0.72rem;
+        border: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 0.72rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .nav-item.active {
+        color: var(--text);
+        border-color: #3b4866;
+        background: linear-gradient(90deg, rgba(255, 91, 147, 0.22), rgba(255, 91, 147, 0));
+      }
+
+      .hero {
+        margin-top: 0.9rem;
+        border: 1px solid #33405d;
+        border-radius: 20px;
+        overflow: hidden;
+        background:
+          linear-gradient(20deg, rgba(9, 11, 18, 0.92), rgba(9, 11, 18, 0.56)),
+          linear-gradient(130deg, rgba(255, 91, 147, 0.45), rgba(61, 226, 216, 0.35), rgba(80, 129, 255, 0.28));
+      }
+
+      .hero-inner {
+        padding: 2.2rem 2.3rem 2rem;
+      }
+
+      .eyebrow {
+        display: inline-block;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.28);
+        padding: 0.34rem 0.55rem;
+        font-size: 0.68rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #dce1f0;
+        margin-bottom: 0.72rem;
+      }
+
+      .hero-title {
+        margin: 0;
+        font-family: "Big Shoulders Local", "Arial Narrow", sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        line-height: 0.96;
+        font-size: clamp(3rem, 7vw, 6.3rem);
+      }
+
+      .hero-sub {
+        margin: 0.7rem 0 0;
+        color: #dce3f8;
+        max-width: 42ch;
+        font-size: 1rem;
+      }
+
+      .chip-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.52rem;
+        margin-top: 1.1rem;
+      }
+
+      .chip {
+        border-radius: 999px;
+        padding: 0.42rem 0.68rem;
+        border: 1px solid var(--line);
+        color: #d2d9ed;
+        font-size: 0.72rem;
+        background: rgba(14, 19, 31, 0.78);
+      }
+
+      .chip.primary {
+        border-color: rgba(61, 226, 216, 0.45);
+        background: var(--accent-soft);
+        color: #d8fbf8;
+      }
+
+      .chip.more {
+        color: var(--muted);
+      }
+
+      .section {
+        margin-top: 1.25rem;
+      }
+
+      .section-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.7rem;
+      }
+
+      .section-title {
+        margin: 0;
+        font-size: 1.1rem;
+        letter-spacing: 0.02em;
+      }
+
+      .section-meta {
+        font-size: 0.72rem;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.09em;
+      }
+
+      .recommend-rail {
+        border: 1px solid #3d4f70;
+        border-radius: 16px;
+        background: linear-gradient(135deg, rgba(80, 129, 255, 0.16), rgba(61, 226, 216, 0.1));
+        padding: 0.85rem;
+        margin-top: 0.78rem;
+      }
+
+      .recommend-grid {
+        display: grid;
+        grid-template-columns: 1.45fr 1fr 1fr;
+        gap: 0.72rem;
+      }
+
+      .feature-card {
+        border: 1px solid #42587e;
+        border-radius: 14px;
+        overflow: hidden;
+        background: #111726;
+        min-height: 220px;
+      }
+
+      .feature-cover {
+        height: 134px;
+        background:
+          linear-gradient(130deg, rgba(61, 226, 216, 0.2), rgba(255, 91, 147, 0.24)),
+          linear-gradient(140deg, #2b3550, #1a2031 58%, #131826);
+      }
+
+      .card-body {
+        padding: 0.72rem;
+      }
+
+      .meta {
+        color: #c4cde3;
+        font-size: 0.68rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .card-title {
+        margin: 0.38rem 0 0.28rem;
+        font-size: 1.03rem;
+        line-height: 1.2;
+      }
+
+      .card-foot {
+        color: var(--muted);
+        font-size: 0.79rem;
+      }
+
+      .grid-3 {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.72rem;
+      }
+
+      .tile {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        overflow: hidden;
+        background: var(--surface);
+        min-height: 220px;
+      }
+
+      .tile-cover {
+        height: 116px;
+        background:
+          linear-gradient(140deg, rgba(255, 91, 147, 0.26), rgba(61, 226, 216, 0.16)),
+          linear-gradient(150deg, #2f3650, #161b2a);
+      }
+
+      .tile:nth-child(2) .tile-cover {
+        background:
+          linear-gradient(140deg, rgba(255, 200, 115, 0.3), rgba(255, 91, 147, 0.16)),
+          linear-gradient(150deg, #4f3a2b, #1d1921);
+      }
+
+      .tile:nth-child(3) .tile-cover {
+        background:
+          linear-gradient(140deg, rgba(80, 129, 255, 0.26), rgba(61, 226, 216, 0.14)),
+          linear-gradient(150deg, #253b57, #131b2b);
+      }
+
+      .tile .card-body {
+        padding: 0.68rem;
+      }
+
+      .split {
+        display: grid;
+        grid-template-columns: 1.3fr 1fr;
+        gap: 0.86rem;
+      }
+
+      .list {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--surface);
+      }
+
+      .list-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.6rem;
+        padding: 0.72rem 0.82rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      }
+
+      .list-row:last-child {
+        border-bottom: 0;
+      }
+
+      .list .left strong {
+        display: block;
+        font-size: 0.93rem;
+        margin-bottom: 0.16rem;
+      }
+
+      .list .left span {
+        color: var(--muted);
+        font-size: 0.79rem;
+      }
+
+      .time-pill {
+        border: 1px solid #3b465f;
+        border-radius: 999px;
+        padding: 0.24rem 0.46rem;
+        font-size: 0.68rem;
+        color: #d5dcef;
+        align-self: flex-start;
+        white-space: nowrap;
+      }
+
+      .briefs {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--surface);
+        padding: 0.45rem 0.55rem;
+      }
+
+      .brief {
+        border-radius: 10px;
+        padding: 0.58rem;
+        margin: 0.34rem 0;
+        background: var(--surface-alt);
+      }
+
+      .brief small {
+        display: inline-block;
+        color: #9db0d7;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        margin-bottom: 0.2rem;
+      }
+
+      .brief p {
+        margin: 0;
+        color: #d8deef;
+        font-size: 0.84rem;
+        line-height: 1.3;
+      }
+
+      .movie-row {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--surface);
+        padding: 0.7rem;
+      }
+
+      .movie-grid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(120px, 1fr));
+        gap: 0.56rem;
+      }
+
+      .movie {
+        border: 1px solid #2f3950;
+        border-radius: 10px;
+        overflow: hidden;
+        background: #121827;
+      }
+
+      .poster {
+        height: 136px;
+        background:
+          linear-gradient(170deg, rgba(255, 91, 147, 0.32), rgba(80, 129, 255, 0.28)),
+          linear-gradient(160deg, #3e2e48, #1a1d31);
+      }
+
+      .movie:nth-child(2) .poster {
+        background:
+          linear-gradient(170deg, rgba(61, 226, 216, 0.36), rgba(80, 129, 255, 0.2)),
+          linear-gradient(160deg, #255263, #162334);
+      }
+
+      .movie:nth-child(3) .poster {
+        background:
+          linear-gradient(170deg, rgba(255, 200, 115, 0.28), rgba(255, 91, 147, 0.21)),
+          linear-gradient(160deg, #56442a, #251a25);
+      }
+
+      .movie:nth-child(4) .poster {
+        background:
+          linear-gradient(170deg, rgba(80, 129, 255, 0.25), rgba(255, 91, 147, 0.2)),
+          linear-gradient(160deg, #2e3c61, #151e34);
+      }
+
+      .movie:nth-child(5) .poster {
+        background:
+          linear-gradient(170deg, rgba(255, 200, 115, 0.24), rgba(61, 226, 216, 0.21)),
+          linear-gradient(160deg, #4f3a32, #17242a);
+      }
+
+      .movie .card-body {
+        padding: 0.5rem 0.55rem 0.58rem;
+      }
+
+      .movie .card-title {
+        font-size: 0.84rem;
+      }
+
+      .tag-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0.6rem;
+      }
+
+      .tag {
+        border: 1px solid #34415d;
+        border-radius: 12px;
+        padding: 0.62rem 0.72rem;
+        background: #111726;
+        color: #dce4f7;
+        text-align: center;
+        font-size: 0.86rem;
+      }
+
+      footer {
+        margin-top: 1.2rem;
+        border-top: 1px solid var(--line);
+        padding-top: 0.8rem;
+        color: var(--muted);
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.74rem;
+      }
+
+      @media (max-width: 1080px) {
+        .recommend-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+
+        .recommend-grid .feature-card:first-child {
+          grid-column: span 2;
+        }
+
+        .grid-3 {
+          grid-template-columns: 1fr 1fr;
+        }
+
+        .movie-grid {
+          grid-template-columns: repeat(3, minmax(120px, 1fr));
+        }
+
+        .tag-grid {
+          grid-template-columns: repeat(3, 1fr);
+        }
+      }
+
+      @media (max-width: 760px) {
+        .page {
+          width: calc(100% - 1rem);
+        }
+
+        .topbar {
+          position: static;
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 0.6rem;
+        }
+
+        .split {
+          grid-template-columns: 1fr;
+        }
+
+        .recommend-grid,
+        .grid-3,
+        .movie-grid,
+        .tag-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .recommend-grid .feature-card:first-child {
+          grid-column: span 1;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-badge">LC</div>
+          <div class="brand-copy">
+            <strong>Lost City</strong>
+            <span>Atlanta Feed</span>
+          </div>
+        </div>
+        <nav class="nav">
+          <div class="nav-item active">Discover</div>
+          <div class="nav-item">Tonight</div>
+          <div class="nav-item">Community</div>
+        </nav>
+      </header>
+
+      <section class="hero">
+        <div class="hero-inner">
+          <span class="eyebrow">Friday Plan Builder</span>
+          <h1 class="hero-title">Friday Morning</h1>
+          <p class="hero-sub">
+            One clear lane to tonight: top picks first, then deeper discovery. Cards now follow one consistent metadata
+            order so comparison is instant.
+          </p>
+          <div class="chip-row">
+            <span class="chip primary">Tonight</span>
+            <span class="chip primary">Free</span>
+            <span class="chip">Music</span>
+            <span class="chip">Food + Drink</span>
+            <span class="chip more">More Filters</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <h2 class="section-title">Recommended Right Now</h2>
+          <span class="section-meta">Fast Path</span>
+        </div>
+        <div class="recommend-rail">
+          <div class="recommend-grid">
+            <article class="feature-card">
+              <div class="feature-cover"></div>
+              <div class="card-body">
+                <div class="meta">7:30 PM - Live Music</div>
+                <h3 class="card-title">Mike Viola with Drumming Bird</h3>
+                <div class="card-foot">Eddie's Attic - Decatur</div>
+              </div>
+            </article>
+            <article class="feature-card">
+              <div class="feature-cover"></div>
+              <div class="card-body">
+                <div class="meta">8:00 PM - Comedy</div>
+                <h3 class="card-title">Late Show at Dynamic El Dorado</h3>
+                <div class="card-foot">Old Fourth Ward</div>
+              </div>
+            </article>
+            <article class="feature-card">
+              <div class="feature-cover"></div>
+              <div class="card-body">
+                <div class="meta">9:00 PM - DJ Set</div>
+                <h3 class="card-title">Neon House Fridays</h3>
+                <div class="card-foot">West Midtown</div>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <h2 class="section-title">Near You Tonight</h2>
+          <span class="section-meta">12 Events</span>
+        </div>
+        <div class="grid-3">
+          <article class="tile">
+            <div class="tile-cover"></div>
+            <div class="card-body">
+              <div class="meta">7:00 PM - Food + Drink</div>
+              <h3 class="card-title">Free Poker Night at Urban Pie</h3>
+              <div class="card-foot">Grant Park</div>
+            </div>
+          </article>
+          <article class="tile">
+            <div class="tile-cover"></div>
+            <div class="card-body">
+              <div class="meta">7:15 PM - Film</div>
+              <h3 class="card-title">Micro Cinema Screening: Low Light Stories</h3>
+              <div class="card-foot">Plaza Theatre - Poncey-Highland</div>
+            </div>
+          </article>
+          <article class="tile">
+            <div class="tile-cover"></div>
+            <div class="card-body">
+              <div class="meta">9:30 PM - Club</div>
+              <h3 class="card-title">Neon Season Improv Showcase</h3>
+              <div class="card-foot">Dad's Garage - Old Fourth Ward</div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="section split">
+        <div>
+          <div class="section-head">
+            <h2 class="section-title">Regular Hangs</h2>
+            <span class="section-meta">Stable Weekly Rhythm</span>
+          </div>
+          <div class="list">
+            <div class="list-row">
+              <div class="left">
+                <strong>Saturday Night DJs</strong>
+                <span>MJQ Concourse - Poncey-Highland</span>
+              </div>
+              <span class="time-pill">Sat 10:00 PM</span>
+            </div>
+            <div class="list-row">
+              <div class="left">
+                <strong>Live Music Saturday</strong>
+                <span>Smith's Olde Bar - Midtown</span>
+              </div>
+              <span class="time-pill">Sat 9:00 PM</span>
+            </div>
+            <div class="list-row">
+              <div class="left">
+                <strong>Sunday Jazz Brunch</strong>
+                <span>St. Cecilia - Buckhead</span>
+              </div>
+              <span class="time-pill">Sun 12:00 PM</span>
+            </div>
+            <div class="list-row">
+              <div class="left">
+                <strong>Dueling Pianos</strong>
+                <span>Park Bench - Underground Atlanta</span>
+              </div>
+              <span class="time-pill">Thu 7:30 PM</span>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="section-head">
+            <h2 class="section-title">Network Briefs</h2>
+            <span class="section-meta">City Notes</span>
+          </div>
+          <div class="briefs">
+            <article class="brief">
+              <small>Decaturist</small>
+              <p>
+                Trial of Michelle Wilson concludes. Conditions in downtown blocks remain the same through this weekend.
+              </p>
+            </article>
+            <article class="brief">
+              <small>Axios Atlanta</small>
+              <p>City explores high-school metal detectors as district safety proposals continue this quarter.</p>
+            </article>
+            <article class="brief">
+              <small>Rough Draft Atlanta</small>
+              <p>Local theater season expands with two neighborhood premieres in March.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <h2 class="section-title">Movies Today</h2>
+          <span class="section-meta">Now Playing</span>
+        </div>
+        <div class="movie-row">
+          <div class="movie-grid">
+            <article class="movie">
+              <div class="poster"></div>
+              <div class="card-body">
+                <h3 class="card-title">Anora</h3>
+                <div class="card-foot">Landmark Midtown - 6:30 PM</div>
+              </div>
+            </article>
+            <article class="movie">
+              <div class="poster"></div>
+              <div class="card-body">
+                <h3 class="card-title">Mufasa</h3>
+                <div class="card-foot">Tara Theatre - 7:10 PM</div>
+              </div>
+            </article>
+            <article class="movie">
+              <div class="poster"></div>
+              <div class="card-body">
+                <h3 class="card-title">A Real Pain</h3>
+                <div class="card-foot">Plaza Theatre - 7:45 PM</div>
+              </div>
+            </article>
+            <article class="movie">
+              <div class="poster"></div>
+              <div class="card-body">
+                <h3 class="card-title">Nickel Boys</h3>
+                <div class="card-foot">Starlight Drive-In - 8:20 PM</div>
+              </div>
+            </article>
+            <article class="movie">
+              <div class="poster"></div>
+              <div class="card-body">
+                <h3 class="card-title">The Brutalist</h3>
+                <div class="card-foot">Tara Theatre - 9:10 PM</div>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <h2 class="section-title">Browse by Vibe</h2>
+          <span class="section-meta">Quick Jump</span>
+        </div>
+        <div class="tag-grid">
+          <div class="tag">Music</div>
+          <div class="tag">Nightlife</div>
+          <div class="tag">Food + Drink</div>
+          <div class="tag">Art</div>
+          <div class="tag">Comedy</div>
+          <div class="tag">Community</div>
+          <div class="tag">Film</div>
+          <div class="tag">Family</div>
+        </div>
+      </section>
+
+      <footer>
+        <span>Comp Direction: High-Contrast Editorial Feed</span>
+        <span>Lost City ATL - Consumer Surface</span>
+      </footer>
+    </main>
+  </body>
+</html>

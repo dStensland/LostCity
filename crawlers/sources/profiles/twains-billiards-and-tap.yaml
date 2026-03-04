@@ -1,0 +1,27 @@
+version: 1
+slug: twains-billiards-and-tap
+name: "Twain's Billiards & Tap"
+integration_method: llm_crawler
+defaults:
+  venue_name: "Twain's Billiards & Tap"
+  category: nightlife
+  tags:
+  - atlanta-expansion-wave-t
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - "https://twains.net"
+  fetch:
+    render_js: true
+    wait_until: domcontentloaded
+detail:
+  enabled: true
+  fetch:
+    render_js: true
+    wait_until: domcontentloaded
+data_goals:
+  - events
+  - lineup
+  - images
+  - tickets

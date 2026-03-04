@@ -70,110 +70,97 @@ function CityFeedPortalLoading({ portalSlug, portalName }: { portalSlug: string;
       <PortalHeader portalSlug={portalSlug} portalName={portalName} />
 
       <main className="max-w-3xl mx-auto px-4 pb-16">
-        {/* Tonight's Picks skeleton */}
-        <section className="py-6 -mx-4 px-4 mb-6 relative overflow-hidden">
-          {/* Subtle atmospheric background */}
-          <div
-            className="absolute inset-0 opacity-20 portal-loading-glow"
-          />
+        {/* GreetingBar hero skeleton — matches the full-bleed photo hero */}
+        <div
+          className="relative overflow-hidden -mx-4"
+          style={{ minHeight: 300 }}
+        >
+          {/* Dark base + subtle gradient overlay matching real hero */}
+          <div className="absolute inset-0 bg-[var(--night)]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[var(--night)]/50 via-transparent to-[var(--void)]" />
 
-          <div className="relative">
-            {/* Section header skeleton */}
-            <div className="flex items-center gap-3 mb-4">
-              <Skeleton className="w-10 h-10 rounded-full" />
-              <div>
-                <Skeleton className="h-5 w-32 rounded mb-1" />
-                <Skeleton className="h-3 w-44 rounded" delay="0.05s" />
+          {/* Masthead text skeleton */}
+          <div className="relative z-10 flex flex-col justify-end min-h-[260px] sm:min-h-[300px] px-6 pb-7 pt-5">
+            <div className="mb-auto pt-2">
+              <Skeleton className="h-3 w-20 rounded-full" />
+            </div>
+            <div className="space-y-2">
+              <Skeleton className="h-10 w-48 sm:w-64 rounded" delay="0.05s" />
+              <Skeleton className="h-6 w-32 sm:w-40 rounded" delay="0.1s" />
+              <Skeleton className="h-4 w-56 sm:w-72 rounded mt-3" delay="0.15s" />
+              {/* Quick links skeleton */}
+              <div className="flex flex-wrap gap-1.5 mt-3">
+                {[0, 1, 2, 3].map((i) => (
+                  <Skeleton key={i} className="h-7 w-20 rounded-full" delay={`${i * 0.04 + 0.2}s`} />
+                ))}
               </div>
             </div>
-
-            {/* Hero card skeleton */}
-            <div className="rounded-2xl overflow-hidden mb-4 relative bg-[var(--dusk)]">
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-              <div className="relative p-5 pt-32">
-                <div className="flex items-center gap-2 mb-2">
-                  <Skeleton className="h-5 w-16 rounded-full" />
-                  <Skeleton className="h-5 w-14 rounded-full" delay="0.05s" />
-                </div>
-                <Skeleton className="h-6 w-3/4 rounded mb-2" delay="0.1s" />
-                <div className="flex items-center gap-2">
-                  <Skeleton className="h-4 w-12 rounded" delay="0.15s" />
-                  <Skeleton className="h-4 w-24 rounded" delay="0.2s" />
-                </div>
-              </div>
-            </div>
-
-            {/* Secondary cards skeleton */}
-            <div className="grid grid-cols-3 gap-3">
-              {[0, 1, 2].map((i) => (
-                <div
-                  key={i}
-                  className="p-3 rounded-xl border border-[var(--twilight)] bg-[var(--dusk)]"
-                >
-                  <Skeleton className="h-3 w-10 rounded mb-2" delay={`${i * 0.05 + 0.25}s`} />
-                  <Skeleton className="h-4 w-full rounded mb-1" delay={`${i * 0.05 + 0.3}s`} />
-                  <Skeleton className="h-4 w-2/3 rounded mb-2" delay={`${i * 0.05 + 0.35}s`} />
-                  <Skeleton className="h-3 w-1/2 rounded" delay={`${i * 0.05 + 0.4}s`} />
-                </div>
-              ))}
-            </div>
           </div>
-        </section>
+        </div>
 
-        {/* Trending Now skeleton */}
-        <section className="py-4 border-b border-[var(--twilight)]">
-          <div className="flex items-center gap-2 mb-3">
-            <Skeleton className="w-4 h-4 rounded" />
-            <Skeleton className="h-3 w-24 rounded" delay="0.5s" />
-            <Skeleton className="h-4 w-8 rounded" delay="0.55s" />
+        {/* Lineup section skeleton — event card rows */}
+        <div className="mt-4" style={{ minHeight: 400 }}>
+          {/* Tab bar skeleton */}
+          <div className="flex items-center gap-2 mb-4">
+            <Skeleton className="h-4 w-3 rounded" delay="0.35s" />
+            <Skeleton className="h-3 w-20 rounded" delay="0.35s" />
+          </div>
+          <div className="flex gap-2 mb-5">
+            {[0, 1, 2].map((i) => (
+              <Skeleton key={i} className="h-9 w-24 rounded-lg" delay={`${i * 0.04 + 0.4}s`} />
+            ))}
           </div>
 
-          <div className="flex gap-3 overflow-hidden -mx-4 px-4">
-            {[0, 1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="flex-shrink-0 w-72 p-3 rounded-lg border border-[var(--twilight)] bg-[var(--dusk)]"
-              >
-                <div className="flex items-start gap-3">
-                  <Skeleton className="flex-shrink-0 w-8 h-8 rounded-full" delay={`${i * 0.08 + 0.6}s`} />
-                  <div className="flex-1 min-w-0">
-                    <Skeleton className="h-4 w-full rounded mb-1" delay={`${i * 0.08 + 0.65}s`} />
-                    <Skeleton className="h-4 w-3/4 rounded mb-2" delay={`${i * 0.08 + 0.7}s`} />
-                    <Skeleton className="h-3 w-24 rounded" delay={`${i * 0.08 + 0.75}s`} />
+          {/* Event card skeletons */}
+          <div className="space-y-2.5">
+            {[0, 1, 2, 3, 4].map((i) => (
+              <div key={i} className="rounded-xl border border-[var(--twilight)]/75 bg-[var(--night)] p-3 sm:p-3.5">
+                <div className="flex gap-2.5 sm:gap-3">
+                  {/* Date rail (desktop) */}
+                  <div className="hidden sm:flex flex-col items-center w-[100px] -ml-3.5 -my-3.5 rounded-l-xl overflow-hidden">
+                    <Skeleton className="w-full h-full" delay={`${i * 0.06 + 0.5}s`} />
+                  </div>
+                  {/* Content */}
+                  <div className="flex-1 min-w-0 py-0.5">
+                    <div className="flex items-center gap-2 mb-2 sm:hidden">
+                      <Skeleton className="h-3 w-14 rounded" delay={`${i * 0.06 + 0.5}s`} />
+                    </div>
+                    <div className="flex items-start gap-2.5">
+                      <Skeleton className="w-8 h-8 rounded-lg flex-shrink-0" delay={`${i * 0.06 + 0.52}s`} />
+                      <div className="flex-1">
+                        <Skeleton className="h-5 w-[70%] rounded mb-1.5" delay={`${i * 0.06 + 0.54}s`} />
+                        <Skeleton className="h-4 w-[50%] rounded mb-1" delay={`${i * 0.06 + 0.56}s`} />
+                        <Skeleton className="h-3 w-[40%] rounded" delay={`${i * 0.06 + 0.58}s`} />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             ))}
           </div>
-        </section>
+        </div>
 
-        {/* Feed sections skeleton */}
-        <div className="py-6 space-y-10">
-          {/* Hero banner skeleton */}
-          <Skeleton className="rounded-2xl h-56 sm:h-64" delay="0.9s" />
-
-          {/* Carousel section skeleton */}
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <Skeleton className="h-6 w-36 rounded" delay="1s" />
-              <Skeleton className="h-6 w-16 rounded-full" delay="1.05s" />
+        {/* Below-fold section divider + placeholder */}
+        <div className="mt-8">
+          <div className="h-px bg-[var(--twilight)]" />
+          <div className="pt-6" style={{ minHeight: 300 }}>
+            <div className="flex items-center gap-2 mb-4">
+              <Skeleton className="w-3.5 h-3.5 rounded" delay="0.9s" />
+              <Skeleton className="h-3 w-28 rounded" delay="0.92s" />
+              <div className="flex-1" />
+              <Skeleton className="h-3 w-14 rounded" delay="0.94s" />
             </div>
-            <div className="flex gap-3 overflow-hidden -mx-4 px-4">
-              {[...Array(4)].map((_, j) => (
-                <Skeleton key={j} className="flex-shrink-0 w-72 rounded-xl h-52" delay={`${j * 0.1 + 1.1}s`} />
-              ))}
-            </div>
-          </div>
-
-          {/* Grid section skeleton */}
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <Skeleton className="h-6 w-32 rounded" delay="1.5s" />
-              <Skeleton className="h-6 w-16 rounded-full" delay="1.55s" />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              {[...Array(4)].map((_, j) => (
-                <Skeleton key={j} className="rounded-xl h-52" delay={`${j * 0.1 + 1.6}s`} />
+            <div className="space-y-2.5">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="rounded-xl border border-[var(--twilight)]/75 bg-[var(--night)] p-3">
+                  <div className="flex gap-3 items-center">
+                    <Skeleton className="w-10 h-10 rounded-lg flex-shrink-0" delay={`${i * 0.05 + 1}s`} />
+                    <div className="flex-1">
+                      <Skeleton className="h-4 w-[60%] rounded mb-1" delay={`${i * 0.05 + 1.02}s`} />
+                      <Skeleton className="h-3 w-[40%] rounded" delay={`${i * 0.05 + 1.04}s`} />
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
           </div>

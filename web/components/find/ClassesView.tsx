@@ -529,21 +529,21 @@ function VenueSection({
       <>
         <ScopedStyles css={accentClass?.css} />
         <div
-          className={`find-row-card rounded-2xl border border-[var(--twilight)]/75 overflow-hidden ${reflectionClass} ${accentClass?.className ?? ""} ${
+          className={`find-row-card find-row-card-bg rounded-xl border border-[var(--twilight)]/75 overflow-hidden ${reflectionClass} ${accentClass?.className ?? ""} ${
             categoryColor ? "border-l-[2px] border-l-[var(--accent-color)]" : ""
           }`}
         >
           <Link href={`/${portalSlug}?event=${cls.id}`} scroll={false} className="group block">
             <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2 sm:gap-3">
-              <div className="min-w-0 p-3.5 sm:p-4 group-hover:bg-[var(--twilight)]/10 transition-colors">
-                <div className="flex gap-3 sm:gap-4">
-                  <div className="hidden sm:flex flex-shrink-0 self-stretch relative w-[124px] -ml-3.5 sm:-ml-4 -my-3.5 sm:-my-4 overflow-hidden list-rail-media border-r border-[var(--twilight)]/60">
+              <div className="min-w-0 p-3 sm:p-3.5 group-hover:bg-[var(--twilight)]/10 transition-colors">
+                <div className="flex gap-2.5 sm:gap-3">
+                  <div className="hidden sm:flex flex-shrink-0 self-stretch relative w-[100px] -ml-3 sm:-ml-3.5 -my-3 sm:-my-3.5 overflow-hidden list-rail-media border-r border-[var(--twilight)]/60">
                     <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/56 to-black/20 pointer-events-none" />
-                    <div className="relative z-10 flex h-full flex-col items-start justify-center gap-1.5 pl-3 pr-2 py-3 sm:py-4">
+                    <div className="relative z-10 flex h-full flex-col items-start justify-center gap-1.5 pl-2.5 pr-1.5 py-2.5 sm:py-3">
                       <span className="font-mono text-xs font-semibold text-[var(--accent-color)] leading-none uppercase tracking-[0.12em]">
                         1 class
                       </span>
-                      <span className="font-mono text-2xl font-bold leading-none tabular-nums text-[var(--cream)]">
+                      <span className="font-mono text-xl font-bold leading-none tabular-nums text-[var(--cream)]">
                         {timeParts.time}
                       </span>
                       {timeParts.period && (
@@ -566,16 +566,16 @@ function VenueSection({
                     </div>
 
                     <div className="flex items-center gap-2.5 mb-1">
-                      <span className="hidden sm:inline-flex flex-shrink-0 items-center justify-center w-9 h-9 rounded-lg bg-accent-20 border border-[var(--twilight)]/55">
-                        <CategoryIcon type={dominantCategory || "learning"} size={18} glow="subtle" />
+                      <span className="hidden sm:inline-flex flex-shrink-0 items-center justify-center w-8 h-8 rounded-lg bg-accent-20 border border-[var(--twilight)]/55">
+                        <CategoryIcon type={dominantCategory || "learning"} size={16} glow="subtle" />
                       </span>
-                      <span className="font-semibold text-base sm:text-xl text-[var(--cream)] group-hover:text-[var(--accent-color)] truncate block transition-colors leading-tight">
+                      <span className="font-semibold text-base sm:text-lg text-[var(--cream)] group-hover:text-[var(--accent-color)] truncate block transition-colors leading-tight">
                         {cls.title}
                       </span>
                     </div>
 
                     <div className="flex items-center gap-1.5 text-sm text-[var(--text-secondary)] mt-1.5 leading-relaxed flex-wrap">
-                      <span className="truncate max-w-[75%] sm:max-w-[55%] text-base">
+                      <span className="truncate max-w-[75%] sm:max-w-[55%] text-sm">
                         {venue.venueName}
                       </span>
                       <Dot />
@@ -587,7 +587,7 @@ function VenueSection({
                 </div>
               </div>
 
-              <div className="flex flex-col items-end gap-2 pt-3 pr-3 pb-3 sm:pt-4 sm:pr-4 sm:pb-4 flex-shrink-0">
+              <div className="flex flex-col items-end gap-2 pt-2.5 pr-2.5 pb-2.5 sm:pt-3 sm:pr-3.5 sm:pb-3 flex-shrink-0">
                 <span
                   className={`font-mono text-xs px-2 py-1 rounded-full whitespace-nowrap font-medium ${
                     categoryColor ? "bg-accent-20 text-accent border border-[var(--twilight)]/45" : "bg-[var(--twilight)] text-[var(--cream)] border border-[var(--twilight)]/60"
@@ -617,7 +617,7 @@ function VenueSection({
     <>
       <ScopedStyles css={accentClass?.css} />
       <div
-        className={`find-row-card rounded-2xl border border-[var(--twilight)]/75 overflow-hidden ${reflectionClass} ${accentClass?.className ?? ""} ${
+        className={`find-row-card find-row-card-bg rounded-xl border border-[var(--twilight)]/75 overflow-hidden ${reflectionClass} ${accentClass?.className ?? ""} ${
           categoryColor ? "border-l-[2px] border-l-[var(--accent-color)]" : ""
         }`}
       >
@@ -628,15 +628,15 @@ function VenueSection({
           className="group w-full"
         >
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2 sm:gap-3">
-            <div className="min-w-0 p-3.5 sm:p-4 group-hover:bg-[var(--twilight)]/10 transition-colors">
-              <div className="flex gap-3 sm:gap-4">
-                <div className="hidden sm:flex flex-shrink-0 self-stretch relative w-[124px] -ml-3.5 sm:-ml-4 -my-3.5 sm:-my-4 overflow-hidden list-rail-media border-r border-[var(--twilight)]/60">
+            <div className="min-w-0 p-3 sm:p-3.5 group-hover:bg-[var(--twilight)]/10 transition-colors">
+              <div className="flex gap-2.5 sm:gap-3">
+                <div className="hidden sm:flex flex-shrink-0 self-stretch relative w-[100px] -ml-3 sm:-ml-3.5 -my-3 sm:-my-3.5 overflow-hidden list-rail-media border-r border-[var(--twilight)]/60">
                   <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/56 to-black/20 pointer-events-none" />
-                  <div className="relative z-10 flex h-full flex-col items-start justify-center gap-1.5 pl-3 pr-2 py-3 sm:py-4">
+                  <div className="relative z-10 flex h-full flex-col items-start justify-center gap-1.5 pl-2.5 pr-1.5 py-2.5 sm:py-3">
                     <span className="font-mono text-xs font-semibold text-[var(--accent-color)] leading-none uppercase tracking-[0.12em]">
                       {venue.classes.length} {venue.classes.length === 1 ? "class" : "classes"}
                     </span>
-                    <span className="font-mono text-2xl font-bold leading-none tabular-nums text-[var(--cream)]">
+                    <span className="font-mono text-xl font-bold leading-none tabular-nums text-[var(--cream)]">
                       {timeParts?.time || "TBA"}
                     </span>
                     {timeParts?.period && (
@@ -658,20 +658,20 @@ function VenueSection({
                   </div>
 
                   <div className="flex items-center gap-2.5 mb-1">
-                    <span className="hidden sm:inline-flex flex-shrink-0 items-center justify-center w-9 h-9 rounded-lg bg-accent-20 border border-[var(--twilight)]/55">
-                      <CategoryIcon type={dominantCategory || "learning"} size={18} glow="subtle" />
+                    <span className="hidden sm:inline-flex flex-shrink-0 items-center justify-center w-8 h-8 rounded-lg bg-accent-20 border border-[var(--twilight)]/55">
+                      <CategoryIcon type={dominantCategory || "learning"} size={16} glow="subtle" />
                     </span>
                     {venue.venueSlug ? (
                       <Link
                         href={`/${portalSlug}?spot=${venue.venueSlug}`}
                         scroll={false}
                         onClick={(e) => e.stopPropagation()}
-                        className="font-semibold text-base sm:text-xl text-[var(--cream)] hover:text-[var(--accent-color)] truncate block transition-colors leading-tight"
+                        className="font-semibold text-base sm:text-lg text-[var(--cream)] hover:text-[var(--accent-color)] truncate block transition-colors leading-tight"
                       >
                         {venue.venueName}
                       </Link>
                     ) : (
-                      <span className="font-semibold text-base sm:text-xl text-[var(--cream)] group-hover:text-[var(--accent-color)] truncate block transition-colors leading-tight">
+                      <span className="font-semibold text-base sm:text-lg text-[var(--cream)] group-hover:text-[var(--accent-color)] truncate block transition-colors leading-tight">
                         {venue.venueName}
                       </span>
                     )}
@@ -679,7 +679,7 @@ function VenueSection({
 
                   <div className="flex items-center gap-1.5 text-sm text-[var(--text-secondary)] mt-1.5 leading-relaxed flex-wrap">
                     {venue.locations && venue.locations.length > 0 && (
-                      <span className="truncate max-w-[75%] sm:max-w-[55%] text-base" title={formatLocationList(venue.locations)}>
+                      <span className="truncate max-w-[75%] sm:max-w-[55%] text-sm" title={formatLocationList(venue.locations)}>
                         {formatLocationList(venue.locations)}
                       </span>
                     )}
@@ -692,7 +692,7 @@ function VenueSection({
               </div>
             </div>
 
-            <div className="flex flex-col items-end gap-2 pt-3 pr-3 pb-3 sm:pt-4 sm:pr-4 sm:pb-4 flex-shrink-0">
+            <div className="flex flex-col items-end gap-2 pt-2.5 pr-2.5 pb-2.5 sm:pt-3 sm:pr-3.5 sm:pb-3 flex-shrink-0">
               <span
                 className={`font-mono text-xs px-2 py-1 rounded-full whitespace-nowrap font-medium ${
                   categoryColor ? "bg-accent-20 text-accent border border-[var(--twilight)]/45" : "bg-[var(--twilight)] text-[var(--cream)] border border-[var(--twilight)]/60"

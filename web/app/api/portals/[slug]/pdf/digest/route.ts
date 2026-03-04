@@ -8,6 +8,7 @@ import {
 import { errorApiResponse } from "@/lib/api-utils";
 import { getPortalWeather } from "@/lib/weather";
 import { haversineDistanceMeters } from "@/lib/itinerary-utils";
+import { excludeSensitiveEvents } from "@/lib/portal-scope";
 import { generateDigestPdf } from "@/lib/pdf/pdf-generator";
 import type {
   DigestEvent,
@@ -95,6 +96,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     .order("start_date", { ascending: true })
     .order("start_time", { ascending: true })
     .limit(12);
+  eventsQuery = excludeSensitiveEvents(eventsQuery);
 
   if (startDate) {
     eventsQuery = eventsQuery.gte("start_date", startDate);

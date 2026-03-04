@@ -92,6 +92,54 @@ def parse_class_title(line: str) -> Optional[dict]:
     }
 
 
+def format_time_label(time_24: Optional[str]) -> Optional[str]:
+    if not time_24:
+        return None
+    raw = str(time_24).strip()
+    if not raw:
+        return None
+    for fmt in ("%H:%M", "%H:%M:%S"):
+        try:
+            return datetime.strptime(raw, fmt).strftime("%-I:%M %p")
+        except ValueError:
+            continue
+    return raw
+
+
+def build_class_description(
+    *,
+    title: str,
+    start_date: str,
+    start_time: Optional[str],
+    event_url: str,
+    price_min: Optional[float],
+    price_max: Optional[float],
+) -> str:
+    time_label = format_time_label(start_time)
+    parts = [
+        f"{title} is a cooking class at The Cook's Warehouse.",
+        "Location: The Cook's Warehouse, Midtown, Atlanta, GA.",
+    ]
+    if start_date and time_label:
+        parts.append(f"Scheduled on {start_date} at {time_label}.")
+    elif start_date:
+        parts.append(f"Scheduled on {start_date}.")
+
+    if price_min is not None and price_max is not None:
+        if price_min == price_max:
+            parts.append(f"Typical class price: ${price_min:.0f}.")
+        else:
+            parts.append(f"Typical class price range: ${price_min:.0f}-${price_max:.0f}.")
+    elif price_min is not None:
+        parts.append(f"Typical class price from ${price_min:.0f}.")
+    else:
+        parts.append("Class pricing varies by session and menu.")
+
+    if event_url:
+        parts.append(f"Check the official class listing for menu, skill level, and availability ({event_url}).")
+    return " ".join(parts)[:1400]
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
     """Crawl The Cook's Warehouse events using Playwright with pagination."""
     source_id = source["id"]
@@ -184,7 +232,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
 
 
-                        description = "Cooking class at The Cook's Warehouse"
+                        description = build_class_description(
+                            title=title,
+                            start_date=start_date,
+                            start_time=start_time,
+                            event_url=event_url,
+                            price_min=price_min,
+                            price_max=price_max,
+                        )
                         image_url = image_map.get(title)
 
                         # Generate smart tags based on title

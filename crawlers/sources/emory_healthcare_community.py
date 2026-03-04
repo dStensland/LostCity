@@ -335,6 +335,78 @@ def determine_if_free(blackthorn_event: dict, category: str) -> bool:
     return False
 
 
+def _clean_text(value: Optional[str]) -> str:
+    if not value:
+        return ""
+    return " ".join(str(value).split()).strip()
+
+
+def _format_time_label(time_24: Optional[str]) -> Optional[str]:
+    if not time_24:
+        return None
+    try:
+        return datetime.strptime(time_24, "%H:%M").strftime("%-I:%M %p")
+    except ValueError:
+        return time_24
+
+
+def _build_emory_description(
+    event_data: dict,
+    group_name: str,
+    venue_name: str,
+    category_name: str,
+    start_date: Optional[str],
+    start_time: Optional[str],
+    end_time: Optional[str],
+    is_recurring: bool,
+    is_free: bool,
+) -> str:
+    base_description = _clean_text(event_data.get("description"))
+    normalized_category = _clean_text(category_name)
+    normalized_venue = _clean_text(venue_name)
+    keywords = event_data.get("keywords") if isinstance(event_data.get("keywords"), list) else []
+
+    parts: list[str] = []
+
+    if base_description and len(base_description) >= 120:
+        parts.append(base_description if base_description.endswith(".") else f"{base_description}.")
+    else:
+        if normalized_category:
+            parts.append(f"Emory Healthcare {normalized_category.lower()} program.")
+        else:
+            parts.append(f"Emory Healthcare community program from the {group_name} schedule.")
+
+    if normalized_venue:
+        parts.append(f"Location: {normalized_venue}.")
+
+    start_label = _format_time_label(start_time)
+    end_label = _format_time_label(end_time)
+    if start_date and start_label and end_label:
+        parts.append(f"Scheduled on {start_date} from {start_label} to {end_label}.")
+    elif start_date and start_label:
+        parts.append(f"Scheduled on {start_date} at {start_label}.")
+    elif start_date:
+        parts.append(f"Scheduled on {start_date}.")
+
+    if is_recurring:
+        parts.append("Part of an ongoing recurring Emory series.")
+
+    if keywords:
+        keyword_preview = [k for k in (_clean_text(v) for v in keywords) if k][:4]
+        if keyword_preview:
+            parts.append(f"Focus areas: {', '.join(keyword_preview)}.")
+
+    parts.append("Free registration." if is_free else "Registration required.")
+    parts.append("Check Emory Healthcare event details for latest class requirements.")
+
+    if base_description and len(base_description) < 120:
+        lowered = " ".join(parts).lower()
+        if base_description.lower() not in lowered:
+            parts.insert(1, base_description if base_description.endswith(".") else f"{base_description}.")
+
+    return " ".join(parts)[:1200]
+
+
 def crawl_group(page, group_key: str, group_name: str, source_id: int) -> tuple[int, int, int]:
     """Crawl a single Blackthorn event group and return (found, new, updated)."""
     events_found = 0
@@ -437,9 +509,9 @@ def crawl_group(page, group_key: str, group_name: str, source_id: int) -> tuple[
 
             # Category mapping
             blackthorn_category = event_data.get("category", "")
-            description = event_data.get("description", "")
+            base_description = _clean_text(event_data.get("description"))
 
-            category, subcategory = map_category_to_lostcity(blackthorn_category, title, description)
+            category, subcategory = map_category_to_lostcity(blackthorn_category, title, base_description)
 
             # Tags
             tags = ["emory-healthcare", "health", "wellness"]
@@ -459,6 +531,17 @@ def crawl_group(page, group_key: str, group_name: str, source_id: int) -> tuple[
 
             # Pricing
             is_free = determine_if_free(event_data, category)
+            description = _build_emory_description(
+                event_data=event_data,
+                group_name=group_name,
+                venue_name=venue_name,
+                category_name=blackthorn_category,
+                start_date=start_date,
+                start_time=start_time,
+                end_time=end_time,
+                is_recurring=bool(event_data.get("recurringEventId")),
+                is_free=is_free,
+            )
 
             # Event URL
             event_url = f"{BASE_URL}/g/{group_key}/{event_id}"
@@ -476,7 +559,7 @@ def crawl_group(page, group_key: str, group_name: str, source_id: int) -> tuple[
                 "source_id": source_id,
                 "venue_id": venue_id,
                 "title": title,
-                "description": description[:1000] if description else None,
+                "description": description if description else None,
                 "start_date": start_date,
                 "start_time": start_time,
                 "end_date": end_date if end_date != start_date else None,

@@ -3,20 +3,30 @@
 /**
  * CityPulseShell — the main feed container for City Pulse.
  *
- * Layout:
- *  Mobile: single column, everything stacked
- *  Desktop (lg+): two-column — main feed left, sidebar right
+ * Progressive rendering strategy:
+ *  T=0ms   Shell computed client-side from pure functions (no API call):
+ *          GreetingBar + QuickLinksBar + DashboardCards render immediately.
+ *  T=0ms   Lineup fetch starts in parallel.
+ *  T=~1s   Lineup data arrives → LineupSection renders with real events.
+ *          If CMS header overrides exist, they upgrade the shell seamlessly.
+ *  scroll  LazySection triggers → self-fetching sections load on demand.
  *
- * Main column:
- *  1. GreetingBar (photo hero)
- *  2. Quick links (contextual shortcuts) + FeedCustomizer
- *  3. Dashboard cards + CTA
- *  4. LineupSection (tabbed: Today / This Week / Coming Up)
+ * Feed blocks (top → bottom):
+ *  1. GreetingBar — photo hero + headline + pulse text
+ *  2. QuickLinksBar — contextual discovery shortcuts + dashboard cards
+ *  3. CTA banner (optional, from CMS header override)
+ *  4. LineupSection — tabbed timeline: Today / This Week / Coming Up
+ *  5. TheSceneSection (Regular Hangs) — self-fetching, lazy-loaded
+ *  6. FestivalsSection — self-fetching, lazy-loaded
+ *  7. NetworkFeedSection — self-fetching, lazy-loaded
+ *  8. NowShowingSection — self-fetching, lazy-loaded
+ *  9. Browse by Category — orderedSections (user-customizable order)
  *
- * Sidebar (desktop only, sticky):
- *  - Trending / WeatherDiscovery / Browse
+ * Section visibility and order are controlled by FeedLayout preferences.
+ * The FeedPageIndex TOC doubles as the customizer (auth-gated edit mode).
  *
- * Mobile stacks everything in main column order, then sidebar sections below.
+ * Admin-only:
+ *  - FeedTimeMachine (?admin flag) — day/time slot override for testing
  */
 
 import { useEffect, useMemo, useState, useCallback } from "react";
@@ -33,15 +43,29 @@ import QuickLinksBar from "./QuickLinksBar";
 import CityPulseSection from "./CityPulseSection";
 import TheSceneSection from "./sections/TheSceneSection";
 import LazySection from "./LazySection";
-import NetworkFeedSection from "./sections/NetworkFeedSection";
+
 import NowShowingSection from "./sections/NowShowingSection";
+import NetworkFeedSection from "./sections/NetworkFeedSection";
+import HorseSpinner from "@/components/ui/HorseSpinner";
 
+import ExperiencesSection from "./sections/ExperiencesSection";
 import FestivalsSection from "./sections/FestivalsSection";
-
 import FeedTimeMachine from "./FeedTimeMachine";
-import FeedCustomizer from "./FeedCustomizer";
-import type { CityPulseSectionType, TimeSlot } from "@/lib/city-pulse/types";
-import { SignIn } from "@phosphor-icons/react";
+import FeedPageIndex from "./FeedPageIndex";
+import type {
+  FeedBlockId,
+  CityPulseSectionType,
+  TimeSlot,
+  FeedContext,
+  ResolvedHeader,
+} from "@/lib/city-pulse/types";
+import { DEFAULT_FEED_ORDER, ALWAYS_VISIBLE_BLOCKS, FIXED_LAST_BLOCKS } from "@/lib/city-pulse/types";
+
+// Client-safe pure functions for instant shell rendering
+import { getTimeSlot, getDayOfWeek, getDayTheme } from "@/lib/city-pulse/time-slots";
+import { getEditorialHeadline, getCityPhoto, getDefaultAccentColor } from "@/lib/city-pulse/header-defaults";
+import { getDashboardCards } from "@/lib/city-pulse/dashboard-cards";
+import { getContextualQuickLinks } from "@/lib/city-pulse/quick-links";
 
 /** Section types that LineupSection absorbs */
 const TIMELINE_SECTION_TYPES = new Set<CityPulseSectionType>([
@@ -67,41 +91,60 @@ const BLOCK_TO_SECTION: Record<string, CityPulseSectionType> = {
   browse: "browse",
 };
 
-interface CityPulseShellProps {
-  portalSlug: string;
+/** Middle blocks = everything except always-first and always-last */
+const MIDDLE_BLOCK_IDS: FeedBlockId[] = DEFAULT_FEED_ORDER.filter(
+  (b) => !ALWAYS_VISIBLE_BLOCKS.includes(b) && !FIXED_LAST_BLOCKS.includes(b),
+);
+
+// ---------------------------------------------------------------------------
+// Client-side default shell — renders at T=0 with no API call
+// ---------------------------------------------------------------------------
+
+function buildDefaultContext(timeSlot: TimeSlot, dayOfWeek: string): FeedContext {
+  const dayTheme = getDayTheme(dayOfWeek, timeSlot);
+  return {
+    time_slot: timeSlot,
+    day_of_week: dayOfWeek,
+    weather: null,
+    active_holidays: [],
+    active_festivals: [],
+    quick_links: [],
+    day_theme: dayTheme,
+    weather_signal: undefined,
+  };
 }
 
-function FeedSkeleton() {
-  return (
-    <div className="space-y-6 animate-pulse">
-      {/* Hero skeleton */}
-      <div className="h-60 sm:h-80 bg-[var(--card-bg)] border-b border-[var(--twilight)]" />
-      {/* Card skeleton */}
-      <div className="flex gap-2.5">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="flex-1 h-16 rounded-xl skeleton-shimmer" />
-        ))}
-      </div>
-      {/* Tab skeleton */}
-      <div className="flex gap-2">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="h-8 w-24 rounded-full skeleton-shimmer shrink-0" />
-        ))}
-      </div>
-      {/* Section skeletons */}
-      {[1, 2].map((i) => (
-        <div key={i} className="space-y-3">
-          <div className="h-5 w-32 skeleton-shimmer rounded" />
-          <div className="h-48 rounded-2xl skeleton-shimmer" />
-          <div className="space-y-1">
-            {[1, 2, 3].map((j) => (
-              <div key={j} className="h-12 rounded-lg skeleton-shimmer" />
-            ))}
-          </div>
-        </div>
-      ))}
-    </div>
+function buildDefaultHeader(
+  context: FeedContext,
+  portalSlug: string,
+): ResolvedHeader {
+  const quickLinks = getContextualQuickLinks(
+    portalSlug,
+    context.time_slot,
+    context.day_of_week,
+    null,
   );
+  const dashboardCards = getDashboardCards(context, portalSlug);
+  return {
+    config_id: null,
+    config_slug: null,
+    headline: getEditorialHeadline(context),
+    hero_image_url: getCityPhoto(context.time_slot, undefined, context.day_of_week),
+    accent_color: getDefaultAccentColor(context),
+    dashboard_cards: dashboardCards,
+    quick_links: quickLinks,
+    events_pulse: { total_active: 0, trending_event: null },
+    suppressed_event_ids: [],
+    boosted_event_ids: [],
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Shell props
+// ---------------------------------------------------------------------------
+
+interface CityPulseShellProps {
+  portalSlug: string;
 }
 
 function FeedError({ onRetry }: { onRetry: () => void }) {
@@ -145,7 +188,7 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
 
   const {
     data,
-    context,
+    context: apiContext,
     sections,
     personalization,
     tabCounts,
@@ -154,12 +197,28 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
     error,
     refresh,
     fetchTab,
+    timeSlot: effectiveTimeSlot,
   } = useCityPulseFeed({
     portalSlug,
     timeSlotOverride,
     dayOverride,
     interests: savedInterests,
   });
+
+  // Client-side defaults — computed once, zero API calls
+  const defaultShell = useMemo(() => {
+    const ts = effectiveTimeSlot;
+    const dow = getDayOfWeek();
+    const ctx = buildDefaultContext(ts, dow);
+    const hdr = buildDefaultHeader(ctx, portalSlug);
+    return { context: ctx, header: hdr };
+  }, [effectiveTimeSlot, portalSlug]);
+
+  // Use API data when available, fall back to client-side defaults
+  const context = apiContext ?? defaultShell.context;
+  const header = data?.header ?? defaultShell.header;
+  const dashboardCards = header.dashboard_cards;
+  const quickLinks = header.quick_links;
 
   // Clean up legacy ?tab= param
   useEffect(() => {
@@ -170,32 +229,27 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
     }
   }, []);
 
-  // Split sections: lineup (timeline) vs non-timeline, extract Regular Hangs
-  const { lineupSections, orderedSections, lineupEventIds, sceneSection, sceneEventIds } = useMemo(() => {
+  // Compute hidden block set and middle section order from feedLayout
+  const hiddenBlockSet = useMemo(() => {
+    if (!feedLayout?.hidden_blocks) return new Set<FeedBlockId>();
+    return new Set<FeedBlockId>(feedLayout.hidden_blocks);
+  }, [feedLayout]);
+
+  const middleSectionOrder = useMemo(() => {
+    if (!feedLayout?.visible_blocks) return MIDDLE_BLOCK_IDS;
+    // Extract middle blocks from visible_blocks, preserving user order
+    return feedLayout.visible_blocks.filter(
+      (b) => !ALWAYS_VISIBLE_BLOCKS.includes(b) && !FIXED_LAST_BLOCKS.includes(b),
+    );
+  }, [feedLayout]);
+
+  // Split sections: lineup (timeline) vs non-timeline
+  const { lineupSections, orderedSections } = useMemo(() => {
     const lineup = sections.filter(
       (s) => TIMELINE_SECTION_TYPES.has(s.type),
     );
 
-    // Extract Regular Hangs section (rendered inline after Lineup, not in orderedSections)
-    const scene = sections.find((s) => s.type === "the_scene" || s.type === "tonights_regulars") ?? null;
-
-    // Collect scene event IDs so Lineup can exclude them
-    const sceneIds = new Set<number>();
-    if (scene) {
-      for (const item of scene.items) {
-        if (item.item_type === "event") sceneIds.add(item.event.id);
-      }
-    }
-
-    // Collect all event IDs from lineup sections for dedup in downstream sections
-    const eventIds = new Set<number>();
-    for (const s of lineup) {
-      for (const item of s.items) {
-        if (item.item_type === "event") eventIds.add(item.event.id);
-      }
-    }
-
-    // Build ordered non-timeline sections, applying user layout if available
+    // Build ordered non-timeline sections, applying user layout
     const sectionMap = new Map(sections.map((s) => [s.type, s]));
     const hiddenSet = new Set(
       feedLayout?.hidden_blocks?.map((b) => BLOCK_TO_SECTION[b]).filter(Boolean) || [],
@@ -204,7 +258,7 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
     let sectionOrder: CityPulseSectionType[];
     if (feedLayout?.visible_blocks) {
       sectionOrder = feedLayout.visible_blocks
-        .filter((b) => b !== "timeline")
+        .filter((b) => b !== "events")
         .map((b) => BLOCK_TO_SECTION[b])
         .filter((t): t is CityPulseSectionType => !!t);
       if (!sectionOrder.includes("browse")) {
@@ -219,30 +273,124 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
       .map((type) => sectionMap.get(type))
       .filter(Boolean) as typeof sections;
 
-    return { lineupSections: lineup, orderedSections: ordered, lineupEventIds: eventIds, sceneSection: scene, sceneEventIds: sceneIds };
+    return { lineupSections: lineup, orderedSections: ordered };
   }, [sections, feedLayout]);
 
   // Theme vars from context
   const themeVars = useMemo(
-    () => (context ? getFeedThemeVars(context) : {}),
+    () => getFeedThemeVars(context),
     [context],
   );
 
-  if (isLoading && !data) {
-    return <FeedSkeleton />;
-  }
-
-  if (error && !data) {
+  // After initial load failure with no data at all, show error
+  if (error && !data && !isLoading) {
     return <FeedError onRetry={refresh} />;
   }
 
-  if (!data) {
-    return <FeedSkeleton />;
-  }
+  /** Render a middle section by blockId */
+  const renderMiddleSection = (blockId: FeedBlockId) => {
+    switch (blockId) {
+      case "recurring":
+        return (
+          <div
+            key="city-pulse-recurring"
+            id="city-pulse-recurring"
+            data-feed-anchor="true"
+            data-index-label="Regular Hangs"
+            data-block-id="recurring"
+            className="mt-8 scroll-mt-28"
+          >
+            <div className="h-px bg-[var(--twilight)]" />
+            <div className="pt-6">
+              <LazySection minHeight={300}>
+                <TheSceneSection portalSlug={portalSlug} />
+              </LazySection>
+            </div>
+          </div>
+        );
 
-  const header = data.header;
-  const dashboardCards = header?.dashboard_cards || [];
-  const quickLinks = header?.quick_links || [];
+      case "festivals":
+        return portal ? (
+          <div
+            key="city-pulse-festivals"
+            id="city-pulse-festivals"
+            data-feed-anchor="true"
+            data-index-label="The Big Stuff"
+            data-block-id="festivals"
+            className="mt-8 scroll-mt-28"
+          >
+            <div className="h-px bg-[var(--twilight)]" />
+            <div className="pt-6">
+              <LazySection minHeight={200}>
+                <FestivalsSection portalSlug={portalSlug} portalId={portal.id} />
+              </LazySection>
+            </div>
+          </div>
+        ) : null;
+
+      case "community":
+        return (
+          <div
+            key="city-pulse-community"
+            id="city-pulse-community"
+            data-feed-anchor="true"
+            data-index-label="The Network"
+            data-block-id="community"
+            className="mt-8 scroll-mt-28"
+          >
+            <div className="h-px bg-[var(--twilight)]" />
+            <div className="pt-6">
+              <LazySection minHeight={400}>
+                <NetworkFeedSection portalSlug={portalSlug} />
+              </LazySection>
+            </div>
+          </div>
+        );
+
+      case "experiences":
+        return (
+          <div
+            key="city-pulse-experiences"
+            id="city-pulse-experiences"
+            data-feed-anchor="true"
+            data-index-label="Things to Do"
+            data-block-id="experiences"
+            className="mt-8 scroll-mt-28"
+          >
+            <div className="h-px bg-[var(--twilight)]" />
+            <div className="pt-6">
+              <LazySection minHeight={200}>
+                <ExperiencesSection portalSlug={portalSlug} />
+              </LazySection>
+            </div>
+          </div>
+        );
+
+      case "cinema":
+        return (
+          <div
+            key="city-pulse-cinema"
+            id="city-pulse-cinema"
+            data-feed-anchor="true"
+            data-index-label="Now Showing"
+            data-block-id="cinema"
+            className="mt-8 scroll-mt-28"
+          >
+            <div className="h-px bg-[var(--twilight)]" />
+            <div className="pt-6">
+              <LazySection minHeight={300}>
+                <NowShowingSection portalSlug={portalSlug} />
+              </LazySection>
+            </div>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  const lineupLoading = isLoading && lineupSections.length === 0;
 
   return (
     <div
@@ -251,43 +399,18 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
         ...(showTimeMachine ? { paddingBottom: "5.5rem" } : {}),
       }}
     >
-      {/* 1. GreetingBar — photo hero + headline + pulse */}
-      {context && header && (
-        <GreetingBar
-          header={header}
-          context={context}
-          portalSlug={portalSlug}
-        />
-      )}
+      {/* 1. GreetingBar — renders instantly from client-side defaults */}
+      {/*    Quick links are rendered inside the hero as subtle glassmorphic pills */}
+      <GreetingBar
+        header={header}
+        context={context}
+        portalSlug={portalSlug}
+        quickLinks={quickLinks}
+        dashboardCards={dashboardCards}
+      />
 
-      {/* 2. Quick links — contextual discovery shortcuts */}
-      {quickLinks.length > 0 && (
-        <div className="mt-3">
-          <QuickLinksBar links={quickLinks} dashboardCards={dashboardCards} />
-        </div>
-      )}
-
-      {/* Feed Customizer / Sign-in CTA */}
-      <div className="mt-2 flex justify-end">
-        {isAuthenticated ? (
-          <FeedCustomizer
-            currentLayout={feedLayout}
-            onSave={handleSaveLayout}
-            isAuthenticated
-          />
-        ) : (
-          <Link
-            href="/auth/login"
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[var(--muted)] hover:text-[var(--soft)] hover:bg-[var(--cream)]/5 transition-colors"
-          >
-            <SignIn weight="bold" className="w-3.5 h-3.5" />
-            <span className="font-mono text-2xs tracking-wide">Sign in to customize</span>
-          </Link>
-        )}
-      </div>
-
-      {/* CTA (if present) */}
-      {header?.cta && (
+      {/* CTA (if present — only from CMS override, so only after API loads) */}
+      {header.cta && (
         <div className="mt-2.5">
           <Link
             href={header.cta.href}
@@ -302,81 +425,67 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
         </div>
       )}
 
-      {/* 3. LineupSection — tabbed Today / This Week / Coming Up */}
-      {lineupSections.length > 0 && (
-        <div className="mt-4">
-          <LineupSection
-            sections={lineupSections}
-            portalSlug={portalSlug}
-            tabCounts={tabCounts}
-            categoryCounts={categoryCounts}
-            fetchTab={fetchTab}
-            activeInterests={feedLayout?.interests}
-            savedInterests={savedInterests}
-            onInterestsChange={handleInterestsChange}
-            onSaveInterests={handleSaveInterests}
-            excludeEventIds={sceneEventIds}
-          />
-        </div>
-      )}
-
-      {/* 3b. Regular Hangs — recurring activities, directly after Lineup */}
-      {sceneSection && (
-        <div className="mt-6">
-          <TheSceneSection
-            section={sceneSection}
-            portalSlug={portalSlug}
-            excludeEventIds={lineupEventIds}
-          />
-        </div>
-      )}
-
-      {/* 4. Network Feed — indie Atlanta publications */}
-      <div className="mt-8">
-        <div className="h-px bg-[var(--twilight)]" />
-        <div className="pt-6">
-          <LazySection minHeight={400}>
-            <NetworkFeedSection portalSlug={portalSlug} />
-          </LazySection>
-        </div>
-      </div>
-
-      {/* 5. Now Showing — indie cinema showtimes */}
-      <div className="mt-8">
-        <div className="h-px bg-[var(--twilight)]" />
-        <div className="pt-6">
-          <LazySection minHeight={300}>
-            <NowShowingSection portalSlug={portalSlug} />
-          </LazySection>
-        </div>
-      </div>
-
-      {/* 6. Festivals — upcoming big events */}
-      <div className="mt-8">
-        <div className="h-px bg-[var(--twilight)]" />
-        <div className="pt-6">
-          <LazySection minHeight={200}>
-            <FestivalsSection portalSlug={portalSlug} portalId={portal.id} />
-          </LazySection>
-        </div>
-      </div>
-
-      {/* Browse by Category (order customizable) */}
-      {orderedSections.map((section) => (
-        <div key={section.id} className="mt-8">
-          <div className="h-px bg-[var(--twilight)]" />
-          <div className="pt-6">
-            <LazySection minHeight={SECTION_HEIGHT_ESTIMATES[section.type] || 200}>
-              <CityPulseSection
-                section={section}
-                portalSlug={portalSlug}
-                personalization={personalization}
-                excludeEventIds={lineupEventIds}
-              />
-            </LazySection>
+      {/* 3. LineupSection — shows spinner until events arrive */}
+      <div
+        id="city-pulse-events"
+        data-feed-anchor="true"
+        data-index-label="The Lineup"
+        data-block-id="events"
+        className="mt-4 scroll-mt-28"
+        style={{ minHeight: lineupLoading ? 400 : undefined }}
+      >
+        {lineupLoading ? (
+          <div className="flex items-center justify-center py-16">
+            <HorseSpinner />
           </div>
+        ) : lineupSections.length > 0 ? (
+          <div className="animate-fade-in">
+            <LineupSection
+              sections={lineupSections}
+              portalSlug={portalSlug}
+              tabCounts={tabCounts}
+              categoryCounts={categoryCounts}
+              fetchTab={fetchTab}
+              activeInterests={feedLayout?.interests}
+              savedInterests={savedInterests}
+              onInterestsChange={handleInterestsChange}
+              onSaveInterests={handleSaveInterests}
+            />
+          </div>
+        ) : null}
+      </div>
+
+      {/* Middle sections — order + visibility controlled by feedLayout */}
+      {middleSectionOrder.map((blockId) => {
+        if (hiddenBlockSet.has(blockId)) return null;
+        return renderMiddleSection(blockId);
+      })}
+
+      {/* Browse by Category (always last) */}
+      {!hiddenBlockSet.has("browse") && (
+        <div
+          id="city-pulse-browse"
+          data-feed-anchor="true"
+          data-index-label="Browse by Category"
+          data-block-id="browse"
+          className="scroll-mt-28"
+        >
+          {orderedSections.map((section) => (
+            <div key={section.id} className="mt-8">
+              <div className="h-px bg-[var(--twilight)]" />
+              <div className="pt-6">
+                <LazySection minHeight={SECTION_HEIGHT_ESTIMATES[section.type] || 200}>
+                  <CityPulseSection
+                    section={section}
+                    portalSlug={portalSlug}
+                    personalization={personalization}
+                  />
+                </LazySection>
+              </div>
+            </div>
+          ))}
         </div>
-      ))}
+      )}
 
       {/* Admin: Feed Time Machine */}
       {showTimeMachine && (
@@ -386,6 +495,14 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
           onOverride={handleOverride}
         />
       )}
+
+      <FeedPageIndex
+        portalSlug={portalSlug}
+        loading={isLoading}
+        isAuthenticated={isAuthenticated}
+        feedLayout={feedLayout}
+        onSaveLayout={handleSaveLayout}
+      />
     </div>
   );
 }

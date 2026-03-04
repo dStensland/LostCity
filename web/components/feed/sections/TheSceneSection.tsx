@@ -3,49 +3,40 @@
 /**
  * The Scene — recurring activities feed section.
  *
+ * Self-fetching: loads data from /api/regulars instead of receiving it
+ * as a prop from the monolithic city-pulse API. This removes ~750KB
+ * from the initial feed response.
+ *
  * Compact layout: horizontal scrollable chip strip for activity types
  * (trivia, karaoke, open mic, DJ, etc.) with tight text-only list rows.
- * Replaces TonightsRegularsSection with a more prominent,
- * week-spanning, customizable view of recurring events.
- *
- * Follows the same chip-strip + "+" picker pattern as LineupSection.
  * Event rows are intentionally compressed — no images, just
  * accent dot + title + venue·time + recurrence badge.
  */
 
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import type { CityPulseSection, CityPulseEventItem } from "@/lib/city-pulse/types";
-import { SCENE_ACTIVITY_TYPES, type SceneActivityType } from "@/lib/city-pulse/section-builders";
-import { formatTime } from "@/lib/formats";
-import { triggerHaptic } from "@/lib/haptics";
+import type { CityPulseEventItem } from "@/lib/city-pulse/types";
 import {
-  ArrowRight, Sparkle, ListBullets, Plus, X, Check, Repeat,
-  // Activity type icons
-  Question, MicrophoneStage, Microphone, Headphones,
-  Waveform, Crown, Lightbulb, Smiley, GameController, MusicNotes,
+  SCENE_ACTIVITY_TYPES,
+  type SceneActivityType,
+  matchActivityType,
+  buildRecurrenceLabel,
+} from "@/lib/city-pulse/section-builders";
+import type { FeedEventData } from "@/components/EventCard";
+import { triggerHaptic } from "@/lib/haptics";
+import { SceneEventRow, SceneChip, getActivityIcon, WeekdayRow, getDayKeyFromDate, getTodayKey, buildNext7Days } from "@/components/feed/SceneEventRow";
+import {
+  ArrowRight, MicrophoneStage, ListBullets, Plus, X, Check, WarningCircle,
 } from "@phosphor-icons/react";
-import type { ComponentType } from "react";
-import type { IconProps } from "@phosphor-icons/react";
-
-// ---------------------------------------------------------------------------
-// Icon resolver
-// ---------------------------------------------------------------------------
-
-const ICON_LOOKUP: Record<string, ComponentType<IconProps>> = {
-  Question, MicrophoneStage, Microphone, Headphones,
-  Waveform, Crown, Lightbulb, Smiley, GameController, MusicNotes,
-};
-
-function getActivityIcon(act: SceneActivityType): ComponentType<IconProps> {
-  return ICON_LOOKUP[act.iconName] || ListBullets;
-}
+import HorseSpinner from "@/components/ui/HorseSpinner";
+import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
 
 /** Map from activity ID → config for O(1) lookup */
 const ACTIVITY_MAP = new Map(SCENE_ACTIVITY_TYPES.map((a) => [a.id, a]));
 
-/** Default activity types shown before user customization */
-const DEFAULT_SCENE_IDS = SCENE_ACTIVITY_TYPES.map((a) => a.id);
+/** Default activity types shown before user customization — crowd favorites */
+const DEFAULT_SCENE_IDS = ["trivia", "karaoke", "comedy", "nerd_stuff", "happy_hour"];
 
 const INITIAL_ROWS = 8;
 
@@ -54,40 +45,105 @@ const INITIAL_ROWS = 8;
 // ---------------------------------------------------------------------------
 
 interface Props {
-  section: CityPulseSection;
   portalSlug: string;
-  excludeEventIds?: Set<number>;
+}
+
+// ---------------------------------------------------------------------------
+// Data fetching & transformation
+// ---------------------------------------------------------------------------
+
+/** Transform raw regulars API events into the format TheSceneSection needs */
+function processRegularsData(rawEvents: FeedEventData[]) {
+  // Match each event to an activity type
+  const eventActivityMap: Record<number, string> = {};
+  for (const event of rawEvents) {
+    const actId = matchActivityType(event);
+    if (actId) {
+      eventActivityMap[event.id] = actId;
+    }
+  }
+
+  // Only keep events that matched an activity type
+  const matched = rawEvents.filter((e) => eventActivityMap[e.id]);
+
+  // Wrap as CityPulseEventItem with recurrence labels
+  const items: CityPulseEventItem[] = matched.map((event) => ({
+    item_type: "event" as const,
+    event: {
+      ...event,
+      is_recurring: true,
+      recurrence_label: buildRecurrenceLabel(event),
+    },
+  }));
+
+  return { items, eventActivityMap };
 }
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export default function TheSceneSection({ section, portalSlug, excludeEventIds }: Props) {
+export default function TheSceneSection({ portalSlug }: Props) {
   const [activeChipId, setActiveChipId] = useState("all");
   const [showAllRows, setShowAllRows] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
 
+  // Rolling 7-day window in portal-local time (America/New_York)
+  const next7Days = useMemo(() => buildNext7Days(), []);
+
+  // Default to the first day in the window (today or earliest event date)
+  const [activeDays, setActiveDays] = useState<string[]>(() => {
+    const firstKey = next7Days[0]?.key ?? getTodayKey();
+    return [firstKey];
+  });
+
   // Local chip selection — which activity types are visible in the strip
   const [localActivities, setLocalActivities] = useState<string[]>(() => [...DEFAULT_SCENE_IDS]);
 
-  // Extract metadata from section
-  const activityCounts = useMemo(
-    () => (section.meta?.activity_counts ?? {}) as Record<string, number>,
-    [section.meta?.activity_counts],
-  );
-  const eventActivityMap = useMemo(
-    () => (section.meta?.event_activity_map ?? {}) as Record<number, string>,
-    [section.meta?.event_activity_map],
-  );
+  // Self-fetch from /api/regulars
+  const { data: regularsData, isLoading, isError } = useQuery<{ events: FeedEventData[] }>({
+    queryKey: ["regulars", portalSlug],
+    queryFn: async () => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10_000);
+      try {
+        const res = await fetch(`/api/regulars?portal=${portalSlug}`, {
+          signal: controller.signal,
+        });
+        if (!res.ok) throw new Error(`Regulars fetch failed: ${res.status}`);
+        return res.json();
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    },
+    staleTime: 3 * 60 * 1000, // 3 min — matches regulars API cache TTL
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: true,
+  });
 
-  // Filter events, excluding already-shown IDs
+  // Process raw events into activity-mapped items
+  const { items: allItems, eventActivityMap } = useMemo(() => {
+    if (!regularsData?.events) return { items: [] as CityPulseEventItem[], eventActivityMap: {} as Record<number, string> };
+    return processRegularsData(regularsData.events);
+  }, [regularsData]);
+
   const allEvents = useMemo(() =>
-    section.items.filter(
-      (i): i is CityPulseEventItem =>
-        i.item_type === "event" && !(excludeEventIds?.has(i.event.id)),
+    allItems.filter(
+      (i): i is CityPulseEventItem => i.item_type === "event",
     ),
-  [section.items, excludeEventIds]);
+  [allItems]);
+
+  // Activity counts from ALL events — chips always show full-week totals
+  const activityCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const item of allEvents) {
+      const actId = eventActivityMap[item.event.id];
+      if (actId) {
+        counts[actId] = (counts[actId] || 0) + 1;
+      }
+    }
+    return counts;
+  }, [allEvents, eventActivityMap]);
 
   // Visible chips: only activity types that the user has selected AND have > 0 events
   const visibleChips = useMemo(() =>
@@ -95,6 +151,9 @@ export default function TheSceneSection({ section, portalSlug, excludeEventIds }
       .map((id) => ACTIVITY_MAP.get(id))
       .filter((a): a is SceneActivityType => !!a && (activityCounts[a.id] || 0) > 0),
   [localActivities, activityCounts]);
+
+  // Set of visible activity IDs — "All" chip only shows events from these
+  const visibleActivityIds = useMemo(() => new Set(visibleChips.map((a) => a.id)), [visibleChips]);
 
   // Chip counts: "all" = sum of all visible activity counts
   const chipCounts = useMemo(() => {
@@ -109,11 +168,43 @@ export default function TheSceneSection({ section, portalSlug, excludeEventIds }
     return counts;
   }, [visibleChips, activityCounts]);
 
-  // Filtered events based on active chip
+  // Per-day event counts for WeekdayRow — scoped to active chip + visible activities
+  const dayCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const item of allEvents) {
+      if (!item.event.start_date) continue;
+      const actId = eventActivityMap[item.event.id];
+      if (!actId) continue;
+      if (activeChipId === "all") {
+        if (!visibleActivityIds.has(actId)) continue;
+      } else if (actId !== activeChipId) {
+        continue;
+      }
+      const dayKey = getDayKeyFromDate(item.event.start_date);
+      counts[dayKey] = (counts[dayKey] || 0) + 1;
+    }
+    return counts;
+  }, [allEvents, eventActivityMap, activeChipId, visibleActivityIds]);
+
+  // Events filtered by selected weekday(s)
+  const dayFilteredEvents = useMemo(() => {
+    if (activeDays.length === 0) return allEvents;
+    return allEvents.filter((item) => {
+      if (!item.event.start_date) return false;
+      return activeDays.includes(getDayKeyFromDate(item.event.start_date));
+    });
+  }, [allEvents, activeDays]);
+
+  // Filtered events: "All" scoped to visible activity types only
   const filteredEvents = useMemo(() => {
-    if (activeChipId === "all") return allEvents;
-    return allEvents.filter((item) => eventActivityMap[item.event.id] === activeChipId);
-  }, [allEvents, activeChipId, eventActivityMap]);
+    if (activeChipId === "all") {
+      return dayFilteredEvents.filter((item) => {
+        const actId = eventActivityMap[item.event.id];
+        return actId && visibleActivityIds.has(actId);
+      });
+    }
+    return dayFilteredEvents.filter((item) => eventActivityMap[item.event.id] === activeChipId);
+  }, [dayFilteredEvents, activeChipId, eventActivityMap, visibleActivityIds]);
 
   const visibleItems = showAllRows
     ? filteredEvents
@@ -128,6 +219,15 @@ export default function TheSceneSection({ section, portalSlug, excludeEventIds }
     setShowAllRows(false);
   }, []);
 
+  const handleDayToggle = useCallback((day: string) => {
+    triggerHaptic("selection");
+    setActiveDays((prev) => {
+      if (prev.includes(day)) return prev.filter((d) => d !== day);
+      return [...prev, day];
+    });
+    setShowAllRows(false);
+  }, []);
+
   const handleToggleActivity = useCallback((actId: string) => {
     setLocalActivities((prev) => {
       if (prev.includes(actId)) {
@@ -139,25 +239,54 @@ export default function TheSceneSection({ section, portalSlug, excludeEventIds }
     });
   }, []);
 
-  if (allEvents.length === 0 || visibleChips.length === 0) return null;
+  // Loading state — section header + spinner (no skeleton mismatch)
+  if (isLoading) {
+    return (
+      <section>
+        <FeedSectionHeader
+          title="Regular Hangs"
+          priority="secondary"
+          accentColor="var(--neon-magenta)"
+          icon={<MicrophoneStage weight="duotone" className="w-5 h-5" />}
+        />
+        <div className="flex items-center justify-center py-10">
+          <HorseSpinner color="var(--neon-magenta)" />
+        </div>
+      </section>
+    );
+  }
+
+  // Error state — subtle, doesn't break feed
+  if (isError) {
+    return (
+      <section>
+        <FeedSectionHeader
+          title="Regular Hangs"
+          priority="secondary"
+          accentColor="var(--neon-magenta)"
+          icon={<MicrophoneStage weight="duotone" className="w-5 h-5" />}
+        />
+        <div className="flex items-center justify-center gap-2 py-8 text-[var(--muted)]">
+          <WarningCircle weight="duotone" className="w-4 h-4" />
+          <span className="font-mono text-xs">Couldn&apos;t load regular hangs</span>
+        </div>
+      </section>
+    );
+  }
+
+  // Hide entire section only if there are zero events in the full week
+  if (allEvents.length === 0) return null;
 
   return (
-    <section>
+    <section className="animate-fade-in">
       {/* Section header */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <Sparkle weight="duotone" className="w-3.5 h-3.5 text-[var(--neon-magenta)]" />
-          <h2 className="font-mono text-xs font-bold tracking-[0.12em] uppercase text-[var(--neon-magenta)]">
-            {section.title || "Regular Hangs"}
-          </h2>
-        </div>
-        <Link
-          href={`/${portalSlug}?view=find&type=events&date=this_week`}
-          className="text-xs flex items-center gap-1 text-[var(--neon-magenta)] transition-colors hover:opacity-80"
-        >
-          See all <ArrowRight className="w-3 h-3" />
-        </Link>
-      </div>
+      <FeedSectionHeader
+        title="Regular Hangs"
+        priority="secondary"
+        accentColor="var(--neon-magenta)"
+        icon={<MicrophoneStage weight="duotone" className="w-5 h-5" />}
+        seeAllHref={`/${portalSlug}?view=find&type=regulars${activeChipId !== "all" ? `&activity=${activeChipId}` : ""}${activeDays.length > 0 ? `&weekday=${activeDays.join(",")}` : ""}`}
+      />
 
       {/* Activity chip strip */}
       <div className="relative mb-3">
@@ -197,6 +326,16 @@ export default function TheSceneSection({ section, portalSlug, excludeEventIds }
         <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-10 bg-gradient-to-l from-[var(--void)] to-transparent" />
       </div>
 
+      {/* Day toggle row — rolling 7-day window starting from today */}
+      <div className="mb-4">
+        <WeekdayRow
+          days={next7Days}
+          activeDays={activeDays}
+          dayCounts={dayCounts}
+          onToggle={handleDayToggle}
+        />
+      </div>
+
       {/* Inline activity picker */}
       {pickerOpen && (
         <ActivityPicker
@@ -207,10 +346,10 @@ export default function TheSceneSection({ section, portalSlug, excludeEventIds }
         />
       )}
 
-      {/* Compact event list — unified container */}
+      {/* Compact event grid */}
       {visibleItems.length > 0 && (
-        <div className="rounded-xl overflow-hidden border border-[var(--twilight)]/40 bg-[var(--night)]">
-          {visibleItems.map((item, idx) => {
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+          {visibleItems.map((item) => {
             const actId = eventActivityMap[item.event.id];
             const act = actId ? ACTIVITY_MAP.get(actId) : undefined;
             return (
@@ -220,7 +359,6 @@ export default function TheSceneSection({ section, portalSlug, excludeEventIds }
                 activity={act}
                 ActivityIcon={act ? getActivityIcon(act) : undefined}
                 portalSlug={portalSlug}
-                isLast={idx === visibleItems.length - 1}
               />
             );
           })}
@@ -231,10 +369,10 @@ export default function TheSceneSection({ section, portalSlug, excludeEventIds }
       {!showAllRows && hasMoreRows && (
         <button
           onClick={() => setShowAllRows(true)}
-          className="mt-2 w-full flex items-center justify-center gap-1.5 text-xs font-mono font-medium py-2 rounded-lg transition-all hover:bg-white/[0.02] text-[var(--neon-magenta)]"
+          className="mt-2 w-full flex items-center justify-center gap-1.5 text-sm font-mono font-medium py-2.5 rounded-lg transition-all hover:bg-[var(--neon-magenta)]/5 text-[var(--neon-magenta)]"
         >
-          +{hiddenCount} more
-          <ArrowRight className="w-3 h-3" />
+          Show {hiddenCount} more
+          <ArrowRight weight="bold" className="w-3.5 h-3.5" />
         </button>
       )}
 
@@ -247,128 +385,6 @@ export default function TheSceneSection({ section, portalSlug, excludeEventIds }
         </div>
       )}
     </section>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// SceneEventRow — compact text-only row for recurring events
-// ---------------------------------------------------------------------------
-
-function SceneEventRow({
-  item,
-  activity,
-  ActivityIcon,
-  portalSlug,
-  isLast,
-}: {
-  item: CityPulseEventItem;
-  activity: SceneActivityType | undefined;
-  ActivityIcon: ComponentType<IconProps> | undefined;
-  portalSlug: string;
-  isLast: boolean;
-}) {
-  const event = item.event;
-  const accentColor = activity?.color ?? "var(--soft)";
-  const timeStr = formatTime(event.start_time, event.is_all_day);
-  const recurrenceLabel = event.recurrence_label;
-
-  return (
-    <Link
-      href={`/${portalSlug}?event=${event.id}`}
-      scroll={false}
-      className={[
-        "flex items-center gap-3 px-3 py-2.5 transition-colors group hover:bg-white/[0.02]",
-        !isLast && "border-b border-[var(--twilight)]/30",
-      ].filter(Boolean).join(" ")}
-    >
-      {/* Activity icon accent */}
-      <span className="shrink-0 flex items-center justify-center w-7 h-7 rounded-lg"
-        style={{ backgroundColor: `color-mix(in srgb, ${accentColor} 12%, transparent)` }}
-      >
-        {ActivityIcon ? (
-          <ActivityIcon weight="duotone" className="w-3.5 h-3.5" style={{ color: accentColor }} />
-        ) : (
-          <Sparkle weight="duotone" className="w-3.5 h-3.5" style={{ color: accentColor }} />
-        )}
-      </span>
-
-      {/* Content */}
-      <div className="min-w-0 flex-1">
-        {/* Title */}
-        <p className="text-sm font-medium text-[var(--cream)] truncate group-hover:text-white transition-colors leading-snug">
-          {event.title}
-        </p>
-        {/* Venue · Time */}
-        <p className="text-xs text-[var(--muted)] truncate mt-0.5">
-          {event.venue?.name}
-          {event.venue?.neighborhood && (
-            <span className="opacity-50"> &middot; {event.venue.neighborhood}</span>
-          )}
-          <span className="opacity-50"> &middot; </span>
-          {timeStr}
-        </p>
-      </div>
-
-      {/* Recurrence badge */}
-      {recurrenceLabel && (
-        <span className="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-md font-mono text-2xs text-[var(--soft)] bg-white/[0.04]">
-          <Repeat weight="bold" className="w-2.5 h-2.5 opacity-60" />
-          {recurrenceLabel}
-        </span>
-      )}
-    </Link>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// SceneChip — follows LineupSection ChipButton pattern
-// ---------------------------------------------------------------------------
-
-function SceneChip({
-  label,
-  Icon,
-  color,
-  count,
-  isActive,
-  onClick,
-}: {
-  label: string;
-  Icon: ComponentType<IconProps>;
-  color: string;
-  count: number;
-  isActive: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={[
-        "shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs tracking-wide transition-all active:scale-95 border",
-        isActive
-          ? "font-medium"
-          : "border-transparent text-[var(--muted)] hover:bg-white/[0.03]",
-      ].join(" ")}
-      style={
-        isActive
-          ? {
-              color,
-              backgroundColor: `color-mix(in srgb, ${color} 12%, transparent)`,
-              borderColor: `color-mix(in srgb, ${color} 30%, transparent)`,
-            }
-          : undefined
-      }
-    >
-      <Icon weight={isActive ? "fill" : "bold"} className="w-4 h-4" />
-      {label}
-      {count > 0 && (
-        <span
-          className="font-mono text-2xs tabular-nums min-w-5 text-center"
-          style={{ opacity: isActive ? 0.8 : 0.5 }}
-        >
-          {count}
-        </span>
-      )}
-    </button>
   );
 }
 

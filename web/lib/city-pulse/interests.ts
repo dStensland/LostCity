@@ -14,7 +14,7 @@ import type { CityPulseEventItem } from "./types";
 // Interest chip type
 // ---------------------------------------------------------------------------
 
-export type InterestType = "category" | "tag" | "specials";
+export type InterestType = "category" | "tag";
 
 export interface InterestChip {
   id: string;
@@ -24,7 +24,7 @@ export interface InterestChip {
   /** Accent color for the active chip state */
   color: string;
   type: InterestType;
-  /** Return true if the event matches this interest. Unused for "specials" type. */
+  /** Return true if the event matches this interest. */
   match: (item: CityPulseEventItem) => boolean;
 }
 
@@ -145,14 +145,6 @@ export const INTEREST_CHIPS: InterestChip[] = [
   },
   // --- Special chips ---
   {
-    id: "happy_hour",
-    label: "Happy Hour",
-    iconName: "BeerStein",
-    color: "var(--gold)",
-    type: "specials",
-    match: () => false,
-  },
-  {
     id: "free",
     label: "Free",
     iconName: "Ticket",
@@ -215,6 +207,38 @@ export const INTEREST_CHIPS: InterestChip[] = [
     match: catMatch("markets"),
   },
   // --- Genre-based chips ---
+  {
+    id: "food_specials",
+    label: "Specials",
+    iconName: "ForkKnife",
+    color: "#FCD34D",
+    type: "category",
+    match: genreMatch("happy-hour", "food-specials", "specials", "oysters", "taco-tuesday", "wings", "drink-specials"),
+  },
+  {
+    id: "run_fitness",
+    label: "Run & Fitness",
+    iconName: "PersonSimpleRun",
+    color: "#5EEAD4",
+    type: "category",
+    match: genreMatch("run-club", "running", "cycling", "bike-ride", "yoga", "pickleball"),
+  },
+  {
+    id: "bingo",
+    label: "Bingo",
+    iconName: "NumberCircleNine",
+    color: "#FDBA74",
+    type: "category",
+    match: genreMatch("bingo"),
+  },
+  {
+    id: "jazz_blues",
+    label: "Jazz & Blues",
+    iconName: "MusicNotes",
+    color: "#93C5FD",
+    type: "category",
+    match: genreMatch("jazz", "blues", "jam-session"),
+  },
   {
     id: "trivia",
     label: "Trivia Night",
@@ -299,6 +323,10 @@ const CHIP_COUNT_KEYS: Record<string, string[]> = {
   open_mic: ["genre:open-mic", "genre:openmic", "tag:open-mic", "tag:openmic"],
   improv: ["genre:improv", "tag:improv"],
   dj_electronic: ["genre:dj", "genre:electronic", "genre:edm", "tag:dj", "tag:electronic", "tag:edm"],
+  food_specials: ["genre:happy-hour", "genre:food-specials", "genre:specials", "genre:oysters", "genre:taco-tuesday", "genre:wings", "genre:drink-specials", "tag:happy-hour", "tag:food-specials", "tag:specials", "tag:oysters", "tag:taco-tuesday", "tag:wings", "tag:drink-specials"],
+  run_fitness: ["genre:run-club", "genre:running", "genre:cycling", "genre:bike-ride", "genre:yoga", "genre:pickleball", "tag:run-club", "tag:running", "tag:cycling", "tag:bike-ride", "tag:yoga", "tag:pickleball"],
+  bingo: ["genre:bingo", "tag:bingo"],
+  jazz_blues: ["genre:jazz", "genre:blues", "genre:jam-session", "tag:jazz", "tag:blues", "tag:jam-session"],
   // Tag-based chips
   free: ["tag:free"],
 };
@@ -344,7 +372,7 @@ export type InterestQueryConfig =
  */
 export function getInterestQueryConfig(chipId: string): InterestQueryConfig {
   const chip = INTEREST_MAP.get(chipId);
-  if (!chip || chip.type === "specials") return null;
+  if (!chip) return null;
 
   const keys = CHIP_COUNT_KEYS[chipId];
   if (keys) {

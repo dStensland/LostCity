@@ -15,6 +15,8 @@ import {
   isBefore,
 } from "date-fns";
 import CategoryIcon from "./CategoryIcon";
+import SmartImage from "./SmartImage";
+import RSVPButton from "./RSVPButton";
 import { decodeHtmlEntities, formatCompactCount, formatTimeSplit } from "@/lib/formats";
 import { DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
 import { useCalendarEvents, type CalendarEvent } from "@/lib/hooks/useCalendarEvents";
@@ -592,46 +594,126 @@ export default function CalendarView({
                           const venueNeighborhood = event.venue?.neighborhood ? decodeHtmlEntities(event.venue.neighborhood) : null;
                           const denseDay = activeDayEvents.length >= denseListThreshold;
                           const ultraDenseDay = activeDayEvents.length >= ultraDenseListThreshold;
+                          const goingCount = event.going_count || 0;
+                          const interestedCount = event.interested_count || 0;
+                          // Featured treatment: first event with image on normal days always gets thumbnail;
+                          // second slot only if tentpole or popular. Skip on dense days.
+                          const isFeatured = !denseDay && !!event.image_url && (
+                            index === 0 || (index === 1 && (event.is_tentpole || goingCount >= 10))
+                          );
 
                           return (
-                            <Link
+                            <div
                               key={event.id}
-                              href={`/${portalSlug}?event=${event.id}`}
-                              scroll={false}
                               data-category={event.category || undefined}
-                              className={`block ${denseDay ? "p-3" : "p-3.5"} rounded-xl border border-[var(--twilight)]/85 bg-[var(--card-bg)] calendar-event-card group animate-fade-up hover:border-[var(--coral)]/35`}
+                              className={`${denseDay ? "p-3" : "p-3.5"} rounded-xl border border-[var(--twilight)]/85 bg-[var(--card-bg)] calendar-event-card group animate-fade-up hover:border-[var(--coral)]/35`}
                               style={{ animationDelay: `${Math.min(index, 8) * 35}ms` }}
                             >
-                              <div className="flex items-center gap-2 mb-1.5">
-                                <span className={`font-mono ${denseDay ? "text-[10px]" : "text-[11px]"} text-[var(--soft)]`}>
-                                  {time}
-                                  {period && <span className="text-xs ml-0.5 opacity-60">{period}</span>}
-                                </span>
-                                {event.is_free && (
-                                  <span className="px-1.5 py-0.5 rounded-full bg-[var(--neon-green)]/20 text-[var(--neon-green)] font-mono text-2xs font-semibold">
-                                    FREE
+                              <Link
+                                href={`/${portalSlug}?event=${event.id}`}
+                                scroll={false}
+                                className="block"
+                              >
+                                {isFeatured ? (
+                                  /* Featured card: thumbnail + content side-by-side */
+                                  <div className="flex gap-3">
+                                    <div className="w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-[var(--twilight)]">
+                                      <SmartImage
+                                        src={event.image_url!}
+                                        alt={title}
+                                        width={64}
+                                        height={64}
+                                        blurhash={event.blurhash}
+                                        className="w-full h-full object-cover"
+                                      />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <span className={`font-mono ${denseDay ? "text-[10px]" : "text-[11px]"} text-[var(--soft)]`}>
+                                          {time}
+                                          {period && <span className="text-xs ml-0.5 opacity-60">{period}</span>}
+                                        </span>
+                                        {event.is_free && (
+                                          <span className="px-1.5 py-0.5 rounded-full bg-[var(--neon-green)]/20 text-[var(--neon-green)] font-mono text-2xs font-semibold">
+                                            FREE
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        {event.category && (
+                                          <CategoryIcon type={event.category} size={denseDay ? 12 : 14} className="flex-shrink-0 opacity-70" />
+                                        )}
+                                        <span className={`text-[var(--cream)] ${denseDay ? "text-[14px]" : "text-[15px]"} leading-snug font-medium group-hover:text-[var(--coral)] transition-colors line-clamp-2`}>
+                                          {title}
+                                        </span>
+                                      </div>
+                                      {venueName && (
+                                        <div className="mt-1 text-xs text-[var(--muted)]/95 truncate">
+                                          {venueName}
+                                          {venueNeighborhood && (
+                                            <span className="opacity-65"> · {venueNeighborhood}</span>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                ) : (
+                                  /* Standard card */
+                                  <>
+                                    <div className="flex items-center gap-2 mb-1.5">
+                                      <span className={`font-mono ${denseDay ? "text-[10px]" : "text-[11px]"} text-[var(--soft)]`}>
+                                        {time}
+                                        {period && <span className="text-xs ml-0.5 opacity-60">{period}</span>}
+                                      </span>
+                                      {event.is_free && (
+                                        <span className="px-1.5 py-0.5 rounded-full bg-[var(--neon-green)]/20 text-[var(--neon-green)] font-mono text-2xs font-semibold">
+                                          FREE
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    <div className="flex items-center gap-2">
+                                      {event.category && (
+                                        <CategoryIcon type={event.category} size={denseDay ? 12 : 14} className="flex-shrink-0 opacity-70" />
+                                      )}
+                                      <span className={`text-[var(--cream)] ${denseDay ? "text-[14px]" : "text-[15px]"} leading-snug group-hover:text-[var(--coral)] transition-colors ${ultraDenseDay ? "line-clamp-1" : "line-clamp-2"}`}>
+                                        {title}
+                                      </span>
+                                    </div>
+
+                                    {venueName && (
+                                      <div className="mt-1.5 text-xs text-[var(--muted)]/95 truncate">
+                                        {venueName}
+                                        {venueNeighborhood && (
+                                          <span className="opacity-65"> · {venueNeighborhood}</span>
+                                        )}
+                                      </div>
+                                    )}
+                                  </>
+                                )}
+                              </Link>
+
+                              {/* RSVP + Social Proof row */}
+                              <div className="mt-2 flex items-center gap-1.5">
+                                <RSVPButton eventId={event.id} variant={ultraDenseDay ? "compact" : "default"} size="sm" />
+                                {!ultraDenseDay && goingCount > 0 && (
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)]/20 font-mono text-xs font-medium text-[var(--coral)]">
+                                    <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    {goingCount} going
+                                  </span>
+                                )}
+                                {!ultraDenseDay && interestedCount > 0 && (
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-[var(--gold)]/10 border border-[var(--gold)]/20 font-mono text-xs font-medium text-[var(--gold)]">
+                                    <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                                    </svg>
+                                    {interestedCount} maybe
                                   </span>
                                 )}
                               </div>
-
-                              <div className="flex items-center gap-2">
-                                {event.category && (
-                                  <CategoryIcon type={event.category} size={denseDay ? 12 : 14} className="flex-shrink-0 opacity-70" />
-                                )}
-                                <span className={`text-[var(--cream)] ${denseDay ? "text-[14px]" : "text-[15px]"} leading-snug group-hover:text-[var(--coral)] transition-colors ${ultraDenseDay ? "line-clamp-1" : "line-clamp-2"}`}>
-                                  {title}
-                                </span>
-                              </div>
-
-                              {venueName && (
-                                <div className="mt-1.5 text-xs text-[var(--muted)]/95 truncate">
-                                  {venueName}
-                                  {venueNeighborhood && (
-                                    <span className="opacity-65"> · {venueNeighborhood}</span>
-                                  )}
-                                </div>
-                              )}
-                            </Link>
+                            </div>
                           );
                         })}
                       </div>

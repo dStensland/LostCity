@@ -14,7 +14,13 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    get_or_create_venue,
+    insert_event,
+    find_event_by_hash,
+    parse_lineup_from_title,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
 from utils import extract_event_links, find_event_url, extract_images_from_page, enrich_event_record
 
@@ -87,8 +93,10 @@ def determine_category(title: str) -> tuple[str, str, list[str]]:
 
     if "hawks" in title_lower:
         return "sports", "basketball", ["hawks", "nba", "basketball", "sports", "state-farm-arena", "downtown"]
-    elif any(word in title_lower for word in ["wrestling", "wwe", "aew", "raw", "smackdown"]):
+    elif any(word in title_lower for word in ["wrestling", "wwe", "aew", "raw", "smackdown", "ufc", "mma", "boxing", "pbr"]):
         return "sports", "wrestling", ["wrestling", "wwe", "sports", "entertainment", "state-farm-arena", "downtown"]
+    elif re.search(r"\bvs\.?\b|\bversus\b", title_lower):
+        return "sports", "basketball", ["sports", "competition", "state-farm-arena", "downtown"]
     elif any(word in title_lower for word in ["monster truck", "monster jam", "hot wheels"]):
         return "family", "show", ["family", "kids", "monster-trucks", "state-farm-arena", "downtown"]
     elif any(word in title_lower for word in ["disney", "ice show", "circus", "sesame"]):
@@ -96,6 +104,10 @@ def determine_category(title: str) -> tuple[str, str, list[str]]:
     elif any(word in title_lower for word in ["comedy", "comedian", "katt williams", "kevin hart", "stand-up"]):
         return "nightlife", "comedy", ["comedy", "standup", "state-farm-arena", "downtown"]
     elif any(word in title_lower for word in ["tour", "concert", "live", "r&b", "hip hop", "country"]):
+        return "music", "concert", ["concert", "live-music", "arena-show", "state-farm-arena", "downtown"]
+    elif any(word in title_lower for word in ["graduation", "commencement", "convention", "conference", "expo", "summit"]):
+        return "community", "event", ["event", "state-farm-arena", "downtown"]
+    elif parse_lineup_from_title(title):
         return "music", "concert", ["concert", "live-music", "arena-show", "state-farm-arena", "downtown"]
     else:
         return "community", "event", ["event", "state-farm-arena", "downtown"]

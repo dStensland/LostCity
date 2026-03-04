@@ -1,6 +1,7 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "./types";
 import { getLocalDateString } from "@/lib/formats";
+import { excludeSensitiveEvents } from "@/lib/portal-scope";
 
 // Sanitize API key - remove any whitespace, control chars, or URL encoding artifacts
 function sanitizeKey(key: string | undefined): string | undefined {
@@ -202,6 +203,7 @@ export async function getRelatedEvents(
           if (portalId) {
             q = q.or(`portal_id.eq.${portalId},portal_id.is.null`);
           }
+          q = excludeSensitiveEvents(q);
           return q
             .order("start_date", { ascending: true })
             .order("start_time", { ascending: true })
@@ -224,6 +226,7 @@ export async function getRelatedEvents(
       if (portalId) {
         q = q.or(`portal_id.eq.${portalId},portal_id.is.null`);
       }
+      q = excludeSensitiveEvents(q);
       return q
         .order("start_time", { ascending: true })
         .limit(limit);

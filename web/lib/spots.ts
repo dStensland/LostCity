@@ -29,7 +29,6 @@ export type {
   VenueType,
   SpotType,
   DestinationCategory,
-  SpotCategory,
   Vibe,
   Neighborhood,
   Spot,

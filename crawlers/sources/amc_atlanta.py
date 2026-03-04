@@ -23,6 +23,55 @@ logger = logging.getLogger(__name__)
 TIME_RE = re.compile(r"^(\d{1,2}:\d{2})\s*(am|pm)$", re.IGNORECASE)
 
 
+def _format_time_label(time_24: str | None) -> str | None:
+    if not time_24:
+        return None
+    raw = str(time_24).strip()
+    if not raw:
+        return None
+    for fmt in ("%H:%M", "%H:%M:%S"):
+        try:
+            return datetime.strptime(raw, fmt).strftime("%-I:%M %p")
+        except ValueError:
+            continue
+    return raw
+
+
+def _build_showtime_description(
+    *,
+    title: str,
+    start_date: str,
+    start_time: str | None,
+    venue_data: dict,
+    source_url: str,
+) -> str:
+    venue_name = str(venue_data.get("name") or "AMC").strip()
+    neighborhood = str(venue_data.get("neighborhood") or "").strip()
+    city = str(venue_data.get("city") or "Atlanta").strip()
+    state = str(venue_data.get("state") or "GA").strip()
+    time_label = _format_time_label(start_time)
+
+    parts: list[str] = [f"Movie showtime for {title} at {venue_name}."]
+    if neighborhood:
+        parts.append(f"Location: {venue_name} in {neighborhood}, {city}, {state}.")
+    else:
+        parts.append(f"Location: {venue_name}, {city}, {state}.")
+
+    if start_date and time_label:
+        parts.append(f"Scheduled on {start_date} at {time_label}.")
+    elif start_date:
+        parts.append(f"Scheduled on {start_date}.")
+
+    if source_url:
+        parts.append(
+            f"Check AMC showtimes for current format options (standard/PLF), runtime, and seat availability ({source_url})."
+        )
+    else:
+        parts.append("Check AMC showtimes for current format options, runtime, and seat availability.")
+
+    return " ".join(parts)[:1200]
+
+
 class AMCAtlantaCrawler(ChainCinemaCrawler):
     CHAIN_NAME = "AMC Theatres"
     CHAIN_TAG = "amc"
@@ -226,7 +275,13 @@ class AMCAtlantaCrawler(ChainCinemaCrawler):
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": None,
+                        "description": _build_showtime_description(
+                            title=title,
+                            start_date=date_str,
+                            start_time=start_time,
+                            venue_data=location["venue_data"],
+                            source_url=url,
+                        ),
                         "start_date": date_str,
                         "start_time": start_time,
                         "end_date": None,

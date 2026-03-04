@@ -21,7 +21,7 @@ def main():
     all_events = []
     offset = 0
     while True:
-        batch = supabase.table("events").select("id, title, venue_id, start_date, created_at, category").range(offset, offset + 999).execute()
+        batch = supabase.table("events").select("id, title, venue_id, start_date, created_at, category_id").range(offset, offset + 999).execute()
         if not batch.data:
             break
         all_events.extend(batch.data)
@@ -81,7 +81,7 @@ def main():
     all_events = []
     offset = 0
     while True:
-        batch = supabase.table("events").select("id, title, venue_id, start_date, created_at, category").range(offset, offset + 999).execute()
+        batch = supabase.table("events").select("id, title, venue_id, start_date, created_at, category_id").range(offset, offset + 999).execute()
         if not batch.data:
             break
         all_events.extend(batch.data)
@@ -132,26 +132,26 @@ def main():
     all_events = []
     offset = 0
     while True:
-        batch = supabase.table("events").select("id, title, venue_id, start_date, created_at, category").range(offset, offset + 999).execute()
+        batch = supabase.table("events").select("id, title, venue_id, start_date, created_at, category_id").range(offset, offset + 999).execute()
         if not batch.data:
             break
         all_events.extend(batch.data)
         offset += 1000
 
-    invalid_cats = [e for e in all_events if e.get("category") not in valid_categories]
+    invalid_cats = [e for e in all_events if e.get("category_id") not in valid_categories]
     fixed_cats = 0
 
     for e in invalid_cats:
         try:
             # "literary" -> "words"
-            if e.get("category") == "literary":
-                supabase.table("events").update({"category": "words"}).eq("id", e["id"]).execute()
+            if e.get("category_id") == "literary":
+                supabase.table("events").update({"category_id": "words"}).eq("id", e["id"]).execute()
                 print(f"  Fixed: '{e['title']}' - literary → words", flush=True)
                 fixed_cats += 1
             else:
                 # Unknown category -> "other"
-                supabase.table("events").update({"category": "other"}).eq("id", e["id"]).execute()
-                print(f"  Fixed: '{e['title']}' - {e.get('category')} → other", flush=True)
+                supabase.table("events").update({"category_id": "other"}).eq("id", e["id"]).execute()
+                print(f"  Fixed: '{e['title']}' - {e.get('category_id')} → other", flush=True)
                 fixed_cats += 1
         except Exception as e_err:
             print(f"  FAILED to fix category for {e['id']}: {e_err}", flush=True)
@@ -170,7 +170,7 @@ def main():
     all_events = []
     offset = 0
     while True:
-        batch = supabase.table("events").select("id, title, venue_id, start_date, created_at, category").range(offset, offset + 999).execute()
+        batch = supabase.table("events").select("id, title, venue_id, start_date, created_at, category_id").range(offset, offset + 999).execute()
         if not batch.data:
             break
         all_events.extend(batch.data)

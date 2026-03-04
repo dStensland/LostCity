@@ -6,7 +6,7 @@ Annual multi-genre music festival at Piedmont Park - typically October.
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
@@ -61,7 +61,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         days_since_sat = (oct_31.weekday() + 2) % 7
         last_saturday = oct_31.replace(day=oct_31.day - days_since_sat)
         start_date = last_saturday
-        end_date = last_saturday.replace(day=last_saturday.day + 1)
+        end_date = last_saturday + timedelta(days=1)
 
     # If past, use next year
     if end_date < now:
@@ -78,11 +78,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
     content_hash = generate_content_hash(
         title, "Piedmont Park", start_date.strftime("%Y-%m-%d")
     )
-
-    if find_event_by_hash(content_hash):
-        events_updated = 1
-        logger.info(f"ONE Musicfest {year} already exists")
-        return events_found, events_new, events_updated
 
     event_record = {
         "source_id": source_id,
@@ -101,6 +96,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         "price_max": 350.0,
         "price_note": "Single day and weekend passes available",
         "is_free": False,
+        "is_tentpole": True,
         "source_url": BASE_URL,
         "ticket_url": BASE_URL,
         "image_url": None,
@@ -110,6 +106,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
         "recurrence_rule": "FREQ=YEARLY;BYMONTH=10",
         "content_hash": content_hash,
     }
+
+    existing = find_event_by_hash(content_hash)
+    if existing:
+        smart_update_existing_event(existing, event_record)
+        events_updated = 1
+        logger.info(f"Updated: {title}")
+        return events_found, events_new, events_updated
 
     try:
         insert_event(event_record)

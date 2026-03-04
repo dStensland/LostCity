@@ -5,7 +5,7 @@ import { getNeighborhoodByName } from "@/config/neighborhoods";
 import { isSpotOpen, VENUE_TYPES_MAP, type VenueType, DESTINATION_CATEGORIES } from "@/lib/spots";
 import { logger } from "@/lib/logger";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
-import { applyFederatedPortalScopeToQuery, filterByPortalCity, isVenueCityInScope } from "@/lib/portal-scope";
+import { applyFederatedPortalScopeToQuery, excludeSensitiveEvents, filterByPortalCity, isVenueCityInScope } from "@/lib/portal-scope";
 import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
 import { getPortalSourceAccess } from "@/lib/federation";
 
@@ -82,6 +82,10 @@ const CATEGORY_FILTERS: Record<string, { spotTypes: string[]; eventCategories: s
     spotTypes: ["recreation", "arcade", "karaoke", "eatertainment", "attraction"],
     eventCategories: ["Comedy", "Sports", "Family"],
   },
+  outdoors: {
+    spotTypes: ["park", "trail", "garden", "zoo", "aquarium", "landmark", "public_art", "viewpoint"],
+    eventCategories: ["outdoors"],
+  },
 };
 
 type HoursData = Record<string, { open: string; close: string } | null>;
@@ -105,6 +109,8 @@ type SpotRow = {
   vibes: string[] | null;
   image_url: string | null;
   city: string | null;
+  is_experience: boolean | null;
+  typical_duration_minutes: number | null;
 };
 
 type LiveEventRow = {
@@ -282,6 +288,7 @@ export async function GET(request: NextRequest) {
         sourceIds: sourceAccess?.sourceIds || [],
         sourceColumn: "source_id",
       });
+      eventCountQuery = excludeSensitiveEvents(eventCountQuery);
 
       // Spots count: still need to fetch hours to check isSpotOpen(), but select minimal columns
       let spotsCountQuery = supabase
@@ -373,7 +380,9 @@ export async function GET(request: NextRequest) {
         hours,
         vibes,
         image_url,
-        city
+        city,
+        is_experience,
+        typical_duration_minutes
       `)
       .eq("active", true)
       .not("lat", "is", null)
@@ -459,6 +468,7 @@ export async function GET(request: NextRequest) {
       sourceIds: sourceAccess?.sourceIds || [],
       sourceColumn: "source_id",
     });
+    eventsQuery = excludeSensitiveEvents(eventsQuery);
 
     // Filter events by category if specified
     if (categoryFilter && categoryFilter.eventCategories.length > 0) {
@@ -505,22 +515,29 @@ export async function GET(request: NextRequest) {
       // Only filter by radius if one was specified
       if (radiusMiles !== null && distance > radiusMiles) continue;
 
-      // Check if open - only include spots with known hours that confirm open
-      if (!spot.hours) continue; // No hours data = can't confirm open, skip
+      // Experience venues (parks, trails, museums) are assumed always visitable
+      const isExperienceVenue = spot.is_experience === true;
 
       let isOpen = false;
       let closesAt: string | undefined;
 
-      try {
-        const result = isSpotOpen(spot.hours, false);
-        isOpen = result.isOpen;
-        closesAt = result.closesAt;
-      } catch {
-        // Hours parsing failed, can't confirm open
+      if (isExperienceVenue) {
+        // Experience venues bypass hours check — always show
+        isOpen = true;
+      } else if (!spot.hours) {
+        // Non-experience venues without hours data can't be confirmed open
         continue;
+      } else {
+        try {
+          const result = isSpotOpen(spot.hours, false);
+          isOpen = result.isOpen;
+          closesAt = result.closesAt;
+        } catch {
+          // Hours parsing failed, can't confirm open
+          continue;
+        }
+        if (!isOpen) continue;
       }
-
-      if (!isOpen) continue;
 
       // Determine closing time display
       const closingTimeDisplay = closesAt ? formatClosingTime(closesAt) : null;

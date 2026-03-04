@@ -378,8 +378,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     try:
         with sync_playwright() as p:
-            # Use Firefox — Akamai WAF blocks Chromium's TLS fingerprint
-            browser = p.firefox.launch(headless=True)
+            # Prefer Firefox for this source, but fall back to Chromium when
+            # Firefox binaries are unavailable in the runtime.
+            try:
+                browser = p.firefox.launch(headless=True)
+            except Exception as exc:
+                logger.warning("Firefox launch failed, falling back to Chromium: %s", exc)
+                browser = p.chromium.launch(headless=True)
             context = browser.new_context(
                 viewport={"width": 1920, "height": 1080},
             )

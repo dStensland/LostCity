@@ -27,6 +27,21 @@ interface GettingThereSectionProps {
   onSpotClick?: (slug: string) => void;
 }
 
+function cleanNote(note: string): string {
+  return note
+    .replace(/^(Getting Here|Getting There|Parking Information|Directions)[:\s]*/i, '')
+    .replace(/^BOX OFFICE HOURS?\s*/i, '')
+    .trim();
+}
+
+function truncateNote(note: string, maxLen = 200): string {
+  const cleaned = cleanNote(note);
+  if (cleaned.length <= maxLen) return cleaned;
+  const sentenceEnd = cleaned.search(/[.!?]\s/);
+  if (sentenceEnd > 0 && sentenceEnd < maxLen) return cleaned.slice(0, sentenceEnd + 1);
+  return cleaned.slice(0, maxLen).trimEnd() + "\u2026";
+}
+
 function hasAnyTransitData(transit: TransitData): boolean {
   return Boolean(
     (transit.nearest_marta_station && transit.marta_walk_minutes && transit.marta_walk_minutes <= 15) ||
@@ -241,7 +256,7 @@ function ExpandedTransit({
             </p>
             {transit.parking_note && (
               <p className="text-xs text-[var(--muted)] font-mono">
-                {transit.parking_note}
+                {truncateNote(transit.parking_note)}
               </p>
             )}
           </div>
@@ -293,7 +308,7 @@ export default function GettingThereSection({
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <h2 className="font-mono text-xs font-medium text-[var(--muted)] uppercase tracking-widest">
+        <h2 className="font-mono text-xs font-bold text-[var(--muted)] uppercase tracking-[0.14em]">
           Getting There
         </h2>
         {transit.transit_score != null && (

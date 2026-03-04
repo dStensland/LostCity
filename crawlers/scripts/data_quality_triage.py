@@ -142,11 +142,11 @@ def analyze_source_health(client):
     }
 
 def analyze_category_distribution(client):
-    """Analyze category coverage and NULL categories by source."""
+    """Analyze category_id coverage and NULL categories by source."""
     print_section("CATEGORY DISTRIBUTION & QUALITY")
     
     # Get category distribution
-    result = client.table("events").select("category,source_id").execute()
+    result = client.table("events").select("category_id,source_id").execute()
     events = result.data or []
     
     category_counts = defaultdict(int)
@@ -154,7 +154,7 @@ def analyze_category_distribution(client):
     total_by_source = defaultdict(int)
     
     for event in events:
-        cat = event.get("category")
+        cat = event.get("category_id")
         sid = event.get("source_id")
         
         if cat:
@@ -168,7 +168,7 @@ def analyze_category_distribution(client):
     for cat, count in sorted(category_counts.items(), key=lambda x: -x[1])[:15]:
         print(f"  {cat:<20} {count:>6} events")
     
-    # Sources with high NULL category rates
+    # Sources with high NULL category_id rates
     print("\n\nSOURCES WITH MISSING CATEGORIES (>10% NULL):")
     
     if null_by_source:
@@ -212,7 +212,7 @@ def analyze_missing_fields(client):
     sixty_days_ago = (datetime.now() - timedelta(days=60)).strftime("%Y-%m-%d")
     
     result = client.table("events").select(
-        "id,title,start_date,start_time,description,image_url,source_id,category"
+        "id,title,start_date,start_time,is_all_day,description,image_url,source_id,category_id"
     ).gte("start_date", sixty_days_ago).limit(5000).execute()
     
     events = result.data or []
@@ -231,7 +231,7 @@ def analyze_missing_fields(client):
             issues["missing_description"].append(event["source_id"])
         if not event.get("image_url"):
             issues["missing_image"].append(event["source_id"])
-        if not event.get("category"):
+        if not event.get("category_id"):
             issues["missing_category"].append(event["source_id"])
     
     print(f"Sample: {len(events)} recent events (last 60 days)")

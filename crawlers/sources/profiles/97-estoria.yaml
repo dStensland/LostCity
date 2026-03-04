@@ -1,0 +1,29 @@
+version: 1
+slug: 97-estoria
+name: "97 Estoria"
+integration_method: llm_crawler
+defaults:
+  venue_name: "97 Estoria"
+  category: nightlife
+  tags:
+  - atlanta-expansion-wave-w
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - "https://www.97estoria.com"
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+detail:
+  enabled: true
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+data_goals:
+  - events
+  - lineup
+  - images
+  - tickets

@@ -209,7 +209,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     events_found += 1
 
-                    content_hash = generate_content_hash(title, "Atlanta Comedy Theater", start_date)
+                    event_start_time = "20:00"
+                    hash_key = f"{start_date}|{event_start_time}"
+                    content_hash = generate_content_hash(title, "Atlanta Comedy Theater", hash_key)
 
 
                     # Determine tags
@@ -247,7 +249,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "title": title,
                         "description": description,
                         "start_date": start_date,
-                        "start_time": "20:00",  # Most shows at 8pm
+                        "start_time": event_start_time,  # Most shows at 8pm
                         "end_date": end_date if end_date != start_date else None,
                         "end_time": None,
                         "is_all_day": False,

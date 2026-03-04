@@ -359,17 +359,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         # Enrich from detail page
                         enrich_event_record(event_record, source_name="High Museum of Art")
 
-                        # Determine is_free if still unknown after enrichment
+                        # High Museum charges admission ($17.50+). Events described
+                        # as "free" or "free with museum admission" still require a
+                        # paid ticket to enter. Only mark as free if explicitly free
+                        # to the public with no admission required.
                         if event_record.get("is_free") is None:
-                            desc_lower = (event_record.get("description") or "").lower()
-                            title_lower = event_record.get("title", "").lower()
-                            combined = f"{title_lower} {desc_lower}"
-                            if any(kw in combined for kw in ["free", "no cost", "no charge", "complimentary"]):
-                                event_record["is_free"] = True
-                                event_record["price_min"] = event_record.get("price_min") or 0
-                                event_record["price_max"] = event_record.get("price_max") or 0
-                            else:
-                                event_record["is_free"] = False
+                            event_record["is_free"] = False
 
                         # Exhibit detection: flag exhibit-related events
                         exhibit_keywords = ["exhibit", "exhibition", "on view", "collection", "installation"]

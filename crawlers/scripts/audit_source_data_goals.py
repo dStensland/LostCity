@@ -80,7 +80,7 @@ def _goal_value(
         text = f"{title} {description}"
         tags = {str(tag).lower() for tag in (e.get("tags") or [])}
         genres = {str(genre).lower() for genre in (e.get("genres") or [])}
-        cat = (e.get("category") or "").lower()
+        cat = (e.get("category_id") or e.get("category") or "").lower()
         content_kind = (e.get("content_kind") or "").lower()
 
         if (
@@ -206,7 +206,7 @@ def main() -> None:
     batch_size = 75
     event_fields = (
         "id,source_id,title,description,start_date,end_date,start_time,is_all_day,"
-        "category,content_kind,genres,tags,ticket_url,image_url,is_class"
+        "category_id,content_kind,genres,tags,ticket_url,image_url,is_class"
     )
     for i in range(0, len(source_ids), batch_size):
         batch = source_ids[i : i + batch_size]

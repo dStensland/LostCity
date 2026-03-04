@@ -1,0 +1,29 @@
+version: 1
+slug: hudson-grille-midtown
+name: "Hudson Grille Midtown"
+integration_method: llm_crawler
+defaults:
+  venue_name: "Hudson Grille Midtown"
+  category: nightlife
+  tags:
+  - atlanta-expansion-wave-v
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - "https://hudsongrille.com"
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+detail:
+  enabled: true
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+data_goals:
+  - events
+  - lineup
+  - images
+  - tickets

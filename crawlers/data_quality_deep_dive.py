@@ -98,18 +98,18 @@ def main():
         print(f"   {data['name']:40s} ({slug:30s}): {data['count']:4,} events")
     print()
     
-    # Check for events with no category (NULL)
-    print("Events with NULL category")
+    # Check for events with no category_id (NULL)
+    print("Events with NULL category_id")
     print("-" * 80)
-    result = client.table("events").select("id", count="exact").gte("start_date", today).is_("category", "null").execute()
+    result = client.table("events").select("id", count="exact").gte("start_date", today).is_("category_id", "null").execute()
     null_category_count = result.count
     print(f"   Total: {null_category_count:,} events")
     
     if null_category_count > 0:
-        print("\n   Top sources with NULL category:")
+        print("\n   Top sources with NULL category_id:")
         result = client.table("events").select(
             "source_id,sources!inner(name,slug)"
-        ).gte("start_date", today).is_("category", "null").execute()
+        ).gte("start_date", today).is_("category_id", "null").execute()
         
         source_cat_issues = {}
         for event in result.data:

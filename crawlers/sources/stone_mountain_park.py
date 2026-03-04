@@ -13,7 +13,7 @@ from datetime import datetime
 from typing import Optional
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, upsert_venue_feature, venues_support_features_table
 from dedupe import generate_content_hash
 from utils import parse_price
 
@@ -32,6 +32,46 @@ SKIP_UMBRELLA_KEYWORDS = [
 
 # Minimum span (in days) for an event to be considered an umbrella festival wrapper.
 UMBRELLA_MIN_DAYS = 7
+
+# Permanent attractions and daily operations — captured as exhibits, not events.
+# These mean "the park is open", not programmed activities with a schedule.
+EXHIBIT_ATTRACTIONS = {
+    "summit skyride",
+    "scenic railroad",
+    "dinosaur explore",
+    "skyhike",
+    "mini golf",
+    "adventure golf",
+    "gemstone mining",
+    "geyser tower",
+    "farmyard",
+    "4-d theater",
+    "duck adventures",
+    "general admission",
+    "nature playground",
+    "splash pad",
+}
+
+# Map attraction titles to feature_type for venue_features table
+_ATTRACTION_FEATURE_TYPES: dict[str, str] = {
+    "summit skyride": "attraction",
+    "scenic railroad": "attraction",
+    "dinosaur explore": "attraction",
+    "skyhike": "attraction",
+    "mini golf": "attraction",
+    "adventure golf": "attraction",
+    "gemstone mining": "attraction",
+    "geyser tower": "attraction",
+    "farmyard": "attraction",
+    "4-d theater": "attraction",
+    "duck adventures": "attraction",
+    "general admission": "attraction",
+    "nature playground": "amenity",
+    "splash pad": "amenity",
+}
+
+# Keywords that indicate real programming (not just "park is open")
+_PROGRAMMING_KEYWORDS = {"workshop", "class", "concert", "performance", "show", "festival", "race", "tournament"}
 
 BASE_URL = "https://stonemountainpark.com"
 API_URL = f"{BASE_URL}/wp-json/tribe/events/v1/events"
@@ -217,6 +257,39 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         logger.debug(f"Skipping umbrella festival: {title}")
                         continue
 
+                    # Classify permanent attractions and long-running entries as exhibits
+                    is_attraction = title.lower().strip() in EXHIBIT_ATTRACTIONS
+                    is_long_span = False
+                    if end_dt:
+                        span_days = (end_dt.date() - start_dt.date()).days
+                        if span_days > 30:
+                            title_lower_check = title.lower()
+                            if not any(kw in title_lower_check for kw in _PROGRAMMING_KEYWORDS):
+                                is_long_span = True
+
+                    # Upsert known attractions as venue features
+                    if is_attraction and venues_support_features_table():
+                        title_key = title.lower().strip()
+                        feature_type = _ATTRACTION_FEATURE_TYPES.get(title_key, "attraction")
+                        description = strip_html(event.get("description", ""))
+                        image_data = event.get("image")
+                        feat_image = image_data.get("url") if isinstance(image_data, dict) else None
+                        cost_str = event.get("cost", "")
+                        _, _, feat_price_note = parse_price(cost_str) if cost_str else (None, None, None)
+                        upsert_venue_feature(venue_id, {
+                            "title": title,
+                            "feature_type": feature_type,
+                            "description": description if description else None,
+                            "image_url": feat_image,
+                            "price_note": feat_price_note,
+                        })
+                        continue  # attractions live in venue_features, not events
+
+                    # Skip long-span non-programming entries (30+ day spans like "Historic Square")
+                    if is_long_span:
+                        logger.debug("Skipping long-span exhibit: %s", title)
+                        continue
+
                     # Check for all-day event
                     is_all_day = event.get("all_day", False)
                     if is_all_day:
@@ -283,6 +356,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "is_recurring": False,
                         "recurrence_rule": None,
                         "content_hash": content_hash,
+                        "content_kind": "exhibit" if (is_attraction or is_long_span) else None,
                     }
 
                     existing = find_event_by_hash(content_hash)

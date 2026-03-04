@@ -112,7 +112,7 @@ export function TagVoteChip({
         ${
           isConfirmed
             ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 border-2 border-green-500"
-            : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-2 border-transparent hover:border-gray-300 dark:hover:border-gray-600"
+            : "bg-[var(--dusk)] text-[var(--soft)] border-2 border-transparent hover:border-[var(--twilight)]"
         }
         ${isVoting ? "opacity-50 cursor-wait" : "cursor-pointer hover:scale-105"}
         disabled:cursor-not-allowed disabled:opacity-50
@@ -144,7 +144,7 @@ export function TagVoteChip({
             ${
               isConfirmed
                 ? "bg-green-500 text-white"
-                : "bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                : "bg-[var(--twilight)] text-[var(--soft)]"
             }
           `}
           title={`${totalConfirms} ${totalConfirms === 1 ? "person confirms" : "people confirm"}`}

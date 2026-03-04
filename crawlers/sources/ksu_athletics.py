@@ -5,6 +5,8 @@ Scrapes sport-specific schedule pages for game information.
 Uses Sidearm Sports platform (same as Georgia Tech).
 """
 
+from __future__ import annotations
+
 import logging
 import re
 from datetime import datetime, timedelta
@@ -99,6 +101,44 @@ VENUES = {
         "website": "https://kennesaw.edu",
     },
 }
+
+
+def format_time_label(time_24: str | None) -> str | None:
+    if not time_24:
+        return None
+    raw = str(time_24).strip()
+    if not raw:
+        return None
+    for fmt in ("%H:%M", "%H:%M:%S"):
+        try:
+            return datetime.strptime(raw, fmt).strftime("%-I:%M %p")
+        except ValueError:
+            continue
+    return raw
+
+
+def build_ksu_description(
+    *,
+    sport_display: str,
+    opponent: str,
+    is_home: bool,
+    start_date: str,
+    start_time: str | None,
+    venue_name: str,
+    source_url: str,
+) -> str:
+    parts = [
+        f"Kennesaw State Owls {sport_display} {'home' if is_home else 'away'} matchup versus {opponent}.",
+        ("Home game at " + venue_name + ".") if is_home else "Away or neutral-site game.",
+    ]
+    time_label = format_time_label(start_time)
+    if start_date and time_label:
+        parts.append(f"Scheduled on {start_date} at {time_label}.")
+    elif start_date:
+        parts.append(f"Scheduled on {start_date}.")
+    if source_url:
+        parts.append(f"Check KSU Athletics for final game time, broadcast, and ticket details ({source_url}).")
+    return " ".join(parts)[:1200]
 
 
 def parse_schedule_page(soup: BeautifulSoup, sport_name: str) -> list[dict]:
@@ -253,7 +293,15 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "source_id": source_id,
                     "venue_id": venue_id if is_home else None,
                     "title": title,
-                    "description": f"Kennesaw State Owls {sport_display} {'home game' if is_home else 'away game'} vs {opponent}",
+                    "description": build_ksu_description(
+                        sport_display=sport_display,
+                        opponent=opponent,
+                        is_home=is_home,
+                        start_date=start_date,
+                        start_time=start_time,
+                        venue_name=venue_data["name"],
+                        source_url=url,
+                    ),
                     "start_date": start_date,
                     "start_time": start_time,
                     "end_date": None,

@@ -60,7 +60,7 @@ export function DetailHero({
 
   if (effectiveMode === "fallback") {
     return (
-      <div className={`relative w-full ${aspectClass} sm:rounded-lg overflow-hidden ${heroAccentClass?.className ?? ""}`}>
+      <div className={`relative w-full ${aspectClass} sm:rounded-lg overflow-hidden bg-gradient-to-br from-[var(--dusk)] via-[var(--night)] to-[var(--void)] ${heroAccentClass?.className ?? ""}`}>
         <ScopedStyles css={heroAccentClass?.css} />
         {backFallbackHref && (
           <BackButton fallbackHref={backFallbackHref} label="Back" className={BACK_BUTTON_CLASS} iconOnly />
@@ -116,13 +116,13 @@ export function DetailHero({
             {badge && <div className="mb-3">{badge}</div>}
 
             <h1
-              className="text-2xl sm:text-3xl md:text-4xl font-bold text-[var(--cream)] leading-tight mb-2 detail-hero-title-glow"
+              className="text-2xl sm:text-3xl md:text-[2rem] font-semibold text-[var(--cream)] tracking-tight leading-[1.08] mb-2 max-w-[24ch] line-clamp-3 detail-hero-title-glow"
             >
               {title}
             </h1>
 
             {subtitle && (
-              <p className="text-base text-[var(--text-secondary)] mb-4">{subtitle}</p>
+              <p className="text-base text-[var(--soft)] mb-4 line-clamp-2">{subtitle}</p>
             )}
 
             {children}
@@ -155,7 +155,7 @@ export function DetailHero({
           src={imageUrl}
           alt={title}
           fill
-          className={`object-cover transition-opacity duration-300 ${imgLoaded ? "opacity-100" : "opacity-0"}`}
+          className={`object-cover brightness-[0.85] contrast-[1.05] transition-opacity duration-300 ${imgLoaded ? "opacity-100" : "opacity-0"}`}
           onError={() => setImgError(true)}
           onLoad={handleImageLoad}
         />
@@ -194,8 +194,8 @@ function HeroOverlay({
     <div
       className="absolute bottom-0 left-0 right-0 glass-wet detail-hero-overlay"
     >
-      <div className="px-4 sm:px-6 pb-5 pt-12">
-        <div className="flex items-center gap-2 mb-2">
+      <div className="px-4 sm:px-6 pb-4 sm:pb-5 pt-14">
+        <div className="flex flex-wrap items-center gap-2 mb-2">
           {badge}
           {isLive && (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-mono uppercase tracking-wider bg-[var(--state-live-bg)] text-[var(--state-live)] border border-[var(--state-live-border)]">
@@ -206,14 +206,14 @@ function HeroOverlay({
         </div>
 
         <h1
-          className="text-xl sm:text-2xl md:text-3xl font-bold text-[var(--cream)] leading-tight mb-1 detail-hero-title-shadow"
+          className="text-xl sm:text-3xl md:text-[2rem] font-semibold tracking-tight text-[var(--cream)] leading-[1.06] mb-1 max-w-[22ch] line-clamp-3 detail-hero-title-shadow"
         >
           {title}
         </h1>
 
         {subtitle && (
           <p
-            className="text-sm text-[var(--text-secondary)] detail-hero-subtitle-shadow"
+            className="text-sm text-[var(--soft)] line-clamp-2 detail-hero-subtitle-shadow"
           >
             {subtitle}
           </p>

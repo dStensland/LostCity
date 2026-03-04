@@ -60,6 +60,28 @@ cd web
 npm run dev
 ```
 
+## Launch Data Health Operations (Atlanta)
+
+Primary operator runbook:
+- `crawlers/scripts/RUNBOOK_LAUNCH_DATA_HEALTH.md`
+
+Fast path after crawler runs:
+
+```bash
+cd /Users/coach/Projects/LostCity/crawlers
+python3 scripts/post_crawl_maintenance.py --city Atlanta
+```
+
+Launch gate decision check:
+
+```bash
+cd /Users/coach/Projects/LostCity/crawlers
+python3 scripts/launch_health_check.py --city Atlanta
+```
+
+Adding new venues/sources/crawlers:
+- Use onboarding flow in `crawlers/scripts/RUNBOOK_LAUNCH_DATA_HEALTH.md` ("Onboard New Venues/Sources/Crawlers")
+
 ## Project Structure
 
 ```

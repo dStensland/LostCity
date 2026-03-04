@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardText } from "@phosphor-icons/react/dist/ssr";
+import { ClipboardText } from "@phosphor-icons/react";
 
 interface OutingFABProps {
   hasActiveOuting: boolean;

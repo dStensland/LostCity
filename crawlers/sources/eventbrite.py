@@ -5,13 +5,16 @@ Discovers events via website, fetches structured data via API.
 
 from __future__ import annotations
 
+import json
 import logging
 import re
 import time
 import requests
 from datetime import datetime
+from functools import lru_cache
 from typing import Optional
 from playwright.sync_api import sync_playwright
+from bs4 import BeautifulSoup
 
 from config import get_config
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
@@ -54,6 +57,215 @@ CATEGORY_MAP = {
     "Other": ("community", []),
     "Nightlife": ("nightlife", []),
 }
+
+EVENTBRITE_DESCRIPTION_ENRICH_MIN_LENGTH = 260
+EVENTBRITE_DESCRIPTION_MAX_LENGTH = 4000
+_VENUE_PAREN_NOTE_RE = re.compile(r"\s*\(([^)]{1,120})\)\s*$")
+_VENUE_PAREN_DROP_HINTS = (
+    "course map",
+    "emailed",
+    "email",
+    "details sent",
+    "address shared",
+)
+
+
+def _clean_text(value: Optional[str]) -> str:
+    if not value:
+        return ""
+    return re.sub(r"\s+", " ", value).strip()
+
+
+def _normalize_eventbrite_venue_name(raw_name: str) -> str:
+    """Normalize obvious instruction-style suffixes from Eventbrite venue names."""
+    name = _clean_text(raw_name)
+    if not name:
+        return ""
+
+    match = _VENUE_PAREN_NOTE_RE.search(name)
+    if match:
+        note = match.group(1).lower()
+        if any(hint in note for hint in _VENUE_PAREN_DROP_HINTS):
+            name = _clean_text(name[: match.start()])
+
+    return name
+
+
+def _iter_jsonld_objects(soup: BeautifulSoup) -> list[dict]:
+    objects: list[dict] = []
+    for script in soup.find_all("script", attrs={"type": "application/ld+json"}):
+        raw = script.string or script.get_text() or ""
+        raw = raw.strip()
+        if not raw:
+            continue
+        try:
+            payload = json.loads(raw)
+        except Exception:
+            continue
+
+        if isinstance(payload, dict):
+            if isinstance(payload.get("@graph"), list):
+                objects.extend([item for item in payload["@graph"] if isinstance(item, dict)])
+            objects.append(payload)
+        elif isinstance(payload, list):
+            objects.extend([item for item in payload if isinstance(item, dict)])
+    return objects
+
+
+def _extract_faq_highlights(soup: BeautifulSoup) -> Optional[str]:
+    highlights: list[str] = []
+
+    for obj in _iter_jsonld_objects(soup):
+        raw_type = obj.get("@type")
+        types = raw_type if isinstance(raw_type, list) else [raw_type]
+        types = [str(t) for t in types if t]
+        if "FAQPage" not in types:
+            continue
+
+        for item in obj.get("mainEntity") or []:
+            if not isinstance(item, dict):
+                continue
+
+            question = _clean_text(item.get("name"))
+            accepted = item.get("acceptedAnswer")
+            answer = ""
+            if isinstance(accepted, dict):
+                answer = _clean_text(accepted.get("text"))
+
+            if question and answer:
+                highlights.append(f"{question} {answer}")
+            elif answer:
+                highlights.append(answer)
+
+    if not highlights:
+        return None
+
+    # De-duplicate while preserving order
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for item in highlights:
+        key = item.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(item)
+
+    if not deduped:
+        return None
+
+    return f"FAQ highlights: {' '.join(deduped[:5])}"
+
+
+@lru_cache(maxsize=2048)
+def fetch_detail_page_enrichment(event_url: str) -> Optional[str]:
+    """Fetch supplemental Eventbrite detail content (FAQ, structured blocks)."""
+    if not event_url:
+        return None
+
+    try:
+        response = requests.get(
+            event_url,
+            timeout=20,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+            },
+        )
+        if response.status_code >= 400:
+            return None
+
+        soup = BeautifulSoup(response.text, "html.parser")
+        faq = _extract_faq_highlights(soup)
+        return _clean_text(faq)
+    except Exception:
+        return None
+
+
+def enrich_description_from_detail_page(base_description: Optional[str], event_url: str) -> str:
+    """Expand short API blurbs using detail-page FAQ content when available."""
+    current = _clean_text(base_description)
+    if len(current) >= EVENTBRITE_DESCRIPTION_ENRICH_MIN_LENGTH:
+        return current[:EVENTBRITE_DESCRIPTION_MAX_LENGTH]
+
+    enrichment = fetch_detail_page_enrichment(event_url)
+    if not enrichment:
+        return current[:EVENTBRITE_DESCRIPTION_MAX_LENGTH]
+
+    if current and enrichment.lower() in current.lower():
+        return current[:EVENTBRITE_DESCRIPTION_MAX_LENGTH]
+
+    if current and current.lower() in enrichment.lower():
+        merged = enrichment
+    elif current:
+        merged = f"{current}\n\n{enrichment}"
+    else:
+        merged = enrichment
+
+    return merged[:EVENTBRITE_DESCRIPTION_MAX_LENGTH]
+
+
+def _format_time_label(value: Optional[str]) -> Optional[str]:
+    if not value:
+        return None
+    raw = str(value).strip()
+    if not raw:
+        return None
+    for fmt in ("%H:%M", "%H:%M:%S"):
+        try:
+            return datetime.strptime(raw, fmt).strftime("%-I:%M %p")
+        except ValueError:
+            continue
+    return raw
+
+
+def build_structured_eventbrite_description(
+    *,
+    title: str,
+    base_description: Optional[str],
+    event_url: str,
+    venue_name: str,
+    venue_city: str,
+    venue_state: str,
+    start_date: Optional[str],
+    start_time: Optional[str],
+    is_free: bool,
+    category_name: Optional[str],
+    organizer_name: Optional[str],
+    format_name: Optional[str],
+) -> str:
+    current = _clean_text(base_description)
+    if len(current) >= EVENTBRITE_DESCRIPTION_ENRICH_MIN_LENGTH:
+        return current[:EVENTBRITE_DESCRIPTION_MAX_LENGTH]
+
+    parts: list[str] = []
+    if current:
+        parts.append(current if current.endswith(".") else f"{current}.")
+    else:
+        descriptor = "Eventbrite event"
+        if category_name:
+            descriptor = f"{category_name} event"
+        parts.append(f"{title} is an Eventbrite {descriptor}.")
+
+    if organizer_name:
+        parts.append(f"Hosted by {organizer_name}.")
+    if format_name:
+        parts.append(f"Format: {format_name}.")
+
+    if venue_name and venue_name != "TBA":
+        parts.append(f"Location: {venue_name}, {venue_city or 'Atlanta'}, {venue_state or 'GA'}.")
+    else:
+        parts.append("Location details are listed on the official event page.")
+
+    time_label = _format_time_label(start_time)
+    if start_date and time_label:
+        parts.append(f"Scheduled on {start_date} at {time_label}.")
+    elif start_date:
+        parts.append(f"Scheduled on {start_date}.")
+
+    parts.append("Free registration." if is_free else "Paid ticketing; price tiers vary by release window.")
+    if event_url:
+        parts.append(f"Check Eventbrite for current agenda, policy updates, and ticket availability ({event_url}).")
+
+    return " ".join(parts)[:EVENTBRITE_DESCRIPTION_MAX_LENGTH]
 
 
 def get_api_headers() -> dict:
@@ -200,8 +412,6 @@ def process_event(event_data: dict, source_id: int, producer_id: Optional[int]) 
             return None
 
         description = event_data.get("description", {}).get("text", "")
-        if description:
-            description = description[:2000]
 
         end_info = event_data.get("end", {})
         end_date, end_time = parse_datetime(end_info.get("local"))
@@ -212,7 +422,9 @@ def process_event(event_data: dict, source_id: int, producer_id: Optional[int]) 
         venue_name = "TBA"
 
         if venue_data and venue_data.get("name"):
-            venue_name = venue_data.get("name", "").strip()
+            venue_name = _normalize_eventbrite_venue_name(venue_data.get("name", ""))
+            if not venue_name:
+                venue_name = "TBA"
             address = venue_data.get("address", {})
 
             # Skip if not in Georgia
@@ -249,6 +461,7 @@ def process_event(event_data: dict, source_id: int, producer_id: Optional[int]) 
 
         # Get URL
         event_url = event_data.get("url", "")
+        description = enrich_description_from_detail_page(description, event_url)
 
         # Generate content hash
         content_hash = generate_content_hash(title, venue_name, start_date)
@@ -257,14 +470,29 @@ def process_event(event_data: dict, source_id: int, producer_id: Optional[int]) 
         tags = ["eventbrite", category]
         if is_free:
             tags.append("free")
-        
+
         format_data = event_data.get("format") or {}
+        format_name = format_data.get("short_name") if format_data else None
         if format_data.get("short_name"):
             tags.append(format_data.get("short_name").lower())
 
         # Get organizer info
         organizer = event_data.get("organizer") or {}
         organizer_name = organizer.get("name", "") if organizer else ""
+        description = build_structured_eventbrite_description(
+            title=title,
+            base_description=description,
+            event_url=event_url,
+            venue_name=venue_name,
+            venue_city=(venue_data or {}).get("address", {}).get("city", "Atlanta") if venue_data else "Atlanta",
+            venue_state="GA",
+            start_date=start_date,
+            start_time=start_time,
+            is_free=is_free,
+            category_name=category_name,
+            organizer_name=organizer_name,
+            format_name=format_name,
+        )
 
         event_record = {
             "source_id": source_id,
@@ -321,19 +549,20 @@ def parse_event_for_pipeline(event_data: dict) -> dict | None:
             return None
 
         description = event_data.get("description", {}).get("text", "")
-        if description:
-            description = description[:2000]
 
         # Venue
         venue_data = event_data.get("venue") or {}
         venue_dict = None
         if venue_data and venue_data.get("name"):
+            venue_name = _normalize_eventbrite_venue_name(venue_data["name"])
+            if not venue_name:
+                venue_name = "TBA"
             address = venue_data.get("address", {})
             region = address.get("region", "")
             if region and region not in ["GA", "Georgia"]:
                 return None
             venue_dict = {
-                "name": venue_data["name"].strip(),
+                "name": venue_name,
                 "address": address.get("address_1"),
                 "city": address.get("city", "Atlanta"),
                 "state": "GA",
@@ -353,6 +582,24 @@ def parse_event_for_pipeline(event_data: dict) -> dict | None:
             image_url = original.get("url")
 
         event_url = event_data.get("url", "")
+        description = enrich_description_from_detail_page(description, event_url)
+        organizer = event_data.get("organizer") or {}
+        organizer_name = organizer.get("name", "") if organizer else ""
+        format_data = event_data.get("format") or {}
+        description = build_structured_eventbrite_description(
+            title=title,
+            base_description=description,
+            event_url=event_url,
+            venue_name=(venue_dict or {}).get("name", "TBA"),
+            venue_city=(venue_dict or {}).get("city", "Atlanta"),
+            venue_state=(venue_dict or {}).get("state", "GA"),
+            start_date=start_date,
+            start_time=start_time,
+            is_free=bool(event_data.get("is_free", False)),
+            category_name=category_name,
+            organizer_name=organizer_name,
+            format_name=(format_data or {}).get("short_name"),
+        )
 
         return {
             "title": title[:500],

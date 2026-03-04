@@ -39,6 +39,7 @@ import {
   MoonStars,
   DiscoBall,
   GameController,
+  LockKey,
   ForkKnife as Knife,
 
   // Sports & Fitness
@@ -139,6 +140,8 @@ const ICON_MAP: Record<string, ComponentType<IconProps>> = {
   gaming: GameController,
   games: GameController,
   arcade: GameController,
+  escape_room: LockKey,
+  lock: LockKey,
   eatertainment: Knife,
 
   // Sports & Fitness - dynamic energy

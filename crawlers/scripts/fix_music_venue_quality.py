@@ -341,7 +341,7 @@ def run_music_venue_quality_fix(
     events_result = (
         client.table("events")
         .select(
-            "id,venue_id,title,start_date,start_time,description,category,"
+            "id,venue_id,title,start_date,start_time,description,category_id,"
             "source_url,ticket_url,image_url,extraction_version,canonical_event_id"
         )
         .in_("venue_id", venue_ids)
@@ -537,7 +537,7 @@ def run_music_venue_quality_fix(
             new_desc = generate_synthetic_description(
                 event.get("title") or "",
                 venue_name=venue_name,
-                category=(event.get("category") or "music"),
+                category=(event.get("category_id") or event.get("category") or "music"),
                 artists=artist_payload if artist_payload else None,
             )
             if new_desc and new_desc != desc:

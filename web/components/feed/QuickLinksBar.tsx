@@ -85,16 +85,18 @@ export default function QuickLinksBar({ links, dashboardCards }: QuickLinksBarPr
 
   return (
     <div className="flex gap-2 overflow-x-auto scrollbar-hide py-1 -mx-1 px-1">
-      {links.map((link) => {
+      {links.map((link, i) => {
         const IconComponent = ICON_MAP[link.icon];
         const matchedCard = dashboardCards ? findMatchingCard(link, dashboardCards) : undefined;
         const badge = matchedCard ? extractBadge(matchedCard) : null;
+        // Stagger class: stagger-1 through stagger-6, cap at 6
+        const staggerClass = `stagger-${Math.min(i + 1, 6)}`;
 
         return (
           <Link
             key={link.label}
             href={link.href}
-            className="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-full text-sm font-semibold border transition-colors hover:brightness-125 active:brightness-90"
+            className={`animate-fade-in ${staggerClass} shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-full text-sm font-semibold border transition-colors hover:brightness-125 active:brightness-90`}
             style={{
               color: link.accent_color,
               borderColor: `color-mix(in srgb, ${link.accent_color} 35%, transparent)`,

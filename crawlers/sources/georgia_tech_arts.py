@@ -168,12 +168,26 @@ def crawl(source: dict) -> tuple[int, int, int]:
             ferst_venue_id = get_or_create_venue(VENUES["ferst"])
             default_venue_id = get_or_create_venue(VENUES["default"])
 
-            # Student-only event keywords to filter out
-            STUDENT_KEYWORDS = [
-                'hackathon', 'town hall', 'org fair', 'student org', 'spring break',
-                'grad student', 'social mixer', 'alternative break', 'wreckcon',
-                'create-your-own', 'media arts day', 'community salon', 'ceismc',
-                'end-of-year', 'open call'
+            # Keywords indicating campus-internal events (not for general public)
+            CAMPUS_ONLY_KEYWORDS = [
+                # Student/faculty-focused
+                'faculty mixer', 'faculty meeting', 'faculty reception',
+                'student org', 'grad student', 'social mixer',
+                'spring break', 'alternative break',
+                'hackathon', 'town hall', 'org fair',
+                'wreckcon', 'create-your-own', 'media arts day',
+                'community salon', 'ceismc', 'end-of-year', 'open call',
+                # Campus-internal programming
+                'night of diversity', 'belonging in view',
+                'inventure prize', 'capstone', 'thesis',
+                'orientation', 'commencement', 'convocation',
+                'student band', 'student-led band',
+            ]
+            # Broader patterns: title contains "faculty" or "student" + social event words
+            CAMPUS_PATTERNS = [
+                re.compile(r'\bfaculty\b.*\b(mixer|reception|meeting|retreat|luncheon)\b', re.I),
+                re.compile(r'\b(student|campus)\b.*\b(mixer|social|org fair|orientation)\b', re.I),
+                re.compile(r'\balternative\s+spring\s+break\b', re.I),
             ]
 
             # Find all unique event links
@@ -184,8 +198,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 text = link.get_text(strip=True)
                 # Skip "LEARN MORE" links, "Image" links, and empty text
                 if href and text and text not in ['LEARN MORE →', 'Image', ''] and len(text) > 3:
-                    # Skip student-focused events
-                    if any(kw in text.lower() for kw in STUDENT_KEYWORDS):
+                    # Skip campus-only events
+                    text_lower = text.lower()
+                    if any(kw in text_lower for kw in CAMPUS_ONLY_KEYWORDS):
+                        logger.debug(f"Skipping campus-only event: {text}")
+                        continue
+                    if any(pat.search(text) for pat in CAMPUS_PATTERNS):
+                        logger.debug(f"Skipping campus-only event (pattern): {text}")
                         continue
                     if href not in unique_events:
                         unique_events[href] = text
@@ -224,12 +243,39 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     description = ""
                     meta_desc = event_soup.find('meta', attrs={'name': 'description'})
                     if meta_desc and meta_desc.get('content'):
-                        description = meta_desc.get('content')[:500]
-                    else:
-                        # Try to find description in page
-                        desc_elem = event_soup.find(class_=re.compile(r'(body|description|content)'))
-                        if desc_elem:
-                            description = desc_elem.get_text(strip=True)[:500]
+                        description = meta_desc.get('content', '').strip()[:500]
+
+                    if not description:
+                        # Try og:description
+                        og_desc = event_soup.find('meta', property='og:description')
+                        if og_desc and og_desc.get('content'):
+                            description = og_desc.get('content', '').strip()[:500]
+
+                    if not description:
+                        # Try specific content selectors (NOT broad "body"/"content" which grabs footer)
+                        for selector in [
+                            'article',
+                            '[class*="event-description"]',
+                            '[class*="event-body"]',
+                            '[class*="field--body"]',
+                            '.node__content .field--type-text-with-summary',
+                        ]:
+                            desc_elem = event_soup.select_one(selector)
+                            if desc_elem:
+                                description = desc_elem.get_text(separator=' ', strip=True)[:500]
+                                break
+
+                    # Reject descriptions that are actually scraped footer/boilerplate
+                    if description and any(marker in description for marker in [
+                        'Equal Opportunity, Nondiscrimination',
+                        'Human Trafficking Notice',
+                        'Georgia Institute of Technology.All Rights Reserved',
+                        'Hazing Public Disclosures',
+                        'Anti-Harassment Policy',
+                        'ArtsRich Computer Center258',
+                    ]):
+                        logger.debug(f"Rejected footer-text description for: {title}")
+                        description = ""
 
                     # Extract image
                     image_url = None
@@ -263,7 +309,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": description or f"Event at {venue_name}",
+                        "description": description or None,
                         "start_date": start_date,
                         "start_time": start_time,
                         "end_date": None,

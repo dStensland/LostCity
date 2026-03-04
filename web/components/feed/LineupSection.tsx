@@ -10,7 +10,6 @@
  *   - Chip selection persists for auth'd users.
  *   - Max 8 events shown, then expand to see more.
  *
- * "Happy Hour" chip switches to specials-only view.
  * "Free" chip is a cross-cut filter on top of the active union.
  */
 
@@ -19,7 +18,6 @@ import Link from "next/link";
 import type {
   CityPulseSection,
   CityPulseEventItem,
-  CityPulseSpecialItem,
   CityPulseResponse,
 } from "@/lib/city-pulse/types";
 import type { FeedEventData } from "@/components/EventCard";
@@ -31,12 +29,13 @@ import {
   getServerChipCount,
   type InterestChip,
 } from "@/lib/city-pulse/interests";
+import { isSceneEvent } from "@/lib/city-pulse/section-builders";
+import FeedSectionHeader from "./FeedSectionHeader";
 import LineupHero from "./LineupHero";
 import CompactEventRow from "./CompactEventRow";
-import InlineSpecialRow from "./InlineSpecialRow";
 import { useAuth } from "@/lib/auth-context";
 import {
-  ArrowRight, CaretDown, Lightning, CalendarBlank,
+  ArrowRight, Lightning, CalendarBlank,
   ListBullets, Plus, X, Check, SignIn, FloppyDisk,
   // Interest chip icons
   Waveform, FilmSlate, Palette, PersonSimpleRun, MoonStars,
@@ -157,8 +156,6 @@ interface LineupSectionProps {
   onInterestsChange?: (ids: string[]) => void;
   /** Callback to persist interests + trigger API refetch with new categories. */
   onSaveInterests?: (ids: string[]) => void;
-  /** Event IDs to exclude from the lineup (e.g. events shown in Regular Hangs) */
-  excludeEventIds?: Set<number>;
 }
 
 // ---------------------------------------------------------------------------
@@ -175,12 +172,10 @@ export default function LineupSection({
   savedInterests,
   onInterestsChange,
   onSaveInterests,
-  excludeEventIds,
 }: LineupSectionProps) {
   const { user } = useAuth();
-  const visibleTabs = useMemo(() => TABS, []);
 
-  const [activeTabId, setActiveTabId] = useState(visibleTabs[0].id);
+  const [activeTabId, setActiveTabId] = useState(TABS[0].id);
   const [activeChipId, setActiveChipId] = useState("all");
   const [showAllRows, setShowAllRows] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -310,7 +305,7 @@ export default function LineupSection({
     }
   }, [lazyData, fetchTab]);
 
-  const activeTab = visibleTabs.find((t) => t.id === activeTabId) || visibleTabs[0];
+  const activeTab = TABS.find((t) => t.id === activeTabId) || TABS[0];
 
   // Build union matcher for "All" chip
   const unionMatcher = useMemo(
@@ -318,17 +313,43 @@ export default function LineupSection({
     [localInterests],
   );
 
-  const isHappyHour = activeChipId === "happy_hour";
-
   // Per-tab event pools — kept separate so lazy-loading THIS WEEK doesn't
   // inflate TODAY's counts. Each tab only contains its own events.
-  // Events shown in Regular Hangs are excluded to avoid duplication.
+  // Events that belong in other blocks are excluded to avoid duplication:
+  //   • Regular Hangs — recurring events matching an activity type
+  //   • Now Showing — film showtimes (series_type = "film")
+  //   • Big Stuff — tentpole events & festival-linked events
   const tabEventPools = useMemo(() => {
     const pools: Record<string, CityPulseEventItem[]> = {};
     const dedup = (items: CityPulseEventItem[]) => {
       const seen = new Set<number>();
       return items.filter((e) => {
-        if (excludeEventIds?.has(e.event.id)) return false;
+        if (isSceneEvent(e.event as FeedEventData)) return false;
+        const ev = e.event as FeedEventData & Record<string, unknown>;
+        // Film events → Now Showing block handles all showtimes; special
+        // screenings route to Big Stuff via festival_id/is_tentpole
+        const series = ev.series as { series_type?: string | null } | null;
+        if (series?.series_type === "film") return false;
+        if (ev.category === "film") return false;
+        // Activism/mobilize → separate opt-in block (not general Lineup)
+        const evTags = ((ev.tags as string[] | null) ?? []);
+        if (evTags.includes("activism") || evTags.includes("mobilize")) return false;
+        // Tentpole & festival events → Big Stuff block
+        if (ev.is_tentpole) return false;
+        if (ev.festival_id) return false;
+        // Recurring fall-throughs: recurring events that don't match any Scene
+        // activity type AND have no premium signal (touring, album-release, tour
+        // series) are low-signal for the Lineup — they belong in their category
+        // feed, not the curated "what's happening" block.
+        const seriesId = ev.series_id;
+        const isRecurring = ev.is_recurring;
+        if (seriesId || isRecurring) {
+          const hasLineupTag = evTags.some((t: string) =>
+            t === "touring" || t === "album-release" || t === "one-night-only",
+          );
+          const hasTourSeries = series?.series_type === "tour";
+          if (!hasLineupTag && !hasTourSeries) return false;
+        }
         if (seen.has(e.event.id)) return false;
         seen.add(e.event.id);
         return true;
@@ -350,7 +371,7 @@ export default function LineupSection({
     }
 
     return pools;
-  }, [sections, lazyData, excludeEventIds]);
+  }, [sections, lazyData]);
 
   // Events for the active tab only
   const tabDateEvents = useMemo(() => {
@@ -364,8 +385,6 @@ export default function LineupSection({
 
   // Apply interest-based filtering on top of the active tab's events
   const events = useMemo(() => {
-    if (isHappyHour) return [];
-
     let evts = tabDateEvents;
 
     if (activeChipId === "all") {
@@ -383,7 +402,7 @@ export default function LineupSection({
     }
 
     return evts;
-  }, [tabDateEvents, activeChipId, unionMatcher, isHappyHour]);
+  }, [tabDateEvents, activeChipId, unionMatcher]);
 
   // Merged category counts: initial response + lazy-loaded tab overrides
   const mergedCategoryCounts = useMemo(() => {
@@ -413,7 +432,7 @@ export default function LineupSection({
         let total = 0;
         for (const id of localInterests) {
           const chip = INTEREST_MAP.get(id);
-          if (!chip || chip.type === "specials" || chip.type === "tag") continue;
+          if (!chip || chip.type === "tag") continue;
           const chipCount = getServerChipCount(id, serverCats);
           if (chipCount != null) total += chipCount;
         }
@@ -428,69 +447,27 @@ export default function LineupSection({
     return counts as { today: number; this_week: number; coming_up: number };
   }, [mergedCategoryCounts, localInterests, tabCounts, lazyTabCounts]);
 
-  // Category chip counts — prefer exact server counts, fall back to pool counts
+  // Category chip counts — always computed from the actual event pool so
+  // counts match what the user sees when clicking a chip. Server counts
+  // (category_counts) are only used for tab badges, not chip badges,
+  // because the SQL count query can't replicate every section-builder filter.
   const chipCounts = useMemo(() => {
-    const serverCats = mergedCategoryCounts[activeTabId];
     const counts: Record<string, number> = {};
-
-    if (serverCats) {
-      // "All" = sum of active category/genre interest counts
-      let allTotal = 0;
-      for (const id of localInterests) {
-        const chip = INTEREST_MAP.get(id);
-        if (!chip || chip.type === "specials" || chip.type === "tag") continue;
-        const c = getServerChipCount(id, serverCats);
-        if (c != null) allTotal += c;
-      }
-      counts["all"] = allTotal;
-
-      // Per-chip counts from server
-      for (const chip of INTEREST_CHIPS) {
-        if (chip.type === "specials") continue;
-        const c = getServerChipCount(chip.id, serverCats);
-        if (c != null) {
-          counts[chip.id] = c;
-        } else {
-          // Chip not represented in server counts — fall back to pool
-          counts[chip.id] = tabDateEvents.filter((e) => chip.match(e)).length;
-        }
-      }
-    } else {
-      // No server counts — fall back to pool counting
-      counts["all"] = tabDateEvents.filter(unionMatcher).length;
-      for (const chip of INTEREST_CHIPS) {
-        if (chip.type === "specials") continue;
-        if (chip.type === "tag" && chip.id === "free") {
-          counts[chip.id] = tabDateEvents.filter(
-            (e) => unionMatcher(e) && chip.match(e),
-          ).length;
-        } else {
-          counts[chip.id] = tabDateEvents.filter((e) => chip.match(e)).length;
-        }
+    counts["all"] = tabDateEvents.filter(unionMatcher).length;
+    for (const chip of INTEREST_CHIPS) {
+      if (chip.type === "tag" && chip.id === "free") {
+        counts[chip.id] = tabDateEvents.filter(
+          (e) => unionMatcher(e) && chip.match(e),
+        ).length;
+      } else {
+        counts[chip.id] = tabDateEvents.filter((e) => chip.match(e)).length;
       }
     }
     return counts;
-  }, [mergedCategoryCounts, activeTabId, localInterests, tabDateEvents, unionMatcher]);
-
-  // Specials — only shown in Happy Hour mode
-  const specials = useMemo(() => {
-    if (!isHappyHour) return [];
-    const all = sections.flatMap((s) => s.items);
-    const allSpecials = all.filter(
-      (i): i is CityPulseSpecialItem => i.item_type === "special",
-    );
-    const seen = new Set<number>();
-    return allSpecials.filter((s) => {
-      if (seen.has(s.special.id)) return false;
-      seen.add(s.special.id);
-      return true;
-    });
-  }, [sections, isHappyHour]);
+  }, [tabDateEvents, unionMatcher]);
 
   // Hero event
   const heroEventId = useMemo(() => {
-    if (isHappyHour) return null;
-
     const nowHH = new Date().getHours();
     const isStale = (e: CityPulseEventItem) => {
       if (e.event.end_time) {
@@ -517,7 +494,7 @@ export default function LineupSection({
     if (withImage) return withImage.event.id;
 
     return null;
-  }, [events, isHappyHour]);
+  }, [events]);
 
   const heroEvent = useMemo(() => {
     if (!heroEventId) return null;
@@ -538,15 +515,24 @@ export default function LineupSection({
 
   // If no sections have any events at all, hide entirely
   const hasAnyContent = sections.some((s) =>
-    s.items.some((i) => i.item_type === "event" || i.item_type === "special"),
+    s.items.some((i) => i.item_type === "event"),
   );
   if (!hasAnyContent) return null;
 
   return (
     <section>
+      {/* Section header */}
+      <FeedSectionHeader
+        title="The Lineup"
+        priority="secondary"
+        accentColor="var(--coral)"
+        icon={<Lightning weight="duotone" className="w-5 h-5" />}
+        seeAllHref={`/${portalSlug}?view=find&type=events`}
+      />
+
       {/* Date tabs — counts are lineup-filtered */}
       <div className="flex items-center gap-4 mb-3 border-b border-[var(--twilight)]/30 overflow-x-auto scrollbar-hide -mx-1 px-1">
-        {visibleTabs.map((tab) => {
+        {TABS.map((tab) => {
           const isActive = tab.id === activeTabId;
           const TabIcon = tab.icon;
           const itemCount = dateTabCounts?.[tab.id as keyof typeof dateTabCounts] ?? 0;
@@ -584,65 +570,65 @@ export default function LineupSection({
 
       {/* Category chips — counts reflect active date tab */}
       <div className={[
-        "relative mb-3 rounded-xl transition-all duration-300",
-        hasUnsavedChanges
-          ? "bg-[var(--coral)]/[0.03] ring-1 ring-[var(--coral)]/15 -mx-2 px-2 py-0.5"
-          : "",
-      ].join(" ")}>
-        {hasUnsavedChanges && (
-          <div className="flex items-center gap-1.5 pt-1.5 pb-0.5 px-1">
-            <span className="inline-block w-1.5 h-1.5 rounded-full bg-[var(--coral)] animate-pulse" />
-            <span className="font-mono text-2xs uppercase tracking-[0.15em] text-[var(--coral)]/70 font-semibold">
-              Draft
-            </span>
-          </div>
-        )}
-        <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1 py-1 pr-8">
-          {/* "All" chip */}
-          <ChipButton
-            label="All"
-            Icon={ListBullets}
-            color="var(--coral)"
-            count={chipCounts["all"] || 0}
-            isActive={activeChipId === "all"}
-            onClick={() => handleChipTap("all")}
-          />
-
-          {/* User's selected interest chips */}
-          {visibleChips.map((chip) => (
+          "relative mb-3 rounded-xl transition-all duration-300",
+          hasUnsavedChanges
+            ? "bg-[var(--coral)]/[0.03] ring-1 ring-[var(--coral)]/15 -mx-2 px-2 py-0.5"
+            : "",
+        ].join(" ")}>
+          {hasUnsavedChanges && (
+            <div className="flex items-center gap-1.5 pt-1.5 pb-0.5 px-1">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-[var(--coral)] animate-pulse" />
+              <span className="font-mono text-2xs uppercase tracking-[0.15em] text-[var(--coral)]/70 font-semibold">
+                Draft
+              </span>
+            </div>
+          )}
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1 py-1 pr-8">
+            {/* "All" chip */}
             <ChipButton
-              key={chip.id}
-              label={chip.label}
-              Icon={getChipIcon(chip)}
-              color={chip.color}
-              count={chip.type === "specials" ? undefined : chipCounts[chip.id]}
-              isActive={activeChipId === chip.id}
-              onClick={() => handleChipTap(chip.id)}
+              label="All"
+              Icon={ListBullets}
+              color="var(--coral)"
+              count={chipCounts["all"] || 0}
+              isActive={activeChipId === "all"}
+              onClick={() => handleChipTap("all")}
             />
-          ))}
 
-          {/* "+" configure lineup — opens inline picker */}
-          <button
-            onClick={() => setPickerOpen(!pickerOpen)}
-            className={[
-              "shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-full transition-all active:scale-95 border",
-              pickerOpen
-                ? "bg-white/10 border-white/15 text-[var(--cream)]"
-                : "border-[var(--twilight)] text-[var(--muted)] hover:text-[var(--soft)] hover:border-[var(--soft)]/30",
-            ].join(" ")}
-            aria-label="Configure your lineup categories"
-            title="Customize categories"
-          >
-            {pickerOpen ? (
-              <X weight="bold" className="w-3.5 h-3.5" />
-            ) : (
-              <Plus weight="bold" className="w-3.5 h-3.5" />
-            )}
-          </button>
+            {/* User's selected interest chips */}
+            {visibleChips.map((chip) => (
+              <ChipButton
+                key={chip.id}
+                label={chip.label}
+                Icon={getChipIcon(chip)}
+                color={chip.color}
+                count={chipCounts[chip.id]}
+                isActive={activeChipId === chip.id}
+                onClick={() => handleChipTap(chip.id)}
+              />
+            ))}
+
+            {/* "+" configure lineup — opens inline picker */}
+            <button
+              onClick={() => setPickerOpen(!pickerOpen)}
+              className={[
+                "shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-full transition-all active:scale-95 border",
+                pickerOpen
+                  ? "bg-white/10 border-white/15 text-[var(--cream)]"
+                  : "border-[var(--twilight)] text-[var(--muted)] hover:text-[var(--soft)] hover:border-[var(--soft)]/30",
+              ].join(" ")}
+              aria-label="Configure your lineup categories"
+              title="Customize categories"
+            >
+              {pickerOpen ? (
+                <X weight="bold" className="w-3.5 h-3.5" />
+              ) : (
+                <Plus weight="bold" className="w-3.5 h-3.5" />
+              )}
+            </button>
+          </div>
+          {/* Right fade — signals more chips are scrollable */}
+          <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-10 bg-gradient-to-l from-[var(--void)] to-transparent" />
         </div>
-        {/* Right fade — signals more chips are scrollable */}
-        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-10 bg-gradient-to-l from-[var(--void)] to-transparent" />
-      </div>
 
       {/* Unsaved lineup changes — prominent save bar */}
       {hasUnsavedChanges && (
@@ -709,28 +695,8 @@ export default function LineupSection({
         </div>
       )}
 
-      {/* Happy Hour: specials-only view */}
-      {loadingTab !== activeTabId && isHappyHour && (
-        <>
-          {specials.length > 0 ? (
-            specials.map((s, idx) => (
-              <InlineSpecialRow
-                key={`special-${s.special.id}`}
-                special={s.special}
-                portalSlug={portalSlug}
-                isLast={idx === specials.length - 1}
-              />
-            ))
-          ) : (
-            <p className="text-center text-[var(--muted)] text-sm py-8 font-mono">
-              No specials right now
-            </p>
-          )}
-        </>
-      )}
-
       {/* Event view: hero + grid */}
-      {loadingTab !== activeTabId && !isHappyHour && (
+      {loadingTab !== activeTabId && (
         <>
           {heroEvent && (
             <LineupHero
@@ -765,12 +731,12 @@ export default function LineupSection({
         const chipMeta = INTEREST_MAP.get(activeChipId);
         const ctaColor = chipMeta?.color || "var(--coral)";
         const ctaLabel =
-          activeChipId !== "all" && activeChipId !== "free" && activeChipId !== "happy_hour"
+          activeChipId !== "all" && activeChipId !== "free"
             ? `See all ${chipMeta?.label?.toLowerCase() || ""} events`
             : "See all events";
         const ctaHref = (() => {
           const base = activeTab.seeAllHref(portalSlug);
-          if (activeChipId !== "all" && activeChipId !== "free" && activeChipId !== "happy_hour") {
+          if (activeChipId !== "all" && activeChipId !== "free") {
             const chip = INTEREST_MAP.get(activeChipId);
             if (chip && chip.type === "category") {
               const sep = base.includes("?") ? "&" : "?";
@@ -783,16 +749,11 @@ export default function LineupSection({
         return (
           <Link
             href={ctaHref}
-            className="mt-4 w-full flex items-center justify-center gap-2 text-sm font-mono font-bold py-3 rounded-xl transition-all active:scale-[0.98] hover:brightness-110 hover:shadow-[0_0_24px_var(--cta-glow)]"
-            style={{
-              backgroundColor: ctaColor,
-              color: "var(--void)",
-              boxShadow: `0 0 16px color-mix(in srgb, ${ctaColor} 35%, transparent)`,
-              "--cta-glow": `color-mix(in srgb, ${ctaColor} 50%, transparent)`,
-            } as React.CSSProperties}
+            className="mt-3 flex items-center justify-center gap-1 font-mono text-xs transition-colors hover:opacity-80"
+            style={{ color: ctaColor }}
           >
             {ctaLabel}
-            <ArrowRight weight="bold" className="w-3.5 h-3.5" />
+            <ArrowRight weight="bold" className="w-3 h-3" />
           </Link>
         );
       })()}
@@ -926,7 +887,7 @@ function InterestPicker({
                 <ChipIcon weight="bold" className="w-3 h-3" />
               )}
               {chip.label}
-              {count != null && count > 0 && chip.type !== "specials" && (
+              {count != null && count > 0 && (
                 <span className="text-2xs tabular-nums min-w-4 text-center opacity-50">{count}</span>
               )}
             </button>

@@ -1,0 +1,29 @@
+version: 1
+slug: blue-martini-atlanta
+name: "Blue Martini Atlanta"
+integration_method: llm_crawler
+defaults:
+  venue_name: "Blue Martini Atlanta"
+  category: nightlife
+  tags:
+  - atlanta-expansion-wave-y
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - "http://bluemartini.com/"
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+detail:
+  enabled: true
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+data_goals:
+  - events
+  - lineup
+  - images
+  - tickets

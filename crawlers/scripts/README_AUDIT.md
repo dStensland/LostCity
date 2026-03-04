@@ -1,158 +1,90 @@
-# Data Quality Audit Script
+# Audit Scripts Reference
 
-## Purpose
-`audit_data_quality.py` performs a comprehensive check for garbage events and data integrity issues in the LostCity database.
+Start here for operations: `crawlers/scripts/RUNBOOK_LAUNCH_DATA_HEALTH.md`
 
-## Usage
+This file is a reference for audit scripts and output artifacts.
+
+## Primary Audit Commands
 
 ```bash
-# From crawlers directory
 cd /Users/coach/Projects/LostCity/crawlers
-python3 scripts/audit_data_quality.py
-# Formal launch/content audit
+
+# Formal content health audit (global)
 python3 scripts/content_health_audit.py
+
+# Formal content health audit (Atlanta launch scope)
+python3 scripts/content_health_audit.py --city Atlanta
+
+# Enforced launch gate (non-zero exit unless PASS)
+python3 scripts/launch_health_check.py --city Atlanta
 ```
 
-## Formal Content Health Audit
+## New Source/Crawler Onboarding
 
-Use `content_health_audit.py` for a consistent launch-grade baseline across initiatives.
+For onboarding flow, use the runbook section:
+- `crawlers/scripts/RUNBOOK_LAUNCH_DATA_HEALTH.md` -> "Onboard New Venues/Sources/Crawlers"
 
-It outputs:
+## Core Artifacts
+
+`content_health_audit.py` writes:
 - `crawlers/reports/content_health_metrics_YYYY-MM-DD.json`
 - `crawlers/reports/content_health_assessment_YYYY-MM-DD.md`
-- `crawlers/reports/content_health_gate_YYYY-MM-DD.json` (launch pass/warn/fail checks)
-- `crawlers/reports/content_health_findings_YYYY-MM-DD.md` (readable drilldown report)
+- `crawlers/reports/content_health_gate_YYYY-MM-DD.json`
+- `crawlers/reports/content_health_findings_YYYY-MM-DD.md`
 
-Coverage includes:
-- dedupe integrity (same-source and cross-source overlap)
-- indie theater showtime completeness
-- specials/happy-hour coverage
-- genres coverage
-- walkability/mobility coverage (distributed model + dedicated-column checks)
-- historic coverage (vibes/types/descriptions/editorial blurbs + dedicated-column checks)
-- closed venue leakage
-- crawl freshness (24h and 7d context)
-- date-over-date regression against the previous metrics run
+City-scoped runs add a scope suffix (example Atlanta):
+- `crawlers/reports/content_health_metrics_YYYY-MM-DD_city-atlanta.json`
+- `crawlers/reports/content_health_assessment_YYYY-MM-DD_city-atlanta.md`
+- `crawlers/reports/content_health_gate_YYYY-MM-DD_city-atlanta.json`
+- `crawlers/reports/content_health_findings_YYYY-MM-DD_city-atlanta.md`
 
-## What It Checks
+## What the Formal Audit Covers
 
-### 1. Garbage Titles
-- Date-like titles (e.g. "February 21, 2026", "Sat Feb 21", "2/21/2026")
-- Day+number titles (e.g. "Mon16", "Tue17")
-- Generic nav words ("Events", "Calendar", "Add To Calendar", "View Details", "Schedule")
-- Numeric-only titles
-- Titles shorter than 3 characters
-- Month headers (e.g. "FEBRUARY 2026")
-- Phone numbers as titles
-- NULL or empty titles
+- Duplicate integrity (same-source and cross-source overlap)
+- Event coverage signals (showtimes, specials/happy-hours, genres)
+- Description depth quality (`short` is measured as `<220` chars)
+- Participant coverage quality (music/comedy/sports event_artists coverage)
+  - Reported in both raw and actionable-expected views.
+  - Actionable expected excludes template/non-performer titles (for example: premium seating packages, generic party/trivia/worship templates).
+- Participant gap drilldown by source (top missing-participant sources)
+- Walkability/mobility and historic coverage
+- Closed venue leakage and inactive-venue leakage
+- Crawl freshness and reliability context
+- Date-over-date regression versus previous run
 
-### 2. Duplicate Events
-- Groups events by (title, venue, date)
-- Reports count of duplicate groups and total duplicate events
-- Shows examples with event IDs
+Feed policy alignment:
+- Keep section-level de-duplication strict.
+- Favor user-controlled filtering/taste controls over forced diversity balancing.
 
-### 3. Invalid Categories
-- Checks all events against the valid category list
-- Reports events with unrecognized categories
-- Shows unique invalid categories found
+## Current Schema Expectations
 
-### 4. Synthetic Descriptions
-- Counts events with fallback descriptions like "Event at [Venue]"
-- Breaks down by source to identify crawlers that need description enrichment
-- Acceptable pattern, but useful to track
+- `content_health_audit.py` auto-detects event active-flag support.
+- Launch baseline expects `scope.events_active_column = is_active`.
+- Required migration set:
+  - `database/migrations/267_events_is_active.sql`
+  - `supabase/migrations/20260227120000_events_is_active.sql`
+  - `database/schema.sql` (updated in same change set)
 
-### 5. Past Events
-- Finds events with start_date in the past
-- Breaks down by recency (30 days, 90 days, 1 year, older)
-- Shows source breakdown
+## Supporting Audits
 
-### 6. NULL Category Events
-- Finds events missing category assignment
+```bash
+cd /Users/coach/Projects/LostCity/crawlers
 
-## Output Format
+# Legacy garbage/data integrity audit
+python3 scripts/audit_data_quality.py
 
-The script produces a structured report with:
-- Section headers for each check
-- Count of issues found
-- Top 5 examples for each issue type
-- Summary statistics at the end
+# Closed venue drift review
+python3 scripts/audit_closed_venues.py --export reports/closed_venues_audit_$(date +%F).md
 
-## Sample Output
-
-```
-================================================================================
- 1. GARBAGE TITLES AUDIT
-================================================================================
-
-1a. Titles that are just dates (e.g. 'February 21, 2026', 'Sat Feb 21')...
-Found 0 events with date-like titles
-
-...
-
-================================================================================
- SUMMARY
-================================================================================
-
-Total garbage title events: 4
-  - Date-like titles: 0
-  - Day+number titles: 0
-  - Generic nav words: 1
-  ...
-
-Duplicate event groups: 81 (208 events)
-Invalid category events: 35
-Synthetic descriptions: 59
-Past events: 66
+# Demote stale inactive tentpole flags (dry-run by default)
+python3 scripts/demote_inactive_tentpoles.py
+python3 scripts/demote_inactive_tentpoles.py --apply
 ```
 
-## When to Run
+## When To Use This Reference
 
-- **After major crawler updates** - verify no new garbage patterns introduced
-- **Before production deploys** - ensure data quality is maintained
-- **Weekly/monthly** - as part of data health monitoring
-- **After bulk imports** - validate imported data quality
+- You need details on audit outputs and scope semantics.
+- You need to inspect why a gate status moved.
+- You are extending `content_health_audit.py` checks.
 
-## Integration with Workflow
-
-1. Run audit script
-2. Review output for issues
-3. If issues found, create fixes using `DATA_QUALITY_FIXES.sql` as template
-4. Apply fixes to database
-5. Re-run audit to verify fixes worked
-
-## Related Files
-
-- `DATA_QUALITY_AUDIT_YYYY-MM-DD.md` - Full diagnostic reports (saved after each run)
-- `DATA_QUALITY_FIXES.sql` - Ready-to-run SQL fixes for common issues
-- `scripts/source_audit.py` - Per-source data quality metrics
-- `data_health.py` - Overall database health scoring
-
-## Configuration
-
-The script uses Supabase credentials from `config.py`, which loads from `.env`:
-- `SUPABASE_URL`
-- `SUPABASE_SERVICE_KEY`
-
-## Performance
-
-- Runtime: ~30-60 seconds for 50K+ events
-- Read-only operations (safe to run on production)
-- Uses service key for admin access
-
-## Extending the Script
-
-To add new checks:
-
-1. Add a new section after existing checks
-2. Use the `print_section()` helper for headers
-3. Use `print_examples()` to show sample events
-4. Add results to the SUMMARY section at the end
-
-Example:
-```python
-print_section("7. NEW CHECK NAME")
-result = supabase.table("events").select("id, title, ...").execute()
-# ... your check logic ...
-print(f"Found {count} events with issue")
-print_examples(results)
-```
+For routine launch operations, use the runbook first.

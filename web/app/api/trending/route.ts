@@ -5,6 +5,7 @@ import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-lim
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
 import {
   applyPortalScopeToQuery,
+  excludeSensitiveEvents,
   filterByPortalCity,
   parsePortalContentFilters,
   applyPortalCategoryFilters,
@@ -92,6 +93,7 @@ export async function GET(request: NextRequest) {
           publicOnlyWhenNoPortal: true,
         });
 
+        eventsQuery = excludeSensitiveEvents(eventsQuery);
         eventsQuery = applyPortalCategoryFilters(eventsQuery, portalContentFilters);
 
         const { data: eventsRaw } = await eventsQuery as { data: Array<{

@@ -87,7 +87,7 @@ def print_tag_health(client, table="events", filter_condition=None):
     """Analyze tag coverage quality for events."""
     print_subheader("Tag Health")
 
-    query = client.table(table).select("tags, genres, category, is_class")
+    query = client.table(table).select("tags, genres, category_id, is_class")
     if filter_condition:
         for key, value in filter_condition.items():
             query = query.eq(key, value)
@@ -237,7 +237,7 @@ def check_events_health(client) -> Dict:
         "start_date": 15,
         "start_time": 8,
         "venue_id": 12,
-        "category": 10,
+        "category_id": 10,
         "image_url": 10,
         "source_url": 8,
         "is_free": 5,
@@ -273,9 +273,9 @@ def check_events_health(client) -> Dict:
     missing_images = total - int(total * fill_rates.get("image_url", 0) / 100)
     print(f"  Missing images: {missing_images}")
 
-    # Missing category
-    missing_category = total - int(total * fill_rates.get("category", 0) / 100)
-    print(f"  Missing category: {missing_category}")
+    # Missing category_id
+    missing_category = total - int(total * fill_rates.get("category_id", 0) / 100)
+    print(f"  Missing category_id: {missing_category}")
 
     print_tag_health(client, "events")
 
@@ -309,7 +309,7 @@ def check_classes_health(client) -> Dict:
         "description": 15,
         "start_date": 15,
         "venue_id": 15,
-        "category": 10,
+        "category_id": 10,
         "image_url": 10,
         "price_min": 10,
         "is_free": 10,

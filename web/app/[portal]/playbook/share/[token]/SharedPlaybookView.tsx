@@ -19,7 +19,7 @@ import {
   Notebook,
   NavigationArrow,
   Copy,
-} from "@phosphor-icons/react/dist/ssr";
+} from "@phosphor-icons/react";
 import {
   ZONE_COLORS,
   getDangerLevel,

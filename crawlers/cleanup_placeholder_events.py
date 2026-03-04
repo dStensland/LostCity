@@ -57,7 +57,7 @@ def find_placeholder_events(dry_run: bool = True):
     # These are legacy events from Landmark with no actual showtimes
     result = client.table("events").select("id, title, description, start_date, source_id, is_all_day").in_(
         "source_id", source_ids
-    ).eq("is_all_day", True).eq("category", "film").eq("description", "Now Playing").execute()
+    ).eq("is_all_day", True).eq("category_id", "film").eq("description", "Now Playing").execute()
     for event in result.data or []:
         if event["id"] not in [e["id"] for e in placeholder_events]:
             placeholder_events.append(event)
@@ -65,7 +65,7 @@ def find_placeholder_events(dry_run: bool = True):
     # Query 4: Film events that are all-day with short/missing description (likely placeholders)
     result = client.table("events").select("id, title, description, start_date, source_id, is_all_day").in_(
         "source_id", source_ids
-    ).eq("is_all_day", True).eq("category", "film").is_("start_time", "null").execute()
+    ).eq("is_all_day", True).eq("category_id", "film").is_("start_time", "null").execute()
     for event in result.data or []:
         desc = event.get("description", "") or ""
         # Only include if description is very short (likely placeholder) or contains placeholder markers

@@ -8,7 +8,7 @@ import type { BestOfCategory, BestOfRankedVenue } from "@/lib/best-of";
 import { getCategoryColor, CASE_MIN_LENGTH, CASE_MAX_LENGTH } from "@/lib/best-of";
 import BestOfVenueCard from "./BestOfVenueCard";
 import NominateSpotSheet from "./NominateSpotSheet";
-import { Info, CaretDown } from "@phosphor-icons/react/dist/ssr";
+import { Info, CaretDown } from "@phosphor-icons/react";
 import { BEST_OF_ICONS, DEFAULT_BEST_OF_ICON } from "./best-of-icons";
 
 interface BestOfLeaderboardProps {

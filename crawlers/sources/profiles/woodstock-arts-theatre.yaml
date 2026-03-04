@@ -1,0 +1,27 @@
+version: 1
+slug: woodstock-arts-theatre
+name: "Woodstock Arts Theatre"
+integration_method: llm_crawler
+defaults:
+  venue_name: "Woodstock Arts Theatre"
+  category: music
+  tags:
+  - atlanta-hardening-gap
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - "https://www.woodstockarts.org/theatre/"
+  fetch:
+    render_js: true
+    wait_until: domcontentloaded
+detail:
+  enabled: true
+  fetch:
+    render_js: true
+    wait_until: domcontentloaded
+data_goals:
+  - events
+  - lineup
+  - images
+  - tickets

@@ -309,19 +309,31 @@ export function formatCompactCount(count: number): string {
 // ============================================================================
 
 /**
- * Get today's date as a string in local timezone (YYYY-MM-DD format).
- * IMPORTANT: Do NOT use `new Date().toISOString().split("T")[0]` as that
- * returns UTC date which is wrong after ~7pm EST (it becomes next day in UTC).
+ * Portal timezone — all server-side "today" logic uses this so that dates
+ * are correct regardless of where the server process runs (Vercel = UTC).
+ */
+const PORTAL_TZ = "America/New_York";
+
+/**
+ * Get a date as YYYY-MM-DD in the portal timezone (America/New_York).
+ * IMPORTANT: Do NOT use `new Date().toISOString().split("T")[0]` or
+ * `date.getFullYear()` etc. — those return UTC on Vercel, which is wrong
+ * after ~7pm EST (it becomes the next day in UTC).
  */
 export function getLocalDateString(date: Date = new Date()): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    timeZone: PORTAL_TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const parts = fmt.formatToParts(date);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+  return `${get("year")}-${get("month")}-${get("day")}`;
 }
 
 /**
- * Get a date string for N days from now in local timezone.
+ * Get a date string for N days from now in the portal timezone.
  */
 export function getLocalDateStringOffset(days: number): string {
   const date = new Date();

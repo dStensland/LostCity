@@ -155,6 +155,64 @@ def parse_meetup_datetime(datetime_str: str) -> tuple[Optional[str], Optional[st
         return None, None
 
 
+def _clean_text(value: Optional[str]) -> str:
+    if not value:
+        return ""
+    return " ".join(str(value).split()).strip()
+
+
+def _format_time_label(time_24: Optional[str]) -> Optional[str]:
+    if not time_24:
+        return None
+    try:
+        return datetime.strptime(time_24, "%H:%M").strftime("%-I:%M %p")
+    except Exception:
+        return time_24
+
+
+def _build_meetup_description(
+    *,
+    title: str,
+    description: Optional[str],
+    group_name: Optional[str],
+    location_text: Optional[str],
+    is_online: bool,
+    topics: list[str],
+    start_date: str,
+    start_time: Optional[str],
+) -> str:
+    base = _clean_text(description)
+    parts: list[str] = []
+
+    if base:
+        parts.append(base if base.endswith(".") else f"{base}.")
+    else:
+        parts.append(f"Meetup community event: {title}.")
+
+    if group_name:
+        parts.append(f"Organizer: {group_name}.")
+
+    if is_online:
+        parts.append("Format: Online event.")
+    elif location_text:
+        parts.append(f"Location: {location_text}.")
+    else:
+        parts.append("Location details are provided on Meetup.")
+
+    time_label = _format_time_label(start_time)
+    if time_label:
+        parts.append(f"Scheduled on {start_date} at {time_label}.")
+    else:
+        parts.append(f"Scheduled on {start_date}.")
+
+    topic_list = [_clean_text(topic) for topic in topics if _clean_text(topic)]
+    if topic_list:
+        parts.append(f"Topics: {', '.join(topic_list[:5])}.")
+
+    parts.append("Check Meetup for RSVP requirements, attendance limits, and last-minute updates.")
+    return " ".join(parts)[:1800]
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
     """Crawl Meetup.com for Atlanta events using Playwright."""
     source_id = source["id"]
@@ -319,6 +377,16 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         topics.append(url_match.group(1))
 
                     subcategory = map_topic_to_subcategory(topics)
+                    description = _build_meetup_description(
+                        title=title,
+                        description=description,
+                        group_name=group_name,
+                        location_text=location_text,
+                        is_online=is_online,
+                        topics=topics,
+                        start_date=start_date,
+                        start_time=start_time,
+                    )
 
                     events_found += 1
 

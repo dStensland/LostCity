@@ -1,25 +1,33 @@
 """
-Crawler for City Winery Atlanta (citywinery.com/atlanta).
-Restaurant, winery, and intimate music venue.
+Crawler for City Winery Atlanta (citywinery.com).
+Restaurant, winery, and intimate music venue at Ponce City Market.
+
+Site uses Vivenu ticketing with a public API at awsapi.citywinery.com/events.
+Pagination via skip param in increments of 16.
 """
 
 from __future__ import annotations
 
-import re
 import logging
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from typing import Optional
 
-from playwright.sync_api import sync_playwright
+import requests
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
-from utils import extract_images_from_page, extract_event_links, find_event_url, enrich_event_record
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = "https://citywinery.com/atlanta"
-EVENTS_URL = f"{BASE_URL}/events"
+API_URL = "https://awsapi.citywinery.com/events"
+BASE_URL = "https://citywinery.com"
+PAGE_SIZE = 16
+MAX_PAGES = 12  # Cap at ~192 events to avoid runaway
+
+HEADERS = {
+    "Origin": "https://citywinery.com",
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+}
 
 VENUE_DATA = {
     "name": "City Winery Atlanta",
@@ -29,210 +37,180 @@ VENUE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30308",
+    "lat": 33.7724,
+    "lng": -84.3654,
     "venue_type": "music_venue",
-    "website": BASE_URL,
+    "spot_type": "music_venue",
+    "website": BASE_URL + "/atlanta",
 }
 
+# Map City Winery genre tags to our genre taxonomy
+GENRE_MAP = {
+    "JAZZ": "jazz",
+    "BLUES": "blues",
+    "R&B": "r-and-b",
+    "HIP HOP": "hip-hop",
+    "NEO SOUL": "neo-soul",
+    "SOUL": "soul",
+    "POP": "pop",
+    "ROCK": "rock",
+    "COUNTRY": "country",
+    "FOLK": "folk",
+    "LATIN": "latin",
+    "COMEDY": "comedy",
+    "GOSPEL": "gospel",
+    "FUNK": "funk",
+    "REGGAE": "reggae",
+    "CLASSICAL": "classical",
+    "SINGER-SONGWRITER": "singer-songwriter",
+    "TRIBUTE": "tribute",
+    "ELECTRONIC": "electronic",
+    "INDIE": "indie",
+    "ALTERNATIVE": "alternative",
+}
 
-def parse_datetime(text: str) -> tuple[Optional[str], Optional[str]]:
-    """Parse date and time from 'Tue, Jan 13 @ 6:00 pm' format."""
+# Eastern Time offset (UTC-5 standard, UTC-4 daylight)
+ET = timezone(timedelta(hours=-5))
+
+
+def parse_utc_datetime(iso_str: str) -> tuple[Optional[str], Optional[str]]:
+    """Parse UTC ISO datetime and convert to Eastern Time."""
+    if not iso_str:
+        return None, None
     try:
-        current_year = datetime.now().year
-
-        # Format: "Tue, Jan 13 @ 6:00 pm" or "Thu, Jan 15 @ 8:00 pm"
-        match = re.search(
-            r"(\w{3}),?\s+(\w{3})\s+(\d+)\s*@\s*(\d{1,2}):(\d{2})\s*(am|pm)",
-            text,
-            re.IGNORECASE,
-        )
-        if match:
-            _, month, day, hour, minute, period = match.groups()
-            # Parse date
-            for fmt in ["%b %d %Y"]:
-                try:
-                    dt = datetime.strptime(f"{month} {day} {current_year}", fmt)
-                    if dt < datetime.now():
-                        dt = datetime.strptime(f"{month} {day} {current_year + 1}", fmt)
-                    date_str = dt.strftime("%Y-%m-%d")
-                    break
-                except ValueError:
-                    continue
-            else:
-                return None, None
-
-            # Parse time
-            hour = int(hour)
-            if period.lower() == "pm" and hour != 12:
-                hour += 12
-            elif period.lower() == "am" and hour == 12:
-                hour = 0
-            time_str = f"{hour:02d}:{minute}"
-
-            return date_str, time_str
-
+        # Parse "2026-02-27T23:00:00.000Z"
+        clean = iso_str.replace("Z", "+00:00")
+        dt_utc = datetime.fromisoformat(clean)
+        # Convert to Eastern Time
+        dt_et = dt_utc.astimezone(ET)
+        return dt_et.strftime("%Y-%m-%d"), dt_et.strftime("%H:%M")
+    except (ValueError, TypeError):
         return None, None
-    except Exception:
-        return None, None
+
+
+def map_genres(api_tags: list) -> list[str]:
+    """Map City Winery genre tags to our taxonomy."""
+    genres = []
+    for tag in (api_tags or []):
+        mapped = GENRE_MAP.get(tag.upper())
+        if mapped:
+            genres.append(mapped)
+    return genres or ["live-music"]
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl City Winery Atlanta events."""
+    """Crawl City Winery Atlanta via Vivenu API."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
 
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                viewport={"width": 1920, "height": 1080},
+        venue_id = get_or_create_venue(VENUE_DATA)
+
+        all_events = []
+        for page in range(MAX_PAGES):
+            skip = page * PAGE_SIZE
+            logger.info(f"Fetching City Winery API (skip={skip})")
+
+            resp = requests.get(
+                API_URL,
+                params={"location": "Atlanta", "skip": skip},
+                headers=HEADERS,
+                timeout=15,
             )
-            page = context.new_page()
+            resp.raise_for_status()
 
-            logger.info(f"Fetching City Winery: {EVENTS_URL}")
-            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)
+            data = resp.json()
+            if data.get("status") != "success":
+                logger.warning(f"API returned non-success: {data.get('status')}")
+                break
 
-            # Extract images from page
-            image_map = extract_images_from_page(page)
+            page_events = data.get("data", {}).get("event_data", [])
+            if not page_events:
+                break
 
-            # Extract event links for specific URLs
-            event_links = extract_event_links(page, BASE_URL)
+            all_events.extend(page_events)
 
-            # Scroll to load more events
-            for _ in range(3):
-                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                page.wait_for_timeout(1000)
+            if len(page_events) < PAGE_SIZE:
+                break
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+        logger.info(f"Fetched {len(all_events)} total events from API")
 
-            body_text = page.inner_text("body")
-
-            # Pattern: Title / "Tue, Jan 13 @ 6:00 pm" / "City Winery Atlanta" / "Get Tickets"
-            # Split by ticket action buttons
-            blocks = re.split(
-                r"(?:Get Tickets|Join Waitlist|Sold out)",
-                body_text,
-                flags=re.IGNORECASE,
-            )
-
-            for block in blocks:
-                lines = [l.strip() for l in block.strip().split("\n") if l.strip()]
-                if len(lines) < 2:
+        for event in all_events:
+            try:
+                title = (event.get("name") or "").strip()
+                if not title or len(title) < 3:
                     continue
 
-                title = None
-                datetime_text = None
+                start_date, start_time = parse_utc_datetime(event.get("start"))
+                end_date, end_time = parse_utc_datetime(event.get("end"))
 
-                for line in lines:
-                    # Date/time pattern: "Tue, Jan 13 @ 6:00 pm"
-                    if re.search(
-                        r"\w{3},?\s+\w{3}\s+\d+\s*@\s*\d{1,2}:\d{2}\s*(am|pm)",
-                        line,
-                        re.IGNORECASE,
-                    ):
-                        datetime_text = line
-                        continue
-
-                    # Skip venue name and navigation
-                    skip_words = [
-                        "City Winery",
-                        "Atlanta Concerts",
-                        "Check out",
-                        "Date",
-                        "Sort",
-                        "All Shows",
-                        "Blues",
-                        "Comedy",
-                        "Global",
-                        "Gospel",
-                        "Hip-Hop",
-                        "Podcast",
-                        "Pop",
-                        "R&B",
-                        "Rock",
-                        "Tribute",
-                        "Wine",
-                        "Pre-Sale",
-                        "Low Ticket Alert",
-                        "This Weekend",
-                        "events",
-                        "Skip to content",
-                    ]
-                    if any(w.lower() in line.lower() for w in skip_words):
-                        continue
-
-                    # Title - substantial text that's not a date
-                    if not title and len(line) > 3 and len(line) < 120:
-                        if not re.match(
-                            r"^\d+$", line
-                        ):  # Skip numbers like "148 events"
-                            title = line
-
-                if not title or not datetime_text:
-                    continue
-
-                start_date, start_time = parse_datetime(datetime_text)
                 if not start_date:
+                    continue
+
+                # Skip past events
+                try:
+                    if datetime.strptime(start_date, "%Y-%m-%d").date() < datetime.now().date():
+                        continue
+                except ValueError:
                     continue
 
                 events_found += 1
 
-                content_hash = generate_content_hash(
-                    title, "City Winery Atlanta", start_date
-                )
+                # Build source URL from event slug
+                event_slug = event.get("url", "")
+                source_url = f"{BASE_URL}/pages/genre/{event_slug}" if event_slug else f"{BASE_URL}/atlanta/events"
 
+                # Extract data from API response
+                price = event.get("startingPrice")
+                sale_status = event.get("saleStatus", "")
+                seo = event.get("seoSettings") or {}
+                description = seo.get("description", "")
+                if description:
+                    description = description[:500]
 
-                # Get specific event URL
+                api_tags = seo.get("tags", [])
+                genres = map_genres(api_tags)
 
+                image_url = event.get("image")
 
-                event_url = find_event_url(title, event_links, EVENTS_URL)
+                is_recurring = event.get("eventType") == "RECURRENCE"
 
+                # Price note for sold out events
+                price_note = None
+                if sale_status == "soldOut":
+                    price_note = "Sold Out"
+                elif price:
+                    price_note = f"From ${price}"
 
+                content_hash = generate_content_hash(title, "City Winery Atlanta", start_date + (start_time or ""))
 
                 event_record = {
                     "source_id": source_id,
                     "venue_id": venue_id,
                     "title": title,
-                    "description": None,
+                    "description": description or f"{title} at City Winery Atlanta",
                     "start_date": start_date,
                     "start_time": start_time,
-                    "end_date": None,
-                    "end_time": None,
+                    "end_date": end_date,
+                    "end_time": end_time,
                     "is_all_day": False,
                     "category": "music",
-                    "subcategory": "live",
-                    "tags": ["music", "live-music", "city-winery", "dinner-show"],
-                    "price_min": None,
-                    "price_max": None,
-                    "price_note": None,
-                    "is_free": None,
-                    "source_url": event_url,
-                    "ticket_url": event_url if event_url != (EVENTS_URL if "EVENTS_URL" in dir() else BASE_URL) else None,
-                    "image_url": image_map.get(title),
-                    "raw_text": None,
-                    "extraction_confidence": 0.85,
-                    "is_recurring": False,
+                    "tags": ["city-winery", "live-music", "dinner-show", "ponce-city-market"],
+                    "price_min": price,
+                    "price_max": price,
+                    "price_note": price_note,
+                    "is_free": price == 0 if price is not None else False,
+                    "source_url": source_url,
+                    "ticket_url": source_url,
+                    "image_url": image_url,
+                    "raw_text": f"{title} - {start_date} {start_time}",
+                    "extraction_confidence": 0.95,
+                    "is_recurring": is_recurring,
                     "recurrence_rule": None,
                     "content_hash": content_hash,
                 }
-
-                # Enrich from detail page
-                enrich_event_record(event_record, source_name="City Winery Atlanta")
-
-                # Determine is_free if still unknown after enrichment
-                if event_record.get("is_free") is None:
-                    desc_lower = (event_record.get("description") or "").lower()
-                    title_lower = event_record.get("title", "").lower()
-                    combined = f"{title_lower} {desc_lower}"
-                    if any(kw in combined for kw in ["free", "no cost", "no charge", "complimentary"]):
-                        event_record["is_free"] = True
-                        event_record["price_min"] = event_record.get("price_min") or 0
-                        event_record["price_max"] = event_record.get("price_max") or 0
-                    else:
-                        event_record["is_free"] = False
 
                 existing = find_event_by_hash(content_hash)
                 if existing:
@@ -241,18 +219,23 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     continue
 
                 try:
-                    insert_event(event_record)
+                    insert_event(event_record, genres=genres)
                     events_new += 1
-                    logger.info(f"Added: {title} on {start_date}")
+                    logger.info(f"Added: {title} on {start_date} at {start_time}")
                 except Exception as e:
                     logger.error(f"Failed to insert: {title}: {e}")
 
-            browser.close()
+            except Exception as e:
+                logger.warning(f"Failed to process event: {e}")
+                continue
 
         logger.info(
-            f"City Winery crawl complete: {events_found} found, {events_new} new"
+            f"City Winery crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
         )
 
+    except requests.RequestException as e:
+        logger.error(f"Failed to fetch City Winery API: {e}")
+        raise
     except Exception as e:
         logger.error(f"Failed to crawl City Winery: {e}")
         raise

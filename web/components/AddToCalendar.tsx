@@ -145,7 +145,7 @@ END:VCALENDAR`;
         onClick={() => setIsOpen(!isOpen)}
         className={
           isIcon
-            ? "inline-flex items-center justify-center min-w-[48px] min-h-[48px] p-3 text-[var(--muted)] rounded-lg hover:bg-[var(--twilight)] hover:text-[var(--cream)] hover:scale-110 transition-all active:scale-95"
+            ? "inline-flex items-center justify-center w-10 h-10 text-[var(--muted)] rounded-xl border border-[var(--twilight)] hover:bg-[var(--dusk)] hover:text-[var(--cream)] hover:border-[var(--soft)] transition-all active:scale-95"
             : "inline-flex items-center justify-center gap-2 px-6 py-3 border border-[var(--twilight)] text-[var(--soft)] font-medium rounded-lg hover:bg-[var(--twilight)] hover:text-[var(--cream)] transition-colors w-full sm:w-auto"
         }
         aria-label="Add to calendar"

@@ -44,6 +44,12 @@ function buildVenueHref(portalSlug: string, params: Record<string, string>): str
   return `/${portalSlug}?${searchParams.toString()}`;
 }
 
+function buildRegularsHref(portalSlug: string, params: Record<string, string> = {}): string {
+  const searchParams = new URLSearchParams({ view: "find", type: "regulars", ...params });
+  return `/${portalSlug}?${searchParams.toString()}`;
+}
+
+
 // ---------------------------------------------------------------------------
 // Link definitions
 // ---------------------------------------------------------------------------
@@ -55,13 +61,13 @@ const LINKS = {
   coffee: (p: string): QuickLink => ({
     label: "Coffee",
     icon: "Coffee",
-    href: buildVenueHref(p, { venue_type: "restaurant", cuisine: "coffee", label: "Coffee", tab: "eat-drink" }),
+    href: buildVenueHref(p, { venue_type: "restaurant", cuisine: "coffee", open_now: "true", label: "Coffee", tab: "eat-drink" }),
     accent_color: "var(--neon-amber)",
   }),
   brunch: (p: string): QuickLink => ({
     label: "Brunch",
     icon: "ForkKnife",
-    href: buildVenueHref(p, { venue_type: "restaurant", cuisine: "brunch_breakfast", label: "Brunch", tab: "eat-drink" }),
+    href: buildVenueHref(p, { venue_type: "restaurant", cuisine: "brunch_breakfast", open_now: "true", label: "Brunch", tab: "eat-drink" }),
     accent_color: "var(--gold)",
   }),
   morningClasses: (p: string): QuickLink => ({
@@ -73,7 +79,7 @@ const LINKS = {
   farmersMarkets: (p: string): QuickLink => ({
     label: "Markets",
     icon: "Storefront",
-    href: buildHref(p, { categories: "food_drink", tags: "market,farmers-market", date: "today" }),
+    href: buildHref(p, { categories: "food_drink", genres: "farmers-market", date: "today" }),
     accent_color: "var(--neon-green)",
   }),
   lunch: (p: string): QuickLink => ({
@@ -96,14 +102,14 @@ const LINKS = {
   }),
   happyHour: (p: string): QuickLink => ({
     label: "Happy Hour",
-    icon: "BeerStein",
-    href: buildVenueHref(p, { venue_type: "bar,brewery,restaurant", open_now: "true", label: "Happy Hour", tab: "eat-drink" }),
-    accent_color: "var(--neon-amber)",
+    icon: "Wine",
+    href: buildRegularsHref(p, { activity: "happy_hour" }),
+    accent_color: "#C4B5FD",
   }),
   tonightEvents: (p: string): QuickLink => ({
     label: "Tonight",
     icon: "MoonStars",
-    href: buildHref(p, { date: "today", time_after: "17:00" }),
+    href: buildHref(p, { categories: "music,nightlife,comedy", date: "today" }),
     accent_color: "var(--neon-magenta)",
   }),
   liveMusic: (p: string): QuickLink => ({
@@ -127,25 +133,25 @@ const LINKS = {
   lateNightEats: (p: string): QuickLink => ({
     label: "Late Night Eats",
     icon: "ForkKnife",
-    href: buildVenueHref(p, { vibes: "late-night", label: "Late Night Eats", tab: "eat-drink" }),
+    href: buildVenueHref(p, { vibes: "late-night", open_now: "true", label: "Late Night Eats", tab: "eat-drink" }),
     accent_color: "var(--coral)",
   }),
   thisWeekend: (p: string): QuickLink => ({
     label: "This Weekend",
     icon: "CalendarCheck",
-    href: buildHref(p, { date: "this_weekend" }),
+    href: buildHref(p, { date: "weekend" }),
     accent_color: "var(--neon-cyan)",
   }),
   outdoors: (p: string): QuickLink => ({
     label: "Outdoors",
     icon: "Park",
-    href: buildVenueHref(p, { venue_type: "park,garden,outdoor_venue", label: "Outdoors", tab: "things-to-do" }),
+    href: buildVenueHref(p, { venue_type: "park,trail,garden", label: "Outdoors", tab: "things-to-do" }),
     accent_color: "var(--neon-green)",
   }),
   patios: (p: string): QuickLink => ({
     label: "Patios",
     icon: "SunHorizon",
-    href: buildVenueHref(p, { vibes: "outdoor-seating,rooftop,patio", label: "Patios" }),
+    href: buildVenueHref(p, { vibes: "outdoor-seating,rooftop,patio", open_now: "true", label: "Patios" }),
     accent_color: "var(--gold)",
   }),
   museums: (p: string): QuickLink => ({
@@ -157,13 +163,13 @@ const LINKS = {
   cozySpots: (p: string): QuickLink => ({
     label: "Cozy Spots",
     icon: "Coffee",
-    href: buildVenueHref(p, { vibes: "cozy,intimate", label: "Cozy Spots", tab: "eat-drink" }),
+    href: buildVenueHref(p, { vibes: "cozy,intimate", open_now: "true", label: "Cozy Spots", tab: "eat-drink" }),
     accent_color: "var(--neon-amber)",
   }),
   indoorFun: (p: string): QuickLink => ({
     label: "Indoor Fun",
     icon: "GameController",
-    href: buildVenueHref(p, { venue_type: "arcade,bowling,cinema", label: "Indoor Fun", tab: "things-to-do" }),
+    href: buildVenueHref(p, { venue_type: "arcade,bowling,cinema,entertainment", label: "Indoor Fun", tab: "things-to-do" }),
     accent_color: "var(--neon-cyan)",
   }),
   family: (p: string): QuickLink => ({
@@ -175,14 +181,86 @@ const LINKS = {
   arts: (p: string): QuickLink => ({
     label: "Art & Culture",
     icon: "PaintBrush",
-    href: buildHref(p, { categories: "art" }),
+    href: buildHref(p, { categories: "art", date: "today" }),
     accent_color: "var(--neon-magenta)",
   }),
   tacoTuesday: (p: string): QuickLink => ({
     label: "Taco Spots",
     icon: "ForkKnife",
-    href: buildVenueHref(p, { cuisine: "mexican,tex_mex", label: "Taco Spots", tab: "eat-drink" }),
+    href: buildVenueHref(p, { cuisine: "mexican,tex_mex", open_now: "true", label: "Taco Spots", tab: "eat-drink" }),
     accent_color: "var(--gold)",
+  }),
+  trivia: (p: string): QuickLink => ({
+    label: "Trivia",
+    icon: "Question",
+    href: buildRegularsHref(p, { activity: "trivia" }),
+    accent_color: "#93C5FD",
+  }),
+  gameNight: (p: string): QuickLink => ({
+    label: "Game Night",
+    icon: "GameController",
+    href: buildRegularsHref(p, { activity: "game_night" }),
+    accent_color: "#7DD3FC",
+  }),
+  regularHangs: (p: string): QuickLink => ({
+    label: "Regulars",
+    icon: "Repeat",
+    href: buildRegularsHref(p),
+    accent_color: "var(--neon-magenta)",
+  }),
+  runClub: (p: string): QuickLink => ({
+    label: "Run Club",
+    icon: "PersonSimpleRun",
+    href: buildRegularsHref(p, { activity: "run_club" }),
+    accent_color: "#5EEAD4",
+  }),
+  foodSpecials: (p: string): QuickLink => ({
+    label: "Food Specials",
+    icon: "ForkKnife",
+    href: buildRegularsHref(p, { activity: "food_specials" }),
+    accent_color: "#FCD34D",
+  }),
+  karaoke: (p: string): QuickLink => ({
+    label: "Karaoke",
+    icon: "Microphone",
+    href: buildRegularsHref(p, { activity: "karaoke" }),
+    accent_color: "var(--neon-magenta)",
+  }),
+  openMic: (p: string): QuickLink => ({
+    label: "Comedy",
+    icon: "Smiley",
+    href: buildRegularsHref(p, { activity: "comedy" }),
+    accent_color: "var(--coral)",
+  }),
+  drag: (p: string): QuickLink => ({
+    label: "Drag Shows",
+    icon: "Sparkle",
+    href: buildRegularsHref(p, { activity: "drag" }),
+    accent_color: "var(--neon-magenta)",
+  }),
+  poker: (p: string): QuickLink => ({
+    label: "Poker",
+    icon: "Club",
+    href: buildRegularsHref(p, { activity: "poker" }),
+    accent_color: "var(--neon-green)",
+  }),
+  lineDancing: (p: string): QuickLink => ({
+    label: "Line Dancing",
+    icon: "MusicNotes",
+    href: buildRegularsHref(p, { activity: "dance" }),
+    accent_color: "var(--gold)",
+  }),
+  latinNight: (p: string): QuickLink => ({
+    label: "Latin Night",
+    icon: "Globe",
+    href: buildRegularsHref(p, { activity: "dance" }),
+    accent_color: "var(--coral)",
+  }),
+  danceFitness: (p: string): QuickLink => ({
+    label: "Dance & Fitness",
+    icon: "Barbell",
+    href: buildHref(p, { categories: "fitness,dance", date: "today" }),
+    accent_color: "var(--neon-cyan)",
   }),
 } satisfies Record<string, LinkFactory>;
 
@@ -194,24 +272,24 @@ type MomentKey = `${TimeSlot}_${DayType}`;
 
 const MOMENT_LINKS: Record<MomentKey, (keyof typeof LINKS)[]> = {
   // Weekday mornings
-  morning_weekday: ["coffee", "brunch", "morningClasses", "todayEvents", "freeToday"],
+  morning_weekday: ["coffee", "brunch", "morningClasses", "runClub", "todayEvents", "freeToday"],
   // Weekend mornings
-  morning_weekend: ["brunch", "farmersMarkets", "coffee", "family", "freeToday"],
+  morning_weekend: ["brunch", "farmersMarkets", "coffee", "runClub", "family", "freeToday"],
   // Weekday midday
   midday_weekday: ["lunch", "todayEvents", "tonightEvents", "freeToday", "museums"],
   // Weekend midday
   midday_weekend: ["todayEvents", "freeToday", "outdoors", "family", "arts"],
   // Weekday happy hour
-  happy_hour_weekday: ["happyHour", "tonightEvents", "liveMusic", "comedy", "freeToday"],
+  happy_hour_weekday: ["happyHour", "foodSpecials", "tonightEvents", "liveMusic", "trivia", "comedy"],
   // Weekend happy hour
-  happy_hour_weekend: ["happyHour", "tonightEvents", "liveMusic", "nightlife", "comedy"],
+  happy_hour_weekend: ["happyHour", "foodSpecials", "tonightEvents", "liveMusic", "nightlife", "comedy"],
   // Weekday evening
-  evening_weekday: ["liveMusic", "comedy", "nightlife", "lateNightEats", "freeToday"],
+  evening_weekday: ["liveMusic", "trivia", "comedy", "nightlife", "karaoke", "lateNightEats"],
   // Weekend evening
-  evening_weekend: ["liveMusic", "nightlife", "comedy", "lateNightEats", "freeToday"],
+  evening_weekend: ["liveMusic", "nightlife", "comedy", "drag", "karaoke", "lateNightEats"],
   // Late night (same both days)
-  late_night_weekday: ["nightlife", "liveMusic", "lateNightEats", "comedy"],
-  late_night_weekend: ["nightlife", "liveMusic", "lateNightEats", "comedy"],
+  late_night_weekday: ["nightlife", "liveMusic", "lateNightEats", "karaoke"],
+  late_night_weekend: ["nightlife", "liveMusic", "lateNightEats", "karaoke"],
 };
 
 // ---------------------------------------------------------------------------
@@ -304,8 +382,19 @@ export function getContextualQuickLinks(
 
   // Day-theme overrides: inject themed links for specific days
   if (dayOfWeek === "tuesday" && !linkKeys.includes("tacoTuesday")) {
-    // On Tuesdays, inject Taco Spots as 2nd link
     linkKeys.splice(1, 0, "tacoTuesday");
+  }
+  if (dayOfWeek === "wednesday" && !linkKeys.includes("trivia")) {
+    linkKeys.splice(1, 0, "trivia");
+  }
+  if (dayOfWeek === "thursday" && !linkKeys.includes("karaoke")) {
+    linkKeys.splice(2, 0, "karaoke");
+  }
+  if (dayOfWeek === "friday" && !linkKeys.includes("latinNight")) {
+    linkKeys.splice(2, 0, "latinNight");
+  }
+  if (dayOfWeek === "saturday" && timeSlot === "morning" && !linkKeys.includes("runClub")) {
+    linkKeys.splice(1, 0, "runClub");
   }
 
   // Deduplicate and cap at 6

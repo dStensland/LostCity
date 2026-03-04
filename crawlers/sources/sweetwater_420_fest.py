@@ -7,7 +7,7 @@ Moving to Westside Park in 2026.
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
@@ -64,7 +64,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             days_to_sat -= 7
         saturday = april_20.replace(day=april_20.day + days_to_sat)
         start_date = saturday
-        end_date = saturday.replace(day=saturday.day + 1)
+        end_date = saturday + timedelta(days=1)
 
     # If past, use next year
     if end_date < now:
@@ -81,11 +81,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
     content_hash = generate_content_hash(
         title, "Westside Park", start_date.strftime("%Y-%m-%d")
     )
-
-    if find_event_by_hash(content_hash):
-        events_updated = 1
-        logger.info(f"SweetWater 420 Fest {year} already exists")
-        return events_found, events_new, events_updated
 
     event_record = {
         "source_id": source_id,
@@ -104,6 +99,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         "price_max": 150.0,
         "price_note": "Single day and weekend passes available",
         "is_free": False,
+        "is_tentpole": True,
         "source_url": BASE_URL,
         "ticket_url": BASE_URL,
         "image_url": None,
@@ -113,6 +109,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
         "recurrence_rule": "FREQ=YEARLY;BYMONTH=4",
         "content_hash": content_hash,
     }
+
+    existing = find_event_by_hash(content_hash)
+    if existing:
+        smart_update_existing_event(existing, event_record)
+        events_updated = 1
+        logger.info(f"Updated: {title}")
+        return events_found, events_new, events_updated
 
     try:
         insert_event(event_record)

@@ -169,7 +169,7 @@ def main():
         print(f"Events in Atlanta portal: {atlanta_count:,}")
         
         # Category breakdown for Atlanta
-        result = client.table("events").select("category").is_(
+        result = client.table("events").select("category_id").is_(
             "canonical_event_id", "null"
         ).eq("portal_id", atlanta_portal_id).gte(
             "start_date", today
@@ -177,7 +177,7 @@ def main():
         
         atlanta_categories = {}
         for event in result.data:
-            cat = event.get("category", "NULL")
+            cat = event.get("category_id", "NULL")
             atlanta_categories[cat] = atlanta_categories.get(cat, 0) + 1
         
         print()

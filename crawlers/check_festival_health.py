@@ -1,124 +1,70 @@
 #!/usr/bin/env python3
+"""Festival health check with enforced positive-state gates.
+
+Usage:
+  python3 check_festival_health.py
+  python3 check_festival_health.py --json
+
+Exit code:
+  0 only when all gates are PASS.
+  1 when any gate is WARN or FAIL.
 """
-Quick festival health check - run anytime to verify data quality.
-Usage: python3 check_festival_health.py
-"""
 
-from db import get_client
-from collections import defaultdict
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from typing import Any
+
+from festival_audit_metrics import compute_festival_audit_snapshot, evaluate_positive_state
 
 
-def check_health():
-    """Run all health checks and print pass/fail status."""
-    client = get_client()
-    
-    print("\n" + "=" * 60)
-    print("FESTIVAL DATA HEALTH CHECK")
-    print("=" * 60)
-    
-    all_passed = True
-    
-    # Check 1: No festival series with 8+ venues (calendar absorption)
-    print("\n1. Calendar Absorption Check...")
-    series_result = client.table("series")\
-        .select("id, title, series_type")\
-        .in_("series_type", ["festival", "festival_program"])\
-        .execute()
+STATUS_ICON = {
+    "PASS": "✅",
+    "WARN": "⚠️",
+    "FAIL": "❌",
+}
 
-    issues = []
-    for series in (series_result.data or []):
-        events = client.table("events")\
-            .select("venue_id")\
-            .eq("series_id", series["id"])\
-            .execute()
-        venue_count = len(set(e["venue_id"] for e in (events.data or []) if e.get("venue_id")))
-        if venue_count >= 8:
-            issues.append((series["title"], venue_count))
 
-    if issues:
-        print(f"   ❌ FAILED - {len(issues)} festival series with 8+ venues:")
-        for title, count in issues:
-            print(f"      - {title}: {count} venues")
-        all_passed = False
+def _print_gate_results(gate_eval: dict[str, Any]) -> None:
+    print("\n" + "=" * 80)
+    print("FESTIVAL POSITIVE-STATE HEALTH CHECK")
+    print("=" * 80)
+
+    for gate in gate_eval["gates"]:
+        icon = STATUS_ICON[gate["status"]]
+        if gate["direction"] == "min":
+            target = f"target>={gate['warn']:.1f}% (fail<{gate['fail']:.1f}%)"
+            value = f"{gate['value']:.1f}%"
+        else:
+            target = f"target<={gate['warn']:.1f} (fail>{gate['fail']:.1f})"
+            value = f"{gate['value']:.1f}"
+
+        print(f"{icon} {gate['label']}: {value} [{gate['status']}] {target}")
+
+    print("\n" + "=" * 80)
+    overall_icon = STATUS_ICON[gate_eval["overall"]]
+    print(f"Overall status: {overall_icon} {gate_eval['overall']}")
+
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Check festival data health gates")
+    parser.add_argument("--json", action="store_true", help="Emit full JSON payload")
+    args = parser.parse_args()
+
+    snapshot = compute_festival_audit_snapshot()
+    gate_eval = evaluate_positive_state(snapshot)
+
+    if args.json:
+        print(json.dumps({"snapshot": snapshot, "gates": gate_eval}, indent=2))
     else:
-        print("   ✅ PASSED - No calendar absorption detected")
-    
-    # Check 2: No source creating 10+ festival_program series
-    print("\n2. Festival Fragmentation Check...")
-    events_result = client.table("events")\
-        .select("source_id, series_id")\
-        .not_.is_("series_id", "null")\
-        .execute()
-    
-    source_series_map = defaultdict(set)
-    for event in (events_result.data or []):
-        source_series_map[event["source_id"]].add(event["series_id"])
-    
-    series_result = client.table("series")\
-        .select("id, title, series_type")\
-        .eq("series_type", "festival_program")\
-        .execute()
-    
-    festival_program_ids = set(s["id"] for s in (series_result.data or []))
-    
-    sources_result = client.table("sources")\
-        .select("id, slug")\
-        .execute()
-    sources_map = {s["id"]: s["slug"] for s in (sources_result.data or [])}
-    
-    fragmented = []
-    for source_id, series_ids in source_series_map.items():
-        festival_count = len(series_ids & festival_program_ids)
-        if festival_count >= 10:
-            fragmented.append((sources_map.get(source_id, f"id:{source_id}"), festival_count))
-    
-    if fragmented:
-        print(f"   ❌ FAILED - {len(fragmented)} sources with 10+ festival_program series:")
-        for slug, count in sorted(fragmented, key=lambda x: x[1], reverse=True):
-            print(f"      - {slug}: {count} series")
-        all_passed = False
-    else:
-        print("   ✅ PASSED - No festival fragmentation detected")
-    
-    # Check 3: No classes in festivals
-    print("\n3. Classes in Festivals Check...")
-    class_events = client.table("events")\
-        .select("id, series_id")\
-        .eq("is_class", True)\
-        .not_.is_("series_id", "null")\
-        .execute()
-    
-    class_in_festival = []
-    for event in (class_events.data or []):
-        series_id = event["series_id"]
-        series = client.table("series")\
-            .select("title, series_type")\
-            .eq("id", series_id)\
-            .execute()
-        
-        if series.data and series.data[0]["series_type"] in ["festival", "festival_program"]:
-            class_in_festival.append(series.data[0]["title"])
-    
-    if class_in_festival:
-        print(f"   ❌ FAILED - {len(class_in_festival)} classes linked to festivals:")
-        for title in set(class_in_festival)[:5]:
-            print(f"      - {title}")
-        all_passed = False
-    else:
-        print("   ✅ PASSED - No classes in festivals")
-    
-    # Summary
-    print("\n" + "=" * 60)
-    if all_passed:
-        print("✅ ALL CHECKS PASSED - Festival data is healthy")
-    else:
-        print("❌ SOME CHECKS FAILED - See details above")
-    print("=" * 60 + "\n")
-    
-    return all_passed
+        _print_gate_results(gate_eval)
+
+    # Health is considered positive only with all PASS gates.
+    return 0 if gate_eval["overall"] == "PASS" else 1
 
 
 if __name__ == "__main__":
-    import sys
-    passed = check_health()
-    sys.exit(0 if passed else 1)
+    sys.exit(main())

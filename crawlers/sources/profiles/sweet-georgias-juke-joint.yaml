@@ -1,0 +1,29 @@
+version: 1
+slug: sweet-georgias-juke-joint
+name: "Sweet Georgia's Juke Joint"
+integration_method: llm_crawler
+defaults:
+  venue_name: "Sweet Georgia's Juke Joint"
+  category: music
+  tags:
+  - atlanta-expansion-wave-y
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - "https://www.sweetgeorgiasjukejoint.com/events"
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+detail:
+  enabled: true
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+data_goals:
+  - events
+  - lineup
+  - images
+  - tickets

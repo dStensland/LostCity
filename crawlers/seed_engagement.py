@@ -183,8 +183,8 @@ def main():
     for cat in categories:
         result = (
             sb.table("events")
-            .select("id, category, start_date, title, venue_id, series_id, is_class, image_url")
-            .eq("category", cat)
+            .select("id, category_id, start_date, title, venue_id, series_id, is_class, image_url")
+            .eq("category_id", cat)
             .gte("start_date", today)
             .lte("start_date", end_date)
             .is_("canonical_event_id", "null")
@@ -197,8 +197,8 @@ def main():
         # Also grab some without images for variety
         result2 = (
             sb.table("events")
-            .select("id, category, start_date, title, venue_id, series_id, is_class, image_url")
-            .eq("category", cat)
+            .select("id, category_id, start_date, title, venue_id, series_id, is_class, image_url")
+            .eq("category_id", cat)
             .gte("start_date", today)
             .lte("start_date", end_date)
             .is_("canonical_event_id", "null")
@@ -213,7 +213,7 @@ def main():
     # Also fetch classes specifically
     class_result = (
         sb.table("events")
-        .select("id, category, start_date, title, venue_id, series_id, is_class, image_url")
+        .select("id, category_id, start_date, title, venue_id, series_id, is_class, image_url")
         .eq("is_class", True)
         .gte("start_date", today)
         .lte("start_date", end_date)

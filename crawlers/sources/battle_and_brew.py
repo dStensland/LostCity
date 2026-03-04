@@ -206,27 +206,27 @@ def parse_date(date_text: str) -> Optional[str]:
 
 
 def get_category_from_title(title: str) -> tuple[str, Optional[str]]:
-    """Determine category based on event title."""
+    """Determine category and subcategory based on event title."""
     title_lower = title.lower()
 
     if any(x in title_lower for x in ["trivia", "quiz"]):
-        return "community", "trivia"
+        return "nightlife", "nightlife.trivia"
     elif any(x in title_lower for x in ["karaoke"]):
-        return "nightlife", "karaoke"
+        return "nightlife", "nightlife.karaoke"
     elif any(x in title_lower for x in ["d&d", "dungeons", "ttrpg", "rpg"]):
-        return "community", "gaming"
+        return "nightlife", "nightlife.bar_games"
     elif any(x in title_lower for x in ["mtg", "magic the gathering", "draft", "pokemon", "pokémon"]):
-        return "community", "gaming"
+        return "nightlife", "nightlife.bar_games"
     elif any(x in title_lower for x in ["mahjong", "board game"]):
-        return "community", "gaming"
+        return "nightlife", "nightlife.bar_games"
     elif any(x in title_lower for x in ["cosplay", "costume"]):
-        return "community", "cosplay"
+        return "community", None
     elif any(x in title_lower for x in ["paint", "art", "craft"]):
-        return "art", "workshop"
+        return "art", None
     elif any(x in title_lower for x in ["brunch", "mimosa"]):
         return "food_drink", None
     else:
-        return "community", "gaming"
+        return "nightlife", "nightlife.bar_games"
 
 
 def crawl(source: dict) -> tuple[int, int, int]:

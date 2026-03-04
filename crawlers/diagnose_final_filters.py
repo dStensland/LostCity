@@ -133,7 +133,7 @@ def main():
                     "start_date", today
                 ).lte("start_date", thirty_days).is_(
                     "canonical_event_id", "null"
-                ).in_("category", portal_filters["categories"]).execute()
+                ).in_("category_id", portal_filters["categories"]).execute()
                 
                 category_filtered_count = result.count
                 print(f"  Events matching portal categories: {category_filtered_count:,}")
@@ -150,7 +150,7 @@ def main():
     print("=" * 80)
     
     # Get all Atlanta events (non-chain, non-duplicate)
-    result = client.table("events").select("id,category,venue_id,portal_id").gte(
+    result = client.table("events").select("id,category_id,venue_id,portal_id").gte(
         "start_date", today
     ).lte("start_date", thirty_days).is_("canonical_event_id", "null").execute()
     
@@ -162,7 +162,7 @@ def main():
     
     category_counts = {}
     for event in atlanta_events:
-        cat = event.get("category") or "NULL"
+        cat = event.get("category_id") or "NULL"
         category_counts[cat] = category_counts.get(cat, 0) + 1
     
     for cat in sorted(category_counts.keys(), key=lambda x: category_counts[x], reverse=True):

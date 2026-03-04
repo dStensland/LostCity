@@ -114,6 +114,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
         response = requests.get(ICAL_URL, headers=headers, timeout=30)
         response.raise_for_status()
 
+        # The iCal endpoint occasionally serves HTML/challenge pages.
+        # Treat that as a soft failure so this source doesn't hard-fail the crawl run.
+        if b"BEGIN:VCALENDAR" not in response.content[:5000]:
+            logger.warning("LifeLine iCal feed did not return calendar data; skipping this run")
+            return 0, 0, 0
+
         cal = Calendar.from_ical(response.content)
         today = date.today()
 

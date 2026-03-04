@@ -13,13 +13,27 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { FeedLayout } from "@/lib/city-pulse/types";
-import { DEFAULT_FEED_ORDER } from "@/lib/city-pulse/types";
+import { DEFAULT_FEED_ORDER, LEGACY_BLOCK_IDS } from "@/lib/city-pulse/types";
 
 function makeDefaultLayout(): FeedLayout {
   return {
     visible_blocks: [...DEFAULT_FEED_ORDER].filter((b) => b !== "browse"),
     hidden_blocks: [],
-    version: 1 as const,
+    version: 2 as const,
+  };
+}
+
+/** Detect legacy v1 block IDs and reset to v2 defaults, preserving interests. */
+function migrateIfLegacy(layout: FeedLayout): { layout: FeedLayout; migrated: boolean } {
+  const allBlocks = [...layout.visible_blocks, ...layout.hidden_blocks];
+  const hasLegacy = allBlocks.some((b) => LEGACY_BLOCK_IDS.has(b));
+  if (!hasLegacy && layout.version === 2) return { layout, migrated: false };
+  return {
+    layout: {
+      ...makeDefaultLayout(),
+      ...(layout.interests !== undefined && { interests: layout.interests }),
+    },
+    migrated: true,
   };
 }
 
@@ -47,9 +61,20 @@ export function useFeedPreferences({ isAuthenticated }: UseFeedPreferencesOption
         const res = await fetch("/api/preferences");
         if (!res.ok) return;
         const prefs = await res.json();
-        if (!cancelled && prefs.feed_layout && !hasLocalChanges.current) {
-          setFeedLayout(prefs.feed_layout);
-          setSavedInterests(prefs.feed_layout.interests ?? undefined);
+        if (cancelled || hasLocalChanges.current) return;
+        if (!prefs.feed_layout) return;
+
+        const { layout, migrated } = migrateIfLegacy(prefs.feed_layout);
+        setFeedLayout(layout);
+        setSavedInterests(layout.interests ?? undefined);
+
+        // Silently persist migrated layout back to DB
+        if (migrated) {
+          fetch("/api/preferences", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ feed_layout: layout }),
+          }).catch(() => {});
         }
       } catch {
         // Preferences are optional — don't block the feed

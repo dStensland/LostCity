@@ -53,7 +53,7 @@ def main():
     # Get enrichment metrics
     cur.execute("""
         SELECT 
-            ROUND(100.0 * COUNT(CASE WHEN category IS NOT NULL THEN 1 END) / COUNT(*), 1) as category_pct,
+            ROUND(100.0 * COUNT(CASE WHEN category_id IS NOT NULL THEN 1 END) / COUNT(*), 1) as category_pct,
             ROUND(100.0 * COUNT(CASE WHEN start_time IS NOT NULL THEN 1 END) / COUNT(*), 1) as time_pct,
             ROUND(100.0 * COUNT(CASE WHEN image_url IS NOT NULL AND image_url != '' THEN 1 END) / COUNT(*), 1) as img_pct,
             ROUND(100.0 * COUNT(CASE WHEN ticket_url IS NOT NULL AND ticket_url != '' THEN 1 END) / COUNT(*), 1) as ticket_pct,

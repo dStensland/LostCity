@@ -11,7 +11,7 @@ import {
   Compass,
   GraduationCap,
   Buildings,
-} from "@phosphor-icons/react/dist/ssr";
+} from "@phosphor-icons/react";
 import { getSeriesTypeColor, getSeriesTypeLabel } from "@/lib/series-utils";
 import { decodeHtmlEntities, formatTimeSplit, formatCompactCount } from "@/lib/formats";
 import { formatRecurrence, type Frequency, type DayOfWeek } from "@/lib/recurrence";
@@ -258,7 +258,7 @@ const SeriesCard = memo(function SeriesCard({
 
   return (
     <div
-      className={`find-row-card ${disableMargin ? "" : "mb-3 sm:mb-4"} rounded-2xl border border-[var(--twilight)]/75 group overflow-hidden border-l-[2px] border-l-[var(--accent-color)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)] ${skipAnimation ? "" : "animate-card-emerge"} ${className ?? ""}`}
+      className={`find-row-card find-row-card-bg ${disableMargin ? "" : "mb-2.5 sm:mb-3"} rounded-xl border border-[var(--twilight)]/75 group overflow-hidden border-l-[2px] border-l-[var(--accent-color)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--void)] ${skipAnimation ? "" : "animate-card-emerge"} ${className ?? ""}`}
       tabIndex={0}
       data-list-row="true"
       aria-label={`${seriesTitle}, ${totalShowtimes} showtimes`}
@@ -268,8 +268,6 @@ const SeriesCard = memo(function SeriesCard({
           "--context-accent": contextColor,
           "--cta-border": "color-mix(in srgb, var(--accent-color) 70%, transparent)",
           "--cta-glow": "color-mix(in srgb, var(--accent-color) 35%, transparent)",
-          background:
-            "linear-gradient(180deg, color-mix(in srgb, var(--night) 84%, transparent), color-mix(in srgb, var(--dusk) 72%, transparent))",
         } as CSSProperties
       }
     >
@@ -278,13 +276,13 @@ const SeriesCard = memo(function SeriesCard({
             href={seriesUrl}
             scroll={false}
             data-row-primary-link="true"
-            className="block min-w-0 p-3.5 sm:p-4"
+            className="block min-w-0 p-3 sm:p-3.5"
           >
-            <div className="flex gap-3 sm:gap-4">
+            <div className="flex gap-2.5 sm:gap-3">
               {/* Time cell - matches EventCard typography */}
               <div
                 ref={parallaxContainerRef}
-                className={`hidden sm:flex flex-shrink-0 self-stretch relative w-[124px] -ml-3.5 sm:-ml-4 -my-3.5 sm:-my-4 overflow-hidden border-r border-[var(--twilight)]/60 ${
+                className={`hidden sm:flex flex-shrink-0 self-stretch relative w-[100px] -ml-3 sm:-ml-3.5 -my-3 sm:-my-3.5 overflow-hidden border-r border-[var(--twilight)]/60 ${
                   hasRailImage ? "list-rail-media" : "bg-[var(--night)]/44"
                 }`}
                 style={{ borderTopLeftRadius: "inherit", borderBottomLeftRadius: "inherit" }}
@@ -296,19 +294,19 @@ const SeriesCard = memo(function SeriesCard({
                       alt={seriesTitle}
                       fill
                       blurhash={railBlurhash}
-                      sizes="124px"
+                      sizes="100px"
                       className="object-cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/56 to-black/20 pointer-events-none" />
                   </div>
                 )}
-                <div className="relative z-10 flex h-full flex-col items-start justify-center gap-1.5 pl-3 pr-2 py-3 sm:py-4 list-rail-caption">
+                <div className="relative z-10 flex h-full flex-col items-start justify-center gap-1.5 pl-2.5 pr-1.5 py-2.5 sm:py-3 list-rail-caption">
                   <span className="font-mono text-2xs font-semibold leading-none uppercase tracking-[0.12em] text-[var(--accent-color)]">
                     {totalShowtimes} {series.series_type === "film" ? (totalShowtimes === 1 ? "show" : "shows") : (totalShowtimes === 1 ? "time" : "times")}
                   </span>
                   {timeParts && (
                     <>
-                      <span className={`font-mono text-2xl font-bold leading-none tabular-nums ${hasRailImage ? "text-white" : "text-[var(--cream)]"}`}>
+                      <span className={`font-mono text-xl font-bold leading-none tabular-nums ${hasRailImage ? "text-white" : "text-[var(--cream)]"}`}>
                         {timeParts.time}
                       </span>
                       {timeParts.period && (
@@ -362,14 +360,14 @@ const SeriesCard = memo(function SeriesCard({
                     </div>
                   )}
                   <div className="flex items-center gap-2.5 mb-1">
-                    <span className="flex-shrink-0 inline-flex items-center justify-center w-9 h-9 rounded-lg bg-accent-20 border border-[var(--twilight)]/55">
+                    <span className="flex-shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-lg bg-accent-20 border border-[var(--twilight)]/55">
                       <SeriesTypeIcon
                         type={series.series_type}
-                        size={18}
+                        size={16}
                         className="text-accent icon-neon-subtle"
                       />
                     </span>
-                    <span className="text-[var(--cream)] font-semibold text-xl transition-colors line-clamp-1 group-hover:text-[var(--accent-color)] leading-tight">
+                    <span className="text-[var(--cream)] font-semibold text-lg transition-colors line-clamp-1 group-hover:text-[var(--accent-color)] leading-tight">
                       {seriesTitle}
                     </span>
                   </div>
@@ -378,7 +376,7 @@ const SeriesCard = memo(function SeriesCard({
                 {/* Details row - matches EventCard style */}
                 <div className="flex items-center gap-1.5 text-sm text-[var(--text-secondary)] mt-1.5 leading-relaxed flex-wrap">
                   {firstVenueName && (
-                    <span className="truncate max-w-[70%] sm:max-w-[45%] font-medium text-base" title={firstVenueName}>
+                    <span className="truncate max-w-[70%] sm:max-w-[45%] font-medium text-sm" title={firstVenueName}>
                       {firstVenueName}
                     </span>
                   )}
@@ -483,7 +481,7 @@ const SeriesCard = memo(function SeriesCard({
             </div>
           </Link>
           {primaryEventId && (
-            <div className="flex flex-col items-end gap-2 pt-3 pr-3 pb-3 sm:pt-4 sm:pr-4 sm:pb-4 flex-shrink-0">
+            <div className="flex flex-col items-end gap-2 pt-2.5 pr-2.5 pb-2.5 sm:pt-3 sm:pr-3.5 sm:pb-3 flex-shrink-0">
               <div className="flex items-start gap-1.5 sm:gap-2">
                 <div data-row-save-action="true">
                   <RSVPButton eventId={primaryEventId} variant="compact" className="list-save-trigger" />

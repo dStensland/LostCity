@@ -28,6 +28,8 @@ import {
   Scales,
 } from "@phosphor-icons/react";
 import Dot from "@/components/ui/Dot";
+import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
+import HorseSpinner from "@/components/ui/HorseSpinner";
 
 // ── Types ───────────────────────────────────────────────────────────
 
@@ -326,34 +328,13 @@ export default function NetworkFeedSection({
   return (
     <section>
       {/* Section header */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <Broadcast
-              weight="bold"
-              className="w-3.5 h-3.5 text-[var(--neon-cyan)]"
-            />
-            <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-[var(--neon-cyan)] animate-ping opacity-75" />
-            <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-[var(--neon-cyan)]" />
-          </div>
-          <div>
-            <h2 className="font-mono text-xs font-bold tracking-[0.12em] uppercase text-[var(--neon-cyan)]">
-              The Network
-            </h2>
-          </div>
-        </div>
-        <Link
-          href={`/${portalSlug}/network`}
-          className="text-xs flex items-center gap-1 text-[var(--neon-cyan)] transition-colors hover:opacity-80"
-        >
-          All <ArrowRight className="w-3 h-3" />
-        </Link>
-      </div>
-
-      {/* Subtitle */}
-      <p className="font-mono text-2xs text-[var(--muted)] tracking-wide mb-3 -mt-1">
-        Independent Atlanta — curated from the city&apos;s indie voices
-      </p>
+      <FeedSectionHeader
+        title="Local News"
+        priority="secondary"
+        accentColor="var(--neon-cyan)"
+        icon={<Broadcast weight="duotone" className="w-5 h-5" />}
+        seeAllHref={`/${portalSlug}/network`}
+      />
 
       {/* Category filter pills */}
       <div className="flex items-center gap-1.5 mb-3 overflow-x-auto scrollbar-none -mx-1 px-1">
@@ -392,15 +373,7 @@ export default function NetworkFeedSection({
       {/* Posts list */}
       <div className="rounded-xl overflow-hidden border border-[var(--twilight)]/40 bg-[var(--night)]">
         {isLoading ? (
-          <>
-            <PostSkeleton />
-            <div className="border-t border-[var(--twilight)]/30">
-              <PostSkeleton />
-            </div>
-            <div className="border-t border-[var(--twilight)]/30">
-              <PostSkeleton />
-            </div>
-          </>
+          <div className="flex justify-center py-10"><HorseSpinner color="var(--neon-cyan)" /></div>
         ) : posts && posts.length > 0 ? (
           posts.map((post, index) => (
             <NetworkPostCard

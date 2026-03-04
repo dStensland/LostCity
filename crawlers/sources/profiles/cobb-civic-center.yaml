@@ -1,0 +1,29 @@
+version: 1
+slug: cobb-civic-center
+name: "Cobb Civic Center"
+integration_method: llm_crawler
+defaults:
+  venue_name: "Cobb Civic Center"
+  category: community
+  tags:
+  - atlanta-expansion-wave-w
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - "https://www.cobbcounty.org/parks/event-centers/civic-center"
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+detail:
+  enabled: true
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+data_goals:
+  - events
+  - lineup
+  - images
+  - tickets

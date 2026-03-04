@@ -99,9 +99,9 @@ export function NeedsTagList({
     return (
       <div className="animate-pulse">
         <div className="flex gap-2 flex-wrap">
-          <div className="h-8 w-32 bg-gray-200 dark:bg-gray-700 rounded-full" />
-          <div className="h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded-full" />
-          <div className="h-8 w-28 bg-gray-200 dark:bg-gray-700 rounded-full" />
+          <div className="h-8 w-32 bg-[var(--twilight)]/50 rounded-full" />
+          <div className="h-8 w-24 bg-[var(--twilight)]/50 rounded-full" />
+          <div className="h-8 w-28 bg-[var(--twilight)]/50 rounded-full" />
         </div>
       </div>
     );
@@ -133,11 +133,11 @@ export function NeedsTagList({
 
   return (
     <div className="space-y-4">
-      <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
+      <h3 className="text-sm font-semibold text-[var(--cream)]">{title}</h3>
 
       {Object.entries(groupedTags).map(([group, groupTags]) => (
         <div key={group} className="space-y-2">
-          <h4 className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
+          <h4 className="text-xs font-medium text-[var(--muted)] uppercase tracking-wider">
             {groupLabels[group] || group}
           </h4>
           <div className="flex flex-wrap gap-2">

@@ -1,0 +1,27 @@
+version: 1
+slug: fontaines-oyster-house
+name: "Fontaine's Oyster House"
+integration_method: llm_crawler
+defaults:
+  venue_name: "Fontaine's Oyster House"
+  category: food_drink
+  tags:
+  - atlanta-expansion-wave-t
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - "http://www.nightcapfoodandspirits.com/fontainesmainpage.html"
+  fetch:
+    render_js: true
+    wait_until: domcontentloaded
+detail:
+  enabled: true
+  fetch:
+    render_js: true
+    wait_until: domcontentloaded
+data_goals:
+  - events
+  - lineup
+  - images
+  - tickets

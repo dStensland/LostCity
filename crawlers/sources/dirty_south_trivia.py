@@ -227,7 +227,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 continue
 
             try:
-                insert_event(event_record, series_hint=series_hint)
+                insert_event(event_record, series_hint=series_hint, genres=["trivia"])
                 events_new += 1
             except Exception as exc:
                 logger.error(f"Failed to insert DST at {venue_name} on {start_date}: {exc}")

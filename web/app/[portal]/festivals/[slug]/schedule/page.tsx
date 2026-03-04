@@ -9,6 +9,7 @@ import {
   getFestivalPrograms,
   getFestivalEvents,
 } from "@/lib/festivals";
+import { getFestivalLayout } from "@/lib/festival-layout";
 
 export const revalidate = 300;
 
@@ -43,9 +44,9 @@ export default async function FestivalSchedulePage({ params }: Props) {
       <ScrollToTop />
       <PortalHeader portalSlug={activePortalSlug} portalName={activePortalName} hideNav />
 
-      <main className="max-w-3xl mx-auto px-4 py-4 sm:py-6 pb-12 space-y-5 sm:space-y-7">
-        <section className="rounded-lg border border-[var(--twilight)] bg-[var(--card-bg)] p-4 sm:p-5">
-          <p className="text-xs font-mono uppercase tracking-widest text-[var(--muted)] mb-2">
+      <main data-festival-detail="true" className="max-w-5xl mx-auto px-4 py-4 sm:py-6 pb-12 space-y-5 sm:space-y-7">
+        <section className="rounded-lg border border-[var(--twilight)]/85 bg-[var(--night)] p-4 sm:p-5">
+          <p className="text-xs font-mono uppercase tracking-[0.14em] text-[var(--muted)] mb-2">
             Dedicated Schedule
           </p>
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -55,6 +56,7 @@ export default async function FestivalSchedulePage({ params }: Props) {
               </h1>
               <p className="text-sm text-[var(--soft)] mt-1">
                 Full program schedule with day, venue, category, and program filters.
+                Starts on the next upcoming festival day by default.
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -88,6 +90,9 @@ export default async function FestivalSchedulePage({ params }: Props) {
             portalSlug={activePortalSlug}
             previewLimit={0}
             prefetchLimit={16}
+            layout={getFestivalLayout(festival.festival_type)}
+            showSessionDescriptions={false}
+            defaultDayMode="firstUpcoming"
           />
         ) : (
           <section className="rounded-lg border border-[var(--twilight)] bg-[var(--card-bg)] p-5 sm:p-6">

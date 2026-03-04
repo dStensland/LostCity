@@ -251,6 +251,11 @@ export function groupEventsForDisplay(
   // Create series groups - group by venue within each series
   for (const [seriesId, group] of seriesGroups) {
     const seriesEvents = group.events;
+
+    // Single-event series → render as a normal EventCard, not a SeriesCard.
+    // A "series of 1" adds a pointless middle click.
+    if (seriesEvents.length <= 1) continue;
+
     // Get series info from first event
     const firstEvent = seriesEvents[0];
     const series = firstEvent.series!;

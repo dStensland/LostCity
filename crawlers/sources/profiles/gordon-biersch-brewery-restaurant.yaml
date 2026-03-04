@@ -1,0 +1,29 @@
+version: 1
+slug: gordon-biersch-brewery-restaurant
+name: "Gordon Biersch Brewery Restaurant"
+integration_method: llm_crawler
+defaults:
+  venue_name: "Gordon Biersch Brewery Restaurant"
+  category: nightlife
+  tags:
+  - atlanta-expansion-wave-x
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - "https://gordonbiersch.com/events"
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+detail:
+  enabled: true
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+data_goals:
+  - events
+  - lineup
+  - images
+  - tickets

@@ -20,7 +20,7 @@ import {
   Drop,
   SealCheck,
   X,
-} from "@phosphor-icons/react/dist/ssr";
+} from "@phosphor-icons/react";
 import {
   type PortalPreferences,
   type TravelParty,

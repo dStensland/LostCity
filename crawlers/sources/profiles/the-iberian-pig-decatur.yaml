@@ -1,0 +1,27 @@
+version: 1
+slug: the-iberian-pig-decatur
+name: "The Iberian Pig (Decatur)"
+integration_method: llm_crawler
+defaults:
+  venue_name: "The Iberian Pig (Decatur)"
+  category: food_drink
+  tags:
+  - atlanta-expansion-wave-t
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - "https://www.iberianpig.com/decatur"
+  fetch:
+    render_js: true
+    wait_until: domcontentloaded
+detail:
+  enabled: true
+  fetch:
+    render_js: true
+    wait_until: domcontentloaded
+data_goals:
+  - events
+  - lineup
+  - images
+  - tickets

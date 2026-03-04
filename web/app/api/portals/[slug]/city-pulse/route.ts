@@ -37,6 +37,10 @@ import {
   suppressEventImagesIfVenueFlagged,
 } from "@/lib/image-quality-suppression";
 import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
+import {
+  dedupeEventsById,
+  filterOutInactiveVenueEvents,
+} from "@/lib/event-feed-health";
 import { getWeatherVenueFilter } from "@/lib/city-pulse/weather-mapping";
 import { buildFeedContext } from "@/lib/city-pulse/context";
 import { getTimeSlot } from "@/lib/city-pulse/time-slots";
@@ -50,17 +54,14 @@ import {
   buildBannerSection,
   buildRightNowSection,
   buildTonightSection,
-  buildTheSceneSection,
   buildThemedSpecialsSection,
   buildWeatherDiscoverySection,
-  buildThisWeekendSection,
-  buildThisWeekSection,
   buildYourPeopleSection,
   buildNewFromSpotsSection,
   buildTrendingSection,
-  buildComingUpSection,
   buildBrowseSection,
   buildTabEventPool,
+  matchActivityType,
 } from "@/lib/city-pulse/section-builders";
 import { resolveHeader } from "@/lib/city-pulse/header-resolver";
 import type {
@@ -113,9 +114,9 @@ const EVENT_SELECT = `
   id, title, start_date, start_time, end_date, end_time,
   is_all_day, is_free, price_min, price_max,
   category:category_id, genres, image_url, featured_blurb,
-  tags, festival_id, is_tentpole, is_featured, series_id, source_id, organization_id,
-  series:series_id(id, frequency, day_of_week),
-  venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city)
+  tags, festival_id, is_tentpole, is_featured, series_id, is_recurring, source_id, organization_id,
+  series:series_id(id, frequency, day_of_week, series_type),
+  venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city, active)
 `;
 
 const VENUE_SELECT = `
@@ -503,12 +504,26 @@ export async function GET(request: NextRequest, { params }: Props) {
     : [...DEFAULT_INTEREST_IDS];
 
   const now = new Date();
-  const timeSlot = timeSlotOverride || getTimeSlot(now.getHours());
 
-  // Late-night continuity: before 5am, people still think of it as the
-  // previous night. Shift "today" back so the feed shows last night's events.
+  // Get current hour in portal timezone (America/New_York), not UTC.
+  // On Vercel (UTC), now.getHours() returns UTC hours which causes
+  // 7pm EST to register as midnight → wrong time slot + wrong date shift.
+  const portalHour = Number(
+    new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", hour12: false })
+      .format(now),
+  );
+  // Late-night continuity: before 5am, people still think of it as the previous night.
+  // Use the day *before* for greeting ("SATURDAY LATE NIGHT" not "SUNDAY LATE NIGHT").
+  const portalDayDate = portalHour < 5 ? new Date(now.getTime() - 86400000) : now;
+  const portalDay = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "long" })
+    .format(portalDayDate)
+    .toLowerCase();
+  const timeSlot = timeSlotOverride || getTimeSlot(portalHour);
+
+  // Late-night continuity: before 5am portal time, people still think of it
+  // as the previous night. Shift "today" back so the feed shows last night's events.
   const effectiveNow = new Date(now);
-  if (timeSlot === "late_night" && now.getHours() < 5) {
+  if (timeSlot === "late_night" && portalHour < 5) {
     effectiveNow.setDate(effectiveNow.getDate() - 1);
   }
   const today = getLocalDateString(effectiveNow);
@@ -534,8 +549,11 @@ export async function GET(request: NextRequest, { params }: Props) {
 
   const hasAdminOverrides = !!(timeSlotOverride || dayOverride);
 
+  // Auth cache key uses 5-minute precision (same as anon TTL) — the only
+  // personalized data is social proof counts which are cheap to recompute.
+  // This dramatically improves cache hit rate for auth users.
   const cacheKey = isAuthenticated
-    ? `${userId}|${canonicalSlug}|${Math.floor(now.getTime() / 60000)}`
+    ? `${userId}|${canonicalSlug}|${Math.floor(now.getTime() / 300000)}`
     : `${canonicalSlug}|${timeSlot}|${today}`;
 
   if (!hasAdminOverrides && !requestedTab) {
@@ -592,8 +610,8 @@ export async function GET(request: NextRequest, { params }: Props) {
       portalSlug: canonicalSlug,
       portalLat: geoCenter?.[0],
       portalLng: geoCenter?.[1],
-      timeSlotOverride: timeSlotOverride || undefined,
-      dayOverride: dayOverride || undefined,
+      timeSlotOverride: timeSlot,
+      dayOverride: dayOverride || portalDay,
       now,
     }),
   ]);
@@ -626,9 +644,6 @@ export async function GET(request: NextRequest, { params }: Props) {
   // TODAY = today, THIS WEEK = +1 to +7 days, COMING UP = +8 to +28 days
   // Uses effectiveNow so late-night (before 5am) aligns with the previous day
   const tomorrow = getLocalDateString(addDays(effectiveNow, 1));
-  const dayOfWeek = effectiveNow.getDay();
-  const daysUntilSunday = dayOfWeek === 0 ? 7 : 7 - dayOfWeek;
-  const endOfWeek = getLocalDateString(addDays(effectiveNow, daysUntilSunday));
   const weekAhead = getLocalDateString(addDays(effectiveNow, 7));
   const twoWeeksAhead = getLocalDateString(addDays(effectiveNow, 14));
   const fourWeeksAhead = getLocalDateString(addDays(effectiveNow, 28));
@@ -642,7 +657,8 @@ export async function GET(request: NextRequest, { params }: Props) {
       .lte("start_date", end)
       .is("canonical_event_id", null)
       .or("is_class.eq.false,is_class.is.null")
-      .or("is_sensitive.eq.false,is_sensitive.is.null");
+      .or("is_sensitive.eq.false,is_sensitive.is.null")
+      .neq("category_id", "film"); // Film → Now Showing (separate API)
     q = applyPortalScope(q);
     return q
       .order("start_date", { ascending: true })
@@ -650,52 +666,72 @@ export async function GET(request: NextRequest, { params }: Props) {
       .limit(limit);
   };
 
-  // Count-only query (HEAD, zero rows — cheap for real tab badge counts)
-  const buildCountQuery = (start: string, end: string) => {
+  // Lightweight query for tab badge counts AND per-category chip counts.
+  // Fetches series_id so we can deduplicate recurring events (count each
+  // series as 1 event, matching what the user actually sees after dedup).
+  const buildCountCategoryQuery = (start: string, end: string) => {
     let q = portalClient
       .from("events")
-      .select("id", { count: "exact", head: true })
+      .select("category_id, series_id, genres, tags")
       .gte("start_date", start)
       .lte("start_date", end)
       .is("canonical_event_id", null)
       .or("is_class.eq.false,is_class.is.null")
-      .or("is_sensitive.eq.false,is_sensitive.is.null");
+      .or("is_sensitive.eq.false,is_sensitive.is.null")
+      .neq("category_id", "film") // Film → Now Showing (separate block)
+      .not("tags", "cs", '{"activism"}') // Activism → separate opt-in block
+      .or("is_tentpole.eq.false,is_tentpole.is.null") // Tentpole → Big Stuff
+      .is("festival_id", null); // Festival → Big Stuff
     q = applyPortalScope(q);
     return q;
   };
 
-  // Lightweight category + tags query — fetches only the fields needed
-  // for per-category counting. No payload bloat, just small strings.
-  const buildCategoryQuery = (start: string, end: string) => {
-    let q = portalClient
-      .from("events")
-      .select("category_id, genres, tags")
-      .gte("start_date", start)
-      .lte("start_date", end)
-      .is("canonical_event_id", null)
-      .or("is_class.eq.false,is_class.is.null")
-      .or("is_sensitive.eq.false,is_sensitive.is.null");
-    q = applyPortalScope(q);
-    return q;
-  };
+  /** Deduplicate rows by series_id (keep first per series), then count */
+  type CountRow = { category_id: string | null; series_id: string | null; genres: string[] | null; tags: string[] | null };
 
-  /** Count events by category and genre/tag from lightweight query results */
-  const buildCategoryCounts = (
-    rows: { category_id: string | null; genres: string[] | null; tags: string[] | null }[],
-  ): Record<string, number> => {
-    const counts: Record<string, number> = {};
+  /** Exclude recurring events that belong in Regular Hangs (The Scene) */
+  const excludeSceneRows = (rows: CountRow[]): CountRow[] =>
+    rows.filter((row) => {
+      if (!row.series_id) return true; // non-recurring → keep
+      // Build minimal FeedEventData-shaped object for matchActivityType
+      const pseudo = {
+        id: 0, title: "", start_date: "", start_time: null, is_all_day: false,
+        is_free: false, price_min: null, price_max: null, image_url: null,
+        description: null, venue: { id: 0, name: "", slug: "", neighborhood: null },
+        category: row.category_id,
+        genres: row.genres,
+        tags: row.tags,
+      };
+      // If it matches a scene activity type → exclude from Lineup counts
+      return matchActivityType(pseudo as never) === null;
+    });
+
+  const dedupeCountRows = (rows: CountRow[]): CountRow[] => {
+    const seriesSeen = new Set<string>();
+    const result: CountRow[] = [];
     for (const row of rows) {
-      // Count by category
+      if (row.series_id) {
+        if (seriesSeen.has(row.series_id)) continue;
+        seriesSeen.add(row.series_id);
+      }
+      result.push(row);
+    }
+    return result;
+  };
+
+  /** Count events by category and genre/tag, after scene exclusion + series deduplication */
+  const buildCategoryCounts = (rows: CountRow[]): Record<string, number> => {
+    const deduped = dedupeCountRows(excludeSceneRows(rows));
+    const counts: Record<string, number> = {};
+    for (const row of deduped) {
       if (row.category_id) {
         counts[row.category_id] = (counts[row.category_id] || 0) + 1;
       }
-      // Count by genres (for genre-based chips like trivia, karaoke, etc.)
       if (Array.isArray(row.genres)) {
         for (const g of row.genres) {
           counts[`genre:${g}`] = (counts[`genre:${g}`] || 0) + 1;
         }
       }
-      // Count by tags (genre chips also check tags array)
       if (Array.isArray(row.tags)) {
         for (const t of row.tags) {
           counts[`tag:${t}`] = (counts[`tag:${t}`] || 0) + 1;
@@ -929,16 +965,12 @@ export async function GET(request: NextRequest, { params }: Props) {
   // Tab counts — always fetched (cheap HEAD queries, zero rows transferred)
   // ---------------------------------------------------------------------------
 
-  const countQueries = Promise.all([
-    buildCountQuery(today, today),
-    buildCountQuery(tomorrow, weekAhead),
-    buildCountQuery(weekAhead, fourWeeksAhead),
-  ]);
-
-  const categoryQueries = Promise.all([
-    buildCategoryQuery(today, today),
-    buildCategoryQuery(tomorrow, weekAhead),
-    buildCategoryQuery(weekAhead, fourWeeksAhead),
+  // Unified count + category queries (one per tab window).
+  // Each returns lightweight rows with series_id for dedup + category/genre/tags for chips.
+  const countCategoryQueries = Promise.all([
+    buildCountCategoryQuery(today, today),
+    buildCountCategoryQuery(tomorrow, weekAhead),
+    buildCountCategoryQuery(weekAhead, fourWeeksAhead),
   ]);
 
   // ---------------------------------------------------------------------------
@@ -955,11 +987,16 @@ export async function GET(request: NextRequest, { params }: Props) {
     const tabEventQuery = buildEventQuery(tabStart, tabEnd, 500);
     const tabInterestQueries = buildInterestQueries(tabStart, tabEnd);
 
-    const [tabEventsResult, tabInterestResults, countResults, categoryResults, tabUserSignals] = await Promise.all([
+    // Only fetch count for the requested tab + today (for badge accuracy).
+    // Skip the third window — client already has it from initial load.
+    const tabCountQuery = buildCountCategoryQuery(tabStart, tabEnd);
+    const todayCountQuery = buildCountCategoryQuery(today, today);
+
+    const [tabEventsResult, tabInterestResults, tabCountResult, todayCountResult, tabUserSignals] = await Promise.all([
       tabEventQuery,
       Promise.all(tabInterestQueries),
-      countQueries,
-      categoryQueries,
+      tabCountQuery,
+      todayCountQuery,
       loadUserSignals(),
     ]);
 
@@ -977,9 +1014,11 @@ export async function GET(request: NextRequest, { params }: Props) {
     }
     const mergedTabEvents = [...baseEvents, ...interestExtras];
 
-    const tabEvents = suppressEventImagesIfVenueFlagged(
-      mergedTabEvents,
-    ) as FeedEventData[];
+    const tabEvents = dedupeEventsById(
+      filterOutInactiveVenueEvents(
+        suppressEventImagesIfVenueFlagged(mergedTabEvents) as FeedEventData[],
+      ),
+    );
 
     // Social proof for tab events
     const tabEventIds = tabEvents.map((e) => e.id);
@@ -1043,14 +1082,15 @@ export async function GET(request: NextRequest, { params }: Props) {
     );
     const tabSections = [tabPoolSection];
 
-    // Always return HEAD counts for tab badges — these represent the true
-    // total for each date range. The frontend handles interest filtering
-    // client-side, so tab badges should stay stable when switching tabs.
-    const tabCountResults = countResults.map((r) => r.count ?? 0);
+    // Tab badge counts — only the requested tab + today were fetched.
+    // The third tab count is omitted (client retains it from initial load).
+    const todayRows = (todayCountResult.data || []) as CountRow[];
+    const tabRows = (tabCountResult.data || []) as CountRow[];
+    const isWeekTab = requestedTab === "this_week";
     const tabCountsObj = {
-      today: tabCountResults[0],
-      this_week: tabCountResults[1],
-      coming_up: tabCountResults[2],
+      today: dedupeCountRows(excludeSceneRows(todayRows)).length,
+      this_week: isWeekTab ? dedupeCountRows(excludeSceneRows(tabRows)).length : 0,
+      coming_up: isWeekTab ? 0 : dedupeCountRows(excludeSceneRows(tabRows)).length,
     };
 
     const tabResponse: CityPulseResponse = {
@@ -1066,9 +1106,9 @@ export async function GET(request: NextRequest, { params }: Props) {
       events_pulse: { total_active: 0, trending_event: null },
       tab_counts: tabCountsObj,
       category_counts: {
-        today: buildCategoryCounts((categoryResults[0].data || []) as any[]),
-        this_week: buildCategoryCounts((categoryResults[1].data || []) as any[]),
-        coming_up: buildCategoryCounts((categoryResults[2].data || []) as any[]),
+        today: buildCategoryCounts(todayRows),
+        this_week: isWeekTab ? buildCategoryCounts(tabRows) : {},
+        coming_up: isWeekTab ? {} : buildCategoryCounts(tabRows),
       },
     };
 
@@ -1090,23 +1130,6 @@ export async function GET(request: NextRequest, { params }: Props) {
 
   const todayInterestQueries = buildInterestQueries(today, today);
 
-  // Query for this week's recurring events (tomorrow → end of week, series_id not null)
-  const buildWeekRecurringQuery = () => {
-    let q = portalClient
-      .from("events")
-      .select(EVENT_SELECT)
-      .gte("start_date", tomorrow)
-      .lte("start_date", endOfWeek)
-      .not("series_id", "is", null)
-      .is("canonical_event_id", null)
-      .or("is_class.eq.false,is_class.is.null")
-      .or("is_sensitive.eq.false,is_sensitive.is.null");
-    q = applyPortalScope(q);
-    return q
-      .order("start_date", { ascending: true })
-      .order("start_time", { ascending: true })
-      .limit(100);
-  };
 
   const [
     todayEventsResult,
@@ -1119,9 +1142,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     headersResult,
     profileResult,
     userSignals,
-    countResults,
-    categoryResults,
-    weekRecurringResult,
+    countCategoryResults,
   ] = await Promise.all([
     buildEventQuery(today, today, 50),
     buildEveningQuery(),
@@ -1133,16 +1154,16 @@ export async function GET(request: NextRequest, { params }: Props) {
     buildHeadersQuery(),
     buildProfileQuery(),
     loadUserSignals(),
-    countQueries,
-    categoryQueries,
-    buildWeekRecurringQuery(),
+    countCategoryQueries,
   ]);
 
-  const tabCountResults = countResults.map((r) => r.count ?? 0);
+  const ccRows = countCategoryResults.map(
+    (r) => (r.data || []) as CountRow[],
+  );
   const tab_counts = {
-    today: tabCountResults[0],
-    this_week: tabCountResults[1],
-    coming_up: tabCountResults[2],
+    today: dedupeCountRows(excludeSceneRows(ccRows[0])).length,
+    this_week: dedupeCountRows(excludeSceneRows(ccRows[1])).length,
+    coming_up: dedupeCountRows(excludeSceneRows(ccRows[2])).length,
   };
 
   // ---------------------------------------------------------------------------
@@ -1162,15 +1183,19 @@ export async function GET(request: NextRequest, { params }: Props) {
       if (!seenIds.has(e.id)) { seenIds.add(e.id); todayRaw.push(e); }
     }
   }
-  const todayEvents = suppressEventImagesIfVenueFlagged(todayRaw) as FeedEventData[];
+  const todayEvents = dedupeEventsById(
+    filterOutInactiveVenueEvents(
+      suppressEventImagesIfVenueFlagged(todayRaw) as FeedEventData[],
+    ),
+  );
 
-  const weekRecurringEvents = suppressEventImagesIfVenueFlagged(
-    (weekRecurringResult.data || []) as FeedEventData[],
-  ) as FeedEventData[];
-
-  const trendingEvents = suppressEventImagesIfVenueFlagged(
-    (trendingResult.data || []) as FeedEventData[],
-  ) as FeedEventData[];
+  const trendingEvents = dedupeEventsById(
+    filterOutInactiveVenueEvents(
+      suppressEventImagesIfVenueFlagged(
+        (trendingResult.data || []) as FeedEventData[],
+      ) as FeedEventData[],
+    ),
+  );
 
   const weatherVenues = (weatherVenuesResult.data || []) as Spot[];
 
@@ -1275,11 +1300,16 @@ export async function GET(request: NextRequest, { params }: Props) {
         .in("venue_id", userSignals.followedVenueIds.slice(0, 50))
         .is("canonical_event_id", null)
         .or("is_class.eq.false,is_class.is.null")
+        .or("is_sensitive.eq.false,is_sensitive.is.null")
         .order("start_date", { ascending: true })
         .limit(10);
-      return suppressEventImagesIfVenueFlagged(
-        (followedEvents || []) as FeedEventData[],
-      ) as FeedEventData[];
+      return dedupeEventsById(
+        filterOutInactiveVenueEvents(
+          suppressEventImagesIfVenueFlagged(
+            (followedEvents || []) as FeedEventData[],
+          ) as FeedEventData[],
+        ),
+      );
     })(),
   ]);
 
@@ -1360,13 +1390,6 @@ export async function GET(request: NextRequest, { params }: Props) {
   // Assemble sections — today + specials + sidebar only (no week/coming-up)
   // ---------------------------------------------------------------------------
 
-  const theSceneSection = buildTheSceneSection(
-    todayEventsWithProof,
-    weekRecurringEvents,
-    userSignals,
-    friendsGoingMap,
-  );
-
   const sections = [
     buildBannerSection(feedContext),
     buildRightNowSection(
@@ -1381,7 +1404,6 @@ export async function GET(request: NextRequest, { params }: Props) {
       userSignals,
       friendsGoingMap,
     ),
-    theSceneSection,
     buildThemedSpecialsSection(feedContext, activeSpecials),
     buildWeatherDiscoverySection(
       feedContext,
@@ -1486,6 +1508,27 @@ export async function GET(request: NextRequest, { params }: Props) {
   // Build response
   // ---------------------------------------------------------------------------
 
+  // Cross-section dedup: prevent the same event from appearing in multiple sections
+  const seenSectionEventIds = new Set<number>();
+  const dedupedSections = sections.map((section) => ({
+    ...section,
+    items: section.items.filter((item) => {
+      if (item.item_type !== "event") return true;
+      if (seenSectionEventIds.has(item.event.id)) return false;
+      seenSectionEventIds.add(item.event.id);
+      return true;
+    }),
+  }));
+
+  const dedupedCuratedSections = curatedSections.map((section) => ({
+    ...section,
+    events: section.events.filter((event) => {
+      if (seenSectionEventIds.has(event.id)) return false;
+      seenSectionEventIds.add(event.id);
+      return true;
+    }),
+  }));
+
   const response: CityPulseResponse = {
     portal: {
       slug: canonicalSlug,
@@ -1493,8 +1536,8 @@ export async function GET(request: NextRequest, { params }: Props) {
     },
     context: feedContext,
     header: resolvedHeader,
-    sections,
-    curated_sections: curatedSections,
+    sections: dedupedSections,
+    curated_sections: dedupedCuratedSections,
     personalization: {
       level: personalizationLevel,
       applied: isAuthenticated && personalizationLevel !== "logged_in",
@@ -1502,9 +1545,9 @@ export async function GET(request: NextRequest, { params }: Props) {
     events_pulse: eventsPulse,
     tab_counts,
     category_counts: {
-      today: buildCategoryCounts((categoryResults[0].data || []) as any[]),
-      this_week: buildCategoryCounts((categoryResults[1].data || []) as any[]),
-      coming_up: buildCategoryCounts((categoryResults[2].data || []) as any[]),
+      today: buildCategoryCounts(ccRows[0]),
+      this_week: buildCategoryCounts(ccRows[1]),
+      coming_up: buildCategoryCounts(ccRows[2]),
     },
   };
 

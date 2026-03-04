@@ -1,0 +1,29 @@
+version: 1
+slug: the-local
+name: "The Local"
+integration_method: llm_crawler
+defaults:
+  venue_name: "The Local"
+  category: nightlife
+  tags:
+  - atlanta-expansion-wave-v
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - "http://thelocalkaraoke.com/home.php"
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+detail:
+  enabled: true
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+data_goals:
+  - events
+  - lineup
+  - images
+  - tickets

@@ -317,6 +317,8 @@ export default async function PortalOrganizerPage({ params }: Props) {
   const locationDisplay = [organization.neighborhood, organization.city]
     .filter(Boolean)
     .join(", ") || "Atlanta";
+  const previewEvents = events.slice(0, 8);
+  const remainingPreviewCount = Math.max(0, events.length - previewEvents.length);
 
   return (
     <>
@@ -337,7 +339,7 @@ export default async function PortalOrganizerPage({ params }: Props) {
           hideNav
         />
 
-        <main className="max-w-3xl mx-auto px-4 py-6 pb-28 space-y-8">
+        <main data-clean-detail="true" className="max-w-5xl mx-auto px-4 py-4 sm:py-6 pb-36 md:pb-16 space-y-6 sm:space-y-9">
           {/* Hero Section */}
           <DetailHero
             mode="poster"
@@ -378,8 +380,12 @@ export default async function PortalOrganizerPage({ params }: Props) {
             </div>
           </DetailHero>
 
-          {/* Main Content Card */}
-          <InfoCard accentColor={orgColor}>
+          {/* Overview Card */}
+          <InfoCard accentColor={orgColor} className="!bg-[var(--night)] !border-[var(--twilight)]/90">
+            <SectionHeader title="At a Glance" className="border-t-0 pt-0 pb-2" />
+            <p className="text-sm text-[var(--muted)] mb-4">
+              Start with the essentials, then browse next events and full organization details.
+            </p>
             {/* Metadata Grid */}
             <MetadataGrid
               items={[
@@ -387,7 +393,7 @@ export default async function PortalOrganizerPage({ params }: Props) {
                 { label: "Location", value: locationDisplay },
                 { label: "Events", value: `${events.length} upcoming` },
               ]}
-              className="mb-8"
+              className="mb-6"
             />
 
             {/* Description */}
@@ -399,6 +405,137 @@ export default async function PortalOrganizerPage({ params }: Props) {
                 </p>
               </>
             )}
+
+            {/* Categories */}
+            {organization.categories && organization.categories.length > 0 && (
+              <>
+                <SectionHeader title="Categories" count={organization.categories.length} />
+                <div className="flex flex-wrap gap-2 mb-6">
+                  {organization.categories.map((cat) => {
+                    const accentClass = categoryAccentClasses[cat];
+                    return (
+                      <span
+                        key={cat}
+                        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-mono bg-accent-15 text-accent ${
+                          accentClass?.className ?? ""
+                        }`}
+                      >
+                        <CategoryIcon type={cat} size={16} glow="subtle" />
+                        {cat.replace(/_/g, " ")}
+                      </span>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </InfoCard>
+
+          {/* Next Events */}
+          <section id="upcoming-events" className="rounded-xl border border-[var(--twilight)]/85 bg-[var(--night)] px-4 py-4 sm:px-5 sm:py-5">
+            <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
+              <div>
+                <p className="font-mono text-[10px] uppercase tracking-[0.13em] text-[var(--muted)] mb-1">
+                  Next Events
+                </p>
+                <h2 className="text-lg font-semibold text-[var(--cream)]">
+                  {events.length} upcoming event{events.length !== 1 ? "s" : ""}
+                </h2>
+              </div>
+              {events.length > 8 && (
+                <a
+                  href="#all-events"
+                  className="inline-flex items-center gap-1 text-sm text-accent hover:text-[var(--cream)] transition-colors"
+                >
+                  Open Full List
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                </a>
+              )}
+            </div>
+
+            {previewEvents.length > 0 ? (
+              <>
+                <div className="rounded-lg border border-[var(--twilight)]/80 bg-[var(--night)]/95">
+                  <div className="divide-y divide-[var(--twilight)]/35">
+                    {previewEvents.map((event) => {
+                      const eventColor = event.category ? getCategoryColor(event.category) : "var(--coral)";
+                      return (
+                        <div key={event.id} className="px-3.5 py-3.5 sm:px-4 sm:py-4">
+                          <RelatedCard
+                            variant="compact"
+                            href={`/${activePortalSlug}/events/${event.id}`}
+                            title={event.title}
+                            subtitle={formatEventTime(event)}
+                            icon={<CategoryIcon type={event.category || "other"} size={20} />}
+                            accentColor={eventColor}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="mt-3 text-xs text-[var(--muted)]">
+                  Showing {previewEvents.length} of {events.length} upcoming events.
+                  {remainingPreviewCount > 0 ? ` +${remainingPreviewCount} more in full list.` : ""}
+                </div>
+              </>
+            ) : (
+              <p className="text-sm text-[var(--muted)]">No upcoming events scheduled.</p>
+            )}
+          </section>
+
+          {/* Full Upcoming Events */}
+          {events.length > 8 && (
+            <section id="all-events" className="rounded-xl border border-[var(--twilight)]/85 bg-[var(--night)] px-4 py-4 sm:px-5 sm:py-5">
+              <details className="group">
+                <summary className="list-none cursor-pointer">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-mono text-[10px] uppercase tracking-[0.13em] text-[var(--muted)] mb-1">
+                        Detailed View
+                      </p>
+                      <h2 className="text-lg font-semibold text-[var(--cream)]">
+                        Full upcoming events list
+                      </h2>
+                    </div>
+                    <svg className="w-4 h-4 text-[var(--muted)] transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                </summary>
+                <div className="mt-4">
+                  <RelatedSection
+                    title="All Upcoming Events"
+                    count={events.length}
+                    emptyMessage="No upcoming events scheduled"
+                  >
+                    {events.map((event) => {
+                      const eventColor = event.category ? getCategoryColor(event.category) : "var(--coral)";
+                      return (
+                        <RelatedCard
+                          key={event.id}
+                          variant="compact"
+                          href={`/${activePortalSlug}/events/${event.id}`}
+                          title={event.title}
+                          subtitle={formatEventTime(event)}
+                          icon={<CategoryIcon type={event.category || "other"} size={20} />}
+                          accentColor={eventColor}
+                        />
+                      );
+                    })}
+                  </RelatedSection>
+                </div>
+              </details>
+            </section>
+          )}
+
+          {/* Organization Details */}
+          <InfoCard accentColor={orgColor} className="!bg-[var(--night)] !border-[var(--twilight)]/90">
+            <SectionHeader title="Organization Details" className="border-t-0 pt-0 pb-2" />
+            <p className="text-sm text-[var(--muted)] mb-4">
+              Links, community input, and data quality controls for this organization.
+            </p>
 
             {/* Social Links */}
             {(organization.website || organization.instagram || organization.facebook || organization.twitter || organization.email) && (
@@ -472,65 +609,19 @@ export default async function PortalOrganizerPage({ params }: Props) {
               </>
             )}
 
-            {/* Categories */}
-            {organization.categories && organization.categories.length > 0 && (
-              <>
-                <SectionHeader title="Categories" count={organization.categories.length} />
-                <div className="flex flex-wrap gap-2 mb-6">
-                  {organization.categories.map((cat) => {
-                    const accentClass = categoryAccentClasses[cat];
-                    return (
-                      <span
-                        key={cat}
-                        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-mono bg-accent-15 text-accent ${
-                          accentClass?.className ?? ""
-                        }`}
-                      >
-                        <CategoryIcon type={cat} size={16} glow="subtle" />
-                        {cat.replace(/_/g, " ")}
-                      </span>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-
-            {/* Community Tags */}
             <SectionHeader title="Community Tags" />
             <div className="mb-6">
               <EntityTagList entityType="org" entityId={parseInt(organization.id, 10)} />
             </div>
 
-            {/* Flag for QA */}
-            <SectionHeader title="Report an Issue" />
-            <FlagButton
-              entityType="organization"
-              entityId={parseInt(organization.id, 10)}
-              entityName={organization.name}
-            />
+            <div className="pt-5 border-t border-[var(--twilight)]/30">
+              <FlagButton
+                entityType="organization"
+                entityId={parseInt(organization.id, 10)}
+                entityName={organization.name}
+              />
+            </div>
           </InfoCard>
-
-          {/* Upcoming Events */}
-          <RelatedSection
-            title="Upcoming Events"
-            count={events.length}
-            emptyMessage="No upcoming events scheduled"
-          >
-            {events.map((event) => {
-              const eventColor = event.category ? getCategoryColor(event.category) : "var(--coral)";
-              return (
-                <RelatedCard
-                  key={event.id}
-                  variant="compact"
-                  href={`/${activePortalSlug}/events/${event.id}`}
-                  title={event.title}
-                  subtitle={formatEventTime(event)}
-                  icon={<CategoryIcon type={event.category || "other"} size={20} />}
-                  accentColor={eventColor}
-                />
-              );
-            })}
-          </RelatedSection>
 
           {/* Similar Organizations */}
           {similarOrgs.length > 0 && (
@@ -562,6 +653,8 @@ export default async function PortalOrganizerPage({ params }: Props) {
       {/* Sticky bottom bar with CTAs */}
       <DetailStickyBar
         shareLabel="Share"
+        className="md:hidden"
+        containerClassName="max-w-5xl"
         secondaryActions={
           <>
             <FollowButton targetOrganizationId={organization.id} size="sm" />

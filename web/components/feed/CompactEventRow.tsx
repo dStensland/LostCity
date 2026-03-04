@@ -15,12 +15,13 @@ import { getCategoryColor, getCategoryLabel } from "@/lib/category-config";
 import CategoryIcon from "@/components/CategoryIcon";
 import { Users, Lightning, Ticket } from "@phosphor-icons/react";
 import { formatTime, getEventStatus } from "@/lib/formats";
+import RSVPButton from "@/components/RSVPButton";
 
 interface CompactEventRowProps {
   event: FeedEventData;
   portalSlug: string;
   isLast?: boolean;
-  /** "sm" = shorter image, tighter text, no category row */
+  /** "sm" = shorter image, tighter text, no going count */
   size?: "default" | "sm";
 }
 
@@ -111,6 +112,11 @@ export default function CompactEventRow({ event, portalSlug, size = "default" }:
             Free
           </span>
         )}
+
+        {/* RSVP overlay — bottom-right */}
+        <span className="absolute bottom-2 right-2 z-10">
+          <RSVPButton eventId={event.id} variant="compact" size="sm" />
+        </span>
       </div>
 
       {/* Content — below image */}
@@ -130,28 +136,26 @@ export default function CompactEventRow({ event, portalSlug, size = "default" }:
           )}
         </p>
 
-        {/* Category + going — hidden in sm */}
-        {!isSm && (
-          <div className="flex items-center gap-1.5">
+        {/* Category + going */}
+        <div className="flex items-center gap-1.5">
+          <span
+            className="inline-flex items-center gap-1 font-mono text-2xs font-semibold uppercase tracking-wider"
+            style={{ color: catColor }}
+          >
+            <CategoryIcon type={event.category || "other"} size={10} glow="none" weight="bold" />
+            {catLabel}
+          </span>
+
+          {!isSm && goingCount > 0 && (
             <span
-              className="inline-flex items-center gap-1 font-mono text-2xs font-semibold uppercase tracking-wider"
+              className="inline-flex items-center gap-0.5 font-mono text-xs font-medium"
               style={{ color: catColor }}
             >
-              <CategoryIcon type={event.category || "other"} size={10} glow="none" weight="bold" />
-              {catLabel}
+              <Users weight="bold" className="w-3 h-3" />
+              {goingCount}
             </span>
-
-            {goingCount > 0 && (
-              <span
-                className="inline-flex items-center gap-0.5 font-mono text-xs font-medium"
-                style={{ color: catColor }}
-              >
-                <Users weight="bold" className="w-3 h-3" />
-                {goingCount}
-              </span>
-            )}
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </Link>
   );

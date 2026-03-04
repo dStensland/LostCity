@@ -1,0 +1,29 @@
+version: 1
+slug: milltown-arms-tavern
+name: "Milltown Arms Tavern"
+integration_method: llm_crawler
+defaults:
+  venue_name: "Milltown Arms Tavern"
+  category: nightlife
+  tags:
+  - atlanta-expansion-wave-v
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - "https://www.milltownarmstavern.com/"
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+detail:
+  enabled: true
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+data_goals:
+  - events
+  - lineup
+  - images
+  - tickets

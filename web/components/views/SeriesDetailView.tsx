@@ -7,8 +7,23 @@ import { format, parseISO } from "date-fns";
 import LinkifyText from "../LinkifyText";
 import Skeleton from "@/components/Skeleton";
 import ScopedStyles from "@/components/ScopedStyles";
+import { GenreChip } from "@/components/ActivityChip";
 import { createCssVarClass } from "@/lib/css-utils";
 import { usePortalOptional } from "@/lib/portal-context";
+import { InfoCard } from "@/components/detail/InfoCard";
+import { SectionHeader } from "@/components/detail/SectionHeader";
+import NeonBackButton from "@/components/detail/NeonBackButton";
+import { formatRecurrence, type Frequency, type DayOfWeek } from "@/lib/recurrence";
+import {
+  CaretRight,
+  CaretDown,
+  Play,
+  Repeat,
+  MapPin,
+  CalendarBlank,
+  FilmSlate,
+  WarningCircle,
+} from "@phosphor-icons/react";
 
 type SeriesData = {
   id: string;
@@ -60,10 +75,10 @@ interface SeriesDetailViewProps {
 // Series type config
 const SERIES_TYPE_CONFIG: Record<string, { label: string; color: string }> = {
   film: { label: "Film", color: "var(--series-type-film, #A5B4FC)" },
-  recurring_show: { label: "Recurring Show", color: "var(--series-type-recurring, #F472B6)" },
+  recurring_show: { label: "Recurring Show", color: "var(--series-type-recurring, #F9A8D4)" },
   festival_program: { label: "Program", color: "var(--series-type-festival, #FBBF24)" },
   convention: { label: "Convention", color: "var(--series-type-convention, #22D3EE)" },
-  tour: { label: "Tour", color: "var(--series-type-tour, #4ADE80)" },
+  tour: { label: "Tour", color: "var(--series-type-tour, #C4B5FD)" },
 };
 
 function getSeriesTypeLabel(type: string): string {
@@ -72,13 +87,6 @@ function getSeriesTypeLabel(type: string): string {
 
 function getSeriesTypeColor(type: string): string {
   return SERIES_TYPE_CONFIG[type]?.color || "var(--series-type-default, #94A3B8)";
-}
-
-function formatGenre(genre: string): string {
-  return genre
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
 }
 
 function formatTime(timeStr: string | null): string {
@@ -109,28 +117,6 @@ function groupEventsByDate(
   return groups;
 }
 
-// Neon-styled floating back button matching EventDetailView
-const NeonFloatingBackButton = ({ onClose }: { onClose: () => void }) => (
-  <button
-    onClick={onClose}
-    className="group absolute top-3 left-3 flex items-center gap-2 px-3.5 py-2 rounded-full font-mono text-xs font-semibold tracking-wide uppercase transition-all duration-300 z-10 hover:scale-105 neon-back-btn"
-  >
-    <svg
-      className="w-4 h-4 transition-transform duration-300 group-hover:-translate-x-0.5 neon-back-icon"
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
-    </svg>
-    <span
-      className="transition-all duration-300 group-hover:text-[var(--coral)] neon-back-text"
-    >
-      Back
-    </span>
-  </button>
-);
-
 export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDetailViewProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -138,7 +124,7 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
   const portalId = portalContext?.portal?.id || null;
   const [series, setSeries] = useState<SeriesData | null>(null);
   const [venueShowtimes, setVenueShowtimes] = useState<VenueShowtime[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [error, setError] = useState<string | null>(null);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
@@ -146,27 +132,38 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
   const [expandedMultiVenue, setExpandedMultiVenue] = useState(false);
 
   useEffect(() => {
+    const controller = new AbortController();
+
     async function fetchSeries() {
-      setLoading(true);
+      setStatus("loading");
       setError(null);
+      setImageLoaded(false);
+      setImageError(false);
+      setExpandedSingleVenue(false);
+      setExpandedMultiVenue(false);
 
       try {
         const qs = portalId ? `?${new URLSearchParams({ portal_id: portalId }).toString()}` : "";
-        const res = await fetch(`/api/series/${slug}${qs}`);
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        const res = await fetch(`/api/series/${slug}${qs}`, { signal: controller.signal });
+        clearTimeout(timeoutId);
         if (!res.ok) {
           throw new Error("Series not found");
         }
         const data = await res.json();
         setSeries(data.series);
         setVenueShowtimes(data.venueShowtimes || []);
+        setStatus("ready");
       } catch (err) {
+        if (controller.signal.aborted) return;
         setError(err instanceof Error ? err.message : "Failed to load series");
-      } finally {
-        setLoading(false);
+        setStatus("error");
       }
     }
 
     fetchSeries();
+
+    return () => controller.abort();
   }, [slug, portalId]);
 
   const navigateToDetail = (param: string, value: string | number) => {
@@ -184,12 +181,12 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
   const handleVenueClick = (venueSlug: string) => navigateToDetail("spot", venueSlug);
   const handleFestivalClick = (festivalSlug: string) => navigateToDetail("festival", festivalSlug);
 
-  if (loading) {
+  if (status === "loading") {
     return (
-      <div className="pt-6 pb-8">
+      <div className="pt-6 pb-8" role="status" aria-label="Loading series details">
         {/* Hero skeleton with floating back button */}
         <div className="relative rounded-xl overflow-hidden mb-6 border border-[var(--twilight)] bg-[var(--dusk)]">
-          <NeonFloatingBackButton onClose={onClose} />
+          <NeonBackButton onClose={onClose} />
           <div className="p-6 flex items-start gap-4">
             {/* Poster */}
             <Skeleton className="w-28 h-40 rounded-lg flex-shrink-0" />
@@ -235,14 +232,12 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
 
   if (error || !series) {
     return (
-      <div className="pt-6">
+      <div className="pt-6" role="alert">
         <div className="relative rounded-xl overflow-hidden mb-6 bg-[var(--dusk)] border border-[var(--twilight)]">
-          <NeonFloatingBackButton onClose={onClose} />
+          <NeonBackButton onClose={onClose} />
           <div className="text-center py-16">
             <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-[var(--twilight)]/50 flex items-center justify-center">
-              <svg className="w-6 h-6 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+              <WarningCircle size={24} weight="light" className="text-[var(--muted)]" aria-hidden="true" />
             </div>
             <p className="text-[var(--muted)]">{error || "Series not found"}</p>
           </div>
@@ -263,7 +258,7 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
       {/* Hero with poster and info */}
       <div className="relative rounded-xl overflow-hidden mb-6 border border-[var(--twilight)] series-hero-bg">
         {/* Floating back button */}
-        <NeonFloatingBackButton onClose={onClose} />
+        <NeonBackButton onClose={onClose} />
         <div className="p-6 flex items-start gap-4">
           {/* Poster */}
           <div className="flex-shrink-0">
@@ -285,13 +280,11 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
               <div
                 className="w-28 h-40 rounded-lg flex items-center justify-center bg-accent-20"
               >
-                <svg className="w-10 h-10 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  {series.series_type === "film" ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
-                  ) : (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  )}
-                </svg>
+                {series.series_type === "film" ? (
+                  <FilmSlate size={40} weight="light" className="text-accent" aria-hidden="true" />
+                ) : (
+                  <CalendarBlank size={40} weight="light" className="text-accent" aria-hidden="true" />
+                )}
               </div>
             )}
           </div>
@@ -300,14 +293,14 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
           <div className="flex-1 min-w-0">
             {/* Type badge */}
             <span
-              className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium uppercase tracking-wider mb-2 bg-accent-20 text-accent"
+              className="inline-flex items-center px-2 py-0.5 rounded text-xs font-mono font-medium uppercase tracking-widest mb-2 bg-accent-20 text-accent"
             >
               {typeLabel}
             </span>
 
-            <h1 className="text-xl font-bold text-[var(--cream)] leading-tight mb-2">
+            <h2 className="text-xl font-bold text-[var(--cream)] leading-tight mb-2">
               {series.title}
-            </h1>
+            </h2>
 
             {/* Film metadata */}
             {series.series_type === "film" && (
@@ -329,9 +322,7 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
             {/* Recurring show metadata */}
             {series.series_type === "recurring_show" && series.frequency && (
               <div className="flex items-center gap-2 text-sm text-[var(--muted)] mb-3">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
+                <Repeat size={16} weight="light" aria-hidden="true" />
                 <span className="capitalize">{series.frequency}</span>
                 {series.day_of_week && <span className="capitalize">on {series.day_of_week}s</span>}
               </div>
@@ -347,12 +338,12 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
             {series.genres && series.genres.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
                 {series.genres.slice(0, 4).map((genre) => (
-                  <span
+                  <GenreChip
                     key={genre}
-                    className="px-2 py-0.5 rounded-full text-xs font-medium border border-[var(--twilight)] text-[var(--soft)]"
-                  >
-                    {formatGenre(genre)}
-                  </span>
+                    genre={genre}
+                    category={series.series_type === "film" ? "film" : null}
+                    portalSlug={portalSlug}
+                  />
                 ))}
               </div>
             )}
@@ -363,10 +354,10 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
       {series.festival && (
         <button
           onClick={() => handleFestivalClick(series.festival!.slug)}
-          className={`w-full mb-5 flex items-center justify-between gap-3 rounded-lg border border-[var(--twilight)] bg-[var(--void)] px-4 py-3 text-left transition-colors hover:border-[var(--coral)]/50 ${accentClass?.className ?? ""}`}
+          className={`w-full mb-5 flex items-center justify-between gap-3 rounded-lg border border-[var(--twilight)] bg-[var(--void)] px-4 py-3 min-h-[44px] text-left transition-colors hover:border-[var(--coral)]/50 focus-ring ${accentClass?.className ?? ""}`}
         >
           <div className="min-w-0">
-            <p className="text-xs font-mono uppercase tracking-wider text-[var(--muted)]">Part of</p>
+            <p className="text-xs font-mono uppercase tracking-[0.14em] text-[var(--muted)]">Part of</p>
             <p className="text-[var(--cream)] font-medium truncate">{series.festival.name}</p>
           </div>
           <span className="text-xs font-mono text-[var(--soft)]">View festival</span>
@@ -375,14 +366,14 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
 
       {/* Description */}
       {series.description && (
-        <div className="border border-[var(--twilight)] rounded-xl p-4 bg-[var(--dusk)] mb-6">
-          <h2 className="font-mono text-xs font-medium text-[var(--muted)] uppercase tracking-widest mb-2">
+        <InfoCard className="mb-6">
+          <h2 className="font-mono text-xs font-bold uppercase tracking-[0.14em] text-[var(--muted)] mb-2">
             About
           </h2>
           <p className="text-[var(--soft)] text-sm leading-relaxed whitespace-pre-wrap">
             <LinkifyText text={series.description} />
           </p>
-        </div>
+        </InfoCard>
       )}
 
       {/* Trailer link */}
@@ -391,11 +382,9 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
           href={series.trailer_url}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--twilight)] text-[var(--cream)] hover:bg-[var(--twilight)]/80 transition-colors mb-6"
+          className="inline-flex items-center gap-2 px-4 py-2 min-h-[44px] rounded-lg bg-[var(--twilight)] text-[var(--cream)] hover:bg-[var(--twilight)]/80 transition-colors mb-6 focus-ring"
         >
-          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M8 5v14l11-7z" />
-          </svg>
+          <Play size={20} weight="fill" aria-hidden="true" />
           Watch Trailer
         </a>
       )}
@@ -406,18 +395,10 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
           className="rounded-xl border p-4 mb-6 series-callout"
         >
           <div className="flex items-start gap-3">
-            <svg className="w-5 h-5 flex-shrink-0 mt-0.5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
+            <Repeat size={20} weight="light" className="flex-shrink-0 mt-0.5 text-accent" aria-hidden="true" />
             <div>
               <p className="font-medium text-[var(--cream)]">
-                {series.frequency === "weekly" && series.day_of_week
-                  ? `Every ${series.day_of_week.charAt(0).toUpperCase() + series.day_of_week.slice(1)}`
-                  : series.frequency === "biweekly" && series.day_of_week
-                    ? `Every other ${series.day_of_week.charAt(0).toUpperCase() + series.day_of_week.slice(1)}`
-                    : series.frequency === "monthly" && series.day_of_week
-                      ? `Monthly on ${series.day_of_week.charAt(0).toUpperCase() + series.day_of_week.slice(1)}s`
-                      : series.frequency.charAt(0).toUpperCase() + series.frequency.slice(1)}
+                {formatRecurrence(series.frequency as Frequency, series.day_of_week as DayOfWeek) || (series.frequency.charAt(0).toUpperCase() + series.frequency.slice(1))}
                 {venueShowtimes[0]?.events[0]?.time && ` at ${formatTime(venueShowtimes[0].events[0].time)}`}
               </p>
               {venueShowtimes.length === 1 && venueShowtimes[0].venue && (
@@ -433,16 +414,13 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
 
       {/* Showtimes by venue */}
       <div>
-        <h2 className="font-mono text-xs font-medium text-[var(--muted)] uppercase tracking-widest mb-4">
-          {totalEvents > 0 ? (
-            <>
-              {totalEvents} Upcoming {series.series_type === "film" ? "Showtime" : "Event"}
-              {totalEvents !== 1 ? "s" : ""}
-            </>
-          ) : (
-            "No Upcoming Showtimes"
-          )}
-        </h2>
+        <SectionHeader
+          title={
+            totalEvents > 0
+              ? `${totalEvents} Upcoming ${series.series_type === "film" ? "Showtime" : "Event"}${totalEvents !== 1 ? "s" : ""}`
+              : "No Upcoming Showtimes"
+          }
+        />
 
         {venueShowtimes.length > 0 ? (
           <div className="space-y-4">
@@ -453,12 +431,9 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
                   {/* Venue header */}
                   <button
                     onClick={() => handleVenueClick(venueShowtimes[0].venue.slug)}
-                    className="w-full p-3 border-b border-[var(--twilight)]/50 flex items-center gap-2 hover:bg-[var(--twilight)]/20 transition-colors group"
+                    className="w-full p-3 border-b border-[var(--twilight)]/50 flex items-center gap-2 hover:bg-[var(--twilight)]/20 transition-colors group focus-ring"
                   >
-                    <svg className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
+                    <MapPin size={16} weight="light" className="text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0" />
                     <span className="font-medium text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors">
                       {venueShowtimes[0].venue.name}
                     </span>
@@ -467,9 +442,7 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
                         ({venueShowtimes[0].venue.neighborhood})
                       </span>
                     )}
-                    <svg className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
+                    <CaretRight size={16} weight="bold" className="text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors ml-auto" />
                   </button>
 
                   {/* Compact date list */}
@@ -480,7 +453,7 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
                           <button
                             key={event.id}
                             onClick={() => handleEventClick(event.id)}
-                            className={`w-full flex items-center gap-3 px-2 ${
+                            className={`w-full flex items-center gap-3 px-2 min-h-[44px] focus-ring ${
                               index === 0 ? "py-1.5 rounded-lg bg-[var(--twilight)]/30 hover:bg-[var(--coral)] hover:text-[var(--void)]" : "py-1 rounded hover:bg-[var(--twilight)]/30"
                             } transition-colors ${index === 0 ? "group/next" : "text-left"}`}
                           >
@@ -502,17 +475,15 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
                 {venueShowtimes[0].events.length > 3 && (
                   <button
                     onClick={() => setExpandedSingleVenue((prev) => !prev)}
-                    className="w-full py-2.5 text-sm font-medium text-accent hover:text-[var(--cream)] border border-[var(--twilight)] rounded-lg hover:bg-[var(--card-bg-hover)] transition-colors flex items-center justify-center gap-2"
+                    aria-expanded={expandedSingleVenue}
+                    className="w-full py-2.5 min-h-[44px] text-sm font-medium text-accent hover:text-[var(--cream)] border border-[var(--twilight)] rounded-lg hover:bg-[var(--card-bg-hover)] transition-colors flex items-center justify-center gap-2 focus-ring"
                   >
                     {expandedSingleVenue ? "Show fewer dates" : `See all ${venueShowtimes[0].events.length} dates`}
-                    <svg
-                      className={`w-4 h-4 transition-transform ${expandedSingleVenue ? "rotate-180" : ""}`}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
+                    <CaretDown
+                      size={16}
+                      weight="bold"
+                      className={`transition-transform ${expandedSingleVenue ? "rotate-180" : ""}`}
+                    />
                   </button>
                 )}
               </>
@@ -530,17 +501,9 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
                       {/* Venue header */}
                       <button
                         onClick={() => handleVenueClick(vs.venue.slug)}
-                        className="w-full p-3 border-b border-[var(--twilight)]/50 flex items-center gap-2 hover:bg-[var(--twilight)]/20 transition-colors group"
+                        className="w-full p-3 border-b border-[var(--twilight)]/50 flex items-center gap-2 hover:bg-[var(--twilight)]/20 transition-colors group focus-ring"
                       >
-                        <svg
-                          className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
+                        <MapPin size={16} weight="light" className="text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors flex-shrink-0" />
                         <span className="font-medium text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors">
                           {vs.venue.name}
                         </span>
@@ -549,14 +512,7 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
                             ({vs.venue.neighborhood})
                           </span>
                         )}
-                        <svg
-                          className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors ml-auto"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
+                        <CaretRight size={16} weight="bold" className="text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors ml-auto" />
                       </button>
 
                       {/* Dates and times */}
@@ -577,7 +533,7 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
                                   <button
                                     key={event.id}
                                     onClick={() => handleEventClick(event.id)}
-                                    className="font-mono text-xs px-2 py-1 rounded bg-[var(--twilight)]/50 text-[var(--cream)] hover:bg-[var(--coral)] hover:text-[var(--void)] transition-colors"
+                                    className="font-mono text-xs px-2 py-1 min-h-[44px] rounded bg-[var(--twilight)]/50 text-[var(--cream)] hover:bg-[var(--coral)] hover:text-[var(--void)] transition-colors focus-ring"
                                   >
                                     {formatTime(event.time) || "Time TBA"}
                                   </button>
@@ -593,17 +549,15 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
                 {venueShowtimes.length > 3 && (
                   <button
                     onClick={() => setExpandedMultiVenue((prev) => !prev)}
-                    className="w-full py-2.5 text-sm font-medium text-accent hover:text-[var(--cream)] border border-[var(--twilight)] rounded-lg hover:bg-[var(--card-bg-hover)] transition-colors flex items-center justify-center gap-2"
+                    aria-expanded={expandedMultiVenue}
+                    className="w-full py-2.5 min-h-[44px] text-sm font-medium text-accent hover:text-[var(--cream)] border border-[var(--twilight)] rounded-lg hover:bg-[var(--card-bg-hover)] transition-colors flex items-center justify-center gap-2 focus-ring"
                   >
                     {expandedMultiVenue ? "Show fewer venues" : `See all ${venueShowtimes.length} venues`}
-                    <svg
-                      className={`w-4 h-4 transition-transform ${expandedMultiVenue ? "rotate-180" : ""}`}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
+                    <CaretDown
+                      size={16}
+                      weight="bold"
+                      className={`transition-transform ${expandedMultiVenue ? "rotate-180" : ""}`}
+                    />
                   </button>
                 )}
               </>
@@ -612,9 +566,7 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
         ) : (
           <div className="py-8 text-center border border-[var(--twilight)] rounded-xl bg-[var(--dusk)]">
             <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-[var(--twilight)]/30 flex items-center justify-center">
-              <svg className="w-6 h-6 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
+              <CalendarBlank size={24} weight="light" className="text-[var(--muted)]" />
             </div>
             <p className="text-[var(--muted)] text-sm">No upcoming showtimes scheduled</p>
             <p className="text-[var(--muted)] text-xs mt-1">Check back later for new dates</p>

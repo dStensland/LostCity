@@ -151,6 +151,35 @@ import { DetailStickyBar } from "@/components/detail";
 />
 ```
 
+### DescriptionTeaser
+
+Pull-quote teaser that extracts the first meaningful sentence from a description:
+
+```tsx
+import { DescriptionTeaser } from "@/components/detail";
+
+<DescriptionTeaser
+  description={event.description}   // raw description, NOT displayDescription
+  accentColor={categoryColor}
+/>
+```
+
+Renders a blockquote with Phosphor `Quotes` icon and accent left border. Returns `null` when the description is too short or has no meaningful first sentence (< 50 chars, first sentence < 30 chars).
+
+### SocialProofStrip
+
+Attendance indicators matching EventCard's visual language (coral checkmark pill for going, gold star pill for interested):
+
+```tsx
+import { SocialProofStrip } from "@/components/detail";
+
+<SocialProofStrip goingCount={42} interestedCount={18}>
+  <FriendsGoing eventId={event.id} />   {/* client component, optional */}
+</SocialProofStrip>
+```
+
+Vertical layout: children slot (friend avatars) on top, aggregate count pills below. Returns `null` when both counts are zero and no children are provided. Use with `fetchSocialProofCounts()` from `lib/social-proof.ts` for server-side data.
+
 ## Design Principles
 
 - **Typography-first**: Strong hierarchy, generous line-height (1.5-1.6)

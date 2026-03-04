@@ -7,6 +7,7 @@ import VenueDetailView from "./VenueDetailView";
 import SeriesDetailView from "./SeriesDetailView";
 import OrgDetailView from "./OrgDetailView";
 import FestivalDetailView from "./FestivalDetailView";
+import { setFeedVisible } from "@/lib/feed-visibility";
 
 interface DetailViewRouterProps {
   portalSlug: string;
@@ -93,15 +94,17 @@ export default function DetailViewRouter({ portalSlug, children }: DetailViewRou
     navigateClose();
   }, [navigateClose]);
 
-  // If we have a detail param, show the detail view with animated wrapper.
+  // Determine which detail view to show (if any).
   // Each wrapper gets a unique key so React unmounts/remounts when switching
   // between detail types (e.g. event → venue → back to event). Without keys,
   // React reuses the AnimatedDetailWrapper instance and its stale closing state
   // causes the content to stay invisible after the exit animation.
+  let detailView: React.ReactNode = null;
+
   if (eventId) {
     const id = parseInt(eventId, 10);
     if (!isNaN(id)) {
-      return (
+      detailView = (
         <AnimatedDetailWrapper key={`event-${id}`} onNavigateClose={navigateClose}>
           <EventDetailView
             eventId={id}
@@ -111,10 +114,8 @@ export default function DetailViewRouter({ portalSlug, children }: DetailViewRou
         </AnimatedDetailWrapper>
       );
     }
-  }
-
-  if (spotSlug) {
-    return (
+  } else if (spotSlug) {
+    detailView = (
       <AnimatedDetailWrapper key={`spot-${spotSlug}`} onNavigateClose={navigateClose}>
         <VenueDetailView
           slug={spotSlug}
@@ -123,10 +124,8 @@ export default function DetailViewRouter({ portalSlug, children }: DetailViewRou
         />
       </AnimatedDetailWrapper>
     );
-  }
-
-  if (seriesSlug) {
-    return (
+  } else if (seriesSlug) {
+    detailView = (
       <AnimatedDetailWrapper key={`series-${seriesSlug}`} onNavigateClose={navigateClose}>
         <SeriesDetailView
           slug={seriesSlug}
@@ -135,10 +134,8 @@ export default function DetailViewRouter({ portalSlug, children }: DetailViewRou
         />
       </AnimatedDetailWrapper>
     );
-  }
-
-  if (festivalSlug) {
-    return (
+  } else if (festivalSlug) {
+    detailView = (
       <AnimatedDetailWrapper key={`festival-${festivalSlug}`} onNavigateClose={navigateClose}>
         <FestivalDetailView
           slug={festivalSlug}
@@ -147,10 +144,8 @@ export default function DetailViewRouter({ portalSlug, children }: DetailViewRou
         />
       </AnimatedDetailWrapper>
     );
-  }
-
-  if (orgSlug) {
-    return (
+  } else if (orgSlug) {
+    detailView = (
       <AnimatedDetailWrapper key={`org-${orgSlug}`} onNavigateClose={navigateClose}>
         <OrgDetailView
           slug={orgSlug}
@@ -161,6 +156,25 @@ export default function DetailViewRouter({ portalSlug, children }: DetailViewRou
     );
   }
 
-  // Otherwise render normal content
-  return <>{children}</>;
+  const isDetailActive = detailView !== null;
+
+  // Sync feed visibility to the external store so child components can pause
+  // side effects (scroll listeners, polling, MutationObservers) while hidden.
+  useEffect(() => {
+    setFeedVisible(!isDetailActive);
+  }, [isDetailActive]);
+
+  // Always render children (the feed/find/community view) to avoid expensive
+  // unmount/remount cycles. When a detail view is active, hide the underlying
+  // content with display:none — this preserves component state, scroll position,
+  // and loaded data while removing it from layout entirely (no intersection
+  // observer callbacks, no layout cost).
+  return (
+    <>
+      <div className={isDetailActive ? "hidden" : "contents"}>
+        {children}
+      </div>
+      {detailView}
+    </>
+  );
 }
