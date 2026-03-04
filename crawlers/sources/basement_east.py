@@ -202,7 +202,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         events_updated += 1
                         continue
 
-                    enrich_event_record(event_record, "The Basement East")
+                    # Only enrich from individual event pages, not the listing page
+                    if event_url and event_url != CALENDAR_URL:
+                        enrich_event_record(event_record, "The Basement East")
                     insert_event(event_record)
                     events_new += 1
                     logger.info(f"Added: {title} on {start_date}" + (f" at {start_time}" if start_time else " (all-day)"))

@@ -740,6 +740,11 @@ def is_junk_description(description: str | None) -> bool:
         # Ticketing UI chrome
         'FAQ BUY TICKETS DONATE',
         'sign up for our thrilling email',
+        # Cookie consent / GDPR gates
+        'cookie consent',
+        'accept cookies',
+        'manage cookies',
+        'necessary cookies',
         # Venue boilerplate (address/phone in description = scraped contact section)
         'Reservations are required, and you must be 21',
         'comedy destination since 1982',
@@ -759,11 +764,14 @@ def is_junk_description(description: str | None) -> bool:
 
     desc_lower = description.lower()
 
-    # Case-insensitive markers — only flag if they appear prominently
-    # (> 20% of the description is junk markers, or description is very short)
-    if len(description) < 100:
+    # Case-insensitive markers — flag in short-to-medium descriptions (< 200 chars)
+    if len(description) < 200:
         if any(marker in desc_lower for marker in JUNK_MARKERS_CI):
             return True
+
+    # Multiple "buy tickets" = scraped page with ticket buttons
+    if desc_lower.count('buy tickets') >= 2:
+        return True
 
     # Nav-dump heuristic: if 3+ ticketing/nav phrases appear, it's a nav dump
     nav_phrases = ['buy tickets', 'sold out', 'doors', 'all ages', 'add to cart',

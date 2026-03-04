@@ -218,37 +218,60 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     start_time = None
                     description = None
 
-                    # Look forward and backward for context
-                    for offset in [-3, -2, -1, 1, 2, 3, 4, 5, 6]:
+                    # Gnosis calendar layout: title is BEFORE the date, details are AFTER
+                    # Two-pass: backward for title, forward for time + description
+                    _skip_keywords = [
+                        "calendar", "view", "month", "week", "day",
+                        "next", "previous", "today", "register",
+                        "more info", "details", "location:",
+                        "event requires", "presented by:", "optional equipment:",
+                        "after you register", "you will receive",
+                        "online",
+                    ]
+                    _address_re = re.compile(
+                        r"\d{3,5}\s+\w.*(?:road|rd|street|st|ave|avenue|blvd|drive|dr|way|suite|ste|ga\s+\d{5})",
+                        re.IGNORECASE,
+                    )
+
+                    def _is_title_candidate(text: str) -> bool:
+                        if len(text) < 5 or len(text) > 150:
+                            return False
+                        if re.match(r"^\d{1,2}:\d{2}", text):
+                            return False
+                        if re.match(r"^(January|February|March|April|May|June|July|August|September|October|November|December)", text):
+                            return False
+                        lower = text.lower()
+                        if any(skip in lower for skip in _skip_keywords):
+                            return False
+                        if _address_re.search(text):
+                            return False
+                        return True
+
+                    # Pass 1: look backward for title (Gnosis puts title before date)
+                    for offset in [-1, -2, -3]:
                         idx = i + offset
                         if 0 <= idx < len(lines):
                             check_line = lines[idx]
-
-                            # Try to extract time
                             if not start_time:
                                 time_result = parse_time(check_line)
                                 if time_result:
                                     start_time = time_result
                                     continue
+                            if not title and _is_title_candidate(check_line):
+                                title = check_line
 
-                            # Try to extract title (avoid generic navigation text)
-                            if not title and len(check_line) > 5 and len(check_line) < 200:
-                                # Skip navigation and common UI elements
-                                skip_keywords = [
-                                    "calendar", "view", "month", "week", "day",
-                                    "next", "previous", "today", "register",
-                                    "more info", "details", "location:",
-                                ]
-                                if not any(skip in check_line.lower() for skip in skip_keywords):
-                                    # Avoid lines that are just times or dates
-                                    if not re.match(r"^\d{1,2}:\d{2}", check_line):
-                                        if not re.match(r"^(January|February|March|April|May|June|July|August|September|October|November|December)", check_line):
-                                            title = check_line
-                                            continue
-
-                            # Try to extract description
+                    # Pass 2: look forward for time and description
+                    for offset in [1, 2, 3, 4, 5, 6]:
+                        idx = i + offset
+                        if 0 <= idx < len(lines):
+                            check_line = lines[idx]
+                            if not start_time:
+                                time_result = parse_time(check_line)
+                                if time_result:
+                                    start_time = time_result
+                                    continue
                             if title and not description and len(check_line) > 20 and len(check_line) < 300:
-                                if check_line != title:
+                                if check_line != title and not any(skip in check_line.lower() for skip in _skip_keywords) and not _address_re.search(check_line):
                                     description = check_line
 
                     # Must have a title
