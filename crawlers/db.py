@@ -1833,6 +1833,18 @@ def validate_event_title(title: str) -> bool:
     if re.match(r"^\d{4}-\d{2}-\d{2}$", title):
         return False
 
+    # Compressed date-as-title ("Mar042026", "Apr182026")
+    if re.match(
+        r"^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\d{6}$",
+        title,
+        re.IGNORECASE,
+    ):
+        return False
+
+    # Repeated nav/parse artifacts ("UpcomingUpcoming")
+    if re.match(r"^(\w{3,})\1$", title, re.IGNORECASE):
+        return False
+
     # Calendar grid cell junk ("0 events16", "1 event28")
     if re.match(r"^\d+\s*events?\d+$", title, re.IGNORECASE):
         return False
@@ -1857,6 +1869,19 @@ def validate_event_title(title: str) -> bool:
 
     # Numeric/date-only slash format ("2/20/2026")
     if re.match(r"^\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4}$", title):
+        return False
+
+    # Titles ending with "(Copy)" — duplicate artifacts from CMS
+    if title.rstrip().endswith("(Copy)"):
+        return False
+
+    # Titles that are schedule descriptions, not event names
+    # e.g. "Wednesdays, 10 and 10:45 a.m.: Nature-inspired stories..."
+    if re.match(
+        r"^(Mondays|Tuesdays|Wednesdays|Thursdays|Fridays|Saturdays|Sundays),?\s+\d",
+        title,
+        re.IGNORECASE,
+    ):
         return False
 
     # Titles starting with description-like patterns

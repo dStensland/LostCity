@@ -261,13 +261,15 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     title, "Punchline Comedy Club", start_date
                 )
 
+                # Punchline typically has 7:30pm shows (sometimes early/late shows too)
+                # but the website doesn't list times. Default to evening.
                 event_record = {
                     "source_id": source_id,
                     "venue_id": venue_id,
                     "title": title,
                     "description": show["description"],
                     "start_date": start_date,
-                    "start_time": None,
+                    "start_time": "19:30",
                     "end_date": end_date,
                     "end_time": None,
                     "is_all_day": False,

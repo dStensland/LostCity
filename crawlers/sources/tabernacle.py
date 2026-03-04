@@ -253,6 +253,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         fields = enrich_from_detail(html, detail_url, "Tabernacle", detail_config)
                         if fields.get("description"):
                             evt["description"] = fields["description"]
+                        if fields.get("start_time") and not evt.get("start_time"):
+                            evt["start_time"] = fields["start_time"]
+                        if fields.get("doors_time") and not evt.get("doors_time"):
+                            evt["doors_time"] = fields["doors_time"]
                         if fields.get("ticket_url") and not evt.get("ticket_url"):
                             evt["ticket_url"] = fields["ticket_url"]
                         if fields.get("image_url") and not evt.get("image_url"):
@@ -271,9 +275,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 # Enrich from detail page
                 enrich_event_record(evt, source_name="Tabernacle")
 
-                # Synthetic fallback
-                if not evt["description"]:
-                    evt["description"] = f"Live event at The Tabernacle."
+                # No synthetic fallback — NULL is better than filler
 
                 # Determine is_free if still unknown after enrichment
                 if evt.get("is_free") is None:
