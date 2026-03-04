@@ -22,7 +22,7 @@ from collections import Counter
 import shlex
 import subprocess
 import sys
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Optional
 
@@ -541,6 +541,158 @@ def run_short_description_sweep(args: argparse.Namespace, py: str, portal_slug: 
     return 0
 
 
+def deactivate_ghost_series(*, dry_run: bool = False) -> int:
+    """Deactivate series with zero future events that are older than 60 days."""
+    from db import get_client
+
+    client = get_client()
+    mode = "dry-run" if dry_run else "apply"
+    print(f"\n== Deactivate ghost series ({mode}) ==")
+
+    # Find series with zero future active events, created > 60 days ago
+    result = client.rpc(
+        "exec_sql",
+        {
+            "query": """
+                SELECT s.id, s.title, s.series_type, s.created_at
+                FROM series s
+                WHERE s.is_active = true
+                  AND s.created_at < NOW() - INTERVAL '60 days'
+                  AND s.id NOT IN (
+                      SELECT DISTINCT series_id
+                      FROM events
+                      WHERE start_date >= CURRENT_DATE
+                        AND is_active = true
+                        AND series_id IS NOT NULL
+                  )
+                LIMIT 5000
+            """
+        },
+    ).execute()
+
+    # Fallback: if RPC not available, use direct query approach
+    ghost_ids: list[str] = []
+    if result.data:
+        ghost_ids = [row["id"] for row in result.data if row.get("id")]
+    else:
+        # Manual approach: get all active series, then subtract those with future events
+        all_series = (
+            client.table("series")
+            .select("id,title,series_type,created_at")
+            .eq("is_active", True)
+            .lt("created_at", (datetime.now() - timedelta(days=60)).isoformat())
+            .limit(5000)
+            .execute()
+            .data or []
+        )
+        if not all_series:
+            print("[OK] No ghost series candidates found.")
+            return 0
+
+        # Get series IDs that DO have future events
+        active_series_ids: set[str] = set()
+        page_start = 0
+        page_size = 1000
+        while True:
+            events_page = (
+                client.table("events")
+                .select("series_id")
+                .gte("start_date", date.today().isoformat())
+                .eq("is_active", True)
+                .not_("series_id", "is", "null")
+                .range(page_start, page_start + page_size - 1)
+                .execute()
+                .data or []
+            )
+            for row in events_page:
+                if row.get("series_id"):
+                    active_series_ids.add(row["series_id"])
+            if len(events_page) < page_size:
+                break
+            page_start += page_size
+
+        ghost_ids = [
+            s["id"] for s in all_series
+            if s["id"] not in active_series_ids
+        ]
+
+    if not ghost_ids:
+        print("[OK] No ghost series found.")
+        return 0
+
+    print(f"Found {len(ghost_ids)} ghost series (no future events, >60 days old).")
+
+    if dry_run:
+        for gid in ghost_ids[:10]:
+            print(f"  [would deactivate] {gid}")
+        if len(ghost_ids) > 10:
+            print(f"  ... and {len(ghost_ids) - 10} more")
+        return 0
+
+    # Deactivate in batches
+    batch_size = 100
+    deactivated = 0
+    for i in range(0, len(ghost_ids), batch_size):
+        batch = ghost_ids[i : i + batch_size]
+        client.table("series").update({"is_active": False}).in_("id", batch).execute()
+        deactivated += len(batch)
+
+    print(f"[OK] Deactivated {deactivated} ghost series.")
+    return 0
+
+
+def fix_html_entities_in_series(*, dry_run: bool = False) -> int:
+    """Fix HTML entities in series titles (e.g. &amp; → &)."""
+    import html as html_mod
+    from db import get_client
+
+    client = get_client()
+    mode = "dry-run" if dry_run else "apply"
+    print(f"\n== Fix HTML entities in series titles ({mode}) ==")
+
+    # Find series with HTML entities
+    candidates: list[dict] = []
+    for pattern in ["%&amp;%", "%&#%"]:
+        result = (
+            client.table("series")
+            .select("id,title")
+            .like("title", pattern)
+            .limit(500)
+            .execute()
+        )
+        if result.data:
+            candidates.extend(result.data)
+
+    # Dedupe
+    seen: set[str] = set()
+    unique: list[dict] = []
+    for c in candidates:
+        if c["id"] not in seen:
+            seen.add(c["id"])
+            unique.append(c)
+    candidates = unique
+
+    if not candidates:
+        print("[OK] No HTML entities found in series titles.")
+        return 0
+
+    print(f"Found {len(candidates)} series with HTML entities.")
+    fixed = 0
+    for row in candidates:
+        old_title = row["title"]
+        new_title = html_mod.unescape(old_title)
+        if new_title == old_title:
+            continue
+        if dry_run:
+            print(f"  [would fix] {old_title!r} → {new_title!r}")
+        else:
+            client.table("series").update({"title": new_title}).eq("id", row["id"]).execute()
+        fixed += 1
+
+    print(f"[{'would fix' if dry_run else 'OK'}] Fixed {fixed} series titles.")
+    return 0
+
+
 def main() -> int:
     args = parse_args()
     py = sys.executable
@@ -651,6 +803,19 @@ def main() -> int:
         if rc != 0:
             best_effort_failures += 1
             print("[WARN] Best-effort short-description sweep failed and will not block launch gate.")
+
+    # --- Inline maintenance steps (series hygiene) ---
+    try:
+        fix_html_entities_in_series(dry_run=args.dry_run)
+    except Exception as exc:
+        print(f"[WARN] HTML entity fix failed: {exc}")
+        best_effort_failures += 1
+
+    try:
+        deactivate_ghost_series(dry_run=args.dry_run)
+    except Exception as exc:
+        print(f"[WARN] Ghost series cleanup failed: {exc}")
+        best_effort_failures += 1
 
     launch_check = [
         py,

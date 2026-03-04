@@ -3,8 +3,10 @@ Series matching and creation logic.
 Identifies when events belong to the same series and manages series records.
 """
 
+import html as html_module
 import re
 import logging
+from datetime import datetime, timezone
 from typing import Optional
 from supabase import Client
 from tags import VALID_CATEGORIES, VALID_FESTIVAL_TYPES
@@ -247,6 +249,9 @@ def get_or_create_series(client: Client, series_hint: dict, category: str = None
     if not series_type or not series_title:
         return None
 
+    # Decode HTML entities (e.g. "&amp;" → "&", "&#8211;" → "–")
+    series_title = html_module.unescape(series_title)
+
     # Resolve festival link if provided
     festival_id = series_hint.get("festival_id") or resolve_festival_id(
         client,
@@ -268,9 +273,11 @@ def get_or_create_series(client: Client, series_hint: dict, category: str = None
         day_of_week=hint_day,
     )
     if existing:
-        # Backfill festival_id if missing
+        # Touch last_verified_at + backfill festival_id if missing
+        touch_updates = {"last_verified_at": datetime.now(timezone.utc).isoformat()}
         if festival_id and not existing.get("festival_id"):
-            client.table("series").update({"festival_id": festival_id}).eq("id", existing["id"]).execute()
+            touch_updates["festival_id"] = festival_id
+        client.table("series").update(touch_updates).eq("id", existing["id"]).execute()
         logger.debug(f"Found existing series: {series_title}")
         return existing["id"]
 
@@ -291,6 +298,7 @@ def get_or_create_series(client: Client, series_hint: dict, category: str = None
         "title": series_title,
         "series_type": series_type,
         "category": category,
+        "last_verified_at": datetime.now(timezone.utc).isoformat(),
     }
     if festival_id:
         series_data["festival_id"] = festival_id
@@ -305,7 +313,8 @@ def get_or_create_series(client: Client, series_hint: dict, category: str = None
 
     # Add recurring show / class series / festival program fields
     if series_type in ("recurring_show", "class_series", "festival_program"):
-        for field in ("frequency", "day_of_week", "start_time", "description", "image_url"):
+        for field in ("frequency", "day_of_week", "start_time", "description", "image_url",
+                      "price_note", "last_verified_at", "confidence"):
             if series_hint.get(field):
                 series_data[field] = series_hint[field]
 
@@ -347,8 +356,8 @@ def update_series_metadata(client: Client, series_id: str, updates: dict) -> boo
         if value is not None and existing.get(key) is None:
             fields_to_set[key] = value
 
-    if not fields_to_set:
-        return False
+    # Always touch last_verified_at when metadata is updated
+    fields_to_set["last_verified_at"] = datetime.now(timezone.utc).isoformat()
 
     client.table("series").update(fields_to_set).eq("id", series_id).execute()
     logger.info(f"Backfilled series {existing.get('title', series_id)}: {list(fields_to_set.keys())}")
