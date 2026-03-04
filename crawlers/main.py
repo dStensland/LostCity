@@ -1454,6 +1454,22 @@ def main():
         help="With --check-festivals, only check festivals within 3 months"
     )
     parser.add_argument(
+        "--specials",
+        action="store_true",
+        help="Run venue specials scraper (extracts happy hours, food nights, etc.)"
+    )
+    parser.add_argument(
+        "--specials-venue-type",
+        default="bar",
+        help="Venue type to scrape for --specials (default: bar)"
+    )
+    parser.add_argument(
+        "--specials-limit",
+        type=int,
+        default=50,
+        help="Max venues to process for --specials (default: 50)"
+    )
+    parser.add_argument(
         "--smart",
         action="store_true",
         help="Smart mode: only crawl sources due based on crawl_frequency"
@@ -1609,6 +1625,34 @@ def main():
             print(f"  [{implemented}] {source['slug']}: {source['name']}")
         print(f"\nTotal: {len(sources)} sources")
         print(f"Crawler modules: {len(modules)} available")
+        return 0
+
+    # Venue specials scraper
+    if args.specials:
+        from scrape_venue_specials import get_venues, scrape_venue, _close_browser
+        logger.info(
+            f"Specials mode: scraping {args.specials_venue_type} venues "
+            f"(limit={args.specials_limit})"
+        )
+        venues = get_venues(
+            venue_type=args.specials_venue_type,
+            limit=args.specials_limit,
+        )
+        logger.info(f"Found {len(venues)} venues to scrape")
+        scraped = 0
+        for i, venue in enumerate(venues, 1):
+            name = venue["name"][:45]
+            logger.info(f"[{i}/{len(venues)}] {name}")
+            try:
+                scrape_venue(venue, dry_run=args.dry_run)
+                scraped += 1
+            except Exception as e:
+                logger.error(f"  Failed: {e}")
+        try:
+            _close_browser()
+        except Exception:
+            pass
+        logger.info(f"Specials scraper done: {scraped}/{len(venues)} venues processed")
         return 0
 
     # Single source

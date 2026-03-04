@@ -2425,8 +2425,8 @@ def insert_event(
             # Backfill genres on existing series that are missing them
             if genres:
                 update_series_metadata(client, series_id, {"genres": genres})
-            # Don't store genres on event if it has a series (genres live on series)
-            genres = None
+            # Genres also stored on the event row for discoverability
+            # (Regulars API queries event.genres for activity type matching)
             # Backfill NULL fields on existing series with OMDB metadata
             if film_metadata and series_hint.get("series_type") == "film":
                 update_series_metadata(
@@ -2452,11 +2452,17 @@ def insert_event(
                     "day_of_week",
                     "start_time",
                     "frequency",
+                    "price_note",
                 ):
                     if series_hint.get(field):
                         backfill[field] = series_hint[field]
                 if backfill:
                     update_series_metadata(client, series_id, backfill)
+                # Always touch last_verified_at on re-crawl (not gated by NULL check)
+                if series_hint.get("last_verified_at"):
+                    client.table("series").update(
+                        {"last_verified_at": series_hint["last_verified_at"]}
+                    ).eq("id", series_id).execute()
 
                 # Force-correct stale day_of_week when the crawler's value
                 # matches the event's actual date but the series record differs.

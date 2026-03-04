@@ -571,7 +571,23 @@ RULES:
 
    DO NOT extract as specials: trivia, karaoke, open mic, live music, DJ nights, comedy,
    drag shows, bingo, game nights, run clubs, or other programmed events. These are EVENTS,
-   not specials. Only extract food/drink PRICING deals.
+   not specials.
+
+   FOOD/DRINK THEMED NIGHTS ARE EVENTS: Taco Tuesday, Wing Wednesday, Oyster Night,
+   Burger Night, Steak Night, Fish Fry Friday, Pizza Night, Sushi Night, Crawfish Boil,
+   BBQ Night, Hot Dog Night, Pasta Night — these are recurring EVENTS with an identity,
+   not just pricing deals. Use type: "event_night" for these.
+
+   HAPPY HOURS with a specific recurring schedule are events. Use type: "event_night".
+
+   NAMED BRUNCHES (Jazz Brunch, Bottomless Brunch, Weekend Brunch) are events.
+   Use type: "event_night".
+
+   LADIES NIGHT, WINE NIGHT/WEDNESDAY, MARGARITA MONDAY, INDUSTRY NIGHT — these are
+   social events. Use type: "event_night".
+
+   Keep type: "daily_special" ONLY for pure pricing deals without a "night" identity
+   (e.g., "$2 off all drafts" with no themed name).
 
    DO NOT extract holiday hours, holiday specials, or one-off seasonal events.
 
@@ -602,11 +618,13 @@ RULES:
    BAD: "$3 tacos every Tuesday" (repeats everything)
 
 8. TYPE MAPPING:
-   - Food/drink day specials → daily_special
-   - Happy hours → happy_hour
-   - Brunch specials → brunch
+   - Food/drink themed nights (Taco Tuesday, Wing Wednesday, etc.) → event_night
+   - Happy hours with recurring schedule → event_night
+   - Named brunches (Jazz Brunch, Bottomless Brunch) → event_night
+   - Ladies night, wine night, industry night → event_night
+   - Pure pricing deals without themed identity → daily_special
    - Pop-ups, guest chefs, seasonal menus → seasonal_menu
-   - Other recurring deals → recurring_deal
+   - Other recurring deals without event identity → recurring_deal
 
 7. For hours: extract operating hours for each day of the week.
 8. For menu: find links to their menu page (food menu, drink menu, etc.).
@@ -1092,10 +1110,17 @@ def _infer_title_from_description(desc: str, special_type: str) -> Optional[str]
 _EVENT_TYPES = {"event_night"}
 # Types that are holiday noise
 _HOLIDAY_TYPES = {"holiday_hours", "holiday_special"}
-# Content patterns that indicate events, not specials
+# Content patterns that indicate entertainment events (not food/drink deals)
 _EVENT_CONTENT_RE = re.compile(
     r"\b(trivia|karaoke|open mic|live music|dj set|comedy|drag show|bingo|"
     r"run club|jazz jam|game night|pub quiz|vinyl night)\b", re.I
+)
+
+# Content patterns for food/drink themed nights — these are recurring events,
+# not just price deals. "Taco Tuesday: $3 tacos" is an event with a price, not a special.
+_FOOD_NIGHT_RE = re.compile(
+    r"\b(taco|wing|oyster|burger|steak|fish fry|pizza|sushi|pasta|crawfish|bbq|hot dog|"
+    r"happy hour|brunch|ladies night|wine night|wine wednesday|margarita|industry night)\b", re.I
 )
 
 # Map event content keywords to categories for insert_event
@@ -1107,6 +1132,24 @@ _EVENT_CATEGORY_MAP = {
     "comedy": "comedy", "drag show": "nightlife",
     "bingo": "nightlife", "game night": "nightlife",
     "run club": "fitness",
+    # Food/drink nights → nightlife so infer_genres handles the rest
+    "taco": "nightlife", "wing": "nightlife", "oyster": "nightlife",
+    "burger": "nightlife", "steak": "nightlife", "fish fry": "nightlife",
+    "pizza": "nightlife", "sushi": "nightlife", "pasta": "nightlife",
+    "crawfish": "nightlife", "bbq": "nightlife", "hot dog": "nightlife",
+    "happy hour": "nightlife", "brunch": "nightlife",
+    "ladies night": "nightlife", "wine night": "nightlife",
+    "wine wednesday": "nightlife", "margarita": "nightlife",
+    "industry night": "nightlife",
+}
+
+# Map special types to genres for Regular Hangs matching
+_SPECIAL_TYPE_GENRES = {
+    "happy_hour": ["happy-hour"],
+    "brunch": ["brunch"],
+    "daily_special": ["specials"],
+    "recurring_deal": ["specials"],
+    "event_night": [],  # Let tag_inference handle it from title
 }
 
 # ISO weekday (1=Mon) to Python weekday (0=Mon)
@@ -1175,9 +1218,13 @@ def validate_specials(specials: list[dict]) -> list[dict]:
         desc = (s.get("description") or "").strip()
         price = (s.get("price_note") or "").strip()
 
-        # Content-based event filter: if the text describes an event, not a food/drink deal, skip
+        # Content-based event filter: skip items routed to events via extract_event_items()
         combined_text = f"{title} {desc}"
+        # Entertainment events without price → events
         if _EVENT_CONTENT_RE.search(combined_text) and not price:
+            continue
+        # Food/drink themed nights → events (even with price)
+        if _FOOD_NIGHT_RE.search(combined_text):
             continue
 
         s = _fixup_common_fields(s)
@@ -1200,24 +1247,27 @@ def validate_specials(specials: list[dict]) -> list[dict]:
 
 
 def extract_event_items(specials: list[dict]) -> list[dict]:
-    """Extract event-like items (trivia, karaoke, etc.) from raw LLM output.
+    """Extract event-like items from raw LLM output.
 
-    These get routed to insert_event() instead of venue_specials.
+    Routes entertainment events (trivia, karaoke, etc.) AND food/drink themed
+    nights (Taco Tuesday, Happy Hour, etc.) to insert_event() instead of venue_specials.
     """
     events = []
     for s in specials:
         stype = s.get("type", "daily_special")
         title = (s.get("title") or "").strip()
         desc = (s.get("description") or "").strip()
+        price = (s.get("price_note") or "").strip()
         combined_text = f"{title} {desc}"
 
         # Capture explicit event_night types
         is_event_type = stype in _EVENT_TYPES
-        # Capture content that's clearly an event (no price = not a drink deal)
-        price = (s.get("price_note") or "").strip()
-        is_event_content = bool(_EVENT_CONTENT_RE.search(combined_text)) and not price
+        # Entertainment events: trivia, karaoke, etc. (no price = not a drink deal)
+        is_entertainment = bool(_EVENT_CONTENT_RE.search(combined_text)) and not price
+        # Food/drink themed nights: route WITH or WITHOUT price — "$3 Taco Tuesday" is still an event
+        is_food_drink_night = bool(_FOOD_NIGHT_RE.search(combined_text))
 
-        if not is_event_type and not is_event_content:
+        if not is_event_type and not is_entertainment and not is_food_drink_night:
             continue
 
         s = _fixup_common_fields(s)
@@ -1228,6 +1278,12 @@ def extract_event_items(specials: list[dict]) -> list[dict]:
         if not s["days"]:
             continue
 
+        # Fold price into description since events don't have price_note column
+        if price and is_food_drink_night:
+            existing_desc = s.get("description") or ""
+            if price not in existing_desc:
+                s["description"] = f"{price}. {existing_desc}" if existing_desc else price
+
         # Determine category from content
         category = "nightlife"  # default for event nights
         for keyword, cat in _EVENT_CATEGORY_MAP.items():
@@ -1235,10 +1291,25 @@ def extract_event_items(specials: list[dict]) -> list[dict]:
                 category = cat
                 break
 
+        # Attach metadata for Regular Hangs matching and series creation
         s["_category"] = category
+        s["_genres"] = _SPECIAL_TYPE_GENRES.get(stype, [])
+        s["_price_note"] = price  # Preserved for series.price_note (separate from description)
         events.append(s)
 
     return events
+
+
+def _get_specials_source_id() -> int:
+    """Resolve or cache the venue-specials-scraper source ID."""
+    if not hasattr(_get_specials_source_id, "_cached"):
+        client = get_client()
+        result = client.table("sources").select("id").eq("slug", "venue-specials-scraper").execute()
+        if result.data:
+            _get_specials_source_id._cached = result.data[0]["id"]
+        else:
+            raise ValueError("Source 'venue-specials-scraper' not found in sources table")
+    return _get_specials_source_id._cached
 
 
 def upsert_event_items(venue: dict, event_items: list[dict], dry_run: bool = False) -> int:
@@ -1248,69 +1319,80 @@ def upsert_event_items(venue: dict, event_items: list[dict], dry_run: bool = Fal
 
     venue_id = venue["id"]
     venue_name = venue.get("name", "")
+    source_id = _get_specials_source_id()
     today = date_cls.today()
     inserted = 0
+
+    now_iso = datetime.now(timezone.utc).isoformat()
 
     for item in event_items:
         title = item["title"]
         category = item.get("_category", "nightlife")
+        genres = item.get("_genres", [])
         time_start = item.get("time_start")
         desc = item.get("description")
+        price_note = item.get("price_note") or item.get("_price_note")
         iso_days = item["days"]  # Already ISO weekday ints
 
-        # Generate next 6 weekly occurrences for each day
-        future_dates = []
+        # Create one series per day — "Happy Hour" Mon-Fri = 5 series, each recurring weekly.
+        # Series title includes venue name to prevent cross-venue sharing.
+        # ("Happy Hour at Barcelona" is unrelated to "Happy Hour at 9 Mile")
+        series_title = f"{title} at {venue_name}" if venue_name else title
+
         for iso_day in iso_days:
+            day_name = _ISO_DAY_NAMES.get(iso_day, "")
             py_day = _ISO_TO_PYTHON_WEEKDAY[iso_day]
-            # Find next occurrence of this weekday
-            days_ahead = (py_day - today.weekday()) % 7
-            if days_ahead == 0:
-                days_ahead = 0  # Include today if it matches
-            next_date = today + timedelta(days=days_ahead)
-            for i in range(6):
-                future_dates.append((next_date + timedelta(weeks=i), iso_day))
 
-        # Series hint for grouping
-        series_hint = {
-            "series_type": "recurring_show",
-            "series_title": title,
-            "frequency": "weekly",
-            "day_of_week": _ISO_DAY_NAMES.get(iso_days[0], ""),
-        }
-
-        for event_date, iso_day in future_dates:
-            date_str = event_date.isoformat()
-
-            # Dedup check
-            content_hash = generate_content_hash(title, venue_name, date_str)
-            if find_event_by_hash(content_hash):
-                continue
-
-            event_data = {
-                "title": title,
-                "venue_id": venue_id,
-                "start_date": date_str,
-                "start_time": time_start,
-                "category": category,
-                "description": desc,
-                "source_url": venue.get("website"),
-                "is_recurring": True,
-                "content_hash": content_hash,
+            # Series hint scoped to this venue + this day
+            series_hint = {
+                "series_type": "recurring_show",
+                "series_title": series_title,
+                "frequency": "weekly",
+                "day_of_week": day_name,
+                "last_verified_at": now_iso,
             }
+            if price_note:
+                series_hint["price_note"] = price_note
 
-            if dry_run:
-                logger.info(f"    [dry-run] Would insert event: {title} on {date_str}")
-                inserted += 1
-                continue
+            # Generate next 2 weekly occurrences for this day
+            days_ahead = (py_day - today.weekday()) % 7
+            next_date = today + timedelta(days=days_ahead)
 
-            try:
-                insert_event(event_data, series_hint=series_hint)
-                inserted += 1
-            except (ValueError, Exception) as e:
-                logger.debug(f"    Event insert failed for '{title}' on {date_str}: {e}")
+            for i in range(2):
+                event_date = next_date + timedelta(weeks=i)
+                date_str = event_date.isoformat()
+
+                # Dedup check
+                content_hash = generate_content_hash(title, venue_name, date_str)
+                if find_event_by_hash(content_hash):
+                    continue
+
+                event_data = {
+                    "title": title,
+                    "venue_id": venue_id,
+                    "source_id": source_id,
+                    "start_date": date_str,
+                    "start_time": time_start,
+                    "category": category,
+                    "description": desc,
+                    "source_url": venue.get("website"),
+                    "is_recurring": True,
+                    "content_hash": content_hash,
+                }
+
+                if dry_run:
+                    logger.info(f"    [dry-run] Would insert event: {title} on {date_str} ({day_name})")
+                    inserted += 1
+                    continue
+
+                try:
+                    insert_event(event_data, series_hint=series_hint, genres=genres or None)
+                    inserted += 1
+                except (ValueError, Exception) as e:
+                    logger.debug(f"    Event insert failed for '{title}' on {date_str}: {e}")
 
         if inserted and not dry_run:
-            logger.info(f"  Inserted {len(future_dates)} instances of recurring event: {title}")
+            logger.info(f"  Inserted {inserted} instances of recurring event: {title}")
 
     return inserted
 

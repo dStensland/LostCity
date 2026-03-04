@@ -920,8 +920,12 @@ class TestSmartUpdateExistingEvent:
     @patch("db.events_support_content_kind_column", return_value=False)
     @patch("db.events_support_is_active_column", return_value=True)
     @patch("db.get_client")
+    @patch("genre_normalize.normalize_genres", return_value=[])
+    @patch("tag_inference.infer_genres", return_value=[])
     def test_does_not_reactivate_event_on_inactive_or_closed_venue(
         self,
+        _mock_infer_genres,
+        _mock_normalize_genres,
         mock_get_client,
         _mock_get_venue,
         _mock_events_active,

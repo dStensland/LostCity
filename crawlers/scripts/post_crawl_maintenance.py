@@ -791,6 +791,26 @@ def main() -> int:
         print(f"[WARN] Ghost series cleanup failed: {exc}")
         best_effort_failures += 1
 
+    # --- Refresh venue specials (biweekly cadence) ---
+    # The specials scraper uses --max-age-days=14 by default, so it auto-skips
+    # venues verified within 14 days. This naturally creates a biweekly cadence.
+    try:
+        specials_cmd = [
+            py,
+            str(SCRIPTS.parent / "scrape_venue_specials.py"),
+            "--venue-type", "bar",
+            "--limit", "50",
+        ]
+        if args.dry_run:
+            specials_cmd.append("--dry-run")
+        rc = run_step("Refresh venue specials (bars)", specials_cmd)
+        if rc != 0:
+            best_effort_failures += 1
+            print("[WARN] Venue specials refresh failed (non-blocking)")
+    except Exception as exc:
+        print(f"[WARN] Venue specials refresh failed: {exc}")
+        best_effort_failures += 1
+
     launch_check = [
         py,
         str(SCRIPTS / "launch_health_check.py"),
