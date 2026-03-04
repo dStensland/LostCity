@@ -39,7 +39,7 @@ const EVENT_SELECT = `
   series_id, source_id,
   is_recurring, recurrence_rule,
   series:series_id(id, frequency, day_of_week, series_type),
-  venue:venues(id, name, neighborhood, slug, venue_type, city, active)
+  venue:venues(id, name, neighborhood, slug, venue_type, city, image_url, active)
 `;
 
 export async function GET(request: NextRequest) {

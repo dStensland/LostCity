@@ -107,6 +107,7 @@ export type Venue = {
   neighborhood: string | null;
   city: string;
   state: string;
+  image_url?: string | null;
   location_designator?:
     | "standard"
     | "private_after_signup"

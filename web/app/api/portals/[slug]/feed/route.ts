@@ -645,7 +645,7 @@ export async function GET(request: NextRequest, { params }: Props) {
           day_of_week,
           festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
         ),
-        venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city, lat, lng, active)
+        venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city, lat, lng, image_url, active)
       `;
 
   const curatedEventsPromise =
@@ -796,7 +796,7 @@ export async function GET(request: NextRequest, { params }: Props) {
           festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
         ),
         source_id,
-        venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city, lat, lng, active)
+        venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city, lat, lng, image_url, active)
     `;
 
     const applyPortalFilter = (query: ReturnType<typeof supabase.from>) => {
@@ -937,7 +937,7 @@ export async function GET(request: NextRequest, { params }: Props) {
             festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
           ),
           source_id,
-          venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city, active)
+          venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city, image_url, active)
         `,
         )
         .or(`start_date.gte.${today},end_date.gte.${today}`) // Include ongoing events (exhibitions)
@@ -1506,7 +1506,7 @@ export async function GET(request: NextRequest, { params }: Props) {
               day_of_week,
               festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
             ),
-            venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city, active)
+            venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city, image_url, active)
         `,
           )
           .overlaps("tags", holidayTags)

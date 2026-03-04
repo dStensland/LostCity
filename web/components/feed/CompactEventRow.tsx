@@ -67,9 +67,9 @@ export default function CompactEventRow({ event, portalSlug, size = "default" }:
 
       {/* Image */}
       <div className={`relative overflow-hidden ${isSm ? "aspect-[16/9]" : "aspect-[4/3]"}`}>
-        {event.image_url ? (
+        {(event.image_url || event.series?.image_url || event.venue?.image_url) ? (
           <Image
-            src={event.image_url}
+            src={(event.image_url || event.series?.image_url || event.venue?.image_url)!}
             alt=""
             fill
             className="object-cover group-hover:scale-105 transition-transform duration-500"

@@ -116,7 +116,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         category:category_id,
         tags,
         image_url,
-        venue:venues(id, name, slug, neighborhood, city, location_designator, lat, lng)
+        venue:venues(id, name, slug, neighborhood, city, location_designator, lat, lng, image_url)
       `, { count: countOnly ? "exact" : undefined, head: countOnly })
       .eq("start_date", today)
       .eq("is_all_day", false)

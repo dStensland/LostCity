@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
           day_of_week,
           festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
         ),
-        venue:venues(id, name, slug, neighborhood, city, lat, lng, location_designator)
+        venue:venues(id, name, slug, neighborhood, city, lat, lng, image_url, location_designator)
       `)
           .gte("start_date", today)
           .lte("start_date", weekFromNow)

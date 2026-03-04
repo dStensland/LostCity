@@ -116,7 +116,7 @@ const EVENT_SELECT = `
   category:category_id, genres, image_url, featured_blurb,
   tags, festival_id, is_tentpole, is_featured, series_id, is_recurring, source_id, organization_id,
   series:series_id(id, frequency, day_of_week, series_type),
-  venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city, active)
+  venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city, image_url, active)
 `;
 
 const VENUE_SELECT = `

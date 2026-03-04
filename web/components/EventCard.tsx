@@ -136,6 +136,7 @@ export type FeedEventData = {
     name: string;
     neighborhood: string | null;
     slug?: string | null;
+    image_url?: string | null;
     blurhash?: string | null;
     location_designator?: LocationDesignator;
   } | null;
@@ -204,7 +205,7 @@ function EventCard({
   const instructorName = event.instructor
     ? decodeHtmlEntities(event.instructor)
     : null;
-  const railImageUrl = event.image_url ?? event.series?.image_url ?? undefined;
+  const railImageUrl = event.image_url ?? event.series?.image_url ?? event.venue?.image_url ?? undefined;
   const railBlurhash = event.blurhash || event.series?.blurhash || null;
   const hasRailImage = Boolean(railImageUrl);
 
@@ -1507,7 +1508,8 @@ export const HeroEventCard = memo(function HeroEventCard({
     includePrice: true,
   });
 
-  const hasImage = !hideImages && event.image_url;
+  const heroImageUrl = event.image_url || event.series?.image_url || event.venue?.image_url;
+  const hasImage = !hideImages && heroImageUrl;
   return (
     <Link
       href={`/${portalSlug}?event=${event.id}`}
@@ -1519,7 +1521,7 @@ export const HeroEventCard = memo(function HeroEventCard({
         <>
           <div className="absolute inset-0 bg-gradient-to-br from-[var(--twilight)] to-[var(--void)]">
             <Image
-              src={event.image_url!}
+              src={heroImageUrl!}
               alt=""
               fill
               className="object-cover"
