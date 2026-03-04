@@ -296,7 +296,10 @@ def build_null_source_description(event: dict, venue: Optional[dict]) -> str:
     if current:
         parts.append(current if current.endswith(".") else f"{current}.")
     else:
-        parts.append(f"{title} is a local event.")
+        # No real description — don't fabricate filler. Return empty string
+        # so the caller skips this event (a NULL description is better than
+        # boilerplate that restates structured fields).
+        return ""
 
     if venue_name:
         if neighborhood:

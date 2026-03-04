@@ -773,6 +773,15 @@ def is_junk_description(description: str | None) -> bool:
     if desc_lower.count('buy tickets') >= 2:
         return True
 
+    # Auto-generated filler descriptions that just restate structured fields
+    FILLER_PATTERNS = [
+        'is a local event',
+        'is a local event.',
+        'Location details are listed on the official event page',
+    ]
+    if any(marker in description for marker in FILLER_PATTERNS):
+        return True
+
     # Nav-dump heuristic: if 3+ ticketing/nav phrases appear, it's a nav dump
     nav_phrases = ['buy tickets', 'sold out', 'doors', 'all ages', 'add to cart',
                    'view more', 'see all', 'filter by', 'sort by', 'load more']
