@@ -121,7 +121,7 @@ VENUES = {
         "state": "GA",
         "zip": "30324",
         "venue_type": "bar",
-        "website": "https://www.smithsoldebar.com",
+        "website": "https://www.sobatl.com",
     },
     "metro-fun-center": {
         "name": "Metro Fun Center",
@@ -366,7 +366,7 @@ VENUES = {
         "state": "GA",
         "zip": "30305",
         "venue_type": "bar",
-        "website": "https://bluemartinilounge.com",
+        # website removed — server unreachable, verify if still open (2026-03)
     },
     # Jazz & Blues venues
     "cafe-circa": {
@@ -541,18 +541,8 @@ VENUES = {
         "zip": "30030",
         "venue_type": "bar",
     },
+    # Fontaine's Oyster House — CLOSED permanently (removed 2026-03)
     # Live music / residency venues
-    "fontaines": {
-        "name": "Fontaine's Oyster House",
-        "slug": "fontaines-oyster-house",
-        "address": "1026 N Highland Ave NE",
-        "neighborhood": "Virginia Highland",
-        "city": "Atlanta",
-        "state": "GA",
-        "zip": "30306",
-        "venue_type": "restaurant",
-        "website": "https://fontainesoysterhouse.com",
-    },
     "apache-cafe": {
         "name": "Apache Cafe",
         "slug": "apache-cafe",
@@ -660,7 +650,7 @@ VENUES = {
         "state": "GA",
         "zip": "30307",
         "venue_type": "food_hall",
-        "website": "https://krogstreetmarket.com",
+        "website": "https://www.thekrogdistrict.com",
     },
     # East Atlanta Village (expanding existing thin coverage)
     "the-glenwood": {
@@ -957,7 +947,7 @@ VENUES = {
         "state": "GA",
         "zip": "30316",
         "venue_type": "bar",
-        "website": "https://www.97estoria.com",
+        # website removed — domain hijacked by gambling site (2026-03)
     },
     "avondale-estates-art-lot": {
         "name": "Avondale Estates Art Lot",
@@ -1052,7 +1042,7 @@ VENUES = {
         "state": "GA",
         "zip": "30318",
         "venue_type": "restaurant",
-        "website": "https://www.anticopizza.it",
+        "website": "https://littleitalia.com/antico/",
     },
     "bartaco-inman-park": {
         "name": "Bartaco",
@@ -1239,7 +1229,7 @@ VENUES = {
         "state": "GA",
         "zip": "30024",
         "venue_type": "theater",
-        "website": "https://villagecomedy.com",
+        # website removed — Squarespace expired (2026-03)
     },
     "whole-world-improv": {
         "name": "Whole World Improv Theatre",
@@ -2002,26 +1992,7 @@ WEEKLY_EVENTS = [
         "tags": ["drag", "nightlife", "weekly", "lgbtq-friendly"],
     },
     # ========== LIVE MUSIC RESIDENCIES ==========
-    {
-        "venue_key": "fontaines",
-        "day": 0,  # Monday
-        "title": "Motown Monday",
-        "description": "Monday Motown night at Fontaine's Oyster House in Virginia Highland. Live soul and Motown with craft cocktails.",
-        "start_time": "20:00",
-        "category": "music",
-        "subcategory": "music.soul",
-        "tags": ["soul", "motown", "live-music", "weekly", "date-night"],
-    },
-    {
-        "venue_key": "fontaines",
-        "day": 2,  # Wednesday
-        "title": "Open Jam Wednesday",
-        "description": "Wednesday open jam session at Fontaine's Oyster House. Musicians welcome to sit in.",
-        "start_time": "20:00",
-        "category": "music",
-        "subcategory": "music.rock",
-        "tags": ["jam-session", "live-music", "open-mic", "weekly"],
-    },
+    # Fontaine's Oyster House — CLOSED, events removed (2026-03)
     {
         "venue_key": "apache-cafe",
         "day": 3,  # Thursday
@@ -2861,18 +2832,7 @@ WEEKLY_EVENTS = [
         "subcategory": None,
         "tags": ["wine", "specials", "half-price", "weekly"],
     },
-    # Fontaine's Half-Price Seafood Thursday
-    # Note: uses existing "fontaines" key (slug: fontaines-oyster-house)
-    {
-        "venue_key": "fontaines",
-        "day": 3,  # Thursday
-        "title": "Half-Price Seafood Happy Hour",
-        "description": "Half-price peel & eat shrimp, crab legs, and raw dozen oysters at Fontaine's in Virginia-Highland. 4-7pm.",
-        "start_time": "16:00",
-        "category": "food_drink",
-        "subcategory": None,
-        "tags": ["oysters", "seafood", "specials", "half-price", "weekly"],
-    },
+    # Fontaine's Half-Price Seafood — CLOSED, removed (2026-03)
     # --- DAILY HAPPY HOURS (Mon / Wed / Fri anchors) ---
     # Watchman's $1 Oysters (Tue-Thu + Sun)
     {

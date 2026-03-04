@@ -1,6 +1,7 @@
 version: 1
 slug: fontaines-oyster-house
 name: "Fontaine's Oyster House"
+# CLOSED permanently — domain parked, business no longer exists (2026-03)
 integration_method: llm_crawler
 defaults:
   venue_name: "Fontaine's Oyster House"
@@ -8,7 +9,7 @@ defaults:
   tags:
   - atlanta-expansion-wave-t
 discovery:
-  enabled: true
+  enabled: false
   type: html
   urls:
   - "http://www.nightcapfoodandspirits.com/fontainesmainpage.html"
@@ -16,7 +17,7 @@ discovery:
     render_js: true
     wait_until: domcontentloaded
 detail:
-  enabled: true
+  enabled: false
   fetch:
     render_js: true
     wait_until: domcontentloaded

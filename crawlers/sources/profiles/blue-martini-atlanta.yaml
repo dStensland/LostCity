@@ -11,7 +11,8 @@ discovery:
   enabled: true
   type: list
   urls:
-  - "http://bluemartini.com/"
+  # Server unreachable, verify if still open (2026-03)
+  - "https://www.bluemartinilounge.com/"
   fetch:
     render_js: false
     wait_until: load

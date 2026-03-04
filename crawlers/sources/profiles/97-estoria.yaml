@@ -11,7 +11,8 @@ discovery:
   enabled: true
   type: list
   urls:
-  - "https://www.97estoria.com"
+  # Domain hijacked by gambling site (2026-03) — venue has no website, social media only
+  - "https://www.instagram.com/97estoria/"
   fetch:
     render_js: false
     wait_until: load

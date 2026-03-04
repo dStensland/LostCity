@@ -7,7 +7,7 @@ discovery:
   enabled: true
   type: list
   urls:
-  - https://www.krogstreetmarket.com
+  - https://www.thekrogdistrict.com
 detail:
   enabled: true
 data_goals:

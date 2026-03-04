@@ -7,7 +7,7 @@ discovery:
   enabled: true
   type: html
   urls:
-  - https://smithsoldebar.com
+  - https://www.sobatl.com
   fetch:
     render_js: true
 detail:

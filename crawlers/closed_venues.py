@@ -73,6 +73,11 @@ CLOSED_VENUES: tuple[ClosedVenue, ...] = (
         name="O4W Pizza",
         reason="Atlanta location closed",
     ),
+    ClosedVenue(
+        slug="fontaines-oyster-house",
+        name="Fontaine's Oyster House",
+        reason="Permanently closed (domain parked, 2026-03)",
+    ),
 )
 
 
