@@ -160,7 +160,7 @@ export default function WhosGoing({ eventId, className = "" }: WhosGoingProps) {
 
   return (
     <div className={`${className}`}>
-      <h2 className="font-mono text-xs font-medium text-[var(--muted)] uppercase tracking-widest mb-4">
+      <h2 className="font-mono text-xs font-bold text-[var(--muted)] uppercase tracking-[0.14em] mb-4">
         Who&apos;s in
       </h2>
 

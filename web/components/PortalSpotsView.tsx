@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import VenueCard from "./VenueCard";
 import { useVenueDiscovery } from "@/lib/hooks/useVenueDiscovery";
 import VenueFilterBar from "@/components/find/VenueFilterBar";
@@ -104,48 +104,71 @@ export default function PortalSpotsView({ portalId, portalSlug, isExclusive = fa
     ? getTabChips(activeTab).find((c) => c.key === filters.occasion)?.label ?? null
     : null;
 
+  // Show category tile grid when on Things to Do tab with all filters at defaults
+  const showCategoryGrid = useMemo(() => {
+    if (activeTab !== "things-to-do") return false;
+    return (
+      filters.venueTypes.length === 0 &&
+      filters.occasion === null &&
+      filters.vibes.length === 0 &&
+      filters.neighborhoods.length === 0 &&
+      filters.cuisine.length === 0 &&
+      filters.priceLevel.length === 0 &&
+      !filters.openNow &&
+      !filters.withEvents
+    );
+  }, [activeTab, filters]);
+
+  const handleCategorySelect = useCallback(
+    (venueTypes: string[]) => {
+      setFilters((f) => ({ ...f, venueTypes }));
+    },
+    [setFilters],
+  );
+
   return (
-    <div className="py-3">
-      <section className="mb-4 rounded-2xl border border-[var(--twilight)]/80 bg-[var(--void)]/70 backdrop-blur-md p-3 sm:p-4">
-        <SpotsTabBar activeTab={activeTab} onTabChange={setActiveTab} />
-        <VenueFilterBar
-          filters={filters}
-          setFilters={setFilters}
-          openCount={meta.openCount}
-          neighborhoods={meta.neighborhoods}
-          portalSlug={portalSlug}
-          portalId={portalId}
-          contextLabel={contextLabel}
-          userLocation={userLocation}
-          onLocationChange={setUserLocation}
-          activeTab={activeTab}
-          filteredCount={filteredSpots.length}
-        />
-        <VenueListView
-          spots={filteredSpots}
-          sortBy={sortBy}
-          setSortBy={setSortBy}
-          portalSlug={portalSlug}
-          loading={loading}
-          fetchError={fetchError}
-          onRetry={retry}
-          filteredCount={filteredSpots.length}
-          totalCount={spots.length}
-          hasLocation={userLocation != null}
-          userLocation={userLocation}
-          activeTab={activeTab}
-          activeChipLabel={activeChipLabel}
-          renderCard={(spot) => (
-            <VenueCard
-              key={spot.id}
-              venue={spot}
-              portalSlug={portalSlug}
-              variant="discovery"
-              showDistance={userLocation ?? undefined}
-            />
-          )}
-        />
-      </section>
+    <div className="space-y-3">
+      <SpotsTabBar activeTab={activeTab} onTabChange={setActiveTab} />
+      <VenueFilterBar
+        filters={filters}
+        setFilters={setFilters}
+        openCount={meta.openCount}
+        neighborhoods={meta.neighborhoods}
+        portalSlug={portalSlug}
+        portalId={portalId}
+        contextLabel={contextLabel}
+        userLocation={userLocation}
+        onLocationChange={setUserLocation}
+        activeTab={activeTab}
+        filteredCount={filteredSpots.length}
+      />
+      <VenueListView
+        spots={filteredSpots}
+        sortBy={sortBy}
+        setSortBy={setSortBy}
+        portalSlug={portalSlug}
+        loading={loading}
+        fetchError={fetchError}
+        onRetry={retry}
+        filteredCount={filteredSpots.length}
+        totalCount={spots.length}
+        hasLocation={userLocation != null}
+        userLocation={userLocation}
+        activeTab={activeTab}
+        activeChipLabel={activeChipLabel}
+        showCategoryGrid={showCategoryGrid}
+        onCategorySelect={handleCategorySelect}
+        allTabSpots={spots}
+        renderCard={(spot) => (
+          <VenueCard
+            key={spot.id}
+            venue={spot}
+            portalSlug={portalSlug}
+            variant="discovery"
+            showDistance={userLocation ?? undefined}
+          />
+        )}
+      />
     </div>
   );
 }

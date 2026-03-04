@@ -74,35 +74,59 @@ CATEGORY_KEYWORDS = {
     "news": [
         "development", "zoning", "transit", "startup", "investigation",
         "officials", "breaking", "report", "announced", "update",
+        "construction", "demolition", "project", "planned", "proposed",
+        "opening", "closing", "relocat", "expansion", "redevelop",
+        "real estate", "property", "skyscraper", "tower", "building",
+        "makeover", "renovation", "business", "company", "headquarter",
     ],
     "arts": [
         "gallery", "museum", "sculpture", "theater", "theatre",
-        "performance", "photography", "exhibition", "mural", "visual art",
+        "performance art", "photography", "exhibition", "mural", "visual art",
+        "painting", "art installation", "curator", "artwork",
+        "ballet", "opera", "symphony", "orchestra",
+        "call for artists", "art show", "art exhibit",
     ],
     "culture": [
         "festival", "literary", "book", "film", "screening", "poetry",
         "open mic", "culture", "heritage", "documentary",
+        "podcast", "magazine", "storytell", "oral history",
     ],
     "food": [
         "restaurant", "chef", "dining", "brunch", "cocktail", "brewery",
         "grand opening", "now open", "menu", "food hall", "tasting", "recipe",
-        "bakery", "cafe", "distillery",
+        "bakery", "cafe", "distillery", "eatery", "kitchen",
+        "burger", "pizza", "taco", "sushi", "ramen", "bbq", "barbecue",
+        "coffee shop", "wine bar", "beer garden", "tavern", "grill",
+        "drive-thru", "fast-casual", "food truck", "ice cream",
+        "executive chef", "culinary", "taproom", "gastropub",
+        "steakhouse", "diner", "winery", "rooftop bar",
     ],
     "music": [
-        "concert", "band", "album", "dj", "hip-hop", "hip hop", "jazz",
-        "live music", "vinyl", "rapper", "singer", "songwriter", "tour",
+        "concert", "band", "album", "hip-hop", "hip hop", "jazz",
+        "live music", "vinyl", "rapper", "singer", "songwriter",
+        "musician", "playlist", "record label", "r&b", "punk",
+        "indie music", "folk music", "blues", "edm", "electronic music",
+        " dj ", "dj set", "dj night",
     ],
     "community": [
         "volunteer", "nonprofit", "mutual aid", "neighborhood",
         "grassroots", "community", "fundraiser", "donation",
+        "career expo", "job fair", "housing", "affordable",
+        "school board", "school closure", "school district",
+        "library", "parks", "recreation",
     ],
     "civic": [
         "city council", "election", "ballot", "zoning", "budget",
         "public hearing", "ordinance", "infrastructure", "marta",
+        "county", "commission", "municipal", "public safety",
+        "transit", "transportation", "traffic",
     ],
     "politics": [
         "political", "campaign", "governor", "legislature", "protest",
         "crime", "policy", "democrat", "republican", "senator",
+        "gubernatorial", "candidate", "bill ", " bill", "passed",
+        "healthcare", "law ", " law", "lawmaker", "regulation",
+        "georgia house", "georgia senate", "state house",
     ],
 }
 
@@ -139,9 +163,13 @@ def classify_post(
         if any(kw in text for kw in keywords):
             matched.add(cat)
 
-    # 3. Fallback to source categories if nothing matched
+    # 3. Fallback: use the source's PRIMARY category (first valid one),
+    #    not ALL source categories — avoids over-tagging general articles.
     if not matched:
-        matched = {c for c in (source_categories or []) if c in VALID_CATEGORIES}
+        for c in (source_categories or []):
+            if c in VALID_CATEGORIES:
+                matched.add(c)
+                break  # only the primary category
 
     # Ensure at least "news" as a default
     if not matched:

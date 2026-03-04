@@ -1,21 +1,23 @@
 """
 Crawler for Ameris Bank Amphitheatre (encoreparkamphitheatre.com).
 
-Site uses JavaScript rendering - must use Playwright.
+Uses JSON-LD event objects from encoreparkamphitheatre.com.
 """
 
 from __future__ import annotations
 
+import json
+import html as html_lib
 import re
 import logging
 from datetime import datetime
 from typing import Optional
 
-from playwright.sync_api import sync_playwright
+import requests
+from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
-from utils import extract_images_from_page, extract_event_links, find_event_url, enrich_event_record
 
 logger = logging.getLogger(__name__)
 
@@ -52,172 +54,156 @@ def parse_time(time_text: str) -> Optional[str]:
     return None
 
 
+def parse_jsonld_events(html: str) -> list[dict]:
+    events: list[dict] = []
+    soup = BeautifulSoup(html, "html.parser")
+    for script in soup.select('script[type="application/ld+json"]'):
+        raw = script.string or script.text or ""
+        if not raw:
+            continue
+        try:
+            data = json.loads(raw)
+        except Exception:
+            continue
+        items = data if isinstance(data, list) else [data]
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            event_type = item.get("@type")
+            if event_type == "Event" or (isinstance(event_type, list) and "Event" in event_type):
+                events.append(item)
+    return events
+
+
+def parse_iso_datetime(value: str | None) -> tuple[Optional[str], Optional[str]]:
+    if not value:
+        return None, None
+    try:
+        dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        return dt.strftime("%Y-%m-%d"), dt.strftime("%H:%M")
+    except ValueError:
+        if re.match(r"^\d{4}-\d{2}-\d{2}$", str(value)):
+            return str(value), None
+        return None, None
+
+
+def clean_description(value: str | None) -> str:
+    if not value:
+        return ""
+    text = html_lib.unescape(str(value))
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Ameris Bank Amphitheatre events using Playwright."""
+    """Crawl Ameris Bank Amphitheatre events from structured JSON-LD."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
 
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                viewport={"width": 1920, "height": 1080},
-            )
-            page = context.new_page()
+        venue_id = get_or_create_venue(VENUE_DATA)
+        logger.info(f"Fetching Ameris Bank Amphitheatre: {EVENTS_URL}")
+        response = requests.get(EVENTS_URL, timeout=30, headers={"User-Agent": "Mozilla/5.0"})
+        response.raise_for_status()
+        jsonld_events = parse_jsonld_events(response.text)
+        logger.info(f"Found {len(jsonld_events)} JSON-LD events")
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+        today = datetime.now().date()
+        seen_keys = set()
 
-            logger.info(f"Fetching Ameris Bank Amphitheatre: {EVENTS_URL}")
-            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)
+        for event_data in jsonld_events:
+            title = (event_data.get("name") or "").strip()
+            if not title:
+                continue
 
-            # Extract images from page
-            image_map = extract_images_from_page(page)
+            start_date, start_time = parse_iso_datetime(event_data.get("startDate"))
+            end_date, end_time = parse_iso_datetime(event_data.get("endDate"))
+            if not start_date:
+                continue
 
-            # Extract event links for specific URLs
-            event_links = extract_event_links(page, BASE_URL)
+            try:
+                start_dt = datetime.strptime(start_date, "%Y-%m-%d").date()
+            except ValueError:
+                continue
 
-            # Scroll to load all content
-            for _ in range(5):
-                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                page.wait_for_timeout(1000)
+            if start_dt < today:
+                continue
 
-            # Get page text and parse line by line
-            body_text = page.inner_text("body")
-            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
+            key = f"{title}|{start_date}"
+            if key in seen_keys:
+                continue
+            seen_keys.add(key)
 
-            # Parse events - look for date patterns
-            i = 0
-            while i < len(lines):
-                line = lines[i]
+            description = clean_description(event_data.get("description"))
+            event_url = event_data.get("url") or EVENTS_URL
 
-                # Skip navigation items
-                if len(line) < 3:
-                    i += 1
-                    continue
+            image_url = event_data.get("image")
+            if isinstance(image_url, list):
+                image_url = image_url[0] if image_url else None
+            if not image_url:
+                image_url = None
 
-                # Look for date patterns
-                date_match = re.match(
-                    r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)?,?\s*(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})(?:,?\s+(\d{4}))?",
-                    line,
-                    re.IGNORECASE
-                )
-
-                if date_match:
-                    month = date_match.group(1)
-                    day = date_match.group(2)
-                    year = date_match.group(3) if date_match.group(3) else str(datetime.now().year)
-
-                    # Look for title in surrounding lines
-                    title = None
-                    start_time = None
-
-                    for offset in [-2, -1, 1, 2, 3]:
-                        idx = i + offset
-                        if 0 <= idx < len(lines):
-                            check_line = lines[idx]
-                            if re.match(r"(January|February|March)", check_line, re.IGNORECASE):
-                                continue
-                            if not start_time:
-                                time_result = parse_time(check_line)
-                                if time_result:
-                                    start_time = time_result
-                                    continue
-                            if not title and len(check_line) > 5:
-                                if not re.match(r"\d{1,2}[:/]", check_line):
-                                    if not re.match(r"(free|tickets|register|\$|more info)", check_line.lower()):
-                                        title = check_line
-                                        break
-
-                    if not title:
-                        i += 1
-                        continue
-
-                    # Parse date
+            offers = event_data.get("offers")
+            price_min = None
+            price_max = None
+            price_note = None
+            is_free = False
+            if isinstance(offers, dict):
+                if offers.get("price") is not None:
                     try:
-                        month_str = month[:3] if len(month) > 3 else month
-                        dt = datetime.strptime(f"{month_str} {day} {year}", "%b %d %Y")
-                        if dt.date() < datetime.now().date():
-                            dt = datetime.strptime(f"{month_str} {day} {int(year) + 1}", "%b %d %Y")
-                        start_date = dt.strftime("%Y-%m-%d")
-                    except ValueError:
-                        i += 1
-                        continue
+                        price_min = float(offers["price"])
+                        price_max = price_min
+                        is_free = price_min == 0
+                    except Exception:
+                        price_note = str(offers.get("price"))
+                availability = offers.get("availability")
+                if availability:
+                    price_note = availability.split("/")[-1]
 
-                    events_found += 1
+            events_found += 1
+            hash_key = f"{start_date}|{start_time}" if start_time else start_date
+            content_hash = generate_content_hash(title, "Ameris Bank Amphitheatre", hash_key)
+            event_record = {
+                "source_id": source_id,
+                "venue_id": venue_id,
+                "title": title,
+                "description": description or "Event at Ameris Bank Amphitheatre",
+                "start_date": start_date,
+                "start_time": start_time,
+                "end_date": end_date,
+                "end_time": end_time,
+                "is_all_day": False,
+                "category": "music",
+                "subcategory": "concert",
+                "tags": ["ameris-bank", "alpharetta", "outdoor-concert", "live-music"],
+                "price_min": price_min,
+                "price_max": price_max,
+                "price_note": price_note,
+                "is_free": is_free,
+                "source_url": event_url,
+                "ticket_url": event_url,
+                "image_url": image_url,
+                "raw_text": f"{title} - {start_date}",
+                "extraction_confidence": 0.91,
+                "is_recurring": False,
+                "recurrence_rule": None,
+                "content_hash": content_hash,
+            }
 
-                    content_hash = generate_content_hash(title, "Ameris Bank Amphitheatre", start_date)
+            existing = find_event_by_hash(content_hash)
+            if existing:
+                smart_update_existing_event(existing, event_record)
+                events_updated += 1
+                continue
 
-
-                    # Get specific event URL
-
-
-                    event_url = find_event_url(title, event_links, EVENTS_URL)
-
-
-
-                    event_record = {
-                        "source_id": source_id,
-                        "venue_id": venue_id,
-                        "title": title,
-                        "description": "Event at Ameris Bank Amphitheatre",
-                        "start_date": start_date,
-                        "start_time": start_time,
-                        "end_date": None,
-                        "end_time": None,
-                        "is_all_day": False,
-                        "category": "music",
-                        "subcategory": "concert",
-                        "tags": ["ameris-bank", "alpharetta", "outdoor-concert"],
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": None,
-                        "is_free": None,
-                        "source_url": event_url,
-                        "ticket_url": event_url,
-                        "image_url": image_map.get(title),
-                        "raw_text": f"{title} - {start_date}",
-                        "extraction_confidence": 0.80,
-                        "is_recurring": False,
-                        "recurrence_rule": None,
-                        "content_hash": content_hash,
-                    }
-
-                    # Enrich from detail page
-                    enrich_event_record(event_record, source_name="Ameris Bank Amphitheatre")
-
-                    # Determine is_free if still unknown after enrichment
-                    if event_record.get("is_free") is None:
-                        desc_lower = (event_record.get("description") or "").lower()
-                        title_lower = event_record.get("title", "").lower()
-                        combined = f"{title_lower} {desc_lower}"
-                        if any(kw in combined for kw in ["free", "no cost", "no charge", "complimentary"]):
-                            event_record["is_free"] = True
-                            event_record["price_min"] = event_record.get("price_min") or 0
-                            event_record["price_max"] = event_record.get("price_max") or 0
-                        else:
-                            event_record["is_free"] = False
-
-                    existing = find_event_by_hash(content_hash)
-                    if existing:
-                        smart_update_existing_event(existing, event_record)
-                        events_updated += 1
-                        i += 1
-                        continue
-
-                    try:
-                        insert_event(event_record)
-                        events_new += 1
-                        logger.info(f"Added: {title} on {start_date}")
-                    except Exception as e:
-                        logger.error(f"Failed to insert: {title}: {e}")
-
-                i += 1
-
-            browser.close()
+            try:
+                insert_event(event_record)
+                events_new += 1
+            except Exception as e:
+                logger.error(f"Failed to insert: {title}: {e}")
 
         logger.info(
             f"Ameris Bank Amphitheatre crawl complete: {events_found} found, {events_new} new, {events_updated} updated"

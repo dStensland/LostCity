@@ -20,7 +20,7 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, remove_stale_source_events
 from dedupe import generate_content_hash
-from utils import extract_event_links, find_event_url, extract_images_from_page, enrich_event_record
+from utils import extract_event_links, find_event_url, extract_images_from_page, enrich_event_record, is_junk_description
 
 logger = logging.getLogger(__name__)
 
@@ -289,7 +289,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         if isinstance(image_url, list):
                             image_url = image_url[0] if image_url else None
 
-                        description = event_data.get("description", f"Event at Gas South Arena")
+                        description = event_data.get("description") or None
+                        if is_junk_description(description):
+                            description = None
 
                         category = infer_category(title)
 
@@ -445,7 +447,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "source_id": source_id,
                             "venue_id": venue_id,
                             "title": title,
-                            "description": f"Event at Gas South Arena",
+                            "description": None,
                             "start_date": start_date,
                             "start_time": start_time,
                             "end_date": None,

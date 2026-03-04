@@ -1,0 +1,29 @@
+version: 1
+slug: chattahoochee-food-works
+name: "Chattahoochee Food Works"
+integration_method: llm_crawler
+defaults:
+  venue_name: "Chattahoochee Food Works"
+  category: food_drink
+  tags:
+  - atlanta-expansion-wave-y
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - "https://chattahoocheefoodworks.com/events/"
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+detail:
+  enabled: true
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+data_goals:
+  - events
+  - lineup
+  - images
+  - tickets

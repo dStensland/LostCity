@@ -1,0 +1,30 @@
+version: 1
+slug: coolray-field
+name: "Coolray Field"
+integration_method: llm_crawler
+defaults:
+  venue_name: "Coolray Field"
+  category: sports
+  tags:
+  - atlanta-expansion-wave-t
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - "https://www.milb.com/gwinnett/events/concerts"
+  - "https://www.milb.com/gwinnett/community/calendar"
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+detail:
+  enabled: true
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+data_goals:
+  - events
+  - lineup
+  - images
+  - tickets

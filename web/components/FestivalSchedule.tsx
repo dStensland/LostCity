@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { FestivalSession, FestivalProgram } from "@/lib/festivals";
+import type { FestivalLayout } from "@/lib/festival-layout";
 import { getCategoryAccentColor } from "@/lib/moments-utils";
 import { decodeHtmlEntities } from "@/lib/formats";
 import RSVPButton from "@/components/RSVPButton";
@@ -17,7 +18,9 @@ interface FestivalScheduleProps {
   prefetchLimit?: number;
   fullScheduleHref?: string;
   fullScheduleLabel?: string;
-  festivalType?: string | null;
+  layout: FestivalLayout;
+  showSessionDescriptions?: boolean;
+  defaultDayMode?: "all" | "firstUpcoming";
 }
 
 function formatShortDate(dateStr: string): string {
@@ -38,6 +41,23 @@ function formatTime(timeStr: string | null): string {
   return `${displayHour}:${minutes} ${ampm}`;
 }
 
+function formatTimeRange(
+  startTime: string | null,
+  endTime: string | null,
+  startDate: string,
+  endDate: string | null
+): string {
+  if (!startTime && !endTime) return "TBA";
+  const start = formatTime(startTime);
+  const end = formatTime(endTime);
+  if (!start) return end || "TBA";
+  if (!end) return start;
+  if (endDate && endDate !== startDate) {
+    return `${start} – ${formatShortDate(endDate)} ${end}`;
+  }
+  return `${start}–${end}`;
+}
+
 function getCategoryColor(category: string | null): string {
   return getCategoryAccentColor(category);
 }
@@ -50,9 +70,10 @@ export default function FestivalSchedule({
   prefetchLimit = 10,
   fullScheduleHref,
   fullScheduleLabel = "Open Full View",
-  festivalType,
+  layout,
+  showSessionDescriptions = false,
+  defaultDayMode = "all",
 }: FestivalScheduleProps) {
-  const isSimplifiedView = festivalType === "market" || festivalType === "fair";
   const router = useRouter();
   const isPreviewEnabled = previewLimit > 0;
 
@@ -89,6 +110,15 @@ export default function FestivalSchedule({
     }
     return map;
   }, [programs]);
+  const programDescriptionById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const program of programs) {
+      if (program.description) {
+        map.set(program.id, decodeHtmlEntities(program.description));
+      }
+    }
+    return map;
+  }, [programs]);
   const daySessionCounts = useMemo(() => {
     const counts = new Map<string, number>();
     for (const session of sessions) {
@@ -102,7 +132,15 @@ export default function FestivalSchedule({
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   }, []);
-  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const initialSelectedDay = useMemo(() => {
+    if (defaultDayMode !== "firstUpcoming" || days.length <= 1) {
+      return null;
+    }
+    const nextOrCurrent = days.find((day) => day >= todayStr);
+    return nextOrCurrent || days[0] || null;
+  }, [days, defaultDayMode, todayStr]);
+
+  const [selectedDay, setSelectedDay] = useState<string | null>(initialSelectedDay);
   const [selectedVenue, setSelectedVenue] = useState<number | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedProgram, setSelectedProgram] = useState<string | null>(null);
@@ -110,8 +148,17 @@ export default function FestivalSchedule({
   const controlsRef = useRef<HTMLDivElement>(null);
   const resetExpanded = () => setExpanded(!isPreviewEnabled);
   const hasDayTabs = days.length > 1;
-  const hasFilterControls = venues.length > 1 || (!isSimplifiedView && (categories.length > 1 || programs.length > 1));
-  const hasProgramContext = !isSimplifiedView && sortedPrograms.length > 1;
+  const chipFilterLimit = 6;
+  const dayChipLimit = 8;
+  const hasVenueFilter = venues.length > 1;
+  const hasCategoryFilter = layout.showCategoryFilters && categories.length > 1;
+  const hasProgramFilter = layout.showProgramFilters && sortedPrograms.length > 1;
+  const useVenueSelect = hasVenueFilter && venues.length > chipFilterLimit;
+  const useCategorySelect = hasCategoryFilter && categories.length > chipFilterLimit;
+  const useProgramSelect = hasProgramFilter && sortedPrograms.length > chipFilterLimit;
+  const useDaySelect = hasDayTabs && days.length > dayChipLimit;
+  const hasFilterControls = hasVenueFilter || hasCategoryFilter || hasProgramFilter;
+  const hasProgramContext = hasProgramFilter;
   const effectiveSelectedDay = selectedDay !== null && days.includes(selectedDay) ? selectedDay : null;
 
   const applyStickyOffset = useCallback(() => {
@@ -137,12 +184,24 @@ export default function FestivalSchedule({
   }, [applyStickyOffset]);
 
   const filtered = useMemo(() => {
-    return sessions.filter((s) => {
+    const matchingSessions = sessions.filter((s) => {
       if (effectiveSelectedDay !== null && s.start_date !== effectiveSelectedDay) return false;
       if (selectedVenue !== null && s.venue?.id !== selectedVenue) return false;
       if (selectedCategory && s.category !== selectedCategory) return false;
       if (selectedProgram && s.series_id !== selectedProgram) return false;
       return true;
+    });
+
+    return matchingSessions.sort((a, b) => {
+      if (a.start_date !== b.start_date) {
+        return a.start_date.localeCompare(b.start_date);
+      }
+      const aTime = a.start_time ?? "99:99";
+      const bTime = b.start_time ?? "99:99";
+      if (aTime !== bTime) {
+        return aTime.localeCompare(bTime);
+      }
+      return decodeHtmlEntities(a.title).localeCompare(decodeHtmlEntities(b.title));
     });
   }, [sessions, effectiveSelectedDay, selectedVenue, selectedCategory, selectedProgram]);
 
@@ -152,6 +211,17 @@ export default function FestivalSchedule({
   );
 
   const hasMoreSessions = isPreviewEnabled && filtered.length > previewLimit;
+  const groupedVisibleSessions = useMemo(() => {
+    const groups = new Map<string, FestivalSession[]>();
+    for (const session of visibleSessions) {
+      if (!groups.has(session.start_date)) {
+        groups.set(session.start_date, []);
+      }
+      groups.get(session.start_date)!.push(session);
+    }
+    return groups;
+  }, [visibleSessions]);
+  const orderedVisibleDays = useMemo(() => Array.from(groupedVisibleSessions.keys()).sort(), [groupedVisibleSessions]);
 
   useEffect(() => {
     // Warm next event pages so festival -> detail navigation feels instant.
@@ -161,6 +231,109 @@ export default function FestivalSchedule({
   }, [router, portalSlug, visibleSessions, prefetchLimit]);
 
   const activeFilters = [effectiveSelectedDay, selectedVenue, selectedCategory, selectedProgram].filter((v) => v !== null).length;
+  const shouldGroupByDay = effectiveSelectedDay === null && days.length > 1;
+
+  const renderSessionRow = (session: FestivalSession, showInlineDay = false) => {
+    const title = decodeHtmlEntities(session.title);
+    const normalizedTitle = title.trim().toLowerCase();
+    const summary = decodeHtmlEntities(
+      session.description ||
+        (session.series_id ? programDescriptionById.get(session.series_id) || "" : "")
+    );
+    const programTitle = session.series_id ? programTitleById.get(session.series_id) : null;
+    const shouldShowProgramTitle =
+      Boolean(programTitle) &&
+      decodeHtmlEntities(programTitle || "").trim().toLowerCase() !== normalizedTitle;
+
+    return (
+      <div
+        key={session.id}
+        className="group flex items-start gap-3 px-3.5 py-3.5 hover:bg-[var(--dusk)]/72 transition-colors sm:gap-4 sm:px-4 sm:py-4"
+      >
+        <div className="flex-shrink-0 w-[5.25rem] sm:w-[6.5rem] pt-0.5">
+          {showInlineDay && (
+            <div className="font-mono text-[10px] text-[var(--muted)] mb-1 truncate">
+              {formatShortDate(session.start_date)}
+            </div>
+          )}
+          <span className="inline-flex rounded px-1.5 py-0.5 font-mono text-[11px] sm:text-xs text-[var(--soft)] bg-[var(--night)]/95 border border-[var(--twilight)]/40">
+            {formatTimeRange(session.start_time, session.end_time, session.start_date, session.end_date)}
+          </span>
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <Link
+            href={`/${portalSlug}/events/${session.id}`}
+            prefetch
+            className="font-medium text-sm sm:text-[15px] text-[var(--cream)] hover:text-accent transition-colors line-clamp-2 leading-snug"
+          >
+            {title}
+          </Link>
+          {showSessionDescriptions && summary && (
+            <p className="mt-1 text-xs sm:text-sm text-[var(--muted)] line-clamp-2">
+              {summary}
+            </p>
+          )}
+
+          <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+            {hasProgramContext && shouldShowProgramTitle && (
+              <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium border border-[var(--twilight)]/50 bg-[var(--twilight)]/20 text-[var(--soft)] max-w-[11rem] truncate">
+                {programTitle}
+              </span>
+            )}
+            {session.venue && (
+              <Link
+                href={`/${portalSlug}/spots/${session.venue.slug}`}
+                className="text-[11px] sm:text-xs text-[var(--soft)] hover:text-[var(--coral)] transition-colors inline-flex items-center gap-1"
+              >
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                {session.venue.name}
+              </Link>
+            )}
+
+            {layout.showCategoryFilters && session.category && (
+              <span
+                className="px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium border"
+                style={{
+                  borderColor: getCategoryColor(session.category),
+                  color: getCategoryColor(session.category),
+                  backgroundColor: `color-mix(in srgb, ${getCategoryColor(session.category)} 12%, transparent)`,
+                }}
+              >
+                {session.category.replace(/_/g, " ")}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="hidden sm:flex shrink-0 items-center gap-1 pt-0.5">
+          <AddToCalendar
+            eventId={session.id}
+            title={title}
+            date={session.start_date}
+            time={session.start_time}
+            venue={session.venue?.name}
+            variant="icon"
+          />
+          <RSVPButton
+            eventId={session.id}
+            eventTitle={title}
+            venueId={session.venue?.id}
+            venueName={session.venue?.name}
+            variant="compact"
+          />
+        </div>
+        <div className="sm:hidden shrink-0 text-[var(--muted)] pt-1">
+          <svg className="w-4 h-4 group-hover:text-[var(--soft)] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div id="schedule">
@@ -169,7 +342,7 @@ export default function FestivalSchedule({
           <svg className="w-5 h-5 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
-          {isSimplifiedView ? "Hours & Events" : "Schedule"}
+          {layout.scheduleTitle}
           <span className="text-sm font-normal text-[var(--muted)]">
             ({filtered.length} session{filtered.length !== 1 ? "s" : ""})
           </span>
@@ -191,157 +364,231 @@ export default function FestivalSchedule({
       {(hasDayTabs || hasFilterControls) && (
         <div
           ref={controlsRef}
-          className="sticky z-30 -mx-4 px-4 py-2 mb-4 border-y border-[var(--twilight)]/30 bg-[var(--void)]/95 backdrop-blur-sm sm:static sm:mx-0 sm:px-0 sm:py-0 sm:mb-4 sm:border-0 sm:bg-transparent sm:backdrop-blur-none"
+          className="sticky z-30 -mx-4 px-4 py-2.5 mb-4 border-y border-[var(--twilight)]/45 bg-[var(--night)]/95 shadow-[0_10px_22px_rgba(0,0,0,0.35)] backdrop-blur-sm sm:static sm:mx-0 sm:px-0 sm:py-0 sm:mb-4 sm:border-0 sm:shadow-none sm:bg-transparent sm:backdrop-blur-none"
           style={{ top: "var(--festival-schedule-sticky-top, 56px)" }}
         >
           {/* Day tabs */}
           {hasDayTabs && (
-            <div className="relative mb-2 sm:mb-4">
-              <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-[var(--void)] to-transparent z-10 pointer-events-none sm:hidden" />
-              <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-[var(--void)] to-transparent z-10 pointer-events-none sm:hidden" />
-              <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-                <div className="flex gap-2 min-w-min">
-                  <button
-                    onClick={() => {
-                      setSelectedDay(null);
+            <div className="relative mb-2 sm:mb-4 space-y-2">
+              {useDaySelect ? (
+                <label className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs border border-[var(--twilight)]/40 bg-[var(--twilight)]/10 text-[var(--soft)]">
+                  Date
+                  <select
+                    value={effectiveSelectedDay ?? ""}
+                    onChange={(e) => {
+                      setSelectedDay(e.target.value || null);
                       resetExpanded();
                     }}
-                    className={`relative px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                      effectiveSelectedDay === null
-                        ? "bg-accent-20 text-accent border border-accent-40"
-                        : "bg-[var(--twilight)]/30 text-[var(--soft)] hover:bg-[var(--twilight)]/60 border border-transparent"
-                    }`}
+                    className="bg-transparent text-xs text-[var(--cream)] border-none focus:outline-none cursor-pointer max-w-[170px]"
                   >
-                    All dates
-                  </button>
-                  {days.map((day) => {
-                    const isSelected = effectiveSelectedDay === day;
-                    const isToday = day === todayStr;
-                    return (
+                    <option value="">All dates</option>
+                    {days.map((day) => (
+                      <option key={day} value={day} className="text-black">
+                        {`${formatShortDate(day)} (${daySessionCounts.get(day) || 0})`}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : (
+                <>
+                  <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-[var(--night)] to-transparent z-10 pointer-events-none sm:hidden" />
+                  <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-[var(--night)] to-transparent z-10 pointer-events-none sm:hidden" />
+                  <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+                    <div className="flex gap-2 min-w-min">
                       <button
-                        key={day}
                         onClick={() => {
-                          setSelectedDay((prev) => (prev === day ? null : day));
+                          setSelectedDay(null);
                           resetExpanded();
                         }}
                         className={`relative px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
-                          isSelected
+                          effectiveSelectedDay === null
                             ? "bg-accent-20 text-accent border border-accent-40"
                             : "bg-[var(--twilight)]/30 text-[var(--soft)] hover:bg-[var(--twilight)]/60 border border-transparent"
                         }`}
                       >
-                        <span>{formatShortDate(day)}</span>
-                        <span className="ml-1.5 text-xs opacity-75">
-                          {daySessionCounts.get(day) || 0}
-                        </span>
-                        {isToday && (
-                          <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-accent shadow-[0_0_6px_rgba(255,107,122,0.6)]" />
-                        )}
+                        All dates
                       </button>
-                    );
-                  })}
-                </div>
-              </div>
+                      {days.map((day) => {
+                        const isSelected = effectiveSelectedDay === day;
+                        const isToday = day === todayStr;
+                        return (
+                          <button
+                            key={day}
+                            onClick={() => {
+                              setSelectedDay((prev) => (prev === day ? null : day));
+                              resetExpanded();
+                            }}
+                            className={`relative px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                              isSelected
+                                ? "bg-accent-20 text-accent border border-accent-40"
+                                : "bg-[var(--twilight)]/30 text-[var(--soft)] hover:bg-[var(--twilight)]/60 border border-transparent"
+                            }`}
+                          >
+                            <span>{formatShortDate(day)}</span>
+                            <span className="ml-1.5 text-xs opacity-75">
+                              {daySessionCounts.get(day) || 0}
+                            </span>
+                            {isToday && (
+                              <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-accent shadow-[0_0_6px_rgba(255,107,122,0.6)]" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
+              )}
+              {useDaySelect && effectiveSelectedDay && (
+                <p className="text-[10px] font-mono uppercase tracking-[0.12em] text-[var(--muted)]">
+                  {formatShortDate(effectiveSelectedDay)} • {daySessionCounts.get(effectiveSelectedDay) || 0} session{(daySessionCounts.get(effectiveSelectedDay) || 0) !== 1 ? "s" : ""}
+                </p>
+              )}
             </div>
           )}
 
-          {/* Filter chips */}
+          {/* Filter controls */}
           {hasFilterControls && (
-            <div className="flex flex-wrap gap-1.5">
-          {/* Venue chips */}
-          {venues.length > 1 && venues.map((v) => (
-            <button
-              key={v.id}
-              onClick={() => {
-                setSelectedVenue(selectedVenue === v.id ? null : v.id);
-                resetExpanded();
-              }}
-              aria-pressed={selectedVenue === v.id}
-              className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-                selectedVenue === v.id
-                  ? "bg-accent-20 text-accent border border-accent-40"
-                  : "bg-[var(--twilight)]/20 text-[var(--muted)] border border-transparent hover:bg-[var(--twilight)]/40 hover:text-[var(--soft)]"
-              }`}
-            >
-              {v.name}
-            </button>
-          ))}
-
-          {/* Category chips (hidden for markets/fairs) */}
-          {!isSimplifiedView && categories.length > 1 && categories.map((c) => (
-            <button
-              key={c}
-              onClick={() => {
-                setSelectedCategory(selectedCategory === c ? null : c);
-                resetExpanded();
-              }}
-              aria-pressed={selectedCategory === c}
-              className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-                selectedCategory === c
-                  ? "bg-accent-20 text-accent border border-accent-40"
-                  : "bg-[var(--twilight)]/20 text-[var(--muted)] border border-transparent hover:bg-[var(--twilight)]/40 hover:text-[var(--soft)]"
-              }`}
-            >
-              {c.replace(/_/g, " ")}
-            </button>
-          ))}
-
-          {/* Program chips — hidden for markets/fairs, only show when manageable count */}
-          {!isSimplifiedView && sortedPrograms.length > 1 && sortedPrograms.length <= 8 && sortedPrograms.map((p) => (
-            <button
-              key={p.id}
-              onClick={() => {
-                setSelectedProgram(selectedProgram === p.id ? null : p.id);
-                resetExpanded();
-              }}
-              aria-pressed={selectedProgram === p.id}
-              className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-                selectedProgram === p.id
-                  ? "bg-accent-20 text-accent border border-accent-40"
-                  : "bg-[var(--twilight)]/20 text-[var(--muted)] border border-transparent hover:bg-[var(--twilight)]/40 hover:text-[var(--soft)]"
-              }`}
-            >
-              {decodeHtmlEntities(p.title)}
-            </button>
-          ))}
-
-          {/* Program select for larger festivals (hidden for markets/fairs) */}
-          {!isSimplifiedView && sortedPrograms.length > 8 && (
-            <label className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs border border-[var(--twilight)]/40 bg-[var(--twilight)]/10 text-[var(--soft)]">
-              Program
-              <select
-                value={selectedProgram ?? ""}
-                onChange={(e) => {
-                  setSelectedProgram(e.target.value || null);
-                  resetExpanded();
-                }}
-                className="bg-transparent text-xs text-[var(--cream)] border-none focus:outline-none cursor-pointer max-w-[180px]"
-              >
-                <option value="">All programs</option>
-                {sortedPrograms.map((p) => (
-                  <option key={p.id} value={p.id} className="text-black">
-                    {decodeHtmlEntities(p.title)}
-                  </option>
+            <div className="space-y-2">
+              <p className="font-mono text-[10px] uppercase tracking-[0.13em] text-[var(--muted)]">
+                Filters
+              </p>
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                {/* Venue */}
+                {hasVenueFilter && !useVenueSelect && venues.map((v) => (
+                  <button
+                    key={v.id}
+                    onClick={() => {
+                      setSelectedVenue(selectedVenue === v.id ? null : v.id);
+                      resetExpanded();
+                    }}
+                    aria-pressed={selectedVenue === v.id}
+                    className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors max-w-[12rem] truncate ${
+                      selectedVenue === v.id
+                        ? "bg-accent-20 text-accent border border-accent-40"
+                        : "bg-[var(--twilight)]/20 text-[var(--muted)] border border-transparent hover:bg-[var(--twilight)]/40 hover:text-[var(--soft)]"
+                    }`}
+                    title={v.name}
+                  >
+                    {v.name}
+                  </button>
                 ))}
-              </select>
-            </label>
-          )}
+                {hasVenueFilter && useVenueSelect && (
+                  <label className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs border border-[var(--twilight)]/40 bg-[var(--twilight)]/10 text-[var(--soft)]">
+                    Venue
+                    <select
+                      value={selectedVenue ?? ""}
+                      onChange={(e) => {
+                        setSelectedVenue(e.target.value ? Number(e.target.value) : null);
+                        resetExpanded();
+                      }}
+                      className="bg-transparent text-xs text-[var(--cream)] border-none focus:outline-none cursor-pointer max-w-[180px]"
+                    >
+                      <option value="">All venues</option>
+                      {venues.map((v) => (
+                        <option key={v.id} value={v.id} className="text-black">
+                          {v.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
 
-          {/* Clear all */}
-          {activeFilters > 0 && (
-            <button
-              onClick={() => {
-                setSelectedDay(null);
-                setSelectedVenue(null);
-                setSelectedCategory(null);
-                setSelectedProgram(null);
-                resetExpanded();
-              }}
-              className="px-2.5 py-1 rounded-full text-xs text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
-            >
-              Clear
-            </button>
-          )}
+                {/* Category */}
+                {hasCategoryFilter && !useCategorySelect && categories.map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => {
+                      setSelectedCategory(selectedCategory === c ? null : c);
+                      resetExpanded();
+                    }}
+                    aria-pressed={selectedCategory === c}
+                    className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors max-w-[11rem] truncate ${
+                      selectedCategory === c
+                        ? "bg-accent-20 text-accent border border-accent-40"
+                        : "bg-[var(--twilight)]/20 text-[var(--muted)] border border-transparent hover:bg-[var(--twilight)]/40 hover:text-[var(--soft)]"
+                    }`}
+                    title={c.replace(/_/g, " ")}
+                  >
+                    {c.replace(/_/g, " ")}
+                  </button>
+                ))}
+                {hasCategoryFilter && useCategorySelect && (
+                  <label className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs border border-[var(--twilight)]/40 bg-[var(--twilight)]/10 text-[var(--soft)]">
+                    Category
+                    <select
+                      value={selectedCategory ?? ""}
+                      onChange={(e) => {
+                        setSelectedCategory(e.target.value || null);
+                        resetExpanded();
+                      }}
+                      className="bg-transparent text-xs text-[var(--cream)] border-none focus:outline-none cursor-pointer max-w-[150px]"
+                    >
+                      <option value="">All categories</option>
+                      {categories.map((c) => (
+                        <option key={c} value={c} className="text-black">
+                          {c.replace(/_/g, " ")}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+
+                {/* Program */}
+                {hasProgramFilter && !useProgramSelect && sortedPrograms.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => {
+                      setSelectedProgram(selectedProgram === p.id ? null : p.id);
+                      resetExpanded();
+                    }}
+                    aria-pressed={selectedProgram === p.id}
+                    className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors max-w-[12rem] truncate ${
+                      selectedProgram === p.id
+                        ? "bg-accent-20 text-accent border border-accent-40"
+                        : "bg-[var(--twilight)]/20 text-[var(--muted)] border border-transparent hover:bg-[var(--twilight)]/40 hover:text-[var(--soft)]"
+                    }`}
+                    title={decodeHtmlEntities(p.title)}
+                  >
+                    {decodeHtmlEntities(p.title)}
+                  </button>
+                ))}
+                {hasProgramFilter && useProgramSelect && (
+                  <label className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs border border-[var(--twilight)]/40 bg-[var(--twilight)]/10 text-[var(--soft)]">
+                    Program
+                    <select
+                      value={selectedProgram ?? ""}
+                      onChange={(e) => {
+                        setSelectedProgram(e.target.value || null);
+                        resetExpanded();
+                      }}
+                      className="bg-transparent text-xs text-[var(--cream)] border-none focus:outline-none cursor-pointer max-w-[170px]"
+                    >
+                      <option value="">All programs</option>
+                      {sortedPrograms.map((p) => (
+                        <option key={p.id} value={p.id} className="text-black">
+                          {decodeHtmlEntities(p.title)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+
+                {/* Clear all */}
+                {activeFilters > 0 && (
+                  <button
+                    onClick={() => {
+                      setSelectedDay(null);
+                      setSelectedVenue(null);
+                      setSelectedCategory(null);
+                      setSelectedProgram(null);
+                      resetExpanded();
+                    }}
+                    className="px-2.5 py-1 rounded-full text-xs text-[var(--muted)] hover:text-[var(--cream)] transition-colors"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -359,94 +606,31 @@ export default function FestivalSchedule({
               Showing {visibleSessions.length} of {filtered.length} sessions
             </p>
           )}
-          <div className="rounded-lg border border-[var(--twilight)] overflow-visible bg-[var(--card-bg)]">
-            <div className="divide-y divide-[var(--twilight)]/30">
-              {visibleSessions.map((session) => (
-                <div
-                  key={session.id}
-                  className="flex items-start gap-2 px-3 py-2.5 hover:bg-[var(--card-bg-hover)] transition-colors sm:gap-4 sm:px-4 sm:py-3"
-                >
-                  {/* Time */}
-                  <div className="flex-shrink-0 w-14 sm:w-20 pt-0.5 sm:pt-1">
-                    {effectiveSelectedDay === null && (
-                      <div className="font-mono text-[10px] text-[var(--muted)] mb-1 truncate">
-                        {formatShortDate(session.start_date)}
-                      </div>
-                    )}
-                    <span className="inline-flex rounded px-1.5 py-0.5 font-mono text-[11px] sm:text-sm text-[var(--muted)] bg-[var(--twilight)]/25">
-                      {formatTime(session.start_time) || "TBA"}
-                    </span>
+          {shouldGroupByDay ? (
+            <div className="rounded-lg border border-[var(--twilight)]/85 overflow-visible bg-[var(--night)]/92 divide-y divide-[var(--twilight)]/35">
+              {orderedVisibleDays.map((day) => (
+                <div key={day}>
+                  <div className="px-3.5 sm:px-4 py-2.5 bg-[var(--void)]/75 border-b border-[var(--twilight)]/35">
+                    <p className="font-mono text-xs uppercase tracking-wider text-[var(--soft)]">
+                      {formatShortDate(day)}
+                      <span className="text-[var(--muted)] ml-2">
+                        ({groupedVisibleSessions.get(day)?.length || 0})
+                      </span>
+                    </p>
                   </div>
-
-                  {/* Event details */}
-                  <div className="flex-1 min-w-0">
-                    {/*
-                      Sessions often ship without imagery, so keep the list text-first and
-                      expose RSVP/calendar actions inline for fast planning.
-                    */}
-                    <Link
-                      href={`/${portalSlug}/events/${session.id}`}
-                      prefetch
-                      className="font-medium text-sm sm:text-base text-[var(--cream)] hover:text-accent transition-colors line-clamp-2"
-                    >
-                      {decodeHtmlEntities(session.title)}
-                    </Link>
-
-                    <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                      {hasProgramContext && session.series_id && programTitleById.get(session.series_id) && (
-                        <span className="px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium border border-[var(--twilight)]/50 bg-[var(--twilight)]/20 text-[var(--soft)]">
-                          {programTitleById.get(session.series_id)}
-                        </span>
-                      )}
-                      {session.venue && (
-                        <Link
-                          href={`/${portalSlug}/spots/${session.venue.slug}`}
-                          className="text-[11px] sm:text-xs text-[var(--soft)] hover:text-[var(--coral)] transition-colors inline-flex items-center gap-1"
-                        >
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                          </svg>
-                          {session.venue.name}
-                        </Link>
-                      )}
-
-                      {!isSimplifiedView && session.category && (
-                        <span
-                          className="px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium border"
-                          style={{
-                            borderColor: getCategoryColor(session.category),
-                            color: getCategoryColor(session.category),
-                            backgroundColor: `color-mix(in srgb, ${getCategoryColor(session.category)} 12%, transparent)`,
-                          }}
-                        >
-                          {session.category.replace(/_/g, " ")}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex shrink-0 items-center gap-1 pt-0.5">
-                    <AddToCalendar
-                      eventId={session.id}
-                      title={decodeHtmlEntities(session.title)}
-                      date={session.start_date}
-                      time={session.start_time}
-                      venue={session.venue?.name}
-                      variant="icon"
-                    />
-                    <RSVPButton
-                      eventId={session.id}
-                      eventTitle={decodeHtmlEntities(session.title)}
-                      venueId={session.venue?.id}
-                      venueName={session.venue?.name}
-                      variant="compact"
-                    />
+                  <div className="divide-y divide-[var(--twilight)]/20">
+                    {(groupedVisibleSessions.get(day) || []).map((session) => renderSessionRow(session))}
                   </div>
                 </div>
               ))}
             </div>
-          </div>
+          ) : (
+            <div className="rounded-lg border border-[var(--twilight)]/85 overflow-visible bg-[var(--night)]/92">
+              <div className="divide-y divide-[var(--twilight)]/35">
+                {visibleSessions.map((session) => renderSessionRow(session, effectiveSelectedDay === null))}
+              </div>
+            </div>
+          )}
 
           {hasMoreSessions && (
             <button

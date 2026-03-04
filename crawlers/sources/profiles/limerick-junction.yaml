@@ -1,0 +1,29 @@
+version: 1
+slug: limerick-junction
+name: "Limerick Junction"
+integration_method: llm_crawler
+defaults:
+  venue_name: "Limerick Junction"
+  category: nightlife
+  tags:
+  - atlanta-expansion-wave-x
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - "https://www.limerickjunction.com/events"
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+detail:
+  enabled: true
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+data_goals:
+  - events
+  - lineup
+  - images
+  - tickets

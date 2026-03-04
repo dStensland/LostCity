@@ -15,7 +15,6 @@ import type {
 import WeatherDiscoverySection from "./sections/WeatherDiscoverySection";
 import TrendingSection from "./sections/TrendingSection";
 import ComingUpSection from "./sections/ComingUpSection";
-import TheSceneSection from "./sections/TheSceneSection";
 import BrowseSection from "./sections/BrowseSection";
 import ConversionCard from "./ConversionCard";
 
@@ -23,13 +22,11 @@ interface CityPulseSectionProps {
   section: CityPulseSectionData;
   portalSlug: string;
   personalization: PersonalizationMeta | null;
-  excludeEventIds?: Set<number>;
 }
 
 export default function CityPulseSection({
   section,
   portalSlug,
-  excludeEventIds,
 }: CityPulseSectionProps) {
   if (section.items.length === 0 && section.type !== "browse") {
     return null;
@@ -42,10 +39,14 @@ export default function CityPulseSection({
       case "trending":
         return <TrendingSection section={section} portalSlug={portalSlug} />;
       case "coming_up":
-        return <ComingUpSection section={section} portalSlug={portalSlug} excludeEventIds={excludeEventIds} />;
+        return <ComingUpSection section={section} portalSlug={portalSlug} />;
       case "the_scene":
       case "tonights_regulars":
-        return <TheSceneSection section={section} portalSlug={portalSlug} excludeEventIds={excludeEventIds} />;
+        // Self-fetching — rendered directly in CityPulseShell, not through this generic renderer
+        return null;
+      case "experiences":
+        // Self-fetching — rendered directly in CityPulseShell, not through this generic renderer
+        return null;
       case "browse":
         return <BrowseSection section={section} portalSlug={portalSlug} />;
       default:

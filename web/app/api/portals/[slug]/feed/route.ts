@@ -38,6 +38,10 @@ import {
   suppressEventImagesIfVenueFlagged,
 } from "@/lib/image-quality-suppression";
 import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
+import {
+  dedupeSectionEventsById,
+  filterOutInactiveVenueEvents,
+} from "@/lib/event-feed-health";
 
 // Cache feed for 5 minutes at CDN, allow stale for 1 hour while revalidating
 export const revalidate = 300;
@@ -178,6 +182,7 @@ type Event = {
       | "recovery_meeting"
       | null;
     city: string | null;
+    active?: boolean | null;
   } | null;
 };
 
@@ -640,7 +645,7 @@ export async function GET(request: NextRequest, { params }: Props) {
           day_of_week,
           festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
         ),
-        venue:venues(id, name, neighborhood, slug, venue_type, location_designator, lat, lng)
+        venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city, lat, lng, active)
       `;
 
   const curatedEventsPromise =
@@ -687,13 +692,13 @@ export async function GET(request: NextRequest, { params }: Props) {
 
   // Merge curated + pinned event rows into a single lookup map
   const eventMap = new Map<number, Event>();
-  for (const event of suppressEventImagesIfVenueFlagged(
-    (curatedEvents || []) as Event[],
+  for (const event of filterOutInactiveVenueEvents(
+    suppressEventImagesIfVenueFlagged((curatedEvents || []) as Event[]),
   )) {
     eventMap.set(event.id, event);
   }
-  for (const event of suppressEventImagesIfVenueFlagged(
-    (pinnedEvents || []) as Event[],
+  for (const event of filterOutInactiveVenueEvents(
+    suppressEventImagesIfVenueFlagged((pinnedEvents || []) as Event[]),
   )) {
     eventMap.set(event.id, event);
   }
@@ -791,7 +796,7 @@ export async function GET(request: NextRequest, { params }: Props) {
           festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
         ),
         source_id,
-        venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city, lat, lng)
+        venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city, lat, lng, active)
     `;
 
     const applyPortalFilter = (query: ReturnType<typeof supabase.from>) => {
@@ -847,7 +852,7 @@ export async function GET(request: NextRequest, { params }: Props) {
 
     // Merge all buckets into the pool
     const addToPool = (events: Event[]) => {
-      for (const rawEvent of events) {
+      for (const rawEvent of filterOutInactiveVenueEvents(events)) {
         const event = suppressEventImageIfVenueFlagged(rawEvent);
         if (
           event.source_id &&
@@ -932,7 +937,7 @@ export async function GET(request: NextRequest, { params }: Props) {
             festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
           ),
           source_id,
-          venue:venues(id, name, neighborhood, slug, venue_type, location_designator)
+          venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city, active)
         `,
         )
         .or(`start_date.gte.${today},end_date.gte.${today}`) // Include ongoing events (exhibitions)
@@ -1501,7 +1506,7 @@ export async function GET(request: NextRequest, { params }: Props) {
               day_of_week,
               festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
             ),
-            venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city)
+            venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city, active)
         `,
           )
           .overlaps("tags", holidayTags)
@@ -1517,7 +1522,7 @@ export async function GET(request: NextRequest, { params }: Props) {
         const suppressedHolidayEvents = suppressEventImagesIfVenueFlagged(
           allHolidayEvents as (Event & { tags?: string[] })[] || [],
         );
-        for (const event of suppressedHolidayEvents) {
+        for (const event of filterOutInactiveVenueEvents(suppressedHolidayEvents)) {
           if (portalCities.length > 0 && event.venue?.city) {
             const venueCity = event.venue.city.trim().toLowerCase();
             if (
@@ -2065,18 +2070,34 @@ export async function GET(request: NextRequest, { params }: Props) {
       return orderA - orderB;
     });
 
-  const finalSections = [...sortedHolidaySections, ...feedSections];
+  const finalSections = dedupeSectionEventsById([
+    ...sortedHolidaySections,
+    ...feedSections,
+  ]);
+
+  const filteredFinalSections = finalSections.filter((section) => {
+    const nonEventTypes = new Set([
+      "category_grid",
+      "announcement",
+      "external_link",
+      "countdown",
+      "venue_list",
+      "nightlife_carousel",
+    ]);
+    if (nonEventTypes.has(section.block_type)) return true;
+    return section.events.length >= 2;
+  });
 
   const allEventIds = Array.from(
     new Set(
-      finalSections.flatMap((section) =>
+      filteredFinalSections.flatMap((section) =>
         section.events.map((event: Event) => event.id),
       ),
     ),
   );
   const socialCounts = await fetchSocialProofCounts(allEventIds);
 
-  const sectionsWithCounts = finalSections.map((section) => ({
+  const sectionsWithCounts = filteredFinalSections.map((section) => ({
     ...section,
     events: section.events.map((event: Event) => {
       const eventCounts = socialCounts.get(event.id);

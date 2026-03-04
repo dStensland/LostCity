@@ -24,6 +24,7 @@ import {
 } from "@/lib/image-quality-suppression";
 import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
 import { isSuppressedFromGeneralEventFeed } from "@/lib/event-content-classification";
+import { filterOutInactiveVenueEvents } from "@/lib/event-feed-health";
 
 import { fetchSocialProofCounts } from "@/lib/social-proof";
 import { format, startOfDay, addDays } from "date-fns";
@@ -214,12 +215,11 @@ export async function GET(request: Request) {
           day_of_week,
           festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
         ),
-        venue:venues(id, name, slug, neighborhood, location_designator, blurhash, city)
+        venue:venues(id, name, slug, neighborhood, location_designator, blurhash, city, active)
       `,
           )
           .gte("start_date", todayForTrending)
           .lte("start_date", weekFromNow)
-          .eq("is_active", true)
           .is("canonical_event_id", null)
           .is("portal_id", null)
           .order("start_date", { ascending: true })
@@ -428,11 +428,10 @@ export async function GET(request: Request) {
         day_of_week,
         festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
       ),
-      venue:venues(id, name, neighborhood, slug, location_designator, blurhash, city, lat, lng)
+      venue:venues(id, name, neighborhood, slug, location_designator, blurhash, city, lat, lng, active)
     `,
       )
       .or(`start_date.gte.${startDateFilter},end_date.gte.${startDateFilter}`) // Include ongoing events (exhibitions with end_date)
-      .eq("is_active", true)
       .is("canonical_event_id", null) // Only show canonical events, not duplicates
       .or("is_class.eq.false,is_class.is.null")
       .or("is_sensitive.eq.false,is_sensitive.is.null")
@@ -519,7 +518,7 @@ export async function GET(request: Request) {
       day_of_week,
       festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
     ),
-    venue:venues(id, name, neighborhood, slug, location_designator, blurhash, city)
+    venue:venues(id, name, neighborhood, slug, location_designator, blurhash, city, active)
   `;
 
     // Build all queries, tracking which ones we're running
@@ -536,7 +535,6 @@ export async function GET(request: Request) {
         .select(eventSelect)
         .in("venue_id", followedVenueIds)
         .gte("start_date", today)
-        .eq("is_active", true)
         .is("canonical_event_id", null)
         .or("is_class.eq.false,is_class.is.null")
         .or("is_sensitive.eq.false,is_sensitive.is.null")
@@ -564,7 +562,6 @@ export async function GET(request: Request) {
         .select(eventSelect)
         .in("organization_id", followedOrganizationIds)
         .gte("start_date", today)
-        .eq("is_active", true)
         .is("canonical_event_id", null)
         .or("is_class.eq.false,is_class.is.null")
         .or("is_sensitive.eq.false,is_sensitive.is.null")
@@ -592,7 +589,6 @@ export async function GET(request: Request) {
         .select(eventSelect)
         .in("source_id", producerSourceIds)
         .gte("start_date", today)
-        .eq("is_active", true)
         .is("canonical_event_id", null)
         .or("is_class.eq.false,is_class.is.null")
         .or("is_sensitive.eq.false,is_sensitive.is.null")
@@ -623,7 +619,6 @@ export async function GET(request: Request) {
         .select(`${eventSelect}, venue!inner(neighborhood)`)
         .in("venue.neighborhood", favoriteNeighborhoods)
         .gte("start_date", today)
-        .eq("is_active", true)
         .is("canonical_event_id", null)
         .or("is_class.eq.false,is_class.is.null")
         .or("is_sensitive.eq.false,is_sensitive.is.null")
@@ -653,7 +648,6 @@ export async function GET(request: Request) {
         .select(eventSelect)
         .in("category_id", favoriteCategories)
         .gte("start_date", today)
-        .eq("is_active", true)
         .is("canonical_event_id", null)
         .or("is_class.eq.false,is_class.is.null")
         .or("is_sensitive.eq.false,is_sensitive.is.null")
@@ -860,6 +854,7 @@ export async function GET(request: Request) {
         slug: string | null;
         blurhash: string | null;
         city?: string | null;
+        active?: boolean | null;
       } | null;
       score?: number;
       reasons?: RecommendationReason[];
@@ -876,6 +871,7 @@ export async function GET(request: Request) {
     let events = suppressEventImagesIfVenueFlagged(
       (mergedEventsData || []) as EventResult[],
     );
+    events = filterOutInactiveVenueEvents(events);
 
     // Filter out cross-city events that leak via portal_id=NULL
     events = filterByPortalCity(events, portalFilters.city, {
@@ -1452,6 +1448,7 @@ export async function GET(request: Request) {
         slug: string;
         neighborhood: string | null;
         city?: string | null;
+        active?: boolean | null;
       } | null;
     };
 
@@ -1460,7 +1457,7 @@ export async function GET(request: Request) {
     );
     // Filter by city to prevent cross-city leakage, then by adult content preference
     const trendingEventsData = filterByPortalCity(
-      trendingEventsRaw,
+      filterOutInactiveVenueEvents(trendingEventsRaw),
       portalFilters.city || "Atlanta",
       { allowMissingCity: true },
     );

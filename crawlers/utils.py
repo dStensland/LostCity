@@ -694,6 +694,41 @@ def find_event_url(
     return fallback_url
 
 
+def is_junk_description(description: str | None) -> bool:
+    """Check if a description is actually scraped boilerplate/footer/cookie text.
+
+    Returns True if the description should be rejected and set to None.
+    """
+    if not description:
+        return False
+
+    JUNK_MARKERS = [
+        # Cookie consent / GDPR
+        'technical storage or access is strictly necessary',
+        'cookie policy',
+        'we use cookies',
+        # Footer / legal boilerplate
+        'All Rights Reserved',
+        'Privacy Policy',
+        'Terms of Service',
+        'Terms of Use',
+        'Site Map',
+        'Equal Opportunity, Nondiscrimination',
+        'Human Trafficking Notice',
+        'Hazing Public Disclosures',
+        'Anti-Harassment Policy',
+        # Scraped nav elements
+        'Back to All Events Add',
+        'Skip to content',
+        'Toggle navigation',
+        'JavaScript is required',
+        # Copyright footers
+        'a carbonhouse experience',
+    ]
+
+    return any(marker in description for marker in JUNK_MARKERS)
+
+
 def enrich_event_record(event_record: dict, source_name: str = "") -> dict:
     """Enrich an event record by fetching its detail page.
 
@@ -710,6 +745,61 @@ def enrich_event_record(event_record: dict, source_name: str = "") -> dict:
     Returns:
         The same event_record dict, mutated with enriched fields.
     """
+    def _normalize_enriched_artists(value: object) -> list[dict]:
+        rows: list[dict] = []
+        seen: set[str] = set()
+        candidates = value if isinstance(value, list) else [value]
+
+        for candidate in candidates:
+            if isinstance(candidate, str):
+                name = candidate.strip()
+                role = None
+            elif isinstance(candidate, dict):
+                name = str(candidate.get("name") or "").strip()
+                role = str(candidate.get("role") or "").strip().lower() or None
+            else:
+                continue
+
+            if not name:
+                continue
+
+            normalized_name = re.sub(r"\s+", " ", name)
+            key = re.sub(
+                r"\s+",
+                " ",
+                re.sub(
+                    r"[^a-z0-9]+",
+                    " ",
+                    normalized_name.lower().replace("&", " and "),
+                ),
+            ).strip()
+            if key in seen:
+                continue
+            seen.add(key)
+
+            rows.append(
+                {
+                    "name": normalized_name,
+                    "role": role,
+                    "billing_order": len(rows) + 1,
+                    "is_headliner": False,
+                }
+            )
+
+        if not rows:
+            return []
+
+        has_headliner = any(row.get("role") == "headliner" for row in rows)
+        for idx, row in enumerate(rows, start=1):
+            if not row.get("role"):
+                row["role"] = "headliner" if idx == 1 else "support"
+            row["is_headliner"] = row["role"] == "headliner"
+            if not has_headliner and idx == 1:
+                row["role"] = "headliner"
+                row["is_headliner"] = True
+
+        return rows
+
     detail_url = event_record.get("source_url") or event_record.get("ticket_url")
     if not detail_url or not detail_url.startswith("http"):
         return event_record
@@ -741,7 +831,10 @@ def enrich_event_record(event_record: dict, source_name: str = "") -> dict:
 
         # Apply enriched fields — only fill gaps
         if not has_good_desc and enriched.get("description"):
-            event_record["description"] = enriched["description"]
+            if not is_junk_description(enriched["description"]):
+                event_record["description"] = enriched["description"]
+            else:
+                logger.debug(f"Rejected junk description from enrichment for: {detail_url}")
         if not has_image and enriched.get("image_url"):
             event_record["image_url"] = enriched["image_url"]
         if not has_price:
@@ -761,6 +854,10 @@ def enrich_event_record(event_record: dict, source_name: str = "") -> dict:
             event_record["end_date"] = enriched["end_date"]
         if not event_record.get("ticket_url") and enriched.get("ticket_url"):
             event_record["ticket_url"] = enriched["ticket_url"]
+        if not event_record.get("_parsed_artists") and enriched.get("artists"):
+            parsed_artists = _normalize_enriched_artists(enriched.get("artists"))
+            if parsed_artists:
+                event_record["_parsed_artists"] = parsed_artists
 
     except Exception as e:
         logger.debug(f"Detail enrichment failed for {detail_url}: {e}")

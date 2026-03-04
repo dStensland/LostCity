@@ -9,11 +9,11 @@ import {
 import { errorResponse, checkBodySize } from "@/lib/api-utils";
 import { logger } from "@/lib/logger";
 import type { FeedBlockId, FeedLayout } from "@/lib/city-pulse/types";
+import { LEGACY_BLOCK_IDS } from "@/lib/city-pulse/types";
 import { ALL_INTEREST_IDS } from "@/lib/city-pulse/interests";
 
 const VALID_BLOCK_IDS: FeedBlockId[] = [
-  "timeline", "trending",
-  "your_people", "new_from_spots", "coming_up", "browse",
+  "events", "recurring", "festivals", "experiences", "community", "cinema", "browse",
 ];
 
 // Valid categories from search-constants.ts
@@ -112,18 +112,18 @@ export async function POST(request: NextRequest) {
         feed_layout = null; // Reset to default
       } else if (
         typeof body.feed_layout === "object" &&
-        body.feed_layout.version === 1 &&
+        (body.feed_layout.version === 1 || body.feed_layout.version === 2) &&
         Array.isArray(body.feed_layout.visible_blocks) &&
         Array.isArray(body.feed_layout.hidden_blocks)
       ) {
-        const visible = (body.feed_layout.visible_blocks as string[])
-          .filter((b): b is FeedBlockId => VALID_BLOCK_IDS.includes(b as FeedBlockId));
-        const hidden = (body.feed_layout.hidden_blocks as string[])
-          .filter((b): b is FeedBlockId => VALID_BLOCK_IDS.includes(b as FeedBlockId));
-        // Timeline must always be visible
-        if (!visible.includes("timeline")) visible.unshift("timeline");
+        // Detect legacy v1 IDs → reset blocks to defaults, preserve interests
+        const allBlocks = [
+          ...(body.feed_layout.visible_blocks as string[]),
+          ...(body.feed_layout.hidden_blocks as string[]),
+        ];
+        const hasLegacy = allBlocks.some((b) => LEGACY_BLOCK_IDS.has(b));
 
-        // Validate interests array if present
+        // Validate interests array (shared by both legacy and current)
         let interests: string[] | null | undefined;
         if (body.feed_layout.interests === null) {
           interests = null;
@@ -133,12 +133,29 @@ export async function POST(request: NextRequest) {
             .slice(0, 30);
         }
 
-        feed_layout = {
-          visible_blocks: visible,
-          hidden_blocks: hidden,
-          ...(interests !== undefined && { interests }),
-          version: 1,
-        };
+        if (hasLegacy) {
+          // Legacy layout: reset to defaults, keep interests
+          feed_layout = {
+            visible_blocks: ["events", "recurring", "festivals", "experiences", "community", "cinema"],
+            hidden_blocks: [],
+            ...(interests !== undefined && { interests }),
+            version: 2,
+          };
+        } else {
+          const visible = (body.feed_layout.visible_blocks as string[])
+            .filter((b): b is FeedBlockId => VALID_BLOCK_IDS.includes(b as FeedBlockId));
+          const hidden = (body.feed_layout.hidden_blocks as string[])
+            .filter((b): b is FeedBlockId => VALID_BLOCK_IDS.includes(b as FeedBlockId));
+          // Events must always be visible
+          if (!visible.includes("events")) visible.unshift("events");
+
+          feed_layout = {
+            visible_blocks: visible,
+            hidden_blocks: hidden,
+            ...(interests !== undefined && { interests }),
+            version: 2,
+          };
+        }
       }
     }
 

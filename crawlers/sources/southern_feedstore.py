@@ -74,7 +74,9 @@ def parse_date(date_str: str) -> Optional[str]:
         year = match.group(3) if match.group(3) else str(now.year)
         try:
             dt = datetime.strptime(f"{month_str} {day} {year}", "%b %d %Y")
-            if dt.date() < now.date():
+            # Only bump year if >60 days in the past (avoids projecting
+            # stale page entries like "Feb 03" into next year)
+            if (now - dt).days > 60:
                 dt = dt.replace(year=now.year + 1)
             return dt.strftime("%Y-%m-%d")
         except ValueError:

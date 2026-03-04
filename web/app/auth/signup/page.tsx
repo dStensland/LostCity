@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Logo from "@/components/Logo";
@@ -12,6 +12,27 @@ import {
   extractPortalFromRedirect,
   getRememberedPortalSlug,
 } from "@/lib/auth-utils";
+
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+function getDaysInMonth(month: number, year: number): number {
+  if (!month || !year) return 31;
+  return new Date(year, month, 0).getDate();
+}
+
+function getAge(year: number, month: number, day: number): number {
+  const today = new Date();
+  const birthDate = new Date(year, month - 1, day);
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
+}
 
 function SignupForm() {
   const router = useRouter();
@@ -34,6 +55,14 @@ function SignupForm() {
   const [checkingUsername, setCheckingUsername] = useState(false);
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
   const [emailSent, setEmailSent] = useState(false);
+  const [birthMonth, setBirthMonth] = useState(0);
+  const [birthDay, setBirthDay] = useState(0);
+  const [birthYear, setBirthYear] = useState(0);
+
+  const currentYear = new Date().getFullYear();
+  const maxDays = useMemo(() => getDaysInMonth(birthMonth, birthYear || currentYear), [birthMonth, birthYear, currentYear]);
+  const isBirthdayComplete = birthMonth > 0 && birthDay > 0 && birthYear > 0;
+  const isTooYoung = isBirthdayComplete && getAge(birthYear, birthMonth, birthDay) < 13;
 
   const supabase = createClient();
 
@@ -84,6 +113,16 @@ function SignupForm() {
       return;
     }
 
+    if (!isBirthdayComplete) {
+      setError("Please enter your date of birth");
+      return;
+    }
+
+    if (isTooYoung) {
+      setError("You must be at least 13 years old to create an account");
+      return;
+    }
+
     setLoading(true);
 
     // Sign up the user - profile is created automatically by database trigger
@@ -103,6 +142,7 @@ function SignupForm() {
         data: {
           username, // Passed to trigger via raw_user_meta_data
           signup_portal_slug: portalSlug || undefined,
+          date_of_birth: `${birthYear}-${String(birthMonth).padStart(2, "0")}-${String(birthDay).padStart(2, "0")}`,
         },
       },
     });
@@ -375,9 +415,65 @@ function SignupForm() {
               <PasswordStrength password={password} />
             </div>
 
+            <div>
+              <label
+                className="block font-mono text-xs text-[var(--muted)] uppercase tracking-wider mb-1.5"
+              >
+                Date of birth
+              </label>
+              <div className="grid grid-cols-[1fr_0.7fr_0.9fr] gap-2">
+                <select
+                  value={birthMonth}
+                  onChange={(e) => {
+                    const m = Number(e.target.value);
+                    setBirthMonth(m);
+                    if (birthDay > getDaysInMonth(m, birthYear || currentYear)) setBirthDay(0);
+                  }}
+                  aria-label="Birth month"
+                  className="w-full px-2 py-2.5 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm focus:outline-none focus:border-[var(--coral)] transition-colors appearance-none"
+                >
+                  <option value={0} disabled>Month</option>
+                  {MONTHS.map((name, i) => (
+                    <option key={name} value={i + 1}>{name}</option>
+                  ))}
+                </select>
+                <select
+                  value={birthDay}
+                  onChange={(e) => setBirthDay(Number(e.target.value))}
+                  aria-label="Birth day"
+                  className="w-full px-2 py-2.5 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm focus:outline-none focus:border-[var(--coral)] transition-colors appearance-none"
+                >
+                  <option value={0} disabled>Day</option>
+                  {Array.from({ length: maxDays }, (_, i) => i + 1).map((d) => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+                <select
+                  value={birthYear}
+                  onChange={(e) => {
+                    const y = Number(e.target.value);
+                    setBirthYear(y);
+                    if (birthDay > getDaysInMonth(birthMonth, y)) setBirthDay(0);
+                  }}
+                  aria-label="Birth year"
+                  className="w-full px-2 py-2.5 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm focus:outline-none focus:border-[var(--coral)] transition-colors appearance-none"
+                >
+                  <option value={0} disabled>Year</option>
+                  {Array.from({ length: 100 }, (_, i) => currentYear - i).map((y) => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              </div>
+              {isTooYoung && (
+                <p role="alert" className="mt-1 font-mono text-xs text-[var(--coral)]">
+                  You must be at least 13 to create an account
+                </p>
+              )}
+            </div>
+
             <button
               type="submit"
-              disabled={loading || usernameAvailable === false}
+              disabled={loading || usernameAvailable === false || isTooYoung}
               className="w-full px-4 py-3 rounded-lg bg-[var(--coral)] text-[var(--void)] font-mono text-sm font-medium hover:bg-[var(--rose)] transition-colors disabled:opacity-50"
             >
               {loading ? "Creating account..." : "Create account"}

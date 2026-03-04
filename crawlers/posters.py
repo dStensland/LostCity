@@ -83,6 +83,16 @@ def extract_film_info(title: str) -> tuple[Optional[str], Optional[str]]:
         flags=re.IGNORECASE,
     )
 
+    # Strip cinema format suffixes (DOLBY CINEMA, IMAX, ATMOS, etc.)
+    cleaned = re.sub(
+        r"\s*[-—]?\s*\b(?:DOLBY\s*CINEMA(?:\s*AT\s*AMC)?|IMAX|D-?BOX|ATMOS|"
+        r"RealD(?:\s*3D)?|SCREEN\s*X|4DX|PLF|Cinerama|PRIME|ScreenX|"
+        r"LASER\s*(?:AT\s*AMC)?|RPX|XD|ETX|LUXE|DINE-IN)\b.*$",
+        "",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+
     year_match = re.search(r"\((\d{4})\)", cleaned)
     year = year_match.group(1) if year_match else None
 

@@ -178,7 +178,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         continue
 
                     # Check for duplicates
-                    event_key = f"{title}|{start_date}"
+                    # Keep per-listing instances; downstream hash handles true dedupe.
+                    event_key = f"{title}|{start_date}|{i}"
                     if event_key in seen_events:
                         i += 1
                         continue
@@ -186,7 +187,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     events_found += 1
 
-                    # Generate content hash
+                    # Provisional hash; recomputed after enrichment if start_time is recovered.
                     content_hash = generate_content_hash(title, "Fox Theatre", start_date)
 
                     # Check for existing
@@ -271,6 +272,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             event_record["price_max"] = event_record.get("price_max") or 0
                         else:
                             event_record["is_free"] = False
+
+                    event_start_time = event_record.get("start_time")
+                    hash_key = f"{start_date}|{event_start_time}" if event_start_time else start_date
+                    content_hash = generate_content_hash(title, "Fox Theatre", hash_key)
+                    event_record["content_hash"] = content_hash
 
                     existing = find_event_by_hash(content_hash)
                     if existing:

@@ -9,8 +9,19 @@ import { logger } from "@/lib/logger";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
 import { applyPortalScopeToQuery, expandCityFilterForMetro } from "@/lib/portal-scope";
 import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
+import { VENUE_TYPE_ALIASES } from "@/lib/spots-constants";
 
 export const dynamic = "force-dynamic";
+
+/** Expand post-consolidation venue types to also include legacy DB aliases */
+function expandVenueTypes(types: string[]): string[] {
+  const expanded = new Set(types);
+  for (const t of types) {
+    const aliases = VENUE_TYPE_ALIASES[t];
+    if (aliases) for (const a of aliases) expanded.add(a);
+  }
+  return Array.from(expanded);
+}
 
 const SPOTS_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes — venue data is stable
 const SPOTS_CACHE_MAX_ENTRIES = 160;
@@ -22,6 +33,7 @@ const SPOTS_CACHE_NAMESPACE = "api:spots";
 const CACHE_KEY_PARAMS = new Set([
   "portal_id", "portal", "exclusive", "open_now", "with_events",
   "price_level", "venue_type", "neighborhood", "vibes", "genres", "cuisine", "q", "include_hours",
+  "include_events",
 ]);
 
 function buildStableSearchParamsKey(searchParams: URLSearchParams): string {
@@ -57,6 +69,7 @@ export async function GET(request: NextRequest) {
   const radiusKm = parseFloatParam(searchParams.get("radius_km"));
   const sortBy = searchParams.get("sort"); // distance | special_relevance | hybrid
   const includeHours = searchParams.get("include_hours") === "true";
+  const includeEvents = searchParams.get("include_events") === "true";
   const responseLimitRaw = Number.parseInt(searchParams.get("limit") || "600", 10);
   const responseLimit = Number.isFinite(responseLimitRaw)
     ? Math.max(1, Math.min(responseLimitRaw, 1200))
@@ -164,9 +177,9 @@ export async function GET(request: NextRequest) {
       query = query.in("city", expandedCities);
     }
 
-    // Apply venue type filter
+    // Apply venue type filter — expand through alias map to catch legacy DB types
     if (venueTypes && venueTypes.length > 0) {
-      query = query.in("venue_type", venueTypes);
+      query = query.in("venue_type", expandVenueTypes(venueTypes));
     }
 
     // Apply neighborhood filter
@@ -361,56 +374,50 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Bound response size before social proof fanout queries.
+    // Bound response size
     spots = spots.slice(0, responseLimit);
 
-    // Fetch social proof counts (followers + recommendations) for returned venues only.
     const venueIds = spots.map((spot) => spot.id);
-    const followerCounts = new Map<number, number>();
-    const recommendationCounts = new Map<number, number>();
-    if (venueIds.length > 0) {
-      // Cap social proof row fetch to prevent unbounded reads.
-      // With 600 venues and ~20 avg followers each, 8000 covers the typical case.
-      const socialProofLimit = 8000;
-      const [{ data: followsData }, { data: recData }] = await Promise.all([
-        supabase
-          .from("follows")
-          .select("followed_venue_id")
-          .in("followed_venue_id", venueIds)
-          .not("followed_venue_id", "is", null)
-          .limit(socialProofLimit),
-        supabase
-          .from("recommendations")
-          .select("venue_id")
-          .in("venue_id", venueIds)
-          .eq("visibility", "public")
-          .limit(socialProofLimit),
-      ]);
 
-      for (const row of (followsData || []) as { followed_venue_id: number | null }[]) {
-        if (row.followed_venue_id) {
-          followerCounts.set(
-            row.followed_venue_id,
-            (followerCounts.get(row.followed_venue_id) || 0) + 1,
-          );
-        }
-      }
+    // Optionally enrich with upcoming event details (next 2 per venue)
+    if (includeEvents && venueIds.length > 0) {
+      const { data: eventDetails } = await supabase
+        .from("events")
+        .select("venue_id, id, title, start_date, start_time")
+        .in("venue_id", venueIds)
+        .gte("start_date", today)
+        .lte("start_date", eventsWindowEnd)
+        .is("canonical_event_id", null)
+        .order("start_date", { ascending: true })
+        .order("start_time", { ascending: true, nullsFirst: false })
+        .limit(venueIds.length * 4); // fetch a few per venue, trim client-side
 
-      for (const row of (recData || []) as { venue_id: number | null }[]) {
-        if (row.venue_id) {
-          recommendationCounts.set(
-            row.venue_id,
-            (recommendationCounts.get(row.venue_id) || 0) + 1,
-          );
+      if (eventDetails) {
+        type EventDetail = { venue_id: number; id: number; title: string; start_date: string; start_time: string | null };
+        const eventsPerVenue = new Map<number, EventDetail[]>();
+        for (const row of eventDetails as EventDetail[]) {
+          const existing = eventsPerVenue.get(row.venue_id);
+          if (!existing) {
+            eventsPerVenue.set(row.venue_id, [row]);
+          } else if (existing.length < 2) {
+            existing.push(row);
+          }
         }
+        spots = spots.map((spot) => {
+          const venueEvents = eventsPerVenue.get(spot.id);
+          if (!venueEvents) return spot;
+          return {
+            ...spot,
+            upcoming_events: venueEvents.map((e) => ({
+              id: e.id,
+              title: e.title,
+              start_date: e.start_date,
+              start_time: e.start_time,
+            })),
+          };
+        });
       }
     }
-
-    spots = spots.map((spot) => ({
-      ...spot,
-      follower_count: followerCounts.get(spot.id) || 0,
-      recommendation_count: recommendationCounts.get(spot.id) || 0,
-    }));
 
     // Compute metadata for filter UI (from full unfiltered data)
     const allNeighborhoods = [...new Set((venues as VenueRow[]).map(v => v.neighborhood).filter(Boolean))] as string[];

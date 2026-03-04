@@ -1,0 +1,37 @@
+version: 1
+slug: commune
+name: Commune
+integration_method: playwright
+defaults:
+  venue_name: Commune
+  category: music
+  tags:
+  - avondale-estates
+  - listening-room
+  - live-music
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.communeatl.com/calendar
+  event_card: .eventlist-event--upcoming
+  fields:
+    title: .eventlist-title-link
+    date: .event-date
+    time: .event-time-localized-start
+    detail_url: .eventlist-title-link@href
+    image_url: .eventlist-column-thumbnail img@src
+    description: .eventlist-description
+  fetch:
+    render_js: true
+    wait_until: domcontentloaded
+detail:
+  enabled: true
+  fetch:
+    render_js: true
+    wait_until: domcontentloaded
+data_goals:
+- events
+- lineup
+- images
+- tickets

@@ -158,7 +158,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     events_found += 1
 
-                    content_hash = generate_content_hash(title, "The Eastern", start_date)
+                    hash_key = f"{start_date}|{start_time}" if start_time else start_date
+                    content_hash = generate_content_hash(title, "The Eastern", hash_key)
 
 
                     # Get specific event URL

@@ -6,6 +6,7 @@ Also infers genres from event title/description using the unified taxonomy.
 
 from __future__ import annotations
 
+import re
 from datetime import date, datetime
 from typing import Optional
 from tags import INHERITABLE_VIBES, VIBE_TO_TAG, ALL_TAGS, GENRE_TO_TAGS
@@ -41,7 +42,7 @@ def infer_tags(
     title = (event.get("title") or "").lower()
     desc = (event.get("description") or "").lower()
     text = f"{title} {desc}"
-    category = (event.get("category") or "").lower()
+    category = (event.get("category") or event.get("category_id") or "").lower()
 
     # --- Inherit relevant vibes from venue ---
     if venue_vibes:
@@ -166,18 +167,31 @@ def infer_tags(
     ):
         tags.add("album-release")
 
-    # Touring artists
-    if any(
-        phrase in text
-        for phrase in [
-            "tour",
-            "touring",
-            "on tour",
-            "world tour",
-            "national tour",
-            "north american tour",
-        ]
-    ):
+    # Touring artists/productions — context-aware to avoid venue/hospital/museum tours.
+    # "tour" alone is too broad: matches "winery tour", "hospital tour", "walking tour".
+    # Venue-tour detection uses TITLE ONLY to avoid false positives from venue names
+    # in descriptions (e.g. "State Farm Arena" triggering the "farm" pattern).
+    _tour_artist = re.search(
+        r'\bon tour\b|\bworld tour\b|\bnational tour\b|\bnorth american tour\b'
+        r'|\bfall tour\b|\bspring tour\b|\bsummer tour\b|\bwinter tour\b'
+        r'|\b\w+ tour 20\d{2}\b'    # "Sunrise Tour 2026"
+        r'|\b\w+\s+tour\b'          # Generic "X tour" (album release tour, etc.)
+        r'|\btour\b.*\b(edition|leg|dates)\b'
+        r'|\(touring\)',             # explicit "(Touring)" suffix
+        text,
+    )
+    _tour_venue = re.search(
+        r'\btour\s*(of|at|:)\b|\btour\s*[+&]\s*(tasting|lunch|dinner|brunch)\b'
+        r'|\b(winery|brewery|distillery|hospital|maternity|birthing|museum|farm|stadium)\b.{0,15}\btour'
+        r'|\btour.{0,15}\b(winery|brewery|distillery|hospital|maternity|birthing|museum|farm|stadium)\b'
+        r'|\bwalking\s+tour\b|\bhistory\s+tour\b|\btour\s+guide\b|\bhomeschool\b'
+        r'|\bopen\s+house\b.{0,15}\btour\b|\btour\b.{0,15}\bopen\s+house\b',
+        title,  # TITLE ONLY — descriptions contain venue names that cause false positives
+    )
+    if _tour_artist and not _tour_venue:
+        tags.add("touring")
+    elif not _tour_venue and re.search(r'\btouring\b', text):
+        # "touring" as an adjective (e.g. "touring production") is usually legit
         tags.add("touring")
 
     # Debuts/premieres
@@ -212,6 +226,19 @@ def infer_tags(
         ]
     ):
         tags.add("family-friendly")
+
+    # Kids content tag — events specifically for children (not just family-friendly)
+    if any(
+        phrase in text
+        for phrase in [
+            "for kids", "for children", "for toddlers", "for preschool",
+            "kids camp", "youth camp", "day camp", "art camp",
+            "kindergarten", "pre-k", "mommy and me", "daddy and me",
+            "little artist", "young artist", "kids class", "kids workshop",
+            "children's class", "children's workshop",
+        ]
+    ):
+        tags.add("kids")
 
     # Age restrictions
     if any(
@@ -292,6 +319,90 @@ def infer_tags(
         ]
     ):
         tags.add("outdoor")
+
+    # Hiking / trail activities
+    if any(
+        phrase in text
+        for phrase in [
+            "hike",
+            "hiking",
+            "trail run",
+            "nature walk",
+            "nature hike",
+            "guided hike",
+            "trail walk",
+        ]
+    ):
+        tags.add("hiking")
+
+    # Running (supplement existing run-club patterns)
+    if any(
+        phrase in text
+        for phrase in [
+            "run club",
+            "running club",
+            "5k",
+            "10k",
+            "marathon",
+            "fun run",
+            "color run",
+            "trail run",
+            "half marathon",
+        ]
+    ):
+        tags.add("running")
+
+    # Outdoor volunteer / cleanup
+    if any(
+        phrase in text
+        for phrase in [
+            "trail cleanup",
+            "park cleanup",
+            "tree planting",
+            "river cleanup",
+            "creek cleanup",
+            "stream cleanup",
+            "litter cleanup",
+            "volunteer cleanup",
+            "park restoration",
+            "invasive species",
+        ]
+    ):
+        tags.add("volunteer-outdoors")
+
+    # Water sports / paddling
+    if any(
+        phrase in text
+        for phrase in [
+            "kayak",
+            "paddleboard",
+            "paddle board",
+            "canoe",
+            "canoeing",
+            "rowing",
+            "sup class",
+            "stand up paddle",
+            "stand-up paddle",
+            "paddle yoga",
+            "dragon boat",
+        ]
+    ):
+        tags.add("water-sports")
+
+    # Cycling (supplement existing bike-ride patterns)
+    if any(
+        phrase in text
+        for phrase in [
+            "bike ride",
+            "cycling",
+            "bike tour",
+            "critical mass",
+            "group ride",
+            "bicycle ride",
+            "bike night",
+        ]
+    ):
+        tags.add("cycling")
 
     # RSVP required — check for negations first
     rsvp_negations = [
@@ -672,7 +783,13 @@ SUPPORT_GROUP_SOURCES = {
     "celebrate-recovery",
     "na-georgia",
     "aa-atlanta",
+    "metro-atl-aa",
     "divorcecare-atlanta",
+    "ridgeview-institute",
+    "ga-council-recovery",
+    "ga-harm-reduction",
+    "nami-georgia",
+    "atlanta-mission",
 }
 
 
@@ -741,6 +858,22 @@ RELIGIOUS_SOURCES = {
     "faith-alliance",
 }
 
+# Title-level keywords for reclassifying music→religious at church venues.
+# Tighter than _RELIGIOUS_KEYWORDS — only catches actual services, not gospel
+# performances at music venues.
+_WORSHIP_TITLE_KEYWORDS = [
+    "worship",
+    "sunday service",
+    "church service",
+    "prayer",
+    "sermon",
+    "vespers",
+    "liturgy",
+    "bible study",
+    "devotional",
+    "revival",
+]
+
 # Secular-signal keywords — if present, don't reclassify even from a church source.
 _SECULAR_OVERRIDES = [
     "concert",
@@ -764,28 +897,63 @@ def infer_is_religious(
     venue_type: str | None = None,
 ) -> bool:
     """
-    Infer whether an event should be categorized as 'religious' instead of
-    'community'.  Only reclassifies events currently in the 'community' bucket.
+    Infer whether an event should be categorized as 'religious'.
+
+    Reclassifies from community OR music when the signal is strong enough.
+    A worship service at a church miscategorized as "music" should still be
+    caught — but a gospel brunch at City Winery should stay music.
     """
     if event.get("category") == "religious":
         return True
 
-    # Only reclassify community events — don't touch music, art, etc.
-    if event.get("category") != "community":
+    category = event.get("category") or ""
+    # Only reclassify community and music — don't touch art, family, etc.
+    if category not in ("community", "music"):
         return False
 
     title = (event.get("title") or "").lower()
     desc = (event.get("description") or "").lower()
     text = f"{title} {desc}"
 
+    # For music events, reclassify when worship signal is strong enough.
+    # Two tiers:
+    #   1. Any venue: title is dominated by worship keywords (e.g. "Sunday Worship")
+    #   2. Church venue: title contains any worship keyword (e.g. "Easter Festival Worship")
+    # "Gospel Brunch Ft. William Murphy" at City Winery stays music — performer
+    # name in title signals a real music event, and it's at a music venue.
+    if category == "music":
+        # Tier 1: Title is entirely worship-focused (no performer names)
+        for kw in _WORSHIP_TITLE_KEYWORDS:
+            if kw in title:
+                # If the entire title is basically just the worship keyword,
+                # it's a service regardless of venue
+                if venue_type in RELIGIOUS_VENUE_TYPES:
+                    return True
+                # At non-church venues, only reclassify when title is
+                # short/generic (no named performers)
+                if len(title.split()) <= 5:
+                    return True
+        return False
+
+    # --- community category path (original logic) ---
+
     # Check for secular overrides first — a concert at a church stays community
     for kw in _SECULAR_OVERRIDES:
         if kw in title:
             return False
 
+    # At outdoor/nature venues, only check title — descriptions often
+    # mention prayer/worship in historical or incidental context.
+    _OUTDOOR_VENUE_TYPES = frozenset({
+        "park", "garden", "trail", "amphitheater", "outdoor_venue",
+        "farmers_market", "plaza", "recreation", "zoo", "aquarium",
+        "nature_center",
+    })
+    search_text = title if venue_type in _OUTDOOR_VENUE_TYPES else text
+
     # Strong keyword match in title or description
     for kw in _RELIGIOUS_KEYWORDS:
-        if kw in text:
+        if kw in search_text:
             return True
 
     # Church venue type + church source = religious by default
@@ -833,6 +1001,61 @@ def infer_is_support_group(
     return False
 
 
+# ── Kids activity recategorization ─────────────────────────────────
+
+# Categories where a kids/children signal should override to "family"
+_KIDS_RECATEGORIZE_FROM = {"art", "learning", "fitness", "community", "food"}
+
+_KIDS_TITLE_KEYWORDS = [
+    "for kids", "for children", "for toddlers", "for preschool",
+    "kids camp", "youth camp", "day camp", "summer camp", "art camp",
+    "kindergarten", "pre-k", "prek",
+    "kids class", "children's class", "kids workshop",
+    "mommy and me", "daddy and me", "parent and child",
+    "little artist", "young artist", "tiny artist",
+    "kids art", "children's art",
+]
+
+_KIDS_AGE_PATTERNS = [
+    "ages 3-", "ages 4-", "ages 5-", "ages 6-",
+    "ages 2-", "age 3-", "age 4-", "age 5-",
+    "grades k-", "grades 1-", "grades pre-",
+]
+
+
+def infer_is_kids_activity(event: dict) -> bool:
+    """
+    Detect events that are fundamentally kids/family activities miscategorized
+    under adult categories (art, learning, fitness, etc.).
+
+    A kindergartners' art camp is a kids event, not an art event.
+    "Art" should be reserved for fine art, galleries, and exhibitions.
+    """
+    category = (event.get("category") or event.get("category_id") or "").lower()
+    if category not in _KIDS_RECATEGORIZE_FROM:
+        return False
+
+    # Already family — no need to recategorize
+    if category == "family":
+        return False
+
+    title = (event.get("title") or "").lower()
+    desc = (event.get("description") or "").lower()
+
+    # Check title keywords (high confidence)
+    for kw in _KIDS_TITLE_KEYWORDS:
+        if kw in title:
+            return True
+
+    # Check age patterns in title or description
+    text = f"{title} {desc}"
+    for pattern in _KIDS_AGE_PATTERNS:
+        if pattern in text:
+            return True
+
+    return False
+
+
 def infer_is_class(
     event: dict,
     source_slug: str | None = None,
@@ -873,8 +1096,35 @@ def infer_is_class(
     title = (event.get("title") or "").lower()
     desc = (event.get("description") or "").lower()
     text = f"{title} {desc}"
+    category = (event.get("category") or event.get("category_id") or "").lower()
     if any(pattern in text for pattern in CLASS_TITLE_PATTERNS):
         return True
+
+    # Title-only regex patterns for generic class words — more aggressive but
+    # scoped to title to avoid description false positives (e.g. "class act").
+    # Skip film category to avoid movie titles like "How to Make a Killing".
+    if category != "film":
+        if re.search(
+            r'\bclass\b(?!ic|\s*act)'   # "class" but not "classic" or "class act"
+            r'|\bworkshop\b'
+            r'|\bseminar\b'
+            r'|\bclinic\b(?!\s*$)'       # "clinic" but not as last word alone
+            r'|\bcourse\b(?!\s)'         # "course" — refined below
+            r'|\bbootcamp\b'
+            r'|\bmaster\s*class\b'
+            r'|\bintroduction to\s+\w+'  # "Introduction to Drawing"
+            r'|\bintro to\s+\w+'
+            r'|\blearn to\s+\w+',
+            title,
+        ):
+            # Exclude support group meetings and non-class uses of these words
+            if not re.search(
+                r'\bgroup\b|\bmeeting\b|\bfellowship\b'
+                r'|\badventure\s+course\b|\bobstacle\s+course\b|\bgolf\s+course\b'
+                r'|\bzip\s*line\b',
+                title,
+            ):
+                return True
 
     return False
 
@@ -917,9 +1167,18 @@ def infer_genres(
 
     title = (event.get("title") or "").lower()
     desc = (event.get("description") or "").lower()
-    category = (event.get("category") or "").lower()
+    category = (event.get("category") or event.get("category_id") or "").lower()
     category_key = "outdoor" if category == "outdoors" else category
     text = f"{title} {desc}"
+
+    # Derive genre from subcategory (e.g. "nightlife.karaoke" → "karaoke")
+    subcategory = (event.get("subcategory") or "").lower()
+    if "." in subcategory:
+        sub_genre = subcategory.split(".", 1)[1].strip().replace("_", "-")
+        if sub_genre:
+            normalized = normalize_genre(sub_genre)
+            if normalized:
+                genres.add(normalized)
 
     # Infer from tags when we have sparse title/description payloads.
     # Keep this category-scoped to avoid cross-domain genre bleed.
@@ -1094,9 +1353,9 @@ def infer_genres(
     elif category == "sports":
         sports_patterns: list[tuple[list[str], str]] = [
             (["braves", "baseball", "mlb", "softball", "batting"], "baseball"),
-            (["hawks", "basketball", "nba", "ncaa basketball", "hoops"], "basketball"),
-            (["falcons", "football", "nfl", "sec ", "touchdown"], "football"),
-            (["united", "soccer", "mls", "nwsl", "fc ", "futbol"], "soccer"),
+            (["hawks", "basketball", "nba", "ncaa basketball", "hoops", "pickup basketball", "pick-up basketball"], "basketball"),
+            (["falcons", "football", "nfl", "sec ", "touchdown", "flag football", "pickup football", "pick-up football"], "football"),
+            (["united", "soccer", "mls", "nwsl", "fc ", "futbol", "pickup soccer", "pick-up soccer", "futsal"], "soccer"),
             (["hockey", "nhl", "gladiators", "puck"], "hockey"),
             (["ufc", "mma", "boxing", "fight night", "bout", "knockout"], "mma"),
             (["nascar", "racing", "motorsport", "grand prix", "derby"], "racing"),
@@ -1109,7 +1368,7 @@ def infer_genres(
             (["esports", "gaming", "league of legends", "valorant"], "esports"),
             (["roller derby", "rollergirls", "bout"], "roller-derby"),
             (["wrestling"], "wrestling"),
-            (["volleyball"], "volleyball"),
+            (["volleyball", "pickup volleyball", "pick-up volleyball"], "volleyball"),
             (["lacrosse"], "lacrosse"),
             (["pickleball"], "pickleball"),
         ]
@@ -1121,7 +1380,8 @@ def infer_genres(
         fitness_patterns: list[tuple[list[str], str]] = [
             (["yoga", "vinyasa", "hot yoga", "yin", "asana", "namaste"], "yoga"),
             (
-                ["run club", "group run", "trail run", "pace group", "runners", "5k", "10k", "half-marathon", "half marathon", "fun run"],
+                ["run club", "group run", "trail run", "pace group", "runners", "5k", "10k", "half-marathon", "half marathon", "fun run",
+                 "walk club", "walking club", "group walk", "power walk", "walk group", "ruck club", "ruck march", "rucking"],
                 "run",
             ),
             (["spin", "cycling", "bike ride", "peloton", "criterium"], "cycling"),
@@ -1190,6 +1450,9 @@ def infer_genres(
                     "sommelier",
                     "natural wine",
                     "vineyard",
+                    "wine night",
+                    "wine wednesday",
+                    "wine down",
                 ],
                 "wine",
             ),
@@ -1230,6 +1493,17 @@ def infer_genres(
             (
                 ["seafood", "oyster", "crawfish", "crab", "shrimp", "fish fry"],
                 "seafood",
+            ),
+            (
+                ["happy hour", "drink special", "half-price drink",
+                 "industry night", "after-work"],
+                "happy-hour",
+            ),
+            (
+                ["wing night", "wing wednesday", "taco tuesday", "burger night",
+                 "half off", "half-price", "dollar oyster", "$1 oyster",
+                 "all you can", "prix fixe", "specials"],
+                "specials",
             ),
         ]
         for keywords, genre in food_patterns:
@@ -1321,15 +1595,15 @@ def infer_genres(
             ),
             (["poker", "texas hold", "hold 'em", "holdem", "freeroll", "card tournament"], "poker"),
             (["bingo", "drag bingo", "music bingo", "b-i-n-g-o"], "bingo"),
-            (["board game", "arcade", "game night", "darts", "shuffleboard", "cornhole", "bocce", "skee-ball", "ping pong", "pool tournament", "billiards"], "bar-games"),
+            (["board game", "game night", "community game"], "game-night"),
+            (["arcade", "darts", "shuffleboard", "cornhole", "bocce", "skee-ball", "ping pong", "pool tournament", "billiards"], "bar-games"),
             (["pub crawl", "bar crawl", "brewery crawl", "brewery tour", "beer tour"], "pub-crawl"),
-            (
-                ["happy hour", "drink special", "taco tuesday", "wing night", "crab night",
-                 "oyster night", "wing wednesday", "thirsty thursday", "ladies night",
-                 "industry night", "burger night", "half off", "half-price",
-                 "bottomless", "all you can", "prix fixe"],
-                "specials",
-            ),
+            (["happy hour", "drink special", "industry night", "ladies night",
+              "thirsty thursday", "bottomless"], "happy-hour"),
+            (["taco tuesday", "wing night", "crab night",
+              "oyster night", "wing wednesday",
+              "burger night", "half off", "half-price",
+              "all you can", "prix fixe"], "specials"),
             (
                 ["latin night", "salsa night", "bachata", "reggaeton", "cumbia",
                  "merengue", "noche latina", "noche de", "tropical night"],
@@ -1341,6 +1615,17 @@ def infer_genres(
             (
                 ["speakeasy", "cocktail party", "mixology", "craft cocktail"],
                 "cocktail-night",
+            ),
+            (["open mic", "open-mic", "openmic", "poetry slam"], "open-mic"),
+            (
+                ["game day", "watch party", "viewing party", "football",
+                 "monday night", "thursday night", "super bowl", "big game"],
+                "viewing-party",
+            ),
+            (
+                ["d&d", "dungeons", "mtg", "magic the gathering", "ttrpg",
+                 "tabletop", "adventurers league", "warhammer", "pathfinder"],
+                "nerd-stuff",
             ),
         ]
         for keywords, genre in nightlife_patterns:
@@ -1443,6 +1728,13 @@ def infer_genres(
                 ],
                 "cultural",
             ),
+            (["board game", "game night", "community game"], "game-night"),
+            (["open mic", "open-mic", "openmic", "poetry slam"], "open-mic"),
+            (
+                ["d&d", "dungeons", "mtg", "magic the gathering", "ttrpg",
+                 "tabletop", "adventurers league", "warhammer", "pathfinder"],
+                "nerd-stuff",
+            ),
         ]
         for keywords, genre in community_patterns:
             if any(kw in text for kw in keywords):
@@ -1467,6 +1759,11 @@ def infer_genres(
                 "music-for-kids",
             ),
             (["play day", "splash pad", "playground", "field day"], "outdoor-play"),
+            (
+                ["game night", "board game", "d&d", "dungeons", "tabletop",
+                 "magic the gathering", "mtg", "ttrpg", "pokemon"],
+                "game-night",
+            ),
         ]
         for keywords, genre in family_patterns:
             if any(kw in text for kw in keywords):
@@ -1506,6 +1803,75 @@ def infer_genres(
             (["book festival", "literary fest", "book fair"], "literary-festival"),
         ]
         for keywords, genre in words_patterns:
+            if any(kw in text for kw in keywords):
+                genres.add(genre)
+
+    elif category == "wellness":
+        wellness_patterns: list[tuple[list[str], str]] = [
+            (
+                ["a.a.", "alcoholics anonymous", "12 step", "twelve step",
+                 "sober", "sobriety", "recovery", "al-anon", "alanon",
+                 "celebrate recovery", "step study", "big book",
+                 "speaker meeting", "open discussion"],
+                "recovery",
+            ),
+            (
+                ["narcotics anonymous", "n.a.", "clean time", "just for today"],
+                "recovery",
+            ),
+            (["yoga", "vinyasa", "hot yoga", "yin ", "asana", "namaste"], "yoga"),
+            (["meditation", "mindfulness", "zazen", "contemplative", "vipassana"], "meditation"),
+            (["breathwork", "pranayama", "breath work", "holotropic"], "breathwork"),
+            (["sound bath", "sound healing", "gong bath", "singing bowl"], "sound-bath"),
+            (["reiki", "energy healing", "chakra", "crystal healing"], "reiki"),
+            (["support group", "grief", "nami", "wellness circle"], "support"),
+            (["therapy", "counseling", "cbt ", "dbt "], "therapy"),
+        ]
+        for keywords, genre in wellness_patterns:
+            if any(kw in text for kw in keywords):
+                genres.add(genre)
+
+    elif category == "meetup":
+        meetup_patterns: list[tuple[list[str], str]] = [
+            (
+                ["hike", "hiking", "trail", "summit", "mountain",
+                 "nature walk", "waterfall", "creek"],
+                "hiking",
+            ),
+            (["book club", "book & brew", "reading group", "book session"], "book-club"),
+            (
+                ["foodie", "eat & explore", "food tour", "restaurant",
+                 "dinner", "brunch", "tasting"],
+                "foodie",
+            ),
+            (["camping", "campfire", "campground", "glamping", "overnight"], "camping"),
+            (["tennis", "pickleball", "volleyball", "basketball", "soccer"], "fitness"),
+            (["dance", "salsa", "bachata", "swing", "two-step", "heels"], "dance"),
+            (["photo walk", "photography", "camera", "shoot"], "photography"),
+            (["language exchange", "spanish", "french", "conversation"], "language"),
+            (["networking", "professional", "career", "industry"], "networking"),
+            (["singles", "speed dating", "mingle", "mixer"], "singles"),
+            (["kayak", "paddle", "canoe", "float"], "outdoors"),
+        ]
+        for keywords, genre in meetup_patterns:
+            if any(kw in text for kw in keywords):
+                genres.add(genre)
+        # Fallback: check tags for hiking signal (very common in meetups)
+        if not genres:
+            meetup_tags = set(event.get("tags") or [])
+            if "hiking" in meetup_tags:
+                genres.add("hiking")
+
+    elif category == "gaming":
+        gaming_patterns: list[tuple[list[str], str]] = [
+            (["expo", "convention", "con ", "fest"], "convention"),
+            (["esports", "tournament", "competitive", "dreamhack", "lan"], "esports"),
+            (["arcade", "pinball", "retro game", "classic game"], "arcade"),
+            (["tabletop", "board game", "d&d", "rpg", "warhammer"], "tabletop"),
+            (["anime", "cosplay", "manga", "otaku"], "anime"),
+            (["retro", "classic", "8-bit", "pixel"], "retro"),
+        ]
+        for keywords, genre in gaming_patterns:
             if any(kw in text for kw in keywords):
                 genres.add(genre)
 
@@ -1557,11 +1923,36 @@ def infer_genres(
             "fitness_center": "crossfit",
             "record_store": "indie",
             "bookstore": "reading",
+            "farmers_market": "farmers-market",
         }
         for vibe in (venue_vibes or []):
             if vibe in vibe_genre_map:
                 genres.add(vibe_genre_map[vibe])
         if not genres and venue_type and venue_type in type_genre_map:
             genres.add(type_genre_map[venue_type])
+
+    # --- Last resort: source-level default genres ---
+    # Some sources are monolithic — every event is the same genre.
+    # Only applies when no genres were inferred from content.
+    if not genres:
+        source_id = event.get("source_id")
+        if source_id:
+            _SOURCE_DEFAULT_GENRES: dict[int, list[str]] = {
+                # Recovery
+                851: ["recovery"],   # Alcoholics Anonymous - Atlanta
+                854: ["recovery"],   # Narcotics Anonymous - Georgia
+                # Health / support
+                911: ["support"],    # Shepherd Center (rehab hospital)
+                906: ["wellness-class"],  # Emory Healthcare Community Events
+                913: ["support"],    # Cancer Support Community Atlanta
+                974: ["support"],    # Pulmonary Fibrosis Foundation
+                967: ["support"],    # Respite Care Atlanta
+                956: ["support"],    # The Warrior Alliance (veterans)
+                # Art / craft
+                554: ["craft"],      # Painting With a Twist
+            }
+            defaults = _SOURCE_DEFAULT_GENRES.get(int(source_id))
+            if defaults:
+                genres.update(defaults)
 
     return sorted(genres)

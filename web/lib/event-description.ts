@@ -2,6 +2,26 @@ import type { EventArtist } from "@/lib/artists-utils";
 import { getDisplayParticipants, getLineupLabels } from "@/lib/artists-utils";
 import { inferLineupGenreFallback } from "@/lib/artist-fallbacks";
 
+/**
+ * Patterns that indicate an AI/crawler-generated metadata string rather than
+ * a real event description. These are produced by `enrich_generic_event()` in
+ * the crawler pipeline and should never be shown to users.
+ */
+const METADATA_DESCRIPTION_PATTERNS = [
+  /^Category:\s/i,
+  /\bScheduled on \d{4}-\d{2}-\d{2}\b/i,
+  /\bUse the ticket link for (current|latest) availability\b/i,
+  /\bUse the official ticket link for current passes\b/i,
+  /\bCheck the official listing for current details\b/i,
+  /^Location:\s.*\d{5}/im, // "Location: X, City, ST ZIP"
+];
+
+/** Returns true if the description looks like machine-generated metadata. */
+export function isMetadataDescription(description: string | null | undefined): boolean {
+  if (!description) return false;
+  return METADATA_DESCRIPTION_PATTERNS.some((pattern) => pattern.test(description));
+}
+
 function normalizeText(value: string | null | undefined): string {
   return (value || "")
     .toLowerCase()
@@ -82,7 +102,9 @@ export function buildDisplayDescription(
   });
 
   const lineupDescription = buildLineupDescription(displayArtists, context);
-  const trimmedBase = baseDescription?.trim() || "";
+  // Suppress machine-generated metadata strings — they expose internal
+  // crawler artifacts to users and must not render as event descriptions.
+  const trimmedBase = isMetadataDescription(baseDescription) ? "" : (baseDescription?.trim() || "");
 
   if (!lineupDescription) {
     return trimmedBase || null;

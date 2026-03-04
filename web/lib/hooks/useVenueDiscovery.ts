@@ -227,6 +227,8 @@ export function useVenueDiscovery({
     }
 
     if (effectiveVenueTypes.length > 0) params.set("venue_type", effectiveVenueTypes.join(","));
+    // Enrich Things to Do venues with upcoming event details
+    if (activeTab === "things-to-do") params.set("include_events", "true");
     if (filters.neighborhoods.length > 0) params.set("neighborhood", filters.neighborhoods.join(","));
     if (effectiveVibes.length > 0) params.set("vibes", effectiveVibes.join(","));
     if (effectiveCuisine.length > 0) params.set("cuisine", effectiveCuisine.join(","));

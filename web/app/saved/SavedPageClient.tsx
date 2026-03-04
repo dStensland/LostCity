@@ -51,7 +51,6 @@ export default function SavedPageClient() {
     <>
       <UnifiedHeader
         portalSlug={portalSlug}
-        backLink={{ href: `/${portalSlug}`, label: "Home" }}
         hideNav
       />
       <main id="main-content" className="max-w-4xl mx-auto px-4 py-6">

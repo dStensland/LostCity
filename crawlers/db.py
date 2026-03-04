@@ -9,8 +9,9 @@ import time
 import logging
 import functools
 import threading
+from urllib.parse import urlparse
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Optional, Tuple
 from supabase import create_client, Client
 from config import get_config
@@ -20,6 +21,7 @@ from tag_inference import (
     infer_is_class,
     infer_is_religious,
     infer_is_support_group,
+    infer_is_kids_activity,
     infer_genres,
 )
 from genre_normalize import normalize_genres
@@ -51,14 +53,7 @@ _AGGREGATOR_SOURCE_SLUGS = {
     "instagram-captions",
     "creative-loafing",
 }
-_SPECIALS_SOURCE_SLUGS = {
-    "battle-and-brew",
-    "our-bar-atl",
-    "bold-monk-brewing",
-    "scofflaw-brewing",
-    "sweetwater",
-    "wrecking-bar",
-}
+_SPECIALS_SOURCE_SLUGS: set[str] = set()  # Deprecated — specials belong in venue_specials table, not as content_kind on events
 # Nightlife genres that never have real performers (participatory events).
 # Genres like "dj", "drag" CAN have performers and are NOT skipped.
 _NIGHTLIFE_SKIP_GENRES = {"karaoke", "trivia", "bar-games", "poker", "bingo"}
@@ -107,10 +102,62 @@ def smart_title_case(text: str) -> str:
 
 
 # ===== IMAGE URL NORMALIZER =====
+# ---------------------------------------------------------------------------
+# Recurrence-rule / start_date consistency
+# ---------------------------------------------------------------------------
+
+# Maps iCalendar BYDAY abbreviations to Python datetime.weekday() (0=Mon)
+_RRULE_BYDAY_TO_WEEKDAY = {
+    "MO": 0, "TU": 1, "WE": 2, "TH": 3, "FR": 4, "SA": 5, "SU": 6,
+}
+_WEEKDAY_TO_BYDAY = {v: k for k, v in _RRULE_BYDAY_TO_WEEKDAY.items()}
+_BYDAY_RE = re.compile(r"BYDAY=([A-Z]{2})", re.IGNORECASE)
+
+
+def _fix_recurrence_day_mismatch(event_data: dict) -> None:
+    """Fix recurrence_rule BYDAY when it disagrees with start_date's actual day.
+
+    AI-powered crawlers sometimes extract the recurrence day from text
+    (e.g. "Every Tuesday") independently from the event date, producing events
+    on Monday with BYDAY=TU.  This corrects the BYDAY to match the real date.
+    """
+    rule = event_data.get("recurrence_rule")
+    start_date_str = event_data.get("start_date")
+    if not rule or not start_date_str:
+        return
+
+    match = _BYDAY_RE.search(rule)
+    if not match:
+        return
+
+    byday = match.group(1).upper()
+    expected_weekday = _RRULE_BYDAY_TO_WEEKDAY.get(byday)
+    if expected_weekday is None:
+        return
+
+    try:
+        actual_date = datetime.strptime(str(start_date_str), "%Y-%m-%d")
+    except (ValueError, TypeError):
+        return
+
+    actual_weekday = actual_date.weekday()
+    if actual_weekday == expected_weekday:
+        return  # Consistent — nothing to fix
+
+    correct_byday = _WEEKDAY_TO_BYDAY[actual_weekday]
+    fixed_rule = _BYDAY_RE.sub(f"BYDAY={correct_byday}", rule)
+    logger.debug(
+        "Fixed recurrence_rule day mismatch for '%s' on %s: %s → %s",
+        event_data.get("title", "")[:50],
+        start_date_str,
+        rule,
+        fixed_rule,
+    )
+    event_data["recurrence_rule"] = fixed_rule
+
+
 # Catches malformed URLs at ingestion time so broken data never reaches the DB.
-_DOUBLED_HOSTNAME_RE = re.compile(
-    r"^https?://[^/]+(?:https?://.*)", re.IGNORECASE
-)
+_DOUBLED_HOSTNAME_RE = re.compile(r"^https?://[^/]+(?:https?://.*)", re.IGNORECASE)
 
 
 def _normalize_image_url(url: Optional[str]) -> Optional[str]:
@@ -147,6 +194,29 @@ def _normalize_image_url(url: Optional[str]) -> Optional[str]:
         return None
 
     return url
+
+
+def _normalize_source_url(url: Optional[str]) -> Optional[str]:
+    """Normalize event/source URLs and reject non-http(s) values."""
+    if not url:
+        return None
+    try:
+        value = str(url).strip()
+    except Exception:
+        return None
+    if not value:
+        return None
+    if value.startswith("//"):
+        value = "https:" + value
+    if _DOUBLED_HOSTNAME_RE.match(value):
+        try:
+            idx = value.index("http", 1)
+            value = value[idx:]
+        except ValueError:
+            return None
+    if not re.match(r"^https?://", value, re.IGNORECASE):
+        return None
+    return value
 
 
 # ===== VALIDATION STATISTICS TRACKING =====
@@ -232,6 +302,8 @@ _EVENTS_HAS_SHOW_SIGNAL_COLUMNS: Optional[bool] = None
 _EVENTS_HAS_FILM_IDENTITY_COLUMNS: Optional[bool] = None
 _EVENTS_HAS_CONTENT_KIND_COLUMN: Optional[bool] = None
 _EVENTS_HAS_FIELD_METADATA_COLUMNS: Optional[bool] = None
+_EVENTS_HAS_IS_ACTIVE_COLUMN: Optional[bool] = None
+_VENUES_HAS_FEATURES_TABLE: Optional[bool] = None
 _VENUES_HAS_LOCATION_DESIGNATOR: Optional[bool] = None
 _WRITES_ENABLED = True
 _WRITE_SKIP_REASON = ""
@@ -267,12 +339,14 @@ def _log_write_skip(operation: str) -> None:
 
 def reset_client() -> None:
     """Reset cached DB client and per-process caches."""
-    global _client, _EVENTS_HAS_SHOW_SIGNAL_COLUMNS, _EVENTS_HAS_FILM_IDENTITY_COLUMNS, _EVENTS_HAS_CONTENT_KIND_COLUMN, _EVENTS_HAS_FIELD_METADATA_COLUMNS
+    global _client, _EVENTS_HAS_SHOW_SIGNAL_COLUMNS, _EVENTS_HAS_FILM_IDENTITY_COLUMNS, _EVENTS_HAS_CONTENT_KIND_COLUMN, _EVENTS_HAS_FIELD_METADATA_COLUMNS, _EVENTS_HAS_IS_ACTIVE_COLUMN, _VENUES_HAS_FEATURES_TABLE
     _client = None
     _EVENTS_HAS_SHOW_SIGNAL_COLUMNS = None
     _EVENTS_HAS_FILM_IDENTITY_COLUMNS = None
     _EVENTS_HAS_CONTENT_KIND_COLUMN = None
     _EVENTS_HAS_FIELD_METADATA_COLUMNS = None
+    _EVENTS_HAS_IS_ACTIVE_COLUMN = None
+    _VENUES_HAS_FEATURES_TABLE = None
     _SOURCE_CACHE.clear()
     _VENUE_CACHE.clear()
 
@@ -542,6 +616,56 @@ def events_support_content_kind_column() -> bool:
     return bool(_EVENTS_HAS_CONTENT_KIND_COLUMN)
 
 
+def venues_support_features_table() -> bool:
+    """Detect whether the venue_features table exists."""
+    global _VENUES_HAS_FEATURES_TABLE
+    if _VENUES_HAS_FEATURES_TABLE is not None:
+        return _VENUES_HAS_FEATURES_TABLE
+
+    client = get_client()
+    try:
+        client.table("venue_features").select("id").limit(1).execute()
+        _VENUES_HAS_FEATURES_TABLE = True
+    except Exception as e:
+        error_str = str(e).lower()
+        if "does not exist" in error_str or "relation" in error_str:
+            _VENUES_HAS_FEATURES_TABLE = False
+            logger.warning(
+                "venue_features table missing; run migration 275_venue_features.sql"
+            )
+        else:
+            raise
+
+    return bool(_VENUES_HAS_FEATURES_TABLE)
+
+
+def events_support_is_active_column() -> bool:
+    """
+    Detect whether events.is_active exists.
+
+    Keeps crawler writes backward compatible before SQL migration is applied.
+    """
+    global _EVENTS_HAS_IS_ACTIVE_COLUMN
+    if _EVENTS_HAS_IS_ACTIVE_COLUMN is not None:
+        return _EVENTS_HAS_IS_ACTIVE_COLUMN
+
+    client = get_client()
+    try:
+        client.table("events").select("is_active").limit(1).execute()
+        _EVENTS_HAS_IS_ACTIVE_COLUMN = True
+    except Exception as e:
+        error_str = str(e).lower()
+        if "does not exist" in error_str and "is_active" in error_str:
+            _EVENTS_HAS_IS_ACTIVE_COLUMN = False
+            logger.warning(
+                "events.is_active missing; run migration 267_events_is_active.sql"
+            )
+        else:
+            raise
+
+    return bool(_EVENTS_HAS_IS_ACTIVE_COLUMN)
+
+
 def events_support_field_metadata_columns() -> bool:
     """
     Detect whether events.field_provenance and events.field_confidence exist.
@@ -554,7 +678,9 @@ def events_support_field_metadata_columns() -> bool:
 
     client = get_client()
     try:
-        client.table("events").select("field_provenance,field_confidence").limit(1).execute()
+        client.table("events").select("field_provenance,field_confidence").limit(
+            1
+        ).execute()
         _EVENTS_HAS_FIELD_METADATA_COLUMNS = True
     except Exception as e:
         error_str = str(e).lower()
@@ -688,9 +814,26 @@ _FESTIVAL_SOURCE_OVERRIDES = {
     "atlanta-food-wine": {"festival_name": "Atlanta Food & Wine Festival"},
     "buried-alive": {"festival_name": "Buried Alive Film Festival"},
     "candler-park-fest": {"festival_name": "Candler Park Fall Fest"},
-    "ga-renaissance-festival": {"festival_name": "Georgia Renaissance Festival"},
     "grant-park-festival": {"festival_name": "Grant Park Summer Shade Festival"},
     "music-midtown": {"festival_name": "Music Midtown"},
+    "bronzelens": {"festival_name": "BronzeLens Film Festival"},
+    "elevate-atl-art": {"festival_name": "Elevate Atlanta"},
+    # These are important annual tentpoles, but currently modeled as
+    # single-parent events without festival-program structure.
+    "piedmont-park-arts-festival": {"force_event_model": True},
+    "national-black-arts-festival": {"force_event_model": True},
+    "native-american-festival-and-pow-wow": {"force_event_model": True},
+    "one-musicfest": {"force_event_model": True},
+    "sweetwater-420-fest": {"force_event_model": True},
+    "bluesberry-norcross": {"force_event_model": True},
+    "conyers-cherry-blossom": {"force_event_model": True},
+    "decatur-watchfest": {"force_event_model": True},
+    "ga-renaissance-festival": {"force_event_model": True},
+    "blue-ridge-trout-fest": {"force_event_model": True},
+    "breakaway-atlanta": {"force_event_model": True},
+    "esfna-atlanta": {"force_event_model": True},
+    "221b-con": {"force_event_model": True},
+    "fifa-fan-festival-atlanta": {"force_event_model": True},
 }
 
 _FESTIVAL_SOURCE_SLUGS = {
@@ -708,7 +851,6 @@ _FESTIVAL_SOURCE_SLUGS = {
     "east-atlanta-strut",
     "peachtree-road-race",
     "atlanta-pride",
-    "atlanta-black-pride",
     "out-on-film",
     "ajff",
     "buried-alive",
@@ -734,6 +876,8 @@ _FESTIVAL_SOURCE_SLUGS = {
     "southern-fried-gaming-expo",
     "anime-weekend-atlanta",
     "atlanta-salsa-bachata-festival",
+    "bronzelens",
+    "elevate-atl-art",
 }
 
 _FESTIVAL_NAME_PATTERN = re.compile(
@@ -782,11 +926,39 @@ def infer_festival_type_from_name(name: Optional[str]) -> Optional[str]:
     return None
 
 
+def _force_update_series_day(
+    client: Client, series_id: str, day_of_week: str
+) -> None:
+    """Overwrite a series' day_of_week when the crawler's value is verified correct.
+
+    Unlike update_series_metadata (which only fills NULL), this forces an update
+    so that stale values get corrected when a venue changes its recurring night.
+    """
+    try:
+        existing = client.table("series").select("day_of_week").eq("id", series_id).execute()
+        if not existing.data:
+            return
+        current = (existing.data[0].get("day_of_week") or "").strip().lower()
+        incoming = day_of_week.strip().lower()
+        if current and current != incoming:
+            client.table("series").update({"day_of_week": incoming}).eq("id", series_id).execute()
+            logger.info(
+                "Corrected series %s day_of_week: %s → %s",
+                series_id[:8], current, incoming,
+            )
+    except Exception as exc:
+        logger.debug("Failed to force-update series day_of_week: %s", exc)
+
+
 def get_festival_source_hint(
     source_slug: Optional[str], source_name: Optional[str]
 ) -> Optional[dict]:
     """Return festival metadata hint if the source looks like a festival/conference."""
     slug = source_slug or ""
+    if slug in _FESTIVAL_SOURCE_OVERRIDES:
+        override = _FESTIVAL_SOURCE_OVERRIDES.get(slug, {})
+        if override.get("force_event_model"):
+            return None
     if slug in _FESTIVAL_SOURCE_OVERRIDES or slug in _FESTIVAL_SOURCE_SLUGS:
         override = _FESTIVAL_SOURCE_OVERRIDES.get(slug, {})
         name = override.get("festival_name") or source_name
@@ -1109,7 +1281,9 @@ def get_or_create_venue(venue_data: dict) -> int:
     if "image_url" in venue_data:
         venue_data["image_url"] = _normalize_image_url(venue_data.get("image_url"))
     if "hero_image_url" in venue_data:
-        venue_data["hero_image_url"] = _normalize_image_url(venue_data.get("hero_image_url"))
+        venue_data["hero_image_url"] = _normalize_image_url(
+            venue_data.get("hero_image_url")
+        )
 
     # Validate venue_type (warn, don't reject)
     vtype = venue_data.get("venue_type")
@@ -1132,6 +1306,23 @@ def get_or_create_venue(venue_data: dict) -> int:
         venue_data.setdefault(
             "location_designator", infer_location_designator(venue_data)
         )
+
+    # Quality gate: warn on hollow venues, skip truly unfindable stubs.
+    _has_address = bool(venue_data.get("address"))
+    _has_coords = bool(venue_data.get("lat") and venue_data.get("lng"))
+
+    if not _has_address and not _has_coords:
+        logger.warning(
+            "Hollow venue: '%s' has no address or coordinates — "
+            "proximity dedup cannot catch future duplicates.",
+            venue_data.get("name", "unknown"),
+        )
+        if not venue_data.get("city") or not venue_data.get("venue_type"):
+            logger.warning(
+                "Skipping venue creation for '%s' — insufficient data.",
+                venue_data.get("name", "unknown"),
+            )
+            return _next_temp_id()
 
     # Create new venue
     if not writes_enabled():
@@ -1173,6 +1364,65 @@ def get_venue_by_slug(slug: str) -> Optional[dict]:
     result = client.table("venues").select("*").eq("slug", slug).execute()
     if result.data and len(result.data) > 0:
         return result.data[0]
+    return None
+
+
+def upsert_venue_feature(venue_id: int, feature_data: dict) -> Optional[int]:
+    """Insert or update a venue feature. Dedupes on (venue_id, slug).
+
+    feature_data keys:
+        title (required), feature_type, description, image_url,
+        is_seasonal, start_date, end_date, price_note, is_free, sort_order
+    """
+    if not venues_support_features_table():
+        return None
+
+    title = (feature_data.get("title") or "").strip()
+    if not title:
+        logger.warning("upsert_venue_feature: missing title for venue_id=%s", venue_id)
+        return None
+
+    # Generate slug from title
+    slug = re.sub(r"[^\w\s-]", "", title.lower())
+    slug = re.sub(r"[\s_]+", "-", slug)
+    slug = re.sub(r"-+", "-", slug).strip("-")
+
+    if not slug:
+        logger.warning("upsert_venue_feature: empty slug from title '%s'", title)
+        return None
+
+    row = {
+        "venue_id": venue_id,
+        "slug": slug,
+        "title": title,
+        "feature_type": feature_data.get("feature_type", "attraction"),
+        "description": feature_data.get("description"),
+        "image_url": feature_data.get("image_url"),
+        "is_seasonal": feature_data.get("is_seasonal", False),
+        "start_date": feature_data.get("start_date"),
+        "end_date": feature_data.get("end_date"),
+        "price_note": feature_data.get("price_note"),
+        "is_free": feature_data.get("is_free", False),
+        "sort_order": feature_data.get("sort_order", 0),
+        "is_active": True,
+        "updated_at": "now()",
+    }
+
+    if not writes_enabled():
+        _log_write_skip(f"upsert venue_features slug={slug} venue_id={venue_id}")
+        return _next_temp_id()
+
+    client = get_client()
+    try:
+        result = (
+            client.table("venue_features")
+            .upsert(row, on_conflict="venue_id,slug")
+            .execute()
+        )
+        if result.data:
+            return result.data[0]["id"]
+    except Exception:
+        logger.exception("Failed to upsert venue feature '%s' for venue %s", title, venue_id)
     return None
 
 
@@ -1294,6 +1544,30 @@ def validate_event(event_data: dict) -> Tuple[bool, Optional[str], list[str]]:
             ),
             warnings,
         )
+
+    # Date-span gate: events spanning >30 days are likely exhibits or seasonal
+    # attractions, not programmed events.  Force content_kind="exhibit" so they're
+    # captured but kept out of the event feed.  Multi-day festivals pass through.
+    end_date_str = event_data.get("end_date")
+    if end_date_str:
+        try:
+            end_date_obj = datetime.strptime(end_date_str, "%Y-%m-%d")
+            span_days = (end_date_obj.date() - event_date).days
+            if span_days > 30:
+                explicit_kind = str(event_data.get("content_kind") or "").strip().lower()
+                if explicit_kind != "event":
+                    _LONG_SPAN_OK_RE = re.compile(
+                        r"(festival|conference|convention|fair|summit|expo|marathon|relay)",
+                        re.IGNORECASE,
+                    )
+                    if not _LONG_SPAN_OK_RE.search(title):
+                        event_data["content_kind"] = "exhibit"
+                        warnings.append(
+                            f"Classified as exhibit (spans {span_days} days): {title}"
+                        )
+                        _validation_stats.record_warning("long_span_exhibit")
+        except (ValueError, TypeError):
+            pass
 
     # Warn on missing start_time (unless genuinely all-day)
     start_time = event_data.get("start_time")
@@ -1655,20 +1929,59 @@ _EXHIBIT_SIGNAL_RE = re.compile(
     flags=re.IGNORECASE,
 )
 
+# Permanent attractions and daily operations — these are "the place is open",
+# not programmed events.  Classified as exhibits so they're captured in the DB
+# but kept out of the event feed.
+_ATTRACTION_TITLES = {
+    "summit skyride",
+    "scenic railroad",
+    "dinosaur explore",
+    "skyhike",
+    "mini golf",
+    "general admission",
+    "play at the museum",
+    "geyser tower",
+    "farmyard",
+    "4-d theater",
+    "duck adventures",
+    "adventure golf",
+    "gemstone mining",
+    "nature playground",
+    "splash pad",
+    "permanent collection",
+    "river roots science stations",
+    "weekend activities",
+    "birdseed fundraiser pick up",
+}
+_ATTRACTION_TITLE_RE = re.compile(
+    r"^(general\s+admission\b|daily\s+operation)",
+    flags=re.IGNORECASE,
+)
+
 
 def infer_content_kind(
-    event_data: dict, series_hint: Optional[dict] = None, source_slug: Optional[str] = None
+    event_data: dict,
+    series_hint: Optional[dict] = None,
+    source_slug: Optional[str] = None,
 ) -> str:
     """Infer event content kind for feed-level filtering and UX treatment."""
     explicit_value = str(event_data.get("content_kind") or "").strip().lower()
     if explicit_value in _CONTENT_KIND_ALLOWED:
         return explicit_value
 
-    series_type = str(
-        (series_hint or {}).get("series_type")
-        or ((event_data.get("series") or {}) if isinstance(event_data.get("series"), dict) else {}).get("series_type")
-        or ""
-    ).strip().lower()
+    series_type = (
+        str(
+            (series_hint or {}).get("series_type")
+            or (
+                (event_data.get("series") or {})
+                if isinstance(event_data.get("series"), dict)
+                else {}
+            ).get("series_type")
+            or ""
+        )
+        .strip()
+        .lower()
+    )
     if series_type == "exhibition":
         return "exhibit"
 
@@ -1690,10 +2003,13 @@ def infer_content_kind(
     if _EXHIBIT_SIGNAL_RE.search(searchable_text):
         return "exhibit"
 
-    if source_slug in _SPECIALS_SOURCE_SLUGS:
-        return "special"
-    if tags & _SPECIAL_SIGNAL_TAGS:
-        return "special"
+    # Specials belong in venue_specials table, not as content_kind on events.
+    # _SPECIALS_SOURCE_SLUGS and _SPECIAL_SIGNAL_TAGS inference removed.
+
+    # Permanent attractions / daily operations → exhibit
+    title = str(event_data.get("title") or "").strip().lower()
+    if title in _ATTRACTION_TITLES or _ATTRACTION_TITLE_RE.match(title):
+        return "exhibit"
 
     return "event"
 
@@ -1737,6 +2053,22 @@ def insert_event(
                 f"Event validation warning: {warning} - Title: \"{event_data.get('title', 'N/A')[:50]}\""
             )
 
+    # Guard: past-date events are inserted as inactive.  Catches stale imports,
+    # archived listings, and ticket-sale dates misidentified as event dates.
+    start_date_str = event_data.get("start_date")
+    if start_date_str:
+        try:
+            event_start = date.fromisoformat(str(start_date_str)[:10])
+            if event_start < date.today():
+                logger.warning(
+                    "Past start_date %s → inserting as inactive: %s",
+                    start_date_str,
+                    (event_data.get("title") or "N/A")[:60],
+                )
+                event_data["is_active"] = False
+        except (ValueError, TypeError):
+            pass  # Don't block insert on unparseable dates
+
     # Additional title quality check (existing validation)
     title = event_data.get("title", "")
     if not validate_event_title(title):
@@ -1778,6 +2110,9 @@ def insert_event(
         )
         logger.warning(f"Auto-generated missing content_hash for: {title[:60]}")
 
+    # Fix recurrence_rule BYDAY when it disagrees with start_date's weekday
+    _fix_recurrence_day_mismatch(event_data)
+
     # Remove producer_id if present (not a database column)
     if "producer_id" in event_data:
         event_data.pop("producer_id")
@@ -1804,7 +2139,9 @@ def insert_event(
     if not is_sensitive_flag and source_info and source_info.get("is_sensitive"):
         is_sensitive_flag = True
 
-    # Get venue info for tag inheritance
+    # Get venue info for tag inheritance and row-level visibility safety.
+    venue = None
+    venue_inactive_or_closed = False
     venue_vibes = []
     venue_type = None
     if event_data.get("venue_id"):
@@ -1812,6 +2149,9 @@ def insert_event(
         if venue:
             venue_vibes = venue.get("vibes") or []
             venue_type = venue.get("venue_type")
+            venue_slug = str(venue.get("slug") or "").strip().lower()
+            if venue.get("active") is False or venue_slug in CLOSED_VENUE_SLUGS:
+                venue_inactive_or_closed = True
 
             # Reject events at venues outside metro Atlanta
             venue_state = (venue.get("state") or "").upper().strip()
@@ -1826,8 +2166,27 @@ def insert_event(
     # Normalize image URL before any enrichment or DB insert
     event_data["image_url"] = _normalize_image_url(event_data.get("image_url"))
 
+    # Ensure source_url exists for current NOT NULL schema. Prefer explicit
+    # event URL, then ticket URL, then source homepage URL.
+    event_data["source_url"] = _normalize_source_url(event_data.get("source_url"))
+    if not event_data.get("source_url"):
+        for candidate in (
+            event_data.get("ticket_url"),
+            event_data.get("url"),
+            source_url,
+        ):
+            normalized = _normalize_source_url(candidate)
+            if normalized:
+                event_data["source_url"] = normalized
+                break
+    if not event_data.get("source_url"):
+        msg = f'Missing source_url after fallback: "{event_data.get("title", "")[:80]}"'
+        logger.warning(f"Event rejected: {msg}")
+        raise ValueError(msg)
+
     # Auto-fetch movie metadata (poster, director, runtime, etc.) for film events
     film_metadata = None
+    parsed_film_title = None
     if event_data.get("category") == "film":
         parsed_film_title, parsed_film_year = extract_film_info(
             event_data.get("title", "")
@@ -1878,9 +2237,14 @@ def insert_event(
             genres = music_info.genres
 
     # Parse lineup from title for event_artists population (music, comedy, nightlife)
-    if event_data.get("category") in ("music", "comedy", "nightlife"):
+    event_category = str(
+        event_data.get("category") or event_data.get("category_id") or ""
+    ).strip().lower()
+    if event_category in ("music", "comedy", "nightlife"):
         event_genres = set(event_data.get("genres") or [])
-        skip = event_data.get("category") == "nightlife" and bool(event_genres & _NIGHTLIFE_SKIP_GENRES)
+        skip = event_category == "nightlife" and bool(
+            event_genres & _NIGHTLIFE_SKIP_GENRES
+        )
         if not skip and not event_data.get("_parsed_artists"):
             parsed = parse_lineup_from_title(event_data.get("title", ""))
             if parsed:
@@ -1919,6 +2283,11 @@ def insert_event(
     if infer_is_support_group(event_data, source_slug=source_slug):
         event_data["category"] = "support_group"
         is_sensitive_flag = True
+
+    # Auto-detect kids activities miscategorized under adult categories
+    # e.g. "Art Camp for Kindergartners" should be family, not art
+    if infer_is_kids_activity(event_data):
+        event_data["category"] = "family"
 
     # Festival/conference rollup hints based on source
     festival_hint = get_festival_source_hint(source_slug, source_name)
@@ -2001,25 +2370,31 @@ def insert_event(
         venue_type=venue_type,
         genres=merged_genres,
     )
-    event_data["tags"] = list(dict.fromkeys(inferred + sorted(valid_crawler_tags - set(inferred))))
-    if source_slug in _SPECIALS_SOURCE_SLUGS:
-        tags = {str(tag).lower() for tag in (event_data.get("tags") or [])}
-        if "specials" not in tags:
-            event_data["tags"] = list(dict.fromkeys((event_data.get("tags") or []) + ["specials"]))
-
+    event_data["tags"] = list(
+        dict.fromkeys(inferred + sorted(valid_crawler_tags - set(inferred)))
+    )
     # Update genres variable for downstream use
     if merged_genres:
         genres = merged_genres
 
     # Warn about genre/tag/vibe values not in taxonomy_definitions (discovery, not rejection)
     from genre_normalize import VALID_GENRES
+
     final_tags = set(event_data.get("tags") or [])
     unknown_genres = set(genres or []) - VALID_GENRES
     unknown_tags = final_tags - ALL_TAGS
     if unknown_genres:
-        logger.debug(f"Unknown genres for '{event_data.get('title', '')[:50]}': {unknown_genres}")
+        logger.debug(
+            f"Unknown genres for '{event_data.get('title', '')[:50]}': {unknown_genres}"
+        )
     if unknown_tags:
-        logger.debug(f"Unknown tags for '{event_data.get('title', '')[:50]}': {unknown_tags}")
+        logger.debug(
+            f"Unknown tags for '{event_data.get('title', '')[:50]}': {unknown_tags}"
+        )
+
+    # Use cleaned film title for series creation (strips DOLBY CINEMA, IMAX, etc.)
+    if series_hint and series_hint.get("series_type") == "film" and parsed_film_title:
+        series_hint["series_title"] = parsed_film_title
 
     # Enrich series_hint with OMDB metadata for film events
     if film_metadata and series_hint and series_hint.get("series_type") == "film":
@@ -2083,6 +2458,26 @@ def insert_event(
                 if backfill:
                     update_series_metadata(client, series_id, backfill)
 
+                # Force-correct stale day_of_week when the crawler's value
+                # matches the event's actual date but the series record differs.
+                hint_dow = (series_hint.get("day_of_week") or "").strip().lower()
+                if hint_dow and event_data.get("start_date"):
+                    try:
+                        ev_date = datetime.strptime(
+                            str(event_data["start_date"]), "%Y-%m-%d"
+                        )
+                        actual_dow = [
+                            "monday", "tuesday", "wednesday",
+                            "thursday", "friday", "saturday", "sunday",
+                        ][ev_date.weekday()]
+                        if hint_dow == actual_dow:
+                            # Hint is consistent with event date — trust it
+                            _force_update_series_day(
+                                client, series_id, series_hint["day_of_week"]
+                            )
+                    except (ValueError, IndexError):
+                        pass
+
     # Always store genres on the event row for discoverability
     # (series also stores genres, but event-level enables filtering/display)
     if genres:
@@ -2096,8 +2491,15 @@ def insert_event(
             series_hint=series_hint,
             source_slug=source_slug,
         )
+
     else:
         event_data.pop("content_kind", None)
+
+    # Row-level visibility control for launch feeds.
+    if events_support_is_active_column():
+        event_data["is_active"] = not venue_inactive_or_closed
+    else:
+        event_data.pop("is_active", None)
 
     # Backfill description from film metadata when missing or too short to be useful
     existing_desc = event_data.get("description") or ""
@@ -2146,7 +2548,8 @@ def insert_event(
             str(genre).lower() for genre in (event_data.get("genres") or [])
         }
         is_paid = event_data.get("is_free") is False or (
-            event_data.get("price_min") is not None and float(event_data.get("price_min") or 0) > 0
+            event_data.get("price_min") is not None
+            and float(event_data.get("price_min") or 0) > 0
         )
         if (
             category_value == "film"
@@ -2196,8 +2599,8 @@ def insert_event(
     elif "category" in event_data:
         event_data.pop("category")
 
-    # Pop transient fields before DB insert
-    parsed_artists_for_insert = event_data.pop("_parsed_artists", None)
+    # Preserve transient parsed artists for insert/update paths.
+    parsed_artists_for_insert = event_data.get("_parsed_artists")
     event_data.pop("subcategory", None)
     event_data.pop("subcategory_id", None)
 
@@ -2206,6 +2609,8 @@ def insert_event(
     # - falls back to natural key (source+venue+title+date+time)
     existing = find_existing_event_for_insert(event_data)
     if existing:
+        if parsed_artists_for_insert and not event_data.get("_parsed_artists"):
+            event_data["_parsed_artists"] = parsed_artists_for_insert
         smart_update_existing_event(existing, event_data)
         return existing["id"]
 
@@ -2213,6 +2618,9 @@ def insert_event(
     cross_source_canonical_id = find_cross_source_canonical_for_insert(event_data)
     if cross_source_canonical_id:
         event_data["canonical_event_id"] = cross_source_canonical_id
+
+    # Pop transient fields before DB insert
+    event_data.pop("_parsed_artists", None)
 
     if not writes_enabled():
         _log_write_skip(
@@ -2320,7 +2728,7 @@ def parse_lineup_from_title(title: str) -> list[dict]:
     def _looks_like_boilerplate(value: str) -> bool:
         return bool(
             re.search(
-                r"(open mic|comedy night|home game|suite|suites|"
+                r"(open mic|comedy night|home game|"
                 r"parking|ticket package|presented by|"
                 r"nightclub\s+(?:mon|tue|wed|thu|fri|sat|sun)\w*|"
                 r"(?:mon|tue|wed|thu|fri|sat|sun)\w*\s+night\s+party|"
@@ -2338,6 +2746,51 @@ def parse_lineup_from_title(title: str) -> list[dict]:
                 flags=re.IGNORECASE,
             )
         )
+
+    def _extract_colon_headliner(value: str) -> Optional[str]:
+        if ":" not in value:
+            return None
+        left, right = [segment.strip() for segment in value.split(":", 1)]
+        if not left or not right:
+            return None
+        left_norm = left.lower()
+        right_norm = right.lower()
+
+        # "Promoter Presents: Artist Name" -> right side is usually the act.
+        if re.search(r"\bpresents?\b|\bpresented by\b", left_norm, flags=re.IGNORECASE):
+            candidate = right
+            if ":" in candidate:
+                candidate = candidate.split(":", 1)[0].strip()
+        # "Artist: Tour Name" -> left side is usually the act.
+        elif re.search(r"\b(tour|experience)\b", right_norm, flags=re.IGNORECASE):
+            candidate = left
+        # "Show: Ms. X" style formats often put performer on the right side.
+        elif "show" in left_norm and re.match(r"^(ms\.?|mr\.?|mrs\.?|dj\b|dr\.?\b)", right_norm):
+            candidate = right
+        # "Performer Entity: Program Descriptor" where performer is on the left.
+        elif (
+            re.search(r"\b(orchestra|band|ensemble|quartet|trio|choir|show)\b", left_norm)
+            and re.search(
+                r"\b(and more|our lives|happiest days|celebration|symphony|music|hits|greatest|best)\b",
+                right_norm,
+            )
+        ):
+            candidate = left
+        else:
+            return None
+
+        candidate = " ".join(candidate.split()).strip(" -\u2013\u2014")
+        if not candidate:
+            return None
+        if _looks_like_boilerplate(candidate):
+            return None
+        if re.search(
+            r"\b(session|party|brunch|jam|worship|eucharist|trivia|karaoke|open mic)\b",
+            candidate,
+            flags=re.IGNORECASE,
+        ):
+            return None
+        return candidate
 
     # --- Pre-processing: reject generic event titles outright ---
     cleaned_title = title.strip()
@@ -2361,6 +2814,15 @@ def parse_lineup_from_title(title: str) -> list[dict]:
             and _normalize(headliner) != _normalize(only_name)
         ):
             parsed_entries = [{"name": headliner, "role": "headliner"}]
+        elif _normalize(only_name) == _normalize(cleaned_title):
+            colon_headliner = _extract_colon_headliner(cleaned_title)
+            if colon_headliner:
+                parsed_entries = [{"name": colon_headliner, "role": "headliner"}]
+
+    if not parsed_entries:
+        colon_headliner = _extract_colon_headliner(cleaned_title)
+        if colon_headliner:
+            parsed_entries = [{"name": colon_headliner, "role": "headliner"}]
 
     if not parsed_entries:
         # Fallback: single artist extraction (removes tour names, prefixes, etc.)
@@ -2383,14 +2845,23 @@ def parse_lineup_from_title(title: str) -> list[dict]:
         if name.lower() in _ARTIST_BLOCKLIST:
             continue
         if len(name) < 4 and " " not in name:
-            continue
+            token = name.strip().upper()
+            # Allow common 3-4 char stage-name acronyms (e.g. KWN, MJT, OCT)
+            # while still rejecting generic placeholders.
+            if not (
+                re.fullmatch(r"[A-Z0-9]{3,4}", token)
+                and token not in {"TBA", "TBD", "VIP", "RSVP"}
+            ):
+                continue
         # Reject pure year numbers (e.g. "2026") and bare month fragments
         if _PURE_YEAR_RE.match(name):
             continue
         if _MONTH_FRAGMENT_RE.match(name):
             continue
         # Activity words are never real performers — reject unconditionally
-        if re.search(r"\bkaraoke\b|\btrivia\b|\bbingo\b|\bimprov\w*\b", name, re.IGNORECASE):
+        if re.search(
+            r"\bkaraoke\b|\btrivia\b|\bbingo\b|\bimprov\w*\b", name, re.IGNORECASE
+        ):
             continue
         normalized_name = _normalize(name)
         is_title_mirror = bool(
@@ -2449,7 +2920,8 @@ _PARTICIPANT_DESCRIPTOR_RE = re.compile(
 )
 
 _PARTICIPANT_BOILERPLATE_RE = re.compile(
-    r"(open mic|comedy night|home game|suite|suites|parking|ticket package|item voucher|voucher|presented by|"
+    r"(open mic|comedy night|home game|parking|ticket package|item voucher|voucher|presented by|"
+    r"premium seating|"
     r"ladies\s+night|industry\s+night|bottle\s+service|vip\s+night|"
     r"day\s+party|pool\s+party|brunch\s+party|after\s*party|happy\s+hour|"
     r"\bkaraoke\b|\btrivia\b|\bbingo\b|\bpoker\s+night\b|\bbowling\b|\bcurling\b|"
@@ -2483,6 +2955,12 @@ def _looks_like_participant_boilerplate(value: str) -> bool:
 
 def _clean_team_name(value: str) -> str:
     cleaned = re.sub(r"\s*\([^)]*\)\s*", " ", value or "")
+    cleaned = re.sub(
+        r"\s*\*\s*(?:premium\s+seating|vip|parking|packages?|tickets?)\s*\*.*$",
+        "",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
     cleaned = re.sub(
         r"\s*(?:\||-|–|—)\s*(?:suite|suites|parking|vip|package|packages|tickets?).*$",
         "",
@@ -2611,7 +3089,7 @@ def sanitize_event_artists(
             continue
 
         if category == "sports" and re.search(
-            r"(home game|suites?|parking|ticket package|vip|presented by)",
+            r"(home game|suites?|parking|ticket package|vip|presented by|premium seating)",
             name,
             flags=re.IGNORECASE,
         ):
@@ -2651,11 +3129,55 @@ def sanitize_event_artists(
                 }
             )
 
+    if category in {"music", "comedy", "nightlife"} and len(filtered) == 1:
+        only_name_norm = _normalize_participant_text(filtered[0].get("name"))
+        if only_name_norm and only_name_norm == title_norm:
+            reparsed = parse_lineup_from_title(title)
+            if len(reparsed) > 1:
+                filtered = [
+                    {
+                        "name": str(item.get("name") or "").strip(),
+                        "role": item.get("role"),
+                        "billing_order": item.get("billing_order"),
+                        "is_headliner": item.get("is_headliner"),
+                    }
+                    for item in reparsed
+                    if str(item.get("name") or "").strip()
+                ]
+
     if not filtered and category in {"music", "comedy", "nightlife"}:
         filtered = parse_lineup_from_title(title)
 
     if not filtered:
         return []
+
+    # Split "Artist A & Artist B" entries when the combined name isn't a
+    # *verified* artist (has external IDs or bio).  Both sides must be
+    # multi-word to avoid splitting band names like "Simon & Garfunkel".
+    # A bare DB record without enrichment data is likely from a previous
+    # bad parse and should not prevent splitting.
+    if category in {"music", "comedy", "nightlife"}:
+        expanded: list[dict] = []
+        for row in filtered:
+            name = row["name"]
+            if " & " in name:
+                parts = [p.strip() for p in name.split(" & ")]
+                if all(len(p.split()) >= 2 for p in parts) and all(parts):
+                    from artists import slugify_artist, get_artist_by_slug
+
+                    slug = slugify_artist(name)
+                    existing = get_artist_by_slug(slug) if slug else None
+                    # Only keep combined if the artist has real enrichment data
+                    is_verified = existing and any(
+                        existing.get(k)
+                        for k in ("spotify_id", "musicbrainz_id", "deezer_id", "bio")
+                    )
+                    if not is_verified:
+                        for part in parts:
+                            expanded.append({**row, "name": part})
+                        continue
+            expanded.append(row)
+        filtered = expanded
 
     # Reindex billing and ensure a lead participant.
     result: list[dict] = []
@@ -2719,7 +3241,9 @@ def _update_event_record(client: Client, event_id: int, event_data: dict):
     return client.table("events").update(event_data).eq("id", event_id).execute()
 
 
-def _should_use_incoming_image(existing_url: Optional[str], incoming_url: Optional[str]) -> bool:
+def _should_use_incoming_image(
+    existing_url: Optional[str], incoming_url: Optional[str]
+) -> bool:
     """True when incoming image should replace existing event image."""
     if not incoming_url:
         return False
@@ -2728,6 +3252,84 @@ def _should_use_incoming_image(existing_url: Optional[str], incoming_url: Option
     if not existing_url:
         return True
     return is_likely_non_event_image(existing_url) and existing_url != incoming_url
+
+
+def _normalize_url_path(url: str) -> str:
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        return ""
+    path = (parsed.path or "").strip().lower()
+    if not path:
+        return "/"
+    if not path.startswith("/"):
+        path = f"/{path}"
+    if len(path) > 1:
+        path = path.rstrip("/")
+    return path or "/"
+
+
+def _is_listing_like_url(url: Optional[str]) -> bool:
+    value = (url or "").strip()
+    if not value:
+        return True
+    path = _normalize_url_path(value)
+    return path in {
+        "/",
+        "/events",
+        "/event",
+        "/calendar",
+        "/shows",
+        "/upcoming",
+        "/upcoming-events",
+    }
+
+
+def _should_promote_incoming_url(existing_url: Optional[str], incoming_url: Optional[str]) -> bool:
+    incoming = (incoming_url or "").strip()
+    if not incoming:
+        return False
+    existing = (existing_url or "").strip()
+    if not existing:
+        return True
+    if existing == incoming:
+        return False
+    return _is_listing_like_url(existing) and not _is_listing_like_url(incoming)
+
+
+def _normalize_entity_key(value: str) -> str:
+    normalized = (value or "").strip().lower().replace("&", " and ")
+    normalized = re.sub(r"[^a-z0-9]+", " ", normalized)
+    return re.sub(r"\s+", " ", normalized).strip()
+
+
+def _should_replace_placeholder_artists(
+    event_title: str,
+    existing_artists: list[dict],
+    incoming_artists: list[dict],
+) -> bool:
+    if not existing_artists or not incoming_artists:
+        return False
+    if len(existing_artists) != 1:
+        return False
+
+    existing_name = str(existing_artists[0].get("name") or "").strip()
+    if not existing_name:
+        return False
+    title_key = _normalize_entity_key(event_title)
+    if not title_key:
+        return False
+
+    existing_key = _normalize_entity_key(existing_name)
+    if existing_key != title_key:
+        return False
+
+    incoming_name = str(incoming_artists[0].get("name") or "").strip()
+    incoming_key = _normalize_entity_key(incoming_name)
+    if not incoming_key:
+        return False
+
+    return incoming_key != title_key
 
 
 def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
@@ -2747,6 +3349,10 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
         return False
 
     updates: dict = {}
+    existing_category = str(existing.get("category_id") or "").strip().lower()
+    incoming_category = str(
+        incoming.get("category_id") or incoming.get("category") or ""
+    ).strip().lower()
 
     # --- Description: prefer longer, non-template descriptions ---
     existing_desc = existing.get("description") or ""
@@ -2784,10 +3390,10 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
     if incoming.get("price_note") and not existing.get("price_note"):
         updates["price_note"] = incoming["price_note"]
 
-    # --- URLs: fill missing ---
-    if incoming.get("ticket_url") and not existing.get("ticket_url"):
+    # --- URLs: fill missing and promote listing placeholders to event-specific links ---
+    if _should_promote_incoming_url(existing.get("ticket_url"), incoming.get("ticket_url")):
         updates["ticket_url"] = incoming["ticket_url"]
-    if incoming.get("source_url") and not existing.get("source_url"):
+    if _should_promote_incoming_url(existing.get("source_url"), incoming.get("source_url")):
         updates["source_url"] = incoming["source_url"]
 
     # --- Portal: fill missing from incoming or source ownership ---
@@ -2799,6 +3405,50 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
                 incoming_portal_id = source_info.get("owner_portal_id")
         if incoming_portal_id:
             updates["portal_id"] = incoming_portal_id
+
+    # --- Category: promote generic legacy buckets when crawler now has specific type ---
+    if incoming_category in VALID_CATEGORIES:
+        if not existing_category:
+            updates["category_id"] = incoming_category
+        elif (
+            incoming_category != existing_category
+            and existing_category in {"community", "other"}
+            and incoming_category not in {"community", "other"}
+        ):
+            updates["category_id"] = incoming_category
+
+    # --- Sensitive flag: propagate from source if not already set ---
+    if not existing.get("is_sensitive"):
+        source_id = existing.get("source_id") or incoming.get("source_id")
+        if source_id:
+            src = get_source_info(source_id)
+            if src and src.get("is_sensitive"):
+                updates["is_sensitive"] = True
+
+    # --- Recurrence: fill missing, validate BYDAY against existing start_date ---
+    if incoming.get("recurrence_rule") and not existing.get("recurrence_rule"):
+        # Validate before propagating: build a temporary dict to fix BYDAY
+        tmp = {
+            "recurrence_rule": incoming["recurrence_rule"],
+            "start_date": existing.get("start_date"),
+        }
+        _fix_recurrence_day_mismatch(tmp)
+        updates["recurrence_rule"] = tmp["recurrence_rule"]
+    if incoming.get("is_recurring") and not existing.get("is_recurring"):
+        updates["is_recurring"] = True
+
+    # Reactivate rows observed again in fresh crawls, except when the venue is
+    # inactive/closed (those rows should remain hidden).
+    if events_support_is_active_column() and existing.get("is_active") is False:
+        should_reactivate = True
+        venue_id = incoming.get("venue_id") or existing.get("venue_id")
+        if venue_id:
+            venue = get_venue_by_id_cached(int(venue_id))
+            venue_slug = str((venue or {}).get("slug") or "").strip().lower()
+            if (venue or {}).get("active") is False or venue_slug in CLOSED_VENUE_SLUGS:
+                should_reactivate = False
+        if should_reactivate:
+            updates["is_active"] = True
 
     # --- Content kind: prefer explicit non-default classifications ---
     if events_support_content_kind_column():
@@ -2827,11 +3477,49 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
         ):
             updates["film_identity_source"] = incoming["film_identity_source"]
 
-    # --- Tags: union merge ---
+    # --- Tags: reconcile (replace with freshly inferred + crawler tags) ---
+    # The incoming event_data has already been through infer_tags() + crawler
+    # tag validation in insert_event(), so it represents the current correct
+    # tag set. Replace rather than union-merge to shed stale/wrong tags.
+    # Preserve any existing tags that were manually added (not in ALL_TAGS
+    # inference vocabulary) as a safety net.
     existing_tags = set(existing.get("tags") or [])
     incoming_tags = set(incoming.get("tags") or [])
-    if incoming_tags and not incoming_tags.issubset(existing_tags):
-        updates["tags"] = list(existing_tags | incoming_tags)
+    if incoming_tags:
+        # Keep manually-added tags that inference wouldn't produce
+        # (e.g., curator-added tags not in the inference pipeline)
+        from tag_inference import ALL_TAGS as _ALL_TAGS
+        manual_tags = existing_tags - _ALL_TAGS  # tags outside taxonomy
+        reconciled = incoming_tags | manual_tags
+        if reconciled != existing_tags:
+            updates["tags"] = list(reconciled)
+
+    # --- Genres: infer if missing, then reconcile ---
+    # Many crawlers call smart_update directly (bypassing insert_event), so
+    # incoming genres may be empty even when they can be inferred from title/category.
+    incoming_genre_list = list(incoming.get("genres") or [])
+    if not incoming_genre_list:
+        from tag_inference import infer_genres as _infer_genres
+        from genre_normalize import normalize_genres as _normalize_genres_su
+
+        # Build minimal context for inference
+        venue_id = incoming.get("venue_id") or existing.get("venue_id")
+        venue = get_venue_by_id_cached(int(venue_id)) if venue_id else None
+        inferred = _normalize_genres_su(
+            _infer_genres(
+                incoming,
+                venue_genres=(venue or {}).get("genres"),
+                venue_vibes=(venue or {}).get("vibes"),
+                venue_type=(venue or {}).get("venue_type"),
+            )
+        )
+        if inferred:
+            incoming_genre_list = inferred
+
+    existing_genres = set(existing.get("genres") or [])
+    incoming_genres = set(incoming_genre_list)
+    if incoming_genres and incoming_genres != existing_genres:
+        updates["genres"] = list(incoming_genres)
 
     # --- Title: prefer non-ALL-CAPS version of same title ---
     existing_title = existing.get("title") or ""
@@ -2865,23 +3553,42 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
                 return False
 
     # --- Backfill event_artists if missing (music/comedy/nightlife) ---
-    category = existing.get("category_id") or incoming.get("category") or ""
+    category = str(
+        updates.get("category_id") or incoming_category or existing_category or ""
+    ).strip().lower()
     event_genres = set(incoming.get("genres") or existing.get("genres") or [])
-    _skip_nightlife = category == "nightlife" and bool(event_genres & _NIGHTLIFE_SKIP_GENRES)
+    _skip_nightlife = category == "nightlife" and bool(
+        event_genres & _NIGHTLIFE_SKIP_GENRES
+    )
     if category in ("music", "comedy", "nightlife") and not _skip_nightlife:
         try:
             client = get_client()
-            has_artists = (
+            current_artist_rows = (
                 client.table("event_artists")
-                .select("id")
+                .select("id,name")
                 .eq("event_id", event_id)
-                .limit(1)
+                .order("billing_order", desc=False)
                 .execute()
             )
-            if not has_artists.data:
+            existing_artists = current_artist_rows.data or []
+
+            parsed = incoming.get("_parsed_artists") or []
+            if not parsed and not existing_artists:
                 title = incoming.get("title") or existing.get("title") or ""
                 parsed = parse_lineup_from_title(title)
-                if parsed:
+
+            if parsed:
+                title = incoming.get("title") or existing.get("title") or ""
+                should_replace = (
+                    not existing_artists
+                    or (
+                        bool(incoming.get("_parsed_artists"))
+                        and _should_replace_placeholder_artists(
+                            title, existing_artists, parsed
+                        )
+                    )
+                )
+                if should_replace:
                     upsert_event_artists(event_id, parsed)
                     logger.debug(
                         f"Backfilled {len(parsed)} artist(s) on update for event {event_id}"
@@ -3278,8 +3985,15 @@ def find_event_by_hash(content_hash: str) -> Optional[dict]:
     result = (
         client.table("events").select("*").eq("content_hash", content_hash).execute()
     )
-    if result.data and len(result.data) > 0:
-        return result.data[0]
+    rows = result.data or []
+    if not rows:
+        return None
+    if events_support_is_active_column():
+        for row in rows:
+            if row.get("is_active") is True:
+                return row
+    if rows:
+        return rows[0]
     return None
 
 
@@ -3331,6 +4045,10 @@ def find_existing_event_by_natural_key(event_data: dict) -> Optional[dict]:
 
     result = query.execute()
     candidates = result.data or []
+    if events_support_is_active_column():
+        candidates = sorted(
+            candidates, key=lambda row: row.get("is_active") is not True
+        )
 
     for candidate in candidates:
         if (
@@ -3445,15 +4163,18 @@ def find_cross_source_canonical_for_insert(event_data: dict) -> Optional[int]:
         return None
 
     client = get_client()
+    has_event_active = events_support_is_active_column()
     query = (
         client.table("events")
         .select(
-            "id,title,source_id,canonical_event_id,created_at,description,image_url,ticket_url"
+            "id,title,source_id,canonical_event_id,created_at,description,image_url,ticket_url,is_active"
         )
         .eq("venue_id", venue_id)
         .eq("start_date", start_date)
         .neq("source_id", source_id)
     )
+    if has_event_active:
+        query = query.eq("is_active", True)
     if start_time:
         query = query.eq("start_time", start_time)
     else:
@@ -3474,11 +4195,14 @@ def find_cross_source_canonical_for_insert(event_data: dict) -> Optional[int]:
         if canonical_id:
             canonical = (
                 client.table("events")
-                .select("id,source_id,created_at,description,image_url,ticket_url")
+                .select(
+                    "id,source_id,created_at,description,image_url,ticket_url,is_active"
+                )
                 .eq("id", canonical_id)
-                .maybe_single()
-                .execute()
-            ).data
+            )
+            if has_event_active:
+                canonical = canonical.eq("is_active", True)
+            canonical = canonical.maybe_single().execute().data
             if canonical:
                 resolved.append(canonical)
                 continue

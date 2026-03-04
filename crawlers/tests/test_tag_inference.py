@@ -2,7 +2,7 @@
 Tests for tag inference logic in tag_inference.py.
 """
 
-from tag_inference import infer_tags, infer_genres, merge_tags
+from tag_inference import infer_tags, infer_genres, merge_tags, infer_is_religious
 
 
 class TestInferTags:
@@ -307,3 +307,87 @@ class TestInferGenres:
         }
         genres = infer_genres(event)
         assert "run" in genres
+
+
+class TestInferIsReligious:
+    """Tests for infer_is_religious — catches worship services miscategorized as music."""
+
+    def test_worship_at_church_reclassified_from_music(self):
+        event = {"title": "Sunday Worship", "category": "music"}
+        assert infer_is_religious(event, venue_type="church") is True
+
+    def test_worship_at_music_venue_stays_music(self):
+        """Gospel brunch at City Winery should NOT be reclassified."""
+        event = {"title": "Gospel Brunch Ft. William Murphy", "category": "music"}
+        assert infer_is_religious(event, venue_type="music_venue") is False
+
+    def test_easter_worship_at_church_reclassified(self):
+        event = {"title": "Easter Day Festival Worship", "category": "music"}
+        assert infer_is_religious(event, venue_type="church") is True
+
+    def test_concert_at_church_stays_music(self):
+        """Secular override: 'concert' keyword protects music category."""
+        event = {"title": "Holiday Concert", "category": "music"}
+        assert infer_is_religious(event, venue_type="church") is False
+
+    def test_community_worship_still_reclassified(self):
+        """Original behavior: community→religious still works."""
+        event = {"title": "Weekly Worship Service", "category": "community"}
+        assert infer_is_religious(event, venue_type="church") is True
+
+    def test_prayer_at_church_reclassified_from_music(self):
+        event = {"title": "Prayer Meeting", "category": "music"}
+        assert infer_is_religious(event, venue_type="church") is True
+
+    def test_worship_at_non_church_venue_short_title_reclassified(self):
+        """'Sunday Worship' at a gallery (community space) is still a service."""
+        event = {"title": "Sunday Worship", "category": "music"}
+        assert infer_is_religious(event, venue_type="gallery") is True
+
+    def test_gospel_brunch_with_performer_at_music_venue_stays(self):
+        """Named performer gospel event at music venue should stay music."""
+        event = {
+            "title": "Urban Worship Collective: Sunday Evening Gospel Brunch Ft. William Murphy",
+            "category": "music",
+        }
+        assert infer_is_religious(event, venue_type="music_venue") is False
+
+    def test_prayer_walk_at_park_not_reclassified(self):
+        """Keyword in description only at a park venue — should NOT trigger."""
+        event = {
+            "title": "Sunrise Walk at Stone Mountain",
+            "description": "Join us for a prayer walk through the historic trails.",
+            "category": "community",
+        }
+        assert infer_is_religious(event, venue_type="park") is False
+
+    def test_prayer_walk_at_church_still_reclassified(self):
+        """Keyword in title at a church venue — should trigger."""
+        event = {
+            "title": "Prayer Meeting",
+            "description": "Weekly gathering for the congregation.",
+            "category": "community",
+        }
+        assert infer_is_religious(event, venue_type="church") is True
+
+    def test_prayer_walk_in_title_at_park_reclassified(self):
+        """Keyword in TITLE at a park venue — should still trigger."""
+        event = {
+            "title": "Community Prayer Walk",
+            "description": "Meet at the trailhead for a group walk.",
+            "category": "community",
+        }
+        assert infer_is_religious(event, venue_type="park") is True
+
+    def test_no_venue_type_uses_full_text(self):
+        """No venue_type — backward compat, keyword in description triggers."""
+        event = {
+            "title": "Morning Gathering",
+            "description": "A prayer meeting for the whole community.",
+            "category": "community",
+        }
+        assert infer_is_religious(event, venue_type=None) is True
+
+    def test_art_category_not_touched(self):
+        event = {"title": "Sunday Worship Art Show", "category": "art"}
+        assert infer_is_religious(event, venue_type="church") is False

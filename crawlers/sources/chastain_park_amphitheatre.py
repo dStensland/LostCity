@@ -193,7 +193,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     events_found += 1
 
-                    content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+                    event_start_time = start_time or "19:30"
+                    hash_key = f"{start_date}|{event_start_time}"
+                    content_hash = generate_content_hash(title, VENUE_DATA["name"], hash_key)
 
 
                     # Find image by title match
@@ -210,7 +212,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "title": title[:500],
                         "description": f"{title} at Chastain Park Amphitheatre, Atlanta's beloved outdoor concert venue.",
                         "start_date": start_date,
-                        "start_time": start_time or "19:30",
+                        "start_time": event_start_time,
                         "end_date": start_date,
                         "end_time": None,
                         "is_all_day": False,

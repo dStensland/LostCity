@@ -1,0 +1,29 @@
+version: 1
+slug: woodruff-arts-center
+name: "Woodruff Arts Center"
+integration_method: llm_crawler
+defaults:
+  venue_name: "Woodruff Arts Center"
+  category: arts
+  tags:
+  - atlanta-expansion-wave-z
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - "https://www.woodruffcenter.org/events/"
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 25000
+detail:
+  enabled: true
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 25000
+data_goals:
+  - events
+  - lineup
+  - images
+  - tickets

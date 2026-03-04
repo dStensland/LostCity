@@ -112,3 +112,30 @@ export function isWeekend(date: Date = new Date()): boolean {
 export function isNightlifeTime(slot: TimeSlot): boolean {
   return slot === "evening" || slot === "late_night" || slot === "happy_hour";
 }
+
+/**
+ * Day-of-week theme — drives editorial headlines and themed quick links.
+ * Pure function, safe for client-side use.
+ */
+export function getDayTheme(dayOfWeek: string, timeSlot: TimeSlot): string | undefined {
+  switch (dayOfWeek) {
+    case "tuesday":
+      return "taco_tuesday";
+    case "wednesday":
+      return "wine_wednesday";
+    case "thursday":
+      return "thirsty_thursday";
+    case "friday":
+      return "friday_night";
+    case "saturday":
+      return timeSlot === "morning" || timeSlot === "midday"
+        ? "brunch_weekend"
+        : "saturday_night";
+    case "sunday":
+      return timeSlot === "morning" || timeSlot === "midday"
+        ? "brunch_weekend"
+        : "sunday_funday";
+    default:
+      return undefined;
+  }
+}

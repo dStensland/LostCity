@@ -176,12 +176,12 @@ def resolve_and_link_event_artists(event_id: int, category: Optional[str] = None
     if event_category is None:
         event_row = (
             client.table("events")
-            .select("category")
+            .select("category_id")
             .eq("id", event_id)
             .maybe_single()
             .execute()
         ).data or {}
-        event_category = event_row.get("category")
+        event_category = event_row.get("category_id")
 
     if (event_category or "").strip().lower() == "sports":
         return

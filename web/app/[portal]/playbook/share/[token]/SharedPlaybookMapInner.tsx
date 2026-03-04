@@ -13,7 +13,7 @@ import {
   ROUTE_LINE_LAYER,
   getItemCategory,
 } from "@/lib/playbook-shared";
-import { Star } from "@phosphor-icons/react/dist/ssr";
+import { Star } from "@phosphor-icons/react";
 
 export default function SharedPlaybookMapInner({
   items,

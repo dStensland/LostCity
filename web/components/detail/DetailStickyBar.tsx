@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useEffect, type ReactNode } from "react";
+import { useState, useEffect, useMemo, type ReactNode } from "react";
 import { ShareNetwork } from "@phosphor-icons/react";
+import ScopedStyles from "@/components/ScopedStyles";
+import { createCssVarClass } from "@/lib/css-utils";
 
 export interface DetailStickyBarProps {
   onShare?: () => void | Promise<void>;
@@ -18,9 +20,16 @@ export interface DetailStickyBarProps {
     onClick?: () => void;
     icon?: ReactNode;
   };
+  /** "filled" = coral/colored bg (transactions). "outlined" = border-only (navigation). */
+  primaryVariant?: "filled" | "outlined";
+  primaryColor?: string;
   className?: string;
+  containerClassName?: string;
   scrollThreshold?: number;
 }
+
+const ICON_BTN =
+  "flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-xl border border-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)] hover:border-[var(--soft)] hover:bg-[var(--dusk)] active:scale-95 transition-all";
 
 export function DetailStickyBar({
   onShare,
@@ -29,10 +38,18 @@ export function DetailStickyBar({
   shareTracking,
   secondaryActions,
   primaryAction,
+  primaryVariant = "filled",
+  primaryColor,
   className = "",
+  containerClassName = "max-w-3xl",
   scrollThreshold = 300,
 }: DetailStickyBarProps) {
   const [isVisible, setIsVisible] = useState(false);
+
+  const ctaColorClass = useMemo(
+    () => primaryColor ? createCssVarClass("--cta-color", primaryColor, "sticky-cta") : null,
+    [primaryColor]
+  );
 
   useEffect(() => {
     const handleScroll = () => {
@@ -84,65 +101,73 @@ export function DetailStickyBar({
     }
   };
 
+  const ctaBase = "ml-auto inline-flex items-center justify-center gap-2 px-5 min-h-[44px] text-sm font-semibold rounded-xl active:scale-95 transition-all";
+  const ctaClass = primaryVariant === "outlined"
+    ? `${ctaBase} border border-[var(--twilight)] text-[var(--soft)] hover:text-[var(--cream)] hover:border-[var(--soft)] hover:bg-[var(--dusk)]`
+    : `${ctaBase} ${ctaColorClass ? "bg-[var(--cta-color)]" : "bg-[var(--coral)]"} text-[var(--void)] hover:brightness-110`;
+
   return (
-    <div
-      className={`fixed bottom-0 left-0 right-0 z-50 transition-transform duration-300 ${
-        isVisible ? "translate-y-0" : "translate-y-full"
-      } ${className}`}
-    >
-      <div className="h-6 bg-gradient-to-t from-[var(--void)] to-transparent" />
-
-      <div className="bg-[var(--void)]/95 backdrop-blur-md border-t border-[var(--twilight)] px-4 py-3 safe-area-bottom">
-        <div className="max-w-3xl mx-auto flex items-center gap-3">
-          {/* Share button */}
-          {showShareButton && (
-            <button
-              onClick={() => {
-                handleShare().catch(() => {
-                  // User cancelled share or share failed.
-                });
-              }}
-              className="flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-lg border border-[var(--twilight)] text-[var(--muted)] hover:text-[var(--cream)] hover:border-[var(--soft)] transition-colors"
-              aria-label={shareLabel}
-            >
-              <ShareNetwork size={20} weight="light" />
-            </button>
-          )}
-
-          {/* Secondary actions */}
-          {secondaryActions && (
-            <div className="flex shrink-0 items-center gap-1 [&>*]:shrink-0">
-              {secondaryActions}
-            </div>
-          )}
-
-          {/* Primary CTA */}
-          {primaryAction && (
-            primaryAction.href ? (
-              <a
-                href={primaryAction.href}
-                {...(primaryAction.href.startsWith("#") ? {} : { target: "_blank", rel: "noopener noreferrer" })}
-                className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-[var(--coral)] text-[var(--void)] font-semibold rounded-lg hover:bg-[var(--rose)] transition-all shadow-[0_0_20px_rgba(255,107,122,0.4)] hover:shadow-[0_0_30px_rgba(255,107,122,0.6)]"
-                onClick={primaryAction.href.startsWith("#") ? (e) => {
-                  e.preventDefault();
-                  document.getElementById(primaryAction.href!.slice(1))?.scrollIntoView({ behavior: "smooth" });
-                } : undefined}
-              >
-                {primaryAction.icon}
-                {primaryAction.label}
-              </a>
-            ) : (
+    <>
+      {ctaColorClass && <ScopedStyles css={ctaColorClass.css} />}
+      <div
+        className={`fixed bottom-3 sm:bottom-5 left-0 right-0 z-50 px-4 transition-all duration-300 ${
+          isVisible ? "translate-y-0 opacity-100" : "translate-y-[calc(100%+2rem)] opacity-0"
+        } ${ctaColorClass?.className ?? ""} ${className}`}
+      >
+        <div
+          className={`mx-auto bg-[var(--night)]/96 backdrop-blur-md border border-[var(--twilight)] rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] safe-area-bottom ${containerClassName}`}
+        >
+          <div className="flex items-center gap-2 px-3 py-2.5">
+            {/* Share button */}
+            {showShareButton && (
               <button
-                onClick={primaryAction.onClick}
-                className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-[var(--coral)] text-[var(--void)] font-semibold rounded-lg hover:bg-[var(--rose)] transition-all shadow-[0_0_20px_rgba(255,107,122,0.4)] hover:shadow-[0_0_30px_rgba(255,107,122,0.6)]"
+                onClick={() => {
+                  handleShare().catch(() => {
+                    // User cancelled share or share failed.
+                  });
+                }}
+                className={ICON_BTN}
+                aria-label={shareLabel}
               >
-                {primaryAction.icon}
-                {primaryAction.label}
+                <ShareNetwork size={18} weight="light" />
               </button>
-            )
-          )}
+            )}
+
+            {/* Secondary actions */}
+            {secondaryActions && (
+              <div className="flex shrink-0 items-center gap-1 [&>*]:shrink-0">
+                {secondaryActions}
+              </div>
+            )}
+
+            {/* Primary CTA — pushed right */}
+            {primaryAction && (
+              primaryAction.href ? (
+                <a
+                  href={primaryAction.href}
+                  {...(primaryAction.href.startsWith("#") ? {} : { target: "_blank", rel: "noopener noreferrer" })}
+                  className={ctaClass}
+                  onClick={primaryAction.href.startsWith("#") ? (e) => {
+                    e.preventDefault();
+                    document.getElementById(primaryAction.href!.slice(1))?.scrollIntoView({ behavior: "smooth" });
+                  } : undefined}
+                >
+                  {primaryAction.icon}
+                  {primaryAction.label}
+                </a>
+              ) : (
+                <button
+                  onClick={primaryAction.onClick}
+                  className={ctaClass}
+                >
+                  {primaryAction.icon}
+                  {primaryAction.label}
+                </button>
+              )
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

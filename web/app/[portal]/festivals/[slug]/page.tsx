@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { cache } from "react";
 import ScrollToTop from "@/components/ScrollToTop";
 import { PortalHeader } from "@/components/headers";
@@ -10,7 +11,6 @@ import {
 } from "@/lib/festivals";
 import { getFestivalArtists } from "@/lib/artists";
 import LineupSection from "@/components/LineupSection";
-import FestivalSchedule from "@/components/FestivalSchedule";
 import FestivalMap from "@/components/FestivalMap";
 import {
   DetailHero,
@@ -20,13 +20,14 @@ import {
   DetailStickyBar,
   RelatedCard,
 } from "@/components/detail";
-import { safeJsonLd, decodeHtmlEntities } from "@/lib/formats";
+import { safeJsonLd, decodeHtmlEntities, formatTime } from "@/lib/formats";
 import GettingThereSection from "@/components/GettingThereSection";
 import type { Metadata } from "next";
 import ScopedStylesServer from "@/components/ScopedStylesServer";
 import { createCssVarClass } from "@/lib/css-utils";
 import { getCategoryAccentColor } from "@/lib/moments-utils";
 import { buildBreadcrumbSchema } from "@/lib/breadcrumb-schema";
+import { getFestivalLayout } from "@/lib/festival-layout";
 
 export const revalidate = 300; // 5 minutes
 
@@ -182,21 +183,26 @@ function getDurationLabel(festival: NonNullable<Awaited<ReturnType<typeof getFes
   return "Varies";
 }
 
-const SIMPLE_SCHEDULE_TYPES = new Set(["market", "fair"]);
-
-function formatTypeLabel(festivalType?: string | null): string {
-  if (!festivalType) return "Festival";
-  const map: Record<string, string> = {
-    festival: "Festival",
-    conference: "Conference",
-    convention: "Convention",
-    market: "Market",
-    fair: "Fair",
-    expo: "Expo",
-    tournament: "Tournament",
-  };
-  return map[festivalType] || "Festival";
+function formatScheduleDateLabel(dateStr: string): string {
+  const date = new Date(`${dateStr}T00:00:00`);
+  return date.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
 }
+
+function formatSessionTimeRangeLabel(startTime: string | null, endTime: string | null): string {
+  if (!startTime && !endTime) return "TBA";
+  if (!startTime) return formatTime(endTime);
+  if (!endTime) return formatTime(startTime);
+  return `${formatTime(startTime)} – ${formatTime(endTime)}`;
+}
+
+function normalizeText(value: string): string {
+  return decodeHtmlEntities(value).trim().toLowerCase();
+}
+
 
 export default async function PortalFestivalPage({ params }: Props) {
   const { slug, portal: portalSlug } = await params;
@@ -210,6 +216,8 @@ export default async function PortalFestivalPage({ params }: Props) {
   // Use the URL portal or fall back to default
   const activePortalSlug = portal?.slug || portalSlug;
   const activePortalName = portal?.name || portalSlug.charAt(0).toUpperCase() + portalSlug.slice(1);
+
+  const layout = getFestivalLayout(festival.festival_type);
 
   const [programs, sessions, festivalArtists] = await Promise.all([
     getFestivalPrograms(festival.id),
@@ -232,6 +240,43 @@ export default async function PortalFestivalPage({ params }: Props) {
       (program.event_count ?? 0) > 0 &&
       decodeHtmlEntities(program.title).trim().toLowerCase() !== "general program"
   );
+  const programHighlights = [...programPages]
+    .sort((a, b) => {
+      const countDiff = (b.event_count ?? 0) - (a.event_count ?? 0);
+      if (countDiff !== 0) return countDiff;
+      return decodeHtmlEntities(a.title).localeCompare(decodeHtmlEntities(b.title));
+    })
+    .slice(0, 8);
+  const hiddenProgramCount = Math.max(0, programPages.length - programHighlights.length);
+  const sortedSessions = [...sessions].sort((a, b) => {
+    if (a.start_date !== b.start_date) return a.start_date.localeCompare(b.start_date);
+    return (a.start_time || "").localeCompare(b.start_time || "");
+  });
+  const sessionDays = Array.from(new Set(sortedSessions.map((session) => session.start_date))).sort();
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const nextScheduleDay = sessionDays.find((day) => day >= todayStr) || sessionDays[0] || null;
+  const nextDaySessions = nextScheduleDay
+    ? sortedSessions.filter((session) => session.start_date === nextScheduleDay)
+    : [];
+  const festivalNameNormalized = normalizeText(festival.name);
+  const nextDaySortedForPreview = [...nextDaySessions].sort((a, b) => {
+    const aTimed = a.start_time ? 0 : 1;
+    const bTimed = b.start_time ? 0 : 1;
+    if (aTimed !== bTimed) return aTimed - bTimed;
+    const aStart = a.start_time || "99:99";
+    const bStart = b.start_time || "99:99";
+    if (aStart !== bStart) return aStart.localeCompare(bStart);
+    return normalizeText(a.title).localeCompare(normalizeText(b.title));
+  });
+  const highSignalSessions = nextDaySortedForPreview.filter(
+    (session) => normalizeText(session.title) !== festivalNameNormalized || Boolean(session.start_time)
+  );
+  const fallbackSessions = nextDaySortedForPreview.filter(
+    (session) => normalizeText(session.title) === festivalNameNormalized && !session.start_time
+  );
+  const nextDayPreview = [...highSignalSessions, ...fallbackSessions].slice(0, 8);
+  const nextDayRemainingCount = Math.max(0, nextDaySessions.length - nextDayPreview.length);
 
   // Build subtitle for hero
   const heroSubtitle = formatFestivalDates(festival);
@@ -269,9 +314,10 @@ export default async function PortalFestivalPage({ params }: Props) {
         />
 
         <main
-          className={`max-w-3xl mx-auto px-4 py-4 sm:py-6 ${
-            primaryActionUrl ? "pb-28 sm:pb-24" : "pb-12"
-          } space-y-5 sm:space-y-8`}
+          data-festival-detail="true"
+          className={`max-w-5xl mx-auto px-4 py-4 sm:py-6 ${
+            primaryActionUrl ? "pb-32 md:pb-14" : "pb-12"
+          } space-y-6 sm:space-y-9`}
         >
           {/* Hero Section */}
           <DetailHero
@@ -289,7 +335,7 @@ export default async function PortalFestivalPage({ params }: Props) {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 4v16m0-12h9l-1.5 3L14 14H5" />
                 </svg>
-                {formatTypeLabel(festival.festival_type)}
+                {layout.typeLabel}
               </span>
             }
           />
@@ -326,24 +372,162 @@ export default async function PortalFestivalPage({ params }: Props) {
             </div>
           )}
 
-          {/* Brief description above schedule so users get context first */}
-          {festival.description && sessions.length > 0 && (
-            <p className="text-sm text-[var(--soft)] leading-relaxed whitespace-pre-wrap">
-              {festival.description}
+          {/* Main Content Card — overview first */}
+          <InfoCard accentColor={accentColor} className="!bg-[var(--night)] !border-[var(--twilight)]/90">
+            <SectionHeader title="At a Glance" className="border-t-0 pt-0 pb-2" />
+            <p className="text-sm text-[var(--muted)] mb-4">
+              Use this page for a quick overview. For date-by-date planning, open the full schedule.
             </p>
-          )}
 
-          {/* Interactive Schedule — high up for immediate engagement */}
-          {sessions.length > 0 ? (
-            <FestivalSchedule
-              sessions={sessions}
-              programs={programs}
-              portalSlug={activePortalSlug}
-              previewLimit={24}
-              fullScheduleHref={`/${activePortalSlug}/festivals/${festival.slug}/schedule`}
-              fullScheduleLabel="View Full Schedule"
-              festivalType={festival.festival_type}
+            <MetadataGrid
+              items={[
+                {
+                  label: "Duration",
+                  value: getDurationLabel(festival),
+                },
+                {
+                  label: "Dates",
+                  value: heroSubtitle,
+                },
+                {
+                  label: "Price",
+                  value: festival.free ? "Free" : "Paid",
+                },
+                {
+                  label: "Location",
+                  value: festival.location || festival.neighborhood || "Various Venues",
+                },
+                ...(sessions.length > 0
+                  ? [{
+                      label: "Sessions",
+                      value: `${sessions.length}`,
+                    }]
+                  : []),
+                ...(sessions.length > 0
+                  ? [{
+                      label: "Venues",
+                      value: `${new Set(sessions.filter((s) => s.venue).map((s) => s.venue!.id)).size}`,
+                    }]
+                  : []),
+              ]}
+              className="mb-6"
             />
+
+            {festival.description && (
+              <>
+                <SectionHeader title="About" className="pt-4 pb-2" />
+                <p className="text-sm sm:text-[15px] text-[var(--soft)] whitespace-pre-wrap leading-relaxed max-w-measure mb-6">
+                  {festival.description}
+                </p>
+              </>
+            )}
+
+            {singleVenue && (
+              <div className="mt-6">
+                <GettingThereSection transit={singleVenue} />
+              </div>
+            )}
+
+            {festival.categories && festival.categories.length > 0 && (
+              <>
+                <SectionHeader title="Categories" count={festival.categories.length} />
+                <div className="flex flex-wrap gap-2 mb-6">
+                  {festival.categories.map((category) => (
+                    <span
+                      key={category}
+                      className="px-2.5 py-1 rounded-full text-xs font-medium border border-[var(--coral)]/30 bg-[var(--coral)]/10 text-[var(--coral)]"
+                    >
+                      {category.replace(/_/g, " ")}
+                    </span>
+                  ))}
+                </div>
+              </>
+            )}
+          </InfoCard>
+
+          {/* Next Up — concise preview, full planner on dedicated page */}
+          {sessions.length > 0 ? (
+            <section id="next-up" className="rounded-xl border border-[var(--twilight)]/85 bg-[var(--night)] px-4 py-4 sm:px-5 sm:py-5">
+              <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
+                <div>
+                  <p className="font-mono text-[10px] uppercase tracking-[0.13em] text-[var(--muted)] mb-1">
+                    Next Up
+                  </p>
+                  <h2 className="text-lg font-semibold text-[var(--cream)]">
+                    {nextScheduleDay ? formatScheduleDateLabel(nextScheduleDay) : "Upcoming Sessions"}
+                  </h2>
+                  <p className="text-sm text-[var(--muted)] mt-1">
+                    {nextDaySessions.length} session{nextDaySessions.length !== 1 ? "s" : ""} scheduled.
+                  </p>
+                </div>
+                <Link
+                  href={`/${activePortalSlug}/festivals/${festival.slug}/schedule`}
+                  className="inline-flex items-center gap-1 text-sm text-accent hover:text-[var(--cream)] transition-colors"
+                >
+                  Open Full Schedule
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                </Link>
+              </div>
+
+              <div className="rounded-lg border border-[var(--twilight)]/80 bg-[var(--night)]/95">
+                <div className="divide-y divide-[var(--twilight)]/35">
+                  {nextDayPreview.map((session) => (
+                    <div key={session.id} className="grid grid-cols-[5.5rem_1fr_auto] items-start gap-3 px-3.5 py-3.5 sm:px-4 sm:py-4">
+                      <div className="pt-0.5">
+                        <span className="inline-flex rounded px-1.5 py-0.5 font-mono text-[11px] sm:text-xs text-[var(--soft)] bg-[var(--night)]/95 border border-[var(--twilight)]/40">
+                          {formatSessionTimeRangeLabel(session.start_time, session.end_time)}
+                        </span>
+                      </div>
+                      <div className="min-w-0">
+                        <Link
+                          href={`/${activePortalSlug}/events/${session.id}`}
+                          className="font-medium text-sm sm:text-[15px] text-[var(--cream)] hover:text-accent transition-colors line-clamp-2"
+                        >
+                          {decodeHtmlEntities(session.title)}
+                        </Link>
+                        <div className="flex flex-wrap items-center gap-2 mt-1">
+                          {session.venue && (
+                            <Link
+                              href={`/${activePortalSlug}/spots/${session.venue.slug}`}
+                              className="text-xs text-[var(--soft)] hover:text-[var(--coral)] transition-colors"
+                            >
+                              {session.venue.name}
+                            </Link>
+                          )}
+                          {session.category && (
+                            <span className="px-1.5 py-0.5 rounded-full text-[10px] sm:text-xs font-medium border border-[var(--twilight)]/50 bg-[var(--twilight)]/20 text-[var(--soft)]">
+                              {session.category.replace(/_/g, " ")}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <Link
+                        href={`/${activePortalSlug}/events/${session.id}`}
+                        aria-label={`Open ${decodeHtmlEntities(session.title)}`}
+                        className="text-[var(--muted)] hover:text-[var(--soft)] transition-colors pt-1"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-[var(--muted)]">
+                <span>
+                  Showing {nextDayPreview.length} of {nextDaySessions.length} sessions for this date.
+                </span>
+                {nextDayRemainingCount > 0 && (
+                  <span>
+                    +{nextDayRemainingCount} more in the full schedule.
+                  </span>
+                )}
+              </div>
+            </section>
           ) : (
             <section className="rounded-lg border border-[var(--twilight)] bg-[var(--card-bg)] p-5 sm:p-6">
               <div className="flex items-start gap-4">
@@ -353,7 +537,7 @@ export default async function PortalFestivalPage({ params }: Props) {
                   </svg>
                 </div>
                 <div>
-                  <h2 className="font-mono text-xs font-medium text-[var(--muted)] uppercase tracking-widest mb-2">
+                  <h2 className="font-mono text-xs font-bold text-[var(--muted)] uppercase tracking-[0.14em] mb-2">
                     Schedule Coming Soon
                   </h2>
                   <p className="text-sm text-[var(--soft)] leading-relaxed">
@@ -378,73 +562,8 @@ export default async function PortalFestivalPage({ params }: Props) {
             </section>
           )}
 
-          {/* Main Content Card */}
-          <InfoCard accentColor={accentColor}>
-            {/* Metadata Grid */}
-            <MetadataGrid
-              items={[
-                {
-                  label: "Duration",
-                  value: getDurationLabel(festival),
-                },
-                {
-                  label: "Location",
-                  value: festival.location || festival.neighborhood || "Various Venues",
-                },
-                {
-                  label: "Price",
-                  value: festival.free ? "Free" : "Paid",
-                },
-                ...(festivalArtists.length > 0
-                  ? [{ label: "Artists", value: `${festivalArtists.length}` }]
-                  : []),
-                ...(sessions.length > 0
-                  ? [{
-                      label: "Venues",
-                      value: `${new Set(sessions.filter((s) => s.venue).map((s) => s.venue!.id)).size}`,
-                    }]
-                  : []),
-              ]}
-              className="mb-8"
-            />
-
-            {/* Transit info for single-venue festivals */}
-            {singleVenue && (
-              <div className="mb-8">
-                <GettingThereSection transit={singleVenue} />
-              </div>
-            )}
-
-            {/* Description */}
-            {festival.description && (
-              <>
-                <SectionHeader title="About" />
-                <p className="text-[var(--soft)] whitespace-pre-wrap leading-relaxed mb-6">
-                  {festival.description}
-                </p>
-              </>
-            )}
-
-            {/* Categories */}
-            {festival.categories && festival.categories.length > 0 && (
-              <>
-                <SectionHeader title="Categories" count={festival.categories.length} />
-                <div className="flex flex-wrap gap-2 mb-6">
-                  {festival.categories.map((category) => (
-                    <span
-                      key={category}
-                      className="px-2.5 py-1 rounded-full text-xs font-medium border border-[var(--coral)]/30 bg-[var(--coral)]/10 text-[var(--coral)]"
-                    >
-                      {category.replace(/_/g, " ")}
-                    </span>
-                  ))}
-                </div>
-              </>
-            )}
-          </InfoCard>
-
-          {/* Lineup / Featured Artists — hidden for markets/fairs */}
-          {festivalArtists.length > 0 && !SIMPLE_SCHEDULE_TYPES.has(festival.festival_type ?? "") && (
+          {/* Lineup / Featured Artists */}
+          {festivalArtists.length > 0 && layout.showLineup && (
             <LineupSection
               artists={festivalArtists}
               portalSlug={activePortalSlug}
@@ -455,15 +574,15 @@ export default async function PortalFestivalPage({ params }: Props) {
           {/* Multi-venue map */}
           <FestivalMap sessions={sessions} portalSlug={activePortalSlug} />
 
-          {/* Program Pages — secondary to schedule filters */}
-          {programPages.length > 0 && (
-            <section>
-              <SectionHeader title="Program Pages" count={programPages.length} />
+          {/* Program Tracks — secondary to schedule filters */}
+          {layout.showTracks && programPages.length > 0 && (
+            <section className="rounded-xl border border-[var(--twilight)]/85 bg-[var(--night)] px-4 py-4 sm:px-5 sm:py-5">
+              <SectionHeader title="Program Highlights" count={programPages.length} />
               <p className="text-xs text-[var(--muted)] mb-3">
-                Use schedule filters above for exact times. Program pages are editorial groupings.
+                Highest-volume program series. Use the schedule filters for the complete list.
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {programPages.map((program) => (
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                {programHighlights.map((program) => (
                   <RelatedCard
                     key={program.id}
                     variant="compact"
@@ -474,6 +593,22 @@ export default async function PortalFestivalPage({ params }: Props) {
                   />
                 ))}
               </div>
+              {hiddenProgramCount > 0 && (
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <span className="text-xs text-[var(--muted)]">
+                    +{hiddenProgramCount} more program series
+                  </span>
+                  <Link
+                    href={`/${activePortalSlug}/festivals/${festival.slug}/schedule`}
+                    className="inline-flex items-center gap-1 text-xs text-accent hover:text-[var(--cream)] transition-colors"
+                  >
+                    Browse full schedule
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    </svg>
+                  </Link>
+                </div>
+              )}
             </section>
           )}
         </main>
@@ -484,15 +619,17 @@ export default async function PortalFestivalPage({ params }: Props) {
               label: primaryActionLabel,
               href: primaryActionUrl,
             }}
+            className="md:hidden"
+            containerClassName="max-w-5xl"
             secondaryActions={
-              sessions.length > 0 ? (
-                <a
-                  href="#schedule"
+              (
+                <Link
+                  href={`/${activePortalSlug}/festivals/${festival.slug}/schedule`}
                   className="inline-flex items-center justify-center px-4 py-2.5 rounded-lg border border-[var(--twilight)] text-sm text-[var(--soft)] hover:text-[var(--cream)] hover:border-[var(--soft)] transition-colors"
                 >
                   Schedule
-                </a>
-              ) : undefined
+                </Link>
+              )
             }
             scrollThreshold={220}
           />

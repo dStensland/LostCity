@@ -1,0 +1,122 @@
+name: Weekly Enrichment Pipeline
+
+on:
+  schedule:
+    # Run Monday 3am EST (08:00 UTC) — after weekend crawls have landed
+    - cron: '0 8 * * 1'
+  workflow_dispatch:
+    inputs:
+      skip_event_descriptions:
+        description: 'Skip event description enrichment'
+        required: false
+        default: 'false'
+      skip_venue_enrichment:
+        description: 'Skip venue website enrichment'
+        required: false
+        default: 'false'
+      skip_venue_images:
+        description: 'Skip venue image enrichment'
+        required: false
+        default: 'false'
+      event_desc_limit:
+        description: 'Max events for description enrichment'
+        required: false
+        default: '600'
+      venue_enrichment_limit:
+        description: 'Max venues for website enrichment'
+        required: false
+        default: '300'
+      venue_image_limit:
+        description: 'Max venues for image scraping'
+        required: false
+        default: '200'
+
+jobs:
+  enrichment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: crawlers/requirements.txt
+
+      - name: Install dependencies
+        working-directory: crawlers
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install Playwright browsers
+        working-directory: crawlers
+        run: |
+          playwright install chromium
+          playwright install-deps chromium
+
+      - name: Create config file
+        working-directory: crawlers
+        run: |
+          cat > .env << EOF
+          SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY=${{ secrets.SUPABASE_SERVICE_KEY }}
+          ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
+          GOOGLE_PLACES_API_KEY=${{ secrets.GOOGLE_PLACES_API_KEY }}
+          EOF
+
+      - name: Run enrichment pipeline
+        working-directory: crawlers
+        run: |
+          ARGS="--apply --continue-on-error --city Atlanta --portal atlanta"
+
+          if [ "${{ github.event.inputs.skip_event_descriptions }}" = "true" ]; then
+            ARGS="$ARGS --skip-event-descriptions"
+          fi
+          if [ "${{ github.event.inputs.skip_venue_enrichment }}" = "true" ]; then
+            ARGS="$ARGS --skip-venue-enrichment"
+          fi
+          if [ "${{ github.event.inputs.skip_venue_images }}" = "true" ]; then
+            ARGS="$ARGS --skip-venue-images"
+          fi
+
+          LIMIT="${{ github.event.inputs.event_desc_limit }}"
+          if [ -n "$LIMIT" ]; then
+            ARGS="$ARGS --event-desc-limit $LIMIT"
+          fi
+
+          VLIMIT="${{ github.event.inputs.venue_enrichment_limit }}"
+          if [ -n "$VLIMIT" ]; then
+            ARGS="$ARGS --venue-enrichment-limit $VLIMIT"
+          fi
+
+          ILIMIT="${{ github.event.inputs.venue_image_limit }}"
+          if [ -n "$ILIMIT" ]; then
+            ARGS="$ARGS --venue-image-limit $ILIMIT"
+          fi
+
+          echo "Running: python3 enrichment_pipeline.py $ARGS"
+          python3 enrichment_pipeline.py $ARGS
+
+      - name: Summary
+        if: always()
+        working-directory: crawlers
+        run: |
+          echo "## Enrichment Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          REPORT=$(ls -t reports/enrichment_pipeline_*.json 2>/dev/null | head -1)
+          if [ -n "$REPORT" ]; then
+            echo '```json' >> $GITHUB_STEP_SUMMARY
+            cat "$REPORT" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No pipeline report found." >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Completed at: $(date)" >> $GITHUB_STEP_SUMMARY

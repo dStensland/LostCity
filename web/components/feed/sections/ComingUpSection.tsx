@@ -11,18 +11,17 @@ import Link from "next/link";
 import type { CityPulseSection, CityPulseEventItem } from "@/lib/city-pulse/types";
 import type { FeedEventData } from "@/components/EventCard";
 import CompactEventRow from "../CompactEventRow";
-import { CalendarBlank, ArrowRight } from "@phosphor-icons/react";
+import { Confetti, ArrowRight } from "@phosphor-icons/react";
+import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
 
 interface Props {
   section: CityPulseSection;
   portalSlug: string;
-  excludeEventIds?: Set<number>;
 }
 
-export default function ComingUpSection({ section, portalSlug, excludeEventIds }: Props) {
+export default function ComingUpSection({ section, portalSlug }: Props) {
   const events = section.items.filter(
-    (i): i is CityPulseEventItem =>
-      i.item_type === "event" && !(excludeEventIds?.has(i.event.id)),
+    (i): i is CityPulseEventItem => i.item_type === "event",
   );
 
   if (events.length === 0) return null;
@@ -30,20 +29,14 @@ export default function ComingUpSection({ section, portalSlug, excludeEventIds }
   return (
     <section>
       {/* Section header */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <CalendarBlank weight="duotone" className="w-3.5 h-3.5 text-[var(--neon-green)]" />
-          <h2 className="font-mono text-xs font-bold tracking-[0.12em] uppercase text-[var(--neon-green)]">
-            {section.title || "Coming Up"}
-          </h2>
-        </div>
-        <Link
-          href={`/${portalSlug}?view=find&type=events&date=next_7_days`}
-          className="text-xs flex items-center gap-1 text-[var(--neon-green)] transition-colors hover:opacity-80"
-        >
-          This week <ArrowRight className="w-3 h-3" />
-        </Link>
-      </div>
+      <FeedSectionHeader
+        title={section.title || "Coming Up"}
+        priority="secondary"
+        accentColor="var(--neon-green)"
+        icon={<Confetti weight="duotone" className="w-5 h-5" />}
+        seeAllHref={`/${portalSlug}?view=find&type=events&date=next_7_days`}
+        seeAllLabel="This week"
+      />
 
       {/* Compact event rows */}
       <div className="rounded-xl overflow-hidden border border-[var(--twilight)]/40 bg-[var(--night)]">

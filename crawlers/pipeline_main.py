@@ -234,6 +234,26 @@ def _normalize_link_list(links: list) -> list[dict]:
     return normalized
 
 
+def _absolutize_discovery_url(base_url: str, value: str | None) -> str | None:
+    if not value:
+        return value
+
+    url = str(value).strip()
+    if not url:
+        return None
+
+    if url.startswith(("http://", "https://", "data:", "mailto:", "tel:")):
+        return url
+
+    return urljoin(base_url, url)
+
+
+def _normalize_discovery_seed_urls(seed: dict, base_url: str) -> dict:
+    for key in ("detail_url", "ticket_url", "image_url"):
+        seed[key] = _absolutize_discovery_url(base_url, seed.get(key))
+    return seed
+
+
 _LINEUP_SPLIT_RE = re.compile(
     r"\s+(?:w/|with|feat\.?|ft\.?|featuring|support(?:ing)?|special guests?|openers?|opening)\s+",
     flags=re.IGNORECASE,
@@ -425,10 +445,8 @@ def run_profile(slug: str, dry_run: bool, limit: int | None) -> CrawlResult:
 
             seeds = discover_from_feed(content, feed_url, profile.discovery)
             for seed in seeds:
+                seed = _normalize_discovery_seed_urls(seed, feed_url)
                 detail_url = seed.get("detail_url")
-                if detail_url and not detail_url.startswith("http"):
-                    detail_url = urljoin(feed_url, detail_url)
-                    seed["detail_url"] = detail_url
 
                 key = (seed.get("title"), seed.get("start_date"), detail_url)
                 if key in seen_keys:
@@ -615,10 +633,8 @@ def run_profile(slug: str, dry_run: bool, limit: int | None) -> CrawlResult:
 
         seeds = discover_from_list(html, profile.discovery)
         for seed in seeds:
+            seed = _normalize_discovery_seed_urls(seed, list_url)
             detail_url = seed.get("detail_url")
-            if detail_url and not detail_url.startswith("http"):
-                detail_url = urljoin(list_url, detail_url)
-                seed["detail_url"] = detail_url
 
             key = (seed.get("title"), seed.get("start_date"), detail_url)
             if key in seen_keys:
@@ -818,6 +834,7 @@ def _process_llm_discovery(profile, source, default_venue_id: int | None, dry_ru
     logger.info(f"{profile.slug}: {len(all_events)} LLM events discovered")
 
     for event in all_events:
+        event = _normalize_discovery_seed_urls(event, profile.discovery.urls[0])
         title = event.get("title")
         start_date = event.get("start_date")
         if not title or not start_date:

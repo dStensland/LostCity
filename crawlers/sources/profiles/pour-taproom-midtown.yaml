@@ -1,0 +1,29 @@
+version: 1
+slug: pour-taproom-midtown
+name: "Pour Taproom Midtown"
+integration_method: llm_crawler
+defaults:
+  venue_name: "Pour Taproom Midtown"
+  category: nightlife
+  tags:
+  - atlanta-expansion-wave-x
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - "https://pourtaproom.com/index.php/events"
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+detail:
+  enabled: true
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+data_goals:
+  - events
+  - lineup
+  - images
+  - tickets

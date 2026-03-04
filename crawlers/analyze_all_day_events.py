@@ -21,7 +21,7 @@ def analyze_all_day_events():
     
     # Count all-day events by source with examples
     result = client.table("events").select(
-        "id, title, start_date, category, source:sources(slug, name)"
+        "id, title, start_date, category_id, source:sources(slug, name)"
     ).eq("is_all_day", True).gte("start_date", "2026-02-01").order("source_id").limit(1000).execute()
     
     if not result.data:
@@ -45,7 +45,7 @@ def analyze_all_day_events():
         # Show 3 example titles
         for event in events[:3]:
             title = event['title'][:60]
-            category = event.get('category', 'none')
+            category = event.get('category_id', 'none')
             print(f"  - [{category:10s}] {title}")
     
     return sorted_sources
@@ -57,7 +57,7 @@ def analyze_null_start_time():
     print_section("2. EVENTS WITH NULL START_TIME BY SOURCE")
     
     result = client.table("events").select(
-        "id, title, start_date, start_time, category, source:sources(slug, name)"
+        "id, title, start_date, start_time, category_id, source:sources(slug, name)"
     ).is_("start_time", "null").gte("start_date", "2026-02-01").order("source_id").limit(1000).execute()
     
     if not result.data:
@@ -78,7 +78,7 @@ def analyze_null_start_time():
         print(f"{source_slug:40s} {len(events):4d} events")
         for event in events[:3]:
             title = event['title'][:60]
-            category = event.get('category', 'none')
+            category = event.get('category_id', 'none')
             print(f"  - [{category:10s}] {title}")
     
     return sorted_sources
@@ -95,7 +95,7 @@ def analyze_tba_titles():
     all_tba_events = []
     for pattern in tba_patterns:
         result = client.table("events").select(
-            "id, title, description, start_date, category, source:sources(slug)"
+            "id, title, description, start_date, category_id, source:sources(slug)"
         ).ilike("title", f"%{pattern}%").gte("start_date", "2026-02-01").limit(500).execute()
         
         if result.data:
@@ -131,7 +131,7 @@ def analyze_suspicious_titles():
     
     # Get all recent events
     result = client.table("events").select(
-        "id, title, category, source:sources(slug)"
+        "id, title, category_id, source:sources(slug)"
     ).gte("start_date", "2026-02-01").limit(2000).execute()
     
     if not result.data:
@@ -187,7 +187,7 @@ def spot_check_top_sources(top_sources):
         # Show 10 examples with categories
         for i, event in enumerate(events[:10], 1):
             title = event['title'][:65]
-            category = event.get('category', 'none')
+            category = event.get('category_id', 'none')
             date = event.get('start_date', 'unknown')
             print(f"{i:2d}. [{category:10s}] {title:65s} | {date}")
 
@@ -200,7 +200,7 @@ def check_film_events():
     # All film events
     all_films = client.table("events").select(
         "id, title, start_time, is_all_day, source:sources(slug)"
-    ).eq("category", "film").gte("start_date", "2026-02-01").limit(1000).execute()
+    ).eq("category_id", "film").gte("start_date", "2026-02-01").limit(1000).execute()
     
     if not all_films.data:
         print("No film events found")

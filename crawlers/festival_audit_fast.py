@@ -63,7 +63,7 @@ def main():
     # Get all events with series links
     print("  - Events...")
     all_events_result = client.table("events")\
-        .select("id, title, venue_id, source_id, category, start_date, is_class, series_id")\
+        .select("id, title, venue_id, source_id, category_id, start_date, is_class, series_id")\
         .not_.is_("series_id", "null")\
         .execute()
     all_events = all_events_result.data or []
@@ -108,7 +108,7 @@ def main():
         # Analyze event distribution
         venue_ids = set(e["venue_id"] for e in events if e.get("venue_id"))
         source_ids = set(e["source_id"] for e in events if e.get("source_id"))
-        categories = set(e["category"] for e in events if e.get("category"))
+        categories = set(e["category_id"] for e in events if e.get("category_id"))
         
         # Calculate date spread
         dates = [e["start_date"] for e in events if e.get("start_date")]

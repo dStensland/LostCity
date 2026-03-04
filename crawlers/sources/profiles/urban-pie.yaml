@@ -1,0 +1,29 @@
+version: 1
+slug: urban-pie
+name: "Urban Pie"
+integration_method: llm_crawler
+defaults:
+  venue_name: "Urban Pie"
+  category: food_drink
+  tags:
+  - atlanta-expansion-wave-v
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - "http://www.urbanpiepizza.com"
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+detail:
+  enabled: true
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+data_goals:
+  - events
+  - lineup
+  - images
+  - tickets

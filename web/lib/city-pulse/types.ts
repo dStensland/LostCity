@@ -156,6 +156,7 @@ export type CityPulseSectionType =
   | "new_from_spots"
   | "trending"
   | "coming_up"
+  | "experiences"
   | "browse"
   | "todays_specials"
   | "tonights_regulars"
@@ -359,26 +360,46 @@ export interface DashboardCard {
 // ---------------------------------------------------------------------------
 
 export type FeedBlockId =
+  | "events"
+  | "recurring"
+  | "festivals"
+  | "experiences"
+  | "community"
+  | "cinema"
+  | "browse";
+
+/** Legacy IDs from v1 layouts — used for migration detection only */
+export type LegacyFeedBlockId =
   | "timeline"
   | "trending"
   | "your_people"
   | "new_from_spots"
-  | "coming_up"
-  | "browse";
+  | "coming_up";
+
+export const LEGACY_BLOCK_IDS = new Set<string>([
+  "timeline", "trending", "your_people", "new_from_spots", "coming_up",
+]);
 
 export interface FeedLayout {
   visible_blocks: FeedBlockId[];
   hidden_blocks: FeedBlockId[];
   /** Active interest chip IDs for the Lineup filter. null/undefined = defaults. */
   interests?: string[] | null;
-  version: 1;
+  version: 1 | 2;
 }
 
 export const DEFAULT_FEED_ORDER: FeedBlockId[] = [
-  "timeline",
-  "trending",
-  "your_people",
-  "new_from_spots",
-  "coming_up",
+  "events",
+  "recurring",
+  "festivals",
+  "experiences",
+  "community",
+  "cinema",
   "browse",
 ];
+
+/** Blocks that cannot be hidden */
+export const ALWAYS_VISIBLE_BLOCKS: FeedBlockId[] = ["events"];
+
+/** Blocks pinned to fixed positions (browse always last) */
+export const FIXED_LAST_BLOCKS: FeedBlockId[] = ["browse"];

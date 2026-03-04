@@ -215,7 +215,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     continue
 
                 try:
-                    insert_event(event_record)
+                    insert_event(event_record, genres=["comedy", "stand-up"])
                     events_new += 1
                     logger.info(f"Added: {title} on {start_date}")
                 except Exception as e:

@@ -32,7 +32,7 @@ export default async function CurationsPage({ params }: Props) {
 
   return (
     <div className="min-h-screen">
-      <PortalHeader portalSlug={portalSlug} backLink={{ label: "Back", fallbackHref: `/${portalSlug}` }} />
+      <PortalHeader portalSlug={portalSlug} />
 
       <div className="max-w-3xl mx-auto px-4 py-6 pb-28">
         <CurationsDiscoveryView portalId={portalId} portalSlug={portalSlug} />

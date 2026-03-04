@@ -20,28 +20,32 @@ from utils import extract_images_from_page, extract_event_links, find_event_url
 logger = logging.getLogger(__name__)
 
 
-def infer_category_from_title(title: str) -> str:
-    """Infer event category from the title text instead of defaulting to 'community'."""
+def infer_category_from_title(title: str) -> tuple[str, Optional[str]]:
+    """Infer event category and subcategory from the title text."""
     t = title.lower()
 
     if any(w in t for w in ["cocktail", "wine", "tasting", "beer", "brunch", "dinner", "pasta", "cooking", "chef"]):
-        return "food_drink"
-    if any(w in t for w in ["run club", "yoga", "fitness", "stroll", "workout", "pilates"]):
-        return "fitness"
+        return "food_drink", None
+    if any(w in t for w in ["run club", "running"]):
+        return "fitness", "fitness.running"
+    if any(w in t for w in ["yoga"]):
+        return "fitness", "fitness.yoga"
+    if any(w in t for w in ["fitness", "stroll", "workout", "pilates"]):
+        return "fitness", None
     if any(w in t for w in ["concert", "live music", "dj", "band", "jazz", "soul", "acoustic"]):
-        return "music"
+        return "music", None
     if any(w in t for w in ["art", "gallery", "exhibition", "paint", "craft", "maker"]):
-        return "art"
+        return "art", None
     if any(w in t for w in ["market", "pop-up", "pop up", "vendor", "shop", "shopping"]):
-        return "shopping"
+        return "shopping", None
     if any(w in t for w in ["valentine", "lunar new year", "holiday", "celebration", "festival"]):
-        return "community"
+        return "community", None
     if any(w in t for w in ["comedy", "stand-up", "standup", "improv", "laugh"]):
-        return "comedy"
+        return "comedy", None
     if any(w in t for w in ["film", "movie", "screening", "cinema"]):
-        return "film"
+        return "film", None
 
-    return "community"
+    return "community", None
 
 BASE_URL = "https://poncecitymarket.com"
 EVENTS_URL = f"{BASE_URL}/events"
@@ -293,6 +297,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
 
 
+                    category, subcategory = infer_category_from_title(title)
+
                     event_record = {
                         "source_id": source_id,
                         "venue_id": venue_id,
@@ -303,8 +309,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "end_date": None,
                         "end_time": None,
                         "is_all_day": False,
-                        "category": infer_category_from_title(title),
-                        "subcategory": None,
+                        "category": category,
+                        "subcategory": subcategory,
                         "tags": ["ponce-city-market", "beltline", "old-fourth-ward"],
                         "price_min": None,
                         "price_max": None,

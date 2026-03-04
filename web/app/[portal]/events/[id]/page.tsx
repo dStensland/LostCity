@@ -508,7 +508,7 @@ export default async function PortalEventPage({ params }: Props) {
 
           {/* Description Teaser */}
           <DescriptionTeaser
-            description={event.description}
+            description={displayDescription}
             accentColor={categoryColor}
           />
 
@@ -544,13 +544,13 @@ export default async function PortalEventPage({ params }: Props) {
                   color: isFree ? "var(--neon-green)" : "var(--gold)"
                 }] : []),
               ]}
-              className="mb-5 sm:mb-8"
+              className="mb-5"
             />
 
             {/* Description */}
             {displayDescription && (
               <>
-                <SectionHeader title="About" />
+                <SectionHeader title="About" variant="inline" />
                 <p className="text-[var(--soft)] whitespace-pre-wrap leading-relaxed mb-6">
                   <LinkifyText text={displayDescription} />
                 </p>
@@ -823,12 +823,13 @@ export default async function PortalEventPage({ params }: Props) {
             )}
 
             {/* Flag for QA */}
-            <SectionHeader title="Report an Issue" />
-            <FlagButton
-              entityType="event"
-              entityId={event.id}
-              entityName={event.title}
-            />
+            <div className="pt-5 border-t border-[var(--twilight)]/30">
+              <FlagButton
+                entityType="event"
+                entityId={event.id}
+                entityName={event.title}
+              />
+            </div>
           </InfoCard>
 
           {/* Before & After - Nearby Spots */}

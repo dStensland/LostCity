@@ -135,7 +135,15 @@ def categorize_event(title: str) -> str:
     ]):
         return 'learning'
 
-    # Arts & crafts
+    # Kids/family — check BEFORE arts so "Art Camp for Kids" → family, not art
+    if any(word in title_lower for word in [
+        'preschool', 'toddler', 'kids', 'children', 'family', 'little',
+        'twisting', 'tumbling', 'playgroup', 'kindergarten', 'pre-k',
+        'youth camp', 'day camp', 'summer camp',
+    ]):
+        return 'family'
+
+    # Arts & crafts (fine art, galleries, adult creative)
     if any(word in title_lower for word in ['art', 'craft', 'paint', 'draw', 'pottery', 'creative']):
         return 'art'
 
@@ -145,13 +153,6 @@ def categorize_event(title: str) -> str:
         'swim', 'gym', 'workout', 'exercise', 'sport', 'hip-hop', 'movement'
     ]):
         return 'fitness'
-
-    # Kids/family
-    if any(word in title_lower for word in [
-        'preschool', 'toddler', 'kids', 'children', 'family', 'little',
-        'twisting', 'tumbling', 'playgroup'
-    ]):
-        return 'family'
 
     # Food/culinary
     if any(word in title_lower for word in ['cook', 'cooking', 'culinary', 'chef', 'baking', 'food']):
@@ -232,74 +233,132 @@ def should_skip_event(title: str) -> bool:
     """
     Check if event should be skipped.
 
-    The MJCCA runs hundreds of registered programs (swim teams, gymnastics sessions,
-    ongoing class sessions) that require membership/enrollment. These aren't discoverable
-    events for the general public. We only keep one-time public events like concerts,
-    speaker series, film screenings, festivals, and open workshops.
+    The MJCCA runs hundreds of registered programs (swim teams, tennis leagues,
+    kids classes, tutoring, ongoing sessions) that require membership/enrollment.
+    These aren't discoverable events for the general public.
+
+    We KEEP: one-time public events (concerts, speaker series, film screenings,
+    festivals, celebrations, open community events).
+    We SKIP: registered programs, classes, camps, leagues, ongoing sessions.
     """
-    title_lower = title.lower()
+    # Normalize smart quotes to straight quotes for matching
+    title_lower = title.lower().replace('\u2019', "'").replace('\u2018', "'")
 
-    # Skip facility rentals, general access, memberships
-    skip_patterns = [
-        'membership',
-        'facility rental',
-        'open gym',
-        'open swim',
-        'lap swim',
-        'pool hours',
-        'facility hours',
-    ]
-
-    if any(pattern in title_lower for pattern in skip_patterns):
+    # ── Facility access / memberships ──
+    if any(p in title_lower for p in [
+        'membership', 'facility rental', 'open gym', 'open swim',
+        'lap swim', 'pool hours', 'facility hours',
+    ]):
         return True
 
-    # Skip ongoing registered programs (swim teams, gymnastics, leagues, classes)
-    registered_program_patterns = [
-        'swim team',
-        'sharks',           # Zaban Sharks swim teams
-        'session 1', 'session 2', 'session 3', 'session 4',
-        'sessions 1', 'sessions 2', 'sessions 3', 'sessions 4',
-        '2025-2026', '2025 – 2026', '2026-2027',
-        'intramural',
-        'pre-team',
-        'level 2 ', 'level 3 ',
-        'xcel ',            # Xcel gymnastics teams
-        'private music lessons',
-        'private lesson',
-        'soar basketball',  # Named memorial program
-        'gym stars',
-    ]
-
-    if any(pattern in title_lower for pattern in registered_program_patterns):
+    # ── ALTA tennis (all entries) ──
+    if re.match(r'^alta\b', title_lower):
         return True
 
-    # Skip gymnastics/dance class names (ongoing registered programs)
-    gymnastics_dance_patterns = [
+    # ── Named registered programs ──
+    if any(p in title_lower for p in [
+        'hoops academy', 'shooting stars', 'mathnasium',
+        'swim team', 'sharks', 'soar basketball', 'gym stars',
+        'xcel ', 'pre-team', 'intramural',
+        'private music lessons', 'private lesson',
+        'blonder bowling registration',
+        'beginner social ladder',
+        'aarp safe driving', 'future fashionistas',
+        'young atlanta leadership', 'abridged hours',
+        'mah jongg', 'bone density series',
+    ]):
+        return True
+
+    # ── Session/year patterns (ongoing multi-week programs) ──
+    if re.search(r'session [1-9]|sessions [1-9]|20\d{2}\s*[-–]\s*20\d{2}', title_lower):
+        return True
+
+    # ── Level/skill patterns (class progressions) ──
+    if re.search(r'level [2-9]\b|beginner level|intermediate level|advanced level', title_lower):
+        return True
+
+    # ── Kids classes / camps ──
+    if any(p in title_lower for p in [
+        'day camp', 'summer camp', "school's out camp", 'vacation camp',
+        'spring into camp', 'camp registration',
+        'mini hoopers', 'little tennis', 'multi-sports',
+        'abc\'s of cooking', 'abcs of cooking', 'kitchen combo',
+        'dramatic discoveries', 'coach and play',
+        'musical theatre jr', 't-ball',
+    ]):
+        return True
+
+    # ── Age/grade ranges in parens ──
+    # "(Ages 3-4)", "(Kindergarten)", "(Pre-K)", "(2nd-3rd Grade)", "(6th-8th Grade)"
+    if re.search(r'\(ages?\s+\d|kindergarten|pre-k|\bgrades?\s+\d', title_lower):
+        return True
+    if re.search(r'\(\d+(?:st|nd|rd|th)\s*[-–]\s*\d+(?:st|nd|rd|th)\s+grade\)', title_lower):
+        return True
+
+    # ── Gymnastics/dance class names ──
+    if any(p in title_lower for p in [
         'aerials', 'tumbling', 'handsprings', 'cartwheels',
         'round-offs', 'flipping', 'twisting',
-        'preschool hip-hop', 'preschool ballet', 'preschool tap',
-        'creative movement',
-        'little tennis', 'multi-sports',
-        'mini hoopers',
-        'elite boxing',
-        'catchball',
-    ]
-
-    if any(pattern in title_lower for pattern in gymnastics_dance_patterns):
+        'creative movement', 'elite boxing', 'catchball',
+        'acro dance',
+    ]):
         return True
 
-    # Skip recurring class sessions that are just weekly schedule items
-    # (Identified by day-of-week in parens: "Hip-Hop (Tuesdays)")
-    import re
+    # ── Standalone class-format titles (dance/fitness/martial arts) ──
+    # Only skip when it's clearly a registered class, not a one-time event
+    if re.match(r'^(hip-hop|ballet|jazz|tap|aikido|chess|cardio tennis)\b', title_lower):
+        # Allow if title suggests a special event: "Hip-Hop Night", "Jazz Concert"
+        if not re.search(r'night|show|concert|performance|event|festival|celebration', title_lower):
+            return True
+
+    # ── Ballet/dance class combos: "Ballet & Jazz (K-2nd Grade)" ──
+    if re.search(r'ballet\s*[&+]\s*(jazz|tap)|jazz\s*[&+]\s*tap', title_lower):
+        return True
+
+    # ── Day-of-week schedule items: "Hip-Hop (Tuesdays)" ──
     if re.search(r'\((mondays?|tuesdays?|wednesdays?|thursdays?|fridays?|saturdays?|sundays?)\)', title_lower):
         return True
 
-    # Skip multi-day class patterns: "(Monday, Tuesday & Wednesday)"
+    # ── Multi-day class patterns: "(Monday, Tuesday & Wednesday)" ──
     if re.search(r'\((?:monday|tuesday|wednesday|thursday|friday|saturday|sunday).*?(?:&|and).*?\)', title_lower):
         return True
 
-    # Skip competitive team entries: "ALTA Mixed Doubles, B Level, Captain..."
-    if 'alta ' in title_lower and 'captain' in title_lower:
+    # ── Hebrew/religious ongoing courses (multi-week enrollment) ──
+    if any(p in title_lower for p in [
+        'ulpan ', 'melton:', 'melton -',
+    ]):
+        return True
+
+    # ── Sports leagues (not one-time tournaments) ──
+    # Catches: basketball league, soccer league, flag football league, softball league, volleyball league, etc.
+    if re.search(r'\bleague\b', title_lower):
+        # Allow "league" in tournament/event context
+        if not re.search(r'tournament|championship|playoff|all.star', title_lower):
+            return True
+
+    # ── Youth-prefixed activities (kids programs) ──
+    if title_lower.startswith('youth '):
+        return True
+
+    # ── Preschool-prefixed anything ──
+    if title_lower.startswith('preschool '):
+        return True
+
+    # ── "Elite" skills training (grade-based sports clinics) ──
+    if re.search(r'elite\s+\w+\s+skills?\s+training', title_lower):
+        return True
+
+    # ── Ongoing class names (standalone, no event context) ──
+    if re.match(r'^(adult gymnastics|musical theater|introduction to judaism|'
+                r'stroke of the week|chopping block|safe sitter)\b', title_lower):
+        return True
+
+    # ── "Coach 'n Play" / "Coach and Play" with month suffix ──
+    if re.search(r"coach\s*[''n]+\s*play|coach and play", title_lower):
+        return True
+
+    # ── Blonder ongoing programs (senior center) ──
+    if re.match(r'^blonder\s+(art|healthy cooking|cooking|exercise)', title_lower):
         return True
 
     return False

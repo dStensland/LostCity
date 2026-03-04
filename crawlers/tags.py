@@ -58,6 +58,7 @@ CONTENT_TAGS = {
     "hands-on",  # Interactive/participatory
     "volunteer",  # Volunteer opportunity
     "activism",  # Civic engagement / organizing
+    "mobilize",  # From Mobilize platform (activism source)
     "community",  # Community gathering/meetup
 
     "valentines",  # Valentine's Day related
@@ -92,29 +93,98 @@ CONTENT_TAGS = {
     "board-games",  # Board game night
     "running",  # Running / run club
     "cycling",  # Cycling / bike ride
+    "hiking",  # Hiking / trail activity
+    "volunteer-outdoors",  # Outdoor volunteer / cleanup
+    "water-sports",  # Water sports / paddling
     "yoga",  # Yoga
     "pickleball",  # Pickleball
+    "skating",  # Skating (ice or roller)
+    "roller-skating",  # Roller skating
     "brunch",  # Brunch
     "happy-hour",  # Happy hour
     "food-specials",  # Food/drink specials
     "nightlife",  # Nightlife event
+
+    # More activity types
+    "standup",  # Stand-up comedy
+    "sketch-comedy",  # Sketch comedy
+    "improv",  # Improv comedy
+    "acoustic",  # Acoustic performance
+    "spoken-word",  # Spoken word / poetry slam
+    "live-band",  # Live band performance
+    "swing",  # Swing dance
+    "lindy-hop",  # Lindy hop dance
+    "salsa",  # Salsa dance
+    "salsa-night",  # Salsa dance night
+    "bachata",  # Bachata dance
+    "latin",  # Latin music/dance
+    "latin-night",  # Latin dance night
+    "reggaeton",  # Reggaeton music
+    "line-dancing",  # Line dancing / country dance
+    "country-dance",  # Country dance / two-step
+    "motown",  # Motown / soul music night
+    "soul",  # Soul music
+    "viewing-party",  # Watch party / viewing event
+    "football",  # Football event / watch party
+    "nfl",  # NFL game / watch party
+    "run-club",  # Running club
+    "bike-ride",  # Group bike ride
+    "tennis",  # Tennis
+    "arcade",  # Arcade games
+    "pinball",  # Pinball
+    "video-games",  # Video gaming
+    "card-games",  # Card games (TCG, poker, etc.)
+    "poker",  # Poker night
+    "bar-poker",  # Bar poker league (freeroll)
+    "freeroll",  # Free-entry poker tournament
+    "miniatures",  # Miniatures gaming (Warhammer, etc.)
+    "warhammer",  # Warhammer / 40k
+    "40k",  # Warhammer 40,000
+    "magic-the-gathering",  # MTG
+    "mtg",  # Magic: The Gathering (short)
+    "commander",  # MTG Commander format
+    "pauper",  # MTG Pauper format
+    "comics",  # Comic book related
+    "game-night",  # General game night
+    "competitive",  # Competitive / tournament play
+    "drop-in",  # Drop-in welcome (no commitment)
+    "geek",  # Geek / nerd culture
+    "social",  # Social gathering
+    "free-lesson",  # Free beginner lesson included
+    "shopping",  # Shopping / retail event
+    "vintage",  # Vintage / retro
 
     # Deal/value tags
     "specials",  # Venue specials / deals
     "oysters",  # Oyster special
     "dollar-oysters",  # $1 oysters
     "tacos",  # Taco special
+    "taco-tuesday",  # Taco Tuesday special
     "wings",  # Wing special
     "wine",  # Wine special
     "bottomless",  # Bottomless drinks
     "half-price",  # Half-price deal
     "margaritas",  # Margarita special
+    "craft-beer",  # Craft beer focus
+    "beer",  # Beer special / event
+    "crab",  # Crab / seafood special
+    "seafood",  # Seafood special
+    "tapas",  # Tapas / small plates
+    "sangria",  # Sangria special
+    "mimosas",  # Mimosa special
+    "pizza",  # Pizza special
+    "drink-specials",  # Drink specials / deals
+    "budget-friendly",  # Good value / affordable
 
     # Vibe extensions
     "late-night",  # Late-night event (after 10pm)
     "lgbtq",  # LGBTQ+ event
     "lgbtq-friendly",  # LGBTQ+ friendly
     "weekly",  # Weekly recurring
+    "biweekly",  # Every two weeks
+    "monthly",  # Monthly recurring
+    "morning",  # Morning event
+    "afternoon",  # Afternoon event
     "brewery",  # At a brewery
     "beltline",  # Near the BeltLine
 }

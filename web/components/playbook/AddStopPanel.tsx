@@ -27,7 +27,7 @@ import {
   MoonStars,
   CaretDown,
   X,
-} from "@phosphor-icons/react/dist/ssr";
+} from "@phosphor-icons/react";
 
 // ---------------------------------------------------------------------------
 // Types

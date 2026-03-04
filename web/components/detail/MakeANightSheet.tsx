@@ -214,7 +214,7 @@ function SuggestionSection({
   if (isLoading) {
     return (
       <div>
-        <h3 className="font-mono text-xs uppercase tracking-widest text-[var(--muted)] py-3 border-t border-[var(--twilight)]">
+        <h3 className="font-mono text-xs font-bold uppercase tracking-[0.14em] text-[var(--muted)] py-3 border-t border-[var(--twilight)]">
           {title}
         </h3>
         <div className="space-y-2">
@@ -231,7 +231,7 @@ function SuggestionSection({
 
   return (
     <div>
-      <h3 className="font-mono text-xs uppercase tracking-widest text-[var(--muted)] py-3 border-t border-[var(--twilight)]">
+      <h3 className="font-mono text-xs font-bold uppercase tracking-[0.14em] text-[var(--muted)] py-3 border-t border-[var(--twilight)]">
         {title}
       </h3>
       <div className="space-y-2">

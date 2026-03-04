@@ -62,15 +62,25 @@ export default function LineupSection({
 
   const hasMore = artists.length > displayCount;
   const canCollapse = expanded && artists.length > maxDisplay;
+  const artistsWithImages = orderedArtists.filter((artist) => Boolean(artist.artist?.image_url)).length;
+  const imageCoverage = artists.length > 0 ? artistsWithImages / artists.length : 0;
+  const useCompactLayout = artists.length >= 8 || imageCoverage < 0.45;
+  const headlinerGridClass = useCompactLayout
+    ? "grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-6"
+    : "grid grid-cols-2 sm:grid-cols-3 gap-6 justify-items-center mb-6";
+  const supportGridClass = useCompactLayout
+    ? "grid grid-cols-1 sm:grid-cols-2 gap-2.5"
+    : "grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-4 justify-items-center";
+  const flatGridClass = useCompactLayout
+    ? "grid grid-cols-1 sm:grid-cols-2 gap-2.5"
+    : "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 justify-items-center";
+  const chipVariant = useCompactLayout ? "inline" : "card";
 
   return (
     <section>
-      <h2 className="text-lg font-semibold text-[var(--cream)] mb-4 flex items-center gap-2">
-        <svg className="w-5 h-5 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-        </svg>
+      <h2 className="font-mono text-xs font-bold uppercase tracking-[0.14em] text-[var(--muted)] mb-4 flex items-center gap-2">
         {resolvedTitle}
-        <span className="text-sm font-normal text-[var(--muted)]">
+        <span className="font-normal">
           ({artists.length})
         </span>
       </h2>
@@ -82,17 +92,17 @@ export default function LineupSection({
               <p className="text-xs font-mono uppercase tracking-widest text-accent mb-3">
                 {resolvedHeadliner}
               </p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-6 justify-items-center mb-6">
+              <div className={headlinerGridClass}>
                 {displayHeadliners.map((artist) => (
                   <ArtistChip
                     key={artist.id}
                     artist={artist}
                     portalSlug={portalSlug}
                     eventCategory={eventCategory}
-                    variant="card"
+                    variant={chipVariant}
                     fallbackImageUrl={fallbackImageUrl}
                     fallbackGenres={fallbackGenres}
-                    emphasizeHeadliner
+                    emphasizeHeadliner={!useCompactLayout}
                   />
                 ))}
               </div>
@@ -107,17 +117,17 @@ export default function LineupSection({
               <p className="text-xs font-mono uppercase tracking-widest text-[var(--muted)] mb-3">
                 {resolvedSupport}
               </p>
-              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-4 justify-items-center">
+              <div className={supportGridClass}>
                 {displaySupport.map((artist) => (
                   <ArtistChip
                     key={artist.id}
                     artist={artist}
                     portalSlug={portalSlug}
                     eventCategory={eventCategory}
-                    variant="card"
+                    variant={chipVariant}
                     fallbackImageUrl={fallbackImageUrl}
                     fallbackGenres={fallbackGenres}
-                    emphasizeHeadliner
+                    emphasizeHeadliner={!useCompactLayout}
                   />
                 ))}
               </div>
@@ -125,14 +135,14 @@ export default function LineupSection({
           )}
         </>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 justify-items-center">
+        <div className={flatGridClass}>
           {displayFlat.map((artist) => (
             <ArtistChip
               key={artist.id}
               artist={artist}
               portalSlug={portalSlug}
               eventCategory={eventCategory}
-              variant="card"
+              variant={chipVariant}
               fallbackImageUrl={fallbackImageUrl}
               fallbackGenres={fallbackGenres}
               emphasizeHeadliner={false}

@@ -120,7 +120,7 @@ export function EntityTagList({
     <div>
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
-        <h2 className="font-mono text-xs font-medium text-[var(--muted)] uppercase tracking-widest">
+        <h2 className="font-mono text-xs font-bold text-[var(--muted)] uppercase tracking-[0.14em]">
           Community Says
         </h2>
         <button

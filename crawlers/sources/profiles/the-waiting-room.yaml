@@ -1,0 +1,28 @@
+version: 1
+slug: the-waiting-room
+name: The Waiting Room
+integration_method: social_media
+defaults:
+  venue_name: The Waiting Room
+  category: nightlife
+  tags:
+  - midtown
+  - lounge
+  - late-night
+discovery:
+  enabled: false
+  type: html
+  urls:
+  - https://www.justkeepwaitingroom.com/goings-on
+  fetch:
+    render_js: true
+    wait_until: domcontentloaded
+detail:
+  enabled: false
+  fetch:
+    render_js: true
+    wait_until: domcontentloaded
+data_goals:
+- events
+- images
+- tickets

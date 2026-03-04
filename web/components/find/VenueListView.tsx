@@ -7,6 +7,7 @@ import { haversineKm } from "@/lib/distance";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
 import VenueListSkeleton from "@/components/find/VenueListSkeleton";
+import CategoryTileGrid from "@/components/find/CategoryTileGrid";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -33,6 +34,12 @@ interface VenueListViewProps {
   activeTab?: SpotsTab;
   /** Label of the active chip filter (for empty state feedback) */
   activeChipLabel?: string | null;
+  /** When true, show category tile grid instead of grouped list */
+  showCategoryGrid?: boolean;
+  /** Callback when a category tile is clicked */
+  onCategorySelect?: (venueTypes: string[]) => void;
+  /** All spots for the current tab (unfiltered) — used by category grid for counts */
+  allTabSpots?: Spot[];
 }
 
 // ---------------------------------------------------------------------------
@@ -53,6 +60,9 @@ export default function VenueListView({
   userLocation,
   activeTab,
   activeChipLabel,
+  showCategoryGrid,
+  onCategorySelect,
+  allTabSpots,
 }: VenueListViewProps) {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const alphaScrollRef = useRef<HTMLDivElement>(null);
@@ -202,6 +212,17 @@ export default function VenueListView({
           Retry
         </button>
       </div>
+    );
+  }
+
+  // ── Category tile grid ────────────────────────────────────────────────
+  if (showCategoryGrid && onCategorySelect) {
+    return (
+      <CategoryTileGrid
+        spots={allTabSpots ?? spots}
+        onCategorySelect={onCategorySelect}
+        loading={loading}
+      />
     );
   }
 

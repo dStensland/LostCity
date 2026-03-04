@@ -194,7 +194,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     events_found += 1
 
                     # Generate content hash
-                    content_hash = generate_content_hash(title, "Variety Playhouse", start_date)
+                    hash_key = f"{start_date}|{start_time}" if start_time else start_date
+                    content_hash = generate_content_hash(title, "Variety Playhouse", hash_key)
 
                     # Check for existing
 

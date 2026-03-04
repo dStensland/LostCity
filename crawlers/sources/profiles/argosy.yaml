@@ -1,17 +1,25 @@
 version: 1
 slug: argosy
 name: Argosy
-integration_method: playwright
-defaults: {}
+integration_method: html
+defaults:
+  venue_name: Argosy
+  category: food_drink
 discovery:
-  enabled: false
+  enabled: true
   type: html
   urls:
-  - https://argosyeastatlanta.com
+  - http://argosy-east.com/
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
 detail:
   enabled: true
   fetch:
-    render_js: true
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
 data_goals:
 - events
 - images

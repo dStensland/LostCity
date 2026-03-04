@@ -19,7 +19,7 @@ function safeParseInt(value: string | null, defaultValue: number, min = 1, max =
 }
 
 export async function GET(request: Request) {
-  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
+  const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request), { bucket: "timeline" });
   if (rateLimitResult) return rateLimitResult;
 
   try {

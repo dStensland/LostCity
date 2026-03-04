@@ -20,9 +20,9 @@
 
   /* ============================================
      TYPOGRAPHY SCALE (1.25 ratio, magazine quality)
-     NOTE: --fs-* prefix avoids collision with Tailwind v4's --text-* color namespace.
+     NOTE: --fs-* vars exist for CSS rules in globals.css (headings, section headers).
      Use Tailwind utilities (text-xs, text-sm, etc.) in components — not var(--fs-*).
-     These vars exist for CSS rules in globals.css (headings, section headers).
+     The actual Tailwind overrides live in @theme inline below (--text-* namespace).
      ============================================ */
   --fs-2xs: 0.625rem;   /* 10px - micro labels */
   --fs-xs: 0.6875rem;   /* 11px - badges, mono labels */
@@ -744,15 +744,17 @@
   .detail-hero-overlay {
     background: linear-gradient(
       to top,
-      rgba(9, 9, 11, 0.98) 0%,
-      rgba(9, 9, 11, 0.9) 40%,
-      rgba(9, 9, 11, 0.6) 70%,
+      rgba(9, 9, 11, 0.99) 0%,
+      rgba(9, 9, 11, 0.92) 36%,
+      rgba(9, 9, 11, 0.7) 62%,
       transparent 100%
     );
   }
 
   .detail-hero-title-shadow {
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8), 0 0 30px color-mix(in srgb, var(--hero-accent) 40%, transparent);
+    text-shadow:
+      0 2px 4px rgba(0, 0, 0, 0.85),
+      0 0 20px color-mix(in srgb, var(--hero-accent) 32%, transparent);
   }
 
   .detail-hero-subtitle-shadow {
@@ -1084,7 +1086,7 @@
      For tighter tracking (inline metadata), add tracking-[0.1em] override */
   .mono-label {
     font-family: var(--font-mono, ui-monospace, monospace);
-    font-size: var(--text-xs);
+    font-size: var(--fs-xs);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -1356,14 +1358,22 @@ body[data-animations="subtle"] *:not(.ambient-layer):not(.ambient-layer *) {
   --font-baloo: var(--font-outfit); /* Alias Baloo to Outfit for ATLittle portal */
   --font-bebas: var(--font-outfit); /* Alias Bebas to Outfit for logo */
 
-  /* Typography scale — overrides Tailwind defaults to match design system */
-  --font-size-xs: 0.6875rem;   /* 11px - badges, mono labels */
-  --font-size-sm: 0.8125rem;   /* 13px - metadata, details */
-  --font-size-base: 0.9375rem; /* 15px - body text */
-  --font-size-lg: 1.125rem;    /* 18px - card titles */
-  --font-size-xl: 1.25rem;     /* 20px - section headers secondary */
-  --font-size-2xl: 1.5rem;     /* 24px - section headers primary */
-  --font-size-3xl: 1.875rem;   /* 30px - page titles */
+  /* Typography scale — overrides Tailwind defaults to match design system.
+     CORRECT namespace: --text-* (Tailwind v4 uses --text-* for font-size in @theme).
+     --font-size-* does NOT work — TW4 ignores that namespace entirely. */
+  --text-xs: 0.6875rem;   /* 11px - badges, mono labels */
+  --text-sm: 0.8125rem;   /* 13px - metadata, details */
+  --text-base: 0.9375rem; /* 15px - body text */
+  --text-lg: 1.125rem;    /* 18px - card titles */
+  --text-xl: 1.25rem;     /* 20px - section headers secondary */
+  --text-2xl: 1.5rem;     /* 24px - section headers primary */
+  --text-3xl: 1.875rem;   /* 30px - page titles */
+
+  /* Custom animations — registered in @theme so Tailwind v4 animate-* utility resolves them
+     (without this, `animate-horse-gallop` generates `animation: var(--animate-horse-gallop)`
+     which is undefined, silently overriding the manual .animate-horse-gallop class). */
+  --animate-horse-gallop: horse-gallop 3s ease-in-out infinite;
+  --animate-neon-spin: neon-spin 1s linear infinite, neon-pulse 1.5s ease-in-out infinite;
 }
 
 body {
@@ -1426,6 +1436,21 @@ body::after {
   opacity: var(--grain-opacity, 0.01);
   pointer-events: none;
   z-index: 50; /* Lower z-index to avoid blocking map controls */
+}
+
+/* Detail pages need cleaner readability than feed-style grain textures. */
+body:has(main[data-festival-detail="true"])::after,
+body:has(main[data-clean-detail="true"])::after {
+  opacity: 0 !important;
+}
+
+body:has(main[data-festival-detail="true"]) .rain-overlay,
+body:has(main[data-festival-detail="true"]) .ambient-glow,
+body:has(main[data-festival-detail="true"]) .cursor-glow,
+body:has(main[data-clean-detail="true"]) .rain-overlay,
+body:has(main[data-clean-detail="true"]) .ambient-glow,
+body:has(main[data-clean-detail="true"]) .cursor-glow {
+  display: none !important;
 }
 
 /* Disable grain for hotel verticals (body-level attribute is set by PortalThemeClient). */
@@ -2149,6 +2174,34 @@ body:has([data-forth-experience="true"]) {
 /* Pill variant - for filter chips */
 .btn-pill {
   @apply rounded-full;
+}
+
+/* Hero Ken Burns — slow cinematic zoom on hero photos */
+@keyframes hero-ken-burns {
+  from { transform: scale(1); }
+  to   { transform: scale(1.12); }
+}
+
+.hero-ken-burns {
+  animation: hero-ken-burns 20s ease-out forwards;
+}
+
+/* Hero entrance stagger — wider intervals for editorial reveal */
+.hero-stagger-1 { animation-delay: 0ms; }
+.hero-stagger-2 { animation-delay: 150ms; }
+.hero-stagger-3 { animation-delay: 300ms; }
+.hero-stagger-4 { animation-delay: 450ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-ken-burns {
+    animation: none !important;
+  }
+  .hero-stagger-1,
+  .hero-stagger-2,
+  .hero-stagger-3,
+  .hero-stagger-4 {
+    animation-delay: 0ms !important;
+  }
 }
 
 /* Event animations */
@@ -2902,9 +2955,36 @@ body:has([data-forth-experience="true"]) {
   }
 }
 
-.animate-neon-spin {
-  animation: neon-spin 1s linear infinite, neon-pulse 1.5s ease-in-out infinite;
+/* Horse gallop — trot with occasional backflip */
+@keyframes horse-gallop {
+  /* Trot cycle: 0–80% (repeats ~4 times over 3s) */
+  0%       { transform: translateY(0) rotate(0deg); }
+  5%       { transform: translateY(-3px) rotate(-4deg); }
+  10%      { transform: translateY(0) rotate(0deg); }
+  15%      { transform: translateY(-2px) rotate(3deg); }
+  20%      { transform: translateY(0) rotate(0deg); }
+  25%      { transform: translateY(-3px) rotate(-4deg); }
+  30%      { transform: translateY(0) rotate(0deg); }
+  35%      { transform: translateY(-2px) rotate(3deg); }
+  40%      { transform: translateY(0) rotate(0deg); }
+  45%      { transform: translateY(-3px) rotate(-4deg); }
+  50%      { transform: translateY(0) rotate(0deg); }
+  55%      { transform: translateY(-2px) rotate(3deg); }
+  60%      { transform: translateY(0) rotate(0deg); }
+  65%      { transform: translateY(-3px) rotate(-4deg); }
+  70%      { transform: translateY(0) rotate(0deg); }
+  75%      { transform: translateY(-2px) rotate(3deg); }
+  /* Backflip: 80–95% */
+  80%      { transform: translateY(0) rotate(0deg); }
+  82%      { transform: translateY(-8px) rotate(0deg); }
+  87%      { transform: translateY(-12px) rotate(-180deg); }
+  92%      { transform: translateY(-8px) rotate(-340deg); }
+  95%      { transform: translateY(0) rotate(-360deg); }
+  100%     { transform: translateY(0) rotate(-360deg); }
 }
+
+/* animate-horse-gallop and animate-neon-spin are now generated by Tailwind v4
+   from --animate-horse-gallop / --animate-neon-spin in @theme inline above. */
 
 /* Page transition animation (replaces framer-motion) */
 @keyframes page-enter {
@@ -3469,7 +3549,7 @@ textarea:focus-visible {
     rgba(37, 37, 48, 0.3) 70%
   );
   background-size: 300% 100%;
-  animation: skeleton-shimmer 2.5s linear infinite;
+  animation: skeleton-shimmer 1.5s linear infinite;
 }
 
 /* ============================================
@@ -4300,6 +4380,10 @@ body[data-forth-bg="off"] .rain-overlay {
    FIND LIST ROW HOVER (SUBTLE, CATEGORY-TINTED)
    ============================================ */
 
+.find-row-card-bg {
+  background: color-mix(in srgb, var(--night) 88%, var(--dusk));
+}
+
 .find-row-card {
   position: relative;
   isolation: isolate;
@@ -4399,13 +4483,13 @@ body[data-forth-bg="off"] .rain-overlay {
   inset: 0;
   pointer-events: none;
   border-radius: inherit;
-  opacity: 0.55;
+  opacity: 0.68;
   background:
     linear-gradient(
       155deg,
-      rgba(7, 9, 14, 0.78) 0%,
-      rgba(11, 14, 20, 0.62) 46%,
-      rgba(20, 24, 34, 0.28) 100%
+      rgba(7, 9, 14, 0.82) 0%,
+      rgba(11, 14, 20, 0.68) 46%,
+      rgba(20, 24, 34, 0.35) 100%
     );
   transition: opacity 240ms ease;
 }
@@ -4438,7 +4522,7 @@ body[data-forth-bg="off"] .rain-overlay {
   background: transparent;
   box-shadow: none;
   backdrop-filter: none;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8), 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
 .find-row-card:hover .list-rail-media::after {
@@ -5301,7 +5385,7 @@ body[data-forth-bg="off"] .rain-overlay {
   font-weight: 700;
   line-height: var(--leading-snug);
   letter-spacing: var(--tracking-tight);
-  color: var(--cream);
+  color: var(--section-accent, var(--cream));
   text-shadow:
     0 1px 0 rgba(0, 0, 0, 0.5),
     0 0 12px color-mix(in srgb, var(--section-accent, var(--coral)) 18%, transparent);
@@ -5320,10 +5404,9 @@ body[data-forth-bg="off"] .rain-overlay {
     0 0 10px color-mix(in srgb, var(--section-accent, var(--coral)) 16%, transparent);
 }
 
-/* Section header icon containers - use --section-accent CSS variable */
+/* Section header icon containers - inherit --section-accent from scoped parent */
 .section-header-icon {
-  --section-accent: var(--coral);
-  background-color: color-mix(in srgb, var(--section-accent) 15%, transparent);
+  background-color: color-mix(in srgb, var(--section-accent, var(--coral)) 15%, transparent);
 }
 
 .section-header-icon-primary {

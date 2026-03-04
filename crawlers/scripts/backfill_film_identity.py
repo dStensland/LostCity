@@ -52,10 +52,10 @@ def run(limit: int, dry_run: bool, start_date: str) -> dict:
         result = (
             client.table("events")
             .select(
-                "id,title,genres,category,start_date,film_title,film_release_year,"
+                "id,title,genres,category_id,start_date,film_title,film_release_year,"
                 "film_imdb_id,film_external_genres,film_identity_source"
             )
-            .eq("category", "film")
+            .eq("category_id", "film")
             .gte("start_date", start_date)
             .is_("canonical_event_id", "null")
             .range(offset, end)

@@ -1,0 +1,29 @@
+version: 1
+slug: the-independent
+name: "The Independent"
+integration_method: llm_crawler
+defaults:
+  venue_name: "The Independent"
+  category: nightlife
+  tags:
+  - atlanta-expansion-wave-w
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - "http://theindependentatlanta.com"
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+detail:
+  enabled: true
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+data_goals:
+  - events
+  - lineup
+  - images
+  - tickets

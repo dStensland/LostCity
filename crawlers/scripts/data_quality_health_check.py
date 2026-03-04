@@ -50,6 +50,12 @@ def get_overall_stats(client):
     }
 
 
+def get_category_name_map(client):
+    """Map category_id -> display name for readable reports."""
+    rows = client.table("categories").select("id,name").execute().data or []
+    return {str(row.get("id")): str(row.get("name") or row.get("id")) for row in rows}
+
+
 def get_field_completeness(client, total_events):
     """Get field completeness rates across all events."""
     
@@ -70,14 +76,14 @@ def get_field_completeness(client, total_events):
     
     while offset < total_events:
         result = client.table("events").select(
-            "category, start_time, description, image_url, ticket_url"
+            "category_id, start_time, description, image_url, ticket_url"
         ).range(offset, offset + page_size - 1).execute()
         
         if not result.data:
             break
         
         for event in result.data:
-            if event.get("category"):
+            if event.get("category_id"):
                 stats["has_category"] += 1
             
             if event.get("start_time"):
@@ -106,7 +112,7 @@ def get_field_completeness(client, total_events):
     return stats
 
 
-def get_events_by_category(client):
+def get_events_by_category(client, category_name_by_id):
     """Get event counts per category."""
     # We need to paginate and count manually since we can't GROUP BY directly
     page_size = 1000
@@ -120,13 +126,14 @@ def get_events_by_category(client):
     total = count_result.count
     
     while True:
-        result = client.table("events").select("category").range(offset, offset + page_size - 1).execute()
+        result = client.table("events").select("category_id").range(offset, offset + page_size - 1).execute()
         
         if not result.data:
             break
         
         for event in result.data:
-            cat = event.get("category") or "(no category)"
+            category_id = event.get("category_id")
+            cat = category_name_by_id.get(str(category_id), str(category_id)) if category_id else "(no category)"
             category_counts[cat] += 1
         
         offset += page_size
@@ -328,6 +335,7 @@ def print_report(stats):
 
 def main():
     client = get_client()
+    category_name_by_id = get_category_name_map(client)
     
     print("Starting data quality health check...", file=sys.stderr)
     print(file=sys.stderr)
@@ -342,7 +350,7 @@ def main():
     stats['completeness'] = get_field_completeness(client, stats['overall']['total_events'])
     
     # Categories
-    stats['categories'] = get_events_by_category(client)
+    stats['categories'] = get_events_by_category(client, category_name_by_id)
     
     # Top sources
     stats['top_sources'] = get_top_sources_by_count(client)

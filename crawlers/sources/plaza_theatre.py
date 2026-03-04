@@ -542,6 +542,14 @@ def extract_special_events(
                 title = title.strip()
 
                 if len(title) >= 3:
+                    # Launch gate expects Plaza showtimes to carry an explicit time.
+                    # Skip special events with no parsed time rather than inserting
+                    # all-day placeholders that dilute time coverage quality.
+                    if not time_str:
+                        logger.debug(f"  Skipping special event without time: {title} on {event_date}")
+                        i = j if j > i + 1 else i + 1
+                        continue
+
                     events_found += 1
 
                     content_hash = generate_content_hash(
@@ -574,7 +582,7 @@ def extract_special_events(
                         "start_time": time_str,
                         "end_date": None,
                         "end_time": None,
-                        "is_all_day": time_str is None,
+                        "is_all_day": False,
                         "category": "film",
                         "subcategory": "special_screening",
                         "tags": tags,

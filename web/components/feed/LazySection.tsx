@@ -42,7 +42,7 @@ export default function LazySection({
   }, [rootMargin]);
 
   if (isVisible) {
-    return <>{children}</>;
+    return <div className="animate-fade-in">{children}</div>;
   }
 
   return (

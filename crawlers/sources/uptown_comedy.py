@@ -1,7 +1,10 @@
 """
-Crawler for Uptown Comedy Corner (uptowncomedycorner.com).
+Crawler for Uptown Comedy Corner (uptowncomedy.net).
+Atlanta's original comedy club, now in Forest Park.
 
-Site uses JavaScript rendering - must use Playwright.
+Site uses SpaceCraft CMS — JS-rendered event list on /tickets page.
+Each event block: month abbreviation, day number, title (repeated), BUY link.
+All tickets go through Eventbrite.
 """
 
 from __future__ import annotations
@@ -15,45 +18,35 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
-from utils import extract_images_from_page, extract_event_links, find_event_url
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = "https://www.uptowncomedycorner.com"
-EVENTS_URL = f"{BASE_URL}/calendar"
+BASE_URL = "https://www.uptowncomedy.net"
+EVENTS_URL = f"{BASE_URL}/tickets"
 
 VENUE_DATA = {
     "name": "Uptown Comedy Corner",
     "slug": "uptown-comedy-corner",
-    "address": "2140 Peachtree Rd NW",
-    "neighborhood": "Buckhead",
-    "city": "Atlanta",
+    "address": "4730 Frontage Rd",
+    "neighborhood": "Forest Park",
+    "city": "Forest Park",
     "state": "GA",
-    "zip": "30309",
-    "lat": 33.8092,
-    "lng": -84.3866,
+    "zip": "30297",
+    "lat": 33.6209,
+    "lng": -84.3602,
     "venue_type": "comedy_club",
     "spot_type": "comedy_club",
     "website": BASE_URL,
 }
 
-
-def parse_time(time_text: str) -> Optional[str]:
-    """Parse time from '7:00 PM' format."""
-    match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", time_text, re.IGNORECASE)
-    if match:
-        hour, minute, period = match.groups()
-        hour = int(hour)
-        if period.lower() == "pm" and hour != 12:
-            hour += 12
-        elif period.lower() == "am" and hour == 12:
-            hour = 0
-        return f"{hour:02d}:{minute}"
-    return None
+MONTH_MAP = {
+    "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
+    "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12,
+}
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Uptown Comedy Corner events using Playwright."""
+    """Crawl Uptown Comedy Corner events."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
@@ -72,133 +65,142 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             logger.info(f"Fetching Uptown Comedy Corner: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)
+            page.wait_for_timeout(5000)
 
-            # Extract images from page
-            image_map = extract_images_from_page(page)
-
-            # Extract event links for specific URLs
-            event_links = extract_event_links(page, BASE_URL)
-
-            # Scroll to load all content
-            for _ in range(5):
+            # Scroll to load all events
+            for _ in range(3):
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 page.wait_for_timeout(1000)
 
-            # Get page text and parse line by line
+            # Collect Eventbrite URLs mapped by title
+            links = page.query_selector_all("a")
+            eventbrite_urls = {}
+            for link in links:
+                href = link.get_attribute("href") or ""
+                if "eventbrite.com" in href:
+                    text = link.inner_text().strip()
+                    if text and text != "BUY" and len(text) > 10:
+                        eventbrite_urls[text.lower()] = href
+
+            # Parse event list from body text
+            # Pattern: month_abbr, day_number, title, title_duplicate, BUY
             body_text = page.inner_text("body")
             lines = [l.strip() for l in body_text.split("\n") if l.strip()]
 
-            # Parse events - look for date patterns
+            now = datetime.now()
+            current_year = now.year
             i = 0
-            while i < len(lines):
-                line = lines[i]
 
-                # Skip navigation items
-                if len(line) < 3:
-                    i += 1
-                    continue
+            while i < len(lines) - 2:
+                line = lines[i].lower()
 
-                # Look for date patterns
-                date_match = re.match(
-                    r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)?,?\s*(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})(?:,?\s+(\d{4}))?",
-                    line,
-                    re.IGNORECASE
-                )
+                # Look for month abbreviation
+                if line in MONTH_MAP:
+                    month_num = MONTH_MAP[line]
 
-                if date_match:
-                    month = date_match.group(1)
-                    day = date_match.group(2)
-                    year = date_match.group(3) if date_match.group(3) else str(datetime.now().year)
+                    # Next line should be day number
+                    if i + 1 < len(lines) and re.match(r"^\d{1,2}$", lines[i + 1]):
+                        day = int(lines[i + 1])
 
-                    # Look for title in surrounding lines
-                    title = None
-                    start_time = None
+                        # Next line is the event title
+                        title = None
+                        if i + 2 < len(lines):
+                            candidate = lines[i + 2].strip()
+                            if candidate and candidate != "BUY" and len(candidate) > 5:
+                                title = candidate
 
-                    for offset in [-2, -1, 1, 2, 3]:
-                        idx = i + offset
-                        if 0 <= idx < len(lines):
-                            check_line = lines[idx]
-                            if re.match(r"(January|February|March)", check_line, re.IGNORECASE):
-                                continue
-                            if not start_time:
-                                time_result = parse_time(check_line)
-                                if time_result:
-                                    start_time = time_result
-                                    continue
-                            if not title and len(check_line) > 5:
-                                if not re.match(r"\d{1,2}[:/]", check_line):
-                                    if not re.match(r"(free|tickets|register|\$|more info)", check_line.lower()):
-                                        title = check_line
-                                        break
+                        if not title:
+                            i += 1
+                            continue
 
-                    if not title:
-                        i += 1
+                        # Build date
+                        year = current_year
+                        try:
+                            event_date = datetime(year, month_num, day)
+                            # If date is >60 days in the past, assume next year
+                            if (now - event_date).days > 60:
+                                event_date = datetime(year + 1, month_num, day)
+                        except ValueError:
+                            i += 1
+                            continue
+
+                        # Skip past events
+                        if event_date.date() < now.date():
+                            i += 5  # Skip full block
+                            continue
+
+                        start_date = event_date.strftime("%Y-%m-%d")
+                        events_found += 1
+
+                        # Find Eventbrite URL for this event
+                        ticket_url = None
+                        title_lower = title.lower()
+                        for eb_title, eb_url in eventbrite_urls.items():
+                            if title_lower[:30] in eb_title or eb_title[:30] in title_lower:
+                                ticket_url = eb_url
+                                break
+
+                        # Clean up title — remove "Uptown Comedy Corner Presents:" prefix
+                        clean_title = re.sub(
+                            r"^Uptown Comedy (?:Corner )?Presents:\s*",
+                            "",
+                            title,
+                            flags=re.IGNORECASE,
+                        )
+                        if len(clean_title) < 5:
+                            clean_title = title
+
+                        content_hash = generate_content_hash(clean_title, "Uptown Comedy Corner", start_date)
+
+                        # Determine subcategory from title
+                        title_check = title.lower()
+                        is_open_mic = "open mic" in title_check or "tequila tap in" in title_check
+                        tags = ["uptown-comedy", "comedy", "stand-up", "forest-park"]
+                        if is_open_mic:
+                            tags.append("open-mic")
+
+                        event_record = {
+                            "source_id": source_id,
+                            "venue_id": venue_id,
+                            "title": clean_title,
+                            "description": f"{clean_title} at Uptown Comedy Corner",
+                            "start_date": start_date,
+                            "start_time": "21:00",  # Default 9pm for comedy
+                            "end_date": None,
+                            "end_time": None,
+                            "is_all_day": False,
+                            "category": "comedy",
+                            "tags": tags,
+                            "price_min": None,
+                            "price_max": None,
+                            "price_note": None,
+                            "is_free": False,
+                            "source_url": EVENTS_URL,
+                            "ticket_url": ticket_url,
+                            "image_url": None,
+                            "raw_text": f"{title} - {start_date}",
+                            "extraction_confidence": 0.88,
+                            "is_recurring": False,
+                            "recurrence_rule": None,
+                            "content_hash": content_hash,
+                        }
+
+                        existing = find_event_by_hash(content_hash)
+                        if existing:
+                            smart_update_existing_event(existing, event_record)
+                            events_updated += 1
+                            i += 5
+                            continue
+
+                        try:
+                            insert_event(event_record, genres=["comedy", "stand-up"])
+                            events_new += 1
+                            logger.info(f"Added: {clean_title} on {start_date}")
+                        except Exception as e:
+                            logger.error(f"Failed to insert: {clean_title}: {e}")
+
+                        i += 5  # Skip past this block
                         continue
-
-                    # Parse date
-                    try:
-                        month_str = month[:3] if len(month) > 3 else month
-                        dt = datetime.strptime(f"{month_str} {day} {year}", "%b %d %Y")
-                        if dt.date() < datetime.now().date():
-                            dt = datetime.strptime(f"{month_str} {day} {int(year) + 1}", "%b %d %Y")
-                        start_date = dt.strftime("%Y-%m-%d")
-                    except ValueError:
-                        i += 1
-                        continue
-
-                    events_found += 1
-
-                    content_hash = generate_content_hash(title, "Uptown Comedy Corner", start_date)
-
-
-                    # Get specific event URL
-
-
-                    event_url = find_event_url(title, event_links, EVENTS_URL)
-
-
-
-                    event_record = {
-                        "source_id": source_id,
-                        "venue_id": venue_id,
-                        "title": title,
-                        "description": "Event at Uptown Comedy Corner",
-                        "start_date": start_date,
-                        "start_time": start_time,
-                        "end_date": None,
-                        "end_time": None,
-                        "is_all_day": False,
-                        "category": "comedy",
-                        "subcategory": "standup",
-                        "tags": ["uptown-comedy", "comedy", "stand-up"],
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": None,
-                        "is_free": False,
-                        "source_url": event_url,
-                        "ticket_url": event_url,
-                        "image_url": image_map.get(title),
-                        "raw_text": f"{title} - {start_date}",
-                        "extraction_confidence": 0.80,
-                        "is_recurring": False,
-                        "recurrence_rule": None,
-                        "content_hash": content_hash,
-                    }
-
-                    existing = find_event_by_hash(content_hash)
-                    if existing:
-                        smart_update_existing_event(existing, event_record)
-                        events_updated += 1
-                        i += 1
-                        continue
-
-                    try:
-                        insert_event(event_record)
-                        events_new += 1
-                        logger.info(f"Added: {title} on {start_date}")
-                    except Exception as e:
-                        logger.error(f"Failed to insert: {title}: {e}")
 
                 i += 1
 

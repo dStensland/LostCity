@@ -85,6 +85,47 @@ RECURRING_EVENTS = [
 ]
 
 
+def format_time_label(time_24: Optional[str]) -> Optional[str]:
+    if not time_24:
+        return None
+    raw = str(time_24).strip()
+    if not raw:
+        return None
+    for fmt in ("%H:%M", "%H:%M:%S"):
+        try:
+            return datetime.strptime(raw, fmt).strftime("%-I:%M %p")
+        except ValueError:
+            continue
+    return raw
+
+
+def build_running_description(
+    *,
+    title: str,
+    base_description: str,
+    start_date: str,
+    start_time: Optional[str],
+    location_label: str,
+    source_url: str,
+) -> str:
+    time_label = format_time_label(start_time)
+    parts: list[str] = []
+    desc = (base_description or "").strip()
+    if desc:
+        parts.append(desc if desc.endswith(".") else f"{desc}.")
+    else:
+        parts.append(f"{title} at Big Peach Running Co.")
+    parts.append(f"Location: Big Peach Running Co {location_label}, Atlanta metro, GA.")
+    if start_date and time_label:
+        parts.append(f"Scheduled on {start_date} at {time_label}.")
+    elif start_date:
+        parts.append(f"Scheduled on {start_date}.")
+    parts.append("Community run/ride programming designed for broad fitness levels; pace groups vary by session.")
+    if source_url:
+        parts.append(f"Check the official listing for route details, pace expectations, and weather updates ({source_url}).")
+    return " ".join(parts)[:1400]
+
+
 def parse_date_time(text: str) -> Optional[tuple[datetime, str]]:
     """Parse date/time patterns like '2/17/26 6:30 pm' or 'Feb 17, 2026 at 6:30pm'."""
     # Pattern: M/D/YY H:MM am/pm
@@ -182,7 +223,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": description,
+                        "description": build_running_description(
+                            title=title,
+                            base_description=description,
+                            start_date=start_date_str,
+                            start_time=time,
+                            location_label=event_info.get("location", "Midtown"),
+                            source_url=event_url,
+                        ),
                         "start_date": start_date_str,
                         "start_time": time,
                         "end_date": None,
@@ -218,7 +266,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "series_title": title,
                         "frequency": "weekly",
                         "day_of_week": day_names[weekday],
-                        "description": description,
+                        "description": build_running_description(
+                            title=title,
+                            base_description=description,
+                            start_date=start_date_str,
+                            start_time=time,
+                            location_label=event_info.get("location", "Midtown"),
+                            source_url=event_url,
+                        ),
                     }
                     if image_url:
                         series_hint["image_url"] = image_url
@@ -266,7 +321,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                     "source_id": source_id,
                                     "venue_id": venue_id,
                                     "title": title,
-                                    "description": f"{title} at Big Peach Running Co. Free shoe demo/clinic event.",
+                                    "description": build_running_description(
+                                        title=title,
+                                        base_description=f"{title} at Big Peach Running Co. Free shoe demo/clinic event.",
+                                        start_date=start_date_str,
+                                        start_time=time_str,
+                                        location_label="Midtown",
+                                        source_url=event_url,
+                                    ),
                                     "start_date": start_date_str,
                                     "start_time": time_str,
                                     "end_date": None,

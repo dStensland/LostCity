@@ -4,6 +4,7 @@ import { format, startOfDay } from "date-fns";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 import { errorResponse } from "@/lib/api-utils";
 import { logger } from "@/lib/logger";
+import { excludeSensitiveEvents } from "@/lib/portal-scope";
 
 type FollowingEvent = {
   id: number;
@@ -129,6 +130,8 @@ export async function GET(request: Request) {
       .order("start_date", { ascending: true })
       .order("start_time", { ascending: true, nullsFirst: true })
       .range(offset, offset + limit - 1);
+
+    query = excludeSensitiveEvents(query);
 
     // Filter by followed venues OR followed organizations
     if (venueIds.length > 0 && organizationIds.length > 0) {

@@ -1,0 +1,39 @@
+version: 1
+slug: lakewood-amphitheatre
+name: "Lakewood Amphitheatre"
+integration_method: playwright
+defaults:
+  venue_name: "Lakewood Amphitheatre"
+  category: music
+  tags:
+  - atlanta-hardening-gap
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - "https://www.livenation.com/venue/KovZpZAEkeFA/lakewood-amphitheatre-events"
+  event_card: "div[role='group']:has(a[href*='/event/']):has(time):has(h3)"
+  fields:
+    title: "h3"
+    date: "time@datetime"
+    time: "time@datetime"
+    detail_url: "a[href*='/event/']@href"
+    ticket_url: "a[href*='/event/']@href"
+    image_url: "img@src"
+  fetch:
+    render_js: true
+    wait_until: networkidle
+    wait_ms: 3000
+    timeout_ms: 90000
+detail:
+  enabled: false
+  use_llm: false
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 30000
+data_goals:
+  - events
+  - lineup
+  - images
+  - tickets

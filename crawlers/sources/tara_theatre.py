@@ -5,10 +5,13 @@ Classic Atlanta cinema showing independent and art house films.
 
 from __future__ import annotations
 
+import json
 import re
 import logging
+import time
 from datetime import datetime, timedelta
 from typing import Optional
+from zoneinfo import ZoneInfo
 
 from playwright.sync_api import sync_playwright, Page
 
@@ -16,6 +19,8 @@ from db import get_or_create_venue, insert_event, find_event_by_hash, smart_upda
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
+SHOWTIME_LINE_RE = re.compile(r"^\d{1,2}:\d{2}\s*(AM|PM)$", re.IGNORECASE)
+ATLANTA_TZ = ZoneInfo("America/New_York")
 
 
 def extract_movie_images(page: Page) -> dict[str, str]:
@@ -110,6 +115,133 @@ def extract_movies_for_date(
     image_map = image_map or {}
 
     date_str = target_date.strftime("%Y-%m-%d")
+
+    # Primary path: DOM card extraction (more reliable than body-text parsing).
+    containers = page.query_selector_all(".movie-container")
+    if containers:
+        for container in containers:
+            try:
+                title_el = container.query_selector(".text-h5") or container.query_selector("h5")
+                if not title_el:
+                    continue
+                raw_title = (title_el.inner_text() or "").strip()
+                if not raw_title:
+                    continue
+
+                # Some cards include rating on a second line (e.g. "Dreams (2026)\\nNR")
+                title_part = raw_title.split("\n")[0].strip()
+                title_part = re.sub(
+                    r"\s*(NR|Not Rated|G|PG|PG-13|R|NC-17)$",
+                    "",
+                    title_part,
+                    flags=re.IGNORECASE,
+                ).strip()
+                if len(title_part) < 3:
+                    continue
+
+                times_list: list[str] = []
+                for btn in container.query_selector_all("button"):
+                    btn_text = (btn.inner_text() or "").strip()
+                    if not btn_text:
+                        continue
+                    first_line = btn_text.split("\n")[0].strip()
+                    parsed = parse_time(first_line)
+                    if parsed and parsed not in times_list:
+                        times_list.append(parsed)
+                if not times_list:
+                    continue
+
+                # Best-effort description from card body text.
+                movie_desc = None
+                try:
+                    card_lines = [line.strip() for line in (container.inner_text() or "").split("\n") if line.strip()]
+                    for line in card_lines:
+                        if line == raw_title or line == title_part:
+                            continue
+                        if SHOWTIME_LINE_RE.match(line):
+                            continue
+                        if "THEATRE" in line.upper():
+                            continue
+                        if re.match(r'^\d+\s*hr(?:\s*\d+\s*min)?', line, re.IGNORECASE):
+                            continue
+                        if len(line) > 40:
+                            movie_desc = line
+                            break
+                except Exception:
+                    pass
+
+                container_image = None
+                try:
+                    img_el = container.query_selector("img.q-img__image") or container.query_selector("img")
+                    if img_el:
+                        container_image = img_el.get_attribute("src")
+                except Exception:
+                    pass
+
+                for showtime in times_list:
+                    events_found += 1
+
+                    content_hash = generate_content_hash(
+                        title_part, "Tara Theatre", f"{date_str}|{showtime}"
+                    )
+                    if seen_hashes is not None:
+                        seen_hashes.add(content_hash)
+
+                    clean_title = re.sub(r'\s*\(\d{4}\)\s*$', '', title_part)
+                    movie_image = (
+                        container_image
+                        or find_image_for_movie(title_part, image_map)
+                        or find_image_for_movie(clean_title, image_map)
+                    )
+
+                    event_record = {
+                        "source_id": source_id,
+                        "venue_id": venue_id,
+                        "title": title_part,
+                        "description": movie_desc,
+                        "start_date": date_str,
+                        "start_time": showtime,
+                        "end_date": None,
+                        "end_time": None,
+                        "is_all_day": False,
+                        "category": "film",
+                        "subcategory": "cinema",
+                        "tags": ["film", "cinema", "arthouse", "showtime", "tara-theatre"],
+                        "price_min": None,
+                        "price_max": None,
+                        "price_note": None,
+                        "is_free": False,
+                        "source_url": HOME_URL,
+                        "ticket_url": None,
+                        "image_url": movie_image,
+                        "raw_text": None,
+                        "extraction_confidence": 0.92,
+                        "is_recurring": False,
+                        "recurrence_rule": None,
+                        "content_hash": content_hash,
+                    }
+
+                    existing = find_event_by_hash(content_hash)
+                    if existing:
+                        smart_update_existing_event(existing, event_record)
+                        events_updated += 1
+                        continue
+
+                    try:
+                        insert_event(event_record)
+                        events_new += 1
+                        logger.info(
+                            f"Added: {title_part} on {date_str} at {showtime}"
+                        )
+                    except Exception as e:
+                        logger.error(f"Failed to insert: {title_part}: {e}")
+            except Exception as e:
+                logger.debug(f"Skipping invalid movie card: {e}")
+                continue
+
+        if events_found > 0:
+            logger.info(f"Found {len(containers)} movies with showtimes for {date_str}")
+            return events_found, events_new, events_updated
 
     body_text = page.inner_text("body")
     lines = [l.strip() for l in body_text.split("\n") if l.strip()]
@@ -503,6 +635,317 @@ def _click_tara_tab(page: Page) -> None:
         pass
 
 
+def _dismiss_cookie_banner(page: Page) -> None:
+    """Dismiss cookie/accessibility notification overlays when present."""
+    for selector in (
+        "text=ACCEPT & DISMISS",
+        "button:has-text('ACCEPT & DISMISS')",
+        ".q-notification button:has-text('ACCEPT & DISMISS')",
+    ):
+        try:
+            btn = page.locator(selector).first
+            if btn.is_visible(timeout=800):
+                btn.click(timeout=2000)
+                page.wait_for_timeout(500)
+                return
+        except Exception:
+            continue
+
+
+def _open_calendar_picker(page: Page) -> bool:
+    """
+    Open Tara's Q-Date calendar picker reliably.
+
+    On some renders, the date controls are hidden behind an intermediate
+    "VIEW NEXT SHOWINGS" action or blocked by cookie overlays.
+    """
+    _dismiss_cookie_banner(page)
+    _click_tara_tab(page)
+
+    # If the picker is already open, we're done.
+    try:
+        picker = page.locator(".q-date").first
+        if picker.is_visible(timeout=500):
+            return True
+    except Exception:
+        pass
+
+    for attempt in range(2):
+        for selector in (
+            "button:has-text('Other')",
+            "li:has-text('Other')",
+            "text=Other",
+        ):
+            try:
+                control = page.locator(selector).first
+                if not control.is_visible(timeout=800):
+                    continue
+                control.click(timeout=2000)
+                page.wait_for_timeout(900)
+                picker = page.locator(".q-date").first
+                if picker.is_visible(timeout=1200):
+                    return True
+            except Exception:
+                continue
+
+        # Some sessions require expanding from a collapsed showtimes state.
+        try:
+            next_showings = page.locator("text=VIEW NEXT SHOWINGS").first
+            if next_showings.is_visible(timeout=1000):
+                next_showings.click(timeout=2000)
+                page.wait_for_timeout(1200)
+        except Exception:
+            pass
+
+        _dismiss_cookie_banner(page)
+        _click_tara_tab(page)
+
+    return False
+
+
+def _count_showtime_lines(page: Page) -> int:
+    """
+    Count detectable showtime signals on the page.
+
+    We keep the legacy text-line signal, but also count showtime buttons within
+    `.movie-container` cards because the current Tara UI often renders times in
+    buttons without exposing clean standalone body text lines.
+    """
+    signals = 0
+
+    try:
+        body_text = page.inner_text("body")
+        signals += sum(
+            1 for line in body_text.split("\n") if SHOWTIME_LINE_RE.match(line.strip())
+        )
+    except Exception:
+        pass
+
+    try:
+        for container in page.query_selector_all(".movie-container"):
+            for btn in container.query_selector_all("button"):
+                btn_text = (btn.inner_text() or "").strip()
+                if not btn_text:
+                    continue
+                first_line = btn_text.split("\n")[0].strip()
+                if parse_time(first_line):
+                    signals += 1
+    except Exception:
+        pass
+
+    return signals
+
+
+def _ensure_showtime_ready(
+    page: Page,
+    label: str,
+    *,
+    max_attempts: int = 3,
+    allow_reload: bool = True,
+    showings_cache: Optional[dict[str, list[dict]]] = None,
+    cache_date: Optional[str] = None,
+) -> bool:
+    """
+    Ensure the page has showtime text before parsing.
+
+    Tara occasionally renders a partial page snapshot with no showtimes yet.
+    This helper adds a bounded wait/retry so we don't record false zero-result
+    "success" runs from transient render timing.
+    """
+    for attempt in range(1, max_attempts + 1):
+        _click_tara_tab(page)
+
+        # Prefer authoritative GraphQL readiness when available for this date.
+        if showings_cache is not None and cache_date:
+            if cache_date in showings_cache:
+                cached = showings_cache.get(cache_date) or []
+                logger.info(
+                    "GraphQL readiness signal for %s on attempt %s (%s rows)",
+                    label,
+                    attempt,
+                    len(cached),
+                )
+                return True
+
+        line_count = _count_showtime_lines(page)
+        if line_count > 0:
+            if attempt > 1:
+                logger.info(
+                    "Showtime signal recovered for %s on attempt %s (%s lines)",
+                    label,
+                    attempt,
+                    line_count,
+                )
+            return True
+
+        if attempt == max_attempts:
+            break
+
+        wait_ms = 1200 * attempt
+        logger.warning(
+            "No showtime signals detected for %s (attempt %s/%s); waiting %sms",
+            label,
+            attempt,
+            max_attempts,
+            wait_ms,
+        )
+        page.wait_for_timeout(wait_ms)
+
+        # Re-check after a wait before doing an expensive reload.
+        if showings_cache is not None and cache_date and cache_date in showings_cache:
+            cached = showings_cache.get(cache_date) or []
+            logger.info(
+                "GraphQL signal appeared for %s after wait (%s rows)",
+                label,
+                len(cached),
+            )
+            return True
+
+        line_count = _count_showtime_lines(page)
+        if line_count > 0:
+            logger.info("Showtime signal appeared for %s after wait (%s lines)", label, line_count)
+            return True
+
+        if allow_reload:
+            logger.info("Reloading Tara page to recover partial render (%s)", label)
+            page.reload(wait_until="domcontentloaded", timeout=30000)
+            page.wait_for_timeout(3000)
+
+    logger.warning("Proceeding without showtime readiness signal for %s", label)
+    return False
+
+
+def _capture_showings_graphql_response(response, showings_cache: dict[str, list[dict]]) -> None:
+    """Capture Tara GraphQL showingsForDate responses keyed by requested date."""
+    try:
+        if "/graphql" not in response.url:
+            return
+        request = response.request
+        if request.method != "POST":
+            return
+        payload_raw = request.post_data or ""
+        if "showingsForDate" not in payload_raw:
+            return
+        payload = json.loads(payload_raw)
+        date_str = ((payload.get("variables") or {}).get("date") or "").strip()
+        if not date_str:
+            return
+        body = response.json()
+        showings = (((body.get("data") or {}).get("showingsForDate") or {}).get("data") or [])
+        if isinstance(showings, list):
+            showings_cache[date_str] = showings
+    except Exception:
+        # Non-fatal: we still have text parsing fallback.
+        return
+
+
+def _wait_for_showings_cache(
+    showings_cache: dict[str, list[dict]], date_str: str, timeout_seconds: float = 6.0
+) -> list[dict] | None:
+    """Wait briefly for a showingsForDate GraphQL response to land in cache."""
+    deadline = time.time() + timeout_seconds
+    while time.time() < deadline:
+        showings = showings_cache.get(date_str)
+        if showings is not None:
+            return showings
+        time.sleep(0.2)
+    return showings_cache.get(date_str)
+
+
+def _extract_movies_from_graphql_showings(
+    showings: list[dict],
+    source_id: int,
+    venue_id: int,
+    image_map: dict[str, str],
+    seen_hashes: set | None = None,
+) -> tuple[int, int, int]:
+    """
+    Extract events from Tara's authoritative showingsForDate GraphQL payload.
+
+    This captures all per-day showtimes, including cases where body-text parsing
+    misses movies/times due partial or collapsed UI render states.
+    """
+    events_found = 0
+    events_new = 0
+    events_updated = 0
+    seen_slots: set[tuple[str, str, str]] = set()
+
+    for showing in showings:
+        movie = showing.get("movie") or {}
+        title = str(movie.get("name") or "").strip()
+        if not title or len(title) < 3:
+            continue
+        if not showing.get("published", True):
+            continue
+        if showing.get("private"):
+            continue
+
+        time_raw = str(showing.get("time") or "").strip()
+        if not time_raw:
+            continue
+        try:
+            start_dt = datetime.fromisoformat(time_raw.replace("Z", "+00:00")).astimezone(ATLANTA_TZ)
+        except Exception:
+            continue
+
+        start_date = start_dt.strftime("%Y-%m-%d")
+        start_time = start_dt.strftime("%H:%M")
+        slot_key = (title, start_date, start_time)
+        if slot_key in seen_slots:
+            continue
+        seen_slots.add(slot_key)
+
+        events_found += 1
+        content_hash = generate_content_hash(title, "Tara Theatre", f"{start_date}|{start_time}")
+        if seen_hashes is not None:
+            seen_hashes.add(content_hash)
+
+        synopsis = str(movie.get("synopsis") or "").strip() or None
+        movie_image = find_image_for_movie(title, image_map)
+
+        event_record = {
+            "source_id": source_id,
+            "venue_id": venue_id,
+            "title": title,
+            "description": synopsis,
+            "start_date": start_date,
+            "start_time": start_time,
+            "end_date": None,
+            "end_time": None,
+            "is_all_day": False,
+            "category": "film",
+            "subcategory": "cinema",
+            "tags": ["film", "cinema", "arthouse", "showtime", "tara-theatre"],
+            "price_min": None,
+            "price_max": None,
+            "price_note": None,
+            "is_free": False,
+            "source_url": HOME_URL,
+            "ticket_url": None,
+            "image_url": movie_image,
+            "raw_text": None,
+            "extraction_confidence": 0.95,
+            "is_recurring": False,
+            "recurrence_rule": None,
+            "content_hash": content_hash,
+        }
+
+        existing = find_event_by_hash(content_hash)
+        if existing:
+            smart_update_existing_event(existing, event_record)
+            events_updated += 1
+            continue
+
+        try:
+            insert_event(event_record)
+            events_new += 1
+            logger.info(f"Added: {title} on {start_date} at {start_time}")
+        except Exception as e:
+            logger.error(f"Failed to insert: {title}: {e}")
+
+    return events_found, events_new, events_updated
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
     """Crawl Tara Theatre showtimes for today and upcoming days."""
     source_id = source["id"]
@@ -519,6 +962,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 viewport={"width": 1920, "height": 1080},
             )
             page = context.new_page()
+            showings_cache: dict[str, list[dict]] = {}
+            page.on("response", lambda response: _capture_showings_graphql_response(response, showings_cache))
 
             venue_id = get_or_create_venue(VENUE_DATA)
             today = datetime.now().date()
@@ -530,15 +975,56 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             # Click "THE TARA" tab (site shows both Tara and Plaza)
             _click_tara_tab(page)
+            _dismiss_cookie_banner(page)
+            _ensure_showtime_ready(
+                page,
+                today.strftime("%Y-%m-%d"),
+                max_attempts=3,
+                allow_reload=True,
+                showings_cache=showings_cache,
+                cache_date=today.strftime("%Y-%m-%d"),
+            )
 
             # Extract movie images from the page
             image_map = extract_movie_images(page)
 
             # First, get today's showtimes (default view)
             logger.info(f"Scraping Today ({today.strftime('%Y-%m-%d')})")
-            found, new, updated = extract_movies_for_date(
-                page, datetime.combine(today, datetime.min.time()), source_id, venue_id, image_map, seen_hashes
-            )
+            today_date_str = today.strftime("%Y-%m-%d")
+            today_showings = _wait_for_showings_cache(showings_cache, today_date_str, timeout_seconds=4.0)
+            if today_showings:
+                found, new, updated = _extract_movies_from_graphql_showings(
+                    today_showings, source_id, venue_id, image_map, seen_hashes
+                )
+                logger.info(
+                    "Using GraphQL showings for %s (%s rows)",
+                    today_date_str,
+                    len(today_showings),
+                )
+            else:
+                found, new, updated = extract_movies_for_date(
+                    page, datetime.combine(today, datetime.min.time()), source_id, venue_id, image_map, seen_hashes
+                )
+            if found == 0:
+                logger.warning(
+                    "No showtimes parsed for today on first pass; retrying once with readiness wait"
+                )
+                _ensure_showtime_ready(
+                    page,
+                    today.strftime("%Y-%m-%d"),
+                    max_attempts=2,
+                    allow_reload=True,
+                    showings_cache=showings_cache,
+                    cache_date=today.strftime("%Y-%m-%d"),
+                )
+                found, new, updated = extract_movies_for_date(
+                    page,
+                    datetime.combine(today, datetime.min.time()),
+                    source_id,
+                    venue_id,
+                    image_map,
+                    seen_hashes,
+                )
             total_found += found
             total_new += new
             total_updated += updated
@@ -561,16 +1047,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 date_str = target_date.strftime("%Y-%m-%d")
 
                 # Open the calendar picker
-                try:
-                    other_btn = page.locator("text=Other").first
-                    if not other_btn.is_visible(timeout=2000):
-                        logger.debug(f"Other button not visible for {date_str}")
-                        continue
-                    other_btn.click()
-                    page.wait_for_timeout(1500)
-                except Exception:
-                    logger.debug(f"Could not open calendar for {date_str}")
-                    continue
+                if not _open_calendar_picker(page):
+                    logger.warning(f"Could not open calendar picker for {date_str}; stopping date crawl")
+                    break
 
                 # Navigate to the correct month if needed
                 if target_month != current_calendar_month:
@@ -616,14 +1095,45 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 _click_tara_tab(page)
 
                 logger.info(f"Scraping {date_str}")
-                found, new, updated = extract_movies_for_date(
-                    page,
-                    datetime.combine(target_date, datetime.min.time()),
-                    source_id,
-                    venue_id,
-                    image_map,
-                    seen_hashes,
-                )
+                showings = _wait_for_showings_cache(showings_cache, date_str, timeout_seconds=4.0)
+                if showings:
+                    found, new, updated = _extract_movies_from_graphql_showings(
+                        showings, source_id, venue_id, image_map, seen_hashes
+                    )
+                    logger.info("  %s: Using GraphQL showings (%s rows)", date_str, len(showings))
+                else:
+                    found, new, updated = extract_movies_for_date(
+                        page,
+                        datetime.combine(target_date, datetime.min.time()),
+                        source_id,
+                        venue_id,
+                        image_map,
+                        seen_hashes,
+                    )
+                if found == 0:
+                    logger.info(f"  {date_str}: No showtimes found on first pass; retrying once")
+                    _ensure_showtime_ready(
+                        page,
+                        date_str,
+                        max_attempts=2,
+                        allow_reload=False,
+                        showings_cache=showings_cache,
+                        cache_date=date_str,
+                    )
+                    retry_found, retry_new, retry_updated = extract_movies_for_date(
+                        page,
+                        datetime.combine(target_date, datetime.min.time()),
+                        source_id,
+                        venue_id,
+                        image_map,
+                        seen_hashes,
+                    )
+                    found += retry_found
+                    new += retry_new
+                    updated += retry_updated
+                    if retry_found > 0:
+                        logger.info(f"  {date_str}: Recovered {retry_found} movies on retry")
+
                 total_found += found
                 total_new += new
                 total_updated += updated

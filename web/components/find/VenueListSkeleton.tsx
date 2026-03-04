@@ -27,18 +27,16 @@ function VenueCardSkeleton({ index }: { index: number }) {
 
   return (
     <div
-      className="rounded-2xl border border-[var(--twilight)]/75 border-l-[2px] overflow-hidden"
+      className="find-row-card-bg rounded-xl border border-[var(--twilight)]/75 border-l-[2px] overflow-hidden"
       style={{
         borderLeftColor: accent,
-        background:
-          "linear-gradient(180deg, color-mix(in srgb, var(--night) 84%, transparent), color-mix(in srgb, var(--dusk) 72%, transparent))",
       }}
     >
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2 sm:gap-3">
-        <div className="min-w-0 p-3.5 sm:p-4">
-          <div className="flex gap-3 sm:gap-4">
+        <div className="min-w-0 p-3 sm:p-3.5">
+          <div className="flex gap-2.5 sm:gap-3">
             {/* Image rail — desktop only */}
-            <div className="hidden sm:flex flex-shrink-0 self-stretch relative w-[124px] -ml-3.5 sm:-ml-4 -my-3.5 sm:-my-4 overflow-hidden border-r border-[var(--twilight)]/60">
+            <div className="hidden sm:flex flex-shrink-0 self-stretch relative w-[100px] -ml-3 sm:-ml-3.5 -my-3 sm:-my-3.5 overflow-hidden border-r border-[var(--twilight)]/60">
               <Skeleton className="absolute inset-0" delay={base} />
             </div>
 
@@ -50,7 +48,7 @@ function VenueCardSkeleton({ index }: { index: number }) {
 
               {/* Title row: icon + name + badge */}
               <div className="flex items-center gap-2.5 mb-1">
-                <Skeleton className="hidden sm:block w-9 h-9 rounded-lg flex-shrink-0" delay={base} />
+                <Skeleton className="hidden sm:block w-8 h-8 rounded-lg flex-shrink-0" delay={base} />
                 <Skeleton className="h-5 w-[55%] rounded" delay={d1} />
                 <Skeleton className="h-4 w-10 rounded flex-shrink-0" delay={d2} />
               </div>
@@ -69,7 +67,7 @@ function VenueCardSkeleton({ index }: { index: number }) {
         </div>
 
         {/* Right arrow area */}
-        <div className="flex flex-col items-end gap-2 pt-3 pr-3 pb-3 sm:pt-4 sm:pr-4 sm:pb-4 flex-shrink-0">
+        <div className="flex flex-col items-end gap-2 pt-2.5 pr-2.5 pb-2.5 sm:pt-3 sm:pr-3.5 sm:pb-3 flex-shrink-0">
           <Skeleton className="w-9 h-9 rounded-lg" delay={d1} />
         </div>
       </div>

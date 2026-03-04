@@ -48,10 +48,8 @@ const MakeANightSheet = dynamic(
 import { DescriptionTeaser } from "@/components/detail/DescriptionTeaser";
 import { InfoCard } from "@/components/detail/InfoCard";
 import { SectionHeader } from "@/components/detail/SectionHeader";
-import { DetailStickyBar } from "@/components/detail/DetailStickyBar";
 import { GenreChip } from "@/components/ActivityChip";
 import { parseRecurrenceRule, parseRecurrenceDays } from "@/lib/recurrence";
-import { isTicketingUrl } from "@/lib/card-utils";
 import NeonBackButton from "@/components/detail/NeonBackButton";
 import Badge from "@/components/ui/Badge";
 
@@ -93,6 +91,7 @@ type EventData = {
     city: string;
     state: string;
     vibes: string[] | null;
+    venue_type?: string | null;
     nearest_marta_station?: string | null;
     marta_walk_minutes?: number | null;
     marta_lines?: string[] | null;
@@ -179,7 +178,7 @@ function CommunityTagsSection({
         className="flex items-center gap-2 w-full text-left group min-h-[44px] focus-ring"
         aria-expanded={expanded}
       >
-        <h2 className="font-mono text-xs text-[var(--muted)] uppercase tracking-widest">
+        <h2 className="font-mono text-xs font-bold text-[var(--muted)] uppercase tracking-[0.14em]">
           Community Tags
         </h2>
         <CaretDown
@@ -194,14 +193,14 @@ function CommunityTagsSection({
       {expanded && (
         <div className="mt-3 space-y-4">
           <div>
-            <p className="text-xs text-[var(--muted)] font-mono uppercase tracking-widest mb-2">
+            <p className="text-xs text-[var(--muted)] font-mono uppercase tracking-[0.14em] mb-2">
               This Event
             </p>
             <EntityTagList entityType="event" entityId={eventId} />
           </div>
           {venue && (
             <div>
-              <p className="text-xs text-[var(--muted)] font-mono uppercase tracking-widest mb-2">
+              <p className="text-xs text-[var(--muted)] font-mono uppercase tracking-[0.14em] mb-2">
                 {venue.name}
               </p>
               <EntityTagList entityType="venue" entityId={venue.id} />
@@ -209,7 +208,7 @@ function CommunityTagsSection({
           )}
           {producer && (
             <div>
-              <p className="text-xs text-[var(--muted)] font-mono uppercase tracking-widest mb-2">
+              <p className="text-xs text-[var(--muted)] font-mono uppercase tracking-[0.14em] mb-2">
                 {producer.name}
               </p>
               <EntityTagList entityType="org" entityId={Number(producer.id)} />
@@ -237,7 +236,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
     nightlife: [],
     fun: [],
   });
-  const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [error, setError] = useState<string | null>(null);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
@@ -248,7 +247,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
     const controller = new AbortController();
 
     async function fetchEvent() {
-      setLoading(true);
+      setStatus("loading");
       setError(null);
       setImageLoaded(false);
       setImageError(false);
@@ -275,12 +274,12 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
           nightlife: [],
           fun: [],
         });
+        setStatus("ready");
       } catch (err) {
         if (controller.signal.aborted) return;
         if (cancelled) return;
         setError(err instanceof Error ? err.message : "Failed to load event");
-      } finally {
-        if (!cancelled) setLoading(false);
+        setStatus("error");
       }
     }
 
@@ -319,7 +318,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
     });
   }, [nearbyDestinations]);
 
-  if (loading) {
+  if (status === "loading") {
     return (
       <div className="pt-6 pb-8" role="status" aria-label="Loading event details">
         {/* Hero skeleton with back button */}
@@ -548,7 +547,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
 
         {/* Title overlay */}
         <div className="absolute bottom-0 left-0 right-0 p-4">
-          <h1 className="text-xl sm:text-2xl font-bold text-white drop-shadow-lg">
+          <h1 className="text-xl sm:text-3xl font-bold text-white drop-shadow-lg">
             {event.title}
           </h1>
           {event.venue && (
@@ -578,13 +577,28 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
       </div>
 
       {/* Quick Actions */}
-      <EventQuickActions event={event} isLive={isLive} className="mb-5" />
+      <EventQuickActions
+        event={event}
+        isLive={isLive}
+        className="mb-5"
+        extraActions={
+          event.venue && event.venue.lat != null && event.venue.lng != null ? (
+            <button
+              onClick={() => setShowNightSheet(true)}
+              className="inline-flex items-center gap-2 px-4 min-h-[44px] rounded-lg text-sm font-mono font-medium text-[var(--gold)] bg-[var(--gold)]/8 border border-[var(--gold)]/25 hover:bg-[var(--gold)]/14 hover:border-[var(--gold)]/40 transition-all focus-ring"
+            >
+              <ForkKnife size={16} weight="duotone" />
+              Make a Night of It
+            </button>
+          ) : undefined
+        }
+      />
 
       {/* Above-the-fold: Description teaser */}
-      {event.description && event.description.length >= 50 && (
+      {descriptionText && descriptionText.length >= 50 && (
         <div className="mb-5">
           <DescriptionTeaser
-            description={event.description}
+            description={descriptionText}
             accentColor={getCategoryColor(event.category || "other")}
           />
         </div>
@@ -599,19 +613,6 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
           {event.genres.slice(0, 5).map((genre) => (
             <GenreChip key={genre} genre={genre} category={event.category} portalSlug={portalSlug} />
           ))}
-        </div>
-      )}
-
-      {/* Make a Night of It — inline bottom sheet, no page navigation */}
-      {event.venue && event.venue.lat != null && event.venue.lng != null && (
-        <div className="flex justify-center mb-6">
-          <button
-            onClick={() => setShowNightSheet(true)}
-            className="inline-flex items-center gap-2 px-4 min-h-[44px] rounded-lg text-sm font-mono font-medium text-[var(--gold)] bg-[var(--gold)]/8 border border-[var(--gold)]/25 hover:bg-[var(--gold)]/14 hover:border-[var(--gold)]/40 transition-all focus-ring"
-          >
-            <ForkKnife size={16} weight="duotone" />
-            Make a Night of It
-          </button>
         </div>
       )}
 
@@ -687,7 +688,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
         {/* Description */}
         {descriptionText && (
           <div className="mb-5">
-            <h2 className="font-mono text-xs uppercase tracking-widest text-[var(--muted)] pb-3">
+            <h2 className="font-mono text-xs font-bold uppercase tracking-[0.14em] text-[var(--muted)] pb-3">
               About
             </h2>
             <p className="text-[var(--soft)] whitespace-pre-wrap leading-relaxed">
@@ -724,7 +725,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
         {event.venue && event.venue.address && (
           <div className="mb-5">
             <div className={`flex items-center justify-between py-4 ${hasIntroContent ? "border-t border-[var(--twilight)]" : ""}`}>
-              <h2 className="font-mono text-xs uppercase tracking-widest text-[var(--muted)]">
+              <h2 className="font-mono text-xs font-bold uppercase tracking-[0.14em] text-[var(--muted)]">
                 Location
               </h2>
               <DirectionsDropdown
@@ -828,7 +829,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
                   <h3 className="text-[var(--cream)] font-medium truncate text-sm">
                     {event.producer.name}
                   </h3>
-                  <p className="text-xs text-[var(--muted)] font-mono uppercase tracking-widest">
+                  <p className="text-xs text-[var(--muted)] font-mono uppercase tracking-[0.14em]">
                     {event.producer.org_type.replace(/_/g, " ")}
                   </p>
                 </div>
@@ -872,26 +873,6 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
         </div>
       </InfoCard>
 
-      {/* Sticky bottom CTA — appears on scroll */}
-      <DetailStickyBar
-        showShareButton
-        shareTracking={{ portalSlug, eventId: event.id }}
-        primaryAction={
-          event.ticket_url
-            ? {
-                label: isLive ? "Join Now" : isTicketingUrl(event.ticket_url) ? "Get Tickets" : event.is_free ? "RSVP Free" : "Learn More",
-                href: event.ticket_url,
-              }
-            : event.source_url
-              ? {
-                  label: event.is_free ? "RSVP Free" : "Get Tickets",
-                  href: event.source_url,
-                }
-              : undefined
-        }
-        scrollThreshold={400}
-      />
-
       {/* Around Here */}
       <AroundHereSection
         venueEvents={venueEvents}
@@ -900,6 +881,7 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
         venueName={event.venue?.name}
         neighborhood={event.venue?.neighborhood}
         portalSlug={portalSlug}
+        venueType={event.venue?.venue_type}
         onSpotClick={handleSpotClick}
         onEventClick={handleEventClick}
       />

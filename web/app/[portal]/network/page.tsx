@@ -23,7 +23,6 @@ export default async function NetworkPage({ params }: Props) {
     <div className="min-h-screen">
       <PortalHeader
         portalSlug={portalSlug}
-        backLink={{ label: "Back", fallbackHref: `/${portalSlug}` }}
       />
 
       <div className="max-w-2xl mx-auto px-4 py-6 pb-28">

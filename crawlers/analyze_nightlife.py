@@ -24,7 +24,7 @@ def analyze_nightlife():
     
     nightlife_events = client.table("events").select(
         "id,title,start_date,tags,genres,venue_id"
-    ).eq("category", "nightlife").gte("start_date", today).execute()
+    ).eq("category_id", "nightlife").gte("start_date", today).execute()
     
     print(f"Total nightlife events (future): {len(nightlife_events.data)}")
     
@@ -64,14 +64,14 @@ def analyze_nightlife():
     
     # Events at nightlife venues OR starting after 7pm
     compound_events = client.table("events").select(
-        "id,title,category,start_time,venue_id,genres"
+        "id,title,category_id,start_time,venue_id,genres"
     ).gte("start_date", today).or_(
         f"venue_id.in.({','.join(map(str, nightlife_venue_ids))}),start_time.gte.19:00:00"
-    ).in_("category", ["music", "comedy", "dance", "gaming", "nightlife"]).execute()
+    ).in_("category_id", ["music", "comedy", "dance", "gaming", "nightlife"]).execute()
     
     print(f"Events captured by nightlife_mode filter: {len(compound_events.data)}")
     
-    category_counts = Counter(e.get("category") for e in compound_events.data)
+    category_counts = Counter(e.get("category_id") for e in compound_events.data)
     print("\nCategory breakdown:")
     for cat, count in sorted(category_counts.items(), key=lambda x: -x[1]):
         print(f"  {cat}: {count}")

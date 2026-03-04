@@ -10,7 +10,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Star, ArrowRight } from "@phosphor-icons/react";
+import { Crown } from "@phosphor-icons/react";
+import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
+import HorseSpinner from "@/components/ui/HorseSpinner";
 import type { Festival } from "@/lib/festivals";
 import {
   computeCountdown,
@@ -49,31 +51,11 @@ type BigStuffItem = {
   start: string | null;
   end: string | null;
   location: string | null;
+  imageUrl: string | null;
   href: string;
   countdownText: string;
   urgencyColor: string;
 };
-
-// ── Skeleton ─────────────────────────────────────────────────────────
-
-function FestivalsSkeleton() {
-  return (
-    <div className="space-y-2.5 animate-pulse">
-      {[1, 2].map((i) => (
-        <div
-          key={i}
-          className="rounded-xl border border-[var(--twilight)]/40 bg-[var(--night)] p-3 flex items-center gap-3"
-        >
-          <div className="flex-1 space-y-2">
-            <div className="h-4 w-40 rounded bg-white/[0.08]" />
-            <div className="h-3 w-24 rounded bg-white/[0.05]" />
-          </div>
-          <div className="h-6 w-20 rounded-full bg-white/[0.06] shrink-0" />
-        </div>
-      ))}
-    </div>
-  );
-}
 
 // ── Component ────────────────────────────────────────────────────────
 
@@ -119,6 +101,7 @@ export default function FestivalsSection({ portalSlug, portalId }: FestivalsSect
         start: festival.announced_start,
         end: festival.announced_end,
         location: festival.neighborhood || festival.location,
+        imageUrl: festival.image_url,
         href: festival.slug
           ? `/${portalSlug}/festivals/${festival.slug}`
           : `/${portalSlug}/festivals`,
@@ -127,7 +110,17 @@ export default function FestivalsSection({ portalSlug, portalId }: FestivalsSect
       }];
     });
 
+    // Build normalized festival name set for dedup against tentpoles
+    const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const festivalNorms = festivalItems.map((f) => normalize(f.title));
+
     const tentpoleItems: BigStuffItem[] = standaloneTentpoles.flatMap((event) => {
+      // Skip tentpoles that duplicate a festival already in the list
+      const normTitle = normalize(event.title);
+      if (festivalNorms.some((fn) => fn.includes(normTitle) || normTitle.includes(fn))) {
+        return [];
+      }
+
       const pseudoFestival = {
         announced_start: event.start_date,
         announced_end: event.end_date,
@@ -141,6 +134,7 @@ export default function FestivalsSection({ portalSlug, portalId }: FestivalsSect
         start: event.start_date,
         end: event.end_date,
         location: event.venue?.name || event.venue?.neighborhood || null,
+        imageUrl: event.image_url,
         href: `/${portalSlug}?event=${event.id}`,
         countdownText: countdown.text,
         urgencyColor: getUrgencyColor(countdown.urgency),
@@ -161,7 +155,7 @@ export default function FestivalsSection({ portalSlug, portalId }: FestivalsSect
     return (
       <section>
         <SectionHeader portalSlug={portalSlug} />
-        <FestivalsSkeleton />
+        <div className="flex justify-center py-10"><HorseSpinner color="var(--gold)" /></div>
       </section>
     );
   }
@@ -172,7 +166,7 @@ export default function FestivalsSection({ portalSlug, portalId }: FestivalsSect
     <section>
       <SectionHeader portalSlug={portalSlug} />
 
-      <div className="space-y-2.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
         {displayItems.map((item) => {
           const dateStr = formatFestivalDates(item.start, item.end);
 
@@ -180,42 +174,67 @@ export default function FestivalsSection({ portalSlug, portalId }: FestivalsSect
             <Link
               key={item.id}
               href={item.href}
-              className="group flex items-center gap-3 rounded-xl border border-[var(--twilight)]/40 bg-[var(--night)] p-3 transition-all hover:border-[var(--twilight)]/60 hover:bg-white/[0.02]"
+              className="group rounded-xl overflow-hidden border border-[var(--twilight)]/40 bg-[var(--night)] transition-all hover:border-[var(--twilight)]/60 hover:shadow-card-sm"
             >
-              {/* Content */}
-              <div className="flex-1 min-w-0">
+              {/* Image — 16:9, blurred fill + sharp contain so nothing gets cropped */}
+              <div className="relative aspect-video overflow-hidden bg-[var(--dusk)]">
+                {item.imageUrl ? (
+                  <>
+                    {/* Blurred background fill — covers letterbox areas */}
+                    <img
+                      src={item.imageUrl}
+                      alt=""
+                      className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-40"
+                      loading="lazy"
+                      aria-hidden="true"
+                    />
+                    {/* Sharp contained image — full image visible, no crop */}
+                    <img
+                      src={item.imageUrl}
+                      alt=""
+                      className="absolute inset-0 w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
+                      loading="lazy"
+                    />
+                  </>
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[var(--gold)]/10 to-[var(--void)]">
+                    <Crown weight="duotone" className="w-10 h-10 text-[var(--gold)]/30" />
+                  </div>
+                )}
+                {/* Bottom gradient for badge readability */}
+                <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/60 to-transparent" />
+                {/* Countdown badge — bottom left over image */}
+                <span
+                  className="absolute bottom-2 left-2.5 inline-flex px-2 py-0.5 rounded-full text-2xs font-mono font-medium tracking-wide whitespace-nowrap backdrop-blur-sm"
+                  style={{
+                    backgroundColor: `color-mix(in srgb, ${item.urgencyColor} 25%, transparent)`,
+                    color: item.urgencyColor,
+                    border: `1px solid color-mix(in srgb, ${item.urgencyColor} 35%, transparent)`,
+                  }}
+                >
+                  {item.countdownText}
+                </span>
+              </div>
+
+              {/* Content below image */}
+              <div className="p-3">
                 <h3 className="text-sm font-semibold text-[var(--cream)] line-clamp-1 group-hover:text-white transition-colors">
                   {item.title}
                 </h3>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  {dateStr && (
-                    <span className="text-2xs text-[var(--muted)]">
-                      {dateStr}
-                    </span>
-                  )}
-                  {dateStr && item.location && (
-                    <span className="text-[var(--muted)] text-2xs">
-                      &middot;
-                    </span>
-                  )}
-                  {item.location && (
-                    <span className="text-2xs text-[var(--muted)] truncate">
-                      {item.location}
-                    </span>
-                  )}
-                </div>
+                {(dateStr || item.location) && (
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    {dateStr && (
+                      <span className="text-xs text-[var(--muted)]">{dateStr}</span>
+                    )}
+                    {dateStr && item.location && (
+                      <span className="text-[var(--muted)] text-xs">&middot;</span>
+                    )}
+                    {item.location && (
+                      <span className="text-xs text-[var(--muted)] truncate">{item.location}</span>
+                    )}
+                  </div>
+                )}
               </div>
-
-              {/* Countdown badge */}
-              <span
-                className="shrink-0 px-2 py-1 rounded-full text-2xs font-mono font-medium tracking-wide whitespace-nowrap"
-                style={{
-                  backgroundColor: `color-mix(in srgb, ${item.urgencyColor} 20%, transparent)`,
-                  color: item.urgencyColor,
-                }}
-              >
-                {item.countdownText}
-              </span>
             </Link>
           );
         })}
@@ -228,19 +247,12 @@ export default function FestivalsSection({ portalSlug, portalId }: FestivalsSect
 
 function SectionHeader({ portalSlug }: { portalSlug: string }) {
   return (
-    <div className="flex items-center justify-between mb-3">
-      <div className="flex items-center gap-2">
-        <Star weight="bold" className="w-3.5 h-3.5 text-[var(--gold)]" />
-        <h2 className="font-mono text-xs font-bold tracking-[0.12em] uppercase text-[var(--gold)]">
-          The Big Stuff
-        </h2>
-      </div>
-      <Link
-        href={`/${portalSlug}/festivals`}
-        className="text-xs flex items-center gap-1 text-[var(--gold)] transition-colors hover:opacity-80"
-      >
-        All Big Stuff <ArrowRight className="w-3 h-3" />
-      </Link>
-    </div>
+    <FeedSectionHeader
+      title="The Big Stuff"
+      priority="secondary"
+      accentColor="var(--gold)"
+      icon={<Crown weight="duotone" className="w-5 h-5" />}
+      seeAllHref={`/${portalSlug}/festivals`}
+    />
   );
 }

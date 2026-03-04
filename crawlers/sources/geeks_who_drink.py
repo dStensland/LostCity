@@ -814,7 +814,7 @@ def generate_events_for_venue(
             continue
 
         try:
-            insert_event(event_record, series_hint=series_hint)
+            insert_event(event_record, series_hint=series_hint, genres=["trivia"])
             new += 1
             logger.debug(
                 f"Added: Geeks Who Drink Pub Quiz at {venue_name} on {start_date}"

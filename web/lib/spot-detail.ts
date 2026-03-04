@@ -43,6 +43,15 @@ type UpcomingEventRow = {
   category_id: string | null;
   source_url: string | null;
   ticket_url: string | null;
+  series_id: string | null;
+  image_url: string | null;
+  series: {
+    id: string;
+    slug: string;
+    title: string;
+    series_type: string;
+    image_url: string | null;
+  } | null;
 };
 
 export type NearbyDestination = {
@@ -59,7 +68,6 @@ export type NearbyDestination = {
   short_description: string | null;
   hours: Record<string, { open: string; close: string } | null> | null;
   hours_display: string | null;
-  is_24_hours: boolean | null;
   vibes: string[] | null;
 };
 
@@ -95,6 +103,19 @@ type VenueFeatureRow = {
   sort_order: number;
 };
 
+type VenueSpecialRow = {
+  id: number;
+  title: string;
+  type: string;
+  description: string | null;
+  days_of_week: number[] | null;
+  time_start: string | null;
+  time_end: string | null;
+  price_note: string | null;
+  image_url: string | null;
+  source_url: string | null;
+};
+
 export type SpotDetailPayload = {
   spot: Record<string, unknown>;
   upcomingEvents: Array<Record<string, unknown>>;
@@ -102,6 +123,7 @@ export type SpotDetailPayload = {
   highlights: Array<Record<string, unknown>>;
   artifacts: Array<Record<string, unknown>>;
   features: VenueFeatureRow[];
+  specials: VenueSpecialRow[];
 };
 
 // ---------------------------------------------------------------------------
@@ -165,11 +187,16 @@ const scoreEventQuality = (
 
 const dedupeBySlot = (
   rows: UpcomingEventRow[],
-  artistsByEventId: Map<number, EventArtistRow[]>
+  artistsByEventId: Map<number, EventArtistRow[]>,
+  isCinema = false
 ) => {
   const winnersBySlot = new Map<string, UpcomingEventRow>();
   for (const row of rows) {
-    const slotKey = `${row.start_date}|${row.start_time || "00:00"}`;
+    // For cinemas, include normalized title in the key so different films
+    // at the same time don't collide
+    const slotKey = isCinema
+      ? `${row.start_date}|${row.start_time || "00:00"}|${normalizeText(row.title)}`
+      : `${row.start_date}|${row.start_time || "00:00"}`;
     const current = winnersBySlot.get(slotKey);
     if (!current) {
       winnersBySlot.set(slotKey, row);
@@ -197,6 +224,7 @@ const dedupeBySlot = (
     }
   }
 
+  const limit = isCinema ? 50 : 20;
   return [...winnersBySlot.values()]
     .sort((a, b) => {
       if (a.start_date !== b.start_date) {
@@ -204,7 +232,7 @@ const dedupeBySlot = (
       }
       return (a.start_time || "").localeCompare(b.start_time || "");
     })
-    .slice(0, 20);
+    .slice(0, limit);
 };
 
 async function fetchNearbyDestinations(
@@ -221,27 +249,36 @@ async function fetchNearbyDestinations(
 
   const allDestinationTypes = Object.values(DESTINATION_CATEGORIES).flat();
   const selectFields =
-    "id, name, slug, venue_type, location_designator, neighborhood, lat, lng, image_url, short_description, hours, hours_display, is_24_hours, vibes";
+    "id, name, slug, venue_type, location_designator, neighborhood, lat, lng, image_url, short_description, hours, hours_display, vibes";
 
   let spots: NearbyDestination[] | null = null;
 
   if (spot.neighborhood) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("venues")
       .select(selectFields)
       .eq("neighborhood", spot.neighborhood)
       .in("venue_type", allDestinationTypes)
       .eq("active", true)
-      .neq("id", spot.id);
+      .neq("id", spot.id)
+      .limit(100);
+    if (error) {
+      console.error("[spot-detail] nearby query failed:", error.message);
+      return nearbyDestinations;
+    }
     spots = (data || null) as NearbyDestination[] | null;
   } else if (spot.lat && spot.lng) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("venues")
       .select(selectFields)
       .in("venue_type", allDestinationTypes)
       .eq("active", true)
       .neq("id", spot.id)
       .limit(50);
+    if (error) {
+      console.error("[spot-detail] nearby geo query failed:", error.message);
+      return nearbyDestinations;
+    }
     spots = (data || null) as NearbyDestination[] | null;
   }
 
@@ -254,7 +291,8 @@ async function fetchNearbyDestinations(
 
     if (dest.lat && dest.lng && spot.lat && spot.lng) {
       distance = getDistanceMiles(spot.lat, spot.lng, dest.lat, dest.lng);
-      if (!spot.neighborhood && distance > 2) {
+      // Cap at 1.5 miles — "nearby" means walkable/short-drive, not across town
+      if (distance > 1.5) {
         continue;
       }
     } else if (!spot.neighborhood) {
@@ -321,19 +359,29 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
     .eq("venue_id", spot.id)
     .eq("is_active", true)
     .order("sort_order", { ascending: true });
+  const specialsPromise = supabase
+    .from("venue_specials")
+    .select("id, title, type, description, days_of_week, time_start, time_end, price_note, image_url, source_url")
+    .eq("venue_id", spot.id)
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true });
+
+  const isCinema = (spotData as Record<string, unknown>).venue_type === "cinema";
 
   // Over-fetch to allow post-query slot dedupe and quality ranking.
   const { data: upcomingEvents } = await supabase
     .from("events")
     .select(`
-      id, title, start_date, end_date, start_time, end_time, is_free, price_min, category_id, source_url, ticket_url
+      id, title, start_date, end_date, start_time, end_time, is_free, price_min, category_id, source_url, ticket_url,
+      series_id, image_url,
+      series:series!events_series_id_fkey(id, slug, title, series_type, image_url)
     `)
     .eq("venue_id", spot.id)
     .is("canonical_event_id", null)
     .or(`start_date.gte.${today},end_date.gte.${today}`)
     .order("start_date", { ascending: true })
     .order("start_time", { ascending: true })
-    .limit(60);
+    .limit(isCinema ? 150 : 60);
 
   const eventRows = (upcomingEvents || []) as UpcomingEventRow[];
   const allEventIds = eventRows.map((event) => event.id);
@@ -360,7 +408,7 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
       ) || new Map<number, EventArtistRow[]>();
   }
 
-  const dedupedRows = dedupeBySlot(eventRows, artistsByEventId);
+  const dedupedRows = dedupeBySlot(eventRows, artistsByEventId, isCinema);
   const upcomingEventIds = dedupedRows.map((event) => event.id);
   const upcomingCountsPromise = fetchSocialProofCounts(upcomingEventIds);
 
@@ -370,12 +418,14 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
     { data: highlights },
     { data: artifacts },
     { data: features },
+    { data: specials },
   ] = await Promise.all([
     upcomingCountsPromise,
     nearbyDestinationsPromise,
     highlightsPromise,
     artifactsPromise,
     featuresPromise,
+    specialsPromise,
   ]);
 
   const upcomingEventsWithCounts: Array<Record<string, unknown>> = dedupedRows.map((event) => {
@@ -388,6 +438,9 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
     return {
       ...event,
       category: event.category_id,
+      series_id: event.series_id,
+      series: event.series,
+      image_url: event.image_url,
       artists,
       lineup: artists.map((artist) => artist.name).join(", ") || null,
       going_count: counts?.going || 0,
@@ -405,5 +458,6 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
     ) as unknown as Array<Record<string, unknown>>,
     artifacts: (artifacts || []) as Array<Record<string, unknown>>,
     features: (features as VenueFeatureRow[] | null) || [],
+    specials: (specials as VenueSpecialRow[] | null) || [],
   };
 }

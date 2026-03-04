@@ -35,7 +35,7 @@ def preview_tba_events():
     today = datetime.now().strftime("%Y-%m-%d")
 
     result = client.table("events").select(
-        "id, title, start_date, venue_id, source_id, category"
+        "id, title, start_date, venue_id, source_id, category_id"
     ).gte(
         "start_date", today
     ).is_("start_time", "null").eq("is_all_day", False).execute()
@@ -47,10 +47,10 @@ def preview_tba_events():
     events = result.data
     print(f"\n⚠️  Found {len(events)} TBA events (missing start_time):\n")
 
-    # Group by category
+    # Group by category_id
     by_category = {}
     for event in events:
-        cat = event.get("category") or "uncategorized"
+        cat = event.get("category_id") or "uncategorized"
         if cat not in by_category:
             by_category[cat] = []
         by_category[cat].append(event)

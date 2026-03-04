@@ -74,9 +74,12 @@ output/playwright/
 
 # Generated reports (timestamped, regenerated frequently)
 crawlers/reports/*.html
-crawlers/reports/crawl_report_*.html
-crawlers/reports/latest.html
-crawlers/reports/image_repair_pass_*.json
+crawlers/reports/*.json
+crawlers/reports/*.csv
+crawlers/reports/*.md
+crawlers/reports/*.txt
+crawlers/reports/maintenance_checkpoints/
+reports/
 
 # Exported data files
 crawlers/*.csv

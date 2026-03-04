@@ -4,9 +4,17 @@ Identifies garbage events, duplicates, and data quality issues.
 """
 
 import re
+import sys
+from pathlib import Path
 from datetime import datetime, date
 from collections import defaultdict
+from typing import Optional
 from supabase import create_client
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 from config import get_config
 
 config = get_config()
@@ -19,6 +27,26 @@ VALID_CATEGORIES = {
     "tours", "meetup", "words", "religious", "markets", "wellness", 
     "support_group", "gaming", "outdoors", "other"
 }
+
+category_rows = supabase.table("categories").select("id,name").execute().data or []
+CATEGORY_ID_TO_NAME = {str(row.get("id")): str(row.get("name") or row.get("id")) for row in category_rows}
+
+
+def get_event_category_id(event: dict) -> Optional[str]:
+    value = event.get("category_id")
+    if value is None:
+        value = event.get("category")
+    if value is None:
+        return None
+    category_id = str(value).strip()
+    return category_id or None
+
+
+def get_event_category_label(event: dict) -> str:
+    category_id = get_event_category_id(event)
+    if not category_id:
+        return "(null)"
+    return CATEGORY_ID_TO_NAME.get(category_id, category_id)
 
 def print_section(title):
     """Print a section header."""
@@ -210,14 +238,16 @@ for i, (key, events) in enumerate(list(duplicates.items())[:3]):
 # ===== 4. INVALID CATEGORIES =====
 print_section("4. INVALID CATEGORIES")
 
-result = supabase.table("events").select("id, title, category, start_date, venue_id, venues!inner(name)").execute()
+result = supabase.table("events").select("id, title, category_id, start_date, venue_id, venues!inner(name)").execute()
 invalid_category_events = []
 for event in result.data:
-    if event.get('category') and event['category'] not in VALID_CATEGORIES:
+    category_id = get_event_category_id(event)
+    if category_id and category_id not in VALID_CATEGORIES:
         invalid_category_events.append({
             'id': event['id'],
             'title': event['title'],
-            'category': event['category'],
+            'category_id': category_id,
+            'category': get_event_category_label(event),
             'venue_name': event['venues']['name'] if event.get('venues') else 'Unknown',
             'start_date': event['start_date']
         })
@@ -225,12 +255,12 @@ for event in result.data:
 print(f"Found {len(invalid_category_events)} events with invalid categories")
 if invalid_category_events:
     # Show unique invalid categories
-    unique_invalid = set(e['category'] for e in invalid_category_events)
+    unique_invalid = set(e['category_id'] for e in invalid_category_events)
     print(f"Invalid categories: {sorted(unique_invalid)}")
 print_examples(invalid_category_events)
 
 # Events with NULL category
-result = supabase.table("events").select("id, title, category, start_date, venue_id, venues!inner(name)").is_("category", "null").execute()
+result = supabase.table("events").select("id, title, category_id, start_date, venue_id, venues!inner(name)").is_("category_id", "null").execute()
 null_category_count = len(result.data)
 print(f"\nEvents with NULL category: {null_category_count}")
 print_examples(result.data)

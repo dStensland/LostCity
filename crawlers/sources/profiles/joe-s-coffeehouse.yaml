@@ -1,0 +1,29 @@
+version: 1
+slug: joe-s-coffeehouse
+name: "Joe's Coffeehouse"
+integration_method: llm_crawler
+defaults:
+  venue_name: "Joe's Coffeehouse"
+  category: community
+  tags:
+  - atlanta-expansion-wave-w
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - "https://www.joescoffeehouseeav.com/"
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+detail:
+  enabled: true
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+data_goals:
+  - events
+  - lineup
+  - images
+  - tickets

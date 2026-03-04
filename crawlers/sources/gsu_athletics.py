@@ -8,6 +8,7 @@ import json
 import logging
 import re
 from datetime import datetime
+from typing import Optional
 from bs4 import BeautifulSoup
 import requests
 
@@ -64,6 +65,28 @@ VENUES = {
         "venue_type": "arena",
         "website": "https://georgiastatesports.com",
     },
+    "baseball": {
+        "name": "GSU Baseball Complex",
+        "slug": "gsu-baseball-complex",
+        "address": "2390 Panthersville Rd",
+        "neighborhood": "Panthersville",
+        "city": "Decatur",
+        "state": "GA",
+        "zip": "30034",
+        "venue_type": "stadium",
+        "website": "https://georgiastatesports.com",
+    },
+    "softball": {
+        "name": "GSU Softball Complex",
+        "slug": "gsu-softball-complex",
+        "address": "2390 Panthersville Rd",
+        "neighborhood": "Panthersville",
+        "city": "Decatur",
+        "state": "GA",
+        "zip": "30034",
+        "venue_type": "stadium",
+        "website": "https://georgiastatesports.com",
+    },
     "default": {
         "name": "Georgia State University",
         "slug": "georgia-state-university",
@@ -76,6 +99,52 @@ VENUES = {
         "website": "https://gsu.edu",
     },
 }
+
+
+def _clean_text(value: Optional[str]) -> str:
+    if not value:
+        return ""
+    return " ".join(str(value).split()).strip()
+
+
+def _extract_team_name(team_obj: Optional[dict]) -> str:
+    if not isinstance(team_obj, dict):
+        return ""
+    return _clean_text(team_obj.get("name"))
+
+
+def _build_event_description(
+    event_data: dict,
+    sport_name: str,
+    location_name: str,
+    is_home: bool,
+) -> str:
+    base_description = _clean_text(event_data.get("description"))
+    away_team = _extract_team_name(event_data.get("awayTeam"))
+    home_team = _extract_team_name(event_data.get("homeTeam"))
+    sport_label = sport_name.replace("-", " ").title()
+
+    parts: list[str] = []
+    if away_team and home_team:
+        parts.append(f"Georgia State Panthers {sport_label} matchup: {home_team} vs {away_team}.")
+    elif away_team:
+        parts.append(f"Georgia State Panthers {sport_label} game against {away_team}.")
+    else:
+        parts.append(f"Georgia State Panthers {sport_label} game.")
+
+    parts.append("Home game." if is_home else "Away or neutral-site game.")
+
+    if location_name:
+        parts.append(f"Location: {location_name}.")
+
+    if base_description:
+        lowered_parts = " ".join(parts).lower()
+        if base_description.lower() not in lowered_parts:
+            parts.append(base_description if base_description.endswith(".") else f"{base_description}.")
+
+    parts.append("Confirm final game time, broadcast, and ticket details on GeorgiaStateSports.com.")
+
+    return " ".join(parts)
 
 
 def parse_jsonld_events(soup: BeautifulSoup) -> list[dict]:
@@ -120,9 +189,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
             soup = BeautifulSoup(response.text, "html.parser")
             sport_events = parse_jsonld_events(soup)
 
-            # Get venue for this sport
+            # Get venue for this sport (maps sport to its home venue)
             venue_data = VENUES.get(sport_name, VENUES["default"])
             venue_id = get_or_create_venue(venue_data)
+            logger.debug(f"Sport {sport_name} → venue {venue_data['name']}")
 
             for event_data in sport_events:
                 events_found += 1
@@ -158,8 +228,17 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 location = event_data.get("location", {})
                 location_name = location.get("name", "") if isinstance(location, dict) else ""
 
-                # Determine if home game
-                is_home = "Center Parc" in location_name or "Convocation" in location_name
+                # Determine if home game based on location keywords
+                HOME_LOCATION_KEYWORDS = [
+                    "center parc", "convocation", "gsu", "georgia state",
+                    "panthersville", "parker h. petit",
+                ]
+                is_home = any(kw in location_name.lower() for kw in HOME_LOCATION_KEYWORDS)
+
+                # Skip away games — they're not Atlanta events
+                if not is_home:
+                    logger.debug(f"Skipping away game: {title} at {location_name}")
+                    continue
 
                 # Generate hash
                 content_hash = generate_content_hash(
@@ -167,16 +246,17 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 )
 
 
-                # Build description
-                away_team = event_data.get("awayTeam", {})
-                away_name = away_team.get("name", "") if isinstance(away_team, dict) else ""
-                description = f"Georgia State Panthers vs {away_name}" if away_name else ""
-                if location_name:
-                    description += f" at {location_name}"
+                description = _build_event_description(
+                    event_data=event_data,
+                    sport_name=sport_name,
+                    location_name=location_name,
+                    is_home=is_home,
+                )
+                source_url = _clean_text(event_data.get("url")) or url
 
                 event_record = {
                     "source_id": source_id,
-                    "venue_id": venue_id if is_home else None,
+                    "venue_id": venue_id,
                     "title": title,
                     "description": description,
                     "start_date": start_date,
@@ -191,7 +271,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "price_max": None,
                     "price_note": "Check georgiastatesports.com for tickets",
                     "is_free": False,
-                    "source_url": url,
+                    "source_url": source_url,
                     "ticket_url": None,
                     "image_url": extract_image_url(soup) if soup else None,
                     "raw_text": json.dumps(event_data),

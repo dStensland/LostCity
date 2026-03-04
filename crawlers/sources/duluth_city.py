@@ -178,13 +178,6 @@ def create_recurring_events(source_id: int, venue_id: int) -> tuple[int, int]:
         start_date = concert_date.strftime("%Y-%m-%d")
 
         content_hash = generate_content_hash(title, "Duluth", start_date)
-
-        existing = find_event_by_hash(content_hash)
-        if existing:
-            smart_update_existing_event(existing, event_record)
-            events_updated += 1
-            continue
-
         description = (
             "Free outdoor concert in downtown Duluth. "
             "Bring chairs and blankets, enjoy live music and community atmosphere."
@@ -216,6 +209,12 @@ def create_recurring_events(source_id: int, venue_id: int) -> tuple[int, int]:
             "recurrence_rule": "FREQ=MONTHLY",
             "content_hash": content_hash,
         }
+
+        existing = find_event_by_hash(content_hash)
+        if existing:
+            smart_update_existing_event(existing, event_record)
+            events_updated += 1
+            continue
 
         series_hint = {
             "series_type": "recurring_show",

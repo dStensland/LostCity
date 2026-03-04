@@ -1,0 +1,26 @@
+version: 1
+slug: atlanta-expo-center-north
+name: "Atlanta Expo Center North"
+integration_method: llm_crawler
+defaults:
+  venue_name: "Atlanta Expo Center North"
+  category: community
+  tags:
+  - atlanta-hardening-gap
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - "http://www.atlantaexpocenter.com/"
+  fetch:
+    render_js: true
+    wait_until: domcontentloaded
+detail:
+  enabled: true
+  fetch:
+    render_js: true
+    wait_until: domcontentloaded
+data_goals:
+  - events
+  - images
+  - tickets

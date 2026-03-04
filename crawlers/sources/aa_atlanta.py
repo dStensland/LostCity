@@ -39,6 +39,7 @@ DAY_MAP = {
     5: 4,  # Friday
     6: 5,  # Saturday
 }
+DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
 # Meeting type codes
 TYPE_CODES = {
@@ -100,27 +101,59 @@ def determine_venue_type(location_name: str) -> str:
         return "community_center"  # Default
 
 
-def format_meeting_description(meeting: dict) -> str:
-    """Generate a description for the meeting based on meeting types."""
+def _format_time_label(time_str: Optional[str]) -> Optional[str]:
+    if not time_str:
+        return None
+    raw = str(time_str).strip()
+    if not raw:
+        return None
+    for fmt in ("%H:%M", "%H:%M:%S"):
+        try:
+            return datetime.strptime(raw, fmt).strftime("%-I:%M %p")
+        except ValueError:
+            continue
+    return raw
+
+
+def format_meeting_description(
+    meeting: dict,
+    *,
+    location_name: str,
+    day_name: str,
+    start_time: Optional[str],
+    source_url: str,
+) -> str:
+    """Generate a logistics-first description for AA meetings."""
     types_list = meeting.get("types", [])
     type_names = [TYPE_CODES.get(t, t) for t in types_list if t in TYPE_CODES]
 
     attendance = meeting.get("attendance_option", "in_person")
-    attendance_str = "In-person" if attendance == "in_person" else "Online"
+    attendance_str = "in-person" if attendance == "in_person" else "online"
+    time_label = _format_time_label(start_time)
 
-    parts = [
-        f"{attendance_str} AA meeting",
-    ]
+    parts = [f"Alcoholics Anonymous peer-support meeting ({attendance_str})."]
 
     if type_names:
-        parts.append(f"({', '.join(type_names)})")
+        parts.append(f"Format: {', '.join(type_names)}.")
 
-    # Add location context
+    if day_name and time_label:
+        parts.append(f"Recurring weekly on {day_name} at {time_label}.")
+    elif day_name:
+        parts.append(f"Recurring weekly on {day_name}.")
+
+    if location_name:
+        parts.append(f"Location: {location_name}.")
+
     location_notes = meeting.get("location_notes", "")
     if location_notes:
-        parts.append(f"Location notes: {location_notes}")
+        parts.append(f"Arrival notes: {location_notes}.")
 
-    return ". ".join(parts) + "."
+    if source_url:
+        parts.append(f"Check the Atlanta Intergroup listing for current format updates ({source_url}).")
+    else:
+        parts.append("Check the Atlanta Intergroup listing for current format updates.")
+
+    return " ".join(parts)
 
 
 def get_next_weekday(start_date: datetime, weekday: int) -> datetime:
@@ -235,11 +268,18 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     logger.warning(f"Invalid day {api_day} for meeting: {title}")
                     continue
 
-                # Generate description
-                description = format_meeting_description(meeting)
-
                 # Get meeting URL
                 meeting_url = meeting.get("url", BASE_URL + "/meetings/")
+                day_name = DAY_NAMES[python_weekday]
+
+                # Generate description
+                description = format_meeting_description(
+                    meeting,
+                    location_name=location_name,
+                    day_name=day_name,
+                    start_time=start_time,
+                    source_url=meeting_url,
+                )
 
                 # Find next occurrence of this day
                 next_date = get_next_weekday(today, python_weekday)
@@ -294,12 +334,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         continue
 
                     # Add series hint for linking
-                    day_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
                     series_hint = {
                         "series_type": "recurring_show",
                         "series_title": title,
                         "frequency": "weekly",
-                        "day_of_week": day_names[python_weekday],
+                        "day_of_week": day_name,
                         "description": description,
                     }
 

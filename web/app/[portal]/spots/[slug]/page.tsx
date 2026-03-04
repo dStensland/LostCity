@@ -9,7 +9,7 @@ import {
 import { getCachedPortalBySlug } from "@/lib/portal";
 import { getSpotDetail } from "@/lib/spot-detail";
 import { notFound } from "next/navigation";
-import Link from "next/link";
+
 import type { Metadata } from "next";
 import { cache } from "react";
 import { safeJsonLd } from "@/lib/formats";
@@ -24,7 +24,6 @@ import RecommendButton from "@/components/RecommendButton";
 import { SaveToListButton } from "@/components/SaveToListButton";
 import {
   DetailHero,
-  InfoCard,
   SectionHeader,
   RelatedSection,
   RelatedCard,
@@ -510,14 +509,6 @@ export default async function PortalSpotPage({ params }: Props) {
             <div className="flex items-center gap-2 mt-3">
               <FollowButton targetVenueId={spot.id} size="sm" />
               <RecommendButton venueId={spot.id} size="sm" />
-              {!spot.claimed_by && (
-                <Link
-                  href={`/venue/${spot.slug}/claim`}
-                  className="text-[var(--muted)] hover:text-[var(--cream)] font-mono text-xs"
-                >
-                  Claim this spot
-                </Link>
-              )}
               {spot.claimed_by && spot.is_verified && (
                 <span className="text-[var(--neon-green)] font-mono text-xs flex items-center gap-1">
                   <svg
@@ -543,14 +534,20 @@ export default async function PortalSpotPage({ params }: Props) {
             accentColor={spotTypeColor}
           />
 
-          {/* ── 3. IDENTITY STRIP — vibes + quick actions ──────────── */}
-          {(hasVibes || hasActions) && (
+          {/* ── 3a. VIBES ──────────────────────────────────────── */}
+          {hasVibes && (
             <div className="flex flex-wrap items-center gap-2">
               {spot.vibes?.slice(0, 4).map((vibe) => (
                 <Badge key={vibe} variant="neutral" size="md">
                   {vibe.replace(/-/g, " ")}
                 </Badge>
               ))}
+            </div>
+          )}
+
+          {/* ── 3b. QUICK ACTIONS ─────────────────────────────── */}
+          {hasActions && (
+            <div className="flex flex-wrap items-center gap-2">
               {spot.website && (
                 <QuickActionLink
                   href={spot.website}
@@ -654,78 +651,70 @@ export default async function PortalSpotPage({ params }: Props) {
             </div>
           )}
 
-          {/* ── 4. AT A GLANCE — type-aware MetadataGrid ───────────── */}
+          {/* ── 4. AT A GLANCE — type-aware MetadataGrid ────────────── */}
           <MetadataGrid items={metadataItems} />
 
-          {/* ── 5. PRIMARY — About + Highlights inline ─────────────── */}
-          {(spot.description || highlights.length > 0) && (
-            <InfoCard accentColor={spotTypeColor}>
-              {spot.description && (
-                <div>
-                  <SectionHeader title="About" variant="inline" />
-                  <p className="text-[var(--soft)] whitespace-pre-wrap leading-relaxed">
-                    {spot.description}
-                  </p>
-                </div>
-              )}
+          {/* ── 5. ABOUT + HIGHLIGHTS — flowing, no card wrapper ──── */}
+          {spot.description && (
+            <div>
+              <SectionHeader title="About" variant="divider" />
+              <p className="text-[var(--soft)] whitespace-pre-wrap leading-relaxed">
+                {spot.description}
+              </p>
+            </div>
+          )}
 
-              {highlights.length > 0 && (
-                <div
-                  className={`space-y-2 ${spot.description ? "mt-4 pt-4 border-t border-[var(--twilight)]/30" : ""}`}
-                >
-                  {!spot.description && (
-                    <SectionHeader title="Highlights" variant="inline" />
-                  )}
-                  {highlights.map((h) => {
-                    const hl = h as {
-                      id: number;
-                      highlight_type: string;
-                      title: string;
-                      description?: string | null;
-                      url?: string | null;
-                    };
-                    return (
-                      <div
-                        key={hl.id}
-                        className="flex items-start gap-2.5 group"
-                      >
-                        <span
-                          className="shrink-0 mt-1.5 w-1.5 h-1.5 rounded-full"
-                          style={{ background: spotTypeColor }}
-                        />
-                        <p className="text-sm leading-relaxed">
-                          {hl.url ? (
-                            <a
-                              href={hl.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="font-medium text-[var(--cream)] underline decoration-[var(--twilight)] underline-offset-2 hover:decoration-[var(--soft)] transition-colors"
-                            >
-                              {hl.title}
-                            </a>
-                          ) : (
-                            <span className="font-medium text-[var(--cream)]">
-                              {hl.title}
-                            </span>
-                          )}
-                          {hl.description && (
-                            <span className="text-[var(--soft)]">
-                              {" "}
-                              &mdash; {hl.description}
-                            </span>
-                          )}
-                          {hl.url && (
-                            <svg className="inline-block w-3 h-3 ml-1 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                            </svg>
-                          )}
-                        </p>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </InfoCard>
+          {highlights.length > 0 && (
+            <div className="space-y-2">
+              <SectionHeader title="Highlights" variant={spot.description ? "divider" : "inline"} />
+              {highlights.map((h) => {
+                const hl = h as {
+                  id: number;
+                  highlight_type: string;
+                  title: string;
+                  description?: string | null;
+                  url?: string | null;
+                };
+                return (
+                  <div
+                    key={hl.id}
+                    className="flex items-start gap-2.5 group"
+                  >
+                    <span
+                      className="shrink-0 mt-1.5 w-1.5 h-1.5 rounded-full"
+                      style={{ background: spotTypeColor }}
+                    />
+                    <p className="text-sm leading-relaxed">
+                      {hl.url ? (
+                        <a
+                          href={hl.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-medium text-[var(--cream)] underline decoration-[var(--twilight)] underline-offset-2 hover:decoration-[var(--soft)] transition-colors"
+                        >
+                          {hl.title}
+                        </a>
+                      ) : (
+                        <span className="font-medium text-[var(--cream)]">
+                          {hl.title}
+                        </span>
+                      )}
+                      {hl.description && (
+                        <span className="text-[var(--soft)]">
+                          {" "}
+                          &mdash; {hl.description}
+                        </span>
+                      )}
+                      {hl.url && (
+                        <svg className="inline-block w-3 h-3 ml-1 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                      )}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
           )}
 
           {/* ── 6. EVENTS (promoted for event-heavy venue types) ──── */}
@@ -738,47 +727,37 @@ export default async function PortalSpotPage({ params }: Props) {
               }
               portalSlug={activePortalSlug}
               venueType={spot.venue_type ?? null}
+              accentColor={spotTypeColor}
             />
           )}
 
           {/* ── 7. PRACTICAL — Hours + Location + Getting There ───── */}
+          {hasHours && (
+            <div>
+              <SectionHeader title="Hours" variant="divider" />
+              <HoursSection
+                hours={spot.hours ?? null}
+                hoursDisplay={spot.hours_display}
+                is24Hours={spot.is_24_hours ?? false}
+              />
+            </div>
+          )}
+
+          {spot.address && (
+            <div>
+              <SectionHeader title="Location" variant="divider" />
+              <p className="text-[var(--soft)]">
+                {spot.address}
+                <br />
+                {spot.city}, {spot.state}
+              </p>
+            </div>
+          )}
+
           {(hasHours || spot.address) && (
-            <InfoCard accentColor={spotTypeColor}>
-              {hasHours && (
-                <div>
-                  <SectionHeader title="Hours" variant="inline" />
-                  <HoursSection
-                    hours={spot.hours ?? null}
-                    hoursDisplay={spot.hours_display}
-                    is24Hours={spot.is_24_hours ?? false}
-                  />
-                </div>
-              )}
-
-              {spot.address && (
-                <div className={hasHours ? "mt-6" : ""}>
-                  <SectionHeader
-                    title="Location"
-                    variant={hasHours ? "divider" : "inline"}
-                  />
-                  <p className="text-[var(--soft)]">
-                    {spot.address}
-                    <br />
-                    {spot.city}, {spot.state}
-                  </p>
-                </div>
-              )}
-
-              <div
-                className={
-                  hasHours || spot.address ? "mt-6" : ""
-                }
-              >
-                <GettingThereSection
-                  transit={spot as TransitData}
-                />
-              </div>
-            </InfoCard>
+            <GettingThereSection
+              transit={spot as TransitData}
+            />
           )}
 
           {/* ── 8. FEATURES — type-aware attractions/exhibits ──────── */}
@@ -814,6 +793,8 @@ export default async function PortalSpotPage({ params }: Props) {
                       artifact.venue_type ?? null
                     )}
                     imageUrl={artifact.image_url || undefined}
+                    category={artifact.venue_type}
+                    accentColor={getSpotTypeColor(artifact.venue_type ?? null)}
                     icon={
                       <div className="text-2xl" role="img">
                         {getSpotTypeIcon(artifact.venue_type ?? null)}
@@ -835,28 +816,25 @@ export default async function PortalSpotPage({ params }: Props) {
               }
               portalSlug={activePortalSlug}
               venueType={spot.venue_type ?? null}
+              accentColor={spotTypeColor}
             />
           )}
 
-          {/* ── 11. COMMUNITY — slim consolidated zone ─────────────── */}
-          <div className="space-y-4">
+          {/* ── 11. COMMUNITY — page footer ──────────────────────── */}
+          <div className="border-t border-[var(--twilight)]/30 pt-5 space-y-3">
             <NeedsTagList
               entityType="venue"
               entityId={spot.id}
               title="Community Verified"
             />
-            <div className="border-t border-[var(--twilight)]/60 pt-4">
-              <CollapsibleSection title="Community Tags">
-                <VenueTagList venueId={spot.id} />
-              </CollapsibleSection>
-            </div>
-            <div className="pt-2">
-              <FlagButton
-                entityType="venue"
-                entityId={spot.id}
-                entityName={spot.name}
-              />
-            </div>
+            <CollapsibleSection title="Community Tags">
+              <VenueTagList venueId={spot.id} />
+            </CollapsibleSection>
+            <FlagButton
+              entityType="venue"
+              entityId={spot.id}
+              entityName={spot.name}
+            />
           </div>
 
           {/* ── 12. NEARBY ─────────────────────────────────────────── */}
@@ -873,6 +851,8 @@ export default async function PortalSpotPage({ params }: Props) {
                   title={nearby.name}
                   subtitle={getSpotTypeLabel(nearby.venue_type ?? null)}
                   imageUrl={nearby.image_url || undefined}
+                  category={nearby.venue_type}
+                  accentColor={getSpotTypeColor(nearby.venue_type ?? null)}
                   icon={
                     <div className="text-2xl" role="img">
                       {getSpotTypeIcon(nearby.venue_type ?? null)}
@@ -888,17 +868,15 @@ export default async function PortalSpotPage({ params }: Props) {
       {/* ── 13. STICKY BAR ──────────────────────────────────────── */}
       <DetailStickyBar
         shareLabel="Share Spot"
+        showShareButton
+        primaryVariant="outlined"
         secondaryActions={
-          <>
-            <SaveToListButton itemType="venue" itemId={spot.id} />
-            <FollowButton targetVenueId={spot.id} size="sm" />
-            <RecommendButton venueId={spot.id} size="sm" />
-          </>
+          <SaveToListButton itemType="venue" itemId={spot.id} />
         }
         primaryAction={
           spot.website
             ? {
-                label: "Website",
+                label: "Visit Website",
                 href: spot.website,
                 icon: (
                   <svg

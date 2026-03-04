@@ -76,6 +76,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     try:
         response = requests.get(EVENTS_URL, headers=headers, timeout=30)
+        if response.status_code in {401, 403}:
+            logger.warning("SCAD Atlanta blocked request with status %s; skipping run", response.status_code)
+            return 0, 0, 0
         response.raise_for_status()
 
         soup = BeautifulSoup(response.text, "html.parser")

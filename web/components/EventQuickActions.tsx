@@ -36,9 +36,11 @@ interface EventQuickActionsProps {
   };
   isLive?: boolean;
   className?: string;
+  /** Extra actions rendered in the CTA row (e.g. "Make a Night of It") */
+  extraActions?: React.ReactNode;
 }
 
-export default function EventQuickActions({ event, isLive, className = "" }: EventQuickActionsProps) {
+export default function EventQuickActions({ event, isLive, className = "", extraActions }: EventQuickActionsProps) {
   const { text: priceText, isFree } = formatPriceDetailed(event);
   const dateObj = parseISO(event.start_date);
   const dateDisplay = event.end_date && event.end_date !== event.start_date
@@ -173,6 +175,13 @@ export default function EventQuickActions({ event, isLive, className = "" }: Eve
           <ShareEventButton eventId={event.id} eventTitle={event.title} variant="icon" />
         </div>
       </div>
+
+      {/* Extra actions (e.g. Make a Night of It) */}
+      {extraActions && (
+        <div className="px-3 pb-3 flex items-center">
+          {extraActions}
+        </div>
+      )}
     </div>
   );
 }

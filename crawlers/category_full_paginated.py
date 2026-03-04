@@ -28,7 +28,7 @@ def main():
     
     while offset < total_count:
         print(f"  Fetching batch {offset//batch_size + 1} (offset {offset})...")
-        result = client.table("events").select("id,category").gte("start_date", today).range(offset, offset + batch_size - 1).execute()
+        result = client.table("events").select("id,category_id").gte("start_date", today).range(offset, offset + batch_size - 1).execute()
         
         if not result.data:
             break
@@ -40,7 +40,7 @@ def main():
     print()
     
     # Count NULL vs non-NULL
-    null_count = sum(1 for e in all_events if e.get("category") is None)
+    null_count = sum(1 for e in all_events if e.get("category_id") is None)
     non_null_count = len(all_events) - null_count
     
     print(f"Events with NULL category: {null_count:,} ({null_count/len(all_events)*100:.2f}%)")
@@ -50,7 +50,7 @@ def main():
     # Get full category breakdown
     category_counts = {}
     for event in all_events:
-        cat = event.get("category")
+        cat = event.get("category_id")
         if cat is None:
             cat = "NULL"
         category_counts[cat] = category_counts.get(cat, 0) + 1

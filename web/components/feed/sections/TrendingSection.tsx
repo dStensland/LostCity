@@ -19,7 +19,7 @@ import type { FeedEventData } from "@/components/EventCard";
 import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
 import { formatSmartDate, formatTime } from "@/lib/formats";
 import {
-  TrendUp,
+  Fire,
   ArrowRight,
   Users,
   CalendarBlank,
@@ -240,8 +240,8 @@ function FriendsZone({
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
-        <Users weight="bold" className="w-4 h-4 text-[var(--cream)]" />
-        <h3 className="font-mono text-xs font-bold tracking-[0.1em] uppercase text-[var(--cream)]">
+        <Users weight="duotone" className="w-3.5 h-3.5 text-[var(--neon-cyan)]" />
+        <h3 className="font-mono text-xs font-bold tracking-[0.12em] uppercase text-[var(--neon-cyan)]">
           Friends Are Going
         </h3>
       </div>
@@ -383,8 +383,8 @@ function UpcomingZone({
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
-        <CalendarBlank weight="bold" className="w-4 h-4 text-[var(--cream)]" />
-        <h3 className="font-mono text-xs font-bold tracking-[0.1em] uppercase text-[var(--cream)]">
+        <CalendarBlank weight="duotone" className="w-3.5 h-3.5 text-[var(--gold)]" />
+        <h3 className="font-mono text-xs font-bold tracking-[0.12em] uppercase text-[var(--gold)]">
           Your Upcoming
         </h3>
       </div>
@@ -484,7 +484,7 @@ export default function TrendingSection({ section, portalSlug }: Props) {
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <TrendUp weight="bold" className="w-3.5 h-3.5 text-[var(--coral)]" />
+            <Fire weight="duotone" className="w-3.5 h-3.5 text-[var(--coral)]" />
             <h2 className="font-mono text-xs font-bold tracking-[0.12em] uppercase text-[var(--coral)]">
               {headerLabel}
             </h2>
@@ -493,7 +493,7 @@ export default function TrendingSection({ section, portalSlug }: Props) {
             href={`/${portalSlug}?view=find&type=events`}
             className="text-xs flex items-center gap-1 text-[var(--coral)] transition-colors hover:opacity-80"
           >
-            All <ArrowRight className="w-3 h-3" />
+            See all <ArrowRight className="w-3 h-3" />
           </Link>
         </div>
 

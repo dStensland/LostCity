@@ -14,6 +14,8 @@ import CategoryIcon, {
   getCategoryLabel,
   getCategoryColor,
 } from "@/components/CategoryIcon";
+import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
+import { Compass } from "@phosphor-icons/react";
 
 interface Props {
   section: CityPulseSection;
@@ -60,14 +62,14 @@ export default function BrowseSection({ section, portalSlug }: Props) {
   const hasCounts = Object.values(categoryCounts).some((c) => c > 0);
 
   return (
-    <section>
+    <section className="pb-2">
       {/* Section header */}
-      <div className="flex items-center gap-2 mb-4">
-        <span className="w-2 h-2 rounded-full bg-[var(--coral)]" />
-        <h2 className="font-mono text-xs font-bold tracking-[0.12em] uppercase text-[var(--cream)]">
-          {section.title || "Browse by Category"}
-        </h2>
-      </div>
+      <FeedSectionHeader
+        title={section.title || "Browse"}
+        priority="secondary"
+        accentColor="var(--coral)"
+        icon={<Compass weight="duotone" className="w-5 h-5" />}
+      />
 
       {/* Grid */}
       <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">

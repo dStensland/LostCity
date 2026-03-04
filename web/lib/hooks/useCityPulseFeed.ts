@@ -10,7 +10,7 @@
  *  - Admin overrides bypass cache and poll more aggressively
  */
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { useEffect, useState, useCallback, useRef } from "react";
 import type { CityPulseResponse, TimeSlot } from "@/lib/city-pulse/types";
 import { getTimeSlot, msUntilNextSlot } from "@/lib/city-pulse/time-slots";
@@ -91,12 +91,17 @@ export function useCityPulseFeed(options: UseCityPulseFeedOptions) {
       }
     },
     enabled,
-    staleTime: hasOverrides ? 0 : 60 * 1000,
-    gcTime: 5 * 60 * 1000,
+    // Keep showing old data while refetching with a new key (e.g. interests change).
+    // Prevents skeleton flash on key transitions.
+    placeholderData: keepPreviousData,
+    // With heavy sections (regulars, experiences) extracted, the payload is
+    // ~80-100KB instead of 760KB — less urgency to refetch constantly.
+    staleTime: hasOverrides ? 0 : 2 * 60 * 1000, // 2 min
+    gcTime: 10 * 60 * 1000,
     refetchInterval: POLL_INTERVAL_MS,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
-    retry: 2,
+    retry: 1,
   });
 
   const refresh = useCallback(() => {

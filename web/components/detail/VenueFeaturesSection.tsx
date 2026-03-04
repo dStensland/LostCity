@@ -35,16 +35,20 @@ function formatSeasonalRange(
 function FeatureBadges({
   feature,
   seasonalLabel,
+  hideType,
 }: {
   feature: VenueFeature;
   seasonalLabel: string | null;
+  hideType?: boolean;
 }) {
   return (
     <div className="flex items-center gap-1.5 flex-wrap">
-      <span className="text-2xs font-mono uppercase tracking-wider text-[var(--soft)]">
-        {FEATURE_TYPE_LABELS[feature.feature_type as FeatureType] ??
-          feature.feature_type}
-      </span>
+      {!hideType && (
+        <span className="text-2xs font-mono uppercase tracking-wider text-[var(--soft)]">
+          {FEATURE_TYPE_LABELS[feature.feature_type as FeatureType] ??
+            feature.feature_type}
+        </span>
+      )}
       {feature.is_free && (
         <Badge variant="success" size="sm">
           Free
@@ -101,10 +105,12 @@ function ImageFeatureCard({
   feature,
   seasonalLabel,
   accentClassName,
+  hideType,
 }: {
   feature: VenueFeature;
   seasonalLabel: string | null;
   accentClassName: string;
+  hideType?: boolean;
 }) {
   return (
     <MaybeLink
@@ -116,7 +122,7 @@ function ImageFeatureCard({
           src={feature.image_url!}
           alt={feature.title}
           fill
-          sizes="(max-width: 768px) 100vw, 680px"
+          sizes="(max-width: 640px) 100vw, 340px"
           className="object-cover transition-transform duration-500 group-hover:scale-105"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[var(--night)] via-[var(--night)]/40 to-transparent" />
@@ -127,7 +133,7 @@ function ImageFeatureCard({
         </div>
       </div>
       <div className="px-4 py-3 space-y-1.5">
-        <FeatureBadges feature={feature} seasonalLabel={seasonalLabel} />
+        <FeatureBadges feature={feature} seasonalLabel={seasonalLabel} hideType={hideType} />
         {feature.description && (
           <p className="text-sm text-[var(--soft)] leading-relaxed line-clamp-3">
             {feature.description}
@@ -150,12 +156,14 @@ function TextFeatureCard({
   accentColor,
   accentClassName,
   IconComp,
+  hideType,
 }: {
   feature: VenueFeature;
   seasonalLabel: string | null;
   accentColor: string;
   accentClassName: string;
   IconComp: React.ComponentType<{ size: number; weight: string; className: string }>;
+  hideType?: boolean;
 }) {
   return (
     <MaybeLink
@@ -173,7 +181,7 @@ function TextFeatureCard({
           {feature.title}
         </h3>
         <div className="mt-1">
-          <FeatureBadges feature={feature} seasonalLabel={seasonalLabel} />
+          <FeatureBadges feature={feature} seasonalLabel={seasonalLabel} hideType={hideType} />
         </div>
         {feature.description && (
           <p className="text-sm text-[var(--soft)] mt-1.5 leading-relaxed">
@@ -211,11 +219,15 @@ export default function VenueFeaturesSection({
     return a.sort_order - b.sort_order;
   });
 
+  // When all features share the same type, suppress per-card type badges (redundant)
+  const allSameType = sorted.length > 1 && sorted.every(f => f.feature_type === sorted[0].feature_type);
+  const hasImages = sorted.some(f => f.image_url);
+
   return (
     <div className="mt-6">
       <ScopedStyles css={colorClass?.css} />
       <SectionHeader title={config.title} count={features.length} />
-      <div className="space-y-3">
+      <div className={`${hasImages ? "grid grid-cols-1 sm:grid-cols-2 gap-3" : "space-y-3"}`}>
         {sorted.map((feature) => {
           const seasonalLabel = feature.is_seasonal
             ? formatSeasonalRange(feature.start_date, feature.end_date)
@@ -227,6 +239,7 @@ export default function VenueFeaturesSection({
               feature={feature}
               seasonalLabel={seasonalLabel}
               accentClassName={colorClass?.className ?? ""}
+              hideType={allSameType}
             />
           ) : (
             <TextFeatureCard
@@ -236,6 +249,7 @@ export default function VenueFeaturesSection({
               accentColor={config.color}
               accentClassName={colorClass?.className ?? ""}
               IconComp={IconComp as React.ComponentType<{ size: number; weight: string; className: string }>}
+              hideType={allSameType}
             />
           );
         })}

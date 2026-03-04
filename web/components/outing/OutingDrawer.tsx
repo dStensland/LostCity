@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { useItinerary } from "@/lib/hooks/useItinerary";
 import { useToast } from "@/components/Toast";
 import OutingSuggestions, { type Suggestion } from "./OutingSuggestions";
-import { Star } from "@phosphor-icons/react/dist/ssr";
+import { Star } from "@phosphor-icons/react";
 import {
   getItemTitle,
   formatItineraryTime,
@@ -242,7 +242,7 @@ export default function OutingDrawer({
             </div>
           )}
 
-          {/* Suggestions section */}
+          {/* Suggestions section — kept mounted to avoid re-fetching on toggle */}
           {anchorEvent && hasAnchorCoords && anchorEvent.start_time && (
             <div>
               <button
@@ -260,7 +260,7 @@ export default function OutingDrawer({
                 Suggestions nearby
               </button>
 
-              {showSuggestions && (
+              <div className={showSuggestions ? "contents" : "hidden"}>
                 <OutingSuggestions
                   portalSlug={portalSlug}
                   anchorLat={anchorEvent.venue.lat!}
@@ -269,7 +269,7 @@ export default function OutingDrawer({
                   anchorDate={anchorEvent.date}
                   onAddSuggestion={handleAddSuggestion}
                 />
-              )}
+              </div>
             </div>
           )}
         </div>

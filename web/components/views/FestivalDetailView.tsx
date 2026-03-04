@@ -110,7 +110,7 @@ export default function FestivalDetailView({
   const portalId = portalContext?.portal?.id || null;
   const [festival, setFestival] = useState<FestivalData | null>(null);
   const [programs, setPrograms] = useState<ProgramData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [error, setError] = useState<string | null>(null);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
@@ -119,7 +119,7 @@ export default function FestivalDetailView({
     const controller = new AbortController();
 
     async function fetchFestival() {
-      setLoading(true);
+      setStatus("loading");
       setError(null);
       setImageLoaded(false);
       setImageError(false);
@@ -135,11 +135,11 @@ export default function FestivalDetailView({
         const data = (await res.json()) as FestivalResponse;
         setFestival(data.festival);
         setPrograms(data.programs || []);
+        setStatus("ready");
       } catch (err) {
         if (controller.signal.aborted) return;
         setError(err instanceof Error ? err.message : "Failed to load festival");
-      } finally {
-        setLoading(false);
+        setStatus("error");
       }
     }
 
@@ -188,7 +188,7 @@ export default function FestivalDetailView({
   const handleSessionClick = (id: number) => navigateToDetail("event", id);
   const handleProgramClick = (slug: string) => navigateToDetail("series", slug);
 
-  if (loading) {
+  if (status === "loading") {
     return (
       <div className="pt-6 pb-8" role="status" aria-label="Loading festival details">
         {/* Hero skeleton with floating back button */}
@@ -397,7 +397,7 @@ export default function FestivalDetailView({
                 <div className="mt-3 space-y-3">
                   {sortedDates.map((date) => (
                     <div key={date} className="space-y-2">
-                      <div className="font-mono text-xs uppercase tracking-widest text-[var(--muted)]">
+                      <div className="font-mono text-xs uppercase tracking-[0.14em] text-[var(--muted)]">
                         {format(parseISO(date), "EEE, MMM d")}
                       </div>
                       <div className="space-y-1">

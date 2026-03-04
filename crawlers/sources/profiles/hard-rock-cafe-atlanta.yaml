@@ -1,0 +1,39 @@
+version: 1
+slug: hard-rock-cafe-atlanta
+name: "Hard Rock Cafe Atlanta"
+integration_method: html
+defaults:
+  venue_name: "Hard Rock Cafe - Atlanta"
+  category: music
+  tags:
+  - atlanta-hardening-gap
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - "https://cafe.hardrock.com/atlanta/event-calendar.aspx"
+  event_card: ".calListDayShell"
+  fields:
+    title: ".calListDayEventTitle"
+    date: "h3.calListDay"
+    time: ".calListDayEventTime"
+    detail_url: "a.calListDayEventLink@href"
+    ticket_url: "a.calListDayEventLink@href"
+    image_url: "img.calListDayEventThumbnail@src"
+    description: ".calListDayEventDescription"
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+detail:
+  enabled: true
+  use_llm: false
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+data_goals:
+  - events
+  - lineup
+  - images
+  - tickets

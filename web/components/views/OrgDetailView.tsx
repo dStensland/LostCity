@@ -90,7 +90,7 @@ export default function OrgDetailView({ slug, portalSlug, onClose }: OrgDetailVi
   const searchParams = useSearchParams();
   const [producer, setProducer] = useState<ProducerData | null>(null);
   const [events, setEvents] = useState<EventData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [error, setError] = useState<string | null>(null);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
@@ -100,7 +100,7 @@ export default function OrgDetailView({ slug, portalSlug, onClose }: OrgDetailVi
     let cancelled = false;
 
     async function fetchProducer() {
-      setLoading(true);
+      setStatus("loading");
       setError(null);
       setImageLoaded(false);
       setImageError(false);
@@ -119,14 +119,12 @@ export default function OrgDetailView({ slug, portalSlug, onClose }: OrgDetailVi
         if (cancelled) return;
         setProducer(data.organization);
         setEvents(data.events || []);
+        setStatus("ready");
       } catch (err) {
         if (controller.signal.aborted) return;
         if (cancelled) return;
         setError(err instanceof Error ? err.message : "Failed to load organizer");
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        setStatus("error");
       }
     }
 
@@ -151,7 +149,7 @@ export default function OrgDetailView({ slug, portalSlug, onClose }: OrgDetailVi
 
   const handleEventClick = (id: number) => navigateToDetail("event", id);
 
-  if (loading) {
+  if (status === "loading") {
     return (
       <div className="pt-6 pb-8" role="status" aria-label="Loading organization details">
         <NeonBackButton onClose={onClose} floating={false} />
@@ -305,7 +303,7 @@ export default function OrgDetailView({ slug, portalSlug, onClose }: OrgDetailVi
         {/* Description */}
         {producer.description && (
           <div className="mt-5 pt-5 border-t border-[var(--twilight)]">
-            <h2 className="font-mono text-xs uppercase tracking-widest text-[var(--muted)] mb-2">
+            <h2 className="font-mono text-xs font-bold uppercase tracking-[0.14em] text-[var(--muted)] mb-2">
               About
             </h2>
             <p className="text-[var(--soft)] text-sm leading-relaxed whitespace-pre-wrap">

@@ -2,7 +2,7 @@ import { createClient, createPortalScopedClient } from "@/lib/supabase/server";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
-import { applyPortalScopeToQuery, filterByPortalCity } from "@/lib/portal-scope";
+import { applyPortalScopeToQuery, excludeSensitiveEvents, filterByPortalCity } from "@/lib/portal-scope";
 
 type LiveEventRow = {
   id: number;
@@ -83,6 +83,7 @@ export async function GET(request: Request) {
       portalExclusive,
       publicOnlyWhenNoPortal: true,
     });
+    query = excludeSensitiveEvents(query);
 
     const { data, error } = await query;
 

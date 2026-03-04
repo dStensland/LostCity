@@ -114,7 +114,7 @@ def main():
     print("CATEGORY BREAKDOWN (Atlanta OR NULL portal, next 30 days)")
     print("=" * 80)
     
-    result = client.table("events").select("id,category,portal_id").gte(
+    result = client.table("events").select("id,category_id,portal_id").gte(
         "start_date", today
     ).lte("start_date", thirty_days).is_("canonical_event_id", "null").execute()
     
@@ -125,7 +125,7 @@ def main():
     
     category_counts = {}
     for event in atlanta_events:
-        cat = event.get("category") or "NULL"
+        cat = event.get("category_id") or "NULL"
         category_counts[cat] = category_counts.get(cat, 0) + 1
     
     for cat in sorted(category_counts.keys(), key=lambda x: category_counts[x], reverse=True):

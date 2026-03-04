@@ -6,6 +6,7 @@ import CategoryIcon from "@/components/CategoryIcon";
 import { OpenStatusBadge } from "@/components/HoursSection";
 import { type HoursData } from "@/lib/hours";
 import VenueEventsByDay from "@/components/VenueEventsByDay";
+import VenueShowtimes, { type ShowtimeEvent } from "@/components/VenueShowtimes";
 import { formatTimeSplit } from "@/lib/formats";
 import { SectionHeader } from "@/components/detail/SectionHeader";
 import { getSpotTypeLabel } from "@/lib/spots-constants";
@@ -35,10 +36,24 @@ export type RelatedEvent = {
   end_time?: string | null;
   distance?: number;
   proximity_label?: string;
-  venue?: { id: number; name: string; slug: string; city?: string; location_designator?: string } | null;
+  venue?: { id: number; name: string; slug: string; city?: string; location_designator?: string; venue_type?: string } | null;
   going_count?: number;
   interested_count?: number;
   recommendation_count?: number;
+  // Cinema/showtime fields
+  series_id?: string | null;
+  series?: {
+    id: string;
+    slug: string;
+    title: string;
+    series_type: string;
+    image_url: string | null;
+  } | null;
+  image_url?: string | null;
+  category?: string | null;
+  category_id?: string | null;
+  is_free?: boolean;
+  price_min?: number | null;
 };
 
 interface AroundHereSectionProps {
@@ -48,6 +63,7 @@ interface AroundHereSectionProps {
   venueName?: string;
   neighborhood?: string | null;
   portalSlug: string;
+  venueType?: string | null;
   onSpotClick: (slug: string) => void;
   onEventClick: (id: number) => void;
 }
@@ -63,6 +79,8 @@ export default function AroundHereSection({
   destinations,
   venueName,
   neighborhood,
+  portalSlug,
+  venueType,
   onSpotClick,
   onEventClick,
 }: AroundHereSectionProps) {
@@ -79,6 +97,8 @@ export default function AroundHereSection({
         <MoreAtVenue
           events={venueEvents}
           venueName={venueName || "This Venue"}
+          venueType={venueType}
+          portalSlug={portalSlug}
           onEventClick={onEventClick}
         />
       )}
@@ -105,15 +125,37 @@ export default function AroundHereSection({
 
 // ─── A. More at Venue ───────────────────────────────────────────────────────
 
+const CINEMA_VENUE_TYPES = new Set(["cinema", "theater"]);
+
 function MoreAtVenue({
   events,
   venueName,
+  venueType,
+  portalSlug,
   onEventClick,
 }: {
   events: RelatedEvent[];
   venueName: string;
+  venueType?: string | null;
+  portalSlug: string;
   onEventClick: (id: number) => void;
 }) {
+  const isCinemaLike = venueType ? CINEMA_VENUE_TYPES.has(venueType) : false;
+  const hasSeries = events.some((e) => e.series_id || e.series);
+
+  // Use VenueShowtimes for cinema/theater venues with series data
+  if (isCinemaLike && hasSeries) {
+    return (
+      <VenueShowtimes
+        events={events as ShowtimeEvent[]}
+        portalSlug={portalSlug}
+        venueType={venueType}
+        title={`More at ${venueName}`}
+        onEventClick={onEventClick}
+      />
+    );
+  }
+
   return (
     <div>
       <SectionHeader title={`More at ${venueName}`} count={events.length} />

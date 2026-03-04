@@ -109,6 +109,9 @@ const HEADER_PHOTOS: Record<TimeSlot, string[]> = {
 
 const RAIN_PHOTOS = [
   "/portals/atlanta/header-bg-rain-crop.jpg",
+  "/portals/atlanta/header-bg-rain.jpg",
+  "https://images.pexels.com/photos/31222634/pexels-photo-31222634.jpeg?w=1200&h=630&fit=crop", // B&W skyline — moody
+  "/portals/atlanta/header-bg-skyline.jpg",
 ];
 
 export function getCityPhoto(timeSlot: TimeSlot, weatherSignal?: string, dayOfWeek?: string): string {

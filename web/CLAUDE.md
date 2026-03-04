@@ -366,6 +366,36 @@ Overflow:   mt-2 text-xs font-mono text-[var(--accent)] hover:opacity-80
 ```
 Reference: `ComingUpSection.tsx`, `TonightsRegularsSection.tsx`
 
+#### List Row Card (.find-row-card)
+
+```
+Container:  find-row-card find-row-card-bg rounded-xl overflow-hidden
+            border border-[var(--twilight)]/75 border-l-[2px] border-l-[var(--accent-color)]
+            mb-2.5 sm:mb-3
+
+Padding:    p-3 sm:p-3.5  (main content link)
+Gap:        gap-2.5 sm:gap-3  (between rail and content)
+
+Date rail:  hidden sm:flex w-[100px]
+            -ml-3 sm:-ml-3.5 -my-3 sm:-my-3.5
+            Image: sizes="100px", list-rail-media class
+Time:       font-mono text-xl font-bold leading-none tabular-nums
+Period:     font-mono text-2xs font-medium uppercase tracking-[0.12em]
+
+Icon box:   w-8 h-8 rounded-lg bg-accent-20 border border-[var(--twilight)]/55
+            CategoryIcon size={16}
+
+Title:      text-base (mobile) / sm:text-lg (desktop)
+            font-semibold text-[var(--cream)] leading-tight
+            group-hover:text-[var(--accent-color)]
+
+Venue:      font-medium text-sm text-[var(--text-secondary)]
+Metadata:   text-sm text-[var(--text-secondary)]
+
+Actions:    pt-2.5 pr-2.5 pb-2.5 sm:pt-3 sm:pr-3.5 sm:pb-3
+```
+Reference: `EventCard.tsx`, `SeriesCard.tsx`, `FestivalCard.tsx`, `VenueCard.tsx`
+
 #### Feed Section Header
 
 ```
@@ -392,10 +422,17 @@ Reference: `FeedSectionHeader.tsx`, `ComingUpSection.tsx`, `NowShowingSection.ts
 ```
 Shell:      <main className="max-w-3xl mx-auto px-4 py-4 sm:py-6 pb-28 space-y-5 sm:space-y-8">
 Hero:       <DetailHero> — modes: "image" (full-width), "poster" (side-by-side), "fallback"
+Teaser:     <DescriptionTeaser> — pull-quote with Quotes icon + accent border-l
+              Extracts first sentence (30–180 chars), returns null if not meaningful
+Social:     <SocialProofStrip> — vertical card: friend avatars (children) + count pills
+              Pills match EventCard: coral ✓ for going, gold ★ for interested
+              font-mono text-xs, bg-[color]/10 border-[color]/20
+Genres:     <GenreChip> from ActivityChip — clickable, links to filtered search
+              Neutral: bg-[var(--twilight)] text-[var(--muted)], hover to cream
 Content:    <InfoCard> wraps content sections, border border-[var(--twilight)] bg-[var(--card-bg)] p-6 sm:p-8
-Metadata:   <MetadataGrid> — label (font-mono text-xs uppercase tracking-widest text-[var(--muted)])
+Metadata:   <MetadataGrid> — label (font-mono text-xs uppercase tracking-[0.13em] text-[var(--muted)])
                             + value (text-base font-medium text-[var(--cream)])
-Sections:   <SectionHeader> — font-mono text-xs uppercase tracking-widest text-[var(--muted)]
+Sections:   <SectionHeader> — font-mono text-xs font-bold uppercase tracking-[0.14em] text-[var(--muted)]
                               with border-t border-[var(--twilight)] separator
 Related:    <RelatedSection> + <RelatedCard> — variants: "compact" (row) and "image" (poster)
 Bottom bar: <DetailStickyBar> — fixed bottom CTA bar, appears on scroll
@@ -552,8 +589,9 @@ When writing recipes, prefer semantic tokens (Layer 2–3) over primitives. For 
 **Text:** `.text-primary` (cream), `.text-secondary` (soft), `.text-tertiary` (muted)
 **Typography:** `.mono-label` — `font-mono text-xs font-bold uppercase tracking-wider` (section headers, metadata labels)
 **Borders:** `.border-subtle` — never `border-gray-*`
+**Backgrounds:** `.find-row-card-bg` — flat night/dusk surface for list row cards
 **Shadows:** `.shadow-card-{sm|md|lg|xl}` — never raw `shadow-*`
-**Radius:** `rounded-card` (12px) or `rounded-card-xl` (16px) — never arbitrary radius
+**Radius:** `rounded-card` (12px) or `rounded-card-xl` (16px). List rows: `rounded-xl` (12px). Grid cards: `rounded-lg` (8px).
 **Hover:** `.hover-lift` — never rebuild translateY hover
 **Focus:** `.focus-ring` — accessible focus-visible ring with coral outline
 **Glow:** `.shadow-glow-{sm|md|lg}` or `.chip-glow-*`
@@ -576,10 +614,24 @@ When writing recipes, prefer semantic tokens (Layer 2–3) over primitives. For 
 - `<CountBadge count={3} placement="overlay" />` instead of inline coral count dots
 - `<DialogFooter onCancel={close} onConfirm={save} />` instead of inline button pairs
 
+### Reusable Detail Components (`components/detail/`)
+
+| Component | Props | Use case |
+|-----------|-------|----------|
+| `<DescriptionTeaser>` | `description`, `accentColor` | Pull-quote teaser between hero and InfoCard (Quotes icon + accent border) |
+| `<SocialProofStrip>` | `goingCount`, `interestedCount`, `children` | Attendance pills (coral going, gold interested) + friend avatar slot |
+| `<GenreChip>` | `genre`, `category`, `portalSlug` | Clickable genre pill that links to filtered search (from `ActivityChip.tsx`) |
+
+**When to use these on detail pages:**
+- `<DescriptionTeaser>` instead of inline blockquotes — handles sentence extraction + null safety
+- `<SocialProofStrip>` instead of inline social proof — matches EventCard's pill visual language
+- `<GenreChip>` instead of static `<Badge>` for genres — interactive, links to search
+
 ### Quick Reference: What NOT To Do
 
 ```
 ❌ text-[var(--text-xs)]     → text-xs           (TW4 generates color, not font-size)
+❌ --font-size-xs in @theme  → --text-xs          (TW4 font-size namespace is --text-*, not --font-size-*)
 ❌ text-[0.65rem]            → text-xs            (use the scale, not arbitrary rem)
 ❌ text-[#8a8a9a]            → text-[var(--muted)] (no hardcoded hex)
 ❌ text-white / bg-gray-900  → text-[var(--cream)] / bg-[var(--night)] (use tokens)
@@ -591,6 +643,8 @@ When writing recipes, prefer semantic tokens (Layer 2–3) over primitives. For 
 ❌ style={{ color: hex }}    → ScopedStyles + createCssVarClass (for dynamic colors)
 ❌ <span className="opacity-40">·</span> → <Dot /> (use the component)
 ❌ min-w-[1.5rem]            → min-w-6            (use Tailwind spacing scale)
+❌ rounded-2xl (list rows)   → rounded-xl          (list row cards are 12px)
+❌ inline gradient bg        → find-row-card-bg    (use the utility class)
 ```
 
 ### Accepted Exceptions

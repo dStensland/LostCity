@@ -187,6 +187,62 @@ def parse_datetime(datetime_str: str) -> tuple[Optional[str], Optional[str]]:
     return None, None
 
 
+def format_time_label(time_24: Optional[str]) -> Optional[str]:
+    if not time_24:
+        return None
+    raw = str(time_24).strip()
+    if not raw:
+        return None
+    for fmt in ("%H:%M", "%H:%M:%S"):
+        try:
+            return datetime.strptime(raw, fmt).strftime("%-I:%M %p")
+        except ValueError:
+            continue
+    return raw
+
+
+def build_painting_description(
+    *,
+    title: str,
+    base_description: Optional[str],
+    venue_name: str,
+    start_date: str,
+    start_time: Optional[str],
+    event_url: str,
+    price_min: Optional[float],
+    price_max: Optional[float],
+) -> str:
+    desc = (base_description or "").strip()
+    parts: list[str] = []
+    if desc and len(desc) >= 140:
+        parts.append(desc if desc.endswith(".") else f"{desc}.")
+    elif desc:
+        parts.append(desc if desc.endswith(".") else f"{desc}.")
+        parts.append(f"Paint-and-sip class at {venue_name}.")
+    else:
+        parts.append(f"{title} is a paint-and-sip class at {venue_name}.")
+
+    parts.append(f"Location: {venue_name}, Atlanta metro, GA.")
+    time_label = format_time_label(start_time)
+    if start_date and time_label:
+        parts.append(f"Scheduled on {start_date} at {time_label}.")
+    elif start_date:
+        parts.append(f"Scheduled on {start_date}.")
+
+    if price_min is not None and price_max is not None:
+        if price_min == price_max:
+            parts.append(f"Typical ticket price: ${price_min:.0f}.")
+        else:
+            parts.append(f"Typical ticket range: ${price_min:.0f}-${price_max:.0f}.")
+    elif price_min is not None:
+        parts.append(f"Typical ticket price from ${price_min:.0f}.")
+
+    parts.append("BYOB-friendly studio class with guided step-by-step painting instruction.")
+    if event_url:
+        parts.append(f"Check the official listing for painting theme, cancellation policy, and seat availability ({event_url}).")
+    return " ".join(parts)[:1600]
+
+
 def clean_title(title: str) -> tuple[str, list[str]]:
     """
     Clean event title and extract tags.
@@ -300,9 +356,16 @@ def crawl_location(
                 detail_fetches += 1
                 time.sleep(0.5)  # Rate limit
 
-            # Fallback synthetic description
-            if not description:
-                description = f"Paint and sip class at {venue_name}. BYOB welcome."
+            description = build_painting_description(
+                title=title,
+                base_description=description,
+                venue_name=venue_name,
+                start_date=start_date,
+                start_time=start_time,
+                event_url=event_url or calendar_url,
+                price_min=price_min,
+                price_max=price_max,
+            )
 
             # Build tags
             tags = [

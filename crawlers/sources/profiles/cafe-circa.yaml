@@ -1,0 +1,27 @@
+version: 1
+slug: cafe-circa
+name: "Cafe Circa"
+integration_method: llm_crawler
+defaults:
+  venue_name: "Cafe Circa"
+  category: nightlife
+  tags:
+  - atlanta-expansion-wave-t
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - "http://circaatlanta.com/"
+  fetch:
+    render_js: true
+    wait_until: domcontentloaded
+detail:
+  enabled: true
+  fetch:
+    render_js: true
+    wait_until: domcontentloaded
+data_goals:
+  - events
+  - lineup
+  - images
+  - tickets

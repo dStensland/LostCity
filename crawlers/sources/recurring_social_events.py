@@ -23,8 +23,10 @@ from db import (
     insert_event,
     find_existing_event_for_insert,
     smart_update_existing_event,
+    writes_enabled,
 )
 from dedupe import generate_content_hash
+from closed_venues import CLOSED_VENUE_SLUGS
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +34,16 @@ logger = logging.getLogger(__name__)
 WEEKS_AHEAD = 6
 
 # Day mapping for recurrence rules
-DAY_CODES = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU']
+DAY_CODES = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
+DAY_NAMES = [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+]
 
 # ============================================
 # VENUE DEFINITIONS
@@ -595,32 +606,8 @@ VENUES = {
         "zip": "30312",
         "venue_type": "bar",
     },
-
     # ========== Phase 2: Neighborhood + day gap fills ==========
-
-    # Little Five Points
-    "the-porter": {
-        "name": "The Porter Beer Bar",
-        "slug": "the-porter-beer-bar",
-        "address": "1156 Euclid Ave NE",
-        "neighborhood": "Little Five Points",
-        "city": "Atlanta",
-        "state": "GA",
-        "zip": "30307",
-        "venue_type": "bar",
-        "website": "https://theporterbeerbar.com",
-    },
-    "wrecking-bar": {
-        "name": "Wrecking Bar Brewpub",
-        "slug": "wrecking-bar-brewpub",
-        "address": "292 Moreland Ave NE",
-        "neighborhood": "Little Five Points",
-        "city": "Atlanta",
-        "state": "GA",
-        "zip": "30307",
-        "venue_type": "brewery",
-        "website": "https://wreckingbarbrewpub.com",
-    },
+    # Little Five Points (the-porter and wrecking-bar defined above in trivia section)
     "elmyr": {
         "name": "Elmyr",
         "slug": "elmyr",
@@ -631,7 +618,6 @@ VENUES = {
         "zip": "30307",
         "venue_type": "restaurant",
     },
-
     # Inman Park
     "barcelona-wine-bar": {
         "name": "Barcelona Wine Bar",
@@ -676,7 +662,6 @@ VENUES = {
         "venue_type": "food_hall",
         "website": "https://krogstreetmarket.com",
     },
-
     # East Atlanta Village (expanding existing thin coverage)
     "the-glenwood": {
         "name": "The Glenwood",
@@ -708,7 +693,6 @@ VENUES = {
         "zip": "30316",
         "venue_type": "bar",
     },
-
     # Sunday gap fills
     "northside-tavern": {
         "name": "Northside Tavern",
@@ -844,7 +828,6 @@ VENUES = {
         "website": "https://woofsatlanta.com",
     },
     # atlanta-eagle: handled by dedicated source (id=138) with recurring upgrade
-
     # ========== GAMING / TABLETOP VENUES ==========
     # "battle-and-brew": handled by dedicated source (sources/battle_and_brew.py)
     "east-atlanta-comics": {
@@ -888,7 +871,6 @@ VENUES = {
         "zip": "30002",
         "venue_type": "bar",
     },
-
     # ========== RUN CLUB VENUES ==========
     # "ponce-city-market": handled by dedicated source (sources/ponce_city_market.py)
     "big-peach-running-midtown": {
@@ -921,7 +903,6 @@ VENUES = {
         "zip": "30305",
         "venue_type": "bar",
     },
-
     # ========== DANCE VENUES ==========
     "tongue-and-groove": {
         "name": "Tongue and Groove",
@@ -944,7 +925,6 @@ VENUES = {
         "zip": "30312",
         "venue_type": "event_space",
     },
-
     # ========== SPORTS / WELLNESS VENUES ==========
     # "piedmont-park": handled by dedicated source (sources/piedmont_park.py)
     "woodruff-park": {
@@ -957,7 +937,6 @@ VENUES = {
         "zip": "30303",
         "venue_type": "park",
     },
-
     # ========== CYCLING / OUTDOOR VENUES ==========
     "inman-park-station": {
         "name": "Inman Park Station",
@@ -1020,7 +999,6 @@ VENUES = {
         "zip": "30315",
         "venue_type": "park",
     },
-
     # ========== FOOD & DRINK SPECIALS VENUES ==========
     "the-optimist": {
         "name": "The Optimist",
@@ -1217,6 +1195,139 @@ VENUES = {
         "zip": "30309",
         "venue_type": "bar",
     },
+    # ========== Regular Hangs buildout ==========
+    # Poker venues
+    "aces-up-atlanta": {
+        "name": "Aces Up Atlanta Bar Poker",
+        "slug": "aces-up-atlanta-bar-poker",
+        "address": "2500 N Decatur Rd",
+        "neighborhood": "Decatur",
+        "city": "Decatur",
+        "state": "GA",
+        "zip": "30033",
+        "venue_type": "bar",
+    },
+    "eddies-attic": {
+        "name": "Eddie's Attic",
+        "slug": "eddies-attic",
+        "address": "515-B N McDonough St",
+        "neighborhood": "Decatur",
+        "city": "Decatur",
+        "state": "GA",
+        "zip": "30030",
+        "venue_type": "music_venue",
+        "website": "https://eddiesattic.com",
+    },
+    # Improv venues
+    "dads-garage": {
+        "name": "Dad's Garage Theatre",
+        "slug": "dads-garage-theatre",
+        "address": "569 Ezzard St SE",
+        "neighborhood": "Reynoldstown",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30312",
+        "venue_type": "theater",
+        "website": "https://dadsgarage.com",
+    },
+    "village-theatre": {
+        "name": "Village Theatre",
+        "slug": "village-theatre",
+        "address": "7509 Main St",
+        "neighborhood": "Suwanee",
+        "city": "Suwanee",
+        "state": "GA",
+        "zip": "30024",
+        "venue_type": "theater",
+        "website": "https://villagecomedy.com",
+    },
+    "whole-world-improv": {
+        "name": "Whole World Improv Theatre",
+        "slug": "whole-world-improv-theatre",
+        "address": "1216 Spring St NW",
+        "neighborhood": "Midtown",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30309",
+        "venue_type": "theater",
+        "website": "https://wholeworldtheatre.com",
+    },
+    # Skate venues
+    "cascade-skating": {
+        "name": "Cascade Family Skating",
+        "slug": "cascade-family-skating",
+        "address": "3535 Cascade Rd SW",
+        "neighborhood": "Cascade",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30311",
+        "venue_type": "entertainment_venue",
+    },
+    "sparkles-kennesaw": {
+        "name": "Sparkles Family Fun Center",
+        "slug": "sparkles-family-fun-center-kennesaw",
+        "address": "2070 Cobb Pkwy NW",
+        "neighborhood": "Kennesaw",
+        "city": "Kennesaw",
+        "state": "GA",
+        "zip": "30152",
+        "venue_type": "entertainment_venue",
+    },
+    # Latin night venues
+    "havana-club-atl": {
+        "name": "Havana Club ATL",
+        "slug": "havana-club-atl",
+        "address": "3112 Piedmont Rd NE",
+        "neighborhood": "Buckhead",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30305",
+        "venue_type": "nightclub",
+    },
+    "el-bar": {
+        "name": "El Bar",
+        "slug": "el-bar",
+        "address": "939 Ponce De Leon Ave NE",
+        "neighborhood": "Virginia Highland",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30306",
+        "venue_type": "bar",
+    },
+    # Viewing party / sports bar venues
+    "hudson-grille-midtown": {
+        "name": "Hudson Grille Midtown",
+        "slug": "hudson-grille-midtown",
+        "address": "942 Peachtree St NE",
+        "neighborhood": "Midtown",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30309",
+        "venue_type": "sports_bar",
+        "website": "https://hudsongrille.com",
+    },
+    "stats-brewpub": {
+        "name": "STATS Brewpub",
+        "slug": "stats-brewpub",
+        "address": "300 Marietta St NW",
+        "neighborhood": "Downtown",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30313",
+        "venue_type": "sports_bar",
+    },
+    # Additional bingo venue
+    "monday-night-garage": {
+        "name": "Monday Night Brewing Garage",
+        "slug": "monday-night-brewing-garage",
+        "address": "933 Lee St SW",
+        "neighborhood": "West End",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30310",
+        "venue_type": "brewery",
+        "website": "https://mondaynightbrewing.com",
+    },
 }
 
 # ============================================
@@ -1276,7 +1387,7 @@ WEEKLY_EVENTS = [
         "start_time": "22:00",
         "category": "nightlife",
         "subcategory": "nightlife.dj",
-        "tags": ["r&b", "dj", "nightlife", "weekly"],
+        "tags": ["dj", "nightlife", "weekly"],
     },
     {
         "venue_key": "daiquiriville",
@@ -1328,7 +1439,6 @@ WEEKLY_EVENTS = [
         "subcategory": "nightlife.karaoke",
         "tags": ["karaoke", "nightlife", "weekly", "family-friendly"],
     },
-
     # ========== OPEN MICS ==========
     {
         "venue_key": "joes-coffeehouse",
@@ -1338,7 +1448,7 @@ WEEKLY_EVENTS = [
         "start_time": "17:00",
         "category": "community",
         "subcategory": None,
-        "tags": ["open-mic", "comedy", "music", "poetry", "weekly"],
+        "tags": ["open-mic", "comedy", "poetry", "weekly"],
     },
     {
         "venue_key": "our-bar-atl",
@@ -1348,7 +1458,7 @@ WEEKLY_EVENTS = [
         "start_time": "21:00",
         "category": "nightlife",
         "subcategory": None,
-        "tags": ["open-mic", "comedy", "music", "weekly"],
+        "tags": ["open-mic", "comedy", "weekly"],
     },
     {
         "venue_key": "southern-feed-store",
@@ -1358,7 +1468,7 @@ WEEKLY_EVENTS = [
         "start_time": "19:00",
         "category": "nightlife",
         "subcategory": None,
-        "tags": ["open-mic", "comedy", "music", "poetry", "weekly"],
+        "tags": ["open-mic", "comedy", "poetry", "weekly"],
     },
     # Laughing Skull: handled by dedicated source (sources/laughing_skull.py) with full 7-day recurring schedule
     {
@@ -1369,7 +1479,7 @@ WEEKLY_EVENTS = [
         "start_time": "21:00",
         "category": "nightlife",
         "subcategory": None,
-        "tags": ["open-mic", "comedy", "music", "weekly"],
+        "tags": ["open-mic", "comedy", "weekly"],
     },
     {
         "venue_key": "limelight-theater",
@@ -1389,7 +1499,7 @@ WEEKLY_EVENTS = [
         "start_time": "19:00",
         "category": "community",
         "subcategory": None,
-        "tags": ["open-mic", "comedy", "music", "weekly"],
+        "tags": ["open-mic", "comedy", "weekly"],
     },
     {
         "venue_key": "red-light-cafe",
@@ -1440,7 +1550,7 @@ WEEKLY_EVENTS = [
         "start_time": "20:00",
         "category": "community",
         "subcategory": None,
-        "tags": ["open-mic", "comedy", "music", "weekly"],
+        "tags": ["open-mic", "comedy", "weekly"],
     },
     {
         "venue_key": "asw-whiskey",
@@ -1450,7 +1560,7 @@ WEEKLY_EVENTS = [
         "start_time": "18:00",
         "category": "nightlife",
         "subcategory": None,
-        "tags": ["open-mic", "comedy", "music", "nightlife", "weekly"],
+        "tags": ["open-mic", "comedy", "nightlife", "weekly"],
     },
     {
         "venue_key": "atlantucky",
@@ -1460,7 +1570,7 @@ WEEKLY_EVENTS = [
         "start_time": "18:30",
         "category": "nightlife",
         "subcategory": None,
-        "tags": ["open-mic", "comedy", "music", "nightlife", "weekly", "brewery"],
+        "tags": ["open-mic", "comedy", "nightlife", "weekly", "brewery"],
     },
     {
         "venue_key": "urban-grind",
@@ -1470,7 +1580,7 @@ WEEKLY_EVENTS = [
         "start_time": "19:00",
         "category": "community",
         "subcategory": None,
-        "tags": ["open-mic", "poetry", "music", "weekly"],
+        "tags": ["open-mic", "poetry", "weekly"],
     },
     {
         "venue_key": "kats-cafe",
@@ -1480,7 +1590,7 @@ WEEKLY_EVENTS = [
         "start_time": "19:00",
         "category": "community",
         "subcategory": None,
-        "tags": ["open-mic", "poetry", "music", "weekly"],
+        "tags": ["open-mic", "poetry", "weekly"],
     },
     {
         "venue_key": "battery-atlanta",
@@ -1490,7 +1600,7 @@ WEEKLY_EVENTS = [
         "start_time": "19:00",
         "category": "community",
         "subcategory": None,
-        "tags": ["open-mic", "comedy", "music", "weekly"],
+        "tags": ["open-mic", "comedy", "weekly"],
     },
     # Joystick verified from Instagram: Wednesday gaming, Thursday karaoke (NOT open mic as badslava listed)
     {
@@ -1521,7 +1631,7 @@ WEEKLY_EVENTS = [
         "start_time": "20:30",
         "category": "nightlife",
         "subcategory": None,
-        "tags": ["open-mic", "comedy", "music", "nightlife", "weekly"],
+        "tags": ["open-mic", "comedy", "nightlife", "weekly"],
     },
     {
         "venue_key": "dynamic-el-dorado",
@@ -1531,7 +1641,7 @@ WEEKLY_EVENTS = [
         "start_time": "23:00",
         "category": "nightlife",
         "subcategory": None,
-        "tags": ["open-mic", "comedy", "music", "weekly", "late-night"],
+        "tags": ["open-mic", "comedy", "weekly", "late-night"],
     },
     # 529 verified: Saturday 3PM Open Mic Comedy (website: 529atlanta.com, not 529atl.com which is hijacked)
     {
@@ -1544,7 +1654,6 @@ WEEKLY_EVENTS = [
         "subcategory": "comedy.standup",
         "tags": ["open-mic", "comedy", "standup", "weekly", "afternoon"],
     },
-
     # ========== GAME NIGHTS ==========
     {
         "venue_key": "jasons-deli",
@@ -1577,7 +1686,6 @@ WEEKLY_EVENTS = [
         "subcategory": None,
         "tags": ["games", "board-games", "weekly", "family-friendly", "community"],
     },
-
     # ========== BINGO ==========
     {
         "venue_key": "punch-bowl",
@@ -1599,7 +1707,6 @@ WEEKLY_EVENTS = [
         "subcategory": None,
         "tags": ["bingo", "games", "weekly", "brunch"],
     },
-
     # ========== JAZZ & BLUES NIGHTS ==========
     {
         "venue_key": "cafe-circa",
@@ -1651,7 +1758,6 @@ WEEKLY_EVENTS = [
         "subcategory": "music.blues",
         "tags": ["blues", "live-music", "nightlife", "weekly"],
     },
-
     # ========== ADDITIONAL KARAOKE ==========
     {
         "venue_key": "sister-louisas",
@@ -1663,7 +1769,6 @@ WEEKLY_EVENTS = [
         "subcategory": "nightlife.karaoke",
         "tags": ["karaoke", "nightlife", "weekly", "lgbtq-friendly"],
     },
-
     # ========== ADDITIONAL TRIVIA ==========
     {
         "venue_key": "brick-store-pub",
@@ -1695,11 +1800,9 @@ WEEKLY_EVENTS = [
         "subcategory": "nightlife.trivia",
         "tags": ["trivia", "games", "nightlife", "weekly", "brewery"],
     },
-
     # ==================================================================
     # Phase 0b: NEW RECURRING EVENTS
     # ==================================================================
-
     # ========== ADDITIONAL TRIVIA ==========
     {
         "venue_key": "thinking-man",
@@ -1751,7 +1854,6 @@ WEEKLY_EVENTS = [
         "subcategory": "nightlife.trivia",
         "tags": ["trivia", "games", "nightlife", "weekly"],
     },
-
     # ========== DJ NIGHTS / DANCE ==========
     {
         "venue_key": "mjq-concourse",
@@ -1823,7 +1925,6 @@ WEEKLY_EVENTS = [
         "subcategory": "nightlife.party",
         "tags": ["dance", "dj", "nightlife", "weekly", "high-energy"],
     },
-
     # ========== DRAG SHOWS ==========
     {
         "venue_key": "burkharts",
@@ -1865,7 +1966,6 @@ WEEKLY_EVENTS = [
         "subcategory": "nightlife.drag",
         "tags": ["drag", "nightlife", "weekly", "lgbtq-friendly"],
     },
-
     # ========== LIVE MUSIC RESIDENCIES ==========
     {
         "venue_key": "fontaines",
@@ -1907,7 +2007,6 @@ WEEKLY_EVENTS = [
         "subcategory": None,
         "tags": ["brunch", "dj", "outdoor", "weekly"],
     },
-
     # ========== FARMERS MARKETS ==========
     {
         "venue_key": "piedmont-park-green-market",
@@ -1917,7 +2016,7 @@ WEEKLY_EVENTS = [
         "start_time": "09:00",
         "category": "markets",
         "subcategory": None,
-        "tags": ["farmers-market", "outdoor", "weekly", "family-friendly"],
+        "tags": ["outdoor", "weekly", "family-friendly"],
     },
     {
         "venue_key": "peachtree-road-farmers-market",
@@ -1927,13 +2026,11 @@ WEEKLY_EVENTS = [
         "start_time": "08:30",
         "category": "markets",
         "subcategory": None,
-        "tags": ["farmers-market", "outdoor", "weekly", "family-friendly", "seasonal"],
+        "tags": ["outdoor", "weekly", "family-friendly", "seasonal"],
     },
-
     # ==================================================================
     # Phase 2: NEIGHBORHOOD + DAY GAP FILLS
     # ==================================================================
-
     # ========== LITTLE FIVE POINTS ==========
     {
         "venue_key": "elmyr",
@@ -1945,7 +2042,6 @@ WEEKLY_EVENTS = [
         "subcategory": None,
         "tags": ["food-specials", "tacos", "weekly", "budget-friendly"],
     },
-
     # ========== INMAN PARK ==========
     {
         "venue_key": "barcelona-wine-bar",
@@ -1965,7 +2061,7 @@ WEEKLY_EVENTS = [
         "start_time": "20:00",
         "category": "music",
         "subcategory": "music.acoustic",
-        "tags": ["live-music", "acoustic", "weekly", "date-night", "patio"],
+        "tags": ["live-music", "acoustic", "weekly", "date-night"],
     },
     {
         "venue_key": "victory-sandwich-bar",
@@ -1995,7 +2091,7 @@ WEEKLY_EVENTS = [
         "start_time": "19:00",
         "category": "music",
         "subcategory": None,
-        "tags": ["live-music", "weekly", "brewery", "beltline", "patio"],
+        "tags": ["live-music", "weekly", "brewery", "beltline"],
     },
     {
         "venue_key": "krog-street-market",
@@ -2005,9 +2101,8 @@ WEEKLY_EVENTS = [
         "start_time": "12:00",
         "category": "music",
         "subcategory": None,
-        "tags": ["live-music", "weekly", "family-friendly", "food-hall"],
+        "tags": ["live-music", "weekly", "family-friendly"],
     },
-
     # ========== EAST ATLANTA VILLAGE ==========
     {
         "venue_key": "the-glenwood",
@@ -2059,7 +2154,6 @@ WEEKLY_EVENTS = [
         "subcategory": "nightlife.dj",
         "tags": ["dj", "dance", "nightlife", "weekly", "lgbtq-friendly"],
     },
-
     # ========== SUNDAY GAP FILLS ==========
     {
         "venue_key": "northside-tavern",
@@ -2141,14 +2235,10 @@ WEEKLY_EVENTS = [
         "subcategory": None,
         "tags": ["brunch", "brewery", "weekly", "family-friendly"],
     },
-
     # NOTE: Sister Louisa's bingo + karaoke handled by dedicated sources
     # (sister-louisas-church for Drag Bingo, sister-louisas for karaoke)
-
     # ========== DISCOVERED FROM VENUE WEBSITES (Feb 2026) ==========
-
     # Star Community Bar: handled by dedicated source upgrade (star_community_bar.py)
-
     # Fado Irish Pub — Buckhead
     {
         "venue_key": "fado-irish-pub",
@@ -2158,9 +2248,8 @@ WEEKLY_EVENTS = [
         "start_time": "19:00",
         "category": "nightlife",
         "subcategory": None,
-        "tags": ["trivia", "games", "nightlife", "weekly", "dirty-south-trivia"],
+        "tags": ["trivia", "games", "nightlife", "weekly"],
     },
-
     # Steady Hand Beer — West Midtown
     {
         "venue_key": "steady-hand-beer",
@@ -2172,7 +2261,6 @@ WEEKLY_EVENTS = [
         "subcategory": None,
         "tags": ["trivia", "games", "nightlife", "weekly", "brewery"],
     },
-
     # Cherry Street Brewing — West Midtown
     {
         "venue_key": "cherry-street-brewing",
@@ -2204,7 +2292,6 @@ WEEKLY_EVENTS = [
         "subcategory": None,
         "tags": ["live-music", "weekly", "brewery"],
     },
-
     # Three Taverns Imaginarium — Reynoldstown
     {
         "venue_key": "three-taverns",
@@ -2226,7 +2313,6 @@ WEEKLY_EVENTS = [
         "subcategory": None,
         "tags": ["games", "game-night", "nightlife", "weekly", "brewery"],
     },
-
     # Gene's BBQ — Kirkwood
     {
         "venue_key": "genes-bbq",
@@ -2248,7 +2334,6 @@ WEEKLY_EVENTS = [
         "subcategory": None,
         "tags": ["karaoke", "nightlife", "weekly"],
     },
-
     # Brewhouse Cafe — Little Five Points
     {
         "venue_key": "brewhouse-cafe",
@@ -2260,7 +2345,6 @@ WEEKLY_EVENTS = [
         "subcategory": None,
         "tags": ["dj", "nightlife", "weekly", "drink-specials"],
     },
-
     # Whitehall Tavern — Buckhead
     {
         "venue_key": "whitehall-tavern",
@@ -2282,7 +2366,6 @@ WEEKLY_EVENTS = [
         "subcategory": None,
         "tags": ["trivia", "games", "nightlife", "weekly"],
     },
-
     # Irby's Tavern — Buckhead
     {
         "venue_key": "irbys-tavern",
@@ -2294,7 +2377,6 @@ WEEKLY_EVENTS = [
         "subcategory": None,
         "tags": ["trivia", "games", "nightlife", "weekly", "drink-specials"],
     },
-
     # Woofs Atlanta — Midtown
     {
         "venue_key": "woofs-atlanta",
@@ -2306,13 +2388,10 @@ WEEKLY_EVENTS = [
         "subcategory": None,
         "tags": ["drag", "viewing-party", "nightlife", "weekly", "lgbtq-friendly"],
     },
-
     # Atlanta Eagle: handled by dedicated source upgrade (atlanta_eagle.py)
-
     # ==================================================================
     # GAMING / TABLETOP / D&D (Feb 2026)
     # ==================================================================
-
     # Joystick Gamebar — Edgewood (ITP)
     # Note: uses "joystick" key (existing entry with slug "joystick-gamebar")
     {
@@ -2335,7 +2414,6 @@ WEEKLY_EVENTS = [
         "subcategory": None,
         "tags": ["dnd", "tabletop", "games", "weekly", "free"],
     },
-
     # Bone Lick BBQ — Grant Park (ITP)
     {
         "venue_key": "bone-lick-bbq",
@@ -2347,9 +2425,7 @@ WEEKLY_EVENTS = [
         "subcategory": None,
         "tags": ["dnd", "tabletop", "games", "weekly", "free"],
     },
-
     # Battle & Brew — handled by dedicated source (sources/battle_and_brew.py)
-
     # Giga-Bites Cafe — Marietta (OTP but destination)
     {
         "venue_key": "giga-bites-cafe",
@@ -2399,9 +2475,8 @@ WEEKLY_EVENTS = [
         "start_time": "12:00",
         "category": "family",
         "subcategory": None,
-        "tags": ["dnd", "kids", "family", "tabletop", "weekly"],
+        "tags": ["dnd", "kids", "tabletop", "weekly"],
     },
-
     # My Parents' Basement — Avondale Estates
     {
         "venue_key": "my-parents-basement",
@@ -2424,7 +2499,6 @@ WEEKLY_EVENTS = [
         "tags": ["trivia", "comics", "geek", "weekly", "free"],
         "is_free": True,
     },
-
     # East Atlanta Comics — MTG
     {
         "venue_key": "east-atlanta-comics",
@@ -2446,13 +2520,10 @@ WEEKLY_EVENTS = [
         "subcategory": "nightlife.bar_games",
         "tags": ["mtg", "magic-the-gathering", "pauper", "card-games", "weekly"],
     },
-
     # ==================================================================
     # RUN CLUBS (Feb 2026)
     # ==================================================================
-
     # Atlanta Run Club at Ponce City Market — handled by dedicated source (sources/ponce_city_market.py)
-
     # BeltLine Run Club at New Realm Brewing
     # Note: uses "new-realm-brewing" key (existing entry)
     {
@@ -2465,7 +2536,6 @@ WEEKLY_EVENTS = [
         "subcategory": None,
         "tags": ["running", "run-club", "beltline", "free", "weekly", "brewery"],
     },
-
     # Big Peach Running Co — Midtown
     {
         "venue_key": "big-peach-running-midtown",
@@ -2487,7 +2557,6 @@ WEEKLY_EVENTS = [
         "subcategory": None,
         "tags": ["running", "run-club", "free", "weekly"],
     },
-
     # Cabbagetown Running Club
     {
         "venue_key": "milltown-arms-tavern",
@@ -2497,9 +2566,8 @@ WEEKLY_EVENTS = [
         "start_time": "19:00",
         "category": "fitness",
         "subcategory": None,
-        "tags": ["running", "run-club", "weekly", "cabbagetown"],
+        "tags": ["running", "run-club", "weekly"],
     },
-
     # Running for Brews — Buckhead
     {
         "venue_key": "elbow-room-buckhead",
@@ -2511,11 +2579,9 @@ WEEKLY_EVENTS = [
         "subcategory": None,
         "tags": ["running", "run-club", "social", "weekly"],
     },
-
     # ==================================================================
     # SOCIAL DANCE NIGHTS (Feb 2026)
     # ==================================================================
-
     # Latin Wednesdays — Tongue & Groove
     {
         "venue_key": "tongue-and-groove",
@@ -2527,7 +2593,6 @@ WEEKLY_EVENTS = [
         "subcategory": "nightlife.latin_night",
         "tags": ["salsa", "bachata", "latin", "dance", "free-lesson", "weekly"],
     },
-
     # Hot Jam Atlanta — Lindy Hop Monday
     {
         "venue_key": "hot-jam-atlanta",
@@ -2539,19 +2604,14 @@ WEEKLY_EVENTS = [
         "subcategory": "nightlife.dance",
         "tags": ["swing", "lindy-hop", "dance", "jazz", "weekly"],
     },
-
     # DanceOut — The Heretic (Country Dance) — handled by dedicated source (sources/the_heretic.py)
-
     # ==================================================================
     # PICKLEBALL & PICKUP SPORTS (Feb 2026)
     # ==================================================================
-
     # Piedmont Park events — handled by dedicated source (sources/piedmont_park.py)
-
     # ==================================================================
     # YOGA & WELLNESS (Feb 2026)
     # ==================================================================
-
     # Woodruff Park Free Yoga
     {
         "venue_key": "woodruff-park",
@@ -2563,11 +2623,9 @@ WEEKLY_EVENTS = [
         "subcategory": None,
         "tags": ["yoga", "free", "outdoor", "weekly"],
     },
-
     # ==================================================================
     # CYCLING GROUPS (Feb 2026)
     # ==================================================================
-
     # Bonafide Riders — Monday social ride
     {
         "venue_key": "inman-park-station",
@@ -2580,7 +2638,6 @@ WEEKLY_EVENTS = [
         "tags": ["cycling", "bike-ride", "free", "social", "weekly", "beltline"],
         "is_free": True,
     },
-
     # Pizza Ride — Thursday fast group ride
     {
         "venue_key": "avondale-estates-art-lot",
@@ -2593,7 +2650,6 @@ WEEKLY_EVENTS = [
         "tags": ["cycling", "bike-ride", "free", "competitive", "weekly"],
         "is_free": True,
     },
-
     # Midweek Roll — biweekly social ride (listed as weekly; description notes every other Wednesday)
     {
         "venue_key": "97-estoria",
@@ -2603,14 +2659,12 @@ WEEKLY_EVENTS = [
         "start_time": "19:00",
         "category": "fitness",
         "subcategory": "fitness.cycling",
-        "tags": ["cycling", "bike-ride", "free", "social", "biweekly", "bar"],
+        "tags": ["cycling", "bike-ride", "free", "social", "biweekly"],
         "is_free": True,
     },
-
     # ==================================================================
     # TENNIS (Feb 2026)
     # ==================================================================
-
     {
         "venue_key": "glenlake-tennis-center",
         "day": 5,  # Saturday
@@ -2623,11 +2677,9 @@ WEEKLY_EVENTS = [
         "price_min": 5,
         "price_max": 10,
     },
-
     # ==================================================================
     # MARKETS (Feb 2026)
     # ==================================================================
-
     {
         "venue_key": "broad-street-boardwalk",
         "day": 3,  # Thursday
@@ -2636,14 +2688,12 @@ WEEKLY_EVENTS = [
         "start_time": "11:00",
         "category": "food_drink",
         "subcategory": None,
-        "tags": ["market", "vintage", "shopping", "free", "weekly", "downtown"],
+        "tags": ["vintage", "shopping", "free", "weekly"],
         "is_free": True,
     },
-
     # ==================================================================
     # VOLUNTEER (Feb 2026)
     # ==================================================================
-
     {
         "venue_key": "grant-park",
         "day": 5,  # Saturday (2nd Saturday each month; recurring template covers all Saturdays)
@@ -2652,16 +2702,13 @@ WEEKLY_EVENTS = [
         "start_time": "09:00",
         "category": "community",
         "subcategory": None,
-        "tags": ["volunteer", "park", "free", "outdoor", "morning", "monthly"],
+        "tags": ["volunteer", "free", "outdoor", "morning", "monthly"],
         "is_free": True,
     },
-
     # ==================================================================
     # FOOD & DRINK SPECIALS (Feb 2026)
     # ==================================================================
-
     # --- MONDAY ---
-
     # Lloyd's Monday Crab Night
     {
         "venue_key": "lloyds-atl",
@@ -2671,7 +2718,7 @@ WEEKLY_EVENTS = [
         "start_time": "17:00",
         "category": "food_drink",
         "subcategory": None,
-        "tags": ["seafood", "crab", "specials", "weekly", "inman-park"],
+        "tags": ["seafood", "crab", "specials", "weekly"],
         "price_min": 35,
         "price_max": 35,
     },
@@ -2684,7 +2731,7 @@ WEEKLY_EVENTS = [
         "start_time": "17:00",
         "category": "food_drink",
         "subcategory": None,
-        "tags": ["wine", "specials", "half-price", "weekly", "buckhead"],
+        "tags": ["wine", "specials", "half-price", "weekly"],
     },
     # Wild Heaven Avondale — Monday half-price margaritas
     {
@@ -2697,9 +2744,7 @@ WEEKLY_EVENTS = [
         "subcategory": None,
         "tags": ["margaritas", "specials", "half-price", "brewery", "weekly"],
     },
-
     # --- TUESDAY (Taco Tuesday) ---
-
     # Pure Taqueria Taco Tuesday
     {
         "venue_key": "pure-taqueria-inman-park",
@@ -2709,7 +2754,7 @@ WEEKLY_EVENTS = [
         "start_time": "11:00",
         "category": "food_drink",
         "subcategory": None,
-        "tags": ["tacos", "taco-tuesday", "specials", "weekly", "inman-park"],
+        "tags": ["tacos", "taco-tuesday", "specials", "weekly"],
     },
     # Tin Lizzy's Taco Tuesday
     {
@@ -2720,7 +2765,7 @@ WEEKLY_EVENTS = [
         "start_time": "11:00",
         "category": "food_drink",
         "subcategory": None,
-        "tags": ["tacos", "taco-tuesday", "specials", "weekly", "midtown"],
+        "tags": ["tacos", "taco-tuesday", "specials", "weekly"],
     },
     # Forza Storico — Tuesday half-price wine
     {
@@ -2731,11 +2776,9 @@ WEEKLY_EVENTS = [
         "start_time": "17:00",
         "category": "food_drink",
         "subcategory": None,
-        "tags": ["wine", "specials", "half-price", "weekly", "west-midtown"],
+        "tags": ["wine", "specials", "half-price", "weekly"],
     },
-
     # --- WEDNESDAY (Wine + Wings + Oysters) ---
-
     # Antico Wine Wednesday
     {
         "venue_key": "antico-pizza",
@@ -2745,7 +2788,7 @@ WEEKLY_EVENTS = [
         "start_time": "11:30",
         "category": "food_drink",
         "subcategory": None,
-        "tags": ["wine", "pizza", "specials", "half-price", "weekly", "west-midtown"],
+        "tags": ["wine", "pizza", "specials", "half-price", "weekly"],
     },
     # Pielands Wing Wednesday
     {
@@ -2756,7 +2799,7 @@ WEEKLY_EVENTS = [
         "start_time": "11:00",
         "category": "food_drink",
         "subcategory": None,
-        "tags": ["wings", "specials", "half-price", "weekly", "virginia-highland"],
+        "tags": ["wings", "specials", "half-price", "weekly"],
     },
     # Beso $1 Oysters Wednesday
     {
@@ -2767,7 +2810,7 @@ WEEKLY_EVENTS = [
         "start_time": "22:00",
         "category": "food_drink",
         "subcategory": None,
-        "tags": ["oysters", "specials", "late-night", "weekly", "buckhead"],
+        "tags": ["oysters", "specials", "late-night", "weekly"],
     },
     # Wild Heaven Toco Hills — Wednesday half-off pitchers
     {
@@ -2780,9 +2823,7 @@ WEEKLY_EVENTS = [
         "subcategory": None,
         "tags": ["beer", "bingo", "specials", "half-price", "weekly"],
     },
-
     # --- THURSDAY ---
-
     # Cypress Street Half-Price Wine Thursday
     {
         "venue_key": "cypress-street-pint",
@@ -2792,7 +2833,7 @@ WEEKLY_EVENTS = [
         "start_time": "17:00",
         "category": "food_drink",
         "subcategory": None,
-        "tags": ["wine", "specials", "half-price", "weekly", "midtown"],
+        "tags": ["wine", "specials", "half-price", "weekly"],
     },
     # Fontaine's Half-Price Seafood Thursday
     # Note: uses existing "fontaines" key (slug: fontaines-oyster-house)
@@ -2804,11 +2845,9 @@ WEEKLY_EVENTS = [
         "start_time": "16:00",
         "category": "food_drink",
         "subcategory": None,
-        "tags": ["oysters", "seafood", "specials", "half-price", "weekly", "virginia-highland"],
+        "tags": ["oysters", "seafood", "specials", "half-price", "weekly"],
     },
-
     # --- DAILY HAPPY HOURS (Mon / Wed / Fri anchors) ---
-
     # Watchman's $1 Oysters (Tue-Thu + Sun)
     {
         "venue_key": "watchmans-seafood",
@@ -2818,7 +2857,7 @@ WEEKLY_EVENTS = [
         "start_time": "17:00",
         "category": "food_drink",
         "subcategory": None,
-        "tags": ["oysters", "specials", "dollar-oysters", "weekly", "krog-street-market"],
+        "tags": ["oysters", "specials", "dollar-oysters", "weekly"],
     },
     {
         "venue_key": "watchmans-seafood",
@@ -2828,7 +2867,7 @@ WEEKLY_EVENTS = [
         "start_time": "17:00",
         "category": "food_drink",
         "subcategory": None,
-        "tags": ["oysters", "specials", "dollar-oysters", "weekly", "krog-street-market"],
+        "tags": ["oysters", "specials", "dollar-oysters", "weekly"],
     },
     {
         "venue_key": "watchmans-seafood",
@@ -2838,7 +2877,7 @@ WEEKLY_EVENTS = [
         "start_time": "17:00",
         "category": "food_drink",
         "subcategory": None,
-        "tags": ["oysters", "specials", "dollar-oysters", "weekly", "krog-street-market"],
+        "tags": ["oysters", "specials", "dollar-oysters", "weekly"],
     },
     {
         "venue_key": "watchmans-seafood",
@@ -2848,9 +2887,8 @@ WEEKLY_EVENTS = [
         "start_time": "16:00",
         "category": "food_drink",
         "subcategory": None,
-        "tags": ["oysters", "specials", "dollar-oysters", "weekly", "krog-street-market"],
+        "tags": ["oysters", "specials", "dollar-oysters", "weekly"],
     },
-
     # The Optimist $1 Oysters (Mon / Wed / Fri anchors for Mon-Fri run)
     {
         "venue_key": "the-optimist",
@@ -2860,7 +2898,7 @@ WEEKLY_EVENTS = [
         "start_time": "17:00",
         "category": "food_drink",
         "subcategory": None,
-        "tags": ["oysters", "specials", "dollar-oysters", "weekly", "west-midtown"],
+        "tags": ["oysters", "specials", "dollar-oysters", "weekly"],
     },
     {
         "venue_key": "the-optimist",
@@ -2870,7 +2908,7 @@ WEEKLY_EVENTS = [
         "start_time": "17:00",
         "category": "food_drink",
         "subcategory": None,
-        "tags": ["oysters", "specials", "dollar-oysters", "weekly", "west-midtown"],
+        "tags": ["oysters", "specials", "dollar-oysters", "weekly"],
     },
     {
         "venue_key": "the-optimist",
@@ -2880,9 +2918,8 @@ WEEKLY_EVENTS = [
         "start_time": "17:00",
         "category": "food_drink",
         "subcategory": None,
-        "tags": ["oysters", "specials", "dollar-oysters", "weekly", "west-midtown"],
+        "tags": ["oysters", "specials", "dollar-oysters", "weekly"],
     },
-
     # Iberian Pig Jamon Happy Hour (Mon / Wed / Fri anchors for Mon-Fri run)
     {
         "venue_key": "iberian-pig-decatur",
@@ -2892,7 +2929,7 @@ WEEKLY_EVENTS = [
         "start_time": "17:00",
         "category": "food_drink",
         "subcategory": None,
-        "tags": ["tapas", "wine", "sangria", "specials", "weekly", "decatur"],
+        "tags": ["tapas", "wine", "sangria", "specials", "weekly"],
     },
     {
         "venue_key": "iberian-pig-decatur",
@@ -2902,7 +2939,7 @@ WEEKLY_EVENTS = [
         "start_time": "17:00",
         "category": "food_drink",
         "subcategory": None,
-        "tags": ["tapas", "wine", "sangria", "specials", "weekly", "decatur"],
+        "tags": ["tapas", "wine", "sangria", "specials", "weekly"],
     },
     {
         "venue_key": "iberian-pig-decatur",
@@ -2912,9 +2949,8 @@ WEEKLY_EVENTS = [
         "start_time": "17:00",
         "category": "food_drink",
         "subcategory": None,
-        "tags": ["tapas", "wine", "sangria", "specials", "weekly", "decatur"],
+        "tags": ["tapas", "wine", "sangria", "specials", "weekly"],
     },
-
     # Bartaco Happy Hour (Wed + Fri anchors for Mon-Fri run)
     {
         "venue_key": "bartaco-inman-park",
@@ -2924,7 +2960,7 @@ WEEKLY_EVENTS = [
         "start_time": "15:00",
         "category": "food_drink",
         "subcategory": None,
-        "tags": ["tacos", "margaritas", "happy-hour", "specials", "weekly", "inman-park"],
+        "tags": ["tacos", "margaritas", "happy-hour", "specials", "weekly"],
     },
     {
         "venue_key": "bartaco-inman-park",
@@ -2934,9 +2970,8 @@ WEEKLY_EVENTS = [
         "start_time": "15:00",
         "category": "food_drink",
         "subcategory": None,
-        "tags": ["tacos", "margaritas", "happy-hour", "specials", "weekly", "inman-park"],
+        "tags": ["tacos", "margaritas", "happy-hour", "specials", "weekly"],
     },
-
     # Superica Happy Hour (Wed + Fri anchors for Mon-Fri run)
     {
         "venue_key": "superica-krog",
@@ -2946,7 +2981,7 @@ WEEKLY_EVENTS = [
         "start_time": "15:00",
         "category": "food_drink",
         "subcategory": None,
-        "tags": ["happy-hour", "specials", "weekly", "krog-street-market"],
+        "tags": ["happy-hour", "specials", "weekly"],
     },
     {
         "venue_key": "superica-krog",
@@ -2956,9 +2991,8 @@ WEEKLY_EVENTS = [
         "start_time": "15:00",
         "category": "food_drink",
         "subcategory": None,
-        "tags": ["happy-hour", "specials", "weekly", "krog-street-market"],
+        "tags": ["happy-hour", "specials", "weekly"],
     },
-
     # BeetleCat Late Night Oysters (Fri + Sat)
     {
         "venue_key": "beetlecat",
@@ -2968,7 +3002,7 @@ WEEKLY_EVENTS = [
         "start_time": "23:00",
         "category": "food_drink",
         "subcategory": None,
-        "tags": ["oysters", "late-night", "specials", "weekly", "inman-park"],
+        "tags": ["oysters", "late-night", "specials", "weekly"],
     },
     {
         "venue_key": "beetlecat",
@@ -2978,9 +3012,8 @@ WEEKLY_EVENTS = [
         "start_time": "23:00",
         "category": "food_drink",
         "subcategory": None,
-        "tags": ["oysters", "late-night", "specials", "weekly", "inman-park"],
+        "tags": ["oysters", "late-night", "specials", "weekly"],
     },
-
     # Fado Midtown — Bottomless Mimosa Brunch (Sat + Sun)
     # Note: "fado-irish-pub" key = Buckhead location; "fado-midtown" = Midtown/Peachtree St
     {
@@ -2991,7 +3024,7 @@ WEEKLY_EVENTS = [
         "start_time": "10:00",
         "category": "food_drink",
         "subcategory": None,
-        "tags": ["brunch", "mimosas", "bottomless", "specials", "weekly", "midtown"],
+        "tags": ["brunch", "mimosas", "bottomless", "specials", "weekly"],
     },
     {
         "venue_key": "fado-midtown",
@@ -3001,7 +3034,266 @@ WEEKLY_EVENTS = [
         "start_time": "10:00",
         "category": "food_drink",
         "subcategory": None,
-        "tags": ["brunch", "mimosas", "bottomless", "specials", "weekly", "midtown"],
+        "tags": ["brunch", "mimosas", "bottomless", "specials", "weekly"],
+    },
+    # ========== Regular Hangs buildout: new categories ==========
+    # ---------- POKER ----------
+    {
+        "venue_key": "eddies-attic",
+        "day": 1,  # Tuesday
+        "title": "Aces Up Bar Poker League",
+        "description": "Weekly freeroll bar poker league night at Eddie's Attic in Decatur, hosted by Aces Up Atlanta. Free to play with prizes for top finishers.",
+        "start_time": "19:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["poker", "freeroll", "bar-poker", "nightlife", "weekly"],
+        "is_free": True,
+    },
+    {
+        "venue_key": "joystick",
+        "day": 2,  # Wednesday
+        "title": "Aces Up Bar Poker — Freeroll",
+        "description": "Wednesday freeroll poker night at Joystick Gamebar on Edgewood Ave, hosted by Aces Up Atlanta. No buy-in, prizes awarded.",
+        "start_time": "19:30",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["poker", "freeroll", "bar-poker", "nightlife", "weekly"],
+        "is_free": True,
+    },
+    {
+        "venue_key": "your-3rd-spot",
+        "day": 3,  # Thursday
+        "title": "Aces Up Bar Poker Night",
+        "description": "Thursday bar poker night at Your 3rd Spot on the Westside, hosted by Aces Up Atlanta. Free to play with prizes.",
+        "start_time": "19:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["poker", "freeroll", "bar-poker", "nightlife", "weekly"],
+        "is_free": True,
+    },
+    # ---------- LINE DANCING ----------
+    {
+        "venue_key": "johnny-hideaway",
+        "day": 4,  # Friday
+        "title": "Country & Line Dancing",
+        "description": "Country and line dancing at Johnny's Hideaway, Atlanta's legendary Buckhead dance club since 1979. Two-stepping, line dances, and classic country hits all night.",
+        "start_time": "20:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["line-dancing", "country-dance", "dance", "nightlife", "weekly"],
+    },
+    {
+        "venue_key": "johnny-hideaway",
+        "day": 5,  # Saturday
+        "title": "Saturday Night Country Dance",
+        "description": "Saturday night country and line dancing at Johnny's Hideaway in Buckhead. Atlanta's iconic venue for two-stepping and boot-scootin'.",
+        "start_time": "20:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["line-dancing", "country-dance", "dance", "nightlife", "weekly"],
+    },
+    # ---------- IMPROV ----------
+    {
+        "venue_key": "dads-garage",
+        "day": 4,  # Friday
+        "title": "Improv Night",
+        "description": "Friday improv and sketch comedy at Dad's Garage Theatre in Reynoldstown. Atlanta's home for off-the-wall comedy since 1995.",
+        "start_time": "20:00",
+        "category": "comedy",
+        "subcategory": None,
+        "tags": ["improv", "comedy", "sketch-comedy", "weekly"],
+    },
+    {
+        "venue_key": "dads-garage",
+        "day": 5,  # Saturday
+        "title": "Saturday Night Improv",
+        "description": "Saturday night improv show at Dad's Garage Theatre. Unscripted comedy from one of Atlanta's longest-running improv troupes.",
+        "start_time": "20:00",
+        "category": "comedy",
+        "subcategory": None,
+        "tags": ["improv", "comedy", "weekly"],
+    },
+    {
+        "venue_key": "whole-world-improv",
+        "day": 4,  # Friday
+        "title": "Friday Improv Showcase",
+        "description": "Friday improv showcase at Whole World Improv Theatre in Midtown. Fast-paced, audience-driven comedy every week.",
+        "start_time": "20:00",
+        "category": "comedy",
+        "subcategory": None,
+        "tags": ["improv", "comedy", "weekly"],
+    },
+    {
+        "venue_key": "whole-world-improv",
+        "day": 5,  # Saturday
+        "title": "Weekend Improv Show",
+        "description": "Saturday evening improv at Whole World Improv Theatre. Interactive comedy with audience suggestions shaping every scene.",
+        "start_time": "19:30",
+        "category": "comedy",
+        "subcategory": None,
+        "tags": ["improv", "comedy", "weekly"],
+    },
+    {
+        "venue_key": "village-theatre",
+        "day": 4,  # Friday
+        "title": "Friday Night Improv",
+        "description": "Friday night improv comedy at Village Theatre in Suwanee. Family-friendly laughs from Atlanta's north-side comedy hub.",
+        "start_time": "20:00",
+        "category": "comedy",
+        "subcategory": None,
+        "tags": ["improv", "comedy", "weekly"],
+        "price_min": 10,
+        "price_max": 15,
+    },
+    {
+        "venue_key": "village-theatre",
+        "day": 5,  # Saturday
+        "title": "Saturday Night Comedy & Improv",
+        "description": "Saturday night comedy and improv show at Village Theatre in Suwanee. Live unscripted performances and guest comedians.",
+        "start_time": "20:00",
+        "category": "comedy",
+        "subcategory": None,
+        "tags": ["improv", "comedy", "weekly"],
+        "price_min": 10,
+        "price_max": 15,
+    },
+    # ---------- SKATE NIGHT ----------
+    {
+        "venue_key": "cascade-skating",
+        "day": 4,  # Friday
+        "title": "Friday Family Skate Night",
+        "description": "Friday night roller skating at Cascade Family Skating. A Southwest Atlanta staple for decades with DJ-powered skate sessions.",
+        "start_time": "19:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["skating", "roller-skating", "nightlife", "weekly"],
+    },
+    {
+        "venue_key": "cascade-skating",
+        "day": 5,  # Saturday
+        "title": "Saturday Night Skate",
+        "description": "Saturday night skating session at Cascade Family Skating. Music, lights, and wheels on the iconic Cascade Rd rink.",
+        "start_time": "19:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["skating", "roller-skating", "nightlife", "weekly"],
+    },
+    {
+        "venue_key": "sparkles-kennesaw",
+        "day": 4,  # Friday
+        "title": "Friday Night Skating",
+        "description": "Friday night roller skating at Sparkles Family Fun Center in Kennesaw. DJ, lights, and family-friendly skating fun.",
+        "start_time": "19:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["skating", "roller-skating", "nightlife", "weekly"],
+    },
+    {
+        "venue_key": "sparkles-kennesaw",
+        "day": 5,  # Saturday
+        "title": "Saturday Skate Session",
+        "description": "Saturday afternoon skating at Sparkles Family Fun Center in Kennesaw. Open skate with music and arcade games.",
+        "start_time": "14:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["skating", "roller-skating", "weekly"],
+    },
+    # ---------- BINGO ----------
+    {
+        "venue_key": "monday-night-garage",
+        "day": 2,  # Wednesday
+        "title": "Brewery Bingo Night",
+        "description": "Wednesday bingo night at Monday Night Brewing Garage in West End. Free to play with craft beer specials and prizes.",
+        "start_time": "19:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["bingo", "brewery", "nightlife", "weekly", "free"],
+        "is_free": True,
+    },
+    {
+        "venue_key": "wild-heaven-avondale",
+        "day": 3,  # Thursday
+        "title": "Bingo & Brews",
+        "description": "Thursday bingo night at Wild Heaven Avondale. Free bingo rounds with craft beer specials in the taproom.",
+        "start_time": "19:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["bingo", "brewery", "nightlife", "weekly", "free"],
+        "is_free": True,
+    },
+    # Note: Gene's BBQ already has Tuesday bingo (Kiki Casino Bingo, day=1) — no duplicate needed
+    # ---------- LATIN NIGHT ----------
+    {
+        "venue_key": "havana-club-atl",
+        "day": 4,  # Friday
+        "title": "Havana Nights — Latin Dance Party",
+        "description": "Friday Latin dance party at Havana Club ATL in Buckhead. Salsa, bachata, reggaeton, and merengue all night with resident DJs.",
+        "start_time": "22:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["latin-night", "bachata", "salsa-night", "dance", "nightlife", "weekly"],
+    },
+    {
+        "venue_key": "havana-club-atl",
+        "day": 5,  # Saturday
+        "title": "Sabado Latino",
+        "description": "Saturday Latin night at Havana Club ATL. Bachata, salsa, and reggaeton in Buckhead's premier Latin club.",
+        "start_time": "22:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["latin-night", "bachata", "salsa-night", "dance", "nightlife", "weekly"],
+    },
+    {
+        "venue_key": "el-bar",
+        "day": 3,  # Thursday
+        "title": "Latin Thursdays",
+        "description": "Thursday Latin night at El Bar on Ponce. Reggaeton, salsa, and bachata in Virginia Highland.",
+        "start_time": "21:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["latin-night", "bachata", "salsa-night", "reggaeton", "nightlife", "weekly"],
+    },
+    # Note: Tongue & Groove already has Latin Wednesdays (day=2) — no duplicate needed
+    # ---------- VIEWING PARTY ----------
+    {
+        "venue_key": "hudson-grille-midtown",
+        "day": 6,  # Sunday
+        "title": "NFL Sunday Watch Party",
+        "description": "NFL Sunday watch party at Hudson Grille Midtown. Big screens, drink specials, and game-day atmosphere on Peachtree.",
+        "start_time": "13:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["viewing-party", "sports", "football", "nfl", "nightlife", "weekly"],
+    },
+    {
+        "venue_key": "hudson-grille-midtown",
+        "day": 0,  # Monday
+        "title": "Monday Night Football",
+        "description": "Monday Night Football at Hudson Grille Midtown. Wings, beer specials, and every game on the big screens.",
+        "start_time": "19:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["viewing-party", "sports", "football", "nfl", "nightlife", "weekly"],
+    },
+    {
+        "venue_key": "stats-brewpub",
+        "day": 6,  # Sunday
+        "title": "Game Day at STATS",
+        "description": "NFL Sunday watch party at STATS Brewpub downtown. Wall-to-wall screens and game-day specials steps from Centennial Park.",
+        "start_time": "13:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["viewing-party", "sports", "football", "nfl", "nightlife", "weekly"],
+    },
+    {
+        "venue_key": "stats-brewpub",
+        "day": 3,  # Thursday
+        "title": "Thursday Night Football",
+        "description": "Thursday Night Football at STATS Brewpub downtown. Craft beer and game-day food specials with every NFL Thursday game.",
+        "start_time": "19:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["viewing-party", "sports", "football", "nfl", "nightlife", "weekly"],
     },
 ]
 
@@ -3012,6 +3304,55 @@ def get_next_weekday(start_date: datetime, weekday: int) -> datetime:
     if days_ahead < 0:
         days_ahead += 7
     return start_date + timedelta(days=days_ahead)
+
+
+def _format_time_label(time_24: str) -> str:
+    try:
+        return datetime.strptime(time_24, "%H:%M").strftime("%-I:%M %p")
+    except Exception:
+        return time_24
+
+
+def _build_recurring_description(event_template: dict, venue_data: dict, source_url: str) -> str:
+    base = " ".join(str(event_template.get("description") or "").split()).strip()
+    day_name = DAY_NAMES[int(event_template["day"])]
+    time_label = _format_time_label(str(event_template.get("start_time") or ""))
+    venue_name = str(venue_data.get("name") or "").strip()
+    neighborhood = str(venue_data.get("neighborhood") or "").strip()
+    city = str(venue_data.get("city") or "Atlanta").strip()
+    state = str(venue_data.get("state") or "GA").strip()
+    category = str(event_template.get("category") or "event").replace("_", " ")
+
+    location = venue_name
+    if neighborhood:
+        location = f"{location} in {neighborhood}"
+    location = f"{location}, {city}, {state}"
+
+    parts = []
+    if base:
+        parts.append(base if base.endswith(".") else f"{base}.")
+    parts.append(
+        f"Recurring weekly {category} event every {day_name} at {time_label}."
+    )
+    parts.append(f"Location: {location}.")
+
+    price_min = event_template.get("price_min")
+    price_max = event_template.get("price_max")
+    if event_template.get("is_free") is True:
+        parts.append("Typically free to attend.")
+    elif price_min is not None and price_max is not None and price_min == price_max:
+        parts.append(f"Typical cost: ${price_min}.")
+    elif price_min is not None or price_max is not None:
+        low = "?" if price_min is None else str(price_min)
+        high = "?" if price_max is None else str(price_max)
+        parts.append(f"Typical cost range: ${low}-${high}.")
+    else:
+        parts.append("Cover charge and specials may vary by week.")
+
+    parts.append(
+        f"Check venue channels for current lineup, hosts, and any weekly schedule changes ({source_url})."
+    )
+    return " ".join(parts)[:1400]
 
 
 def _normalize_domain(url: Optional[str]) -> Optional[str]:
@@ -3066,11 +3407,17 @@ def _compute_venue_suppressions(source_slug: str) -> dict[str, str]:
             or []
         )
     except Exception as exc:
-        logger.warning(f"Could not load active sources for recurring suppression check: {exc}")
+        logger.warning(
+            f"Could not load active sources for recurring suppression check: {exc}"
+        )
         return suppressions
 
     # Exclude this source from overlap checks.
-    candidate_sources = [s for s in active_sources if _normalize_slug(s.get("slug")) != _normalize_slug(source_slug)]
+    candidate_sources = [
+        s
+        for s in active_sources
+        if _normalize_slug(s.get("slug")) != _normalize_slug(source_slug)
+    ]
 
     for venue_key, venue in VENUES.items():
         venue_slug = venue.get("slug")
@@ -3080,13 +3427,29 @@ def _compute_venue_suppressions(source_slug: str) -> dict[str, str]:
             source_domain = _normalize_domain(source.get("url"))
 
             if venue_domain and source_domain and venue_domain == source_domain:
-                suppressions[venue_key] = f"active source '{source_slug_candidate}' shares domain '{source_domain}'"
+                suppressions[venue_key] = (
+                    f"active source '{source_slug_candidate}' shares domain '{source_domain}'"
+                )
                 break
 
-            if _slugs_related(venue_slug, source_slug_candidate) or _slugs_related(venue_key, source_slug_candidate):
-                suppressions[venue_key] = f"active source '{source_slug_candidate}' slug-overlaps venue slug '{venue_slug}'"
+            if _slugs_related(venue_slug, source_slug_candidate) or _slugs_related(
+                venue_key, source_slug_candidate
+            ):
+                suppressions[venue_key] = (
+                    f"active source '{source_slug_candidate}' slug-overlaps venue slug '{venue_slug}'"
+                )
                 break
 
+    return suppressions
+
+
+def _compute_closed_venue_suppressions() -> dict[str, str]:
+    """Suppress recurring templates tied to registry-closed venues."""
+    suppressions: dict[str, str] = {}
+    for venue_key, venue in VENUES.items():
+        venue_slug = _normalize_slug(venue.get("slug"))
+        if venue_slug in CLOSED_VENUE_SLUGS:
+            suppressions[venue_key] = "venue is in closed_venues registry"
     return suppressions
 
 
@@ -3115,6 +3478,13 @@ def _remove_suppressed_future_events(
         if venue_key not in venue_ids:
             venue_ids[venue_key] = get_or_create_venue(venue_data)
         venue_id = venue_ids[venue_key]
+
+        if not writes_enabled():
+            logger.info(
+                f"[DRY RUN] Would remove suppressed recurring events for venue '{venue_key}' "
+                f"(id={venue_id}) from {today_date} onward"
+            )
+            continue
 
         try:
             result = (
@@ -3145,15 +3515,19 @@ def crawl(source: dict) -> tuple[int, int, int]:
     today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
 
     logger.info(f"Generating recurring social events for next {WEEKS_AHEAD} weeks")
-    logger.info(f"Processing {len(WEEKLY_EVENTS)} event templates across {len(VENUES)} venues")
+    logger.info(
+        f"Processing {len(WEEKLY_EVENTS)} event templates across {len(VENUES)} venues"
+    )
 
     # Cache venue IDs
     venue_ids = {}
 
     suppressions = _compute_venue_suppressions(source_slug)
+    for venue_key, reason in _compute_closed_venue_suppressions().items():
+        suppressions.setdefault(venue_key, reason)
     if suppressions:
         logger.info(
-            f"Recurring suppression active for {len(suppressions)} venue(s) with dedicated sources: "
+            f"Recurring suppression active for {len(suppressions)} venue(s): "
             + ", ".join(sorted(suppressions.keys()))
         )
         removed = _remove_suppressed_future_events(
@@ -3198,22 +3572,38 @@ def crawl(source: dict) -> tuple[int, int, int]:
             events_found += 1
 
             content_hash = generate_content_hash(
-                event_template["title"],
-                venue_name,
-                start_date
+                event_template["title"], venue_name, start_date
             )
-
 
             # Support optional price fields in event templates
             price_min = event_template.get("price_min")
             price_max = event_template.get("price_max")
-            is_free = event_template.get("is_free", False) if price_min is None and price_max is None else False
+            is_free = (
+                event_template.get("is_free", False)
+                if price_min is None and price_max is None
+                else False
+            )
+
+            source_url = venue_data.get("website", "https://badslava.com/")
+            description = _build_recurring_description(
+                event_template,
+                venue_data=venue_data,
+                source_url=source_url,
+            )
+
+            # Derive genres from subcategory (e.g. "nightlife.karaoke" → ["karaoke"])
+            subcategory = event_template.get("subcategory") or ""
+            derived_genres = []
+            if "." in subcategory:
+                genre_part = subcategory.split(".", 1)[1].replace("_", "-")
+                if genre_part:
+                    derived_genres = [genre_part]
 
             event_record = {
                 "source_id": source_id,
                 "venue_id": venue_id,
                 "title": event_template["title"],
-                "description": event_template["description"],
+                "description": description,
                 "start_date": start_date,
                 "start_time": event_template["start_time"],
                 "end_date": None,
@@ -3221,12 +3611,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 "is_all_day": False,
                 "category": event_template["category"],
                 "subcategory": event_template.get("subcategory"),
+                "genres": derived_genres,
                 "tags": event_template["tags"],
                 "price_min": price_min,
                 "price_max": price_max,
                 "price_note": event_template.get("price_note"),
                 "is_free": is_free,
-                "source_url": venue_data.get("website", "https://badslava.com/"),
+                "source_url": source_url,
                 "ticket_url": None,
                 "image_url": None,
                 "raw_text": f"{event_template['title']} at {venue_name} - {start_date}",
@@ -3242,21 +3633,24 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 events_updated += 1
                 continue
 
-            day_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
             series_hint = {
                 "series_type": "recurring_show",
                 "series_title": event_template["title"],
                 "frequency": "weekly",
-                "day_of_week": day_names[event_template["day"]],
-                "description": event_template["description"],
+                "day_of_week": DAY_NAMES[event_template["day"]],
+                "description": description,
             }
 
             try:
                 insert_event(event_record, series_hint=series_hint)
                 events_new += 1
-                logger.debug(f"Added: {event_template['title']} at {venue_name} on {start_date}")
+                logger.debug(
+                    f"Added: {event_template['title']} at {venue_name} on {start_date}"
+                )
             except Exception as e:
-                logger.error(f"Failed to insert {event_template['title']} at {venue_name}: {e}")
+                logger.error(
+                    f"Failed to insert {event_template['title']} at {venue_name}: {e}"
+                )
 
     logger.info(
         f"Recurring social events crawl complete: {events_found} found, {events_new} new, {events_updated} existing"

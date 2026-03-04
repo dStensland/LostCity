@@ -110,20 +110,17 @@ export default function VenueEventsSection({
       {/* Header */}
       <div className="mb-4 relative">
         <h2
-          className="font-mono text-lg font-bold uppercase tracking-widest text-coral-strong"
+          className="font-mono text-xs font-bold uppercase tracking-[0.14em] text-[var(--muted)]"
         >
-          <span className="text-blur-soft">More at {venueName}</span>
+          More at {venueName}
         </h2>
-        <div
-          className="absolute inset-0 pointer-events-none coral-sweep"
-        />
       </div>
 
-      {/* Date Selector */}
+      {/* Date Selector — compact pill strip */}
       <div className="relative mb-4">
         <div
           ref={scrollRef}
-          className="flex gap-2 overflow-x-auto scrollbar-hide pb-2 -mx-4 px-4"
+          className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-1 -mx-4 px-4"
         >
           {availableDates.map((date) => {
             const isSelected = isSameDay(date, selectedDate);
@@ -133,23 +130,20 @@ export default function VenueEventsSection({
               <button
                 key={date.toISOString()}
                 onClick={() => setSelectedDate(date)}
-                className={`flex-shrink-0 flex flex-col items-center px-3 py-2 min-h-[44px] rounded-lg border transition-all focus-ring ${
+                className={[
+                  "shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs tracking-wide transition-all active:scale-95 border",
                   isSelected
-                    ? "bg-[var(--coral)]/20 border-[var(--coral)]/50 text-[var(--coral)]"
-                    : "bg-[var(--dusk)] border-[var(--twilight)] text-[var(--soft)] hover:border-[var(--coral)]/30"
-                }`}
+                    ? "bg-[var(--coral)]/15 border-[var(--coral)]/40 text-[var(--coral)] font-semibold"
+                    : "border-[var(--twilight)] text-[var(--soft)] hover:border-[var(--coral)]/30 hover:bg-white/[0.02]",
+                ].join(" ")}
               >
-                <span className="font-mono text-xs uppercase tracking-widest">
-                  {formatDateLabel(date)}
-                </span>
-                <span className="font-mono text-lg font-bold leading-tight">
-                  {format(date, "d")}
-                </span>
-                <span className="font-mono text-2xs text-[var(--muted)] uppercase">
-                  {format(date, "MMM")}
-                </span>
+                <span>{formatDateLabel(date)}</span>
+                <span className="tabular-nums font-semibold">{format(date, "d")}</span>
                 {eventsOnDay > 1 && (
-                  <span className="mt-1 px-1.5 py-0.5 bg-[var(--twilight)] rounded text-2xs font-mono">
+                  <span className={[
+                    "text-2xs tabular-nums",
+                    isSelected ? "opacity-70" : "opacity-40",
+                  ].join(" ")}>
                     {eventsOnDay}
                   </span>
                 )}
@@ -157,14 +151,13 @@ export default function VenueEventsSection({
             );
           })}
 
-          {/* Date Picker Button */}
-          <div className="flex-shrink-0 relative">
+          {/* Jump to date */}
+          <div className="shrink-0 relative">
             <button
               onClick={() => setShowDatePicker(!showDatePicker)}
-              className="flex flex-col items-center justify-center px-3 py-2 rounded-lg border border-dashed border-[var(--twilight)] text-[var(--muted)] hover:border-[var(--coral)]/50 hover:text-[var(--coral)] transition-all h-full min-h-[72px] focus-ring"
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full border border-[var(--twilight)] text-[var(--muted)] hover:border-[var(--coral)]/30 hover:text-[var(--coral)] transition-all font-mono text-xs"
             >
-              <CalendarBlank size={20} weight="light" aria-hidden="true" />
-              <span className="font-mono text-2xs mt-1 uppercase">Jump</span>
+              <CalendarBlank size={14} weight="bold" aria-hidden="true" />
             </button>
             {showDatePicker && (
               <input

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { getDayPart, getHappeningNowGreeting } from "@/lib/time-greeting";
+import { useFeedVisible } from "@/lib/feed-visibility";
 
 interface HappeningNowCTAProps {
   portalSlug: string;
@@ -52,10 +53,14 @@ export default function HappeningNowCTA({ portalSlug }: HappeningNowCTAProps) {
   const [eventCount, setEventCount] = useState<number>(0);
   const [spotCount, setSpotCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
+  const feedVisible = useFeedVisible();
 
   const totalCount = eventCount + spotCount;
 
   useEffect(() => {
+    // Skip polling while feed is hidden behind a detail view
+    if (!feedVisible) return;
+
     const abortController = new AbortController();
 
     async function fetchLiveCount() {
@@ -84,7 +89,7 @@ export default function HappeningNowCTA({ portalSlug }: HappeningNowCTAProps) {
       abortController.abort();
       clearInterval(interval);
     };
-  }, [portalSlug]);
+  }, [portalSlug, feedVisible]);
 
   // Show skeleton while loading
   if (loading) {

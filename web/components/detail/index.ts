@@ -12,3 +12,6 @@ export { default as NeonBackButton, type NeonBackButtonProps } from "./NeonBackB
 export { default as MakeANightSheet, type MakeANightSheetProps, type AnchorEvent } from "./MakeANightSheet";
 export { default as DogNearbySection } from "./DogNearbySection";
 export { default as VenueEventsSection } from "./VenueEventsSection";
+export { QuickActionLink } from "./QuickActionLink";
+export { CollapsibleSection } from "./CollapsibleSection";
+export { default as VenueFeaturesSection } from "./VenueFeaturesSection";

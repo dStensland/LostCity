@@ -67,7 +67,7 @@ def audit_festival_event_absorption(client):
         
         # Get all events for this series
         events_result = client.table("events")\
-            .select("id, title, venue_id, source_id, category, start_date, is_class")\
+            .select("id, title, venue_id, source_id, category_id, start_date, is_class")\
             .eq("series_id", series_id)\
             .execute()
         
@@ -79,7 +79,7 @@ def audit_festival_event_absorption(client):
         # Analyze event distribution
         venue_ids = set(e["venue_id"] for e in events if e.get("venue_id"))
         source_ids = set(e["source_id"] for e in events if e.get("source_id"))
-        categories = set(e["category"] for e in events if e.get("category"))
+        categories = set(e["category_id"] for e in events if e.get("category_id"))
         
         # Calculate date spread
         dates = [e["start_date"] for e in events if e.get("start_date")]

@@ -25,6 +25,7 @@ import { safeJsonLd } from "@/lib/formats";
 import { toAbsoluteUrl, getSiteUrl } from "@/lib/site-url";
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
+import HorseSpinner from "@/components/ui/HorseSpinner";
 import EmoryMobileBottomNav from "./_components/hospital/EmoryMobileBottomNav";
 import type { Metadata } from "next";
 
@@ -61,7 +62,7 @@ export async function generateMetadata({
 }
 
 type ViewMode = "feed" | "find" | "community";
-type FindType = "events" | "classes" | "destinations" | "showtimes" | "playbook" | "regulars";
+type FindType = "events" | "classes" | "destinations" | "showtimes" | "regulars";
 type FindDisplay = "list" | "map" | "calendar";
 
 type PortalSearchParams = {
@@ -257,7 +258,7 @@ export default async function PortalPage({ params, searchParams }: Props) {
   // Note: "orgs" was moved to community view, redirect to events
   // Note: "spots" is a URL alias for the "destinations" findType
   let findType: FindType = "events";
-  if (findTypeParam && findTypeParam !== "orgs") {
+  if (findTypeParam && findTypeParam !== "orgs" && findTypeParam !== "playbook") {
     findType = (findTypeParam === "spots" ? "destinations" : findTypeParam) as FindType;
   } else if (viewParam === "spots") {
     findType = "destinations";
@@ -520,33 +521,8 @@ function FeedSkeleton({
   }
 
   return (
-    <div data-skeleton-route="feed-view" data-skeleton-vertical={skeletonVertical} className="space-y-4">
-      {/* Hero skeleton — matches GreetingBar compact height */}
-      <div className="h-[200px] sm:h-[240px] rounded-2xl skeleton-shimmer" />
-      {/* Quick links skeleton */}
-      <div className="flex gap-2">
-        {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-10 w-24 rounded-full skeleton-shimmer shrink-0" style={{ animationDelay: `${i * 40}ms` }} />
-        ))}
-      </div>
-      {/* Tab bar skeleton */}
-      <div className="flex gap-4 border-b border-[var(--twilight)]/20 pb-3">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="h-4 w-20 skeleton-shimmer rounded" style={{ animationDelay: `${i * 50}ms` }} />
-        ))}
-      </div>
-      {/* Compact event rows skeleton */}
-      <div className="space-y-0">
-        {[1, 2, 3, 4, 5, 6].map((i) => (
-          <div key={i} className="flex items-center gap-3 py-1">
-            <div className="w-16 h-[3.75rem] skeleton-shimmer shrink-0" style={{ animationDelay: `${i * 30}ms` }} />
-            <div className="flex-1 space-y-1.5">
-              <div className="h-3.5 w-[70%] skeleton-shimmer rounded" />
-              <div className="h-3 w-[45%] skeleton-shimmer rounded" />
-            </div>
-          </div>
-        ))}
-      </div>
+    <div data-skeleton-route="feed-view" data-skeleton-vertical={skeletonVertical} className="flex items-center justify-center min-h-[60vh]">
+      <HorseSpinner />
     </div>
   );
 }

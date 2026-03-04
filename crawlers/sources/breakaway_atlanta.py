@@ -74,9 +74,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_found = 1
 
     title = f"Breakaway Music Festival Atlanta {year}"
-    content_hash = generate_content_hash(
-        title, "Piedmont Park", start_date.strftime("%Y-%m-%d")
-    )
+    hash_key = f"{start_date.strftime('%Y-%m-%d')}|14:00"
+    content_hash = generate_content_hash(title, "Piedmont Park", hash_key)
 
     if find_event_by_hash(content_hash):
         events_updated = 1

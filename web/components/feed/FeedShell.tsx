@@ -3,6 +3,7 @@
 import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import HorseSpinner from "@/components/ui/HorseSpinner";
 import ForYouView from "@/components/feed/ForYouView";
 import ExploreTrackList from "@/components/explore/ExploreTrackList";
 import Link from "next/link";
@@ -22,21 +23,11 @@ const TABS: { key: FeedTab; label: string; authRequired: boolean }[] = [
   { key: "foryou", label: "For You", authRequired: true },
 ];
 
-// Loading skeleton for auth-gated content
-function AuthLoadingSkeleton() {
+// Loading spinner for auth-gated content
+function AuthLoadingSpinner() {
   return (
-    <div className="space-y-4">
-      {[1, 2, 3].map((i) => (
-        <div key={i} className="p-3 rounded-lg border border-[var(--twilight)] bg-[var(--card-bg)]">
-          <div className="flex gap-3">
-            <div className="w-14 h-10 skeleton-shimmer rounded" />
-            <div className="flex-1 space-y-2">
-              <div className="h-4 skeleton-shimmer rounded w-3/4" />
-              <div className="h-3 skeleton-shimmer rounded w-1/2" />
-            </div>
-          </div>
-        </div>
-      ))}
+    <div className="flex justify-center py-16">
+      <HorseSpinner />
     </div>
   );
 }
@@ -142,7 +133,7 @@ function FeedShellInner({ portalId, portalSlug, activeTab, curatedContent }: Fee
   const renderProtectedContent = (children: React.ReactNode, showSignUpPrompt: boolean = false) => {
     // If auth is still loading but hasn't timed out, show skeleton
     if (authLoading && !timedOut) {
-      return <AuthLoadingSkeleton />;
+      return <AuthLoadingSpinner />;
     }
     // Show inline sign-up prompt for signed-out users, but still render content
     if (!user && showSignUpPrompt) {
@@ -206,15 +197,8 @@ export default function FeedShell(props: FeedShellProps) {
   return (
     <Suspense
       fallback={
-        <div className="py-6 space-y-6">
-          {/* Tab skeleton */}
-          <div className="flex gap-1 p-1 bg-[var(--night)] rounded-lg">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="flex-1 h-9 skeleton-shimmer rounded-md" />
-            ))}
-          </div>
-          {/* Content skeleton - matches EventCard style */}
-          <AuthLoadingSkeleton />
+        <div className="flex justify-center py-16">
+          <HorseSpinner />
         </div>
       }
     >

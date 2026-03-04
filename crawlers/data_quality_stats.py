@@ -59,14 +59,14 @@ def main():
     print()
     
     # 7. Category breakdown for future events
-    print("7. Category breakdown for future events:")
+    print("7. Category ID breakdown for future events:")
     print("-" * 60)
-    result = client.table("events").select("category").gte("start_date", today).execute()
+    result = client.table("events").select("category_id").gte("start_date", today).execute()
     
     # Count categories
     category_counts = {}
     for event in result.data:
-        cat = event.get("category") or "NULL"
+        cat = event.get("category_id") or "NULL"
         category_counts[cat] = category_counts.get(cat, 0) + 1
     
     # Sort by count descending

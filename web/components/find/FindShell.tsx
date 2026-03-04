@@ -1,11 +1,10 @@
 "use client";
 
-import { Suspense, useState, useEffect, useRef, useMemo, useCallback, type MouseEvent } from "react";
+import { Suspense, useEffect, useRef, useMemo, useCallback, type MouseEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import AddNewChooser from "@/components/find/AddNewChooser";
 import EventsFinder, { EventsFinderFilters } from "@/components/find/EventsFinder";
-import SpotsFinder from "@/components/find/SpotsFinder";
 import { FindContext } from "@/lib/find-context";
 
 const ClassesView = dynamic(() => import("@/components/find/ClassesView"), {
@@ -14,11 +13,12 @@ const ClassesView = dynamic(() => import("@/components/find/ClassesView"), {
 const ShowtimesView = dynamic(() => import("@/components/find/ShowtimesView"), {
   loading: () => <div className="py-16 text-center text-[var(--muted)] font-mono text-sm">Loading showtimes...</div>,
 });
-const PlaybookView = dynamic(() => import("@/components/find/PlaybookView"), {
-  loading: () => <div className="py-16 text-center text-[var(--muted)] font-mono text-sm">Loading playbook...</div>,
+const SpotsFinder = dynamic(() => import("@/components/find/SpotsFinder"), {
+  loading: () => <div className="py-16 text-center text-[var(--muted)] font-mono text-sm">Loading spots...</div>,
 });
-const OutingFAB = dynamic(() => import("@/components/outing/OutingFAB"), { ssr: false });
-const OutingDrawer = dynamic(() => import("@/components/outing/OutingDrawer"), { ssr: false });
+const RegularsView = dynamic(() => import("@/components/find/RegularsView"), {
+  loading: () => <div className="py-16 text-center text-[var(--muted)] font-mono text-sm">Loading regulars...</div>,
+});
 import {
   FIND_FILTER_RESET_KEYS,
   SHOWTIMES_EXCLUDED_FILTER_KEYS,
@@ -42,7 +42,7 @@ const TYPE_OPTIONS: { key: FindType; label: string; icon: React.ReactNode }[] = 
     key: "events",
     label: "Events",
     icon: (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
       </svg>
     ),
@@ -51,7 +51,7 @@ const TYPE_OPTIONS: { key: FindType; label: string; icon: React.ReactNode }[] = 
     key: "classes",
     label: "Classes",
     icon: (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
       </svg>
     ),
@@ -60,7 +60,7 @@ const TYPE_OPTIONS: { key: FindType; label: string; icon: React.ReactNode }[] = 
     key: "destinations",
     label: "Spots",
     icon: (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
       </svg>
@@ -70,17 +70,17 @@ const TYPE_OPTIONS: { key: FindType; label: string; icon: React.ReactNode }[] = 
     key: "showtimes",
     label: "Now Playing",
     icon: (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
       </svg>
     ),
   },
   {
-    key: "playbook",
-    label: "Playbook",
+    key: "regulars",
+    label: "Regulars",
     icon: (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
       </svg>
     ),
   },
@@ -143,28 +143,6 @@ function FindShellInner({
   const previousFilterSnapshotByTypeRef = useRef<Partial<Record<FindType, FindFilterSnapshot>>>({});
   const lastFilterChangeAtByTypeRef = useRef<Partial<Record<FindType, number>>>({});
 
-  // ─── Outing Builder State ─────────────────────────────────────────────────
-  const [outingDrawerOpen, setOutingDrawerOpen] = useState(false);
-  const [outingItemCount, setOutingItemCount] = useState(0);
-  const [outingAnchorEvent, setOutingAnchorEvent] = useState<{
-    id: number;
-    title: string;
-    start_time: string | null;
-    date: string;
-    venue: { id: number; name: string; slug: string; lat: number | null; lng: number | null };
-  } | null>(null);
-
-  const handlePlanAroundEvent = useCallback((item: {
-    id: number;
-    title: string;
-    start_time: string | null;
-    date: string;
-    venue: { id: number; name: string; slug: string; lat: number | null; lng: number | null };
-  }) => {
-    setOutingAnchorEvent(item);
-    setOutingDrawerOpen(true);
-  }, []);
-
   // ─── URL Helpers ──────────────────────────────────────────────────────────
 
   const resetFindFiltersForTypeChange = useCallback((params: URLSearchParams): boolean => {
@@ -210,6 +188,7 @@ function FindShellInner({
   const availableDisplayModes: DisplayMode[] = useMemo(() => {
     if (findType === "events") return ["list", "calendar", "map"];
     if (findType === "destinations") return ["list", "map"];
+    if (findType === "regulars") return ["list"];
     return [];
   }, [findType]);
 
@@ -335,10 +314,10 @@ function FindShellInner({
     <FindContext.Provider value={portalConfig}>
     <div ref={viewRootRef} className="py-3 space-y-3" onClickCapture={handleFindClickCapture}>
       {/* ─── Control Panel ──────────────────────────────────────────────────── */}
-      <section className="relative z-40 rounded-2xl border border-[var(--twilight)]/80 bg-gradient-to-b from-[var(--night)]/94 to-[var(--void)]/86 shadow-[0_14px_30px_rgba(0,0,0,0.24)] backdrop-blur-md p-3 sm:p-4">
+      <section className="relative z-40 rounded-xl border border-[var(--twilight)]/60 bg-[var(--night)]/80 backdrop-blur-sm p-2 sm:p-3">
         {/* Type selector tabs */}
         <div className="flex items-center justify-between gap-3">
-          <div className="flex p-1 bg-[var(--void)]/72 border border-[var(--twilight)]/80 rounded-xl flex-1 min-w-0 overflow-x-auto">
+          <div className="flex gap-1.5 flex-1 min-w-0 overflow-x-auto scrollbar-hide">
             {TYPE_OPTIONS.map((option) => {
               const isActive = findType === option.key;
               return (
@@ -346,9 +325,9 @@ function FindShellInner({
                   key={option.key}
                   onClick={() => handleTypeChange(option.key)}
                   aria-label={option.label}
-                  className={`flex-1 sm:flex-none shrink-0 flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-2.5 sm:py-2 rounded-lg font-mono text-xs whitespace-nowrap transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]/70 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--void)] ${
+                  className={`shrink-0 flex items-center justify-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-full font-mono text-xs whitespace-nowrap transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]/70 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--void)] ${
                     isActive
-                      ? "bg-gradient-to-r from-[var(--gold)] to-[var(--coral)] text-[var(--void)] font-semibold shadow-[0_6px_16px_rgba(0,0,0,0.25)]"
+                      ? "bg-gradient-to-r from-[var(--gold)] to-[var(--coral)] text-[var(--void)] font-semibold"
                       : "text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/55"
                   }`}
                 >
@@ -389,33 +368,32 @@ function FindShellInner({
           </div>
         </div>
 
-        {/* Mobile: display toggle */}
-        {availableDisplayModes.length > 1 && (
-          <div className="sm:hidden mt-3 flex rounded-full bg-[var(--void)]/72 border border-[var(--twilight)]/80 p-0.5">
-            {availableDisplayModes.map((mode) => {
-              const modeConfig = DISPLAY_OPTIONS[mode];
-              const isActive = displayMode === mode;
-              return (
-                <button
-                  key={mode}
-                  onClick={() => handleDisplayModeChange(mode)}
-                  className={`flex-1 flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-full font-mono text-xs font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]/70 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--void)] ${
-                    isActive
-                      ? "bg-[var(--cream)] text-[var(--void)] shadow-[0_6px_16px_rgba(0,0,0,0.2)]"
-                      : "text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/45"
-                  }`}
-                  aria-label={`${modeConfig.label} view`}
-                >
-                  {modeConfig.icon}
-                  <span>{modeConfig.shortLabel}</span>
-                </button>
-              );
-            })}
-          </div>
-        )}
-        {/* Mobile: Add button */}
-        <div className="sm:hidden mt-3 flex items-center gap-2">
-          <div className="flex-1 min-w-0">
+        {/* Mobile: display toggle + add button */}
+        <div className="sm:hidden mt-2 flex items-center gap-2">
+          {availableDisplayModes.length > 1 && (
+            <div className="flex rounded-full bg-[var(--void)]/72 border border-[var(--twilight)]/80 p-0.5">
+              {availableDisplayModes.map((mode) => {
+                const modeConfig = DISPLAY_OPTIONS[mode];
+                const isActive = displayMode === mode;
+                return (
+                  <button
+                    key={mode}
+                    onClick={() => handleDisplayModeChange(mode)}
+                    className={`flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-full font-mono text-xs font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]/70 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--void)] ${
+                      isActive
+                        ? "bg-[var(--cream)] text-[var(--void)]"
+                        : "text-[var(--muted)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/45"
+                    }`}
+                    aria-label={`${modeConfig.label} view`}
+                  >
+                    {modeConfig.icon}
+                    <span>{modeConfig.shortLabel}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          <div className="ml-auto">
             <AddNewChooser portalSlug={portalSlug} />
           </div>
         </div>
@@ -461,30 +439,14 @@ function FindShellInner({
         />
       )}
 
-      {findType === "playbook" && (
-        <PlaybookView
+      {findType === "regulars" && (
+        <RegularsView
           portalId={portalId}
           portalSlug={portalSlug}
-          onPlanAroundEvent={handlePlanAroundEvent}
         />
       )}
 
     </div>
-
-      {/* Outing Builder — rendered outside scroll container for correct fixed positioning */}
-      <OutingFAB
-        hasActiveOuting={!!outingAnchorEvent}
-        itemCount={outingItemCount}
-        onOpen={() => setOutingDrawerOpen(true)}
-      />
-      <OutingDrawer
-        portalId={portalId}
-        portalSlug={portalSlug}
-        open={outingDrawerOpen}
-        onClose={() => setOutingDrawerOpen(false)}
-        anchorEvent={outingAnchorEvent}
-        onItemCountChange={setOutingItemCount}
-      />
     </FindContext.Provider>
   );
 }

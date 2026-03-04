@@ -8,6 +8,7 @@ import { isSpotOpen, DESTINATION_CATEGORIES } from "@/lib/spots";
 import { logger } from "@/lib/logger";
 import {
   applyFederatedPortalScopeToQuery,
+  excludeSensitiveEvents,
   filterByPortalCity,
   parsePortalContentFilters,
   applyPortalCategoryFilters,
@@ -129,6 +130,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
       sourceIds: sourceAccess.sourceIds,
       sourceColumn: "source_id",
     });
+
+    query = excludeSensitiveEvents(query);
 
     // Apply portal category filters (include/exclude)
     query = applyPortalCategoryFilters(query, portalContentFilters);

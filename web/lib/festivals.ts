@@ -5,7 +5,9 @@ import { getLocalDateString } from "@/lib/formats";
 type RawFestivalEvent = {
   id: number;
   title: string;
+  description: string | null;
   start_date: string;
+  end_date: string | null;
   start_time: string | null;
   end_time: string | null;
   category: string | null;
@@ -59,7 +61,9 @@ export interface FestivalProgram {
 export interface FestivalSession {
   id: number;
   title: string;
+  description: string | null;
   start_date: string;
+  end_date: string | null;
   start_time: string | null;
   end_time: string | null;
   category: string | null;
@@ -147,69 +151,102 @@ export async function getFestivalEvents(
   futureOnly = true
 ): Promise<FestivalSession[]> {
   const supabase = await createClient();
+  const today = futureOnly ? getLocalDateString() : undefined;
 
-  // First get all series linked to this festival
-  const { data: seriesData, error: seriesError } = await supabase
+  const eventSelect = `
+    id,
+    title,
+    description,
+    start_date,
+    end_date,
+    start_time,
+    end_time,
+    category:category_id,
+    image_url,
+    series_id,
+    is_all_day,
+    venues (
+      id,
+      name,
+      slug,
+      neighborhood,
+      nearest_marta_station,
+      marta_walk_minutes,
+      marta_lines,
+      beltline_adjacent,
+      beltline_segment,
+      parking_type,
+      parking_free,
+      transit_score
+    )
+  `;
+
+  // Path 1: events linked through series.festival_id → events.series_id
+  const { data: seriesData } = await supabase
     .from("series")
     .select("id")
     .eq("festival_id", festivalId)
     .eq("is_active", true);
 
-  if (seriesError || !seriesData || seriesData.length === 0) {
-    return [];
+  const seriesIds = (seriesData as { id: string }[] | null)?.map((s) => s.id) ?? [];
+
+  let seriesEvents: RawFestivalEvent[] = [];
+  if (seriesIds.length > 0) {
+    let q = supabase
+      .from("events")
+      .select(eventSelect)
+      .in("series_id", seriesIds)
+      .or("start_time.not.is.null,is_all_day.eq.true")
+      .order("start_date", { ascending: true })
+      .order("start_time", { ascending: true });
+
+    if (today) q = q.gte("start_date", today);
+
+    const { data } = await q;
+    seriesEvents = (data as RawFestivalEvent[] | null) ?? [];
   }
 
-  const seriesIds = (seriesData as { id: string }[]).map((s) => s.id);
+  // Path 2: events linked directly via events.festival_id (no series record)
+  let directEvents: RawFestivalEvent[] = [];
+  {
+    let q = supabase
+      .from("events")
+      .select(eventSelect)
+      .eq("festival_id", festivalId)
+      .is("series_id", null)
+      .or("start_time.not.is.null,is_all_day.eq.true")
+      .order("start_date", { ascending: true })
+      .order("start_time", { ascending: true });
 
-  // Now get all events for these series
-  let query = supabase
-    .from("events")
-    .select(`
-      id,
-      title,
-      start_date,
-      start_time,
-      end_time,
-      category,
-      image_url,
-      series_id,
-      is_all_day,
-      venues (
-        id,
-        name,
-        slug,
-        neighborhood,
-        nearest_marta_station,
-        marta_walk_minutes,
-        marta_lines,
-        beltline_adjacent,
-        beltline_segment,
-        parking_type,
-        parking_free,
-        transit_score
-      )
-    `)
-    .in("series_id", seriesIds)
-    // Hide TBA events (no start_time, not all-day)
-    .or("start_time.not.is.null,is_all_day.eq.true")
-    .order("start_date", { ascending: true })
-    .order("start_time", { ascending: true });
+    if (today) q = q.gte("start_date", today);
 
-  if (futureOnly) {
-    const today = getLocalDateString();
-    query = query.gte("start_date", today);
+    const { data } = await q;
+    directEvents = (data as RawFestivalEvent[] | null) ?? [];
   }
 
-  const { data, error } = await query;
-
-  if (error || !data) {
-    return [];
+  // Merge and dedup by event ID
+  const seen = new Set<number>();
+  const merged: RawFestivalEvent[] = [];
+  for (const event of [...seriesEvents, ...directEvents]) {
+    if (!seen.has(event.id)) {
+      seen.add(event.id);
+      merged.push(event);
+    }
   }
 
-  return (data as RawFestivalEvent[]).map((event) => ({
+  // Re-sort after merge
+  merged.sort((a, b) => {
+    const dateCmp = a.start_date.localeCompare(b.start_date);
+    if (dateCmp !== 0) return dateCmp;
+    return (a.start_time || "").localeCompare(b.start_time || "");
+  });
+
+  return merged.map((event) => ({
     id: event.id,
     title: event.title,
+    description: event.description,
     start_date: event.start_date,
+    end_date: event.end_date,
     start_time: event.start_time,
     end_time: event.end_time,
     category: event.category,

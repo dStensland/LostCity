@@ -1,0 +1,29 @@
+version: 1
+slug: westside-motor-lounge
+name: "Westside Motor Lounge"
+integration_method: llm_crawler
+defaults:
+  venue_name: "Westside Motor Lounge"
+  category: nightlife
+  tags:
+  - atlanta-expansion-wave-y
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - "https://www.westsidemotorlounge.com/happenings/"
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+detail:
+  enabled: true
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+data_goals:
+  - events
+  - lineup
+  - images
+  - tickets

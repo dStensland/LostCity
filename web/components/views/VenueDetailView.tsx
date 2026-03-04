@@ -18,22 +18,25 @@ import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
 import { isDogPortal } from "@/lib/dog-art";
 import { HIGHLIGHT_CONFIG, type VenueHighlight } from "@/lib/venue-highlights";
+import { type VenueFeature } from "@/lib/venue-features";
+import VenueFeaturesSection from "@/components/detail/VenueFeaturesSection";
+import VenueSpecialsSection, { type VenueSpecial } from "@/components/detail/VenueSpecialsSection";
 import DirectionsDropdown from "@/components/DirectionsDropdown";
 import GettingThereSection, { type WalkableNeighbor } from "@/components/GettingThereSection";
 import {
-  CaretDown,
   CaretRight,
   Globe,
   InstagramLogo,
   Phone,
   Tag,
 } from "@phosphor-icons/react";
-import { InfoCard } from "@/components/detail/InfoCard";
 import { SectionHeader } from "@/components/detail/SectionHeader";
+import { QuickActionLink } from "@/components/detail/QuickActionLink";
+import { CollapsibleSection } from "@/components/detail/CollapsibleSection";
 import NeonBackButton from "@/components/detail/NeonBackButton";
 import Badge from "@/components/ui/Badge";
 import Dot from "@/components/ui/Dot";
-import VenueEventsSection from "@/components/detail/VenueEventsSection";
+import VenueShowtimes, { type ShowtimeEvent } from "@/components/VenueShowtimes";
 import DogNearbySection from "@/components/detail/DogNearbySection";
 import dynamic from "next/dynamic";
 
@@ -86,6 +89,15 @@ type UpcomingEvent = {
   is_free?: boolean;
   price_min: number | null;
   category: string | null;
+  series_id?: string | null;
+  series?: {
+    id: string;
+    slug: string;
+    title: string;
+    series_type: string;
+    image_url: string | null;
+  } | null;
+  image_url?: string | null;
   artists?: {
     name: string;
     billing_order?: number | null;
@@ -136,31 +148,12 @@ const dogVibeLabels: Record<string, string> = {
   "fenced": "Fenced Area",
 };
 
-// Collapsible community tags — lazy-mounts VenueTagList to save API calls
+// CollapsibleVenueTags uses shared CollapsibleSection
 function CollapsibleVenueTags({ venueId }: { venueId: number }) {
-  const [expanded, setExpanded] = useState(false);
-
   return (
-    <div>
-      <button
-        onClick={() => setExpanded((v) => !v)}
-        className="w-full flex items-center justify-between group min-h-[44px] focus-ring"
-      >
-        <h2 className="font-mono text-xs font-medium text-[var(--muted)] uppercase tracking-widest group-hover:text-[var(--soft)] transition-colors">
-          Community Tags
-        </h2>
-        <CaretDown
-          size={16}
-          weight="bold"
-          className={`text-[var(--muted)] transition-transform ${expanded ? "rotate-180" : ""}`}
-        />
-      </button>
-      {expanded && (
-        <div className="mt-3">
-          <VenueTagList venueId={venueId} />
-        </div>
-      )}
-    </div>
+    <CollapsibleSection title="Community Tags">
+      <VenueTagList venueId={venueId} />
+    </CollapsibleSection>
   );
 }
 
@@ -170,12 +163,14 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
   const [spot, setSpot] = useState<SpotData | null>(null);
   const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
   const [nearbyDestinations, setNearbyDestinations] = useState<NearbyDestinations | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [error, setError] = useState<string | null>(null);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [isLowRes, setIsLowRes] = useState(false);
   const [highlights, setHighlights] = useState<VenueHighlight[]>([]);
+  const [features, setFeatures] = useState<VenueFeature[]>([]);
+  const [specials, setSpecials] = useState<VenueSpecial[]>([]);
   const [artifacts, setArtifacts] = useState<{id: number; name: string; slug: string | null; image_url: string | null; short_description: string | null}[]>([]);
   const [walkableNeighbors, setWalkableNeighbors] = useState<WalkableNeighbor[]>([]);
   const [showTagModal, setShowTagModal] = useState(false);
@@ -185,7 +180,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
     const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     async function fetchSpot() {
-      setLoading(true);
+      setStatus("loading");
       setError(null);
       setImageLoaded(false);
       setImageError(false);
@@ -202,12 +197,14 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
         setUpcomingEvents(data.upcomingEvents || []);
         setNearbyDestinations(data.nearbyDestinations || null);
         setHighlights(data.highlights || []);
+        setFeatures(data.features || []);
+        setSpecials(data.specials || []);
         setArtifacts(data.artifacts || []);
+        setStatus("ready");
       } catch (err) {
         if (controller.signal.aborted) return;
         setError(err instanceof Error ? err.message : "Failed to load spot");
-      } finally {
-        setLoading(false);
+        setStatus("error");
       }
     }
 
@@ -252,62 +249,64 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
   const handleEventClick = (id: number) => navigateToDetail("event", id);
   const handleSpotClick = (spotSlug: string) => navigateToDetail("spot", spotSlug);
 
-  if (loading) {
+  if (status === "loading") {
     return (
       <div className="pt-6 pb-8" role="status" aria-label="Loading venue details">
         <NeonBackButton onClose={onClose} floating={false} />
 
         {/* Hero image skeleton */}
-        <div className="aspect-video bg-[var(--night)] rounded-lg overflow-hidden mb-6 border border-[var(--twilight)] relative">
+        <div className="aspect-video bg-[var(--night)] rounded-lg overflow-hidden mb-6 relative">
           <Skeleton className="absolute inset-0" />
         </div>
 
-        {/* Info card skeleton */}
-        <InfoCard>
-          {/* Type badge */}
-          <Skeleton className="h-7 w-28 rounded-full mb-4" delay="0.06s" />
+        {/* Flowing skeleton — matches new unwrapped layout */}
+        <div className="space-y-5 sm:space-y-8">
+          <div>
+            {/* Type badge */}
+            <Skeleton className="h-7 w-28 rounded-full mb-4" delay="0.06s" />
 
-          {/* Name + follow/recommend */}
-          <div className="flex items-start justify-between gap-4">
-            <Skeleton className="h-7 w-[60%] rounded" delay="0.1s" />
-            <div className="flex gap-2 flex-shrink-0">
-              <Skeleton className="w-9 h-9 rounded-lg" delay="0.14s" />
-              <Skeleton className="w-9 h-9 rounded-lg" delay="0.16s" />
+            {/* Name + follow/recommend */}
+            <div className="flex items-start justify-between gap-4">
+              <Skeleton className="h-7 w-[60%] rounded" delay="0.1s" />
+              <div className="flex gap-2 flex-shrink-0">
+                <Skeleton className="w-9 h-9 rounded-lg" delay="0.14s" />
+                <Skeleton className="w-9 h-9 rounded-lg" delay="0.16s" />
+              </div>
             </div>
+
+            {/* Neighborhood + price */}
+            <Skeleton className="h-5 w-[35%] rounded mt-2" delay="0.18s" />
           </div>
 
-          {/* Neighborhood + price */}
-          <Skeleton className="h-5 w-[35%] rounded mt-2" delay="0.18s" />
-
           {/* Vibe pills */}
-          <div className="flex gap-2 mt-3">
+          <div className="flex gap-2">
             <Skeleton className="h-6 w-16 rounded-full" delay="0.22s" />
             <Skeleton className="h-6 w-20 rounded-full" delay="0.24s" />
             <Skeleton className="h-6 w-14 rounded-full" delay="0.26s" />
           </div>
 
           {/* Quick actions */}
-          <div className="flex flex-wrap gap-2 mt-4">
-            <Skeleton className="h-8 w-24 rounded-lg" delay="0.3s" />
-            <Skeleton className="h-8 w-28 rounded-lg" delay="0.32s" />
-            <Skeleton className="h-8 w-24 rounded-lg" delay="0.34s" />
+          <div className="flex flex-wrap gap-2">
+            <Skeleton className="h-8 w-24 rounded-full" delay="0.3s" />
+            <Skeleton className="h-8 w-28 rounded-full" delay="0.32s" />
+            <Skeleton className="h-8 w-24 rounded-full" delay="0.34s" />
           </div>
 
           {/* Hours section */}
-          <div className="mt-6 pt-6 border-t border-[var(--twilight)]">
+          <div className="pt-6 border-t border-[var(--twilight)]/30">
             <Skeleton className="h-3 w-12 rounded mb-3" delay="0.4s" />
             <Skeleton className="h-4 w-[50%] rounded" delay="0.44s" />
             <Skeleton className="h-4 w-[45%] rounded mt-1.5" delay="0.46s" />
           </div>
 
           {/* Description section */}
-          <div className="mt-6 pt-6 border-t border-[var(--twilight)]">
+          <div className="pt-6 border-t border-[var(--twilight)]/30">
             <Skeleton className="h-3 w-14 rounded mb-3" delay="0.5s" />
             <Skeleton className="h-4 w-full rounded" delay="0.54s" />
             <Skeleton className="h-4 w-[90%] rounded mt-1.5" delay="0.56s" />
             <Skeleton className="h-4 w-[75%] rounded mt-1.5" delay="0.58s" />
           </div>
-        </InfoCard>
+        </div>
       </div>
     );
   }
@@ -340,7 +339,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
 
       {/* Spot image */}
       {showImage && (
-        <div className="aspect-video bg-[var(--night)] rounded-lg overflow-hidden mb-6 border border-[var(--twilight)] relative">
+        <div className="aspect-video bg-[var(--night)] rounded-lg overflow-hidden mb-6 relative">
           {!imageLoaded && (
             <Skeleton className="absolute inset-0" />
           )}
@@ -349,7 +348,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
             alt={spot.name}
             fill
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            className={`${isLowRes ? "object-contain" : "object-cover"} transition-opacity duration-300 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
+            className={`${isLowRes ? "object-contain" : "object-cover"} brightness-[0.85] contrast-[1.05] transition-opacity duration-300 ${imageLoaded ? "opacity-100" : "opacity-0"}`}
             onLoad={(e) => {
               setImageLoaded(true);
               if (e.currentTarget.naturalWidth < 600) setIsLowRes(true);
@@ -359,87 +358,79 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
         </div>
       )}
 
-      {/* Main spot info card */}
-      <InfoCard>
-      {/* Type badge */}
-      {typeInfo && (() => {
-          const badgeColor = getCategoryColor(primaryType || "");
-          const badgeClass = createCssVarClass("--accent-color", badgeColor, "accent");
-          return (
-            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm mb-4 border bg-accent-15 border-accent-40 ${badgeClass?.className ?? ""}`}>
-              <ScopedStyles css={badgeClass?.css} />
-              <CategoryIcon type={primaryType || ""} size={16} glow="subtle" />
-              <span
-                className="font-mono text-xs font-medium uppercase tracking-widest text-accent"
-              >
-                {spot.spot_types && spot.spot_types.length > 1
-                  ? getSpotTypeLabels(spot.spot_types)
-                  : typeInfo.label}
+      {/* Editorial flowing layout — no single InfoCard wrapper */}
+      <div className="space-y-5 sm:space-y-8">
+        {/* ── IDENTITY ────────────────────────────────────── */}
+        <div>
+          {/* Type badge */}
+          {typeInfo && (() => {
+            const badgeColor = getCategoryColor(primaryType || "");
+            const badgeClass = createCssVarClass("--accent-color", badgeColor, "accent");
+            return (
+              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm mb-4 border bg-accent-15 border-accent-40 ${badgeClass?.className ?? ""}`}>
+                <ScopedStyles css={badgeClass?.css} />
+                <CategoryIcon type={primaryType || ""} size={16} glow="subtle" />
+                <span className="font-mono text-xs font-medium uppercase tracking-widest text-accent">
+                  {spot.spot_types && spot.spot_types.length > 1
+                    ? getSpotTypeLabels(spot.spot_types)
+                    : typeInfo.label}
+                </span>
               </span>
-            </span>
-          );
-        })()}
+            );
+          })()}
 
-        {/* Name + Follow/Recommend */}
-        <div className="flex items-start justify-between gap-4">
-          <h2 className="text-2xl font-bold text-[var(--cream)] leading-tight">
-            {spot.name}
-          </h2>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <FollowButton targetVenueId={spot.id} size="sm" />
-            <RecommendButton venueId={spot.id} size="sm" />
+          {/* Name + Follow/Recommend */}
+          <div className="flex items-start justify-between gap-4">
+            <h2 className="text-2xl font-bold text-[var(--cream)] leading-tight">
+              {spot.name}
+            </h2>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <FollowButton targetVenueId={spot.id} size="sm" />
+              <RecommendButton venueId={spot.id} size="sm" />
+            </div>
           </div>
+
+          {/* Neighborhood + Price */}
+          <p className="mt-2 text-[var(--soft)] text-lg">
+            {spot.neighborhood || spot.city}
+            {priceDisplay && (
+              <span className="text-[var(--muted)]"> <Dot /> {priceDisplay}</span>
+            )}
+          </p>
         </div>
 
-        {/* Neighborhood + Price */}
-        <p className="mt-2 text-[var(--soft)] text-lg">
-          {spot.neighborhood || spot.city}
-          {priceDisplay && (
-            <span className="text-[var(--muted)]"> <Dot /> {priceDisplay}</span>
-          )}
-        </p>
-
-        {/* Top vibes — instant characterization */}
+        {/* ── VIBES ───────────────────────────────────────── */}
         {spot.vibes && spot.vibes.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mt-2.5">
-            {spot.vibes.slice(0, 3).map((vibe) => (
-              <Badge key={vibe} variant="alert" size="md">{vibe.replace(/-/g, " ")}</Badge>
+          <div className="flex flex-wrap gap-1.5">
+            {spot.vibes.slice(0, 4).map((vibe) => (
+              <Badge key={vibe} variant="neutral" size="md">{vibe.replace(/-/g, " ")}</Badge>
             ))}
           </div>
         )}
 
-        {/* Quick Actions */}
-        <div className="flex flex-wrap gap-2 mt-4">
+        {/* ── QUICK ACTIONS ───────────────────────────────── */}
+        <div className="flex flex-wrap gap-2">
           {spot.website && (
-            <a
+            <QuickActionLink
               href={spot.website}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] bg-[var(--twilight)]/50 text-[var(--soft)] hover:text-[var(--cream)] rounded-lg text-sm transition-colors focus-ring"
-            >
-              <Globe size={16} weight="light" aria-hidden="true" />
-              Website
-            </a>
+              icon={<Globe size={16} weight="light" aria-hidden="true" />}
+              label="Website"
+            />
           )}
           {spot.instagram && (
-            <a
+            <QuickActionLink
               href={`https://instagram.com/${spot.instagram.replace("@", "")}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] bg-[var(--twilight)]/50 text-[var(--soft)] hover:text-[var(--cream)] rounded-lg text-sm transition-colors focus-ring"
-            >
-              <InstagramLogo size={16} weight="light" aria-hidden="true" />
-              Instagram
-            </a>
+              icon={<InstagramLogo size={16} weight="light" aria-hidden="true" />}
+              label="Instagram"
+            />
           )}
           {spot.phone && (
-            <a
+            <QuickActionLink
               href={`tel:${spot.phone}`}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] bg-[var(--twilight)]/50 text-[var(--soft)] hover:text-[var(--cream)] rounded-lg text-sm transition-colors focus-ring"
-            >
-              <Phone size={16} weight="light" aria-hidden="true" />
-              Call
-            </a>
+              icon={<Phone size={16} weight="light" aria-hidden="true" />}
+              label="Call"
+              external={false}
+            />
           )}
           {spot.address && (
             <DirectionsDropdown
@@ -453,7 +444,7 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
 
         {/* Dog-friendly highlights (dog portal only) */}
         {isDog && dogHighlightVibes.length > 0 && (
-          <div className="mt-5 flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2">
             {dogHighlightVibes.map((vibe) => (
               <Badge key={vibe} variant="alert">
                 {vibe === "off-leash" && "🐕"}
@@ -473,17 +464,17 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
         {isDog && (
           <button
             onClick={() => setShowTagModal(true)}
-            className="mt-4 inline-flex items-center gap-2 px-4 py-2 min-h-[44px] rounded-xl text-sm font-semibold transition-colors bg-[var(--coral)]/8 text-[var(--coral)] border border-[var(--coral)]/20 focus-ring"
+            className="inline-flex items-center gap-2 px-4 py-2 min-h-[44px] rounded-xl text-sm font-semibold transition-colors bg-[var(--coral)]/8 text-[var(--coral)] border border-[var(--coral)]/20 focus-ring"
           >
             <Tag size={16} weight="light" aria-hidden="true" />
             Tag this spot
           </button>
         )}
 
-        {/* Hours */}
+        {/* ── HOURS ───────────────────────────────────────── */}
         {(spot.hours || spot.hours_display || spot.is_24_hours) && (
-          <div className="mt-6">
-            <SectionHeader title="Hours" />
+          <div>
+            <SectionHeader title="Hours" variant="divider" />
             <HoursSection
               hours={spot.hours}
               hoursDisplay={spot.hours_display}
@@ -492,27 +483,27 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
           </div>
         )}
 
-        {/* Description */}
+        {/* ── ABOUT ───────────────────────────────────────── */}
         {spot.description && (
-          <div className="mt-6">
-            <SectionHeader title="About" />
+          <div>
+            <SectionHeader title="About" variant="divider" />
             <p className="text-[var(--soft)] whitespace-pre-wrap leading-relaxed">
               <LinkifyText text={spot.description} />
             </p>
           </div>
         )}
 
-        {/* While You're Here — venue highlights */}
+        {/* ── HIGHLIGHTS ──────────────────────────────────── */}
         {highlights.length > 0 && (
-          <div className="mt-6">
-            <SectionHeader title="While You're Here" />
+          <div>
+            <SectionHeader title="While You're Here" variant="divider" />
             <div className="space-y-3">
               {highlights.map((h) => {
                 const config = HIGHLIGHT_CONFIG[h.highlight_type];
                 const IconComp = config?.Icon;
                 const highlightColorClass = createCssVarClass("--highlight-color", config?.color || "#A78BFA", `hl-${h.highlight_type}`);
                 return (
-                  <div key={h.id} className={`flex items-start gap-3 p-3 rounded-lg border border-[var(--twilight)] bg-[var(--dusk)] ${highlightColorClass?.className ?? ""}`}>
+                  <div key={h.id} className={`flex items-start gap-3 p-3 rounded-lg border border-[var(--twilight)]/40 bg-[var(--dusk)] ${highlightColorClass?.className ?? ""}`}>
                     <ScopedStyles css={highlightColorClass?.css} />
                     {IconComp && (
                       <IconComp
@@ -539,16 +530,22 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
           </div>
         )}
 
-        {/* Artifacts housed at this venue */}
+        {/* ── FEATURES ────────────────────────────────────── */}
+        <VenueFeaturesSection features={features} venueType={spot.spot_type} />
+
+        {/* ── SPECIALS ──────────────────────────────────── */}
+        <VenueSpecialsSection specials={specials} />
+
+        {/* ── ARTIFACTS ───────────────────────────────────── */}
         {artifacts.length > 0 && (
-          <div className="mt-6">
-            <SectionHeader title="Artifacts" count={artifacts.length} />
+          <div>
+            <SectionHeader title="Artifacts" count={artifacts.length} variant="divider" />
             <div className="space-y-2">
               {artifacts.map((artifact) => (
                 <button
                   key={artifact.id}
                   onClick={() => artifact.slug && handleSpotClick(artifact.slug)}
-                  className="block w-full text-left p-3 min-h-[44px] border border-[var(--twilight)] rounded-lg bg-[var(--dusk)] hover:border-[var(--coral)]/50 transition-colors group focus-ring"
+                  className="block w-full text-left p-3 min-h-[44px] border border-[var(--twilight)]/40 rounded-lg bg-[var(--dusk)] hover:border-[var(--coral)]/50 transition-colors group focus-ring"
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex-1 min-w-0">
@@ -569,26 +566,9 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
           </div>
         )}
 
-        {/* Vibes */}
-        {spot.vibes && spot.vibes.length > 0 && (
-          <div className="mt-6">
-            <SectionHeader title="Vibes" count={spot.vibes.length} />
-            <div className="flex flex-wrap gap-2">
-              {spot.vibes.map((vibe) => (
-                <Badge key={vibe} variant="alert">{vibe.replace(/-/g, " ")}</Badge>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Community Tags — collapsed by default to save API calls */}
-        <div className="mt-6 border-t border-[var(--twilight)] py-4">
-          <CollapsibleVenueTags venueId={spot.id} />
-        </div>
-
-        {/* Getting There — transit, parking, walkable neighbors */}
+        {/* ── GETTING THERE ───────────────────────────────── */}
         {(spot.nearest_marta_station || spot.beltline_adjacent || (spot.parking_type && spot.parking_type.length > 0) || spot.transit_score) && (
-          <div className="mt-6 border-t border-[var(--twilight)] pt-4">
+          <div>
             <GettingThereSection
               transit={spot}
               variant="expanded"
@@ -598,11 +578,11 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
           </div>
         )}
 
-        {/* Location */}
+        {/* ── LOCATION ────────────────────────────────────── */}
         {spot.address && (
-          <div className="mt-6">
-            <div className="flex items-center justify-between py-4 border-t border-[var(--twilight)]">
-              <h2 className="font-mono text-xs uppercase tracking-widest text-[var(--muted)]">
+          <div>
+            <div className="flex items-center justify-between pt-6 border-t border-[var(--twilight)]/30 pb-3">
+              <h2 className="font-mono text-xs font-bold uppercase tracking-[0.14em] text-[var(--muted)]">
                 Location
               </h2>
               <DirectionsDropdown
@@ -620,23 +600,28 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
           </div>
         )}
 
-        {/* Flag */}
-        <div className="mt-6 border-t border-[var(--twilight)] pt-4">
+        {/* ── COMMUNITY ───────────────────────────────────── */}
+        <div className="border-t border-[var(--twilight)]/30 pt-5 space-y-3">
+          <CollapsibleVenueTags venueId={spot.id} />
           <FlagButton
             entityType="venue"
             entityId={spot.id}
             entityName={spot.name}
           />
         </div>
-      </InfoCard>
+      </div>
 
-      {/* More at Venue - Day by day events */}
+      {/* More at Venue - Showtime-grouped for cinemas, day-by-day for others */}
       {upcomingEvents.length > 0 && (
-        <VenueEventsSection
-          venueName={spot.name}
-          events={upcomingEvents}
-          onEventClick={handleEventClick}
-        />
+        <div className="mt-8">
+          <VenueShowtimes
+            events={upcomingEvents as ShowtimeEvent[]}
+            portalSlug={portalSlug}
+            venueType={spot.spot_type}
+            title={`More at ${spot.name}`}
+            onEventClick={handleEventClick}
+          />
+        </div>
       )}
 
       {/* Happening Around Here */}

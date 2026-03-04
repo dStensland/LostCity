@@ -98,7 +98,7 @@ def main():
     print(f"Events with ticket_url: {format_percentage(ticket_count, total_events)}")
     
     # Category
-    result = run_query(conn, "SELECT COUNT(*) FROM events WHERE category IS NOT NULL", "Events with category")
+    result = run_query(conn, "SELECT COUNT(*) FROM events WHERE category_id IS NOT NULL", "Events with category")
     cat_count = result[0][0] if result else 0
     print(f"Events with category: {format_percentage(cat_count, total_events)}")
     
@@ -151,9 +151,10 @@ def main():
     print("-" * 80)
     
     result = run_query(conn, """
-        SELECT category, COUNT(*) as cnt 
-        FROM events 
-        GROUP BY category 
+        SELECT COALESCE(c.name, e.category_id::text, '(null)') as category_name, COUNT(*) as cnt
+        FROM events e
+        LEFT JOIN categories c ON c.id = e.category_id
+        GROUP BY category_name
         ORDER BY cnt DESC 
         LIMIT 15
     """, "Category distribution")

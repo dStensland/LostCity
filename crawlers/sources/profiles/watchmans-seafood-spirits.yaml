@@ -1,0 +1,27 @@
+version: 1
+slug: watchmans-seafood-spirits
+name: "Watchman's Seafood & Spirits"
+integration_method: llm_crawler
+defaults:
+  venue_name: "Watchman's Seafood & Spirits"
+  category: food_drink
+  tags:
+  - atlanta-expansion-wave-t
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - "https://watchmans.com"
+  fetch:
+    render_js: true
+    wait_until: domcontentloaded
+detail:
+  enabled: true
+  fetch:
+    render_js: true
+    wait_until: domcontentloaded
+data_goals:
+  - events
+  - lineup
+  - images
+  - tickets

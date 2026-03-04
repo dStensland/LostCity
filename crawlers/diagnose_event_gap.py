@@ -105,14 +105,14 @@ def main():
     
     # Events with NULL category in next 30 days
     result = client.table("events").select("id", count="exact").is_(
-        "category", "null"
+        "category_id", "null"
     ).gte("start_date", today).lte("start_date", thirty_days).execute()
     null_category_future = result.count
     print(f"Events with NULL category (next 30 days): {null_category_future:,}")
     
     # Events with category set in next 30 days
     result = client.table("events").select("id", count="exact").not_.is_(
-        "category", "null"
+        "category_id", "null"
     ).gte("start_date", today).lte("start_date", thirty_days).execute()
     has_category_future = result.count
     print(f"Events with category set (next 30 days): {has_category_future:,}")
@@ -121,15 +121,15 @@ def main():
     print("Breakdown by category (next 30 days, unique events only):")
     
     # Get category breakdown for unique future events
-    result = client.table("events").select("category").is_(
+    result = client.table("events").select("category_id").is_(
         "canonical_event_id", "null"
-    ).not_.is_("category", "null").gte(
+    ).not_.is_("category_id", "null").gte(
         "start_date", today
     ).lte("start_date", thirty_days).execute()
     
     category_counts = {}
     for event in result.data:
-        cat = event.get("category", "NULL")
+        cat = event.get("category_id", "NULL")
         category_counts[cat] = category_counts.get(cat, 0) + 1
     
     for cat in sorted(category_counts.keys(), key=lambda x: category_counts[x], reverse=True):
@@ -176,7 +176,7 @@ def main():
     print("Sample events with future dates but missing category:")
     result = client.table("events").select(
         "id,title,start_date,venue_id,source_id"
-    ).is_("category", "null").is_(
+    ).is_("category_id", "null").is_(
         "canonical_event_id", "null"
     ).gte("start_date", today).lte("start_date", thirty_days).limit(10).execute()
     

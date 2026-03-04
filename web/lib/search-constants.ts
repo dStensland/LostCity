@@ -83,6 +83,26 @@ export const TAG_GROUPS = {
     { value: "sold-out", label: "Sold Out" },
     { value: "limited-seating", label: "Limited Seating" },
   ],
+  Activity: [
+    { value: "trivia", label: "Trivia" },
+    { value: "karaoke", label: "Karaoke" },
+    { value: "open-mic", label: "Open Mic" },
+    { value: "comedy", label: "Comedy" },
+    { value: "dj", label: "DJ" },
+    { value: "drag", label: "Drag" },
+    { value: "bingo", label: "Bingo" },
+    { value: "happy-hour", label: "Happy Hour" },
+    { value: "brunch", label: "Brunch" },
+    { value: "food-specials", label: "Food Specials" },
+    { value: "run-club", label: "Run Club" },
+    { value: "cycling", label: "Cycling" },
+    { value: "yoga", label: "Yoga" },
+    { value: "jazz", label: "Jazz" },
+    { value: "blues", label: "Blues" },
+    { value: "dnd", label: "D&D" },
+    { value: "board-games", label: "Board Games" },
+    { value: "dance", label: "Dance" },
+  ],
 } as const;
 
 export const ALL_TAGS = [
@@ -91,4 +111,5 @@ export const ALL_TAGS = [
   ...TAG_GROUPS.Type,
   ...TAG_GROUPS.Special,
   ...TAG_GROUPS.Logistics,
+  ...TAG_GROUPS.Activity,
 ] as const;

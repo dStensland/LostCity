@@ -63,7 +63,8 @@ FITNESS_GENRES = {
 FOOD_DRINK_GENRES = {
     "southern", "mexican", "italian", "asian", "brunch", "wine", "beer",
     "cocktails", "coffee", "pop-up", "tasting", "cooking-class",
-    "food-festival", "seafood",
+    "food-festival", "seafood", "farmers-market",
+    "happy-hour", "specials",
 }
 
 ART_GENRES = {
@@ -74,8 +75,9 @@ ART_GENRES = {
 NIGHTLIFE_GENRES = {
     "dj", "drag", "trivia", "karaoke", "dance-party", "game-night",
     "burlesque", "wine-night", "cocktail-night",
-    "poker", "bingo", "bar-games", "pub-crawl", "specials",
+    "poker", "bingo", "bar-games", "pub-crawl", "specials", "happy-hour",
     "latin-night", "line-dancing",
+    "open-mic", "viewing-party", "nerd-stuff",
 }
 
 LEARNING_GENRES = {
@@ -86,11 +88,13 @@ LEARNING_GENRES = {
 COMMUNITY_GENRES = {
     "volunteer", "meetup", "networking", "lgbtq", "faith", "activism",
     "support", "cultural", "meditation", "interfaith",
+    "game-night", "open-mic", "nerd-stuff",
 }
 
 FAMILY_GENRES = {
     "storytime", "crafts", "science", "nature", "puppet-show",
     "festival", "music-for-kids", "outdoor-play",
+    "game-night",
 }
 
 OUTDOOR_GENRES = {
@@ -102,12 +106,29 @@ WORDS_GENRES = {
     "comics", "literary-festival",
 }
 
+WELLNESS_GENRES = {
+    "recovery", "yoga", "meditation", "breathwork", "sound-bath",
+    "support", "therapy", "reiki", "wellness-class",
+}
+
+MEETUP_GENRES = {
+    "hiking", "book-club", "social", "camping", "foodie",
+    "photography", "language", "dance", "fitness", "networking",
+    "singles", "outdoors",
+}
+
+GAMING_GENRES = {
+    "convention", "esports", "arcade", "tabletop", "anime",
+    "retro", "lan-party",
+}
+
 # Union of all valid genres
 VALID_GENRES: set[str] = (
     MUSIC_GENRES | FILM_GENRES | COMEDY_GENRES | THEATER_GENRES |
     SPORTS_GENRES | FITNESS_GENRES | FOOD_DRINK_GENRES | ART_GENRES |
     NIGHTLIFE_GENRES | LEARNING_GENRES | COMMUNITY_GENRES | FAMILY_GENRES |
-    OUTDOOR_GENRES | WORDS_GENRES
+    OUTDOOR_GENRES | WORDS_GENRES | WELLNESS_GENRES | MEETUP_GENRES |
+    GAMING_GENRES
 )
 
 # Category → genre set mapping (for category-scoped lookups)
@@ -126,6 +147,9 @@ GENRES_BY_CATEGORY: dict[str, set[str]] = {
     "family": FAMILY_GENRES,
     "outdoor": OUTDOOR_GENRES,
     "words": WORDS_GENRES,
+    "wellness": WELLNESS_GENRES,
+    "meetup": MEETUP_GENRES,
+    "gaming": GAMING_GENRES,
 }
 
 
@@ -503,10 +527,10 @@ GENRE_NORMALIZATION: dict[str, str] = {
     "cooking class": "cooking-class",
     "baking class": "cooking-class",
     "culinary workshop": "cooking-class",
-    "farmers market": "food-festival",
-    "farmers' market": "food-festival",
+    "farmers market": "farmers-market",
+    "farmers' market": "farmers-market",
     "food truck": "food-festival",
-    "night market": "food-festival",
+    "night market": "farmers-market",
     "food fest": "food-festival",
     "oyster": "seafood",
     "crawfish": "seafood",
@@ -536,6 +560,20 @@ GENRE_NORMALIZATION: dict[str, str] = {
     "bingo": "game-night",
     "wine down": "wine-night",
     "wine wednesday": "wine-night",
+    "watch party": "viewing-party",
+    "viewing party": "viewing-party",
+    "game day": "viewing-party",
+    "open mic": "open-mic",
+    "open-mic": "open-mic",
+    "open mic night": "open-mic",
+    "d&d": "nerd-stuff",
+    "dungeons and dragons": "nerd-stuff",
+    "dungeons & dragons": "nerd-stuff",
+    "magic the gathering": "nerd-stuff",
+    "mtg": "nerd-stuff",
+    "tabletop": "nerd-stuff",
+    "tabletop gaming": "nerd-stuff",
+    "ttrpg": "nerd-stuff",
 
     # --- Learning ---
     "hands-on": "workshop",
@@ -697,6 +735,50 @@ GENRE_NORMALIZATION: dict[str, str] = {
     "book festival": "literary-festival",
     "literary fest": "literary-festival",
     "book fair": "literary-festival",
+
+    # --- Wellness ---
+    "aa": "recovery",
+    "alcoholics anonymous": "recovery",
+    "na": "recovery",
+    "narcotics anonymous": "recovery",
+    "12 step": "recovery",
+    "twelve step": "recovery",
+    "12-step": "recovery",
+    "sober": "recovery",
+    "sobriety": "recovery",
+    "al-anon": "recovery",
+    "celebrate recovery": "recovery",
+    "sound bath": "sound-bath",
+    "sound healing": "sound-bath",
+    "breathwork": "breathwork",
+    "pranayama": "breathwork",
+    "reiki": "reiki",
+    "energy healing": "reiki",
+    "wellness class": "wellness-class",
+    "recovery meeting": "recovery",
+
+    # --- Meetup ---
+    "hike": "hiking",
+    "trail": "hiking",
+    "nature walk": "hiking",
+    "group hike": "hiking",
+    "food tour": "foodie",
+    "eat & explore": "foodie",
+    "foodie friday": "foodie",
+    "supper club": "foodie",
+    "singles": "singles",
+    "speed dating": "singles",
+
+    # --- Gaming ---
+    "gaming expo": "convention",
+    "gaming convention": "convention",
+    "dreamhack": "esports",
+    "lan party": "lan-party",
+    "lan-party": "lan-party",
+    "retro gaming": "retro",
+    "anime convention": "anime",
+    "anime weekend": "anime",
+    "cosplay": "anime",
 }
 
 
@@ -739,7 +821,7 @@ SUBCATEGORY_TO_GENRE: dict[str, Optional[str]] = {
     "nightlife.lgbtq": "lgbtq",
     "nightlife.club": "dj",
     "nightlife.karaoke": "karaoke",
-    "food_drink.farmers_market": "food-festival",
+    "food_drink.farmers_market": "farmers-market",
     "outdoor.sightseeing": None,
     "art.exhibition": "exhibition",
     "art.arts.workshop": "craft",

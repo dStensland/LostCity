@@ -1,0 +1,29 @@
+version: 1
+slug: atlantucky-brewing
+name: "Atlantucky Brewing"
+integration_method: llm_crawler
+defaults:
+  venue_name: "Atlantucky Brewing"
+  category: nightlife
+  tags:
+  - atlanta-expansion-wave-w
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - "https://atlantucky.com"
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+detail:
+  enabled: true
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+data_goals:
+  - events
+  - lineup
+  - images
+  - tickets

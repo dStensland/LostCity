@@ -101,6 +101,7 @@ CREATE TABLE events (
   reentry_policy TEXT,
   set_times_mentioned BOOLEAN DEFAULT false,
   is_free BOOLEAN DEFAULT false,
+  is_active BOOLEAN NOT NULL DEFAULT true,
   source_url TEXT NOT NULL,
   ticket_url TEXT,
   image_url TEXT,
@@ -181,6 +182,8 @@ CREATE INDEX idx_events_content_kind ON events(content_kind);
 CREATE INDEX idx_events_venue_id ON events(venue_id);
 CREATE INDEX idx_events_content_hash ON events(content_hash);
 CREATE INDEX idx_events_source_id ON events(source_id);
+CREATE INDEX idx_events_is_active ON events(is_active);
+CREATE INDEX idx_events_active_start_date ON events(start_date) WHERE is_active = true;
 CREATE INDEX idx_event_artists_event_id ON event_artists(event_id);
 CREATE INDEX idx_event_artists_name ON event_artists(name);
 CREATE UNIQUE INDEX idx_event_artists_event_name ON event_artists(event_id, name);

@@ -124,7 +124,7 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
   const portalId = portalContext?.portal?.id || null;
   const [series, setSeries] = useState<SeriesData | null>(null);
   const [venueShowtimes, setVenueShowtimes] = useState<VenueShowtime[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [error, setError] = useState<string | null>(null);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
@@ -135,7 +135,7 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
     const controller = new AbortController();
 
     async function fetchSeries() {
-      setLoading(true);
+      setStatus("loading");
       setError(null);
       setImageLoaded(false);
       setImageError(false);
@@ -153,11 +153,11 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
         const data = await res.json();
         setSeries(data.series);
         setVenueShowtimes(data.venueShowtimes || []);
+        setStatus("ready");
       } catch (err) {
         if (controller.signal.aborted) return;
         setError(err instanceof Error ? err.message : "Failed to load series");
-      } finally {
-        setLoading(false);
+        setStatus("error");
       }
     }
 
@@ -181,7 +181,7 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
   const handleVenueClick = (venueSlug: string) => navigateToDetail("spot", venueSlug);
   const handleFestivalClick = (festivalSlug: string) => navigateToDetail("festival", festivalSlug);
 
-  if (loading) {
+  if (status === "loading") {
     return (
       <div className="pt-6 pb-8" role="status" aria-label="Loading series details">
         {/* Hero skeleton with floating back button */}
@@ -357,7 +357,7 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
           className={`w-full mb-5 flex items-center justify-between gap-3 rounded-lg border border-[var(--twilight)] bg-[var(--void)] px-4 py-3 min-h-[44px] text-left transition-colors hover:border-[var(--coral)]/50 focus-ring ${accentClass?.className ?? ""}`}
         >
           <div className="min-w-0">
-            <p className="text-xs font-mono uppercase tracking-widest text-[var(--muted)]">Part of</p>
+            <p className="text-xs font-mono uppercase tracking-[0.14em] text-[var(--muted)]">Part of</p>
             <p className="text-[var(--cream)] font-medium truncate">{series.festival.name}</p>
           </div>
           <span className="text-xs font-mono text-[var(--soft)]">View festival</span>
@@ -367,7 +367,7 @@ export default function SeriesDetailView({ slug, portalSlug, onClose }: SeriesDe
       {/* Description */}
       {series.description && (
         <InfoCard className="mb-6">
-          <h2 className="font-mono text-xs uppercase tracking-widest text-[var(--muted)] mb-2">
+          <h2 className="font-mono text-xs font-bold uppercase tracking-[0.14em] text-[var(--muted)] mb-2">
             About
           </h2>
           <p className="text-[var(--soft)] text-sm leading-relaxed whitespace-pre-wrap">

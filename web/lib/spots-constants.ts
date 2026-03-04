@@ -52,6 +52,7 @@ export const VENUE_TYPES_MAP = {
   festival: { label: "Festival", icon: "🎪" },
 
   // Recreation
+  escape_room: { label: "Escape Room", icon: "🔐" },
   games: { label: "Games", icon: "🎯" },
   arcade: { label: "Arcade", icon: "🕹️" },
   karaoke: { label: "Karaoke", icon: "🎤" },
@@ -161,7 +162,37 @@ export const DESTINATION_CATEGORIES = {
 } as const;
 
 export type DestinationCategory = keyof typeof DESTINATION_CATEGORIES;
-export type SpotCategory = "venues" | "places";
+
+/**
+ * Alias map: post-consolidation type → legacy DB types that should also match.
+ * Applied at query time so QUICK_VENUE_TYPES / SPOTS_TABS stay clean.
+ */
+export const VENUE_TYPE_ALIASES: Record<string, string[]> = {
+  restaurant: ["coffee_shop", "cafe", "food_hall", "cooking_school"],
+  bar: ["sports_bar", "lounge", "wine_bar", "club"],
+  fitness: ["fitness_center"],
+  nightclub: ["club"],
+  theater: ["performing_arts"],
+  arts_center: ["cultural_center"],
+  convention_center: ["convention"],
+  recreation: ["entertainment"],
+};
+
+/** Top cuisine types by count + Atlanta relevance — UI filter options */
+export const CUISINE_TYPES = [
+  { value: "southern", label: "Southern" },
+  { value: "soul_food", label: "Soul Food" },
+  { value: "bbq", label: "BBQ" },
+  { value: "mexican", label: "Mexican" },
+  { value: "italian", label: "Italian" },
+  { value: "japanese", label: "Japanese" },
+  { value: "seafood", label: "Seafood" },
+  { value: "pizza", label: "Pizza" },
+  { value: "mediterranean", label: "Mediterranean" },
+  { value: "thai", label: "Thai" },
+  { value: "korean", label: "Korean" },
+  { value: "indian", label: "Indian" },
+] as const;
 
 // ─── Spot Discovery UI Config ─────────────────────────────────────────────────
 // Used by PortalSpotsView and other spots listing UIs.
@@ -236,8 +267,8 @@ export const QUICK_VENUE_TYPES = [
   { key: "music", label: "Music", types: ["music_venue", "amphitheater"], color: "#F472B6" },
   { key: "arts", label: "Arts", types: ["theater", "gallery", "museum", "arts_center"], color: "#A78BFA" },
   { key: "fun", label: "Fun", types: ["recreation", "eatertainment", "attraction"], color: "#86EFAC" },
-  { key: "outdoors", label: "Outdoors", types: ["park", "trail", "landmark", "viewpoint"], color: "#4ADE80" },
-  { key: "sightseeing", label: "Sightseeing", types: ["landmark", "skyscraper", "artifact", "public_art", "viewpoint", "trail"], color: "#A78BFA" },
+  { key: "outdoors", label: "Outdoors", types: ["park", "trail", "viewpoint", "garden", "outdoor_venue"], color: "#4ADE80" },
+  { key: "landmarks", label: "Landmarks", types: ["landmark", "historic_site", "skyscraper", "artifact", "public_art"], color: "#A78BFA" },
 ] as const;
 
 /** Unified category presets for both list and map filter UIs */
@@ -281,13 +312,39 @@ const OCCASION_CHIPS: readonly ChipDefinition[] = [
   { key: "date-night-ed", label: "Date Night", icon: "food_drink", filterOverrides: { vibes: ["date-spot", "upscale", "intimate"] }, color: "#F472B6" },
 ];
 
-/** Category chips for Things to Do tab */
+/** Visual category tile definitions for Things to Do browse grid */
+export type ThingsToDoTile = {
+  readonly key: string;
+  readonly label: string;
+  readonly venueTypes: readonly string[];
+  readonly color: string;
+  readonly iconType: string; // Maps to CategoryIcon type prop
+};
+
+export const THINGS_TO_DO_TILES: readonly ThingsToDoTile[] = [
+  { key: "museums", label: "Museums & Galleries", venueTypes: ["museum", "gallery", "arts_center"], color: "#A78BFA", iconType: "museum" },
+  { key: "parks", label: "Parks & Gardens", venueTypes: ["park", "garden"], color: "#86EFAC", iconType: "park" },
+  { key: "trails", label: "Trails & Nature", venueTypes: ["trail", "viewpoint"], color: "#4ADE80", iconType: "trail" },
+  { key: "arts", label: "Arts & Theater", venueTypes: ["theater", "cinema", "amphitheater"], color: "#F472B6", iconType: "theater" },
+  { key: "entertainment-games", label: "Entertainment & Games", venueTypes: ["arcade", "recreation", "attraction", "eatertainment", "entertainment", "bowling", "pool_hall"], color: "#22D3EE", iconType: "gaming" },
+  { key: "escape-rooms", label: "Escape Rooms", venueTypes: ["escape_room"], color: "#E879F9", iconType: "lock" },
+  { key: "historic", label: "Historic Sites", venueTypes: ["landmark", "historic_site", "skyscraper", "artifact", "public_art"], color: "#FBBF24", iconType: "landmark" },
+  { key: "fitness", label: "Fitness & Wellness", venueTypes: ["fitness", "fitness_center", "stadium"], color: "#5EEAD4", iconType: "fitness" },
+  { key: "zoos", label: "Zoos & Aquariums", venueTypes: ["zoo", "aquarium"], color: "#FB923C", iconType: "outdoors" },
+  { key: "markets", label: "Markets & Food Halls", venueTypes: ["farmers_market", "food_hall"], color: "#FCA5A5", iconType: "farmers_market" },
+  { key: "libraries", label: "Libraries & Learning", venueTypes: ["bookstore", "library", "institution", "community_center"], color: "#60A5FA", iconType: "library" },
+] as const;
+
+/** Category chips for Things to Do tab — aligned with tile keys */
 const ACTIVITY_CHIPS: readonly ChipDefinition[] = [
   { key: "museums", label: "Museums", icon: "museum", filterOverrides: { venueTypes: ["museum", "gallery", "arts_center"] }, color: "#A78BFA" },
-  { key: "outdoors", label: "Outdoors", icon: "outdoors", filterOverrides: { venueTypes: ["park", "trail", "landmark", "viewpoint"] }, color: "#4ADE80" },
-  { key: "family-fun", label: "Family Fun", icon: "games", filterOverrides: { venueTypes: ["arcade", "recreation", "attraction", "eatertainment"] }, color: "#86EFAC" },
-  { key: "arts", label: "Arts & Theater", icon: "theater", filterOverrides: { venueTypes: ["theater", "cinema", "arts_center"] }, color: "#F472B6" },
-  { key: "fitness", label: "Fitness", icon: "fitness", filterOverrides: { venueTypes: ["fitness", "recreation"] }, color: "#5EEAD4" },
+  { key: "parks", label: "Parks", icon: "park", filterOverrides: { venueTypes: ["park", "garden"] }, color: "#86EFAC" },
+  { key: "trails", label: "Trails", icon: "trail", filterOverrides: { venueTypes: ["trail", "viewpoint"] }, color: "#4ADE80" },
+  { key: "arts", label: "Arts & Theater", icon: "theater", filterOverrides: { venueTypes: ["theater", "cinema", "amphitheater"] }, color: "#F472B6" },
+  { key: "entertainment-games", label: "Entertainment", icon: "games", filterOverrides: { venueTypes: ["arcade", "recreation", "attraction", "eatertainment", "entertainment", "bowling", "pool_hall"] }, color: "#22D3EE" },
+  { key: "escape-rooms", label: "Escape Rooms", icon: "lock", filterOverrides: { venueTypes: ["escape_room"] }, color: "#E879F9" },
+  { key: "historic", label: "Historic Sites", icon: "landmark", filterOverrides: { venueTypes: ["landmark", "historic_site", "skyscraper", "artifact", "public_art"] }, color: "#FBBF24" },
+  { key: "fitness", label: "Fitness", icon: "fitness", filterOverrides: { venueTypes: ["fitness", "fitness_center", "stadium"] }, color: "#5EEAD4" },
 ];
 
 /** Vibe chips for Nightlife tab */
@@ -316,11 +373,11 @@ export const SPOTS_TABS: SpotsTabConfig[] = [
     icon: "compass",
     venueTypes: [
       "museum", "gallery", "arts_center", "theater", "cinema", "park", "trail",
-      "recreation", "arcade", "attraction", "landmark", "viewpoint", "skyscraper",
-      "artifact", "public_art", "fitness", "bookstore", "library", "stadium",
+      "recreation", "arcade", "attraction", "entertainment", "landmark", "viewpoint", "skyscraper",
+      "artifact", "public_art", "fitness", "fitness_center", "bookstore", "library", "stadium",
       "amphitheater", "community_center", "institution", "event_space",
       "convention_center", "festival", "coworking", "studio", "arena",
-      "zoo", "aquarium", "bowling", "pool_hall", "historic_site",
+      "zoo", "aquarium", "bowling", "pool_hall", "historic_site", "escape_room",
     ],
     chips: ACTIVITY_CHIPS,
   },
@@ -350,30 +407,6 @@ export function getTabChips(tab: SpotsTab): readonly ChipDefinition[] {
   return getTabConfig(tab).chips;
 }
 
-/** Load occasions from /api/filters response, falling back to static chips.
- *  Call this from components that consume occasion data to prefer DB-backed values. */
-export function getTabChipsFromApi(
-  tab: SpotsTab,
-  apiOccasions?: { value: string; label: string; tab: string; filterOverrides: ChipFilterOverrides }[]
-): readonly ChipDefinition[] {
-  if (!apiOccasions || apiOccasions.length === 0) {
-    return getTabChips(tab);
-  }
-
-  const tabOccasions = apiOccasions.filter((o) => o.tab === tab);
-  if (tabOccasions.length === 0) {
-    return getTabChips(tab);
-  }
-
-  // Convert API occasions to ChipDefinition shape
-  return tabOccasions.map((o) => ({
-    key: o.value,
-    label: o.label,
-    filterOverrides: o.filterOverrides,
-    color: "#A78BFA", // Default color; DB occasions can override via UI later
-  }));
-}
-
 export function getTabVenueTypes(tab: SpotsTab): string[] {
   return getTabConfig(tab).venueTypes;
 }
@@ -384,11 +417,16 @@ export const QUICK_VIBES = [
   { value: "rooftop", label: "Rooftop", color: "#38BDF8" },
   { value: "late-night", label: "Late Night", color: "#A78BFA" },
   { value: "craft-cocktails", label: "Cocktails", color: "#FBBF24" },
+  { value: "upscale", label: "Upscale", color: "#D4AF37" },
+  { value: "artsy", label: "Artsy", color: "#C084FC" },
+  { value: "good-for-groups", label: "Groups", color: "#22D3EE" },
   { value: "black-owned", label: "Black-Owned", color: "#34D399" },
   { value: "live-music", label: "Live Music", color: "#F472B6" },
   { value: "outdoor-seating", label: "Outdoor", color: "#86EFAC" },
   { value: "dog-friendly", label: "Dog Friendly", color: "#FB923C" },
   { value: "family-friendly", label: "Family", color: "#93C5FD" },
+  { value: "all-ages", label: "All Ages", color: "#60A5FA" },
+  { value: "dive-bar", label: "Divey", color: "#86EFAC" },
 ] as const;
 
 // Vibes organized by category for UI grouping
@@ -472,6 +510,12 @@ export type Spot = {
   event_count?: number;
   follower_count?: number;
   recommendation_count?: number;
+  upcoming_events?: Array<{
+    id: number;
+    title: string;
+    start_date: string;
+    start_time: string | null;
+  }>;
   // API-computed fields (from /api/spots)
   is_open?: boolean;
   closes_at?: string;

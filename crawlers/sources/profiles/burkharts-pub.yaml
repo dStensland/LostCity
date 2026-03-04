@@ -1,0 +1,27 @@
+version: 1
+slug: burkharts-pub
+name: "Burkhart's Pub"
+integration_method: llm_crawler
+defaults:
+  venue_name: "Burkhart's Pub"
+  category: nightlife
+  tags:
+  - atlanta-expansion-wave-t
+discovery:
+  enabled: true
+  type: html
+  urls:
+  - "https://www.burkharts.com"
+  fetch:
+    render_js: true
+    wait_until: domcontentloaded
+detail:
+  enabled: true
+  fetch:
+    render_js: true
+    wait_until: domcontentloaded
+data_goals:
+  - events
+  - lineup
+  - images
+  - tickets

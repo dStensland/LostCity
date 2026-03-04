@@ -48,6 +48,46 @@ WEEKLY_EVENTS = [
 ]
 
 
+def format_time_label(time_24: str | None) -> str | None:
+    if not time_24:
+        return None
+    raw = str(time_24).strip()
+    if not raw:
+        return None
+    for fmt in ("%H:%M", "%H:%M:%S"):
+        try:
+            return datetime.strptime(raw, fmt).strftime("%-I:%M %p")
+        except ValueError:
+            continue
+    return raw
+
+
+def build_lore_description(
+    *,
+    title: str,
+    base_description: str,
+    start_date: str,
+    start_time: str | None,
+    source_url: str,
+) -> str:
+    time_label = format_time_label(start_time)
+    parts: list[str] = []
+    desc = (base_description or "").strip()
+    if desc:
+        parts.append(desc if desc.endswith(".") else f"{desc}.")
+    else:
+        parts.append(f"{title} at Lore Atlanta.")
+    parts.append("Location: Lore Atlanta, Edgewood, Atlanta, GA.")
+    if start_date and time_label:
+        parts.append(f"Scheduled on {start_date} at {time_label}.")
+    elif start_date:
+        parts.append(f"Scheduled on {start_date}.")
+    parts.append("Lore Atlanta is an LGBTQ+ nightlife venue featuring drag, dance, karaoke, and variety programming.")
+    if source_url:
+        parts.append(f"Check Lore's official listing for host lineup updates, cover details, and entry policy ({source_url}).")
+    return " ".join(parts)[:1400]
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
     source_id = source["id"]
     events_found = 0
@@ -113,7 +153,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": description,
+                        "description": build_lore_description(
+                            title=title,
+                            base_description=description,
+                            start_date=start_date_str,
+                            start_time=time,
+                            source_url=event_url,
+                        ),
                         "start_date": start_date_str,
                         "start_time": time,
                         "end_date": None,
@@ -142,7 +188,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "series_title": title,
                         "frequency": "weekly",
                         "day_of_week": day_names[weekday],
-                        "description": description,
+                        "description": build_lore_description(
+                            title=title,
+                            base_description=description,
+                            start_date=start_date_str,
+                            start_time=time,
+                            source_url=event_url,
+                        ),
                     }
                     if image_url:
                         series_hint["image_url"] = image_url

@@ -1,0 +1,29 @@
+version: 1
+slug: cauble-park-acworth
+name: "Cauble Park, Acworth"
+integration_method: llm_crawler
+defaults:
+  venue_name: "Cauble Park, Acworth"
+  category: community
+  tags:
+  - atlanta-expansion-wave-w
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - "https://acworthtourism.org/acworth-events/"
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+detail:
+  enabled: true
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
+data_goals:
+  - events
+  - lineup
+  - images
+  - tickets

@@ -52,7 +52,7 @@ from dotenv import load_dotenv
 load_dotenv(env_path)
 
 sys.path.insert(0, str(Path(__file__).parent))
-from db import get_client
+from db import get_client, insert_event
 from llm_client import generate_text
 from hours_utils import prepare_hours_update, should_update_hours
 
@@ -554,7 +554,7 @@ Given HTML content from a venue's website, extract structured data in one pass.
 
 RULES:
 1. Extract ONLY information explicitly stated on the page. Never invent details.
-2. For specials: thoroughly scan for ALL recurring specials, deals, and events. Specifically look for:
+2. For specials: extract ONLY recurring food/drink deals and happy hours. Specifically:
 
    DAY-OF-WEEK FOOD SPECIALS: Taco Tuesday, Wing Wednesday, Wing Night, Oyster Night,
    Steak Night, Fish Fry Friday, Burger Night, Pizza Night, Sushi Night/Special,
@@ -565,34 +565,45 @@ RULES:
    industry night pricing, half-price drinks, $X wells/domestics, pitcher specials,
    cocktail of the week, beer flight deals, bottle specials.
 
-   THEMED EVENT NIGHTS: Trivia night, pub quiz, karaoke, open mic, live music night,
-   DJ night, game night, bingo, comedy night, drag show, dance night, vinyl night.
-
    BRUNCH: Weekend brunch with hours and pricing, bottomless brunch, brunch cocktail deals.
 
-   SPECIAL MENUS: Prix fixe, tasting menus, seasonal menus, chef's table, wine pairing dinners.
+   INDUSTRY & SOCIAL NIGHTS: Industry night, ladies' night, military/first responder discounts.
 
-   POP-UPS & COLLABORATIONS: Guest chef, pop-up kitchen, pop-up bar, collaboration dinners
-   (use seasonal_menu type with start/end dates if available).
+   DO NOT extract as specials: trivia, karaoke, open mic, live music, DJ nights, comedy,
+   drag shows, bingo, game nights, run clubs, or other programmed events. These are EVENTS,
+   not specials. Only extract food/drink PRICING deals.
 
-   INDUSTRY & SOCIAL NIGHTS: Industry night, ladies' night, date night packages,
-   military/first responder discounts, neighborhood nights.
+   DO NOT extract holiday hours, holiday specials, or one-off seasonal events.
 
-3. TITLE GUIDELINES: Use descriptive titles that include the day name when relevant.
-   GOOD: "Taco Tuesday", "Wing Wednesday", "Half-Price Wine Night", "$1 Oyster Thursday"
-   BAD: "Food Special", "Drink Deal", "Weekly Special"
+3. TITLE GUIDELINES — CRITICAL: Every special MUST have a specific descriptive title.
+   GOOD: "Taco Tuesday", "Wing Wednesday", "Half-Price Wine Night", "$1 Oyster Thursday",
+         "Happy Hour", "Weekend Brunch", "BOGO Wings Monday"
+   BAD: "Special", "Food Special", "Drink Deal", "Weekly Special"
+   NEVER use "Special" as a title. If you can't name it specifically, don't include it.
 
-4. PRICING: Always capture specific pricing in price_note.
+4. DAYS — CRITICAL: Every special MUST have specific days in the "days" array.
+   If a special runs "every day" or "daily", use ["mon","tue","wed","thu","fri","sat","sun"].
+   If it runs "weekdays" or "Mon-Fri", use ["mon","tue","wed","thu","fri"].
+   If it runs "weekends", use ["sat","sun"].
+   Read the source carefully: "Happy Hour Mon-Fri" means 5 days, not 1.
+   NEVER leave the days array empty if the text mentions when it occurs.
+
+5. PRICING: Always capture specific pricing in price_note.
    GOOD: "$1 oysters", "half-price wings", "$5 margaritas", "$3 domestic drafts", "2-for-1 wells"
    BAD: "discounted", "special pricing", "deals"
 
-5. HAPPY HOURS: Always capture what's discounted, not just "happy hour" generically.
+6. HAPPY HOURS: Always capture what's discounted, not just "happy hour" generically.
    Include the specific items and prices (e.g., "$2 off drafts, $5 wells, half-price appetizers").
 
-6. TYPE MAPPING:
+7. DESCRIPTION: Write 1 sentence max that adds info NOT already in the title and price_note.
+   Do NOT repeat the title or price in the description. If there's nothing to add, use null.
+   GOOD (title="Taco Tuesday", price="$3 tacos"): "Rotating selection with al pastor, carnitas, and fish options"
+   BAD: "Taco Tuesday with $3 tacos" (just repeats title and price)
+   BAD: "$3 tacos every Tuesday" (repeats everything)
+
+8. TYPE MAPPING:
    - Food/drink day specials → daily_special
    - Happy hours → happy_hour
-   - Themed event nights (trivia, karaoke, live music, DJ) → event_night
    - Brunch specials → brunch
    - Pop-ups, guest chefs, seasonal menus → seasonal_menu
    - Other recurring deals → recurring_deal
@@ -607,11 +618,9 @@ RULES:
 14. If information is unclear or not found, use null (or [] for arrays).
 15. Times should be 24-hour format "HH:MM".
 16. Days should be lowercase 3-letter abbreviations: "mon", "tue", "wed", "thu", "fri", "sat", "sun".
-17. special.type must be one of: happy_hour, daily_special, recurring_deal, event_night, brunch, exhibit, seasonal_menu
-18. For holiday_hours: extract any modified hours for specific holidays (Thanksgiving, Christmas Eve, Christmas, NYE, New Year's Day, etc.). Only extract holidays explicitly mentioned on the page.
-19. For holiday_specials: extract one-off specials tied to specific dates (NYE party, Valentine's dinner, holiday brunch, etc.).
-20. Use YYYY-MM-DD format for all dates. Infer the year from context — use the current year if the holiday hasn't passed yet, otherwise the next occurrence.
-21. For cuisine: classify the venue's cuisine type(s). Use 1-3 tags from: mexican, vietnamese, japanese, chinese, thai, indian, korean, pizza, bbq, mediterranean, ethiopian, southern, seafood, french, italian, gastropub, vegan, bakery, deli, brunch_breakfast, steakhouse, chicken_wings, burgers, ice_cream_dessert, coffee, american, new_american, caribbean, cuban, peruvian, brazilian, african, middle_eastern, turkish, german, british, hawaiian, cajun_creole, tex_mex, fusion. Only set for food-serving venues.
+17. special.type must be one of: happy_hour, daily_special, recurring_deal, brunch, seasonal_menu
+18. Do NOT extract holiday_hours or holiday_specials. They are not useful.
+19. For cuisine: classify the venue's cuisine type(s). Use 1-3 tags from: mexican, vietnamese, japanese, chinese, thai, indian, korean, pizza, bbq, mediterranean, ethiopian, southern, seafood, french, italian, gastropub, vegan, bakery, deli, brunch_breakfast, steakhouse, chicken_wings, burgers, ice_cream_dessert, coffee, american, new_american, caribbean, cuban, peruvian, brazilian, african, middle_eastern, turkish, german, british, hawaiian, cajun_creole, tex_mex, fusion. Only set for food-serving venues.
 22. For service_style: one of "quick_service", "casual_dine_in", "full_service", "tasting_menu", "bar_food", "coffee_dessert". Infer from menu format, pricing, and self-description.
 23. For description: Write a 2-4 sentence paragraph (50-200 words) that helps someone decide whether to visit.
     Your tone is a local food/nightlife journalist — specific, opinionated, zero fluff.
@@ -1012,6 +1021,300 @@ def parse_days(day_names: list) -> list[int]:
     return sorted(set(result))
 
 
+# ---------------------------------------------------------------------------
+# Post-extraction validation & fixup for specials
+# ---------------------------------------------------------------------------
+
+_DAY_NAME_RE = re.compile(
+    r"\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday"
+    r"|mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)\b", re.I
+)
+_EVERY_DAY_RE = re.compile(r"\b(every\s*day|daily|7\s*days)\b", re.I)
+_WEEKDAY_RE = re.compile(r"\b(weekdays?|mon(?:day)?\s*(?:[-–—through]+|to)\s*fri(?:day)?)\b", re.I)
+_WEEKEND_RE = re.compile(r"\b(weekends?|sat(?:urday)?\s*(?:[-–—&/,]|and)\s*sun(?:day)?)\b", re.I)
+_TIME_EXTRACT_RE = re.compile(
+    r"\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b", re.I
+)
+
+
+def _infer_days_from_text(text: str) -> Optional[list[int]]:
+    """Parse day-of-week info from free text. Returns ISO weekday ints or None."""
+    if not text:
+        return None
+    if _EVERY_DAY_RE.search(text):
+        return [1, 2, 3, 4, 5, 6, 7]
+    days = set()
+    if _WEEKDAY_RE.search(text):
+        days.update([1, 2, 3, 4, 5])
+    if _WEEKEND_RE.search(text):
+        days.update([6, 7])
+    for m in _DAY_NAME_RE.finditer(text):
+        d = m.group(1).lower()
+        if d in DAY_MAP:
+            days.add(DAY_MAP[d])
+    return sorted(days) if days else None
+
+
+def _infer_time_from_text(text: str) -> tuple[Optional[str], Optional[str]]:
+    """Parse start/end times from free text. Returns (time_start, time_end) in HH:MM."""
+    if not text:
+        return None, None
+    matches = _TIME_EXTRACT_RE.findall(text)
+    if not matches:
+        return None, None
+    times = []
+    for hour_str, minute_str, ampm in matches:
+        h = int(hour_str)
+        m = int(minute_str) if minute_str else 0
+        if ampm.lower() == "pm" and h < 12:
+            h += 12
+        elif ampm.lower() == "am" and h == 12:
+            h = 0
+        times.append(f"{h:02d}:{m:02d}")
+    if len(times) >= 2:
+        return times[0], times[1]
+    return times[0], None
+
+
+def _infer_title_from_description(desc: str, special_type: str) -> Optional[str]:
+    """Try to extract a meaningful title from the description text."""
+    if not desc:
+        return None
+    # If description starts with a name-like phrase before a comma or colon, use it
+    # Don't split on hyphens — they appear in prices like "Half-priced"
+    first_part = re.split(r"[,:]", desc, maxsplit=1)[0].strip()
+    if 5 <= len(first_part) <= 60 and first_part.lower() != "special":
+        return first_part
+    return None
+
+
+# Types that are actually events, not specials
+_EVENT_TYPES = {"event_night"}
+# Types that are holiday noise
+_HOLIDAY_TYPES = {"holiday_hours", "holiday_special"}
+# Content patterns that indicate events, not specials
+_EVENT_CONTENT_RE = re.compile(
+    r"\b(trivia|karaoke|open mic|live music|dj set|comedy|drag show|bingo|"
+    r"run club|jazz jam|game night|pub quiz|vinyl night)\b", re.I
+)
+
+# Map event content keywords to categories for insert_event
+_EVENT_CATEGORY_MAP = {
+    "trivia": "nightlife", "pub quiz": "nightlife",
+    "karaoke": "nightlife", "dj set": "nightlife",
+    "live music": "music", "jazz jam": "music",
+    "open mic": "music", "vinyl night": "music",
+    "comedy": "comedy", "drag show": "nightlife",
+    "bingo": "nightlife", "game night": "nightlife",
+    "run club": "fitness",
+}
+
+# ISO weekday (1=Mon) to Python weekday (0=Mon)
+_ISO_TO_PYTHON_WEEKDAY = {1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 7: 6}
+_ISO_DAY_NAMES = {1: "monday", 2: "tuesday", 3: "wednesday", 4: "thursday",
+                  5: "friday", 6: "saturday", 7: "sunday"}
+
+
+def _fixup_common_fields(s: dict) -> dict:
+    """Parse/infer days, times, and title for a raw special/event dict. Mutates and returns it."""
+    title = (s.get("title") or "").strip()
+    desc = (s.get("description") or "").strip()
+    days = s.get("days") or []
+
+    # Parse structured days from LLM output
+    parsed_days = parse_days(days) if days else []
+
+    # If no structured days, try to infer from description or title
+    if not parsed_days:
+        inferred = _infer_days_from_text(desc) or _infer_days_from_text(title)
+        if inferred:
+            parsed_days = inferred
+
+    # If no structured times, try to infer from description or title
+    time_start = validate_time(s.get("time_start"))
+    time_end = validate_time(s.get("time_end"))
+    if not time_start:
+        inf_start, inf_end = _infer_time_from_text(desc) or (None, None)
+        if not inf_start:
+            inf_start, inf_end = _infer_time_from_text(title) or (None, None)
+        if inf_start:
+            time_start = inf_start
+        if inf_end and not time_end:
+            time_end = inf_end
+
+    # Try to fix generic titles
+    if not title or title.lower() == "special":
+        inferred_title = _infer_title_from_description(desc, s.get("type", ""))
+        if inferred_title:
+            title = inferred_title
+
+    # Clean up redundant description
+    if desc and desc.lower().strip() == title.lower().strip():
+        desc = ""
+
+    s["title"] = title
+    s["description"] = desc or None
+    s["days"] = parsed_days
+    s["time_start"] = time_start
+    s["time_end"] = time_end
+    s["_days_already_parsed"] = True
+    return s
+
+
+def validate_specials(specials: list[dict]) -> list[dict]:
+    """Filter and fix up extracted specials. Returns only valid food/drink deals."""
+    validated = []
+    for s in specials:
+        stype = s.get("type", "daily_special")
+
+        # Event and holiday types are handled separately
+        if stype in _EVENT_TYPES or stype in _HOLIDAY_TYPES:
+            continue
+
+        title = (s.get("title") or "").strip()
+        desc = (s.get("description") or "").strip()
+        price = (s.get("price_note") or "").strip()
+
+        # Content-based event filter: if the text describes an event, not a food/drink deal, skip
+        combined_text = f"{title} {desc}"
+        if _EVENT_CONTENT_RE.search(combined_text) and not price:
+            continue
+
+        s = _fixup_common_fields(s)
+
+        # Reject generic or too-short titles
+        if not s["title"] or s["title"].lower() in ("special", "specials", "deal", "deals"):
+            continue
+        if len(s["title"]) < 5:
+            continue
+
+        # Gate: must have days. A special without a schedule can't be displayed usefully.
+        if not s["days"]:
+            continue
+
+        s["price_note"] = price or None
+        s["type"] = stype
+        validated.append(s)
+
+    return validated
+
+
+def extract_event_items(specials: list[dict]) -> list[dict]:
+    """Extract event-like items (trivia, karaoke, etc.) from raw LLM output.
+
+    These get routed to insert_event() instead of venue_specials.
+    """
+    events = []
+    for s in specials:
+        stype = s.get("type", "daily_special")
+        title = (s.get("title") or "").strip()
+        desc = (s.get("description") or "").strip()
+        combined_text = f"{title} {desc}"
+
+        # Capture explicit event_night types
+        is_event_type = stype in _EVENT_TYPES
+        # Capture content that's clearly an event (no price = not a drink deal)
+        price = (s.get("price_note") or "").strip()
+        is_event_content = bool(_EVENT_CONTENT_RE.search(combined_text)) and not price
+
+        if not is_event_type and not is_event_content:
+            continue
+
+        s = _fixup_common_fields(s)
+
+        # Must have a real title and days to create events
+        if not s["title"] or s["title"].lower() == "special":
+            continue
+        if not s["days"]:
+            continue
+
+        # Determine category from content
+        category = "nightlife"  # default for event nights
+        for keyword, cat in _EVENT_CATEGORY_MAP.items():
+            if keyword in combined_text.lower():
+                category = cat
+                break
+
+        s["_category"] = category
+        events.append(s)
+
+    return events
+
+
+def upsert_event_items(venue: dict, event_items: list[dict], dry_run: bool = False) -> int:
+    """Insert event items as recurring events via insert_event(). Returns count inserted."""
+    from datetime import date as date_cls, timedelta
+    from dedupe import generate_content_hash, find_event_by_hash
+
+    venue_id = venue["id"]
+    venue_name = venue.get("name", "")
+    today = date_cls.today()
+    inserted = 0
+
+    for item in event_items:
+        title = item["title"]
+        category = item.get("_category", "nightlife")
+        time_start = item.get("time_start")
+        desc = item.get("description")
+        iso_days = item["days"]  # Already ISO weekday ints
+
+        # Generate next 6 weekly occurrences for each day
+        future_dates = []
+        for iso_day in iso_days:
+            py_day = _ISO_TO_PYTHON_WEEKDAY[iso_day]
+            # Find next occurrence of this weekday
+            days_ahead = (py_day - today.weekday()) % 7
+            if days_ahead == 0:
+                days_ahead = 0  # Include today if it matches
+            next_date = today + timedelta(days=days_ahead)
+            for i in range(6):
+                future_dates.append((next_date + timedelta(weeks=i), iso_day))
+
+        # Series hint for grouping
+        series_hint = {
+            "series_type": "recurring_show",
+            "series_title": title,
+            "frequency": "weekly",
+            "day_of_week": _ISO_DAY_NAMES.get(iso_days[0], ""),
+        }
+
+        for event_date, iso_day in future_dates:
+            date_str = event_date.isoformat()
+
+            # Dedup check
+            content_hash = generate_content_hash(title, venue_name, date_str)
+            if find_event_by_hash(content_hash):
+                continue
+
+            event_data = {
+                "title": title,
+                "venue_id": venue_id,
+                "start_date": date_str,
+                "start_time": time_start,
+                "category": category,
+                "description": desc,
+                "source_url": venue.get("website"),
+                "is_recurring": True,
+                "content_hash": content_hash,
+            }
+
+            if dry_run:
+                logger.info(f"    [dry-run] Would insert event: {title} on {date_str}")
+                inserted += 1
+                continue
+
+            try:
+                insert_event(event_data, series_hint=series_hint)
+                inserted += 1
+            except (ValueError, Exception) as e:
+                logger.debug(f"    Event insert failed for '{title}' on {date_str}: {e}")
+
+        if inserted and not dry_run:
+            logger.info(f"  Inserted {len(future_dates)} instances of recurring event: {title}")
+
+    return inserted
+
+
 def _merge_social_bio(data: dict, bio: dict, venue: dict) -> None:
     """Merge social bio data into extraction results using fill-gaps logic.
 
@@ -1336,7 +1639,7 @@ def scrape_venue(venue: dict, use_playwright: bool = True, include_social_bios: 
 
     # LLM extraction
     try:
-        raw = generate_text(EXTRACTION_PROMPT, combined, model_override="gpt-4o")
+        raw = generate_text(EXTRACTION_PROMPT, combined, provider_override="anthropic", model_override="claude-sonnet-4-20250514")
 
         # Strip markdown code fences if present
         raw = raw.strip()
@@ -1391,7 +1694,7 @@ def upsert_results(
     client = get_client()
     venue_id = venue["id"]
     now = datetime.utcnow().isoformat()
-    stats = {"specials_added": 0, "holiday_hours_added": 0, "holiday_specials_added": 0, "venue_updated": False}
+    stats = {"specials_added": 0, "holiday_hours_added": 0, "holiday_specials_added": 0, "raw_extracted": 0, "venue_updated": False}
 
     def should_set(field_name: str, data_key: str = None) -> bool:
         """Return True if we should write this field (has data + empty or forced)."""
@@ -1519,30 +1822,34 @@ def upsert_results(
 
     # --- Upsert specials ---
     if not skip_specials:
-        specials = data.get("specials", [])
-        holiday_hours = data.get("holiday_hours", [])
-        holiday_specials = data.get("holiday_specials", [])
+        raw_specials = data.get("specials", [])
+        specials = validate_specials(raw_specials)
 
-        if not dry_run and (specials or holiday_hours or holiday_specials):
-            # Delete only recurring specials (start_date IS NULL) — preserve holiday entries
+        if specials:
+            logger.info(f"  Specials: {len(raw_specials)} extracted → {len(specials)} validated")
+        elif raw_specials:
+            logger.info(f"  Specials: {len(raw_specials)} extracted → 0 validated (all filtered)")
+
+        if not dry_run and specials:
+            # Delete existing recurring specials for this venue (start_date IS NULL)
             client.table("venue_specials").delete().eq("venue_id", venue_id).is_("start_date", "null").execute()
-            # Delete holiday entries for the same holidays being re-scraped
-            holiday_dates = [h["date"] for h in holiday_hours if validate_date(h.get("date"))]
-            holiday_dates += [h["date"] for h in holiday_specials if validate_date(h.get("date"))]
-            if holiday_dates:
-                client.table("venue_specials").delete().eq("venue_id", venue_id).in_("start_date", holiday_dates).execute()
 
-        # Recurring specials
         for special in specials:
-            days = parse_days(special.get("days") or []) or None
+            # Days are already parsed as ints by validate_specials
+            days = special.get("days") or None
+            if special.get("_days_already_parsed"):
+                pass  # days are already ISO ints
+            else:
+                days = parse_days(days) if days else None
+
             row = {
                 "venue_id": venue_id,
-                "title": special.get("title", "Special"),
+                "title": special["title"],
                 "type": special.get("type", "daily_special"),
                 "description": special.get("description"),
-                "days_of_week": days,
-                "time_start": validate_time(special.get("time_start")),
-                "time_end": validate_time(special.get("time_end")),
+                "days_of_week": days if days else None,
+                "time_start": special.get("time_start"),
+                "time_end": special.get("time_end"),
                 "price_note": special.get("price_note"),
                 "confidence": "medium",
                 "source_url": venue.get("website"),
@@ -1555,52 +1862,13 @@ def upsert_results(
 
             stats["specials_added"] += 1
 
-        # Holiday hours
-        for hh in holiday_hours:
-            if not validate_date(hh.get("date")):
-                continue
-            is_closed = hh.get("closed", False)
-            row = {
-                "venue_id": venue_id,
-                "title": hh.get("name", "Holiday Hours"),
-                "type": "holiday_hours",
-                "description": "Closed" if is_closed else None,
-                "start_date": hh["date"],
-                "end_date": hh["date"],
-                "time_start": None if is_closed else validate_time(hh.get("open")),
-                "time_end": None if is_closed else validate_time(hh.get("close")),
-                "confidence": "medium",
-                "source_url": venue.get("website"),
-                "last_verified_at": now,
-                "is_active": True,
-            }
-
-            if not dry_run:
-                client.table("venue_specials").insert(row).execute()
-
-            stats["holiday_hours_added"] += 1
-
-        # Holiday specials
-        for hs in holiday_specials:
-            if not validate_date(hs.get("date")):
-                continue
-            row = {
-                "venue_id": venue_id,
-                "title": hs.get("title", "Holiday Special"),
-                "type": "holiday_special",
-                "description": hs.get("description"),
-                "start_date": hs["date"],
-                "price_note": hs.get("price_note"),
-                "confidence": "medium",
-                "source_url": venue.get("website"),
-                "last_verified_at": now,
-                "is_active": True,
-            }
-
-            if not dry_run:
-                client.table("venue_specials").insert(row).execute()
-
-            stats["holiday_specials_added"] += 1
+        # --- Route event-like items to events table ---
+        event_items = extract_event_items(raw_specials)
+        if event_items:
+            n_events = upsert_event_items(venue, event_items, dry_run=dry_run)
+            stats["events_routed"] = n_events
+            if n_events:
+                logger.info(f"  Events routed: {len(event_items)} items → {n_events} event instances")
 
     return stats
 

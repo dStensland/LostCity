@@ -10,6 +10,7 @@ import re
 import logging
 from datetime import datetime
 from typing import Optional
+from urllib.parse import urlparse
 
 from playwright.sync_api import sync_playwright
 
@@ -19,10 +20,35 @@ from utils import extract_images_from_page, extract_event_links, find_event_url
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = "https://atlblackpride.org"
-EVENTS_URL = f"{BASE_URL}/events"
+BASE_URL = "https://atlantablackpride.org"
+EVENTS_URL = f"{BASE_URL}/events/"
+FALLBACK_URLS = (
+    EVENTS_URL,
+    f"{BASE_URL}/",
+    "https://atlblackpride.org/events",
+    "https://atlblackpride.org/",
+    "https://www.atlantablackprideweekend.com/",
+    "https://www.atlantablackprideweekend.com/atlanta-black-pride/",
+)
+ALLOWED_HOSTS = {
+    "atlantablackpride.org",
+    "www.atlantablackpride.org",
+    "atlblackpride.org",
+    "www.atlblackpride.org",
+    "atlantablackprideweekend.com",
+    "www.atlantablackprideweekend.com",
+}
 
-VENUE_DATA = {}
+VENUE_DATA = {
+    "name": "Atlanta Black Pride",
+    "slug": "atlanta-black-pride",
+    "address": "Various Locations",
+    "neighborhood": "Atlanta",
+    "city": "Atlanta",
+    "state": "GA",
+    "venue_type": "festival",
+    "website": BASE_URL,
+}
 
 
 def parse_time(time_text: str) -> Optional[str]:
@@ -39,8 +65,56 @@ def parse_time(time_text: str) -> Optional[str]:
     return None
 
 
+def _is_allowed_host(url: str) -> bool:
+    host = (urlparse(url).netloc or "").lower()
+    return host in ALLOWED_HOSTS
+
+
+def _parse_weekend_date_range(text: str) -> tuple[Optional[str], Optional[str]]:
+    """
+    Parse compact date ranges like `09/02/26 - 09/08/26`.
+    Returns (start_date, end_date) in YYYY-MM-DD format.
+    """
+    match = re.search(
+        r"(\d{1,2})/(\d{1,2})/(\d{2,4})\s*[-–]\s*(\d{1,2})/(\d{1,2})/(\d{2,4})",
+        text,
+    )
+    if not match:
+        return None, None
+
+    m1, d1, y1, m2, d2, y2 = match.groups()
+    year1 = int(y1) + 2000 if len(y1) == 2 else int(y1)
+    year2 = int(y2) + 2000 if len(y2) == 2 else int(y2)
+    try:
+        start = datetime(year1, int(m1), int(d1)).strftime("%Y-%m-%d")
+        end = datetime(year2, int(m2), int(d2)).strftime("%Y-%m-%d")
+        return start, end
+    except ValueError:
+        return None, None
+
+
+def _is_noise_title(title: str) -> bool:
+    normalized = re.sub(r"\s+", " ", (title or "").strip().lower())
+    if not normalized:
+        return True
+    noise_exact = {
+        "privacy policy",
+        "terms and conditions",
+        "terms of use",
+        "cookie policy",
+        "contact us",
+        "donate",
+        "home",
+        "events",
+        "about",
+    }
+    if normalized in noise_exact:
+        return True
+    return bool(re.search(r"(copyright|all rights reserved|menu|search)", normalized))
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Unknown events using Playwright."""
+    """Crawl Atlanta Black Pride events using Playwright."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
@@ -57,9 +131,46 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             venue_id = get_or_create_venue(VENUE_DATA)
 
-            logger.info(f"Fetching Unknown: {EVENTS_URL}")
-            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)
+            selected_url = None
+            for candidate_url in FALLBACK_URLS:
+                try:
+                    logger.info(f"Fetching Atlanta Black Pride candidate: {candidate_url}")
+                    response = page.goto(
+                        candidate_url,
+                        wait_until="domcontentloaded",
+                        timeout=30000,
+                    )
+                    page.wait_for_timeout(3000)
+                    final_url = page.url or candidate_url
+                    status = response.status if response else None
+                    if status and status >= 400:
+                        logger.warning(
+                            "Skipping Atlanta Black Pride candidate due HTTP %s: %s",
+                            status,
+                            final_url,
+                        )
+                        continue
+                    if not _is_allowed_host(final_url):
+                        logger.warning(
+                            "Skipping Atlanta Black Pride candidate due off-domain redirect: %s",
+                            final_url,
+                        )
+                        continue
+                    selected_url = final_url
+                    break
+                except Exception as candidate_error:
+                    logger.warning(
+                        "Failed Atlanta Black Pride candidate %s: %s",
+                        candidate_url,
+                        candidate_error,
+                    )
+
+            if not selected_url:
+                logger.warning(
+                    "No reachable Atlanta Black Pride page found in allowed domains; skipping source."
+                )
+                browser.close()
+                return 0, 0, 0
 
             # Extract images from page
             image_map = extract_images_from_page(page)
@@ -122,6 +233,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     if not title:
                         i += 1
                         continue
+                    if _is_noise_title(title):
+                        i += 1
+                        continue
 
                     # Parse date
                     try:
@@ -136,13 +250,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     events_found += 1
 
-                    content_hash = generate_content_hash(title, "Unknown", start_date)
+                    content_hash = generate_content_hash(title, "Atlanta Black Pride", start_date)
 
 
                     # Get specific event URL
 
 
-                    event_url = find_event_url(title, event_links, EVENTS_URL)
+                    event_url = find_event_url(title, event_links, selected_url)
 
 
 
@@ -150,7 +264,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": "Event at Unknown",
+                        "description": "Official Atlanta Black Pride program event.",
                         "start_date": start_date,
                         "start_time": start_time,
                         "end_date": None,
@@ -158,7 +272,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "is_all_day": False,
                         "category": "community",
                         "subcategory": None,
-                        "tags": ["event"],
+                        "tags": ["lgbtq", "pride", "community", "atlanta-black-pride"],
                         "price_min": None,
                         "price_max": None,
                         "price_note": None,
@@ -189,10 +303,63 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 i += 1
 
+            if events_found == 0:
+                weekend_start, weekend_end = _parse_weekend_date_range(body_text)
+                if weekend_start:
+                    title = "Atlanta Black Pride Weekend"
+                    content_hash = generate_content_hash(title, "Atlanta Black Pride", weekend_start)
+                    event_url = selected_url
+                    fallback_record = {
+                        "source_id": source_id,
+                        "venue_id": venue_id,
+                        "title": title,
+                        "description": (
+                            "Official Atlanta Black Pride annual weekend programming window. "
+                            "Individual sessions may be published closer to event dates."
+                        ),
+                        "start_date": weekend_start,
+                        "start_time": None,
+                        "end_date": weekend_end,
+                        "end_time": None,
+                        "is_all_day": True,
+                        "category": "community",
+                        "subcategory": None,
+                        "tags": ["lgbtq", "pride", "community", "atlanta-black-pride"],
+                        "price_min": None,
+                        "price_max": None,
+                        "price_note": None,
+                        "is_free": False,
+                        "source_url": event_url,
+                        "ticket_url": event_url,
+                        "image_url": image_map.get(title),
+                        "raw_text": f"{title} - {weekend_start} to {weekend_end}",
+                        "extraction_confidence": 0.75,
+                        "is_recurring": False,
+                        "recurrence_rule": None,
+                        "content_hash": content_hash,
+                    }
+
+                    existing = find_event_by_hash(content_hash)
+                    events_found += 1
+                    if existing:
+                        smart_update_existing_event(existing, fallback_record)
+                        events_updated += 1
+                    else:
+                        try:
+                            insert_event(fallback_record)
+                            events_new += 1
+                            logger.info(
+                                "Added fallback Atlanta Black Pride weekend window: %s to %s",
+                                weekend_start,
+                                weekend_end,
+                            )
+                        except Exception as e:
+                            logger.error(f"Failed fallback insert for Atlanta Black Pride: {e}")
+
             browser.close()
 
         logger.info(
-            f"Unknown crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
+            f"Atlanta Black Pride crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
         )
 
     except Exception as e:

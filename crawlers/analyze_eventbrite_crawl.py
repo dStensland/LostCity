@@ -30,11 +30,11 @@ def analyze_category_breakdown():
     print("QUERY 1: EVENTS BY CATEGORY (Today's Crawl)")
     print("="*80)
     
-    result = supabase.table("events").select("category").eq("source_id", 1).gte("created_at", TODAY).execute()
+    result = supabase.table("events").select("category_id").eq("source_id", 1).gte("created_at", TODAY).execute()
     
     categories = defaultdict(int)
     for event in result.data:
-        cat = event.get("category") or "uncategorized"
+        cat = event.get("category_id") or "uncategorized"
         categories[cat] += 1
     
     # Sort by count
@@ -91,9 +91,9 @@ def analyze_new_category_events():
     
     for category in target_categories:
         result = supabase.table("events")\
-            .select("title, category, venues(name)")\
+            .select("title, category_id, venues(name)")\
             .eq("source_id", 1)\
-            .eq("category", category)\
+            .eq("category_id", category)\
             .gte("created_at", TODAY)\
             .limit(10)\
             .execute()

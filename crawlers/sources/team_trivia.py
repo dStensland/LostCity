@@ -254,6 +254,7 @@ EVENT_TYPE_CONFIG = {
         "category": "nightlife",
         "subcategory": "nightlife.trivia",
         "tags": ["trivia", "games", "nightlife", "weekly", "outspoken"],
+        "genres": ["trivia"],
     },
     "music_bingo": {
         "title": "Music Bingo",
@@ -261,8 +262,46 @@ EVENT_TYPE_CONFIG = {
         "category": "nightlife",
         "subcategory": "nightlife.bingo",
         "tags": ["music-bingo", "bingo", "nightlife", "weekly", "outspoken"],
+        "genres": ["bingo"],
     },
 }
+
+
+def _format_time_label(time_24: str) -> str:
+    try:
+        return datetime.strptime(time_24, "%H:%M").strftime("%-I:%M %p")
+    except Exception:
+        return time_24
+
+
+def _build_description(
+    base_template: str,
+    *,
+    venue_name: str,
+    venue_data: dict,
+    day_name: str,
+    start_time: str,
+    source_url: str,
+) -> str:
+    base = base_template.format(venue=venue_name).strip()
+    neighborhood = str(venue_data.get("neighborhood") or "").strip()
+    city = str(venue_data.get("city") or "Atlanta").strip()
+    state = str(venue_data.get("state") or "GA").strip()
+    start_label = _format_time_label(start_time)
+
+    where = venue_name
+    if neighborhood:
+        where = f"{where} in {neighborhood}"
+    where = f"{where}, {city}, {state}"
+
+    parts = [
+        base,
+        f"Recurring weekly every {day_name} at {start_label}.",
+        f"Location: {where}.",
+        "Hosted by OutSpoken Entertainment. Free to play with team-based scoring and venue prizes.",
+        f"Confirm weekly details and specials on the venue listing or {source_url}.",
+    ]
+    return " ".join(parts)[:1200]
 
 
 def get_next_weekday(start_date: datetime, weekday: int) -> datetime:
@@ -304,7 +343,15 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         config = EVENT_TYPE_CONFIG.get(event_type, EVENT_TYPE_CONFIG["trivia"])
         title = config["title"]
-        description = config["description_tpl"].format(venue=venue_name)
+        source_url = venue_data.get("website", "https://outspokenentertainment.com")
+        description = _build_description(
+            config["description_tpl"],
+            venue_name=venue_name,
+            venue_data=venue_data,
+            day_name=day_name,
+            start_time=start_time,
+            source_url=source_url,
+        )
 
         next_date = get_next_weekday(today, day_int)
 
@@ -340,7 +387,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 "price_min": None,
                 "price_max": None,
                 "price_note": "Free to play",
-                "source_url": venue_data.get("website", "https://outspokenentertainment.com"),
+                "source_url": source_url,
                 "ticket_url": None,
                 "image_url": None,
                 "raw_text": f"{title} at {venue_name} - {start_date}",
@@ -357,7 +404,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 continue
 
             try:
-                insert_event(event_record, series_hint=series_hint)
+                insert_event(event_record, series_hint=series_hint, genres=config.get("genres"))
                 events_new += 1
             except Exception as exc:
                 logger.error(f"Failed to insert {title} at {venue_name} on {start_date}: {exc}")

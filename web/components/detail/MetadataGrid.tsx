@@ -24,14 +24,14 @@ export function MetadataGrid({ items, className = "" }: MetadataGridProps) {
   if (items.length === 0) return null;
 
   return (
-    <div className={`grid grid-cols-2 sm:grid-cols-3 gap-4 ${className}`}>
+    <div className={`flex flex-wrap items-baseline gap-x-5 gap-y-2 ${className}`}>
       {items.map((item, index) => (
-        <div key={index} className="flex flex-col gap-1">
-          <span className="font-mono text-xs uppercase tracking-widest text-[var(--muted)]">
+        <div key={index} className="flex items-baseline gap-1.5">
+          <span className="font-mono text-xs uppercase tracking-[0.13em] text-[var(--muted)]">
             {item.label}
           </span>
           <span
-            className={`text-base font-medium ${
+            className={`text-sm font-semibold leading-snug ${
               (item.color && COLOR_CLASS_MAP[item.color]) || "text-[var(--cream)]"
             }`}
           >

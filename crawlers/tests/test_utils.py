@@ -3,6 +3,7 @@ Tests for utility functions in utils.py.
 """
 
 from datetime import datetime, timedelta
+from unittest.mock import patch
 from utils import (
     slugify,
     parse_price,
@@ -316,3 +317,37 @@ class TestImageUrlQuality:
             is_likely_non_event_image("https://example.com/images/festival-hero-1200x675.jpg")
             is False
         )
+
+
+class TestEnrichEventRecord:
+    """Tests for detail-page enrichment helpers."""
+
+    @patch("pipeline.fetch.fetch_html")
+    @patch("pipeline.detail_enrich.enrich_from_detail")
+    def test_populates_parsed_artists_from_enriched_detail(
+        self,
+        mock_enrich_from_detail,
+        mock_fetch_html,
+    ):
+        from utils import enrich_event_record
+
+        mock_fetch_html.return_value = ("<html><body>test</body></html>", None)
+        mock_enrich_from_detail.return_value = {
+            "artists": ["Mumford and Sons", "Mumford & Sons", "Dawes"],
+        }
+
+        record = {
+            "title": "Mumford & Sons",
+            "source_url": "https://example.com/events/mumford",
+            "description": "Short",
+            "category": "music",
+        }
+
+        enriched = enrich_event_record(record, "State Farm Arena")
+
+        assert "_parsed_artists" in enriched
+        assert [row["name"] for row in enriched["_parsed_artists"]] == [
+            "Mumford and Sons",
+            "Dawes",
+        ]
+        assert enriched["_parsed_artists"][0]["role"] == "headliner"

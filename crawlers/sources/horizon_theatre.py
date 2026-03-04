@@ -233,7 +233,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     events_found += 1
 
-                    content_hash = generate_content_hash(title, "Horizon Theatre", start_date)
+                    event_start_time = "20:00"
+                    hash_key = f"{start_date}|{event_start_time}"
+                    content_hash = generate_content_hash(title, "Horizon Theatre", hash_key)
 
 
                     # Create series hint for the show run
@@ -254,7 +256,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "title": title,
                         "description": description or f"{title} at Horizon Theatre",
                         "start_date": start_date,
-                        "start_time": "20:00",  # Default evening showtime
+                        "start_time": event_start_time,  # Default evening showtime
                         "end_date": end_date,
                         "end_time": None,
                         "is_all_day": False,

@@ -17,6 +17,7 @@ import {
   isBefore,
 } from "date-fns";
 import CategoryIcon from "@/components/CategoryIcon";
+import RSVPButton from "@/components/RSVPButton";
 import { decodeHtmlEntities, formatCompactCount, formatTimeSplit } from "@/lib/formats";
 import { DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
 import { useCalendarEvents, type CalendarEvent } from "@/lib/hooks/useCalendarEvents";
@@ -433,47 +434,65 @@ function EventCard({
   const title = decodeHtmlEntities(event.title);
   const venueName = event.venue?.name ? decodeHtmlEntities(event.venue.name) : null;
   const venueNeighborhood = event.venue?.neighborhood ? decodeHtmlEntities(event.venue.neighborhood) : null;
+  const goingCount = event.going_count || 0;
 
   return (
-    <Link
-      href={`/${portalSlug}?event=${event.id}`}
-      scroll={false}
+    <div
       data-category={event.category || undefined}
-      className={`block ${compact ? "p-2.5" : "p-3"} rounded-xl border border-[var(--twilight)] bg-[var(--card-bg)] hover:border-[var(--coral)]/40 transition-all group calendar-event-card animate-fade-up`}
+      className={`${compact ? "p-2.5" : "p-3"} rounded-xl border border-[var(--twilight)] bg-[var(--card-bg)] hover:border-[var(--coral)]/40 transition-all group calendar-event-card animate-fade-up`}
       style={{ animationDelay: `${Math.min(index, 8) * 28}ms` }}
     >
-      {/* Time + badges row */}
-      <div className="flex items-center gap-2 mb-1.5">
-        <span className={`font-mono ${compact ? "text-[13px]" : "text-sm"} font-medium text-[var(--coral)]`}>
-          {time}
-          {period && <span className="text-xs ml-0.5 opacity-60">{period}</span>}
-        </span>
-        {event.is_free && (
-          <span className="px-1.5 py-0.5 rounded-full bg-[var(--neon-green)]/20 text-[var(--neon-green)] font-mono text-2xs font-medium">
-            FREE
+      <Link
+        href={`/${portalSlug}?event=${event.id}`}
+        scroll={false}
+        className="block"
+      >
+        {/* Time + badges row */}
+        <div className="flex items-center gap-2 mb-1.5">
+          <span className={`font-mono ${compact ? "text-[13px]" : "text-sm"} font-medium text-[var(--coral)]`}>
+            {time}
+            {period && <span className="text-xs ml-0.5 opacity-60">{period}</span>}
+          </span>
+          {event.is_free && (
+            <span className="px-1.5 py-0.5 rounded-full bg-[var(--neon-green)]/20 text-[var(--neon-green)] font-mono text-2xs font-medium">
+              FREE
+            </span>
+          )}
+        </div>
+
+        {/* Title row */}
+        <div className="flex items-center gap-2">
+          {event.category && (
+            <CategoryIcon type={event.category} size={compact ? 14 : 16} className="flex-shrink-0 opacity-60" />
+          )}
+          <span className={`text-[var(--cream)] ${compact ? "text-[14px]" : "font-medium"} group-hover:text-[var(--coral)] transition-colors ${compact ? "line-clamp-1" : "line-clamp-2"}`}>
+            {title}
+          </span>
+        </div>
+
+        {/* Venue row */}
+        {venueName && (
+          <div className={`mt-1.5 ${compact ? "text-[11px] pl-5" : "text-xs pl-6"} text-[var(--muted)] truncate`}>
+            {venueName}
+            {venueNeighborhood && (
+              <span className="opacity-60"> · {venueNeighborhood}</span>
+            )}
+          </div>
+        )}
+      </Link>
+
+      {/* RSVP + going count row */}
+      <div className="mt-2 flex items-center gap-1.5">
+        <RSVPButton eventId={event.id} variant={compact ? "compact" : "default"} size="sm" />
+        {goingCount > 0 && (
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-[var(--coral)]/10 border border-[var(--coral)]/20 font-mono text-xs font-medium text-[var(--coral)]">
+            <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            {goingCount} going
           </span>
         )}
       </div>
-
-      {/* Title row */}
-      <div className="flex items-center gap-2">
-        {event.category && (
-          <CategoryIcon type={event.category} size={compact ? 14 : 16} className="flex-shrink-0 opacity-60" />
-        )}
-        <span className={`text-[var(--cream)] ${compact ? "text-[14px]" : "font-medium"} group-hover:text-[var(--coral)] transition-colors ${compact ? "line-clamp-1" : "line-clamp-2"}`}>
-          {title}
-        </span>
-      </div>
-
-      {/* Venue row */}
-      {venueName && (
-        <div className={`mt-1.5 ${compact ? "text-[11px] pl-5" : "text-xs pl-6"} text-[var(--muted)] truncate`}>
-          {venueName}
-          {venueNeighborhood && (
-            <span className="opacity-60"> · {venueNeighborhood}</span>
-          )}
-        </div>
-      )}
-    </Link>
+    </div>
   );
 }

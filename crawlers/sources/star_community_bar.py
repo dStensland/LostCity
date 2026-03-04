@@ -64,22 +64,22 @@ def parse_time(time_str: str) -> Optional[str]:
     return None
 
 
-def determine_category(title: str) -> tuple[str, Optional[str], list[str]]:
-    """Determine category based on event title."""
+def determine_category(title: str) -> tuple[str, Optional[str], list[str], list[str]]:
+    """Determine category, subcategory, tags, and genres based on event title."""
     title_lower = title.lower()
     tags = ["star-bar", "little-five-points", "l5p"]
 
     if any(w in title_lower for w in ["comedy", "stand-up", "standup", "open mic comedy"]):
-        return "comedy", "standup", tags + ["comedy"]
+        return "comedy", None, tags + ["comedy"], ["comedy", "stand-up"]
     if any(w in title_lower for w in ["dj", "dance", "disco", "80s", "90s"]):
-        return "nightlife", "club", tags + ["dj", "dance"]
+        return "nightlife", "nightlife.dj", tags + ["dj", "dance"], ["dance", "dj"]
     if any(w in title_lower for w in ["karaoke"]):
-        return "nightlife", "karaoke", tags + ["karaoke"]
+        return "nightlife", "nightlife.karaoke", tags + ["karaoke"], ["karaoke"]
     if any(w in title_lower for w in ["trivia", "quiz"]):
-        return "community", None, tags + ["trivia"]
+        return "nightlife", "nightlife.trivia", tags + ["trivia"], ["trivia"]
 
     # Default to music
-    return "music", "live", tags + ["live-music"]
+    return "music", None, tags + ["live-music"], ["live-music"]
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
@@ -197,7 +197,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             title, "Star Community Bar", start_date
                         )
 
-                        category, subcategory, tags = determine_category(title)
+                        category, subcategory, tags, genres = determine_category(title)
 
                         # Get raw text for debugging
                         raw_text = element.get_text(separator=" ", strip=True)[:500]
@@ -237,7 +237,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             continue
 
                         try:
-                            insert_event(event_record)
+                            insert_event(event_record, genres=genres)
                             events_new += 1
                             logger.info(f"Added: {title} on {start_date} at {start_time}")
                         except Exception as e:
@@ -289,6 +289,7 @@ RECURRING_SCHEDULE = [
         "category": "nightlife",
         "subcategory": "nightlife.trivia",
         "tags": ["trivia", "games", "nightlife", "weekly", "free", "l5p"],
+        "genres": ["trivia"],
     },
     {
         "day": 0,  # Monday
@@ -298,6 +299,7 @@ RECURRING_SCHEDULE = [
         "category": "comedy",
         "subcategory": None,
         "tags": ["comedy", "stand-up", "open-mic", "weekly", "free", "l5p"],
+        "genres": ["comedy", "stand-up"],
     },
     {
         "day": 1,  # Tuesday
@@ -307,6 +309,7 @@ RECURRING_SCHEDULE = [
         "category": "nightlife",
         "subcategory": "nightlife.dj",
         "tags": ["dj", "dance", "nightlife", "weekly", "free", "l5p"],
+        "genres": ["dance", "dj"],
     },
     {
         "day": 2,  # Wednesday
@@ -316,6 +319,7 @@ RECURRING_SCHEDULE = [
         "category": "nightlife",
         "subcategory": "nightlife.karaoke",
         "tags": ["karaoke", "nightlife", "weekly", "l5p"],
+        "genres": ["karaoke"],
     },
 ]
 
@@ -386,7 +390,7 @@ def _generate_recurring_events(source_id: int, venue_id: int) -> tuple[int, int,
                 continue
 
             try:
-                insert_event(event_record, series_hint=series_hint)
+                insert_event(event_record, series_hint=series_hint, genres=template.get("genres"))
                 events_new += 1
             except Exception as exc:
                 logger.error(f"Failed to insert {template['title']} on {start_date}: {exc}")

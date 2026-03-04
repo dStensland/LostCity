@@ -32,7 +32,11 @@ export function RelatedSection({
         <div className="w-full">{children}</div>
       ) : (
         <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-          <div className="flex gap-4 sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:gap-4 snap-x snap-mandatory sm:snap-none">
+          <div className={`flex gap-4 sm:grid ${
+            Array.isArray(children) && children.length <= 2
+              ? "sm:grid-cols-2"
+              : "sm:grid-cols-2 lg:grid-cols-3"
+          } sm:gap-4 snap-x snap-mandatory sm:snap-none`}>
             {children}
           </div>
         </div>

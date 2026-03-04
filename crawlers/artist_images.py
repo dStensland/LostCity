@@ -161,10 +161,8 @@ def extract_artist_from_title(title: str) -> Optional[str]:
         r'\s+featuring\s+',    # "featuring"
         r'\s+ft\.?\s+',        # "ft" or "ft."
         r'\s+feat\.?\s+',      # "feat" or "feat."
-        r'\s*,\s+',            # comma (multiple artists)
         r'\s*[-–—]\s+',        # dash variants (tour name or support)
         r':\s+',               # colon (tour name)
-        r'\s+\+\s+',           # plus sign
         r'\s*[|]\s*',          # pipe
     ]
 

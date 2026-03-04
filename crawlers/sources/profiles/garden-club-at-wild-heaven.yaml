@@ -1,0 +1,29 @@
+version: 1
+slug: garden-club-at-wild-heaven
+name: "The Garden Club at Wild Heaven"
+integration_method: llm_crawler
+defaults:
+  venue_name: "The Garden Club at Wild Heaven"
+  category: music
+  tags:
+  - atlanta-expansion-wave-z
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - "https://gardenclubatl.freshtix.com/"
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 25000
+detail:
+  enabled: true
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 25000
+data_goals:
+  - events
+  - lineup
+  - images
+  - tickets

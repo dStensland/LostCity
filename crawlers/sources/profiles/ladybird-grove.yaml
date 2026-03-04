@@ -1,17 +1,25 @@
 version: 1
 slug: ladybird-grove
 name: Ladybird Grove & Mess Hall
-integration_method: playwright
-defaults: {}
+integration_method: html
+defaults:
+  venue_name: Ladybird Grove & Mess Hall
+  category: food_drink
 discovery:
-  enabled: false
+  enabled: true
   type: html
   urls:
-  - https://www.ladybirdatlanta.com
+  - https://www.ladybirdatl.com/
+  fetch:
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
 detail:
   enabled: true
   fetch:
-    render_js: true
+    render_js: false
+    wait_until: load
+    timeout_ms: 20000
 data_goals:
 - events
 - images

@@ -75,7 +75,12 @@ def normalize_text(text: str) -> str:
 
 
 def _normalize_date_for_hash(value) -> str:
-    """Normalize date-like values to YYYY-MM-DD for stable hashing."""
+    """Normalize date-like values to YYYY-MM-DD for stable hashing.
+
+    Strips ISO datetime suffixes (T00:00:00, space-delimited times) but
+    preserves pipe-separated time suffixes like "2026-03-02|14:00" used
+    by cinema crawlers to produce unique hashes per showtime.
+    """
     if isinstance(value, dt_date):
         return value.isoformat()
     if isinstance(value, datetime):
@@ -85,8 +90,9 @@ def _normalize_date_for_hash(value) -> str:
     if not text:
         return ""
 
-    # Handles values like "2026-02-17T00:00:00" / "2026-02-17 00:00:00"
-    m = re.match(r"^(\d{4}-\d{2}-\d{2})", text)
+    # Strip ISO datetime suffixes: "2026-02-17T00:00:00" / "2026-02-17 00:00:00"
+    # but NOT pipe-separated time: "2026-03-02|14:00" (intentional per-showtime key)
+    m = re.match(r"^(\d{4}-\d{2}-\d{2})[T ]", text)
     if m:
         return m.group(1)
     return text

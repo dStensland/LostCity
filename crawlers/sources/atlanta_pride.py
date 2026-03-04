@@ -1,42 +1,33 @@
 """
 Crawler for Atlanta Pride (atlantapride.org).
-Atlanta's major LGBTQ+ organization hosting Pride festival and year-round events.
 
-Site uses JavaScript rendering - must use Playwright.
+This crawler tracks the annual festival container event with a reliable
+multi-day window and hydrates festival metadata from the official site.
 """
 
 from __future__ import annotations
 
-import re
 import logging
-from datetime import datetime
+import re
+from datetime import date, datetime, timedelta
 from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    find_event_by_hash,
+    get_client,
+    get_or_create_venue,
+    insert_event,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
-from utils import extract_images_from_page, extract_event_links, find_event_url
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = "https://atlantapride.org"
-EVENTS_URL = f"{BASE_URL}/events-page/"
+BASE_URL = "https://www.atlantapride.org"
+FESTIVAL_URL = f"{BASE_URL}/festival"
 
-# Default venue for Atlanta Pride events
-DEFAULT_VENUE = {
-    "name": "Atlanta Pride",
-    "slug": "atlanta-pride",
-    "address": "1530 DeKalb Ave NE",
-    "neighborhood": "Candler Park",
-    "city": "Atlanta",
-    "state": "GA",
-    "zip": "30307",
-    "venue_type": "organization",
-    "website": BASE_URL,
-}
-
-# Piedmont Park is the main Pride festival location
 PIEDMONT_PARK = {
     "name": "Piedmont Park",
     "slug": "piedmont-park",
@@ -49,240 +40,274 @@ PIEDMONT_PARK = {
     "website": "https://piedmontpark.org",
 }
 
+KNOWN_DATES = {
+    2026: ("2026-10-10", "2026-10-11"),
+}
 
-def parse_time(time_text: str) -> Optional[str]:
-    """Parse time from '4:30 pm' format."""
-    match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", time_text, re.IGNORECASE)
-    if match:
-        hour, minute, period = match.groups()
-        hour = int(hour)
-        if period.lower() == "pm" and hour != 12:
-            hour += 12
-        elif period.lower() == "am" and hour == 12:
-            hour = 0
-        return f"{hour:02d}:{minute}"
-    # Also try "4pm" format without colon
-    match = re.search(r"(\d{1,2})\s*(am|pm)", time_text, re.IGNORECASE)
-    if match:
-        hour, period = match.groups()
-        hour = int(hour)
-        if period.lower() == "pm" and hour != 12:
-            hour += 12
-        elif period.lower() == "am" and hour == 12:
-            hour = 0
-        return f"{hour:02d}:00"
-    return None
+_MONTHS = {
+    "jan": 1,
+    "january": 1,
+    "feb": 2,
+    "february": 2,
+    "mar": 3,
+    "march": 3,
+    "apr": 4,
+    "april": 4,
+    "may": 5,
+    "jun": 6,
+    "june": 6,
+    "jul": 7,
+    "july": 7,
+    "aug": 8,
+    "august": 8,
+    "sep": 9,
+    "sept": 9,
+    "september": 9,
+    "oct": 10,
+    "october": 10,
+    "nov": 11,
+    "november": 11,
+    "dec": 12,
+    "december": 12,
+}
+
+
+def _safe_date(year: int, month: int, day: int) -> Optional[date]:
+    try:
+        return date(year, month, day)
+    except ValueError:
+        return None
+
+
+def _parse_year(value: Optional[str], *, fallback: int) -> int:
+    if value:
+        parsed = int(value)
+        if parsed < 100:
+            return 2000 + parsed
+        return parsed
+    return fallback
+
+
+def _extract_windows(text: str, *, fallback_year: int) -> list[tuple[date, date]]:
+    normalized = re.sub(r"\s+", " ", text.replace("–", "-")).strip()
+    candidates: list[tuple[date, date]] = []
+
+    month_tokens = "|".join(sorted(_MONTHS.keys(), key=len, reverse=True))
+
+    # October 10-11, 2026 / October 10 & 11, 2026
+    same_month_pattern = re.compile(
+        rf"\b({month_tokens})\.?\s+(\d{{1,2}})(?:st|nd|rd|th)?\s*"
+        rf"(?:-|to|through|and|&)\s*(\d{{1,2}})(?:st|nd|rd|th)?(?:,\s*(\d{{4}}))?",
+        re.IGNORECASE,
+    )
+    for match in same_month_pattern.finditer(normalized):
+        month_token, day1, day2, year = match.groups()
+        year_num = _parse_year(year, fallback=fallback_year)
+        month_num = _MONTHS[month_token.lower().rstrip(".")]
+        start = _safe_date(year_num, month_num, int(day1))
+        end = _safe_date(year_num, month_num, int(day2))
+        if start and end:
+            if end < start:
+                end = start
+            candidates.append((start, end))
+
+    # Oct 31-Nov 1, 2026
+    multi_month_pattern = re.compile(
+        rf"\b({month_tokens})\.?\s+(\d{{1,2}})(?:st|nd|rd|th)?\s*[-]\s*"
+        rf"({month_tokens})\.?\s+(\d{{1,2}})(?:st|nd|rd|th)?(?:,\s*(\d{{4}}))?",
+        re.IGNORECASE,
+    )
+    for match in multi_month_pattern.finditer(normalized):
+        m1, d1, m2, d2, year = match.groups()
+        year_num = _parse_year(year, fallback=fallback_year)
+        start = _safe_date(year_num, _MONTHS[m1.lower().rstrip(".")], int(d1))
+        end = _safe_date(year_num, _MONTHS[m2.lower().rstrip(".")], int(d2))
+        if start and end:
+            if end < start:
+                next_year_end = _safe_date(year_num + 1, end.month, end.day)
+                end = next_year_end or start
+            candidates.append((start, end))
+
+    # 10/10/2026 - 10/11/2026
+    numeric_pattern = re.compile(
+        r"\b(\d{1,2})/(\d{1,2})/(\d{2,4})\s*[-]\s*(\d{1,2})/(\d{1,2})/(\d{2,4})\b"
+    )
+    for match in numeric_pattern.finditer(normalized):
+        m1, d1, y1, m2, d2, y2 = match.groups()
+        y1n = _parse_year(y1, fallback=fallback_year)
+        y2n = _parse_year(y2, fallback=fallback_year)
+        start = _safe_date(y1n, int(m1), int(d1))
+        end = _safe_date(y2n, int(m2), int(d2))
+        if start and end:
+            if end < start:
+                end = start
+            candidates.append((start, end))
+
+    # De-duplicate.
+    deduped: dict[tuple[date, date], tuple[date, date]] = {}
+    for start, end in candidates:
+        deduped[(start, end)] = (start, end)
+    return list(deduped.values())
+
+
+def _estimate_october_window(year: int) -> tuple[date, date]:
+    oct_1 = date(year, 10, 1)
+    days_until_saturday = (5 - oct_1.weekday()) % 7
+    first_saturday = oct_1 + timedelta(days=days_until_saturday)
+    second_saturday = first_saturday + timedelta(days=7)
+    return second_saturday, second_saturday + timedelta(days=1)
+
+
+def _resolve_window(body_text: str, *, today: date) -> tuple[date, date]:
+    candidates = _extract_windows(body_text, fallback_year=today.year)
+    if candidates:
+        upcoming = sorted(
+            [window for window in candidates if window[1] >= today],
+            key=lambda window: (window[0], window[1]),
+        )
+        if upcoming:
+            return upcoming[0]
+        return sorted(candidates, key=lambda window: (window[0], window[1]), reverse=True)[0]
+
+    for offset in (0, 1):
+        year = today.year + offset
+        if year in KNOWN_DATES:
+            start, end = KNOWN_DATES[year]
+            return date.fromisoformat(start), date.fromisoformat(end)
+
+    return _estimate_october_window(today.year if today.month <= 10 else today.year + 1)
+
+
+def _hydrate_festival(source_slug: str, description: str, start_date: date, end_date: date, website: str) -> None:
+    client = get_client()
+    rows = (
+        client.table("festivals")
+        .select("id")
+        .eq("slug", source_slug)
+        .limit(1)
+        .execute()
+        .data
+        or []
+    )
+    if not rows:
+        return
+
+    festival_id = rows[0]["id"]
+    update_payload = {
+        "website": website,
+        "announced_start": start_date.isoformat(),
+        "announced_end": end_date.isoformat(),
+        "description": description,
+        "date_source": "official_site",
+        "date_confidence": 95,
+    }
+    client.table("festivals").update(update_payload).eq("id", festival_id).execute()
+    client.table("series").update({"description": description}).eq("festival_id", festival_id).execute()
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Atlanta Pride events using Playwright."""
+    """Crawl Atlanta Pride annual festival container event."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
 
-    try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                viewport={"width": 1920, "height": 1080},
-            )
-            page = context.new_page()
+    today = datetime.now().date()
+    venue_id = get_or_create_venue(PIEDMONT_PARK)
 
-            # Pre-create venues
-            default_venue_id = get_or_create_venue(DEFAULT_VENUE)
-            piedmont_venue_id = get_or_create_venue(PIEDMONT_PARK)
-
-            logger.info(f"Fetching Atlanta Pride: {EVENTS_URL}")
-            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)
-
-            # Extract images from page
-            image_map = extract_images_from_page(page)
-
-            # Extract event links for specific URLs
-            event_links = extract_event_links(page, BASE_URL)
-
-            # Scroll to load all content
-            for _ in range(5):
-                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                page.wait_for_timeout(1000)
-
-            # Get page text and parse line by line
-            body_text = page.inner_text("body")
-            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
-
-            # Parse events - look for date patterns
-            # Format varies: "January 18" or "January 18, 2026" or "Jan 18"
-            i = 0
-            while i < len(lines):
-                line = lines[i]
-
-                # Skip navigation/header items
-                skip_items = [
-                    "menu", "home", "about", "events", "donate", "volunteer",
-                    "contact", "search", "close", "navigation", "pride",
-                    "get involved", "sponsors", "board", "staff", "history"
-                ]
-                if line.lower() in skip_items or len(line) < 3:
-                    i += 1
-                    continue
-
-                # Look for date patterns
-                # "January 18, 2026" or "January 18" or "Jan 18, 2026"
-                date_match = re.match(
-                    r"(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})(?:,?\s+(\d{4}))?",
-                    line,
-                    re.IGNORECASE
-                )
-
-                # Also try "MM/DD/YYYY" format
-                if not date_match:
-                    date_match = re.match(r"(\d{1,2})/(\d{1,2})/(\d{4})", line)
-                    if date_match:
-                        month_num, day, year = date_match.groups()
-                        month_names = ["", "January", "February", "March", "April", "May", "June",
-                                      "July", "August", "September", "October", "November", "December"]
-                        try:
-                            month = month_names[int(month_num)]
-                            date_match = type('Match', (), {
-                                'groups': lambda s=month, d=day, y=year: (s, d, y)
-                            })()
-                        except (IndexError, ValueError):
-                            date_match = None
-
-                if date_match:
-                    groups = date_match.groups()
-                    month = groups[0]
-                    day = groups[1]
-                    year = groups[2] if len(groups) > 2 and groups[2] else str(datetime.now().year)
-
-                    # Look for title in surrounding lines
-                    title = None
-                    start_time = None
-
-                    # Check lines before and after for title and time
-                    for offset in [-2, -1, 1, 2, 3]:
-                        idx = i + offset
-                        if 0 <= idx < len(lines):
-                            check_line = lines[idx]
-
-                            # Skip if it's another date or skip item
-                            if check_line.lower() in skip_items:
-                                continue
-                            if re.match(r"(January|February|March|April|May|June|July|August|September|October|November|December)", check_line, re.IGNORECASE):
-                                continue
-
-                            # Check for time
-                            if not start_time:
-                                time_result = parse_time(check_line)
-                                if time_result:
-                                    start_time = time_result
-                                    continue
-
-                            # Look for title (longer text that's not a time or date)
-                            if not title and len(check_line) > 5:
-                                if not re.match(r"\d{1,2}[:/]", check_line):
-                                    if not re.match(r"(free|tickets|rsvp|register|\$)", check_line.lower()):
-                                        title = check_line
-                                        break
-
-                    if not title:
-                        i += 1
-                        continue
-
-                    # Parse date
-                    try:
-                        # Handle both full and abbreviated month names
-                        month_str = month[:3] if len(month) > 3 else month
-                        dt = datetime.strptime(f"{month_str} {day} {year}", "%b %d %Y")
-                        # If date is in past, assume next year
-                        if dt.date() < datetime.now().date():
-                            dt = datetime.strptime(f"{month_str} {day} {int(year) + 1}", "%b %d %Y")
-                        start_date = dt.strftime("%Y-%m-%d")
-                    except ValueError:
-                        i += 1
-                        continue
-
-                    events_found += 1
-
-                    # Determine venue - use Piedmont Park for festival events
-                    title_lower = title.lower()
-                    venue_id = default_venue_id
-                    if "piedmont" in title_lower or "festival" in title_lower or "parade" in title_lower:
-                        venue_id = piedmont_venue_id
-
-                    # Generate content hash
-                    content_hash = generate_content_hash(title, "Atlanta Pride", start_date)
-
-                    # Check for existing
-
-                    # Build tags
-                    tags = ["lgbtq", "pride", "atlanta-pride", "community"]
-                    if "festival" in title_lower:
-                        tags.append("festival")
-                    if "parade" in title_lower:
-                        tags.append("parade")
-
-                    # Get specific event URL
-
-
-                    event_url = find_event_url(title, event_links, EVENTS_URL)
-
-
-
-                    event_record = {
-                        "source_id": source_id,
-                        "venue_id": venue_id,
-                        "title": title,
-                        "description": "Atlanta Pride event",
-                        "start_date": start_date,
-                        "start_time": start_time,
-                        "end_date": None,
-                        "end_time": None,
-                        "is_all_day": False,
-                        "category": "community",
-                        "subcategory": "pride",
-                        "tags": tags,
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": None,
-                        "is_free": True,
-                        "source_url": event_url,
-                        "ticket_url": event_url if event_url != (EVENTS_URL if "EVENTS_URL" in dir() else BASE_URL) else None,
-                        "image_url": image_map.get(title),
-                        "raw_text": f"{title} - {start_date}",
-                        "extraction_confidence": 0.80,
-                        "is_recurring": False,
-                        "recurrence_rule": None,
-                        "content_hash": content_hash,
-                    }
-
-                    existing = find_event_by_hash(content_hash)
-                    if existing:
-                        smart_update_existing_event(existing, event_record)
-                        events_updated += 1
-                        i += 1
-                        continue
-
-                    try:
-                        insert_event(event_record)
-                        events_new += 1
-                        logger.info(f"Added: {title} on {start_date}")
-                    except Exception as e:
-                        logger.error(f"Failed to insert: {title}: {e}")
-
-                i += 1
-
-            browser.close()
-
-        logger.info(
-            f"Atlanta Pride crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
+    page_text = ""
+    selected_url = FESTIVAL_URL
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        context = browser.new_context(
+            user_agent=(
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36"
+            ),
+            viewport={"width": 1920, "height": 1080},
         )
+        page = context.new_page()
 
-    except Exception as e:
-        logger.error(f"Failed to crawl Atlanta Pride: {e}")
-        raise
+        for candidate in (FESTIVAL_URL, BASE_URL):
+            try:
+                page.goto(candidate, wait_until="domcontentloaded", timeout=45000)
+                page.wait_for_timeout(2000)
+                text = page.inner_text("body").strip()
+                if len(text) < 20:
+                    continue
+                page_text = text
+                selected_url = page.url or candidate
+                break
+            except Exception as exc:
+                logger.warning("Atlanta Pride candidate failed (%s): %s", candidate, exc)
 
+        browser.close()
+
+    if not page_text:
+        logger.warning("Atlanta Pride page text unavailable")
+        return 0, 0, 0
+
+    start_date, end_date = _resolve_window(page_text, today=today)
+    event_year = start_date.year
+    title = f"Atlanta Pride Festival {event_year}"
+    description = (
+        "Atlanta Pride Festival is a multi-day LGBTQ+ celebration in Piedmont Park "
+        "with stages, cultural programming, vendors, community activations, and "
+        "citywide Pride events."
+    )
+
+    content_hash = generate_content_hash(title, PIEDMONT_PARK["name"], start_date.isoformat())
+    event_record = {
+        "source_id": source_id,
+        "venue_id": venue_id,
+        "title": title,
+        "description": description,
+        "start_date": start_date.isoformat(),
+        "start_time": None,
+        "end_date": end_date.isoformat() if end_date > start_date else None,
+        "end_time": None,
+        "is_all_day": True,
+        "category": "community",
+        "subcategory": "festival",
+        "tags": ["atlanta-pride", "pride", "lgbtq", "festival", "piedmont-park"],
+        "price_min": None,
+        "price_max": None,
+        "price_note": "Free admission to most festival grounds programming",
+        "is_free": True,
+        "is_tentpole": True,
+        "source_url": selected_url,
+        "ticket_url": selected_url,
+        "image_url": None,
+        "raw_text": f"Atlanta Pride festival window {start_date.isoformat()} to {end_date.isoformat()}",
+        "extraction_confidence": 0.92,
+        "is_recurring": True,
+        "recurrence_rule": "FREQ=YEARLY;BYMONTH=10",
+        "content_hash": content_hash,
+    }
+
+    events_found = 1
+    existing = find_event_by_hash(content_hash)
+    if existing:
+        smart_update_existing_event(existing, event_record)
+        events_updated = 1
+        logger.info("Updated: %s", title)
+    else:
+        insert_event(event_record)
+        events_new = 1
+        logger.info("Added: %s", title)
+
+    _hydrate_festival(
+        source_slug=source.get("slug") or "atlanta-pride",
+        description=description,
+        start_date=start_date,
+        end_date=end_date,
+        website=selected_url,
+    )
+
+    logger.info(
+        "Atlanta Pride crawl complete: %s found, %s new, %s updated",
+        events_found,
+        events_new,
+        events_updated,
+    )
     return events_found, events_new, events_updated
