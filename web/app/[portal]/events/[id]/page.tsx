@@ -308,6 +308,12 @@ export default async function PortalEventPage({ params }: Props) {
   ]);
   const sanitizedVenueEvents = suppressEventImagesIfVenueFlagged(venueEvents);
   const sanitizedSameDateEvents = suppressEventImagesIfVenueFlagged(sameDateEvents);
+
+  // Image fallback chain: event -> series -> venue
+  const resolvedImageUrl = event.image_url
+    || (event.series as { image_url?: string | null } | null)?.image_url
+    || event.venue?.image_url
+    || null;
   const displayParticipants = getDisplayParticipants(eventArtists, {
     eventTitle: event.title,
     eventCategory: event.category,
@@ -356,6 +362,10 @@ export default async function PortalEventPage({ params }: Props) {
   const eventSchema = withPerformerSchema(generateEventSchema(event), displayParticipants, event.category);
   if (displayDescription) {
     eventSchema.description = displayDescription;
+  }
+  // Use resolved image in schema if event has no image but series/venue does
+  if (!event.image_url && resolvedImageUrl) {
+    eventSchema.image = [resolvedImageUrl];
   }
 
   // Event state
@@ -449,8 +459,8 @@ export default async function PortalEventPage({ params }: Props) {
         <main className="max-w-3xl mx-auto px-4 py-4 sm:py-6 pb-28 space-y-5 sm:space-y-8">
           {/* Hero Section */}
           <DetailHero
-            mode={event.image_url ? "image" : "fallback"}
-            imageUrl={event.image_url}
+            mode={resolvedImageUrl ? "image" : "fallback"}
+            imageUrl={resolvedImageUrl}
             title={event.title}
             subtitle={event.venue?.name}
             categoryColor={categoryColor}
@@ -568,7 +578,7 @@ export default async function PortalEventPage({ params }: Props) {
                   headlinerLabel={participantLabels.headlinerLabel}
                   supportLabel={participantLabels.supportLabel}
                   eventCategory={event.category}
-                  fallbackImageUrl={event.image_url}
+                  fallbackImageUrl={resolvedImageUrl}
                   fallbackGenres={lineupGenreFallback}
                 />
               </div>

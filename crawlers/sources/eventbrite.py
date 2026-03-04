@@ -466,8 +466,8 @@ def process_event(event_data: dict, source_id: int, producer_id: Optional[int]) 
         # Generate content hash
         content_hash = generate_content_hash(title, venue_name, start_date)
 
-        # Build tags
-        tags = ["eventbrite", category]
+        # Build tags — no source tags (they leak to UI)
+        tags = [category]
         if is_free:
             tags.append("free")
 

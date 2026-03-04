@@ -337,16 +337,19 @@ def parse_event(event_data: dict) -> Optional[dict]:
             price_min = price_ranges[0].get("min")
             price_max = price_ranges[0].get("max")
 
-        # Images - get the highest resolution
+        # Images - get the highest resolution, filtering out TM category placeholders
         images = event_data.get("images", [])
         image_url = None
         images_list = []
         if images:
+            # Filter out generic TM category placeholders (/dam/c/ = category, /dam/a/ = attraction)
+            event_specific = [img for img in images if "/dam/c/" not in (img.get("url") or "")]
+            pool = event_specific if event_specific else images
             # Sort by width descending and get largest
             sorted_images = sorted(
-                images, key=lambda x: x.get("width", 0), reverse=True
+                pool, key=lambda x: x.get("width", 0), reverse=True
             )
-            image_url = sorted_images[0].get("url")
+            image_url = sorted_images[0].get("url") if sorted_images else None
             for img in sorted_images:
                 url = img.get("url")
                 if not url:
@@ -374,40 +377,21 @@ def parse_event(event_data: dict) -> Optional[dict]:
                 attr = attractions[0]
                 description = attr.get("description") or attr.get("additionalInfo")
 
-        # Synthetic fallback from genre + venue
-        if not description and genre and venue_data:
-            description = f"{genre} event at {venue_data['name']}."
-        elif not description and venue_data:
-            description = f"Event at {venue_data['name']}."
-
         attractions = event_data.get("_embedded", {}).get("attractions", [])
-        attraction_names = [
-            _clean_text(a.get("name"))
-            for a in attractions
-            if isinstance(a, dict) and _clean_text(a.get("name"))
-        ]
         parsed_artists = _build_parsed_artists(
             [a for a in attractions if isinstance(a, dict)]
         )
 
+        # Try detail page enrichment if description is low quality
         if DETAIL_ENRICH and source_url and _is_low_quality_description(description):
             enriched_description = _fetch_detail_description(source_url)
             if enriched_description and (not description or len(enriched_description) > len(description)):
                 description = enriched_description
+
+        # If still low quality, store None — no description is better than
+        # auto-generated boilerplate like "X is a Other event."
         if _is_low_quality_description(description):
-            description = _build_structured_description(
-                title=title,
-                current_description=description,
-                category=category,
-                genre=genre,
-                attractions=attraction_names,
-                venue_data=venue_data,
-                start_date=start_date,
-                start_time=start_time,
-                price_min=price_min,
-                price_max=price_max,
-                source_url=source_url,
-            )
+            description = None
 
         links = []
         if source_url:
@@ -506,8 +490,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 # Check for existing
 
-                # Build tags
-                tags = ["ticketmaster"]
+                # Build tags — no source tags (they leak to UI)
+                tags = ["ticketed"]
                 if parsed.get("genre"):
                     tags.append(parsed["genre"].lower())
 
