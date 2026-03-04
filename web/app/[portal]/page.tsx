@@ -520,9 +520,13 @@ function FeedSkeleton({
     );
   }
 
+  // City vertical: structural skeleton matching CityPulseShell layout
+  // (hero area is rendered by GreetingBar instantly, so only lineup area needs a skeleton)
   return (
-    <div data-skeleton-route="feed-view" data-skeleton-vertical={skeletonVertical} className="flex items-center justify-center min-h-[60vh]">
-      <HorseSpinner />
+    <div data-skeleton-route="feed-view" data-skeleton-vertical={skeletonVertical} className="mt-4" style={{ minHeight: 400 }}>
+      <div className="flex items-center justify-center py-16">
+        <HorseSpinner />
+      </div>
     </div>
   );
 }

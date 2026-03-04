@@ -432,6 +432,7 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
         data-index-label="The Lineup"
         data-block-id="events"
         className="mt-4 scroll-mt-28"
+        style={{ minHeight: lineupLoading ? 400 : undefined }}
       >
         {lineupLoading ? (
           <div className="flex items-center justify-center py-16">
