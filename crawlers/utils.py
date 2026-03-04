@@ -722,11 +722,57 @@ def is_junk_description(description: str | None) -> bool:
         'Skip to content',
         'Toggle navigation',
         'JavaScript is required',
+        'Skip Navigation',
+        'Filter By\nSearch By',
         # Copyright footers
         'a carbonhouse experience',
+        # Bot-block interstitials
+        'something about your browser made us think you were a bot',
+        'To regain access, please make sure that cookies and JavaScript',
+        'please enable cookies and JavaScript',
+        'enable JavaScript to run this app',
+        'Please enable JS and disable any ad blocker',
+        'Checking if the site connection is secure',
+        # Venue navigation dumps
+        'Other Location\nHeaven',
+        'Heaven, Hell, Purgatory, and Altar at The Masquerade',
+        'Not a band. Not DJ',
+        # Ticketing UI chrome
+        'FAQ BUY TICKETS DONATE',
+        'sign up for our thrilling email',
+        # Venue boilerplate (address/phone in description = scraped contact section)
+        'Reservations are required, and you must be 21',
+        'comedy destination since 1982',
     ]
 
-    return any(marker in description for marker in JUNK_MARKERS)
+    # Case-insensitive check for common junk patterns
+    JUNK_MARKERS_CI = [
+        'buy tickets',
+        'add to cart',
+        'upcoming shows',
+        'upcoming events',
+        'view all events',
+    ]
+
+    if any(marker in description for marker in JUNK_MARKERS):
+        return True
+
+    desc_lower = description.lower()
+
+    # Case-insensitive markers — only flag if they appear prominently
+    # (> 20% of the description is junk markers, or description is very short)
+    if len(description) < 100:
+        if any(marker in desc_lower for marker in JUNK_MARKERS_CI):
+            return True
+
+    # Nav-dump heuristic: if 3+ ticketing/nav phrases appear, it's a nav dump
+    nav_phrases = ['buy tickets', 'sold out', 'doors', 'all ages', 'add to cart',
+                   'view more', 'see all', 'filter by', 'sort by', 'load more']
+    nav_hits = sum(1 for phrase in nav_phrases if phrase in desc_lower)
+    if nav_hits >= 3:
+        return True
+
+    return False
 
 
 def enrich_event_record(event_record: dict, source_name: str = "") -> dict:
