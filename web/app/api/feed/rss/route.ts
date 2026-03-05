@@ -10,6 +10,7 @@ import {
 import { getLocalDateString } from "@/lib/formats";
 import { getSiteUrl } from "@/lib/site-url";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
+import { applyFeedGate } from "@/lib/feed-gate";
 
 export const dynamic = "force-dynamic";
 
@@ -114,6 +115,7 @@ export async function GET(request: NextRequest) {
     sourceIds: sourceAccess.sourceIds,
     sourceColumn: "source_id",
   });
+  query = applyFeedGate(query);
 
   if (category) {
     query = query.eq("category_id", category);

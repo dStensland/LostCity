@@ -2,31 +2,9 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
+import type { FriendRequest } from "@/lib/types/profile";
 
-/**
- * Profile type for user data
- */
-export type Profile = {
-  id: string;
-  username: string;
-  display_name: string | null;
-  avatar_url: string | null;
-  bio: string | null;
-};
-
-/**
- * Friend request type
- */
-export type FriendRequest = {
-  id: string;
-  inviter_id: string;
-  invitee_id: string;
-  status: "pending" | "accepted" | "declined";
-  created_at: string;
-  responded_at: string | null;
-  inviter?: Profile | null;
-  invitee?: Profile | null;
-};
+export type { FriendRequest };
 
 /**
  * Response from /api/friend-requests

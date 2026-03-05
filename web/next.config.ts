@@ -158,6 +158,7 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ["@phosphor-icons/react", "date-fns"],
   },
   images: {
+    formats: ["image/avif", "image/webp"],
     // Allow only known HTTPS image hosts. Add more via NEXT_PUBLIC_IMAGE_HOSTS.
     localPatterns: [
       // Allow proxied images with query params plus standard local assets.

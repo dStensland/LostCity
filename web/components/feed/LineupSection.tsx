@@ -783,8 +783,10 @@ function ChipButton({
   return (
     <button
       onClick={onClick}
+      aria-pressed={isActive}
       className={[
-        "shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs tracking-wide transition-all active:scale-95 border",
+        "shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs tracking-wide transition-all active:scale-95 border min-h-[44px] sm:min-h-[32px]",
+        "focus-visible:ring-2 focus-visible:ring-[var(--coral)] focus-visible:outline-none",
         isActive
           ? "font-medium"
           : "border-transparent text-[var(--muted)] hover:bg-white/[0.03]",
@@ -795,6 +797,7 @@ function ChipButton({
               color,
               backgroundColor: `color-mix(in srgb, ${color} 12%, transparent)`,
               borderColor: `color-mix(in srgb, ${color} 30%, transparent)`,
+              boxShadow: `0 0 12px color-mix(in srgb, ${color} 40%, transparent), 0 0 24px color-mix(in srgb, ${color} 20%, transparent)`,
             }
           : undefined
       }

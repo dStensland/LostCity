@@ -41,6 +41,7 @@ $$ LANGUAGE plpgsql STABLE;
 ALTER TABLE events ENABLE ROW LEVEL SECURITY;
 
 -- SELECT policy: no portal = see all; with portal = only accessible sources
+DROP POLICY IF EXISTS events_portal_read_policy ON events;
 CREATE POLICY events_portal_read_policy ON events FOR SELECT USING (
   _portal_source_ids() IS NULL
   OR source_id = ANY(_portal_source_ids())

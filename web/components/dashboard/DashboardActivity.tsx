@@ -9,22 +9,24 @@ import { FriendSuggestions } from "@/components/community/FriendSuggestions";
 import { useFriendRequests } from "@/lib/hooks/useFriendRequests";
 import { useFriendSuggestions } from "@/lib/hooks/useFriendSuggestions";
 import CrewThisWeekCard from "@/components/dashboard/CrewThisWeekCard";
-import InviteTrackingCard from "@/components/dashboard/InviteTrackingCard";
-import { PlansSection } from "@/components/plans/PlansSection";
+import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
+
+const FindPeopleIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 8a2 2 0 100 4 2 2 0 000-4z" opacity="0.6" />
+  </svg>
+);
 
 export default function DashboardActivity() {
   const { user } = useAuth();
 
-  // Fetch data using TanStack Query hooks
   const { pendingRequests, isLoading: requestsLoading } = useFriendRequests({
     type: "received",
   });
   const { suggestions: friendSuggestions, isLoading: suggestionsLoading } = useFriendSuggestions();
 
-  // Loading state
-  const loading = requestsLoading;
-
-  if (loading) {
+  if (requestsLoading) {
     return <LoadingSkeleton />;
   }
 
@@ -34,28 +36,28 @@ export default function DashboardActivity() {
 
   return (
     <div className="space-y-6">
-      {/* 0. Crew This Week */}
-      <CrewThisWeekCard />
-
-      {/* 1. Enhanced Search - Glass style */}
-      <FriendSearch />
-
-      {/* 2. Friend Suggestions */}
-      {(friendSuggestions.length > 0 || suggestionsLoading) && (
-        <FriendSuggestions suggestions={friendSuggestions} isLoading={suggestionsLoading} />
-      )}
-
-      {/* 3. Invite Tracking */}
-      <InviteTrackingCard />
-
-      {/* 4. Pending Friend Requests - Always visible when present */}
+      {/* 1. Pending Requests — urgent, only when present */}
       <PendingRequests requests={pendingRequests} />
 
-      {/* 5. Plans */}
-      <PlansSection />
+      {/* 2. Crew This Week — hero */}
+      <CrewThisWeekCard />
 
-      {/* 6. Activity Feed - Primary content */}
+      {/* 3. Activity Feed — infinite scroll, primary content */}
       <FriendsActivity />
+
+      {/* 4. Find People — search + suggestions, lower priority */}
+      <div className="space-y-4">
+        <FeedSectionHeader
+          title="Find People"
+          priority="tertiary"
+          accentColor="var(--neon-cyan)"
+          icon={<FindPeopleIcon className="w-3.5 h-3.5" />}
+        />
+        <FriendSearch />
+        {(friendSuggestions.length > 0 || suggestionsLoading) && (
+          <FriendSuggestions suggestions={friendSuggestions} isLoading={suggestionsLoading} />
+        )}
+      </div>
     </div>
   );
 }
@@ -136,7 +138,6 @@ function UnauthenticatedView() {
       {/* Blurred preview hint */}
       <div className="relative overflow-hidden rounded-xl">
         <div className="space-y-3 blur-[6px] opacity-40 select-none" aria-hidden="true">
-          {/* Fake activity items - neutral tones only */}
           {[1, 2, 3].map((i) => (
             <div key={i} className="p-4 border border-[var(--twilight)]/50 rounded-lg bg-[var(--dusk)]/50">
               <div className="flex items-start gap-3">
@@ -149,7 +150,6 @@ function UnauthenticatedView() {
             </div>
           ))}
         </div>
-        {/* Fade overlay */}
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[var(--void)]" />
       </div>
     </div>

@@ -322,7 +322,8 @@ export type ThingsToDoTile = {
 };
 
 export const THINGS_TO_DO_TILES: readonly ThingsToDoTile[] = [
-  { key: "museums", label: "Museums & Galleries", venueTypes: ["museum", "gallery", "arts_center"], color: "#A78BFA", iconType: "museum" },
+  { key: "museums", label: "Museums", venueTypes: ["museum", "arts_center"], color: "#A78BFA", iconType: "museum" },
+  { key: "galleries", label: "Galleries", venueTypes: ["gallery"], color: "#C084FC", iconType: "gallery" },
   { key: "parks", label: "Parks & Gardens", venueTypes: ["park", "garden"], color: "#86EFAC", iconType: "park" },
   { key: "trails", label: "Trails & Nature", venueTypes: ["trail", "viewpoint"], color: "#4ADE80", iconType: "trail" },
   { key: "arts", label: "Arts & Theater", venueTypes: ["theater", "cinema", "amphitheater"], color: "#F472B6", iconType: "theater" },
@@ -337,7 +338,8 @@ export const THINGS_TO_DO_TILES: readonly ThingsToDoTile[] = [
 
 /** Category chips for Things to Do tab — aligned with tile keys */
 const ACTIVITY_CHIPS: readonly ChipDefinition[] = [
-  { key: "museums", label: "Museums", icon: "museum", filterOverrides: { venueTypes: ["museum", "gallery", "arts_center"] }, color: "#A78BFA" },
+  { key: "museums", label: "Museums", icon: "museum", filterOverrides: { venueTypes: ["museum", "arts_center"] }, color: "#A78BFA" },
+  { key: "galleries", label: "Galleries", icon: "gallery", filterOverrides: { venueTypes: ["gallery"] }, color: "#C084FC" },
   { key: "parks", label: "Parks", icon: "park", filterOverrides: { venueTypes: ["park", "garden"] }, color: "#86EFAC" },
   { key: "trails", label: "Trails", icon: "trail", filterOverrides: { venueTypes: ["trail", "viewpoint"] }, color: "#4ADE80" },
   { key: "arts", label: "Arts & Theater", icon: "theater", filterOverrides: { venueTypes: ["theater", "cinema", "amphitheater"] }, color: "#F472B6" },

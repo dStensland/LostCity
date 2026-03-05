@@ -5,6 +5,7 @@ import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limi
 import { errorResponse } from "@/lib/api-utils";
 import { logger } from "@/lib/logger";
 import { excludeSensitiveEvents } from "@/lib/portal-scope";
+import { applyFeedGate } from "@/lib/feed-gate";
 
 type FollowingEvent = {
   id: number;
@@ -132,6 +133,7 @@ export async function GET(request: Request) {
       .range(offset, offset + limit - 1);
 
     query = excludeSensitiveEvents(query);
+    query = applyFeedGate(query);
 
     // Filter by followed venues OR followed organizations
     if (venueIds.length > 0 && organizationIds.length > 0) {

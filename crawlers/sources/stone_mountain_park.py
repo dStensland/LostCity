@@ -40,16 +40,20 @@ EXHIBIT_ATTRACTIONS = {
     "scenic railroad",
     "dinosaur explore",
     "skyhike",
+    "sky hike",         # alternate spacing
     "mini golf",
     "adventure golf",
+    "adventure park",
     "gemstone mining",
     "geyser tower",
+    "geyser towers",    # plural variant
     "farmyard",
     "4-d theater",
     "duck adventures",
     "general admission",
     "nature playground",
     "splash pad",
+    "camp highland outpost",
 }
 
 # Map attraction titles to feature_type for venue_features table
@@ -58,16 +62,20 @@ _ATTRACTION_FEATURE_TYPES: dict[str, str] = {
     "scenic railroad": "attraction",
     "dinosaur explore": "attraction",
     "skyhike": "attraction",
+    "sky hike": "attraction",
     "mini golf": "attraction",
     "adventure golf": "attraction",
+    "adventure park": "attraction",
     "gemstone mining": "attraction",
     "geyser tower": "attraction",
+    "geyser towers": "attraction",
     "farmyard": "attraction",
     "4-d theater": "attraction",
     "duck adventures": "attraction",
     "general admission": "attraction",
     "nature playground": "amenity",
     "splash pad": "amenity",
+    "camp highland outpost": "attraction",
 }
 
 # Keywords that indicate real programming (not just "park is open")

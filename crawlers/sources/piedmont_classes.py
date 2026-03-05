@@ -252,8 +252,11 @@ def crawl_category(page: Page, category: str, source_id: int, portal_id: str) ->
                     date_text = line
                     continue
 
-                # Look for time (@ HH:MM AM/PM)
-                if re.search(r"@\s*\d{1,2}:\d{2}\s*(AM|PM)", line, re.IGNORECASE):
+                # Look for time (@ HH:MM AM/PM or just HH:MM AM/PM)
+                if re.search(r"@?\s*\d{1,2}:\d{2}\s*(AM|PM)", line, re.IGNORECASE) and not date_text:
+                    time_text = line
+                    continue
+                if re.search(r"\d{1,2}:\d{2}\s*(AM|PM)", line, re.IGNORECASE) and not time_text:
                     time_text = line
                     continue
 
@@ -278,7 +281,10 @@ def crawl_category(page: Page, category: str, source_id: int, portal_id: str) ->
             except ValueError:
                 continue
 
-            start_time = parse_time(time_text or date_text)
+            # Try time_text first, then fall back to extracting time from date_text
+            start_time = parse_time(time_text) if time_text else None
+            if not start_time and date_text:
+                start_time = parse_time(date_text)
             is_free, price_min, price_max = parse_price(price_text or "")
 
             # Get or create venue

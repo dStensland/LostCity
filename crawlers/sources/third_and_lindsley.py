@@ -2,14 +2,15 @@
 Crawler for 3rd & Lindsley (3rdandlindsley.com/calendar).
 
 Nashville music venue and bar/grill in SoBro district.
-Uses WordPress with Event Discovery plugin and JavaScript rendering.
+Uses TicketWeb calendar widget — event data lives in a JavaScript `all_events`
+array, not in static HTML. We extract directly from JS for reliable times.
 """
 
 from __future__ import annotations
 
+import json
 import re
 import logging
-from datetime import datetime
 from typing import Optional
 
 from playwright.sync_api import sync_playwright
@@ -17,7 +18,6 @@ from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
-from description_fetcher import fetch_description_playwright
 from utils import enrich_event_record
 
 logger = logging.getLogger(__name__)
@@ -41,7 +41,7 @@ VENUE_DATA = {
 
 
 def parse_time(time_text: str) -> Optional[str]:
-    """Parse time from '7:00 PM' or '7:00PM' format to 24-hour time."""
+    """Parse time from '7:00 PM' or 'Doors: 6:00 PM' format to HH:MM."""
     match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", time_text, re.IGNORECASE)
     if match:
         hour, minute, period = match.groups()
@@ -54,18 +54,20 @@ def parse_time(time_text: str) -> Optional[str]:
     return None
 
 
-def parse_price(price_text: str) -> tuple[Optional[float], Optional[float], Optional[str]]:
-    """Parse price from text. Returns (min, max, note)."""
-    # Try to find price pattern like $25.00 or $25
-    match = re.search(r"\$(\d+(?:\.\d{2})?)", price_text)
-    if match:
-        price = float(match.group(1))
-        return price, price, None
-    return None, None, None
+def extract_image_url(image_html: str) -> Optional[str]:
+    """Extract src from an <img> HTML string."""
+    if not image_html:
+        return None
+    soup = BeautifulSoup(image_html, "html.parser")
+    img = soup.find("img")
+    if img and img.get("src"):
+        src = img["src"]
+        return src if src.startswith("http") else None
+    return None
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl 3rd & Lindsley events using Playwright."""
+    """Crawl 3rd & Lindsley events by extracting the JS all_events array."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
@@ -86,164 +88,140 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page.goto(CALENDAR_URL, wait_until="domcontentloaded", timeout=30000)
             page.wait_for_timeout(3000)
 
-            # Scroll to load all content
-            for _ in range(5):
-                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                page.wait_for_timeout(1000)
+            # Extract the all_events JS array directly from the page
+            raw_events = page.evaluate("""
+                () => {
+                    if (typeof all_events !== 'undefined' && Array.isArray(all_events)) {
+                        return all_events.map(e => ({
+                            id: e.id || null,
+                            start: e.start || null,
+                            title: e.title || null,
+                            doors: e.doors || null,
+                            displayTime: e.displayTime || null,
+                            imageUrl: e.imageUrl || null,
+                            allDay: e.allDay || false,
+                            url: e.url || null,
+                        }));
+                    }
+                    return [];
+                }
+            """)
 
-            # Get page HTML and parse with BeautifulSoup
+            if not raw_events:
+                logger.warning("No events found in all_events JS array")
+                browser.close()
+                return 0, 0, 0
+
+            logger.info(f"Extracted {len(raw_events)} events from JS")
+
+            # Also scrape the rendered HTML for event detail dialogs
+            # (TicketWeb renders these after JS executes)
+            page.wait_for_timeout(2000)
             html = page.content()
             soup = BeautifulSoup(html, "html.parser")
 
-            # Find all event containers - Uses tw-cal-event (calendar plugin)
-            event_containers = soup.find_all("div", class_="tw-cal-event")
+            # Build a map of dialog content by event ID
+            dialog_data: dict[str, dict] = {}
+            for dialog in soup.find_all("div", id=re.compile(r"tw-event-dialog-\d+")):
+                eid = re.search(r"tw-event-dialog-(\d+)", dialog.get("id", ""))
+                if not eid:
+                    continue
+                eid = eid.group(1)
+                info: dict = {}
 
-            logger.info(f"Found {len(event_containers)} event containers")
+                # Description
+                desc_elem = dialog.find(["div", "p"], class_=re.compile(r"tw-desc|tw-description|tw-event-desc"))
+                if desc_elem:
+                    info["description"] = desc_elem.get_text(strip=True)[:500]
 
-            new_events = []
+                # Ticket URL
+                ticket_link = dialog.find("a", class_=re.compile(r"tw-buy|tw-ticket|tw-button"))
+                if ticket_link and ticket_link.get("href"):
+                    href = ticket_link["href"]
+                    if href.startswith("http"):
+                        info["ticket_url"] = href
 
-            for container in event_containers:
+                # Price
+                price_elem = dialog.find(["span", "div"], class_=re.compile(r"tw-price|price"))
+                if price_elem:
+                    price_text = price_elem.get_text(strip=True)
+                    price_match = re.search(r"\$(\d+(?:\.\d{2})?)", price_text)
+                    if price_match:
+                        info["price_min"] = float(price_match.group(1))
+
+                if info:
+                    dialog_data[eid] = info
+
+            if dialog_data:
+                logger.info(f"Found {len(dialog_data)} event dialogs with extra data")
+
+            for evt in raw_events:
                 try:
-                    # Extract title from .tw-name div
-                    title_elem = container.find("div", class_="tw-name")
-                    if not title_elem:
+                    title = evt.get("title") or ""
+                    # Strip HTML from title if present
+                    if "<" in title:
+                        title = BeautifulSoup(title, "html.parser").get_text(strip=True)
+                    title = title.strip()
+                    if not title:
                         continue
 
-                    title_link = title_elem.find("a")
-                    title = title_link.get_text(strip=True) if title_link else title_elem.get_text(strip=True)
-
-                    # Extract event URL
-                    event_url = CALENDAR_URL
-                    if title_link and title_link.get("href"):
-                        event_url = title_link["href"]
-                        if not event_url.startswith("http"):
-                            event_url = BASE_URL + event_url
-
-                    # Extract date from .tw-event-date span (format: "February 02, 2026")
-                    date_elem = container.find("span", class_="tw-event-date")
-                    if not date_elem:
+                    start_date = evt.get("start")
+                    if not start_date or not re.match(r"\d{4}-\d{2}-\d{2}", start_date):
                         continue
 
-                    start_date = None
+                    # Parse show time from displayTime ("Show: 7:30 PM")
                     start_time = None
+                    doors_time = None
+                    if evt.get("displayTime"):
+                        start_time = parse_time(evt["displayTime"])
+                    if evt.get("doors"):
+                        doors_time = parse_time(evt["doors"])
 
-                    # Date is in format "February 02, 2026"
-                    date_text = date_elem.get_text(strip=True)
-                    try:
-                        dt = datetime.strptime(date_text, "%B %d, %Y")
-                        start_date = dt.strftime("%Y-%m-%d")
-                    except:
-                        logger.warning(f"Could not parse date: {date_text}")
-                        continue
+                    # If no show time but have doors, use doors as start_time
+                    if not start_time and doors_time:
+                        start_time = doors_time
 
-                    # Extract time from .tw-calendar-event-time or .tw-calendar-event-doors
-                    time_elem = container.find(["div", "span"], class_=re.compile(r"tw-calendar-event-time|tw-calendar-event-doors"))
-                    if time_elem:
-                        time_text = time_elem.get_text(strip=True)
-                        time_match = re.search(r"(\d{1,2}:\d{2}\s*[AP]M)", time_text, re.IGNORECASE)
-                        if time_match:
-                            start_time = parse_time(time_match.group(1))
+                    # Extract image URL from HTML string
+                    image_url = extract_image_url(evt.get("imageUrl") or "")
 
-                    # Extract description
-                    description = None
-                    desc_elem = container.find(["div", "p"], class_=re.compile(r"description|excerpt|content"))
-                    if desc_elem:
-                        description = desc_elem.get_text(strip=True)[:500]
-
-                    # Extract supporting acts
-                    support_elem = container.find(["div", "span"], class_=re.compile(r"support|opener|with"))
-                    if support_elem and not description:
-                        description = f"With {support_elem.get_text(strip=True)}"
-
-                    # Extract price
-                    price_min = None
-                    price_max = None
-                    price_note = None
-                    price_elem = container.find(["span", "div"], class_=re.compile(r"price|cost"))
-                    if price_elem:
-                        price_text = price_elem.get_text(strip=True)
-                        price_min, price_max, price_note = parse_price(price_text)
-
-                    # Extract image URL
-                    image_url = None
-                    img_elem = container.find("img")
-                    if img_elem and img_elem.get("src"):
-                        image_url = img_elem["src"]
-                        if not image_url.startswith("http"):
-                            image_url = BASE_URL + image_url
+                    # Get dialog extras
+                    eid = evt.get("id") or ""
+                    extras = dialog_data.get(eid, {})
 
                     events_found += 1
-
                     content_hash = generate_content_hash(title, "3rd & Lindsley", start_date)
 
-
-                    # Collect new event for batch processing
-                    new_events.append({
+                    event_record = {
+                        "source_id": source_id,
+                        "venue_id": venue_id,
                         "title": title,
-                        "description": description,
+                        "description": extras.get("description"),
                         "start_date": start_date,
                         "start_time": start_time,
-                        "price_min": price_min,
-                        "price_max": price_max,
-                        "price_note": price_note,
-                        "event_url": event_url,
+                        "doors_time": doors_time,
+                        "end_date": None,
+                        "end_time": None,
+                        "is_all_day": False,
+                        "category": "music",
+                        "subcategory": "concert",
+                        "tags": ["3rd-and-lindsley", "nashville", "live-music", "sobro"],
+                        "price_min": extras.get("price_min"),
+                        "price_max": extras.get("price_min"),
+                        "price_note": None,
+                        "is_free": None,
+                        "source_url": CALENDAR_URL,
+                        "ticket_url": extras.get("ticket_url"),
                         "image_url": image_url,
+                        "raw_text": f"{title} - {start_date}",
+                        "extraction_confidence": 0.95,
+                        "is_recurring": False,
+                        "recurrence_rule": None,
                         "content_hash": content_hash,
-                    })
+                    }
 
-                except Exception as e:
-                    logger.error(f"Failed to parse event: {e}")
-                    continue
-
-            # Fetch descriptions from detail pages for new events (cap at 30)
-            detail_page = context.new_page()
-            detail_fetches = 0
-            for evt in new_events:
-                if not evt["description"] and evt["event_url"] != CALENDAR_URL and detail_fetches < 30:
-                    desc = fetch_description_playwright(detail_page, evt["event_url"])
-                    if desc:
-                        evt["description"] = desc
-                    detail_fetches += 1
-                    page.wait_for_timeout(1000)  # Rate limit
-
-                # Synthetic fallback
-                if not evt["description"]:
-                    evt["description"] = f"Live music at 3rd & Lindsley."
-
-                event_record = {
-                    "source_id": source_id,
-                    "venue_id": venue_id,
-                    "title": evt["title"],
-                    "description": evt["description"],
-                    "start_date": evt["start_date"],
-                    "start_time": evt["start_time"],
-                    "end_date": None,
-                    "end_time": None,
-                    "is_all_day": False,
-                    "category": "music",
-                    "subcategory": "concert",
-                    "tags": ["3rd-and-lindsley", "nashville", "live-music", "sobro"],
-                    "price_min": evt["price_min"],
-                    "price_max": evt["price_max"],
-                    "price_note": evt["price_note"],
-                    "is_free": None,
-                    "source_url": CALENDAR_URL,
-                    "ticket_url": evt["event_url"],
-                    "image_url": evt["image_url"],
-                    "raw_text": f"{evt['title']} - {evt['start_date']}",
-                    "extraction_confidence": 0.90,
-                    "is_recurring": False,
-                    "recurrence_rule": None,
-                    "content_hash": evt["content_hash"],
-                }
-
-                # Enrich from detail page
-                enrich_event_record(event_record, source_name="3rd & Lindsley")
-
-                # Determine is_free if still unknown after enrichment
-                if event_record.get("is_free") is None:
+                    # Determine is_free
                     desc_lower = (event_record.get("description") or "").lower()
-                    title_lower = event_record.get("title", "").lower()
+                    title_lower = title.lower()
                     combined = f"{title_lower} {desc_lower}"
                     if any(kw in combined for kw in ["free", "no cost", "no charge", "complimentary"]):
                         event_record["is_free"] = True
@@ -252,20 +230,23 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     else:
                         event_record["is_free"] = False
 
-                existing = find_event_by_hash(evt["content_hash"])
-                if existing:
-                    smart_update_existing_event(existing, event_record)
-                    events_updated += 1
+                    existing = find_event_by_hash(content_hash)
+                    if existing:
+                        smart_update_existing_event(existing, event_record)
+                        events_updated += 1
+                        continue
+
+                    try:
+                        insert_event(event_record)
+                        events_new += 1
+                        logger.info(f"Added: {title} on {start_date} at {start_time or 'TBA'}")
+                    except Exception as e:
+                        logger.error(f"Failed to insert: {title}: {e}")
+
+                except Exception as e:
+                    logger.error(f"Failed to parse event: {e}")
                     continue
 
-                try:
-                    insert_event(event_record)
-                    events_new += 1
-                    logger.info(f"Added: {evt['title']} on {evt['start_date']}")
-                except Exception as e:
-                    logger.error(f"Failed to insert: {evt['title']}: {e}")
-
-            detail_page.close()
             browser.close()
 
         logger.info(

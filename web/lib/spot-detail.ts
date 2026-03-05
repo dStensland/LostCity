@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getDistanceMiles } from "@/lib/geo";
 import { getLocalDateString } from "@/lib/formats";
 import { fetchSocialProofCounts } from "@/lib/social-proof";
+import { applyVenueGate } from "@/lib/feed-gate";
 
 // ---------------------------------------------------------------------------
 // Destination category mappings for venues (post-consolidation types)
@@ -369,19 +370,21 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
   const isCinema = (spotData as Record<string, unknown>).venue_type === "cinema";
 
   // Over-fetch to allow post-query slot dedupe and quality ranking.
-  const { data: upcomingEvents } = await supabase
-    .from("events")
-    .select(`
-      id, title, start_date, end_date, start_time, end_time, is_free, price_min, category_id, source_url, ticket_url,
-      series_id, image_url,
-      series:series!events_series_id_fkey(id, slug, title, series_type, image_url)
-    `)
-    .eq("venue_id", spot.id)
-    .is("canonical_event_id", null)
-    .or(`start_date.gte.${today},end_date.gte.${today}`)
-    .order("start_date", { ascending: true })
-    .order("start_time", { ascending: true })
-    .limit(isCinema ? 150 : 60);
+  const { data: upcomingEvents } = await applyVenueGate(
+    supabase
+      .from("events")
+      .select(`
+        id, title, start_date, end_date, start_time, end_time, is_free, price_min, category_id, source_url, ticket_url,
+        series_id, image_url,
+        series:series!events_series_id_fkey(id, slug, title, series_type, image_url)
+      `)
+      .eq("venue_id", spot.id)
+      .is("canonical_event_id", null)
+      .or(`start_date.gte.${today},end_date.gte.${today}`)
+      .order("start_date", { ascending: true })
+      .order("start_time", { ascending: true })
+      .limit(isCinema ? 150 : 60)
+  );
 
   const eventRows = (upcomingEvents || []) as UpcomingEventRow[];
   const allEventIds = eventRows.map((event) => event.id);

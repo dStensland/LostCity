@@ -107,11 +107,11 @@ export function TagVoteChip({
       onClick={handleClick}
       disabled={isVoting || isAuthLoading}
       className={`
-        inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium
+        inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium font-mono
         transition-all duration-200 ease-in-out
         ${
           isConfirmed
-            ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 border-2 border-green-500"
+            ? "bg-[var(--neon-green)]/15 text-[var(--neon-green)] border-2 border-[var(--neon-green)]/50 chip-glow-green"
             : "bg-[var(--dusk)] text-[var(--soft)] border-2 border-transparent hover:border-[var(--twilight)]"
         }
         ${isVoting ? "opacity-50 cursor-wait" : "cursor-pointer hover:scale-105"}
@@ -140,10 +140,10 @@ export function TagVoteChip({
       {showTrustBadge && (
         <span
           className={`
-            inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-semibold
+            inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-2xs font-bold
             ${
               isConfirmed
-                ? "bg-green-500 text-white"
+                ? "bg-[var(--neon-green)] text-[var(--void)]"
                 : "bg-[var(--twilight)] text-[var(--soft)]"
             }
           `}

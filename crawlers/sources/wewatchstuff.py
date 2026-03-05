@@ -15,6 +15,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
+from config import get_config
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import find_event_url
@@ -38,23 +39,24 @@ def fetch_movie_poster(title: str, year: Optional[str] = None) -> Optional[str]:
 def fetch_movie_poster_omdb(title: str, year: Optional[str] = None) -> Optional[str]:
     """
     Fetch movie poster URL from OMDB (Open Movie Database).
-    Uses free tier which doesn't require API key for poster URLs.
 
     Args:
         title: Movie title
         year: Optional release year
 
     Returns:
-        Poster URL or None if not found
+        Poster URL or None if not found or API key not configured
     """
+    api_key = get_config().api.omdb_api_key
+    if not api_key:
+        return None
+
     try:
-        # OMDB API - free tier with limited requests
-        # We'll use the poster redirect which doesn't need a key
         search_query = title.replace(" ", "+")
         if year:
-            omdb_url = f"https://www.omdbapi.com/?t={search_query}&y={year}&apikey=trilogy"
+            omdb_url = f"https://www.omdbapi.com/?t={search_query}&y={year}&apikey={api_key}"
         else:
-            omdb_url = f"https://www.omdbapi.com/?t={search_query}&apikey=trilogy"
+            omdb_url = f"https://www.omdbapi.com/?t={search_query}&apikey={api_key}"
 
         response = requests.get(omdb_url, timeout=10)
 

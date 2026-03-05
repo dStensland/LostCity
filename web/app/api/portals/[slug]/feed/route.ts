@@ -42,6 +42,7 @@ import {
   dedupeSectionEventsById,
   filterOutInactiveVenueEvents,
 } from "@/lib/event-feed-health";
+import { applyFeedGate } from "@/lib/feed-gate";
 
 // Cache feed for 5 minutes at CDN, allow stale for 1 hour while revalidating
 export const revalidate = 300;
@@ -412,7 +413,8 @@ export async function GET(request: NextRequest, { params }: Props) {
     ? Math.max(1, Math.min(parsedLimit, 50))
     : 5;
   const sectionKey = (sectionIds || []).slice().sort().join(",");
-  const cacheKey = `${canonicalSlug}|${defaultLimit}|${sectionKey}`;
+  const currentHour = new Date().getHours().toString().padStart(2, "0");
+  const cacheKey = `${canonicalSlug}|${defaultLimit}|${sectionKey}|${currentHour}`;
   const cachedPayload = await getCachedFeedPayload(cacheKey);
   if (cachedPayload) {
     return NextResponse.json(cachedPayload, {
@@ -650,25 +652,29 @@ export async function GET(request: NextRequest, { params }: Props) {
 
   const curatedEventsPromise =
     eventIds.size > 0
-      ? portalClient
-          .from("events")
-          .select(curatedEventSelect)
-          .in("id", Array.from(eventIds))
-          .or(`start_date.gte.${today},end_date.gte.${today}`)
-          .is("canonical_event_id", null)
-          .or("is_class.eq.false,is_class.is.null")
-          .or("is_sensitive.eq.false,is_sensitive.is.null")
+      ? applyFeedGate(
+          portalClient
+            .from("events")
+            .select(curatedEventSelect)
+            .in("id", Array.from(eventIds))
+            .or(`start_date.gte.${today},end_date.gte.${today}`)
+            .is("canonical_event_id", null)
+            .or("is_class.eq.false,is_class.is.null")
+            .or("is_sensitive.eq.false,is_sensitive.is.null"),
+        )
       : Promise.resolve({ data: [] as Event[] });
 
   const pinnedEventsPromise =
     pinnedEventIds.size > 0
-      ? portalClient
-          .from("events")
-          .select(curatedEventSelect)
-          .in("id", Array.from(pinnedEventIds))
-          .is("canonical_event_id", null)
-          .or("is_class.eq.false,is_class.is.null")
-          .or("is_sensitive.eq.false,is_sensitive.is.null")
+      ? applyFeedGate(
+          portalClient
+            .from("events")
+            .select(curatedEventSelect)
+            .in("id", Array.from(pinnedEventIds))
+            .is("canonical_event_id", null)
+            .or("is_class.eq.false,is_class.is.null")
+            .or("is_sensitive.eq.false,is_sensitive.is.null"),
+        )
       : Promise.resolve({ data: [] as Event[] });
 
   const [{ data: curatedEvents }, { data: pinnedEvents }, federationAccess] =
@@ -830,10 +836,12 @@ export async function GET(request: NextRequest, { params }: Props) {
         .is("canonical_event_id", null)
         .or("is_class.eq.false,is_class.is.null")
         .or("is_sensitive.eq.false,is_sensitive.is.null");
+      q = applyFeedGate(q);
       q = applyPortalFilter(q);
       q = applyPortalCategoryFilters(q, portalContentFilters);
       return q
         .order("start_date", { ascending: true })
+        .order("data_quality", { ascending: false, nullsFirst: false })
         .order("start_time", { ascending: true })
         .limit(limit);
     };
@@ -959,6 +967,8 @@ export async function GET(request: NextRequest, { params }: Props) {
         constrainedQuery = constrainedQuery.in("venue_id", constrainedVenueIds);
       }
 
+      constrainedQuery = applyFeedGate(constrainedQuery);
+
       // Re-apply portal federation visibility guardrails
       constrainedQuery = applyPortalFilter(constrainedQuery);
 
@@ -973,6 +983,7 @@ export async function GET(request: NextRequest, { params }: Props) {
 
       const { data: constrainedEvents } = await constrainedQuery
         .order("start_date", { ascending: true })
+        .order("data_quality", { ascending: false, nullsFirst: false })
         .order("start_time", { ascending: true })
         .limit(supplementalLimit);
 
@@ -1008,6 +1019,7 @@ export async function GET(request: NextRequest, { params }: Props) {
         .or("is_class.eq.false,is_class.is.null")
         .or("is_sensitive.eq.false,is_sensitive.is.null")
         .eq("category_id", "nightlife");
+      nightlifeCoreQuery = applyFeedGate(nightlifeCoreQuery);
       nightlifeCoreQuery = applyPortalFilter(nightlifeCoreQuery);
 
       // Pass 2: entertainment categories (music/comedy/dance) evening events
@@ -1021,6 +1033,7 @@ export async function GET(request: NextRequest, { params }: Props) {
         .or("is_sensitive.eq.false,is_sensitive.is.null")
         .in("category_id", ["music", "comedy", "dance"])
         .gte("start_time", "17:00:00");
+      entertainmentQuery = applyFeedGate(entertainmentQuery);
       entertainmentQuery = applyPortalFilter(entertainmentQuery);
 
       // Pass 3: any event at nightlife venues starting 5pm+
@@ -1041,20 +1054,24 @@ export async function GET(request: NextRequest, { params }: Props) {
         .or("is_sensitive.eq.false,is_sensitive.is.null")
         .in("venues.venue_type", nightlifeVenueFilter)
         .gte("start_time", "17:00:00");
+      venueBasedQuery = applyFeedGate(venueBasedQuery);
       venueBasedQuery = applyPortalFilter(venueBasedQuery);
 
       const [coreResult, entertainmentResult, venueResult] =
         await Promise.all([
           nightlifeCoreQuery
             .order("start_date", { ascending: true })
+            .order("data_quality", { ascending: false, nullsFirst: false })
             .order("start_time", { ascending: true })
             .limit(60),
           entertainmentQuery
             .order("start_date", { ascending: true })
+            .order("data_quality", { ascending: false, nullsFirst: false })
             .order("start_time", { ascending: true })
             .limit(120),
           venueBasedQuery
             .order("start_date", { ascending: true })
+            .order("data_quality", { ascending: false, nullsFirst: false })
             .order("start_time", { ascending: true })
             .limit(60),
         ]);
@@ -1515,7 +1532,9 @@ export async function GET(request: NextRequest, { params }: Props) {
           .is("canonical_event_id", null)
           .or("is_class.eq.false,is_class.is.null")
           .or("is_sensitive.eq.false,is_sensitive.is.null")
+          .or("is_feed_ready.eq.true,is_feed_ready.is.null")
           .order("start_date", { ascending: true })
+          .order("data_quality", { ascending: false, nullsFirst: false })
           .limit(holidayFetchLimit);
 
         const cityFilteredHolidayEvents: (Event & { tags?: string[] })[] = [];

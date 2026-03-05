@@ -14,6 +14,7 @@ import {
   applyPortalCategoryFilters,
   filterByPortalContentScope,
 } from "@/lib/portal-scope";
+import { applyFeedGate } from "@/lib/feed-gate";
 
 /**
  * Calendar API - Optimized endpoint for calendar view
@@ -159,6 +160,8 @@ export async function GET(request: NextRequest) {
     } else if (priceFilter === "premium") {
       query = query.gte("price_min", 75);
     }
+
+    query = applyFeedGate(query);
 
     query = applyPortalScopeToQuery(query, {
       portalId,

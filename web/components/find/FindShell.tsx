@@ -314,7 +314,10 @@ function FindShellInner({
     <FindContext.Provider value={portalConfig}>
     <div ref={viewRootRef} className="py-3 space-y-3" onClickCapture={handleFindClickCapture}>
       {/* ─── Control Panel ──────────────────────────────────────────────────── */}
-      <section className="relative z-40 rounded-xl border border-[var(--twilight)]/60 bg-[var(--night)]/80 backdrop-blur-sm p-2 sm:p-3">
+      <section
+        className={`relative z-40 rounded-xl border border-[var(--twilight)]/60 bg-[var(--night)]/80 backdrop-blur-sm p-2 sm:p-3${displayMode === "map" ? " sticky" : ""}`}
+        style={displayMode === "map" ? { top: "var(--find-list-sticky-top, 52px)" } : undefined}
+      >
         {/* Type selector tabs */}
         <div className="flex items-center justify-between gap-3">
           <div className="flex gap-1.5 flex-1 min-w-0 overflow-x-auto scrollbar-hide">
@@ -332,9 +335,7 @@ function FindShellInner({
                   }`}
                 >
                   {option.icon}
-                  <span className={`${isActive ? "inline" : "hidden"} sm:inline`}>
-                    {option.label}
-                  </span>
+                  <span>{option.label}</span>
                 </button>
               );
             })}

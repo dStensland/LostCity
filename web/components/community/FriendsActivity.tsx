@@ -2,14 +2,13 @@
 
 import Link from "next/link";
 import { useEffect, useRef } from "react";
-import UserAvatar, { AvatarStack } from "@/components/UserAvatar";
-import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
-import { formatDistanceToNow, format, parseISO, isToday, isYesterday, isThisWeek } from "date-fns";
+import UserAvatar from "@/components/UserAvatar";
+import { formatDistanceToNow, isToday, isYesterday, isThisWeek } from "date-fns";
 import { useInfiniteActivities } from "@/lib/hooks/useInfiniteActivities";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
 import { FriendOnboarding } from "@/components/community/FriendOnboarding";
-import { ReactionBar } from "@/components/ui/ReactionBar";
+import { ActivityEventCard } from "@/components/community/ActivityEventCard";
 
 export type ActivityItem = {
   id: string;
@@ -95,7 +94,6 @@ export function FriendsActivity() {
 
   return (
     <div className="space-y-6">
-      {/* Today's Activities */}
       {groupedByTime.today.length > 0 && (
         <TimeSection
           title="Today"
@@ -104,7 +102,6 @@ export function FriendsActivity() {
         />
       )}
 
-      {/* Yesterday's Activities */}
       {groupedByTime.yesterday.length > 0 && (
         <TimeSection
           title="Yesterday"
@@ -113,7 +110,6 @@ export function FriendsActivity() {
         />
       )}
 
-      {/* This Week's Activities */}
       {groupedByTime.thisWeek.length > 0 && (
         <TimeSection
           title="This Week"
@@ -122,7 +118,6 @@ export function FriendsActivity() {
         />
       )}
 
-      {/* Older Activities */}
       {groupedByTime.older.length > 0 && (
         <TimeSection
           title="Earlier"
@@ -131,14 +126,12 @@ export function FriendsActivity() {
         />
       )}
 
-      {/* Intersection observer trigger */}
       {hasMore && (
         <div ref={loadMoreRef} className="py-4">
           {isFetchingNextPage && <LoadingSkeleton count={3} />}
         </div>
       )}
 
-      {/* End of list indicator */}
       {!hasMore && activities.length > 0 && (
         <div className="text-center py-4">
           <p className="font-mono text-xs text-[var(--muted)]">
@@ -181,8 +174,9 @@ interface TimeSectionProps {
 
 function TimeSection({ title, activities, accentColor }: TimeSectionProps) {
   const accentClass = createCssVarClass("--accent-color", accentColor, "accent");
+
   // Group RSVP activities by event for display
-  const localGroupedActivities = activities.reduce<GroupedActivity[]>((acc, activity) => {
+  const groupedRsvps = activities.reduce<GroupedActivity[]>((acc, activity) => {
     if (activity.activity_type === "rsvp" && activity.event) {
       const existing = acc.find((g) => g.event?.id === activity.event?.id);
       if (existing) {
@@ -201,7 +195,7 @@ function TimeSection({ title, activities, accentColor }: TimeSectionProps) {
     return acc;
   }, []);
 
-  // Non-event activities (follows, saves)
+  // Non-RSVP activities (follows, saves)
   const otherActivities = activities.filter(
     (a) => a.activity_type !== "rsvp" || !a.event
   );
@@ -209,7 +203,6 @@ function TimeSection({ title, activities, accentColor }: TimeSectionProps) {
   return (
     <div className={`space-y-3 ${accentClass?.className ?? ""}`}>
       <ScopedStyles css={accentClass?.css} />
-      {/* Enhanced section header with colored accent, gradient divider, and event count */}
       <div className="flex items-center gap-3">
         <div className="w-1 h-4 rounded-full bg-accent" />
         <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-accent-glow">
@@ -221,12 +214,17 @@ function TimeSection({ title, activities, accentColor }: TimeSectionProps) {
         </span>
       </div>
 
-      {/* Grouped Event Activity */}
-      {localGroupedActivities.map((group) => (
-        <GroupedEventCard key={group.event!.id} group={group} />
+      {/* Grouped RSVP events */}
+      {groupedRsvps.map((group) => (
+        <ActivityEventCard
+          key={group.event!.id}
+          event={group.event!}
+          users={group.users}
+          activityType="rsvp"
+        />
       ))}
 
-      {/* Other Activity */}
+      {/* Individual activities */}
       {otherActivities.map((activity) => (
         <ActivityCard key={activity.id} activity={activity} />
       ))}
@@ -259,261 +257,29 @@ function LoadingSkeleton({ count = 5 }: { count?: number }) {
   );
 }
 
-function GroupedEventCard({ group }: { group: GroupedActivity }) {
-  const event = group.event!;
-  const dateObj = parseISO(event.start_date);
-  const categoryColor = event.category ? getCategoryColor(event.category) : null;
-  const accentColor = categoryColor || "var(--neon-magenta)";
-  const accentClass = createCssVarClass("--accent-color", accentColor, "accent");
-
-  // Format time
-  const timeStr = event.is_all_day
-    ? "All Day"
-    : event.start_time
-      ? format(parseISO(`2000-01-01T${event.start_time}`), "h:mm a")
-      : "";
-
-  const dayLabel = format(dateObj, "EEE");
-  const dateLabel = format(dateObj, "MMM d");
-
-  return (
-    <>
-      <ScopedStyles css={accentClass?.css} />
-      <Link
-        href={`/events/${event.id}`}
-        className={`block p-2.5 sm:p-3 rounded-lg glass border border-[var(--twilight)]/50 hover:border-[var(--coral)]/30 transition-all group relative ${accentClass?.className ?? ""} ${
-          categoryColor ? "border-l-[3px] border-l-[var(--accent-color)]" : ""
-        }`}
-      >
-      {/* Hover glow effect */}
-      <div className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none blur-xl hover-glow-coral-magenta" />
-      <div className="flex gap-2 sm:gap-3 relative z-10">
-        {/* Time cell - like EventCard */}
-        <div className="flex-shrink-0 w-12 sm:w-14 flex flex-col items-center justify-center py-1">
-          <span className="font-mono text-2xs font-medium leading-none text-[var(--muted)]">
-            {dayLabel}
-          </span>
-          <span className="font-mono text-sm font-medium text-[var(--soft)] leading-none tabular-nums mt-0.5">
-            {dateLabel}
-          </span>
-          {timeStr && (
-            <span className="font-mono text-2xs text-[var(--muted)] mt-0.5">{timeStr}</span>
-          )}
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          {/* Category icon + title */}
-          <div className="flex items-center gap-2 mb-1">
-            {event.category && (
-              <span
-                className="flex-shrink-0 inline-flex items-center justify-center w-5 h-5 rounded bg-accent-20"
-              >
-                <CategoryIcon type={event.category} size={12} glow="subtle" />
-              </span>
-            )}
-            <h3 className="text-[var(--cream)] font-medium leading-snug line-clamp-2 sm:line-clamp-1 group-hover:text-[var(--coral)] transition-colors">
-              {event.title}
-            </h3>
-          </div>
-
-          {/* Friend avatars with enhanced visual */}
-          <div className="flex flex-wrap items-center gap-2 mb-1">
-            <div className="relative">
-              <AvatarStack
-                users={group.users.map((u) => ({
-                  id: u.id,
-                  name: u.display_name || u.username,
-                  avatar_url: u.avatar_url,
-                }))}
-                max={4}
-                size="xs"
-              />
-              {group.users.length > 1 && (
-                <div className="absolute -inset-1 bg-[var(--coral)]/10 rounded-full blur-sm -z-10 animate-pulse-slow" />
-              )}
-            </div>
-            <div className="flex items-center gap-1.5">
-              {group.users.length === 1 ? (
-                <>
-                  <span className="font-medium text-[var(--coral)] text-xs truncate max-w-[120px]">
-                    {group.users[0].display_name || group.users[0].username}
-                  </span>
-                  <span className="font-mono text-xs text-[var(--muted)]">is going</span>
-                </>
-              ) : group.users.length <= 3 ? (
-                <>
-                  <span className="font-medium text-[var(--coral)] text-xs">
-                    {group.users.slice(0, 2).map((u) => u.display_name || u.username).join(", ")}
-                  </span>
-                  {group.users.length === 3 && (
-                    <>
-                      <span className="text-[var(--muted)] text-xs">and</span>
-                      <span className="font-medium text-[var(--coral)] text-xs">
-                        {group.users[2].display_name || group.users[2].username}
-                      </span>
-                    </>
-                  )}
-                  <span className="font-mono text-xs text-[var(--muted)]">are going</span>
-                </>
-              ) : (
-                <>
-                  <span className="font-bold text-[var(--coral)] text-sm">
-                    {group.users.length}
-                  </span>
-                  <span className="font-mono text-xs text-[var(--muted)]">friends going</span>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Venue details + Join them CTA */}
-          <div className="flex items-center gap-2 mt-0.5">
-            {event.venue && (
-              <p className="font-mono text-xs text-[var(--muted)] truncate">
-                {event.venue.name}
-              </p>
-            )}
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[var(--coral)]/15 text-[var(--coral)] font-mono text-xs font-medium flex-shrink-0 group-hover:bg-[var(--coral)]/25 transition-colors">
-              Join them
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-              </svg>
-            </span>
-          </div>
-        </div>
-
-      </div>
-      </Link>
-      <div className="mt-1 ml-14 sm:ml-16">
-        <ReactionBar
-          targetType="rsvp"
-          targetId={event.id}
-          reactions={[]}
-        />
-      </div>
-    </>
-  );
-}
-
 function ActivityCard({ activity }: { activity: ActivityItem }) {
   const timeAgo = formatDistanceToNow(new Date(activity.created_at), { addSuffix: true });
 
-  // Render saved/RSVP event activity - styled like EventCard
+  // Render saved/RSVP event activity via shared card
   if ((activity.activity_type === "save" || activity.activity_type === "rsvp") && activity.event) {
-    const eventDate = parseISO(activity.event.start_date);
-    const categoryColor = activity.event.category ? getCategoryColor(activity.event.category) : null;
-    const accentColor = categoryColor || "var(--neon-magenta)";
-    const accentClass = createCssVarClass("--accent-color", accentColor, "accent");
-
-    // Format time
-    const timeStr = activity.event.is_all_day
-      ? "All Day"
-      : activity.event.start_time
-        ? format(parseISO(`2000-01-01T${activity.event.start_time}`), "h:mm a")
-        : "";
-
-    const dayLabel = format(eventDate, "EEE");
-    const dateLabel = format(eventDate, "MMM d");
-
     return (
-      <>
-        <ScopedStyles css={accentClass?.css} />
-        <Link
-          href={`/events/${activity.event.id}`}
-          className={`block p-2.5 sm:p-3 rounded-lg glass border border-[var(--twilight)]/50 hover:border-[var(--neon-magenta)]/30 transition-all group relative ${accentClass?.className ?? ""} ${
-            categoryColor ? "border-l-[3px] border-l-[var(--accent-color)]" : ""
-          }`}
-        >
-        {/* Hover glow effect */}
-        <div className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none blur-xl hover-glow-magenta-coral" />
-        <div className="flex flex-col sm:flex-row gap-3 relative z-10">
-          {/* Time cell - like EventCard */}
-          <div className="flex-shrink-0 w-14 flex flex-col items-center justify-center py-1">
-            <span className="font-mono text-2xs font-medium leading-none text-[var(--muted)]">
-              {dayLabel}
-            </span>
-            <span className="font-mono text-sm font-medium text-[var(--soft)] leading-none tabular-nums mt-0.5">
-              {dateLabel}
-            </span>
-            {timeStr && (
-              <span className="font-mono text-2xs text-[var(--muted)] mt-0.5">{timeStr}</span>
-            )}
-          </div>
-
-          {/* Content */}
-          <div className="flex-1 min-w-0">
-            {/* User action header */}
-            <div className="flex flex-wrap items-center gap-2 mb-1">
-              <UserAvatar
-                src={activity.user.avatar_url}
-                name={activity.user.display_name || activity.user.username}
-                size="xs"
-              />
-              <span className="text-xs text-[var(--muted)] truncate">
-                <span className="text-[var(--soft)]">
-                  {activity.user.display_name || activity.user.username}
-                </span>
-                {" "}{activity.activity_type === "save" ? "saved" : "is interested in"} this
-              </span>
-              <span className="ml-auto font-mono text-2xs text-[var(--muted)] flex-shrink-0">
-                {timeAgo}
-              </span>
-            </div>
-
-            {/* Category icon + title */}
-            <div className="flex items-center gap-2 mb-1">
-            {activity.event.category && (
-              <span
-                className="flex-shrink-0 inline-flex items-center justify-center w-5 h-5 rounded bg-accent-20"
-              >
-                <CategoryIcon type={activity.event.category} size={12} glow="subtle" />
-              </span>
-            )}
-              <h3 className="text-[var(--cream)] font-medium leading-snug line-clamp-2 sm:line-clamp-1 group-hover:text-[var(--neon-magenta)] transition-colors">
-                {activity.event.title}
-              </h3>
-            </div>
-
-            {/* Venue details + Check it out CTA */}
-            <div className="flex items-center gap-2 mt-0.5">
-              {activity.event.venue && (
-                <p className="font-mono text-xs text-[var(--muted)] truncate">
-                  {activity.event.venue.name}
-                </p>
-              )}
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[var(--neon-magenta)]/15 text-[var(--neon-magenta)] font-mono text-xs font-medium flex-shrink-0 group-hover:bg-[var(--neon-magenta)]/25 transition-colors">
-                Check it out
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                </svg>
-              </span>
-            </div>
-          </div>
-
-        </div>
-        </Link>
-        <div className="mt-1 ml-14 sm:ml-16">
-          <ReactionBar
-            targetType={activity.activity_type}
-            targetId={activity.event.id}
-            reactions={[]}
-          />
-        </div>
-      </>
+      <ActivityEventCard
+        event={activity.event}
+        users={[activity.user]}
+        activityType={activity.activity_type}
+        timeAgo={timeAgo}
+      />
     );
   }
 
-  // Render venue follow activity - simpler card
+  // Render venue follow activity
   if (activity.activity_type === "follow" && activity.venue?.slug) {
     return (
       <Link
         href={`/spots/${activity.venue.slug}`}
         className="block p-3 rounded-lg glass border border-[var(--twilight)]/50 hover:border-[var(--coral)]/30 transition-all group relative"
       >
-        {/* Hover glow effect */}
         <div className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none blur-xl hover-glow-coral" />
-        {/* Header */}
         <div className="flex flex-wrap items-center gap-2 mb-2 relative z-10">
           <UserAvatar
             src={activity.user.avatar_url}
@@ -530,8 +296,6 @@ function ActivityCard({ activity }: { activity: ActivityItem }) {
             {timeAgo}
           </span>
         </div>
-
-        {/* Venue info */}
         <div className="relative z-10">
           <h4 className="font-medium text-[var(--cream)] group-hover:text-[var(--coral)] transition-colors truncate">
             {activity.venue.name}
@@ -546,16 +310,14 @@ function ActivityCard({ activity }: { activity: ActivityItem }) {
     );
   }
 
-  // Render organization follow activity - simpler card
+  // Render organization follow activity
   if (activity.activity_type === "follow" && activity.organization?.slug) {
     return (
       <Link
         href={`/orgs/${activity.organization.slug}`}
         className="block p-3 rounded-lg glass border border-[var(--twilight)]/50 hover:border-[var(--neon-cyan)]/30 transition-all group relative"
       >
-        {/* Hover glow effect */}
         <div className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none blur-xl hover-glow-cyan" />
-        {/* Header */}
         <div className="flex flex-wrap items-center gap-2 mb-2 relative z-10">
           <UserAvatar
             src={activity.user.avatar_url}
@@ -572,8 +334,6 @@ function ActivityCard({ activity }: { activity: ActivityItem }) {
             {timeAgo}
           </span>
         </div>
-
-        {/* Organization info */}
         <div className="relative z-10 flex items-center gap-2">
           <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-[var(--twilight)] flex items-center justify-center">
             <svg className="w-4 h-4 text-[var(--neon-cyan)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -591,6 +351,5 @@ function ActivityCard({ activity }: { activity: ActivityItem }) {
     );
   }
 
-  // Fallback
   return null;
 }

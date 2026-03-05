@@ -3,23 +3,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
 import { fetchWithRetry } from "@/lib/fetchWithRetry";
-
-/**
- * Profile type for friend data
- */
-export type Profile = {
-  id: string;
-  username: string;
-  display_name: string | null;
-  avatar_url: string | null;
-  bio: string | null;
-};
+import type { FriendProfile } from "@/lib/types/profile";
 
 /**
  * Response from /api/friends
  */
 interface FriendsResponse {
-  friends: Profile[];
+  friends: FriendProfile[];
   count: number;
 }
 

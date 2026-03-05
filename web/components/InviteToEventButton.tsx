@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useState, useCallback } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { useFriends, type Profile } from "@/lib/hooks/useFriends";
+import { useFriends } from "@/lib/hooks/useFriends";
+import type { FriendProfile } from "@/lib/types/profile";
 import { useToast } from "@/components/Toast";
 import UserAvatar from "@/components/UserAvatar";
 
@@ -84,7 +85,7 @@ function InviteModal({ eventId, eventTitle, onClose, showToast }: InviteModalPro
   const [emailText, setEmailText] = useState("");
   const [emailSending, setEmailSending] = useState(false);
 
-  const handleInvite = useCallback(async (friend: Profile) => {
+  const handleInvite = useCallback(async (friend: FriendProfile) => {
     setSendingId(friend.id);
     try {
       const res = await fetch("/api/invites", {

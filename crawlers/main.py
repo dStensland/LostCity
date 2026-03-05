@@ -10,6 +10,7 @@ Features:
 """
 
 import argparse
+import inspect
 import logging
 import os
 import random
@@ -45,8 +46,8 @@ from db import (
     reset_client,
 )
 from config import set_database_target, get_config
+from crawl_context import set_crawl_context, CrawlContext
 from utils import setup_logging
-from circuit_breaker import should_skip_source, get_all_circuit_states
 from fetch_logos import fetch_logos
 from crawler_health import (
     record_crawl_start as health_record_start,
@@ -55,6 +56,7 @@ from crawler_health import (
     get_recommended_workers,
     get_recommended_delay,
     should_skip_crawl,
+    get_all_circuit_states,
     get_system_health_summary,
     print_health_report,
 )
@@ -83,6 +85,59 @@ CHAIN_CINEMA_TIMEOUT_SLUGS = {
 
 # Permanently closed sources that should never run, even if re-activated in DB.
 BLOCKED_SOURCE_SLUGS = set(CLOSED_SOURCE_SLUGS)
+
+# Playwright (browser) worker limits — Playwright launches a full browser process
+# per thread; too many concurrent browsers exhaust file descriptors and RAM quickly.
+# Requests-only crawlers are lightweight and can run at higher concurrency.
+MAX_PLAYWRIGHT_WORKERS = 2  # Reduced from 3 — each browser consumes ~200MB RAM + file descriptors; 2 avoids Errno 35 on macOS
+MAX_REQUESTS_WORKERS = 8   # Reduced from 10 — keeps total socket pressure lower on the same run
+
+# Populated once at startup by _classify_sources().
+PLAYWRIGHT_SOURCES: set[str] = set()
+
+
+def _classify_sources() -> None:
+    """Scan source modules and populate PLAYWRIGHT_SOURCES with slugs that use Playwright.
+
+    A source is classified as Playwright-based when its module source code contains
+    a top-level import of playwright (``from playwright`` or ``import playwright``).
+    Called once at module initialisation so the cost is paid before any crawl begins.
+    """
+    import pkgutil
+    import importlib as _importlib
+
+    sources_dir = os.path.join(os.path.dirname(__file__), "sources")
+    if not os.path.isdir(sources_dir):
+        return
+
+    # Build a minimal package spec so pkgutil can walk it without a real import.
+    import types
+    sources_pkg = types.ModuleType("sources")
+    sources_pkg.__path__ = [sources_dir]  # type: ignore[attr-defined]
+    sources_pkg.__package__ = "sources"
+
+    for _importer, modname, _ispkg in pkgutil.iter_modules(sources_pkg.__path__):
+        try:
+            mod = _importlib.import_module(f"sources.{modname}")
+            source_code = inspect.getsource(mod)
+        except Exception:
+            continue
+
+        if "from playwright" in source_code or "import playwright" in source_code:
+            # Slug is the module filename with underscores replaced by hyphens,
+            # matching the convention in auto_discover_modules().
+            slug = modname.replace("_", "-")
+            PLAYWRIGHT_SOURCES.add(slug)
+
+    logger.debug(
+        "Source classification complete: %s Playwright sources, checked via source inspection",
+        len(PLAYWRIGHT_SOURCES),
+    )
+
+
+# Classify at import time so every code path (run_all_sources, _run_source_list, etc.)
+# benefits without needing an explicit call site.
+_classify_sources()
 
 
 def run_launch_post_crawl_maintenance(
@@ -273,8 +328,9 @@ def run_source(slug: str, skip_circuit_breaker: bool = False) -> bool:
     """
     # Get recommended delay based on source health
     delay = get_recommended_delay(slug)
-    # Add some randomness to spread out requests
-    time.sleep(delay + random.uniform(0.0, 0.5))
+    if delay > 0:
+        # Add some randomness to spread out requests
+        time.sleep(delay + random.uniform(0.0, 0.5))
 
     source = get_source_by_slug(slug)
 
@@ -292,27 +348,18 @@ def run_source(slug: str, skip_circuit_breaker: bool = False) -> bool:
         logger.warning(f"Source is not active: {slug}")
         return False
 
-    # Check circuit breaker (unless bypassed)
+    # Check health-based skip (circuit breaker logic lives in crawler_health)
     if not skip_circuit_breaker:
-        should_skip, reason = should_skip_source(source)
+        should_skip, reason = should_skip_crawl(slug)
         if should_skip:
-            logger.warning(f"Skipping {slug}: circuit breaker open ({reason})")
+            logger.warning(f"Skipping {slug}: health check failed ({reason})")
             return False
-
-    # Check health-based skip
-    health_skip, health_reason = should_skip_crawl(slug)
-    if health_skip and not skip_circuit_breaker:
-        logger.warning(f"Skipping {slug}: health check failed ({health_reason})")
-        return False
 
     logger.info(f"Starting crawl for: {source['name']}")
     log_id = create_crawl_log(source["id"])
 
     # Reset validation stats for this source
     reset_validation_stats()
-
-    # Clear venue cache for this crawl run
-    clear_venue_cache()
 
     # Record start in health tracker
     health_run_id = health_record_start(slug)
@@ -981,14 +1028,30 @@ def run_post_crawl_tasks(
     except Exception as e:
         logger.warning(f"Artist backfill failed: {e}")
 
-    # 3. Deactivate TBA events (missing start_time after enrichment)
-    logger.info("Deactivating TBA events (missing start_time)...")
+    # 3. Hydrate TBA events — enrich from source/ticket URLs before reporting
+    logger.info("Hydrating TBA events (enriching from source URLs)...")
+    try:
+        from hydrate_tba_events import hydrate_tba_events
+        tba_stats = hydrate_tba_events(apply=True)
+        tba_total = tba_stats.get("total", 0)
+        if tba_total > 0:
+            logger.info(
+                f"TBA hydration: {tba_stats.get('time_filled', 0)} times found, "
+                f"{tba_stats.get('enriched', 0)} enriched, "
+                f"{tba_stats.get('deduped', 0)} deduped "
+                f"out of {tba_total} TBA events"
+            )
+    except Exception as e:
+        logger.warning(f"TBA hydration failed: {e}")
+
+    # 3b. Report remaining TBA events
+    logger.info("Counting remaining TBA events...")
     try:
         tba_count = deactivate_tba_events()
         if tba_count > 0:
-            logger.info(f"Deactivated {tba_count} TBA events")
+            logger.info(f"Still {tba_count} TBA events remaining (hidden from feeds)")
     except Exception as e:
-        logger.warning(f"TBA deactivation failed: {e}")
+        logger.warning(f"TBA count failed: {e}")
 
     # 4. Backfill tags for any events missing venue-type-based tags
     logger.info("Running tag backfill...")
@@ -1055,6 +1118,10 @@ def run_all_sources(
     sources = get_active_sources()
     results = {}
 
+    # Clear venue cache once at the start so it persists across all sources
+    # in this run but doesn't carry stale data between separate invocations.
+    clear_venue_cache()
+
     # Use adaptive worker count if enabled
     if adaptive:
         recommended = get_recommended_workers()
@@ -1067,7 +1134,7 @@ def run_all_sources(
     skipped_sources = []
 
     for source in sources:
-        should_skip, reason = should_skip_source(source)
+        should_skip, reason = should_skip_crawl(source["slug"])
         if should_skip:
             skipped_sources.append((source["slug"], reason))
             results[source["slug"]] = False
@@ -1086,44 +1153,11 @@ def run_all_sources(
     )
 
     if parallel and len(active_sources) > 1:
-        # Parallel execution
-        logger.info(f"Using parallel execution with {max_workers} workers")
-        batch_slugs = [source["slug"] for source in active_sources]
-        batch_timeout = get_batch_timeout_seconds(batch_slugs)
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            # Submit all tasks
-            future_to_slug = {
-                executor.submit(run_source, source["slug"], True): source["slug"]
-                for source in active_sources
-            }
-
-            # Collect results as they complete
-            try:
-                for future in as_completed(future_to_slug, timeout=batch_timeout):
-                    slug = future_to_slug[future]
-                    try:
-                        results[slug] = future.result()
-                    except Exception as e:
-                        logger.error(f"Parallel execution failed for {slug}: {e}")
-                        results[slug] = False
-            except FuturesTimeoutError:
-                logger.error(
-                    "Parallel crawl batch exceeded timeout budget (%ss). "
-                    "Marking unfinished sources as failed.",
-                    batch_timeout,
-                )
-                for future, slug in future_to_slug.items():
-                    if slug in results:
-                        continue
-                    if future.done():
-                        try:
-                            results[slug] = future.result()
-                        except Exception as e:
-                            logger.error(f"Parallel execution failed for {slug}: {e}")
-                            results[slug] = False
-                    else:
-                        future.cancel()
-                        results[slug] = False
+        # Split sources into Playwright and requests pools running concurrently.
+        pw_workers = min(MAX_PLAYWRIGHT_WORKERS, max_workers)
+        req_workers = min(MAX_REQUESTS_WORKERS, max_workers)
+        split_results = _run_split_pool(active_sources, pw_workers=pw_workers, req_workers=req_workers)
+        results.update(split_results)
     else:
         # Sequential execution
         for source in active_sources:
@@ -1163,48 +1197,111 @@ def run_all_sources(
     return results
 
 
+def _run_split_pool(
+    sources: list[dict],
+    pw_workers: int = MAX_PLAYWRIGHT_WORKERS,
+    req_workers: int = MAX_REQUESTS_WORKERS,
+) -> dict[str, bool]:
+    """Run sources in two separate thread pools — one for Playwright, one for requests.
+
+    Playwright launches a full browser process per thread; keeping its pool small
+    (default 3) avoids exhausting file descriptors and RAM.  Requests-only crawlers
+    are I/O-lightweight and can run at higher concurrency (default 10).
+
+    Both pools execute concurrently.  Results are merged and returned with the same
+    {slug: bool} shape as the single-pool path.
+
+    Args:
+        sources:    List of source dicts (must have a ``slug`` key).
+        pw_workers: Max concurrent threads for Playwright sources.
+        req_workers: Max concurrent threads for requests-only sources.
+
+    Returns:
+        Dict mapping source slug → True (success) / False (failure).
+    """
+    # Split by Playwright classification.  Unknown slugs (e.g. profile-backed
+    # sources that don't have a .py module) default to the requests pool since
+    # they don't launch browsers.
+    pw_sources = [s for s in sources if s["slug"] in PLAYWRIGHT_SOURCES]
+    req_sources = [s for s in sources if s["slug"] not in PLAYWRIGHT_SOURCES]
+
+    logger.info(
+        "Split pool: %s Playwright sources (max %s workers), "
+        "%s requests sources (max %s workers)",
+        len(pw_sources), pw_workers,
+        len(req_sources), req_workers,
+    )
+
+    results: dict[str, bool] = {}
+
+    # Guard against empty pools — ThreadPoolExecutor(max_workers=0) raises ValueError.
+    actual_pw_workers = min(pw_workers, len(pw_sources)) if pw_sources else 1
+    actual_req_workers = min(req_workers, len(req_sources)) if req_sources else 1
+
+    batch_slugs = [s["slug"] for s in sources]
+    batch_timeout = get_batch_timeout_seconds(batch_slugs)
+
+    with (
+        ThreadPoolExecutor(max_workers=actual_pw_workers) as pw_pool,
+        ThreadPoolExecutor(max_workers=actual_req_workers) as req_pool,
+    ):
+        future_to_slug: dict = {}
+        for source in pw_sources:
+            future_to_slug[pw_pool.submit(run_source, source["slug"], True)] = source["slug"]
+        for source in req_sources:
+            future_to_slug[req_pool.submit(run_source, source["slug"], True)] = source["slug"]
+
+        try:
+            for future in as_completed(future_to_slug, timeout=batch_timeout):
+                slug = future_to_slug[future]
+                try:
+                    results[slug] = future.result()
+                except Exception as e:
+                    logger.error("Parallel execution failed for %s: %s", slug, e)
+                    results[slug] = False
+        except FuturesTimeoutError:
+            logger.error(
+                "Split-pool crawl batch exceeded timeout budget (%ss). "
+                "Marking unfinished sources as failed.",
+                batch_timeout,
+            )
+            for future, slug in future_to_slug.items():
+                if slug in results:
+                    continue
+                if future.done():
+                    try:
+                        results[slug] = future.result()
+                    except Exception as e:
+                        logger.error("Parallel execution failed for %s: %s", slug, e)
+                        results[slug] = False
+                else:
+                    future.cancel()
+                    results[slug] = False
+
+    return results
+
+
 def _run_source_list(sources: list[dict], parallel: bool = True, max_workers: int = MAX_WORKERS) -> dict[str, bool]:
     """Run a list of sources through the standard parallel/sequential pipeline with retries.
 
     Shared logic used by run_all_sources, run_smart_crawl, and run_cadence_crawl.
+    When parallel=True, sources are split into Playwright and requests pools
+    (see _run_split_pool).  max_workers is kept for the --workers CLI flag but
+    is no longer used to size the single pool; instead it caps the requests pool
+    so that explicit --workers N behaves as a global upper bound.
     """
+    # Clear venue cache once at the start of a batch run so it persists
+    # across all sources in this run (avoids redundant DB lookups) but
+    # doesn't carry stale data between separate invocations.
+    clear_venue_cache()
+
     results = {}
 
     if parallel and len(sources) > 1:
-        logger.info(f"Using parallel execution with {max_workers} workers")
-        batch_slugs = [source["slug"] for source in sources]
-        batch_timeout = get_batch_timeout_seconds(batch_slugs)
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            future_to_slug = {
-                executor.submit(run_source, source["slug"], True): source["slug"]
-                for source in sources
-            }
-            try:
-                for future in as_completed(future_to_slug, timeout=batch_timeout):
-                    slug = future_to_slug[future]
-                    try:
-                        results[slug] = future.result()
-                    except Exception as e:
-                        logger.error(f"Parallel execution failed for {slug}: {e}")
-                        results[slug] = False
-            except FuturesTimeoutError:
-                logger.error(
-                    "Parallel source list exceeded timeout budget (%ss). "
-                    "Marking unfinished sources as failed.",
-                    batch_timeout,
-                )
-                for future, slug in future_to_slug.items():
-                    if slug in results:
-                        continue
-                    if future.done():
-                        try:
-                            results[slug] = future.result()
-                        except Exception as e:
-                            logger.error(f"Parallel execution failed for {slug}: {e}")
-                            results[slug] = False
-                    else:
-                        future.cancel()
-                        results[slug] = False
+        # Cap both pools by max_workers so --workers N still acts as a global limit.
+        pw_workers = min(MAX_PLAYWRIGHT_WORKERS, max_workers)
+        req_workers = min(MAX_REQUESTS_WORKERS, max_workers)
+        results = _run_split_pool(sources, pw_workers=pw_workers, req_workers=req_workers)
     else:
         for source in sources:
             slug = source["slug"]
@@ -1244,7 +1341,7 @@ def run_smart_crawl(args) -> dict[str, bool]:
     # Pre-filter circuit breakers
     active_sources = []
     for source in due_sources:
-        should_skip, reason = should_skip_source(source)
+        should_skip, reason = should_skip_crawl(source["slug"])
         if should_skip:
             logger.debug(f"Skipping {source['slug']}: circuit breaker ({reason})")
         else:
@@ -1281,7 +1378,7 @@ def run_cadence_crawl(args) -> dict[str, bool]:
     # Pre-filter circuit breakers
     active_sources = []
     for source in sources:
-        should_skip, reason = should_skip_source(source)
+        should_skip, reason = should_skip_crawl(source["slug"])
         if should_skip:
             logger.debug(f"Skipping {source['slug']}: circuit breaker ({reason})")
         else:
@@ -1497,6 +1594,16 @@ def main():
         default="atlanta",
         help="Portal passed to post-crawl launch maintenance. Default: atlanta.",
     )
+    parser.add_argument(
+        "--city",
+        default="Atlanta",
+        help="City context for this crawl run (default: Atlanta).",
+    )
+    parser.add_argument(
+        "--state",
+        default="GA",
+        help="State context for this crawl run; also sets allowed_states (default: GA).",
+    )
 
     args = parser.parse_args()
 
@@ -1548,6 +1655,17 @@ def main():
         cfg.database.active_target,
         "enabled" if should_write else "disabled",
     )
+
+    # Set city/state crawl context so geographic filters are parameterized.
+    # When running Atlanta (the default), this is a no-op. For new markets,
+    # pass --city Nashville --state TN and the venue state gate will allow it.
+    if args.city != "Atlanta" or args.state != "GA":
+        set_crawl_context(CrawlContext(
+            city=args.city,
+            state=args.state,
+            allowed_states=[args.state],
+        ))
+        logger.info("Crawl context: city=%s state=%s", args.city, args.state)
 
     # Health report
     if args.health:

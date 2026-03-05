@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { getLocalDateString } from "@/lib/formats";
 import { suppressVenueImagesIfFlagged } from "@/lib/image-quality-suppression";
+import { applyFeedGate } from "@/lib/feed-gate";
 
 export const revalidate = 300; // 5 min
 
@@ -219,7 +220,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     futureDate.setDate(futureDate.getDate() + 14);
     const futureDateStr = getLocalDateString(futureDate);
 
-    const { data: rawEvents } = await supabase
+    let trackEventsQuery = supabase
       .from("events")
       .select("id, venue_id, title, start_date, start_time, end_time, category_id, is_free, price_min, price_max")
       .in("venue_id", venueIds)
@@ -232,6 +233,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
       .order("start_date", { ascending: true })
       .order("start_time", { ascending: true })
       .limit(200);
+    trackEventsQuery = applyFeedGate(trackEventsQuery);
+    const { data: rawEvents } = await trackEventsQuery;
 
     const allEvents = rawEvents as unknown as EventRow[] | null;
 

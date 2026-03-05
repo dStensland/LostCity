@@ -16,7 +16,7 @@ import { getProxiedImageSrc } from "@/lib/image-proxy";
 import { useDebounce } from "@/lib/hooks/useDebounce";
 import CategoryIcon from "@/components/CategoryIcon";
 import type { AddItineraryItemInput } from "@/lib/itinerary-utils";
-import type { Suggestion } from "@/components/outing/OutingSuggestions";
+import type { OutingSuggestion as Suggestion } from "@/lib/outing-suggestions-utils";
 import { usePortalCity } from "@/lib/portal-context";
 import {
   MagnifyingGlass,

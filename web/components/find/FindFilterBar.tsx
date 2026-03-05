@@ -11,7 +11,52 @@ type FindFilterBarProps = {
   variant?: "full" | "compact";
   portalId?: string;
   portalExclusive?: boolean;
+  portalSlug?: string;
 };
+
+// ─── Filter counts hook ─────────────────────────────────────────────────────
+
+function useFilterCounts(portalSlug?: string) {
+  const [counts, setCounts] = useState<Record<string, Record<string, number>>>({});
+
+  useEffect(() => {
+    if (!portalSlug) return;
+
+    const controller = new AbortController();
+    fetch(`/api/portals/${portalSlug}/filter-counts`, { signal: controller.signal })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) setCounts(data);
+      })
+      .catch(() => {});
+
+    return () => controller.abort();
+  }, [portalSlug]);
+
+  return counts;
+}
+
+// ─── Time-aware emphasis helper ─────────────────────────────────────────────
+
+function useTimeEmphasis() {
+  const [emphasis, setEmphasis] = useState<"tonight" | "weekend" | null>(null);
+
+  useEffect(() => {
+    const now = new Date();
+    const hour = now.getHours();
+    const day = now.getDay(); // 0=Sun, 5=Fri, 6=Sat
+
+    if (hour >= 17) {
+      // After 5pm: emphasize Tonight
+      setEmphasis("tonight");
+    } else if (day === 5 || day === 6) {
+      // Friday or Saturday: emphasize Weekend
+      setEmphasis("weekend");
+    }
+  }, []);
+
+  return emphasis;
+}
 
 const DATE_OPTIONS = [
   { value: "today", label: "Today" },
@@ -52,7 +97,7 @@ type MobileFilterStripProps = {
   onSetDate: (date: string) => void;
 };
 
-function MobileFilterStrip({ f, variant, onOpenSheet, onSetDate }: MobileFilterStripProps) {
+function MobileFilterStrip({ f, variant, onOpenSheet, onSetDate, timeEmphasis }: MobileFilterStripProps & { timeEmphasis: "tonight" | "weekend" | null }) {
   const handleCategoryTap = useCallback((value: string) => {
     triggerHaptic("selection");
     f.toggleCategory(value);
@@ -115,16 +160,20 @@ function MobileFilterStrip({ f, variant, onOpenSheet, onSetDate }: MobileFilterS
               className={`flex-shrink-0 min-h-[44px] px-3.5 rounded-full font-mono text-xs font-medium border transition-transform active:scale-95 ${
                 f.effectiveDateFilter === "today"
                   ? "bg-[var(--gold)] text-[var(--void)] border-[var(--gold)]/40"
+                  : timeEmphasis === "tonight"
+                  ? "bg-[var(--gold)]/10 text-[var(--gold)] border-[var(--gold)]/30"
                   : "bg-white/5 backdrop-blur-sm text-[var(--soft)] border-white/10"
               }`}
             >
-              Today
+              {timeEmphasis === "tonight" ? "Tonight" : "Today"}
             </button>
             <button
               onClick={() => handleDateTap("weekend")}
               className={`flex-shrink-0 min-h-[44px] px-3.5 rounded-full font-mono text-xs font-medium border transition-transform active:scale-95 ${
                 f.effectiveDateFilter === "weekend"
                   ? "bg-[var(--gold)] text-[var(--void)] border-[var(--gold)]/40"
+                  : timeEmphasis === "weekend"
+                  ? "bg-[var(--gold)]/10 text-[var(--gold)] border-[var(--gold)]/30"
                   : "bg-white/5 backdrop-blur-sm text-[var(--soft)] border-white/10"
               }`}
             >
@@ -200,8 +249,11 @@ function MobileFilterStrip({ f, variant, onOpenSheet, onSetDate }: MobileFilterS
   );
 }
 
-export default function FindFilterBar({ variant = "full", portalId, portalExclusive = false }: FindFilterBarProps) {
+export default function FindFilterBar({ variant = "full", portalId, portalExclusive = false, portalSlug }: FindFilterBarProps) {
   const f = useFilterEngine({ portalId, portalExclusive });
+  const filterCounts = useFilterCounts(portalSlug);
+  const timeEmphasis = useTimeEmphasis();
+  const categoryCounts = filterCounts.category || {};
 
   // ─── Dropdown state (single active dropdown) ──────────────────────────────
   const [activeDropdown, setActiveDropdown] = useState<DropdownId>(null);
@@ -286,12 +338,17 @@ export default function FindFilterBar({ variant = "full", portalId, portalExclus
                   <div className="p-2">
                     {f.categoryOptions.map((cat) => {
                       const isActive = f.currentCategories.includes(cat.value);
+                      const count = categoryCounts[cat.value];
+                      const isEmpty = count === 0;
                       return (
                         <button
                           key={cat.value}
                           onClick={() => f.toggleCategory(cat.value)}
+                          disabled={isEmpty}
                           className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg font-mono text-xs font-medium transition-colors ${
-                            isActive
+                            isEmpty
+                              ? "opacity-40 pointer-events-none text-[var(--muted)]"
+                              : isActive
                               ? "bg-[var(--action-primary)] text-[var(--btn-primary-text)]"
                               : "text-[var(--cream)] hover:bg-[var(--twilight)]"
                           }`}
@@ -303,6 +360,11 @@ export default function FindFilterBar({ variant = "full", portalId, portalExclus
                             glow={isActive ? "none" : "subtle"}
                           />
                           <span className="truncate">{cat.label}</span>
+                          {count != null && count > 0 && !isActive && (
+                            <span className="ml-auto text-2xs text-[var(--muted)]">
+                              {count}
+                            </span>
+                          )}
                           {isActive && (
                             <svg className="w-3 h-3 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -393,6 +455,36 @@ export default function FindFilterBar({ variant = "full", portalId, portalExclus
               </div>
             )}
 
+            {/* Desktop Tonight / Weekend quick-chips */}
+            {variant === "full" && (
+              <>
+                <button
+                  onClick={() => handleSetDate(f.effectiveDateFilter === "today" ? "" : "today")}
+                  className={`btn-press flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]/70 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--void)] ${
+                    f.effectiveDateFilter === "today"
+                      ? "bg-[var(--gold)] text-[var(--void)] border-[var(--gold)]/40 shadow-sm"
+                      : timeEmphasis === "tonight"
+                      ? "bg-[var(--gold)]/10 text-[var(--gold)] border-[var(--gold)]/30 hover:bg-[var(--gold)]/20"
+                      : "bg-[var(--dusk)]/80 text-[var(--cream)]/80 border-[var(--twilight)]/80 hover:text-[var(--cream)] hover:bg-[var(--twilight)]/40 hover:border-[var(--twilight)]"
+                  }`}
+                >
+                  {timeEmphasis === "tonight" ? "Tonight" : "Today"}
+                </button>
+                <button
+                  onClick={() => handleSetDate(f.effectiveDateFilter === "weekend" ? "" : "weekend")}
+                  className={`btn-press flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--coral)]/70 focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--void)] ${
+                    f.effectiveDateFilter === "weekend"
+                      ? "bg-[var(--gold)] text-[var(--void)] border-[var(--gold)]/40 shadow-sm"
+                      : timeEmphasis === "weekend"
+                      ? "bg-[var(--gold)]/10 text-[var(--gold)] border-[var(--gold)]/30 hover:bg-[var(--gold)]/20"
+                      : "bg-[var(--dusk)]/80 text-[var(--cream)]/80 border-[var(--twilight)]/80 hover:text-[var(--cream)] hover:bg-[var(--twilight)]/40 hover:border-[var(--twilight)]"
+                  }`}
+                >
+                  Weekend
+                </button>
+              </>
+            )}
+
             {/* Filters button (opens mobile sheet) */}
             <button
               onClick={() => setMobileSheetOpen(true)}
@@ -458,6 +550,7 @@ export default function FindFilterBar({ variant = "full", portalId, portalExclus
         variant={variant}
         onOpenSheet={() => setMobileSheetOpen(true)}
         onSetDate={handleSetDate}
+        timeEmphasis={timeEmphasis}
       />
 
       {/* Mobile filter sheet */}

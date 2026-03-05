@@ -2,24 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-
-type Profile = {
-  id: string;
-  username: string;
-  display_name: string | null;
-  avatar_url: string | null;
-  bio: string | null;
-};
-
-type FriendRequest = {
-  id: string;
-  inviter_id: string;
-  invitee_id: string;
-  status: "pending" | "accepted" | "declined";
-  created_at: string;
-  inviter?: Profile | null;
-  invitee?: Profile | null;
-};
+import UserAvatar from "@/components/UserAvatar";
+import type { FriendRequest } from "@/lib/types/profile";
 
 type FriendRequestCardProps = {
   request: FriendRequest;
@@ -43,18 +27,6 @@ export default function FriendRequestCard({
   const otherUser = isReceived ? request.inviter : request.invitee;
 
   if (!otherUser) return null;
-
-  const getInitials = (name: string | null, username: string) => {
-    if (name) {
-      return name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2);
-    }
-    return username.slice(0, 2).toUpperCase();
-  };
 
   const handleAccept = async () => {
     setActionLoading("accept");
@@ -131,11 +103,12 @@ export default function FriendRequestCard({
 
   return (
     <div className="flex items-center gap-4 p-4 bg-[var(--dusk)] rounded-lg">
-      {/* Avatar - always show initials for now */}
       <Link href={`/profile/${otherUser.username}`}>
-        <div className="w-12 h-12 rounded-full bg-[var(--coral)] flex items-center justify-center text-[var(--void)] font-bold">
-          {getInitials(otherUser.display_name, otherUser.username)}
-        </div>
+        <UserAvatar
+          src={otherUser.avatar_url}
+          name={otherUser.display_name || otherUser.username}
+          size="lg"
+        />
       </Link>
 
       {/* User Info */}
@@ -149,7 +122,7 @@ export default function FriendRequestCard({
         <p className="text-sm text-[var(--muted)] truncate">
           @{otherUser.username}
         </p>
-        {error && <p className="text-sm text-red-400 mt-1">{error}</p>}
+        {error && <p className="text-sm text-[var(--neon-red)] mt-1">{error}</p>}
       </div>
 
       {/* Actions */}
@@ -167,7 +140,7 @@ export default function FriendRequestCard({
               <button
                 onClick={handleDecline}
                 disabled={!!actionLoading}
-                className="px-4 py-2 bg-transparent border border-[var(--muted)] text-[var(--muted)] rounded-lg text-sm font-medium hover:bg-[var(--muted)]/10 disabled:opacity-50 transition-colors"
+                className="px-4 py-2 bg-transparent border border-[var(--twilight)] text-[var(--muted)] rounded-lg text-sm font-medium hover:bg-[var(--twilight)]/10 disabled:opacity-50 transition-colors"
               >
                 {actionLoading === "decline" ? "..." : "Decline"}
               </button>
@@ -176,7 +149,7 @@ export default function FriendRequestCard({
             <button
               onClick={handleCancel}
               disabled={!!actionLoading}
-              className="px-4 py-2 bg-transparent border border-[var(--clay)] text-[var(--clay)] rounded text-sm font-medium hover:bg-[var(--clay)]/10 disabled:opacity-50"
+              className="px-4 py-2 bg-transparent border border-[var(--twilight)] text-[var(--muted)] rounded text-sm font-medium hover:bg-[var(--twilight)]/10 disabled:opacity-50"
             >
               {actionLoading === "cancel" ? "..." : "Cancel"}
             </button>
@@ -185,7 +158,7 @@ export default function FriendRequestCard({
       )}
 
       {request.status === "accepted" && (
-        <span className="text-sm text-green-400">Friends</span>
+        <span className="text-sm text-[var(--neon-green)]">Friends</span>
       )}
 
       {request.status === "declined" && (

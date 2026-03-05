@@ -5,19 +5,10 @@ import Link from "next/link";
 import UserAvatar from "@/components/UserAvatar";
 import FriendButton from "@/components/FriendButton";
 import type { RelationshipStatus } from "@/lib/hooks/useFriendship";
-
-export type Profile = {
-  id: string;
-  username: string;
-  display_name: string | null;
-  avatar_url: string | null;
-  bio: string | null;
-  mutual_friends_count?: number;
-  suggestion_reason?: "mutual_friends" | "shared_interests" | "similar_activity" | "popular";
-};
+import type { SuggestedProfile } from "@/lib/types/profile";
 
 interface FriendSuggestionsProps {
-  suggestions: Profile[];
+  suggestions: SuggestedProfile[];
   isLoading?: boolean;
 }
 
@@ -42,7 +33,7 @@ export function FriendSuggestions({ suggestions, isLoading = false }: FriendSugg
 
   return (
     <div className="space-y-2">
-      <h3 className="font-mono text-[10px] font-medium uppercase tracking-wider text-[var(--muted)] px-1">
+      <h3 className="font-mono text-2xs font-medium uppercase tracking-wider text-[var(--muted)] px-1">
         Suggested
       </h3>
       <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
@@ -59,7 +50,7 @@ export function FriendSuggestions({ suggestions, isLoading = false }: FriendSugg
 }
 
 interface SuggestionCardProps {
-  profile: Profile;
+  profile: SuggestedProfile;
   onDismiss: (profileId: string) => void;
 }
 
@@ -105,13 +96,13 @@ function SuggestionCard({ profile, onDismiss }: SuggestionCardProps) {
         {profile.display_name || `@${profile.username}`}
       </Link>
       {subtitle && (
-        <p className="text-[10px] text-[var(--muted)] font-mono truncate w-full mt-0.5">
+        <p className="text-2xs text-[var(--muted)] font-mono truncate w-full mt-0.5">
           {subtitle}
         </p>
       )}
       <div className="mt-2 w-full">
         {cardState === "actioned" ? (
-          <span className="inline-flex items-center gap-1 text-[10px] text-[var(--neon-green)] font-mono">
+          <span className="inline-flex items-center gap-1 text-2xs text-[var(--neon-green)] font-mono">
             <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
             </svg>
@@ -131,7 +122,7 @@ function SuggestionCard({ profile, onDismiss }: SuggestionCardProps) {
   );
 }
 
-function getSuggestionReasonShort(profile: Profile): string | null {
+function getSuggestionReasonShort(profile: SuggestedProfile): string | null {
   if (!profile.suggestion_reason) return null;
   switch (profile.suggestion_reason) {
     case "mutual_friends":

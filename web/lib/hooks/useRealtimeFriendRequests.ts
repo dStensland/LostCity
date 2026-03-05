@@ -4,25 +4,7 @@ import { useEffect, useCallback, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/lib/auth-context";
-
-type Profile = {
-  id: string;
-  username: string;
-  display_name: string | null;
-  avatar_url: string | null;
-  bio: string | null;
-};
-
-type FriendRequest = {
-  id: string;
-  inviter_id: string;
-  invitee_id: string;
-  status: "pending" | "accepted" | "declined";
-  created_at: string;
-  responded_at: string | null;
-  inviter?: Profile | null;
-  invitee?: Profile | null;
-};
+import type { FriendRequest } from "@/lib/types/profile";
 
 type FriendRequestsResponse = {
   requests: FriendRequest[];

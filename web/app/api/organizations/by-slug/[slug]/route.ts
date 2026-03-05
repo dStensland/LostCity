@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { NextRequest } from "next/server";
 import { getLocalDateString } from "@/lib/formats";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
+import { applyFeedGate } from "@/lib/feed-gate";
 
 export async function GET(
   request: NextRequest,
@@ -37,7 +38,7 @@ export async function GET(
   const today = getLocalDateString();
 
   // Fetch upcoming events for this organization
-  const { data: eventsData } = await supabase
+  let eventsQuery = supabase
     .from("events")
     .select(`
       id, title, start_date, start_time, end_time, is_free, price_min, category:category_id,
@@ -48,6 +49,10 @@ export async function GET(
     .order("start_date", { ascending: true })
     .order("start_time", { ascending: true })
     .limit(30);
+
+  eventsQuery = applyFeedGate(eventsQuery);
+
+  const { data: eventsData } = await eventsQuery;
 
   return Response.json({
     organization: organizationData,

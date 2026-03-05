@@ -7,6 +7,7 @@
 
 import { supabase } from "./supabase";
 import { getLocalDateString } from "@/lib/formats";
+import { applyFeedGate } from "@/lib/feed-gate";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -98,16 +99,18 @@ const SERVICE_TYPES = ["vet", "groomer", "pet_store", "pet_daycare", "animal_she
 export async function getDogEvents(limit = 20): Promise<DogEvent[]> {
   const today = getLocalDateString();
 
-  const { data } = await supabase
-    .from("events")
-    .select(EVENT_SELECT)
-    .gte("start_date", today)
-    .is("canonical_event_id", null)
-    .or("is_class.eq.false,is_class.is.null")
-    .or("is_sensitive.eq.false,is_sensitive.is.null")
-    .overlaps("tags", ["dog-friendly", "pets", "adoption", "outdoor", "family-friendly"])
-    .order("start_date", { ascending: true })
-    .limit(limit);
+  const { data } = await applyFeedGate(
+    supabase
+      .from("events")
+      .select(EVENT_SELECT)
+      .gte("start_date", today)
+      .is("canonical_event_id", null)
+      .or("is_class.eq.false,is_class.is.null")
+      .or("is_sensitive.eq.false,is_sensitive.is.null")
+      .overlaps("tags", ["dog-friendly", "pets", "adoption", "outdoor", "family-friendly"])
+      .order("start_date", { ascending: true })
+      .limit(limit)
+  );
 
   return (data || []) as DogEvent[];
 }
@@ -130,17 +133,19 @@ export async function getDogWeekendEvents(limit = 10): Promise<DogEvent[]> {
   const fridayStr = friday.toISOString().split("T")[0];
   const sundayStr = sunday.toISOString().split("T")[0];
 
-  const { data } = await supabase
-    .from("events")
-    .select(EVENT_SELECT)
-    .gte("start_date", fridayStr)
-    .lte("start_date", sundayStr)
-    .is("canonical_event_id", null)
-    .or("is_class.eq.false,is_class.is.null")
-    .or("is_sensitive.eq.false,is_sensitive.is.null")
-    .overlaps("tags", ["dog-friendly", "pets", "adoption", "outdoor", "family-friendly"])
-    .order("start_date", { ascending: true })
-    .limit(limit);
+  const { data } = await applyFeedGate(
+    supabase
+      .from("events")
+      .select(EVENT_SELECT)
+      .gte("start_date", fridayStr)
+      .lte("start_date", sundayStr)
+      .is("canonical_event_id", null)
+      .or("is_class.eq.false,is_class.is.null")
+      .or("is_sensitive.eq.false,is_sensitive.is.null")
+      .overlaps("tags", ["dog-friendly", "pets", "adoption", "outdoor", "family-friendly"])
+      .order("start_date", { ascending: true })
+      .limit(limit)
+  );
 
   return (data || []) as DogEvent[];
 }
@@ -252,15 +257,17 @@ export async function getDogPupCupSpots(): Promise<DogVenue[]> {
 export async function getDogAdoptionEvents(limit = 20): Promise<DogEvent[]> {
   const today = getLocalDateString();
 
-  const { data } = await supabase
-    .from("events")
-    .select(EVENT_SELECT)
-    .gte("start_date", today)
-    .is("canonical_event_id", null)
-    .or("is_sensitive.eq.false,is_sensitive.is.null")
-    .overlaps("tags", ["adoption", "adoption-event", "pets"])
-    .order("start_date", { ascending: true })
-    .limit(limit);
+  const { data } = await applyFeedGate(
+    supabase
+      .from("events")
+      .select(EVENT_SELECT)
+      .gte("start_date", today)
+      .is("canonical_event_id", null)
+      .or("is_sensitive.eq.false,is_sensitive.is.null")
+      .overlaps("tags", ["adoption", "adoption-event", "pets"])
+      .order("start_date", { ascending: true })
+      .limit(limit)
+  );
 
   return (data || []) as DogEvent[];
 }
@@ -308,21 +315,23 @@ export async function getDogTrainingEvents(
 
   // Find events that are either marked as classes with dog tags,
   // or any event with specific dog-training tags (regardless of is_class)
-  let query = supabase
-    .from("events")
-    .select(EVENT_SELECT)
-    .gte("start_date", today)
-    .is("canonical_event_id", null)
-    .or("is_sensitive.eq.false,is_sensitive.is.null")
-    .overlaps("tags", [
-      "dog-training",
-      "puppy-class",
-      "obedience",
-      "agility",
-      "dog-social",
-    ])
-    .order("start_date", { ascending: true })
-    .limit(limit);
+  let query = applyFeedGate(
+    supabase
+      .from("events")
+      .select(EVENT_SELECT)
+      .gte("start_date", today)
+      .is("canonical_event_id", null)
+      .or("is_sensitive.eq.false,is_sensitive.is.null")
+      .overlaps("tags", [
+        "dog-training",
+        "puppy-class",
+        "obedience",
+        "agility",
+        "dog-social",
+      ])
+      .order("start_date", { ascending: true })
+      .limit(limit)
+  );
 
   if (filter && filter !== "all") {
     query = query.contains("tags", [filter]);

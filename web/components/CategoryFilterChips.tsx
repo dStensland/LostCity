@@ -41,11 +41,11 @@ function CategoryFilterChips({ selected, onChange, counts, className = "" }: Pro
             key={cat.value}
             onClick={() => onChange(cat.value)}
             className={`
-              flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full
-              text-sm font-medium transition-all
+              flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full min-h-[44px]
+              font-mono text-xs font-medium transition-all
               ${
                 isSelected
-                  ? "bg-[var(--neon-amber)]/20 text-[var(--neon-amber)] border border-[var(--neon-amber)]/40 shadow-[0_0_8px_var(--neon-amber)/15]"
+                  ? "bg-[var(--neon-amber)]/20 text-[var(--neon-amber)] border border-[var(--neon-amber)]/40 chip-glow-gold"
                   : "bg-[var(--twilight)]/50 text-[var(--soft)] border border-[var(--twilight)] hover:border-[var(--muted)] hover:text-[var(--cream)]"
               }
             `}

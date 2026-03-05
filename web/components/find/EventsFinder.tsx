@@ -55,6 +55,7 @@ export function EventsFinderFilters({
           variant={displayMode === "map" ? "compact" : "full"}
           portalId={portalId}
           portalExclusive={portalExclusive}
+          portalSlug={portalSlug}
         />
         {/* Active Filters */}
         {hasActiveFilters && displayMode === "list" && (

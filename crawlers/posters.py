@@ -304,6 +304,8 @@ def _fetch_wikidata_labels(entity_ids: list[str]) -> dict[str, str]:
 
 def _fetch_from_omdb(title: str, year: Optional[str]) -> Optional[FilmMetadata]:
     api_key = get_config().api.omdb_api_key
+    if not api_key:
+        return None
     search_query = title.replace(" ", "+")
     if year:
         omdb_url = f"https://www.omdbapi.com/?t={search_query}&y={year}&plot=full&apikey={api_key}"

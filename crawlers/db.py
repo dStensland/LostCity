@@ -34,7 +34,7 @@ from planning_capabilities import (
     derive_capability_snapshot,
     attach_capability_metadata,
 )
-from utils import is_likely_non_event_image
+from utils import is_likely_non_event_image, validate_url
 from closed_venues import (
     CLOSED_VENUE_NOTE,
     CLOSED_VENUE_SLUGS,
@@ -1054,6 +1054,11 @@ def _queue_event_blurhash(event_id: int, image_url: Optional[str]) -> None:
 def _fetch_venue_description(url: str) -> Optional[str]:
     """Quick meta description extraction for new venues. Non-blocking, short timeout."""
     try:
+        validate_url(url)
+    except ValueError as e:
+        logger.debug(f"Skipping venue description fetch (SSRF check): {e}")
+        return None
+    try:
         import requests
         from bs4 import BeautifulSoup
 
@@ -1653,6 +1658,36 @@ def validate_event(event_data: dict) -> Tuple[bool, Optional[str], list[str]]:
     return True, None, warnings
 
 
+# Domains that are research leads, not real event sources.
+# If a crawler can't find the venue's own URL, it should skip the event.
+PROHIBITED_SOURCE_DOMAINS = {
+    "badslava.com",
+    "artsatl.org",
+    "creativeloafing.com",
+    "discoversouthside.com",
+    "timeout.com",
+    "accessatlanta.com",
+}
+
+
+def _reject_aggregator_source_url(source_url: Optional[str]) -> None:
+    """Raise ValueError if source_url points to a known aggregator/curator domain."""
+    if not source_url:
+        return
+    try:
+        domain = urlparse(source_url).netloc.lower().lstrip("www.")
+        for prohibited in PROHIBITED_SOURCE_DOMAINS:
+            if prohibited in domain:
+                raise ValueError(
+                    f"source_url points to prohibited aggregator '{domain}' — "
+                    f"crawl the original venue source instead"
+                )
+    except ValueError:
+        raise
+    except Exception:
+        pass  # Don't block insert on unparseable URLs
+
+
 @retry_on_network_error(max_retries=3, base_delay=0.5)
 def validate_event_title(title: str) -> bool:
     """Reject obviously bad event titles (nav elements, descriptions, junk).
@@ -1884,6 +1919,30 @@ def validate_event_title(title: str) -> bool:
     ):
         return False
 
+    # Month-abbreviation-only titles ("MAR", "APR") — parser artifacts
+    if re.match(
+        r"^(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)$",
+        title,
+        re.IGNORECASE,
+    ):
+        return False
+
+    # Date-range titles ("Apr 16, 2026 to Apr 19, 2026") — scrape artifacts
+    if re.match(
+        r"^\w+ \d+,?\s*\d{4}\s+to\s+\w+ \d+",
+        title,
+        re.IGNORECASE,
+    ):
+        return False
+
+    # Parser artifacts: literal word "Recurring" as title
+    if title.strip().lower() == "recurring":
+        return False
+
+    # Calendar grid cell artifacts ("1 event,12", "2 events,5")
+    if re.match(r"^\d+ events?,\d+$", title, re.IGNORECASE):
+        return False
+
     # Titles starting with description-like patterns
     desc_starts = [
         "every monday",
@@ -2094,6 +2153,21 @@ def insert_event(
         except (ValueError, TypeError):
             pass  # Don't block insert on unparseable dates
 
+    # Reject events with source_url pointing to known aggregator/curator domains.
+    # These are research leads, not real sources — crawl the original venue instead.
+    _reject_aggregator_source_url(event_data.get("source_url"))
+
+    # Normalize ALL-CAPS titles to Title Case before any further checks.
+    # Mixed-case titles (including already-correct ones) are left untouched.
+    # Short acronyms (≤3 chars like "DJ") are also left alone since they're
+    # handled correctly by smart_title_case once embedded in a longer title.
+    _raw_title = event_data.get("title", "") or ""
+    if _raw_title and _raw_title == _raw_title.upper() and len(_raw_title) > 3:
+        _cased = smart_title_case(_raw_title)
+        if _cased != _raw_title:
+            logger.debug("Title-cased ALL-CAPS title: %r → %r", _raw_title[:60], _cased[:60])
+            event_data["title"] = _cased
+
     # Additional title quality check (existing validation)
     title = event_data.get("title", "")
     if not validate_event_title(title):
@@ -2209,7 +2283,10 @@ def insert_event(
         logger.warning(f"Event rejected: {msg}")
         raise ValueError(msg)
 
-    # Auto-fetch movie metadata (poster, director, runtime, etc.) for film events
+    # Auto-fetch movie metadata (poster, director, runtime, etc.) for film events.
+    # Run in a thread with a timeout so a slow/unreachable OMDb or Wikidata endpoint
+    # never blocks the insert path.  The in-memory cache in posters.py means warm
+    # lookups are instant; this guard only matters on cold misses.
     film_metadata = None
     parsed_film_title = None
     if event_data.get("category") == "film":
@@ -2226,9 +2303,24 @@ def insert_event(
                 except (TypeError, ValueError):
                     pass
 
-        film_metadata = get_metadata_for_film_event(
-            event_data.get("title", ""), event_data.get("image_url")
-        )
+        _film_title_for_enrich = event_data.get("title", "")
+        _film_image_for_enrich = event_data.get("image_url")
+        try:
+            with ThreadPoolExecutor(max_workers=1) as _pool:
+                _future = _pool.submit(
+                    get_metadata_for_film_event,
+                    _film_title_for_enrich,
+                    _film_image_for_enrich,
+                )
+                film_metadata = _future.result(timeout=15)
+        except Exception as _enrich_err:
+            logger.warning(
+                "Film enrichment timed out or failed for '%s': %s — inserting without metadata",
+                event_data.get("title", "")[:60],
+                _enrich_err,
+            )
+            film_metadata = None
+
         if film_metadata:
             metadata_source = getattr(film_metadata, "source", None) or "omdb"
             if not event_data.get("image_url"):
@@ -2247,18 +2339,35 @@ def insert_event(
             if film_metadata.genres and not genres:
                 genres = film_metadata.genres
 
-    # Auto-fetch artist image, genres, and bio for music events
+    # Auto-fetch artist image, genres, and bio for music events.
+    # Same deferred pattern: run in a thread with a timeout so MusicBrainz rate-limit
+    # sleeps, Wikidata latency, or Spotify auth failures don't stall the insert.
     music_info = None
     if event_data.get("category") == "music":
-        music_info = get_info_for_music_event(
-            event_data.get("title", ""),
-            event_data.get("image_url"),
-            genres,  # Pass existing genres if any
-        )
-        if music_info.image_url and not event_data.get("image_url"):
+        _music_title_for_enrich = event_data.get("title", "")
+        _music_image_for_enrich = event_data.get("image_url")
+        _music_genres_for_enrich = genres
+        try:
+            with ThreadPoolExecutor(max_workers=1) as _pool:
+                _future = _pool.submit(
+                    get_info_for_music_event,
+                    _music_title_for_enrich,
+                    _music_image_for_enrich,
+                    _music_genres_for_enrich,
+                )
+                music_info = _future.result(timeout=20)
+        except Exception as _enrich_err:
+            logger.warning(
+                "Music enrichment timed out or failed for '%s': %s — inserting without artist info",
+                event_data.get("title", "")[:60],
+                _enrich_err,
+            )
+            music_info = None
+
+        if music_info and music_info.image_url and not event_data.get("image_url"):
             event_data["image_url"] = music_info.image_url
         # Use fetched genres if none provided
-        if music_info.genres and not genres:
+        if music_info and music_info.genres and not genres:
             genres = music_info.genres
 
     # Parse lineup from title for event_artists population (music, comedy, nightlife)
@@ -2623,6 +2732,13 @@ def insert_event(
     else:
         event_data.pop("field_provenance", None)
         event_data.pop("field_confidence", None)
+
+    # Compute data_quality score (0-100) before category rename, since weights use "category"
+    try:
+        from compute_data_quality import score_record, EVENT_WEIGHTS
+        event_data["data_quality"] = score_record(event_data, EVENT_WEIGHTS)
+    except Exception as e:
+        logger.debug("data_quality scoring failed for '%s': %s", event_data.get("title", "")[:50], e)
 
     # Unify category → category_id (single canonical column)
     if "category" in event_data and "category_id" not in event_data:
@@ -3567,6 +3683,18 @@ def smart_update_existing_event(existing: dict, incoming: dict) -> bool:
         # Even if no field updates, still check for missing artists below
         pass
 
+    # Recompute data_quality when fields change (merged view of existing + updates)
+    if updates:
+        try:
+            from compute_data_quality import score_record as _score_record, EVENT_WEIGHTS as _EW
+            merged = {**existing, **updates}
+            # score_record expects "category" but DB uses "category_id"
+            if "category_id" in merged and "category" not in merged:
+                merged["category"] = merged["category_id"]
+            updates["data_quality"] = _score_record(merged, _EW)
+        except Exception as e:
+            logger.debug("data_quality scoring failed for '%s': %s", existing.get("title", "")[:50], e)
+
     if updates:
         if not writes_enabled():
             _log_write_skip(f"update events id={event_id} (smart update)")
@@ -4026,6 +4154,28 @@ def find_event_by_hash(content_hash: str) -> Optional[dict]:
     if rows:
         return rows[0]
     return None
+
+
+def prefetch_hashes(source_id: int = None, venue_id: int = None) -> set[str]:
+    """Pre-fetch all content hashes for a source or venue in one query.
+
+    Returns a set of content_hash strings for fast local membership checks.
+    Callers can use `hash in prefetched` instead of querying per event.
+    """
+    try:
+        client = get_client()
+        query = client.table("events").select("content_hash")
+        if source_id:
+            query = query.eq("source_id", source_id)
+        if venue_id:
+            query = query.eq("venue_id", venue_id)
+        # Only active future events matter for dedup
+        query = query.eq("is_active", True)
+        result = query.execute()
+        return {row["content_hash"] for row in (result.data or []) if row.get("content_hash")}
+    except Exception as e:
+        logger.warning(f"Failed to prefetch hashes: {e}")
+        return set()
 
 
 def _normalize_title_for_natural_key(title: Optional[str]) -> str:

@@ -7,6 +7,7 @@ import { isValidUUID } from "@/lib/api-utils";
 import { EXPLORE_CATEGORIES } from "@/lib/explore-constants";
 import { applyPortalScopeToQuery } from "@/lib/portal-scope";
 import { suppressVenueImagesIfFlagged } from "@/lib/image-quality-suppression";
+import { applyFeedGate } from "@/lib/feed-gate";
 
 export const revalidate = 900; // 15 min
 
@@ -114,6 +115,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       .or("is_class.eq.false,is_class.is.null")
       .or("is_sensitive.eq.false,is_sensitive.is.null");
 
+    eventCountsQuery = applyFeedGate(eventCountsQuery);
     eventCountsQuery = applyPortalScopeToQuery(eventCountsQuery, {
       portalId: portal.id,
       portalExclusive: false,

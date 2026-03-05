@@ -15,7 +15,7 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
-from utils import extract_images_from_page
+from utils import enrich_event_record
 
 logger = logging.getLogger(__name__)
 
@@ -118,9 +118,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
             page.wait_for_timeout(3000)
 
-            # Extract images
-            image_map = extract_images_from_page(page)
-
             # Scroll to load all events
             for _ in range(3):
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
@@ -218,9 +215,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     location_elem = item.query_selector("[class*='eapp-events-calendar-location-component']")
                     location_detail = location_elem.inner_text().strip() if location_elem else None
 
-                    # Description: None — let enrichment or detail page provide it
-                    description = None
-
                     # Extract event URL
                     link_elem = item.query_selector("a")
                     event_url = link_elem.get_attribute("href") if link_elem else EVENTS_URL
@@ -231,8 +225,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
 
-                    # Determine category from title/description
-                    title_lower = (title + " " + (description or "")).lower()
+                    # Determine category from title
+                    title_lower = title.lower()
                     if any(w in title_lower for w in ["music", "live", "band", "dj", "concert", "performance"]):
                         category, subcategory = "music", "live"
                         tags = ["music", "live-music", "hotel", "rooftop"]
@@ -247,7 +241,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": description,
+                        "description": None,
                         "start_date": start_date,
                         "start_time": start_time,
                         "end_date": None,
@@ -262,13 +256,20 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "is_free": False,
                         "source_url": event_url,
                         "ticket_url": None,
-                        "image_url": image_map.get(title),
+                        "image_url": None,
                         "raw_text": None,
                         "extraction_confidence": 0.85,
                         "is_recurring": False,
                         "recurrence_rule": None,
                         "content_hash": content_hash,
                     }
+
+                    # Fetch description and image from the detail page.
+                    # Squarespace event pages reliably expose og:description and og:image,
+                    # so this is the correct fix rather than trying to match alt text on
+                    # the listing page (which has near-zero hit rate).
+                    if event_url and event_url != EVENTS_URL:
+                        enrich_event_record(event_record, source_name="Hotel Clermont")
 
                     existing = find_event_by_hash(content_hash)
                     if existing:

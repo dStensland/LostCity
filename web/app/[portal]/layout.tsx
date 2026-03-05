@@ -13,12 +13,13 @@ import { isPCMDemoPortal } from "@/lib/marketplace-art";
 
 import type { Metadata } from "next";
 
-// Hotel vertical fonts
+// Hotel vertical fonts — preload disabled so they only load for hotel portals
 const cormorantGaramond = Cormorant_Garamond({
   weight: ["400", "500", "600", "700"],
   variable: "--font-display",
   subsets: ["latin"],
   display: "swap",
+  preload: false,
 });
 
 const inter = Inter({
@@ -26,6 +27,7 @@ const inter = Inter({
   variable: "--font-body",
   subsets: ["latin"],
   display: "swap",
+  preload: false,
 });
 
 type Props = {

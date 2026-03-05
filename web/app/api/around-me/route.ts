@@ -8,6 +8,7 @@ import { resolvePortalQueryContext } from "@/lib/portal-query-context";
 import { applyFederatedPortalScopeToQuery, excludeSensitiveEvents, filterByPortalCity, isVenueCityInScope } from "@/lib/portal-scope";
 import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
 import { getPortalSourceAccess } from "@/lib/federation";
+import { applyFeedGate } from "@/lib/feed-gate";
 
 export const dynamic = "force-dynamic";
 
@@ -289,6 +290,7 @@ export async function GET(request: NextRequest) {
         sourceColumn: "source_id",
       });
       eventCountQuery = excludeSensitiveEvents(eventCountQuery);
+      eventCountQuery = applyFeedGate(eventCountQuery);
 
       // Spots count: still need to fetch hours to check isSpotOpen(), but select minimal columns
       let spotsCountQuery = supabase
@@ -469,6 +471,7 @@ export async function GET(request: NextRequest) {
       sourceColumn: "source_id",
     });
     eventsQuery = excludeSensitiveEvents(eventsQuery);
+    eventsQuery = applyFeedGate(eventsQuery);
 
     // Filter events by category if specified
     if (categoryFilter && categoryFilter.eventCategories.length > 0) {

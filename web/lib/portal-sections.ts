@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { applyFeedGate } from "@/lib/feed-gate";
 
 export type PortalSectionItem = {
   id: string;
@@ -82,19 +83,21 @@ export async function getPortalSections(portalId: string): Promise<PortalSection
 
       if (eventIds.length > 0) {
         // Fetch event data
-        const { data: events } = await supabase
-          .from("events")
-          .select(`
-            id,
-            title,
-            start_date,
-            start_time,
-            category_id,
-            is_free,
-            venue:venues(id, name, slug)
-          `)
-          .in("id", eventIds)
-          .or("is_sensitive.eq.false,is_sensitive.is.null");
+        const { data: events } = await applyFeedGate(
+          supabase
+            .from("events")
+            .select(`
+              id,
+              title,
+              start_date,
+              start_time,
+              category_id,
+              is_free,
+              venue:venues(id, name, slug)
+            `)
+            .in("id", eventIds)
+            .or("is_sensitive.eq.false,is_sensitive.is.null")
+        );
 
         type EventData = {
           id: number;

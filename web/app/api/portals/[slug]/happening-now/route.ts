@@ -16,6 +16,7 @@ import {
 } from "@/lib/portal-scope";
 import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
 import { getPortalSourceAccess } from "@/lib/federation";
+import { applyFeedGate } from "@/lib/feed-gate";
 
 type RouteContext = {
   params: Promise<{ slug: string }>;
@@ -56,7 +57,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
   const searchParams = request.nextUrl.searchParams;
 
   const countOnly = searchParams.get("countOnly") === "true";
-  const limit = parseInt(searchParams.get("limit") || "20");
+  const limit = Math.min(parseInt(searchParams.get("limit") || "20") || 20, 100);
   const now = new Date();
   const today = getLocalDateString(now);
   const currentHour = now.getHours();
@@ -123,6 +124,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
       .not("start_time", "is", null)
       .lte("start_time", currentTimeStr);
 
+    query = applyFeedGate(query);
+
     query = applyFederatedPortalScopeToQuery(query, {
       portalId: portal.id,
       portalExclusive: portal.portal_type === "business",
@@ -136,9 +139,12 @@ export async function GET(request: NextRequest, context: RouteContext) {
     // Apply portal category filters (include/exclude)
     query = applyPortalCategoryFilters(query, portalContentFilters);
 
-    // Order by start time
+    // Order by start time, then data_quality as tiebreaker
     if (!countOnly) {
-      query = query.order("start_time", { ascending: true }).limit(limit);
+      query = query
+        .order("start_time", { ascending: true })
+        .order("data_quality", { ascending: false, nullsFirst: false })
+        .limit(limit);
     }
 
     const { data, count, error } = await query;

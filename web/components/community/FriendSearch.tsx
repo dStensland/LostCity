@@ -5,15 +5,8 @@ import Link from "next/link";
 import UserAvatar from "@/components/UserAvatar";
 import { useDebounce } from "@/lib/hooks/useDebounce";
 import FriendButton from "@/components/FriendButton";
+import type { FriendProfile } from "@/lib/types/profile";
 // FollowButton removed — benched for curator feature
-
-export type Profile = {
-  id: string;
-  username: string;
-  display_name: string | null;
-  avatar_url: string | null;
-  bio: string | null;
-};
 
 interface FriendSearchProps {
   onResultsChange?: (count: number) => void;
@@ -21,7 +14,7 @@ interface FriendSearchProps {
 
 export function FriendSearch({ onResultsChange }: FriendSearchProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<Profile[]>([]);
+  const [searchResults, setSearchResults] = useState<FriendProfile[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const debouncedQuery = useDebounce(searchQuery, 300);
 
@@ -55,7 +48,7 @@ export function FriendSearch({ onResultsChange }: FriendSearchProps) {
   return (
     <section>
       {/* Glass search container with focus glow */}
-      <div className="glass rounded-xl p-1 group focus-within:shadow-lg transition-shadow duration-300">
+      <div className="relative glass rounded-xl p-1 group focus-within:shadow-lg transition-shadow duration-300">
         {/* Focus glow effect */}
         <div className="absolute inset-0 rounded-xl opacity-0 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none blur-xl friend-search-glow" />
 
@@ -100,7 +93,7 @@ export function FriendSearch({ onResultsChange }: FriendSearchProps) {
   );
 }
 
-function UserCard({ profile }: { profile: Profile }) {
+function UserCard({ profile }: { profile: FriendProfile }) {
   return (
     <div className="flex items-center gap-3 p-3 rounded-lg bg-[var(--dusk)] border border-[var(--twilight)] hover:border-[var(--coral)]/30 transition-all group">
       <Link href={`/profile/${profile.username}`} className="flex-shrink-0">

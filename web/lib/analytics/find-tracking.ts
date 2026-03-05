@@ -150,6 +150,113 @@ export function trackFindZeroResults({
   });
 }
 
+// ============================================
+// Search Analytics
+// ============================================
+
+const SEARCH_QUERY_SECTION_KEY = "search_query";
+const SEARCH_RESULT_CLICK_SECTION_KEY = "search_result_click";
+const SEARCH_ZERO_RESULTS_SECTION_KEY = "search_zero_results";
+
+type TrackSearchQueryArgs = {
+  portalSlug: string;
+  query: string;
+  resultCount: number;
+  isNLQuery?: boolean;
+  intentType?: string | null;
+  hasFilters?: boolean;
+  findType?: string | null;
+};
+
+export function trackSearchQuery({
+  portalSlug,
+  query,
+  resultCount,
+  isNLQuery,
+  intentType,
+  hasFilters,
+  findType,
+}: TrackSearchQueryArgs) {
+  if (!portalSlug || !query.trim()) return;
+
+  trackPortalAction(portalSlug, {
+    action_type: "resource_clicked",
+    page_type: "find",
+    section_key: SEARCH_QUERY_SECTION_KEY,
+    target_kind: "search_query",
+    target_label: query.trim().slice(0, 100),
+    metadata: {
+      result_count: resultCount,
+      is_nl_query: isNLQuery || false,
+      intent_type: intentType || null,
+      has_filters: hasFilters || false,
+      find_type: findType || null,
+    },
+  });
+}
+
+type TrackSearchResultClickArgs = {
+  portalSlug: string;
+  query: string;
+  resultType: string;
+  resultId: string;
+  resultPosition: number;
+};
+
+export function trackSearchResultClick({
+  portalSlug,
+  query,
+  resultType,
+  resultId,
+  resultPosition,
+}: TrackSearchResultClickArgs) {
+  if (!portalSlug || !resultId) return;
+
+  trackPortalAction(portalSlug, {
+    action_type: "resource_clicked",
+    page_type: "find",
+    section_key: SEARCH_RESULT_CLICK_SECTION_KEY,
+    target_kind: resultType,
+    target_id: resultId,
+    target_label: query.trim().slice(0, 100),
+    metadata: {
+      result_type: resultType,
+      result_position: resultPosition,
+    },
+  });
+}
+
+type TrackSearchZeroResultsArgs = {
+  portalSlug: string;
+  query: string;
+  isNLQuery?: boolean;
+  intentType?: string | null;
+  findType?: string | null;
+};
+
+export function trackSearchZeroResults({
+  portalSlug,
+  query,
+  isNLQuery,
+  intentType,
+  findType,
+}: TrackSearchZeroResultsArgs) {
+  if (!portalSlug || !query.trim()) return;
+
+  trackPortalAction(portalSlug, {
+    action_type: "resource_clicked",
+    page_type: "find",
+    section_key: SEARCH_ZERO_RESULTS_SECTION_KEY,
+    target_kind: "search_zero",
+    target_label: query.trim().slice(0, 100),
+    metadata: {
+      is_nl_query: isNLQuery || false,
+      intent_type: intentType || null,
+      find_type: findType || null,
+    },
+  });
+}
+
 export type FindDetailTarget = {
   targetKind: "find_event_detail" | "find_destination_detail" | "find_series_detail";
   targetId: string;

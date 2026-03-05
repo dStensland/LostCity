@@ -60,11 +60,15 @@ def normalize_venue_for_dedup(venue_name: str) -> str:
 
 
 def normalize_text(text: str) -> str:
-    """Normalize text for comparison."""
+    """Normalize text for comparison. Strips status suffixes (sold out, cancelled,
+    etc.) before normalization so titled events differing only by suffix are
+    treated as the same event."""
     if not text:
         return ""
     # Lowercase
     text = text.lower()
+    # Strip status suffixes before whitespace normalization
+    text = re.sub(r'\s*\((sold[\s-]?out|rescheduled|cancelled|postponed|waitlist)\)\s*$', '', text, flags=re.IGNORECASE)
     # Remove extra whitespace
     text = re.sub(r"\s+", " ", text).strip()
     # Remove common prefixes/suffixes

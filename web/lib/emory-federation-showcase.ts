@@ -10,6 +10,7 @@ import { resolveSupportSourcePolicy, SUPPORT_SOURCE_POLICY_ITEMS } from "@/lib/s
 import type { HospitalLocation } from "@/lib/hospitals";
 import { supabase } from "@/lib/supabase";
 import { createServiceClient } from "@/lib/supabase/service";
+import { applyFeedGate } from "@/lib/feed-gate";
 
 type SourceAccessType = "owner" | "global" | "subscription";
 
@@ -532,7 +533,7 @@ export async function getEmoryFederationShowcase(args: {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let eventsQuery = (client as any)
+  let eventsQuery = applyFeedGate((client as any)
     .from("events")
     .select(
       `
@@ -554,7 +555,7 @@ export async function getEmoryFederationShowcase(args: {
     .gte("start_date", today)
     .order("start_date", { ascending: true })
     .order("start_time", { ascending: true, nullsFirst: false })
-    .limit(380);
+    .limit(380));
 
   if (!includeSensitive) {
     eventsQuery = eventsQuery.or("is_sensitive.eq.false,is_sensitive.is.null");

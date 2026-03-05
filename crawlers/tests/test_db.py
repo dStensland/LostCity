@@ -10,7 +10,7 @@ from types import SimpleNamespace
 class TestGetOrCreateVenue:
     """Tests for get_or_create_venue function."""
 
-    @patch("db.get_client")
+    @patch("db.venues.get_client")
     def test_finds_existing_venue_by_slug(self, mock_get_client, sample_venue_data):
         """Should return existing venue ID when slug matches."""
         client = MagicMock()
@@ -30,7 +30,7 @@ class TestGetOrCreateVenue:
         assert venue_id == 42
         client.table.assert_called_with("venues")
 
-    @patch("db.get_client")
+    @patch("db.venues.get_client")
     def test_finds_existing_venue_by_name(self, mock_get_client, sample_venue_data):
         """Should return existing venue ID when name matches."""
         client = MagicMock()
@@ -53,7 +53,7 @@ class TestGetOrCreateVenue:
 
         assert venue_id == 99
 
-    @patch("db.get_client")
+    @patch("db.venues.get_client")
     def test_creates_new_venue(self, mock_get_client, sample_venue_data):
         """Should create new venue when no match found."""
         client = MagicMock()
@@ -79,7 +79,7 @@ class TestGetOrCreateVenue:
         assert venue_id == 123
         table.insert.assert_called_once_with(sample_venue_data)
 
-    @patch("db.get_client")
+    @patch("db.venues.get_client")
     def test_dry_run_skips_new_venue_insert(self, mock_get_client, sample_venue_data):
         """Should return a synthetic ID and skip insert in dry-run mode."""
         client = MagicMock()
@@ -111,15 +111,15 @@ class TestGetOrCreateVenue:
 class TestInsertEvent:
     """Tests for insert_event function."""
 
-    @patch("db.get_festival_source_hint", return_value=None)
-    @patch("db.events_support_field_metadata_columns", return_value=False)
-    @patch("db.events_support_content_kind_column", return_value=True)
-    @patch("db.events_support_is_active_column", return_value=True)
-    @patch("db.find_cross_source_canonical_for_insert", return_value=None)
-    @patch("db.find_existing_event_for_insert", return_value=None)
-    @patch("db.get_source_info")
-    @patch("db.get_venue_by_id_cached")
-    @patch("db.get_client")
+    @patch("db.events.get_festival_source_hint", return_value=None)
+    @patch("db.events.events_support_field_metadata_columns", return_value=False)
+    @patch("db.events.events_support_content_kind_column", return_value=True)
+    @patch("db.events.events_support_is_active_column", return_value=True)
+    @patch("db.events.find_cross_source_canonical_for_insert", return_value=None)
+    @patch("db.events.find_existing_event_for_insert", return_value=None)
+    @patch("db.events.get_source_info")
+    @patch("db.events.get_venue_by_id_cached")
+    @patch("db.events.get_client")
     def test_sets_event_row_active_true_when_column_supported(
         self,
         mock_get_client,
@@ -156,15 +156,15 @@ class TestInsertEvent:
         inserted_data = table.insert.call_args_list[0][0][0]
         assert inserted_data["is_active"] is True
 
-    @patch("db.get_festival_source_hint", return_value=None)
-    @patch("db.events_support_field_metadata_columns", return_value=False)
-    @patch("db.events_support_content_kind_column", return_value=True)
-    @patch("db.events_support_is_active_column", return_value=True)
-    @patch("db.find_cross_source_canonical_for_insert", return_value=None)
-    @patch("db.find_existing_event_for_insert", return_value=None)
-    @patch("db.get_source_info")
+    @patch("db.events.get_festival_source_hint", return_value=None)
+    @patch("db.events.events_support_field_metadata_columns", return_value=False)
+    @patch("db.events.events_support_content_kind_column", return_value=True)
+    @patch("db.events.events_support_is_active_column", return_value=True)
+    @patch("db.events.find_cross_source_canonical_for_insert", return_value=None)
+    @patch("db.events.find_existing_event_for_insert", return_value=None)
+    @patch("db.events.get_source_info")
     @patch(
-        "db.get_venue_by_id_cached",
+        "db.events.get_venue_by_id_cached",
         return_value={
             "id": 123,
             "name": "Churchill Grounds",
@@ -175,7 +175,7 @@ class TestInsertEvent:
             "state": "GA",
         },
     )
-    @patch("db.get_client")
+    @patch("db.events.get_client")
     def test_sets_event_row_inactive_when_venue_is_closed_or_inactive(
         self,
         mock_get_client,
@@ -211,15 +211,15 @@ class TestInsertEvent:
         inserted_data = table.insert.call_args_list[0][0][0]
         assert inserted_data["is_active"] is False
 
-    @patch("db.get_festival_source_hint", return_value=None)
-    @patch("db.events_support_field_metadata_columns", return_value=True)
-    @patch("db.events_support_content_kind_column", return_value=True)
-    @patch("db.events_support_is_active_column", return_value=True)
-    @patch("db.find_cross_source_canonical_for_insert", return_value=None)
-    @patch("db.find_existing_event_for_insert", return_value=None)
-    @patch("db.get_source_info")
-    @patch("db.get_venue_by_id_cached")
-    @patch("db.get_client")
+    @patch("db.events.get_festival_source_hint", return_value=None)
+    @patch("db.events.events_support_field_metadata_columns", return_value=True)
+    @patch("db.events.events_support_content_kind_column", return_value=True)
+    @patch("db.events.events_support_is_active_column", return_value=True)
+    @patch("db.events.find_cross_source_canonical_for_insert", return_value=None)
+    @patch("db.events.find_existing_event_for_insert", return_value=None)
+    @patch("db.events.get_source_info")
+    @patch("db.events.get_venue_by_id_cached")
+    @patch("db.events.get_client")
     def test_inserts_event_with_tags(
         self,
         mock_get_client,
@@ -263,12 +263,12 @@ class TestInsertEvent:
         assert "capabilities" in inserted_data["field_confidence"]
         assert inserted_data["field_confidence"]["capabilities"]["quality_score"] >= 0
 
-    @patch("db.get_festival_source_hint", return_value=None)
-    @patch("db.find_cross_source_canonical_for_insert", return_value=None)
-    @patch("db.find_existing_event_for_insert", return_value=None)
-    @patch("db.get_source_info")
-    @patch("db.get_venue_by_id_cached")
-    @patch("db.get_client")
+    @patch("db.events.get_festival_source_hint", return_value=None)
+    @patch("db.events.find_cross_source_canonical_for_insert", return_value=None)
+    @patch("db.events.find_existing_event_for_insert", return_value=None)
+    @patch("db.events.get_source_info")
+    @patch("db.events.get_venue_by_id_cached")
+    @patch("db.events.get_client")
     def test_inherits_venue_vibes(
         self, mock_get_client, mock_get_venue, mock_get_source_info,
         _mock_find_existing, _mock_find_cross_source, mock_festival_hint,
@@ -298,12 +298,12 @@ class TestInsertEvent:
         assert "intimate" in inserted_data["tags"]
         assert "all-ages" in inserted_data["tags"]
 
-    @patch("db.get_festival_source_hint", return_value=None)
-    @patch("db.find_cross_source_canonical_for_insert", return_value=None)
-    @patch("db.find_existing_event_for_insert", return_value=None)
-    @patch("db.get_source_info")
-    @patch("db.get_venue_by_id_cached")
-    @patch("db.get_client")
+    @patch("db.events.get_festival_source_hint", return_value=None)
+    @patch("db.events.find_cross_source_canonical_for_insert", return_value=None)
+    @patch("db.events.find_existing_event_for_insert", return_value=None)
+    @patch("db.events.get_source_info")
+    @patch("db.events.get_venue_by_id_cached")
+    @patch("db.events.get_client")
     def test_normalizes_activism_category_to_community_with_genre(
         self, mock_get_client, mock_get_venue, mock_get_source_info,
         _mock_find_existing, _mock_find_cross_source, mock_festival_hint,
@@ -333,12 +333,12 @@ class TestInsertEvent:
         assert inserted_data["category_id"] == "community"
         assert "activism" in (inserted_data.get("genres") or [])
 
-    @patch("db.get_festival_source_hint", return_value=None)
-    @patch("db.find_cross_source_canonical_for_insert", return_value=None)
-    @patch("db.find_existing_event_for_insert", return_value=None)
-    @patch("db.get_source_info")
-    @patch("db.get_venue_by_id_cached")
-    @patch("db.get_client")
+    @patch("db.events.get_festival_source_hint", return_value=None)
+    @patch("db.events.find_cross_source_canonical_for_insert", return_value=None)
+    @patch("db.events.find_existing_event_for_insert", return_value=None)
+    @patch("db.events.get_source_info")
+    @patch("db.events.get_venue_by_id_cached")
+    @patch("db.events.get_client")
     def test_defaults_invalid_category_to_other(
         self, mock_get_client, mock_get_venue, mock_get_source_info,
         _mock_find_existing, _mock_find_cross_source, mock_festival_hint,
@@ -370,14 +370,14 @@ class TestInsertEvent:
         inserted_data = table.insert.call_args_list[0][0][0]
         assert inserted_data["category_id"] == "other"
 
-    @patch("db.get_festival_source_hint", return_value=None)
-    @patch("db.find_cross_source_canonical_for_insert", return_value=None)
-    @patch("db.find_existing_event_for_insert", return_value=None)
-    @patch("db.get_source_info")
-    @patch("db.events_support_film_identity_columns", return_value=True)
-    @patch("db.get_metadata_for_film_event")
-    @patch("db.get_venue_by_id_cached")
-    @patch("db.get_client")
+    @patch("db.events.get_festival_source_hint", return_value=None)
+    @patch("db.events.find_cross_source_canonical_for_insert", return_value=None)
+    @patch("db.events.find_existing_event_for_insert", return_value=None)
+    @patch("db.events.get_source_info")
+    @patch("db.events.events_support_film_identity_columns", return_value=True)
+    @patch("db.events.get_metadata_for_film_event")
+    @patch("db.events.get_venue_by_id_cached")
+    @patch("db.events.get_client")
     def test_stores_film_identity_without_overwriting_event_title(
         self,
         mock_get_client,
@@ -433,14 +433,14 @@ class TestInsertEvent:
         assert inserted_data["film_identity_source"] == "omdb"
         assert inserted_data["film_external_genres"] == ["adventure", "family"]
 
-    @patch("db.get_festival_source_hint", return_value=None)
-    @patch("db.find_cross_source_canonical_for_insert", return_value=None)
-    @patch("db.find_existing_event_for_insert", return_value=None)
-    @patch("db.get_source_info")
-    @patch("db.events_support_film_identity_columns", return_value=True)
-    @patch("db.get_metadata_for_film_event")
-    @patch("db.get_venue_by_id_cached")
-    @patch("db.get_client")
+    @patch("db.events.get_festival_source_hint", return_value=None)
+    @patch("db.events.find_cross_source_canonical_for_insert", return_value=None)
+    @patch("db.events.find_existing_event_for_insert", return_value=None)
+    @patch("db.events.get_source_info")
+    @patch("db.events.events_support_film_identity_columns", return_value=True)
+    @patch("db.events.get_metadata_for_film_event")
+    @patch("db.events.get_venue_by_id_cached")
+    @patch("db.events.get_client")
     def test_uses_wikidata_source_for_film_identity_when_omdb_misses(
         self,
         mock_get_client,
@@ -490,12 +490,12 @@ class TestInsertEvent:
         assert inserted_data["film_title"] == "Fight Club"
         assert inserted_data["film_identity_source"] == "wikidata"
 
-    @patch("db.get_festival_source_hint", return_value=None)
-    @patch("db.find_cross_source_canonical_for_insert", return_value=None)
-    @patch("db.find_existing_event_for_insert", return_value=None)
-    @patch("db.get_source_info")
-    @patch("db.get_venue_by_id_cached")
-    @patch("db.get_client")
+    @patch("db.events.get_festival_source_hint", return_value=None)
+    @patch("db.events.find_cross_source_canonical_for_insert", return_value=None)
+    @patch("db.events.find_existing_event_for_insert", return_value=None)
+    @patch("db.events.get_source_info")
+    @patch("db.events.get_venue_by_id_cached")
+    @patch("db.events.get_client")
     def test_uses_source_url_as_ticket_url_for_film_showtimes(
         self, mock_get_client, mock_get_venue, mock_get_source_info,
         _mock_find_existing, _mock_find_cross_source, mock_festival_hint,
@@ -526,12 +526,12 @@ class TestInsertEvent:
         inserted_data = table.insert.call_args_list[0][0][0]
         assert inserted_data["ticket_url"] == event_data["source_url"]
 
-    @patch("db.get_festival_source_hint", return_value=None)
-    @patch("db.find_cross_source_canonical_for_insert", return_value=None)
-    @patch("db.find_existing_event_for_insert", return_value=None)
-    @patch("db.get_source_info")
-    @patch("db.get_venue_by_id_cached")
-    @patch("db.get_client")
+    @patch("db.events.get_festival_source_hint", return_value=None)
+    @patch("db.events.find_cross_source_canonical_for_insert", return_value=None)
+    @patch("db.events.find_existing_event_for_insert", return_value=None)
+    @patch("db.events.get_source_info")
+    @patch("db.events.get_venue_by_id_cached")
+    @patch("db.events.get_client")
     def test_strips_deprecated_subcategory_fields_before_insert(
         self, mock_get_client, mock_get_venue, mock_get_source_info,
         _mock_find_existing, _mock_find_cross_source, mock_festival_hint,
@@ -565,8 +565,8 @@ class TestInsertEvent:
 class TestFindEventByHash:
     """Tests for find_event_by_hash function."""
 
-    @patch("db.events_support_is_active_column", return_value=True)
-    @patch("db.get_client")
+    @patch("db.events.events_support_is_active_column", return_value=True)
+    @patch("db.events.get_client")
     def test_prefers_active_row_when_hash_has_multiple_matches(
         self, mock_get_client, _mock_events_active
     ):
@@ -592,7 +592,7 @@ class TestFindEventByHash:
         assert result is not None
         assert result["id"] == 11
 
-    @patch("db.get_client")
+    @patch("db.events.get_client")
     def test_finds_existing_event(self, mock_get_client):
         """Should return event when hash matches."""
         client = MagicMock()
@@ -614,7 +614,7 @@ class TestFindEventByHash:
         assert result["id"] == 1
         assert result["title"] == "Test Event"
 
-    @patch("db.get_client")
+    @patch("db.events.get_client")
     def test_returns_none_when_not_found(self, mock_get_client):
         """Should return None when no match found."""
         client = MagicMock()
@@ -636,7 +636,7 @@ class TestFindEventByHash:
 class TestFindEventsByDateAndVenue:
     """Tests for find_events_by_date_and_venue function."""
 
-    @patch("db.get_client")
+    @patch("db.events.get_client")
     def test_finds_events(self, mock_get_client):
         """Should return events matching date and venue."""
         client = MagicMock()
@@ -660,7 +660,7 @@ class TestFindEventsByDateAndVenue:
         assert len(results) == 2
         assert results[0]["title"] == "Event 1"
 
-    @patch("db.get_client")
+    @patch("db.events.get_client")
     def test_returns_empty_list(self, mock_get_client):
         """Should return empty list when no events found."""
         client = MagicMock()
@@ -682,8 +682,8 @@ class TestFindEventsByDateAndVenue:
 class TestSmartUpdateExistingEvent:
     """Tests for smart_update_existing_event function."""
 
-    @patch("db.get_source_info")
-    @patch("db.get_client")
+    @patch("db.events.get_source_info")
+    @patch("db.events.get_client")
     def test_backfills_portal_from_source_owner(
         self, mock_get_client, mock_get_source_info
     ):
@@ -717,8 +717,8 @@ class TestSmartUpdateExistingEvent:
         updates = table.update.call_args[0][0]
         assert updates["portal_id"] == "portal-123"
 
-    @patch("db.get_source_info", return_value=None)
-    @patch("db.get_client")
+    @patch("db.events.get_source_info", return_value=None)
+    @patch("db.events.get_client")
     def test_keeps_existing_portal_unchanged(
         self, mock_get_client, _mock_get_source_info
     ):
@@ -746,7 +746,7 @@ class TestSmartUpdateExistingEvent:
         assert updated is False
         table.update.assert_not_called()
 
-    @patch("db.get_client")
+    @patch("db.events.get_client")
     def test_replaces_bad_existing_image_when_incoming_is_better(self, mock_get_client):
         """Should upgrade logo/placeholder images when a better event image arrives."""
         client = MagicMock()
@@ -776,7 +776,7 @@ class TestSmartUpdateExistingEvent:
         updates = table.update.call_args[0][0]
         assert updates["image_url"] == incoming["image_url"]
 
-    @patch("db.get_client")
+    @patch("db.events.get_client")
     def test_does_not_accept_bad_incoming_image_when_missing(self, mock_get_client):
         """Should ignore incoming logo/placeholder URLs even if event image is missing."""
         client = MagicMock()
@@ -805,7 +805,7 @@ class TestSmartUpdateExistingEvent:
         assert updated is False
         table.update.assert_not_called()
 
-    @patch("db.get_client")
+    @patch("db.events.get_client")
     def test_promotes_listing_urls_to_specific_event_urls(self, mock_get_client):
         """Should replace generic listing URLs with event-specific links on smart update."""
         client = MagicMock()
@@ -843,7 +843,7 @@ class TestSmartUpdateExistingEvent:
             == "https://www.masqueradeatlanta.com/events/goldie-boutilier/"
         )
 
-    @patch("db.get_client")
+    @patch("db.events.get_client")
     def test_does_not_downgrade_specific_urls_to_listing(self, mock_get_client):
         """Should not overwrite specific URLs when incoming data regresses to listing pages."""
         client = MagicMock()
@@ -870,13 +870,13 @@ class TestSmartUpdateExistingEvent:
         assert updated is False
         table.update.assert_not_called()
 
-    @patch("db.get_source_info", return_value=None)
+    @patch("db.events.get_source_info", return_value=None)
     @patch(
-        "db.get_venue_by_id_cached", return_value={"active": True, "slug": "open-venue"}
+        "db.events.get_venue_by_id_cached", return_value={"active": True, "slug": "open-venue"}
     )
-    @patch("db.events_support_content_kind_column", return_value=False)
-    @patch("db.events_support_is_active_column", return_value=True)
-    @patch("db.get_client")
+    @patch("db.events.events_support_content_kind_column", return_value=False)
+    @patch("db.events.events_support_is_active_column", return_value=True)
+    @patch("db.events.get_client")
     def test_reactivates_inactive_event_when_seen_again(
         self,
         mock_get_client,
@@ -912,14 +912,14 @@ class TestSmartUpdateExistingEvent:
         updates = table.update.call_args[0][0]
         assert updates["is_active"] is True
 
-    @patch("db.get_source_info", return_value=None)
+    @patch("db.events.get_source_info", return_value=None)
     @patch(
-        "db.get_venue_by_id_cached",
+        "db.events.get_venue_by_id_cached",
         return_value={"active": False, "slug": "churchill-grounds"},
     )
-    @patch("db.events_support_content_kind_column", return_value=False)
-    @patch("db.events_support_is_active_column", return_value=True)
-    @patch("db.get_client")
+    @patch("db.events.events_support_content_kind_column", return_value=False)
+    @patch("db.events.events_support_is_active_column", return_value=True)
+    @patch("db.events.get_client")
     @patch("genre_normalize.normalize_genres", return_value=[])
     @patch("tag_inference.infer_genres", return_value=[])
     def test_does_not_reactivate_event_on_inactive_or_closed_venue(
@@ -959,12 +959,12 @@ class TestSmartUpdateExistingEvent:
         assert updated is False
         table.update.assert_not_called()
 
-    @patch("db.upsert_event_artists")
-    @patch("db.parse_lineup_from_title")
-    @patch("db.get_source_info", return_value=None)
-    @patch("db.events_support_content_kind_column", return_value=False)
-    @patch("db.events_support_is_active_column", return_value=False)
-    @patch("db.get_client")
+    @patch("db.events.upsert_event_artists")
+    @patch("db.events.parse_lineup_from_title")
+    @patch("db.events.get_source_info", return_value=None)
+    @patch("db.events.events_support_content_kind_column", return_value=False)
+    @patch("db.events.events_support_is_active_column", return_value=False)
+    @patch("db.events.get_client")
     def test_backfills_artists_when_incoming_uses_category_id(
         self,
         mock_get_client,
@@ -1014,12 +1014,12 @@ class TestSmartUpdateExistingEvent:
         mock_parse_lineup.assert_called_once_with("Mumford & Sons")
         mock_upsert_artists.assert_called_once()
 
-    @patch("db.upsert_event_artists")
-    @patch("db.parse_lineup_from_title")
-    @patch("db.get_source_info", return_value=None)
-    @patch("db.events_support_content_kind_column", return_value=False)
-    @patch("db.events_support_is_active_column", return_value=False)
-    @patch("db.get_client")
+    @patch("db.events.upsert_event_artists")
+    @patch("db.events.parse_lineup_from_title")
+    @patch("db.events.get_source_info", return_value=None)
+    @patch("db.events.events_support_content_kind_column", return_value=False)
+    @patch("db.events.events_support_is_active_column", return_value=False)
+    @patch("db.events.get_client")
     def test_prefers_incoming_parsed_artists_for_backfill(
         self,
         mock_get_client,
@@ -1068,12 +1068,12 @@ class TestSmartUpdateExistingEvent:
         mock_parse_lineup.assert_not_called()
         mock_upsert_artists.assert_called_once_with(123, incoming_artists)
 
-    @patch("db.upsert_event_artists")
-    @patch("db.parse_lineup_from_title")
-    @patch("db.get_source_info", return_value=None)
-    @patch("db.events_support_content_kind_column", return_value=False)
-    @patch("db.events_support_is_active_column", return_value=False)
-    @patch("db.get_client")
+    @patch("db.events.upsert_event_artists")
+    @patch("db.events.parse_lineup_from_title")
+    @patch("db.events.get_source_info", return_value=None)
+    @patch("db.events.events_support_content_kind_column", return_value=False)
+    @patch("db.events.events_support_is_active_column", return_value=False)
+    @patch("db.events.get_client")
     def test_replaces_placeholder_artist_with_incoming_parsed_artist(
         self,
         mock_get_client,
@@ -1127,7 +1127,7 @@ class TestSmartUpdateExistingEvent:
 class TestCrawlLog:
     """Tests for crawl log functions."""
 
-    @patch("db.get_client")
+    @patch("db.sources.get_client")
     def test_create_crawl_log(self, mock_get_client):
         """Should create a crawl log entry."""
         client = MagicMock()
@@ -1151,7 +1151,7 @@ class TestCrawlLog:
         assert insert_data["status"] == "running"
         assert "started_at" in insert_data
 
-    @patch("db.get_client")
+    @patch("db.sources.get_client")
     def test_create_crawl_log_dry_run_skips_insert(self, mock_get_client):
         """Should return synthetic ID and avoid DB writes in dry-run mode."""
         from db import create_crawl_log, configure_write_mode
@@ -1165,7 +1165,7 @@ class TestCrawlLog:
         assert log_id < 0
         mock_get_client.assert_not_called()
 
-    @patch("db.get_client")
+    @patch("db.sources.get_client")
     def test_update_crawl_log(self, mock_get_client):
         """Should update crawl log with results."""
         client = MagicMock()
@@ -1197,7 +1197,7 @@ class TestCrawlLog:
         assert update_data["events_updated"] == 3
         assert "completed_at" in update_data
 
-    @patch("db.get_client")
+    @patch("db.sources.get_client")
     def test_update_crawl_log_with_error(self, mock_get_client):
         """Should include error message when provided."""
         client = MagicMock()
@@ -1232,8 +1232,8 @@ class TestCrossSourceCanonicalSelection:
 
         assert active < inactive
 
-    @patch("db.get_source_info")
-    @patch("db.get_client")
+    @patch("db.events.get_source_info")
+    @patch("db.events.get_client")
     def test_prefers_active_source_for_cross_source_canonical(
         self, mock_get_client, mock_get_source_info
     ):

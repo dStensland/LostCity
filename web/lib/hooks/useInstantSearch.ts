@@ -8,6 +8,10 @@ import {
   clearRecentSearches,
 } from "@/lib/searchHistory";
 import {
+  trackSearchQuery,
+  trackSearchZeroResults,
+} from "@/lib/analytics/find-tracking";
+import {
   type QuickAction,
   rankResults,
   detectQuickActions,
@@ -220,6 +224,7 @@ export function useInstantSearch({
 
   // Refs
   const fetchIdRef = useRef(0);
+  const analyticsTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   // Build ranking context
   const rankingContext = useMemo<RankingContext>(() => ({
@@ -303,6 +308,34 @@ export function useInstantSearch({
       clearTimeout(timer);
     };
   }, [query, portalSlug, rankingContext, enabled, debounceMs, findType, portalId, viewMode]);
+
+  // Search analytics — fires 500ms after results settle (not per-keystroke)
+  useEffect(() => {
+    if (!enabled || query.length < 2 || isLoading) return;
+
+    clearTimeout(analyticsTimerRef.current);
+    analyticsTimerRef.current = setTimeout(() => {
+      const totalCount = suggestions.length;
+      if (totalCount === 0) {
+        trackSearchZeroResults({
+          portalSlug,
+          query,
+          intentType: intentType || undefined,
+          findType: findType || undefined,
+        });
+      } else {
+        trackSearchQuery({
+          portalSlug,
+          query,
+          resultCount: totalCount,
+          intentType: intentType || undefined,
+          findType: findType || undefined,
+        });
+      }
+    }, 500);
+
+    return () => clearTimeout(analyticsTimerRef.current);
+  }, [query, suggestions.length, isLoading, enabled, portalSlug, intentType, findType]);
 
   // Derived booleans
   const showRecent = query.length < 2 && recentSearches.length > 0;

@@ -67,7 +67,7 @@ export default function BrowseSection({ section, portalSlug }: Props) {
       <FeedSectionHeader
         title={section.title || "Browse"}
         priority="secondary"
-        accentColor="var(--coral)"
+        accentColor="var(--neon-cyan)"
         icon={<Compass weight="duotone" className="w-5 h-5" />}
       />
 

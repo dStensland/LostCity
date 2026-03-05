@@ -37,6 +37,9 @@ VENUE_DATA = {
     "website": BASE_URL,
 }
 
+# Lines containing the venue address should not be treated as event titles
+_VENUE_ADDRESS_FRAGMENTS = ["100 ivan allen", "ivan allen jr blvd"]
+
 
 def parse_time(time_text: str) -> Optional[str]:
     """Parse time from '7:00 PM' format."""
@@ -129,6 +132,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             if not title and len(check_line) > 5:
                                 if not re.match(r"\d{1,2}[:/]", check_line):
                                     if not re.match(r"(free|tickets|register|\$|more info)", check_line.lower()):
+                                        # Reject lines containing the venue's own address
+                                        if any(frag in check_line.lower() for frag in _VENUE_ADDRESS_FRAGMENTS):
+                                            continue
                                         title = check_line
                                         break
 

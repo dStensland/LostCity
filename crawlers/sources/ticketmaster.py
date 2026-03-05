@@ -72,6 +72,36 @@ def _clean_text(value: Optional[str]) -> str:
     return " ".join(str(value).split()).strip()
 
 
+def _normalize_tm_title(title: str) -> str:
+    """Normalize Ticketmaster title for dedup.
+
+    Strips ticket-tier suffixes like '(2)', '(Section 100)', '(Floor)',
+    '(GA)' etc. and collapses repeated whitespace.  Case normalization
+    happens downstream in generate_content_hash via normalize_text(), but
+    we also title-case here so the stored title is readable.
+
+    Examples:
+        "Lady Gaga (2)"           -> "Lady Gaga"
+        "LADY GAGA"               -> "LADY GAGA"  (case kept for display)
+        "Beyoncé (Section 100)"   -> "Beyoncé"
+        "Hozier (Floor)"          -> "Hozier"
+        "SZA (GA)"                -> "SZA"
+        "Bad Bunny (VIP)"         -> "Bad Bunny"
+    """
+    if not title:
+        return title
+    # Strip bare numeric suffixes: " (2)", " (10)", etc.
+    title = re.sub(r'\s*\(\d+\)\s*$', '', title)
+    # Strip named ticket-tier / section suffixes (case-insensitive).
+    title = re.sub(
+        r'\s*\((?:Section|Floor|GA|VIP|Pit|Lawn|Balcony|Club|Loge|Suite|General\s*Admission)\s*\d*\)\s*$',
+        '',
+        title,
+        flags=re.IGNORECASE,
+    )
+    return title.strip()
+
+
 _ATTRACTION_REJECT_TERMS = {
     "parking",
     "vip package",
@@ -272,8 +302,9 @@ def fetch_events(page: int = 0, size: int = 200) -> dict:
 def parse_event(event_data: dict) -> Optional[dict]:
     """Parse a single event from Ticketmaster API response."""
     try:
-        # Basic info
-        title = event_data.get("name", "").strip()
+        # Basic info — normalize before any further use so the cleaned title
+        # flows into both the stored record and the content hash.
+        title = _normalize_tm_title(event_data.get("name", "").strip())
         if not title:
             return None
         if _should_skip_event_title(title):
@@ -467,6 +498,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 parsed = parse_event(event_data)
                 if not parsed:
+                    continue
+
+                # Skip events with no usable link — they can't be actioned by a user.
+                if not parsed.get("source_url") and not parsed.get("ticket_url"):
+                    logger.debug("Skipping event with no URL: %s", parsed.get("title", ""))
                     continue
 
                 events_found += 1

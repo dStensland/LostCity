@@ -12,7 +12,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_venue, insert_event, find_event_by_hash
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, extract_event_links, find_event_url, enrich_event_record
 
@@ -28,8 +28,12 @@ VENUE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30324",
+    "lat": 33.8035,
+    "lng": -84.3740,
     "venue_type": "music_venue",
+    "spot_type": "music_venue",
     "website": BASE_URL,
+    "vibes": ["live-music", "multiple-stages", "midtown", "bar", "indie", "local-bands"],
 }
 
 

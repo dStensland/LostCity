@@ -9,6 +9,7 @@ import {
   parsePortalContentFilters,
   applyPortalCategoryFilters,
 } from "@/lib/portal-scope";
+import { applyFeedGate } from "@/lib/feed-gate";
 import { getPortalSourceAccess } from "@/lib/federation";
 
 /**
@@ -83,6 +84,7 @@ export async function GET(request: NextRequest) {
       .not("category_id", "is", null)
       .or("is_sensitive.eq.false,is_sensitive.is.null");
 
+    activityQuery = applyFeedGate(activityQuery);
     activityQuery = applyFederatedPortalScopeToQuery(activityQuery, {
       portalId: portalContext.portalId,
       portalExclusive,

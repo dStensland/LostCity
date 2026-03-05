@@ -7,6 +7,7 @@ import { getLocalDateString } from "@/lib/formats";
 import { getProximityTier, getProximityLabel, getWalkingMinutes, haversineDistanceKm, type ProximityTier } from "@/lib/geo";
 import { logger } from "@/lib/logger";
 import { applyFederatedPortalScopeToQuery } from "@/lib/portal-scope";
+import { applyFeedGate } from "@/lib/feed-gate";
 import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
 
 export const dynamic = "force-dynamic";
@@ -417,6 +418,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       sourceIds: hasSubscribedSources ? federationAccess.sourceIds : [],
       publicOnlyWhenNoPortal: true,
     });
+    eventsQuery = applyFeedGate(eventsQuery);
 
     const eventsLimit = Math.min(900, Math.max(300, venueIds.length * 2));
     const { data: eventsData } = await eventsQuery

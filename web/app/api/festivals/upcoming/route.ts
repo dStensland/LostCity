@@ -4,6 +4,7 @@ import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-lim
 import { apiResponse, escapeSQLPattern } from "@/lib/api-utils";
 import { startOfDay, addDays, isSaturday, isSunday, nextSaturday, nextSunday, format } from "date-fns";
 import { getPortalSourceAccess } from "@/lib/federation";
+import { applyFeedGate } from "@/lib/feed-gate";
 
 function getDateRange(filter: string): { start: string; end: string } | null {
   const now = new Date();
@@ -168,6 +169,7 @@ export async function GET(request: Request) {
       if (allowedSourceIds && allowedSourceIds.length > 0) {
         tentpoleQuery = tentpoleQuery.in("source_id", allowedSourceIds);
       }
+      tentpoleQuery = applyFeedGate(tentpoleQuery);
 
       const { data: tentpoleData, error: tentpoleError } = await tentpoleQuery;
       if (tentpoleError) {

@@ -27,6 +27,7 @@ import {
   dedupeEventsById,
   filterOutInactiveVenueEvents,
 } from "@/lib/event-feed-health";
+import { applyVenueGate } from "@/lib/feed-gate";
 
 const CACHE_NAMESPACE = "api:regulars";
 const CACHE_TTL_MS = 3 * 60 * 1000; // 3 min
@@ -110,6 +111,8 @@ export async function GET(request: NextRequest) {
     .or("is_sensitive.eq.false,is_sensitive.is.null")
     .not("category_id", "in", "(film,theater,community,wellness,family,learning)")
     .not("tags", "cs", '{"class"}'); // Exclude class-tagged events (paint-and-sip, workshops)
+
+  query = applyVenueGate(query);
 
   // Apply portal scope (federation, city filter)
   if (sourceAccess) {

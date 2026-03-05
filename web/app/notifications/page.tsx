@@ -9,28 +9,7 @@ import FriendRequestCard from "@/components/FriendRequestCard";
 import { useAuth } from "@/lib/auth-context";
 import { formatDistanceToNow } from "date-fns";
 import PageFooter from "@/components/PageFooter";
-
-type FriendRequest = {
-  id: string;
-  inviter_id: string;
-  invitee_id: string;
-  status: "pending" | "accepted" | "declined";
-  created_at: string;
-  inviter?: {
-    id: string;
-    username: string;
-    display_name: string | null;
-    avatar_url: string | null;
-    bio: string | null;
-  } | null;
-  invitee?: {
-    id: string;
-    username: string;
-    display_name: string | null;
-    avatar_url: string | null;
-    bio: string | null;
-  } | null;
-};
+import type { FriendRequest } from "@/lib/types/profile";
 
 type NotificationType =
   | "new_follower"

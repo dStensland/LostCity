@@ -4,9 +4,21 @@ import { useCallback, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useInstantSearch } from "@/lib/hooks/useInstantSearch";
 import { buildSearchResultHref } from "@/lib/search-navigation";
+import { trackSearchResultClick } from "@/lib/analytics/find-tracking";
+import { addRecentSearch } from "@/lib/searchHistory";
 import { SuggestionGroup, QuickActionsList } from "@/components/search";
 import type { SearchResult } from "@/lib/unified-search";
 import type { QuickAction } from "@/lib/search-ranking";
+
+const TRENDING_SEARCHES = ["Live Music", "Comedy", "Free", "Rooftop", "Late Night"];
+
+const CATEGORY_CHIPS = [
+  { value: "music", label: "Music" },
+  { value: "comedy", label: "Comedy" },
+  { value: "food_drink", label: "Food & Drink" },
+  { value: "art", label: "Arts" },
+  { value: "nightlife", label: "Nightlife" },
+] as const;
 
 interface FindSearchInputProps {
   portalSlug: string;
@@ -26,6 +38,7 @@ export default function FindSearchInput({
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const urlSyncRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const skipUrlSyncRef = useRef(false);
   const pathname = `/${portalSlug}`;
 
   const search = useInstantSearch({
@@ -50,6 +63,10 @@ export default function FindSearchInput({
   // Debounced sync of query → URL
   useEffect(() => {
     clearTimeout(urlSyncRef.current);
+    if (skipUrlSyncRef.current) {
+      skipUrlSyncRef.current = false;
+      return;
+    }
     urlSyncRef.current = setTimeout(() => {
       const params = new URLSearchParams(searchParams?.toString() || "");
       const trimmed = search.query.trim();
@@ -69,7 +86,15 @@ export default function FindSearchInput({
   // Handle suggestion selection → navigate to detail
   const handleSelectSuggestion = useCallback(
     (result: SearchResult) => {
+      trackSearchResultClick({
+        portalSlug,
+        query: search.query,
+        resultType: result.type,
+        resultId: String(result.id),
+        resultPosition: search.selectedIndex,
+      });
       search.selectSuggestion(result);
+      skipUrlSyncRef.current = true;
       search.setQuery("");
       const url = buildSearchResultHref(result, { portalSlug });
       router.push(url, { scroll: false });
@@ -82,6 +107,7 @@ export default function FindSearchInput({
   const handleSelectQuickAction = useCallback(
     (action: QuickAction) => {
       search.selectQuickAction(action);
+      skipUrlSyncRef.current = true;
       search.setQuery("");
       router.push(action.url, { scroll: false });
       inputRef.current?.blur();
@@ -122,7 +148,31 @@ export default function FindSearchInput({
     [search, handleSelectSuggestion, handleSelectQuickAction, handleSelectRecent]
   );
 
+  // Handle trending search click
+  const handleTrendingSearch = useCallback(
+    (term: string) => {
+      search.setQuery(term);
+      addRecentSearch(term);
+    },
+    [search]
+  );
+
+  // Handle category chip click — apply as filter param
+  const handleCategoryChip = useCallback(
+    (category: string) => {
+      search.setShowDropdown(false);
+      const params = new URLSearchParams(searchParams?.toString() || "");
+      params.set("categories", category);
+      params.delete("search");
+      params.delete("page");
+      router.push(`${pathname}?${params.toString()}`, { scroll: false });
+    },
+    [router, search, searchParams, pathname]
+  );
+
   const isSearching = search.query.trim() !== urlSearch || search.isLoading;
+  const showPreSearch = search.showDropdown && search.query.length < 2;
+  const showDropdown = search.shouldShowDropdown || showPreSearch;
 
   // Track currentIndex for grouped display
   let currentIndex = 0;
@@ -178,7 +228,7 @@ export default function FindSearchInput({
       )}
 
       {/* Suggestions dropdown */}
-      {search.shouldShowDropdown && (
+      {showDropdown && (
         <div
           id={suggestionsId}
           role="listbox"
@@ -238,6 +288,48 @@ export default function FindSearchInput({
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Trending + category chips — shown in pre-search state */}
+          {showPreSearch && (
+            <div className="p-2">
+              <div className="flex items-center gap-2 px-2 pb-2">
+                <svg className="h-3 w-3 text-[var(--coral)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>
+                <p className="text-xs text-[var(--muted)] font-mono uppercase tracking-wider">Trending</p>
+              </div>
+              <div className="flex flex-wrap gap-1.5 px-2">
+                {TRENDING_SEARCHES.map((term) => (
+                  <button
+                    key={term}
+                    onMouseDown={() => handleTrendingSearch(term)}
+                    className="px-3 py-1.5 rounded-full bg-[var(--twilight)]/70 text-[var(--soft)] hover:text-[var(--cream)] hover:bg-[var(--twilight)] transition-colors text-xs font-mono"
+                  >
+                    {term}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-3 px-2">
+                <div className="flex items-center gap-2 pb-2">
+                  <svg className="h-3 w-3 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                  </svg>
+                  <p className="text-xs text-[var(--muted)] font-mono uppercase tracking-wider">Browse</p>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {CATEGORY_CHIPS.map((cat) => (
+                    <button
+                      key={cat.value}
+                      onMouseDown={() => handleCategoryChip(cat.value)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[var(--twilight)]/60 bg-white/5 text-[var(--soft)] hover:text-[var(--cream)] hover:bg-[var(--twilight)]/50 transition-colors text-xs font-mono"
+                    >
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
 

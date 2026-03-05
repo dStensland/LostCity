@@ -5,6 +5,7 @@ import { errorResponse } from "@/lib/api-utils";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
 import { applyPortalScopeToQuery, filterByPortalCity } from "@/lib/portal-scope";
+import { applyVenueGate } from "@/lib/feed-gate";
 
 export const dynamic = "force-dynamic";
 
@@ -64,6 +65,8 @@ export async function GET(request: NextRequest, { params }: Props) {
     portalExclusive,
     publicOnlyWhenNoPortal: true,
   });
+
+  query = applyVenueGate(query);
 
   const { data: events, error } = await query;
 

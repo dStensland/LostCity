@@ -169,19 +169,15 @@ export default function EventQuickActions({ event, isLive, className = "", extra
           />
         )}
 
+        {/* Extra actions (e.g. Plan Night neon pill) */}
+        {extraActions}
+
         {/* Mobile secondary actions */}
         <div className="flex sm:hidden items-center gap-1">
           <InviteToEventButton eventId={event.id} eventTitle={event.title} variant="icon" />
           <ShareEventButton eventId={event.id} eventTitle={event.title} variant="icon" />
         </div>
       </div>
-
-      {/* Extra actions (e.g. Make a Night of It) */}
-      {extraActions && (
-        <div className="px-3 pb-3 flex items-center">
-          {extraActions}
-        </div>
-      )}
     </div>
   );
 }

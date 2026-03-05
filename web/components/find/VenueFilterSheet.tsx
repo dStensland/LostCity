@@ -430,7 +430,7 @@ export const VenueFilterSheet = memo(function VenueFilterSheet({
                 <button
                   onClick={() => handleNeighborhoodSelect("all")}
                   aria-pressed={isAllAreas}
-                  className={`min-h-[44px] px-4 py-2.5 rounded-lg font-mono text-sm font-medium transition-all ${
+                  className={`min-h-[44px] px-4 py-2.5 rounded-full font-mono text-sm font-medium transition-all ${
                     isAllAreas
                       ? "bg-[var(--coral)] text-[var(--void)]"
                       : "bg-[var(--twilight)] text-[var(--cream)] hover:bg-[var(--dusk)]"
@@ -445,7 +445,7 @@ export const VenueFilterSheet = memo(function VenueFilterSheet({
                       key={s.key}
                       onClick={() => handleNeighborhoodSelect(s.key)}
                       aria-pressed={isShortcutActive}
-                      className={`min-h-[44px] px-4 py-2.5 rounded-lg font-mono text-sm font-medium transition-all ${
+                      className={`min-h-[44px] px-4 py-2.5 rounded-full font-mono text-sm font-medium transition-all ${
                         isShortcutActive
                           ? "bg-[var(--coral)] text-[var(--void)]"
                           : "bg-[var(--twilight)] text-[var(--cream)] hover:bg-[var(--dusk)]"
@@ -463,7 +463,7 @@ export const VenueFilterSheet = memo(function VenueFilterSheet({
                       key={hood}
                       onClick={() => handleNeighborhoodSelect(hood)}
                       aria-pressed={isActive}
-                      className={`min-h-[44px] px-4 py-2.5 rounded-lg font-mono text-sm font-medium transition-all ${
+                      className={`min-h-[44px] px-4 py-2.5 rounded-full font-mono text-sm font-medium transition-all ${
                         isActive
                           ? "bg-[var(--coral)] text-[var(--void)]"
                           : "bg-[var(--twilight)] text-[var(--cream)] hover:bg-[var(--dusk)]"
@@ -480,7 +480,7 @@ export const VenueFilterSheet = memo(function VenueFilterSheet({
                       triggerHaptic("selection");
                       setShowAllHoods((v) => !v);
                     }}
-                    className="min-h-[44px] px-4 py-2.5 rounded-lg font-mono text-xs font-medium text-[var(--muted)] border border-dashed border-[var(--twilight)] hover:text-[var(--soft)] transition-colors"
+                    className="min-h-[44px] px-4 py-2.5 rounded-full font-mono text-xs font-medium text-[var(--muted)] border border-dashed border-[var(--twilight)] hover:text-[var(--soft)] transition-colors"
                   >
                     {showAllHoods ? "Show less" : `+${secondaryHoods.length} more`}
                   </button>

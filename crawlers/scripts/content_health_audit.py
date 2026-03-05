@@ -83,6 +83,24 @@ LAUNCH_GATE_THRESHOLDS = {
     "event_description_fill_rate_pct": {"warn_lt": 70.0, "fail_lt": 50.0},
 }
 
+GATE_PROFILES: dict[str, dict[str, Any]] = {
+    # Backward-compatible: all checks are hard, using default thresholds.
+    "legacy": {
+        "soft_check_ids": set(),
+        "threshold_overrides": {},
+    },
+    # City consumer launch: specials depth is advisory (metadata-first strategy).
+    "atlanta-consumer": {
+        "soft_check_ids": {"specials.active_total"},
+        "threshold_overrides": {},
+    },
+    # Concierge/hotel launches still require strong specials density.
+    "concierge-hotel": {
+        "soft_check_ids": set(),
+        "threshold_overrides": {},
+    },
+}
+
 SHORT_DESCRIPTION_MAX_LEN = 220
 PRIORITY_SOURCE_SHORT_DESC_THRESHOLDS: dict[str, dict[str, float | int]] = {
     "atlanta-recurring-social": {"warn_gt": 30.0, "fail_gt": 45.0, "min_events": 50},
@@ -293,6 +311,27 @@ def collapse_status(statuses: list[str]) -> str:
     if not statuses:
         return "PASS"
     return max(statuses, key=status_rank)
+
+
+def resolve_gate_profile(
+    profile_arg: str,
+    *,
+    portal: str | None,
+    city: str | None,
+) -> str:
+    if profile_arg != "auto":
+        if profile_arg not in GATE_PROFILES:
+            raise ValueError(
+                f"Unsupported gate profile '{profile_arg}'. Valid profiles: "
+                f"{', '.join(sorted(GATE_PROFILES.keys()))}, auto"
+            )
+        return profile_arg
+
+    normalized_portal = (portal or "").strip().lower()
+    normalized_city = normalize_city(city)
+    if normalized_portal == "atlanta" and normalized_city == "atlanta":
+        return "atlanta-consumer"
+    return "legacy"
 
 
 def apply_threshold(
@@ -1272,8 +1311,16 @@ def build_metrics(scope: DateScope) -> dict[str, Any]:
     }
 
 
-def evaluate_launch_gate(metrics: dict[str, Any]) -> dict[str, Any]:
+def evaluate_launch_gate(metrics: dict[str, Any], *, gate_profile: str) -> dict[str, Any]:
     checks: list[dict[str, Any]] = []
+    profile_config = GATE_PROFILES.get(gate_profile, GATE_PROFILES["legacy"])
+    soft_check_ids = set(profile_config.get("soft_check_ids") or set())
+    thresholds = dict(LAUNCH_GATE_THRESHOLDS)
+    threshold_overrides = profile_config.get("threshold_overrides") or {}
+    for key, override in threshold_overrides.items():
+        merged = dict(thresholds.get(key) or {})
+        merged.update(override)
+        thresholds[key] = merged
     events_active_column = str(
         deep_get(metrics, "scope.events_active_column", "none") or "none"
     )
@@ -1286,13 +1333,17 @@ def evaluate_launch_gate(metrics: dict[str, Any]) -> dict[str, Any]:
         threshold: dict[str, Any],
         context: str = "",
     ) -> None:
+        severity = "soft" if check_id in soft_check_ids else "hard"
         status = apply_threshold(value, **threshold)
+        if severity == "soft" and status == "FAIL":
+            status = "WARN"
         checks.append(
             {
                 "id": check_id,
                 "label": label,
                 "value": value,
                 "status": status,
+                "severity": severity,
                 "threshold": threshold,
                 "context": context,
             }
@@ -1303,7 +1354,7 @@ def evaluate_launch_gate(metrics: dict[str, Any]) -> dict[str, Any]:
             check_id=check_id,
             label=label,
             value=value,
-            threshold=LAUNCH_GATE_THRESHOLDS[threshold_key],
+            threshold=thresholds[threshold_key],
             context=context,
         )
 
@@ -1314,6 +1365,7 @@ def evaluate_launch_gate(metrics: dict[str, Any]) -> dict[str, Any]:
                 "label": label,
                 "value": value,
                 "status": "PASS",
+                "severity": "info",
                 "threshold": {},
                 "context": context,
             }
@@ -1487,10 +1539,20 @@ def evaluate_launch_gate(metrics: dict[str, Any]) -> dict[str, Any]:
 
     counts = Counter(check["status"] for check in checks)
     overall_status = collapse_status([check["status"] for check in checks])
+    hard_checks = [check for check in checks if check.get("severity") == "hard"]
+    blocking_status = collapse_status([check["status"] for check in hard_checks])
+    blocking_counts = Counter(check["status"] for check in hard_checks)
 
     return {
+        "gate_profile": gate_profile,
         "overall_status": overall_status,
+        "blocking_status": blocking_status,
         "counts": {"PASS": counts.get("PASS", 0), "WARN": counts.get("WARN", 0), "FAIL": counts.get("FAIL", 0)},
+        "blocking_counts": {
+            "PASS": blocking_counts.get("PASS", 0),
+            "WARN": blocking_counts.get("WARN", 0),
+            "FAIL": blocking_counts.get("FAIL", 0),
+        },
         "checks": checks,
     }
 
@@ -2021,8 +2083,11 @@ def write_report_files(
     gate_payload = {
         "generated_at": metrics["generated_at"],
         "as_of": metrics["scope"]["future_start_date"],
+        "gate_profile": gate["gate_profile"],
         "overall_status": gate["overall_status"],
+        "blocking_status": gate["blocking_status"],
         "counts": gate["counts"],
+        "blocking_counts": gate["blocking_counts"],
         "checks": gate["checks"],
         "regression": regression,
     }
@@ -2068,6 +2133,16 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Disable metro expansion for --city Atlanta and require strict city matching.",
     )
+    parser.add_argument(
+        "--gate-profile",
+        type=str,
+        default="auto",
+        choices=["auto", "legacy", "atlanta-consumer", "concierge-hotel"],
+        help=(
+            "Launch gate profile. auto selects atlanta-consumer for Atlanta city portal "
+            "scope; otherwise legacy."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -2090,15 +2165,21 @@ def main() -> int:
         include_metro=not args.strict_city,
         portal=args.portal,
     )
+    gate_profile = resolve_gate_profile(
+        args.gate_profile,
+        portal=scope.portal,
+        city=scope.city,
+    )
     output_dir = Path(args.output_dir)
     metrics = build_metrics(scope)
+    metrics.setdefault("scope", {})["gate_profile"] = gate_profile
     scope_slug = str(deep_get(metrics, "scope.scope_slug", "global") or "global")
     previous_metrics, previous_date = load_previous_metrics(
         output_dir,
         as_of,
         scope_slug=scope_slug,
     )
-    gate = evaluate_launch_gate(metrics)
+    gate = evaluate_launch_gate(metrics, gate_profile=gate_profile)
     regression = build_regression(metrics, previous_metrics, previous_date)
     json_path, md_path, gate_path, findings_path = write_report_files(
         output_dir, as_of, metrics, gate, regression
@@ -2113,7 +2194,7 @@ def main() -> int:
         f"{metrics['counts']['future_events_visible']} visible future events, "
         f"{metrics['specials']['active_total']} active specials, "
         f"{metrics['mobility']['venues_with_walkable_neighbor_count']} venues with walkable neighbors, "
-        f"launch gate={gate['overall_status']}."
+        f"launch gate={gate['overall_status']} (blocking={gate['blocking_status']}, profile={gate_profile})."
     )
     return 0
 

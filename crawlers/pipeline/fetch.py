@@ -11,6 +11,7 @@ import httpx
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
 from pipeline.models import FetchConfig
+from utils import validate_url
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +31,11 @@ def fetch_html(url: str, fetch: Optional[FetchConfig] = None) -> Tuple[str, Opti
     if not url:
         return "", "missing-url"
 
+    try:
+        validate_url(url)
+    except ValueError as e:
+        return "", f"ssrf-blocked: {e}"
+
     if cfg.render_js:
         try:
             with sync_playwright() as p:
@@ -37,7 +43,7 @@ def fetch_html(url: str, fetch: Optional[FetchConfig] = None) -> Tuple[str, Opti
                 context = browser.new_context(
                     user_agent=ua,
                     viewport={"width": 1920, "height": 1080},
-                    ignore_https_errors=True,
+                    ignore_https_errors=False,
                 )
                 page = context.new_page()
                 try:

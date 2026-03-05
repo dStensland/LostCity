@@ -62,7 +62,7 @@ export default function TagChip({
   return (
     <div
       data-tag-group={tag.tag_group}
-      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border transition-colors tag-chip"
+      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border transition-colors tag-chip"
     >
       {/* Tag label */}
       <span

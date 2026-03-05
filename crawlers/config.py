@@ -118,7 +118,7 @@ class APIConfig(BaseModel):
     eventbrite_api_key: str = Field(default_factory=lambda: os.getenv("EVENTBRITE_API_KEY", ""))
     meetup_api_key: str = Field(default_factory=lambda: os.getenv("MEETUP_API_KEY", ""))
     ticketmaster_api_key: str = Field(default_factory=lambda: os.getenv("TICKETMASTER_API_KEY", ""))
-    omdb_api_key: str = Field(default_factory=lambda: os.getenv("OMDB_API_KEY", "trilogy"))
+    omdb_api_key: str = Field(default_factory=lambda: os.getenv("OMDB_API_KEY", ""))
     spotify_client_id: str = Field(default_factory=lambda: os.getenv("SPOTIFY_CLIENT_ID", ""))
     spotify_client_secret: str = Field(default_factory=lambda: os.getenv("SPOTIFY_CLIENT_SECRET", ""))
 

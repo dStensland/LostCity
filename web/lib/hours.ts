@@ -91,6 +91,62 @@ export function isOpenAt(
 }
 
 /**
+ * Timezone-safe variant of isOpenAt.
+ * Accepts day-of-week + HH:MM directly, avoiding Date timezone issues
+ * (Vercel runs UTC; constructing Date("2026-03-04T19:30:00") without
+ * a TZ suffix gives UTC, not local venue time).
+ */
+export function isOpenAtTime(
+  hours: HoursData | null,
+  dayOfWeek: number, // 0=Sun..6=Sat
+  timeHHMM: string,  // "HH:MM"
+  is24Hours?: boolean,
+): { isOpen: boolean; closesAt?: string } {
+  if (is24Hours) return { isOpen: true };
+  if (!hours) return { isOpen: false };
+
+  const day = DAY_NAMES[dayOfWeek];
+  const currentMinutes = timeToMinutes(timeHHMM);
+  if (currentMinutes < 0) return { isOpen: false };
+
+  const todayHours = hours[day];
+  if (!todayHours) {
+    // Check if still open from previous day (overnight hours)
+    const yesterdayIdx = (dayOfWeek + 6) % 7;
+    const yesterdayHours = hours[DAY_NAMES[yesterdayIdx]];
+    if (yesterdayHours) {
+      const { open, close } = yesterdayHours;
+      if (open && close) {
+        const openMins = timeToMinutes(open);
+        const closeMins = timeToMinutes(close);
+        if (openMins >= 0 && closeMins >= 0 && closeMins < openMins && currentMinutes < closeMins) {
+          return { isOpen: true, closesAt: close };
+        }
+      }
+    }
+    return { isOpen: false };
+  }
+
+  const { open, close } = todayHours;
+  if (!open || !close) return { isOpen: false };
+  const openMins = timeToMinutes(open);
+  const closeMins = timeToMinutes(close);
+  if (openMins < 0 || closeMins < 0) return { isOpen: false };
+
+  if (closeMins < openMins) {
+    if (currentMinutes >= openMins || currentMinutes < closeMins) {
+      return { isOpen: true, closesAt: close };
+    }
+  } else {
+    if (currentMinutes >= openMins && currentMinutes < closeMins) {
+      return { isOpen: true, closesAt: close };
+    }
+  }
+
+  return { isOpen: false };
+}
+
+/**
  * Get the close time for a spot on a given date
  * Returns null if closed that day
  */

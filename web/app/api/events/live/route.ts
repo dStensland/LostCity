@@ -3,6 +3,7 @@ import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limi
 import { logger } from "@/lib/logger";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
 import { applyPortalScopeToQuery, excludeSensitiveEvents, filterByPortalCity } from "@/lib/portal-scope";
+import { applyFeedGate } from "@/lib/feed-gate";
 
 type LiveEventRow = {
   id: number;
@@ -78,6 +79,7 @@ export async function GET(request: Request) {
       .is("canonical_event_id", null) // Only show canonical events, not duplicates
       .order("start_time", { ascending: true });
 
+    query = applyFeedGate(query);
     query = applyPortalScopeToQuery(query, {
       portalId: portalContext.portalId,
       portalExclusive,

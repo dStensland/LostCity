@@ -14,7 +14,7 @@ from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeo
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
-from utils import extract_images_from_page
+from utils import extract_images_from_page, enrich_event_record
 
 logger = logging.getLogger(__name__)
 
@@ -227,6 +227,17 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     # Build source URL
                     source_url = f"{BASE_URL}{href}" if href.startswith("/") else href
 
+                    # Pull card-level image from the <img> inside this link element
+                    card_image = None
+                    try:
+                        img_el = link.query_selector("img")
+                        if img_el:
+                            card_image = img_el.get_attribute("src") or img_el.get_attribute("data-src")
+                            if card_image and card_image.startswith("/"):
+                                card_image = f"{BASE_URL}{card_image}"
+                    except Exception:
+                        pass
+
                     event_record = {
                         "source_id": source_id,
                         "venue_id": venue_id,
@@ -246,13 +257,17 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "is_free": True,
                         "source_url": source_url,
                         "ticket_url": None,
-                        "image_url": image_map.get(title),
+                        "image_url": card_image,
                         "raw_text": None,
                         "extraction_confidence": 0.85,
                         "is_recurring": False,
                         "recurrence_rule": None,
                         "content_hash": content_hash,
                     }
+
+                    # Enrich from detail page: fills description, image_url (og:image),
+                    # price, start_time if missing. Only fetches when fields are absent.
+                    enrich_event_record(event_record, source_name="Atlanta BeltLine")
 
                     existing = find_event_by_hash(content_hash)
                     if existing:

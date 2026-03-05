@@ -12,6 +12,7 @@ import {
   filterByPortalContentScope,
 } from "@/lib/portal-scope";
 import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
+import { applyFeedGate } from "@/lib/feed-gate";
 
 const TRENDING_CACHE_TTL_MS = 60 * 1000;
 const TRENDING_CACHE_MAX_ENTRIES = 200;
@@ -85,8 +86,10 @@ export async function GET(request: NextRequest) {
           .eq("is_active", true)
           .is("canonical_event_id", null)
           .order("start_date", { ascending: true })
+          .order("data_quality", { ascending: false, nullsFirst: false })
           .limit(120);
 
+        eventsQuery = applyFeedGate(eventsQuery);
         eventsQuery = applyPortalScopeToQuery(eventsQuery, {
           portalId: portalContext.portalId,
           portalExclusive: false,

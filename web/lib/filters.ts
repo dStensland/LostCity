@@ -1,6 +1,7 @@
 import { supabase, Event } from "./supabase";
 import type { PortalFilters } from "./portal-context";
 import { getLocalDateString } from "@/lib/formats";
+import { applyFeedGate } from "@/lib/feed-gate";
 
 export interface PaginatedResult {
   events: Event[];
@@ -33,6 +34,8 @@ export async function getFilteredEvents(
     .or("is_sensitive.eq.false,is_sensitive.is.null")
     .order("start_date", { ascending: true })
     .order("start_time", { ascending: true });
+
+  query = applyFeedGate(query);
 
   // Apply city filter (via venue join)
   if (filters.city) {
@@ -123,6 +126,8 @@ export async function getAllFilteredEvents(
     .order("start_time", { ascending: true })
     .limit(limit);
 
+  query = applyFeedGate(query);
+
   // Apply city filter - need to handle the join differently for non-inner join
   // For optional venue, we filter in app
   if (filters.city) {
@@ -141,6 +146,8 @@ export async function getAllFilteredEvents(
       .order("start_date", { ascending: true })
       .order("start_time", { ascending: true })
       .limit(limit);
+
+    query = applyFeedGate(query);
   }
 
   // Apply date range filter

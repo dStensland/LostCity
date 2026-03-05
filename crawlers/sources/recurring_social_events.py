@@ -60,6 +60,7 @@ VENUES = {
         "state": "GA",
         "zip": "30306",
         "venue_type": "bar",
+        "website": "http://metalsomelivebandkaraoke.com/",
     },
     "copper-cove": {
         "name": "Copper Cove Restaurant & Lounge",
@@ -91,6 +92,7 @@ VENUES = {
         "state": "GA",
         "zip": "30303",
         "venue_type": "bar",
+        "website": "https://daiquiriville.myportfolio.com/menu",
     },
     "roll-1-cafe": {
         "name": "Roll 1 Cafe",
@@ -101,6 +103,7 @@ VENUES = {
         "state": "GA",
         "zip": "30315",
         "venue_type": "cafe",
+        "website": "http://roll1cafe.com/",
     },
     "your-3rd-spot": {
         "name": "Your 3rd Spot",
@@ -111,6 +114,7 @@ VENUES = {
         "state": "GA",
         "zip": "30318",
         "venue_type": "bar",
+        "website": "http://www.your3rdspot.com/",
     },
     "smiths-olde-bar": {
         "name": "Smith's Olde Bar",
@@ -143,6 +147,7 @@ VENUES = {
         "state": "GA",
         "zip": "30316",
         "venue_type": "cafe",
+        "website": "https://www.joescoffeehouseeav.com/",
     },
     "our-bar-atl": {
         "name": "Our Bar ATL",
@@ -163,6 +168,7 @@ VENUES = {
         "state": "GA",
         "zip": "30316",
         "venue_type": "bar",
+        "website": "https://www.sfseav.com/",
     },
     # "laughing-skull" — handled by dedicated source (sources/laughing_skull.py)
     "limerick-junction": {
@@ -174,6 +180,7 @@ VENUES = {
         "state": "GA",
         "zip": "30306",
         "venue_type": "bar",
+        "website": "https://www.limerickjunction.com/events",
     },
     "limelight-theater": {
         "name": "Limelight Theater",
@@ -238,6 +245,7 @@ VENUES = {
         "state": "GA",
         "zip": "30313",
         "venue_type": "brewery",
+        "website": "https://atlantucky.com",
     },
     "urban-grind": {
         "name": "Urban Grind",
@@ -248,6 +256,7 @@ VENUES = {
         "state": "GA",
         "zip": "30318",
         "venue_type": "cafe",
+        "website": "https://urbangrindatlanta.com",
     },
     "kats-cafe": {
         "name": "Kat's Cafe",
@@ -290,6 +299,7 @@ VENUES = {
         "state": "GA",
         "zip": "30313",
         "venue_type": "bar",
+        "website": "https://www.instagram.com/petersstreetstation/",
     },
     "dynamic-el-dorado": {
         "name": "Dynamic El Dorado",
@@ -300,6 +310,7 @@ VENUES = {
         "state": "GA",
         "zip": "30312",
         "venue_type": "bar",
+        "website": "http://dynamiceldorado.com/",
     },
     "529-bar": {
         "name": "529",
@@ -344,6 +355,7 @@ VENUES = {
         "state": "GA",
         "zip": "30307",
         "venue_type": "community_center",
+        "website": "http://www.epiphany.org/",
     },
     # Bingo venues
     "punch-bowl": {
@@ -399,6 +411,7 @@ VENUES = {
         "state": "GA",
         "zip": "30313",
         "venue_type": "bar",
+        "website": "https://www.facebook.com/elliottstreetdeli",
     },
     # Additional trivia venues
     "brick-store-pub": {
@@ -456,6 +469,7 @@ VENUES = {
         "state": "GA",
         "zip": "30030",
         "venue_type": "bar",
+        "website": "https://thinkingmantavern.com",
     },
     "righteous-room": {
         "name": "Righteous Room",
@@ -466,6 +480,7 @@ VENUES = {
         "state": "GA",
         "zip": "30306",
         "venue_type": "bar",
+        "website": "http://www.stayrighteous.com",
     },
     "the-local": {
         "name": "The Local",
@@ -476,6 +491,7 @@ VENUES = {
         "state": "GA",
         "zip": "30308",
         "venue_type": "bar",
+        "website": "http://thelocalkaraoke.com/home.php",
     },
     "twains": {
         "name": "Twain's Billiards & Tap",
@@ -508,6 +524,7 @@ VENUES = {
         "state": "GA",
         "zip": "30312",
         "venue_type": "music_venue",
+        "website": "https://www.facebook.com/themusicroomatl",
     },
     "johnny-hideaway": {
         "name": "Johnny's Hideaway",
@@ -530,6 +547,7 @@ VENUES = {
         "state": "GA",
         "zip": "30309",
         "venue_type": "bar",
+        "website": "https://www.burkharts.com",
     },
     "my-sisters-room": {
         "name": "My Sister's Room",
@@ -540,6 +558,7 @@ VENUES = {
         "state": "GA",
         "zip": "30030",
         "venue_type": "bar",
+        "website": "https://www.mysistersroom.com",
     },
     # Fontaine's Oyster House — CLOSED permanently (removed 2026-03)
     # Live music / residency venues
@@ -552,6 +571,7 @@ VENUES = {
         "state": "GA",
         "zip": "30308",
         "venue_type": "bar",
+        "website": "https://apachexlr.com/",
     },
     "dieselfillingstation": {
         "name": "Diesel Filling Station",
@@ -562,6 +582,7 @@ VENUES = {
         "state": "GA",
         "zip": "30306",
         "venue_type": "bar",
+        "website": "https://www.dieselfillingstation.com",
     },
     # Farmers markets
     "piedmont-park-green-market": {
@@ -595,6 +616,7 @@ VENUES = {
         "state": "GA",
         "zip": "30312",
         "venue_type": "bar",
+        "website": "http://www.ladybirdatl.com/",
     },
     # ========== Phase 2: Neighborhood + day gap fills ==========
     # Little Five Points (the-porter and wrecking-bar defined above in trivia section)
@@ -840,6 +862,7 @@ VENUES = {
         "state": "GA",
         "zip": "30062",
         "venue_type": "gaming",
+        "website": "http://www.giga-bitescafe.com/",
     },
     "bone-lick-bbq": {
         "name": "Bone Lick BBQ",
@@ -850,6 +873,7 @@ VENUES = {
         "state": "GA",
         "zip": "30312",
         "venue_type": "restaurant",
+        "website": "https://bonelickbbq.com",
     },
     "my-parents-basement": {
         "name": "My Parents' Basement",
@@ -860,6 +884,7 @@ VENUES = {
         "state": "GA",
         "zip": "30002",
         "venue_type": "bar",
+        "website": "https://www.myparentsbasementcbcb.com",
     },
     # ========== RUN CLUB VENUES ==========
     # "ponce-city-market": handled by dedicated source (sources/ponce_city_market.py)
@@ -882,6 +907,7 @@ VENUES = {
         "state": "GA",
         "zip": "30312",
         "venue_type": "bar",
+        "website": "https://www.milltownarmstavern.com/",
     },
     "elbow-room-buckhead": {
         "name": "Elbow Room",
@@ -892,6 +918,7 @@ VENUES = {
         "state": "GA",
         "zip": "30305",
         "venue_type": "bar",
+        "website": "https://www.elbowroomatlanta.com",
     },
     # ========== DANCE VENUES ==========
     "tongue-and-groove": {
@@ -903,6 +930,7 @@ VENUES = {
         "state": "GA",
         "zip": "30324",
         "venue_type": "nightclub",
+        "website": "https://www.tandgclub.com",
     },
     # "the-heretic": handled by dedicated source (sources/the_heretic.py)
     "hot-jam-atlanta": {
@@ -914,6 +942,7 @@ VENUES = {
         "state": "GA",
         "zip": "30312",
         "venue_type": "event_space",
+        "website": "https://www.instagram.com/hotjamatl/",
     },
     # ========== SPORTS / WELLNESS VENUES ==========
     # "piedmont-park": handled by dedicated source (sources/piedmont_park.py)
@@ -926,6 +955,7 @@ VENUES = {
         "state": "GA",
         "zip": "30303",
         "venue_type": "park",
+        "website": "https://www.woodruffpark.org",
     },
     # ========== CYCLING / OUTDOOR VENUES ==========
     "inman-park-station": {
@@ -937,6 +967,7 @@ VENUES = {
         "state": "GA",
         "zip": "30307",
         "venue_type": "park",
+        "website": "https://www.instagram.com/bonafideriders/",
     },
     "97-estoria": {
         "name": "97 Estoria",
@@ -968,6 +999,7 @@ VENUES = {
         "state": "GA",
         "zip": "30030",
         "venue_type": "fitness_center",
+        "website": "https://www.decaturga.com/parks-recreation",
     },
     "broad-street-boardwalk": {
         "name": "Broad Street Boardwalk",
@@ -1032,6 +1064,7 @@ VENUES = {
         "state": "GA",
         "zip": "30307",
         "venue_type": "restaurant",
+        "website": "https://www.facebook.com/lloydsinmanpark",
     },
     "antico-pizza": {
         "name": "Antico Pizza Napoletana",
@@ -1064,6 +1097,7 @@ VENUES = {
         "state": "GA",
         "zip": "30305",
         "venue_type": "restaurant",
+        "website": "https://www.instagram.com/tavernarestaurantgroup/",
     },
     "pure-taqueria-inman-park": {
         "name": "Pure Taqueria",
@@ -1085,6 +1119,7 @@ VENUES = {
         "state": "GA",
         "zip": "30309",
         "venue_type": "restaurant",
+        "website": "https://tinlizzyscantina.com",
     },
     "forza-storico": {
         "name": "Forza Storico",
@@ -1106,6 +1141,7 @@ VENUES = {
         "state": "GA",
         "zip": "30308",
         "venue_type": "bar",
+        "website": "http://cypressatl.com/",
     },
     "beso-buckhead": {
         "name": "Beso Buckhead",
@@ -1184,6 +1220,7 @@ VENUES = {
         "state": "GA",
         "zip": "30309",
         "venue_type": "bar",
+        "website": "https://www.fadoirishpub.com/atlanta",
     },
     # ========== Regular Hangs buildout ==========
     # Poker venues
@@ -1252,6 +1289,7 @@ VENUES = {
         "state": "GA",
         "zip": "30311",
         "venue_type": "entertainment_venue",
+        "website": "https://cascadefamilyskating.com",
     },
     "sparkles-kennesaw": {
         "name": "Sparkles Family Fun Center",
@@ -1262,6 +1300,7 @@ VENUES = {
         "state": "GA",
         "zip": "30152",
         "venue_type": "entertainment_venue",
+        "website": "https://www.sparkles.com",
     },
     # Latin night venues
     "havana-club-atl": {
@@ -1273,6 +1312,7 @@ VENUES = {
         "state": "GA",
         "zip": "30305",
         "venue_type": "nightclub",
+        "website": "https://www.havanaclubbuckhead.com",
     },
     "el-bar": {
         "name": "El Bar",
@@ -1305,6 +1345,7 @@ VENUES = {
         "state": "GA",
         "zip": "30313",
         "venue_type": "sports_bar",
+        "website": "http://www.statsatl.com/",
     },
     # Additional bingo venue
     "monday-night-garage": {
@@ -3682,6 +3723,15 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             continue
 
+        # Skip venues without a real website — badslava is only a research lead,
+        # not a valid source URL. If we can't link to the venue, don't generate.
+        if not venue_data.get("website"):
+            logger.debug(
+                f"Skipping venue '{venue_key}' ({event_template['title']}): "
+                "no website — need a real source before generating events"
+            )
+            continue
+
         # Get or cache venue ID
         if venue_key not in venue_ids:
             venue_ids[venue_key] = get_or_create_venue(venue_data)
@@ -3712,7 +3762,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 else False
             )
 
-            source_url = venue_data.get("website", "https://badslava.com/")
+            source_url = venue_data["website"]  # guaranteed by skip-check above
             description = _build_recurring_description(
                 event_template,
                 venue_data=venue_data,

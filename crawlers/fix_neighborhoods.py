@@ -347,7 +347,7 @@ def get_neighborhood_for_venue(venue: Dict) -> Optional[str]:
             return neighborhood
 
     # Last resort: try to extract city from address
-    city = venue.get('city', '').lower()
+    city = (venue.get('city') or '').lower()
     if city:
         # Map common city names to neighborhoods
         city_map = {

@@ -55,6 +55,7 @@ BOILERPLATE_PATTERNS = [
 def _infer_showtime(start_date: str) -> str:
     """Infer start_time from day-of-week per Punchline's published schedule.
 
+    Source: https://punchline.com/shows/ (schedule listed at top of page)
     Mon-Thu: 7:30PM (1 show)
     Fri: 7:30PM (first of 2)
     Sat: 6:00PM (first of 2-3)

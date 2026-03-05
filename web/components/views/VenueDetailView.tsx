@@ -23,8 +23,10 @@ import VenueFeaturesSection from "@/components/detail/VenueFeaturesSection";
 import VenueSpecialsSection, { type VenueSpecial } from "@/components/detail/VenueSpecialsSection";
 import DirectionsDropdown from "@/components/DirectionsDropdown";
 import GettingThereSection, { type WalkableNeighbor } from "@/components/GettingThereSection";
+import { usePortal } from "@/lib/portal-context";
 import {
   CaretRight,
+  ForkKnife,
   Globe,
   InstagramLogo,
   Phone,
@@ -43,6 +45,10 @@ import dynamic from "next/dynamic";
 const DogTagModal = dynamic(
   () => import("@/app/[portal]/_components/dog/DogTagModal"),
   { ssr: false }
+);
+const OutingPlannerSheet = dynamic(
+  () => import("@/components/outing-planner/OutingPlannerSheet"),
+  { ssr: false },
 );
 
 type SpotData = {
@@ -78,6 +84,8 @@ type SpotData = {
   parking_note: string | null;
   transit_score: number | null;
   walkable_neighbor_count: number | null;
+  lat: number | null;
+  lng: number | null;
 };
 
 type UpcomingEvent = {
@@ -174,6 +182,8 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
   const [artifacts, setArtifacts] = useState<{id: number; name: string; slug: string | null; image_url: string | null; short_description: string | null}[]>([]);
   const [walkableNeighbors, setWalkableNeighbors] = useState<WalkableNeighbor[]>([]);
   const [showTagModal, setShowTagModal] = useState(false);
+  const [showOutingSheet, setShowOutingSheet] = useState(false);
+  const { portal } = usePortal();
 
   useEffect(() => {
     const controller = new AbortController();
@@ -440,6 +450,15 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
               state={spot.state}
             />
           )}
+          {spot.lat != null && spot.lng != null && (
+            <button
+              onClick={() => setShowOutingSheet(true)}
+              className="inline-flex items-center gap-2 px-4 min-h-[44px] rounded-lg text-sm font-mono font-medium text-[var(--gold)] bg-[var(--gold)]/8 border border-[var(--gold)]/25 hover:bg-[var(--gold)]/14 hover:border-[var(--gold)]/40 transition-all focus-ring"
+            >
+              <ForkKnife size={16} weight="duotone" />
+              Plan an Evening Here
+            </button>
+          )}
         </div>
 
         {/* Dog-friendly highlights (dog portal only) */}
@@ -653,6 +672,27 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
             setSpot((prev) => prev ? { ...prev, vibes: updatedVibes } : prev);
             setShowTagModal(false);
           }}
+        />
+      )}
+
+      {/* Outing Planner */}
+      {showOutingSheet && spot.lat != null && spot.lng != null && (
+        <OutingPlannerSheet
+          anchor={{
+            type: "venue",
+            venue: {
+              id: spot.id,
+              name: spot.name,
+              slug: spot.slug,
+              lat: spot.lat,
+              lng: spot.lng,
+            },
+          }}
+          portalId={portal?.id || ""}
+          portalSlug={portalSlug}
+          portalVertical={portal?.settings?.vertical}
+          isOpen={showOutingSheet}
+          onClose={() => setShowOutingSheet(false)}
         />
       )}
     </div>

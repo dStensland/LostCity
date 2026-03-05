@@ -43,6 +43,48 @@ VENUE_DATA = {
     "vibes": ["workshop", "creative", "hands-on", "art-class", "historic", "pottery"],
 }
 
+# Course code pattern: DAP-301, POT 201, WELL-100, PHOTO.201, KIDS 101, etc.
+# Covers 2–6 uppercase letters, optional separator, 2–4 digits, then colon/dash/period separator.
+_COURSE_CODE_RE = re.compile(
+    r"^([A-Z]{2,6}[-.\s]?\d{2,4})\s*[:.\-]\s*(.+)$"
+)
+
+
+def _clean_callanwolde_title(title: str) -> tuple[str, str | None]:
+    """Strip internal course codes from a Callanwolde class title.
+
+    Returns (clean_title, course_code).  If no code is found, course_code is None
+    and clean_title equals the original title.
+
+    Examples
+    --------
+    "DAP-301: Intermediate Watercolor" -> ("Intermediate Watercolor", "DAP-301")
+    "POT 201: Wheel Throwing"          -> ("Wheel Throwing", "POT 201")
+    "WELL-100: Intro to Yoga"          -> ("Intro to Yoga", "WELL-100")
+    "Spring Exhibition Opening"        -> ("Spring Exhibition Opening", None)
+    """
+    match = _COURSE_CODE_RE.match(title)
+    if match:
+        return match.group(2).strip(), match.group(1).strip()
+    return title, None
+
+
+def _infer_series_hint(clean_title: str, course_code: str | None) -> dict | None:
+    """Return a series_hint dict for class-series grouping, or None if not applicable.
+
+    Groups all sessions of the same class together (same clean title = same series).
+    The course code guarantees uniqueness per curriculum cycle; sessions sharing a
+    code and name are the same multi-week class.
+    """
+    if not course_code:
+        return None
+    return {
+        "series_type": "class_series",
+        "series_title": clean_title,
+        "frequency": "weekly",
+    }
+
+
 # Skip staff meetings and internal events
 SKIP_KEYWORDS = [
     "staff meeting",
@@ -192,9 +234,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 continue
 
             try:
-                title = str(component.get("SUMMARY", "")).strip()
-                if not title or len(title) < 5:
+                raw_title = str(component.get("SUMMARY", "")).strip()
+                if not raw_title or len(raw_title) < 5:
                     continue
+
+                # Strip course codes (e.g. "DAP-301: Intermediate Watercolor")
+                # before any downstream processing so consumers see clean titles.
+                clean_title, course_code = _clean_callanwolde_title(raw_title)
 
                 # Parse start date/time
                 dtstart = component.get("DTSTART")
@@ -218,8 +264,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 if event_date < today:
                     continue
 
-                # Dedupe by title + date
-                event_key = f"{title}|{start_date}"
+                # Dedupe by raw title + date so re-runs are idempotent even if
+                # the source feed changes the course code prefix.
+                event_key = f"{raw_title}|{start_date}"
                 if event_key in seen_events:
                     continue
                 seen_events.add(event_key)
@@ -239,19 +286,22 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 # URL (extract early for description fetching)
                 source_url = str(component.get("URL", f"{BASE_URL}/events/"))
 
-                # Description — prefer iCal, fall back to web page, then generic
+                # Description — prefer iCal, fall back to web page, then generic.
+                # Use the raw title when fetching from the web so the URL match
+                # is accurate, then switch to clean_title for the stored record.
                 description = clean_ical_text(str(component.get("DESCRIPTION", "")))
                 if not description or len(description) < 80:
                     fetched = fetch_description_from_url(source_url)
                     if fetched:
                         description = fetched
-                        logger.debug(f"Fetched description from URL for: {title}")
+                        logger.debug(f"Fetched description from URL for: {clean_title}")
                     elif not description or len(description) < 10:
-                        description = f"{title} at Callanwolde Fine Arts Center"
+                        description = f"{clean_title} at Callanwolde Fine Arts Center"
 
-                # Check if public
-                if not is_public_event(title, description):
-                    logger.debug(f"Skipping internal event: {title}")
+                # Check if public (use raw title so code-prefixed skippable events
+                # are still detected even after title cleaning)
+                if not is_public_event(raw_title, description):
+                    logger.debug(f"Skipping internal event: {raw_title}")
                     continue
 
                 # Image from ATTACH
@@ -275,19 +325,32 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 events_found += 1
 
+                # Content hash uses raw_title so existing events aren't re-inserted
+                # after this change is deployed (the hash was already stored that way).
                 content_hash = generate_content_hash(
-                    title, "Callanwolde Fine Arts Center", start_date
+                    raw_title, "Callanwolde Fine Arts Center", start_date
                 )
-
 
                 category, subcategory, tags = determine_category_and_tags(
-                    title, description, ical_categories
+                    clean_title, description, ical_categories
                 )
+
+                # Add course code as a tag so it's searchable / filterable,
+                # and prepend it to the description for context.
+                if course_code:
+                    tags = [*tags, f"course:{course_code.lower()}"]
+                    if description and not description.startswith(course_code):
+                        description = f"[{course_code}] {description}"
+
+                # Class sessions are recurring; use series_hint to group all
+                # sessions of the same class under one series record.
+                series_hint = _infer_series_hint(clean_title, course_code)
+                is_recurring = series_hint is not None
 
                 event_record = {
                     "source_id": source_id,
                     "venue_id": venue_id,
-                    "title": title[:200],
+                    "title": clean_title[:200],
                     "description": description[:1000],
                     "start_date": start_date,
                     "start_time": start_time if not is_all_day else None,
@@ -304,9 +367,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "source_url": source_url,
                     "ticket_url": source_url,
                     "image_url": image_url,
-                    "raw_text": f"{title} - {description[:200]}",
+                    "raw_text": f"{raw_title} - {description[:200]}",
                     "extraction_confidence": 0.95,
-                    "is_recurring": False,
+                    "is_recurring": is_recurring,
                     "recurrence_rule": None,
                     "content_hash": content_hash,
                 }
@@ -322,11 +385,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     event_record = enrich_event_record(event_record, source_name="Callanwolde Fine Arts Center")
 
                 try:
-                    insert_event(event_record)
+                    insert_event(event_record, series_hint=series_hint)
                     events_new += 1
-                    logger.info(f"Added: {title} on {start_date}")
+                    logger.info(f"Added: {clean_title} on {start_date}" + (f" [{course_code}]" if course_code else ""))
                 except Exception as e:
-                    logger.error(f"Failed to insert event '{title}': {e}")
+                    logger.error(f"Failed to insert event '{clean_title}': {e}")
 
             except Exception as e:
                 logger.error(f"Error processing iCal event: {e}")

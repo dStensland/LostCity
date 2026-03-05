@@ -123,7 +123,7 @@ const ALL_CHIP_CONFIGS: ExperienceChipConfig[] = THINGS_TO_DO_TILES.map((tile) =
 const CHIP_MAP = new Map(ALL_CHIP_CONFIGS.map((c) => [c.id, c]));
 
 /** Default visible chip IDs — the 6 most useful categories */
-const DEFAULT_VISIBLE_IDS = ["parks", "trails", "museums", "arts", "entertainment-games", "escape-rooms"];
+const DEFAULT_VISIBLE_IDS = ["parks", "trails", "museums", "galleries", "arts", "entertainment-games"];
 
 // ---------------------------------------------------------------------------
 // Helpers

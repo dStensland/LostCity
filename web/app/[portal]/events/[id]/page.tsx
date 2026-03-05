@@ -1,7 +1,7 @@
 import ScrollToTop from "@/components/ScrollToTop";
 import { getEventById, getRelatedEvents } from "@/lib/supabase";
 import { getNearbySpots, getSpotTypeLabel } from "@/lib/spots";
-import { getCachedPortalBySlug } from "@/lib/portal";
+import { getCachedPortalBySlug, getPortalVertical } from "@/lib/portal";
 import { getSeriesTypeLabel, getSeriesTypeColor } from "@/lib/series";
 import Image from "@/components/SmartImage";
 import CategoryIcon, { getCategoryColor } from "@/components/CategoryIcon";
@@ -21,7 +21,7 @@ import DirectionsDropdown from "@/components/DirectionsDropdown";
 import VenueVibes from "@/components/VenueVibes";
 import GettingThereSection from "@/components/GettingThereSection";
 import LinkifyText from "@/components/LinkifyText";
-import { formatTime, formatTimeSplit, formatPriceDetailed, safeJsonLd, formatRelativeTime } from "@/lib/formats";
+import { formatTime, formatTimeSplit, formatPriceDetailed, safeJsonLd } from "@/lib/formats";
 import VenueTagList from "@/components/VenueTagList";
 import FlagButton from "@/components/FlagButton";
 import LiveIndicator from "@/components/LiveIndicator";
@@ -56,6 +56,7 @@ import {
   suppressEventImageIfVenueFlagged,
   suppressEventImagesIfVenueFlagged,
 } from "@/lib/image-quality-suppression";
+import OutingPlannerButton from "@/components/outing-planner/OutingPlannerButton";
 
 export const revalidate = 60;
 
@@ -523,9 +524,11 @@ export default async function PortalEventPage({ params }: Props) {
           />
 
           {/* Social Proof Strip */}
-          <SocialProofStrip goingCount={goingCount} interestedCount={interestedCount}>
-            <FriendsGoing eventId={event.id} />
-          </SocialProofStrip>
+          {(goingCount > 0 || interestedCount > 0) && (
+            <SocialProofStrip goingCount={goingCount} interestedCount={interestedCount}>
+              <FriendsGoing eventId={event.id} />
+            </SocialProofStrip>
+          )}
 
           {/* Genre Pills */}
           {event.genres && event.genres.length > 0 && (
@@ -670,10 +673,14 @@ export default async function PortalEventPage({ params }: Props) {
             )}
 
             {/* Social Proof */}
-            <SectionHeader title="Who's Going" />
-            <div className="mb-6">
-              <WhosGoing eventId={event.id} />
-            </div>
+            {goingCount > 0 && (
+              <>
+                <SectionHeader title="Who's Going" />
+                <div className="mb-6">
+                  <WhosGoing eventId={event.id} />
+                </div>
+              </>
+            )}
 
             {/* Series Link */}
             {event.series && (
@@ -807,30 +814,6 @@ export default async function PortalEventPage({ params }: Props) {
               <EntityTagList entityType="event" entityId={event.id} />
             </div>
 
-            {/* Data Freshness — subtle provenance hint */}
-            {(event.source_url || event.updated_at) && (
-              <div className="flex items-center gap-2 text-xs font-mono text-[var(--muted)] mb-4">
-                <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>
-                  {event.updated_at && (
-                    <>Last verified {formatRelativeTime(event.updated_at)}</>
-                  )}
-                  {event.source_url && event.updated_at && <span className="opacity-40"> · </span>}
-                  {event.source_url && (
-                    <a
-                      href={event.source_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="hover:text-[var(--soft)] transition-colors underline decoration-dotted underline-offset-2"
-                    >
-                      View source
-                    </a>
-                  )}
-                </span>
-              </div>
-            )}
 
             {/* Flag for QA */}
             <div className="pt-5 border-t border-[var(--twilight)]/30">
@@ -937,6 +920,30 @@ export default async function PortalEventPage({ params }: Props) {
               venueType={event.venue?.venue_type}
               variant="compact"
             />
+            {event.venue && event.venue.lat != null && event.venue.lng != null && (
+              <OutingPlannerButton
+                event={{
+                  id: event.id,
+                  title: event.title,
+                  start_date: event.start_date,
+                  start_time: event.start_time,
+                  end_time: event.end_time,
+                  is_all_day: event.is_all_day,
+                  category: event.category,
+                  venue: {
+                    id: event.venue.id,
+                    name: event.venue.name,
+                    slug: event.venue.slug,
+                    lat: event.venue.lat,
+                    lng: event.venue.lng,
+                  },
+                }}
+                portalId={portal?.id || ""}
+                portalSlug={activePortalSlug}
+                portalVertical={portal ? getPortalVertical(portal) : undefined}
+                categoryColor={categoryColor}
+              />
+            )}
           </>
         }
         primaryAction={

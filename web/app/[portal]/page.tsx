@@ -310,16 +310,18 @@ export default async function PortalPage({ params, searchParams }: Props) {
     },
   };
 
-  const mainClassName =
-    viewMode === "find" && findDisplay === "map"
-      ? ""
-      : viewMode === "find" && findDisplay === "calendar"
-      ? "max-w-[1500px] mx-auto px-4 pb-20"
-        : isEmoryNativeHospital
-          ? "max-w-6xl mx-auto px-4 pb-20"
-          : isFilm
-            ? "max-w-6xl mx-auto px-4 pb-20"
-          : "max-w-5xl mx-auto px-4 pb-20";
+  const mainClassName = (() => {
+    const base = "mx-auto px-4 pb-20";
+    if (viewMode !== "find") {
+      return isEmoryNativeHospital || isFilm
+        ? `max-w-6xl ${base}`
+        : `max-w-5xl ${base}`;
+    }
+    if (findDisplay === "calendar" || findDisplay === "map") {
+      return `max-w-[1500px] ${base}`;
+    }
+    return `max-w-5xl ${base}`;
+  })();
 
   return (
     <div className={`min-h-screen ${isEmoryNativeHospital ? "bg-[#f2f5fa] text-[#002f6c]" : ""}`}>

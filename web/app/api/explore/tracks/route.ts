@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { getLocalDateString } from "@/lib/formats";
 import { suppressVenueImagesIfFlagged } from "@/lib/image-quality-suppression";
+import { applyFeedGate } from "@/lib/feed-gate";
 
 export const revalidate = 900; // 15 min
 
@@ -150,7 +151,7 @@ export async function GET(request: NextRequest) {
     // Batch fetch upcoming events with richer data for activity signals
     const eventsByVenue = new Map<number, EventRow[]>();
     if (allVenueIds.size > 0) {
-      const { data: rawEvents } = await supabase
+      let eventsQuery = supabase
         .from("events")
         .select("id, venue_id, title, start_date, start_time, is_free, price_min")
         .in("venue_id", Array.from(allVenueIds))
@@ -163,6 +164,8 @@ export async function GET(request: NextRequest) {
         .order("start_date", { ascending: true })
         .order("start_time", { ascending: true })
         .limit(500);
+      eventsQuery = applyFeedGate(eventsQuery);
+      const { data: rawEvents } = await eventsQuery;
 
       const events = rawEvents as unknown as EventRow[] | null;
       if (events) {
@@ -177,7 +180,7 @@ export async function GET(request: NextRequest) {
     // Also fetch total upcoming count (beyond weekend) for venue badges
     const eventCountsByVenue = new Map<number, number>();
     if (allVenueIds.size > 0) {
-      const { data: rawCounts } = await supabase
+      let countsQuery = supabase
         .from("events")
         .select("venue_id")
         .in("venue_id", Array.from(allVenueIds))
@@ -186,6 +189,8 @@ export async function GET(request: NextRequest) {
         .is("portal_id", null)
         .or("is_class.eq.false,is_class.is.null")
         .or("is_sensitive.eq.false,is_sensitive.is.null");
+      countsQuery = applyFeedGate(countsQuery);
+      const { data: rawCounts } = await countsQuery;
 
       const countEvents = rawCounts as unknown as { venue_id: number }[] | null;
       if (countEvents) {

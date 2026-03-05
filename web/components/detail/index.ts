@@ -9,7 +9,7 @@ export { DescriptionTeaser, type DescriptionTeaserProps } from "./DescriptionTea
 export { SocialProofStrip, type SocialProofStripProps } from "./SocialProofStrip";
 export { default as AroundHereSection, type NearbyDestination } from "./AroundHereSection";
 export { default as NeonBackButton, type NeonBackButtonProps } from "./NeonBackButton";
-export { default as MakeANightSheet, type MakeANightSheetProps, type AnchorEvent } from "./MakeANightSheet";
+
 export { default as DogNearbySection } from "./DogNearbySection";
 export { default as VenueEventsSection } from "./VenueEventsSection";
 export { QuickActionLink } from "./QuickActionLink";

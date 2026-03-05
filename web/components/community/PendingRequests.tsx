@@ -8,23 +8,7 @@ import { CelebrationToast } from "@/components/ui/CelebrationToast";
 import { useToast } from "@/components/Toast";
 import { formatDistanceToNow } from "date-fns";
 import { useRealtimeFriendRequests } from "@/lib/hooks/useRealtimeFriendRequests";
-
-export type Profile = {
-  id: string;
-  username: string;
-  display_name: string | null;
-  avatar_url: string | null;
-  bio: string | null;
-};
-
-export type FriendRequest = {
-  id: string;
-  inviter_id: string;
-  invitee_id: string;
-  status: "pending" | "accepted" | "declined";
-  created_at: string;
-  inviter?: Profile | null;
-};
+import type { FriendRequest } from "@/lib/types/profile";
 
 interface PendingRequestsProps {
   requests: FriendRequest[];

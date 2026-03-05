@@ -27,6 +27,7 @@ import { buildPortalManifest } from "@/lib/portal-manifest";
 import {
   suppressEventImagesIfVenueFlagged,
 } from "@/lib/image-quality-suppression";
+import { applyFeedGate } from "@/lib/feed-gate";
 import { getTimeSlot } from "@/lib/city-pulse/time-slots";
 import type { TimeSlot } from "@/lib/city-pulse/types";
 
@@ -329,6 +330,7 @@ export async function GET(request: NextRequest, { params }: Props) {
       .or("is_class.eq.false,is_class.is.null")
       .or("is_sensitive.eq.false,is_sensitive.is.null");
     q = applyPortalScope(q);
+    q = applyFeedGate(q);
     return q
       .order("start_time", { ascending: true })
       .limit(100);

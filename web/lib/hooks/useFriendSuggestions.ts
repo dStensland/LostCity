@@ -2,10 +2,10 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
-import type { Profile } from "@/components/community/FriendSuggestions";
+import type { SuggestedProfile } from "@/lib/types/profile";
 
 interface SuggestionsResponse {
-  suggestions: Profile[];
+  suggestions: SuggestedProfile[];
 }
 
 export function useFriendSuggestions() {

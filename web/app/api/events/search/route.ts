@@ -10,6 +10,7 @@ import {
   applyPortalCategoryFilters,
   filterByPortalContentScope,
 } from "@/lib/portal-scope";
+import { applyFeedGate } from "@/lib/feed-gate";
 
 // GET /api/events/search?q= - Search events for autocomplete
 export async function GET(request: NextRequest) {
@@ -68,6 +69,8 @@ export async function GET(request: NextRequest) {
     .or(`start_date.gte.${new Date().toISOString().split("T")[0]},end_date.gte.${new Date().toISOString().split("T")[0]}`)
     .order("start_date", { ascending: true })
     .limit(limit);
+
+  searchQuery = applyFeedGate(searchQuery);
 
   // Filter by class status
   if (excludeClasses) {

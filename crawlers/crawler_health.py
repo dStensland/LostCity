@@ -437,11 +437,21 @@ def get_recommended_workers() -> int:
 
 
 def get_recommended_delay(source_slug: str) -> float:
-    """Get recommended delay before crawling this source."""
+    """Get recommended delay before crawling this source.
+
+    Returns 0.0 for healthy or unknown sources so crawls run immediately.
+    Only sources with actual health problems incur a delay.
+    """
     health = get_source_health(source_slug)
-    if health:
-        return health.recommended_delay_seconds
-    return 1.0  # Default delay for unknown sources
+    if not health:
+        return 0.0  # No history — let it run immediately
+
+    # Healthy sources with no recent failures need no delay
+    if health.health_score > 80 and health.consecutive_failures == 0:
+        return 0.0
+
+    # Otherwise use the failure-tier delay calculated in get_source_health()
+    return health.recommended_delay_seconds
 
 
 def should_skip_crawl(source_slug: str) -> tuple[bool, str]:
@@ -485,6 +495,42 @@ def should_skip_crawl(source_slug: str) -> tuple[bool, str]:
         return True, f"consecutive_failures={health.consecutive_failures}"
 
     return False, ""
+
+
+@dataclass
+class CircuitState:
+    """Unified circuit state derived from health tracker data."""
+    slug: str
+    consecutive_failures: int
+    is_open: bool
+    reason: str
+
+
+def get_all_circuit_states() -> list[CircuitState]:
+    """
+    Get circuit state for all tracked sources.
+
+    Derives open/closed state from the same logic used by should_skip_crawl(),
+    so the --circuit-status display is always consistent with skip decisions.
+    """
+    all_health = get_all_source_health()
+    states = []
+
+    for health in all_health:
+        skip, reason = should_skip_crawl(health.source_slug)
+        if not reason:
+            if health.consecutive_failures == 0:
+                reason = "healthy"
+            else:
+                reason = f"degraded_{health.consecutive_failures}_failures"
+        states.append(CircuitState(
+            slug=health.source_slug,
+            consecutive_failures=health.consecutive_failures,
+            is_open=skip,
+            reason=reason,
+        ))
+
+    return states
 
 
 def get_system_health_summary() -> dict:

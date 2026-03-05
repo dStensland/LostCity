@@ -193,6 +193,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "content_hash": content_hash,
                     }
 
+                    # Enrich from detail page if we're missing start_time
+                    if not start_time and event_url and event_url != EVENTS_URL:
+                        try:
+                            event_record = enrich_event_record(event_record, VENUE_DATA["name"])
+                        except Exception as enrich_err:
+                            logger.debug(f"Enrichment failed for {title}: {enrich_err}")
+
                     existing = find_event_by_hash(content_hash)
                     if existing:
                         smart_update_existing_event(existing, event_record)

@@ -8,6 +8,7 @@ import {
 import { getLocalDateString } from "@/lib/formats";
 import { isChainCinemaVenue } from "@/lib/cinema-filter";
 import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
+import { applyFeedGate } from "@/lib/feed-gate";
 
 // Cache 5 min public, 10 min stale-while-revalidate
 export const revalidate = 300;
@@ -287,7 +288,7 @@ export async function GET(request: NextRequest) {
     async () => {
       // Fetch ALL film events at cinema venues for this date (both showtime and special).
       // We fetch broadly and split in code to avoid PostgREST join-filter limitations.
-      const { data: events, error } = await supabase
+      let showtimesQuery = supabase
         .from("events")
         .select(
           `
@@ -319,6 +320,8 @@ export async function GET(request: NextRequest) {
         .not("start_time", "is", null)
         .order("start_time", { ascending: true })
         .limit(SHOWTIMES_EVENT_LIMIT);
+      showtimesQuery = applyFeedGate(showtimesQuery);
+      const { data: events, error } = await showtimesQuery;
 
       if (error) {
         throw error;

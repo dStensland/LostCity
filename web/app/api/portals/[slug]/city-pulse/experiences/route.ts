@@ -26,11 +26,29 @@ import { getPortalSourceAccess } from "@/lib/federation";
 import { getLocalDateString } from "@/lib/formats";
 import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
 import { THINGS_TO_DO_TILES, type Spot } from "@/lib/spots-constants";
+import { applyFeedGate } from "@/lib/feed-gate";
 import { buildExperiencesSection } from "@/lib/city-pulse/section-builders";
 
 // ---------------------------------------------------------------------------
 // Config
 // ---------------------------------------------------------------------------
+
+/** Chain / franchise venues to exclude from Things to Do (case-insensitive prefix match) */
+const CHAIN_VENUE_PREFIXES = [
+  "amc ",
+  "regal ",
+  "cinemark ",
+  "marcus theatres",
+  "marcus cinema",
+  "century theatres",
+  "megaplex",
+  "planet fitness",
+  "la fitness",
+  "orangetheory",
+  "goldfish swim",
+  "lifetime fitness",
+  "topgolf",
+];
 
 const CACHE_NAMESPACE = "api:city-pulse-experiences";
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 min
@@ -148,7 +166,10 @@ export async function GET(request: NextRequest, { params }: Props) {
   venueQuery = venueQuery.order("name").limit(300);
 
   const { data: venuesRaw } = await venueQuery;
-  const venues = (venuesRaw ?? []) as Spot[];
+  const venues = (venuesRaw ?? []).filter((v) => {
+    const nameLower = ((v as { name?: string }).name ?? "").toLowerCase();
+    return !CHAIN_VENUE_PREFIXES.some((prefix) => nameLower.startsWith(prefix));
+  }) as Spot[];
 
   if (venues.length === 0) {
     const emptyResult = { section: null };
@@ -173,6 +194,7 @@ export async function GET(request: NextRequest, { params }: Props) {
       .gte("start_date", today)
       .is("canonical_event_id", null);
     evQ = applyPortalScope(evQ);
+    evQ = applyFeedGate(evQ);
     const { data: evRows } = await evQ.limit(2000);
     if (evRows) {
       for (const row of evRows as { venue_id: number }[]) {

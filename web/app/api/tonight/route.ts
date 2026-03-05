@@ -11,6 +11,7 @@ import {
   filterByPortalContentScope,
 } from "@/lib/portal-scope";
 import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
+import { applyFeedGate } from "@/lib/feed-gate";
 
 type HighlightsPeriod = "today" | "week" | "month";
 
@@ -780,6 +781,8 @@ export async function GET(request: NextRequest) {
         .or("is_class.eq.false,is_class.is.null")
         .or("is_sensitive.eq.false,is_sensitive.is.null");
 
+      scoped = applyFeedGate(scoped);
+
       scoped = applyPortalScopeToQuery(scoped, {
         portalId: activePortal.id,
         portalExclusive: false,
@@ -811,6 +814,7 @@ export async function GET(request: NextRequest) {
             .neq("category_id", "film")
             .not("image_url", "is", null)
             .order("start_date", { ascending: true })
+            .order("data_quality", { ascending: false, nullsFirst: false })
             .order("start_time", { ascending: true })
             .limit(PER_WEEK_LIMIT)
         );
@@ -822,6 +826,7 @@ export async function GET(request: NextRequest) {
           .not("image_url", "is", null)
           .not("tags", "cs", "{showtime}")
           .order("start_date", { ascending: true })
+          .order("data_quality", { ascending: false, nullsFirst: false })
           .order("start_time", { ascending: true })
           .limit(50)
       );
@@ -839,6 +844,7 @@ export async function GET(request: NextRequest) {
           .neq("category_id", "film")
           .not("image_url", "is", null)
           .order("start_date", { ascending: true })
+          .order("data_quality", { ascending: false, nullsFirst: false })
           .order("start_time", { ascending: true })
           .limit(config.candidateLimit),
         // Only fetch film events that AREN'T regular chain showtimes
@@ -847,17 +853,20 @@ export async function GET(request: NextRequest) {
           .not("image_url", "is", null)
           .not("tags", "cs", "{showtime}")
           .order("start_date", { ascending: true })
+          .order("data_quality", { ascending: false, nullsFirst: false })
           .order("start_time", { ascending: true })
           .limit(period === "today" ? 30 : 50),
       ]);
 
       if (nonFilmResult.error && filmResult.error) {
         console.error("Failed to fetch tonight events:", nonFilmResult.error);
-        const payload = { events: [], period };
-        await setCachedTonightResponse(cacheKey, payload, cacheTtlMs);
-        return NextResponse.json(payload, {
-          headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120" }
-        });
+        return NextResponse.json(
+          { events: [], period },
+          {
+            headers: { "Cache-Control": "no-store" },
+            status: 503,
+          }
+        );
       }
 
       allEvents = [
@@ -876,6 +885,7 @@ export async function GET(request: NextRequest) {
         .neq("category_id", "film")
         .is("image_url", null)
         .order("start_date", { ascending: true })
+        .order("data_quality", { ascending: false, nullsFirst: false })
         .order("start_time", { ascending: true })
         .limit(backfillLimit);
 

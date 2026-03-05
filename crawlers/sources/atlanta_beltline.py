@@ -16,7 +16,7 @@ from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeo
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
-from utils import extract_images_from_page, extract_event_links, find_event_url
+from utils import extract_images_from_page, extract_event_links, find_event_url, enrich_event_record
 
 logger = logging.getLogger(__name__)
 
@@ -262,6 +262,15 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
 
 
+                    # Only use a real detail URL — listing page gives nothing useful
+                    is_detail_url = (
+                        event_url
+                        and event_url != EVENTS_URL
+                        and event_url != BASE_URL
+                        and "/events/" in event_url
+                        and len(event_url) > len(EVENTS_URL) + 2
+                    )
+
                     event_record = {
                         "source_id": source_id,
                         "venue_id": venue_id,
@@ -271,7 +280,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "start_time": event_time,
                         "end_date": None,
                         "end_time": None,
-                        "is_all_day": event_time is None,
+                        "is_all_day": False,
                         "category": category,
                         "subcategory": None,
                         "tags": tags,
@@ -279,15 +288,21 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "price_max": None,
                         "price_note": None,
                         "is_free": is_free,
-                        "source_url": event_url,
-                        "ticket_url": event_url if event_url != (EVENTS_URL if "EVENTS_URL" in dir() else BASE_URL) else None,
-                        "image_url": image_map.get(title),
+                        "source_url": event_url or EVENTS_URL,
+                        "ticket_url": event_url if is_detail_url else None,
+                        "image_url": None,
                         "raw_text": f"{title} | {event_date} | {description[:200]}"[:500],
                         "extraction_confidence": 0.80,
                         "is_recurring": False,
                         "recurrence_rule": None,
                         "content_hash": content_hash,
                     }
+
+                    # Enrich from detail page: fills description (og:description / JSON-LD),
+                    # image_url (og:image), price. Only fires when a real detail URL exists
+                    # and fields are missing.
+                    if is_detail_url:
+                        enrich_event_record(event_record, source_name="Atlanta BeltLine")
 
                     existing = find_event_by_hash(content_hash)
                     if existing:

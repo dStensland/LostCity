@@ -32,6 +32,7 @@ import {
   resolvePortalSlugAlias,
 } from "@/lib/portal-aliases";
 import { applyManifestFederatedScopeToQuery } from "@/lib/portal-scope";
+import { applyFeedGate } from "@/lib/feed-gate";
 import { buildPortalManifest } from "@/lib/portal-manifest";
 import {
   suppressEventImagesIfVenueFlagged,
@@ -659,9 +660,11 @@ export async function GET(request: NextRequest, { params }: Props) {
       .or("is_class.eq.false,is_class.is.null")
       .or("is_sensitive.eq.false,is_sensitive.is.null")
       .neq("category_id", "film"); // Film → Now Showing (separate API)
+    q = applyFeedGate(q);
     q = applyPortalScope(q);
     return q
       .order("start_date", { ascending: true })
+      .order("data_quality", { ascending: false, nullsFirst: false })
       .order("start_time", { ascending: true })
       .limit(limit);
   };
@@ -679,7 +682,9 @@ export async function GET(request: NextRequest, { params }: Props) {
       .or("is_class.eq.false,is_class.is.null")
       .or("is_sensitive.eq.false,is_sensitive.is.null")
       .neq("category_id", "film") // Film → Now Showing (separate block)
-      .not("tags", "cs", '{"activism"}') // Activism → separate opt-in block
+      .not("tags", "cs", '{"activism"}'); // Activism → separate opt-in block
+    q = applyFeedGate(q);
+    q = q
       .or("is_tentpole.eq.false,is_tentpole.is.null") // Tentpole → Big Stuff
       .is("festival_id", null); // Festival → Big Stuff
     q = applyPortalScope(q);
@@ -769,6 +774,7 @@ export async function GET(request: NextRequest, { params }: Props) {
       queries.push(
         q
           .order("start_date", { ascending: true })
+          .order("data_quality", { ascending: false, nullsFirst: false })
           .order("start_time", { ascending: true })
           .limit(PER_INTEREST_LIMIT) as unknown as Promise<{ data: FeedEventData[] | null }>,
       );
@@ -873,6 +879,7 @@ export async function GET(request: NextRequest, { params }: Props) {
       .order("is_featured", { ascending: false, nullsFirst: false })
       .order("attendee_count", { ascending: false, nullsFirst: false })
       .order("start_date", { ascending: true })
+      .order("data_quality", { ascending: false, nullsFirst: false })
       .limit(20);
   };
 
@@ -890,6 +897,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     q = applyPortalScope(q);
     return q
       .order("start_time", { ascending: true })
+      .order("data_quality", { ascending: false, nullsFirst: false })
       .limit(30);
   };
 
@@ -1302,6 +1310,7 @@ export async function GET(request: NextRequest, { params }: Props) {
         .or("is_class.eq.false,is_class.is.null")
         .or("is_sensitive.eq.false,is_sensitive.is.null")
         .order("start_date", { ascending: true })
+        .order("data_quality", { ascending: false, nullsFirst: false })
         .limit(10);
       return dedupeEventsById(
         filterOutInactiveVenueEvents(

@@ -25,6 +25,7 @@ import {
 import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
 import { isSuppressedFromGeneralEventFeed } from "@/lib/event-content-classification";
 import { filterOutInactiveVenueEvents } from "@/lib/event-feed-health";
+import { applyFeedGate } from "@/lib/feed-gate";
 
 import { fetchSocialProofCounts } from "@/lib/social-proof";
 import { format, startOfDay, addDays } from "date-fns";
@@ -222,7 +223,9 @@ export async function GET(request: Request) {
           .lte("start_date", weekFromNow)
           .is("canonical_event_id", null)
           .is("portal_id", null)
+          .or("is_feed_ready.eq.true,is_feed_ready.is.null")
           .order("start_date", { ascending: true })
+          .order("data_quality", { ascending: false, nullsFirst: false })
           .limit(200),
       ]);
 
@@ -435,11 +438,14 @@ export async function GET(request: Request) {
       .is("canonical_event_id", null) // Only show canonical events, not duplicates
       .or("is_class.eq.false,is_class.is.null")
       .or("is_sensitive.eq.false,is_sensitive.is.null")
-      .order("start_date", { ascending: true });
+      .order("start_date", { ascending: true })
+      .order("data_quality", { ascending: false, nullsFirst: false });
 
     if (hideAdultContent) {
       query = query.or("is_adult.eq.false,is_adult.is.null");
     }
+
+    query = applyFeedGate(query);
 
     // Apply end date filter if specified
     if (endDateFilter) {
@@ -539,6 +545,7 @@ export async function GET(request: Request) {
         .or("is_class.eq.false,is_class.is.null")
         .or("is_sensitive.eq.false,is_sensitive.is.null")
         .order("start_date", { ascending: true })
+        .order("data_quality", { ascending: false, nullsFirst: false })
         .limit(50);
 
       if (hideAdultContent) {
@@ -551,6 +558,7 @@ export async function GET(request: Request) {
         publicOnlyWhenNoPortal: true,
       });
 
+      venueQuery = applyFeedGate(venueQuery);
       queries.push(venueQuery);
       queryTypes.push("venue");
     }
@@ -566,6 +574,7 @@ export async function GET(request: Request) {
         .or("is_class.eq.false,is_class.is.null")
         .or("is_sensitive.eq.false,is_sensitive.is.null")
         .order("start_date", { ascending: true })
+        .order("data_quality", { ascending: false, nullsFirst: false })
         .limit(50);
 
       if (hideAdultContent) {
@@ -578,6 +587,7 @@ export async function GET(request: Request) {
         publicOnlyWhenNoPortal: true,
       });
 
+      producerQuery = applyFeedGate(producerQuery);
       queries.push(producerQuery);
       queryTypes.push("org");
     }
@@ -593,6 +603,7 @@ export async function GET(request: Request) {
         .or("is_class.eq.false,is_class.is.null")
         .or("is_sensitive.eq.false,is_sensitive.is.null")
         .order("start_date", { ascending: true })
+        .order("data_quality", { ascending: false, nullsFirst: false })
         .limit(50);
 
       if (hideAdultContent) {
@@ -605,6 +616,7 @@ export async function GET(request: Request) {
         publicOnlyWhenNoPortal: true,
       });
 
+      sourceQuery = applyFeedGate(sourceQuery);
       queries.push(sourceQuery);
       queryTypes.push("source");
     }
@@ -623,6 +635,7 @@ export async function GET(request: Request) {
         .or("is_class.eq.false,is_class.is.null")
         .or("is_sensitive.eq.false,is_sensitive.is.null")
         .order("start_date", { ascending: true })
+        .order("data_quality", { ascending: false, nullsFirst: false })
         .limit(50);
 
       if (hideAdultContent) {
@@ -637,6 +650,7 @@ export async function GET(request: Request) {
         publicOnlyWhenNoPortal: true,
       });
 
+      neighborhoodQuery = applyFeedGate(neighborhoodQuery);
       queries.push(neighborhoodQuery);
       queryTypes.push("neighborhood");
     }
@@ -652,6 +666,7 @@ export async function GET(request: Request) {
         .or("is_class.eq.false,is_class.is.null")
         .or("is_sensitive.eq.false,is_sensitive.is.null")
         .order("start_date", { ascending: true })
+        .order("data_quality", { ascending: false, nullsFirst: false })
         .limit(50);
 
       if (hideAdultContent) {
@@ -664,6 +679,7 @@ export async function GET(request: Request) {
         publicOnlyWhenNoPortal: true,
       });
 
+      categoryQuery = applyFeedGate(categoryQuery);
       queries.push(categoryQuery);
       queryTypes.push("category");
     }

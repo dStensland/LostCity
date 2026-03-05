@@ -6,6 +6,8 @@ from __future__ import annotations
 
 import re
 import time
+import socket
+import ipaddress
 import logging
 from functools import wraps
 from typing import Callable, TypeVar, Optional, Dict, Tuple
@@ -200,6 +202,34 @@ def parse_relative_date(text: str) -> Optional[datetime]:
     return None
 
 
+def validate_url(url: str) -> str:
+    """Validate a URL is safe to fetch (no SSRF to private networks).
+
+    Resolves the hostname and rejects private/reserved IP ranges.
+    Returns the URL if safe, raises ValueError if not.
+    """
+    from urllib.parse import urlparse
+
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        raise ValueError(f"Unsupported scheme: {parsed.scheme}")
+
+    hostname = parsed.hostname
+    if not hostname:
+        raise ValueError("Missing hostname")
+
+    try:
+        resolved = socket.getaddrinfo(hostname, None)
+        for family, _, _, _, sockaddr in resolved:
+            ip = ipaddress.ip_address(sockaddr[0])
+            if ip.is_private or ip.is_reserved or ip.is_loopback or ip.is_link_local:
+                raise ValueError(f"URL resolves to private/reserved IP: {ip}")
+    except socket.gaierror:
+        raise ValueError(f"Cannot resolve hostname: {hostname}")
+
+    return url
+
+
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=1, max=10))
 def fetch_page(url: str, use_session: Optional[requests.Session] = None) -> str:
     """
@@ -212,6 +242,7 @@ def fetch_page(url: str, use_session: Optional[requests.Session] = None) -> str:
     Returns:
         The page HTML content
     """
+    validate_url(url)
     cfg = get_config()
 
     session = use_session or requests.Session()

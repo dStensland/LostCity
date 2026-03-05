@@ -30,6 +30,7 @@ import {
   type ProximityTier,
 } from "./geo";
 import { addDays, startOfDay, nextFriday, nextSunday, isFriday, isSaturday, isSunday } from "date-fns";
+import { applyFeedGate } from "@/lib/feed-gate";
 
 // ---------------------------------------------------------------------------
 // Daypart helpers
@@ -534,7 +535,7 @@ async function fetchFeedSectionsDirect(
   // 3. Fetch curated/pinned events
   const eventMap = new Map<number, DbEvent>();
   if (curatedEventIds.size > 0) {
-    const { data: curatedEvents } = await supabase
+    let curatedQuery = supabase
       .from("events")
       .select(EVENT_SELECT)
       .in("id", Array.from(curatedEventIds))
@@ -542,6 +543,8 @@ async function fetchFeedSectionsDirect(
       .is("canonical_event_id", null)
       .or("is_class.eq.false,is_class.is.null")
       .or("is_sensitive.eq.false,is_sensitive.is.null");
+    curatedQuery = applyFeedGate(curatedQuery);
+    const { data: curatedEvents } = await curatedQuery;
 
     for (const event of (curatedEvents || []) as DbEvent[]) {
       eventMap.set(event.id, event);
@@ -559,14 +562,16 @@ async function fetchFeedSectionsDirect(
     const today = getLocalDateString();
     const maxDate = getLocalDateString(addDays(new Date(), 14));
 
-    let eventsQuery = supabase
-      .from("events")
-      .select(EVENT_SELECT)
-      .gte("start_date", today)
-      .lte("start_date", maxDate)
-      .is("canonical_event_id", null)
-      .or("is_class.eq.false,is_class.is.null")
-      .or("is_sensitive.eq.false,is_sensitive.is.null") as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+    let eventsQuery = applyFeedGate(
+      supabase
+        .from("events")
+        .select(EVENT_SELECT)
+        .gte("start_date", today)
+        .lte("start_date", maxDate)
+        .is("canonical_event_id", null)
+        .or("is_class.eq.false,is_class.is.null")
+        .or("is_sensitive.eq.false,is_sensitive.is.null")
+    ) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
     // Apply portal access filtering
     if (isExclusivePortal) {
@@ -774,14 +779,16 @@ async function fetchDestinationsDirect(
       .in("venue_id", venueIds)
       .eq("is_active", true),
     (() => {
-      let q = supabase
-        .from("events")
-        .select("id, title, start_date, start_time, venue_id, source_id, category_id")
-        .in("venue_id", venueIds)
-        .gte("start_date", today)
-        .is("canonical_event_id", null)
-        .or("is_class.eq.false,is_class.is.null")
-        .or("is_sensitive.eq.false,is_sensitive.is.null") as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+      let q = applyFeedGate(
+        supabase
+          .from("events")
+          .select("id, title, start_date, start_time, venue_id, source_id, category_id")
+          .in("venue_id", venueIds)
+          .gte("start_date", today)
+          .is("canonical_event_id", null)
+          .or("is_class.eq.false,is_class.is.null")
+          .or("is_sensitive.eq.false,is_sensitive.is.null")
+      ) as any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
       if (isExclusivePortal) {
         q = hasSubscribedSources

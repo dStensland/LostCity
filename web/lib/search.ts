@@ -20,6 +20,7 @@ import { decodeCursor, generateNextCursor, type CursorData } from "./cursor";
 import { createLogger } from "./logger";
 import type { Frequency, DayOfWeek } from "./recurrence";
 import { applyFederatedPortalScopeToQuery, applyPortalScopeToQuery } from "./portal-scope";
+import { applyFeedGate } from "./feed-gate";
 
 const logger = createLogger("search");
 
@@ -230,6 +231,7 @@ async function batchFetchVenueIds(filters: {
   city?: string;
 }): Promise<{
   searchVenueIds: number[];
+  searchEventIds: number[];
   moodVenueIds: number[];
   vibesVenueIds: number[];
   neighborhoodVenueIds: number[];
@@ -239,6 +241,7 @@ async function batchFetchVenueIds(filters: {
   if (!filters.searchTerm && !filters.moodVibes && !filters.vibes && !filters.neighborhoods && !filters.city) {
     return {
       searchVenueIds: [],
+      searchEventIds: [],
       moodVenueIds: [],
       vibesVenueIds: [],
       neighborhoodVenueIds: [],
@@ -248,9 +251,9 @@ async function batchFetchVenueIds(filters: {
 
   // Build parallel targeted queries - only fetch IDs that match specific filters
   const queries: Promise<number[]>[] = [];
-  const queryTypes: ('search' | 'moodVibes' | 'vibes' | 'neighborhoods' | 'city')[] = [];
+  const queryTypes: ('search' | 'searchEvents' | 'moodVibes' | 'vibes' | 'neighborhoods' | 'city')[] = [];
 
-  // Search term - use ilike for name matching
+  // Search term - use ilike for venue name matching
   if (filters.searchTerm) {
     const escapedTerm = escapePostgrestValue(filters.searchTerm);
     queries.push(
@@ -263,6 +266,22 @@ async function batchFetchVenueIds(filters: {
       })()
     );
     queryTypes.push('search');
+
+    // Pre-fetch event IDs matching title/description to avoid ilike in the
+    // main query chain (which causes PostgreSQL planner timeouts when combined
+    // with multiple .or() filters and joins).
+    queries.push(
+      (async () => {
+        const { data } = await supabase
+          .from("events")
+          .select("id")
+          .or(`title.ilike.%${escapedTerm}%,description.ilike.%${escapedTerm}%`)
+          .gte("start_date", format(startOfDay(new Date()), "yyyy-MM-dd"))
+          .limit(500);
+        return (data || []).map((e: { id: number }) => e.id);
+      })()
+    );
+    queryTypes.push('searchEvents');
   }
 
   // Mood vibes - use overlaps for array matching
@@ -331,6 +350,7 @@ async function batchFetchVenueIds(filters: {
   // Map results back to their respective arrays
   const resultMap: Record<string, number[]> = {
     search: [],
+    searchEvents: [],
     moodVibes: [],
     vibes: [],
     neighborhoods: [],
@@ -343,6 +363,7 @@ async function batchFetchVenueIds(filters: {
 
   return {
     searchVenueIds: resultMap.search,
+    searchEventIds: resultMap.searchEvents,
     moodVenueIds: resultMap.moodVibes,
     vibesVenueIds: resultMap.vibes,
     neighborhoodVenueIds: resultMap.neighborhoods,
@@ -439,25 +460,38 @@ async function applySearchFilters(
   options: {
     mood: ReturnType<typeof getMoodById> | null;
     searchVenueIds: number[];
+    searchEventIds: number[];
     moodVenueIds: number[];
     vibesVenueIds: number[];
     neighborhoodVenueIds: number[];
     cityVenueIds: number[];
   }
 ): Promise<{ query: any; shouldReturnEmpty: boolean }> { // eslint-disable-line @typescript-eslint/no-explicit-any
-  const { mood, searchVenueIds, moodVenueIds, vibesVenueIds, neighborhoodVenueIds, cityVenueIds } = options;
+  const { mood, searchVenueIds, searchEventIds, moodVenueIds, vibesVenueIds, neighborhoodVenueIds, cityVenueIds } = options;
 
-  // Apply search filter (includes venue name search)
+  // Apply search filter using pre-fetched IDs.
+  // We pre-fetch event IDs matching title/description and venue IDs matching
+  // venue name in batchFetchVenueIds. Using id.in() here instead of ilike
+  // avoids PostgreSQL planner timeouts when combined with the other .or()
+  // filters and table joins in the main query.
   if (filters.search && filters.search.trim()) {
-    const escapedSearch = escapePostgrestValue(filters.search.trim());
-    const searchTerm = `%${escapedSearch}%`;
+    // Combine pre-fetched event IDs (title/description matches) with
+    // venue ID matches into a single .or() condition
+    const allMatchingIds = new Set([...searchEventIds]);
+    const conditions: string[] = [];
 
+    if (allMatchingIds.size > 0) {
+      conditions.push(`id.in.(${[...allMatchingIds].join(",")})`);
+    }
     if (searchVenueIds.length > 0) {
-      query = query.or(
-        `title.ilike.${searchTerm},description.ilike.${searchTerm},venue_id.in.(${searchVenueIds.join(",")})`
-      );
+      conditions.push(`venue_id.in.(${searchVenueIds.join(",")})`);
+    }
+
+    if (conditions.length > 0) {
+      query = query.or(conditions.join(","));
     } else {
-      query = query.or(`title.ilike.${searchTerm},description.ilike.${searchTerm}`);
+      // No matches from pre-fetch — return empty
+      return { query, shouldReturnEmpty: true };
     }
   }
 
@@ -658,6 +692,8 @@ export async function getFilteredEventsWithSearch(
     .or("start_time.not.is.null,is_all_day.eq.true")
     .is("canonical_event_id", null); // Only show canonical events, not duplicates
 
+  query = applyFeedGate(query);
+
   // Apply portal + federated source restriction filter.
   // If no portal_id is provided, keep query unscoped for admin/global callers.
   query = applyFederatedPortalScopeToQuery(query, {
@@ -674,6 +710,7 @@ export async function getFilteredEventsWithSearch(
   // Batch all venue queries in parallel (eliminates N+1 sequential queries)
   const {
     searchVenueIds,
+    searchEventIds,
     moodVenueIds,
     vibesVenueIds,
     neighborhoodVenueIds,
@@ -690,6 +727,7 @@ export async function getFilteredEventsWithSearch(
   const { query: filteredQuery, shouldReturnEmpty } = await applySearchFilters(query, filters, {
     mood,
     searchVenueIds,
+    searchEventIds,
     moodVenueIds,
     vibesVenueIds,
     neighborhoodVenueIds,
@@ -706,6 +744,7 @@ export async function getFilteredEventsWithSearch(
   // Order and paginate
   query = query
     .order("start_date", { ascending: true })
+    .order("data_quality", { ascending: false, nullsFirst: false })
     .order("start_time", { ascending: true })
     .range(offset, offset + pageSize - 1);
 
@@ -779,6 +818,8 @@ export async function getFilteredEventsWithCursor(
     .or("start_time.not.is.null,is_all_day.eq.true")
     .is("canonical_event_id", null); // Only show canonical events, not duplicates
 
+  query = applyFeedGate(query);
+
   query = applyFederatedPortalScopeToQuery(query, {
     portalId: filters.portal_id,
     portalExclusive: filters.portal_exclusive,
@@ -793,6 +834,7 @@ export async function getFilteredEventsWithCursor(
   // Batch all venue queries in parallel
   const {
     searchVenueIds,
+    searchEventIds,
     moodVenueIds,
     vibesVenueIds,
     neighborhoodVenueIds,
@@ -809,6 +851,7 @@ export async function getFilteredEventsWithCursor(
   const { query: filteredQuery, shouldReturnEmpty } = await applySearchFilters(query, filters, {
     mood,
     searchVenueIds,
+    searchEventIds,
     moodVenueIds,
     vibesVenueIds,
     neighborhoodVenueIds,
@@ -835,9 +878,11 @@ export async function getFilteredEventsWithCursor(
   }
 
   // Order and limit (fetch one extra to check hasMore)
+  // data_quality is placed after start_time so the cursor tuple (date, time, id) remains valid
   query = query
     .order("start_date", { ascending: true })
     .order("start_time", { ascending: true, nullsFirst: true })
+    .order("data_quality", { ascending: false, nullsFirst: false })
     .order("id", { ascending: true })
     .limit(pageSize + 1);
 
@@ -894,6 +939,7 @@ export async function getEventsForMap(
   // instead of making sequential queries
   const {
     searchVenueIds,
+    searchEventIds,
     moodVenueIds,
     vibesVenueIds,
     neighborhoodVenueIds,
@@ -963,6 +1009,7 @@ export async function getEventsForMap(
   const { query: filteredQuery, shouldReturnEmpty } = await applySearchFilters(query, mapFilters, {
     mood,
     searchVenueIds,
+    searchEventIds,
     moodVenueIds,
     vibesVenueIds,
     neighborhoodVenueIds,
@@ -976,7 +1023,10 @@ export async function getEventsForMap(
 
   query = filteredQuery;
 
-  query = query.order("start_date", { ascending: true }).limit(limit);
+  query = query
+    .order("start_date", { ascending: true })
+    .order("data_quality", { ascending: false, nullsFirst: false })
+    .limit(limit);
 
   const { data, error } = await query;
 

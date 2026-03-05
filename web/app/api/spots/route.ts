@@ -8,6 +8,7 @@ import { haversineDistanceKm, getWalkingMinutes, getProximityTier, getProximityL
 import { logger } from "@/lib/logger";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
 import { applyPortalScopeToQuery, expandCityFilterForMetro } from "@/lib/portal-scope";
+import { applyFeedGate } from "@/lib/feed-gate";
 import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
 import { VENUE_TYPE_ALIASES } from "@/lib/spots-constants";
 
@@ -254,6 +255,7 @@ export async function GET(request: NextRequest) {
       portalExclusive: isExclusive,
       publicOnlyWhenNoPortal: true,
     });
+    eventsQuery = applyFeedGate(eventsQuery);
 
     const eventCandidateLimit = Math.max(
       400,
@@ -381,7 +383,7 @@ export async function GET(request: NextRequest) {
 
     // Optionally enrich with upcoming event details (next 2 per venue)
     if (includeEvents && venueIds.length > 0) {
-      const { data: eventDetails } = await supabase
+      let eventDetailsQuery = supabase
         .from("events")
         .select("venue_id, id, title, start_date, start_time")
         .in("venue_id", venueIds)
@@ -391,6 +393,8 @@ export async function GET(request: NextRequest) {
         .order("start_date", { ascending: true })
         .order("start_time", { ascending: true, nullsFirst: false })
         .limit(venueIds.length * 4); // fetch a few per venue, trim client-side
+      eventDetailsQuery = applyFeedGate(eventDetailsQuery);
+      const { data: eventDetails } = await eventDetailsQuery;
 
       if (eventDetails) {
         type EventDetail = { venue_id: number; id: number; title: string; start_date: string; start_time: string | null };

@@ -22,6 +22,7 @@ import {
 } from "@/lib/portal-scope";
 import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
 import { getPortalSourceAccess } from "@/lib/federation";
+import { applyFeedGate } from "@/lib/feed-gate";
 
 const VALID_CLASS_CATEGORIES = [
   "painting",
@@ -218,6 +219,7 @@ export async function GET(request: NextRequest) {
     query = applyPortalCategoryFilters(query, portalContentFilters, {
       userCategoriesActive: true,
     });
+    query = applyFeedGate(query);
 
     // Sorting
     if (sort === "price") {

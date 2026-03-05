@@ -69,7 +69,7 @@ Optional same-day content-depth lift (after gate is stable):
 cd /Users/coach/Projects/LostCity/crawlers
 python3 scripts/enrich_eventbrite_descriptions.py --portal atlanta --start-date $(date +%F) --limit 200 --apply
 python3 scripts/enrich_non_eventbrite_descriptions.py --portal atlanta --start-date $(date +%F) --limit 5000 --page-size 1000 --apply
-python3 scripts/launch_health_check.py --city Atlanta --portal atlanta
+python3 scripts/launch_health_check.py --city Atlanta --portal atlanta --gate-profile auto
 ```
 
 Optional participant integrity lift (music lineup quality, Atlanta-scoped):
@@ -130,7 +130,7 @@ Use this when feed detail quality drops and you need to force content depth back
 cd /Users/coach/Projects/LostCity/crawlers
 
 # 1) Pull full content health snapshot
-python3 scripts/content_health_audit.py --city Atlanta --portal atlanta
+python3 scripts/content_health_audit.py --city Atlanta --portal atlanta --gate-profile auto
 
 # 2) Run portal-scoped enrichment on the current short-source set
 python3 scripts/enrich_non_eventbrite_descriptions.py --portal atlanta --source-slugs <comma-separated-short-slugs> --min-length 220 --min-delta 1 --limit 5000 --page-size 1000 --apply
@@ -139,7 +139,7 @@ python3 scripts/enrich_non_eventbrite_descriptions.py --portal atlanta --source-
 python3 scripts/post_crawl_maintenance.py --city Atlanta --short-description-threshold 220
 
 # 4) Re-run launch gate
-python3 scripts/launch_health_check.py --city Atlanta --portal atlanta
+python3 scripts/launch_health_check.py --city Atlanta --portal atlanta --gate-profile auto
 ```
 
 ## Onboard New Venues/Sources/Crawlers
@@ -178,8 +178,8 @@ python3 main.py --health
 python3 main.py --quality
 
 # Launch-quality checks in Atlanta scope
-python3 scripts/content_health_audit.py --city Atlanta --portal atlanta
-python3 scripts/launch_health_check.py --city Atlanta --portal atlanta
+python3 scripts/content_health_audit.py --city Atlanta --portal atlanta --gate-profile auto
+python3 scripts/launch_health_check.py --city Atlanta --portal atlanta --gate-profile auto
 ```
 
 ### 4) Promote to production + stabilize feed
@@ -223,22 +223,27 @@ python3 scripts/deactivate_events_on_inactive_venues.py --apply
 python3 scripts/demote_inactive_tentpoles.py --apply
 
 # 5) Produce scoped audit artifacts
-python3 scripts/content_health_audit.py --city Atlanta --portal atlanta
+python3 scripts/content_health_audit.py --city Atlanta --portal atlanta --gate-profile auto
 
 # 6) Enforce launch gate
-python3 scripts/launch_health_check.py --city Atlanta --portal atlanta
+python3 scripts/launch_health_check.py --city Atlanta --portal atlanta --gate-profile auto
 ```
 
 ## Daily Operator Check (Low Friction)
 
 ```bash
 cd /Users/coach/Projects/LostCity/crawlers
-python3 scripts/launch_health_check.py --city Atlanta --portal atlanta
+python3 scripts/launch_health_check.py --city Atlanta --portal atlanta --gate-profile auto
 ```
 
 If this fails, run the post-crawl maintenance sequence and re-check.
 
 ## Gate Interpretation
+
+Gate profile defaults:
+- Atlanta consumer launch checks: use `--gate-profile auto` (resolves to `atlanta-consumer` for `--city Atlanta --portal atlanta`).
+- Concierge/hotel launch checks: use `--gate-profile concierge-hotel` so specials remain blocking.
+- Legacy strict mode: use `--gate-profile legacy` to treat all checks as hard.
 
 - `PASS`: launch-safe for audited scope.
 - `WARN`: operational risk; fix before shipping if user-visible or trending worse.
@@ -271,7 +276,7 @@ If duplicates regress:
 cd /Users/coach/Projects/LostCity/crawlers
 python3 scripts/canonicalize_same_source_exact_duplicates.py --start-date $(date +%F)
 python3 scripts/canonicalize_cross_source_duplicates.py --start-date $(date +%F)
-python3 scripts/launch_health_check.py --city Atlanta --portal atlanta
+python3 scripts/launch_health_check.py --city Atlanta --portal atlanta --gate-profile auto
 ```
 
 If inactive/closed leakage regresses:
@@ -280,7 +285,7 @@ If inactive/closed leakage regresses:
 cd /Users/coach/Projects/LostCity/crawlers
 python3 scripts/apply_closed_venues.py --apply
 python3 scripts/deactivate_events_on_inactive_venues.py --apply
-python3 scripts/launch_health_check.py --city Atlanta --portal atlanta
+python3 scripts/launch_health_check.py --city Atlanta --portal atlanta --gate-profile auto
 ```
 
 If tentpole inventory drifts with inactive rows:
@@ -293,7 +298,7 @@ python3 festival_tentpole_qualification_audit.py --md-out ../reports/festival-te
 
 If crawl reliability regresses (`crawl.error_rate_24h` near/above threshold):
 - Prioritize source failure triage and reruns before launch decisions.
-- Re-run `python3 scripts/launch_health_check.py --city Atlanta --portal atlanta` after fixes.
+- Re-run `python3 scripts/launch_health_check.py --city Atlanta --portal atlanta --gate-profile auto` after fixes.
 
 ## Artifacts to Read First
 

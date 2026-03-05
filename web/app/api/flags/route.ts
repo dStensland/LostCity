@@ -33,9 +33,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate entity_type
-    if (!["event", "venue", "producer"].includes(entity_type)) {
+    if (!["event", "venue", "producer", "organization"].includes(entity_type)) {
       return NextResponse.json(
-        { error: "Invalid entity_type. Must be: event, venue, or producer" },
+        { error: "Invalid entity_type. Must be: event, venue, producer, or organization" },
         { status: 400 }
       );
     }

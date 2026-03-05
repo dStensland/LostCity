@@ -48,11 +48,11 @@ VENUE_WEIGHTS = {
 }  # 100 pts total
 
 EVENT_WEIGHTS = {
-    "description": 20,
+    "description": 25,
     "start_time": 8,
     "venue_id": 15,
     "category": 10,
-    "image_url": 20,
+    "image_url": 15,
     "source_url": 5,
     "is_free": 5,
     "price_min": 7,
@@ -95,6 +95,29 @@ ORG_WEIGHTS = {
 }  # 100 pts total
 
 
+def _is_boilerplate_description(desc: Optional[str]) -> bool:
+    """Return True if the description matches known boilerplate templates."""
+    if not desc or not isinstance(desc, str):
+        return False
+    lower = desc.lower()
+    boilerplate_markers = [
+        "is a community program",
+        "is a live event",
+        "is a live music event",
+        "is a film screening",
+        "is a local event",
+        "use the ticket link for current availability",
+        "location details are listed on the official event page",
+    ]
+    for marker in boilerplate_markers:
+        if marker in lower:
+            return True
+    # Thin boilerplate: "Category: " near the top and the whole thing is short
+    if "category: " in desc[:200] and len(desc) < 250:
+        return True
+    return False
+
+
 def score_record(record: dict, weights: Dict[str, int]) -> int:
     """Compute quality score for a single record."""
     score = 0
@@ -105,9 +128,18 @@ def score_record(record: dict, weights: Dict[str, int]) -> int:
             if isinstance(value, (int, float)) and value >= 70:
                 score += points
             continue
+        # description: full points for real content, partial for boilerplate, zero for null
+        if field == "description":
+            if value and isinstance(value, str) and value != "":
+                score += 8 if _is_boilerplate_description(value) else points
+            continue
         if value is not None and value != "" and value != [] and value != {}:
-            # For boolean fields, True counts as filled
-            if isinstance(value, bool):
+            # For boolean fields: is_free awards points for any non-NULL boolean
+            # (False means pricing is known, which is just as informative as True)
+            if field == "is_free" and isinstance(value, bool):
+                score += points
+            # For all other boolean fields, True counts as filled
+            elif isinstance(value, bool):
                 score += points if value else 0
             # For numeric fields like events_per_month_avg, > 0 counts
             elif isinstance(value, (int, float)):
@@ -193,7 +225,9 @@ def compute_venues(client, dry_run: bool = False) -> dict:
 
 def compute_events(client, dry_run: bool = False) -> dict:
     """Compute and store event quality scores."""
-    fields = ",".join(["id"] + list(EVENT_WEIGHTS.keys()))
+    # DB column is category_id, but EVENT_WEIGHTS uses "category"
+    db_fields = [f if f != "category" else "category_id" for f in EVENT_WEIGHTS.keys()]
+    fields = ",".join(["id"] + db_fields)
     records = fetch_all(client, "events", fields)
     logger.info(f"Events: scoring {len(records)} records")
 
@@ -201,6 +235,9 @@ def compute_events(client, dry_run: bool = False) -> dict:
     distribution = {0: 0, 25: 0, 50: 0, 75: 0, 90: 0}
 
     for r in records:
+        # Map category_id back to category for scoring
+        if "category_id" in r and "category" not in r:
+            r["category"] = r["category_id"]
         s = score_record(r, EVENT_WEIGHTS)
         scores[r["id"]] = s
         for threshold in sorted(distribution.keys(), reverse=True):

@@ -145,8 +145,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 args=[
                     '--disable-blink-features=AutomationControlled',
                     '--disable-dev-shm-usage',
-                    '--no-sandbox',
-                    '--disable-web-security',
                 ]
             )
 

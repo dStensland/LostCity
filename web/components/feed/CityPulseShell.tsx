@@ -435,8 +435,25 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
         style={{ minHeight: lineupLoading ? 400 : undefined }}
       >
         {lineupLoading ? (
-          <div className="flex items-center justify-center py-16">
-            <HorseSpinner />
+          <div className="space-y-4 animate-pulse">
+            {/* Tab strip skeleton */}
+            <div className="flex items-center gap-2 overflow-hidden px-1">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-8 rounded-full bg-[var(--twilight)]/60" style={{ width: `${60 + i * 12}px` }} />
+              ))}
+            </div>
+            {/* Event grid skeleton */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="rounded-xl border border-[var(--twilight)]/40 bg-[var(--night)] overflow-hidden">
+                  <div className="aspect-[4/3] bg-[var(--twilight)]/30" />
+                  <div className="p-3 space-y-2">
+                    <div className="h-4 w-3/4 rounded bg-[var(--twilight)]/40" />
+                    <div className="h-3 w-1/2 rounded bg-[var(--twilight)]/30" />
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         ) : lineupSections.length > 0 ? (
           <div className="animate-fade-in">

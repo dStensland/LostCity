@@ -21,13 +21,16 @@ Usage:
 
     # Limit posts per source (default: 20)
     python3 scrape_network_feeds.py --limit 50
+
+    # Prune stale posts (default retention: 7 days)
+    python3 scrape_network_feeds.py --retention-days 7
 """
 
 import sys
 import time
 import logging
 import argparse
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Optional
 from html import unescape
@@ -62,6 +65,7 @@ HEADERS = {
 
 # Max chars for raw_description storage
 MAX_DESCRIPTION_CHARS = 5000
+DEFAULT_RETENTION_DAYS = 7
 
 # ── Per-post classification ──────────────────────────────────────────
 
@@ -395,6 +399,79 @@ def update_source_status(source_id: int, error: Optional[str] = None):
         logger.warning(f"  Could not update source status: {e}")
 
 
+def prune_old_posts(
+    retention_days: int,
+    dry_run: bool = False,
+    source_id: Optional[int] = None,
+) -> int:
+    """Delete stale network posts older than retention_days.
+
+    Uses published_at when available. Falls back to created_at for rows with
+    null published_at.
+    """
+    if retention_days <= 0:
+        return 0
+
+    cutoff = datetime.now(timezone.utc) - timedelta(days=retention_days)
+    cutoff_iso = cutoff.isoformat()
+    client = get_client()
+
+    # 1) Rows with explicit published_at older than cutoff
+    q_published = (
+        client.table("network_posts")
+        .select("id", count="exact")
+        .lt("published_at", cutoff_iso)
+    )
+    if source_id:
+        q_published = q_published.eq("source_id", source_id)
+    old_published = q_published.execute().count or 0
+
+    # 2) Rows with null published_at and stale created_at
+    q_null_pub = (
+        client.table("network_posts")
+        .select("id", count="exact")
+        .is_("published_at", "null")
+        .lt("created_at", cutoff_iso)
+    )
+    if source_id:
+        q_null_pub = q_null_pub.eq("source_id", source_id)
+    old_null_pub = q_null_pub.execute().count or 0
+
+    total_to_prune = old_published + old_null_pub
+    if total_to_prune == 0:
+        logger.info(
+            f"  Retention cleanup: nothing older than {retention_days} days "
+            f"(cutoff {cutoff.date().isoformat()})"
+        )
+        return 0
+
+    logger.info(
+        f"  Retention cleanup: {'would remove' if dry_run else 'removing'} "
+        f"{total_to_prune} posts older than {retention_days} days "
+        f"(cutoff {cutoff.date().isoformat()})"
+    )
+
+    if dry_run:
+        return total_to_prune
+
+    delete_published = client.table("network_posts").delete().lt("published_at", cutoff_iso)
+    if source_id:
+        delete_published = delete_published.eq("source_id", source_id)
+    delete_published.execute()
+
+    delete_null_pub = (
+        client.table("network_posts")
+        .delete()
+        .is_("published_at", "null")
+        .lt("created_at", cutoff_iso)
+    )
+    if source_id:
+        delete_null_pub = delete_null_pub.eq("source_id", source_id)
+    delete_null_pub.execute()
+
+    return total_to_prune
+
+
 # ── Feed fetching & parsing ──────────────────────────────────────────
 
 
@@ -415,6 +492,7 @@ def parse_feed_entries(
     existing_guids: set,
     existing_urls: set,
     limit: int = 20,
+    min_published_at: Optional[datetime] = None,
 ) -> list:
     """Parse RSS/Atom feed and return list of new post dicts ready for insert."""
     feed = feedparser.parse(raw_xml)
@@ -425,6 +503,7 @@ def parse_feed_entries(
 
     new_posts = []
     skipped_dup = 0
+    skipped_old = 0
 
     for entry in feed.entries:
         title = (entry.get("title") or "").strip()
@@ -442,6 +521,16 @@ def parse_feed_entries(
             skipped_dup += 1
             continue
 
+        published_at = parse_published_date(entry)
+        if min_published_at and published_at:
+            try:
+                published_dt = datetime.fromisoformat(published_at.replace("Z", "+00:00"))
+                if published_dt < min_published_at:
+                    skipped_old += 1
+                    continue
+            except Exception:
+                pass
+
         summary = extract_summary(entry)
         source_categories = source.get("categories") or []
         categories = classify_post(entry, source_categories, title, summary)
@@ -455,7 +544,7 @@ def parse_feed_entries(
             "author": extract_author(entry),
             "summary": summary,
             "image_url": extract_image_url(entry),
-            "published_at": parse_published_date(entry),
+            "published_at": published_at,
             "raw_description": extract_raw_description(entry),
             "categories": categories,
         }
@@ -472,6 +561,8 @@ def parse_feed_entries(
 
     if skipped_dup:
         logger.info(f"  Skipped {skipped_dup} already-known posts")
+    if skipped_old:
+        logger.info(f"  Skipped {skipped_old} older-than-window posts")
 
     return new_posts
 
@@ -479,7 +570,12 @@ def parse_feed_entries(
 # ── Main ─────────────────────────────────────────────────────────────
 
 
-def process_source(source: dict, limit: int = 20, dry_run: bool = False) -> tuple:
+def process_source(
+    source: dict,
+    limit: int = 20,
+    dry_run: bool = False,
+    min_published_at: Optional[datetime] = None,
+) -> tuple:
     """Fetch and process a single network source. Returns (found, new)."""
     name = source["name"]
     feed_url = source["feed_url"]
@@ -497,7 +593,14 @@ def process_source(source: dict, limit: int = 20, dry_run: bool = False) -> tupl
     existing_guids = set() if dry_run else get_existing_guids(source["id"])
     existing_urls = set() if dry_run else get_existing_urls(source["id"])
 
-    new_posts = parse_feed_entries(raw_xml, source, existing_guids, existing_urls, limit)
+    new_posts = parse_feed_entries(
+        raw_xml,
+        source,
+        existing_guids,
+        existing_urls,
+        limit,
+        min_published_at=min_published_at,
+    )
 
     feed = feedparser.parse(raw_xml)
     total_entries = len(feed.entries or [])
@@ -571,6 +674,12 @@ def main():
                         help="Show current network feed stats and exit")
     parser.add_argument("--verbose", action="store_true",
                         help="Enable debug logging")
+    parser.add_argument(
+        "--retention-days",
+        type=int,
+        default=DEFAULT_RETENTION_DAYS,
+        help=f"Prune posts older than this many days (default: {DEFAULT_RETENTION_DAYS}, 0 disables)",
+    )
     args = parser.parse_args()
 
     if args.verbose:
@@ -593,30 +702,67 @@ def main():
     if args.dry_run:
         logger.info("Mode: DRY RUN (no writes)")
     logger.info(f"Limit: {args.limit} posts per source")
+    if args.retention_days > 0:
+        logger.info(f"Retention: prune posts older than {args.retention_days} days")
+    else:
+        logger.info("Retention: disabled")
 
     total_found = 0
     total_new = 0
     errors = 0
+    source_results = []
+
+    min_published_at = None
+    if args.retention_days > 0:
+        min_published_at = datetime.now(timezone.utc) - timedelta(days=args.retention_days)
 
     for source in sources:
         try:
-            found, new = process_source(source, limit=args.limit, dry_run=args.dry_run)
+            found, new = process_source(
+                source,
+                limit=args.limit,
+                dry_run=args.dry_run,
+                min_published_at=min_published_at,
+            )
             total_found += found
             total_new += new
+            source_results.append({
+                "name": source["name"],
+                "slug": source["slug"],
+                "found": found,
+                "new": new,
+            })
         except Exception as e:
             logger.error(f"  ERROR processing {source['name']}: {e}")
             errors += 1
+            source_results.append({
+                "name": source["name"],
+                "slug": source["slug"],
+                "found": 0,
+                "new": 0,
+            })
             if not args.dry_run:
                 update_source_status(source["id"], error=str(e)[:200])
 
         # Be polite between sources
         time.sleep(1)
 
+    source_id_for_prune = sources[0]["id"] if args.source and len(sources) == 1 else None
+    pruned = prune_old_posts(
+        retention_days=args.retention_days,
+        dry_run=args.dry_run,
+        source_id=source_id_for_prune,
+    )
+
     logger.info(f"\n{'=' * 60}")
     logger.info(f"Done!")
     logger.info(f"  Sources processed: {len(sources)}")
     logger.info(f"  Feed entries found: {total_found}")
     logger.info(f"  New posts imported: {total_new}")
+    logger.info(f"  Old posts pruned: {pruned}")
+    logger.info("  New posts by source:")
+    for item in sorted(source_results, key=lambda x: x["new"], reverse=True):
+        logger.info(f"    {item['slug']}: +{item['new']} (entries: {item['found']})")
     if errors:
         logger.info(f"  Errors: {errors}")
     if args.dry_run:

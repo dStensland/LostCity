@@ -41,8 +41,8 @@ import {
   Flag,
 } from "@phosphor-icons/react";
 
-const MakeANightSheet = dynamic(
-  () => import("@/components/detail/MakeANightSheet"),
+const OutingPlannerSheet = dynamic(
+  () => import("@/components/outing-planner/OutingPlannerSheet"),
   { ssr: false },
 );
 import { DescriptionTeaser } from "@/components/detail/DescriptionTeaser";
@@ -582,15 +582,36 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
         isLive={isLive}
         className="mb-5"
         extraActions={
-          event.venue && event.venue.lat != null && event.venue.lng != null ? (
-            <button
-              onClick={() => setShowNightSheet(true)}
-              className="inline-flex items-center gap-2 px-4 min-h-[44px] rounded-lg text-sm font-mono font-medium text-[var(--gold)] bg-[var(--gold)]/8 border border-[var(--gold)]/25 hover:bg-[var(--gold)]/14 hover:border-[var(--gold)]/40 transition-all focus-ring"
-            >
-              <ForkKnife size={16} weight="duotone" />
-              Make a Night of It
-            </button>
-          ) : undefined
+          event.venue && event.venue.lat != null && event.venue.lng != null ? (() => {
+            const neonColor = getCategoryColor(event.category || "other");
+            return (
+              <button
+                onClick={() => setShowNightSheet(true)}
+                className="inline-flex items-center gap-2 px-3 sm:px-4 min-h-[40px] rounded-full text-sm font-mono font-medium transition-all focus-ring active:scale-95"
+                style={{
+                  color: neonColor,
+                  backgroundColor: `color-mix(in srgb, ${neonColor} 10%, transparent)`,
+                  borderWidth: 1,
+                  borderStyle: "solid",
+                  borderColor: `color-mix(in srgb, ${neonColor} 30%, transparent)`,
+                  boxShadow: `0 0 12px color-mix(in srgb, ${neonColor} 20%, transparent)`,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = `color-mix(in srgb, ${neonColor} 18%, transparent)`;
+                  e.currentTarget.style.borderColor = `color-mix(in srgb, ${neonColor} 45%, transparent)`;
+                  e.currentTarget.style.boxShadow = `0 0 16px color-mix(in srgb, ${neonColor} 35%, transparent)`;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = `color-mix(in srgb, ${neonColor} 10%, transparent)`;
+                  e.currentTarget.style.borderColor = `color-mix(in srgb, ${neonColor} 30%, transparent)`;
+                  e.currentTarget.style.boxShadow = `0 0 12px color-mix(in srgb, ${neonColor} 20%, transparent)`;
+                }}
+              >
+                <ForkKnife size={16} weight="duotone" />
+                <span className="hidden sm:inline">Plan Night</span>
+              </button>
+            );
+          })() : undefined
         }
       />
 
@@ -886,23 +907,31 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
         onEventClick={handleEventClick}
       />
 
-      {/* Make a Night of It — inline bottom sheet */}
+      {/* Outing Planner — consolidated bottom sheet */}
       {showNightSheet && event.venue && (
-        <MakeANightSheet
-          anchorEvent={{
-            id: event.id,
-            title: event.title,
-            start_date: event.start_date,
-            start_time: event.start_time,
-            end_time: event.end_time,
-            is_all_day: event.is_all_day,
-            venue: {
-              ...event.venue,
-              lat: event.venue.lat ?? null,
-              lng: event.venue.lng ?? null,
+        <OutingPlannerSheet
+          anchor={{
+            type: "event",
+            event: {
+              id: event.id,
+              title: event.title,
+              start_date: event.start_date,
+              start_time: event.start_time,
+              end_time: event.end_time,
+              is_all_day: event.is_all_day,
+              category_id: event.category,
+              venue: {
+                id: event.venue.id,
+                name: event.venue.name,
+                slug: event.venue.slug,
+                lat: event.venue.lat ?? null,
+                lng: event.venue.lng ?? null,
+              },
             },
           }}
+          portalId={portal?.id || ""}
           portalSlug={portalSlug}
+          portalVertical={portal?.settings?.vertical}
           isOpen={showNightSheet}
           onClose={() => setShowNightSheet(false)}
         />

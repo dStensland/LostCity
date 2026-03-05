@@ -20,7 +20,7 @@ from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeo
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
-from utils import extract_images_from_page
+from utils import extract_images_from_page, enrich_event_record
 from date_utils import parse_human_date
 
 logger = logging.getLogger(__name__)
@@ -437,6 +437,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
             # Insert events
             for event_record in event_records:
                 events_found += 1
+
+                # Enrich from detail page if we're missing start_time
+                if not event_record.get("start_time") and event_record.get("source_url") != CALENDAR_URL:
+                    try:
+                        event_record = enrich_event_record(event_record, "Atlanta Track Club")
+                    except Exception as enrich_err:
+                        logger.debug(f"Enrichment failed for {event_record['title']}: {enrich_err}")
 
                 # Check for existing
                 existing = find_event_by_hash(event_record["content_hash"])

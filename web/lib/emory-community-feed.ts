@@ -13,6 +13,7 @@ import {
 } from "@/lib/emory-source-policy";
 import { supabase } from "@/lib/supabase";
 import { createServiceClient } from "@/lib/supabase/service";
+import { applyFeedGate } from "@/lib/feed-gate";
 
 type TrackKey = CommunityTrackKey;
 
@@ -543,7 +544,7 @@ async function getTrackStories(args: {
   if (sourceIds.length === 0) return [];
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (client as any)
+  const { data, error } = await applyFeedGate((client as any)
     .from("events")
     .select(`
       id,
@@ -563,7 +564,7 @@ async function getTrackStories(args: {
     .lte("start_date", horizonDate)
     .order("start_date", { ascending: true })
     .order("start_time", { ascending: true, nullsFirst: false })
-    .limit(limit * TRACK_QUERY_MULTIPLIER);
+    .limit(limit * TRACK_QUERY_MULTIPLIER));
 
   if (error || !Array.isArray(data)) return [];
 

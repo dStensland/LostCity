@@ -1,6 +1,9 @@
 """
-Crawler for Argosy (argosyeastatlanta.com).
-East Atlanta Village cocktail bar with games - venue-only crawler.
+Crawler for Argosy (argosyatl.com).
+East Atlanta Village bar and restaurant with craft cocktails, patio, and games.
+
+Website returns connection errors as of 2026-03-05.
+Registered as destination-only.
 """
 
 from __future__ import annotations
@@ -10,7 +13,7 @@ from db import get_or_create_venue
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = "https://argosyeastatlanta.com"
+BASE_URL = "https://www.argosyatl.com"
 
 VENUE_DATA = {
     "name": "Argosy",
@@ -25,7 +28,7 @@ VENUE_DATA = {
     "venue_type": "bar",
     "spot_type": "bar",
     "website": BASE_URL,
-    "vibes": ["cocktails", "games", "patio", "east-atlanta"],
+    "vibes": ["cocktails", "craft-cocktails", "games", "patio", "east-atlanta", "bar-restaurant"],
 }
 
 

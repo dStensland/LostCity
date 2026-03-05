@@ -73,6 +73,16 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Disable metro expansion for --city Atlanta.",
     )
+    parser.add_argument(
+        "--gate-profile",
+        type=str,
+        default="auto",
+        choices=["auto", "legacy", "atlanta-consumer", "concierge-hotel"],
+        help=(
+            "Launch gate profile passed to content_health_audit.py. auto selects "
+            "atlanta-consumer for --city Atlanta --portal atlanta."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -99,6 +109,8 @@ def main() -> int:
         command.extend(["--portal", portal_arg])
     if args.strict_city:
         command.append("--strict-city")
+    if args.gate_profile:
+        command.extend(["--gate-profile", args.gate_profile])
 
     result = subprocess.run(command, capture_output=True, text=True)
     if result.stdout:
@@ -117,25 +129,51 @@ def main() -> int:
 
     payload = json.loads(gate_path.read_text(encoding="utf-8"))
     overall_status = str(payload.get("overall_status") or "").upper()
+    blocking_status = str(payload.get("blocking_status") or overall_status).upper()
+    gate_profile = str(payload.get("gate_profile") or args.gate_profile or "legacy")
     counts = payload.get("counts") or {}
+    blocking_counts = payload.get("blocking_counts") or counts
     print(
         "Launch Health Gate: "
-        f"{overall_status} "
-        f"(PASS={counts.get('PASS', 0)}, WARN={counts.get('WARN', 0)}, FAIL={counts.get('FAIL', 0)})"
+        f"overall={overall_status} "
+        f"(PASS={counts.get('PASS', 0)}, WARN={counts.get('WARN', 0)}, FAIL={counts.get('FAIL', 0)}) "
+        f"| blocking={blocking_status} "
+        f"(PASS={blocking_counts.get('PASS', 0)}, WARN={blocking_counts.get('WARN', 0)}, FAIL={blocking_counts.get('FAIL', 0)}) "
+        f"| profile={gate_profile}"
     )
 
-    if overall_status == "PASS":
-        return 0
-
-    failing_checks = [
+    non_passing_checks = [
         check
         for check in (payload.get("checks") or [])
         if str(check.get("status") or "").upper() in {"WARN", "FAIL"}
     ]
-    if failing_checks:
+    blocking_checks = []
+    advisory_checks = []
+    for check in non_passing_checks:
+        severity = str(check.get("severity") or "hard").lower()
+        if severity == "soft":
+            advisory_checks.append(check)
+        elif severity == "hard":
+            blocking_checks.append(check)
+        else:
+            # Unknown / legacy checks should remain blocking by default.
+            blocking_checks.append(check)
+
+    if blocking_checks:
         print("Blocking checks:")
-        for check in failing_checks:
-            print(f"- [{check.get('status')}] {check.get('id')}: {check.get('value')}")
+        for check in blocking_checks:
+            context = str(check.get("context") or "").strip()
+            suffix = f" ({context})" if context else ""
+            print(f"- [{check.get('status')}] {check.get('id')}: {check.get('value')}{suffix}")
+    if advisory_checks:
+        print("Advisory checks (non-blocking for current profile):")
+        for check in advisory_checks:
+            context = str(check.get("context") or "").strip()
+            suffix = f" ({context})" if context else ""
+            print(f"- [{check.get('status')}] {check.get('id')}: {check.get('value')}{suffix}")
+
+    if blocking_status == "PASS":
+        return 0
     return 1
 
 

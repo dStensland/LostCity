@@ -4,7 +4,8 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import Image from "next/image";
 import type { AddItineraryItemInput } from "@/lib/itinerary-utils";
 import { getProxiedImageSrc } from "@/lib/image-proxy";
-import OutingSuggestions from "@/components/outing/OutingSuggestions";
+import OutingSuggestionList from "@/components/outing-planner/OutingSuggestionList";
+import type { OutingSuggestion } from "@/lib/outing-suggestions-utils";
 
 interface SearchResult {
   id: number;
@@ -49,6 +50,9 @@ export default function ItineraryAddDrawer({
   const [customAddress, setCustomAddress] = useState("");
   const [customTime, setCustomTime] = useState("");
   const [customDuration, setCustomDuration] = useState(60);
+  const [beforeSuggestions, setBeforeSuggestions] = useState<OutingSuggestion[]>([]);
+  const [afterSuggestions, setAfterSuggestions] = useState<OutingSuggestion[]>([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -57,6 +61,46 @@ export default function ItineraryAddDrawer({
       setTimeout(() => inputRef.current?.focus(), 100);
     }
   }, [open, tab]);
+
+  // Fetch suggestions when tab is active
+  useEffect(() => {
+    if (!open || tab !== "suggestions" || !anchorEvent) return;
+    let cancelled = false;
+    const controller = new AbortController();
+
+    async function fetchSuggestions() {
+      setSuggestionsLoading(true);
+      const baseParams = new URLSearchParams({
+        anchor_lat: String(anchorEvent!.lat),
+        anchor_lng: String(anchorEvent!.lng),
+        anchor_time: anchorEvent!.time,
+        anchor_date: anchorEvent!.date,
+      });
+      const base = `/api/portals/${portalSlug}/outing-suggestions`;
+      try {
+        const [beforeRes, afterRes] = await Promise.all([
+          fetch(`${base}?${baseParams}&slot=before`, { signal: controller.signal }),
+          fetch(`${base}?${baseParams}&slot=after`, { signal: controller.signal }),
+        ]);
+        if (cancelled) return;
+        if (beforeRes.ok) {
+          const data = await beforeRes.json();
+          if (!cancelled) setBeforeSuggestions(data.suggestions ?? []);
+        }
+        if (afterRes.ok) {
+          const data = await afterRes.json();
+          if (!cancelled) setAfterSuggestions(data.suggestions ?? []);
+        }
+      } catch {
+        // ignore abort/network errors
+      } finally {
+        if (!cancelled) setSuggestionsLoading(false);
+      }
+    }
+
+    fetchSuggestions();
+    return () => { cancelled = true; controller.abort(); };
+  }, [open, tab, anchorEvent, portalSlug]);
 
   const search = useCallback(
     async (q: string) => {
@@ -278,13 +322,13 @@ export default function ItineraryAddDrawer({
               </div>
             </>
           ) : tab === "suggestions" && anchorEvent ? (
-            <OutingSuggestions
-              portalSlug={portalSlug}
-              anchorLat={anchorEvent.lat}
-              anchorLng={anchorEvent.lng}
-              anchorTime={anchorEvent.time}
-              anchorDate={anchorEvent.date}
-              onAddSuggestion={(s) => {
+            <OutingSuggestionList
+              beforeSuggestions={beforeSuggestions}
+              afterSuggestions={afterSuggestions}
+              beforeLabel="Before"
+              afterLabel="After"
+              loading={suggestionsLoading}
+              onAdd={(s: OutingSuggestion) => {
                 onAdd({
                   item_type: s.type === "event" ? "event" : "venue",
                   ...(s.type === "event"
