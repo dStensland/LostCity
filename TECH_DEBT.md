@@ -69,7 +69,7 @@ Findings from comprehensive security, architecture, and performance audits. Crit
 
 ### Architecture — Advisory
 
-**A8. Crawlers directory structural debt** — 150+ files in root, many one-off scripts. Reorganize into `scripts/` subdirs.
+**A8. Crawlers directory structural debt** — ~~150+ files in root, many one-off scripts.~~ Partially addressed: one-off scripts moved to `crawlers/scripts/` subdir (staged). Remaining: `db.py` monolith decomposition (in progress, `crawlers/db/` submodules created but not yet switched over).
 
 **A9. `tmp/` files not in .gitignore** — Add `crawlers/tmp/`, `crawlers/reports/`, `crawl_assessment_*.txt`.
 

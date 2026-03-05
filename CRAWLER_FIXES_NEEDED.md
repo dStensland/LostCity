@@ -102,34 +102,21 @@ psql -c "SELECT series_id, COUNT(*) FROM events WHERE title LIKE '%Time Jumpers%
 
 ### Atlanta Recurring Social Events (Source 349)
 
-**Issues:**
+**Partial fix applied (2026-03-05):**
+- 54 events recategorized → gaming (D&D, Warhammer, Poker, Bingo)
+- 16 events recategorized → family (Family Skate, Saturday Skate)
+- Duplicate venue 2542 merged into venue 928 (Ormsby's)
+
+**Remaining issues:**
 - "Open Mic Night" (72 events)
 - "Karaoke Night" (53 events)
 
-**Action:** This source already should be using series. Verify implementation.
+**Action:** These should use series_hint for proper grouping. Verify implementation.
 
 **Crawler Fix:**
-- File: `sources/atlanta_recurring_social.py`
+- File: `sources/recurring_social_events.py`
 - Check if series_hint is being set
-- If not, add:
-
-```python
-# Extract event type from title
-event_type = title.lower()
-
-if "open mic" in event_type:
-    series_hint = {
-        "series_type": "recurring_show",
-        "series_title": "Open Mic Night",
-        "frequency": "weekly"
-    }
-elif "karaoke" in event_type:
-    series_hint = {
-        "series_type": "recurring_show",
-        "series_title": "Karaoke Night",
-        "frequency": "weekly"
-    }
-```
+- If not, add series_hint for recurring show types
 
 ---
 

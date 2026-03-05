@@ -5,82 +5,15 @@ import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
 import { BeerBottle } from "@phosphor-icons/react";
 import Badge from "@/components/ui/Badge";
+import {
+  type VenueSpecial,
+  isActiveNow,
+  formatDays,
+  formatTimeWindow,
+  TYPE_LABELS,
+} from "@/lib/specials-utils";
 
-export type VenueSpecial = {
-  id: number;
-  title: string;
-  type: string;
-  description: string | null;
-  days_of_week: number[] | null;
-  time_start: string | null;
-  time_end: string | null;
-  price_note: string | null;
-  image_url: string | null;
-  source_url: string | null;
-};
-
-const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-function formatDays(days: number[] | null): string | null {
-  if (!days || days.length === 0) return null;
-  if (days.length === 7) return "Every day";
-  const sorted = [...days].sort();
-  // Check for Mon-Fri
-  if (
-    sorted.length === 5 &&
-    sorted[0] === 1 &&
-    sorted[4] === 5
-  )
-    return "Mon\u2013Fri";
-  // Check for Sat-Sun
-  if (sorted.length === 2 && sorted[0] === 0 && sorted[1] === 6)
-    return "Weekends";
-  return sorted.map((d) => DAY_LABELS[d] ?? "").join(", ");
-}
-
-function formatTimeWindow(
-  start: string | null,
-  end: string | null
-): string | null {
-  if (!start) return null;
-  const fmt = (t: string) => {
-    const [h, m] = t.split(":");
-    const hour = parseInt(h, 10);
-    const period = hour >= 12 ? "pm" : "am";
-    const displayHour = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
-    return m === "00" ? `${displayHour}${period}` : `${displayHour}:${m}${period}`;
-  };
-  if (!end) return fmt(start);
-  return `${fmt(start)}\u2013${fmt(end)}`;
-}
-
-function isActiveNow(special: VenueSpecial): boolean {
-  const now = new Date();
-  const currentDay = now.getDay();
-  if (special.days_of_week && !special.days_of_week.includes(currentDay))
-    return false;
-  if (!special.time_start) return false;
-  const nowMinutes = now.getHours() * 60 + now.getMinutes();
-  const [sh, sm] = special.time_start.split(":").map(Number);
-  const startMin = sh * 60 + (sm || 0);
-  if (special.time_end) {
-    const [eh, em] = special.time_end.split(":").map(Number);
-    const endMin = eh * 60 + (em || 0);
-    return nowMinutes >= startMin && nowMinutes <= endMin;
-  }
-  // No end time — active within 3 hours of start
-  return nowMinutes >= startMin && nowMinutes <= startMin + 180;
-}
-
-const TYPE_LABELS: Record<string, string> = {
-  happy_hour: "Happy Hour",
-  daily_special: "Daily Special",
-  brunch: "Brunch",
-  drink_special: "Drink Special",
-  food_special: "Food Special",
-  late_night: "Late Night",
-  recurring_deal: "Deal",
-};
+export type { VenueSpecial };
 
 interface VenueSpecialsSectionProps {
   specials: VenueSpecial[];

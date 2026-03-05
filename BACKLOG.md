@@ -49,7 +49,7 @@ The original roadmap (Phases 0-7) covered ~45 features across data quality, user
 
 ### Discovery & Feed
 - [x] **City Pulse feed** — Portal-scoped context-aware feed with time-of-day sections (Right Now, Tonight, This Weekend, This Week, Coming Up, Browse), weather-aware reranking, social proof, personalization scoring
-- [x] **Find Discovery Shell** — 5 discovery modes (Events, Classes, Spots, Showtimes, Playbook) with List/Calendar/Map views, density toggle, filter bar
+- [x] **Find Discovery Shell** — 6 discovery modes (Events, Classes, Spots, Showtimes, Playbook, Regulars) with List/Calendar/Map views, density toggle, filter bar
 - [x] **Interest chips** — 17-chip system (Music, Comedy, Art, Food & Drink, Nightlife, Film, Sports, Family, Theater, Fitness, Community, Learning, Wellness, Dance, Outdoors, Markets + Happy Hour + Free)
 - [x] **Search** — Full-text (tsvector), instant search, suggestions, unified across events/venues/orgs/people
 - [x] **Natural language search** — LLM-powered query parsing via `/api/search/nl`, context layering, fallback to keyword, daily quota + rate limiting
@@ -152,17 +152,24 @@ The original roadmap (Phases 0-7) covered ~45 features across data quality, user
 - [ ] Add pre-prod validation checklist: crawl success rate threshold, error-type review, top-source diff checks
 - [ ] Define promotion gate from staging to production runs and document rollback path
 
-### 0.4 Venue Specials Backfill & Expansion
-**Status:** Infrastructure 100% complete. Data coverage ~5% (~217 records across ~4,500 venues).
+### 0.4 Venue Specials Infrastructure
+**Status:** Infrastructure complete. Specials render on venue detail pages. NOT a feed section (product decision 2026-03-05).
 
-- [x] Schema, API (`/api/specials`), UI, scraper (`scrape_venue_specials.py`) all built and deployed
-- [x] Deployed in FORTH portal with themed specials sections (taco_tuesday, wine_wednesday, brunch_weekend)
-- [ ] **Backfill: run specials scraper across all Atlanta bars and restaurants** (~300 bars, ~670 restaurants). Expected 6-8 hours, should yield 500-700+ records.
-- [ ] **Integrate scraper into main.py orchestrator** so specials refresh automatically (weekly or biweekly)
-- [ ] **Expand specials taxonomy** — Taco Tuesday, Wing Wednesday, Oyster Night, trivia, karaoke, open mic, DJ night, prix fixe, pop-ups, industry nights
-- [ ] **Surface specials in Atlanta main feed** (not just FORTH) — "Happy Hour Near You", "Taco Tuesday Picks"
-- [ ] **User-submitted specials** — "Know a special? Add it" flow with moderation queue
-- [ ] Freshness tracking: flag specials not verified in 30+ days for re-scrape
+- [x] Schema, API (`/api/specials`), UI (`VenueSpecialsSection`), scraper (`scrape_venue_specials.py`) all built
+- [x] Deployed in FORTH portal with themed specials sections
+- [x] **Backfill: scraped 88 Atlanta bars/restaurants** — series + specials data
+- [x] **Integrated scraper into main.py** (`--specials` flag) and post_crawl_maintenance.py (biweekly cadence)
+- [x] **Expanded routing** — food nights, happy hours, brunches route to events via `_FOOD_NIGHT_RE`
+- [x] **Regular Hangs in Atlanta feed** — recurring events with activity chips (trivia, karaoke, open mic, etc.)
+- [x] **Source 1177 migration** (2026-03-05) — 207 food/drink events deactivated, 12 venue_specials inserted, 34 real events kept
+- [x] **Shared utils extracted** — `specials-utils.ts` with `isActiveNow()`, `formatDays()`, `formatTimeWindow()`, ISO 8601 day handling
+- [x] **ISO day bug fixed** — `isActiveNow()` now correctly converts JS `getDay()` (0=Sun) to ISO 8601 (1=Mon, 7=Sun)
+- [x] **Venue detail rendering** — `VenueSpecialsSection` shows specials on venue pages
+- [ ] **Price badges in Regular Hangs UI** — show `series.price_note` on event rows
+- [ ] **Confidence decay cron** — downgrade series confidence when `last_verified_at > 30 days`
+- [ ] **Data enrichment** — specials data is thin (~60 Atlanta records). Needs scraper coverage expansion before specials become a Find filter.
+
+**Product decision (2026-03-05):** Evaluated adding a "Deals & Specials" venue-card section to the Regulars tab. Rejected — fails product smell test: (1) ~60 specials from one bad source is not a section, (2) mixing venue attributes with recurring events confuses intent, (3) not curated enough for LostCity quality bar. Specials are **venue metadata** shown on venue detail pages, not a discovery surface. Revisit when data is 10x richer and could work as a Find filter ("show venues with active specials").
 
 ---
 
@@ -224,16 +231,10 @@ The original roadmap (Phases 0-7) covered ~45 features across data quality, user
 - [ ] Improve minimum admin capabilities needed to support active demos and first customers
 
 ### 2.3 Natural Language Search
-**Status:** Implemented and deployed.
+**Status:** Removed (2026-03-05). Route `/api/search/nl` deleted as part of portal-scope cleanup.
 
-- [x] LLM-powered query parsing → structured filters (`/api/search/nl`, `parseNaturalLanguageQuery()`)
-- [x] Unified search across events, venues, organizers, series, lists (`unifiedSearch()`)
-- [x] Fallback to keyword search on LLM timeout
-- [x] Daily quota + rate limiting (`applyDailyQuota()`, 200/day)
-- [x] Test coverage (`nl-search.test.ts`)
-- [ ] Conversational follow-ups: "Show me more like this" / "What about tomorrow instead?"
-- [ ] Context layering: current time, weather, user preferences, location, friend activity
-- [ ] Quick-refine chips on results: "Too expensive" / "Closer to me" / "Something else"
+- [x] ~~LLM-powered query parsing~~ — removed, dead code. Standard full-text search + portal-scoped RPCs are the active search path.
+- The NL search infrastructure was functional but not worth maintaining alongside the portal-scoped search system. If conversational search returns, it should be rebuilt on top of the current portal-scoped search RPCs rather than as a separate pipeline.
 
 ### 2.4 User Curations
 **Status:** Both systems operational. Unification pending.

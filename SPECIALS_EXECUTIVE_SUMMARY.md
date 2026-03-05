@@ -1,14 +1,19 @@
 # Happy Hours & Specials - Executive Summary
 
-**Date:** February 14, 2026  
-**Status:** Infrastructure Complete, Data Coverage at ~5%  
-**Priority:** HIGH (top 3 user-requested feature)
+**Date:** February 14, 2026
+**Last Updated:** March 5, 2026
+**Status:** Infrastructure complete. **Product decision: specials are venue metadata, NOT a feed section.**
+**Priority:** LOW — data enrichment backlog item, not an active initiative
 
 ---
 
 ## TL;DR
 
-We have **production-ready infrastructure** for happy hours and specials but only **217 venue_specials records** covering ~5-6% of bars/restaurants. Running one systematic scrape across our 302 bars + 671 restaurants would increase coverage to 500-700+ records within 2 weeks.
+**March 2026 update:** We evaluated adding specials as a discovery section in the Regulars tab and explicitly rejected it. The product smell test failed: ~60 specials from limited sources isn't enough for a section, mixing venue attributes with event discovery confuses user intent, and it's not curated to LostCity's quality bar. Specials remain **venue metadata** — they render on venue detail pages via `VenueSpecialsSection` and may become a Find filter in the future when data is 10x richer.
+
+**Source 1177 cleanup (2026-03-05):** 207 food/drink events (happy hours, brunches, deal nights) migrated into `venue_specials` table and deactivated from the events feed. 12 unique specials created, 34 real events kept active.
+
+We have production-ready infrastructure (~230 venue_specials records) but the data is too thin for a consumer-facing feature beyond venue detail. Expanding coverage requires scraper investment that isn't justified until specials serve a clear product purpose.
 
 ---
 
@@ -250,14 +255,25 @@ Add SpecialsCarousel to main Atlanta portal:
 
 ---
 
-## Recommendation
+## Recommendation (Updated 2026-03-05)
 
-**Proceed with Phase 1 immediately.** Infrastructure is production-ready, gap is purely data coverage. Running the systematic scrape would transform this from a FORTH-only feature to a platform-wide differentiator within 2 weeks.
+**Do NOT invest in expanding specials as a standalone feature.** The infrastructure works, but specials fail the product smell test as a discovery surface:
 
-**Priority rationale:** Happy hour/specials search is consistently in the top 3 user requests for nightlife discovery apps. Competitors (Yelp, Google Maps) show operating hours but NOT time-sensitive specials state. This is a winnable competitive advantage.
+1. **Who benefits?** Casual diners looking for deals. But our data isn't curated — it's scraped fragments from one bad source. Not LostCity quality.
+2. **Does it work without curation?** No. Happy hours change frequently, data decays fast, and wrong info erodes trust.
+3. **Uniquely positioned?** No. Yelp and Google already surface hours/deals. We'd be building a worse version.
+
+**What specials ARE good for:**
+- **Venue detail enrichment** — "This bar has a happy hour Mon–Fri 4–7pm" on the venue page adds value
+- **Future Find filter** — "Show venues with active specials nearby" when data is 10x richer
+- **FORTH portal** — Hotel concierge context where curated specials recommendations make sense
+
+**Next steps (low priority):**
+- Expand scraper coverage IF a customer specifically needs it (e.g., FORTH wants more dining data)
+- Revisit as a Find filter when venue_specials has 500+ records with confirmed freshness
 
 ---
 
-**Prepared by:** Data Quality Specialist  
-**Date:** February 14, 2026  
-**Next Review:** After Phase 1 completion (target: Feb 28, 2026)
+**Prepared by:** Data Quality Specialist
+**Date:** February 14, 2026
+**Updated:** March 5, 2026 — strategy revised after product review

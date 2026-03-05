@@ -12,12 +12,11 @@
  */
 
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import {
   SCENE_ACTIVITY_TYPES,
   matchActivityType,
   buildRecurrenceLabel,
-  type SceneActivityType,
 } from "@/lib/city-pulse/section-builders";
 import { SceneEventRow, SceneChip, getActivityIcon, WeekdayRow, getDayKeyFromDate, buildNext7Days } from "@/components/feed/SceneEventRow";
 import { triggerHaptic } from "@/lib/haptics";
@@ -51,7 +50,6 @@ const ACTIVITY_MAP = new Map(SCENE_ACTIVITY_TYPES.map((a) => [a.id, a]));
 
 export default function RegularsView({ portalId, portalSlug }: RegularsViewProps) {
   const searchParams = useSearchParams();
-  const router = useRouter();
 
   const [events, setEvents] = useState<RegularEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,31 +58,30 @@ export default function RegularsView({ portalId, portalSlug }: RegularsViewProps
   // Rolling 7-day window in portal-local time (America/New_York)
   const next7Days = useMemo(() => buildNext7Days(), []);
 
-  // Read filters from URL
-  const activeActivities = useMemo(() => {
+  // Local filter state — initialized from URL, synced back via replaceState
+  // (avoids router.push() which triggers full Next.js navigation on every tap)
+  const [activeActivities, setActiveActivities] = useState<string[]>(() => {
     const param = searchParams?.get("activity");
     return param ? param.split(",").filter(Boolean) : [];
-  }, [searchParams]);
+  });
 
-  const activeWeekdays = useMemo(() => {
+  const [activeWeekdays, setActiveWeekdays] = useState<string[]>(() => {
     const param = searchParams?.get("weekday");
     return param ? param.split(",").filter(Boolean) : [];
-  }, [searchParams]);
+  });
 
-  // URL update helper
-  const updateParams = useCallback(
-    (key: string, value: string | null) => {
-      const params = new URLSearchParams(searchParams?.toString() || "");
+  // Sync filter state to URL without triggering navigation
+  const syncUrl = useCallback(
+    (activities: string[], weekdays: string[]) => {
+      const params = new URLSearchParams();
       params.set("view", "find");
       params.set("type", "regulars");
-      if (value) {
-        params.set(key, value);
-      } else {
-        params.delete(key);
-      }
-      router.push(`/${portalSlug}?${params.toString()}`, { scroll: false });
+      if (activities.length > 0) params.set("activity", activities.join(","));
+      if (weekdays.length > 0) params.set("weekday", weekdays.join(","));
+      const url = `/${portalSlug}?${params.toString()}`;
+      window.history.replaceState(window.history.state, "", url);
     },
-    [portalSlug, router, searchParams],
+    [portalSlug],
   );
 
   // Fetch all events for the week (filtering happens client-side)
@@ -122,17 +119,20 @@ export default function RegularsView({ portalId, portalSlug }: RegularsViewProps
     return map;
   }, [events]);
 
-  // Per-day event counts for WeekdayRow (based on all classified events)
+  // Per-day event counts for WeekdayRow — reflects active activity filter
+  // so day badges show "what you'll see" not "total unfiltered"
   const dayCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const event of events) {
       if (!event.start_date) continue;
-      if (!classifiedEvents.has(event.id)) continue;
+      const actId = classifiedEvents.get(event.id);
+      if (!actId) continue;
+      if (activeActivities.length > 0 && !activeActivities.includes(actId)) continue;
       const dayKey = getDayKeyFromDate(event.start_date);
       counts[dayKey] = (counts[dayKey] || 0) + 1;
     }
     return counts;
-  }, [events, classifiedEvents]);
+  }, [events, classifiedEvents, activeActivities]);
 
   // Client-side weekday filter
   const dayFilteredEvents = useMemo(() => {
@@ -153,10 +153,13 @@ export default function RegularsView({ portalId, portalSlug }: RegularsViewProps
     return counts;
   }, [dayFilteredEvents, classifiedEvents]);
 
-  // Visible activity chips (only those with events in the day-filtered set)
+  // Visible activity chips — show if has events OR is actively selected
+  // (so the user can always see and clear their active filter)
   const visibleActivities = useMemo(
-    () => SCENE_ACTIVITY_TYPES.filter((a) => (activityCounts[a.id] || 0) > 0),
-    [activityCounts],
+    () => SCENE_ACTIVITY_TYPES.filter(
+      (a) => (activityCounts[a.id] || 0) > 0 || activeActivities.includes(a.id),
+    ),
+    [activityCounts, activeActivities],
   );
 
   const allCount = useMemo(
@@ -189,34 +192,43 @@ export default function RegularsView({ portalId, portalSlug }: RegularsViewProps
   const handleActivityTap = useCallback(
     (actId: string) => {
       triggerHaptic("selection");
-      if (actId === "all") {
-        updateParams("activity", null);
-        return;
-      }
-      const current = new Set(activeActivities);
-      if (current.has(actId)) {
-        current.delete(actId);
-      } else {
-        current.add(actId);
-      }
-      updateParams("activity", current.size > 0 ? Array.from(current).join(",") : null);
+      setActiveActivities((prev) => {
+        let next: string[];
+        if (actId === "all") {
+          next = [];
+        } else {
+          const current = new Set(prev);
+          if (current.has(actId)) {
+            current.delete(actId);
+          } else {
+            current.add(actId);
+          }
+          next = Array.from(current);
+        }
+        syncUrl(next, activeWeekdays);
+        return next;
+      });
     },
-    [activeActivities, updateParams],
+    [activeWeekdays, syncUrl],
   );
 
   // Weekday toggle handlers
   const handleWeekdayToggle = useCallback(
     (day: string) => {
       triggerHaptic("selection");
-      const current = new Set(activeWeekdays);
-      if (current.has(day)) {
-        current.delete(day);
-      } else {
-        current.add(day);
-      }
-      updateParams("weekday", current.size > 0 ? Array.from(current).join(",") : null);
+      setActiveWeekdays((prev) => {
+        const current = new Set(prev);
+        if (current.has(day)) {
+          current.delete(day);
+        } else {
+          current.add(day);
+        }
+        const next = Array.from(current);
+        syncUrl(activeActivities, next);
+        return next;
+      });
     },
-    [activeWeekdays, updateParams],
+    [activeActivities, syncUrl],
   );
 
   // Convert API event to CityPulseEventItem for SceneEventRow

@@ -28,13 +28,12 @@ Based on `BACKLOG.md` tiers, here are natural parallel workstreams:
 **Backlog items:**
 - 0.2 Data quality: run health audit, identify/fix top 20 degraded crawlers
 - 0.3 Crawler staging pipeline: staging credentials, dry-run, validation checklist
-- 0.4 Venue specials: backfill scraper run, integrate into main.py, expand taxonomy
+- ~~0.4 Venue specials: backfill scraper run~~ — Done (2026-03-05). Source 1177 migrated, specials infrastructure complete. Not an active initiative.
 
 **Claimed paths:**
 - `crawlers/main.py`
 - `crawlers/sources/`
 - `crawlers/data_health.py`
-- `crawlers/scrape_venue_specials.py` (and related specials scripts)
 
 ### Session B — Attribution Hardening (Tier 0)
 **Scope:** `database/migrations/`, `web/app/api/`
