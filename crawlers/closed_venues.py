@@ -124,6 +124,21 @@ CLOSED_VENUES: tuple[ClosedVenue, ...] = (
         name="Village Theatre",
         reason="Rebranded as Limelight Theater (2023, same address 349 Decatur St)",
     ),
+    ClosedVenue(
+        slug="the-glenwood",
+        name="The Glenwood",
+        reason="Permanently closed (Oct 2023)",
+    ),
+    ClosedVenue(
+        slug="el-bar",
+        name="El Bar",
+        reason="Permanently closed (COVID era) — now Bar ANA",
+    ),
+    ClosedVenue(
+        slug="metro-fun-center",
+        name="Metro Fun Center",
+        reason="Permanently closed (Jan 2026)",
+    ),
 )
 
 

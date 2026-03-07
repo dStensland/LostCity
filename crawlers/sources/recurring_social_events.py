@@ -274,6 +274,7 @@ VENUES = {
         "state": "GA",
         "zip": "30309",
         "venue_type": "cafe",
+        "website": "https://katscafeatlanta.com",
     },
     "battery-atlanta": {
         "name": "The Battery Atlanta",
@@ -481,6 +482,7 @@ VENUES = {
         "state": "GA",
         "zip": "30312",
         "venue_type": "bar",
+        "website": "https://www.sisterlouisaschurch.com",
     },
     # ========== Phase 0b: New recurring venue additions ==========
     # Trivia venues
@@ -621,6 +623,7 @@ VENUES = {
         "state": "GA",
         "zip": "30305",
         "venue_type": "farmers_market",
+        "website": "https://peachtreeroadfarmersmarket.com",
     },
     # Brunch / food-scene venues
     "ladybird": {
@@ -645,6 +648,7 @@ VENUES = {
         "state": "GA",
         "zip": "30307",
         "venue_type": "restaurant",
+        "website": "https://elmyr.com",
     },
     # Inman Park
     "barcelona-wine-bar": {
@@ -667,6 +671,7 @@ VENUES = {
         "state": "GA",
         "zip": "30307",
         "venue_type": "bar",
+        "website": "https://www.vicsandwich.com",
     },
     "new-realm-brewing": {
         "name": "New Realm Brewing",
@@ -691,16 +696,7 @@ VENUES = {
         "website": "https://www.thekrogdistrict.com",
     },
     # East Atlanta Village (expanding existing thin coverage)
-    "the-glenwood": {
-        "name": "The Glenwood",
-        "slug": "the-glenwood",
-        "address": "1263 Glenwood Ave SE",
-        "neighborhood": "East Atlanta Village",
-        "city": "Atlanta",
-        "state": "GA",
-        "zip": "30316",
-        "venue_type": "bar",
-    },
+    # "the-glenwood" — PERMANENTLY CLOSED (Oct 2023), moved to closed_venues.py
     "flatiron": {
         "name": "Flatiron",
         "slug": "flatiron-eav",
@@ -710,6 +706,7 @@ VENUES = {
         "state": "GA",
         "zip": "30316",
         "venue_type": "bar",
+        "website": "https://flatironatl.com",
     },
     "marys-bar": {
         "name": "Mary's",
@@ -720,6 +717,7 @@ VENUES = {
         "state": "GA",
         "zip": "30316",
         "venue_type": "bar",
+        "website": "https://www.marysatlanta.com",
     },
     # Sunday gap fills
     "northside-tavern": {
@@ -915,6 +913,7 @@ VENUES = {
         "state": "GA",
         "zip": "30308",
         "venue_type": "organization",
+        "website": "https://www.bigpeachrunningco.com",
     },
     "milltown-arms-tavern": {
         "name": "Milltown Arms Tavern",
@@ -1044,6 +1043,7 @@ VENUES = {
         "state": "GA",
         "zip": "30315",
         "venue_type": "park",
+        "website": "https://www.atlantaga.gov/?navid=470",
     },
     # ========== FOOD & DRINK SPECIALS VENUES ==========
     "the-optimist": {
@@ -1248,16 +1248,7 @@ VENUES = {
     },
     # ========== Regular Hangs buildout ==========
     # Poker venues
-    "aces-up-atlanta": {
-        "name": "Aces Up Atlanta Bar Poker",
-        "slug": "aces-up-atlanta-bar-poker",
-        "address": "2500 N Decatur Rd",
-        "neighborhood": "Decatur",
-        "city": "Decatur",
-        "state": "GA",
-        "zip": "30033",
-        "venue_type": "bar",
-    },
+    # "aces-up-atlanta" — removed, not a venue (bar poker league that plays at various bars)
     "eddies-attic": {
         "name": "Eddie's Attic",
         "slug": "eddies-attic",
@@ -1419,6 +1410,7 @@ VENUES = {
         "state": "GA",
         "zip": "30316",
         "venue_type": "bar",
+        "website": "https://www.themidwaypub.com",
     },
     # ========== BOOKSTORES ==========
     "charis-books": {
@@ -2177,26 +2169,7 @@ EVENT_TEMPLATES = [
     },
     # krog-street-market Sat live music + Tue trivia: handled by dedicated source (sources/krog_street_market.py)
     # ========== EAST ATLANTA VILLAGE ==========
-    {
-        "venue_key": "the-glenwood",
-        "day": 2,  # Wednesday
-        "title": "Trivia Night",
-        "description": "Wednesday trivia at The Glenwood in East Atlanta Village. Neighborhood bar trivia with a loyal crowd.",
-        "start_time": "20:00",
-        "category": "nightlife",
-        "subcategory": "nightlife.trivia",
-        "tags": ["trivia", "games", "nightlife", "weekly"],
-    },
-    {
-        "venue_key": "the-glenwood",
-        "day": 4,  # Friday
-        "title": "Friday DJ Night",
-        "description": "Friday DJ night at The Glenwood in East Atlanta Village.",
-        "start_time": "22:00",
-        "category": "nightlife",
-        "subcategory": "nightlife.dj",
-        "tags": ["dj", "nightlife", "weekly", "late-night"],
-    },
+    # "the-glenwood" trivia + DJ night — REMOVED, venue permanently closed (Oct 2023)
     {
         "venue_key": "flatiron",
         "day": 3,  # Thursday
