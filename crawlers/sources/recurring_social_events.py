@@ -71,6 +71,7 @@ VENUES = {
         "state": "GA",
         "zip": "30324",
         "venue_type": "restaurant",
+        "website": "https://www.coppercoveatl.com/",
     },
     # "boggs" — handled by dedicated source (sources/boggs_social.py)
     "ten-atl": {
@@ -82,6 +83,7 @@ VENUES = {
         "state": "GA",
         "zip": "30316",
         "venue_type": "bar",
+        "website": "https://tenatl.com/",
     },
     "daiquiriville": {
         "name": "Daiquiriville",
@@ -127,6 +129,7 @@ VENUES = {
         "venue_type": "bar",
         "website": "https://www.sobatl.com",
     },
+    # "metro-fun-center" — PERMANENTLY CLOSED (Sept 2022)
     "metro-fun-center": {
         "name": "Metro Fun Center",
         "slug": "metro-fun-center",
@@ -136,6 +139,7 @@ VENUES = {
         "state": "GA",
         "zip": "30315",
         "venue_type": "entertainment_venue",
+        # CLOSED — do not add website
     },
     # Open mic venues
     "joes-coffeehouse": {
@@ -158,6 +162,7 @@ VENUES = {
         "state": "GA",
         "zip": "30312",
         "venue_type": "bar",
+        "website": "https://www.ourbaratl.com/",
     },
     "southern-feed-store": {
         "name": "Southern Feed Store",
@@ -175,12 +180,12 @@ VENUES = {
         "name": "Limerick Junction",
         "slug": "limerick-junction",
         "address": "822 N Highland Ave NE",
-        "neighborhood": "Virginia Highland",
+        "neighborhood": "Virginia-Highland",
         "city": "Atlanta",
         "state": "GA",
         "zip": "30306",
         "venue_type": "bar",
-        "website": "https://www.limerickjunction.com/events",
+        "website": "https://www.limerickjunction.com",
     },
     "limelight-theater": {
         "name": "Limelight Theater",
@@ -191,6 +196,7 @@ VENUES = {
         "state": "GA",
         "zip": "30312",
         "venue_type": "theater",
+        "website": "https://limelight.tix.page/",
     },
     "farm-burger": {
         "name": "Farm Burger Midtown",
@@ -342,7 +348,7 @@ VENUES = {
         "neighborhood": "Poncey-Highland",
         "city": "Atlanta",
         "state": "GA",
-        "zip": "30306",
+        "zip": "30307",
         "venue_type": "bar",
         "website": "https://manuelstavern.com",
     },
@@ -369,6 +375,7 @@ VENUES = {
         "venue_type": "entertainment_venue",
         "website": "https://punchbowlsocial.com",
     },
+    # "blue-martini" — PERMANENTLY CLOSED (mid-2025)
     "blue-martini": {
         "name": "Blue Martini Atlanta",
         "slug": "blue-martini-atlanta",
@@ -378,7 +385,7 @@ VENUES = {
         "state": "GA",
         "zip": "30305",
         "venue_type": "bar",
-        # website removed — server unreachable, verify if still open (2026-03)
+        # CLOSED — do not add website
     },
     # Jazz & Blues venues
     "cafe-circa": {
@@ -390,6 +397,7 @@ VENUES = {
         "state": "GA",
         "zip": "30312",
         "venue_type": "restaurant",
+        "website": "https://www.cafecircaatlanta.com/",
     },
     "churchill-grounds": {
         "name": "Churchill Grounds",
@@ -440,7 +448,7 @@ VENUES = {
         "name": "Wrecking Bar Brewpub",
         "slug": "wrecking-bar-brewpub",
         "address": "292 Moreland Ave NE",
-        "neighborhood": "Little Five Points",
+        "neighborhood": "Inman Park",
         "city": "Atlanta",
         "state": "GA",
         "zip": "30307",
@@ -475,7 +483,7 @@ VENUES = {
         "name": "Righteous Room",
         "slug": "righteous-room",
         "address": "1051 Ponce De Leon Ave NE",
-        "neighborhood": "Virginia Highland",
+        "neighborhood": "Virginia-Highland",
         "city": "Atlanta",
         "state": "GA",
         "zip": "30306",
@@ -508,24 +516,16 @@ VENUES = {
     "mjq-concourse": {
         "name": "MJQ Concourse",
         "slug": "mjq-concourse",
-        "address": "736 Ponce De Leon Ave NE",
-        "neighborhood": "Poncey-Highland",
+        "address": "50 Lower Alabama St",
+        "neighborhood": "Downtown",
         "city": "Atlanta",
         "state": "GA",
-        "zip": "30306",
+        "zip": "30303",
         "venue_type": "nightclub",
+        "website": "https://www.mjqofficial.com/",
     },
-    "music-room": {
-        "name": "The Music Room",
-        "slug": "the-music-room",
-        "address": "327 Edgewood Ave SE",
-        "neighborhood": "Old Fourth Ward",
-        "city": "Atlanta",
-        "state": "GA",
-        "zip": "30312",
-        "venue_type": "music_venue",
-        "website": "https://www.facebook.com/themusicroomatl",
-    },
+    # The Music Room — CLOSED permanently (COVID casualty, Sep 2020)
+    # "music-room": { ... },
     "johnny-hideaway": {
         "name": "Johnny's Hideaway",
         "slug": "johnnys-hideaway",
@@ -563,13 +563,13 @@ VENUES = {
     # Fontaine's Oyster House — CLOSED permanently (removed 2026-03)
     # Live music / residency venues
     "apache-cafe": {
-        "name": "Apache Cafe",
-        "slug": "apache-cafe",
-        "address": "64 3rd St NW",
+        "name": "Apache XLR",
+        "slug": "apache-xlr",
+        "address": "393 Marietta St NW",
         "neighborhood": "Midtown",
         "city": "Atlanta",
         "state": "GA",
-        "zip": "30308",
+        "zip": "30313",
         "venue_type": "bar",
         "website": "https://apachexlr.com/",
     },
@@ -577,7 +577,7 @@ VENUES = {
         "name": "Diesel Filling Station",
         "slug": "diesel-filling-station",
         "address": "870 N Highland Ave NE",
-        "neighborhood": "Virginia Highland",
+        "neighborhood": "Virginia-Highland",
         "city": "Atlanta",
         "state": "GA",
         "zip": "30306",
@@ -656,7 +656,7 @@ VENUES = {
         "name": "New Realm Brewing",
         "slug": "new-realm-brewing",
         "address": "550 Somerset Terrace NE",
-        "neighborhood": "Inman Park",
+        "neighborhood": "Poncey-Highland",
         "city": "Atlanta",
         "state": "GA",
         "zip": "30306",
@@ -696,8 +696,8 @@ VENUES = {
         "venue_type": "bar",
     },
     "marys-bar": {
-        "name": "Mary's Bar",
-        "slug": "marys-bar-atlanta",
+        "name": "Mary's",
+        "slug": "marys-bar",
         "address": "1287 Glenwood Ave SE",
         "neighborhood": "East Atlanta Village",
         "city": "Atlanta",
@@ -867,13 +867,13 @@ VENUES = {
     "bone-lick-bbq": {
         "name": "Bone Lick BBQ",
         "slug": "bone-lick-bbq",
-        "address": "318 Memorial Dr SE",
-        "neighborhood": "Grant Park",
+        "address": "1133 Huff Rd NW",
+        "neighborhood": "West Midtown",
         "city": "Atlanta",
         "state": "GA",
-        "zip": "30312",
+        "zip": "30318",
         "venue_type": "restaurant",
-        "website": "https://bonelickbbq.com",
+        "website": "https://bonelickbarbecue.com",
     },
     "my-parents-basement": {
         "name": "My Parents' Basement",
@@ -973,12 +973,12 @@ VENUES = {
         "name": "97 Estoria",
         "slug": "97-estoria",
         "address": "727 Wylie St SE",
-        "neighborhood": "Reynoldstown",
+        "neighborhood": "Cabbagetown",
         "city": "Atlanta",
         "state": "GA",
         "zip": "30316",
         "venue_type": "bar",
-        # website removed — domain hijacked by gambling site (2026-03)
+        "website": "https://www.estoriabar.com/",  # 97estoria.com was hijacked; estoriabar.com is official
     },
     "avondale-estates-art-lot": {
         "name": "Avondale Estates Art Lot",
@@ -1257,17 +1257,7 @@ VENUES = {
         "venue_type": "theater",
         "website": "https://dadsgarage.com",
     },
-    "village-theatre": {
-        "name": "Village Theatre",
-        "slug": "village-theatre",
-        "address": "7509 Main St",
-        "neighborhood": "Suwanee",
-        "city": "Suwanee",
-        "state": "GA",
-        "zip": "30024",
-        "venue_type": "theater",
-        # website removed — Squarespace expired (2026-03)
-    },
+    # "village-theatre" — REMOVED, cannot verify (Squarespace expired, no evidence of current operation)
     "whole-world-improv": {
         "name": "Whole World Improv Theatre",
         "slug": "whole-world-improv-theatre",
@@ -1283,46 +1273,48 @@ VENUES = {
     "cascade-skating": {
         "name": "Cascade Family Skating",
         "slug": "cascade-family-skating",
-        "address": "3535 Cascade Rd SW",
+        "address": "3335 Martin Luther King Jr Dr SW",
         "neighborhood": "Cascade",
         "city": "Atlanta",
         "state": "GA",
-        "zip": "30311",
+        "zip": "30331",
         "venue_type": "entertainment_venue",
         "website": "https://cascadefamilyskating.com",
     },
     "sparkles-kennesaw": {
         "name": "Sparkles Family Fun Center",
         "slug": "sparkles-family-fun-center-kennesaw",
-        "address": "2070 Cobb Pkwy NW",
+        "address": "1000 McCollum Pkwy NW",
         "neighborhood": "Kennesaw",
         "city": "Kennesaw",
         "state": "GA",
-        "zip": "30152",
+        "zip": "30144",
         "venue_type": "entertainment_venue",
         "website": "https://www.sparkles.com",
     },
-    # Latin night venues
-    "havana-club-atl": {
-        "name": "Havana Club ATL",
-        "slug": "havana-club-atl",
+    # Latin night venues — uses same slug as dedicated crawler (havana_club.py)
+    "havana-club": {
+        "name": "Havana Club",
+        "slug": "havana-club",
         "address": "3112 Piedmont Rd NE",
         "neighborhood": "Buckhead",
         "city": "Atlanta",
         "state": "GA",
         "zip": "30305",
         "venue_type": "nightclub",
-        "website": "https://www.havanaclubbuckhead.com",
+        "website": "https://www.havanaclubatl.com",
     },
+    # "el-bar" — PERMANENTLY CLOSED, replaced by Bar ANA (2026-03)
     "el-bar": {
         "name": "El Bar",
         "slug": "el-bar",
         "address": "939 Ponce De Leon Ave NE",
-        "neighborhood": "Virginia Highland",
+        "neighborhood": "Virginia-Highland",
         "city": "Atlanta",
         "state": "GA",
         "zip": "30306",
         "venue_type": "bar",
+        # CLOSED — do not add website
     },
     # Viewing party / sports bar venues
     "hudson-grille-midtown": {
@@ -1363,7 +1355,7 @@ VENUES = {
     "commune": {
         "name": "Commune",
         "slug": "commune",
-        "address": "100 N Avondale Rd",
+        "address": "6 Olive St, Ste 113",
         "neighborhood": "Avondale Estates",
         "city": "Avondale Estates",
         "state": "GA",
@@ -1398,7 +1390,7 @@ VENUES = {
         "name": "Midway Pub",
         "slug": "midway-pub",
         "address": "552 Flat Shoals Ave SE",
-        "neighborhood": "East Atlanta",
+        "neighborhood": "East Atlanta Village",
         "city": "Atlanta",
         "state": "GA",
         "zip": "30316",
@@ -1450,14 +1442,100 @@ VENUES = {
         "venue_type": "event_space",
         "website": "https://www.atlanticstation.com",
     },
+    # ========== Tasting venues ==========
+    "reverence-epicurean": {
+        "name": "Reverence at Epicurean Atlanta",
+        "slug": "reverence-epicurean",
+        "address": "1117 West Peachtree St NW",
+        "neighborhood": "Midtown",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30309",
+        "venue_type": "restaurant",
+        "website": "https://reverenceatlanta.com",
+    },
+    "3-parks-wine-shop": {
+        "name": "3 Parks Wine Shop",
+        "slug": "3-parks-wine-shop",
+        "address": "451 Bill Kennedy Way SE",
+        "neighborhood": "Glenwood Park",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30316",
+        "venue_type": "wine_bar",
+        "website": "https://3parkswine.com",
+    },
+    "city-winery-atlanta": {
+        "name": "City Winery Atlanta",
+        "slug": "city-winery-atlanta",
+        "address": "650 North Ave NE",
+        "neighborhood": "Old Fourth Ward",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30308",
+        "venue_type": "wine_bar",
+        "website": "https://citywinery.com/atlanta",
+    },
+    "vinoteca-atl": {
+        "name": "VinoTeca ATL",
+        "slug": "vinoteca-atl",
+        "address": "299 N Highland Ave NE, Suite T",
+        "neighborhood": "Inman Park",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30307",
+        "venue_type": "wine_bar",
+        "website": "https://www.shopvinoteca.com",
+    },
+    "taste-wine-bar": {
+        "name": "Taste Wine Bar and Market",
+        "slug": "taste-wine-bar-and-market",
+        "address": "202 Chattahoochee Row NW, Suite B",
+        "neighborhood": "Upper Westside",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30318",
+        "venue_type": "wine_bar",
+        "website": "https://www.tastewinebarandmarket.com",
+    },
+    # ========== Sports watch party venues ==========
+    "der-biergarten": {
+        "name": "Der Biergarten",
+        "slug": "der-biergarten",
+        "address": "300 Marietta St NW",
+        "neighborhood": "Downtown",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30313",
+        "venue_type": "bar",
+        "website": "https://derbiergarten.com",
+    },
+    "ri-ra-midtown": {
+        "name": "Ri Ra Irish Pub Midtown",
+        "slug": "ri-ra-irish-pub-midtown",
+        "address": "1080 Peachtree St NE, Suite 1",
+        "neighborhood": "Midtown",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30309",
+        "venue_type": "bar",
+        "website": "https://www.rirairishpub.com",
+    },
+    # "hudson-grille-midtown" — duplicate key removed (already defined at line 1320)
 }
 
 # ============================================
 # EVENT SCHEDULE
 # Day of week: 0=Monday, 6=Sunday
+#
+# Optional scheduling fields per template:
+#   frequency:       "weekly" (default), "biweekly", "monthly"
+#   active_months:   list of 1-12 ints — only generate during these months
+#   week_of_month:   int 1-4 or -1 (last) — for monthly events (e.g. 2nd Saturday)
+#   biweekly_anchor: "YYYY-MM-DD" — reference date for biweekly cadence
 # ============================================
 
-WEEKLY_EVENTS = [
+EVENT_TEMPLATES = [
     # ========== KARAOKE ==========
     {
         "venue_key": "metalsome",
@@ -1551,16 +1629,7 @@ WEEKLY_EVENTS = [
         "subcategory": "nightlife.karaoke",
         "tags": ["karaoke", "nightlife", "weekly"],
     },
-    {
-        "venue_key": "metro-fun-center",
-        "day": 4,  # Friday
-        "title": "Karaoke Night",
-        "description": "Friday night karaoke at Metro Fun Center.",
-        "start_time": "20:00",
-        "category": "nightlife",
-        "subcategory": "nightlife.karaoke",
-        "tags": ["karaoke", "nightlife", "weekly", "family-friendly"],
-    },
+    # "metro-fun-center" karaoke — REMOVED, venue permanently closed (Sept 2022)
     # ========== OPEN MICS ==========
     {
         "venue_key": "joes-coffeehouse",
@@ -1596,34 +1665,25 @@ WEEKLY_EVENTS = [
     {
         "venue_key": "limerick-junction",
         "day": 1,  # Tuesday
-        "title": "Open Mic Night",
-        "description": "Tuesday open mic at Limerick Junction in Virginia Highland. Music and comedy.",
+        "title": "Free Comedy Night at Limerick Junction",
+        "description": "Tuesday free comedy show at Limerick Junction in Virginia-Highland. Local and touring comedians in a classic Irish pub on N Highland Ave.",
         "start_time": "21:00",
-        "category": "nightlife",
-        "subcategory": None,
-        "tags": ["open-mic", "nightlife", "weekly"],
+        "category": "comedy",
+        "subcategory": "comedy.standup",
+        "tags": ["comedy", "stand-up", "weekly", "free", "virginia-highland"],
     },
     {
         "venue_key": "limelight-theater",
         "day": 1,  # Tuesday
         "title": "Late Night Open Mic",
-        "description": "Late night open mic at Limelight Theater in Downtown Atlanta.",
+        "description": "Late night open mic at Limelight Theater in Downtown Atlanta. Mixed format — comedy, music, spoken word.",
         "start_time": "22:00",
-        "category": "comedy",
-        "subcategory": "comedy.standup",
-        "tags": ["open-mic", "comedy", "weekly", "late-night"],
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["open-mic", "nightlife", "weekly", "late-night"],
     },
     # Farm Burger Midtown — removed, implausible open mic venue (burger restaurant)
-    {
-        "venue_key": "red-light-cafe",
-        "day": 2,  # Wednesday
-        "title": "Wednesday Jazz Jam",
-        "description": "Weekly jazz jam session at Red Light Cafe in Midtown. Musicians welcome to sit in. A staple of Atlanta's jazz scene since 1996.",
-        "start_time": "21:00",
-        "category": "music",
-        "subcategory": "music.jazz",
-        "tags": ["jazz", "jam-session", "live-music", "weekly"],
-    },
+    # red-light-cafe Wed Jazz Jam: handled by dedicated source (sources/red_light_cafe.py)
     # Smith's Olde Bar verified events
     {
         "venue_key": "smiths-olde-bar",
@@ -1660,11 +1720,11 @@ WEEKLY_EVENTS = [
         "venue_key": "asw-whiskey",
         "day": 3,  # Thursday
         "title": "Open Mic Night",
-        "description": "Thursday open mic at ASW Whiskey Exchange in West End.",
+        "description": "Thursday open mic at ASW Whiskey Exchange in West End. Live music in the tasting room.",
         "start_time": "18:00",
-        "category": "nightlife",
+        "category": "music",
         "subcategory": None,
-        "tags": ["open-mic", "nightlife", "weekly"],
+        "tags": ["open-mic", "live-music", "weekly"],
     },
     {
         "venue_key": "atlantucky",
@@ -1696,16 +1756,7 @@ WEEKLY_EVENTS = [
         "subcategory": None,
         "tags": ["open-mic", "poetry", "spoken-word", "weekly"],
     },
-    {
-        "venue_key": "battery-atlanta",
-        "day": 3,  # Thursday
-        "title": "Open Mic Night",
-        "description": "Thursday open mic at The Battery Atlanta entertainment district.",
-        "start_time": "19:00",
-        "category": "nightlife",
-        "subcategory": None,
-        "tags": ["open-mic", "nightlife", "weekly"],
-    },
+    # Battery Atlanta open mic — REMOVED, implausible (800 Battery Ave is a retail district, not a stage)
     # Joystick verified from Instagram: Wednesday gaming, Thursday karaoke (NOT open mic as badslava listed)
     {
         "venue_key": "joystick",
@@ -1798,19 +1849,10 @@ WEEKLY_EVENTS = [
         "description": "Thursday bingo night at Punch Bowl Social at The Battery.",
         "start_time": "20:00",
         "category": "nightlife",
-        "subcategory": None,
+        "subcategory": "nightlife.bingo",
         "tags": ["bingo", "games", "weekly"],
     },
-    {
-        "venue_key": "blue-martini",
-        "day": 6,  # Sunday
-        "title": "Sunday Funday Bingo",
-        "description": "Sunday bingo at Blue Martini Atlanta in Buckhead.",
-        "start_time": "12:00",
-        "category": "nightlife",
-        "subcategory": None,
-        "tags": ["bingo", "games", "weekly", "brunch"],
-    },
+    # "blue-martini" bingo — REMOVED, venue permanently closed (mid-2025)
     # ========== JAZZ & BLUES NIGHTS ==========
     {
         "venue_key": "cafe-circa",
@@ -1843,17 +1885,7 @@ WEEKLY_EVENTS = [
         "subcategory": "music.blues",
         "tags": ["blues", "live-music", "nightlife", "weekly"],
     },
-    # ========== ADDITIONAL KARAOKE ==========
-    {
-        "venue_key": "sister-louisas",
-        "day": 2,  # Wednesday
-        "title": "Karaoke Night",
-        "description": "Wednesday karaoke at Sister Louisa's Church on Edgewood Ave. Sing surrounded by outsider art.",
-        "start_time": "21:00",
-        "category": "nightlife",
-        "subcategory": "nightlife.karaoke",
-        "tags": ["karaoke", "nightlife", "weekly", "lgbtq-friendly"],
-    },
+    # Sister Louisa's karaoke — handled by dedicated source (sources/sister_louisas.py)
     # ========== ADDITIONAL TRIVIA ==========
     {
         "venue_key": "brick-store-pub",
@@ -1865,26 +1897,8 @@ WEEKLY_EVENTS = [
         "subcategory": "nightlife.trivia",
         "tags": ["trivia", "games", "nightlife", "weekly", "craft-beer"],
     },
-    {
-        "venue_key": "the-porter",
-        "day": 2,  # Wednesday
-        "title": "Trivia Night",
-        "description": "Wednesday trivia at The Porter Beer Bar in Little Five Points.",
-        "start_time": "20:00",
-        "category": "nightlife",
-        "subcategory": "nightlife.trivia",
-        "tags": ["trivia", "games", "nightlife", "weekly", "craft-beer"],
-    },
-    {
-        "venue_key": "wrecking-bar",
-        "day": 2,  # Wednesday
-        "title": "Trivia Night",
-        "description": "Wednesday trivia at Wrecking Bar Brewpub in Little Five Points. House-brewed beers and pub trivia.",
-        "start_time": "19:30",
-        "category": "nightlife",
-        "subcategory": "nightlife.trivia",
-        "tags": ["trivia", "games", "nightlife", "weekly", "brewery"],
-    },
+    # "the-porter" trivia — handled by dedicated source (sources/the_porter.py)
+    # "wrecking-bar" trivia — handled by dedicated source (sources/wrecking_bar.py)
     # ==================================================================
     # Phase 0b: NEW RECURRING EVENTS
     # ==================================================================
@@ -1892,9 +1906,9 @@ WEEKLY_EVENTS = [
     {
         "venue_key": "thinking-man",
         "day": 1,  # Tuesday
-        "title": "Trivia Night",
-        "description": "Tuesday trivia at Thinking Man Tavern in Decatur. Neighborhood bar vibes and solid pub trivia.",
-        "start_time": "20:00",
+        "title": "Team Trivia",
+        "description": "Tuesday team trivia at Thinking Man Tavern in Decatur. Every Tuesday at 7:30pm.",
+        "start_time": "19:30",
         "category": "nightlife",
         "subcategory": "nightlife.trivia",
         "tags": ["trivia", "games", "nightlife", "weekly"],
@@ -1921,30 +1935,27 @@ WEEKLY_EVENTS = [
     },
     {
         "venue_key": "twains",
-        "day": 2,  # Wednesday
+        "day": 0,  # Monday
         "title": "Team Trivia",
-        "description": "Wednesday team trivia at Twain's Billiards & Tap in Decatur. Pool tables, craft beer, and pub trivia.",
+        "description": "Monday night team trivia at Twain's Brewpub & Billiards in Decatur. Starts at 8pm. Bring your smartest crew.",
         "start_time": "20:00",
         "category": "nightlife",
         "subcategory": "nightlife.trivia",
         "tags": ["trivia", "games", "nightlife", "weekly"],
     },
-    {
-        "venue_key": "dieselfillingstation",
-        "day": 1,  # Tuesday
-        "title": "Trivia Night",
-        "description": "Tuesday trivia at Diesel Filling Station in Virginia Highland. Patio-friendly pub trivia.",
-        "start_time": "20:00",
-        "category": "nightlife",
-        "subcategory": "nightlife.trivia",
-        "tags": ["trivia", "games", "nightlife", "weekly"],
-    },
+    # Diesel Filling Station: permanently closed end of 2021, replaced by Dad's bar
+    # {
+    #     "venue_key": "dieselfillingstation",
+    #     "day": 1,  # Tuesday
+    #     "title": "Trivia Night",
+    #     ...
+    # },
     # ========== DJ NIGHTS / DANCE ==========
     {
         "venue_key": "mjq-concourse",
         "day": 3,  # Thursday
         "title": "MJQ Thursday",
-        "description": "Thursday DJ night at MJQ Concourse. Underground dance vibes below Ponce De Leon. One of Atlanta's longest-running dance nights.",
+        "description": "Thursday DJ night at MJQ Concourse at Underground Atlanta. One of Atlanta's longest-running dance nights, now in the former Dante's Down the Hatch space.",
         "start_time": "22:00",
         "category": "nightlife",
         "subcategory": "nightlife.dj",
@@ -1954,7 +1965,7 @@ WEEKLY_EVENTS = [
         "venue_key": "mjq-concourse",
         "day": 4,  # Friday
         "title": "MJQ Friday",
-        "description": "Friday DJ night at MJQ Concourse. Atlanta's legendary underground dance club.",
+        "description": "Friday DJ night at MJQ Concourse at Underground Atlanta. Atlanta's legendary dance club.",
         "start_time": "22:00",
         "category": "nightlife",
         "subcategory": "nightlife.dj",
@@ -1964,32 +1975,13 @@ WEEKLY_EVENTS = [
         "venue_key": "mjq-concourse",
         "day": 5,  # Saturday
         "title": "MJQ Saturday",
-        "description": "Saturday DJ night at MJQ Concourse. The best dance floor in Atlanta, underground on Ponce.",
+        "description": "Saturday DJ night at MJQ Concourse at Underground Atlanta. The best dance floor in Atlanta.",
         "start_time": "22:00",
         "category": "nightlife",
         "subcategory": "nightlife.dj",
         "tags": ["dj", "dance", "nightlife", "weekly", "late-night", "high-energy"],
     },
-    {
-        "venue_key": "music-room",
-        "day": 4,  # Friday
-        "title": "Friday Night DJ Set",
-        "description": "Friday DJ set at The Music Room on Edgewood Ave. Rotating DJs, cocktails, and late-night vibes.",
-        "start_time": "22:00",
-        "category": "nightlife",
-        "subcategory": "nightlife.dj",
-        "tags": ["dj", "dance", "nightlife", "weekly", "late-night"],
-    },
-    {
-        "venue_key": "music-room",
-        "day": 5,  # Saturday
-        "title": "Saturday Night DJ Set",
-        "description": "Saturday DJ set at The Music Room on Edgewood Ave.",
-        "start_time": "22:00",
-        "category": "nightlife",
-        "subcategory": "nightlife.dj",
-        "tags": ["dj", "dance", "nightlife", "weekly", "late-night"],
-    },
+    # The Music Room — CLOSED, events removed (Sep 2020)
     # Johnny's Hideaway — Dance Night dupes removed; specific "Country & Line Dancing" events below
     # ========== DRAG SHOWS ==========
     {
@@ -2038,7 +2030,7 @@ WEEKLY_EVENTS = [
         "venue_key": "apache-cafe",
         "day": 3,  # Thursday
         "title": "Open Mic & Poetry Slam",
-        "description": "Thursday open mic and poetry slam at Apache Cafe in Midtown. Atlanta's creative arts and spoken word staple.",
+        "description": "Thursday open mic and poetry slam at Apache XLR in Midtown. Atlanta's creative arts and spoken word staple.",
         "start_time": "20:00",
         "category": "words",
         "subcategory": None,
@@ -2054,6 +2046,16 @@ WEEKLY_EVENTS = [
         "subcategory": None,
         "tags": ["brunch", "dj", "outdoor", "weekly"],
     },
+    {
+        "venue_key": "ladybird",
+        "day": 2,  # Wednesday
+        "title": "Chess Night at Ladybird",
+        "description": "Wednesday chess night at Ladybird Grove & Mess Hall on the BeltLine. Boards provided, all skill levels welcome.",
+        "start_time": "18:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.bar_games",
+        "tags": ["chess", "board-games", "games", "bar-games", "weekly", "beltline"],
+    },
     # ========== FARMERS MARKETS ==========
     {
         "venue_key": "piedmont-park-green-market",
@@ -2065,41 +2067,14 @@ WEEKLY_EVENTS = [
         "subcategory": None,
         "tags": ["farmers-market", "outdoor", "weekly", "family-friendly"],
     },
-    {
-        "venue_key": "peachtree-road-farmers-market",
-        "day": 5,  # Saturday
-        "title": "Peachtree Road Farmers Market",
-        "description": "Saturday farmers market at Cathedral of St. Philip in Buckhead. Seasonal produce, baked goods, and local vendors.",
-        "start_time": "08:30",
-        "category": "markets",
-        "subcategory": None,
-        "tags": ["farmers-market", "outdoor", "weekly", "family-friendly", "seasonal"],
-    },
+    # Peachtree Road Farmers Market — handled by dedicated source (sources/farmers_markets.py) with correct season gate
     # ==================================================================
     # Phase 2: NEIGHBORHOOD + DAY GAP FILLS
     # ==================================================================
     # ========== LITTLE FIVE POINTS ==========
-    {
-        "venue_key": "elmyr",
-        "day": 1,  # Tuesday
-        "title": "Taco Tuesday",
-        "description": "Taco Tuesday specials at Elmyr in Little Five Points. Cheap tacos and margaritas in L5P's favorite late-night taqueria.",
-        "start_time": "17:00",
-        "category": "food_drink",
-        "subcategory": None,
-        "tags": ["food-specials", "tacos", "weekly", "budget-friendly"],
-    },
+    # Elmyr Taco Tuesday — venue attribute, not a programmed event (moved to venue_specials)
     # ========== INMAN PARK ==========
-    {
-        "venue_key": "barcelona-wine-bar",
-        "day": 2,  # Wednesday
-        "title": "Wine Wednesday",
-        "description": "Wednesday wine specials at Barcelona Wine Bar in Inman Park. Half-off select bottles and tapas pairings.",
-        "start_time": "17:00",
-        "category": "food_drink",
-        "subcategory": None,
-        "tags": ["wine", "food-specials", "weekly", "date-night"],
-    },
+    # Barcelona Wine Wednesday — venue attribute, not a programmed event (moved to venue_specials)
     {
         "venue_key": "barcelona-wine-bar",
         "day": 3,  # Thursday
@@ -2120,16 +2095,7 @@ WEEKLY_EVENTS = [
         "subcategory": "nightlife.trivia",
         "tags": ["trivia", "games", "nightlife", "weekly"],
     },
-    {
-        "venue_key": "new-realm-brewing",
-        "day": 3,  # Thursday
-        "title": "Trivia Night",
-        "description": "Thursday trivia at New Realm Brewing on the BeltLine. Craft beer, rooftop views, and pub trivia.",
-        "start_time": "19:00",
-        "category": "nightlife",
-        "subcategory": "nightlife.trivia",
-        "tags": ["trivia", "games", "nightlife", "weekly", "brewery", "beltline"],
-    },
+    # New Realm Thursday trivia — handled by dedicated source (sources/new_realm_brewing.py)
     {
         "venue_key": "new-realm-brewing",
         "day": 4,  # Friday
@@ -2140,16 +2106,7 @@ WEEKLY_EVENTS = [
         "subcategory": None,
         "tags": ["live-music", "weekly", "brewery", "beltline"],
     },
-    {
-        "venue_key": "krog-street-market",
-        "day": 5,  # Saturday
-        "title": "Saturday Live Music",
-        "description": "Saturday live music at Krog Street Market in Inman Park. Local performers in the food hall courtyard.",
-        "start_time": "12:00",
-        "category": "music",
-        "subcategory": None,
-        "tags": ["live-music", "weekly", "family-friendly"],
-    },
+    # krog-street-market Sat live music + Tue trivia: handled by dedicated source (sources/krog_street_market.py)
     # ========== EAST ATLANTA VILLAGE ==========
     {
         "venue_key": "the-glenwood",
@@ -2181,67 +2138,10 @@ WEEKLY_EVENTS = [
         "subcategory": "nightlife.dj",
         "tags": ["dj", "nightlife", "weekly", "late-night"],
     },
-    {
-        "venue_key": "marys-bar",
-        "day": 4,  # Friday
-        "title": "Friday Drag Show",
-        "description": "Friday drag show at Mary's in East Atlanta Village. Atlanta's beloved queer dive bar.",
-        "start_time": "22:00",
-        "category": "nightlife",
-        "subcategory": "nightlife.drag",
-        "tags": ["drag", "nightlife", "weekly", "lgbtq-friendly"],
-    },
-    {
-        "venue_key": "marys-bar",
-        "day": 5,  # Saturday
-        "title": "Saturday DJ Night",
-        "description": "Saturday DJ night at Mary's in East Atlanta Village. Dance floor, cheap drinks, queer dive bar energy.",
-        "start_time": "22:00",
-        "category": "nightlife",
-        "subcategory": "nightlife.dj",
-        "tags": ["dj", "dance", "nightlife", "weekly", "lgbtq-friendly"],
-    },
+    # marys-bar Fri drag + Sat DJ: handled by dedicated source (sources/marys.py)
     # ========== SUNDAY GAP FILLS ==========
-    {
-        "venue_key": "northside-tavern",
-        "day": 6,  # Sunday
-        "title": "Sunday Blues Jam",
-        "description": "Sunday blues jam at Northside Tavern in West Midtown. Atlanta's iconic juke joint — live blues every Sunday for decades.",
-        "start_time": "16:00",
-        "category": "music",
-        "subcategory": "music.blues",
-        "tags": ["blues", "live-music", "jam-session", "weekly"],
-    },
-    {
-        "venue_key": "northside-tavern",
-        "day": 4,  # Friday
-        "title": "Friday Night Blues",
-        "description": "Friday night live blues at Northside Tavern. Atlanta's legendary blues bar since 1973.",
-        "start_time": "21:30",
-        "category": "music",
-        "subcategory": "music.blues",
-        "tags": ["blues", "live-music", "nightlife", "weekly"],
-    },
-    {
-        "venue_key": "northside-tavern",
-        "day": 5,  # Saturday
-        "title": "Saturday Night Blues",
-        "description": "Saturday night live blues at Northside Tavern. The real deal — no frills, just blues.",
-        "start_time": "21:30",
-        "category": "music",
-        "subcategory": "music.blues",
-        "tags": ["blues", "live-music", "nightlife", "weekly"],
-    },
-    {
-        "venue_key": "park-tavern",
-        "day": 6,  # Sunday
-        "title": "Sunday Live Music",
-        "description": "Sunday live music at Park Tavern overlooking Piedmont Park. Outdoor stage, craft beer, and local bands.",
-        "start_time": "15:00",
-        "category": "music",
-        "subcategory": None,
-        "tags": ["live-music", "outdoor", "weekly", "family-friendly"],
-    },
+    # Northside Tavern blues (Sun/Fri/Sat) — handled by dedicated source (sources/northside_tavern.py)
+    # park-tavern Sun live music: handled by dedicated source (sources/park_tavern.py)
     {
         "venue_key": "ladybird",
         "day": 6,  # Sunday
@@ -2266,22 +2166,13 @@ WEEKLY_EVENTS = [
         "venue_key": "apache-cafe",
         "day": 6,  # Sunday
         "title": "Sunday Open Mic",
-        "description": "Sunday open mic at Apache Cafe in Midtown. Poetry, spoken word, and acoustic sets.",
+        "description": "Sunday open mic at Apache XLR in Midtown. Poetry, spoken word, and acoustic sets.",
         "start_time": "19:00",
         "category": "words",
         "subcategory": None,
         "tags": ["open-mic", "poetry", "spoken-word", "weekly"],
     },
-    {
-        "venue_key": "wrecking-bar",
-        "day": 6,  # Sunday
-        "title": "Sunday Brunch",
-        "description": "Sunday brunch at Wrecking Bar Brewpub in Little Five Points. House-brewed beers and brunch favorites in a historic firehouse.",
-        "start_time": "10:00",
-        "category": "food_drink",
-        "subcategory": None,
-        "tags": ["brunch", "brewery", "weekly", "family-friendly"],
-    },
+    # Wrecking Bar Sunday Brunch — venue attribute, not a programmed event (moved to venue_specials)
     # NOTE: Sister Louisa's bingo + karaoke handled by dedicated sources
     # (sister-louisas-church for Drag Bingo, sister-louisas for karaoke)
     # ========== DISCOVERED FROM VENUE WEBSITES (Feb 2026) ==========
@@ -2294,7 +2185,7 @@ WEEKLY_EVENTS = [
         "description": "Wednesday pub quiz at Fado Irish Pub hosted by Dirty South Trivia. Win prizes and pub cash.",
         "start_time": "19:00",
         "category": "nightlife",
-        "subcategory": None,
+        "subcategory": "nightlife.trivia",
         "tags": ["trivia", "games", "nightlife", "weekly"],
     },
     # Steady Hand Beer — West Midtown
@@ -2305,7 +2196,7 @@ WEEKLY_EVENTS = [
         "description": "Wednesday themed trivia at Steady Hand Beer Co. hosted by Lights Up Entertainment. Rotating pop culture themes with prizes.",
         "start_time": "19:00",
         "category": "nightlife",
-        "subcategory": None,
+        "subcategory": "nightlife.trivia",
         "tags": ["trivia", "games", "nightlife", "weekly", "brewery"],
     },
     # Cherry Street Brewing — West Midtown
@@ -2347,7 +2238,7 @@ WEEKLY_EVENTS = [
         "description": "Monday trivia night at Three Taverns Imaginarium in Reynoldstown.",
         "start_time": "20:00",
         "category": "nightlife",
-        "subcategory": None,
+        "subcategory": "nightlife.trivia",
         "tags": ["trivia", "games", "nightlife", "weekly", "brewery"],
     },
     {
@@ -2357,7 +2248,7 @@ WEEKLY_EVENTS = [
         "description": "Tuesday Mario Kart N64 gaming night at Three Taverns Imaginarium. Play in the upstairs loft.",
         "start_time": "19:00",
         "category": "nightlife",
-        "subcategory": None,
+        "subcategory": "nightlife.bar_games",
         "tags": ["games", "game-night", "nightlife", "weekly", "brewery"],
     },
     # Gene's BBQ — Kirkwood
@@ -2368,7 +2259,7 @@ WEEKLY_EVENTS = [
         "description": "Tuesday bingo night at Gene's BBQ hosted by Kiki Casino with DJ. Free to play with prizes.",
         "start_time": "20:00",
         "category": "nightlife",
-        "subcategory": None,
+        "subcategory": "nightlife.bingo",
         "tags": ["bingo", "dj", "nightlife", "weekly", "free"],
     },
     {
@@ -2378,7 +2269,7 @@ WEEKLY_EVENTS = [
         "description": "Thursday karaoke at Gene's BBQ. All classics, no filler.",
         "start_time": "20:00",
         "category": "nightlife",
-        "subcategory": None,
+        "subcategory": "nightlife.karaoke",
         "tags": ["karaoke", "nightlife", "weekly"],
     },
     # Brewhouse Cafe — Little Five Points
@@ -2389,7 +2280,7 @@ WEEKLY_EVENTS = [
         "description": "Friday DJ night at Brewhouse Cafe in Little Five Points. DJ Jen with $5 drafts and margaritas.",
         "start_time": "19:00",
         "category": "nightlife",
-        "subcategory": None,
+        "subcategory": "nightlife.dj",
         "tags": ["dj", "nightlife", "weekly", "drink-specials"],
     },
     # Whitehall Tavern — Buckhead
@@ -2400,7 +2291,7 @@ WEEKLY_EVENTS = [
         "description": "Wednesday trivia night at Whitehall Tavern in Buckhead.",
         "start_time": "20:00",
         "category": "nightlife",
-        "subcategory": None,
+        "subcategory": "nightlife.trivia",
         "tags": ["trivia", "games", "nightlife", "weekly"],
     },
     {
@@ -2410,7 +2301,7 @@ WEEKLY_EVENTS = [
         "description": "Thursday trivia night at Whitehall Tavern in Buckhead.",
         "start_time": "20:00",
         "category": "nightlife",
-        "subcategory": None,
+        "subcategory": "nightlife.trivia",
         "tags": ["trivia", "games", "nightlife", "weekly"],
     },
     # Irby's Tavern — Buckhead
@@ -2421,7 +2312,7 @@ WEEKLY_EVENTS = [
         "description": "Wednesday trivia with whiskey specials at Irby's Tavern in Buckhead.",
         "start_time": "20:00",
         "category": "nightlife",
-        "subcategory": None,
+        "subcategory": "nightlife.trivia",
         "tags": ["trivia", "games", "nightlife", "weekly", "drink-specials"],
     },
     # Woofs Atlanta — Midtown
@@ -2432,7 +2323,7 @@ WEEKLY_EVENTS = [
         "description": "Friday RuPaul's Drag Race viewing party at Woofs Atlanta.",
         "start_time": "18:00",
         "category": "nightlife",
-        "subcategory": None,
+        "subcategory": "nightlife.drag",
         "tags": ["drag", "viewing-party", "nightlife", "weekly", "lgbtq-friendly"],
     },
     # Atlanta Eagle: handled by dedicated source upgrade (atlanta_eagle.py)
@@ -2448,7 +2339,7 @@ WEEKLY_EVENTS = [
         "description": "Free drop-in D&D 5e at Joystick Gamebar on Edgewood Ave. New players welcome — free pre-gen characters and dice provided. All ages before 8pm.",
         "start_time": "18:00",
         "category": "nightlife",
-        "subcategory": None,
+        "subcategory": "nightlife.bar_games",
         "tags": ["dnd", "tabletop", "games", "weekly", "free"],
     },
     {
@@ -2458,18 +2349,18 @@ WEEKLY_EVENTS = [
         "description": "Free drop-in D&D 5e at Joystick Gamebar on Edgewood Ave. New players welcome — free pre-gen characters and dice provided. All ages before 8pm.",
         "start_time": "18:00",
         "category": "nightlife",
-        "subcategory": None,
+        "subcategory": "nightlife.bar_games",
         "tags": ["dnd", "tabletop", "games", "weekly", "free"],
     },
-    # Bone Lick BBQ — Grant Park (ITP)
+    # Bone Lick BBQ — West Midtown (ITP)
     {
         "venue_key": "bone-lick-bbq",
         "day": 3,  # Thursday
         "title": "ATL D&D Drop-In",
-        "description": "Thursday D&D at Bone Lick BBQ. Happy hour at 6pm, official start at 7pm, games begin ~7:30. Free drop-in D&D 5e.",
+        "description": "Thursday D&D at Bone Lick BBQ in West Midtown. Happy hour at 6pm, official start at 7pm, games begin ~7:30. Free drop-in D&D 5e.",
         "start_time": "18:00",
         "category": "nightlife",
-        "subcategory": None,
+        "subcategory": "nightlife.bar_games",
         "tags": ["dnd", "tabletop", "games", "weekly", "free"],
     },
     # Battle & Brew — handled by dedicated source (sources/battle_and_brew.py)
@@ -2481,7 +2372,7 @@ WEEKLY_EVENTS = [
         "description": "Tuesday open board game night at Giga-Bites Cafe. Large game library available. All welcome.",
         "start_time": "18:00",
         "category": "nightlife",
-        "subcategory": None,
+        "subcategory": "nightlife.bar_games",
         "tags": ["board-games", "tabletop", "games", "weekly"],
     },
     {
@@ -2491,7 +2382,7 @@ WEEKLY_EVENTS = [
         "description": "Official D&D Adventurers League play at Giga-Bites Cafe. Arrive by 6:30pm, tables assigned 6:45, games at 7.",
         "start_time": "18:30",
         "category": "nightlife",
-        "subcategory": None,
+        "subcategory": "nightlife.bar_games",
         "tags": ["dnd", "tabletop", "games", "weekly"],
     },
     {
@@ -2528,22 +2419,12 @@ WEEKLY_EVENTS = [
     {
         "venue_key": "my-parents-basement",
         "day": 1,  # Tuesday
-        "title": "Geek Trivia Night",
-        "description": "Tuesday comic book and geek trivia at My Parents' Basement. 20 pinball machines and board games available.",
-        "start_time": "19:00",
-        "category": "nightlife",
-        "subcategory": "nightlife.trivia",
-        "tags": ["trivia", "geek", "comics", "pinball", "games", "weekly"],
-    },
-    {
-        "venue_key": "my-parents-basement",
-        "day": 1,  # Tuesday
         "title": "Comic Book Trivia Night",
-        "description": "Tuesday trivia night at My Parents Basement in Avondale Estates. Comics, sci-fi, pop culture. Free to play.",
+        "description": "Tuesday trivia night at My Parents' Basement in Avondale Estates. Comics, sci-fi, pop culture. Free to play with 20 pinball machines and board games available.",
         "start_time": "19:00",
         "category": "nightlife",
         "subcategory": "nightlife.trivia",
-        "tags": ["trivia", "comics", "geek", "weekly", "free"],
+        "tags": ["trivia", "comics", "geek", "pinball", "weekly", "free"],
         "is_free": True,
     },
     # East Atlanta Comics — MTG
@@ -2580,7 +2461,7 @@ WEEKLY_EVENTS = [
         "description": "Thursday BeltLine run/walk organized by Atlanta Track Club. 2 or 4 miles. Gather 6:15pm, start 6:30. Free. Post-run food and beer specials.",
         "start_time": "18:15",
         "category": "fitness",
-        "subcategory": None,
+        "subcategory": "fitness.running",
         "tags": ["running", "run-club", "beltline", "free", "weekly", "brewery"],
     },
     # Big Peach Running Co — Midtown
@@ -2591,7 +2472,7 @@ WEEKLY_EVENTS = [
         "description": "Tuesday group run from Big Peach Running Co Midtown through Piedmont Park. Changing rooms and showers available.",
         "start_time": "18:30",
         "category": "fitness",
-        "subcategory": None,
+        "subcategory": "fitness.running",
         "tags": ["running", "run-club", "free", "weekly"],
     },
     {
@@ -2601,7 +2482,7 @@ WEEKLY_EVENTS = [
         "description": "Saturday morning group run from Big Peach Running Co Midtown. All levels welcome.",
         "start_time": "07:30",
         "category": "fitness",
-        "subcategory": None,
+        "subcategory": "fitness.running",
         "tags": ["running", "run-club", "free", "weekly"],
     },
     # Cabbagetown Running Club
@@ -2612,7 +2493,7 @@ WEEKLY_EVENTS = [
         "description": "Thursday group run from Milltown Arms Tavern in Cabbagetown. All levels welcome. Running continuously since December 2005.",
         "start_time": "19:00",
         "category": "fitness",
-        "subcategory": None,
+        "subcategory": "fitness.running",
         "tags": ["running", "run-club", "weekly"],
     },
     # Running for Brews — Buckhead
@@ -2623,7 +2504,7 @@ WEEKLY_EVENTS = [
         "description": "Monday social 5K run from Elbow Room in Buckhead. Run a route through Buckhead then return for beers and socializing.",
         "start_time": "19:00",
         "category": "fitness",
-        "subcategory": None,
+        "subcategory": "fitness.running",
         "tags": ["running", "run-club", "social", "weekly"],
     },
     # ==================================================================
@@ -2659,7 +2540,7 @@ WEEKLY_EVENTS = [
     # ==================================================================
     # YOGA & WELLNESS (Feb 2026)
     # ==================================================================
-    # Woodruff Park Free Yoga
+    # Woodruff Park Free Yoga (outdoor, Mar–Nov)
     {
         "venue_key": "woodruff-park",
         "day": 5,  # Saturday
@@ -2669,6 +2550,7 @@ WEEKLY_EVENTS = [
         "category": "wellness",
         "subcategory": None,
         "tags": ["yoga", "free", "outdoor", "weekly"],
+        "active_months": [3, 4, 5, 6, 7, 8, 9, 10, 11],
     },
     # ==================================================================
     # CYCLING GROUPS (Feb 2026)
@@ -2697,18 +2579,7 @@ WEEKLY_EVENTS = [
         "tags": ["cycling", "bike-ride", "free", "competitive", "weekly"],
         "is_free": True,
     },
-    # Midweek Roll — biweekly social ride (listed as weekly; description notes every other Wednesday)
-    {
-        "venue_key": "97-estoria",
-        "day": 2,  # Wednesday
-        "title": "Midweek Roll — Social Bike Ride",
-        "description": "Wednesday evening social-paced bike ride from 97 Estoria in Reynoldstown. 10-12 miles at 10-12 mph. Helmets and lights required. Ends back at the bar. Every other Wednesday.",
-        "start_time": "19:00",
-        "category": "fitness",
-        "subcategory": "fitness.cycling",
-        "tags": ["cycling", "bike-ride", "free", "social", "biweekly"],
-        "is_free": True,
-    },
+    # Midweek Roll — REMOVED, biweekly event (every other Wednesday) can't be represented in weekly generator
     # ==================================================================
     # TENNIS (Feb 2026)
     # ==================================================================
@@ -2744,338 +2615,20 @@ WEEKLY_EVENTS = [
     # Grant Park Volunteer Workday — removed, monthly event (2nd Saturday only)
     # can't be represented in weekly generator; would create 6x instances per month
     # ==================================================================
-    # FOOD & DRINK SPECIALS (Feb 2026)
+    # FOOD & DRINK SPECIALS — REMOVED (2026-03)
+    # Product decision: venue specials (happy hours, taco tuesdays, wine nights,
+    # oyster hours, brunches, half-price deals) are venue ATTRIBUTES, not
+    # programmed events. They belong in venue_specials table, not the event feed.
+    # Removed: Lloyd's Crab Night, Taverna wine, Wild Heaven margaritas,
+    # Pure Taqueria / Tin Lizzy's / Elmyr taco tuesdays, Forza Storico wine,
+    # Antico wine, Pielands wings, Beso oysters, Cypress Street wine,
+    # Optimist oysters (3x), Iberian Pig happy hour (3x), Bartaco HH (2x),
+    # Superica HH (2x), BeetleCat oysters (5x), Fado bottomless brunch (2x),
+    # Barcelona Wine Wednesday, Wrecking Bar Sunday Brunch
     # ==================================================================
-    # --- MONDAY ---
-    # Lloyd's Monday Crab Night
-    {
-        "venue_key": "lloyds-atl",
-        "day": 0,  # Monday
-        "title": "Monday Crab Night",
-        "description": "Monday crab legs at Lloyd's in Inman Park. $35 snow crab plate with boiled potatoes, corn, and biscuit. An Atlanta institution.",
-        "start_time": "17:00",
-        "category": "food_drink",
-        "subcategory": None,
-        "tags": ["seafood", "crab", "specials", "weekly"],
-        "price_min": 35,
-        "price_max": 35,
-    },
-    # Taverna Monday Half-Price Wine
-    {
-        "venue_key": "taverna-buckhead",
-        "day": 0,  # Monday
-        "title": "Half-Price Wine Mondays",
-        "description": "All wine bottles under $90 are half price all day Monday at Taverna in Buckhead.",
-        "start_time": "17:00",
-        "category": "food_drink",
-        "subcategory": None,
-        "tags": ["wine", "specials", "half-price", "weekly"],
-    },
-    # Wild Heaven Avondale — Monday half-price margaritas
-    {
-        "venue_key": "wild-heaven-avondale",
-        "day": 0,  # Monday
-        "title": "Half-Price Margarita Mondays",
-        "description": "Half-price margaritas all day Monday at Wild Heaven Avondale. Plus Music Bingo.",
-        "start_time": "15:00",
-        "category": "food_drink",
-        "subcategory": None,
-        "tags": ["margaritas", "specials", "half-price", "brewery", "weekly"],
-    },
-    # --- TUESDAY (Taco Tuesday) ---
-    # Pure Taqueria Taco Tuesday
-    {
-        "venue_key": "pure-taqueria-inman-park",
-        "day": 1,  # Tuesday
-        "title": "Taco Tuesday",
-        "description": "Taco Tuesday at Pure Taqueria. $3.50 tacos (chipotle chicken, shredded pork, fish) and $2 Tecates all day.",
-        "start_time": "11:00",
-        "category": "food_drink",
-        "subcategory": None,
-        "tags": ["tacos", "taco-tuesday", "specials", "weekly"],
-    },
-    # Tin Lizzy's Taco Tuesday
-    {
-        "venue_key": "tin-lizzys-midtown",
-        "day": 1,  # Tuesday
-        "title": "Taco Tuesday",
-        "description": "$2 select tacos and $5 Patron shots all day at Tin Lizzy's Cantina Midtown.",
-        "start_time": "11:00",
-        "category": "food_drink",
-        "subcategory": None,
-        "tags": ["tacos", "taco-tuesday", "specials", "weekly"],
-    },
-    # Forza Storico — Tuesday half-price wine
-    {
-        "venue_key": "forza-storico",
-        "day": 1,  # Tuesday
-        "title": "Half-Price Wine Tuesdays",
-        "description": "Half-price wine bottles from 5pm at Forza Storico in West Midtown.",
-        "start_time": "17:00",
-        "category": "food_drink",
-        "subcategory": None,
-        "tags": ["wine", "specials", "half-price", "weekly"],
-    },
-    # --- WEDNESDAY (Wine + Wings + Oysters) ---
-    # Antico Wine Wednesday
-    {
-        "venue_key": "antico-pizza",
-        "day": 2,  # Wednesday
-        "title": "Wine Wednesday",
-        "description": "Half-price wine bottles with pizza purchase all day Wednesday at Antico Pizza in West Midtown.",
-        "start_time": "11:30",
-        "category": "food_drink",
-        "subcategory": None,
-        "tags": ["wine", "pizza", "specials", "half-price", "weekly"],
-    },
-    # Pielands Wing Wednesday
-    {
-        "venue_key": "pielands",
-        "day": 2,  # Wednesday
-        "title": "Wing Wednesday — Half-Price Wings",
-        "description": "Half-price wings all day Wednesday at Pielands in Virginia-Highland.",
-        "start_time": "11:00",
-        "category": "food_drink",
-        "subcategory": None,
-        "tags": ["wings", "specials", "half-price", "weekly"],
-    },
-    # Beso $1 Oysters Wednesday
-    {
-        "venue_key": "beso-buckhead",
-        "day": 2,  # Wednesday
-        "title": "$1 Oyster Night",
-        "description": "Dollar oysters and half-price wine bottles at Beso Buckhead every Wednesday 10pm-2am.",
-        "start_time": "22:00",
-        "category": "food_drink",
-        "subcategory": None,
-        "tags": ["oysters", "specials", "late-night", "weekly"],
-    },
-    # Wild Heaven Toco Hills — Wednesday half-off pitchers
-    {
-        "venue_key": "wild-heaven-toco-hills",
-        "day": 2,  # Wednesday
-        "title": "Half-Off Pitchers + Music Bingo",
-        "description": "Half-off beer pitchers and Music Bingo at 7pm at Wild Heaven x Fox Bros Toco Hills.",
-        "start_time": "17:00",
-        "category": "food_drink",
-        "subcategory": None,
-        "tags": ["beer", "bingo", "specials", "half-price", "weekly"],
-    },
-    # --- THURSDAY ---
-    # Cypress Street Half-Price Wine Thursday
-    {
-        "venue_key": "cypress-street-pint",
-        "day": 3,  # Thursday
-        "title": "Half-Price Wine Night",
-        "description": "Half-price wine bottles all evening at Cypress Street Pint & Plate in Midtown.",
-        "start_time": "17:00",
-        "category": "food_drink",
-        "subcategory": None,
-        "tags": ["wine", "specials", "half-price", "weekly"],
-    },
-    # Fontaine's Half-Price Seafood — CLOSED, removed (2026-03)
-    # --- DAILY HAPPY HOURS (Mon / Wed / Fri anchors) ---
-    # Watchman's $1 Oysters (Tue-Thu + Sun)
-    {
-        "venue_key": "watchmans-seafood",
-        "day": 1,  # Tuesday
-        "title": "$1 Oyster Happy Hour",
-        "description": "Dollar oysters from the full raw bar menu at Watchman's in Krog Street Market. 5-6pm Tuesday through Thursday, 4-6pm Sunday.",
-        "start_time": "17:00",
-        "category": "food_drink",
-        "subcategory": None,
-        "tags": ["oysters", "specials", "dollar-oysters", "weekly"],
-    },
-    {
-        "venue_key": "watchmans-seafood",
-        "day": 2,  # Wednesday
-        "title": "$1 Oyster Happy Hour",
-        "description": "Dollar oysters from the full raw bar menu at Watchman's in Krog Street Market. 5-6pm Tuesday through Thursday, 4-6pm Sunday.",
-        "start_time": "17:00",
-        "category": "food_drink",
-        "subcategory": None,
-        "tags": ["oysters", "specials", "dollar-oysters", "weekly"],
-    },
-    {
-        "venue_key": "watchmans-seafood",
-        "day": 3,  # Thursday
-        "title": "$1 Oyster Happy Hour",
-        "description": "Dollar oysters from the full raw bar menu at Watchman's in Krog Street Market. 5-6pm Tuesday through Thursday, 4-6pm Sunday.",
-        "start_time": "17:00",
-        "category": "food_drink",
-        "subcategory": None,
-        "tags": ["oysters", "specials", "dollar-oysters", "weekly"],
-    },
-    {
-        "venue_key": "watchmans-seafood",
-        "day": 6,  # Sunday
-        "title": "$1 Oyster Happy Hour",
-        "description": "Dollar oysters from the full raw bar menu at Watchman's in Krog Street Market. 4-6pm Sunday.",
-        "start_time": "16:00",
-        "category": "food_drink",
-        "subcategory": None,
-        "tags": ["oysters", "specials", "dollar-oysters", "weekly"],
-    },
-    # The Optimist $1 Oysters (Mon / Wed / Fri anchors for Mon-Fri run)
-    {
-        "venue_key": "the-optimist",
-        "day": 0,  # Monday
-        "title": "$1 Oyster Happy Hour",
-        "description": "Dollar select oysters at the raw bar during happy hour at The Optimist in West Midtown. 5-6pm weekdays.",
-        "start_time": "17:00",
-        "category": "food_drink",
-        "subcategory": None,
-        "tags": ["oysters", "specials", "dollar-oysters", "weekly"],
-    },
-    {
-        "venue_key": "the-optimist",
-        "day": 2,  # Wednesday
-        "title": "$1 Oyster Happy Hour",
-        "description": "Dollar select oysters at the raw bar during happy hour at The Optimist in West Midtown. 5-6pm weekdays.",
-        "start_time": "17:00",
-        "category": "food_drink",
-        "subcategory": None,
-        "tags": ["oysters", "specials", "dollar-oysters", "weekly"],
-    },
-    {
-        "venue_key": "the-optimist",
-        "day": 4,  # Friday
-        "title": "$1 Oyster Happy Hour",
-        "description": "Dollar select oysters at the raw bar during happy hour at The Optimist in West Midtown. 5-6pm weekdays.",
-        "start_time": "17:00",
-        "category": "food_drink",
-        "subcategory": None,
-        "tags": ["oysters", "specials", "dollar-oysters", "weekly"],
-    },
-    # Iberian Pig Jamon Happy Hour (Mon / Wed / Fri anchors for Mon-Fri run)
-    {
-        "venue_key": "iberian-pig-decatur",
-        "day": 0,  # Monday
-        "title": "Jamon Happy Hour",
-        "description": "Discounted charcuterie boards, cheese, and $5 sangria/wine at The Iberian Pig Decatur. 5-7pm weekdays.",
-        "start_time": "17:00",
-        "category": "food_drink",
-        "subcategory": None,
-        "tags": ["tapas", "wine", "sangria", "specials", "weekly"],
-    },
-    {
-        "venue_key": "iberian-pig-decatur",
-        "day": 2,  # Wednesday
-        "title": "Jamon Happy Hour",
-        "description": "Discounted charcuterie boards, cheese, and $5 sangria/wine at The Iberian Pig Decatur. 5-7pm weekdays.",
-        "start_time": "17:00",
-        "category": "food_drink",
-        "subcategory": None,
-        "tags": ["tapas", "wine", "sangria", "specials", "weekly"],
-    },
-    {
-        "venue_key": "iberian-pig-decatur",
-        "day": 4,  # Friday
-        "title": "Jamon Happy Hour",
-        "description": "Discounted charcuterie boards, cheese, and $5 sangria/wine at The Iberian Pig Decatur. 5-7pm weekdays.",
-        "start_time": "17:00",
-        "category": "food_drink",
-        "subcategory": None,
-        "tags": ["tapas", "wine", "sangria", "specials", "weekly"],
-    },
-    # Bartaco Happy Hour (Wed + Fri anchors for Mon-Fri run)
-    {
-        "venue_key": "bartaco-inman-park",
-        "day": 2,  # Wednesday
-        "title": "$3 Tacos & $5 Margaritas Happy Hour",
-        "description": "$3 tacos, $5 margaritas, and $2 sides at Bartaco Inman Park. 3-6pm Monday through Friday.",
-        "start_time": "15:00",
-        "category": "food_drink",
-        "subcategory": None,
-        "tags": ["tacos", "margaritas", "happy-hour", "specials", "weekly"],
-    },
-    {
-        "venue_key": "bartaco-inman-park",
-        "day": 4,  # Friday
-        "title": "$3 Tacos & $5 Margaritas Happy Hour",
-        "description": "$3 tacos, $5 margaritas, and $2 sides at Bartaco Inman Park. 3-6pm Monday through Friday.",
-        "start_time": "15:00",
-        "category": "food_drink",
-        "subcategory": None,
-        "tags": ["tacos", "margaritas", "happy-hour", "specials", "weekly"],
-    },
-    # Superica Happy Hour (Wed + Fri anchors for Mon-Fri run)
-    {
-        "venue_key": "superica-krog",
-        "day": 2,  # Wednesday
-        "title": "Happy Hour at the Bar",
-        "description": "Food and drink specials at the bar and patio at Superica in Krog Street Market. 3-6pm weekdays.",
-        "start_time": "15:00",
-        "category": "food_drink",
-        "subcategory": None,
-        "tags": ["happy-hour", "specials", "weekly"],
-    },
-    {
-        "venue_key": "superica-krog",
-        "day": 4,  # Friday
-        "title": "Happy Hour at the Bar",
-        "description": "Food and drink specials at the bar and patio at Superica in Krog Street Market. 3-6pm weekdays.",
-        "start_time": "15:00",
-        "category": "food_drink",
-        "subcategory": None,
-        "tags": ["happy-hour", "specials", "weekly"],
-    },
-    # BeetleCat Late Night Oysters (Fri + Sat)
-    {
-        "venue_key": "beetlecat",
-        "day": 4,  # Friday
-        "title": "Late-Night Oyster Happy Hour",
-        "description": "Late-night oyster and drink specials at BeetleCat in Inman Park. 11pm-2am Friday and Saturday.",
-        "start_time": "23:00",
-        "category": "food_drink",
-        "subcategory": None,
-        "tags": ["oysters", "late-night", "specials", "weekly"],
-    },
-    {
-        "venue_key": "beetlecat",
-        "day": 5,  # Saturday
-        "title": "Late-Night Oyster Happy Hour",
-        "description": "Late-night oyster and drink specials at BeetleCat in Inman Park. 11pm-2am Friday and Saturday.",
-        "start_time": "23:00",
-        "category": "food_drink",
-        "subcategory": None,
-        "tags": ["oysters", "late-night", "specials", "weekly"],
-    },
-    # Fado Midtown — Bottomless Mimosa Brunch (Sat + Sun)
-    # Note: "fado-irish-pub" key = Buckhead location; "fado-midtown" = Midtown/Peachtree St
-    {
-        "venue_key": "fado-midtown",
-        "day": 5,  # Saturday
-        "title": "Bottomless Mimosa Brunch",
-        "description": "$17 bottomless mimosas and $19 bottomless sangria at Fado Irish Pub Midtown. Until 3pm.",
-        "start_time": "10:00",
-        "category": "food_drink",
-        "subcategory": None,
-        "tags": ["brunch", "mimosas", "bottomless", "specials", "weekly"],
-    },
-    {
-        "venue_key": "fado-midtown",
-        "day": 6,  # Sunday
-        "title": "Bottomless Mimosa Brunch",
-        "description": "$17 bottomless mimosas and $19 bottomless sangria at Fado Irish Pub Midtown. Until 3pm.",
-        "start_time": "10:00",
-        "category": "food_drink",
-        "subcategory": None,
-        "tags": ["brunch", "mimosas", "bottomless", "specials", "weekly"],
-    },
     # ========== Regular Hangs buildout: new categories ==========
     # ---------- POKER ----------
-    {
-        "venue_key": "eddies-attic",
-        "day": 1,  # Tuesday
-        "title": "Aces Up Bar Poker League",
-        "description": "Weekly freeroll bar poker league night at Eddie's Attic in Decatur, hosted by Aces Up Atlanta. Free to play with prizes for top finishers.",
-        "start_time": "19:00",
-        "category": "nightlife",
-        "subcategory": None,
-        "tags": ["poker", "freeroll", "bar-poker", "nightlife", "weekly"],
-        "is_free": True,
-    },
+    # Eddie's Attic poker — REMOVED, factually implausible (Eddie's is an acoustic listening room)
     {
         "venue_key": "joystick",
         "day": 2,  # Wednesday
@@ -3083,7 +2636,7 @@ WEEKLY_EVENTS = [
         "description": "Wednesday freeroll poker night at Joystick Gamebar on Edgewood Ave, hosted by Aces Up Atlanta. No buy-in, prizes awarded.",
         "start_time": "19:30",
         "category": "nightlife",
-        "subcategory": None,
+        "subcategory": "nightlife.poker",
         "tags": ["poker", "freeroll", "bar-poker", "nightlife", "weekly"],
         "is_free": True,
     },
@@ -3094,7 +2647,7 @@ WEEKLY_EVENTS = [
         "description": "Thursday bar poker night at Your 3rd Spot on the Westside, hosted by Aces Up Atlanta. Free to play with prizes.",
         "start_time": "19:00",
         "category": "nightlife",
-        "subcategory": None,
+        "subcategory": "nightlife.poker",
         "tags": ["poker", "freeroll", "bar-poker", "nightlife", "weekly"],
         "is_free": True,
     },
@@ -3106,7 +2659,7 @@ WEEKLY_EVENTS = [
         "description": "Country and line dancing at Johnny's Hideaway, Atlanta's legendary Buckhead dance club since 1979. Two-stepping, line dances, and classic country hits all night.",
         "start_time": "20:00",
         "category": "nightlife",
-        "subcategory": None,
+        "subcategory": "nightlife.line_dancing",
         "tags": ["line-dancing", "country-dance", "dance", "nightlife", "weekly"],
     },
     {
@@ -3116,7 +2669,7 @@ WEEKLY_EVENTS = [
         "description": "Saturday night country and line dancing at Johnny's Hideaway in Buckhead. Atlanta's iconic venue for two-stepping and boot-scootin'.",
         "start_time": "20:00",
         "category": "nightlife",
-        "subcategory": None,
+        "subcategory": "nightlife.line_dancing",
         "tags": ["line-dancing", "country-dance", "dance", "nightlife", "weekly"],
     },
     # ---------- IMPROV ----------
@@ -3127,7 +2680,7 @@ WEEKLY_EVENTS = [
         "description": "Friday improv and sketch comedy at Dad's Garage Theatre in Reynoldstown. Atlanta's home for off-the-wall comedy since 1995.",
         "start_time": "20:00",
         "category": "comedy",
-        "subcategory": None,
+        "subcategory": "comedy.improv",
         "tags": ["improv", "comedy", "sketch-comedy", "weekly"],
     },
     {
@@ -3137,7 +2690,7 @@ WEEKLY_EVENTS = [
         "description": "Saturday night improv show at Dad's Garage Theatre. Unscripted comedy from one of Atlanta's longest-running improv troupes.",
         "start_time": "20:00",
         "category": "comedy",
-        "subcategory": None,
+        "subcategory": "comedy.improv",
         "tags": ["improv", "comedy", "weekly"],
     },
     {
@@ -3147,7 +2700,7 @@ WEEKLY_EVENTS = [
         "description": "Friday improv showcase at Whole World Improv Theatre in Midtown. Fast-paced, audience-driven comedy every week.",
         "start_time": "20:00",
         "category": "comedy",
-        "subcategory": None,
+        "subcategory": "comedy.improv",
         "tags": ["improv", "comedy", "weekly"],
     },
     {
@@ -3157,33 +2710,10 @@ WEEKLY_EVENTS = [
         "description": "Saturday evening improv at Whole World Improv Theatre. Interactive comedy with audience suggestions shaping every scene.",
         "start_time": "19:30",
         "category": "comedy",
-        "subcategory": None,
+        "subcategory": "comedy.improv",
         "tags": ["improv", "comedy", "weekly"],
     },
-    {
-        "venue_key": "village-theatre",
-        "day": 4,  # Friday
-        "title": "Friday Night Improv",
-        "description": "Friday night improv comedy at Village Theatre in Suwanee. Family-friendly laughs from Atlanta's north-side comedy hub.",
-        "start_time": "20:00",
-        "category": "comedy",
-        "subcategory": None,
-        "tags": ["improv", "comedy", "weekly"],
-        "price_min": 10,
-        "price_max": 15,
-    },
-    {
-        "venue_key": "village-theatre",
-        "day": 5,  # Saturday
-        "title": "Saturday Night Comedy & Improv",
-        "description": "Saturday night comedy and improv show at Village Theatre in Suwanee. Live unscripted performances and guest comedians.",
-        "start_time": "20:00",
-        "category": "comedy",
-        "subcategory": None,
-        "tags": ["improv", "comedy", "weekly"],
-        "price_min": 10,
-        "price_max": 15,
-    },
+    # Village Theatre — REMOVED, venue unverifiable (Squarespace expired)
     # ---------- SKATE NIGHT ----------
     {
         "venue_key": "cascade-skating",
@@ -3191,9 +2721,9 @@ WEEKLY_EVENTS = [
         "title": "Friday Family Skate Night",
         "description": "Friday night roller skating at Cascade Family Skating. A Southwest Atlanta staple for decades with DJ-powered skate sessions.",
         "start_time": "19:00",
-        "category": "nightlife",
+        "category": "entertainment",
         "subcategory": None,
-        "tags": ["skating", "roller-skating", "nightlife", "weekly"],
+        "tags": ["skating", "roller-skating", "family-friendly", "weekly"],
     },
     {
         "venue_key": "cascade-skating",
@@ -3201,9 +2731,9 @@ WEEKLY_EVENTS = [
         "title": "Saturday Night Skate",
         "description": "Saturday night skating session at Cascade Family Skating. Music, lights, and wheels on the iconic Cascade Rd rink.",
         "start_time": "19:00",
-        "category": "nightlife",
+        "category": "entertainment",
         "subcategory": None,
-        "tags": ["skating", "roller-skating", "nightlife", "weekly"],
+        "tags": ["skating", "roller-skating", "family-friendly", "weekly"],
     },
     {
         "venue_key": "sparkles-kennesaw",
@@ -3211,9 +2741,9 @@ WEEKLY_EVENTS = [
         "title": "Friday Night Skating",
         "description": "Friday night roller skating at Sparkles Family Fun Center in Kennesaw. DJ, lights, and family-friendly skating fun.",
         "start_time": "19:00",
-        "category": "nightlife",
+        "category": "entertainment",
         "subcategory": None,
-        "tags": ["skating", "roller-skating", "nightlife", "weekly"],
+        "tags": ["skating", "roller-skating", "family-friendly", "weekly"],
     },
     {
         "venue_key": "sparkles-kennesaw",
@@ -3221,9 +2751,9 @@ WEEKLY_EVENTS = [
         "title": "Saturday Skate Session",
         "description": "Saturday afternoon skating at Sparkles Family Fun Center in Kennesaw. Open skate with music and arcade games.",
         "start_time": "14:00",
-        "category": "nightlife",
+        "category": "entertainment",
         "subcategory": None,
-        "tags": ["skating", "roller-skating", "weekly"],
+        "tags": ["skating", "roller-skating", "family-friendly", "weekly"],
     },
     # ---------- BINGO ----------
     {
@@ -3233,7 +2763,7 @@ WEEKLY_EVENTS = [
         "description": "Wednesday bingo night at Monday Night Brewing Garage in West End. Free to play with craft beer specials and prizes.",
         "start_time": "19:00",
         "category": "nightlife",
-        "subcategory": None,
+        "subcategory": "nightlife.bingo",
         "tags": ["bingo", "brewery", "nightlife", "weekly", "free"],
         "is_free": True,
     },
@@ -3244,53 +2774,47 @@ WEEKLY_EVENTS = [
         "description": "Thursday bingo night at Wild Heaven Avondale. Free bingo rounds with craft beer specials in the taproom.",
         "start_time": "19:00",
         "category": "nightlife",
-        "subcategory": None,
+        "subcategory": "nightlife.bingo",
         "tags": ["bingo", "brewery", "nightlife", "weekly", "free"],
+        "is_free": True,
+    },
+    {
+        "venue_key": "wild-heaven-toco-hills",
+        "day": 2,  # Wednesday
+        "title": "Music Bingo",
+        "description": "Wednesday music bingo at Wild Heaven x Fox Bros Toco Hills. Free to play with prizes.",
+        "start_time": "19:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.bingo",
+        "tags": ["bingo", "music-bingo", "brewery", "nightlife", "weekly", "free"],
         "is_free": True,
     },
     # Note: Gene's BBQ already has Tuesday bingo (Kiki Casino Bingo, day=1) — no duplicate needed
     # ---------- LATIN NIGHT ----------
     {
-        "venue_key": "havana-club-atl",
+        "venue_key": "havana-club",
         "day": 4,  # Friday
         "title": "Havana Nights — Latin Dance Party",
         "description": "Friday Latin dance party at Havana Club ATL in Buckhead. Salsa, bachata, reggaeton, and merengue all night with resident DJs.",
         "start_time": "22:00",
         "category": "nightlife",
-        "subcategory": None,
+        "subcategory": "nightlife.latin_night",
         "tags": ["latin-night", "bachata", "salsa-night", "dance", "nightlife", "weekly"],
     },
-    {
-        "venue_key": "havana-club-atl",
-        "day": 5,  # Saturday
-        "title": "Sabado Latino",
-        "description": "Saturday Latin night at Havana Club ATL. Bachata, salsa, and reggaeton in Buckhead's premier Latin club.",
-        "start_time": "22:00",
-        "category": "nightlife",
-        "subcategory": None,
-        "tags": ["latin-night", "bachata", "salsa-night", "dance", "nightlife", "weekly"],
-    },
-    {
-        "venue_key": "el-bar",
-        "day": 3,  # Thursday
-        "title": "Latin Thursdays",
-        "description": "Thursday Latin night at El Bar on Ponce. Reggaeton, salsa, and bachata in Virginia Highland.",
-        "start_time": "21:00",
-        "category": "nightlife",
-        "subcategory": None,
-        "tags": ["latin-night", "bachata", "salsa-night", "reggaeton", "nightlife", "weekly"],
-    },
+    # havana-club Sat latin: handled by dedicated source (sources/havana_club.py)
+    # "el-bar" Latin Thursdays — REMOVED, venue permanently closed (replaced by Bar ANA)
     # Note: Tongue & Groove already has Latin Wednesdays (day=2) — no duplicate needed
-    # ---------- VIEWING PARTY ----------
+    # ---------- VIEWING PARTY (NFL season: Sep–Feb) ----------
     {
         "venue_key": "hudson-grille-midtown",
         "day": 6,  # Sunday
         "title": "NFL Sunday Watch Party",
         "description": "NFL Sunday watch party at Hudson Grille Midtown. Big screens, drink specials, and game-day atmosphere on Peachtree.",
         "start_time": "13:00",
-        "category": "nightlife",
+        "category": "sports",
         "subcategory": None,
-        "tags": ["viewing-party", "sports", "football", "nfl", "nightlife", "weekly"],
+        "tags": ["viewing-party", "sports", "football", "nfl", "weekly"],
+        "active_months": [9, 10, 11, 12, 1, 2],
     },
     {
         "venue_key": "hudson-grille-midtown",
@@ -3298,9 +2822,10 @@ WEEKLY_EVENTS = [
         "title": "Monday Night Football",
         "description": "Monday Night Football at Hudson Grille Midtown. Wings, beer specials, and every game on the big screens.",
         "start_time": "19:00",
-        "category": "nightlife",
+        "category": "sports",
         "subcategory": None,
-        "tags": ["viewing-party", "sports", "football", "nfl", "nightlife", "weekly"],
+        "tags": ["viewing-party", "sports", "football", "nfl", "weekly"],
+        "active_months": [9, 10, 11, 12, 1],
     },
     {
         "venue_key": "stats-brewpub",
@@ -3308,9 +2833,10 @@ WEEKLY_EVENTS = [
         "title": "Game Day at STATS",
         "description": "NFL Sunday watch party at STATS Brewpub downtown. Wall-to-wall screens and game-day specials steps from Centennial Park.",
         "start_time": "13:00",
-        "category": "nightlife",
+        "category": "sports",
         "subcategory": None,
-        "tags": ["viewing-party", "sports", "football", "nfl", "nightlife", "weekly"],
+        "tags": ["viewing-party", "sports", "football", "nfl", "weekly"],
+        "active_months": [9, 10, 11, 12, 1, 2],
     },
     {
         "venue_key": "stats-brewpub",
@@ -3318,9 +2844,10 @@ WEEKLY_EVENTS = [
         "title": "Thursday Night Football",
         "description": "Thursday Night Football at STATS Brewpub downtown. Craft beer and game-day food specials with every NFL Thursday game.",
         "start_time": "19:00",
-        "category": "nightlife",
+        "category": "sports",
         "subcategory": None,
-        "tags": ["viewing-party", "sports", "football", "nfl", "nightlife", "weekly"],
+        "tags": ["viewing-party", "sports", "football", "nfl", "weekly"],
+        "active_months": [9, 10, 11, 12, 1],
     },
     # ==================================================================
     # VINYL / LISTENING NIGHTS
@@ -3411,58 +2938,211 @@ WEEKLY_EVENTS = [
     # ==================================================================
     # BOOK CLUBS / LITERARY EVENTS
     # ==================================================================
-    {
-        "venue_key": "charis-books",
-        "day": 3,  # Thursday
-        "title": "Charis Book Club",
-        "description": "Monthly book club at Charis Books & More in Decatur. Atlanta's oldest feminist bookstore and LGBTQ+ community hub. Open to all readers.",
-        "start_time": "19:00",
-        "category": "words",
-        "subcategory": None,
-        "tags": ["book-club", "reading", "monthly"],
-    },
+    # ========== MONTHLY EVENTS ==========
     {
         "venue_key": "charis-books",
         "day": 5,  # Saturday
-        "title": "Author Reading & Signing",
-        "description": "Saturday author events at Charis Books & More in Decatur. Readings, signings, and conversations with authors. Check website for schedule.",
+        "title": "Charis Book Club",
+        "description": "Monthly book club at Charis Books & More in Decatur. Community reading and discussion. Check website for current selection.",
         "start_time": "14:00",
         "category": "words",
         "subcategory": None,
-        "tags": ["reading", "author-event", "weekly"],
+        "tags": ["book-club", "reading", "community", "monthly"],
+        "frequency": "monthly",
+        "week_of_month": 1,  # 1st Saturday
     },
     {
         "venue_key": "a-cappella-books",
-        "day": 6,  # Sunday
+        "day": 5,  # Saturday
         "title": "A Cappella Book Club",
-        "description": "Monthly book club at A Cappella Books in Little Five Points. Atlanta's beloved independent bookstore since 1989.",
+        "description": "Monthly book club at A Cappella Books in Little Five Points. Curated reading and lively discussion.",
         "start_time": "15:00",
         "category": "words",
         "subcategory": None,
-        "tags": ["book-club", "reading", "monthly"],
+        "tags": ["book-club", "reading", "community", "monthly"],
+        "frequency": "monthly",
+        "week_of_month": 3,  # 3rd Saturday
     },
-    # ==================================================================
-    # OUTDOOR MOVIES (seasonal May-October)
-    # ==================================================================
+    # ========== BIWEEKLY EVENTS ==========
+    {
+        "venue_key": "inman-park-station",
+        "day": 2,  # Wednesday
+        "title": "Midweek Roll",
+        "description": "Biweekly Wednesday night group bike ride through Atlanta. Social pace, 15-20 miles. Meet at the BeltLine Eastside Trail near Inman Park.",
+        "start_time": "19:00",
+        "category": "fitness",
+        "subcategory": "fitness.cycling",
+        "tags": ["cycling", "bike-ride", "free", "social", "biweekly"],
+        "is_free": True,
+        "frequency": "biweekly",
+        "biweekly_anchor": "2026-03-11",  # Known ride date
+    },
+    # ========== SEASONAL EVENTS ==========
     {
         "venue_key": "colony-square",
         "day": 3,  # Thursday
         "title": "Movies on the Square",
-        "description": "Free outdoor movies at Colony Square in Midtown. Seasonal series running May through October on select Thursdays. Bring a blanket.",
-        "start_time": "20:00",
+        "description": "Free outdoor movie night at Colony Square in Midtown. Blankets, lawn chairs, and a big screen under the stars.",
+        "start_time": "20:30",
         "category": "film",
         "subcategory": None,
-        "tags": ["outdoor", "free", "family-friendly", "seasonal", "weekly"],
+        "tags": ["outdoor-movies", "free", "weekly", "family-friendly"],
+        "is_free": True,
+        "active_months": [5, 6, 7, 8, 9, 10],
     },
     {
         "venue_key": "atlantic-station",
         "day": 3,  # Thursday
         "title": "Screen on the Green",
-        "description": "Free outdoor movie screenings at Atlantic Station. Seasonal summer series with films on the Central Lawn. Bring chairs and blankets.",
+        "description": "Free outdoor movie screening at Atlantic Station. Bring a blanket and enjoy a film on the Central Park lawn.",
         "start_time": "20:30",
         "category": "film",
         "subcategory": None,
-        "tags": ["outdoor", "free", "family-friendly", "seasonal", "weekly"],
+        "tags": ["outdoor-movies", "free", "weekly", "family-friendly"],
+        "is_free": True,
+        "active_months": [5, 6, 7, 8, 9, 10],
+    },
+    # ========== WINE & SPIRITS TASTINGS ==========
+    {
+        "venue_key": "reverence-epicurean",
+        "day": 2,  # Wednesday
+        "title": "Wine Down Wednesday at Reverence",
+        "description": "Weekly wine tasting at Reverence inside Epicurean Atlanta. Interactive tasting with rotating grape varieties and themes. Wine Spectator Award of Excellence winner. $10 per person.",
+        "start_time": "17:00",
+        "category": "food_drink",
+        "subcategory": None,
+        "tags": ["wine", "wine-tasting", "weekly", "date-night"],
+        "is_free": False,
+    },
+    {
+        "venue_key": "3-parks-wine-shop",
+        "day": 2,  # Wednesday
+        "title": "Wednesday Wine Tasting at 3 Parks",
+        "description": "Educational wine tasting at 3 Parks Wine Shop in Glenwood Park. Sample 3-4 bottles with discussion of grapes, regions, and producers. $10-15 per person.",
+        "start_time": "17:30",
+        "category": "food_drink",
+        "subcategory": None,
+        "tags": ["wine", "wine-tasting", "weekly", "chill"],
+        "is_free": False,
+    },
+    {
+        "venue_key": "city-winery-atlanta",
+        "day": 5,  # Saturday
+        "title": "Winery Tour & Tasting at City Winery",
+        "description": "Saturday winery tour and tasting at City Winery Atlanta in Old Fourth Ward. Led by resident sommelier. Sample wines produced on-site plus selections from around the world, paired with curated charcuterie.",
+        "start_time": "15:00",
+        "category": "food_drink",
+        "subcategory": None,
+        "tags": ["wine", "wine-tasting", "weekly", "date-night"],
+        "is_free": False,
+    },
+    {
+        "venue_key": "vinoteca-atl",
+        "day": 3,  # Thursday
+        "title": "Weekly Wine Tasting at VinoTeca",
+        "description": "Curated selection of three wines at VinoTeca ATL in Inman Park. Staff-selected pours rotate weekly. Indoor and outdoor seating. $15 per person.",
+        "start_time": "17:00",
+        "category": "food_drink",
+        "subcategory": None,
+        "tags": ["wine", "wine-tasting", "weekly", "chill"],
+        "is_free": False,
+    },
+    {
+        "venue_key": "taste-wine-bar",
+        "day": 1,  # Tuesday
+        "title": "Taste of The Blues at Taste Wine Bar",
+        "description": "Tuesday evening wine tasting with live blues at Taste Wine Bar and Market on the Upper Westside. 48 wines on tap via self-service Enomatic machines. Live music 6-9pm.",
+        "start_time": "18:00",
+        "category": "food_drink",
+        "subcategory": None,
+        "tags": ["wine", "wine-tasting", "live-music", "blues", "weekly"],
+        "is_free": False,
+    },
+    # ========== SPORTS WATCH PARTIES ==========
+    {
+        "venue_key": "brewhouse-cafe",
+        "day": 5,  # Saturday
+        "title": "EPL Saturday Morning Watch at Brewhouse Cafe",
+        "description": "Premier League Saturday morning watch at Brewhouse Cafe in Little Five Points. Voted America's Best Soccer Bar. 27 large-screen TVs, opens early for EPL, Bundesliga, and Champions League matches.",
+        "start_time": "07:30",
+        "category": "sports",
+        "subcategory": None,
+        "tags": ["viewing-party", "soccer", "weekly"],
+        "is_free": True,
+        "active_months": [1, 2, 3, 4, 5, 8, 9, 10, 11, 12],
+    },
+    {
+        "venue_key": "brewhouse-cafe",
+        "day": 6,  # Sunday
+        "title": "EPL Sunday Morning Watch at Brewhouse Cafe",
+        "description": "Premier League Sunday morning matches at Brewhouse Cafe in Little Five Points. America's Best Soccer Bar opens early for all major European football leagues.",
+        "start_time": "09:00",
+        "category": "sports",
+        "subcategory": None,
+        "tags": ["viewing-party", "soccer", "weekly"],
+        "is_free": True,
+        "active_months": [1, 2, 3, 4, 5, 8, 9, 10, 11, 12],
+    },
+    {
+        "venue_key": "fado-midtown",
+        "day": 5,  # Saturday
+        "title": "EPL Morning Watch at Fado Midtown",
+        "description": "Premier League Saturday morning watch party at Fado Irish Pub Midtown. Official Atlanta United Pub Partner and home of Manchester United Supporters Club Atlanta. Opens early for EPL, Bundesliga, and La Liga.",
+        "start_time": "07:30",
+        "category": "sports",
+        "subcategory": None,
+        "tags": ["viewing-party", "soccer", "weekly"],
+        "is_free": True,
+        "active_months": [1, 2, 3, 4, 5, 8, 9, 10, 11, 12],
+    },
+    {
+        "venue_key": "ri-ra-midtown",
+        "day": 5,  # Saturday
+        "title": "EPL Morning Watch at Ri Ra",
+        "description": "Premier League Saturday morning watch at Ri Ra Irish Pub Midtown. Official Atlanta United Pub Partner. Popular with Chelsea FC fans. Opens early for all EPL and European matches.",
+        "start_time": "07:30",
+        "category": "sports",
+        "subcategory": None,
+        "tags": ["viewing-party", "soccer", "weekly"],
+        "is_free": True,
+        "active_months": [1, 2, 3, 4, 5, 8, 9, 10, 11, 12],
+    },
+    {
+        "venue_key": "park-tavern",
+        "day": 6,  # Sunday
+        "title": "NFL Sunday Watch Party at Park Tavern",
+        "description": "NFL Sunday watch party at Park Tavern overlooking Piedmont Park. 25+ HD TVs with all games. Official Atlanta United Pub Partner. Large projection screen for marquee matchups.",
+        "start_time": "13:00",
+        "category": "sports",
+        "subcategory": None,
+        "tags": ["viewing-party", "football", "nfl", "weekly"],
+        "is_free": True,
+        "active_months": [1, 2, 9, 10, 11, 12],
+    },
+    # Hudson Grille NFL Sunday — duplicate removed (already at line 3144)
+    {
+        "venue_key": "stats-brewpub",
+        "day": 6,  # Sunday
+        "title": "NFL Sunday at STATS Brewpub",
+        "description": "NFL Sunday watch party at STATS Brewpub Downtown. 16,000 sq ft with 70 HD TVs across five bars. Part of Atlanta Falcons and Hawks Bar Networks. Self-pour beer tap system.",
+        "start_time": "13:00",
+        "category": "sports",
+        "subcategory": None,
+        "tags": ["viewing-party", "football", "nfl", "weekly"],
+        "is_free": True,
+        "active_months": [1, 2, 9, 10, 11, 12],
+    },
+    {
+        "venue_key": "der-biergarten",
+        "day": 5,  # Saturday
+        "title": "Soccer Saturday at Der Biergarten",
+        "description": "Soccer watch party at Der Biergarten Downtown. Official Atlanta United Pub Partner and longtime supporters headquarters. 7,000 sq ft beer hall with big screens. Opens early for EPL and international fixtures.",
+        "start_time": "10:00",
+        "category": "sports",
+        "subcategory": None,
+        "tags": ["viewing-party", "soccer", "weekly"],
+        "is_free": True,
+        "active_months": [1, 2, 3, 4, 5, 8, 9, 10, 11, 12],
     },
 ]
 
@@ -3473,6 +3153,108 @@ def get_next_weekday(start_date: datetime, weekday: int) -> datetime:
     if days_ahead < 0:
         days_ahead += 7
     return start_date + timedelta(days=days_ahead)
+
+
+def _generate_dates(
+    today: datetime, event_template: dict, weeks_ahead: int
+) -> list[datetime]:
+    """Generate event dates based on frequency, season, and schedule rules.
+
+    Returns a list of datetime dates when this event should occur.
+    """
+    frequency = event_template.get("frequency", "weekly")
+    active_months = event_template.get("active_months")
+    day = event_template["day"]
+
+    if frequency == "weekly":
+        next_date = get_next_weekday(today, day)
+        dates = [next_date + timedelta(weeks=w) for w in range(weeks_ahead)]
+
+    elif frequency == "biweekly":
+        anchor_str = event_template.get("biweekly_anchor")
+        if not anchor_str:
+            logger.warning(
+                f"Biweekly event '{event_template['title']}' missing biweekly_anchor, skipping"
+            )
+            return []
+        anchor = datetime.strptime(anchor_str, "%Y-%m-%d")
+        next_date = get_next_weekday(today, day)
+        # Align to the biweekly cadence from the anchor
+        days_since_anchor = (next_date - anchor).days
+        weeks_off = days_since_anchor // 7
+        if weeks_off % 2 != 0:
+            next_date += timedelta(weeks=1)
+        dates = [next_date + timedelta(weeks=w * 2) for w in range(weeks_ahead)]
+
+    elif frequency == "monthly":
+        week_of_month = event_template.get("week_of_month", 1)
+        dates = []
+        for month_offset in range(weeks_ahead):  # generate N months ahead
+            month = today.month + month_offset
+            year = today.year + (month - 1) // 12
+            month = ((month - 1) % 12) + 1
+            d = _nth_weekday_of_month(year, month, day, week_of_month)
+            if d and d >= today:
+                dates.append(d)
+    else:
+        logger.warning(
+            f"Unknown frequency '{frequency}' for '{event_template['title']}', skipping"
+        )
+        return []
+
+    # Apply seasonal gate
+    if active_months:
+        dates = [d for d in dates if d.month in active_months]
+
+    return dates
+
+
+def _nth_weekday_of_month(
+    year: int, month: int, weekday: int, n: int
+) -> datetime | None:
+    """Get the nth occurrence of a weekday in a given month.
+
+    Args:
+        weekday: 0=Monday, 6=Sunday
+        n: 1=first, 2=second, ... -1=last
+    """
+    import calendar
+
+    if n == -1:
+        # Last occurrence: start from end of month
+        last_day = calendar.monthrange(year, month)[1]
+        d = datetime(year, month, last_day)
+        while d.weekday() != weekday:
+            d -= timedelta(days=1)
+        return d
+
+    # nth occurrence: find first, then add (n-1) weeks
+    first = datetime(year, month, 1)
+    days_ahead = weekday - first.weekday()
+    if days_ahead < 0:
+        days_ahead += 7
+    first_occurrence = first + timedelta(days=days_ahead)
+    result = first_occurrence + timedelta(weeks=n - 1)
+    if result.month != month:
+        return None  # e.g. 5th Tuesday doesn't exist
+    return result
+
+
+def _build_recurrence_rule(event_template: dict) -> str:
+    """Build an iCal RRULE string from a template's scheduling fields."""
+    frequency = event_template.get("frequency", "weekly")
+    day_code = DAY_CODES[event_template["day"]]
+
+    if frequency == "weekly":
+        return f"FREQ=WEEKLY;BYDAY={day_code}"
+    elif frequency == "biweekly":
+        return f"FREQ=WEEKLY;INTERVAL=2;BYDAY={day_code}"
+    elif frequency == "monthly":
+        week_of_month = event_template.get("week_of_month", 1)
+        if week_of_month == -1:
+            return f"FREQ=MONTHLY;BYDAY=-1{day_code}"
+        return f"FREQ=MONTHLY;BYDAY={week_of_month}{day_code}"
+    return f"FREQ=WEEKLY;BYDAY={day_code}"
 
 
 def _format_time_label(time_24: str) -> str:
@@ -3524,8 +3306,19 @@ def _build_recurring_description(event_template: dict, venue_data: dict, source_
     return " ".join(parts)[:1400]
 
 
+_GENERIC_DOMAINS = frozenset({
+    "instagram.com", "facebook.com", "twitter.com", "x.com",
+    "tiktok.com", "youtube.com", "linktr.ee", "eventbrite.com",
+    "ticketmaster.com", "dice.fm", "meetup.com",
+})
+
+
 def _normalize_domain(url: Optional[str]) -> Optional[str]:
-    """Normalize URL domains so different source URLs can be compared reliably."""
+    """Normalize URL domains so different source URLs can be compared reliably.
+
+    Returns None for generic/social-media domains that many venues share,
+    preventing false-positive suppression matches.
+    """
     if not url:
         return None
     candidate = url.strip()
@@ -3541,6 +3334,8 @@ def _normalize_domain(url: Optional[str]) -> Optional[str]:
         return None
     if netloc.startswith("www."):
         netloc = netloc[4:]
+    if netloc in _GENERIC_DOMAINS:
+        return None
     return netloc
 
 
@@ -3674,7 +3469,7 @@ def _remove_suppressed_future_events(
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Generate recurring weekly events for all configured venues."""
+    """Generate recurring events (weekly, biweekly, monthly, seasonal) for all configured venues."""
     source_id = source["id"]
     source_slug = source.get("slug", "")
     events_found = 0
@@ -3685,7 +3480,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
     logger.info(f"Generating recurring social events for next {WEEKS_AHEAD} weeks")
     logger.info(
-        f"Processing {len(WEEKLY_EVENTS)} event templates across {len(VENUES)} venues"
+        f"Processing {len(EVENT_TEMPLATES)} event templates across {len(VENUES)} venues"
     )
 
     # Cache venue IDs
@@ -3708,7 +3503,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         if removed:
             logger.info(f"Removed {removed} suppressed recurring future event(s)")
 
-    for event_template in WEEKLY_EVENTS:
+    for event_template in EVENT_TEMPLATES:
         venue_key = event_template["venue_key"]
         venue_data = VENUES.get(venue_key)
 
@@ -3738,49 +3533,59 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
         venue_id = venue_ids[venue_key]
         venue_name = venue_data["name"]
+        frequency = event_template.get("frequency", "weekly")
 
-        # Find next occurrence of this day
-        next_date = get_next_weekday(today, event_template["day"])
+        # Generate dates based on frequency and season rules
+        event_dates = _generate_dates(today, event_template, WEEKS_AHEAD)
+        if not event_dates:
+            continue
 
-        # Generate events for the next N weeks
-        for week in range(WEEKS_AHEAD):
-            event_date = next_date + timedelta(weeks=week)
+        # Pre-compute template-level fields (same across all dates)
+        source_url = venue_data["website"]  # guaranteed by skip-check above
+        description = _build_recurring_description(
+            event_template,
+            venue_data=venue_data,
+            source_url=source_url,
+        )
+
+        # Derive genres from subcategory (e.g. "nightlife.karaoke" → ["karaoke"])
+        subcategory = event_template.get("subcategory") or ""
+        derived_genres = []
+        if "." in subcategory:
+            genre_part = subcategory.split(".", 1)[1].replace("_", "-")
+            if genre_part:
+                derived_genres = [genre_part]
+
+        # Auto-append venue name to generic titles
+        raw_title = event_template["title"]
+        venue_words = venue_name.lower().split()
+        title_lower = raw_title.lower()
+        title_has_venue = any(w in title_lower for w in venue_words if len(w) > 2)
+        display_title = raw_title if title_has_venue else f"{raw_title} at {venue_name}"
+
+        price_min = event_template.get("price_min")
+        price_max = event_template.get("price_max")
+        is_free = (
+            event_template.get("is_free", False)
+            if price_min is None and price_max is None
+            else False
+        )
+
+        # Build recurrence rule
+        rrule = _build_recurrence_rule(event_template)
+
+        for event_date in event_dates:
             start_date = event_date.strftime("%Y-%m-%d")
-
             events_found += 1
 
             content_hash = generate_content_hash(
-                event_template["title"], venue_name, start_date
+                display_title, venue_name, start_date
             )
-
-            # Support optional price fields in event templates
-            price_min = event_template.get("price_min")
-            price_max = event_template.get("price_max")
-            is_free = (
-                event_template.get("is_free", False)
-                if price_min is None and price_max is None
-                else False
-            )
-
-            source_url = venue_data["website"]  # guaranteed by skip-check above
-            description = _build_recurring_description(
-                event_template,
-                venue_data=venue_data,
-                source_url=source_url,
-            )
-
-            # Derive genres from subcategory (e.g. "nightlife.karaoke" → ["karaoke"])
-            subcategory = event_template.get("subcategory") or ""
-            derived_genres = []
-            if "." in subcategory:
-                genre_part = subcategory.split(".", 1)[1].replace("_", "-")
-                if genre_part:
-                    derived_genres = [genre_part]
 
             event_record = {
                 "source_id": source_id,
                 "venue_id": venue_id,
-                "title": event_template["title"],
+                "title": display_title,
                 "description": description,
                 "start_date": start_date,
                 "start_time": event_template["start_time"],
@@ -3798,10 +3603,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 "source_url": source_url,
                 "ticket_url": None,
                 "image_url": None,
-                "raw_text": f"{event_template['title']} at {venue_name} - {start_date}",
+                "raw_text": f"{display_title} - {start_date}",
                 "extraction_confidence": 0.90,
                 "is_recurring": True,
-                "recurrence_rule": f"FREQ=WEEKLY;BYDAY={DAY_CODES[event_template['day']]}",
+                "recurrence_rule": rrule,
                 "content_hash": content_hash,
             }
 
@@ -3813,9 +3618,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             series_hint = {
                 "series_type": "recurring_show",
-                "series_title": event_template["title"],
-                "frequency": "weekly",
-                "day_of_week": DAY_NAMES[event_template["day"]],
+                "series_title": display_title,
+                "frequency": frequency,
+                "day_of_week": DAY_NAMES[event_template["day"]].lower(),
                 "description": description,
             }
 

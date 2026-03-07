@@ -78,6 +78,47 @@ CLOSED_VENUES: tuple[ClosedVenue, ...] = (
         name="Fontaine's Oyster House",
         reason="Permanently closed (domain parked, 2026-03)",
     ),
+    ClosedVenue(
+        slug="sound-table",
+        name="The Sound Table",
+        reason="Permanently closed — now Pisces",
+        source_slug="sound-table",
+    ),
+    ClosedVenue(
+        slug="eventide-brewing",
+        name="Eventide Brewing",
+        reason="Permanently closed (Aug 2024)",
+        source_slug="eventide-brewing",
+    ),
+    ClosedVenue(
+        slug="nonis",
+        name="Noni's Bar & Deli",
+        reason="Permanently closed (Oct 2023)",
+        source_slug="nonis",
+    ),
+    ClosedVenue(
+        slug="mother-bar",
+        name="Mother Bar",
+        reason="Permanently closed — now Iconz",
+        source_slug="mother-bar",
+    ),
+    ClosedVenue(
+        slug="watchmans-seafood-spirits",
+        name="Watchman's Seafood & Spirits",
+        reason="Permanently closed (2022)",
+        source_slug="watchmans",
+    ),
+    ClosedVenue(
+        slug="burkharts-pub",
+        name="Burkhart's Pub",
+        reason="Permanently closed (Jan 2018)",
+    ),
+    ClosedVenue(
+        slug="the-music-room",
+        name="The Music Room",
+        reason="Permanently closed (Sep 2020, COVID)",
+        source_slug="the-music-room",
+    ),
 )
 
 

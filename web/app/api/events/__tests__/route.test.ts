@@ -34,6 +34,30 @@ vi.mock("@/lib/logger", () => ({
   },
 }));
 
+vi.mock("@/lib/api-utils", () => ({
+  apiResponse: vi.fn((data: unknown, opts?: { status?: number; headers?: Record<string, string> }) => {
+    const headers = new Headers(opts?.headers);
+    return new Response(JSON.stringify(data), { status: opts?.status || 200, headers });
+  }),
+}));
+
+vi.mock("@/lib/event-content-classification", () => ({
+  isSuppressedFromGeneralEventFeed: vi.fn(() => false),
+}));
+
+vi.mock("@/lib/supabase/server", () => ({
+  createClient: vi.fn(() => Promise.resolve({
+    auth: { getUser: vi.fn(() => Promise.resolve({ data: { user: null }, error: null })) },
+  })),
+}));
+
+vi.mock("@/lib/portal-query-context", () => ({
+  resolvePortalQueryContext: vi.fn(() => Promise.resolve({
+    portalId: null,
+    filters: { city: null },
+  })),
+}));
+
 describe("GET /api/events", () => {
   const mockEvents = [
     {

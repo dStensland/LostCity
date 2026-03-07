@@ -17,7 +17,7 @@ describe("formats", () => {
     it("formats morning times correctly", () => {
       expect(formatTime("09:00")).toBe("9:00am");
       expect(formatTime("06:30")).toBe("6:30am");
-      expect(formatTime("00:00")).toBe("12:00am"); // Midnight
+      expect(formatTime("00:00")).toBe("TBA"); // Midnight treated as crawler placeholder
     });
 
     it("formats afternoon/evening times correctly", () => {
