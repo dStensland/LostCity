@@ -22,6 +22,7 @@ from db import (
     get_or_create_venue,
     insert_event,
     find_existing_event_for_insert,
+    find_cross_source_canonical_for_insert,
     smart_update_existing_event,
     writes_enabled,
 )
@@ -284,6 +285,21 @@ VENUES = {
         "zip": "30339",
         "venue_type": "entertainment_venue",
         "website": "https://batteryatl.com",
+    },
+    "park-bench-battery": {
+        "name": "Park Bench Battery",
+        "slug": "park-bench-battery",
+        "address": "900 Battery Ave, Ste 1060",
+        "neighborhood": "The Battery",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30339",
+        "lat": 33.8905,
+        "lng": -84.4680,
+        "venue_type": "bar",
+        "spot_type": "bar",
+        "website": "https://parkbenchbattery.com",
+        "vibes": ["live-music", "karaoke", "dueling-pianos", "late-night", "21+"],
     },
     "joystick": {
         "name": "Joystick Gamebar",
@@ -809,11 +825,13 @@ VENUES = {
     "whitehall-tavern": {
         "name": "Whitehall Tavern",
         "slug": "whitehall-tavern",
-        "address": "3180 Roswell Rd NW",
+        "address": "2391 Peachtree Rd NW",
         "neighborhood": "Buckhead",
         "city": "Atlanta",
         "state": "GA",
         "zip": "30305",
+        "lat": 33.8424,
+        "lng": -84.3786,
         "venue_type": "bar",
         "website": "https://whitehall-tavern.com",
     },
@@ -988,7 +1006,10 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30002",
+        "lat": 33.7712,
+        "lng": -84.2668,
         "venue_type": "park",
+        "website": "https://atlptn.com/rides/pizza-ride",
     },
     "glenlake-tennis-center": {
         "name": "Glenlake Tennis Center",
@@ -1009,7 +1030,10 @@ VENUES = {
         "city": "Atlanta",
         "state": "GA",
         "zip": "30303",
+        "lat": 33.7568,
+        "lng": -84.3912,
         "venue_type": "park",
+        "website": "https://www.atlantadowntown.com/broad-street-boardwalk",
     },
     "grant-park": {
         "name": "Grant Park",
@@ -1757,6 +1781,51 @@ EVENT_TEMPLATES = [
         "tags": ["open-mic", "poetry", "spoken-word", "weekly"],
     },
     # Battery Atlanta open mic — REMOVED, implausible (800 Battery Ave is a retail district, not a stage)
+    # Park Bench Battery — verified weekly events from parkbenchbattery.com/calendar/
+    {
+        "venue_key": "park-bench-battery",
+        "day": 2,  # Wednesday
+        "title": "Karaoke Night",
+        "description": "Wednesday karaoke night at Park Bench Battery in The Battery Atlanta. Step into the spotlight — all genres welcome. No cover, 21+.",
+        "start_time": "20:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.karaoke",
+        "tags": ["karaoke", "nightlife", "weekly", "free"],
+        "is_free": True,
+    },
+    {
+        "venue_key": "park-bench-battery",
+        "day": 3,  # Thursday
+        "title": "Country Karaoke Night",
+        "description": "Thursday country karaoke at Park Bench Battery. Requests and performances, all country hits. No cover, 21+.",
+        "start_time": "21:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.karaoke",
+        "tags": ["karaoke", "country", "nightlife", "weekly", "free"],
+        "is_free": True,
+    },
+    {
+        "venue_key": "park-bench-battery",
+        "day": 4,  # Friday
+        "title": "Vegas-Style Piano Show",
+        "description": "Friday night Vegas-style piano show at Park Bench Battery. High-energy rapid-fire piano melodies and sing-alongs. No cover, 21+.",
+        "start_time": "21:00",
+        "category": "music",
+        "subcategory": None,
+        "tags": ["dueling-pianos", "piano", "live-music", "weekly", "free"],
+        "is_free": True,
+    },
+    {
+        "venue_key": "park-bench-battery",
+        "day": 5,  # Saturday
+        "title": "Dueling Pianos",
+        "description": "Saturday night dueling pianos at Park Bench Battery in The Battery. Interactive all-night piano show — request your favorite songs. No cover, 21+.",
+        "start_time": "19:30",
+        "category": "music",
+        "subcategory": None,
+        "tags": ["dueling-pianos", "piano", "live-music", "weekly", "free"],
+        "is_free": True,
+    },
     # Joystick verified from Instagram: Wednesday gaming, Thursday karaoke (NOT open mic as badslava listed)
     {
         "venue_key": "joystick",
@@ -2604,9 +2673,9 @@ EVENT_TEMPLATES = [
         "title": "Amateur Flea Market",
         "description": "Thursday flea market on Broad Street Boardwalk in Downtown Atlanta. Curated vintage clothing, accessories, and goods. 11am-2:30pm. Free admission.",
         "start_time": "11:00",
-        "category": "food_drink",
+        "category": "entertainment",
         "subcategory": None,
-        "tags": ["vintage", "shopping", "free", "weekly"],
+        "tags": ["vintage", "shopping", "free", "weekly", "market"],
         "is_free": True,
     },
     # ==================================================================
@@ -2827,17 +2896,7 @@ EVENT_TEMPLATES = [
         "tags": ["viewing-party", "sports", "football", "nfl", "weekly"],
         "active_months": [9, 10, 11, 12, 1],
     },
-    {
-        "venue_key": "stats-brewpub",
-        "day": 6,  # Sunday
-        "title": "Game Day at STATS",
-        "description": "NFL Sunday watch party at STATS Brewpub downtown. Wall-to-wall screens and game-day specials steps from Centennial Park.",
-        "start_time": "13:00",
-        "category": "sports",
-        "subcategory": None,
-        "tags": ["viewing-party", "sports", "football", "nfl", "weekly"],
-        "active_months": [9, 10, 11, 12, 1, 2],
-    },
+    # Game Day at STATS — duplicate of NFL Sunday at STATS Brewpub (line ~3185), removed
     {
         "venue_key": "stats-brewpub",
         "day": 3,  # Thursday
@@ -3609,6 +3668,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 "recurrence_rule": rrule,
                 "content_hash": content_hash,
             }
+
+            # Skip if a non-ARSE source already covers this venue+date
+            canonical = find_cross_source_canonical_for_insert(event_record)
+            if canonical:
+                events_updated += 1
+                continue
 
             existing = find_existing_event_for_insert(event_record)
             if existing:

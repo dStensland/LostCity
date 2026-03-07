@@ -119,6 +119,11 @@ CLOSED_VENUES: tuple[ClosedVenue, ...] = (
         reason="Permanently closed (Sep 2020, COVID)",
         source_slug="the-music-room",
     ),
+    ClosedVenue(
+        slug="village-theatre",
+        name="Village Theatre",
+        reason="Rebranded as Limelight Theater (2023, same address 349 Decatur St)",
+    ),
 )
 
 
