@@ -107,9 +107,10 @@ export async function GET(request: NextRequest) {
     .lte("start_date", weekAhead)
     .not("series_id", "is", null)
     .is("canonical_event_id", null)
+    .eq("is_regular_ready", true)
     .or("is_class.eq.false,is_class.is.null")
     .or("is_sensitive.eq.false,is_sensitive.is.null")
-    .not("category_id", "in", "(film,theater,community,wellness,family,learning)")
+    .not("category_id", "in", "(film,theater,family,learning)") // Showtimes, theater runs, kids events, classes — never regular hangs
     .not("tags", "cs", '{"class"}'); // Exclude class-tagged events (paint-and-sip, workshops)
 
   query = applyVenueGate(query);

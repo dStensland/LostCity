@@ -1538,6 +1538,62 @@ VENUES = {
         "website": "https://www.rirairishpub.com",
     },
     # "hudson-grille-midtown" — duplicate key removed (already defined at line 1320)
+    # ========== SOMETHING DIFFERENT / ODDBALL VENUES ==========
+    "petite-violette": {
+        "name": "Petite Violette",
+        "slug": "petite-violette",
+        "address": "2948 Clairmont Rd NE",
+        "neighborhood": "Brookhaven",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30329",
+        "venue_type": "restaurant",
+        "website": "https://www.petitevioletterestaurant.com",
+    },
+    "the-pigalle": {
+        "name": "The Pigalle Theater & Speakeasy",
+        "slug": "the-pigalle",
+        "address": "50 Lower Alabama St, Suite 104",
+        "neighborhood": "Downtown",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30303",
+        "venue_type": "theater",
+        "website": "https://thepigalle.com",
+    },
+    "national-anthem": {
+        "name": "National Anthem",
+        "slug": "national-anthem",
+        "address": "2625 Circle 75 Pkwy SE",
+        "neighborhood": "The Battery",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30339",
+        "venue_type": "restaurant",
+        "website": "https://www.omnihotels.com/hotels/atlanta-battery/dining/national-anthem",
+    },
+    "the-supermarket-bakery": {
+        "name": "The Supermarket",
+        "slug": "the-supermarket-bakery-atlanta",
+        "address": "638 N Highland Ave NE",
+        "neighborhood": "Virginia-Highland",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30306",
+        "venue_type": "event_space",
+        "website": "https://www.thebakeryatlanta.com",
+    },
+    "wwa4": {
+        "name": "WWA4 Pro Wrestling",
+        "slug": "wwa4-pro-wrestling",
+        "address": "4375 Commerce Dr",
+        "neighborhood": "South Fulton",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30336",
+        "venue_type": "venue",
+        "website": "https://www.wwa4.com",
+    },
 }
 
 # ============================================
@@ -1566,7 +1622,7 @@ EVENT_TEMPLATES = [
     {
         "venue_key": "copper-cove",
         "day": 1,  # Tuesday
-        "title": "Karaoke Night",
+        "title": "Karaoke at Copper Cove",
         "description": "Weekly karaoke night at Copper Cove Restaurant & Lounge on Cheshire Bridge.",
         "start_time": "19:00",
         "category": "nightlife",
@@ -1608,7 +1664,7 @@ EVENT_TEMPLATES = [
     {
         "venue_key": "daiquiriville",
         "day": 3,  # Thursday
-        "title": "Karaoke Night",
+        "title": "Karaoke at Daiquiriville",
         "description": "Weekly karaoke at Daiquiriville in Downtown Atlanta.",
         "start_time": "18:00",
         "category": "nightlife",
@@ -1618,7 +1674,7 @@ EVENT_TEMPLATES = [
     {
         "venue_key": "roll-1-cafe",
         "day": 3,  # Thursday
-        "title": "Karaoke Night",
+        "title": "Karaoke at Roll 1 Cafe",
         "description": "Weekly karaoke at Roll 1 Cafe.",
         "start_time": "20:00",
         "category": "nightlife",
@@ -1628,7 +1684,7 @@ EVENT_TEMPLATES = [
     {
         "venue_key": "your-3rd-spot",
         "day": 3,  # Thursday
-        "title": "Karaoke Night",
+        "title": "Karaoke at Your 3rd Spot",
         "description": "Weekly karaoke at Your 3rd Spot on the Upper Westside.",
         "start_time": "20:30",
         "category": "nightlife",
@@ -1638,7 +1694,7 @@ EVENT_TEMPLATES = [
     {
         "venue_key": "smiths-olde-bar",
         "day": 3,  # Thursday
-        "title": "Karaoke Night",
+        "title": "Karaoke at Smith's Olde Bar",
         "description": "Weekly karaoke at Smith's Olde Bar, Atlanta's legendary live music venue.",
         "start_time": "22:00",
         "category": "nightlife",
@@ -1650,17 +1706,17 @@ EVENT_TEMPLATES = [
     {
         "venue_key": "joes-coffeehouse",
         "day": 0,  # Monday
-        "title": "Open Mic Night",
+        "title": "Open Mic at Joe's Coffeehouse",
         "description": "Weekly open mic at Joe's Coffeehouse in East Atlanta. All performers welcome — music, poetry, spoken word.",
         "start_time": "17:00",
-        "category": "words",
+        "category": "nightlife",
         "subcategory": None,
         "tags": ["open-mic", "poetry", "spoken-word", "weekly"],
     },
     {
         "venue_key": "our-bar-atl",
         "day": 0,  # Monday
-        "title": "Open Mic Night",
+        "title": "Open Mic at Our Bar ATL",
         "description": "Monday open mic at Our Bar ATL on Edgewood Ave. Music, comedy, and spoken word.",
         "start_time": "21:00",
         "category": "nightlife",
@@ -1670,7 +1726,7 @@ EVENT_TEMPLATES = [
     {
         "venue_key": "southern-feed-store",
         "day": 1,  # Tuesday
-        "title": "Open Mic Night",
+        "title": "Open Mic at Southern Feed Store",
         "description": "Tuesday open mic at Southern Feed Store in East Atlanta. Music, comedy, and poetry welcome.",
         "start_time": "19:00",
         "category": "nightlife",
@@ -1735,7 +1791,7 @@ EVENT_TEMPLATES = [
     {
         "venue_key": "asw-whiskey",
         "day": 3,  # Thursday
-        "title": "Open Mic Night",
+        "title": "Open Mic at ASW Whiskey Exchange",
         "description": "Thursday open mic at ASW Whiskey Exchange in West End. Live music in the tasting room.",
         "start_time": "18:00",
         "category": "music",
@@ -1745,7 +1801,7 @@ EVENT_TEMPLATES = [
     {
         "venue_key": "atlantucky",
         "day": 3,  # Thursday
-        "title": "Open Mic Night",
+        "title": "Open Mic at Atlantucky Brewing",
         "description": "Thursday open mic at Atlantucky Brewing.",
         "start_time": "18:30",
         "category": "nightlife",
@@ -1755,20 +1811,20 @@ EVENT_TEMPLATES = [
     {
         "venue_key": "urban-grind",
         "day": 3,  # Thursday
-        "title": "Open Mic Night",
+        "title": "Open Mic at Urban Grind",
         "description": "Thursday open mic at Urban Grind coffee shop. Poetry and spoken word.",
         "start_time": "19:00",
-        "category": "words",
+        "category": "nightlife",
         "subcategory": None,
         "tags": ["open-mic", "poetry", "spoken-word", "weekly"],
     },
     {
         "venue_key": "kats-cafe",
         "day": 3,  # Thursday
-        "title": "Open Mic Night",
+        "title": "Open Mic at Kat's Cafe",
         "description": "Thursday open mic at Kat's Cafe in Midtown. Poetry and spoken word.",
         "start_time": "19:00",
-        "category": "words",
+        "category": "nightlife",
         "subcategory": None,
         "tags": ["open-mic", "poetry", "spoken-word", "weekly"],
     },
@@ -1777,7 +1833,7 @@ EVENT_TEMPLATES = [
     {
         "venue_key": "park-bench-battery",
         "day": 2,  # Wednesday
-        "title": "Karaoke Night",
+        "title": "Karaoke at Park Bench Battery",
         "description": "Wednesday karaoke night at Park Bench Battery in The Battery Atlanta. Step into the spotlight — all genres welcome. No cover, 21+.",
         "start_time": "20:00",
         "category": "nightlife",
@@ -1842,7 +1898,7 @@ EVENT_TEMPLATES = [
     {
         "venue_key": "peters-street",
         "day": 3,  # Thursday
-        "title": "Open Mic Night",
+        "title": "Open Mic at Peters Street Station",
         "description": "Thursday open mic at Peters Street Station in Castleberry Hill.",
         "start_time": "20:30",
         "category": "nightlife",
@@ -1874,10 +1930,10 @@ EVENT_TEMPLATES = [
     {
         "venue_key": "jasons-deli",
         "day": 0,  # Monday
-        "title": "Board Game Night",
+        "title": "Board Game Night at Jason's Deli",
         "description": "Weekly board game night at Jason's Deli in Dunwoody. Bring your own games or join others.",
         "start_time": "17:00",
-        "category": "community",
+        "category": "nightlife",
         "subcategory": None,
         "tags": ["games", "board-games", "weekly", "family-friendly"],
     },
@@ -1895,8 +1951,8 @@ EVENT_TEMPLATES = [
     {
         "venue_key": "church-epiphany",
         "day": 5,  # Saturday
-        "title": "Community Game Night",
-        "description": "Saturday community game night at Church of the Epiphany. All ages welcome.",
+        "title": "Community Game Night at Church of the Epiphany",
+        "description": "Saturday community game night at Church of the Epiphany in Decatur. All ages, all welcome — board games, card games, snacks. Free.",
         "start_time": "18:00",
         "category": "community",
         "subcategory": None,
@@ -1906,7 +1962,7 @@ EVENT_TEMPLATES = [
     {
         "venue_key": "punch-bowl",
         "day": 3,  # Thursday
-        "title": "Bingo Night",
+        "title": "Bingo at Punch Bowl Social",
         "description": "Thursday bingo night at Punch Bowl Social at The Battery.",
         "start_time": "20:00",
         "category": "nightlife",
@@ -1939,7 +1995,7 @@ EVENT_TEMPLATES = [
     {
         "venue_key": "elliott-street-pub",
         "day": 4,  # Friday
-        "title": "Blues Night",
+        "title": "Blues Night at Elliott Street Pub",
         "description": "Friday blues night at Elliott Street Deli & Pub in Castleberry Hill.",
         "start_time": "21:00",
         "category": "music",
@@ -1951,7 +2007,7 @@ EVENT_TEMPLATES = [
     {
         "venue_key": "brick-store-pub",
         "day": 1,  # Tuesday
-        "title": "Trivia Night",
+        "title": "Trivia at Brick Store Pub",
         "description": "Tuesday trivia at Brick Store Pub in downtown Decatur. Award-winning beer selection and pub trivia.",
         "start_time": "20:00",
         "category": "nightlife",
@@ -1977,7 +2033,7 @@ EVENT_TEMPLATES = [
     {
         "venue_key": "righteous-room",
         "day": 3,  # Thursday
-        "title": "Trivia Night",
+        "title": "Trivia at Righteous Room",
         "description": "Thursday trivia at Righteous Room on Ponce. Dive bar trivia in Virginia Highland.",
         "start_time": "20:00",
         "category": "nightlife",
@@ -1987,7 +2043,7 @@ EVENT_TEMPLATES = [
     {
         "venue_key": "the-local",
         "day": 2,  # Wednesday
-        "title": "Trivia Night",
+        "title": "Trivia at The Local",
         "description": "Wednesday trivia at The Local in Ponce City Market.",
         "start_time": "19:30",
         "category": "nightlife",
@@ -2093,7 +2149,7 @@ EVENT_TEMPLATES = [
         "title": "Open Mic & Poetry Slam",
         "description": "Thursday open mic and poetry slam at Apache XLR in Midtown. Atlanta's creative arts and spoken word staple.",
         "start_time": "20:00",
-        "category": "words",
+        "category": "nightlife",
         "subcategory": None,
         "tags": ["open-mic", "poetry", "spoken-word", "poetry-slam", "weekly"],
     },
@@ -2149,7 +2205,7 @@ EVENT_TEMPLATES = [
     {
         "venue_key": "victory-sandwich-bar",
         "day": 1,  # Tuesday
-        "title": "Trivia Night",
+        "title": "Trivia at Victory Sandwich Bar",
         "description": "Tuesday trivia at Victory Sandwich Bar in Inman Park. Craft cocktails, sandwiches, and pub trivia.",
         "start_time": "20:00",
         "category": "nightlife",
@@ -2207,10 +2263,10 @@ EVENT_TEMPLATES = [
     {
         "venue_key": "apache-cafe",
         "day": 6,  # Sunday
-        "title": "Sunday Open Mic",
+        "title": "Sunday Open Mic at Apache Cafe",
         "description": "Sunday open mic at Apache XLR in Midtown. Poetry, spoken word, and acoustic sets.",
         "start_time": "19:00",
-        "category": "words",
+        "category": "nightlife",
         "subcategory": None,
         "tags": ["open-mic", "poetry", "spoken-word", "weekly"],
     },
@@ -2245,7 +2301,7 @@ EVENT_TEMPLATES = [
     {
         "venue_key": "cherry-street-brewing",
         "day": 2,  # Wednesday
-        "title": "Open Mic Night",
+        "title": "Open Mic at Cherry Street Brewing",
         "description": "Wednesday open mic at Cherry Street Brewing taproom. Live music from local performers.",
         "start_time": "19:00",
         "category": "music",
@@ -2255,7 +2311,7 @@ EVENT_TEMPLATES = [
     {
         "venue_key": "cherry-street-brewing",
         "day": 4,  # Friday
-        "title": "Friday Live Music",
+        "title": "Live Music at Cherry Street Brewing",
         "description": "Live music every Friday at Cherry Street Brewing taproom.",
         "start_time": "19:00",
         "category": "music",
@@ -2329,7 +2385,7 @@ EVENT_TEMPLATES = [
     {
         "venue_key": "whitehall-tavern",
         "day": 2,  # Wednesday
-        "title": "Trivia Night",
+        "title": "Trivia at Whitehall Tavern",
         "description": "Wednesday trivia night at Whitehall Tavern in Buckhead.",
         "start_time": "20:00",
         "category": "nightlife",
@@ -2339,7 +2395,7 @@ EVENT_TEMPLATES = [
     {
         "venue_key": "whitehall-tavern",
         "day": 3,  # Thursday
-        "title": "Trivia Night",
+        "title": "Trivia at Whitehall Tavern",
         "description": "Thursday trivia night at Whitehall Tavern in Buckhead.",
         "start_time": "20:00",
         "category": "nightlife",
@@ -2455,6 +2511,7 @@ EVENT_TEMPLATES = [
         "start_time": "12:00",
         "category": "family",
         "subcategory": None,
+        "is_class": True,
         "tags": ["dnd", "kids", "tabletop", "weekly"],
     },
     # My Parents' Basement — Avondale Estates
@@ -2589,7 +2646,7 @@ EVENT_TEMPLATES = [
         "title": "Free Yoga in Woodruff Park",
         "description": "Free Saturday morning vinyasa flow yoga in Woodruff Park downtown. All levels welcome. Bring your own mat.",
         "start_time": "10:00",
-        "category": "wellness",
+        "category": "fitness",
         "subcategory": None,
         "tags": ["yoga", "free", "outdoor", "weekly"],
         "active_months": [3, 4, 5, 6, 7, 8, 9, 10, 11],
@@ -2718,7 +2775,7 @@ EVENT_TEMPLATES = [
     {
         "venue_key": "dads-garage",
         "day": 4,  # Friday
-        "title": "Improv Night",
+        "title": "Improv Night at Dad's Garage",
         "description": "Friday improv and sketch comedy at Dad's Garage Theatre in Reynoldstown. Atlanta's home for off-the-wall comedy since 1995.",
         "start_time": "20:00",
         "category": "comedy",
@@ -2937,7 +2994,7 @@ EVENT_TEMPLATES = [
     {
         "venue_key": "stereo-atl",
         "day": 3,  # Thursday
-        "title": "Vinyl Night",
+        "title": "Vinyl Night at Stereo",
         "description": "Thursday vinyl night at Stereo in Inman Park. Coffee shop by day, listening bar by night. Curated vinyl on a hi-fi system with craft cocktails.",
         "start_time": "18:00",
         "category": "nightlife",
@@ -3175,6 +3232,144 @@ EVENT_TEMPLATES = [
         "tags": ["viewing-party", "soccer", "weekly"],
         "is_free": True,
         "active_months": [1, 2, 3, 4, 5, 8, 9, 10, 11, 12],
+    },
+    # ==================================================================
+    # SOMETHING DIFFERENT / ODDBALL EVENTS (Mar 2026)
+    # ==================================================================
+    # Sister Louisa's Tarot Tuesday — handled by dedicated source (sources/sister_louisas.py)
+    # Red Light Cafe burlesque/variety — handled by dedicated source (sources/red_light_cafe.py)
+    # Atlanta Eagle cabaret — handled by dedicated source (sources/atlanta_eagle.py)
+    # Lips Atlanta drag brunch — handled by dedicated source (sources/lips_atlanta.py)
+    # ---------- MURDER MYSTERY ----------
+    {
+        "venue_key": "petite-violette",
+        "day": 4,  # Friday
+        "title": "Murder, Mystery & Mayhem at Petite Violette",
+        "description": "Interactive murder mystery dinner at Petite Violette in Brookhaven. Live actors, audience participation, and a four-course French dinner. Check-in 6:45pm, show at 7:30pm. $75/person.",
+        "start_time": "19:30",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["murder-mystery", "variety-show", "date-night", "weekly"],
+        "is_free": False,
+        "price_min": 75,
+        "price_max": 75,
+    },
+    {
+        "venue_key": "petite-violette",
+        "day": 5,  # Saturday
+        "title": "Murder, Mystery & Mayhem at Petite Violette",
+        "description": "Saturday murder mystery dinner at Petite Violette. Interactive whodunit with live actors and a four-course French dinner. Check-in 6:15pm, show at 7pm. $75/person.",
+        "start_time": "19:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["murder-mystery", "variety-show", "date-night", "weekly"],
+        "is_free": False,
+        "price_min": 75,
+        "price_max": 75,
+    },
+    # ---------- OPERA DINNER (monthly, 3rd Tuesday) ----------
+    {
+        "venue_key": "petite-violette",
+        "day": 1,  # Tuesday
+        "title": "Dinner and a Diva at Petite Violette",
+        "description": "Monthly opera dinner at Petite Violette featuring Capitol City Opera Company. Four-course French dinner with live opera performances. Cocktails at 6:15pm, dinner and show at 7pm. $75/person.",
+        "start_time": "19:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["variety-show", "cabaret", "date-night", "monthly"],
+        "is_free": False,
+        "price_min": 75,
+        "price_max": 75,
+        "frequency": "monthly",
+        "week_of_month": 3,  # 3rd Tuesday
+    },
+    # ---------- BURLESQUE / SPEAKEASY ----------
+    {
+        "venue_key": "the-pigalle",
+        "day": 5,  # Saturday
+        "title": "Saturday Night Burlesque at The Pigalle",
+        "description": "Live-band burlesque at The Pigalle Theater & Speakeasy in Underground Atlanta. In-house jazz band, variety acts, and absinthe cocktails in a Parisian speakeasy setting.",
+        "start_time": "21:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["burlesque", "variety-show", "cabaret", "jazz", "date-night", "weekly"],
+    },
+    {
+        "venue_key": "the-pigalle",
+        "day": 4,  # Friday
+        "title": "Chanteuse & Cocktails at The Pigalle",
+        "description": "Friday night chanteuse performances at The Pigalle in Underground Atlanta. Live vocals, cocktails, and intimate speakeasy atmosphere.",
+        "start_time": "20:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["cabaret", "variety-show", "date-night", "weekly"],
+    },
+    # ---------- SILENT DISCO ----------
+    {
+        "venue_key": "punch-bowl",
+        "day": 5,  # Saturday
+        "title": "Silent Disco at Punch Bowl Social",
+        "description": "Monthly silent disco at Punch Bowl Social at The Battery. Three DJs on separate wireless headphone channels — you pick your vibe. Headphones provided.",
+        "start_time": "21:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["silent-disco", "dj", "dance", "nightlife", "monthly"],
+        "frequency": "monthly",
+        "week_of_month": 3,  # 3rd Saturday
+        "active_months": [3, 4, 5, 6, 7, 8, 9],
+    },
+    # ---------- MURDER MYSTERY (monthly at Hudson Grille) ----------
+    {
+        "venue_key": "hudson-grille-midtown",
+        "day": 4,  # Friday
+        "title": "Murder Mystery Dinner at Hudson Grille",
+        "description": "Monthly interactive murder mystery dinner at Hudson Grille Midtown. Three-course dinner and two-hour show with live actors. Guests play suspects and detectives.",
+        "start_time": "19:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["murder-mystery", "variety-show", "date-night", "monthly"],
+        "frequency": "monthly",
+        "week_of_month": 1,  # varies — approximating 1st Friday
+    },
+    # ---------- YAPPY HOUR ----------
+    {
+        "venue_key": "national-anthem",
+        "day": 6,  # Sunday
+        "title": "Yappy Hour at National Anthem",
+        "description": "Sunday afternoon yappy hour at National Anthem at The Battery. Dog-friendly patio with pup snack menu and human cocktails. 3-5pm.",
+        "start_time": "15:00",
+        "category": "food_drink",
+        "subcategory": None,
+        "tags": ["yappy-hour", "outdoor", "weekly"],
+        "active_months": [3, 4, 5, 6, 7, 8, 9, 10],
+    },
+    # ---------- FIGURE DRAWING ----------
+    {
+        "venue_key": "the-supermarket-bakery",
+        "day": 2,  # Wednesday
+        "title": "Figure Drawing Night at The Supermarket",
+        "description": "Monthly live figure drawing session at The Supermarket in Virginia-Highland. Short and long poses with a live model. BYO art supplies, all skill levels. $15/person. Drinks available.",
+        "start_time": "19:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["figure-drawing", "monthly"],
+        "is_free": False,
+        "price_min": 15,
+        "price_max": 15,
+        "frequency": "monthly",
+        "week_of_month": 1,  # 1st Wednesday
+    },
+    # ---------- PRO WRESTLING ----------
+    {
+        "venue_key": "wwa4",
+        "day": 3,  # Thursday
+        "title": "WWA4 Live Pro Wrestling",
+        "description": "Free weekly live pro wrestling at WWA4 in South Fulton. Atlanta's indie wrestling school puts on live shows with trained performers every Thursday at 8pm. Running since 1995.",
+        "start_time": "20:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["pro-wrestling", "free", "weekly"],
+        "is_free": True,
     },
 ]
 
@@ -3638,6 +3833,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 "raw_text": f"{display_title} - {start_date}",
                 "extraction_confidence": 0.90,
                 "is_recurring": True,
+                "is_class": event_template.get("is_class", False),
                 "recurrence_rule": rrule,
                 "content_hash": content_hash,
             }

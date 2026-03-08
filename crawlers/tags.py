@@ -82,12 +82,16 @@ CONTENT_TAGS = {
     "drag",  # Drag show
     "bingo",  # Bingo night
     "jam-session",  # Jam session
+    "open-jam",  # Open jam session (all welcome)
     "jazz",  # Jazz performance
     "blues",  # Blues performance
+    "bluegrass",  # Bluegrass music
     "poetry",  # Poetry reading / spoken word
     "dance",  # Dance event
     "comedy",  # Comedy show
     "games",  # Games / gaming
+    "chess",  # Chess night
+    "bar-games",  # Bar games (darts, pool, shuffleboard, etc.)
     "dnd",  # D&D / tabletop RPG
     "tabletop",  # Tabletop gaming
     "board-games",  # Board game night
@@ -153,6 +157,8 @@ CONTENT_TAGS = {
     "free-lesson",  # Free beginner lesson included
     "shopping",  # Shopping / retail event
     "vintage",  # Vintage / retro
+    "farmers-market",  # Farmers market / green market
+    "market",  # Market / pop-up market
 
     # Deal/value tags
     "specials",  # Venue specials / deals
@@ -176,6 +182,22 @@ CONTENT_TAGS = {
     "drink-specials",  # Drink specials / deals
     "budget-friendly",  # Good value / affordable
 
+    # Tasting events
+    "wine-tasting",  # Wine tasting event
+    "bourbon-tasting",  # Bourbon tasting event
+    "whiskey-tasting",  # Whiskey tasting event
+    "beer-tasting",  # Beer/craft beer tasting
+
+    # Sports
+    "soccer",  # Soccer / football watch party
+    "basketball",  # Basketball watch party
+    "baseball",  # Baseball watch party
+    "hockey",  # Hockey watch party
+    "mma",  # MMA / UFC watch party
+    "ufc",  # UFC fight night
+    "boxing",  # Boxing watch party
+    "wrestling",  # Wrestling watch party
+
     # Vibe extensions
     "late-night",  # Late-night event (after 10pm)
     "lgbtq",  # LGBTQ+ event
@@ -187,6 +209,21 @@ CONTENT_TAGS = {
     "afternoon",  # Afternoon event
     "brewery",  # At a brewery
     "beltline",  # Near the BeltLine
+
+    # Oddball / variety
+    "tarot",  # Tarot reading / psychic event
+    "burlesque",  # Burlesque show
+    "variety-show",  # Variety show / cabaret / revue
+    "murder-mystery",  # Murder mystery dinner / event
+    "cabaret",  # Cabaret night
+    "speed-dating",  # Speed dating event
+    "silent-disco",  # Silent disco event
+    "figure-drawing",  # Life drawing / figure drawing at a bar
+    "yappy-hour",  # Dog-friendly social event at a bar
+    "pro-wrestling",  # Live indie wrestling show
+    "rocky-horror",  # Rocky Horror Picture Show screening w/ shadow cast
+    "sip-and-paint",  # Paint night at a bar (not a dedicated studio)
+    "outdoor-movies",  # Outdoor movie screening (parks, plazas)
 }
 
 # Combined set of all valid tags

@@ -913,60 +913,88 @@ export const SCENE_ACTIVITY_TYPES: SceneActivityType[] = [
   { id: "karaoke", label: "Karaoke", iconName: "MicrophoneStage", color: "#F9A8D4", matchGenres: ["karaoke"], matchTitle: /karaoke/i },
   { id: "comedy", label: "Comedy", iconName: "Smiley", color: "#FCD34D", matchGenres: ["comedy", "stand-up", "standup", "improv"], matchCategories: ["comedy"], matchTitle: /comedy|stand.up|\bimprov\b/i },
   { id: "bingo", label: "Bingo", iconName: "NumberCircleNine", color: "#FDBA74", matchGenres: ["bingo"], matchTitle: /bingo/i },
+  // --- Brunch (before dj — "DJ Brunch" is brunch, not a DJ night) ---
+  { id: "brunch", label: "Brunch", iconName: "Coffee", color: "#FDBA74", matchGenres: ["brunch", "bottomless-brunch"], matchTitle: /\bbrunch\b/i },
   // --- Nightlife (before gaming — drag/dj are more specific than broad "game-night") ---
-  { id: "dj", label: "DJ Night", iconName: "Headphones", color: "#C4B5FD", matchGenres: ["dj", "electronic", "edm"] },
+  { id: "dj", label: "DJ Night", iconName: "Headphones", color: "#C4B5FD", matchGenres: ["dj", "electronic", "edm"], matchTitle: /\bdj\b/i },
   { id: "drag", label: "Drag", iconName: "Crown", color: "#E879F9", matchGenres: ["drag"], matchTitle: /drag (show|brunch|bingo|night)/i },
   // --- Gaming (before food so nerd genres beat the broad "specials" tag) ---
   { id: "nerd_stuff", label: "Nerd Stuff", iconName: "Sword", color: "#7DD3FC", matchGenres: ["dnd", "tabletop", "mtg", "magic-the-gathering", "warhammer", "board-games", "card-games", "video-games", "miniatures", "game-night"], matchTitle: /\bgame night\b|board game|d&d|dungeons|warhammer|magic.the.gathering/i },
   { id: "bar_games", label: "Bar Games", iconName: "BowlingBall", color: "#86EFAC", matchGenres: ["bar-games", "bowling", "bocce", "skee-ball", "curling", "darts", "shuffleboard", "pool", "billiards", "cornhole", "axe-throwing", "ping-pong"], matchTitle: /bowl|skee.?ball|darts|shuffleboard|bocce|cornhole|billiards|curling/i },
-  // --- Food & drink (happy_hour → brunch → food_specials: specific before broad) ---
+  // --- Food & drink (specific types before food_specials catch-all) ---
   { id: "happy_hour", label: "Happy Hour", iconName: "Wine", color: "#C4B5FD", matchGenres: ["happy-hour", "drink-specials", "margaritas", "bottomless", "sangria", "mimosas"], matchTitle: /happy hour/i },
-  { id: "brunch", label: "Brunch", iconName: "Coffee", color: "#FDBA74", matchGenres: ["brunch", "bottomless-brunch"], matchTitle: /\bbrunch\b/i },
-  { id: "food_specials", label: "Food Specials", iconName: "ForkKnife", color: "#FCD34D", matchGenres: ["food-specials", "specials", "oysters", "dollar-oysters", "tacos", "taco-tuesday", "wings", "half-price", "pizza", "crab", "seafood", "tapas"], matchCategories: ["food_drink"], matchTitle: /taco (tuesday|night)|wing (night|wednesday)|oyster (night|monday)|half.price/i },
+  { id: "tasting", label: "Tasting", iconName: "BeerStein", color: "#F9A8D4", matchGenres: ["wine-tasting", "whiskey-tasting", "bourbon-tasting", "craft-beer"], matchTitle: /wine (night|tasting|down|wednesday)|bourbon (brawl|tasting)|whiskey tasting|beer tasting|cocktail class/i },
+  { id: "farmers_market", label: "Farmers Market", iconName: "Leaf", color: "#86EFAC", matchGenres: ["farmers-market"], matchCategories: ["markets"], matchTitle: /farmers.?market|green.?market/i },
+  { id: "food_specials", label: "Food Specials", iconName: "ForkKnife", color: "#FCD34D", matchGenres: ["food-specials", "specials", "oysters", "dollar-oysters", "tacos", "taco-tuesday", "wings", "half-price", "pizza", "crab", "seafood", "tapas", "beer"], matchCategories: ["food_drink"], matchTitle: /taco (tuesday|night)|wing (night|wednesday)|oyster (night|monday)|half.price|pint night|\$\d+\s+\w+day|bottle(s)?\s*(deal|night|monday|tuesday|wednesday|thursday|friday|special)|half.off/i },
   // --- Music genre ---
   { id: "jazz_blues", label: "Jazz & Blues", iconName: "MusicNotes", color: "#93C5FD", matchGenres: ["jazz", "blues", "jam-session", "bluegrass"] },
   { id: "dance", label: "Dance", iconName: "MusicNotes", color: "#F9A8D4", matchGenres: ["dance", "salsa", "swing", "line-dancing", "latin-night", "dance-party", "two-step", "bachata", "reggaeton", "cumbia", "country-dance", "salsa-night"], matchTitle: /dance (night|party)|salsa night|swing night|line danc|two.step|country (night|dance)|latin[oa]?\s*(night|tuesday|saturday|friday)|bachata|reggaeton|noche latina/i },
   // --- Other specific types ---
   { id: "poker", label: "Poker", iconName: "Club", color: "#86EFAC", matchGenres: ["poker", "texas-holdem", "freeroll"], matchTitle: /poker/i },
-  // line_dancing and latin_night consolidated into "dance" above (their genres already match there first)
   // --- Fitness (run_club before fitness — outdoor group activities are more specific) ---
   { id: "run_club", label: "Run Club", iconName: "PersonSimpleRun", color: "#5EEAD4", matchGenres: ["run-club", "running", "cycling", "bike-ride"], matchTitle: /run club|running club|bike ride|cycling/i },
-  { id: "fitness", label: "Fitness", iconName: "Barbell", color: "#86EFAC", matchGenres: ["yoga", "pickleball", "tennis", "hiking"], matchCategories: ["fitness"] },
+  { id: "fitness", label: "Fitness", iconName: "Barbell", color: "#86EFAC", matchGenres: ["yoga", "pickleball", "tennis", "hiking"], matchCategories: ["fitness"], matchTitle: /walk(ing)?\s*(club|group)/i },
   // --- Social / community ---
-  { id: "viewing_party", label: "Viewing Party", iconName: "Television", color: "#A78BFA", matchGenres: ["viewing-party"], matchTitle: /viewing party|watch party/i },
-  { id: "tasting", label: "Tasting", iconName: "BeerStein", color: "#F9A8D4", matchGenres: ["wine-tasting", "whiskey-tasting", "bourbon-tasting", "craft-beer"], matchTitle: /wine (night|tasting|down|wednesday)|bourbon (brawl|tasting)|whiskey tasting|beer tasting/i },
+  { id: "sports", label: "Sports", iconName: "Trophy", color: "#A78BFA", matchGenres: ["viewing-party", "football", "nfl", "soccer", "basketball", "baseball", "hockey", "mma", "ufc", "boxing", "wrestling"], matchTitle: /viewing party|watch party|\b(nfl|nba|mlb|nhl|mls|ufc|mma)\b|game\s*day|fight night/i },
   { id: "skate_night", label: "Skate Night", iconName: "Disc", color: "#7DD3FC", matchGenres: ["skating", "roller-skating"], matchTitle: /skate night|skating/i },
   // --- Listening / vinyl ---
   { id: "vinyl_night", label: "Vinyl Night", iconName: "VinylRecord", color: "#E879F9", matchGenres: ["vinyl", "listening-party", "hi-fi"], matchTitle: /vinyl|listening (session|party|night|bar)|hi.?fi|record (night|spin)/i },
-  // --- Markets ---
-  { id: "farmers_market", label: "Farmers Market", iconName: "Leaf", color: "#86EFAC", matchGenres: ["farmers-market"], matchCategories: ["markets"], matchTitle: /farmers.?market|green.?market/i },
   // --- Words / spoken word (before open_mic so poetry slams match here, not generic open mic) ---
-  { id: "spoken_word", label: "Spoken Word", iconName: "BookOpen", color: "#C4B5FD", matchGenres: ["spoken-word", "poetry", "poetry-slam", "storytelling"], matchCategories: ["words"], matchTitle: /poetry|spoken word|poetry slam|book club|literary/i },
+  { id: "spoken_word", label: "Spoken Word", iconName: "BookOpen", color: "#C4B5FD", matchGenres: ["spoken-word", "poetry", "poetry-slam", "storytelling"], matchTitle: /poetry|spoken word|poetry slam|literary/i },
   // --- Open mic (after comedy + spoken_word — events with those genres already matched above) ---
   { id: "open_mic", label: "Open Mic", iconName: "Microphone", color: "#FDBA74", matchGenres: ["open-mic"], matchTitle: /open mic|open.mic/i },
+  // --- Something Different (oddball events — before live_music catchall) ---
+  { id: "wild_card", label: "Something Different", iconName: "Sparkle", color: "#E879F9", matchGenres: ["tarot", "burlesque", "variety-show", "murder-mystery", "cabaret", "speed-dating", "silent-disco", "figure-drawing", "yappy-hour", "pro-wrestling", "rocky-horror", "sip-and-paint"], matchTitle: /tarot|burlesque|murder mystery|cabaret|variety show|speed dating|psychic|fortune tell|ghost tour|séance|seance|silent disco|figure drawing|life drawing|yappy hour|sip.{0,3}paint|paint.{0,3}sip|pro wrestling|rocky horror/i },
+  // --- Outdoor movies (narrow match — NOT theater chain showtimes) ---
+  { id: "movie_night", label: "Movie Night", iconName: "FilmStrip", color: "#C4B5FD", matchGenres: ["outdoor-movies"], matchTitle: /outdoor movie|movies? (on|in|at) the|screen on the green|movie night/i },
+  // --- Book clubs ---
+  { id: "book_club", label: "Book Club", iconName: "BookOpen", color: "#93C5FD", matchTitle: /book club/i },
   // --- Format-based catchalls (last — identity types above take priority) ---
   { id: "live_music", label: "Live Music", iconName: "Waveform", color: "#F9A8D4", matchCategories: ["music"] },
 ];
 
-/** Match a single event to its best activity type (first match wins: genres → category → title) */
+/** Match a single event to its best activity type.
+ *  Uses title-confirmed disambiguation when multiple genre matches exist. */
 export function matchActivityType(event: FeedEventData): string | null {
   const genres = ((event as Record<string, unknown>).genres as string[] | null) ?? [];
   const tags = ((event as Record<string, unknown>).tags as string[] | null) ?? [];
   const category = event.category ?? "";
+  const title = (event.title ?? "").toLowerCase();
+  const combined = [...genres, ...tags];
 
-  // Pass 1 & 2: match on genres/tags and category
+  // Pass 1: Genre/tag matching — collect ALL matches, then disambiguate
+  const genreMatches: SceneActivityType[] = [];
   for (const act of SCENE_ACTIVITY_TYPES) {
-    if (act.matchGenres) {
-      const combined = [...genres, ...tags];
-      if (act.matchGenres.some((g) => combined.includes(g))) return act.id;
-    }
-    if (act.matchCategories) {
-      if (act.matchCategories.includes(category)) return act.id;
+    if (act.matchGenres?.some((g) => combined.includes(g))) {
+      genreMatches.push(act);
     }
   }
 
-  // Pass 3: title regex fallback for events with missing/empty genres
-  const title = (event.title ?? "").toLowerCase();
+  if (genreMatches.length === 1) return genreMatches[0].id;
+
+  if (genreMatches.length > 1) {
+    // Multiple genre matches (e.g. event has both "bingo" and "trivia" genres).
+    // Prefer the match whose title regex also confirms the type.
+    for (const act of genreMatches) {
+      if (act.matchTitle?.test(title)) return act.id;
+    }
+    // No title confirmation — fall back to array order
+    return genreMatches[0].id;
+  }
+
+  // Pass 2: Category matching — but let title override to a more specific type
+  // e.g. "Weekend Brunch" with food_drink category → brunch, not food_specials
+  for (const act of SCENE_ACTIVITY_TYPES) {
+    if (act.matchCategories?.includes(category)) {
+      // Check if title suggests a more specific activity type
+      for (const specific of SCENE_ACTIVITY_TYPES) {
+        if (specific.matchTitle?.test(title)) return specific.id;
+      }
+      return act.id;
+    }
+  }
+
+  // Pass 3: Title regex fallback for events with no genre or category match
   for (const act of SCENE_ACTIVITY_TYPES) {
     if (act.matchTitle?.test(title)) return act.id;
   }

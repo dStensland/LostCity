@@ -42,8 +42,21 @@ VENUE_DATA = {
 
 WEEKLY_SCHEDULE = [
     {
+        "day": 1,  # Tuesday
+        "title": "Tarot Girl at Sister Louisa's",
+        "description": (
+            "Tuesday tarot readings at Sister Louisa's Church on Edgewood Ave. "
+            "Get your cards read in one of Atlanta's most beautifully weird bars. "
+            "Walk-up readings all night."
+        ),
+        "start_time": "20:00",
+        "category": "nightlife",
+        "subcategory": None,
+        "tags": ["tarot", "nightlife", "weekly", "lgbtq-friendly"],
+    },
+    {
         "day": 2,  # Wednesday
-        "title": "Karaoke Night",
+        "title": "Karaoke at Sister Louisa's",
         "description": (
             "Wednesday karaoke at Sister Louisa's Church on Edgewood Ave. "
             "Sing surrounded by outsider art in one of Atlanta's most iconic bars."
@@ -87,7 +100,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             "series_type": "recurring_show",
             "series_title": template["title"],
             "frequency": "weekly",
-            "day_of_week": day_name,
+            "day_of_week": day_name.lower(),
             "description": template["description"],
         }
 
