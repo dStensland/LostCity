@@ -132,7 +132,7 @@ const DEFAULT_SIGNATURE_VENUES: SignatureVenue[] = [
     kind: "restaurant",
     spotlight: "Poolside Mediterranean with daytime-to-sunset transitions.",
     mockSpecial: "Poolside Lunch Prix Fixe",
-    mockNote: "Weekdays until 3pm",
+    mockNote: "11am to 3pm",
     photoUrl: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&q=80",
   },
   {
@@ -772,7 +772,12 @@ async function fetchDestinationsDirect(
     .filter((v): v is DbVenue & { distance_km: number; proximity_tier: ProximityTier; proximity_label: string } => v !== null);
 
   const propertyVenueSlugs = new Set(['bar-premio', 'il-premio', 'elektra-forth', 'moonlight-forth', 'forth-hotel-atlanta']);
-  const filteredVenues = venuesInRadius.filter((v) => !propertyVenueSlugs.has(v.slug));
+  // Venue types that don't belong in a hotel neighborhood guide
+  const excludedVenueTypes = new Set(['nonprofit', 'food_bank', 'charity', 'church', 'school', 'government', 'hospital', 'office']);
+  const filteredVenues = venuesInRadius.filter((v) =>
+    !propertyVenueSlugs.has(v.slug) &&
+    (!v.venue_type || !excludedVenueTypes.has(v.venue_type))
+  );
 
   if (filteredVenues.length === 0) {
     return { destinations: [], liveDestinations: [], specialsMeta: null };

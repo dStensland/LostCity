@@ -255,6 +255,7 @@ async function fetchRegulars(
     .is("canonical_event_id", null)
     .or("is_class.eq.false,is_class.is.null")
     .or("is_sensitive.eq.false,is_sensitive.is.null")
+    .not("category_id", "in", "(film,cinema)")
     .not("venues.lat", "is", null)
     .not("venues.lng", "is", null)
     .gte("venues.lat", centerLat - latDelta)
@@ -428,11 +429,20 @@ export async function getDiscoverFeedData(
   );
   const tonightEvents = tonightSection?.events || [];
 
-  // Extract coming-up events (non-tonight sections)
+  // Extract coming-up events (non-tonight sections), filtering out past events for today
   const tonightSlugs = new Set(["tonight", "today", "this-evening"]);
+  const currentTimeStr = now.toTimeString().slice(0, 5); // "HH:MM"
+  const todayStr = getLocalDateString(now);
   const comingUpEvents = sections
     .filter((s) => !tonightSlugs.has(s.slug || ""))
-    .flatMap((s) => s.events);
+    .flatMap((s) => s.events)
+    .filter((e) => {
+      // For today's events, exclude those whose start_time has already passed
+      if (e.start_date === todayStr && e.start_time) {
+        return e.start_time >= currentTimeStr;
+      }
+      return true;
+    });
 
   // Fetch real venue_specials for signature venues and pass to computePropertyMoments.
   const propertySpecialsMap = await fetchSignatureVenueSpecials(
