@@ -163,6 +163,63 @@ export default async function PortalLayout({ children, params }: Props) {
           }
         `}</style>
       )}
+      {vertical === "community" && (
+        <style>{`
+          body::before { opacity: 0 !important; }
+          body::after { opacity: 0 !important; }
+          .ambient-glow { opacity: 0 !important; }
+          .rain-overlay { display: none !important; }
+          .cursor-glow { display: none !important; }
+
+          [data-vertical="community"] .animate-page-enter,
+          [data-vertical="community"] .animate-glitch-flicker,
+          [data-vertical="community"] .animate-flicker,
+          [data-vertical="community"] .animate-flicker-fast,
+          [data-vertical="community"] .animate-coral-shimmer,
+          [data-vertical="community"] .animate-coral-scan,
+          [data-vertical="community"] .animate-coral-pulse,
+          [data-vertical="community"] .animate-happening-now-pulse,
+          [data-vertical="community"] .animate-pulse-glow {
+            animation: none !important;
+          }
+
+          /* Civic editorial typography */
+          [data-vertical="community"] .civic-hero-heading {
+            font-family: var(--portal-font-heading, 'Source Serif 4', Georgia, serif);
+            font-weight: 600;
+            letter-spacing: -0.01em;
+          }
+
+          /* Civic card refinements — slightly warmer and softer */
+          [data-vertical="community"] .civic-quick-link {
+            border-color: color-mix(in srgb, var(--twilight) 70%, transparent);
+          }
+          [data-vertical="community"] .civic-quick-link:hover {
+            box-shadow: 0 2px 12px color-mix(in srgb, var(--action-primary) 8%, transparent);
+          }
+
+          /* Override nav-tab active for civic green instead of coral */
+          [data-vertical="community"] .nav-tab-active {
+            background-color: var(--action-primary) !important;
+          }
+
+          /* Override the skeleton shimmer for light theme */
+          [data-vertical="community"] .skeleton-shimmer {
+            background: linear-gradient(
+              90deg,
+              color-mix(in srgb, var(--twilight) 15%, transparent) 0%,
+              color-mix(in srgb, var(--twilight) 25%, transparent) 50%,
+              color-mix(in srgb, var(--twilight) 15%, transparent) 100%
+            ) !important;
+            background-size: 200% 100% !important;
+          }
+
+          /* Feed section header — use portal accent for "See all" link */
+          [data-vertical="community"] .text-accent {
+            color: var(--action-primary);
+          }
+        `}</style>
+      )}
       {isFilm && (
         <style>{`
           [data-vertical="film"] {

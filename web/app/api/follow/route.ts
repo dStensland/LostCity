@@ -4,6 +4,8 @@ import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-lim
 import { ensureUserProfile } from "@/lib/user-utils";
 import { withOptionalAuth, withAuth } from "@/lib/api-middleware";
 import { resolvePortalAttributionForWrite } from "@/lib/portal-attribution";
+import { resolvePortalId } from "@/lib/portal-resolution";
+import { buildFollowPortalScopeFilter } from "@/lib/follows";
 import { logger } from "@/lib/logger";
 
 export const GET = withOptionalAuth(async (request, { user, serviceClient }) => {
@@ -30,10 +32,16 @@ export const GET = withOptionalAuth(async (request, { user, serviceClient }) => 
   }
 
   try {
+    const portalId = await resolvePortalId(request);
     let query = serviceClient
       .from("follows")
       .select("id")
       .eq("follower_id", user.id);
+
+    const portalScopeFilter = buildFollowPortalScopeFilter(portalId, true);
+    if (portalScopeFilter) {
+      query = query.or(portalScopeFilter);
+    }
 
     if (targetUserId) {
       query = query.eq("followed_user_id", targetUserId);
@@ -100,11 +108,18 @@ export const POST = withAuth(async (request, { user, serviceClient }) => {
   await ensureUserProfile(user, serviceClient);
 
   try {
+    const scopedPortalId = await resolvePortalId(request);
+
     if (action === "unfollow") {
       let query = serviceClient
         .from("follows")
         .delete()
         .eq("follower_id", user.id);
+
+      const portalScopeFilter = buildFollowPortalScopeFilter(scopedPortalId, true);
+      if (portalScopeFilter) {
+        query = query.or(portalScopeFilter);
+      }
 
       if (targetUserId) {
         query = query.eq("followed_user_id", targetUserId);

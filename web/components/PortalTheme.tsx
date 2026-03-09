@@ -74,7 +74,7 @@ export async function PortalTheme({ portal }: PortalThemeProps) {
   const cardColor = (branding.card_color as string) || null;
   const fontHeading = (branding.font_heading as string) || null;
   const fontBody = (branding.font_body as string) || null;
-  const themeMode = (branding.theme_mode as string) || "dark";
+  const themeMode = resolvedBranding.theme_mode || (branding.theme_mode as string) || "dark";
 
   // Determine if this is a light theme
   const isLight = themeMode === "light";
@@ -260,6 +260,10 @@ export async function PortalTheme({ portal }: PortalThemeProps) {
     cssVars.push(`--neon-amber: #D97706;`); // Darker amber for light bg
     // Rose/coral uses portal primary for light themes
     cssVars.push(`--rose: ${lightPrimary};`);
+    // Derive hover color from primary if not explicitly set
+    if (!primaryLight && safeLightPrimary) {
+      cssVars.push(`--coral-light: ${adjustBrightness(safeLightPrimary, 15)};`);
+    }
     if (!buttonColor && !primaryColor) {
       cssVars.push(`--coral: ${lightPrimary};`);
     }

@@ -16,6 +16,7 @@ import CategoryIcon from "@/components/CategoryIcon";
 import { Users, Lightning, Ticket } from "@phosphor-icons/react";
 import { formatTime, getEventStatus } from "@/lib/formats";
 import RSVPButton from "@/components/RSVPButton";
+import { getCivicEventHref } from "@/lib/civic-routing";
 
 interface CompactEventRowProps {
   event: FeedEventData;
@@ -23,9 +24,11 @@ interface CompactEventRowProps {
   isLast?: boolean;
   /** "sm" = shorter image, tighter text, no going count */
   size?: "default" | "sm";
+  /** Portal vertical — used for civic routing (e.g. "community") */
+  vertical?: string | null;
 }
 
-export default function CompactEventRow({ event, portalSlug, size = "default" }: CompactEventRowProps) {
+export default function CompactEventRow({ event, portalSlug, size = "default", vertical }: CompactEventRowProps) {
   const isSm = size === "sm";
   const catColor = getCategoryColor(event.category);
   const catLabel = getCategoryLabel(event.category);
@@ -52,9 +55,11 @@ export default function CompactEventRow({ event, portalSlug, size = "default" }:
     background: `linear-gradient(160deg, color-mix(in srgb, ${catColor} 30%, var(--night)) 0%, color-mix(in srgb, ${catColor} 15%, var(--void)) 60%, var(--void) 100%)`,
   }), [catColor]);
 
+  const eventHref = getCivicEventHref(event, portalSlug, vertical) ?? `/${portalSlug}?event=${event.id}`;
+
   return (
     <Link
-      href={`/${portalSlug}?event=${event.id}`}
+      href={eventHref}
       scroll={false}
       className="block overflow-hidden transition-all group relative rounded-lg border border-[var(--twilight)]/30 hover:border-[var(--card-accent)]/40 hover:shadow-[0_0_12px_var(--card-accent-glow)]"
       style={cardStyle}

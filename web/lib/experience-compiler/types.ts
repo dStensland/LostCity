@@ -20,6 +20,9 @@ export type ExperienceNavigationSpec = {
   show_map?: boolean;
   nav_labels?: {
     feed?: string;
+    find?: string;
+    community?: string;
+    groups?: string;
     events?: string;
     spots?: string;
   };

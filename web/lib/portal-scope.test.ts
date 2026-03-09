@@ -45,7 +45,7 @@ describe("applyPortalScopeToQuery", () => {
       portalExclusive: false,
       publicOnlyWhenNoPortal: true,
     });
-    expect(query.ops).toEqual(["or:portal_id.eq.portal-123,portal_id.is.null"]);
+    expect(query.ops).toEqual(["eq:portal_id:portal-123"]);
   });
 
   it("applies public-only scope when no portal is provided and policy requires it", () => {
@@ -80,7 +80,7 @@ describe("applyFederatedPortalScopeToQuery", () => {
       publicOnlyWhenNoPortal: true,
     });
     expect(query.ops).toEqual([
-      "or:portal_id.eq.portal-123,portal_id.is.null,source_id.in.(12,44)",
+      "or:portal_id.eq.portal-123,source_id.in.(12,44)",
     ]);
   });
 
@@ -91,7 +91,7 @@ describe("applyFederatedPortalScopeToQuery", () => {
       portalExclusive: false,
       publicOnlyWhenNoPortal: true,
     });
-    expect(query.ops).toEqual(["or:portal_id.eq.portal-123,portal_id.is.null"]);
+    expect(query.ops).toEqual(["eq:portal_id:portal-123"]);
   });
 });
 

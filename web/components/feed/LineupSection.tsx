@@ -52,7 +52,7 @@ import type { ComponentType } from "react";
 import type { IconProps } from "@phosphor-icons/react";
 import { triggerHaptic } from "@/lib/haptics";
 
-const INITIAL_ROWS = 6;
+const INITIAL_ROWS = 4;
 
 // ---------------------------------------------------------------------------
 // Icon resolver — maps iconName string → Phosphor component
@@ -156,6 +156,16 @@ interface LineupSectionProps {
   onInterestsChange?: (ids: string[]) => void;
   /** Callback to persist interests + trigger API refetch with new categories. */
   onSaveInterests?: (ids: string[]) => void;
+  /** Hide the category filter chips (e.g. civic portals). Defaults to true. */
+  showCategoryFilters?: boolean;
+  /** Override the section header title (default: "The Lineup"). */
+  sectionTitle?: string;
+  /** Override the section header accent color (default: var(--coral)). */
+  sectionAccentColor?: string;
+  /** Keep recurring events in the lineup (civic portals). Defaults to false. */
+  keepRecurring?: boolean;
+  /** Portal vertical — used for civic routing (e.g. "community") */
+  vertical?: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -172,6 +182,11 @@ export default function LineupSection({
   savedInterests,
   onInterestsChange,
   onSaveInterests,
+  showCategoryFilters = true,
+  sectionTitle = "The Lineup",
+  sectionAccentColor = "var(--coral)",
+  keepRecurring = false,
+  vertical,
 }: LineupSectionProps) {
   const { user } = useAuth();
 
@@ -192,8 +207,10 @@ export default function LineupSection({
   const [loadingTab, setLoadingTab] = useState<string | null>(null);
 
   // Local interest state — synced from props but editable via picker
+  // When activeInterests is explicitly passed (even empty), use it.
+  // Only fall back to defaults when activeInterests is undefined/null.
   const [localInterests, setLocalInterests] = useState<string[]>(() => {
-    if (activeInterests && activeInterests.length > 0) return [...activeInterests];
+    if (activeInterests != null) return [...activeInterests];
     return [...DEFAULT_INTEREST_IDS];
   });
 
@@ -324,7 +341,7 @@ export default function LineupSection({
     const dedup = (items: CityPulseEventItem[]) => {
       const seen = new Set<number>();
       return items.filter((e) => {
-        if (isSceneEvent(e.event as FeedEventData)) return false;
+        if (!keepRecurring && isSceneEvent(e.event as FeedEventData)) return false;
         const ev = e.event as FeedEventData & Record<string, unknown>;
         // Film events → Now Showing block handles all showtimes; special
         // screenings route to Big Stuff via festival_id/is_tentpole
@@ -341,14 +358,17 @@ export default function LineupSection({
         // activity type AND have no premium signal (touring, album-release, tour
         // series) are low-signal for the Lineup — they belong in their category
         // feed, not the curated "what's happening" block.
-        const seriesId = ev.series_id;
-        const isRecurring = ev.is_recurring;
-        if (seriesId || isRecurring) {
-          const hasLineupTag = evTags.some((t: string) =>
-            t === "touring" || t === "album-release" || t === "one-night-only",
-          );
-          const hasTourSeries = series?.series_type === "tour";
-          if (!hasLineupTag && !hasTourSeries) return false;
+        // Civic portals keep all recurring events (meetings, volunteer shifts).
+        if (!keepRecurring) {
+          const seriesId = ev.series_id;
+          const isRecurring = ev.is_recurring;
+          if (seriesId || isRecurring) {
+            const hasLineupTag = evTags.some((t: string) =>
+              t === "touring" || t === "album-release" || t === "one-night-only",
+            );
+            const hasTourSeries = series?.series_type === "tour";
+            if (!hasLineupTag && !hasTourSeries) return false;
+          }
         }
         if (seen.has(e.event.id)) return false;
         seen.add(e.event.id);
@@ -371,7 +391,7 @@ export default function LineupSection({
     }
 
     return pools;
-  }, [sections, lazyData]);
+  }, [sections, lazyData, keepRecurring]);
 
   // Events for the active tab only
   const tabDateEvents = useMemo(() => {
@@ -510,9 +530,6 @@ export default function LineupSection({
     ? listEvents
     : listEvents.slice(0, INITIAL_ROWS);
 
-  const hasMoreRows = listEvents.length > INITIAL_ROWS;
-  const hiddenCount = listEvents.length - INITIAL_ROWS;
-
   // If no sections have any events at all, hide entirely
   const hasAnyContent = sections.some((s) =>
     s.items.some((i) => i.item_type === "event"),
@@ -523,9 +540,9 @@ export default function LineupSection({
     <section>
       {/* Section header */}
       <FeedSectionHeader
-        title="The Lineup"
+        title={sectionTitle}
         priority="secondary"
-        accentColor="var(--coral)"
+        accentColor={sectionAccentColor}
         icon={<Lightning weight="duotone" className="w-5 h-5" />}
         seeAllHref={`/${portalSlug}?view=find&type=events`}
       />
@@ -536,6 +553,7 @@ export default function LineupSection({
           const isActive = tab.id === activeTabId;
           const TabIcon = tab.icon;
           const itemCount = dateTabCounts?.[tab.id as keyof typeof dateTabCounts] ?? 0;
+          const tabAccent = sectionAccentColor !== "var(--coral)" ? sectionAccentColor : tab.accent;
 
           return (
             <button
@@ -547,7 +565,7 @@ export default function LineupSection({
                   ? "text-[var(--cream)]"
                   : "text-[var(--muted)] hover:text-[var(--soft)] border-transparent",
               ].join(" ")}
-              style={isActive ? { borderBottomColor: tab.accent } : undefined}
+              style={isActive ? { borderBottomColor: tabAccent } : undefined}
             >
               <TabIcon weight={isActive ? "fill" : "bold"} className="w-4 h-4" />
               {tab.label}
@@ -556,7 +574,7 @@ export default function LineupSection({
                   className="font-mono text-2xs tabular-nums px-1.5 py-0.5 rounded-full leading-none min-w-6 text-center inline-block"
                   style={
                     isActive
-                      ? { backgroundColor: `color-mix(in srgb, ${tab.accent} 20%, transparent)`, color: tab.accent }
+                      ? { backgroundColor: `color-mix(in srgb, ${tabAccent} 20%, transparent)`, color: tabAccent }
                       : { backgroundColor: "var(--twilight)", color: "var(--muted)" }
                   }
                 >
@@ -569,6 +587,7 @@ export default function LineupSection({
       </div>
 
       {/* Category chips — counts reflect active date tab */}
+      {showCategoryFilters && (<>
       <div className={[
           "relative mb-3 rounded-xl transition-all duration-300",
           hasUnsavedChanges
@@ -687,6 +706,7 @@ export default function LineupSection({
           onSave={handleSave}
         />
       )}
+      </>)}
 
       {/* Loading state for lazy tab */}
       {loadingTab === activeTabId && (
@@ -702,6 +722,7 @@ export default function LineupSection({
             <LineupHero
               event={heroEvent.event as FeedEventData}
               portalSlug={portalSlug}
+              vertical={vertical}
             />
           )}
 
@@ -712,6 +733,7 @@ export default function LineupSection({
                   key={`row-${item.event.id}`}
                   event={item.event as FeedEventData}
                   portalSlug={portalSlug}
+                  vertical={vertical}
                   size="sm"
                 />
               ))}
@@ -729,7 +751,7 @@ export default function LineupSection({
       {/* See all — glow button, contextual to active chip */}
       {(() => {
         const chipMeta = INTEREST_MAP.get(activeChipId);
-        const ctaColor = chipMeta?.color || "var(--coral)";
+        const ctaColor = chipMeta?.color || sectionAccentColor;
         const ctaLabel =
           activeChipId !== "all" && activeChipId !== "free"
             ? `See all ${chipMeta?.label?.toLowerCase() || ""} events`

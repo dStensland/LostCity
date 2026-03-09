@@ -63,13 +63,27 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: artist.name,
       description,
       type: "profile",
-      images: artist.image_url ? [{ url: artist.image_url }] : [],
+      images: [
+        {
+          url: `/${portal?.slug || portalSlug}/artists/${slug}/opengraph-image`,
+          width: 1200,
+          height: 630,
+          alt: artist.name,
+        },
+      ],
     },
     twitter: {
-      card: artist.image_url ? "summary_large_image" : "summary",
+      card: "summary_large_image",
       title: artist.name,
       description,
-      images: artist.image_url ? [artist.image_url] : [],
+      images: [
+        {
+          url: `/${portal?.slug || portalSlug}/artists/${slug}/opengraph-image`,
+          width: 1200,
+          height: 630,
+          alt: artist.name,
+        },
+      ],
     },
   };
 }

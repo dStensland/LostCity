@@ -16,7 +16,7 @@ export default function PortalThemeClient({ portal }: PortalThemeClientProps) {
   const settings = portal.settings || {};
   const resolvedBranding = applyPreset(branding as PortalBranding);
   const componentStyle = resolvedBranding.component_style;
-  const themeMode = (branding.theme_mode as string) || "dark";
+  const themeMode = resolvedBranding.theme_mode || (branding.theme_mode as string) || "dark";
   const isLight = themeMode === "light";
   const pageTemplate = typeof portal.page_template === "string"
     ? portal.page_template.toLowerCase()

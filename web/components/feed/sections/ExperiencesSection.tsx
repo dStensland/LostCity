@@ -48,7 +48,7 @@ import { THINGS_TO_DO_TILES, getVenueTypeLabel } from "@/lib/spots-constants";
 import { triggerHaptic } from "@/lib/haptics";
 import { SceneChip } from "@/components/feed/SceneEventRow";
 
-import HorseSpinner from "@/components/ui/HorseSpinner";
+import FeedSectionSkeleton from "@/components/feed/FeedSectionSkeleton";
 import type { CityPulseSection as CityPulseSectionData } from "@/lib/city-pulse/types";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
 
@@ -261,7 +261,7 @@ export default function ExperiencesSection({ portalSlug }: Props) {
     setActiveCategory("all");
   }, []);
 
-  // Loading state — section header + spinner (no skeleton mismatch)
+  // Loading state — themed cityscape skeleton
   if (isLoading) {
     return (
       <section>
@@ -271,9 +271,7 @@ export default function ExperiencesSection({ portalSlug }: Props) {
           accentColor="var(--neon-green)"
           icon={<Binoculars weight="duotone" className="w-5 h-5" />}
         />
-        <div className="flex items-center justify-center py-10">
-          <HorseSpinner color="var(--neon-green)" />
-        </div>
+        <FeedSectionSkeleton accentColor="var(--neon-green)" minHeight={480} />
       </section>
     );
   }

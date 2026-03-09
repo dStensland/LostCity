@@ -25,6 +25,11 @@ export function formatTime(time: string | null, isAllDay?: boolean): string {
     return "TBA";
   }
 
+  // Treat midnight (00:00:00) as a placeholder — crawlers often default to it
+  if (hour === 0 && minutes === "00") {
+    return "TBA";
+  }
+
   const period = hour >= 12 ? "pm" : "am";
   const hour12 = hour % 12 || 12;
   return `${hour12}:${minutes}${period}`;
@@ -46,6 +51,11 @@ export function formatTimeSplit(time: string | null, isAllDay?: boolean): { time
   const hour = parseInt(hours, 10);
 
   if (isNaN(hour) || hour < 0 || hour > 23) {
+    return { time: "TBA", period: "" };
+  }
+
+  // Treat midnight (00:00:00) as a placeholder — crawlers often default to it
+  if (hour === 0 && minutes === "00") {
     return { time: "TBA", period: "" };
   }
 

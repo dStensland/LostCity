@@ -21,6 +21,9 @@ import { NeedsTagList } from "@/components/NeedsTagList";
 import FlagButton from "@/components/FlagButton";
 import FollowButton from "@/components/FollowButton";
 import RecommendButton from "@/components/RecommendButton";
+import { HangButton } from "@/components/hangs/HangButton";
+import { VenueHangStripLive } from "@/components/hangs/VenueHangStripLive";
+import { ENABLE_HANGS_V1 } from "@/lib/launch-flags";
 import { SaveToListButton } from "@/components/SaveToListButton";
 import {
   DetailHero,
@@ -95,7 +98,27 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: spot.name,
       description,
       type: "website",
-      images: spot.image_url ? [{ url: spot.image_url }] : [],
+      images: [
+        {
+          url: `/${portal?.slug || portalSlug}/spots/${slug}/opengraph-image`,
+          width: 1200,
+          height: 630,
+          alt: spot.name,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: spot.name,
+      description,
+      images: [
+        {
+          url: `/${portal?.slug || portalSlug}/spots/${slug}/opengraph-image`,
+          width: 1200,
+          height: 630,
+          alt: spot.name,
+        },
+      ],
     },
   };
 }
@@ -507,6 +530,17 @@ export default async function PortalSpotPage({ params }: Props) {
             }
           >
             <div className="flex items-center gap-2 mt-3">
+              {ENABLE_HANGS_V1 && (
+                <HangButton
+                  venue={{
+                    id: spot.id,
+                    name: spot.name,
+                    slug: spot.slug,
+                    image_url: spot.image_url ?? null,
+                    neighborhood: spot.neighborhood ?? null,
+                  }}
+                />
+              )}
               <FollowButton targetVenueId={spot.id} size="sm" />
               <RecommendButton venueId={spot.id} size="sm" />
               {spot.claimed_by && spot.is_verified && (
@@ -653,6 +687,11 @@ export default async function PortalSpotPage({ params }: Props) {
 
           {/* ── 4. AT A GLANCE — type-aware MetadataGrid ────────────── */}
           <MetadataGrid items={metadataItems} />
+
+          {/* ── 4b. VENUE HANG STRIP — who's here ────────────────── */}
+          {ENABLE_HANGS_V1 && (
+            <VenueHangStripLive venueId={spot.id} variant="full" />
+          )}
 
           {/* ── 5. ABOUT + HIGHLIGHTS — flowing, no card wrapper ──── */}
           {spot.description && (

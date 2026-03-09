@@ -10,6 +10,7 @@ import BackButton from "./BackButton";
 import HeaderSearchButton from "../HeaderSearchButton";
 import { usePortalOptional, DEFAULT_PORTAL, DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
 import { useAuth } from "@/lib/auth-context";
+import { getPortalNavLabel } from "@/lib/nav-labels";
 import type { HeaderConfig } from "@/lib/visual-presets";
 import type { PortalBranding } from "@/lib/portal-context";
 
@@ -92,7 +93,7 @@ export default function StandardHeader({
     .filter(tab => !tab.authRequired || user)
     .map(tab => ({
       ...tab,
-      label: navLabels[tab.key] || tab.defaultLabel,
+      label: getPortalNavLabel(navLabels, tab.key, tab.defaultLabel),
     }));
 
   const currentView = searchParams?.get("view");
@@ -285,6 +286,10 @@ export default function StandardHeader({
                   </div>
                 )}
               </div>
+            ) : portalSlug !== DEFAULT_PORTAL_SLUG && portalSlug !== "nashville" ? (
+              <Link href={`/${portalSlug}`} className="font-bold text-lg tracking-tight text-[var(--cream)]">
+                {portalName}
+              </Link>
             ) : (
               <Logo href={`/${portalSlug}`} size="sm" portal={portalSlug} />
             )}

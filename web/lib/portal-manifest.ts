@@ -164,4 +164,3 @@ export function shouldApplyCityFilter(manifest: PortalManifest): boolean {
   if (manifest.scope.enforceCityFilter === "always") return true;
   return !manifest.scope.portalExclusive;
 }
-

@@ -257,6 +257,9 @@ export type Portal = {
     vertical?: "city" | "hotel" | "film" | "hospital" | "community" | "marketplace";
     nav_labels?: {
       feed?: string;
+      find?: string;
+      community?: string;
+      groups?: string;
       events?: string;
       spots?: string;
     };

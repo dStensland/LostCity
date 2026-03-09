@@ -43,7 +43,7 @@ import {
 } from "@/lib/my-theaters";
 import { useAuth } from "@/lib/auth-context";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
-import HorseSpinner from "@/components/ui/HorseSpinner";
+import FeedSectionSkeleton from "@/components/feed/FeedSectionSkeleton";
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -246,7 +246,7 @@ export default function NowShowingSection({ portalSlug }: NowShowingSectionProps
 
   // ── Render gates ───────────────────────────────────────────────────
 
-  if (loading) return <div className="flex justify-center py-10"><HorseSpinner color="var(--vibe)" /></div>;
+  if (loading) return <FeedSectionSkeleton accentColor="var(--vibe)" minHeight={320} />;
   if (failed) return null;
 
   // Hide if no indie theaters have showtimes (and user hasn't added any chains)

@@ -79,6 +79,65 @@ export const OG_CATEGORY_STYLES: Record<string, CategoryStyle> = {
   },
 };
 
+/** Venue type accent styles for spot OG images. */
+export const OG_VENUE_TYPE_STYLES: Record<string, CategoryStyle> = {
+  music_venue: {
+    accent: "text-[#E855A0]",
+    badgeBg: "bg-[#E855A0]",
+    gradient: "bg-[linear-gradient(90deg,_#E855A0,_#FF6B6B)]",
+  },
+  theater: {
+    accent: "text-[#A78BFA]",
+    badgeBg: "bg-[#A78BFA]",
+    gradient: "bg-[linear-gradient(90deg,_#A78BFA,_#FF6B6B)]",
+  },
+  nightclub: {
+    accent: "text-[#00D4E8]",
+    badgeBg: "bg-[#00D4E8]",
+    gradient: "bg-[linear-gradient(90deg,_#00D4E8,_#FF6B6B)]",
+  },
+  bar: {
+    accent: "text-[#FF6B7A]",
+    badgeBg: "bg-[#FF6B7A]",
+    gradient: "bg-[linear-gradient(90deg,_#FF6B7A,_#FF6B6B)]",
+  },
+  restaurant: {
+    accent: "text-[#FFD93D]",
+    badgeBg: "bg-[#FFD93D]",
+    gradient: "bg-[linear-gradient(90deg,_#FFD93D,_#FF6B6B)]",
+  },
+  brewery: {
+    accent: "text-[#FDBA74]",
+    badgeBg: "bg-[#FDBA74]",
+    gradient: "bg-[linear-gradient(90deg,_#FDBA74,_#FF6B6B)]",
+  },
+  cocktail_bar: {
+    accent: "text-[#E855A0]",
+    badgeBg: "bg-[#E855A0]",
+    gradient: "bg-[linear-gradient(90deg,_#E855A0,_#FF6B6B)]",
+  },
+  gallery: {
+    accent: "text-[#C4B5FD]",
+    badgeBg: "bg-[#C4B5FD]",
+    gradient: "bg-[linear-gradient(90deg,_#C4B5FD,_#FF6B6B)]",
+  },
+  comedy_club: {
+    accent: "text-[#FCD34D]",
+    badgeBg: "bg-[#FCD34D]",
+    gradient: "bg-[linear-gradient(90deg,_#FCD34D,_#FF6B6B)]",
+  },
+  cinema: {
+    accent: "text-[#A5B4FC]",
+    badgeBg: "bg-[#A5B4FC]",
+    gradient: "bg-[linear-gradient(90deg,_#A5B4FC,_#FF6B6B)]",
+  },
+};
+
+/** Look up accent style for a venue type, falling back to default. */
+export function getVenueTypeOgStyle(venueType: string | null | undefined): CategoryStyle {
+  return (venueType && OG_VENUE_TYPE_STYLES[venueType]) || OG_CATEGORY_STYLES.default;
+}
+
 /** Look up accent style for a category, falling back to default. */
 export function getCategoryOgStyle(category: string | null | undefined): CategoryStyle {
   return (category && OG_CATEGORY_STYLES[category]) || OG_CATEGORY_STYLES.default;

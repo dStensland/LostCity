@@ -75,13 +75,27 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: series.title,
       description,
       type: "website",
-      images: series.image_url ? [{ url: series.image_url }] : [],
+      images: [
+        {
+          url: `/${portal?.slug || portalSlug}/series/${slug}/opengraph-image`,
+          width: 1200,
+          height: 630,
+          alt: series.title,
+        },
+      ],
     },
     twitter: {
-      card: series.image_url ? "summary_large_image" : "summary",
+      card: "summary_large_image",
       title: series.title,
       description,
-      images: series.image_url ? [series.image_url] : [],
+      images: [
+        {
+          url: `/${portal?.slug || portalSlug}/series/${slug}/opengraph-image`,
+          width: 1200,
+          height: 630,
+          alt: series.title,
+        },
+      ],
     },
   };
 }
@@ -300,14 +314,16 @@ export default async function PortalSeriesPage({ params }: Props) {
   const activePortalSlug = portal?.slug || portalSlug;
   const activePortalName = portal?.name || portalSlug.charAt(0).toUpperCase() + portalSlug.slice(1);
 
-  const events = await getSeriesEvents(series.id);
+  const [events, relatedSeries] = await Promise.all([
+    getSeriesEvents(series.id),
+    getRelatedSeries(series.id, series.series_type, series.genres),
+  ]);
   const venueShowtimes = groupSeriesEventsByVenue(events);
   const typeColor = getSeriesTypeColor(series.series_type);
   const seriesAccentClass = createCssVarClass("--accent-color", typeColor, "accent");
   const festivalAccentClass = series.festival
     ? createCssVarClass("--accent-color", getSeriesTypeColor("festival_program"), "festival-accent")
     : null;
-  const relatedSeries = await getRelatedSeries(series.id, series.series_type, series.genres);
   const seriesSchema = generateSeriesSchema(series, events);
   const previewEvents = events.slice(0, 8);
   const remainingPreviewCount = Math.max(0, events.length - previewEvents.length);

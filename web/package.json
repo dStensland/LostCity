@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test": "vitest",
     "test:run": "vitest run",
+    "test:db-types": "vitest run lib/db-type-contract.test.ts",
     "test:skeletons": "vitest run lib/skeleton-contract.test.ts app/\\[portal\\]/_components/__tests__/skeleton-process.test.ts",
     "test:coverage": "vitest run --coverage",
     "seed": "tsx scripts/seed-staging.ts",

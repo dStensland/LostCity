@@ -29,7 +29,7 @@ import {
 } from "@phosphor-icons/react";
 import Dot from "@/components/ui/Dot";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
-import HorseSpinner from "@/components/ui/HorseSpinner";
+
 
 // ── Types ───────────────────────────────────────────────────────────
 
@@ -54,6 +54,8 @@ interface NetworkFeedSectionProps {
   portalSlug: string;
   posts?: NetworkPost[];
   isLoading?: boolean;
+  /** Override section accent color (default: var(--neon-cyan)). */
+  accentColor?: string;
 }
 
 // ── Category config ─────────────────────────────────────────────────
@@ -273,7 +275,9 @@ export default function NetworkFeedSection({
   portalSlug,
   posts: postsProp,
   isLoading: isLoadingProp,
+  accentColor: accentColorProp,
 }: NetworkFeedSectionProps) {
+  const sectionAccent = accentColorProp || "var(--neon-cyan)";
   const [filter, setFilter] = useState("all");
   const [fetchedPosts, setFetchedPosts] = useState<NetworkPost[] | null>(null);
   const [isFetching, setIsFetching] = useState(postsProp === undefined);
@@ -331,7 +335,7 @@ export default function NetworkFeedSection({
       <FeedSectionHeader
         title="Local News"
         priority="secondary"
-        accentColor="var(--neon-cyan)"
+        accentColor={sectionAccent}
         icon={<Broadcast weight="duotone" className="w-5 h-5" />}
         seeAllHref={`/${portalSlug}/network`}
       />
@@ -373,7 +377,19 @@ export default function NetworkFeedSection({
       {/* Posts list */}
       <div className="rounded-xl overflow-hidden border border-[var(--twilight)]/40 bg-[var(--night)]">
         {isLoading ? (
-          <div className="flex justify-center py-10"><HorseSpinner color="var(--neon-cyan)" /></div>
+          <div className="p-5 space-y-4" style={{ minHeight: 280 }} role="status">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex gap-4">
+                <div className="flex-1 space-y-2">
+                  <div className="h-3 w-1/3 rounded skeleton-shimmer" style={{ opacity: 0.2, animationDelay: `${i * 80}ms` }} />
+                  <div className="h-4 w-3/4 rounded skeleton-shimmer" style={{ opacity: 0.15, animationDelay: `${i * 80 + 40}ms` }} />
+                  <div className="h-3 w-full rounded skeleton-shimmer" style={{ opacity: 0.1, animationDelay: `${i * 80 + 80}ms` }} />
+                </div>
+                <div className="shrink-0 w-20 h-16 rounded-lg skeleton-shimmer" style={{ opacity: 0.12, animationDelay: `${i * 80}ms` }} />
+              </div>
+            ))}
+            <span className="sr-only">Loading news…</span>
+          </div>
         ) : posts && posts.length > 0 ? (
           posts.map((post, index) => (
             <NetworkPostCard

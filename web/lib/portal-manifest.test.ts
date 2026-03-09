@@ -57,4 +57,3 @@ describe("shouldApplyCityFilter", () => {
     expect(shouldApplyCityFilter(manifest)).toBe(false);
   });
 });
-

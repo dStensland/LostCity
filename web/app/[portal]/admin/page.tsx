@@ -8,6 +8,7 @@ type Stats = {
   ownedSourcesCount: number;
   activeSubscriptionsCount: number;
   totalSubscribersCount: number;
+  channelsCount: number;
 };
 
 export default function PortalAdminDashboard({ params }: { params: Promise<{ portal: string }> }) {
@@ -20,32 +21,31 @@ export default function PortalAdminDashboard({ params }: { params: Promise<{ por
   useEffect(() => {
     async function loadStats() {
       try {
-        // Load subscriptions data
-        const subsRes = await fetch(`/api/admin/portals/${portal.id}/subscriptions`);
-        if (subsRes.ok) {
-          const subsData = await subsRes.json();
+        const [subsRes, fedRes, channelsRes] = await Promise.all([
+          fetch(`/api/admin/portals/${portal.id}/subscriptions`),
+          fetch("/api/admin/federation/stats"),
+          fetch(`/api/admin/portals/${portal.id}/channels`),
+        ]);
 
-          // Load federation stats for owned sources
-          const fedRes = await fetch("/api/admin/federation/stats");
-          if (fedRes.ok) {
-            const fedData = await fedRes.json();
-            const ownedSources = (fedData.sources || []).filter(
-              (s: { ownerPortalId: string | null }) => s.ownerPortalId === portal.id
-            );
+        const subsData = subsRes.ok ? await subsRes.json() : { subscriptions: [] };
+        const fedData = fedRes.ok ? await fedRes.json() : { sources: [] };
+        const channelsData = channelsRes.ok ? await channelsRes.json() : { channels: [] };
 
-            // Calculate total subscribers across all owned sources
-            const totalSubscribers = ownedSources.reduce(
-              (sum: number, s: { subscriberCount?: number }) => sum + (s.subscriberCount || 0),
-              0
-            );
+        const ownedSources = (fedData.sources || []).filter(
+          (s: { ownerPortalId: string | null }) => s.ownerPortalId === portal.id
+        );
 
-            setStats({
-              ownedSourcesCount: ownedSources.length,
-              activeSubscriptionsCount: subsData.subscriptions?.length || 0,
-              totalSubscribersCount: totalSubscribers,
-            });
-          }
-        }
+        const totalSubscribers = ownedSources.reduce(
+          (sum: number, s: { subscriberCount?: number }) => sum + (s.subscriberCount || 0),
+          0
+        );
+
+        setStats({
+          ownedSourcesCount: ownedSources.length,
+          activeSubscriptionsCount: subsData.subscriptions?.length || 0,
+          totalSubscribersCount: totalSubscribers,
+          channelsCount: channelsData.channels?.length || 0,
+        });
       } catch (err) {
         console.error("Failed to load stats:", err);
       } finally {
@@ -67,7 +67,7 @@ export default function PortalAdminDashboard({ params }: { params: Promise<{ por
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard
           label="Owned Sources"
           value={loading ? "..." : stats?.ownedSourcesCount || 0}
@@ -82,6 +82,11 @@ export default function PortalAdminDashboard({ params }: { params: Promise<{ por
           label="Total Subscribers"
           value={loading ? "..." : stats?.totalSubscribersCount || 0}
           color="green"
+        />
+        <StatCard
+          label="Interest Channels"
+          value={loading ? "..." : stats?.channelsCount || 0}
+          href={`/${slug}/admin/channels`}
         />
       </div>
 
@@ -105,6 +110,15 @@ export default function PortalAdminDashboard({ params }: { params: Promise<{ por
             <h3 className="font-mono text-sm text-[var(--coral)] mb-1">Manage Subscriptions</h3>
             <p className="font-mono text-xs text-[var(--muted)]">
               Subscribe to sources shared by other portals
+            </p>
+          </Link>
+          <Link
+            href={`/${slug}/admin/channels`}
+            className="p-4 bg-[var(--night)] rounded-lg hover:bg-[var(--twilight)] transition-colors"
+          >
+            <h3 className="font-mono text-sm text-[var(--coral)] mb-1">Manage Channels</h3>
+            <p className="font-mono text-xs text-[var(--muted)]">
+              Create civic/community follow groups and matching rules
             </p>
           </Link>
           <Link
@@ -134,7 +148,8 @@ export default function PortalAdminDashboard({ params }: { params: Promise<{ por
         <p className="font-mono text-xs text-[var(--muted)] leading-relaxed">
           As a portal owner, you can share your event sources with other portals.
           Configure sharing rules to control which categories other portals can access.
-          You can also subscribe to sources shared by other portals to expand your event coverage.
+          You can also subscribe to sources shared by other portals and define Interest Channels
+          (city/county/school-board/topic groups) for user follow experiences.
         </p>
       </div>
     </div>

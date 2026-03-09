@@ -220,12 +220,25 @@ export function validateExperienceSpec(input: unknown): ExperienceValidationResu
     }
 
     if (isRecord(input.navigation.nav_labels)) {
-      const navLabels: { feed?: string; events?: string; spots?: string } = {};
+      const navLabels: {
+        feed?: string;
+        find?: string;
+        community?: string;
+        groups?: string;
+        events?: string;
+        spots?: string;
+      } = {};
       const feed = asTrimmedString(input.navigation.nav_labels.feed, 32);
+      const find = asTrimmedString(input.navigation.nav_labels.find, 32);
+      const community = asTrimmedString(input.navigation.nav_labels.community, 32);
+      const groups = asTrimmedString(input.navigation.nav_labels.groups, 32);
       const events = asTrimmedString(input.navigation.nav_labels.events, 32);
       const spots = asTrimmedString(input.navigation.nav_labels.spots, 32);
 
       if (feed) navLabels.feed = feed;
+      if (find) navLabels.find = find;
+      if (community) navLabels.community = community;
+      if (groups) navLabels.groups = groups;
       if (events) navLabels.events = events;
       if (spots) navLabels.spots = spots;
 

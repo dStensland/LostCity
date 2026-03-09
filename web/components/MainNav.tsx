@@ -5,6 +5,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { usePortalOptional, DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
 import { useAuth } from "@/lib/auth-context";
 import { useRealtimeFriendRequests } from "@/lib/hooks/useRealtimeFriendRequests";
+import { getPortalNavLabel } from "@/lib/nav-labels";
 
 interface Props {
   portalSlug?: string;
@@ -36,7 +37,10 @@ export default function MainNav({ portalSlug = DEFAULT_PORTAL_SLUG }: Props) {
     .filter(tab => !tab.authRequired || user)
     .map(tab => ({
       ...tab,
-      label: navLabels[tab.key] || tab.defaultLabel,
+      label:
+        tab.key === "feed" || tab.key === "events" || tab.key === "spots" || tab.key === "community"
+          ? getPortalNavLabel(navLabels, tab.key, tab.defaultLabel)
+          : navLabels[tab.key] || tab.defaultLabel,
     }));
   const pathname = usePathname();
   const searchParams = useSearchParams();

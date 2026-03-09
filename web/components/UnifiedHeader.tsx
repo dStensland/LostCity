@@ -12,6 +12,7 @@ import { usePortalOptional, DEFAULT_PORTAL, DEFAULT_PORTAL_SLUG, DEFAULT_PORTAL_
 import { useAuth } from "@/lib/auth-context";
 import { useLogoUrl } from "@/lib/hooks/useDesignOverrides";
 import { useRealtimeFriendRequests } from "@/lib/hooks/useRealtimeFriendRequests";
+import { getPortalNavLabel } from "@/lib/nav-labels";
 
 interface PortalBranding {
   logo_url?: string;
@@ -102,7 +103,7 @@ function UnifiedHeaderInner({
     .filter(tab => !tab.authRequired || user)
     .map(tab => ({
       ...tab,
-      label: navLabels[tab.key] || tab.defaultLabel,
+      label: getPortalNavLabel(navLabels, tab.key, tab.defaultLabel),
     }));
 
   const currentView = searchParams?.get("view") || "feed";

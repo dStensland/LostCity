@@ -107,16 +107,12 @@ export function applyPortalScopeToQuery<T>(
 ): T {
   const {
     portalId = null,
-    portalExclusive = false,
     publicOnlyWhenNoPortal = false,
   } = options;
   const scoped = query as unknown as PortalScopedQuery<T>;
 
   if (portalId) {
-    if (portalExclusive) {
-      return scoped.eq("portal_id", portalId) as T;
-    }
-    return scoped.or(`portal_id.eq.${portalId},portal_id.is.null`) as T;
+    return scoped.eq("portal_id", portalId) as T;
   }
 
   if (publicOnlyWhenNoPortal) {
@@ -132,7 +128,6 @@ export function applyFederatedPortalScopeToQuery<T>(
 ): T {
   const {
     portalId = null,
-    portalExclusive = false,
     publicOnlyWhenNoPortal = false,
     sourceIds = [],
     sourceColumn = "source_id",
@@ -144,16 +139,11 @@ export function applyFederatedPortalScopeToQuery<T>(
   const sourceFilter = hasSources ? `${sourceColumn}.in.(${sanitizedSourceIds.join(",")})` : "";
 
   if (portalId) {
-    if (portalExclusive) {
-      if (hasSources) {
-        return scoped.or(`portal_id.eq.${portalId},${sourceFilter}`) as T;
-      }
-      return scoped.eq("portal_id", portalId) as T;
-    }
+    // Portal sees its own events + events from subscribed/owned sources
     if (hasSources) {
-      return scoped.or(`portal_id.eq.${portalId},portal_id.is.null,${sourceFilter}`) as T;
+      return scoped.or(`portal_id.eq.${portalId},${sourceFilter}`) as T;
     }
-    return scoped.or(`portal_id.eq.${portalId},portal_id.is.null`) as T;
+    return scoped.eq("portal_id", portalId) as T;
   }
 
   if (publicOnlyWhenNoPortal) {
@@ -205,7 +195,6 @@ export function isRowInFederatedPortalScope(
 ): boolean {
   const {
     portalId = null,
-    portalExclusive = false,
     publicOnlyWhenNoPortal = false,
     sourceIds = [],
     sourceColumn = "source_id",
@@ -224,10 +213,7 @@ export function isRowInFederatedPortalScope(
   const sourceMatch = Boolean(sourceSet && rowSourceId !== null && sourceSet.has(rowSourceId));
 
   if (portalId) {
-    if (portalExclusive) {
-      return rowPortalId === portalId || sourceMatch;
-    }
-    return rowPortalId === portalId || rowPortalId === null || sourceMatch;
+    return rowPortalId === portalId || sourceMatch;
   }
 
   if (publicOnlyWhenNoPortal) {

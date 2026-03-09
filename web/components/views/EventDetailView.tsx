@@ -770,7 +770,8 @@ export default function EventDetailView({ eventId, portalSlug, onClose }: EventD
                   {event.venue.address} · {event.venue.city}, {event.venue.state}
                 </span>
               </p>
-              {event.venue.vibes && event.venue.vibes.length > 0 && (
+              {event.venue.vibes && event.venue.vibes.length > 0 &&
+                event.category && ["food_drink", "nightlife", "music"].includes(event.category) && (
                 <VenueVibes vibes={event.venue.vibes} className="mt-2" />
               )}
               <GettingThereSection transit={event.venue} variant="compact" />

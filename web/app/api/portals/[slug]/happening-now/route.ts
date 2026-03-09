@@ -7,13 +7,14 @@ import { isValidUUID } from "@/lib/api-utils";
 import { isSpotOpen, DESTINATION_CATEGORIES } from "@/lib/spots";
 import { logger } from "@/lib/logger";
 import {
-  applyFederatedPortalScopeToQuery,
+  applyManifestFederatedScopeToQuery,
   excludeSensitiveEvents,
   filterByPortalCity,
   parsePortalContentFilters,
   applyPortalCategoryFilters,
   filterByPortalContentScope,
 } from "@/lib/portal-scope";
+import { buildPortalManifest } from "@/lib/portal-manifest";
 import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
 import { getPortalSourceAccess } from "@/lib/federation";
 import { applyFeedGate } from "@/lib/feed-gate";
@@ -98,6 +99,15 @@ export async function GET(request: NextRequest, context: RouteContext) {
     );
     const sourceAccess = await getPortalSourceAccess(portal.id);
     const portalClient = await createPortalScopedClient(portal.id);
+    const manifest = buildPortalManifest({
+      portalId: portal.id,
+      slug: portal.slug,
+      portalType: portal.portal_type,
+      parentPortalId: portal.parent_portal_id,
+      settings: portal.settings,
+      filters: portal.filters as { city?: string; cities?: string[] } | null,
+      sourceIds: sourceAccess.sourceIds,
+    });
 
     // Build query for events happening now
     // An event is "happening now" if:
@@ -126,9 +136,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     query = applyFeedGate(query);
 
-    query = applyFederatedPortalScopeToQuery(query, {
-      portalId: portal.id,
-      portalExclusive: portal.portal_type === "business",
+    query = applyManifestFederatedScopeToQuery(query, manifest, {
       publicOnlyWhenNoPortal: true,
       sourceIds: sourceAccess.sourceIds,
       sourceColumn: "source_id",

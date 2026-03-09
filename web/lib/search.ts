@@ -26,6 +26,23 @@ const logger = createLogger("search");
 
 export { CATEGORIES, DATE_FILTERS, PRICE_FILTERS, TAG_GROUPS, ALL_TAGS };
 
+// Shared select string for event list queries.
+// Both getFilteredEventsWithSearch and getFilteredEventsWithCursor use this
+// to ensure a consistent response shape and avoid fetching unused columns.
+const EVENT_LIST_SELECT = `
+  id, title, start_date, start_time, end_time, end_date,
+  is_all_day, is_free, is_live, is_tentpole, is_recurring,
+  category_id, tags, genres,
+  price_min, price_max,
+  image_url, blurhash,
+  source_url, ticket_url,
+  featured_blurb, series_id, venue_id, source_id,
+  recurrence_rule, is_regular_ready,
+  venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max, venue_type, location_designator, blurhash),
+  category_data:categories(typical_price_min, typical_price_max),
+  series:series(id, slug, title, series_type, image_url, frequency, day_of_week, festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood))
+`;
+
 
 export interface SearchFilters {
   search?: string;
@@ -55,6 +72,10 @@ export interface SearchFilters {
   source_ids?: number[];     // Explicit list of source IDs to filter by
   // Content filters (set automatically from user preferences / portal settings)
   exclude_adult?: boolean;   // If true, exclude adult entertainment venues/events (internal use)
+  // Portal city — scopes venue sub-queries (vibes, neighborhoods, search) to this city.
+  // Unlike `city` (which adds .in("venue_id", [...]) to the main query and can exceed
+  // PostgREST URL limits for large cities), this only constrains batchFetchVenueIds.
+  portal_city?: string;
 }
 
 // Rollup types for collapsed event groups
@@ -229,6 +250,7 @@ async function batchFetchVenueIds(filters: {
   vibes?: string[];
   neighborhoods?: string[];
   city?: string;
+  portalCity?: string; // Scope ALL venue queries to this city (portal integrity)
 }): Promise<{
   searchVenueIds: number[];
   searchEventIds: number[];
@@ -258,10 +280,12 @@ async function batchFetchVenueIds(filters: {
     const escapedTerm = escapePostgrestValue(filters.searchTerm);
     queries.push(
       (async () => {
-        const { data } = await supabase
+        let q = supabase
           .from("venues")
           .select("id")
           .ilike("name", `%${escapedTerm}%`);
+        if (filters.portalCity) q = q.eq("city", filters.portalCity);
+        const { data } = await q;
         return (data || []).map((v: { id: number }) => v.id);
       })()
     );
@@ -289,10 +313,12 @@ async function batchFetchVenueIds(filters: {
     const moodVibes = filters.moodVibes; // Local reference for type safety
     queries.push(
       (async () => {
-        const { data } = await supabase
+        let q = supabase
           .from("venues")
           .select("id")
           .overlaps("vibes", moodVibes);
+        if (filters.portalCity) q = q.eq("city", filters.portalCity);
+        const { data } = await q;
         return (data || []).map((v: { id: number }) => v.id);
       })()
     );
@@ -304,10 +330,12 @@ async function batchFetchVenueIds(filters: {
     const vibes = filters.vibes; // Local reference for type safety
     queries.push(
       (async () => {
-        const { data } = await supabase
+        let q = supabase
           .from("venues")
           .select("id")
           .overlaps("vibes", vibes);
+        if (filters.portalCity) q = q.eq("city", filters.portalCity);
+        const { data } = await q;
         return (data || []).map((v: { id: number }) => v.id);
       })()
     );
@@ -319,10 +347,12 @@ async function batchFetchVenueIds(filters: {
     const neighborhoods = filters.neighborhoods; // Local reference for type safety
     queries.push(
       (async () => {
-        const { data } = await supabase
+        let q = supabase
           .from("venues")
           .select("id")
           .in("neighborhood", neighborhoods);
+        if (filters.portalCity) q = q.eq("city", filters.portalCity);
+        const { data } = await q;
         return (data || []).map((v: { id: number }) => v.id);
       })()
     );
@@ -671,15 +701,7 @@ export async function getFilteredEventsWithSearch(
 
   let query = supabase
     .from("events")
-    .select(
-      `
-      *,
-      venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max, venue_type, location_designator, blurhash),
-      category_data:categories(typical_price_min, typical_price_max),
-      series:series(id, slug, title, series_type, image_url, frequency, day_of_week, festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood))
-    `,
-      { count: "estimated" }
-    )
+    .select(EVENT_LIST_SELECT, { count: "estimated" })
     .or(`start_date.gte.${today},end_date.gte.${today}`)
     // Hide past events for today:
     // - Show if future date (start_date > today)
@@ -721,6 +743,7 @@ export async function getFilteredEventsWithSearch(
     vibes: filters.vibes,
     neighborhoods: filters.neighborhoods,
     city: filters.city,
+    portalCity: filters.portal_city || filters.city, // Scope all venue queries to portal city
   });
 
   // Apply all search filters using the centralized helper
@@ -803,14 +826,7 @@ export async function getFilteredEventsWithCursor(
 
   let query = supabase
     .from("events")
-    .select(
-      `
-      *,
-      venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng, typical_price_min, typical_price_max, venue_type, location_designator, blurhash),
-      category_data:categories(typical_price_min, typical_price_max),
-      series:series(id, slug, title, series_type, image_url, frequency, day_of_week, festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood))
-    `
-    )
+    .select(EVENT_LIST_SELECT)
     .or(`start_date.gte.${today},end_date.gte.${today}`)
     // Hide past events for today
     .or(`start_date.gt.${today},end_date.gt.${today},end_time.gte.${currentTime},and(end_time.is.null,start_time.gte.${currentTime}),is_all_day.eq.true`)
@@ -845,6 +861,7 @@ export async function getFilteredEventsWithCursor(
     vibes: filters.vibes,
     neighborhoods: filters.neighborhoods,
     city: filters.city,
+    portalCity: filters.portal_city || filters.city, // Scope all venue queries to portal city
   });
 
   // Apply all search filters using the centralized helper
@@ -950,6 +967,7 @@ export async function getEventsForMap(
     vibes: filters.vibes,
     neighborhoods: filters.neighborhoods,
     city: filters.city,
+    portalCity: filters.portal_city || filters.city, // Scope all venue queries to portal city
   });
 
   // Early return if vibes filter specified but no matching venues found

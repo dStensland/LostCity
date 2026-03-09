@@ -172,7 +172,7 @@ export async function GET(request: NextRequest) {
       .select("id, name, slug, address, neighborhood, venue_type, location_designator, city, image_url, lat, lng, price_level, hours, hours_display, vibes, short_description, genres")
       .neq("active", false); // Exclude deactivated venues
 
-    // Note: venues table has no portal_id column, so we scope by city instead
+    // Venues table has no portal_id column, so we scope by city.
     if (portalCityFilter.length > 0) {
       const expandedCities = expandCityFilterForMetro(portalCityFilter);
       query = query.in("city", expandedCities);
@@ -225,24 +225,7 @@ export async function GET(request: NextRequest) {
     );
     query = query.order("name").limit(venueCandidateLimit);
 
-    const { data: venues, error: venuesError } = await query;
-
-    if (venuesError) {
-      throw venuesError;
-    }
-
-    if (!venues || venues.length === 0) {
-      return {
-        spots: [],
-        meta: {
-          total: 0,
-          openCount: 0,
-          neighborhoods: [],
-        },
-      };
-    }
-
-    // Get event counts for venues with upcoming events
+    // Get event counts for venues with upcoming events (built independently)
     let eventsQuery = portalClient
       .from("events")
       .select("venue_id")
@@ -261,7 +244,27 @@ export async function GET(request: NextRequest) {
       400,
       Math.min(3500, responseLimit * 5),
     );
-    const { data: events } = await eventsQuery.limit(eventCandidateLimit);
+
+    // Run venues and events queries in parallel — they are independent
+    const [{ data: venues, error: venuesError }, { data: events }] = await Promise.all([
+      query,
+      eventsQuery.limit(eventCandidateLimit),
+    ]);
+
+    if (venuesError) {
+      throw venuesError;
+    }
+
+    if (!venues || venues.length === 0) {
+      return {
+        spots: [],
+        meta: {
+          total: 0,
+          openCount: 0,
+          neighborhoods: [],
+        },
+      };
+    }
 
     // Count events per venue
     const eventCounts = new Map<number, number>();

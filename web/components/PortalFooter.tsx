@@ -1,6 +1,6 @@
 "use client";
 
-import { usePortal } from "@/lib/portal-context";
+import { usePortal, DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
 import PageFooter from "./PageFooter";
 
 /**
@@ -17,6 +17,9 @@ export default function PortalFooter() {
 
   const branding = portal.branding || {};
 
+  // Non-default portals show their own name in footer instead of Lost City logo
+  const isNonDefault = portal.slug !== DEFAULT_PORTAL_SLUG;
+
   return (
     <PageFooter
       cityName={portal.name}
@@ -25,6 +28,7 @@ export default function PortalFooter() {
       footerText={branding.footer_text}
       footerLinks={branding.footer_links}
       logoUrl={branding.logo_url}
+      portalName={isNonDefault ? portal.name : undefined}
     />
   );
 }

@@ -15,6 +15,11 @@ import {
   filterByPortalContentScope,
 } from "@/lib/portal-scope";
 import { applyFeedGate } from "@/lib/feed-gate";
+import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
+
+const CALENDAR_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes — matches CDN s-maxage=300
+const CALENDAR_CACHE_MAX_ENTRIES = 200;
+const CALENDAR_CACHE_NAMESPACE = "api:calendar";
 
 /**
  * Calendar API - Optimized endpoint for calendar view
@@ -178,103 +183,137 @@ export async function GET(request: NextRequest) {
     return query;
   };
 
-  // Fetch all events using pagination (Supabase has 1000 row limit)
-  const PAGE_SIZE = 1000;
-  const allEvents: CalendarEvent[] = [];
-  const seenIds = new Set<number>();
-  let page = 0;
-  let hasMore = true;
-
-  while (hasMore) {
-    const from = page * PAGE_SIZE;
-    const to = from + PAGE_SIZE - 1;
-
-    const { data, error: pageError } = await buildQuery().range(from, to);
-
-    if (pageError) {
-      logger.error("Calendar query error", pageError);
-      return NextResponse.json({ error: pageError.message }, { status: 500 });
-    }
-
-    const pageEvents = (data || []) as CalendarEvent[];
-
-    // Deduplicate as we go
-    for (const event of pageEvents) {
-      if (!seenIds.has(event.id)) {
-        seenIds.add(event.id);
-        allEvents.push(event);
-      }
-    }
-
-    // If we got fewer than PAGE_SIZE results, we've reached the end
-    hasMore = pageEvents.length === PAGE_SIZE;
-    page++;
-
-    // Safety limit to prevent infinite loops
-    if (page > 10) break;
-  }
-
-  const cityFiltered = filterByPortalCity(allEvents, portalCity, {
-    allowMissingCity: true,
-  });
-  const events = filterByPortalContentScope(cityFiltered, portalContentFilters);
-
-  // Flatten genres from series into top-level event field
-  const eventsWithGenres = events.map((event) => {
-    const { series, ...rest } = event;
-    return {
-      ...rest,
-      genres: series?.genres || null,
-    };
-  });
-
-  // Fetch social proof counts in a single batch RPC call
-  const eventIds = eventsWithGenres.map((e) => e.id);
-  const socialProofCounts = await fetchSocialProofCounts(eventIds);
-
-  // Merge social proof onto events
-  const eventsWithSocialProof = eventsWithGenres.map((event) => {
-    const counts = socialProofCounts.get(event.id);
-    return {
-      ...event,
-      going_count: counts?.going || 0,
-      interested_count: counts?.interested || 0,
-    };
-  });
-
-  // Group events by date
-  type EventWithSocialProof = (typeof eventsWithSocialProof)[number];
-  const eventsByDate: Record<string, EventWithSocialProof[]> = {};
-  const categoryCounts: Record<string, number> = {};
-
-  eventsWithSocialProof.forEach((event) => {
-    const dateKey = event.start_date;
-    if (!eventsByDate[dateKey]) {
-      eventsByDate[dateKey] = [];
-    }
-    eventsByDate[dateKey].push(event);
-
-    // Track category counts
-    if (event.category) {
-      categoryCounts[event.category] = (categoryCounts[event.category] || 0) + 1;
-    }
-  });
-
-  // Calculate summary stats
-  const totalEvents = eventsWithSocialProof.length;
-  const daysWithEvents = Object.keys(eventsByDate).length;
-
-  return NextResponse.json({
+  const cacheKey = [
+    portalId ?? "null",
     month,
     year,
-    range: { start: startDate, end: endDate },
-    eventsByDate,
-    summary: {
-      totalEvents,
-      daysWithEvents,
-      categoryCounts,
-    },
-  }, {
+    categories?.join(",") ?? "",
+    neighborhoods?.join(",") ?? "",
+    priceFilter ?? "",
+    portalExclusive ? "exclusive" : "inclusive",
+  ].join("|");
+
+  type CalendarPayload = {
+    month: number;
+    year: number;
+    range: { start: string; end: string };
+    eventsByDate: Record<string, unknown[]>;
+    summary: { totalEvents: number; daysWithEvents: number; categoryCounts: Record<string, number> };
+  };
+
+  let payload: CalendarPayload;
+  try {
+    payload = await getOrSetSharedCacheJson<CalendarPayload>(
+      CALENDAR_CACHE_NAMESPACE,
+      cacheKey,
+      CALENDAR_CACHE_TTL_MS,
+      async (): Promise<CalendarPayload> => {
+        // Fetch all events using pagination (Supabase has 1000 row limit)
+        const PAGE_SIZE = 1000;
+        const allEvents: CalendarEvent[] = [];
+        const seenIds = new Set<number>();
+        let page = 0;
+        let hasMore = true;
+
+        while (hasMore) {
+          const from = page * PAGE_SIZE;
+          const to = from + PAGE_SIZE - 1;
+
+          const { data, error: pageError } = await buildQuery().range(from, to);
+
+          if (pageError) {
+            logger.error("Calendar query error", pageError);
+            throw new Error(pageError.message);
+          }
+
+          const pageEvents = (data || []) as CalendarEvent[];
+
+          // Deduplicate as we go
+          for (const event of pageEvents) {
+            if (!seenIds.has(event.id)) {
+              seenIds.add(event.id);
+              allEvents.push(event);
+            }
+          }
+
+          // If we got fewer than PAGE_SIZE results, we've reached the end
+          hasMore = pageEvents.length === PAGE_SIZE;
+          page++;
+
+          // Safety limit to prevent infinite loops
+          if (page > 10) break;
+        }
+
+        const cityFiltered = filterByPortalCity(allEvents, portalCity, {
+          allowMissingCity: true,
+        });
+        const events = filterByPortalContentScope(cityFiltered, portalContentFilters);
+
+        // Flatten genres from series into top-level event field
+        const eventsWithGenres = events.map((event) => {
+          const { series, ...rest } = event;
+          return {
+            ...rest,
+            genres: series?.genres || null,
+          };
+        });
+
+        // Fetch social proof counts in a single batch RPC call
+        const eventIds = eventsWithGenres.map((e) => e.id);
+        const socialProofCounts = await fetchSocialProofCounts(eventIds);
+
+        // Merge social proof onto events
+        const eventsWithSocialProof = eventsWithGenres.map((event) => {
+          const counts = socialProofCounts.get(event.id);
+          return {
+            ...event,
+            going_count: counts?.going || 0,
+            interested_count: counts?.interested || 0,
+          };
+        });
+
+        // Group events by date
+        type EventWithSocialProof = (typeof eventsWithSocialProof)[number];
+        const eventsByDate: Record<string, EventWithSocialProof[]> = {};
+        const categoryCounts: Record<string, number> = {};
+
+        eventsWithSocialProof.forEach((event) => {
+          const dateKey = event.start_date;
+          if (!eventsByDate[dateKey]) {
+            eventsByDate[dateKey] = [];
+          }
+          eventsByDate[dateKey].push(event);
+
+          // Track category counts
+          if (event.category) {
+            categoryCounts[event.category] = (categoryCounts[event.category] || 0) + 1;
+          }
+        });
+
+        // Calculate summary stats
+        const totalEvents = eventsWithSocialProof.length;
+        const daysWithEvents = Object.keys(eventsByDate).length;
+
+        return {
+          month,
+          year,
+          range: { start: startDate, end: endDate },
+          eventsByDate,
+          summary: {
+            totalEvents,
+            daysWithEvents,
+            categoryCounts,
+          },
+        };
+      },
+      { maxEntries: CALENDAR_CACHE_MAX_ENTRIES }
+    );
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+
+  return NextResponse.json(payload, {
     headers: {
       // Cache for 5 minutes, stale-while-revalidate for 1 hour
       "Cache-Control": "public, s-maxage=300, stale-while-revalidate=3600",

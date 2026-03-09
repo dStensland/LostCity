@@ -178,6 +178,7 @@ export type Database = {
           followed_user_id: string | null;
           followed_venue_id: number | null;
           followed_organization_id: string | null;
+          portal_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -185,6 +186,7 @@ export type Database = {
           followed_user_id?: string | null;
           followed_venue_id?: number | null;
           followed_organization_id?: string | null;
+          portal_id?: string | null;
         };
       };
       username_reservations: {
@@ -888,6 +890,7 @@ export type RecommendationReasonType =
   | "friends_going"
   | "followed_venue"
   | "followed_organization"
+  | "followed_channel"
   | "neighborhood"
   | "price"
   | "category"

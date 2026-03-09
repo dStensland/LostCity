@@ -26,6 +26,7 @@ import {
   getSmartDateLabel,
   getFeedEventStatus,
 } from "@/lib/card-utils";
+import { getCivicEventHref } from "@/lib/civic-routing";
 import { LiveBadge, SoonBadge, FreeBadge } from "./Badge";
 import Image from "@/components/SmartImage";
 import SeriesBadge from "./SeriesBadge";
@@ -156,6 +157,8 @@ interface Props {
   onHide?: () => void;
   /** List density mode */
   density?: "comfortable" | "compact";
+  /** Portal vertical — used for civic routing (e.g. "community") */
+  vertical?: string | null;
 }
 
 function EventCard({
@@ -167,6 +170,7 @@ function EventCard({
   reasons,
   contextType,
   density = "comfortable",
+  vertical,
 }: Props) {
   const { time, period } = formatTimeSplit(event.start_time, event.is_all_day);
   // Use exhibition date formatting for multi-week exhibitions (>7 day duration with end_date)
@@ -245,11 +249,13 @@ function EventCard({
   const hasSocialProof =
     goingCount > 0 || interestedCount > 0 || recommendationCount > 0;
 
-  // Build detail href - use portal context to show detail modal
+  // Build detail href - civic portals route to dedicated pages; others use modal
   const eventHref = useMemo(() => {
     if (!portalSlug) return `/events/${event.id}`;
+    const civicHref = getCivicEventHref({ id: event.id, category: event.category }, portalSlug, vertical);
+    if (civicHref) return civicHref;
     return `/${portalSlug}?event=${event.id}`;
-  }, [portalSlug, event.id]);
+  }, [portalSlug, event.id, event.category, vertical]);
   const linkOutUrl = event.ticket_url || event.source_url || eventHref;
   const isExternalLinkOut = Boolean(event.ticket_url || event.source_url);
   const linkOutLabel = getLinkOutLabel({
@@ -739,6 +745,7 @@ function EventCard({
                       key={`${reason.type}-${idx}`}
                       reason={reason}
                       size="sm"
+                      portalSlug={portalSlug}
                     />
                   ))}
                 </div>
@@ -1163,12 +1170,14 @@ interface GridEventCardProps {
   event: FeedEventData & { contextual_label?: string };
   isCarousel?: boolean;
   portalSlug?: string;
+  vertical?: string | null;
 }
 
 export const GridEventCard = memo(function GridEventCard({
   event,
   isCarousel,
   portalSlug,
+  vertical,
 }: GridEventCardProps) {
   const goingCount = event.going_count || 0;
   const interestedCount = event.interested_count || 0;
@@ -1186,7 +1195,9 @@ export const GridEventCard = memo(function GridEventCard({
   return (
     <Link
       href={
-        portalSlug ? `/${portalSlug}?event=${event.id}` : `/events/${event.id}`
+        portalSlug
+          ? (getCivicEventHref(event, portalSlug, vertical) ?? `/${portalSlug}?event=${event.id}`)
+          : `/events/${event.id}`
       }
       data-category={event.category || "other"}
       data-accent="category"
@@ -1272,6 +1283,7 @@ interface CompactEventCardProps {
   isAlternate?: boolean;
   showDate?: boolean;
   portalSlug?: string;
+  vertical?: string | null;
 }
 
 export const CompactEventCard = memo(function CompactEventCard({
@@ -1279,6 +1291,7 @@ export const CompactEventCard = memo(function CompactEventCard({
   isAlternate,
   showDate = true,
   portalSlug,
+  vertical,
 }: CompactEventCardProps) {
   const goingCount = event.going_count || 0;
   const interestedCount = event.interested_count || 0;
@@ -1400,7 +1413,7 @@ export const CompactEventCard = memo(function CompactEventCard({
         <Link
           href={
             portalSlug
-              ? `/${portalSlug}?event=${event.id}`
+              ? (getCivicEventHref(event, portalSlug, vertical) ?? `/${portalSlug}?event=${event.id}`)
               : `/events/${event.id}`
           }
           scroll={false}
@@ -1489,6 +1502,7 @@ interface HeroEventCardProps {
   portalSlug: string;
   hideImages?: boolean;
   editorialBlurb?: string | null;
+  vertical?: string | null;
 }
 
 export const HeroEventCard = memo(function HeroEventCard({
@@ -1496,6 +1510,7 @@ export const HeroEventCard = memo(function HeroEventCard({
   portalSlug,
   hideImages,
   editorialBlurb,
+  vertical,
 }: HeroEventCardProps) {
   const goingCount = event.going_count || 0;
   const interestedCount = event.interested_count || 0;
@@ -1510,9 +1525,10 @@ export const HeroEventCard = memo(function HeroEventCard({
 
   const heroImageUrl = event.image_url || event.series?.image_url || event.venue?.image_url;
   const hasImage = !hideImages && heroImageUrl;
+  const heroEventHref = getCivicEventHref(event, portalSlug, vertical) ?? `/${portalSlug}?event=${event.id}`;
   return (
     <Link
-      href={`/${portalSlug}?event=${event.id}`}
+      href={heroEventHref}
       className="block relative rounded-2xl overflow-hidden group hero-featured coral-glow-hover"
       aria-label={`Featured event: ${event.title}`}
     >
@@ -1641,11 +1657,13 @@ export const HeroEventCard = memo(function HeroEventCard({
 interface TrendingEventCardProps {
   event: FeedEventData;
   portalSlug?: string;
+  vertical?: string | null;
 }
 
 export const TrendingEventCard = memo(function TrendingEventCard({
   event,
   portalSlug,
+  vertical,
 }: TrendingEventCardProps) {
   const reflectionClass = getReflectionClass(event.category);
   const goingCount = event.going_count || 0;
@@ -1661,7 +1679,9 @@ export const TrendingEventCard = memo(function TrendingEventCard({
   return (
     <Link
       href={
-        portalSlug ? `/${portalSlug}?event=${event.id}` : `/events/${event.id}`
+        portalSlug
+          ? (getCivicEventHref(event, portalSlug, vertical) ?? `/${portalSlug}?event=${event.id}`)
+          : `/events/${event.id}`
       }
       scroll={false}
       data-category={event.category || undefined}

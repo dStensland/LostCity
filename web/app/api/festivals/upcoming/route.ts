@@ -5,6 +5,10 @@ import { apiResponse, escapeSQLPattern } from "@/lib/api-utils";
 import { startOfDay, addDays, isSaturday, isSunday, nextSaturday, nextSunday, format } from "date-fns";
 import { getPortalSourceAccess } from "@/lib/federation";
 import { applyFeedGate } from "@/lib/feed-gate";
+import { resolvePortalQueryContext } from "@/lib/portal-query-context";
+import { applyFederatedPortalScopeToQuery } from "@/lib/portal-scope";
+import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
+import { logger } from "@/lib/logger";
 
 function getDateRange(filter: string): { start: string; end: string } | null {
   const now = new Date();
@@ -53,68 +57,19 @@ export async function GET(request: Request) {
     const supabase = await createClient();
     const today = getLocalDateString();
 
-    let query = supabase
-      .from("festivals")
-      .select("id, name, slug, website, location, neighborhood, categories, free, announced_start, announced_end, ticket_url, description, image_url, typical_month, typical_duration_days, festival_type, portal_id")
-      .not("announced_start", "is", null)
-      .or(`announced_end.gte.${today},announced_end.is.null`)
-      .order("announced_start", { ascending: true })
-      .limit(50);
+    // Resolve portal context for federation scope (needed to build the cache key)
+    const portalContext = await resolvePortalQueryContext(supabase, searchParams);
+    const portalId = portalContext.portalId || searchParams.get("portal_id");
 
-    // Portal filter - only show festivals for the requested portal
-    const portalId = searchParams.get("portal_id");
-    if (portalId) {
-      query = query.eq("portal_id", portalId);
-    }
+    const search = searchParams.get("search") ?? "";
+    const categories = searchParams.get("categories") ?? "";
+    const neighborhoods = searchParams.get("neighborhoods") ?? "";
+    const price = searchParams.get("price") ?? "";
+    const dateFilter = searchParams.get("date") ?? "";
 
-    // Search filter
-    const search = searchParams.get("search");
-    if (search) {
-      const escaped = escapeSQLPattern(search);
-      query = query.ilike("name", `%${escaped}%`);
-    }
+    const cacheKey = `${portalId ?? "none"}|${search}|${categories}|${neighborhoods}|${price}|${dateFilter}`;
 
-    // Categories filter (overlaps with festivals.categories array)
-    const categories = searchParams.get("categories")?.split(",").filter(Boolean);
-    if (categories && categories.length > 0) {
-      query = query.overlaps("categories", categories);
-    }
-
-    // Neighborhoods filter
-    const neighborhoods = searchParams.get("neighborhoods")?.split(",").filter(Boolean);
-    if (neighborhoods && neighborhoods.length > 0) {
-      query = query.in("neighborhood", neighborhoods);
-    }
-
-    // Free filter
-    const price = searchParams.get("price");
-    if (price === "free") {
-      query = query.eq("free", true);
-    }
-
-    // Date filter - festival overlaps with the requested date range
-    const dateFilter = searchParams.get("date");
-    if (dateFilter) {
-      const range = getDateRange(dateFilter);
-      if (range) {
-        // Festival overlaps with range if: announced_start <= range.end AND (announced_end >= range.start OR announced_end IS NULL)
-        query = query
-          .lte("announced_start", range.end)
-          .or(`announced_end.gte.${range.start},announced_end.is.null`);
-      }
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      console.error("Festivals upcoming API error:", error);
-      return apiResponse(
-        { error: "Failed to fetch festivals", festivals: [] },
-        { status: 500 }
-      );
-    }
-
-    let standaloneTentpoles: Array<{
+    type StandaloneTentpole = {
       id: number;
       title: string;
       start_date: string;
@@ -131,80 +86,156 @@ export async function GET(request: Request) {
         slug: string;
         neighborhood: string | null;
       } | null;
-    }> = [];
+    };
 
-    let allowedSourceIds: number[] | null = null;
-    let categoryConstraints: Map<number, string[] | null> | null = null;
-    if (portalId) {
-      const sourceAccess = await getPortalSourceAccess(portalId);
-      allowedSourceIds = sourceAccess.sourceIds;
-      categoryConstraints = sourceAccess.categoryConstraints;
-    }
+    type FestivalsPayload = {
+      festivals: unknown[];
+      standalone_tentpoles: StandaloneTentpole[];
+    };
 
-    if (!portalId || (allowedSourceIds && allowedSourceIds.length > 0)) {
-      let tentpoleQuery = supabase
-        .from("events")
-        .select(`
-          id,
-          title,
-          start_date,
-          end_date,
-          start_time,
-          end_time,
-          category:category_id,
-          image_url,
-          description,
-          source_id,
-          venue:venues(id, name, slug, neighborhood)
-        `)
-        .eq("is_tentpole", true)
-        .eq("is_active", true)
-        .is("festival_id", null)
-        .or(`start_date.gte.${today},end_date.gte.${today}`)
-        .is("canonical_event_id", null)
-        .order("start_date", { ascending: true })
-        .order("start_time", { ascending: true })
-        .limit(30);
+    const payload = await getOrSetSharedCacheJson<FestivalsPayload>(
+      "api:festivals-upcoming",
+      cacheKey,
+      5 * 60 * 1000,
+      async () => {
+        let query = supabase
+          .from("festivals")
+          .select("id, name, slug, website, location, neighborhood, categories, free, announced_start, announced_end, ticket_url, description, image_url, typical_month, typical_duration_days, festival_type, portal_id")
+          .not("announced_start", "is", null)
+          .or(`announced_end.gte.${today},announced_end.is.null`)
+          .order("announced_start", { ascending: true })
+          .limit(50);
 
-      if (allowedSourceIds && allowedSourceIds.length > 0) {
-        tentpoleQuery = tentpoleQuery.in("source_id", allowedSourceIds);
-      }
-      tentpoleQuery = applyFeedGate(tentpoleQuery);
+        // Portal filter - only show festivals for the requested portal
+        if (portalId) {
+          query = query.eq("portal_id", portalId);
+        }
 
-      const { data: tentpoleData, error: tentpoleError } = await tentpoleQuery;
-      if (tentpoleError) {
-        console.error("Festivals upcoming tentpoles API error:", tentpoleError);
-      } else {
-        const rawTentpoles = (tentpoleData || []) as typeof standaloneTentpoles;
-        standaloneTentpoles = rawTentpoles.filter((event) => {
-          if (!categoryConstraints || event.source_id == null) return true;
-          if (!categoryConstraints.has(event.source_id)) return true;
-          const allowed = categoryConstraints.get(event.source_id);
-          if (allowed == null) return true;
-          return !!event.category && allowed.includes(event.category);
+        // Search filter
+        if (search) {
+          const escaped = escapeSQLPattern(search);
+          query = query.ilike("name", `%${escaped}%`);
+        }
+
+        // Categories filter (overlaps with festivals.categories array)
+        const categoryList = categories.split(",").filter(Boolean);
+        if (categoryList.length > 0) {
+          query = query.overlaps("categories", categoryList);
+        }
+
+        // Neighborhoods filter
+        const neighborhoodList = neighborhoods.split(",").filter(Boolean);
+        if (neighborhoodList.length > 0) {
+          query = query.in("neighborhood", neighborhoodList);
+        }
+
+        // Free filter
+        if (price === "free") {
+          query = query.eq("free", true);
+        }
+
+        // Date filter - festival overlaps with the requested date range
+        if (dateFilter) {
+          const range = getDateRange(dateFilter);
+          if (range) {
+            // Festival overlaps with range if: announced_start <= range.end AND (announced_end >= range.start OR announced_end IS NULL)
+            query = query
+              .lte("announced_start", range.end)
+              .or(`announced_end.gte.${range.start},announced_end.is.null`);
+          }
+        }
+
+        // Run festivals query and portal source access lookup in parallel
+        const [festivalsResult, sourceAccess] = await Promise.all([
+          query,
+          portalId ? getPortalSourceAccess(portalId) : Promise.resolve(null),
+        ]);
+
+        const { data, error } = festivalsResult;
+
+        if (error) {
+          logger.error("Festivals upcoming API error:", { error: error.message });
+          throw error;
+        }
+
+        const allowedSourceIds: number[] | null = sourceAccess?.sourceIds ?? null;
+        const categoryConstraints: Map<number, string[] | null> | null =
+          sourceAccess?.categoryConstraints ?? null;
+
+        let standaloneTentpoles: StandaloneTentpole[] = [];
+
+        if (!portalId || (allowedSourceIds && allowedSourceIds.length > 0)) {
+          let tentpoleQuery = supabase
+            .from("events")
+            .select(`
+              id,
+              title,
+              start_date,
+              end_date,
+              start_time,
+              end_time,
+              category:category_id,
+              image_url,
+              description,
+              source_id,
+              venue:venues(id, name, slug, neighborhood)
+            `)
+            .eq("is_tentpole", true)
+            .eq("is_active", true)
+            .is("festival_id", null)
+            .or(`start_date.gte.${today},end_date.gte.${today}`)
+            .is("canonical_event_id", null)
+            .order("start_date", { ascending: true })
+            .order("start_time", { ascending: true })
+            .limit(30);
+
+          if (allowedSourceIds && allowedSourceIds.length > 0) {
+            tentpoleQuery = tentpoleQuery.in("source_id", allowedSourceIds);
+          }
+          tentpoleQuery = applyFeedGate(tentpoleQuery);
+          if (portalId) {
+            tentpoleQuery = applyFederatedPortalScopeToQuery(tentpoleQuery, {
+              portalId,
+              sourceIds: allowedSourceIds || [],
+            });
+          }
+
+          const { data: tentpoleData, error: tentpoleError } = await tentpoleQuery;
+          if (tentpoleError) {
+            logger.error("Festivals upcoming tentpoles API error:", { error: tentpoleError.message });
+          } else {
+            const rawTentpoles = (tentpoleData || []) as StandaloneTentpole[];
+            standaloneTentpoles = rawTentpoles.filter((event) => {
+              if (!categoryConstraints || event.source_id == null) return true;
+              if (!categoryConstraints.has(event.source_id)) return true;
+              const allowed = categoryConstraints.get(event.source_id);
+              if (allowed == null) return true;
+              return !!event.category && allowed.includes(event.category);
+            });
+          }
+        }
+
+        // Server-side dedup: remove tentpoles whose title matches a festival name
+        const festivals = data || [];
+        const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+        const festivalNorms = festivals.map((f: { name: string }) => normalize(f.name));
+        const dedupedTentpoles = standaloneTentpoles.filter((t) => {
+          const normTitle = normalize(t.title);
+          return !festivalNorms.some((fn: string) => fn.includes(normTitle) || normTitle.includes(fn));
         });
-      }
-    }
 
-    // Server-side dedup: remove tentpoles whose title matches a festival name
-    const festivals = data || [];
-    const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
-    const festivalNorms = festivals.map((f: { name: string }) => normalize(f.name));
-    const dedupedTentpoles = standaloneTentpoles.filter((t) => {
-      const normTitle = normalize(t.title);
-      return !festivalNorms.some((fn: string) => fn.includes(normTitle) || normTitle.includes(fn));
-    });
-
-    return apiResponse(
-      { festivals, standalone_tentpoles: dedupedTentpoles },
-      {
-        headers: {
-          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
-        },
-      }
+        return { festivals, standalone_tentpoles: dedupedTentpoles };
+      },
+      { maxEntries: 100 },
     );
+
+    return apiResponse(payload, {
+      headers: {
+        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+      },
+    });
   } catch (error) {
-    console.error("Festivals upcoming API error:", error);
+    logger.error("Festivals upcoming API error:", error);
     return apiResponse(
       { error: "Failed to fetch festivals", festivals: [] },
       { status: 500 }

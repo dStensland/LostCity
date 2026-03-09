@@ -3,9 +3,16 @@ import { createClient } from "@/lib/supabase/server";
 import { getPortalBySlug } from "@/lib/portal";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";
+import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
 
 type RouteContext = {
   params: Promise<{ slug: string }>;
+};
+
+type PortalRow = {
+  id: string;
+  slug: string;
+  parent_portal_id?: string | null;
 };
 
 // GET /api/portals/[slug]/network-feed
@@ -28,6 +35,46 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     const supabase = await createClient();
 
+    // Resolve feedPortalId: inherit from parent when this portal has no active sources.
+    // This runs 2-3 sequential queries; cache the result for 5 minutes.
+    const feedPortalId = await getOrSetSharedCacheJson<string>(
+      "network-feed:portal-id",
+      slug,
+      5 * 60 * 1000,
+      async () => {
+        const { count: activeSourceCount, error: activeSourceCountError } = await supabase
+          .from("network_sources")
+          .select("id", { count: "exact", head: true })
+          .eq("portal_id", portal.id)
+          .eq("is_active", true);
+
+        if (!activeSourceCountError && (activeSourceCount || 0) === 0 && portal.parent_portal_id) {
+          const { data: parentPortal } = await supabase
+            .from("portals")
+            .select("id, slug")
+            .eq("id", portal.parent_portal_id)
+            .eq("status", "active")
+            .maybeSingle();
+
+          if (parentPortal) {
+            const typedParent = parentPortal as PortalRow;
+            const { count: parentActiveSourceCount, error: parentSourceCountError } = await supabase
+              .from("network_sources")
+              .select("id", { count: "exact", head: true })
+              .eq("portal_id", typedParent.id)
+              .eq("is_active", true);
+
+            if (!parentSourceCountError && (parentActiveSourceCount || 0) > 0) {
+              return typedParent.id;
+            }
+          }
+        }
+
+        return portal.id;
+      },
+      { maxEntries: 50 },
+    );
+
     // Build query: network_posts joined with network_sources
     // Post-level categories (migration 265) are used for filtering;
     // source-level categories kept on the join for fallback display.
@@ -49,7 +96,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
           categories
         )
       `)
-      .eq("portal_id", portal.id)
+      .eq("portal_id", feedPortalId)
       .eq("network_sources.is_active", true)
       .order("published_at", { ascending: false, nullsFirst: false })
       .range(offset, offset + limit - 1);
@@ -81,7 +128,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       const { data: sources, error: srcError } = await supabase
         .from("network_sources")
         .select("name, slug, website_url, description, categories")
-        .eq("portal_id", portal.id)
+        .eq("portal_id", feedPortalId)
         .eq("is_active", true)
         .order("name");
 

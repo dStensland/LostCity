@@ -28,19 +28,20 @@ import {
   filterOutInactiveVenueEvents,
 } from "@/lib/event-feed-health";
 import { applyVenueGate } from "@/lib/feed-gate";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger("regulars");
 
 const CACHE_NAMESPACE = "api:regulars";
 const CACHE_TTL_MS = 3 * 60 * 1000; // 3 min
 const CACHE_CONTROL = "public, s-maxage=180, stale-while-revalidate=360";
 
 const EVENT_SELECT = `
-  id, title, start_date, start_time, end_date, end_time,
-  is_all_day, is_free, price_min, price_max,
-  category:category_id, genres, tags, image_url,
-  series_id, source_id,
-  is_recurring, recurrence_rule,
-  series:series_id(id, frequency, day_of_week, series_type),
-  venue:venues(id, name, neighborhood, slug, venue_type, city, image_url, active)
+  id, title, start_date, start_time,
+  is_all_day,
+  category:category_id, genres, tags,
+  series:series_id(day_of_week, frequency),
+  venue:venues(name, neighborhood, city, active)
 `;
 
 export async function GET(request: NextRequest) {
@@ -66,8 +67,10 @@ export async function GET(request: NextRequest) {
     );
   }
   const portalId = portalContext.portalId;
-  const portalClient = await createPortalScopedClient(portalId);
-  const sourceAccess = portalId ? await getPortalSourceAccess(portalId) : null;
+  const [portalClient, sourceAccess] = await Promise.all([
+    createPortalScopedClient(portalId),
+    portalId ? getPortalSourceAccess(portalId) : Promise.resolve(null),
+  ]);
   const portalCity = !portalExclusive ? portalContext.filters.city : undefined;
   const portalContentFilters = parsePortalContentFilters(
     portalContext.filters as Record<string, unknown> | null,
@@ -117,7 +120,9 @@ export async function GET(request: NextRequest) {
 
   // Apply portal scope (federation, city filter)
   if (sourceAccess) {
-    query = applyFederatedPortalScopeToQuery(query, sourceAccess) as typeof query;
+    query = applyFederatedPortalScopeToQuery(query, {
+      ...sourceAccess,
+    }) as typeof query;
   }
 
   // Optional weekday filtering — compute target dates
@@ -131,12 +136,12 @@ export async function GET(request: NextRequest) {
   query = query
     .order("start_date", { ascending: true })
     .order("start_time", { ascending: true })
-    .limit(5000);
+    .limit(1000);
 
   const { data: rawEvents, error } = await query;
 
   if (error) {
-    console.error("[regulars] Query error:", error.message);
+    logger.error("[regulars] Query error", { error: error.message });
     return NextResponse.json(
       { error: "Failed to fetch regulars" },
       { status: 500 },
@@ -165,7 +170,17 @@ export async function GET(request: NextRequest) {
   events = dedupeEventsById(events);
   events = filterOutInactiveVenueEvents(events) as EventRow[];
 
-  const payload = { events };
+  // Strip server-only venue fields to reduce payload (~357KB → ~100KB)
+  const responseEvents = events.map((e) => {
+    const { venue, ...rest } = e as Record<string, unknown>;
+    const v = venue as Record<string, unknown> | null;
+    return {
+      ...rest,
+      venue: v ? { name: v.name } : null,
+    };
+  });
+
+  const payload = { events: responseEvents };
 
   // Cache the result
   await setSharedCacheJson(CACHE_NAMESPACE, cacheKey, payload, CACHE_TTL_MS);

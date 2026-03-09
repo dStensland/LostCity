@@ -12,7 +12,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Crown } from "@phosphor-icons/react";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
-import HorseSpinner from "@/components/ui/HorseSpinner";
+import FeedSectionSkeleton from "@/components/feed/FeedSectionSkeleton";
 import type { Festival } from "@/lib/festivals";
 import {
   computeCountdown,
@@ -155,7 +155,7 @@ export default function FestivalsSection({ portalSlug, portalId }: FestivalsSect
     return (
       <section>
         <SectionHeader portalSlug={portalSlug} />
-        <div className="flex justify-center py-10"><HorseSpinner color="var(--gold)" /></div>
+        <FeedSectionSkeleton accentColor="var(--gold)" minHeight={420} />
       </section>
     );
   }

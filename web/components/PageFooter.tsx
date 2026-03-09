@@ -18,6 +18,8 @@ interface PageFooterProps {
   footerLinks?: FooterLink[];
   /** Custom logo URL (for white-label portals) */
   logoUrl?: string;
+  /** Portal name to display instead of Lost City logo (for non-default portals) */
+  portalName?: string;
 }
 
 export default function PageFooter({
@@ -27,6 +29,7 @@ export default function PageFooter({
   footerText,
   footerLinks,
   logoUrl,
+  portalName,
 }: PageFooterProps) {
   const currentYear = 2026;
 
@@ -41,10 +44,27 @@ export default function PageFooter({
       <div className="max-w-3xl mx-auto px-4 py-8">
         {/* Logo and tagline */}
         <div className="text-center mb-6">
-          {showLostCityLogo ? (
-            <Logo size="md" href={undefined} />
-          ) : logoUrl ? (
+          {logoUrl ? (
             <Image src={logoUrl} alt="" width={120} height={32} className="h-8 mx-auto object-contain" />
+          ) : portalName ? (
+            <div className="flex items-center justify-center gap-2">
+              <div
+                className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                style={{ backgroundColor: "var(--action-primary)" }}
+              >
+                <span
+                  className="text-sm font-bold leading-none text-white"
+                  style={{ fontFamily: "var(--portal-font-heading, inherit)" }}
+                >
+                  {portalName.charAt(0).toUpperCase()}
+                </span>
+              </div>
+              <span className="font-semibold text-xl text-[var(--cream)] tracking-tight" style={{ fontFamily: "var(--portal-font-heading, inherit)" }}>
+                {portalName}
+              </span>
+            </div>
+          ) : showLostCityLogo ? (
+            <Logo size="md" href={undefined} />
           ) : null}
           <p className="font-serif text-[var(--muted)] mt-1">
             {tagline || `Find your people in ${cityName}`}

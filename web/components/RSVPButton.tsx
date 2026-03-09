@@ -8,15 +8,22 @@ import { useToast } from "@/components/Toast";
 import { VISIBILITY_OPTIONS, DEFAULT_VISIBILITY, type Visibility } from "@/lib/visibility";
 import { PostRsvpNeedsPrompt } from "./PostRsvpNeedsPrompt";
 import { PostRsvpSharePrompt } from "./PostRsvpSharePrompt";
+import { PostRsvpHangPrompt } from "./hangs/PostRsvpHangPrompt";
 import { CompanionPicker } from "./CompanionPicker";
+import { ENABLE_HANGS_V1 } from "@/lib/launch-flags";
 
 export type RSVPStatus = "going" | "interested" | "went" | null;
 
 type RSVPButtonProps = {
   eventId: number;
   eventTitle?: string;
+  /** YYYY-MM-DD format. Used to gate the hang check-in prompt to today-only events. */
+  eventDate?: string;
   venueId?: number;
   venueName?: string;
+  venueSlug?: string | null;
+  venueImageUrl?: string | null;
+  venueNeighborhood?: string | null;
   venueType?: string | null;
   size?: "sm" | "md";
   variant?: "default" | "compact" | "primary";
@@ -34,8 +41,12 @@ const STATUS_CONFIG = {
 export default function RSVPButton({
   eventId,
   eventTitle,
+  eventDate,
   venueId,
   venueName,
+  venueSlug = null,
+  venueImageUrl = null,
+  venueNeighborhood = null,
   venueType,
   size = "md",
   variant = "default",
@@ -59,10 +70,23 @@ export default function RSVPButton({
   const [menuPos, setMenuPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const [showNeedsPrompt, setShowNeedsPrompt] = useState(false);
   const [showSharePrompt, setShowSharePrompt] = useState(false);
+  const [showHangPrompt, setShowHangPrompt] = useState(false);
   const [showCompanionPicker, setShowCompanionPicker] = useState(false);
   const actionInFlightRef = useRef(false);
   const loadingSafetyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const celebrationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Determine if the event is today (YYYY-MM-DD comparison in local time)
+  const isEventToday = eventDate
+    ? eventDate === new Date().toLocaleDateString("en-CA")
+    : false;
+
+  // Whether the hang prompt should be offered after the share prompt
+  const canShowHangPrompt =
+    ENABLE_HANGS_V1 &&
+    isEventToday &&
+    !!venueId &&
+    !!venueName;
 
   const statusOptions = Object.keys(STATUS_CONFIG) as (keyof typeof STATUS_CONFIG)[];
   const menuItemCount = statusOptions.length + (status ? 1 : 0); // +1 for "Remove RSVP"
@@ -704,7 +728,29 @@ export default function RSVPButton({
         <PostRsvpSharePrompt
           eventId={eventId}
           eventTitle={eventTitle}
-          onDismiss={() => setShowSharePrompt(false)}
+          onDismiss={() => {
+            setShowSharePrompt(false);
+            // Show hang prompt after share prompt closes (if eligible)
+            if (canShowHangPrompt) {
+              setTimeout(() => setShowHangPrompt(true), 800);
+            }
+          }}
+        />
+      )}
+
+      {/* Post-RSVP hang prompt */}
+      {showHangPrompt && canShowHangPrompt && eventTitle && venueId && venueName && (
+        <PostRsvpHangPrompt
+          eventId={eventId}
+          eventTitle={eventTitle}
+          venue={{
+            id: venueId,
+            name: venueName,
+            slug: venueSlug,
+            image_url: venueImageUrl,
+            neighborhood: venueNeighborhood,
+          }}
+          onDismiss={() => setShowHangPrompt(false)}
         />
       )}
 

@@ -45,7 +45,19 @@ function adjustForWeather(
 
 export function getFeedThemeVars(
   context: FeedContext,
+  portalSlug?: string,
+  options?: { isLightTheme?: boolean },
 ): Record<string, string> {
+  // Light-mode portals: static accent from action-primary
+  // (time-of-day neon shifts don't apply to light themes)
+  if (options?.isLightTheme) {
+    return {
+      "--pulse-accent": "var(--action-primary)",
+      "--pulse-glow": "rgba(15, 118, 110, 0.10)",
+      "--pulse-bg": "rgba(15, 118, 110, 0.04)",
+    };
+  }
+
   let palette = SLOT_PALETTES[context.time_slot] ?? SLOT_PALETTES.evening;
   palette = adjustForWeather(palette, context.weather_signal);
 

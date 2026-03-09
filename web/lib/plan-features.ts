@@ -81,7 +81,7 @@ export const PLAN_FEATURES: Record<PlanTier, PlanFeatures> = {
     can_subscribe_sources: true,
     can_share_sources: false,
     // Deep White-Labeling: 5 presets, most templates
-    visual_presets: ["default", "corporate_clean", "vibrant_community", "family_friendly", "minimal_modern"],
+    visual_presets: ["default", "editorial_light", "corporate_clean", "vibrant_community", "family_friendly", "minimal_modern"],
     header_templates: ["standard", "minimal", "branded"],
     ambient_effects: ["none", "subtle_glow", "gradient_wave"],
     category_colors: true,

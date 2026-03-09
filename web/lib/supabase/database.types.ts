@@ -1276,6 +1276,7 @@ export type Database = {
           followed_venue_id: number | null
           follower_id: string
           id: string
+          portal_id: string | null
         }
         Insert: {
           created_at?: string | null
@@ -1285,6 +1286,7 @@ export type Database = {
           followed_venue_id?: number | null
           follower_id: string
           id?: string
+          portal_id?: string | null
         }
         Update: {
           created_at?: string | null
@@ -1294,6 +1296,7 @@ export type Database = {
           followed_venue_id?: number | null
           follower_id?: string
           id?: string
+          portal_id?: string | null
         }
         Relationships: [
           {
@@ -1322,6 +1325,20 @@ export type Database = {
             columns: ["follower_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "follows_portal_id_fkey"
+            columns: ["portal_id"]
+            isOneToOne: false
+            referencedRelation: "portal_source_access"
+            referencedColumns: ["portal_id"]
+          },
+          {
+            foreignKeyName: "follows_portal_id_fkey"
+            columns: ["portal_id"]
+            isOneToOne: false
+            referencedRelation: "portals"
             referencedColumns: ["id"]
           },
         ]
@@ -1463,6 +1480,50 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      hangs: {
+        Row: {
+          id: string
+          user_id: string
+          venue_id: number
+          event_id: number | null
+          portal_id: string | null
+          status: string
+          visibility: string
+          note: string | null
+          started_at: string
+          planned_for: string | null
+          auto_expire_at: string
+          ended_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          venue_id: number
+          event_id?: number | null
+          portal_id?: string | null
+          status?: string
+          visibility?: string
+          note?: string | null
+          started_at?: string
+          planned_for?: string | null
+          auto_expire_at?: string
+          ended_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          status?: string
+          visibility?: string
+          note?: string | null
+          planned_for?: string | null
+          auto_expire_at?: string
+          ended_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       inferred_preferences: {
         Row: {

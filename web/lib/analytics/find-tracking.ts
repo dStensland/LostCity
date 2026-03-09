@@ -44,6 +44,10 @@ function readRawValue(input: FilterInput, key: string): string {
 
 export function createFindFilterSnapshot(input: FilterInput, findType: FindType): FindFilterSnapshot {
   const keys = FIND_TYPE_FILTER_KEYS[findType];
+  // Guard against unknown findType values (e.g. from URL params)
+  if (!keys) {
+    return { findType, signature: "", activeKeys: [], activeCount: 0, valuesByKey: {} };
+  }
   const valuesByKey: Record<string, string> = {};
 
   for (const key of keys) {

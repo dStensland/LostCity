@@ -11,6 +11,7 @@ import HeroSection from "../HeroSection";
 import BackButton from "./BackButton";
 import { usePortalOptional, DEFAULT_PORTAL, DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
 import { useAuth } from "@/lib/auth-context";
+import { getPortalNavLabel } from "@/lib/nav-labels";
 import type { HeaderConfig } from "@/lib/visual-presets";
 import type { PortalBranding } from "@/lib/portal-context";
 
@@ -71,7 +72,7 @@ export default function ImmersiveHeader({
     .filter(tab => !tab.authRequired || user)
     .map(tab => ({
       ...tab,
-      label: navLabels[tab.key] || tab.defaultLabel,
+      label: getPortalNavLabel(navLabels, tab.key, tab.defaultLabel),
     }));
 
   const currentView = searchParams?.get("view") || "feed";

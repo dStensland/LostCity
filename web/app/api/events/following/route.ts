@@ -1,11 +1,19 @@
 import { NextResponse } from "next/server";
 import { createClient, getUser } from "@/lib/supabase/server";
 import { format, startOfDay } from "date-fns";
-import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
+import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { errorResponse } from "@/lib/api-utils";
 import { logger } from "@/lib/logger";
 import { excludeSensitiveEvents } from "@/lib/portal-scope";
 import { applyFeedGate } from "@/lib/feed-gate";
+import { resolvePortalQueryContext } from "@/lib/portal-query-context";
+import { getUserFollowedEntityIds } from "@/lib/follows";
+import { createServiceClient } from "@/lib/supabase/service";
+import { ENABLE_INTEREST_CHANNELS_V1 } from "@/lib/launch-flags";
+import {
+  getUserSubscribedChannelMatchesForEvents,
+  type EventChannelMatch,
+} from "@/lib/interest-channel-matches";
 
 type FollowingEvent = {
   id: number;
@@ -22,6 +30,8 @@ type FollowingEvent = {
   description: string | null;
   ticket_url: string | null;
   source_url: string | null;
+  source_id: number | null;
+  tags: string[] | null;
   venue_id: number | null;
   organization_id: string | null;
   venue: {
@@ -56,28 +66,19 @@ export async function GET(request: Request) {
     const offset = parseInt(searchParams.get("offset") || "0", 10);
 
     const supabase = await createClient();
+    const portalContext = await resolvePortalQueryContext(supabase, searchParams);
+    if (portalContext.hasPortalParamMismatch) {
+      return NextResponse.json(
+        { error: "portal and portal_id parameters must reference the same portal" },
+        { status: 400 },
+      );
+    }
 
-    // Get followed venues
-    const { data: followedVenues } = await supabase
-      .from("follows")
-      .select("followed_venue_id")
-      .eq("follower_id", user.id)
-      .not("followed_venue_id", "is", null) as { data: { followed_venue_id: number | null }[] | null };
-
-    const venueIds = (followedVenues || [])
-      .map((f) => f.followed_venue_id)
-      .filter((id): id is number => id !== null);
-
-    // Get followed organizations
-    const { data: followedOrganizations } = await supabase
-      .from("follows")
-      .select("followed_organization_id")
-      .eq("follower_id", user.id)
-      .not("followed_organization_id", "is", null) as { data: { followed_organization_id: string | null }[] | null };
-
-    const organizationIds = (followedOrganizations || [])
-      .map((f) => f.followed_organization_id)
-      .filter((id): id is string => id !== null);
+    const { followedVenueIds: venueIds, followedOrganizationIds: organizationIds } =
+      await getUserFollowedEntityIds(supabase, user.id, {
+        portalId: portalContext.portalId,
+        includeUnscoped: true,
+      });
 
     // If user doesn't follow anything, return empty
     if (venueIds.length === 0 && organizationIds.length === 0) {
@@ -109,6 +110,8 @@ export async function GET(request: Request) {
         description,
         ticket_url,
         source_url,
+        source_id,
+        tags,
         venue_id,
         organization_id,
         venue:venues!left(
@@ -128,9 +131,14 @@ export async function GET(request: Request) {
         )
       `)
       .gte("start_date", today)
+      .is("canonical_event_id", null)
       .order("start_date", { ascending: true })
       .order("start_time", { ascending: true, nullsFirst: true })
       .range(offset, offset + limit - 1);
+
+    if (portalContext.portalId) {
+      query = query.eq("portal_id", portalContext.portalId);
+    }
 
     query = excludeSensitiveEvents(query);
     query = applyFeedGate(query);
@@ -152,6 +160,31 @@ export async function GET(request: Request) {
         { error: "Failed to fetch events" },
         { status: 500 }
       );
+    }
+
+    let followingChannelCount = 0;
+    let channelMatchesByEventId = new Map<number, EventChannelMatch[]>();
+    if (ENABLE_INTEREST_CHANNELS_V1 && (events || []).length > 0) {
+      const serviceClient = createServiceClient();
+      const channelMatchResult = await getUserSubscribedChannelMatchesForEvents(
+        serviceClient,
+        user.id,
+        (events || []).map((event) => ({
+          id: event.id,
+          source_id: event.source_id,
+          organization_id: event.organization_id,
+          category: event.category,
+          tags: event.tags || [],
+          venue_id: event.venue_id,
+          venue: event.venue ? { id: event.venue.id } : null,
+        })),
+        {
+          portalId: portalContext.portalId,
+          includeUnscoped: true,
+        },
+      );
+      followingChannelCount = channelMatchResult.subscribedChannelCount;
+      channelMatchesByEventId = channelMatchResult.matchesByEventId;
     }
 
     // Add reason badges
@@ -178,6 +211,18 @@ export async function GET(request: Request) {
         });
       }
 
+      const channelMatches = channelMatchesByEventId.get(event.id) || [];
+      if (channelMatches.length > 0) {
+        reasons.push({
+          type: "followed_channel",
+          label: "Matches your channels",
+          detail: channelMatches
+            .slice(0, 2)
+            .map((match) => match.channel_name)
+            .join(", "),
+        });
+      }
+
       return {
         ...event,
         reasons,
@@ -189,6 +234,9 @@ export async function GET(request: Request) {
       hasMore: (events?.length || 0) === limit,
       followingVenues: venueIds.length,
       followingOrganizations: organizationIds.length,
+      followingChannels: followingChannelCount,
+    }, {
+      headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=120" },
     });
   } catch (err) {
     return errorResponse(err, "GET /api/events/following");

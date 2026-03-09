@@ -14,10 +14,12 @@ import CategoryIcon from "@/components/CategoryIcon";
 import { Users, Lightning, Ticket } from "@phosphor-icons/react";
 import { formatTime, getEventStatus } from "@/lib/formats";
 import type { FeedEventData } from "@/components/EventCard";
+import { getCivicEventHref } from "@/lib/civic-routing";
 
 interface LineupHeroProps {
   event: FeedEventData;
   portalSlug: string;
+  vertical?: string | null;
 }
 
 /** Build a contextual time string: "NOW", "Soon · 7pm", "Tonight 8pm", "All Day" */
@@ -40,15 +42,16 @@ function buildTimeDisplay(event: FeedEventData): {
   return { label: time, isLive: false, isSoon: false };
 }
 
-export default function LineupHero({ event, portalSlug }: LineupHeroProps) {
+export default function LineupHero({ event, portalSlug, vertical }: LineupHeroProps) {
   const { label: timeLabel, isLive, isSoon } = buildTimeDisplay(event);
   const catColor = getCategoryColor(event.category);
   const catLabel = getCategoryLabel(event.category);
   const goingCount = event.going_count || 0;
+  const eventHref = getCivicEventHref(event, portalSlug, vertical) ?? `/${portalSlug}?event=${event.id}`;
 
   return (
     <Link
-      href={`/${portalSlug}?event=${event.id}`}
+      href={eventHref}
       scroll={false}
       className="block overflow-hidden transition-all group mb-0 relative"
     >

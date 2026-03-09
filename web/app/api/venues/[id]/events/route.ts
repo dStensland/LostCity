@@ -93,5 +93,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     };
   });
 
-  return NextResponse.json({ events: flatEvents });
+  return NextResponse.json({ events: flatEvents }, {
+    headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120" },
+  });
 }

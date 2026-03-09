@@ -82,14 +82,46 @@ export default function MinimalHeader({
                   className={`${logoSizeClass} w-auto object-contain`}
                 />
               </Link>
-              {/* Only show "powered by" if attribution is not hidden */}
               {!branding?.hide_attribution && (
-                <div className="hidden lg:flex items-center gap-1 text-xs text-[var(--muted)] font-mono">
-                  <span>powered by</span>
-                  <Link href={`/${DEFAULT_PORTAL_SLUG}`} className="text-[var(--coral)] hover:opacity-80 transition-opacity">
-                    Lost City
-                  </Link>
+                <Link
+                  href={`/${DEFAULT_PORTAL_SLUG}`}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-[var(--twilight)]/50 hover:border-[var(--coral)]/50 transition-colors group"
+                >
+                  <span className="hidden sm:inline text-2xs font-mono text-[var(--muted)]">powered by</span>
+                  <span className="text-2xs font-mono font-semibold text-[var(--coral)] group-hover:opacity-80 transition-opacity">Lost City</span>
+                </Link>
+              )}
+            </div>
+          ) : portalSlug !== DEFAULT_PORTAL_SLUG ? (
+            <div className="flex items-center gap-2.5">
+              <Link href={`/${portalSlug}`} className="flex items-center gap-2">
+                {/* Monogram mark */}
+                <div
+                  className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                  style={{ backgroundColor: "var(--action-primary)" }}
+                >
+                  <span
+                    className="text-sm font-bold leading-none text-white"
+                    style={{ fontFamily: "var(--portal-font-heading, inherit)" }}
+                  >
+                    {portalName.charAt(0).toUpperCase()}
+                  </span>
                 </div>
+                <span
+                  className="font-semibold text-xl text-[var(--cream)] tracking-tight leading-none"
+                  style={{ fontFamily: "var(--portal-font-heading, inherit)" }}
+                >
+                  {portalName}
+                </span>
+              </Link>
+              {!branding?.hide_attribution && (
+                <Link
+                  href={`/${DEFAULT_PORTAL_SLUG}`}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-[var(--twilight)]/50 hover:border-[var(--action-primary)]/50 transition-colors group"
+                >
+                  <span className="hidden sm:inline text-2xs font-mono text-[var(--muted)]">powered by</span>
+                  <span className="text-2xs font-mono font-semibold text-[var(--action-primary)] group-hover:opacity-80 transition-opacity">Lost City</span>
+                </Link>
               )}
             </div>
           ) : (

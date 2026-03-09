@@ -29,7 +29,7 @@ import { SceneEventRow, SceneChip, getActivityIcon, WeekdayRow, getDayKeyFromDat
 import {
   ArrowRight, MicrophoneStage, ListBullets, Plus, X, Check, WarningCircle,
 } from "@phosphor-icons/react";
-import HorseSpinner from "@/components/ui/HorseSpinner";
+import FeedSectionSkeleton from "@/components/feed/FeedSectionSkeleton";
 import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
 
 /** Map from activity ID → config for O(1) lookup */
@@ -239,7 +239,7 @@ export default function TheSceneSection({ portalSlug }: Props) {
     });
   }, []);
 
-  // Loading state — section header + spinner (no skeleton mismatch)
+  // Loading state — themed cityscape skeleton
   if (isLoading) {
     return (
       <section>
@@ -249,9 +249,7 @@ export default function TheSceneSection({ portalSlug }: Props) {
           accentColor="var(--vibe)"
           icon={<MicrophoneStage weight="duotone" className="w-5 h-5" />}
         />
-        <div className="flex items-center justify-center py-10">
-          <HorseSpinner color="var(--vibe)" />
-        </div>
+        <FeedSectionSkeleton accentColor="var(--vibe)" minHeight={360} />
       </section>
     );
   }

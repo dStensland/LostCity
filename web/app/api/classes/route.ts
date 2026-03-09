@@ -179,6 +179,7 @@ export async function GET(request: NextRequest) {
       )
       .eq("is_class", true)
       .gte("start_date", startDate || today)
+      .is("canonical_event_id", null)
       .or("is_sensitive.eq.false,is_sensitive.is.null");
 
     // Apply filters

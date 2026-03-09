@@ -46,6 +46,7 @@ import { getWeatherVenueFilter } from "@/lib/city-pulse/weather-mapping";
 import { buildFeedContext } from "@/lib/city-pulse/context";
 import { getTimeSlot } from "@/lib/city-pulse/time-slots";
 import { getAllConversionPrompts } from "@/lib/city-pulse/conversion-prompts";
+import { getUserFollowedEntityIds } from "@/lib/follows";
 import {
   ALL_INTEREST_IDS,
   DEFAULT_INTEREST_IDS,
@@ -905,23 +906,17 @@ export async function GET(request: NextRequest, { params }: Props) {
   const loadUserSignals = async (): Promise<UserSignals | null> => {
     if (!userId) return null;
 
-    const [prefsResult, followedVenuesResult, followedOrgsResult, friendIdsResult] =
+    const [prefsResult, followedEntityIdsResult, friendIdsResult] =
       await Promise.all([
         supabase
           .from("user_preferences")
           .select("*")
           .eq("user_id", userId)
           .maybeSingle(),
-        supabase
-          .from("follows")
-          .select("followed_venue_id")
-          .eq("follower_id", userId)
-          .not("followed_venue_id", "is", null),
-        supabase
-          .from("follows")
-          .select("followed_organization_id")
-          .eq("follower_id", userId)
-          .not("followed_organization_id", "is", null),
+        getUserFollowedEntityIds(supabase, userId, {
+          portalId: portalData.id,
+          includeUnscoped: true,
+        }),
         supabase.rpc(
           "get_friend_ids" as never,
           { user_id: userId } as never,
@@ -930,15 +925,8 @@ export async function GET(request: NextRequest, { params }: Props) {
         }>,
       ]);
 
-    const followedVenueIds =
-      (followedVenuesResult.data as { followed_venue_id: number | null }[] | null)
-        ?.map((f) => f.followed_venue_id)
-        .filter((id): id is number => id !== null) ?? [];
-
-    const followedOrganizationIds =
-      (followedOrgsResult.data as { followed_organization_id: string | null }[] | null)
-        ?.map((f) => f.followed_organization_id)
-        .filter((id): id is string => id !== null) ?? [];
+    const followedVenueIds = followedEntityIdsResult.followedVenueIds;
+    const followedOrganizationIds = followedEntityIdsResult.followedOrganizationIds;
 
     const friendIds = (friendIdsResult.data || []).map((r) => r.friend_id);
 

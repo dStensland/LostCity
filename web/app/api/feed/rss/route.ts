@@ -76,8 +76,8 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = await createClient();
-  const { portalId, portalSlug, filters } =
-    await resolvePortalQueryContext(supabase, searchParams);
+  const portalContext = await resolvePortalQueryContext(supabase, searchParams);
+  const { portalId, portalSlug, filters } = portalContext;
 
   if (!portalId || !portalSlug) {
     return NextResponse.json({ error: "Portal not found" }, { status: 404 });

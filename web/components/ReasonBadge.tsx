@@ -6,6 +6,7 @@ export type ReasonType =
   | "friends_going"
   | "followed_venue"
   | "followed_organization"
+  | "followed_channel"
   | "neighborhood"
   | "price"
   | "category"
@@ -20,6 +21,7 @@ export type RecommendationReason = {
 interface ReasonBadgeProps {
   reason: RecommendationReason;
   size?: "sm" | "md";
+  portalSlug?: string;
 }
 
 // Color mapping using existing design system variables
@@ -48,6 +50,15 @@ const REASON_STYLES: Record<ReasonType, { bg: string; text: string; icon: React.
     icon: (
       <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+      </svg>
+    ),
+  },
+  followed_channel: {
+    bg: "bg-blue-500/15",
+    text: "text-blue-300",
+    icon: (
+      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h8M8 12h8m-8 5h5M5 4h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z" />
       </svg>
     ),
   },
@@ -95,14 +106,38 @@ export const REASON_PRIORITY: ReasonType[] = [
   "friends_going",
   "followed_venue",
   "followed_organization",
+  "followed_channel",
   "neighborhood",
   "category",
   "price",
   "trending",
 ];
 
-function ReasonBadge({ reason, size = "sm" }: ReasonBadgeProps) {
+function getReasonDisplayText(reason: RecommendationReason, portalSlug?: string): string {
+  const defaultLabel = reason.detail || reason.label;
+  if (portalSlug !== "helpatl") return defaultLabel;
+
+  switch (reason.type) {
+    case "followed_channel":
+      return `Matched: ${reason.detail || reason.label}`;
+    case "followed_organization":
+      return `Institution: ${reason.detail || reason.label}`;
+    case "followed_venue":
+      return `Source: ${reason.detail || reason.label}`;
+    case "neighborhood":
+      return `Jurisdiction: ${reason.detail || reason.label}`;
+    case "category":
+      return `Topic: ${reason.detail || reason.label}`;
+    case "trending":
+      return "Fresh update";
+    default:
+      return defaultLabel;
+  }
+}
+
+function ReasonBadge({ reason, size = "sm", portalSlug }: ReasonBadgeProps) {
   const style = REASON_STYLES[reason.type] || REASON_STYLES.category;
+  const displayText = getReasonDisplayText(reason, portalSlug);
 
   const sizeClasses = size === "sm"
     ? "text-xs px-1.5 py-0.5 gap-1"
@@ -111,11 +146,11 @@ function ReasonBadge({ reason, size = "sm" }: ReasonBadgeProps) {
   return (
     <span
       className={`inline-flex items-center rounded-full font-mono font-medium ${style.bg} ${style.text} ${sizeClasses}`}
-      title={reason.detail || reason.label}
+      title={displayText}
     >
       {style.icon}
       <span className="truncate max-w-[100px]">
-        {reason.detail || reason.label}
+        {displayText}
       </span>
     </span>
   );

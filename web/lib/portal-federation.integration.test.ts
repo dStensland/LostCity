@@ -23,7 +23,7 @@ const FIXTURE_EVENTS: FixtureEvent[] = [
 ];
 
 describe("portal federation integration", () => {
-  it("shared city portal excludes cross-city public leakage after city guard", () => {
+  it("city portal sees only owned events after city guard", () => {
     const scoped = filterRowsByFederatedPortalScope(FIXTURE_EVENTS, {
       portalId: "atl",
       portalExclusive: false,
@@ -33,10 +33,11 @@ describe("portal federation integration", () => {
       allowMissingCity: false,
     });
 
-    expect(cityScoped.map((event) => event.id)).toEqual([1, 2, 5, 6]);
+    // Only portal_id="atl" events in Atlanta metro — no null portal_id leakage
+    expect(cityScoped.map((event) => event.id)).toEqual([1, 6]);
   });
 
-  it("shared portal with subscribed sources still requires city in shared mode", () => {
+  it("portal with subscribed sources sees owned + subscribed, city-filtered", () => {
     const scoped = filterRowsByFederatedPortalScope(FIXTURE_EVENTS, {
       portalId: "atl",
       portalExclusive: false,
@@ -47,9 +48,12 @@ describe("portal federation integration", () => {
       allowMissingCity: true,
     });
 
-    expect(cityScoped.map((event) => event.id)).toEqual([1, 2, 5, 6, 8]);
+    // portal_id="atl" (1, 6) + source_id=900 in Atlanta metro (5=Decatur)
+    // Event 4 excluded (Nashville city). Event 8 excluded (no source match, no portal match).
+    expect(cityScoped.map((event) => event.id)).toEqual([1, 5, 6]);
     expect(cityScoped.some((event) => event.id === 4)).toBe(false);
   });
+
 
   it("exclusive business portal can include subscribed-source events across cities", () => {
     const scoped = filterRowsByFederatedPortalScope(FIXTURE_EVENTS, {

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient, createPortalScopedClient, getUser } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import {
   applyRateLimit,
   RATE_LIMITS,
@@ -26,6 +27,12 @@ import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
 import { isSuppressedFromGeneralEventFeed } from "@/lib/event-content-classification";
 import { filterOutInactiveVenueEvents } from "@/lib/event-feed-health";
 import { applyFeedGate } from "@/lib/feed-gate";
+import { getUserFollowedEntityIds } from "@/lib/follows";
+import { ENABLE_INTEREST_CHANNELS_V1 } from "@/lib/launch-flags";
+import {
+  getUserSubscribedChannelMatchesForEvents,
+  type EventChannelMatch,
+} from "@/lib/interest-channel-matches";
 
 import { fetchSocialProofCounts } from "@/lib/social-proof";
 import { format, startOfDay, addDays } from "date-fns";
@@ -34,6 +41,7 @@ type RecommendationReason = {
   type:
     | "followed_venue"
     | "followed_organization"
+    | "followed_channel"
     | "neighborhood"
     | "price"
     | "friends_going"
@@ -170,6 +178,7 @@ export async function GET(request: Request) {
 
     const feedLoadPromise = (async (): Promise<Response> => {
     const supabase = await createClient();
+    const serviceClient = createServiceClient();
 
     // Calculate date range for trending events
     const now = new Date();
@@ -224,6 +233,7 @@ export async function GET(request: Request) {
           .is("canonical_event_id", null)
           .is("portal_id", null)
           .or("is_feed_ready.eq.true,is_feed_ready.is.null")
+          .or("is_sensitive.eq.false,is_sensitive.is.null")
           .order("start_date", { ascending: true })
           .order("data_quality", { ascending: false, nullsFirst: false })
           .limit(200),
@@ -240,6 +250,14 @@ export async function GET(request: Request) {
     }
 
     const portalId = portalContext.portalId;
+    const portalSettings = portalContext.portalSettings;
+    const recommendationLabels = (
+      typeof portalSettings.recommendation_labels === "object" &&
+      portalSettings.recommendation_labels !== null &&
+      !Array.isArray(portalSettings.recommendation_labels)
+    )
+      ? (portalSettings.recommendation_labels as Record<string, string>)
+      : null;
     const portalClient = await createPortalScopedClient(portalId);
     const portalFilters = portalContext.filters;
 
@@ -280,36 +298,13 @@ export async function GET(request: Request) {
       portalId && !crossPortalRecommendations,
     );
 
-    // Get followed venues and organizations in parallel
-    const [{ data: followedVenuesData }, { data: followedOrganizationsData }] =
-      await Promise.all([
-        supabase
-          .from("follows")
-          .select("followed_venue_id")
-          .eq("follower_id", user.id)
-          .not("followed_venue_id", "is", null),
-        supabase
-          .from("follows")
-          .select("followed_organization_id")
-          .eq("follower_id", user.id)
-          .not("followed_organization_id", "is", null),
-      ]);
-
-    const followedVenues = followedVenuesData as
-      | { followed_venue_id: number | null }[]
-      | null;
-    const followedVenueIds =
-      (followedVenues
-        ?.map((f) => f.followed_venue_id)
-        .filter(Boolean) as number[]) || [];
-
-    const followedOrganizations = followedOrganizationsData as
-      | { followed_organization_id: string | null }[]
-      | null;
-    const followedOrganizationIds =
-      (followedOrganizations
-        ?.map((f) => f.followed_organization_id)
-        .filter(Boolean) as string[]) || [];
+    const {
+      followedVenueIds,
+      followedOrganizationIds,
+    } = await getUserFollowedEntityIds(supabase, user.id, {
+      portalId,
+      includeUnscoped: true,
+    });
 
     // Parallelize independent queries: producerSources and friend IDs
     type GetFriendIdsResult = { friend_id: string }[];
@@ -911,6 +906,31 @@ export async function GET(request: Request) {
       (event) => includeExhibits || !isSuppressedFromGeneralEventFeed(event),
     );
 
+    let followedChannelCount = 0;
+    let channelMatchesByEventId = new Map<number, EventChannelMatch[]>();
+
+    if (ENABLE_INTEREST_CHANNELS_V1 && events.length > 0) {
+      const channelMatchResult = await getUserSubscribedChannelMatchesForEvents(
+        serviceClient,
+        user.id,
+        events.map((event) => ({
+          id: event.id,
+          source_id: event.source_id ?? null,
+          organization_id: event.organization_id ?? null,
+          category: event.category ?? null,
+          tags: event.tags || [],
+          venue: event.venue ? { id: event.venue.id } : null,
+        })),
+        {
+          portalId,
+          includeUnscoped: true,
+        },
+      );
+
+      followedChannelCount = channelMatchResult.subscribedChannelCount;
+      channelMatchesByEventId = channelMatchResult.matchesByEventId;
+    }
+
     // Score and sort events by relevance
     events = events.map((event) => {
       let score = 0;
@@ -945,7 +965,7 @@ export async function GET(request: Request) {
         score += 50;
         reasons.push({
           type: "followed_venue",
-          label: "You follow this venue",
+          label: recommendationLabels?.followed_venue ?? "You follow this venue",
           detail: event.venue.name,
         });
       }
@@ -961,7 +981,20 @@ export async function GET(request: Request) {
         score += 45;
         reasons.push({
           type: "followed_organization",
-          label: "From an organizer you follow",
+          label: recommendationLabels?.followed_organization ?? "From an organizer you follow",
+        });
+      }
+
+      const channelMatches = channelMatchesByEventId.get(event.id) || [];
+      if (channelMatches.length > 0) {
+        score += 40 + Math.min(10, (channelMatches.length - 1) * 3);
+        reasons.push({
+          type: "followed_channel",
+          label: recommendationLabels?.followed_channel ?? "Matches your channels",
+          detail: channelMatches
+            .slice(0, 2)
+            .map((match) => match.channel_name)
+            .join(", "),
         });
       }
 
@@ -988,7 +1021,7 @@ export async function GET(request: Request) {
           score += 30;
           reasons.push({
             type: "neighborhood",
-            label: "In your favorite area",
+            label: recommendationLabels?.neighborhood ?? "In your favorite area",
             detail: event.venue.neighborhood,
           });
         }
@@ -1063,7 +1096,7 @@ export async function GET(request: Request) {
           .join(" ");
         reasons.push({
           type: "category",
-          label: "Fits your interests",
+          label: recommendationLabels?.category ?? "Fits your interests",
           detail,
         });
       }
@@ -1130,6 +1163,8 @@ export async function GET(request: Request) {
           (event.source_id ? sourceOrganizationMap[event.source_id] : null);
         if (eventOrgId && followedOrganizationIds.includes(eventOrgId))
           return true;
+        // Keep events matching subscribed channels
+        if (channelMatchesByEventId.has(event.id)) return true;
         // Keep events matching favorite categories
         if (
           prefs?.favorite_categories?.length &&
@@ -1250,7 +1285,8 @@ export async function GET(request: Request) {
             (reason) =>
               reason.type === "friends_going" ||
               reason.type === "followed_venue" ||
-              reason.type === "followed_organization",
+              reason.type === "followed_organization" ||
+              reason.type === "followed_channel",
           ),
         );
 
@@ -1415,6 +1451,7 @@ export async function GET(request: Request) {
     const personalization = {
       followedVenueIds,
       followedOrgIds: followedOrganizationIds,
+      followedChannelCount,
       favoriteNeighborhoods,
       favoriteCategories,
       favoriteGenres,

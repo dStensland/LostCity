@@ -10,7 +10,7 @@ interface HorseSpinnerProps {
   className?: string;
 }
 
-function HorseIcon({ className, style }: { className?: string; style?: React.CSSProperties }) {
+export function HorseIcon({ className, style }: { className?: string; style?: React.CSSProperties }) {
   return (
     <svg
       className={className}

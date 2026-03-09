@@ -55,7 +55,6 @@ export async function GET(request: NextRequest) {
       `
       id,
       title,
-      slug,
       start_date,
       end_date,
       is_all_day,
@@ -66,6 +65,8 @@ export async function GET(request: NextRequest) {
     `
     )
     .ilike("title", `%${escapeSQLPattern(normalizedQuery)}%`)
+    .eq("is_active", true)
+    .is("canonical_event_id", null)
     .or(`start_date.gte.${new Date().toISOString().split("T")[0]},end_date.gte.${new Date().toISOString().split("T")[0]}`)
     .order("start_date", { ascending: true })
     .limit(limit);
@@ -99,7 +100,6 @@ export async function GET(request: NextRequest) {
   type EventResult = {
     id: number;
     title: string;
-    slug: string;
     start_date: string;
     end_date: string | null;
     is_all_day: boolean;
@@ -153,7 +153,6 @@ export async function GET(request: NextRequest) {
   const results = sortedEvents.map((event) => ({
     id: event.id,
     title: event.title,
-    slug: event.slug,
     start_date: event.start_date,
     end_date: event.end_date,
     is_all_day: event.is_all_day,

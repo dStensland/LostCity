@@ -5,7 +5,7 @@
  *
  * Progressive rendering strategy:
  *  T=0ms   Shell computed client-side from pure functions (no API call):
- *          GreetingBar + QuickLinksBar + DashboardCards render immediately.
+ *          GreetingBar + DashboardCards render immediately.
  *  T=0ms   Lineup fetch starts in parallel.
  *  T=~1s   Lineup data arrives → LineupSection renders with real events.
  *          If CMS header overrides exist, they upgrade the shell seamlessly.
@@ -13,8 +13,8 @@
  *
  * Feed blocks (top → bottom):
  *  1. GreetingBar — photo hero + headline + pulse text
- *  2. QuickLinksBar — contextual discovery shortcuts + dashboard cards
- *  3. CTA banner (optional, from CMS header override)
+ *  2. CTA banner (optional, from CMS header override)
+ *  3. InterestChannelsSection — join/follow groups for civic/topic routing
  *  4. LineupSection — tabbed timeline: Today / This Week / Coming Up
  *  5. TheSceneSection (Regular Hangs) — self-fetching, lazy-loaded
  *  6. FestivalsSection — self-fetching, lazy-loaded
@@ -36,17 +36,19 @@ import { useFeedPreferences } from "@/lib/hooks/useFeedPreferences";
 import { getFeedThemeVars } from "@/lib/city-pulse/theme";
 import { useAuth } from "@/lib/auth-context";
 import { usePortal } from "@/lib/portal-context";
+import { getVisualPreset } from "@/lib/visual-presets";
 import Link from "next/link";
 import GreetingBar from "./GreetingBar";
 import LineupSection from "./LineupSection";
-import QuickLinksBar from "./QuickLinksBar";
 import CityPulseSection from "./CityPulseSection";
 import TheSceneSection from "./sections/TheSceneSection";
 import LazySection from "./LazySection";
+import InterestChannelsSection from "./sections/InterestChannelsSection";
+import { HangFeedSection } from "./sections/HangFeedSection";
 
 import NowShowingSection from "./sections/NowShowingSection";
 import NetworkFeedSection from "./sections/NetworkFeedSection";
-import HorseSpinner from "@/components/ui/HorseSpinner";
+import FeedSectionSkeleton from "@/components/feed/FeedSectionSkeleton";
 
 import ExperiencesSection from "./sections/ExperiencesSection";
 import FestivalsSection from "./sections/FestivalsSection";
@@ -60,9 +62,10 @@ import type {
   ResolvedHeader,
 } from "@/lib/city-pulse/types";
 import { DEFAULT_FEED_ORDER, ALWAYS_VISIBLE_BLOCKS, FIXED_LAST_BLOCKS } from "@/lib/city-pulse/types";
+import { ENABLE_HANGS_V1 } from "@/lib/launch-flags";
 
 // Client-safe pure functions for instant shell rendering
-import { getTimeSlot, getDayOfWeek, getDayTheme } from "@/lib/city-pulse/time-slots";
+import { getDayOfWeek, getDayTheme } from "@/lib/city-pulse/time-slots";
 import { getEditorialHeadline, getCityPhoto, getDefaultAccentColor } from "@/lib/city-pulse/header-defaults";
 import { getDashboardCards } from "@/lib/city-pulse/dashboard-cards";
 import { getContextualQuickLinks } from "@/lib/city-pulse/quick-links";
@@ -277,19 +280,37 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
   }, [sections, feedLayout]);
 
   // Theme vars from context
-  const themeVars = useMemo(
-    () => getFeedThemeVars(context),
-    [context],
-  );
+  const isLightTheme = useMemo(() => {
+    const branding = portal?.branding;
+    if (branding?.theme_mode === "light") return true;
+    if (branding?.visual_preset) {
+      return getVisualPreset(branding.visual_preset)?.theme_mode === "light";
+    }
+    return false;
+  }, [portal?.branding]);
 
-  // After initial load failure with no data at all, show error
-  if (error && !data && !isLoading) {
-    return <FeedError onRetry={refresh} />;
-  }
+  const themeVars = useMemo(
+    () => getFeedThemeVars(context, portalSlug, { isLightTheme }),
+    [context, portalSlug, isLightTheme],
+  );
 
   /** Render a middle section by blockId */
   const renderMiddleSection = (blockId: FeedBlockId) => {
     switch (blockId) {
+      case "hangs":
+        return ENABLE_HANGS_V1 ? (
+          <div
+            key="city-pulse-hangs"
+            id="city-pulse-hangs"
+            data-feed-anchor="true"
+            data-index-label="Hangs"
+            data-block-id="hangs"
+            className="mt-6 scroll-mt-28"
+          >
+            <HangFeedSection portalSlug={portalSlug} />
+          </div>
+        ) : null;
+
       case "recurring":
         return (
           <div
@@ -391,6 +412,12 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
   };
 
   const lineupLoading = isLoading && lineupSections.length === 0;
+  const hasAnyTabEvents = tabCounts && (tabCounts.today > 0 || tabCounts.this_week > 0 || tabCounts.coming_up > 0);
+
+  // After initial load failure with no data at all, show error
+  if (error && !data && !isLoading) {
+    return <FeedError onRetry={refresh} />;
+  }
 
   return (
     <div
@@ -408,7 +435,6 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
         quickLinks={quickLinks}
         dashboardCards={dashboardCards}
       />
-
       {/* CTA (if present — only from CMS override, so only after API loads) */}
       {header.cta && (
         <div className="mt-2.5">
@@ -425,6 +451,8 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
         </div>
       )}
 
+      <InterestChannelsSection portalSlug={portalSlug} onSubscriptionChange={refresh} />
+
       {/* 3. LineupSection — shows spinner until events arrive */}
       <div
         id="city-pulse-events"
@@ -435,27 +463,8 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
         style={{ minHeight: lineupLoading ? 400 : undefined }}
       >
         {lineupLoading ? (
-          <div className="space-y-4 animate-pulse">
-            {/* Tab strip skeleton */}
-            <div className="flex items-center gap-2 overflow-hidden px-1">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-8 rounded-full bg-[var(--twilight)]/60" style={{ width: `${60 + i * 12}px` }} />
-              ))}
-            </div>
-            {/* Event grid skeleton */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} className="rounded-xl border border-[var(--twilight)]/40 bg-[var(--night)] overflow-hidden">
-                  <div className="aspect-[4/3] bg-[var(--twilight)]/30" />
-                  <div className="p-3 space-y-2">
-                    <div className="h-4 w-3/4 rounded bg-[var(--twilight)]/40" />
-                    <div className="h-3 w-1/2 rounded bg-[var(--twilight)]/30" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : lineupSections.length > 0 ? (
+          <FeedSectionSkeleton accentColor="var(--coral)" minHeight={400} />
+        ) : lineupSections.length > 0 || hasAnyTabEvents ? (
           <div className="animate-fade-in">
             <LineupSection
               sections={lineupSections}
@@ -467,6 +476,7 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
               savedInterests={savedInterests}
               onInterestsChange={handleInterestsChange}
               onSaveInterests={handleSaveInterests}
+              vertical={portal?.settings?.vertical}
             />
           </div>
         ) : null}

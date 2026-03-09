@@ -20,6 +20,8 @@ export type PortalQueryContext = {
   portalSlug: string | null;
   filters: PortalFilters;
   hasPortalParamMismatch: boolean;
+  /** Raw portal settings JSONB — use instead of slug comparisons for feature flags */
+  portalSettings: Record<string, unknown>;
 };
 
 const PORTAL_QUERY_CACHE_NAMESPACE = "portal-query-context";
@@ -29,6 +31,7 @@ type CachedPortalRow = {
   id: string;
   slug: string;
   filters: PortalFilters;
+  portalSettings: Record<string, unknown>;
 };
 
 function parsePortalFilters(raw: unknown): PortalFilters {
@@ -118,6 +121,7 @@ export async function resolvePortalQueryContext(
     id: string;
     slug: string;
     filters: Record<string, unknown> | string | null;
+    settings: Record<string, unknown> | null;
   };
 
   const readCachedPortal = async (cacheKey: string): Promise<CachedPortalRow | null> =>
@@ -150,6 +154,7 @@ export async function resolvePortalQueryContext(
         portalId: cachedRow.id,
         portalSlug: cachedRow.slug,
         filters: cachedRow.filters,
+        portalSettings: cachedRow.portalSettings ?? {},
         hasPortalParamMismatch:
           Boolean(portalIdParam && isValidUUID(portalIdParam) && cachedRow.id !== portalIdParam),
       };
@@ -157,7 +162,7 @@ export async function resolvePortalQueryContext(
 
     const { data } = await supabase
       .from("portals")
-      .select("id, slug, filters")
+      .select("id, slug, filters, settings")
       .eq("slug", portalSlug)
       .eq("status", "active")
       .maybeSingle();
@@ -165,15 +170,18 @@ export async function resolvePortalQueryContext(
     const row = data as PortalRow | null;
     if (row) {
       const parsedFilters = parsePortalFilters(row.filters);
+      const portalSettings = row.settings ?? {};
       void writeCachedPortal({
         id: row.id,
         slug: row.slug,
         filters: parsedFilters,
+        portalSettings,
       });
       return {
         portalId: row.id,
         portalSlug: row.slug,
         filters: parsedFilters,
+        portalSettings,
         hasPortalParamMismatch: Boolean(portalIdParam && isValidUUID(portalIdParam) && row.id !== portalIdParam),
       };
     }
@@ -186,13 +194,14 @@ export async function resolvePortalQueryContext(
         portalId: cachedRow.id,
         portalSlug: cachedRow.slug,
         filters: cachedRow.filters,
+        portalSettings: cachedRow.portalSettings ?? {},
         hasPortalParamMismatch: false,
       };
     }
 
     const { data } = await supabase
       .from("portals")
-      .select("id, slug, filters")
+      .select("id, slug, filters, settings")
       .eq("id", portalId)
       .eq("status", "active")
       .maybeSingle();
@@ -200,15 +209,18 @@ export async function resolvePortalQueryContext(
     const row = data as PortalRow | null;
     if (row) {
       const parsedFilters = parsePortalFilters(row.filters);
+      const portalSettings = row.settings ?? {};
       void writeCachedPortal({
         id: row.id,
         slug: row.slug,
         filters: parsedFilters,
+        portalSettings,
       });
       return {
         portalId: row.id,
         portalSlug: row.slug,
         filters: parsedFilters,
+        portalSettings,
         hasPortalParamMismatch: false,
       };
     }
@@ -218,6 +230,7 @@ export async function resolvePortalQueryContext(
     portalId: null,
     portalSlug: portalSlug,
     filters: {},
+    portalSettings: {},
     hasPortalParamMismatch: false,
   };
 }

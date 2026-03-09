@@ -40,6 +40,9 @@ export type FeedSettings = {
 
 export type NavLabels = {
   feed?: string;
+  find?: string;
+  community?: string;
+  groups?: string;
   events?: string;
   spots?: string;
 };

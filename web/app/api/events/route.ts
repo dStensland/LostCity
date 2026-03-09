@@ -6,6 +6,8 @@ import { generateNextCursor } from "@/lib/cursor";
 import { logger } from "@/lib/logger";
 import { apiResponse } from "@/lib/api-utils";
 import { isSuppressedFromGeneralEventFeed } from "@/lib/event-content-classification";
+import { createClient } from "@/lib/supabase/server";
+import { resolvePortalQueryContext } from "@/lib/portal-query-context";
 
 // Helper to safely parse integers with validation
 function safeParseInt(value: string | null, defaultValue: number, min = 1, max = 1000): number {
@@ -33,11 +35,16 @@ export async function GET(request: Request) {
     const venueParam = searchParams.get("venue");
     const venueId = venueParam ? safeParseInt(venueParam, 0, 0, 999999) : undefined;
 
-    const portalId = searchParams.get("portal_id") || undefined;
     const portalExclusive = searchParams.get("portal_exclusive") === "true";
     const includeExhibits = ["1", "true"].includes(
       (searchParams.get("include_exhibits") || "").toLowerCase()
     );
+
+    // Resolve portal context to get portal_id and city filter
+    const supabase = await createClient();
+    const portalContext = await resolvePortalQueryContext(supabase, searchParams);
+    const portalId = portalContext.portalId || searchParams.get("portal_id") || undefined;
+    const portalCity = !portalExclusive ? portalContext.filters.city : undefined;
 
     const dateParam = searchParams.get("date") || "";
     const dateSpecific = /^\d{4}-\d{2}-\d{2}$/.test(dateParam) ? dateParam : undefined;
@@ -80,6 +87,10 @@ export async function GET(request: Request) {
       portal_exclusive: portalExclusive,
       exclude_classes: true,
       geo_bounds: geoBounds,
+      // portal_city scopes venue sub-queries (vibes, neighborhoods, search) to
+      // the portal's city without adding .in("venue_id", [...]) to the main query
+      // (which exceeds PostgREST URL limits for cities with 2500+ venues).
+      portal_city: portalCity,
     };
 
     const pageSize = safeParseInt(searchParams.get("pageSize"), 20, 1, 500);

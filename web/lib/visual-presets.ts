@@ -12,6 +12,7 @@
 
 export type VisualPresetId =
   | "default"
+  | "editorial_light"
   | "corporate_clean"
   | "vibrant_community"
   | "nightlife"
@@ -183,9 +184,56 @@ export const VISUAL_PRESETS: Record<VisualPresetId, VisualPreset> = {
       card_style: "default",
       button_style: "default",
       glow_enabled: true,
-      glow_intensity: "medium",
+      glow_intensity: "subtle",
       animations: "full",
-      glass_enabled: true,
+      glass_enabled: false,
+    },
+  },
+
+  editorial_light: {
+    id: "editorial_light",
+    name: "Editorial Light",
+    description: "Clean civic publication feel with restrained accents",
+    bestFor: "Civic/community action portals",
+    colors: {
+      primary_color: "#0f766e",
+      secondary_color: "#1d4ed8",
+      accent_color: "#ea580c",
+      background_color: "#f8fafc",
+      text_color: "#0f172a",
+      muted_color: "#64748b",
+      button_color: "#0f766e",
+      button_text_color: "#ffffff",
+      border_color: "#cbd5e1",
+      card_color: "#ffffff",
+    },
+    theme_mode: "light",
+    header: {
+      template: "minimal",
+      logo_position: "left",
+      logo_size: "md",
+      nav_style: "underline",
+      show_search_in_header: true,
+      transparent_on_top: false,
+    },
+    ambient: {
+      effect: "none",
+    },
+    component_style: {
+      border_radius: "sm",
+      shadows: "subtle",
+      card_style: "outlined",
+      button_style: "sharp",
+      glow_enabled: false,
+      glow_intensity: "subtle",
+      animations: "subtle",
+      glass_enabled: false,
+    },
+    category_colors: {
+      community: "#0f766e",
+      learning: "#1d4ed8",
+      civic: "#0f766e",
+      volunteer: "#ea580c",
     },
   },
 
@@ -324,9 +372,9 @@ export const VISUAL_PRESETS: Record<VisualPresetId, VisualPreset> = {
       card_style: "glass",
       button_style: "default",
       glow_enabled: true,
-      glow_intensity: "intense",
+      glow_intensity: "medium",
       animations: "full",
-      glass_enabled: true,
+      glass_enabled: false,
     },
     category_colors: {
       nightlife: "#ff00ff",
@@ -473,9 +521,9 @@ export const VISUAL_PRESETS: Record<VisualPresetId, VisualPreset> = {
       card_style: "glass",
       button_style: "default",
       glow_enabled: true,
-      glow_intensity: "medium",
+      glow_intensity: "subtle",
       animations: "full",
-      glass_enabled: true,
+      glass_enabled: false,
     },
     category_colors: {
       music: "#FF6B7A",
@@ -533,9 +581,9 @@ export const VISUAL_PRESETS: Record<VisualPresetId, VisualPreset> = {
       card_style: "glass",
       button_style: "pill",
       glow_enabled: true,
-      glow_intensity: "intense",
+      glow_intensity: "medium",
       animations: "full",
-      glass_enabled: true,
+      glass_enabled: false,
     },
     category_colors: {
       music: "#FF1B8D",
@@ -589,9 +637,9 @@ export const VISUAL_PRESETS: Record<VisualPresetId, VisualPreset> = {
       card_style: "default",
       button_style: "default",
       glow_enabled: true,
-      glow_intensity: "medium",
+      glow_intensity: "subtle",
       animations: "full",
-      glass_enabled: true,
+      glass_enabled: false,
     },
   },
 };
@@ -686,9 +734,9 @@ export const SHADOW_VALUES: Record<ShadowLevel, string> = {
  * Glow intensity opacity values
  */
 export const GLOW_OPACITY_VALUES: Record<GlowIntensity, number> = {
-  subtle: 0.3,
-  medium: 0.5,
-  intense: 0.8,
+  subtle: 0.08,
+  medium: 0.14,
+  intense: 0.22,
 };
 
 /**

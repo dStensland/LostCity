@@ -10,12 +10,169 @@ import { logger } from "@/lib/logger";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
 import { filterByPortalCity } from "@/lib/portal-scope";
 import { getPortalSourceAccess } from "@/lib/federation";
+import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
 
 function safeParseInt(value: string | null, defaultValue: number, min = 1, max = 1000): number {
   if (!value) return defaultValue;
   const parsed = parseInt(value, 10);
   if (isNaN(parsed)) return defaultValue;
   return Math.min(Math.max(parsed, min), max);
+}
+
+type TimelinePayload = {
+  events: Awaited<ReturnType<typeof enrichEventsWithSocialProof>>;
+  festivals: Festival[];
+  cursor: string | null;
+  hasMore: boolean;
+};
+
+const TIMELINE_CACHE_NAMESPACE = "api:timeline";
+const TIMELINE_CACHE_TTL_MS = 60 * 1000; // 60 seconds
+
+function buildTimelineCacheKey(portalId: string | undefined, filters: SearchFilters): string {
+  const parts = [
+    portalId || "none",
+    filters.search || "",
+    filters.categories?.join(",") || "",
+    filters.genres?.join(",") || "",
+    filters.tags?.join(",") || "",
+    filters.vibes?.join(",") || "",
+    filters.neighborhoods?.join(",") || "",
+    filters.is_free ? "free" : "",
+    filters.price_max?.toString() || "",
+    filters.date_filter || "",
+    filters.venue_id?.toString() || "",
+    filters.mood || "",
+    filters.portal_exclusive ? "excl" : "",
+  ];
+  return parts.join("|");
+}
+
+async function fetchTimelinePage(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  filters: SearchFilters,
+  portalId: string | undefined,
+  portalCity: string | undefined,
+  cursor: string | null,
+  pageSize: number,
+): Promise<TimelinePayload> {
+  // PERFORMANCE: Fetch events and festivals in parallel.
+  // Skip festivals when event-specific filters are active that festivals
+  // can't match (tags, vibes, venue) — showing unfiltered festivals alongside
+  // filtered events is confusing.
+  const hasEventOnlyFilters = !!(
+    filters.tags?.length ||
+    filters.vibes?.length ||
+    filters.venue_id
+  );
+  const today = getLocalDateString(new Date());
+
+  const [eventsResult, festivalsResult] = await Promise.all([
+    // Fetch events with cursor pagination
+    getFilteredEventsWithCursor(filters, cursor, pageSize),
+
+    // Fetch festivals (if applicable)
+    hasEventOnlyFilters
+      ? Promise.resolve({ data: [], error: null })
+      : (async () => {
+          let festivalQuery = supabase
+            .from("festivals")
+            .select("id, name, slug, website, location, neighborhood, categories, free, announced_start, announced_end, ticket_url, description, image_url, typical_month, typical_duration_days, festival_type, portal_id")
+            .not("announced_start", "is", null);
+
+          // Apply a default future range filter
+          festivalQuery = festivalQuery.or(`announced_end.gte.${today},announced_end.is.null`);
+
+          // Apply portal filter
+          if (portalId) {
+            festivalQuery = festivalQuery.eq("portal_id", portalId);
+          }
+
+          // Apply search filter
+          if (filters.search) {
+            const escapedSearch = escapeSQLPattern(filters.search);
+            festivalQuery = festivalQuery.ilike("name", `%${escapedSearch}%`);
+          }
+
+          // Apply category filter
+          if (filters.categories && filters.categories.length > 0) {
+            festivalQuery = festivalQuery.overlaps("categories", filters.categories);
+          }
+
+          // Apply price filter
+          if (filters.is_free) {
+            festivalQuery = festivalQuery.eq("free", true);
+          }
+
+          // Apply neighborhood filter
+          if (filters.neighborhoods && filters.neighborhoods.length > 0) {
+            festivalQuery = festivalQuery.in("neighborhood", filters.neighborhoods);
+          }
+
+          // Apply date filter
+          if (filters.date_filter) {
+            if (filters.date_filter === "today") {
+              festivalQuery = festivalQuery
+                .lte("announced_start", today)
+                .gte("announced_end", today);
+            }
+          }
+
+          festivalQuery = festivalQuery
+            .order("announced_start", { ascending: true })
+            .limit(50);
+
+          return festivalQuery;
+        })(),
+  ]);
+
+  const { events: rawEvents, nextCursor, hasMore } = eventsResult;
+
+  // Filter events by portal city (in-memory, avoids header overflow from venue ID pre-fetching)
+  const cityFilteredEvents = filterByPortalCity(rawEvents, portalCity, { allowMissingCity: true });
+
+  // Enrich events with social proof
+  const events = await enrichEventsWithSocialProof(cityFilteredEvents);
+
+  let festivals: Festival[] = [];
+  let festivalError: { message: string } | null = null;
+
+  if (!hasEventOnlyFilters) {
+    const { data: festivalsData, error } = festivalsResult;
+
+    // Filter festivals based on actual event date range if we have events
+    if (festivalsData && hasMore && events.length > 0) {
+      const lastEventDate = events[events.length - 1].start_date;
+      festivals = (festivalsData as Festival[]).filter(f => {
+        return (
+          (f.announced_start && f.announced_start >= today && f.announced_start <= lastEventDate) ||
+          (f.announced_start && f.announced_start <= today && f.announced_end && f.announced_end >= today)
+        );
+      });
+    } else {
+      festivals = (festivalsData || []) as Festival[];
+    }
+
+    festivalError = error;
+  }
+
+  if (festivalError) {
+    logger.error("Error fetching festivals for timeline", { error: festivalError.message });
+    // Return events without festivals rather than failing entirely
+    return {
+      events,
+      festivals: [] as Festival[],
+      cursor: nextCursor,
+      hasMore,
+    };
+  }
+
+  return {
+    events,
+    festivals: festivals || [],
+    cursor: nextCursor,
+    hasMore,
+  };
 }
 
 export async function GET(request: Request) {
@@ -64,127 +221,29 @@ export async function GET(request: Request) {
     const pageSize = 20;
     const cursor = searchParams.get("cursor");
 
-    // PERFORMANCE: Fetch events and festivals in parallel
-    // Skip festivals when event-specific filters are active that festivals
-    // can't match (tags, vibes, venue) — showing unfiltered
-    // festivals alongside filtered events is confusing.
-    const hasEventOnlyFilters = !!(
-      filters.tags?.length ||
-      filters.vibes?.length ||
-      filters.venue_id
-    );
-    const today = getLocalDateString(new Date());
+    // For first-page requests (no cursor), use shared cache to avoid repeat cold fetches.
+    // Paginated requests vary too much per cursor value and are far less common.
+    if (!cursor) {
+      const cacheKey = buildTimelineCacheKey(portalId, filters);
 
-    const [eventsResult, festivalsResult] = await Promise.all([
-      // Fetch events with cursor pagination
-      getFilteredEventsWithCursor(filters, cursor, pageSize),
+      const payload = await getOrSetSharedCacheJson<TimelinePayload>(
+        TIMELINE_CACHE_NAMESPACE,
+        cacheKey,
+        TIMELINE_CACHE_TTL_MS,
+        async () => {
+          return fetchTimelinePage(supabase, filters, portalId, portalCity, null, pageSize);
+        },
+        { maxEntries: 100 },
+      );
 
-      // Fetch festivals (if applicable)
-      hasEventOnlyFilters
-        ? Promise.resolve({ data: [], error: null })
-        : (async () => {
-            let festivalQuery = supabase
-              .from("festivals")
-              .select("id, name, slug, website, location, neighborhood, categories, free, announced_start, announced_end, ticket_url, description, image_url, typical_month, typical_duration_days, festival_type, portal_id")
-              .not("announced_start", "is", null);
-
-            // Note: we can't determine date range yet since we don't have events
-            // Apply a default future range filter for now
-            festivalQuery = festivalQuery.or(`announced_end.gte.${today},announced_end.is.null`);
-
-            // Apply portal filter
-            if (portalId) {
-              festivalQuery = festivalQuery.eq("portal_id", portalId);
-            }
-
-            // Apply search filter
-            if (filters.search) {
-              const escapedSearch = escapeSQLPattern(filters.search);
-              festivalQuery = festivalQuery.ilike("name", `%${escapedSearch}%`);
-            }
-
-            // Apply category filter
-            if (filters.categories && filters.categories.length > 0) {
-              festivalQuery = festivalQuery.overlaps("categories", filters.categories);
-            }
-
-            // Apply price filter
-            if (filters.is_free) {
-              festivalQuery = festivalQuery.eq("free", true);
-            }
-
-            // Apply neighborhood filter
-            if (filters.neighborhoods && filters.neighborhoods.length > 0) {
-              festivalQuery = festivalQuery.in("neighborhood", filters.neighborhoods);
-            }
-
-            // Apply date filter
-            if (filters.date_filter) {
-              if (filters.date_filter === "today") {
-                festivalQuery = festivalQuery
-                  .lte("announced_start", today)
-                  .gte("announced_end", today);
-              }
-            }
-
-            festivalQuery = festivalQuery
-              .order("announced_start", { ascending: true })
-              .limit(50);
-
-            return festivalQuery;
-          })()
-    ]);
-
-    const { events: rawEvents, nextCursor, hasMore } = eventsResult;
-
-    // Filter events by portal city (in-memory, avoids header overflow from venue ID pre-fetching)
-    const cityFilteredEvents = filterByPortalCity(rawEvents, portalCity, { allowMissingCity: true });
-
-    // Enrich events with social proof in parallel with festival processing
-    const events = await enrichEventsWithSocialProof(cityFilteredEvents);
-
-    let festivals: Festival[] = [];
-    let festivalError: { message: string } | null = null;
-
-    if (!hasEventOnlyFilters) {
-      const { data: festivalsData, error } = festivalsResult;
-
-      // Filter festivals based on actual event date range if we have events
-      if (festivalsData && hasMore && events.length > 0) {
-        const lastEventDate = events[events.length - 1].start_date;
-        festivals = (festivalsData as Festival[]).filter(f => {
-          // Include if starts within range or is currently happening
-          return (
-            (f.announced_start && f.announced_start >= today && f.announced_start <= lastEventDate) ||
-            (f.announced_start && f.announced_start <= today && f.announced_end && f.announced_end >= today)
-          );
-        });
-      } else {
-        festivals = (festivalsData || []) as Festival[];
-      }
-
-      festivalError = error;
-    }
-
-    if (festivalError) {
-      logger.error("Error fetching festivals for timeline", { error: festivalError.message });
-      // Return events without festivals rather than failing entirely
-      return apiResponse({
-        events,
-        festivals: [] as Festival[],
-        cursor: nextCursor,
-        hasMore,
-      }, {
+      return apiResponse(payload, {
         headers: { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60" },
       });
     }
 
-    return apiResponse({
-      events,
-      festivals: festivals || [],
-      cursor: nextCursor,
-      hasMore,
-    }, {
+    // Cursor requests fall through to direct fetch (no cache).
+    const cursorPayload = await fetchTimelinePage(supabase, filters, portalId, portalCity, cursor, pageSize);
+    return apiResponse(cursorPayload, {
       headers: { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60" },
     });
 

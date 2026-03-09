@@ -4,6 +4,7 @@ import { logger } from "@/lib/logger";
 import { resolvePortalQueryContext } from "@/lib/portal-query-context";
 import { applyPortalScopeToQuery, excludeSensitiveEvents, filterByPortalCity } from "@/lib/portal-scope";
 import { applyFeedGate } from "@/lib/feed-gate";
+import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
 
 type LiveEventRow = {
   id: number;
@@ -49,97 +50,106 @@ export async function GET(request: Request) {
     const portalClient = await createPortalScopedClient(portalContext.portalId);
     const portalCity = !portalExclusive ? portalContext.filters.city : undefined;
 
-    // Get all currently live events with venue info
-    let query = portalClient
-      .from("events")
-      .select(`
-        id,
-        title,
-        start_time,
-        end_time,
-        is_all_day,
-        category_id,
-        tags,
-        price_min,
-        price_max,
-        is_free,
-        ticket_url,
-        is_live,
-        venue:venues!events_venue_id_fkey(
-          id,
-          name,
-          neighborhood,
-          city,
-          lat,
-          lng,
-          venue_type
-        )
-      `)
-      .eq("is_live", true)
-      .is("canonical_event_id", null) // Only show canonical events, not duplicates
-      .order("start_time", { ascending: true });
+    const todayDate = new Date().toISOString().slice(0, 10);
+    const cacheKey = `${portalContext.portalId ?? "none"}|${portalExclusive}|${todayDate}`;
 
-    query = applyFeedGate(query);
-    query = applyPortalScopeToQuery(query, {
-      portalId: portalContext.portalId,
-      portalExclusive,
-      publicOnlyWhenNoPortal: true,
-    });
-    query = excludeSensitiveEvents(query);
+    type LiveResponsePayload = { events: (LiveEventRow & { going_count: number })[]; count: number };
 
-    const { data, error } = await query;
+    const payload = await getOrSetSharedCacheJson<LiveResponsePayload>(
+      "api:events-live",
+      cacheKey,
+      30 * 1000,
+      async () => {
+        // Get all currently live events with venue info
+        let query = portalClient
+          .from("events")
+          .select(`
+            id,
+            title,
+            start_time,
+            end_time,
+            is_all_day,
+            category_id,
+            tags,
+            price_min,
+            price_max,
+            is_free,
+            ticket_url,
+            is_live,
+            venue:venues!events_venue_id_fkey(
+              id,
+              name,
+              neighborhood,
+              city,
+              lat,
+              lng,
+              venue_type
+            )
+          `)
+          .eq("is_live", true)
+          .is("canonical_event_id", null) // Only show canonical events, not duplicates
+          .order("start_time", { ascending: true });
 
-    if (error) {
-      throw error;
-    }
+        query = applyFeedGate(query);
+        query = applyPortalScopeToQuery(query, {
+          portalId: portalContext.portalId,
+          portalExclusive,
+          publicOnlyWhenNoPortal: true,
+        });
+        query = excludeSensitiveEvents(query);
 
-    const events = filterByPortalCity((data as LiveEventRow[] | null) || [], portalCity, {
-      allowMissingCity: true,
-    });
+        const { data, error } = await query;
 
-    // Get RSVP counts for live events
-    const eventIds = events.map((e) => e.id);
-    let goingCounts: Record<number, number> = {};
+        if (error) {
+          throw error;
+        }
 
-    if (eventIds.length > 0) {
-      const { data: rsvpData } = await supabase
-        .from("event_rsvps")
-        .select("event_id")
-        .in("event_id", eventIds)
-        .eq("status", "going");
+        const events = filterByPortalCity((data as LiveEventRow[] | null) || [], portalCity, {
+          allowMissingCity: true,
+        });
 
-      const rsvps = rsvpData as { event_id: number }[] | null;
-      if (rsvps) {
-        goingCounts = rsvps.reduce((acc, rsvp) => {
-          acc[rsvp.event_id] = (acc[rsvp.event_id] || 0) + 1;
-          return acc;
-        }, {} as Record<number, number>);
-      }
-    }
+        // Get RSVP counts for live events
+        const eventIds = events.map((e) => e.id);
+        let goingCounts: Record<number, number> = {};
 
-    // Filter regular showtimes from live events
-    const nonShowtimeEvents = events.filter(
-      (event) => !event.tags?.includes("showtime")
-    );
+        if (eventIds.length > 0) {
+          const { data: rsvpData } = await supabase
+            .from("event_rsvps")
+            .select("event_id")
+            .in("event_id", eventIds)
+            .eq("status", "going");
 
-    // Enrich events with counts
-    const enrichedEvents = nonShowtimeEvents.map((event) => ({
-      ...event,
-      going_count: goingCounts[event.id] || 0,
-    }));
+          const rsvps = rsvpData as { event_id: number }[] | null;
+          if (rsvps) {
+            goingCounts = rsvps.reduce((acc, rsvp) => {
+              acc[rsvp.event_id] = (acc[rsvp.event_id] || 0) + 1;
+              return acc;
+            }, {} as Record<number, number>);
+          }
+        }
 
-    return Response.json(
-      {
-        events: enrichedEvents,
-        count: enrichedEvents.length,
+        // Filter regular showtimes from live events
+        const nonShowtimeEvents = events.filter(
+          (event) => !event.tags?.includes("showtime")
+        );
+
+        // Enrich events with counts
+        const enrichedEvents = nonShowtimeEvents.map((event) => ({
+          ...event,
+          going_count: goingCounts[event.id] || 0,
+        }));
+
+        return { events: enrichedEvents, count: enrichedEvents.length };
       },
-      {
-        headers: {
-          // Live events change frequently - short cache
-          "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
-        },
-      }
+      { maxEntries: 50 },
     );
+
+    return Response.json(payload, {
+      headers: {
+        // Live events change frequently - short cache
+        "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
+      },
+    });
   } catch (error) {
     logger.error("Live events API error:", error);
     return Response.json(
