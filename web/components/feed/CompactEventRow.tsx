@@ -52,7 +52,7 @@ export default function CompactEventRow({ event, portalSlug, size = "default", v
   } as React.CSSProperties), [catColor]);
 
   const placeholderStyle = useMemo(() => ({
-    background: `linear-gradient(160deg, color-mix(in srgb, ${catColor} 30%, var(--night)) 0%, color-mix(in srgb, ${catColor} 15%, var(--void)) 60%, var(--void) 100%)`,
+    background: `linear-gradient(160deg, color-mix(in srgb, ${catColor} 30%, #0F0F14) 0%, color-mix(in srgb, ${catColor} 15%, #09090b) 60%, #09090b 100%)`,
   }), [catColor]);
 
   const eventHref = getCivicEventHref(event, portalSlug, vertical) ?? `/${portalSlug}?event=${event.id}`;
@@ -127,7 +127,7 @@ export default function CompactEventRow({ event, portalSlug, size = "default", v
       {/* Content — below image */}
       <div className={isSm ? "px-2 py-2 space-y-0.5" : "px-2.5 py-2.5 space-y-1"}>
         {/* Title */}
-        <p className={`font-semibold text-[var(--cream)] group-hover:text-white transition-colors leading-snug ${isSm ? "text-xs line-clamp-1" : "text-sm line-clamp-2"}`}>
+        <p className={`font-semibold text-[var(--cream)] leading-snug ${isSm ? "text-xs line-clamp-1" : "text-sm line-clamp-2"}`}>
           {event.title}
         </p>
 

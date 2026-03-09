@@ -65,8 +65,23 @@ export default function LineupHero({ event, portalSlug, vertical }: LineupHeroPr
               className="object-cover group-hover:scale-[1.03] transition-transform duration-700 ease-out"
               sizes="(max-width: 768px) 100vw, 600px"
               blurhash={event.blurhash}
+              fallback={
+                <div
+                  className="absolute inset-0 flex items-center justify-center"
+                  style={{
+                    background: `linear-gradient(145deg, color-mix(in srgb, ${catColor} 40%, #18181F), color-mix(in srgb, ${catColor} 20%, #0F0F14))`,
+                  }}
+                >
+                  <CategoryIcon
+                    type={event.category || "other"}
+                    size={56}
+                    glow="none"
+                    weight="light"
+                  />
+                </div>
+              }
             />
-            {/* Category-tinted gradient: image fades into category color atmosphere */}
+            {/* Category-tinted gradient: image fades into dark overlay for text readability */}
             <div
               className="absolute inset-0"
               style={{
@@ -78,7 +93,7 @@ export default function LineupHero({ event, portalSlug, vertical }: LineupHeroPr
           <div
             className="w-full h-full flex items-center justify-center"
             style={{
-              background: `linear-gradient(145deg, color-mix(in srgb, ${catColor} 25%, #09090b), color-mix(in srgb, ${catColor} 8%, #09090b))`,
+              background: `linear-gradient(145deg, color-mix(in srgb, ${catColor} 40%, #18181F), color-mix(in srgb, ${catColor} 20%, #0F0F14))`,
             }}
           >
             <CategoryIcon
@@ -139,16 +154,16 @@ export default function LineupHero({ event, portalSlug, vertical }: LineupHeroPr
         {/* Bottom content — title, venue, social proof */}
         <div className="absolute bottom-0 left-0 right-0 px-4 pb-4">
           <p
-            className="font-masthead text-2xl sm:text-3xl font-bold text-[var(--cream)] leading-tight group-hover:text-white transition-colors line-clamp-2"
+            className="font-masthead text-2xl sm:text-3xl font-bold text-white leading-tight line-clamp-2"
             style={{ textShadow: "0 2px 12px rgba(0,0,0,0.7)" }}
           >
             {event.title}
           </p>
           <div className="flex items-center gap-2.5 mt-2">
-            <p className="text-sm text-[var(--soft)] truncate" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>
+            <p className="text-sm text-white/70 truncate" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}>
               {event.venue?.name}
               {event.venue?.neighborhood && (
-                <span className="text-[var(--muted)]">
+                <span className="text-white/50">
                   {" "}&middot; {event.venue.neighborhood}
                 </span>
               )}
