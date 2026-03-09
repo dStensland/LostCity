@@ -6,9 +6,10 @@ import { parseFloatParam, parseIntParam, validationError, isValidUUID } from "@/
 import { getLocalDateString } from "@/lib/formats";
 import { getProximityTier, getProximityLabel, getWalkingMinutes, haversineDistanceKm, type ProximityTier } from "@/lib/geo";
 import { logger } from "@/lib/logger";
-import { applyFederatedPortalScopeToQuery } from "@/lib/portal-scope";
+import { applyManifestFederatedScopeToQuery } from "@/lib/portal-scope";
 import { applyFeedGate } from "@/lib/feed-gate";
 import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
+import { buildPortalManifest } from "@/lib/portal-manifest";
 
 export const dynamic = "force-dynamic";
 
@@ -399,9 +400,17 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const now = new Date();
     const today = getLocalDateString(now);
 
-    const isExclusivePortal = portal.portal_type === "business" && !portal.parent_portal_id;
     const federationAccess = await getPortalSourceAccess(portal.id);
     const hasSubscribedSources = federationAccess.sourceIds.length > 0;
+    const manifest = buildPortalManifest({
+      portalId: portal.id,
+      slug: portal.slug,
+      portalType: portal.portal_type,
+      parentPortalId: portal.parent_portal_id,
+      settings: portal.settings,
+      filters: parsedFilters as { city?: string; cities?: string[] },
+      sourceIds: hasSubscribedSources ? federationAccess.sourceIds : [],
+    });
 
     let eventsQuery = portalClient
       .from("events")
@@ -412,9 +421,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       .or("is_class.eq.false,is_class.is.null")
       .or("is_sensitive.eq.false,is_sensitive.is.null");
 
-    eventsQuery = applyFederatedPortalScopeToQuery(eventsQuery, {
-      portalId: portal.id,
-      portalExclusive: isExclusivePortal,
+    eventsQuery = applyManifestFederatedScopeToQuery(eventsQuery, manifest, {
       sourceIds: hasSubscribedSources ? federationAccess.sourceIds : [],
       publicOnlyWhenNoPortal: true,
     });
