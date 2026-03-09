@@ -121,8 +121,9 @@ async function resolveParentPortalId(
     .maybeSingle();
 
   if (error) throw new Error(`Failed resolving parent portal '${parentSlug}': ${error.message}`);
-  if (!data?.id) throw new Error(`Parent portal not found for slug '${parentSlug}'`);
-  return data.id;
+  const row = data as { id: string } | null;
+  if (!row?.id) throw new Error(`Parent portal not found for slug '${parentSlug}'`);
+  return row.id;
 }
 
 async function resolveSourceIds(
