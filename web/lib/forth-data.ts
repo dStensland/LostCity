@@ -104,9 +104,9 @@ export function getQuickActions(dayPart: DayPart): QuickAction[] {
 // ---------------------------------------------------------------------------
 
 export const HERO_PHOTOS_BY_DAYPART: Record<DayPart, string> = {
-  morning: "https://images.unsplash.com/photo-1444201983204-c43cbd584d93?auto=format&fit=crop&w=2200&q=80",
-  afternoon: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=2200&q=80",
-  evening: "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=2200&q=80",
+  morning: "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=1600&q=80",
+  afternoon: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1600&q=80",
+  evening: "https://images.unsplash.com/photo-1470337458703-46ad1756a187?w=1600&q=80",
   late_night: "https://images.unsplash.com/photo-1544148103-0773bf10d330?auto=format&fit=crop&w=2200&q=80",
 };
 
@@ -133,7 +133,7 @@ const DEFAULT_SIGNATURE_VENUES: SignatureVenue[] = [
     spotlight: "Poolside Mediterranean with daytime-to-sunset transitions.",
     mockSpecial: "Poolside Lunch Prix Fixe",
     mockNote: "Weekdays until 3pm",
-    photoUrl: "https://images.unsplash.com/photo-1578683010236-d716f9a3f461?auto=format&fit=crop&w=1600&q=80",
+    photoUrl: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&q=80",
   },
   {
     id: "bar-premio",
@@ -153,7 +153,7 @@ const DEFAULT_SIGNATURE_VENUES: SignatureVenue[] = [
     spotlight: "Rooftop views and late-night cocktail programming.",
     mockSpecial: "Sunset Martini Service",
     mockNote: "Daily from 6pm",
-    photoUrl: "https://images.unsplash.com/photo-1514933651103-005eec06c04b2?auto=format&fit=crop&w=1600&q=80",
+    photoUrl: "https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=800&q=80",
   },
 ];
 
@@ -668,6 +668,13 @@ async function fetchFeedSectionsDirect(
         filtered = filtered.filter((e) => !excludeSet.has(e.id));
       }
 
+      if (section.show_after_time) {
+        filtered = filtered.filter((e) => {
+          if (!e.start_time) return true;
+          return e.start_time >= section.show_after_time!;
+        });
+      }
+
       events = filtered.slice(0, limit);
 
       // For mixed sections, merge curated items at the top
@@ -764,11 +771,14 @@ async function fetchDestinationsDirect(
     })
     .filter((v): v is DbVenue & { distance_km: number; proximity_tier: ProximityTier; proximity_label: string } => v !== null);
 
-  if (venuesInRadius.length === 0) {
+  const propertyVenueSlugs = new Set(['bar-premio', 'il-premio', 'elektra-forth', 'moonlight-forth', 'forth-hotel-atlanta']);
+  const filteredVenues = venuesInRadius.filter((v) => !propertyVenueSlugs.has(v.slug));
+
+  if (filteredVenues.length === 0) {
     return { destinations: [], liveDestinations: [], specialsMeta: null };
   }
 
-  const venueIds = venuesInRadius.map((v) => v.id);
+  const venueIds = filteredVenues.map((v) => v.id);
 
   // 2. Fetch specials + next events in parallel
   const today = getLocalDateString();
@@ -825,7 +835,7 @@ async function fetchDestinationsDirect(
   const now = new Date();
   const CONFIDENCE_SCORE: Record<string, number> = { high: 3, medium: 2, low: 1 };
 
-  const allDestinations = venuesInRadius
+  const allDestinations = filteredVenues
     .map((venue): Destination | null => {
       const specials = specialsByVenue.get(venue.id) || [];
       const withStatus = specials.map((s) => ({ special: s, status: getSpecialStatus(s, now, includeUpcomingHours, today) }));
