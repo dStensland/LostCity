@@ -18,7 +18,7 @@
  * No GreetingBar, no magazine-style hero, no feed customizer.
  */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useCityPulseFeed } from "@/lib/hooks/useCityPulseFeed";
 import { usePortal } from "@/lib/portal-context";
 import { CivicOnboarding } from "@/components/civic/CivicOnboarding";
@@ -27,16 +27,19 @@ import { getVisualPreset } from "@/lib/visual-presets";
 import { getDayOfWeek } from "@/lib/city-pulse/time-slots";
 import type {
   CityPulseSectionType,
-  QuickLink,
 } from "@/lib/city-pulse/types";
 
 import CivicHero from "./civic/CivicHero";
+import { CivicImpactStrip } from "./civic/CivicImpactStrip";
 import UpcomingDeadlinesCard from "./civic/UpcomingDeadlinesCard";
 import InterestChannelsSection from "./sections/InterestChannelsSection";
 import NetworkFeedSection from "./sections/NetworkFeedSection";
 import LineupSection from "./LineupSection";
 import LazySection from "./LazySection";
 import { CalendarBlank, UsersThree } from "@phosphor-icons/react";
+
+/** Categories visible in the civic network feed */
+const CIVIC_NEWS_CATEGORIES = ["news", "civic", "politics", "community"];
 
 // Section types included in the civic timeline — includes "trending" because
 // civic events often land there instead of time-based slots. The LineupSection
@@ -78,13 +81,16 @@ export default function CivicFeedShell({ portalSlug }: CivicFeedShellProps) {
     timeSlot: effectiveTimeSlot,
   } = useCityPulseFeed({ portalSlug });
 
-  // Quick links from portal settings
-  const quickLinks = useMemo<QuickLink[]>(() => {
-    if (Array.isArray(portal.settings.hero_quick_links)) {
-      return portal.settings.hero_quick_links as QuickLink[];
-    }
-    return [];
-  }, [portal.settings.hero_quick_links]);
+  // Group count for CivicHero pathway pill — lightweight one-off fetch
+  const [groupCount, setGroupCount] = useState<number | undefined>(undefined);
+  useEffect(() => {
+    fetch(`/api/portals/${portalSlug}/channels`, { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.channels) setGroupCount(data.channels.length);
+      })
+      .catch(() => {/* non-critical */});
+  }, [portalSlug]);
 
   // Light theme detection for feed theme vars
   const isLightTheme = useMemo(() => {
@@ -123,7 +129,6 @@ export default function CivicFeedShell({ portalSlug }: CivicFeedShellProps) {
 
   const lineupLoading = isLoading && lineupSections.length === 0;
   const hasAnyTabEvents = tabCounts && (tabCounts.today > 0 || tabCounts.this_week > 0 || tabCounts.coming_up > 0);
-  const dayOfWeek = feedContext.day_of_week || getDayOfWeek();
 
   if (error && !data && !isLoading) {
     return (
@@ -152,111 +157,135 @@ export default function CivicFeedShell({ portalSlug }: CivicFeedShellProps) {
         />
       )}
 
-      {/* 1. Civic Hero — editorial masthead */}
+      {/* 1. Civic Hero — full-width editorial masthead */}
       <CivicHero
         portalSlug={portalSlug}
-        portalName={portal.name}
-        quickLinks={quickLinks}
-        dayOfWeek={dayOfWeek}
         tabCounts={tabCounts}
+        weather={feedContext.weather}
+        cityName={portal.filters?.city ?? "Atlanta"}
+        groupCount={groupCount}
+        lineupSections={lineupSections}
       />
 
-      {/* 2. Interest Channels — "Your Groups" personalization anchor */}
-      <div className="mt-2">
-        <InterestChannelsSection portalSlug={portalSlug} onSubscriptionChange={refresh} />
-      </div>
+      {/* 2. Two-column desktop layout */}
+      <div className="mt-4 lg:grid lg:grid-cols-[1fr_340px] lg:gap-8">
+        {/* ── Main Column ───────────────────────────────────────── */}
+        <div className="min-w-0">
+          {/* Interest Channels — compact in feed, capped to 6 */}
+          <InterestChannelsSection portalSlug={portalSlug} onSubscriptionChange={refresh} maxVisible={6} compact />
 
-      {/* Section divider */}
-      <div className="mt-6 mb-5">
-        <div
-          className="h-px"
-          style={{
-            background: "linear-gradient(90deg, var(--action-primary) 0%, var(--twilight) 30%, transparent 100%)",
-            opacity: 0.4,
-          }}
-        />
-      </div>
-
-      {/* 3. Meetings & Events Timeline */}
-      <div className="scroll-mt-28" style={{ minHeight: lineupLoading ? 400 : undefined }}>
-        {lineupLoading ? (
-          <div
-            className="rounded-xl border border-[var(--twilight)] bg-[var(--night)]"
-            style={{ minHeight: 400 }}
-            role="status"
-          >
-            <div className="p-5 space-y-3">
-              <div className="h-3 w-3/4 rounded-full skeleton-shimmer" style={{ opacity: 0.2 }} />
-              <div className="h-3 w-1/2 rounded-full skeleton-shimmer" style={{ opacity: 0.15, animationDelay: "60ms" }} />
-              <div className="h-2.5 w-2/3 rounded-full skeleton-shimmer" style={{ opacity: 0.12, animationDelay: "120ms" }} />
-            </div>
-            <div className="px-5 space-y-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-20 rounded-xl skeleton-shimmer" style={{ opacity: 0.1, animationDelay: `${i * 80}ms` }} />
-              ))}
-            </div>
-            <span className="sr-only">Loading events...</span>
+          {/* Impact strip — mobile only (desktop uses sidebar card) */}
+          <div className="lg:hidden mt-4">
+            <CivicImpactStrip portalSlug={portalSlug} variant="strip" />
           </div>
-        ) : lineupSections.length > 0 || hasAnyTabEvents ? (
-          <div className="animate-fade-in">
-            <LineupSection
-              sections={lineupSections}
-              portalSlug={portalSlug}
-              tabCounts={tabCounts}
-              fetchTab={fetchTab}
-              showCategoryFilters={false}
-              sectionTitle="Upcoming"
-              sectionAccentColor="var(--action-primary)"
-              keepRecurring
-              activeInterests={[]}
-              vertical="community"
+
+          {/* Section divider */}
+          <div className="mt-4 mb-3">
+            <div
+              className="h-px"
+              style={{
+                background: "linear-gradient(90deg, var(--action-primary) 0%, var(--twilight) 40%, transparent 100%)",
+                opacity: 0.6,
+              }}
             />
           </div>
-        ) : !isLoading ? (
-          <div className="rounded-xl border border-[var(--twilight)] bg-[var(--night)] p-10 text-center">
-            <CalendarBlank size={44} weight="duotone" className="mx-auto text-[var(--muted)]/60 mb-4" />
-            <p className="text-base font-semibold text-[var(--cream)] mb-1.5">
-              No upcoming events yet
-            </p>
-            <p className="text-sm text-[var(--muted)] mb-5 max-w-xs mx-auto">
-              Join groups above to customize your civic feed with the topics you care about.
-            </p>
-            <a
-              href={`/${portalSlug}/groups`}
-              className="inline-flex items-center gap-2 rounded-lg bg-[var(--action-primary)] px-5 py-2.5 text-sm font-medium text-[var(--btn-primary-text)] hover:bg-[var(--action-primary-hover)] transition-colors"
-            >
-              <UsersThree weight="bold" className="w-4 h-4" />
-              Browse Groups
-            </a>
-          </div>
-        ) : null}
-      </div>
 
-      {/* 4. Upcoming Deadlines — only when enough items */}
-      {lineupSections.length > 0 && (
-        <div className="mt-5">
+          {/* Meetings & Events Timeline */}
+          <div className="scroll-mt-28" style={{ minHeight: lineupLoading ? 400 : undefined }}>
+            {lineupLoading ? (
+              <div
+                className="rounded-xl border border-[var(--twilight)] bg-[var(--night)]"
+                style={{ minHeight: 400 }}
+                role="status"
+              >
+                <div className="p-5 space-y-3">
+                  <div className="h-3 w-3/4 rounded-full skeleton-shimmer" style={{ opacity: 0.2 }} />
+                  <div className="h-3 w-1/2 rounded-full skeleton-shimmer" style={{ opacity: 0.15, animationDelay: "200ms" }} />
+                  <div className="h-2.5 w-2/3 rounded-full skeleton-shimmer" style={{ opacity: 0.12, animationDelay: "400ms" }} />
+                </div>
+                <div className="px-5 space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="h-20 rounded-xl skeleton-shimmer" style={{ opacity: 0.1, animationDelay: `${i * 200}ms` }} />
+                  ))}
+                </div>
+                <span className="sr-only">Loading events...</span>
+              </div>
+            ) : lineupSections.length > 0 || hasAnyTabEvents ? (
+              <LineupSection
+                sections={lineupSections}
+                portalSlug={portalSlug}
+                tabCounts={tabCounts}
+                fetchTab={fetchTab}
+                showCategoryFilters={false}
+                sectionTitle="Upcoming"
+                sectionAccentColor="var(--action-primary)"
+                keepRecurring
+                activeInterests={[]}
+                vertical="community"
+              />
+            ) : !isLoading ? (
+              <div className="rounded-xl border border-[var(--twilight)] bg-[var(--night)] p-10 text-center">
+                <CalendarBlank size={44} weight="duotone" className="mx-auto text-[var(--muted)]/60 mb-4" />
+                <p className="text-base font-semibold text-[var(--cream)] mb-1.5">
+                  No upcoming events yet
+                </p>
+                <p className="text-sm text-[var(--muted)] mb-5 max-w-xs mx-auto">
+                  Join groups above to customize your civic feed with the topics you care about.
+                </p>
+                <a
+                  href={`/${portalSlug}/groups`}
+                  className="inline-flex items-center gap-2 rounded-lg bg-[var(--action-primary)] px-5 py-2.5 text-sm font-medium text-[var(--btn-primary-text)] hover:bg-[var(--action-primary-hover)] transition-colors"
+                >
+                  <UsersThree weight="bold" className="w-4 h-4" />
+                  Browse Groups
+                </a>
+              </div>
+            ) : null}
+          </div>
+
+          {/* Civic Updates — local civic news */}
+          <div className="mt-8 scroll-mt-28">
+            <div className="mb-5">
+              <div
+                className="h-px"
+                style={{
+                  background: "linear-gradient(90deg, var(--action-primary) 0%, var(--twilight) 30%, transparent 100%)",
+                  opacity: 0.4,
+                }}
+              />
+            </div>
+            <LazySection minHeight={300}>
+              <NetworkFeedSection
+                portalSlug={portalSlug}
+                accentColor="var(--action-primary)"
+                sectionTitle="Civic Updates"
+                visibleCategories={CIVIC_NEWS_CATEGORIES}
+              />
+            </LazySection>
+          </div>
+        </div>
+
+        {/* ── Sidebar (desktop only) ────────────────────────────── */}
+        <aside className="hidden lg:block space-y-5 border-l border-[var(--twilight)] pl-8">
+          {/* Impact Snapshot — civic engagement stats */}
+          <CivicImpactStrip portalSlug={portalSlug} variant="card" />
+
+          {/* Upcoming Deadlines — promoted to sidebar */}
           <UpcomingDeadlinesCard
             lineupSections={lineupSections}
             portalSlug={portalSlug}
-            minItems={3}
+            minItems={1}
           />
-        </div>
-      )}
+        </aside>
+      </div>
 
-      {/* 5. Community Network — local civic news */}
-      <div className="mt-8 scroll-mt-28">
-        <div className="mb-5">
-          <div
-            className="h-px"
-            style={{
-              background: "linear-gradient(90deg, var(--action-primary) 0%, var(--twilight) 30%, transparent 100%)",
-              opacity: 0.4,
-            }}
-          />
-        </div>
-        <LazySection minHeight={300}>
-          <NetworkFeedSection portalSlug={portalSlug} accentColor="var(--action-primary)" />
-        </LazySection>
+      {/* Mobile-only: Upcoming Deadlines (below timeline) */}
+      <div className="lg:hidden mt-5">
+        <UpcomingDeadlinesCard
+          lineupSections={lineupSections}
+          portalSlug={portalSlug}
+          minItems={1}
+        />
       </div>
     </div>
   );

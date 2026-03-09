@@ -90,20 +90,11 @@ export function GroupSubscribeButton({
         type="button"
         onClick={handleToggle}
         disabled={isPending}
-        className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-60"
-        style={
+        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-60 border-[1.5px] ${
           isSubscribed
-            ? {
-                backgroundColor: "rgba(45, 106, 79, 0.1)",
-                color: "#2D6A4F",
-                border: "1.5px solid #2D6A4F",
-              }
-            : {
-                backgroundColor: "#1D4ED8",
-                color: "#ffffff",
-                border: "1.5px solid #1D4ED8",
-              }
-        }
+            ? "bg-[var(--action-primary)]/10 text-[var(--action-primary)] border-[var(--action-primary)]"
+            : "bg-[var(--action-primary)] text-[var(--btn-primary-text,#fff)] border-[var(--action-primary)] hover:opacity-90"
+        }`}
         aria-pressed={isSubscribed}
       >
         {isSubscribed ? (
@@ -119,7 +110,7 @@ export function GroupSubscribeButton({
         )}
       </button>
       {error && (
-        <p className="mt-2 text-xs" style={{ color: "#DC2626" }}>
+        <p className="mt-2 text-xs text-[var(--neon-red)]">
           {error}
         </p>
       )}

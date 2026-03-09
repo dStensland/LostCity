@@ -54,10 +54,10 @@ export default function MinimalHeader({
 
   return (
     <header
-      className={`sticky top-0 z-[100] border-b transition-all duration-300 ${
+      className={`sticky top-0 z-[100] border-b transition-all duration-300 backdrop-blur-md ${
         isScrolled
-          ? "glass border-[var(--twilight)]/50"
-          : "bg-[var(--void)]/95 backdrop-blur-sm border-[var(--twilight)]/30"
+          ? "bg-[var(--void)]/95 border-[var(--twilight)]/50 shadow-sm"
+          : "bg-[var(--void)]/95 border-[var(--twilight)]/30"
       }`}
     >
       <div className="px-4 py-3 flex items-center justify-between">
@@ -85,42 +85,52 @@ export default function MinimalHeader({
               {!branding?.hide_attribution && (
                 <Link
                   href={`/${DEFAULT_PORTAL_SLUG}`}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-[var(--twilight)]/50 hover:border-[var(--coral)]/50 transition-colors group"
+                  className="hidden sm:inline-flex items-center gap-1 opacity-40 hover:opacity-70 transition-opacity"
+                  title="Powered by Lost City"
                 >
-                  <span className="hidden sm:inline text-2xs font-mono text-[var(--muted)]">powered by</span>
-                  <span className="text-2xs font-mono font-semibold text-[var(--coral)] group-hover:opacity-80 transition-opacity">Lost City</span>
+                  <span className="text-2xs font-mono text-[var(--muted)]">on</span>
+                  <span className="text-2xs font-mono font-semibold text-[var(--soft)]">Lost City</span>
                 </Link>
               )}
             </div>
           ) : portalSlug !== DEFAULT_PORTAL_SLUG ? (
-            <div className="flex items-center gap-2.5">
-              <Link href={`/${portalSlug}`} className="flex items-center gap-2">
-                {/* Monogram mark */}
+            <div className="flex items-center gap-3">
+              <Link href={`/${portalSlug}`} className="flex items-center gap-2.5 group/logo">
+                {/* Portal monogram — squircle mark using portal colors */}
                 <div
-                  className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-                  style={{ backgroundColor: "var(--action-primary)" }}
+                  className="relative w-8 h-8 shrink-0 rounded-[9px] flex items-center justify-center"
+                  style={{
+                    background: "linear-gradient(135deg, var(--action-primary) 0%, color-mix(in srgb, var(--action-primary) 70%, #34d399) 100%)",
+                    boxShadow: "0 2px 6px color-mix(in srgb, var(--action-primary) 20%, transparent)",
+                  }}
                 >
                   <span
-                    className="text-sm font-bold leading-none text-white"
-                    style={{ fontFamily: "var(--portal-font-heading, inherit)" }}
+                    className="text-sm font-extrabold text-white leading-none"
+                    style={{ letterSpacing: "-0.03em" }}
                   >
                     {portalName.charAt(0).toUpperCase()}
                   </span>
                 </div>
+                {/* Portal wordmark — colored with action-primary for identity */}
                 <span
-                  className="font-semibold text-xl text-[var(--cream)] tracking-tight leading-none"
-                  style={{ fontFamily: "var(--portal-font-heading, inherit)" }}
+                  className="font-semibold text-xl tracking-tight leading-none transition-opacity group-hover/logo:opacity-75"
+                  style={{
+                    fontFamily: "var(--portal-font-heading, inherit)",
+                    color: "var(--action-primary)",
+                  }}
                 >
                   {portalName}
                 </span>
               </Link>
+              {/* Attribution — subtle, non-competing */}
               {!branding?.hide_attribution && (
                 <Link
                   href={`/${DEFAULT_PORTAL_SLUG}`}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-[var(--twilight)]/50 hover:border-[var(--action-primary)]/50 transition-colors group"
+                  className="hidden sm:inline-flex items-center gap-1 opacity-40 hover:opacity-70 transition-opacity"
+                  title="Powered by Lost City"
                 >
-                  <span className="hidden sm:inline text-2xs font-mono text-[var(--muted)]">powered by</span>
-                  <span className="text-2xs font-mono font-semibold text-[var(--action-primary)] group-hover:opacity-80 transition-opacity">Lost City</span>
+                  <span className="text-2xs font-mono text-[var(--muted)]">on</span>
+                  <span className="text-2xs font-mono font-semibold text-[var(--soft)]">Lost City</span>
                 </Link>
               )}
             </div>
