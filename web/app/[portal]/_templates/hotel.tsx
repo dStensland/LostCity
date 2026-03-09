@@ -1,22 +1,20 @@
 import HotelConciergeFeed from "../_components/hotel/HotelConciergeFeed";
-import ConciergeExperience from "../_components/concierge/ConciergeExperience";
+import DiscoverExperience from "../_components/concierge/DiscoverExperience";
 import { isConciergePortal } from "@/lib/concierge/concierge-config";
 import type { Portal } from "@/lib/portal-context";
-import type { Pillar } from "@/lib/concierge/concierge-types";
 
 interface HotelTemplateProps {
   portal: Portal;
-  initialPillar?: Pillar;
 }
 
 /**
- * Hotel template - luxury concierge guided experience
- * Uses the concierge framework for FORTH-variant portals,
- * falls back to HotelConciergeFeed for others.
+ * Hotel template - luxury concierge guided experience.
+ * FORTH-variant portals use the single-surface Discover feed.
+ * Falls back to HotelConciergeFeed for non-FORTH hotel portals.
  */
-export async function HotelTemplate({ portal, initialPillar }: HotelTemplateProps) {
+export async function HotelTemplate({ portal }: HotelTemplateProps) {
   if (isConciergePortal(portal)) {
-    return <ConciergeExperience portal={portal} initialPillar={initialPillar} />;
+    return <DiscoverExperience portal={portal} />;
   }
 
   return <HotelConciergeFeed portal={portal} />;
