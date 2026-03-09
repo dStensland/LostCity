@@ -40,18 +40,13 @@ jobs:
           playwright install chromium
           playwright install-deps chromium
 
-      - name: Create config file
-        working-directory: crawlers
-        run: |
-          cat > .env << EOF
-          SUPABASE_URL=${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY=${{ secrets.SUPABASE_SERVICE_KEY }}
-          ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
-          TICKETMASTER_API_KEY=${{ secrets.TICKETMASTER_API_KEY }}
-          EOF
-
       - name: Run crawler
         working-directory: crawlers
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TICKETMASTER_API_KEY: ${{ secrets.TICKETMASTER_API_KEY }}
         run: |
           if [ -n "${{ github.event.inputs.source }}" ]; then
             echo "Running crawler for: ${{ github.event.inputs.source }}"

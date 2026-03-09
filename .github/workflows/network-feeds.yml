@@ -37,16 +37,11 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Create config file
-        working-directory: crawlers
-        run: |
-          cat > .env << EOF
-          SUPABASE_URL=${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY=${{ secrets.SUPABASE_SERVICE_KEY }}
-          EOF
-
       - name: Run network feed crawl
         working-directory: crawlers
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: |
           LIMIT="${{ github.event.inputs.limit }}"
           if [ -z "$LIMIT" ]; then
