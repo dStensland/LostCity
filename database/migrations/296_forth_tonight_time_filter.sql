@@ -22,8 +22,7 @@ BEGIN
   END IF;
 
   UPDATE portal_sections
-  SET    show_after_time = '14:00',
-         updated_at      = now()
+  SET    show_after_time = '14:00'
   WHERE  portal_id = forth_id
     AND  slug      = 'this-evening';
 
