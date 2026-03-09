@@ -669,4 +669,4 @@ export const CivicOnboarding = memo(function CivicOnboarding({
   );
 });
 
-export type { CivicOnboardingProps };
+
