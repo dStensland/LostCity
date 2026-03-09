@@ -50,10 +50,10 @@ jobs:
         run: |
           if [ -n "${{ github.event.inputs.source }}" ]; then
             echo "Running crawler for: ${{ github.event.inputs.source }}"
-            python main.py --source "${{ github.event.inputs.source }}"
+            python main.py --source "${{ github.event.inputs.source }}" --allow-production-writes
           else
             echo "Running all crawlers"
-            python main.py
+            python main.py --allow-production-writes
           fi
 
       - name: Summary
