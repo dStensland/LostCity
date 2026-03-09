@@ -29,7 +29,7 @@ export default function UpcomingDeadlinesCard({
   if (deadlines.length < minItems) return null;
 
   return (
-    <section className="rounded-xl border border-[var(--twilight)] bg-[var(--night)] overflow-hidden">
+    <section className="rounded-xl border border-[var(--twilight)] bg-[var(--card-bg,var(--night))] overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between gap-3 px-4 pt-3.5 pb-3">
         <div className="flex items-center gap-2">
