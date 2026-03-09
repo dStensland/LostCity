@@ -31,6 +31,25 @@ const HOSPITALITY_POSITIVE_KEYWORDS = [
   "brunch",
   "market",
   "festival",
+  "wine",
+  "gallery",
+  "museum",
+  "tour",
+  "performance",
+  "chef",
+  "prix fixe",
+  "acoustic",
+  "dj set",
+  "patio",
+  "craft",
+  "speakeasy",
+  "popup",
+  "supper club",
+  "oyster",
+  "comedy show",
+  "open mic",
+  "art walk",
+  "food hall",
 ];
 
 const HOSPITALITY_NEGATIVE_KEYWORDS = [
@@ -46,25 +65,56 @@ const HOSPITALITY_NEGATIVE_KEYWORDS = [
   "hearing",
   "volunteer",
   "certification",
+  "recovery",
+  "rehab",
+  "job fair",
+  "career fair",
+  "blood drive",
+  "food bank",
+  "food pantry",
+  "housing assistance",
+  "resume workshop",
+  "legal aid",
+  "town hall",
+  "zoning",
+  "public comment",
+  "budget hearing",
+  "school board",
+  "training session",
+  "webinar",
+  "orientation",
+  "intake",
+  "enrollment",
+  "parent meeting",
+  "pta",
+  "fundraiser",
 ];
 
 const CATEGORY_REASON_LABELS: Record<string, string> = {
   music: "Live music",
-  comedy: "Comedy night",
-  theater: "Theater pick",
-  nightlife: "Nightlife energy",
-  food_drink: "Dining favorite",
-  film: "Cinema pick",
+  comedy: "Comedy",
+  theater: "Theater",
+  nightlife: "Nightlife",
+  food_drink: "Dining",
+  film: "Film",
   art: "Arts & culture",
 };
 
 const KEYWORD_REASON_LABELS: Array<{ keyword: string; label: string }> = [
-  { keyword: "rooftop", label: "Rooftop vibe" },
-  { keyword: "cocktail", label: "Cocktail spot" },
+  { keyword: "rooftop", label: "Rooftop" },
+  { keyword: "cocktail", label: "Cocktails" },
   { keyword: "happy hour", label: "Happy hour" },
-  { keyword: "brunch", label: "Brunch-friendly" },
+  { keyword: "brunch", label: "Brunch" },
   { keyword: "jazz", label: "Live jazz" },
-  { keyword: "festival", label: "Festival atmosphere" },
+  { keyword: "festival", label: "Festival" },
+  { keyword: "wine", label: "Wine" },
+  { keyword: "tasting", label: "Tasting" },
+  { keyword: "gallery", label: "Gallery" },
+  { keyword: "speakeasy", label: "Speakeasy" },
+  { keyword: "acoustic", label: "Acoustic" },
+  { keyword: "open mic", label: "Open mic" },
+  { keyword: "chef", label: "Chef-driven" },
+  { keyword: "popup", label: "Pop-up" },
 ];
 
 type RankedEvent = FeedEvent & { _score: number };
@@ -111,9 +161,9 @@ function dayPartTimeScore(dayPart: DayPart, hour: number | null): number {
 function dayPartTimeReason(dayPart: DayPart, hour: number | null): string | null {
   if (hour === null) return null;
 
-  if (dayPart === "morning" && hour >= 6 && hour < 11) return "Great this morning";
-  if (dayPart === "afternoon" && hour >= 11 && hour < 17) return "Ideal this afternoon";
-  if (dayPart === "evening" && hour >= 17 && hour < 23) return "Perfect for tonight";
+  if (dayPart === "morning" && hour >= 6 && hour < 11) return "Morning pick";
+  if (dayPart === "afternoon" && hour >= 11 && hour < 17) return "Afternoon pick";
+  if (dayPart === "evening" && hour >= 17 && hour < 23) return "Tonight's pick";
   if (dayPart === "late_night" && (hour >= 22 || hour < 3)) return "Open late";
   return null;
 }
@@ -168,8 +218,8 @@ function distanceScore(distanceKm: number | null | undefined): number {
 
 function distanceReason(distanceKm: number | null | undefined): string | null {
   if (typeof distanceKm !== "number") return null;
-  if (distanceKm <= 1.2) return "Walkable from hotel";
-  if (distanceKm <= 2.5) return "Short ride away";
+  if (distanceKm <= 1.2) return "Easy walk";
+  if (distanceKm <= 2.5) return "Quick ride";
   return null;
 }
 

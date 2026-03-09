@@ -24,6 +24,8 @@ import { getPortalSourceAccess } from "@/lib/federation";
 import { applyFederatedPortalScopeToQuery } from "@/lib/portal-scope";
 import { getLocalDateString } from "@/lib/formats";
 import { isActiveNow, formatTimeWindow } from "@/lib/specials-utils";
+import { rankEventsForConcierge } from "./event-relevance";
+import { getDayPart } from "@/lib/forth-data";
 
 // ---------------------------------------------------------------------------
 // Property moment computation
@@ -423,17 +425,22 @@ export async function getDiscoverFeedData(
   const { sections, destinations, agentNarrative } = feedData;
   const { conciergePhone } = propertyData;
 
-  // Extract tonight events from feed sections
+  // Extract tonight events from feed sections, ranked by hotel relevance
+  const dayPart = getDayPart(now);
   const tonightSection = sections.find(
     (s) => s.slug === "tonight" || s.slug === "today" || s.slug === "this-evening"
   );
-  const tonightEvents = tonightSection?.events || [];
+  const tonightEvents = rankEventsForConcierge(
+    tonightSection?.events || [],
+    dayPart,
+    { strictCutoff: 0.0, minResults: 4 },
+  );
 
-  // Extract coming-up events (non-tonight sections), filtering out past events for today
+  // Extract coming-up events (non-tonight sections), ranked and filtered
   const tonightSlugs = new Set(["tonight", "today", "this-evening"]);
   const currentTimeStr = now.toTimeString().slice(0, 5); // "HH:MM"
   const todayStr = getLocalDateString(now);
-  const comingUpEvents = sections
+  const rawComingUp = sections
     .filter((s) => !tonightSlugs.has(s.slug || ""))
     .flatMap((s) => s.events)
     .filter((e) => {
@@ -443,6 +450,11 @@ export async function getDiscoverFeedData(
       }
       return true;
     });
+  const comingUpEvents = rankEventsForConcierge(
+    rawComingUp,
+    dayPart,
+    { strictCutoff: 0.0, minResults: 4 },
+  );
 
   // Fetch real venue_specials for signature venues and pass to computePropertyMoments.
   const propertySpecialsMap = await fetchSignatureVenueSpecials(

@@ -49,9 +49,9 @@ export function DiscoverSceneSection({ regulars }: DiscoverSceneSectionProps) {
     <section id="scene" className="rounded-2xl bg-[var(--hotel-cream)]/60 p-5 md:p-6 space-y-3">
       {/* Section header */}
       <div>
-        <h2 className="font-display text-2xl text-[var(--hotel-charcoal)]">The Scene</h2>
+        <h2 className="font-display text-2xl text-[var(--hotel-charcoal)]">Neighborhood Regulars</h2>
         <p className="text-sm font-body text-[var(--hotel-stone)] mt-0.5">
-          Weekly regulars nearby
+          The weekly lineup steps from your door
         </p>
       </div>
 

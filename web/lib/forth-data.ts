@@ -45,27 +45,27 @@ export function getDayPart(now: Date): DayPart {
 }
 
 export function getDayPartGreeting(dayPart: DayPart, portalName?: string): { title: string; subtitle: string } {
-  const name = portalName || "your hotel";
+  void portalName;
   switch (dayPart) {
     case "morning":
       return {
         title: "Good Morning",
-        subtitle: `Start your stay with the best coffee, brunch, and nearby options around ${name}.`,
+        subtitle: "The best neighborhood coffee, brunch spots, and what's worth doing today.",
       };
     case "afternoon":
       return {
-        title: "Your Afternoon Plan",
-        subtitle: "Happy hour, dinner, and tonight's standout events, arranged for easy decisions.",
+        title: "Your Afternoon",
+        subtitle: "Happy hours are starting up, dinner reservations are filling — here's what's on tonight.",
       };
     case "evening":
       return {
-        title: "Good Evening",
-        subtitle: "Live specials, top events, and walkable picks for a great evening.",
+        title: "Tonight in Midtown",
+        subtitle: "Live music, cocktail hours, and the best of what's happening within walking distance.",
       };
     case "late_night":
       return {
-        title: "Late Night",
-        subtitle: "Best nightcap options now plus strong picks for tomorrow morning.",
+        title: "Still Out?",
+        subtitle: "Late-night spots still going and our picks for tomorrow morning.",
       };
   }
 }
@@ -74,27 +74,27 @@ export function getQuickActions(dayPart: DayPart): QuickAction[] {
   switch (dayPart) {
     case "morning":
       return [
-        { label: "Coffee nearby", icon: "coffee", sectionId: "nearby" },
-        { label: "Today's events", icon: "calendar", sectionId: "tonight" },
-        { label: "Plan your day", icon: "spa", sectionId: "plan" },
+        { label: "Morning coffee", icon: "coffee", sectionId: "nearby" },
+        { label: "What's on today", icon: "calendar", sectionId: "tonight" },
+        { label: "Walk the BeltLine", icon: "map", sectionId: "nearby" },
       ];
     case "afternoon":
       return [
-        { label: "Lunch spots", icon: "utensils", sectionId: "nearby" },
+        { label: "Happy hour", icon: "glass", sectionId: "nearby" },
         { label: "Tonight's picks", icon: "sparkles", sectionId: "tonight" },
-        { label: "BeltLine walk", icon: "map", sectionId: "nearby" },
+        { label: "Walk the BeltLine", icon: "map", sectionId: "nearby" },
       ];
     case "evening":
       return [
-        { label: "Dinner reservations", icon: "utensils", sectionId: "tonight" },
+        { label: "Dinner spots", icon: "utensils", sectionId: "nearby" },
         { label: "Live tonight", icon: "music", sectionId: "tonight" },
         { label: "Rooftop drinks", icon: "glass", sectionId: "nearby" },
       ];
     case "late_night":
       return [
-        { label: "Late-night bites", icon: "utensils", sectionId: "nearby" },
-        { label: "Bars open now", icon: "glass", sectionId: "nearby" },
-        { label: "Nightcap spots", icon: "moon", sectionId: "nearby" },
+        { label: "Still serving", icon: "utensils", sectionId: "nearby" },
+        { label: "Where to drink", icon: "glass", sectionId: "nearby" },
+        { label: "Tomorrow morning", icon: "coffee", sectionId: "coming-up" },
       ];
   }
 }

@@ -28,16 +28,13 @@ export function DiscoverTonightSection({ events, dayPart, onEventClick }: Discov
     <section id="tonight" className="space-y-3">
       {/* Section header */}
       <div className="flex items-baseline justify-between">
-        <div className="flex items-baseline gap-2">
+        <div>
           <h2 className="font-display text-2xl text-[var(--hotel-charcoal)]">Tonight</h2>
-          <span className="font-body text-sm text-[var(--hotel-stone)]">{events.length} events</span>
+          <p className="text-sm font-body text-[var(--hotel-stone)] mt-0.5">
+            Our picks for guests this evening
+          </p>
         </div>
-        <a
-          href="#tonight"
-          className="text-xs font-body text-[var(--hotel-stone)] hover:text-[var(--hotel-charcoal)] transition-colors"
-        >
-          See all →
-        </a>
+        <span className="text-sm font-body text-[var(--hotel-stone)]">{events.length} events</span>
       </div>
 
       {/* 2-column grid on desktop, single column on mobile */}

@@ -58,7 +58,7 @@ export default function DiscoverComingUpSection({ events, onEventClick }: Discov
 
   return (
     <section id="coming-up" className="space-y-6">
-      <h2 className="font-display text-2xl text-[var(--hotel-charcoal)]">Coming Up</h2>
+      <h2 className="font-display text-2xl text-[var(--hotel-charcoal)]">This Week</h2>
 
       {dayGroups.map((group) => (
         <div key={group.label}>

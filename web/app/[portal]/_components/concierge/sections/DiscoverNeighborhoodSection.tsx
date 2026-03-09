@@ -60,7 +60,12 @@ export default function DiscoverNeighborhoodSection({ destinations, onDestinatio
 
   return (
     <section id="nearby" className="space-y-4">
-      <h2 className="font-display text-2xl text-[var(--hotel-charcoal)]">The Neighborhood</h2>
+      <div>
+        <h2 className="font-display text-2xl text-[var(--hotel-charcoal)]">Steps Away</h2>
+        <p className="text-sm font-body text-[var(--hotel-stone)] mt-0.5">
+          Walkable dining, drinks, and culture
+        </p>
+      </div>
 
       {/* Category filter pills */}
       <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
