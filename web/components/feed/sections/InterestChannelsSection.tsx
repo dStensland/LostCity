@@ -232,7 +232,7 @@ function ChannelCard({ channel, updatingChannelId, onToggle }: ChannelCardProps)
           {channel.scope === "global" ? " • Global" : ""}
           {isSchoolBoardChannel(channel) && (
             <span className="rounded-full border border-[var(--action-primary)]/35 bg-[var(--action-primary)]/10 px-1.5 py-0.5 text-2xs text-[var(--action-primary)] normal-case tracking-normal">
-              Source-backed
+              Auto-updated
             </span>
           )}
         </p>

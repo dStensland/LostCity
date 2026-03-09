@@ -344,7 +344,7 @@ export default function PortalGroupsClient({ portalSlug }: PortalGroupsClientPro
                   {channel.scope === "global" ? " • Global" : ""}
                   {isSchoolBoardChannel(channel) && (
                     <span className="rounded-full border border-cyan-400/45 bg-cyan-500/15 px-1.5 py-0.5 text-2xs text-cyan-300 normal-case tracking-normal">
-                      Source-backed
+                      Auto-updated
                     </span>
                   )}
                 </p>

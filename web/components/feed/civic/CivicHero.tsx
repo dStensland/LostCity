@@ -155,7 +155,7 @@ export default function CivicHero({
 
         {/* Subtitle — concise mission statement */}
         <p className="mt-2 text-sm sm:text-base font-medium text-[var(--soft)] max-w-md leading-relaxed">
-          Meetings, volunteer opportunities, and civic action — all in one place.
+          Meetings, volunteer opportunities, and civic action in one place.
         </p>
 
         {/* Pathway pills — color-coded by intent */}
