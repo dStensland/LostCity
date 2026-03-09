@@ -57,6 +57,8 @@ import {
   suppressEventImagesIfVenueFlagged,
 } from "@/lib/image-quality-suppression";
 import OutingPlannerButton from "@/components/outing-planner/OutingPlannerButton";
+import { HangButton } from "@/components/hangs/HangButton";
+import { ENABLE_HANGS_V1 } from "@/lib/launch-flags";
 
 export const revalidate = 60;
 
@@ -103,11 +105,27 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title: event.title,
       description,
       type: "website",
+      images: [
+        {
+          url: `/${portalSlug}/events/${event.id}/opengraph-image`,
+          width: 1200,
+          height: 630,
+          alt: event.title,
+        },
+      ],
     },
     twitter: {
       card: "summary_large_image",
       title: event.title,
       description,
+      images: [
+        {
+          url: `/${portalSlug}/events/${event.id}/twitter-image`,
+          width: 1200,
+          height: 600,
+          alt: event.title,
+        },
+      ],
     },
   };
 }
@@ -134,7 +152,9 @@ function getLocationDesignatorLabel(
 function generateEventSchema(event: EventWithOrganization) {
   const locationDesignator = event.venue?.location_designator || "standard";
   const isVirtualLocation = locationDesignator === "virtual";
-  const startDateTime = event.start_time
+  // Treat midnight (00:00:00) as a placeholder — crawlers default to it
+  const hasRealTime = event.start_time && event.start_time !== "00:00:00";
+  const startDateTime = hasRealTime
     ? `${event.start_date}T${event.start_time}:00`
     : event.start_date;
 
@@ -500,6 +520,28 @@ export default async function PortalEventPage({ params }: Props) {
             </Link>
           )}
 
+          {/* Past Event Banner */}
+          {(() => {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const endDate = event.end_date ? new Date(event.end_date + "T00:00:00") : null;
+            const startDate = new Date(event.start_date + "T00:00:00");
+            const isPast = endDate ? endDate < today : startDate < today;
+            if (!isPast) return null;
+            return (
+              <div className="flex items-center gap-3 p-4 rounded-lg border border-[var(--twilight)] bg-[var(--card-bg)]">
+                <div className="w-10 h-10 rounded-full bg-[var(--twilight)] flex items-center justify-center flex-shrink-0">
+                  <svg className="w-5 h-5 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <p className="text-[var(--soft)] text-sm">
+                  This event has ended
+                </p>
+              </div>
+            );
+          })()}
+
           {/* Recurring Event Notice */}
           {event.is_recurring && recurrenceText && (
             <div
@@ -642,7 +684,10 @@ export default async function PortalEventPage({ params }: Props) {
                       </span>
                     </p>
 
-                    <VenueVibes vibes={event.venue.vibes} className="mt-3" />
+                    {/* Show venue vibes only for categories where venue atmosphere matters */}
+                    {event.category && ["food_drink", "nightlife", "music"].includes(event.category) && (
+                      <VenueVibes vibes={event.venue.vibes} className="mt-3" />
+                    )}
                     <GettingThereSection transit={event.venue} variant="compact" />
                   </Link>
 
@@ -663,7 +708,8 @@ export default async function PortalEventPage({ params }: Props) {
                     </div>
                   )}
 
-                  {!isVirtualLocation && !isPrivateLocation && (
+                  {!isVirtualLocation && !isPrivateLocation &&
+                    event.category && ["food_drink", "nightlife", "music"].includes(event.category) && (
                     <div className="mt-3">
                       <VenueTagList venueId={event.venue.id} />
                     </div>
@@ -915,11 +961,29 @@ export default async function PortalEventPage({ params }: Props) {
             />
             <RSVPButton
               eventId={event.id}
+              eventTitle={event.title}
+              eventDate={event.start_date}
               venueId={event.venue?.id}
               venueName={event.venue?.name}
+              venueSlug={event.venue?.slug}
+              venueImageUrl={event.venue?.image_url}
+              venueNeighborhood={event.venue?.neighborhood}
               venueType={event.venue?.venue_type}
               variant="compact"
             />
+            {ENABLE_HANGS_V1 && event.venue && (
+              <HangButton
+                venue={{
+                  id: event.venue.id,
+                  name: event.venue.name,
+                  slug: event.venue.slug,
+                  image_url: event.venue.image_url || null,
+                  neighborhood: event.venue.neighborhood || null,
+                }}
+                event={{ id: event.id, title: event.title }}
+                compact
+              />
+            )}
             {event.venue && event.venue.lat != null && event.venue.lng != null && (
               <OutingPlannerButton
                 event={{

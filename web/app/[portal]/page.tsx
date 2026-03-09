@@ -9,7 +9,7 @@ import { GalleryTemplate } from "./_templates/gallery";
 import { TimelineTemplate } from "./_templates/timeline";
 import { FilmTemplate } from "./_templates/film";
 import { HotelTemplate } from "./_templates/hotel";
-import type { Pillar } from "@/lib/concierge/concierge-types";
+// Pillar type import removed — Discover feed doesn't use pillars
 import { HospitalTemplate } from "./_templates/hospital";
 import EmoryCommunityExperience from "./_components/hospital/EmoryCommunityExperience";
 import { normalizeHospitalMode } from "@/lib/hospital-modes";
@@ -27,6 +27,7 @@ import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import HorseSpinner from "@/components/ui/HorseSpinner";
 import EmoryMobileBottomNav from "./_components/hospital/EmoryMobileBottomNav";
+import { CivicTabBar } from "@/components/civic/CivicTabBar";
 import type { Metadata } from "next";
 
 export const revalidate = 300;
@@ -117,19 +118,17 @@ export default async function PortalPage({ params, searchParams }: Props) {
   const isHospital = vertical === "hospital" || isEmoryPortal;
   const isEmoryNativeHospital = isHospital && isEmoryPortal;
   const isMarketplace = vertical === "marketplace" || isPCMDemoPortal(portal.slug);
+  const isCommunity = vertical === "community";
   const isDog = vertical === "dog" || isDogPortal(portal.slug);
-  const disableAmbientEffects = isEmoryNativeHospital || isFilm || isMarketplace || isDog;
+  const disableAmbientEffects = isEmoryNativeHospital || isFilm || isMarketplace || isDog || isCommunity;
 
   // Hotel portals always show the concierge experience (no view switching)
   if (isHotel) {
-    const validPillars: Pillar[] = ["services", "around", "planner"];
-    const rawPillar = typeof searchParamsData.pillar === "string" ? searchParamsData.pillar : undefined;
-    const pillarParam = rawPillar && validPillars.includes(rawPillar as Pillar) ? (rawPillar as Pillar) : undefined;
     return (
       <div className="min-h-screen overflow-x-hidden">
         <Suspense fallback={null}>
           <DetailViewRouter portalSlug={portal.slug}>
-            <HotelTemplate portal={portal} initialPillar={pillarParam} />
+            <HotelTemplate portal={portal} />
           </DetailViewRouter>
         </Suspense>
       </div>
@@ -257,9 +256,11 @@ export default async function PortalPage({ params, searchParams }: Props) {
   // Determine find type - support legacy view params
   // Note: "orgs" was moved to community view, redirect to events
   // Note: "spots" is a URL alias for the "destinations" findType
+  const VALID_FIND_TYPES = new Set<FindType>(["events", "classes", "destinations", "showtimes", "regulars"]);
   let findType: FindType = "events";
   if (findTypeParam && findTypeParam !== "orgs" && findTypeParam !== "playbook") {
-    findType = (findTypeParam === "spots" ? "destinations" : findTypeParam) as FindType;
+    const mapped = findTypeParam === "spots" ? "destinations" : findTypeParam;
+    findType = VALID_FIND_TYPES.has(mapped as FindType) ? (mapped as FindType) : "events";
   } else if (viewParam === "spots") {
     findType = "destinations";
   }
@@ -432,6 +433,23 @@ export default async function PortalPage({ params, searchParams }: Props) {
           <div className="lg:hidden h-16" />
         </>
       )}
+      {isCommunity && (
+        <>
+          <Suspense fallback={null}>
+            <CivicTabBar
+              portalSlug={portal.slug}
+              actLabel={
+                typeof portal.settings.nav_labels === "object" &&
+                portal.settings.nav_labels !== null &&
+                typeof (portal.settings.nav_labels as Record<string, unknown>).feed === "string"
+                  ? (portal.settings.nav_labels as Record<string, string>).feed
+                  : "Act"
+              }
+            />
+          </Suspense>
+          <div className="h-14" />
+        </>
+      )}
     </div>
   );
 }
@@ -516,6 +534,41 @@ function FeedSkeleton({
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
             <div key={i} className="h-28 rounded-2xl skeleton-shimmer" style={{ animationDelay: `${i * 70}ms` }} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Community vertical: clean skeleton matching CivicFeedShell layout
+  if (vertical === "community") {
+    return (
+      <div data-skeleton-route="feed-view" data-skeleton-vertical="community" className="space-y-4 mt-2">
+        {/* CivicHero skeleton */}
+        <div className="rounded-xl border border-[var(--twilight)] bg-[var(--night)] p-4 sm:p-6 space-y-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-2 flex-1">
+              <div className="h-7 w-44 rounded skeleton-shimmer" />
+              <div className="h-4 w-36 rounded skeleton-shimmer" style={{ animationDelay: "40ms" }} />
+            </div>
+            <div className="h-9 w-24 rounded-lg skeleton-shimmer" />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-12 rounded-lg skeleton-shimmer" style={{ animationDelay: `${i * 50}ms` }} />
+            ))}
+          </div>
+        </div>
+        {/* Channel chips skeleton */}
+        <div className="flex gap-2 px-1">
+          {[28, 24, 32, 20].map((w, i) => (
+            <div key={i} className="h-8 rounded-full skeleton-shimmer" style={{ width: `${w * 4}px`, animationDelay: `${i * 40}ms` }} />
+          ))}
+        </div>
+        {/* Event card skeletons */}
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-24 rounded-xl border border-[var(--twilight)] skeleton-shimmer" style={{ animationDelay: `${i * 60}ms` }} />
           ))}
         </div>
       </div>

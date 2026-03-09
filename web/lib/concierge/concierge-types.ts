@@ -96,3 +96,38 @@ export interface ConciergeExperienceData {
   ambient: AmbientContext;
   agentNarrative: import("@/lib/forth-types").AgentNarrative | null;
 }
+
+// ---------------------------------------------------------------------------
+// Discover Feed Types (single-surface concierge rebuild)
+// ---------------------------------------------------------------------------
+
+export type PropertyMoment = {
+  venue: import("@/lib/forth-types").SignatureVenue;
+  status: "active_now" | "starting_soon" | "later" | "closed";
+  contextLine: string;
+  specialTitle: string | null;
+};
+
+export type RegularHang = {
+  id: number;
+  title: string;
+  venue_name: string;
+  venue_slug: string;
+  day_of_week: number;
+  start_time: string | null;
+  activity_type: string;
+  distance_km: number;
+  image_url: string | null;
+};
+
+export type DiscoverFeedData = {
+  ambient: AmbientContext;
+  config: ConciergeConfig;
+  propertyData: import("@/lib/forth-types").ForthPropertyData;
+  propertyMoments: PropertyMoment[];
+  tonightEvents: import("@/lib/forth-types").FeedEvent[];
+  comingUpEvents: import("@/lib/forth-types").FeedEvent[];
+  regulars: RegularHang[];
+  destinations: import("@/lib/forth-types").Destination[];
+  agentNarrative: import("@/lib/forth-types").AgentNarrative | null;
+};
