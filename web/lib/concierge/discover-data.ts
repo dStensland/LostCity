@@ -413,7 +413,7 @@ export async function getDiscoverFeedData(
     geoCenter?.[0] && geoCenter?.[1]
       ? getPortalWeather(portal.id, geoCenter[0], geoCenter[1])
       : Promise.resolve(null as WeatherData | null),
-    geoCenter
+    geoCenter?.[0] && geoCenter?.[1]
       ? fetchRegulars(portal, geoCenter, radiusKm)
       : Promise.resolve([] as RegularHang[]),
   ]);

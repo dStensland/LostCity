@@ -4,8 +4,8 @@
 -- The FORTH portal's "this-evening" section has no show_after_time set,
 -- so brunch events at 10am appear in "Tonight" at 6pm.
 --
--- Fix: set show_after_time = '14:00' so the section is only visible
--- from 2pm onward, matching actual evening/afternoon use.
+-- Fix: set show_after_time = '17:00' so the section only shows events
+-- starting at 5pm or later, filtering out brunch/afternoon events.
 --
 -- Idempotent: only updates if the section exists; subsequent runs are no-ops.
 
@@ -22,7 +22,7 @@ BEGIN
   END IF;
 
   UPDATE portal_sections
-  SET    show_after_time = '14:00'
+  SET    show_after_time = '17:00'
   WHERE  portal_id = forth_id
     AND  slug      = 'this-evening';
 
@@ -31,7 +31,7 @@ BEGIN
   IF rows_updated = 0 THEN
     RAISE NOTICE 'FORTH this-evening section not found. No update applied.';
   ELSE
-    RAISE NOTICE 'Set show_after_time = 14:00 on FORTH this-evening section.';
+    RAISE NOTICE 'Set show_after_time = 17:00 on FORTH this-evening section.';
   END IF;
 
 END $$;
