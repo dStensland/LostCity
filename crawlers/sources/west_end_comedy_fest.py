@@ -355,19 +355,26 @@ def _parse_schedule_html(html: str, year: int) -> list[dict]:
             }
         )
 
-    if shows:
+    if len(shows) >= 5:
         logger.info(
             "West End Comedy Fest: extracted %d shows via structured blocks", len(shows)
         )
         return shows
+    elif shows:
+        logger.info(
+            "West End Comedy Fest: structured blocks found only %d shows — trying text scan", len(shows)
+        )
 
     # --- Approach 2: raw text scan ---
-    shows = _parse_schedule_from_text(soup.get_text("\n", strip=True), year)
-    if shows:
+    text_shows = _parse_schedule_from_text(soup.get_text("\n", strip=True), year)
+    if len(text_shows) > len(shows):
         logger.info(
-            "West End Comedy Fest: extracted %d shows via text scan", len(shows)
+            "West End Comedy Fest: extracted %d shows via text scan", len(text_shows)
         )
-    return shows
+        return text_shows
+    if shows:
+        return shows
+    return text_shows
 
 
 def _guess_title_from_block(block) -> Optional[str]:
@@ -524,9 +531,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
     if html:
         shows = _parse_schedule_html(html, current_year)
 
-    if not shows:
+    if len(shows) < 5:
         logger.warning(
-            "West End Comedy Fest: live scrape returned no shows — falling back to hardcoded 2026 schedule"
+            "West End Comedy Fest: live scrape returned only %d shows — falling back to hardcoded 2026 schedule",
+            len(shows),
         )
         shows = _get_hardcoded_2026_shows()
 
