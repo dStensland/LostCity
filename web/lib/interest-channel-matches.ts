@@ -37,6 +37,7 @@ export type MatchableEvent = {
   id: number;
   source_id: number | null;
   organization_id: string | null;
+  title?: string | null;
   category: string | null;
   tags?: string[] | null;
   venue_id?: number | null;
@@ -302,6 +303,48 @@ function ruleMatchesEvent(rule: InterestChannelRuleRow, event: MatchableEvent): 
       }
 
       return false;
+    }
+    case "expression": {
+      if (!payload) return false;
+
+      const eventTags = new Set(
+        (event.tags || [])
+          .filter((tag): tag is string => typeof tag === "string")
+          .map((tag) => tag.toLowerCase()),
+      );
+      const title = normalizeLower(event.title) || "";
+
+      const allTags = collectStrings(payload, [], ["all_tags"], true);
+      if (allTags.length > 0 && !allTags.every((tag) => eventTags.has(tag))) {
+        return false;
+      }
+
+      const anyTags = collectStrings(payload, [], ["any_tags"], true);
+      if (anyTags.length > 0 && !anyTags.some((tag) => eventTags.has(tag))) {
+        return false;
+      }
+
+      const anyTitleTerms = collectStrings(payload, [], ["any_title_terms"], true);
+      if (anyTitleTerms.length > 0 && !anyTitleTerms.some((term) => title.includes(term))) {
+        return false;
+      }
+
+      const titleRegex = normalizeString(payload["title_regex"]);
+      if (titleRegex) {
+        try {
+          const regex = new RegExp(titleRegex, "i");
+          if (!regex.test(event.title || "")) return false;
+        } catch {
+          return false;
+        }
+      }
+
+      return (
+        allTags.length > 0 ||
+        anyTags.length > 0 ||
+        anyTitleTerms.length > 0 ||
+        Boolean(titleRegex)
+      );
     }
     default:
       return false;
@@ -610,14 +653,15 @@ export async function refreshEventChannelMatchesForPortal(
   while (true) {
     const venueColumns = "venues(city, state, lat, lng, neighborhood)";
     const selectColumns = categoryColumn === "category"
-      ? `id, source_id, organization_id, category, tags, venue_id, start_date, ${venueColumns}`
-      : `id, source_id, organization_id, category_id, tags, venue_id, start_date, ${venueColumns}`;
+      ? `id, source_id, organization_id, title, category, tags, venue_id, start_date, ${venueColumns}`
+      : `id, source_id, organization_id, title, category_id, tags, venue_id, start_date, ${venueColumns}`;
 
     let query = supabase
       .from("events")
       .select(selectColumns)
       .gte("start_date", startDate)
       .lte("start_date", endDate)
+      .eq("is_active", true)
       .is("canonical_event_id", null)
       .order("id", { ascending: true })
       .range(offset, offset + batchSize - 1);
@@ -645,6 +689,7 @@ export async function refreshEventChannelMatchesForPortal(
       id: number;
       source_id: number | null;
       organization_id: string | null;
+      title: string | null;
       category: string | null;
       category_id?: string | null;
       tags: string[] | null;
@@ -663,6 +708,7 @@ export async function refreshEventChannelMatchesForPortal(
         id: row.id,
         source_id: row.source_id,
         organization_id: row.organization_id,
+        title: row.title,
         category: normalizeEventCategoryValue(
           categoryColumn === "category" ? row.category : row.category_id,
         ),

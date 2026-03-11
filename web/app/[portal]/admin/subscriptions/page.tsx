@@ -128,9 +128,16 @@ export default function PortalSubscriptionsPage() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-[var(--cream)] mb-1">Subscriptions</h1>
+        <h1 className="text-2xl font-semibold text-[var(--cream)] mb-1">Live Event Sources</h1>
         <p className="font-mono text-sm text-[var(--muted)]">
-          Subscribe to sources shared by other portals
+          Manage dated feeds shared by other portals. This screen is for calendar and live-feed sources.
+        </p>
+      </div>
+
+      <div className="mb-6 rounded-lg border border-[var(--twilight)] bg-[var(--night)] p-4">
+        <p className="font-mono text-xs leading-relaxed text-[var(--muted)]">
+          Ongoing Opportunity Sources are managed separately. They power long-term roles and program pathways,
+          and usually stay accessible through ownership or portal access rather than live event subscriptions.
         </p>
       </div>
 
@@ -160,23 +167,23 @@ export default function PortalSubscriptionsPage() {
               : "bg-[var(--dusk)] text-[var(--muted)] hover:text-[var(--cream)]"
           }`}
         >
-          Available ({availableSources.length})
+          Available to Add ({availableSources.length})
         </button>
       </div>
 
-      {/* Active Subscriptions */}
+      {/* Active Live Event Sources */}
       {activeTab === "active" && (
         <div className="bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg overflow-hidden">
           {subscriptions.length === 0 ? (
             <div className="p-8 text-center">
               <p className="font-mono text-sm text-[var(--muted)] mb-4">
-                You haven&apos;t subscribed to any sources yet.
+                You haven&apos;t added any live event sources yet.
               </p>
               <button
                 onClick={() => setActiveTab("available")}
                 className="px-4 py-2 bg-[var(--coral)] text-[var(--void)] rounded-lg font-mono text-sm"
               >
-                Browse Available Sources
+                Browse Available Live Event Sources
               </button>
             </div>
           ) : (
@@ -197,7 +204,7 @@ export default function PortalSubscriptionsPage() {
                       <p className="font-mono text-xs text-[var(--muted)]">
                         From {source.ownerPortal?.name || "Unknown"}
                         {" • "}
-                        Subscribed {formatDistanceToNow(new Date(subscription.createdAt), { addSuffix: true })}
+                        Added {formatDistanceToNow(new Date(subscription.createdAt), { addSuffix: true })}
                       </p>
                     </div>
                   </div>
@@ -219,7 +226,7 @@ export default function PortalSubscriptionsPage() {
                       onClick={() => handleUnsubscribe(subscription.id)}
                       className="px-3 py-1 bg-red-500/20 text-red-400 rounded font-mono text-xs hover:bg-red-500/30"
                     >
-                      Unsubscribe
+                      Remove
                     </button>
                   </div>
                 </div>
@@ -229,13 +236,13 @@ export default function PortalSubscriptionsPage() {
         </div>
       )}
 
-      {/* Available Sources */}
+      {/* Available Live Event Sources */}
       {activeTab === "available" && (
         <div className="bg-[var(--dusk)] border border-[var(--twilight)] rounded-lg overflow-hidden">
           {availableSources.length === 0 ? (
             <div className="p-8 text-center">
               <p className="font-mono text-sm text-[var(--muted)]">
-                No additional sources are available to subscribe to.
+                No additional live event sources are available to add.
               </p>
             </div>
           ) : (
@@ -275,7 +282,7 @@ export default function PortalSubscriptionsPage() {
                       disabled={subscribing === source.id}
                       className="px-3 py-1 bg-[var(--coral)] text-[var(--void)] rounded font-mono text-xs hover:opacity-90 disabled:opacity-50"
                     >
-                      {subscribing === source.id ? "..." : "Subscribe"}
+                      {subscribing === source.id ? "..." : "Add"}
                     </button>
                   </div>
                 </div>

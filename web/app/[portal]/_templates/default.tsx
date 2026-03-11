@@ -1,7 +1,9 @@
 import CityPulseShell from "@/components/feed/CityPulseShell";
 import CivicFeedShell from "@/components/feed/CivicFeedShell";
+import ArtsFeedShell from "@/components/feed/ArtsFeedShell";
 import { FamilyFeed } from "@/components/family";
 import type { Portal } from "@/lib/portal-context";
+import { getPortalVertical } from "@/lib/portal";
 
 interface DefaultTemplateProps {
   portal: Portal;
@@ -16,10 +18,10 @@ interface DefaultTemplateProps {
 export async function DefaultTemplate({
   portal,
 }: DefaultTemplateProps) {
-  const vertical = portal.settings?.vertical || "city";
+  const vertical = getPortalVertical(portal);
 
-  // Special case: atlanta-families uses custom FamilyFeed
-  if (portal.slug === "atlanta-families") {
+  // Family portal — custom FamilyFeed shell
+  if (vertical === "family" || portal.slug === "atlanta-families") {
     const isExclusive = portal.portal_type === "business" && !portal.parent_portal_id;
     return (
       <FamilyFeed
@@ -33,6 +35,11 @@ export async function DefaultTemplate({
   // Community/civic portals get a purpose-built civic feed
   if (vertical === "community") {
     return <CivicFeedShell portalSlug={portal.slug} />;
+  }
+
+  // Arts portal — bespoke feed shell with exhibition-centric sections
+  if (vertical === "arts") {
+    return <ArtsFeedShell portalSlug={portal.slug} />;
   }
 
   return (

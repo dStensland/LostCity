@@ -27,10 +27,14 @@ import { getVisualPreset } from "@/lib/visual-presets";
 import { getDayOfWeek } from "@/lib/city-pulse/time-slots";
 import type {
   CityPulseSectionType,
+  CityPulseSection,
 } from "@/lib/city-pulse/types";
 
 import CivicHero from "./civic/CivicHero";
 import { CivicImpactStrip } from "./civic/CivicImpactStrip";
+import VolunteerThisWeekCard from "./civic/VolunteerThisWeekCard";
+import CommitmentOpportunitiesCard from "./civic/CommitmentOpportunitiesCard";
+import SupportResourcesCard from "./civic/SupportResourcesCard";
 import UpcomingDeadlinesCard from "./civic/UpcomingDeadlinesCard";
 import InterestChannelsSection from "./sections/InterestChannelsSection";
 import NetworkFeedSection from "./sections/NetworkFeedSection";
@@ -40,6 +44,7 @@ import { CalendarBlank, UsersThree } from "@phosphor-icons/react";
 
 /** Categories visible in the civic network feed */
 const CIVIC_NEWS_CATEGORIES = ["news", "civic", "politics", "community"];
+const HELPATL_POLICY_CATEGORIES = ["news", "civic", "politics"];
 
 // Section types included in the civic timeline — includes "trending" because
 // civic events often land there instead of time-based slots. The LineupSection
@@ -59,6 +64,7 @@ interface CivicFeedShellProps {
 
 export default function CivicFeedShell({ portalSlug }: CivicFeedShellProps) {
   const { portal } = usePortal();
+  const showHelpAtlActionHub = portalSlug === "helpatl";
 
   // First-run onboarding
   const [onboardingComplete, setOnboardingComplete] = useState(() => {
@@ -127,6 +133,38 @@ export default function CivicFeedShell({ portalSlug }: CivicFeedShellProps) {
     [sections],
   );
 
+  const [volunteerWeekSections, setVolunteerWeekSections] = useState<CityPulseSection[] | null>(null);
+
+  const volunteerCardSections = useMemo(() => {
+    if (!showHelpAtlActionHub || !volunteerWeekSections || volunteerWeekSections.length === 0) {
+      return lineupSections;
+    }
+    const withoutWeek = lineupSections.filter((section) => section.type !== "this_week");
+    return [...withoutWeek, ...volunteerWeekSections];
+  }, [lineupSections, showHelpAtlActionHub, volunteerWeekSections]);
+
+  useEffect(() => {
+    if (!showHelpAtlActionHub) return;
+    let cancelled = false;
+
+    fetchTab("this_week")
+      .then((response) => {
+        if (cancelled) return;
+        const weekSections = (response.sections || []).filter(
+          (section) => section.type === "this_week",
+        );
+        if (weekSections.length === 0) return;
+        setVolunteerWeekSections(weekSections);
+      })
+      .catch(() => {
+        // Non-blocking enhancement: the card falls back to the initial feed slice.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchTab, showHelpAtlActionHub]);
+
   const lineupLoading = isLoading && lineupSections.length === 0;
   const hasAnyTabEvents = tabCounts && (tabCounts.today > 0 || tabCounts.this_week > 0 || tabCounts.coming_up > 0);
 
@@ -171,12 +209,42 @@ export default function CivicFeedShell({ portalSlug }: CivicFeedShellProps) {
       <div className="mt-4 lg:grid lg:grid-cols-[1fr_340px] lg:gap-8">
         {/* ── Main Column ───────────────────────────────────────── */}
         <div className="min-w-0">
-          {/* Interest Channels — compact in feed, capped to 6 */}
-          <InterestChannelsSection portalSlug={portalSlug} onSubscriptionChange={refresh} maxVisible={6} compact />
-
-          {/* Impact strip — mobile only (desktop uses sidebar card) */}
-          <div className="lg:hidden mt-4">
+          <div className="lg:hidden">
             <CivicImpactStrip portalSlug={portalSlug} variant="strip" />
+          </div>
+
+          {/* Immediate action comes first for HelpATL; group subscriptions should not lead the home feed. */}
+          {showHelpAtlActionHub && (
+            <>
+              <VolunteerThisWeekCard
+                portalSlug={portalSlug}
+                lineupSections={volunteerCardSections}
+                isLoading={lineupLoading}
+              />
+
+              <section className="mt-4 rounded-2xl border border-[var(--twilight)] bg-[var(--card-bg,var(--night))] p-4 sm:p-5">
+                <div className="mb-4 flex items-start justify-between gap-3">
+                  <div>
+                    <div className="font-mono text-2xs font-bold uppercase tracking-[0.18em] text-[var(--action-primary)]">
+                      Ways To Help
+                    </div>
+                    <p className="mt-1 max-w-2xl text-sm text-[var(--soft)]">
+                      Start with something concrete this week, then decide whether you want a recurring role or support map.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 xl:grid-cols-2">
+                  <CommitmentOpportunitiesCard portalSlug={portalSlug} />
+                  <SupportResourcesCard portalSlug={portalSlug} />
+                </div>
+              </section>
+            </>
+          )}
+
+          {/* Interest Channels — compact in feed, capped to 6 */}
+          <div className="mt-4">
+            <InterestChannelsSection portalSlug={portalSlug} onSubscriptionChange={refresh} maxVisible={6} compact />
           </div>
 
           {/* Section divider */}
@@ -242,6 +310,31 @@ export default function CivicFeedShell({ portalSlug }: CivicFeedShellProps) {
               </div>
             ) : null}
           </div>
+
+          {/* Civic Updates — local civic news */}
+          {showHelpAtlActionHub && (
+            <div className="mt-8 scroll-mt-28">
+              <div className="mb-5">
+                <div
+                  className="h-px"
+                  style={{
+                    background: "linear-gradient(90deg, var(--secondary-color, #1d4ed8) 0%, var(--twilight) 30%, transparent 100%)",
+                    opacity: 0.45,
+                  }}
+                />
+              </div>
+              <LazySection minHeight={300}>
+                <NetworkFeedSection
+                  portalSlug={portalSlug}
+                  accentColor="var(--secondary-color, #1d4ed8)"
+                  sectionTitle="Policy Watch"
+                  visibleCategories={HELPATL_POLICY_CATEGORIES}
+                  defaultCategory="civic"
+                  sourceScope="local"
+                />
+              </LazySection>
+            </div>
+          )}
 
           {/* Civic Updates — local civic news */}
           <div className="mt-8 scroll-mt-28">

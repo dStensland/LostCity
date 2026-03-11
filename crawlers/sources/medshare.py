@@ -20,7 +20,13 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    get_or_create_venue,
+    insert_event,
+    find_event_by_hash,
+    smart_update_existing_event,
+    update_event,
+)
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -55,6 +61,68 @@ VOLUNTEER_SESSIONS = [
     {"day": "Saturday", "start_time": "09:00", "end_time": "12:00"},
     {"day": "Saturday", "start_time": "13:00", "end_time": "16:00"},
 ]
+
+
+def _format_session_display_time(start_time: str) -> str:
+    """Render a 24-hour HH:MM string as a compact 12-hour display time."""
+    dt = datetime.strptime(start_time, "%H:%M")
+    return dt.strftime("%-I:%M %p")
+
+
+def _build_volunteer_session_title(session: dict) -> str:
+    """Use a descriptive, user-facing title for recurring volunteer shifts."""
+    return (
+        f"Medical Supply Volunteer Session - {session['day']} "
+        f"{_format_session_display_time(session['start_time'])}"
+    )
+
+
+def _volunteer_session_tags() -> list[str]:
+    """Return the canonical tag set for MedShare volunteer sessions."""
+    return [
+        "volunteer",
+        "medical-supplies",
+        "global-health",
+        "family-friendly",
+        "youth-welcome",
+        "near-emory",
+    ]
+
+
+def _legacy_volunteer_session_title(session: dict) -> str:
+    """
+    Preserve the old title shape for content-hash continuity.
+
+    MedShare sessions were historically keyed by the generic
+    "Volunteer Session - ..." title. Keep that hash input stable so reruns update
+    existing rows instead of inserting duplicates when the user-facing title improves.
+    """
+    return (
+        f"Volunteer Session - {session['day']} "
+        f"{session['start_time'][:2]}:{session['start_time'][3:5]} "
+        f"{'AM' if int(session['start_time'][:2]) < 12 else 'PM'}"
+    )
+
+
+def _sync_existing_volunteer_session(existing: dict, event_record: dict) -> None:
+    """Apply MedShare-specific title cleanup while reusing the shared update path."""
+    direct_updates = {}
+
+    if (existing.get("title") or "").strip() != (event_record.get("title") or "").strip():
+        direct_updates["title"] = event_record["title"]
+
+    existing_tags = {
+        str(tag).strip().lower() for tag in (existing.get("tags") or []) if str(tag).strip()
+    }
+    canonical_tags = set(_volunteer_session_tags())
+    if existing_tags != canonical_tags:
+        direct_updates["tags"] = _volunteer_session_tags()
+
+    if direct_updates:
+        update_event(existing["id"], direct_updates)
+        existing = {**existing, **direct_updates}
+
+    smart_update_existing_event(existing, event_record)
 
 
 def parse_date_string(date_str: str) -> Optional[str]:
@@ -336,19 +404,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         if session_date < datetime.now().strftime("%Y-%m-%d"):
                             continue
 
-                        title = f"Volunteer Session - {session['day']} {session['start_time'][:2]}:{session['start_time'][3:5]} {'AM' if int(session['start_time'][:2]) < 12 else 'PM'}"
+                        title = _build_volunteer_session_title(session)
+                        legacy_hash_title = _legacy_volunteer_session_title(session)
 
                         content_hash = generate_content_hash(
-                            title, "MedShare", session_date
+                            legacy_hash_title, "MedShare", session_date
                         )
-
-                        existing = find_event_by_hash(content_hash)
-                        if existing:
-                            smart_update_existing_event(existing, event_record)
-                            events_updated += 1
-                            continue
-
-                        events_found += 1
 
                         description = (
                             "Join us for a volunteer session at MedShare! "
@@ -369,7 +430,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "is_all_day": False,
                             "category": "community",
                             "subcategory": "volunteer",
-                            "tags": ["volunteer", "medical-supplies", "global-health", "family-friendly", "youth-welcome", "near-emory"],
+                            "tags": _volunteer_session_tags(),
                             "price_min": None,
                             "price_max": None,
                             "price_note": None,
@@ -383,6 +444,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "recurrence_rule": f"Weekly on {session['day']} at {session['start_time']}",
                             "content_hash": content_hash,
                         }
+
+                        existing = find_event_by_hash(content_hash)
+                        if existing:
+                            _sync_existing_volunteer_session(existing, event_record)
+                            events_updated += 1
+                            continue
+
+                        events_found += 1
 
                         try:
                             insert_event(event_record)

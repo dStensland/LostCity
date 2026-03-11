@@ -56,6 +56,9 @@ export type PortalManifest = {
     subscribed_categories?: string[] | null;
     is_active?: boolean;
   };
+  structured_opportunity_sources?: {
+    source_slugs: string[];
+  };
   sections?: PortalSectionManifest[];
   interest_channels?: InterestChannelManifest[];
   refresh_schedule?: {
@@ -161,6 +164,16 @@ export function loadPortalManifest(manifestPath: string): PortalManifest {
     }
   }
 
+  if (parsed.structured_opportunity_sources !== undefined) {
+    if (!isObject(parsed.structured_opportunity_sources)) {
+      throw new Error("structured_opportunity_sources must be an object when provided");
+    }
+    const sourceSlugs = parsed.structured_opportunity_sources.source_slugs;
+    if (!Array.isArray(sourceSlugs) || sourceSlugs.some((slug) => !isNonEmptyString(slug))) {
+      throw new Error("structured_opportunity_sources.source_slugs must be an array of strings");
+    }
+  }
+
   if (parsed.refresh_schedule !== undefined) {
     if (!isObject(parsed.refresh_schedule)) {
       throw new Error("refresh_schedule must be an object when provided");
@@ -222,6 +235,16 @@ export function collectManifestSourceSlugs(manifest: PortalManifest): string[] {
         }
       }
     }
+  }
+
+  return [...sourceSlugs].sort();
+}
+
+export function collectManifestStructuredSourceSlugs(manifest: PortalManifest): string[] {
+  const sourceSlugs = new Set<string>();
+
+  for (const slug of manifest.structured_opportunity_sources?.source_slugs || []) {
+    sourceSlugs.add(slug.trim());
   }
 
   return [...sourceSlugs].sort();

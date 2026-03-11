@@ -4,15 +4,10 @@ import { getPortalBySlug } from "@/lib/portal";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";
 import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
+import { resolveNetworkFeedAccess, type NetworkFeedAccessSummary } from "@/lib/network-feed-access";
 
 type RouteContext = {
   params: Promise<{ slug: string }>;
-};
-
-type PortalRow = {
-  id: string;
-  slug: string;
-  parent_portal_id?: string | null;
 };
 
 // GET /api/portals/[slug]/network-feed
@@ -26,6 +21,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
   const offset = Math.max(parseInt(searchParams.get("offset") || "0") || 0, 0);
   const category = searchParams.get("category") || null;
   const includeSources = searchParams.get("include_sources") === "true";
+  const sourceScope = searchParams.get("source_scope") || "all";
 
   try {
     const portal = await getPortalBySlug(slug);
@@ -35,45 +31,57 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     const supabase = await createClient();
 
-    // Resolve feedPortalId: inherit from parent when this portal has no active sources.
-    // This runs 2-3 sequential queries; cache the result for 5 minutes.
-    const feedPortalId = await getOrSetSharedCacheJson<string>(
-      "network-feed:portal-id",
+    const feedAccess = await getOrSetSharedCacheJson<NetworkFeedAccessSummary>(
+      "network-feed:access",
       slug,
       5 * 60 * 1000,
-      async () => {
-        const { count: activeSourceCount, error: activeSourceCountError } = await supabase
-          .from("network_sources")
-          .select("id", { count: "exact", head: true })
-          .eq("portal_id", portal.id)
-          .eq("is_active", true);
-
-        if (!activeSourceCountError && (activeSourceCount || 0) === 0 && portal.parent_portal_id) {
-          const { data: parentPortal } = await supabase
-            .from("portals")
-            .select("id, slug")
-            .eq("id", portal.parent_portal_id)
-            .eq("status", "active")
-            .maybeSingle();
-
-          if (parentPortal) {
-            const typedParent = parentPortal as PortalRow;
-            const { count: parentActiveSourceCount, error: parentSourceCountError } = await supabase
-              .from("network_sources")
-              .select("id", { count: "exact", head: true })
-              .eq("portal_id", typedParent.id)
-              .eq("is_active", true);
-
-            if (!parentSourceCountError && (parentActiveSourceCount || 0) > 0) {
-              return typedParent.id;
-            }
-          }
-        }
-
-        return portal.id;
-      },
+      async () => resolveNetworkFeedAccess(supabase, portal),
       { maxEntries: 50 },
     );
+
+    let accessibleSourcesQuery = supabase
+      .from("network_sources")
+      .select("id, name, slug, website_url, description, categories, portal_id")
+      .eq("is_active", true)
+      .order("name");
+
+    if (sourceScope === "local") {
+      accessibleSourcesQuery = accessibleSourcesQuery.eq("portal_id", portal.id);
+    } else if (sourceScope === "parent") {
+      const parentOnlyIds = feedAccess.accessiblePortalIds.filter((id) => id !== portal.id);
+      if (parentOnlyIds.length === 0) {
+        const emptyBody: Record<string, unknown> = { posts: [], has_more: false };
+        if (includeSources) emptyBody.sources = [];
+        return NextResponse.json(emptyBody, {
+          headers: {
+            "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+          },
+        });
+      }
+      accessibleSourcesQuery = accessibleSourcesQuery.in("portal_id", parentOnlyIds);
+    } else {
+      accessibleSourcesQuery = accessibleSourcesQuery.in("portal_id", feedAccess.accessiblePortalIds);
+    }
+
+    const { data: accessibleSources, error: accessibleSourcesError } = await accessibleSourcesQuery;
+
+    if (accessibleSourcesError) {
+      logger.error("Error fetching accessible network sources:", { error: accessibleSourcesError.message });
+      return NextResponse.json({ error: "Failed to fetch network feed" }, { status: 500 });
+    }
+
+    const accessibleSourceIds = (accessibleSources || []).map((row) => row.id);
+    if (accessibleSourceIds.length === 0) {
+      const emptyBody: Record<string, unknown> = { posts: [], has_more: false };
+      if (includeSources) {
+        emptyBody.sources = [];
+      }
+      return NextResponse.json(emptyBody, {
+        headers: {
+          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+        },
+      });
+    }
 
     // Build query: network_posts joined with network_sources
     // Post-level categories (migration 265) are used for filtering;
@@ -96,7 +104,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
           categories
         )
       `)
-      .eq("portal_id", feedPortalId)
+      .in("source_id", accessibleSourceIds)
       .eq("network_sources.is_active", true)
       .order("published_at", { ascending: false, nullsFirst: false })
       .range(offset, offset + limit - 1);
@@ -125,18 +133,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     // Optionally include the source directory
     if (includeSources) {
-      const { data: sources, error: srcError } = await supabase
-        .from("network_sources")
-        .select("name, slug, website_url, description, categories")
-        .eq("portal_id", feedPortalId)
-        .eq("is_active", true)
-        .order("name");
-
-      if (srcError) {
-        logger.error("Error fetching network sources:", srcError);
-      } else {
-        responseBody.sources = sources || [];
-      }
+      responseBody.sources = accessibleSources || [];
     }
 
     return NextResponse.json(

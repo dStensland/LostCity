@@ -83,7 +83,7 @@ export default function FederationDashboardPage() {
         <div>
           <h1 className="text-2xl font-semibold text-[var(--cream)]">Source Federation</h1>
           <p className="font-mono text-sm text-[var(--muted)] mt-1">
-            Manage source ownership, sharing, and subscriptions across portals
+            Manage source ownership, sharing, live event subscriptions, and portal access across portals
           </p>
         </div>
         <Link
@@ -101,7 +101,7 @@ export default function FederationDashboardPage() {
           <StatCard label="With Owners" value={stats.sourcesWithOwners} color="blue" />
           <StatCard label="Global" value={stats.globalSources} color="purple" />
           <StatCard label="Sharing Rules" value={stats.activeSharingRules} color="green" />
-          <StatCard label="Subscriptions" value={stats.activeSubscriptions} color="yellow" />
+          <StatCard label="Live Event Subs" value={stats.activeSubscriptions} color="yellow" />
           <StatCard label="Owner Portals" value={stats.portalsWithOwnedSources} color="cyan" />
           <StatCard label="Subscriber Portals" value={stats.portalsWithSubscriptions} color="pink" />
         </div>
@@ -113,7 +113,7 @@ export default function FederationDashboardPage() {
           <div className="p-4 border-b border-[var(--twilight)]">
             <h2 className="text-lg font-semibold text-[var(--cream)]">Sources by Portal</h2>
             <p className="font-mono text-xs text-[var(--muted)] mt-1">
-              Distribution of source ownership across portals
+              Distribution of source ownership across portals, including sources that stay accessible without live event subscriptions
             </p>
           </div>
           <div className="divide-y divide-[var(--twilight)]">
@@ -165,7 +165,7 @@ export default function FederationDashboardPage() {
           <div className="p-4 border-b border-[var(--twilight)]">
             <h2 className="text-lg font-semibold text-[var(--cream)]">Sources Overview</h2>
             <p className="font-mono text-xs text-[var(--muted)] mt-1">
-              Source ownership and sharing status
+              Source ownership, sharing status, and live event subscriber count
             </p>
           </div>
           <div className="divide-y divide-[var(--twilight)] max-h-96 overflow-y-auto">
@@ -204,7 +204,7 @@ export default function FederationDashboardPage() {
                   )}
                   {source.subscriberCount > 0 && (
                     <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded font-mono text-xs">
-                      {source.subscriberCount} sub{source.subscriberCount !== 1 ? "s" : ""}
+                      {source.subscriberCount} live sub{source.subscriberCount !== 1 ? "s" : ""}
                     </span>
                   )}
                 </div>

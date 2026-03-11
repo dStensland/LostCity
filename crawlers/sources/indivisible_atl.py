@@ -20,6 +20,17 @@ logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.indivisibleatl.com"
 EVENTS_URL = f"{BASE_URL}/events"
+BASE_TAGS = ["activism", "civic-engagement", "attend"]
+
+TAG_RULES: list[tuple[str, list[str]]] = [
+    (r"board of registrations|board of elections|state election board|elections meeting", ["government", "public-meeting", "election", "public-comment"]),
+    (r"school board", ["education", "school-board", "public-meeting"]),
+    (r"city council|board of commissioners|city hall|capitol|district \d+", ["government", "public-meeting"]),
+    (r"workshop|training|teach-?in|make a poster", ["education"]),
+    (r"rally|march|banner brigade|honk\s*&\s*wave|day of action", ["advocacy", "rally"]),
+    (r"volunteer|canvass|knock doors|phone bank|text bank", ["volunteer"]),
+    (r"\bice\b|immigrant|day laborer|deport", ["immigration", "advocacy"]),
+]
 
 VENUE_DATA = {
     "name": "Indivisible ATL",
@@ -128,6 +139,30 @@ def parse_time(time_text: str) -> Optional[str]:
     return None
 
 
+def _clean_text(value: str | None) -> str:
+    if not value:
+        return ""
+    return re.sub(r"\s+", " ", value).strip()
+
+
+def _enrich_tags(title: str, description: str) -> list[str]:
+    text = f"{title} {description}".lower()
+    tags: list[str] = []
+    for pattern, extra in TAG_RULES:
+        if re.search(pattern, text):
+            tags.extend(extra)
+    if "free" in text or "rsvp" in text:
+        tags.append("free")
+    return list(dict.fromkeys(BASE_TAGS + tags))
+
+
+def _determine_category(title: str, description: str) -> str:
+    text = f"{title} {description}".lower()
+    if re.search(r"workshop|training|teach-?in|make a poster", text):
+        return "learning"
+    return "community"
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
     """Crawl Indivisible ATL events using Playwright."""
     source_id = source["id"]
@@ -233,11 +268,25 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     # Check if exists
 
-                    # Default description (we could fetch detail page, but this is faster)
-                    description = f"{title} - Indivisible ATL organizing event"
+                    description_parts: list[str] = []
+                    for selector in ('.eventlist-excerpt', '.eventlist-description'):
+                        for node in container.query_selector_all(selector):
+                            text = _clean_text(node.inner_text())
+                            if text:
+                                description_parts.append(text)
+
+                    description = _clean_text(" ".join(description_parts))
+                    if not description:
+                        container_text = _clean_text(container.inner_text())
+                        description = container_text.replace(title, "", 1).strip()
+                    if not description:
+                        description = f"{title} - Indivisible ATL organizing event"
 
                     # Check for free events
-                    is_free = any(word in title.lower() for word in ["free", "no cost"])
+                    text_for_pricing = f"{title} {description}".lower()
+                    is_free = any(word in text_for_pricing for word in ["free", "no cost", "rsvp"])
+                    category = _determine_category(title, description)
+                    tags = _enrich_tags(title, description)
 
                     # Build event record
                     event_record = {
@@ -250,15 +299,15 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "end_date": end_date,
                         "end_time": None,
                         "is_all_day": False,
-                        "category": "activism",
+                        "category": category,
                         "subcategory": None,
-                        "tags": ["activism", "progressive", "politics", "organizing"],
+                        "tags": tags,
                         "price_min": None,
                         "price_max": None,
                         "price_note": None,
                         "is_free": is_free,
                         "source_url": event_url,
-                        "ticket_url": event_url,
+                        "ticket_url": None,
                         "image_url": image_url,
                         "raw_text": f"{title} - {date_text}",
                         "extraction_confidence": 0.85,

@@ -15,8 +15,10 @@ import {
   UsersThree,
   CloudSun,
   ArrowRight,
+  Lifebuoy,
 } from "@phosphor-icons/react";
 import type { CityPulseSection } from "@/lib/city-pulse/types";
+import { isHelpAtlSupportDirectoryEnabled } from "@/lib/helpatl-support";
 
 interface CivicHeroProps {
   portalSlug: string;
@@ -82,6 +84,7 @@ export default function CivicHero({
 }: CivicHeroProps) {
   const dateStr = getFormattedDate();
   const weekCount = tabCounts?.this_week ?? 0;
+  const showSupport = isHelpAtlSupportDirectoryEnabled(portalSlug);
 
   // Derive urgency pill: next upcoming event
   const nextEventLabel = useMemo(
@@ -189,6 +192,17 @@ export default function CivicHero({
               <UsersThree weight="duotone" className="w-4 h-4 text-emerald-600 shrink-0" />
               <span className="font-bold text-emerald-900">{groupCount} groups</span>
               <span className="text-emerald-700">to join</span>
+            </Link>
+          )}
+
+          {showSupport && (
+            <Link
+              href={`/${portalSlug}/support`}
+              className="civic-pill inline-flex items-center gap-2 rounded-xl border-[1.5px] border-sky-300 bg-sky-50 px-4 min-h-11 text-sm transition-colors hover:bg-sky-100"
+            >
+              <Lifebuoy weight="duotone" className="w-4 h-4 text-sky-600 shrink-0" />
+              <span className="font-bold text-sky-900">Need support?</span>
+              <span className="text-sky-700">Find help</span>
             </Link>
           )}
         </div>

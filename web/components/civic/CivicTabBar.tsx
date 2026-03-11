@@ -3,18 +3,24 @@
 import type { ElementType } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Lightning, UsersThree, CalendarBlank } from "@phosphor-icons/react";
+import { Lightning, UsersThree, CalendarBlank, Lifebuoy } from "@phosphor-icons/react";
+import { isHelpAtlSupportDirectoryEnabled } from "@/lib/helpatl-support";
 
-type TabKey = "act" | "groups" | "calendar";
+export type CivicTabKey = "act" | "groups" | "calendar" | "support";
 
 type Tab = {
-  key: TabKey;
+  key: CivicTabKey;
   label: string;
   icon: ElementType;
   href: string;
 };
 
-function isTabActive(tab: TabKey, pathname: string, searchParams: URLSearchParams, portalSlug: string): boolean {
+export function isCivicTabActive(
+  tab: CivicTabKey,
+  pathname: string,
+  searchParams: URLSearchParams,
+  portalSlug: string
+): boolean {
   const isPortalRoot = pathname === `/${portalSlug}`;
   const viewParam = searchParams.get("view");
   const tabParam = searchParams.get("tab");
@@ -29,21 +35,17 @@ function isTabActive(tab: TabKey, pathname: string, searchParams: URLSearchParam
     case "calendar":
       // Active on portal root with view=find and tab=calendar
       return isPortalRoot && viewParam === "find" && tabParam === "calendar";
+    case "support":
+      return pathname.startsWith(`/${portalSlug}/support`);
     default:
       return false;
   }
 }
 
-interface CivicTabBarProps {
-  portalSlug: string;
-  actLabel?: string;
-}
+export function getCivicTabs(portalSlug: string, actLabel = "Act"): Tab[] {
+  const showSupport = isHelpAtlSupportDirectoryEnabled(portalSlug);
 
-export function CivicTabBar({ portalSlug, actLabel = "Act" }: CivicTabBarProps) {
-  const pathname = usePathname() || "";
-  const searchParams = useSearchParams() ?? new URLSearchParams();
-
-  const tabs: Tab[] = [
+  return [
     {
       key: "act",
       label: actLabel,
@@ -62,18 +64,39 @@ export function CivicTabBar({ portalSlug, actLabel = "Act" }: CivicTabBarProps) 
       icon: CalendarBlank,
       href: `/${portalSlug}?view=find&tab=calendar`,
     },
+    ...(showSupport
+      ? [
+          {
+            key: "support" as const,
+            label: "Support",
+            icon: Lifebuoy,
+            href: `/${portalSlug}/support`,
+          },
+        ]
+      : []),
   ];
+}
+
+interface CivicTabBarProps {
+  portalSlug: string;
+  actLabel?: string;
+}
+
+export function CivicTabBar({ portalSlug, actLabel = "Act" }: CivicTabBarProps) {
+  const pathname = usePathname() || "";
+  const searchParams = useSearchParams() ?? new URLSearchParams();
+  const tabs = getCivicTabs(portalSlug, actLabel);
 
   return (
     <nav
-      className="fixed bottom-0 inset-x-0 z-[140] bg-white border-t border-[var(--twilight)] pb-safe"
+      className="fixed bottom-0 inset-x-0 z-[140] bg-[var(--void)] border-t border-[var(--twilight)] pb-safe sm:hidden"
       aria-label="Civic portal navigation"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <div className="flex items-stretch h-14">
         {tabs.map((tab) => {
           const Icon = tab.icon;
-          const active = isTabActive(tab.key, pathname, searchParams, portalSlug);
+          const active = isCivicTabActive(tab.key, pathname, searchParams, portalSlug);
 
           return (
             <Link

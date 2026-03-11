@@ -11,6 +11,7 @@ import HeaderSearchButton from "../HeaderSearchButton";
 import { usePortalOptional, DEFAULT_PORTAL, DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
 import { useAuth } from "@/lib/auth-context";
 import { getPortalNavLabel } from "@/lib/nav-labels";
+import { isHelpAtlSupportDirectoryEnabled } from "@/lib/helpatl-support";
 import type { HeaderConfig } from "@/lib/visual-presets";
 import type { PortalBranding } from "@/lib/portal-context";
 
@@ -28,7 +29,7 @@ interface StandardHeaderProps {
 }
 
 type NavTab = {
-  key: "feed" | "find" | "community";
+  key: "feed" | "find" | "community" | "support";
   defaultLabel: string;
   authRequired?: boolean;
   icon?: React.ReactNode;
@@ -87,9 +88,20 @@ export default function StandardHeader({
 
   // Get custom nav labels from portal settings
   const navLabels = (portal.settings?.nav_labels || {}) as Record<string, string | undefined>;
+  const showSupportTab = isHelpAtlSupportDirectoryEnabled(portalSlug);
 
   // Build tabs with custom labels, filtering out auth-required tabs when not logged in
-  const TABS = DEFAULT_TABS
+  const TABS = [
+    ...DEFAULT_TABS,
+    ...(showSupportTab
+      ? [
+          {
+            key: "support" as const,
+            defaultLabel: "Support",
+          },
+        ]
+      : []),
+  ]
     .filter(tab => !tab.authRequired || user)
     .map(tab => ({
       ...tab,
@@ -145,11 +157,13 @@ export default function StandardHeader({
     if (tab.key === "find") {
       params.set("view", "find");
       params.delete("tab");
-    } else {
+    } else if (tab.key === "community") {
       params.set("view", "community");
       params.delete("type");
       params.delete("display");
       if (!params.get("tab")) params.set("tab", "people");
+    } else {
+      return `/${portalSlug}/support`;
     }
 
     const query = params.toString();
@@ -179,6 +193,9 @@ export default function StandardHeader({
     }
     if (tab.key === "community") {
       return isCommunityRoute || (isPortalPage && currentView === "community");
+    }
+    if (tab.key === "support") {
+      return pathname.startsWith(`/${portalSlug}/support`);
     }
     return false;
   };

@@ -38,6 +38,7 @@ import { useAuth } from "@/lib/auth-context";
 import { usePortal } from "@/lib/portal-context";
 import { getVisualPreset } from "@/lib/visual-presets";
 import Link from "next/link";
+import CityBriefing from "./CityBriefing";
 import GreetingBar from "./GreetingBar";
 import LineupSection from "./LineupSection";
 import CityPulseSection from "./CityPulseSection";
@@ -53,6 +54,7 @@ import FeedSectionSkeleton from "@/components/feed/FeedSectionSkeleton";
 import ExperiencesSection from "./sections/ExperiencesSection";
 import FestivalsSection from "./sections/FestivalsSection";
 import YonderRegionalEscapesSection from "./sections/YonderRegionalEscapesSection";
+import ActiveContestSection from "./sections/ActiveContestSection";
 import FeedTimeMachine from "./FeedTimeMachine";
 import FeedPageIndex from "./FeedPageIndex";
 import type {
@@ -99,6 +101,9 @@ const BLOCK_TO_SECTION: Record<string, CityPulseSectionType> = {
 const MIDDLE_BLOCK_IDS: FeedBlockId[] = DEFAULT_FEED_ORDER.filter(
   (b) => !ALWAYS_VISIBLE_BLOCKS.includes(b) && !FIXED_LAST_BLOCKS.includes(b),
 );
+
+const ATLANTA_NETWORK_CATEGORIES = ["news", "culture", "arts", "food", "music", "community"];
+const ATLANTA_NETWORK_DEFAULT_CATEGORY = "culture";
 
 // ---------------------------------------------------------------------------
 // Client-side default shell — renders at T=0 with no API call
@@ -363,7 +368,11 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
             <div className="h-px bg-[var(--twilight)]" />
             <div className="pt-6">
               <LazySection minHeight={400}>
-                <NetworkFeedSection portalSlug={portalSlug} />
+                <NetworkFeedSection
+                  portalSlug={portalSlug}
+                  visibleCategories={portalSlug === "atlanta" ? ATLANTA_NETWORK_CATEGORIES : undefined}
+                  defaultCategory={portalSlug === "atlanta" ? ATLANTA_NETWORK_DEFAULT_CATEGORY : "all"}
+                />
               </LazySection>
             </div>
           </div>
@@ -427,15 +436,32 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
         ...(showTimeMachine ? { paddingBottom: "5.5rem" } : {}),
       }}
     >
-      {/* 1. GreetingBar — renders instantly from client-side defaults */}
-      {/*    Quick links are rendered inside the hero as subtle glassmorphic pills */}
-      <GreetingBar
-        header={header}
-        context={context}
-        portalSlug={portalSlug}
-        quickLinks={quickLinks}
-        dashboardCards={dashboardCards}
-      />
+      {/* 1. City Briefing (Atlanta) or GreetingBar (other portals) */}
+      {portal ? (
+        <div
+          id="city-pulse-briefing"
+          data-feed-anchor="true"
+          data-index-label="City Briefing"
+          data-block-id="briefing"
+          className="scroll-mt-28"
+        >
+          <CityBriefing
+            header={header}
+            context={context}
+            portalSlug={portalSlug}
+            portalId={portal.id}
+            quickLinks={quickLinks}
+          />
+        </div>
+      ) : (
+        <GreetingBar
+          header={header}
+          context={context}
+          portalSlug={portalSlug}
+          quickLinks={quickLinks}
+          dashboardCards={dashboardCards}
+        />
+      )}
       {/* CTA (if present — only from CMS override, so only after API loads) */}
       {header.cta && (
         <div className="mt-2.5">
@@ -452,9 +478,7 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
         </div>
       )}
 
-      <InterestChannelsSection portalSlug={portalSlug} onSubscriptionChange={refresh} />
-
-      {/* 3. LineupSection — shows spinner until events arrive */}
+      {/* 4. LineupSection — shows spinner until events arrive */}
       <div
         id="city-pulse-events"
         data-feed-anchor="true"
@@ -466,7 +490,7 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
         {lineupLoading ? (
           <FeedSectionSkeleton accentColor="var(--coral)" minHeight={400} />
         ) : lineupSections.length > 0 || hasAnyTabEvents ? (
-          <div className="animate-fade-in">
+          <div>
             <LineupSection
               sections={lineupSections}
               portalSlug={portalSlug}
@@ -482,6 +506,14 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
           </div>
         ) : null}
       </div>
+
+      {/* 5. Interest Channels — only on civic portals where groups are meaningful */}
+      {portal?.settings?.vertical === "community" && (
+        <InterestChannelsSection portalSlug={portalSlug} onSubscriptionChange={refresh} compact />
+      )}
+
+      {/* Active Contest card — self-fetching, renders only when a contest is live */}
+      <ActiveContestSection portalSlug={portalSlug} />
 
       {portalSlug === "yonder" && (
         <YonderRegionalEscapesSection

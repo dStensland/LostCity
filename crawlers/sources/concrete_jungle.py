@@ -23,7 +23,14 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    find_event_by_hash,
+    get_or_create_venue,
+    insert_event,
+    remove_stale_source_events,
+    smart_update_existing_event,
+    update_event,
+)
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -95,26 +102,62 @@ def clean_title(title: str) -> str:
     return re.sub(r'\s*-\s*\d{1,2}/\d{1,2}/\d{4}\s*$', '', title).strip()
 
 
+def is_full_event(title: str, spots: str = "") -> bool:
+    """Skip sold-out rows that are no longer actionable for users."""
+    title_lower = (title or "").strip().lower()
+    spots_lower = (spots or "").strip().lower()
+    return (
+        title_lower.startswith("full:")
+        or spots_lower in {"0", "full", "sold out", "waitlist"}
+    )
+
+
+def _sync_existing_event(existing: dict, incoming: dict) -> None:
+    """Remove stale volunteer/free metadata when the source record changes shape."""
+    direct_updates = {}
+
+    field_pairs = (
+        ("category_id", incoming.get("category")),
+        ("tags", incoming.get("tags")),
+        ("price_min", incoming.get("price_min")),
+        ("price_max", incoming.get("price_max")),
+        ("price_note", incoming.get("price_note")),
+        ("is_free", incoming.get("is_free")),
+        ("ticket_url", incoming.get("ticket_url")),
+        ("source_url", incoming.get("source_url")),
+    )
+
+    for existing_field, incoming_value in field_pairs:
+        if existing.get(existing_field) != incoming_value:
+            direct_updates[existing_field] = incoming_value
+
+    if direct_updates:
+        update_event(existing["id"], direct_updates)
+        existing = {**existing, **direct_updates}
+
+    smart_update_existing_event(existing, incoming)
+
+
 def determine_category(title: str, description: str = "") -> tuple[str, Optional[str], list[str]]:
     """Determine event category based on title and description."""
     text = f"{title} {description}".lower()
 
-    tags = ["volunteer", "food", "concrete-jungle"]
-
     if any(word in text for word in ["pick", "glean", "harvest", "fruit", "tree", "orchard", "muscadine"]):
-        tags.extend(["outdoors", "gleaning"])
+        tags = ["concrete-jungle", "food", "volunteer", "outdoors", "gleaning"]
         return "community", "volunteer", tags
 
     if any(word in text for word in ["workshop", "class", "training", "learn", "education",
                                       "compost", "gardening", "sewing", "seed swap"]):
-        tags.append("education")
+        tags = ["concrete-jungle", "food", "education"]
+        if any(word in text for word in ["farm", "doghead"]):
+            tags.append("outdoors")
         return "learning", "workshop", tags
 
     if any(word in text for word in ["farm volunteer", "farm day"]):
-        tags.append("outdoors")
+        tags = ["concrete-jungle", "food", "volunteer", "outdoors"]
         return "community", "volunteer", tags
 
-    return "community", "volunteer", tags
+    return "community", "volunteer", ["concrete-jungle", "food", "volunteer"]
 
 
 def download_airtable_csv() -> list[dict]:
@@ -163,6 +206,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     try:
         venue_id = get_or_create_venue(VENUE_DATA)
         today = date.today()
+        current_hashes: set[str] = set()
 
         rows = download_airtable_csv()
         if not rows:
@@ -211,12 +255,17 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 # Capacity info
                 spots = row.get("Number of Spots Remaining", "")
 
+                if is_full_event(raw_title, spots):
+                    logger.debug("Skipping full Concrete Jungle event: %s", raw_title)
+                    continue
+
                 events_found += 1
 
                 category, subcategory, event_tags = determine_category(title, description)
+                is_free = subcategory == "volunteer"
 
                 content_hash = generate_content_hash(title, "Concrete Jungle", start_date)
-
+                current_hashes.add(content_hash)
 
                 event_record = {
                     "source_id": source_id,
@@ -231,10 +280,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "category": category,
                     "subcategory": subcategory,
                     "tags": event_tags,
-                    "price_min": 0,
-                    "price_max": 0,
-                    "price_note": "Free volunteer event",
-                    "is_free": True,
+                    "price_min": 0 if is_free else None,
+                    "price_max": 0 if is_free else None,
+                    "price_note": "Free volunteer event" if is_free else None,
+                    "is_free": is_free,
                     "source_url": source_url,
                     "ticket_url": source_url,
                     "image_url": None,
@@ -247,7 +296,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 existing = find_event_by_hash(content_hash)
                 if existing:
-                    smart_update_existing_event(existing, event_record)
+                    _sync_existing_event(existing, event_record)
                     events_updated += 1
                     continue
 
@@ -261,6 +310,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
             except Exception as e:
                 logger.warning(f"Error processing CSV row: {e}")
                 continue
+
+        stale_deleted = remove_stale_source_events(source_id, current_hashes)
+        if stale_deleted:
+            logger.info(
+                "Removed %s stale Concrete Jungle events after calendar refresh",
+                stale_deleted,
+            )
 
         logger.info(
             f"Concrete Jungle crawl complete: {events_found} found, {events_new} new, {events_updated} updated"

@@ -31,4 +31,12 @@ describe("getPortalNavLabel", () => {
     expect(getPortalNavLabel(labels, "spots", "Spots")).toBe("Places");
     expect(getPortalNavLabel(labels, "community", "Community")).toBe("Community");
   });
+
+  it("supports a dedicated support label", () => {
+    const labels = {
+      support: "Help",
+    };
+
+    expect(getPortalNavLabel(labels, "support", "Support")).toBe("Help");
+  });
 });

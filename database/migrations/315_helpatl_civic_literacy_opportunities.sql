@@ -1,0 +1,315 @@
+-- ============================================
+-- MIGRATION 315: HelpATL Civic Literacy Opportunities
+-- ============================================
+-- Adds structured civic literacy and watchdog pathways for high-trust local
+-- civic organizations already present in HelpATL's source network.
+
+WITH helpatl AS (
+  SELECT id
+  FROM portals
+  WHERE slug = 'helpatl'
+  LIMIT 1
+),
+org_seed(name, slug, org_type, website, description, categories, city, portal_id) AS (
+  SELECT
+    seed.name,
+    seed.slug,
+    seed.org_type,
+    seed.website,
+    seed.description,
+    seed.categories,
+    'Atlanta',
+    (SELECT id FROM helpatl)
+  FROM (
+    VALUES
+      (
+        'League of Women Voters of Atlanta-Fulton County',
+        'lwv-atlanta-fulton',
+        'community_group',
+        'https://lwvaf.org/',
+        'Nonpartisan civic organization focused on informed participation in government, voter engagement, and public-process observation in Atlanta and Fulton County.',
+        ARRAY['community']
+      ),
+      (
+        'Center for Civic Innovation',
+        'center-for-civic-innovation',
+        'community_group',
+        'https://civicatlanta.org/home',
+        'Atlanta civic education and policy organization focused on community understanding, engagement, and grassroots leadership development.',
+        ARRAY['community', 'learning']
+      )
+  ) AS seed(name, slug, org_type, website, description, categories)
+)
+INSERT INTO organizations (
+  id,
+  name,
+  slug,
+  org_type,
+  website,
+  description,
+  categories,
+  city,
+  portal_id,
+  hidden,
+  featured
+)
+SELECT
+  gen_random_uuid(),
+  name,
+  slug,
+  org_type,
+  website,
+  description,
+  categories,
+  city,
+  portal_id,
+  false,
+  false
+FROM org_seed
+ON CONFLICT (slug) DO UPDATE SET
+  name = EXCLUDED.name,
+  org_type = EXCLUDED.org_type,
+  website = COALESCE(organizations.website, EXCLUDED.website),
+  description = COALESCE(organizations.description, EXCLUDED.description),
+  categories = COALESCE(organizations.categories, EXCLUDED.categories),
+  city = COALESCE(organizations.city, EXCLUDED.city),
+  portal_id = COALESCE(organizations.portal_id, EXCLUDED.portal_id),
+  hidden = false;
+
+WITH helpatl AS (
+  SELECT id
+  FROM portals
+  WHERE slug = 'helpatl'
+  LIMIT 1
+),
+opportunity_seed AS (
+  SELECT *
+  FROM (
+    VALUES
+      (
+        'lwv-observer-corps',
+        'lwv-atlanta-fulton',
+        'lwv-atlanta',
+        'Join the Observer Corps',
+        'Monitor local government bodies and help document how public institutions are operating in Atlanta and Fulton County.',
+        'The League of Women Voters of Atlanta-Fulton County recruits volunteers for its Observer Corps, which watches and monitors the Fulton County Board of Elections, Atlanta Board of Education, City of Atlanta, and Fulton County Commission.',
+        'ongoing',
+        'ongoing',
+        'light',
+        'Recurring monitoring role tied to local government meetings and public-process observation.',
+        'Atlanta and Fulton County public meetings',
+        ARRAY['journalism', 'advocacy']::text[],
+        ARRAY[]::text[],
+        'low',
+        NULL::integer,
+        false,
+        false,
+        false,
+        'Good fit for residents who want a recurring watchdog role tied to real public institutions.',
+        false,
+        false,
+        NULL::integer,
+        NULL::integer,
+        'normal',
+        NULL::date,
+        NULL::date,
+        'https://lwvaf.org/getinvolved',
+        'https://lwvaf.org/getinvolved',
+        '{"cause":"civic_engagement"}'::jsonb
+      ),
+      (
+        'lwv-deputy-registrar',
+        'lwv-atlanta-fulton',
+        'lwv-atlanta',
+        'Become a Deputy Registrar',
+        'Train to support voter registration drives in local schools, colleges, and community settings.',
+        'The League points volunteers to the Fulton County Board of Registrations and Elections training process for Deputy Registrars. Once trained, participants can host voter-registration drives in the community.',
+        'ongoing',
+        'multi_week',
+        'training_required',
+        'Monthly training path through Fulton County followed by recurring community voter-registration work.',
+        'Atlanta and Fulton County',
+        ARRAY['advocacy']::text[],
+        ARRAY[]::text[],
+        'low',
+        NULL::integer,
+        false,
+        true,
+        false,
+        'Useful for residents who want a concrete democracy-support role beyond attending meetings.',
+        false,
+        true,
+        NULL::integer,
+        NULL::integer,
+        'normal',
+        NULL::date,
+        NULL::date,
+        'https://lwvaf.org/getinvolved',
+        'https://lwvaf.org/getinvolved',
+        '{"cause":"civic_engagement"}'::jsonb
+      ),
+      (
+        'atlanta-civics-academy',
+        'center-for-civic-innovation',
+        'civic-innovation-atl',
+        'Join Atlanta Civics Academy',
+        'Build a practical understanding of City Hall, the city budget, NPUs, and how to influence public policy in Atlanta.',
+        'The Center for Civic Innovation''s Civics Academy is a hands-on training program designed to demystify local government and help residents take meaningful action in their communities.',
+        'ongoing',
+        'multi_week',
+        'training_required',
+        'Periodic training sessions and workshops offered through the Center for Civic Innovation.',
+        'Atlanta and CCI training sessions',
+        ARRAY['leadership', 'advocacy']::text[],
+        ARRAY[]::text[],
+        'low',
+        NULL::integer,
+        false,
+        false,
+        true,
+        'Open to neighborhood leaders, students, nonprofit organizers, small-business owners, and residents who want stronger civic fluency.',
+        false,
+        true,
+        NULL::integer,
+        NULL::integer,
+        'normal',
+        NULL::date,
+        NULL::date,
+        'https://civicatlanta.org/civics-academy',
+        'https://civicatlanta.org/civics-academy',
+        '{"cause":"civic_engagement"}'::jsonb
+      )
+  ) AS seed(
+    slug,
+    org_slug,
+    source_slug,
+    title,
+    summary,
+    description,
+    commitment_level,
+    time_horizon,
+    onboarding_level,
+    schedule_summary,
+    location_summary,
+    skills_required,
+    language_support,
+    physical_demand,
+    min_age,
+    family_friendly,
+    group_friendly,
+    remote_allowed,
+    accessibility_notes,
+    background_check_required,
+    training_required,
+    capacity_total,
+    capacity_remaining,
+    urgency_level,
+    starts_on,
+    ends_on,
+    application_url,
+    source_url,
+    metadata
+  )
+)
+INSERT INTO volunteer_opportunities (
+  slug,
+  organization_id,
+  source_id,
+  portal_id,
+  event_id,
+  title,
+  summary,
+  description,
+  commitment_level,
+  time_horizon,
+  onboarding_level,
+  schedule_summary,
+  location_summary,
+  skills_required,
+  language_support,
+  physical_demand,
+  min_age,
+  family_friendly,
+  group_friendly,
+  remote_allowed,
+  accessibility_notes,
+  background_check_required,
+  training_required,
+  capacity_total,
+  capacity_remaining,
+  urgency_level,
+  starts_on,
+  ends_on,
+  application_url,
+  source_url,
+  metadata,
+  is_active
+)
+SELECT
+  seed.slug,
+  org.id,
+  src.id,
+  (SELECT id FROM helpatl),
+  NULL::integer,
+  seed.title,
+  seed.summary,
+  seed.description,
+  seed.commitment_level::text,
+  seed.time_horizon::text,
+  seed.onboarding_level::text,
+  seed.schedule_summary,
+  seed.location_summary,
+  seed.skills_required,
+  seed.language_support,
+  seed.physical_demand::text,
+  seed.min_age,
+  seed.family_friendly,
+  seed.group_friendly,
+  seed.remote_allowed,
+  seed.accessibility_notes,
+  seed.background_check_required,
+  seed.training_required,
+  seed.capacity_total,
+  seed.capacity_remaining,
+  seed.urgency_level::text,
+  seed.starts_on,
+  seed.ends_on,
+  seed.application_url,
+  seed.source_url,
+  seed.metadata,
+  true
+FROM opportunity_seed seed
+JOIN organizations org ON org.slug = seed.org_slug
+LEFT JOIN sources src ON src.slug = seed.source_slug
+ON CONFLICT (slug) DO UPDATE SET
+  organization_id = EXCLUDED.organization_id,
+  source_id = EXCLUDED.source_id,
+  portal_id = EXCLUDED.portal_id,
+  title = EXCLUDED.title,
+  summary = EXCLUDED.summary,
+  description = EXCLUDED.description,
+  commitment_level = EXCLUDED.commitment_level,
+  time_horizon = EXCLUDED.time_horizon,
+  onboarding_level = EXCLUDED.onboarding_level,
+  schedule_summary = EXCLUDED.schedule_summary,
+  location_summary = EXCLUDED.location_summary,
+  skills_required = EXCLUDED.skills_required,
+  language_support = EXCLUDED.language_support,
+  physical_demand = EXCLUDED.physical_demand,
+  min_age = EXCLUDED.min_age,
+  family_friendly = EXCLUDED.family_friendly,
+  group_friendly = EXCLUDED.group_friendly,
+  remote_allowed = EXCLUDED.remote_allowed,
+  accessibility_notes = EXCLUDED.accessibility_notes,
+  background_check_required = EXCLUDED.background_check_required,
+  training_required = EXCLUDED.training_required,
+  capacity_total = EXCLUDED.capacity_total,
+  capacity_remaining = EXCLUDED.capacity_remaining,
+  urgency_level = EXCLUDED.urgency_level,
+  starts_on = EXCLUDED.starts_on,
+  ends_on = EXCLUDED.ends_on,
+  application_url = EXCLUDED.application_url,
+  source_url = EXCLUDED.source_url,
+  metadata = EXCLUDED.metadata,
+  is_active = true,
+  updated_at = now();
