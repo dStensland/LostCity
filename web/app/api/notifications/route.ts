@@ -32,7 +32,8 @@ export async function GET(request: Request) {
         id, username, display_name, avatar_url
       ),
       event:events(id, title),
-      venue:venues(id, name, slug)
+      venue:venues(id, name, slug),
+      itinerary:itineraries(id, title, share_token, portal_id)
     `)
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
