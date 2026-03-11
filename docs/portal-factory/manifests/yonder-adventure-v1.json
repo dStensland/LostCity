@@ -1,0 +1,320 @@
+{
+  "portal": {
+    "slug": "yonder",
+    "name": "Yonder",
+    "tagline": "Wander over yonder",
+    "portal_type": "event",
+    "visibility": "public",
+    "plan": "professional",
+    "parent_portal_slug": "atlanta",
+    "filters": {
+      "categories": ["community", "sports", "fitness", "family"],
+      "exclude_categories": ["nightlife"]
+    },
+    "branding": {
+      "visual_preset": "editorial_light",
+      "theme_mode": "light",
+      "primary_color": "#C45A3B",
+      "secondary_color": "#6B8E5E",
+      "accent_color": "#1A1A1A",
+      "background_color": "#F5F2ED",
+      "card_color": "#FFFFFF",
+      "text_color": "#1A1A1A",
+      "button_color": "#C45A3B",
+      "button_text_color": "#FFFFFF",
+      "font_heading": "Space Grotesk",
+      "font_body": "Inter"
+    },
+    "settings": {
+      "vertical": "adventure",
+      "show_categories": true,
+      "show_map": true,
+      "default_view": "list",
+      "nav_labels": {
+        "feed": "Yonder",
+        "find": "Find",
+        "community": "Crew",
+        "events": "Events",
+        "spots": "Destinations"
+      },
+      "primary_navigation_axis": "commitment",
+      "commitment_tiers": ["hour", "halfday", "fullday", "weekend"],
+      "scope": "atlanta-north-georgia",
+      "yonder_inventory_refresh": {
+        "cadence": "daily",
+        "hour_utc": 11
+      }
+    }
+  },
+  "source_subscriptions": {
+    "source_slugs": [
+      "atlanta-outdoor-club",
+      "blk-hiking-club",
+      "meetup",
+      "big-peach-running",
+      "chattahoochee-nature",
+      "piedmont-park",
+      "trees-atlanta",
+      "chattahoochee-riverkeeper",
+      "park-pride",
+      "central-rock-gym-atlanta",
+      "dunwoody-nature"
+    ],
+    "subscription_scope": "all",
+    "is_active": true
+  },
+  "sections": [
+    {
+      "title": "An Hour Outside",
+      "slug": "an-hour-outside",
+      "description": "Low-friction outdoor plans you can do before the day gets away from you.",
+      "section_type": "auto",
+      "auto_filter": {
+        "source_slugs": [
+          "meetup",
+          "big-peach-running",
+          "chattahoochee-nature",
+          "piedmont-park",
+          "dunwoody-nature"
+        ],
+        "categories": ["community", "sports", "fitness", "family"],
+        "tags": ["outdoor", "park", "fitness", "run", "walk", "nature", "trail"],
+        "date_filter": "next_14_days",
+        "sort_by": "date"
+      },
+      "is_visible": true,
+      "display_order": 1
+    },
+    {
+      "title": "Half Day Moves",
+      "slug": "half-day-moves",
+      "description": "Hikes, paddles, climbs, and classes that justify a real block of time without needing a full trip plan.",
+      "section_type": "auto",
+      "auto_filter": {
+        "source_slugs": [
+          "atlanta-outdoor-club",
+          "blk-hiking-club",
+          "meetup",
+          "chattahoochee-nature",
+          "central-rock-gym-atlanta"
+        ],
+        "tags": ["hiking", "trail", "climbing", "bouldering", "paddle", "kayak", "outdoor", "adventure"],
+        "date_filter": "next_30_days",
+        "sort_by": "date"
+      },
+      "is_visible": true,
+      "display_order": 2
+    },
+    {
+      "title": "Full Day Reasons",
+      "slug": "full-day-reasons",
+      "description": "The bigger adventure prompts that help Yonder feel like more than a city fitness calendar.",
+      "section_type": "auto",
+      "auto_filter": {
+        "source_slugs": [
+          "atlanta-outdoor-club",
+          "blk-hiking-club",
+          "meetup"
+        ],
+        "tags": ["waterfall", "hike", "adventure", "kayak", "rafting", "day-trip", "climb"],
+        "date_filter": "next_30_days",
+        "sort_by": "date"
+      },
+      "is_visible": true,
+      "display_order": 3
+    },
+    {
+      "title": "Weekend Crew Plans",
+      "slug": "weekend-crew-plans",
+      "description": "Trips, overnighters, and group-friendly prompts that will later ladder into camps and trip hangs.",
+      "section_type": "auto",
+      "auto_filter": {
+        "source_slugs": [
+          "atlanta-outdoor-club",
+          "blk-hiking-club",
+          "meetup"
+        ],
+        "tags": ["camping", "backpacking", "weekend", "overnight", "trip", "adventure"],
+        "date_filter": "next_30_days",
+        "sort_by": "date"
+      },
+      "is_visible": true,
+      "display_order": 4
+    },
+    {
+      "title": "Stewardship & Trail Work",
+      "slug": "stewardship-trail-work",
+      "description": "Trail maintenance, river cleanups, and park work that get people outside with purpose.",
+      "section_type": "auto",
+      "auto_filter": {
+        "source_slugs": [
+          "trees-atlanta",
+          "chattahoochee-riverkeeper",
+          "park-pride"
+        ],
+        "categories": ["community"],
+        "tags": ["volunteer", "cleanup", "trail", "river", "park", "stewardship"],
+        "date_filter": "next_30_days",
+        "sort_by": "date"
+      },
+      "is_visible": true,
+      "display_order": 5
+    },
+    {
+      "title": "Learn the Skills",
+      "slug": "learn-the-skills",
+      "description": "Beginner-friendly workshops, clinics, and classes that make bigger adventures more accessible.",
+      "section_type": "auto",
+      "auto_filter": {
+        "source_slugs": [
+          "central-rock-gym-atlanta",
+          "chattahoochee-nature"
+        ],
+        "categories": ["community", "sports", "fitness", "family"],
+        "tags": ["class", "clinic", "training", "skills", "climbing", "outdoor", "camp"],
+        "date_filter": "next_30_days",
+        "sort_by": "date"
+      },
+      "is_visible": true,
+      "display_order": 6
+    }
+  ],
+  "interest_channels": [
+    {
+      "slug": "trails-hikes",
+      "name": "Trails & Hikes",
+      "channel_type": "topic",
+      "description": "Group hikes, nature walks, and trail-first outdoor plans.",
+      "sort_order": 10,
+      "is_active": true,
+      "rules": [
+        {
+          "rule_type": "source",
+          "rule_payload": { "source_slug": "atlanta-outdoor-club" },
+          "priority": 10,
+          "is_active": true
+        },
+        {
+          "rule_type": "source",
+          "rule_payload": { "source_slug": "blk-hiking-club" },
+          "priority": 10,
+          "is_active": true
+        },
+        {
+          "rule_type": "source",
+          "rule_payload": { "source_slug": "chattahoochee-nature" },
+          "priority": 20,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "slug": "water",
+      "name": "Water",
+      "channel_type": "topic",
+      "description": "Paddles, river access, water safety, and cleanup events.",
+      "sort_order": 20,
+      "is_active": true,
+      "rules": [
+        {
+          "rule_type": "source",
+          "rule_payload": { "source_slug": "atlanta-outdoor-club" },
+          "priority": 10,
+          "is_active": true
+        },
+        {
+          "rule_type": "source",
+          "rule_payload": { "source_slug": "chattahoochee-riverkeeper" },
+          "priority": 10,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "slug": "climbing",
+      "name": "Climbing",
+      "channel_type": "topic",
+      "description": "Indoor climbing, bouldering meetups, and skills progression.",
+      "sort_order": 30,
+      "is_active": true,
+      "rules": [
+        {
+          "rule_type": "source",
+          "rule_payload": { "source_slug": "central-rock-gym-atlanta" },
+          "priority": 10,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "slug": "running-social-miles",
+      "name": "Running & Social Miles",
+      "channel_type": "topic",
+      "description": "Group runs and movement-first social rituals that lower the barrier to getting outside.",
+      "sort_order": 40,
+      "is_active": true,
+      "rules": [
+        {
+          "rule_type": "source",
+          "rule_payload": { "source_slug": "big-peach-running" },
+          "priority": 10,
+          "is_active": true
+        },
+        {
+          "rule_type": "source",
+          "rule_payload": { "source_slug": "meetup" },
+          "priority": 20,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "slug": "stewardship",
+      "name": "Stewardship",
+      "channel_type": "topic",
+      "description": "Park, trail, and river work that turns discovery into care.",
+      "sort_order": 50,
+      "is_active": true,
+      "rules": [
+        {
+          "rule_type": "source",
+          "rule_payload": { "source_slug": "trees-atlanta" },
+          "priority": 10,
+          "is_active": true
+        },
+        {
+          "rule_type": "source",
+          "rule_payload": { "source_slug": "park-pride" },
+          "priority": 10,
+          "is_active": true
+        },
+        {
+          "rule_type": "source",
+          "rule_payload": { "source_slug": "chattahoochee-riverkeeper" },
+          "priority": 10,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "slug": "skills-classes",
+      "name": "Skills & Classes",
+      "channel_type": "topic",
+      "description": "Beginner ramps into camping, climbing, paddling, and outdoor confidence.",
+      "sort_order": 60,
+      "is_active": true,
+      "rules": [
+        {
+          "rule_type": "source",
+          "rule_payload": { "source_slug": "central-rock-gym-atlanta" },
+          "priority": 10,
+          "is_active": true
+        }
+      ]
+    }
+  ],
+  "refresh_schedule": {
+    "cadence": "daily",
+    "hour_utc": 11
+  }
+}

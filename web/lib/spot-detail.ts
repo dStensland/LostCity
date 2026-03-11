@@ -3,6 +3,18 @@ import { getDistanceMiles } from "@/lib/geo";
 import { getLocalDateString } from "@/lib/formats";
 import { fetchSocialProofCounts } from "@/lib/social-proof";
 import { applyVenueGate } from "@/lib/feed-gate";
+import {
+  getYonderDestinationIntelligence,
+  type YonderDestinationIntelligence,
+} from "@/config/yonder-destination-intelligence";
+import {
+  getYonderAccommodationInventorySource,
+  type YonderAccommodationInventorySource,
+} from "@/config/yonder-accommodation-inventory";
+import {
+  getYonderRuntimeInventorySnapshot,
+  type YonderRuntimeInventorySnapshot,
+} from "@/lib/yonder-provider-inventory";
 
 // ---------------------------------------------------------------------------
 // Destination category mappings for venues (post-consolidation types)
@@ -125,6 +137,9 @@ export type SpotDetailPayload = {
   artifacts: Array<Record<string, unknown>>;
   features: VenueFeatureRow[];
   specials: VenueSpecialRow[];
+  yonderDestinationIntelligence: YonderDestinationIntelligence | null;
+  yonderAccommodationInventorySource: YonderAccommodationInventorySource | null;
+  yonderRuntimeInventorySnapshot: YonderRuntimeInventorySnapshot | null;
 };
 
 // ---------------------------------------------------------------------------
@@ -340,6 +355,13 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
   }
 
   const spot = spotData as SpotRecord;
+  const spotSlug = typeof spotData.slug === "string" ? spotData.slug : slug;
+  const yonderDestinationIntelligence =
+    getYonderDestinationIntelligence(spotSlug);
+  const yonderAccommodationInventorySource =
+    getYonderAccommodationInventorySource(spotSlug);
+  const yonderRuntimeInventorySnapshotPromise =
+    getYonderRuntimeInventorySnapshot(spotSlug);
   const today = getLocalDateString();
 
   const nearbyDestinationsPromise = fetchNearbyDestinations(supabase, spot);
@@ -418,6 +440,7 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
   const [
     upcomingCounts,
     nearbyDestinations,
+    yonderRuntimeInventorySnapshot,
     { data: highlights },
     { data: artifacts },
     { data: features },
@@ -425,6 +448,7 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
   ] = await Promise.all([
     upcomingCountsPromise,
     nearbyDestinationsPromise,
+    yonderRuntimeInventorySnapshotPromise,
     highlightsPromise,
     artifactsPromise,
     featuresPromise,
@@ -462,5 +486,8 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
     artifacts: (artifacts || []) as Array<Record<string, unknown>>,
     features: (features as VenueFeatureRow[] | null) || [],
     specials: (specials as VenueSpecialRow[] | null) || [],
+    yonderDestinationIntelligence,
+    yonderAccommodationInventorySource,
+    yonderRuntimeInventorySnapshot,
   };
 }

@@ -20,7 +20,8 @@
     "perf:prewarm": "tsx scripts/prewarm-cache.ts",
     "perf:check": "npm run perf:prewarm && PERF_MAX_COLD_MS=1500 PERF_MAX_WARM_MS=500 PERF_REQUIRE_2XX=true tsx scripts/perf-audit.ts",
     "perf:check:strict": "npm run perf:prewarm && PERF_MAX_COLD_MS=1200 PERF_MAX_WARM_MS=350 PERF_REQUIRE_2XX=true tsx scripts/perf-audit.ts",
-    "perf:local": "bash scripts/perf-local.sh"
+    "perf:local": "bash scripts/perf-local.sh",
+    "yonder:inventory:trigger": "tsx scripts/trigger-yonder-inventory-cron.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

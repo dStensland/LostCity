@@ -37,6 +37,7 @@ import {
   QuickActionLink,
   CollapsibleSection,
   VenueFeaturesSection,
+  YonderAdventureSnapshot,
 } from "@/components/detail";
 import Badge from "@/components/ui/Badge";
 import HoursSection from "@/components/HoursSection";
@@ -232,6 +233,9 @@ type SpotFromDetail = {
   short_description?: string | null;
   image_url?: string | null;
   website?: string | null;
+  reservation_url?: string | null;
+  accepts_reservations?: boolean | null;
+  reservation_recommended?: boolean | null;
   phone?: string | null;
   instagram?: string | null;
   hours?: Record<string, { open: string; close: string } | null> | null;
@@ -376,13 +380,22 @@ export default async function PortalSpotPage({ params }: Props) {
   }
 
   const spot = detail.spot as SpotFromDetail;
-  const { upcomingEvents, nearbyDestinations, highlights, artifacts, features } =
-    detail;
+  const {
+    upcomingEvents,
+    nearbyDestinations,
+    highlights,
+    artifacts,
+    features,
+    yonderDestinationIntelligence,
+    yonderAccommodationInventorySource,
+    yonderRuntimeInventorySnapshot,
+  } = detail;
 
   const activePortalSlug = portal?.slug || portalSlug;
   const activePortalName =
     portal?.name ||
     portalSlug.charAt(0).toUpperCase() + portalSlug.slice(1);
+  const isYonderPortal = activePortalSlug === "yonder";
 
   const primaryType = spot.venue_type as SpotType | null;
   const typeInfo = primaryType ? SPOT_TYPES[primaryType] : null;
@@ -687,6 +700,20 @@ export default async function PortalSpotPage({ params }: Props) {
 
           {/* ── 4. AT A GLANCE — type-aware MetadataGrid ────────────── */}
           <MetadataGrid items={metadataItems} />
+
+          {/* ── 4a. YONDER ADVENTURE SNAPSHOT ───────────────────── */}
+          {isYonderPortal && yonderDestinationIntelligence && (
+            <YonderAdventureSnapshot
+              intelligence={yonderDestinationIntelligence}
+              accommodationInventorySource={yonderAccommodationInventorySource}
+              runtimeInventorySnapshot={yonderRuntimeInventorySnapshot}
+              bookingSupport={{
+                acceptsReservations: spot.accepts_reservations ?? null,
+                reservationRecommended: spot.reservation_recommended ?? null,
+                reservationUrl: spot.reservation_url ?? null,
+              }}
+            />
+          )}
 
           {/* ── 4b. VENUE HANG STRIP — who's here ────────────────── */}
           {ENABLE_HANGS_V1 && (
