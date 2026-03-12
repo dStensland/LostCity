@@ -95,6 +95,58 @@ MAX_REQUESTS_WORKERS = 8   # Reduced from 10 — keeps total socket pressure low
 # Populated once at startup by _classify_sources().
 PLAYWRIGHT_SOURCES: set[str] = set()
 
+TRANSIENT_CRAWL_ERROR_PATTERNS = (
+    "server disconnected",
+    "connection terminated",
+    "connection reset by peer",
+    "remote protocol error",
+    "temporarily unavailable",
+    "timed out",
+    "timeout",
+    "429",
+    "too many requests",
+    "rate limit",
+    "403 forbidden",
+)
+TRANSIENT_CRAWL_MAX_ATTEMPTS = 2
+
+
+def is_transient_crawl_error(exc: Exception) -> bool:
+    """Return True when a crawl failure looks like a short-lived network problem."""
+    message = str(exc or "").strip().lower()
+    if not message:
+        return False
+    return any(pattern in message for pattern in TRANSIENT_CRAWL_ERROR_PATTERNS)
+
+
+def run_crawler_with_retry(source: dict) -> tuple[int, int, int]:
+    """Retry transient source failures once before surfacing them as hard errors."""
+    slug = source["slug"]
+    last_exc: Optional[Exception] = None
+
+    for attempt in range(1, TRANSIENT_CRAWL_MAX_ATTEMPTS + 1):
+        try:
+            return run_crawler(source)
+        except Exception as exc:
+            last_exc = exc
+            if attempt >= TRANSIENT_CRAWL_MAX_ATTEMPTS or not is_transient_crawl_error(exc):
+                raise
+
+            backoff_seconds = float(attempt)
+            logger.warning(
+                "Transient crawl failure for %s on attempt %s/%s: %s. Retrying in %.1fs.",
+                slug,
+                attempt,
+                TRANSIENT_CRAWL_MAX_ATTEMPTS,
+                exc,
+                backoff_seconds,
+            )
+            time.sleep(backoff_seconds)
+
+    if last_exc:
+        raise last_exc
+    raise RuntimeError(f"run_crawler_with_retry exhausted without result for {slug}")
+
 
 def _classify_sources() -> None:
     """Scan source modules and populate PLAYWRIGHT_SOURCES with slugs that use Playwright.
@@ -216,13 +268,16 @@ SOURCE_OVERRIDES = {
     "529": "sources.five29",
     "10times": "sources.tentimes",
     "13-stories": "sources.thirteen_stories",
+    "404-weekend": "sources.four04_weekend",
     "404-found-atl": "sources.four04_found_atl",
     "7-stages": "sources.seven_stages",
     
     # Multiple slugs mapping to single module
-    "mobilize-api": "sources.mobilize_api",  # New API aggregator
+    "mobilize-api": "sources.mobilize_api",  # Legacy slug
+    "mobilize-us": "sources.mobilize_api",   # HelpATL API aggregator
     "mobilize-dekalb-dems": "sources.mobilize",
     "mobilize-ga-dems": "sources.mobilize",
+    "fair-count": "sources.mobilize",
     "mobilize-indivisible-atl": "sources.mobilize",
     "mobilize-indivisible-cobb": "sources.mobilize",
     "mobilize-indivisible-cherokee": "sources.mobilize",
@@ -247,6 +302,7 @@ SOURCE_OVERRIDES = {
     "ellis-station-candle-co": "sources.ellis_station",
     "fun-spot-america-atlanta": "sources.fun_spot_atlanta",
     "georgia-ensemble-theatre": "sources.georgia_ensemble",
+    "georgia-ethics-commission": "sources.georgia_ethics_commission",
     "georgian-terrace-hotel": "sources.georgian_terrace",
     "goat-farm-arts-center": "sources.goat_farm",
     "hambidge-center": "sources.hambidge",
@@ -260,11 +316,12 @@ SOURCE_OVERRIDES = {
     "sandler-hudson-gallery": "sources.sandler_hudson",
     "silverspot-cinema-atlanta": "sources.silverspot_atlanta",
     "six-flags-over-georgia": "sources.six_flags",
-    "spruill-center": "sources.spruill_center_for_the_arts",
     "skylounge-glenn-hotel": "sources.skylounge_glenn",
     "the-bakery-atl": "sources.the_bakery",
+    "the-works-atl": "sources.the_works",
     "the-gathering-spot": "sources.gathering_spot",
     "the-maker-station": "sources.maker_station",
+    "chattahoochee-food-works": "sources.the_works",
     "wild-heaven-beer-avondale": "sources.wild_heaven_beer",
     # Support portal slug-to-filename mismatches
     "good-samaritan-health-center": "sources.good_samaritan_health",
@@ -281,6 +338,19 @@ SOURCE_OVERRIDES = {
     "esfna-atlanta": "sources.annual_tentpoles",
     "221b-con": "sources.annual_tentpoles",
     "fifa-fan-festival-atlanta": "sources.annual_tentpoles",
+    # Rec1 (CivicRec) county parks & recreation platforms
+    "cobb-parks-rec": "sources.cobb_parks_rec",
+    "gwinnett-parks-rec": "sources.gwinnett_parks_rec",
+    # Destination-first crawlers (descriptive slugs != short filenames)
+    "museum-of-illusions-atlanta": "sources.museum_of_illusions",
+    "topgolf-atlanta-midtown": "sources.topgolf_atlanta",
+    "andretti-indoor-karting-atlanta": "sources.andretti_karting",
+    "ifly-indoor-skydiving-atlanta": "sources.ifly_atlanta",
+    "dave-and-busters-marietta": "sources.dave_and_busters",
+    "round-1-arcade-alpharetta": "sources.round_1_arcade",
+    "porsche-experience-center-atlanta": "sources.porsche_experience_center",
+    "atlanta-alpaca-treehouse": "sources.alpaca_treehouse",
+    "trader-vics-atlanta": "sources.trader_vics",
 }
 
 
@@ -345,8 +415,11 @@ def run_source(slug: str, skip_circuit_breaker: bool = False) -> bool:
         return False
 
     if not source["is_active"]:
-        logger.warning(f"Source is not active: {slug}")
-        return False
+        if skip_circuit_breaker:
+            logger.warning("Source is inactive; continuing because --force was used: %s", slug)
+        else:
+            logger.warning(f"Source is not active: {slug}")
+            return False
 
     # Check health-based skip (circuit breaker logic lives in crawler_health)
     if not skip_circuit_breaker:
@@ -365,7 +438,7 @@ def run_source(slug: str, skip_circuit_breaker: bool = False) -> bool:
     health_run_id = health_record_start(slug)
 
     try:
-        found, new, updated = run_crawler(source)
+        found, new, updated = run_crawler_with_retry(source)
 
         # Get validation statistics
         stats = get_validation_stats()
@@ -493,13 +566,19 @@ def run_festival_schedules(portal_slug: Optional[str] = None) -> dict:
         stats["festivals_processed"] += 1
 
         profile_urls: list[str] = []
+        render_js = False
         try:
             from pipeline.loader import load_profile
 
             profile = load_profile(slug)
             profile_urls = list(profile.discovery.urls or [])
+            render_js = bool(
+                getattr(profile.discovery.fetch, "render_js", False)
+                or getattr(profile.detail.fetch, "render_js", False)
+            )
         except Exception:
             profile_urls = []
+            render_js = False
 
         source_url = source_url_by_slug.get(slug)
         candidate_urls = _build_festival_schedule_candidate_urls(
@@ -517,7 +596,7 @@ def run_festival_schedules(portal_slug: Optional[str] = None) -> dict:
                 found, new, _skipped = crawl_festival_schedule(
                     slug=slug,
                     url=candidate_url,
-                    render_js=False,
+                    render_js=render_js,
                     use_llm=False,
                     dry_run=False,
                 )
@@ -910,6 +989,10 @@ def run_post_crawl_tasks(
         logger.info("Write mode disabled; skipping post-crawl tasks.")
         return
 
+    if not run_global_tasks:
+        logger.info("Skipping post-crawl tasks for scoped run.")
+        return
+
     # Refresh available filters for UI
     logger.info("Refreshing available filters...")
     if refresh_available_filters():
@@ -939,10 +1022,6 @@ def run_post_crawl_tasks(
     except Exception as e:
         logger.debug(f"Could not get health summary: {e}")
 
-    if not run_global_tasks:
-        logger.info("Skipping global post-crawl tasks for scoped run.")
-        return
-
     # ===== POST-CRAWL TASKS =====
 
     # 1. Clean up old events
@@ -961,6 +1040,22 @@ def run_post_crawl_tasks(
         )
     except Exception as e:
         logger.warning(f"Cleanup failed: {e}")
+
+    # 1b. Data quality healing loop
+    logger.info("Running data quality healing loop...")
+    try:
+        from heal_events import run_healing_loop
+        heal_stats = run_healing_loop(dry_run=False, fix=True, report=True)
+        logger.info(
+            "Healing: %s prices, %s titles, %s caps, %s closed-venue, %s alerts",
+            heal_stats.get("prices_fixed", 0),
+            heal_stats.get("titles_cleaned", 0),
+            heal_stats.get("caps_fixed", 0),
+            heal_stats.get("closed_deactivated", 0),
+            heal_stats.get("alerts", 0),
+        )
+    except Exception as e:
+        logger.warning(f"Healing loop failed: {e}")
 
     # 2. Festival schedule extraction (structured parsing, no LLM)
     logger.info("Extracting festival program sessions...")
@@ -1094,6 +1189,18 @@ def run_post_crawl_tasks(
         )
         if not ok:
             raise RuntimeError("Launch maintenance sequence failed")
+
+
+def should_run_full_post_crawl_for_source(args) -> bool:
+    """
+    Return whether a single-source run should trigger broad post-crawl jobs.
+
+    Scoped rehab/debug runs should not default into cleanup, healing, festival
+    extraction, and launch maintenance. Those remain opt-in for source runs.
+    """
+    if getattr(args, "skip_launch_maintenance", False):
+        return False
+    return bool(getattr(args, "full_post_crawl", False))
 
 
 def run_all_sources(
@@ -1585,6 +1692,14 @@ def main():
         ),
     )
     parser.add_argument(
+        "--full-post-crawl",
+        action="store_true",
+        help=(
+            "For scoped --source runs, opt into the full post-crawl pipeline "
+            "(cleanup, healing, festivals, reports, and launch maintenance)."
+        ),
+    )
+    parser.add_argument(
         "--launch-maintenance-city",
         default="Atlanta",
         help="City passed to post-crawl launch maintenance. Default: Atlanta.",
@@ -1777,9 +1892,10 @@ def main():
     if args.source:
         success = run_source(args.source, skip_circuit_breaker=args.force)
         if success and should_write:
+            run_full_post_crawl = should_run_full_post_crawl_for_source(args)
             run_post_crawl_tasks(
-                run_global_tasks=not args.skip_launch_maintenance,
-                run_launch_maintenance=not args.skip_launch_maintenance,
+                run_global_tasks=run_full_post_crawl,
+                run_launch_maintenance=run_full_post_crawl,
                 maintenance_city=args.launch_maintenance_city,
                 maintenance_portal=args.launch_maintenance_portal,
             )

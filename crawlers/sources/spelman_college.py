@@ -4,10 +4,15 @@ Concerts, lectures, museum exhibitions, and campus events at the #1 HBCU.
 Uses their JSON feed for reliable event extraction, plus static HTML list for annual events.
 """
 
+from __future__ import annotations
+
 import json
 import logging
 import re
 from datetime import datetime
+from typing import Optional
+from urllib.parse import urljoin
+
 import requests
 from bs4 import BeautifulSoup
 
@@ -46,6 +51,8 @@ def is_public_event(title: str, description: str = "") -> bool:
 BASE_URL = "https://www.spelman.edu"
 JSON_FEED_URL = f"{BASE_URL}/events/_data/current-live.json"
 EVENTS_PAGE_URL = f"{BASE_URL}/events/"
+MUSEUM_BASE_URL = "https://museum.spelman.edu"
+MUSEUM_EXHIBITIONS_URL = f"{MUSEUM_BASE_URL}/art-and-events/exhibitions/index.html"
 
 VENUES = {
     "museum": {
@@ -71,6 +78,17 @@ VENUES = {
         "website": "https://spelman.edu",
     },
 }
+
+
+def _clean_text(value: str) -> str:
+    text = value or ""
+    if any(token in text for token in ("â", "Â", "Ã")):
+        try:
+            text = text.encode("latin1", errors="ignore").decode("utf-8", errors="ignore")
+        except Exception:
+            pass
+    text = text.replace("\xa0", " ")
+    return re.sub(r"\s+", " ", text).strip()
 
 
 def parse_iso_datetime(iso_string: str) -> tuple[str, str]:
@@ -172,16 +190,16 @@ def categorize_event(event_data: dict, title: str) -> tuple[str, str, dict]:
 
     # Check for museum events
     if "Museum of Fine Art" in filter_tags:
-        return "museums", "exhibition", VENUES["museum"]
+        return "art", "exhibition", VENUES["museum"]
 
     # Check other filter tags
     if "Arts and Entertainment" in filter_tags:
         if "concert" in title_lower or "music" in title_lower or "choir" in title_lower:
             return "music", "concert", VENUES["default"]
         elif "theater" in title_lower or "performance" in title_lower:
-            return "performing-arts", "theater", VENUES["default"]
+            return "theater", "play", VENUES["default"]
         else:
-            return "art", "visual-art", VENUES["default"]
+            return "art", "exhibition", VENUES["default"]
 
     if "Admissions" in filter_tags:
         return "community", "campus", VENUES["default"]
@@ -207,6 +225,134 @@ def categorize_event(event_data: dict, title: str) -> tuple[str, str, dict]:
 
     # Default category
     return "community", "campus", VENUES["default"]
+
+
+def parse_spelman_museum_date_range(date_text: str) -> tuple[Optional[str], Optional[str]]:
+    """Parse museum exhibit dates from abbreviated or verbose copy."""
+    cleaned = _clean_text(date_text).replace("–", "-").replace("—", "-")
+    cleaned = re.sub(r"(\b[A-Za-z]{3})\.\s", r"\1 ", cleaned)
+
+    range_match = re.search(
+        r"([A-Za-z]{3,9}\s+\d{1,2},\s+\d{4})\s*-\s*([A-Za-z]{3,9}\s+\d{1,2},\s+\d{4})",
+        cleaned,
+    )
+    if range_match:
+        start_raw, end_raw = range_match.groups()
+        return _parse_spelman_date(start_raw), _parse_spelman_date(end_raw)
+
+    open_until_match = re.search(
+        r"open to the public on\s+(?:[A-Za-z]+,\s+)?([A-Za-z]{3,9}\s+\d{1,2},\s+\d{4}).{0,220}?until\s+([A-Za-z]{3,9}\s+\d{1,2},\s+\d{4})",
+        cleaned,
+        re.IGNORECASE,
+    )
+    if open_until_match:
+        start_raw, end_raw = open_until_match.groups()
+        return _parse_spelman_date(start_raw), _parse_spelman_date(end_raw)
+
+    return None, None
+
+
+def _parse_spelman_date(date_text: str) -> Optional[str]:
+    cleaned = _clean_text(date_text)
+    cleaned = re.sub(r"(\b[A-Za-z]{3})\.\s", r"\1 ", cleaned)
+    for fmt in ("%B %d, %Y", "%b %d, %Y"):
+        try:
+            return datetime.strptime(cleaned, fmt).strftime("%Y-%m-%d")
+        except ValueError:
+            continue
+    return None
+
+
+def normalize_ongoing_exhibit_dates(start_date: str, end_date: Optional[str]) -> tuple[str, Optional[str]]:
+    """Keep active exhibits visible by advancing already-open shows to today."""
+    if not start_date or not end_date:
+        return start_date, end_date
+
+    today = datetime.now().date()
+    start_dt = datetime.strptime(start_date, "%Y-%m-%d").date()
+    end_dt = datetime.strptime(end_date, "%Y-%m-%d").date()
+    if start_dt < today <= end_dt:
+        return today.strftime("%Y-%m-%d"), end_date
+    return start_date, end_date
+
+
+def _museum_hash_candidates(title: str, start_date: str) -> list[str]:
+    candidates = [generate_content_hash(title, VENUES["museum"]["name"], start_date)]
+    if ": " in title:
+        candidates.append(
+            generate_content_hash(title.replace(": ", ", ", 1), VENUES["museum"]["name"], start_date)
+        )
+    if ", " in title:
+        candidates.append(
+            generate_content_hash(title.replace(", ", ": ", 1), VENUES["museum"]["name"], start_date)
+        )
+    deduped: list[str] = []
+    for candidate in candidates:
+        if candidate not in deduped:
+            deduped.append(candidate)
+    return deduped
+
+
+def extract_museum_exhibitions(html_content: str) -> list[dict]:
+    """Extract museum exhibition cards from the museum site."""
+    exhibitions: list[dict] = []
+    soup = BeautifulSoup(html_content, "html.parser")
+
+    for block in soup.select(".image-content-container"):
+        content = block.select_one(".image-content")
+        if not content:
+            continue
+
+        title_el = content.find("h3")
+        if not title_el:
+            continue
+
+        title = _clean_text(title_el.get_text(" ", strip=True).split("\n")[0])
+        title = title.split(" Oct.", 1)[0].split(" October ", 1)[0].strip()
+        if not title:
+            continue
+
+        detail_url = None
+        detail_link = content.find("a", href=re.compile(r"(?:^|/)exhibitions/.+\.html$", re.IGNORECASE))
+        if detail_link and detail_link.get("href"):
+            detail_href = detail_link["href"].strip()
+            detail_url = urljoin(f"{MUSEUM_BASE_URL}/", detail_href.lstrip("/"))
+
+        combined_text = _clean_text(content.get_text(" ", strip=True))
+        start_date_raw, end_date = parse_spelman_museum_date_range(combined_text)
+        if not start_date_raw or not end_date:
+            continue
+
+        description = None
+        for paragraph in content.find_all("p"):
+            text = _clean_text(paragraph.get_text(" ", strip=True))
+            if len(text) >= 50:
+                description = text[:1000]
+                break
+
+        image_url = None
+        image_container = block.select_one(".image-container[style]")
+        if image_container:
+            style = image_container.get("style", "")
+            image_match = re.search(r"url\(([^)]+)\)", style)
+            if image_match:
+                image_url = urljoin(MUSEUM_EXHIBITIONS_URL, image_match.group(1).strip("'\""))
+
+        start_date, normalized_end_date = normalize_ongoing_exhibit_dates(start_date_raw, end_date)
+        exhibitions.append(
+            {
+                "title": title,
+                "description": description or f"Exhibition at {VENUES['museum']['name']}.",
+                "start_date": start_date,
+                "hash_start_date": start_date_raw,
+                "end_date": normalized_end_date,
+                "source_url": detail_url or MUSEUM_EXHIBITIONS_URL,
+                "ticket_url": detail_url,
+                "image_url": image_url,
+            }
+        )
+
+    return exhibitions
 
 
 def parse_static_events(html_content: str) -> list[dict]:
@@ -288,6 +434,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
         html_response = requests.get(EVENTS_PAGE_URL, headers=headers, timeout=30)
         html_response.raise_for_status()
         static_events = parse_static_events(html_response.text)
+
+        museum_response = requests.get(MUSEUM_EXHIBITIONS_URL, headers=headers, timeout=30)
+        museum_response.raise_for_status()
+        museum_exhibitions = extract_museum_exhibitions(museum_response.text)
 
         # Process JSON events first
         for event_data in json_events:
@@ -427,14 +577,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 category, subcategory, venue_data = categorize_event({}, title)
                 venue_id = get_or_create_venue(venue_data)
 
-                # Check for duplicates
-                content_hash = generate_content_hash(title, venue_data["name"], start_date)
-                existing = find_event_by_hash(content_hash)
-                if existing:
-                    smart_update_existing_event(existing, event_record)
-                    events_updated += 1
-                    continue
-
                 # Build description
                 description = "Annual event at Spelman College, ranked #1 HBCU in the nation."
 
@@ -442,6 +584,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 tags = ["college", "hbcu", "spelman", "women", "annual"]
 
                 # Create event record
+                content_hash = generate_content_hash(title, venue_data["name"], start_date)
                 event_record = {
                     "source_id": source_id,
                     "venue_id": venue_id,
@@ -469,12 +612,80 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "content_hash": content_hash,
                 }
 
+                existing = find_event_by_hash(content_hash)
+                if existing:
+                    smart_update_existing_event(existing, event_record)
+                    events_updated += 1
+                    continue
+
                 insert_event(event_record)
                 events_new += 1
                 logger.debug(f"Inserted static event: {title} on {start_date}")
 
             except Exception as e:
                 logger.error(f"Failed to process static event '{event_data.get('title', 'Unknown')}': {e}", exc_info=True)
+                continue
+
+        museum_venue_id = get_or_create_venue(VENUES["museum"])
+        for exhibit in museum_exhibitions:
+            try:
+                end_date = exhibit.get("end_date")
+                if not end_date or end_date < datetime.now().strftime("%Y-%m-%d"):
+                    continue
+
+                events_found += 1
+                hash_start_date = exhibit.get("hash_start_date") or exhibit["start_date"]
+                hash_candidates = _museum_hash_candidates(exhibit["title"], hash_start_date)
+
+                event_record = {
+                    "source_id": source_id,
+                    "venue_id": museum_venue_id,
+                    "title": exhibit["title"],
+                    "description": exhibit["description"],
+                    "start_date": exhibit["start_date"],
+                    "start_time": None,
+                    "end_date": exhibit["end_date"],
+                    "end_time": None,
+                    "is_all_day": True,
+                    "content_kind": "exhibit",
+                    "category": "art",
+                    "subcategory": "exhibition",
+                    "tags": ["art", "museum", "spelman", "hbcu", "exhibition"],
+                    "price_min": None,
+                    "price_max": None,
+                    "price_note": "Suggested donation: $5",
+                    "is_free": True,
+                    "source_url": exhibit["source_url"],
+                    "ticket_url": exhibit["ticket_url"],
+                    "image_url": exhibit["image_url"],
+                    "raw_text": json.dumps(exhibit),
+                    "extraction_confidence": 0.93,
+                    "is_recurring": False,
+                    "recurrence_rule": None,
+                    "content_hash": hash_candidates[0],
+                }
+
+                existing = None
+                for candidate_hash in hash_candidates:
+                    existing = find_event_by_hash(candidate_hash)
+                    if existing:
+                        event_record["content_hash"] = candidate_hash
+                        break
+
+                if existing:
+                    smart_update_existing_event(existing, event_record)
+                    events_updated += 1
+                    continue
+
+                insert_event(event_record)
+                events_new += 1
+                logger.debug(f"Inserted museum exhibit: {exhibit['title']} ({exhibit['start_date']})")
+
+            except Exception as e:
+                logger.error(
+                    f"Failed to process museum exhibit '{exhibit.get('title', 'Unknown')}': {e}",
+                    exc_info=True,
+                )
                 continue
 
         logger.info(f"Spelman College: Found {events_found} events, {events_new} new, {events_updated} existing")

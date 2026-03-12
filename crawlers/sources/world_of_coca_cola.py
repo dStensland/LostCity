@@ -13,7 +13,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_client, get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, extract_event_links, find_event_url
 
@@ -35,6 +35,25 @@ VENUE_DATA = {
     "venue_type": "museum",
     "spot_type": "museum",
     "website": BASE_URL,
+    # Admission: $21 adult, $17 child (ages 3-12), free under 3
+    # Hours verified 2026-03-11 against worldofcoca-cola.com
+    "hours": {
+        "sunday": "10:00-17:00",
+        "monday": "10:00-17:00",
+        "tuesday": "10:00-17:00",
+        "wednesday": "10:00-17:00",
+        "thursday": "10:00-17:00",
+        "friday": "10:00-18:00",
+        "saturday": "10:00-18:00",
+    },
+    "vibes": [
+        "family-friendly",
+        "educational",
+        "tourist-attraction",
+        "interactive",
+        "downtown",
+        "centennial-park",
+    ],
 }
 
 
@@ -71,8 +90,46 @@ def crawl(source: dict) -> tuple[int, int, int]:
             venue_id = get_or_create_venue(VENUE_DATA)
 
             logger.info(f"Fetching World of Coca-Cola: {EVENTS_URL}")
-            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
+            response = page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
             page.wait_for_timeout(3000)
+
+            if response and response.status == 404:
+                logger.warning(
+                    "World of Coca-Cola events endpoint returned 404; "
+                    "enriching venue record from homepage and treating as destination-first"
+                )
+                # Enrich venue with og:image and og:description from the homepage
+                try:
+                    page.goto(BASE_URL, wait_until="domcontentloaded", timeout=30000)
+                    page.wait_for_timeout(2000)
+                    og_image = page.evaluate(
+                        "() => { const m = document.querySelector('meta[property=\"og:image\"]'); "
+                        "return m ? m.getAttribute('content') : null; }"
+                    )
+                    og_desc = page.evaluate(
+                        "() => { const m = document.querySelector('meta[property=\"og:description\"]') "
+                        "|| document.querySelector('meta[name=\"description\"]'); "
+                        "return m ? m.getAttribute('content') : null; }"
+                    )
+                    if og_image or og_desc:
+                        venue_update: dict = {}
+                        if og_image:
+                            venue_update["image_url"] = og_image
+                        if og_desc:
+                            venue_update["description"] = og_desc[:500]
+                        if venue_update:
+                            get_client().table("venues").update(venue_update).eq(
+                                "id", venue_id
+                            ).execute()
+                            logger.info(
+                                "World of Coca-Cola: enriched venue with homepage og: metadata"
+                            )
+                except Exception as enrich_exc:
+                    logger.warning(
+                        "World of Coca-Cola: homepage enrichment failed: %s", enrich_exc
+                    )
+                browser.close()
+                return 0, 0, 0
 
             # Extract images from page
             image_map = extract_images_from_page(page)
@@ -163,7 +220,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": "Event at World of Coca-Cola",
+                        "description": None,
                         "start_date": start_date,
                         "start_time": start_time,
                         "end_date": None,

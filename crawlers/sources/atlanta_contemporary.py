@@ -13,6 +13,10 @@ import re
 import logging
 from datetime import datetime
 from typing import Optional
+from urllib.parse import urljoin
+
+import requests
+from bs4 import BeautifulSoup
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
@@ -23,6 +27,7 @@ logger = logging.getLogger(__name__)
 
 BASE_URL = "https://atlantacontemporary.org"
 EVENTS_URL = f"{BASE_URL}/programs/schedule"
+EXHIBITIONS_URL = f"{BASE_URL}/exhibitions"
 
 VENUE_DATA = {
     "name": "Atlanta Contemporary",
@@ -37,6 +42,24 @@ VENUE_DATA = {
     "venue_type": "museum",
     "spot_type": "museum",
     "website": BASE_URL,
+    # Description populated dynamically from og:description on first Playwright visit.
+    # Fallback for offline/test runs:
+    "description": (
+        "Atlanta Contemporary is a free contemporary art center in West Midtown dedicated to "
+        "presenting innovative work by local, national, and international artists through "
+        "rotating exhibitions, artist talks, studio visits, and community programs."
+    ),
+    # Hours verified 2026-03-11 from atlantacontemporary.org/visit
+    "hours": {
+        "monday": "closed",
+        "tuesday": "11:00-17:00",
+        "wednesday": "11:00-17:00",
+        "thursday": "11:00-20:00",
+        "friday": "11:00-17:00",
+        "saturday": "11:00-17:00",
+        "sunday": "12:00-17:00",
+    },
+    "vibes": ["free", "contemporary-art", "cultural", "west-midtown"],
 }
 
 
@@ -156,6 +179,148 @@ def determine_category(event_type: str, title: str, description: str = "") -> tu
     return "museums", None, tags
 
 
+def parse_exhibition_date_range(date_text: str) -> tuple[Optional[str], Optional[str]]:
+    """Parse exhibition range strings like 'February 1, 2026 - May 17, 2026'."""
+    if not date_text:
+        return None, None
+
+    cleaned = re.sub(r"\s+", " ", date_text.strip()).replace("–", "-").replace("—", "-")
+    match = re.search(
+        r"([A-Za-z]+ \d{1,2}, \d{4})\s*-\s*([A-Za-z]+ \d{1,2}, \d{4})",
+        cleaned,
+    )
+    if not match:
+        return None, None
+
+    start_raw, end_raw = match.groups()
+    for fmt in ("%B %d, %Y", "%b %d, %Y"):
+        try:
+            start_dt = datetime.strptime(start_raw, fmt)
+            end_dt = datetime.strptime(end_raw, fmt)
+            return start_dt.strftime("%Y-%m-%d"), end_dt.strftime("%Y-%m-%d")
+        except ValueError:
+            continue
+
+    return None, None
+
+
+def normalize_ongoing_exhibit_dates(start_date: str, end_date: Optional[str]) -> tuple[str, Optional[str]]:
+    """
+    Keep ongoing exhibits active by normalizing the visible start date to today
+    once the show is already running.
+    """
+    if not start_date or not end_date:
+        return start_date, end_date
+
+    today = datetime.now().date()
+    start_dt = datetime.strptime(start_date, "%Y-%m-%d").date()
+    end_dt = datetime.strptime(end_date, "%Y-%m-%d").date()
+
+    if start_dt < today <= end_dt:
+        return today.strftime("%Y-%m-%d"), end_date
+
+    return start_date, end_date
+
+
+def build_exhibition_title(primary: str, secondary: str) -> str:
+    """Build a readable exhibit title from artist/org + show name."""
+    primary_clean = re.sub(r"\s+", " ", (primary or "").strip())
+    secondary_clean = re.sub(r"\s+", " ", (secondary or "").strip())
+
+    if primary_clean and secondary_clean and primary_clean.lower() != secondary_clean.lower():
+        return f"{primary_clean}: {secondary_clean}"
+    return secondary_clean or primary_clean
+
+
+def extract_exhibition_detail(detail_url: str) -> tuple[Optional[str], Optional[str]]:
+    """Fetch the exhibit detail page for description and hero image."""
+    try:
+        response = requests.get(
+            detail_url,
+            timeout=30,
+            headers={"User-Agent": "Mozilla/5.0"},
+        )
+        response.raise_for_status()
+    except Exception as exc:
+        logger.warning("Failed to fetch Atlanta Contemporary exhibit detail %s: %s", detail_url, exc)
+        return None, None
+
+    soup = BeautifulSoup(response.text, "html.parser")
+
+    description = None
+    for paragraph in soup.select("main p, article p, .content p"):
+        text = re.sub(r"\s+", " ", paragraph.get_text(" ", strip=True))
+        if len(text) >= 80:
+            description = text[:1000]
+            break
+
+    image_url = None
+    for image in soup.select('img[src*="/transforms/exhibits/"], img[src*="/images/exhibits/"], img'):
+        src = image.get("src")
+        if not src:
+            continue
+        image_url = urljoin(BASE_URL, src)
+        break
+
+    return description, image_url
+
+
+def extract_exhibitions() -> list[dict]:
+    """Extract current exhibitions from Atlanta Contemporary's exhibitions page."""
+    try:
+        response = requests.get(
+            EXHIBITIONS_URL,
+            timeout=30,
+            headers={"User-Agent": "Mozilla/5.0"},
+        )
+        response.raise_for_status()
+    except Exception as exc:
+        logger.error("Failed to fetch Atlanta Contemporary exhibitions page: %s", exc)
+        return []
+
+    soup = BeautifulSoup(response.text, "html.parser")
+    exhibitions: list[dict] = []
+
+    for article in soup.select(".exhibitions__featured article"):
+        link = article.select_one('a[href*="/exhibits/"]')
+        primary = article.select_one("h2")
+        secondary = article.select_one("h3")
+        text = re.sub(r"\s+", " ", article.get_text(" ", strip=True))
+
+        if not link or not primary or not secondary:
+            continue
+
+        canonical_start_date, end_date = parse_exhibition_date_range(text)
+        if not canonical_start_date:
+            logger.debug("Could not parse Atlanta Contemporary exhibit dates from: %s", text)
+            continue
+
+        normalized_start_date, normalized_end_date = normalize_ongoing_exhibit_dates(
+            canonical_start_date,
+            end_date,
+        )
+        detail_url = urljoin(BASE_URL, link.get("href"))
+        description, image_url = extract_exhibition_detail(detail_url)
+
+        exhibitions.append(
+            {
+                "title": build_exhibition_title(
+                    primary.get_text(" ", strip=True),
+                    secondary.get_text(" ", strip=True),
+                ),
+                "description": description,
+                "canonical_start_date": canonical_start_date,
+                "start_date": normalized_start_date,
+                "end_date": normalized_end_date,
+                "source_url": detail_url,
+                "ticket_url": detail_url,
+                "image_url": image_url,
+            }
+        )
+
+    return exhibitions
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
     """
     Crawl Atlanta Contemporary events using Playwright.
@@ -177,11 +342,32 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
+            # ----------------------------------------------------------------
+            # 0. Homepage — extract og:image / og:description for venue record
+            # ----------------------------------------------------------------
+            try:
+                page.goto(BASE_URL, wait_until="domcontentloaded", timeout=30000)
+                og_image = page.evaluate(
+                    "() => { const m = document.querySelector('meta[property=\"og:image\"]'); return m ? m.content : null; }"
+                )
+                og_desc = page.evaluate(
+                    "() => { const m = document.querySelector('meta[property=\"og:description\"]') "
+                    "|| document.querySelector('meta[name=\"description\"]'); return m ? m.content : null; }"
+                )
+                if og_image:
+                    VENUE_DATA["image_url"] = og_image
+                    logger.debug("Atlanta Contemporary: og:image = %s", og_image)
+                if og_desc:
+                    VENUE_DATA["description"] = og_desc
+                    logger.debug("Atlanta Contemporary: og:description captured")
+            except Exception as _meta_exc:
+                logger.debug("Atlanta Contemporary: could not extract og meta from homepage: %s", _meta_exc)
+
             # Get venue ID
             venue_id = get_or_create_venue(VENUE_DATA)
 
             logger.info(f"Fetching Atlanta Contemporary events: {EVENTS_URL}")
-            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
+            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=60000)
             page.wait_for_timeout(3000)
 
             # Scroll to load all content
@@ -315,6 +501,75 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 except Exception as e:
                     logger.warning(f"Error parsing event article: {e}")
+                    continue
+
+            exhibitions = extract_exhibitions()
+            logger.info("Found %d current exhibitions", len(exhibitions))
+
+            for exhibition in exhibitions:
+                try:
+                    events_found += 1
+
+                    canonical_start_date = exhibition["canonical_start_date"]
+                    content_hash = generate_content_hash(
+                        exhibition["title"],
+                        "Atlanta Contemporary",
+                        canonical_start_date,
+                    )
+
+                    event_record = {
+                        "source_id": source_id,
+                        "venue_id": venue_id,
+                        "title": exhibition["title"],
+                        "description": exhibition["description"],
+                        "start_date": exhibition["start_date"],
+                        "start_time": None,
+                        "end_date": exhibition["end_date"],
+                        "end_time": None,
+                        "is_all_day": True,
+                        "content_kind": "exhibit",
+                        "category": "art",
+                        "subcategory": "exhibition",
+                        "tags": [
+                            "atlanta-contemporary",
+                            "museum",
+                            "contemporary-art",
+                            "west-midtown",
+                            "exhibition",
+                            "free",
+                        ],
+                        "price_min": None,
+                        "price_max": None,
+                        "price_note": "Free admission",
+                        "is_free": True,
+                        "source_url": exhibition["source_url"],
+                        "ticket_url": exhibition["ticket_url"],
+                        "image_url": exhibition["image_url"],
+                        "raw_text": (
+                            f"{exhibition['title']} - {canonical_start_date}"
+                            f" - {exhibition['end_date'] or ''}"
+                        ),
+                        "extraction_confidence": 0.88,
+                        "is_recurring": False,
+                        "recurrence_rule": None,
+                        "content_hash": content_hash,
+                    }
+
+                    existing = find_event_by_hash(content_hash)
+                    if existing:
+                        smart_update_existing_event(existing, event_record)
+                        events_updated += 1
+                        continue
+
+                    insert_event(event_record)
+                    events_new += 1
+                    logger.info(
+                        "Added exhibit: %s on %s",
+                        exhibition["title"],
+                        exhibition["start_date"],
+                    )
+                except Exception as e:
+                    logger.warning("Error parsing Atlanta Contemporary exhibition: %s", e)
                     continue
 
             browser.close()

@@ -8,13 +8,14 @@ discovery:
   type: html
   urls:
   - https://scadfash.org/events
+  - https://www.scad.edu/sites/default/files/PDF/scad-2025-2026-accessible-catalog.pdf
   fetch:
     render_js: true
 detail:
   enabled: true
 data_goals:
-- events
-- exhibits
 - images
-- showtimes
 - tickets
+- venue_hours
+- planning
+- accessibility

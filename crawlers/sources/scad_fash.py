@@ -2,30 +2,79 @@
 Crawler for SCAD FASH Museum of Fashion + Film (scadfash.org).
 
 Fashion and film museum in Midtown Atlanta operated by SCAD.
-Site uses JavaScript rendering - must use Playwright.
+
+Primary path: Playwright against live events/exhibitions pages.
+Fallback path: official SCAD catalog PDF for destination intelligence when
+Cloudflare blocks runtime access to the live site.
 """
 
 from __future__ import annotations
 
+from io import BytesIO
 import re
 import logging
 from datetime import datetime
 from typing import Optional
 
+import requests
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    get_client,
+    get_or_create_venue,
+    insert_event,
+    find_event_by_hash,
+    smart_update_existing_event,
+    writes_enabled,
+)
 from dedupe import generate_content_hash
 from utils import (
     extract_images_from_page, extract_event_links, find_event_url,
     enrich_event_record, parse_date_range,
 )
 
+try:
+    from pypdf import PdfReader
+
+    HAS_PYPDF = True
+except Exception:
+    PdfReader = None
+    HAS_PYPDF = False
+
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://scadfash.org"
 EVENTS_URL = f"{BASE_URL}/events"
 EXHIBITIONS_URL = f"{BASE_URL}/exhibitions"
+CATALOG_URL = "https://www.scad.edu/sites/default/files/PDF/scad-2025-2026-accessible-catalog.pdf"
+CATALOG_SOURCE_NOTE = "Official SCAD 2025-2026 catalog PDF fallback"
+
+CATALOG_SHORT_DESCRIPTION = (
+    "SCAD FASH Museum of Fashion + Film celebrates fashion as a universal "
+    "language and film as an immersive medium, connecting visitors with "
+    "internationally renowned designers, filmmakers, and photographers."
+)
+CATALOG_DESCRIPTION = (
+    "Official SCAD catalog copy describes SCAD FASH Museum of Fashion + Film "
+    "as a destination for exhibitions, films, and events that explore the "
+    "legacies of fashion history and inspire contemporary creative work."
+)
+CATALOG_EXHIBITION_CANDIDATES = [
+    "Christian Dior: Jardins Rêvés",
+    "Campbell Addy: The Stillness of Elegance",
+    "Jeanne Lanvin: Haute Couture Heritage",
+    "Sandy Powell’s Dressing the Part: Costume Design for Film",
+    "Imane Ayissi: From Africa to the World",
+    "Manish Arora: Life Is Beautiful",
+    "Entering Modernity: 1920s Fashion from the Parodi Costume Collection",
+    "Cristóbal Balenciaga: Master of Tailoring",
+    "The Blonds: Glamour, Fashion, Fantasy",
+    "Julien Fournié: Haute Couture Un Point C’est Tout!",
+    "Madame Grès: The Art of Draping",
+    "Isabel Toledo: A Love Letter",
+    "Ruth E. Carter: Afrofuturism in Costume Design",
+    "Robert Wun: Between Reality and Fantasy",
+]
 
 VENUE_DATA = {
     "name": "SCAD FASH Museum of Fashion + Film",
@@ -40,7 +89,170 @@ VENUE_DATA = {
     "lat": 33.7926,
     "lng": -84.3862,
     "website": BASE_URL,
+    # Description sourced from official SCAD catalog (CATALOG_SHORT_DESCRIPTION constant).
+    # og:image is extracted dynamically when the live site is reachable (not Cloudflare-blocked).
+    "description": CATALOG_SHORT_DESCRIPTION,
+    # Hours verified 2026-03-11 from scadfash.org/visit
+    "hours": {
+        "monday": "closed",
+        "tuesday": "10:00-17:00",
+        "wednesday": "10:00-17:00",
+        "thursday": "10:00-17:00",
+        "friday": "10:00-17:00",
+        "saturday": "10:00-17:00",
+        "sunday": "12:00-17:00",
+    },
+    # Admission: typically $15 adult, $10 student/senior
+    "vibes": ["fashion", "cultural", "art", "midtown"],
 }
+
+
+def _is_cloudflare_challenge_text(text: str) -> bool:
+    """Detect Cloudflare interstitials so blocked pages don't read as zero inventory."""
+    normalized = (text or "").lower()
+    return (
+        "just a moment" in normalized
+        or "enable javascript and cookies to continue" in normalized
+        or "attention required" in normalized
+        or "cloudflare" in normalized
+    )
+
+
+def _normalize_catalog_text(text: str) -> str:
+    value = (text or "").replace("\u00a0", " ").replace("\u2011", "-")
+    return re.sub(r"\s+", " ", value).strip()
+
+
+def _extract_between(text: str, start_marker: str, end_marker: str) -> str:
+    start_idx = text.find(start_marker)
+    if start_idx < 0:
+        return ""
+    start_idx += len(start_marker)
+    if not end_marker:
+        return text[start_idx:].strip()
+    end_idx = text.find(end_marker, start_idx)
+    if end_idx < 0:
+        return text[start_idx:].strip()
+    return text[start_idx:end_idx].strip()
+
+
+def _extract_catalog_recent_examples(section_text: str, limit: int = 5) -> list[str]:
+    normalized = _normalize_catalog_text(section_text).lower()
+    examples: list[str] = []
+    for title in CATALOG_EXHIBITION_CANDIDATES:
+        if title.lower() in normalized:
+            examples.append(title)
+        if len(examples) >= limit:
+            break
+    return examples
+
+
+def _extract_catalog_destination_fields_from_text(catalog_text: str) -> Optional[dict]:
+    normalized = _normalize_catalog_text(catalog_text)
+    fash_section = _extract_between(
+        normalized,
+        "SCAD FASH MUSEUMS",
+        "SCAD FASH exhibitions like",
+    )
+    if not fash_section:
+        return None
+
+    recent_section = _extract_between(
+        fash_section,
+        "RECENT SCAD FASH EXHIBITIONS",
+        "",
+    )
+    examples = _extract_catalog_recent_examples(recent_section)
+
+    planning_note = (
+        "Official SCAD 2025-2026 catalog describes SCAD FASH as a museum for "
+        "fashion and film with exhibitions, films, and events tied to fashion "
+        "history and contemporary design."
+    )
+    if examples:
+        planning_note += (
+            " Recent exhibitions highlighted by SCAD include "
+            + ", ".join(examples[:-1])
+            + ("," if len(examples) > 2 else "")
+            + (" and " + examples[-1] if len(examples) > 1 else examples[0])
+            + "."
+        )
+    planning_note += (
+        " Live SCAD event and exhibition pages are currently Cloudflare-blocked "
+        "from the crawler runtime, so this venue is treated as destination-first "
+        "until a fetchable public calendar is available."
+    )
+
+    return {
+        "website": BASE_URL,
+        "short_description": CATALOG_SHORT_DESCRIPTION,
+        "description": CATALOG_DESCRIPTION,
+        "planning_notes": planning_note,
+    }
+
+
+def _fetch_catalog_destination_fields() -> Optional[dict]:
+    if not HAS_PYPDF:
+        logger.warning("pypdf not installed; SCAD catalog fallback unavailable")
+        return None
+
+    try:
+        response = requests.get(CATALOG_URL, timeout=45)
+        response.raise_for_status()
+        reader = PdfReader(BytesIO(response.content))
+        pages: list[str] = []
+        for page in reader.pages[37:41]:
+            try:
+                pages.append(page.extract_text() or "")
+            except Exception:
+                continue
+        return _extract_catalog_destination_fields_from_text("\n".join(pages))
+    except Exception as exc:
+        logger.warning("Failed to fetch SCAD catalog PDF fallback: %s", exc)
+        return None
+
+
+def _apply_catalog_destination_fallback(venue_id: int) -> bool:
+    updates = _fetch_catalog_destination_fields()
+    if not updates:
+        return False
+
+    client = get_client()
+    current_res = (
+        client.table("venues")
+        .select("website,description,short_description,planning_notes")
+        .eq("id", venue_id)
+        .limit(1)
+        .execute()
+    )
+    current = current_res.data[0] if current_res.data else {}
+
+    merged_updates: dict[str, str] = {}
+    if (current.get("website") or "").startswith("http://") or not current.get("website"):
+        merged_updates["website"] = updates["website"]
+    if not current.get("short_description"):
+        merged_updates["short_description"] = updates["short_description"]
+    if not current.get("description"):
+        merged_updates["description"] = updates["description"]
+
+    existing_planning = (current.get("planning_notes") or "").strip()
+    if not existing_planning or CATALOG_SOURCE_NOTE.lower() in existing_planning.lower():
+        merged_updates["planning_notes"] = (
+            f"{updates['planning_notes']} Source: {CATALOG_SOURCE_NOTE}."
+        )
+        merged_updates["planning_last_verified_at"] = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    if not merged_updates:
+        logger.info("SCAD FASH catalog fallback found no missing destination fields to update")
+        return False
+
+    if not writes_enabled():
+        logger.info("SCAD FASH catalog fallback would update venue %s with %s", venue_id, sorted(merged_updates))
+        return True
+
+    client.table("venues").update(merged_updates).eq("id", venue_id).execute()
+    logger.info("SCAD FASH catalog fallback updated venue %s with %s", venue_id, sorted(merged_updates))
+    return True
 
 
 def parse_date(date_text: str) -> Optional[str]:
@@ -149,7 +361,35 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
+            # ----------------------------------------------------------------
+            # 0. Homepage — extract og:image for venue record (best-effort;
+            #    Cloudflare may block, which is fine — we fall back to catalog).
+            # ----------------------------------------------------------------
+            try:
+                page.goto(BASE_URL, wait_until="domcontentloaded", timeout=30000)
+                home_title = page.title() or ""
+                home_body = page.inner_text("body")
+                if not _is_cloudflare_challenge_text(f"{home_title}\n{home_body}"):
+                    og_image = page.evaluate(
+                        "() => { const m = document.querySelector('meta[property=\"og:image\"]'); return m ? m.content : null; }"
+                    )
+                    og_desc = page.evaluate(
+                        "() => { const m = document.querySelector('meta[property=\"og:description\"]') "
+                        "|| document.querySelector('meta[name=\"description\"]'); return m ? m.content : null; }"
+                    )
+                    if og_image:
+                        VENUE_DATA["image_url"] = og_image
+                        logger.debug("SCAD FASH: og:image = %s", og_image)
+                    if og_desc:
+                        VENUE_DATA["description"] = og_desc
+                        logger.debug("SCAD FASH: og:description captured")
+                else:
+                    logger.debug("SCAD FASH: homepage is Cloudflare-blocked; using catalog description")
+            except Exception as _meta_exc:
+                logger.debug("SCAD FASH: could not extract og meta from homepage: %s", _meta_exc)
+
             venue_id = get_or_create_venue(VENUE_DATA)
+            blocked_urls: list[str] = []
 
             # Try both events and exhibitions pages
             for url in [EVENTS_URL, EXHIBITIONS_URL]:
@@ -161,6 +401,17 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     logger.warning(f"Failed to load {url}: {e}, skipping")
                     continue
 
+                page_title = page.title() or ""
+                body_text = page.inner_text("body")
+                if _is_cloudflare_challenge_text(f"{page_title}\n{body_text}"):
+                    blocked_urls.append(url)
+                    logger.warning(
+                        "SCAD FASH blocked by Cloudflare challenge at %s; "
+                        "treat as source-access failure, not empty feed",
+                        url,
+                    )
+                    continue
+
                 # Extract images from page
                 image_map = extract_images_from_page(page)
 
@@ -170,7 +421,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     page.wait_for_timeout(1500)
 
                 # Get page text
-                body_text = page.inner_text("body")
                 lines = [line.strip() for line in body_text.split("\n") if line.strip()]
 
                 # Skip navigation items
@@ -346,6 +596,17 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     i += 1
 
             browser.close()
+
+            if events_found == 0 and blocked_urls:
+                fallback_applied = _apply_catalog_destination_fallback(venue_id)
+                logger.warning(
+                    "SCAD FASH produced no events because source access is blocked for %s",
+                    blocked_urls,
+                )
+                if fallback_applied:
+                    logger.info(
+                        "SCAD FASH used official catalog PDF fallback for destination intelligence"
+                    )
 
         logger.info(
             f"SCAD FASH Museum crawl complete: {events_found} found, {events_new} new, {events_updated} updated"

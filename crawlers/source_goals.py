@@ -21,6 +21,9 @@ VALID_DATA_GOALS = {
     "tickets",
     "images",
     "venue_hours",
+    "planning",
+    "accessibility",
+    "dietary",
 }
 
 GOAL_ALIASES = {
@@ -39,6 +42,23 @@ GOAL_ALIASES = {
     "photos": "images",
     "image": "images",
     "hours": "venue_hours",
+    "parking": "planning",
+    "walkability": "planning",
+    "access": "accessibility",
+    "ada": "accessibility",
+    "allergy": "dietary",
+    "allergies": "dietary",
+}
+
+EVENT_FEED_GOALS = {"events", "exhibits", "classes", "showtimes", "lineup"}
+DESTINATION_INTELLIGENCE_GOALS = {
+    "specials",
+    "tickets",
+    "images",
+    "venue_hours",
+    "planning",
+    "accessibility",
+    "dietary",
 }
 
 
@@ -50,6 +70,20 @@ def normalize_goal(goal: str) -> Optional[str]:
     if value not in VALID_DATA_GOALS:
         return None
     return value
+
+
+def source_has_event_feed_goal(goals: list[str]) -> bool:
+    normalized = {goal for goal in (normalize_goal(goal) for goal in goals) if goal}
+    return bool(normalized & EVENT_FEED_GOALS)
+
+
+def source_is_destination_only(goals: list[str]) -> bool:
+    normalized = {goal for goal in (normalize_goal(goal) for goal in goals) if goal}
+    if not normalized:
+        return False
+    return not bool(normalized & EVENT_FEED_GOALS) and bool(
+        normalized & DESTINATION_INTELLIGENCE_GOALS
+    )
 
 
 def infer_data_goals(
