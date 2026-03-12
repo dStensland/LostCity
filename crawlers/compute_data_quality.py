@@ -96,30 +96,18 @@ ORG_WEIGHTS = {
 
 
 def _is_boilerplate_description(desc: Optional[str]) -> bool:
-    """Return True if the description matches known boilerplate templates."""
-    if not desc or not isinstance(desc, str):
-        return False
-    lower = desc.lower()
-    boilerplate_markers = [
-        "is a community program",
-        "is a live event",
-        "is a live music event",
-        "is a film screening",
-        "is a local event",
-        "use the ticket link for current availability",
-        "location details are listed on the official event page",
-    ]
-    for marker in boilerplate_markers:
-        if marker in lower:
-            return True
-    # Thin boilerplate: "Category: " near the top and the whole thing is short
-    if "category: " in desc[:200] and len(desc) < 250:
-        return True
-    return False
+    """Return True if the description matches known boilerplate templates.
+
+    Delegates to description_quality.classify_description().
+    """
+    from description_quality import classify_description
+    return classify_description(desc) in ("junk", "boilerplate")
 
 
 def score_record(record: dict, weights: Dict[str, int]) -> int:
     """Compute quality score for a single record."""
+    from description_quality import classify_description
+
     score = 0
     for field, points in weights.items():
         value = record.get(field)
@@ -131,7 +119,12 @@ def score_record(record: dict, weights: Dict[str, int]) -> int:
         # description: full points for real content, partial for boilerplate, zero for null
         if field == "description":
             if value and isinstance(value, str) and value != "":
-                score += 8 if _is_boilerplate_description(value) else points
+                # Title-as-description = no value added
+                title = record.get("title") or ""
+                if value.strip().lower() == title.strip().lower():
+                    continue
+                classification = classify_description(value)
+                score += 0 if classification == "junk" else (8 if classification == "boilerplate" else points)
             continue
         if value is not None and value != "" and value != [] and value != {}:
             # For boolean fields: is_free awards points for any non-NULL boolean
@@ -227,7 +220,9 @@ def compute_events(client, dry_run: bool = False) -> dict:
     """Compute and store event quality scores."""
     # DB column is category_id, but EVENT_WEIGHTS uses "category"
     db_fields = [f if f != "category" else "category_id" for f in EVENT_WEIGHTS.keys()]
-    fields = ",".join(["id"] + db_fields)
+    # Include title for title-as-description penalty check
+    extra_fields = {"title"} - set(db_fields)
+    fields = ",".join(["id"] + db_fields + list(extra_fields))
     records = fetch_all(client, "events", fields)
     logger.info(f"Events: scoring {len(records)} records")
 

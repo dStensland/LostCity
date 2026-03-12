@@ -7,13 +7,22 @@ from __future__ import annotations
 import logging
 import re
 from typing import Optional
+from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup
 
 from description_fetcher import extract_description_from_html
 from extractors.lineup import split_lineup_text
+from utils import is_likely_non_event_image
 
 logger = logging.getLogger(__name__)
+
+_STATUS_CANCELLED_RE = re.compile(r"\bcancel+ed\b|\bpostponed\b|\brescheduled\b", re.IGNORECASE)
+_STATUS_SOLD_OUT_RE = re.compile(r"\bsold[\s-]?out\b|\boff[\s-]?sale\b|\bsales?\s*ended\b", re.IGNORECASE)
+_STATUS_LOW_TICKETS_RE = re.compile(
+    r"\blow\s*tickets?\b|\bfew\s*tickets?\s*left\b|\blimited\s*tickets?\b|\balmost\s*sold\s*out\b",
+    re.IGNORECASE,
+)
 
 
 def _find_ticket_url(soup: BeautifulSoup) -> Optional[str]:
@@ -25,7 +34,10 @@ def _find_ticket_url(soup: BeautifulSoup) -> Optional[str]:
         href = a.get("href")
         if not href:
             continue
-        if any(kw in text for kw in ticket_keywords):
+        classes = " ".join(a.get("class") or []).lower()
+        node_id = str(a.get("id") or "").lower()
+        context = " ".join(part for part in (text, href.lower(), classes, node_id) if part)
+        if any(kw in context for kw in ticket_keywords):
             return href.strip()
     return None
 
@@ -42,14 +54,20 @@ def _find_image_url(soup: BeautifulSoup) -> Optional[str]:
     ]
     for selector in selectors:
         img = soup.select_one(selector)
-        if img and img.get("src"):
+        if img and img.get("src") and not is_likely_non_event_image(img["src"]):
             return img["src"].strip()
 
-    # Fallback to the first reasonably sized image
+    # Fallback only when the image itself carries event-specific context.
+    best_src: Optional[str] = None
+    best_score = 0
     for img in soup.find_all("img"):
         src = img.get("src")
         if not src:
             continue
+        src = src.strip()
+        if not src or is_likely_non_event_image(src):
+            continue
+
         width = img.get("width") or ""
         height = img.get("height") or ""
         if width and height:
@@ -58,7 +76,112 @@ def _find_image_url(soup: BeautifulSoup) -> Optional[str]:
                     continue
             except ValueError:
                 pass
-        return src.strip()
+
+        alt = (img.get("alt") or "").strip().lower()
+        title = (img.get("title") or "").strip().lower()
+        classes = " ".join(img.get("class") or []).lower()
+        node_id = str(img.get("id") or "").lower()
+        parent = img.find_parent()
+        parent_classes = " ".join(parent.get("class") or []).lower() if parent else ""
+        parent_id = str(parent.get("id") or "").lower() if parent else ""
+        path = urlparse(src).path.lower()
+        context = " ".join(filter(None, [alt, title, classes, node_id, parent_classes, parent_id, path]))
+
+        hint_terms = (
+            "event",
+            "poster",
+            "show",
+            "film",
+            "movie",
+            "screening",
+            "festival",
+            "exhibit",
+            "exhibition",
+            "artist",
+            "performer",
+            "production",
+            "play",
+            "concert",
+            "series",
+        )
+        generic_terms = (
+            "logo",
+            "homepage",
+            "home page",
+            "slidebg",
+            "site-header",
+            "site-header",
+        )
+
+        score = 0
+        if any(term in context for term in hint_terms):
+            score += 3
+        if alt and len(alt) >= 12 and not any(term in alt for term in generic_terms):
+            score += 2
+        if title and len(title) >= 12 and not any(term in title for term in generic_terms):
+            score += 2
+        if any(term in path for term in hint_terms):
+            score += 2
+
+        if score > best_score:
+            best_score = score
+            best_src = src
+
+    return best_src if best_score > 0 else None
+
+
+def _find_ticket_status(soup: BeautifulSoup) -> Optional[str]:
+    candidates: list[str] = []
+    seen: set[str] = set()
+
+    for elem in soup.select("a, button, input[type='submit'], input[type='button'], [class*='status'], [class*='availability'], [data-status]"):
+        text_parts = [
+            elem.get_text(" ", strip=True),
+            elem.get("aria-label"),
+            elem.get("title"),
+            elem.get("value"),
+            elem.get("data-status"),
+        ]
+        classes = " ".join(elem.get("class") or [])
+        elem_id = str(elem.get("id") or "")
+        href = str(elem.get("href") or "")
+        context = " ".join(str(part).strip() for part in [*text_parts, classes, elem_id, href] if part).strip()
+        if not context:
+            continue
+
+        lower = context.lower()
+        if not any(
+            token in lower
+            for token in (
+                "ticket",
+                "tickets",
+                "buy",
+                "register",
+                "status",
+                "availability",
+                "sold out",
+                "postponed",
+                "rescheduled",
+                "cancelled",
+                "canceled",
+            )
+        ):
+            continue
+        if lower in seen:
+            continue
+        seen.add(lower)
+        candidates.append(context)
+
+    for text in candidates:
+        if _STATUS_CANCELLED_RE.search(text):
+            return "cancelled"
+    for text in candidates:
+        if _STATUS_SOLD_OUT_RE.search(text):
+            return "sold-out"
+    for text in candidates:
+        if _STATUS_LOW_TICKETS_RE.search(text):
+            return "low-tickets"
+
     return None
 
 
@@ -283,6 +406,10 @@ def extract_heuristic_fields(html: str) -> dict:
     ticket_url = _find_ticket_url(soup)
     if ticket_url:
         result["ticket_url"] = ticket_url
+
+    ticket_status = _find_ticket_status(soup)
+    if ticket_status:
+        result["ticket_status"] = ticket_status
 
     image_url = _find_image_url(soup)
     if image_url:

@@ -15,6 +15,7 @@ import logging
 from typing import Optional
 
 from bs4 import BeautifulSoup
+from description_quality import classify_description
 
 logger = logging.getLogger(__name__)
 
@@ -323,7 +324,13 @@ def _is_useful_description(text: str) -> bool:
     if not text or len(text) < 20:
         return False
 
-    lower = text.lower()
+    normalized = _clean_text(text)
+    if not normalized:
+        return False
+    if classify_description(normalized) != "good":
+        return False
+
+    lower = normalized.lower()
 
     # Reject common boilerplate
     boilerplate = [
@@ -368,7 +375,7 @@ def _is_useful_description(text: str) -> bool:
     # Repeated date/time fragments with little narrative are usually schedule rows.
     date_time_fragments = len(re.findall(r"\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\b", lower))
     meridiem_fragments = lower.count(" am") + lower.count(" pm")
-    if len(text) > 220 and date_time_fragments >= 3 and meridiem_fragments >= 3:
+    if len(normalized) > 220 and date_time_fragments >= 3 and meridiem_fragments >= 3:
         return False
 
     tokens = re.findall(r"[a-z0-9]+", lower)

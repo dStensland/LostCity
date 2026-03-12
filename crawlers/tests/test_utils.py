@@ -351,3 +351,88 @@ class TestEnrichEventRecord:
             "Dawes",
         ]
         assert enriched["_parsed_artists"][0]["role"] == "headliner"
+
+    @patch("pipeline.fetch.fetch_html")
+    @patch("pipeline.detail_enrich.enrich_from_detail")
+    def test_promotes_explicit_ticket_url_from_enriched_detail(
+        self,
+        mock_enrich_from_detail,
+        mock_fetch_html,
+    ):
+        from utils import enrich_event_record
+
+        mock_fetch_html.return_value = ("<html><body>test</body></html>", None)
+        mock_enrich_from_detail.return_value = {
+            "ticket_url": "https://www.ticketmaster.com/event/0E00636796DF7AD4",
+        }
+
+        record = {
+            "title": "Goldie Boutilier",
+            "source_url": "https://www.masqueradeatlanta.com/events/goldie-boutilier/",
+            "ticket_url": "https://www.masqueradeatlanta.com/events/goldie-boutilier/",
+            "description": "Short",
+            "category": "music",
+        }
+
+        enriched = enrich_event_record(record, "Masquerade")
+
+        assert enriched["ticket_url"] == "https://www.ticketmaster.com/event/0E00636796DF7AD4"
+
+    @patch("pipeline.fetch.fetch_html")
+    @patch("pipeline.detail_enrich.enrich_from_detail")
+    def test_copies_ticket_status_from_enriched_detail(
+        self,
+        mock_enrich_from_detail,
+        mock_fetch_html,
+    ):
+        from utils import enrich_event_record
+
+        mock_fetch_html.return_value = ("<html><body>test</body></html>", None)
+        mock_enrich_from_detail.return_value = {
+            "ticket_status": "cancelled",
+        }
+
+        record = {
+            "title": "Touring Artist Live",
+            "source_url": "https://example.com/events/touring-artist-live",
+            "description": "Short",
+            "category": "music",
+        }
+
+        enriched = enrich_event_record(record, "Example Venue")
+
+        assert enriched["ticket_status"] == "cancelled"
+
+    @patch("pipeline.fetch.fetch_html")
+    @patch("pipeline.detail_enrich.enrich_from_detail")
+    def test_rejects_truncated_detail_description(
+        self,
+        mock_enrich_from_detail,
+        mock_fetch_html,
+    ):
+        from utils import enrich_event_record
+
+        mock_fetch_html.return_value = ("<html><body>test</body></html>", None)
+        mock_enrich_from_detail.return_value = {
+            "description": (
+                "Nobu Woods is a Dominican-American singer, songwriter, and producer from "
+                "Jamaica, Queens, known for his self-produced, atmospheric approach to "
+                "alternative R&B. Born to first-generation immigrants from the Dominican "
+                "Republic, Woods was raised on the rhythm-first sounds of bachata and "
+                "merengue, developing an early ear for melody and emotional storytelling. "
+                "As a teenager, he gravitated toward… Raised in New Jersey, Isaiah Kaleo "
+                "is stepping into the spotlight after years of shaping sound from behind "
+                "the scenes."
+            ),
+        }
+
+        record = {
+            "title": "Nobu Woods",
+            "source_url": "https://www.masqueradeatlanta.com/events/nobu-woods/",
+            "description": "Short",
+            "category": "music",
+        }
+
+        enriched = enrich_event_record(record, "The Masquerade")
+
+        assert enriched["description"] == "Short"
