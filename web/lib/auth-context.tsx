@@ -15,6 +15,7 @@ export type Profile = {
   website: string | null;
   is_public: boolean;
   is_admin: boolean;
+  privacy_mode: "low_key" | "social" | "open_book";
   created_at: string;
   updated_at: string;
 };

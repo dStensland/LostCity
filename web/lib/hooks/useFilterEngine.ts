@@ -4,7 +4,7 @@ import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useCallback, useMemo, useState, useEffect, useRef, useTransition } from "react";
 import { CATEGORIES, TAG_GROUPS } from "@/lib/search-constants";
 import { VIBE_GROUPS } from "@/lib/spots-constants";
-import { FIND_TYPE_FILTER_KEYS, type FindType } from "@/lib/find-filter-schema";
+import { type FindType } from "@/lib/find-filter-schema";
 import {
   createFindFilterSnapshot,
   diffFindFilterKeys,
@@ -234,7 +234,7 @@ export function useFilterEngine({
       params.delete("page");
       const url = params.toString() ? `${pathname}?${params.toString()}` : pathname;
       startTransition(() => {
-        router.push(url, { scroll: false });
+        router.replace(url, { scroll: false });
       });
     },
     [router, pathname, searchParams, startTransition]
