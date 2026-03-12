@@ -412,8 +412,8 @@ export function SearchResultSection({
 }) {
   const labels: Record<string, string> = {
     event: "Events",
-    venue: "Venues",
-    organizer: "Organizers",
+    venue: "Places",
+    organizer: "Organizations",
     series: "Series",
     list: "Curations",
     neighborhood: "Neighborhoods",

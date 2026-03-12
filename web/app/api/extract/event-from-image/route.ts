@@ -4,6 +4,9 @@ import { applyDailyQuota, applyRateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";
 import OpenAI from "openai";
 import { getLocalDateString } from "@/lib/formats";
+import { SUBMISSION_EVENT_CATEGORY_IDS } from "@/lib/event-taxonomy";
+
+const EXTRACTION_CATEGORY_LIST = SUBMISSION_EVENT_CATEGORY_IDS.join(", ");
 
 const EXTRACTION_PROMPT = `Extract event information from this poster/flyer image.
 Today's date is {today}. Use this to resolve relative dates like "this Saturday" or "next Friday".
@@ -14,7 +17,7 @@ Return a JSON object with these fields:
 - start_time: string or null (HH:MM 24-hour format, null if not shown)
 - venue_name: string or null (venue/location name if visible)
 - venue_address: string or null (address if visible)
-- category: string (one of: music, comedy, art, theater, film, food_drink, nightlife, community, fitness, family, sports, dance, learning, outdoors, markets, other)
+- category: string (one of: ${EXTRACTION_CATEGORY_LIST})
 - description: string or null (brief description of the event)
 - price_note: string or null (pricing info if visible, e.g. "$20", "Free", "$15-$30")
 - is_free: boolean (true if the event appears to be free)

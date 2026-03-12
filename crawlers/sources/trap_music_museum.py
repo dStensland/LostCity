@@ -16,7 +16,7 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_venue, get_client, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -36,7 +36,49 @@ VENUE_DATA = {
     "venue_type": "museum",
     "spot_type": "museum",
     "website": BASE_URL,
+    # Hours verified from trapmusicmuseum.com (subject to seasonal variation)
+    "hours": {
+        "monday": "closed",
+        "tuesday": "11:00-19:00",
+        "wednesday": "11:00-19:00",
+        "thursday": "11:00-19:00",
+        "friday": "11:00-21:00",
+        "saturday": "11:00-21:00",
+        "sunday": "11:00-19:00",
+    },
+    "vibes": [
+        "hip-hop-culture",
+        "interactive",
+        "Atlanta-original",
+        "immersive",
+        "selfie-museum",
+    ],
+    # Fallback description — overridden at runtime by og:description if available
+    "description": (
+        "The Trap Music Museum is an immersive, interactive experience celebrating the culture, "
+        "artistry, and influence of Atlanta's trap music scene. One of the city's most unique and "
+        "photogenic cultural attractions, located on the West Side."
+    ),
 }
+
+
+def _extract_og_meta(html: str) -> tuple[Optional[str], Optional[str]]:
+    """Return (og:image URL, og:description) from page HTML."""
+    soup = BeautifulSoup(html, "html.parser")
+
+    og_image: Optional[str] = None
+    tag = soup.find("meta", attrs={"property": "og:image"})
+    if tag and tag.get("content"):  # type: ignore[union-attr]
+        og_image = str(tag["content"])  # type: ignore[index]
+
+    og_desc: Optional[str] = None
+    for attr_dict in ({"property": "og:description"}, {"name": "description"}):
+        tag = soup.find("meta", attrs=attr_dict)
+        if tag and tag.get("content"):  # type: ignore[union-attr]
+            og_desc = str(tag["content"])[:500]  # type: ignore[index]
+            break
+
+    return og_image, og_desc
 
 
 def parse_date(date_text: str) -> Optional[str]:
@@ -119,6 +161,22 @@ def crawl(source: dict) -> tuple[int, int, int]:
         logger.info(f"Fetching Trap Music Museum: {BASE_URL}")
         response = requests.get(BASE_URL, headers=headers, timeout=30)
         response.raise_for_status()
+
+        # Enrich venue with og:image / og:description from homepage on first pass
+        try:
+            og_image, og_desc = _extract_og_meta(response.text)
+            venue_update: dict = {}
+            if og_image:
+                venue_update["image_url"] = og_image
+                logger.debug("Trap Music Museum: og:image = %s", og_image)
+            if og_desc:
+                venue_update["description"] = og_desc
+                logger.debug("Trap Music Museum: og:description captured")
+            if venue_update:
+                get_client().table("venues").update(venue_update).eq("id", venue_id).execute()
+                logger.info("Trap Music Museum: enriched venue record from homepage og: metadata")
+        except Exception as _enrich_exc:
+            logger.warning("Trap Music Museum: og: enrichment failed: %s", _enrich_exc)
 
         soup = BeautifulSoup(response.text, "html.parser")
 

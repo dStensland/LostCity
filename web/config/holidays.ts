@@ -31,6 +31,8 @@ export interface HolidayConfig {
   iconBgGlow?: boolean;
   /** Enable pulsing glow ring around the icon */
   iconGlowRing?: boolean;
+  /** Quick-link CTAs rendered as pills below the title. href is appended to /{portalSlug} */
+  quickLinks?: { label: string; href: string }[];
 }
 
 // Holiday configs — Valentine's first (hero position), then specifics, then broad
@@ -160,16 +162,22 @@ export const HOLIDAYS: HolidayConfig[] = [
     slug: "st-patricks-day",
     tag: "st-patricks-day",
     title: "St. Patrick's Day",
-    subtitle: "Parade, pubs & plenty of green in the ATL",
-    gradient: "linear-gradient(135deg, #020d02 0%, #0a2a0a 30%, #061a06 60%, #020d02 100%)",
-    accentColor: "#4caf50",
-    glowColor: "#4caf50",
-    icon: "/images/shamrock-neon.svg",
+    subtitle: "Parades, bar crawls & green across the city",
+    gradient: "linear-gradient(135deg, #061a0e 0%, #0d3320 25%, #143d28 50%, #0d3320 75%, #061a0e 100%)",
+    accentColor: "#4ade80",
+    glowColor: "#4ade80",
+    icon: "/images/st-patricks-guinness.jpg",
     showFrom: [3, 12],
     showUntil: [3, 17],
     eventDate: [3, 17],
     iconBgGlow: true,
     iconGlowRing: true,
+    quickLinks: [
+      { label: "Events", href: "?tags=st-patricks-day&view=find" },
+      { label: "Irish Pubs", href: "?type=destinations&venue_type=bar&search=irish&view=find" },
+      { label: "Parades", href: "?tags=st-patricks-day&search=parade&view=find" },
+      { label: "Pub Crawls", href: "?tags=st-patricks-day&search=crawl&view=find" },
+    ],
   },
 ];
 

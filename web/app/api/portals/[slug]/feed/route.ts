@@ -1,15 +1,17 @@
 import { createClient, createPortalScopedClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
-import {
-  addDays,
-  startOfDay,
-  nextFriday,
-  nextSunday,
-  isFriday,
-  isSaturday,
-  isSunday,
-} from "date-fns";
+import { addDays } from "date-fns";
 import { getLocalDateString } from "@/lib/formats";
+import {
+  buildPortalNightlifeCarouselData,
+  mergePortalMixedSectionEvents,
+  selectPortalAutoSectionEvents,
+} from "@/lib/portal-auto-section";
+import {
+  attachPortalSocialCounts,
+  buildPortalHolidayFeedSections,
+  finalizePortalFeedSections,
+} from "@/lib/portal-feed-finalize";
 import { getPortalSourceAccess } from "@/lib/federation";
 import {
   applyRateLimit,
@@ -39,10 +41,26 @@ import {
 } from "@/lib/image-quality-suppression";
 import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
 import {
-  dedupeSectionEventsById,
   filterOutInactiveVenueEvents,
 } from "@/lib/event-feed-health";
 import { applyFeedGate } from "@/lib/feed-gate";
+import {
+  buildPortalFeedAutoSectionPlan,
+  shouldSectionUseAutoEventPool,
+} from "@/lib/portal-feed-plan";
+import { buildPortalHolidaySections } from "@/lib/portal-holiday-sections";
+import {
+  getPortalFeedDateRange,
+  isPortalCommunityActionSection,
+  isPortalSectionVisible,
+} from "@/lib/portal-feed-section-rules";
+import {
+  getPortalSectionEventLimit,
+  isPortalNoEventContentBlockType,
+  resolvePortalSectionBlockType,
+  shouldKeepPortalSection,
+} from "@/lib/portal-section-presentation";
+import { createServerTimingRecorder } from "@/lib/server-timing";
 
 // Cache feed for 5 minutes at CDN, allow stale for 1 hour while revalidating
 export const revalidate = 300;
@@ -51,9 +69,21 @@ const FEED_CACHE_TTL_MS = 5 * 60 * 1000;
 const FEED_CACHE_MAX_ENTRIES = 200;
 const FEED_CACHE_CONTROL = "public, s-maxage=300, stale-while-revalidate=3600";
 const FEED_CACHE_NAMESPACE = "api:portal-feed";
-const FEED_IN_FLIGHT_LOADS = new Map<string, Promise<unknown>>();
+const FEED_IN_FLIGHT_LOADS = new Map<
+  string,
+  Promise<{ payload: unknown; serverTiming: string; status?: number }>
+>();
+const SECTION_CACHE_TTL_MS = 5 * 60 * 1000;
+const SECTION_CACHE_NAMESPACE = "api:portal-feed:sections";
+const SECTION_EVENTS_CACHE_TTL_MS = 5 * 60 * 1000;
+const SECTION_EVENTS_CACHE_NAMESPACE = "api:portal-feed:section-events";
+const AUTO_POOL_CACHE_TTL_MS = 5 * 60 * 1000;
+const AUTO_POOL_CACHE_NAMESPACE = "api:portal-feed:auto-pool";
+const SOURCE_SLUG_CACHE_TTL_MS = 30 * 60 * 1000;
+const SOURCE_SLUG_CACHE_NAMESPACE = "api:portal-feed:source-slugs";
 const HOLIDAY_EVENTS_CACHE_TTL_MS = 12 * 60 * 60 * 1000;
 const HOLIDAY_EVENTS_CACHE_NAMESPACE = "api:portal-feed:holidays";
+const PORTAL_FEED_SOCIAL_COUNTS_TIMEOUT_MS = 120;
 
 async function getCachedFeedPayload(cacheKey: string): Promise<unknown | null> {
   return getSharedCacheJson<unknown>(FEED_CACHE_NAMESPACE, cacheKey);
@@ -70,6 +100,87 @@ async function setCachedFeedPayload(
     FEED_CACHE_TTL_MS,
     { maxEntries: FEED_CACHE_MAX_ENTRIES },
   );
+}
+
+function buildAutoPoolCacheKey(input: {
+  portalId: string;
+  today: string;
+  maxEndDate: string;
+  perBucketLimit: number;
+  constrainedSupplementalLimit: number;
+  hasNightlifeSection: boolean;
+  onlyNightlifeSections: boolean;
+  constrainedSourceIds: number[];
+  constrainedSourceSlugs: string[];
+  constrainedVenueIds: number[];
+  portalCities: string[];
+  contentFilters: {
+    categories?: string[];
+    exclude_categories?: string[];
+    neighborhoods?: string[];
+    geo_center?: [number, number];
+    venue_ids?: number[];
+    tags?: string[];
+    price_max?: number;
+    geo_radius_km?: number;
+  };
+}): string {
+  return JSON.stringify({
+    portalId: input.portalId,
+    today: input.today,
+    maxEndDate: input.maxEndDate,
+    perBucketLimit: input.perBucketLimit,
+    constrainedSupplementalLimit: input.constrainedSupplementalLimit,
+    hasNightlifeSection: input.hasNightlifeSection,
+    onlyNightlifeSections: input.onlyNightlifeSections,
+    constrainedSourceIds: [...input.constrainedSourceIds].sort((a, b) => a - b),
+    constrainedSourceSlugs: [...input.constrainedSourceSlugs].sort(),
+    constrainedVenueIds: [...input.constrainedVenueIds].sort((a, b) => a - b),
+    portalCities: [...input.portalCities].sort(),
+    contentFilters: {
+      categories: [...(input.contentFilters.categories || [])].sort(),
+      exclude_categories: [...(input.contentFilters.exclude_categories || [])].sort(),
+      neighborhoods: [...(input.contentFilters.neighborhoods || [])].sort(),
+      geo_center: input.contentFilters.geo_center || null,
+      venue_ids: [...(input.contentFilters.venue_ids || [])].sort((a, b) => a - b),
+      tags: [...(input.contentFilters.tags || [])].sort(),
+      price_max: input.contentFilters.price_max || null,
+      geo_radius_km: input.contentFilters.geo_radius_km || null,
+    },
+  });
+}
+
+function buildSourceSlugCacheKey(input: {
+  portalId: string;
+  sourceSlugs: string[];
+  accessibleSourceIds: number[];
+}): string {
+  return JSON.stringify({
+    portalId: input.portalId,
+    sourceSlugs: [...input.sourceSlugs].sort(),
+    accessibleSourceIds: [...input.accessibleSourceIds].sort((a, b) => a - b),
+  });
+}
+
+function buildPortalSectionsCacheKey(
+  portalId: string,
+  sectionIds: string[] | null | undefined,
+): string {
+  return `${portalId}|${(sectionIds || []).slice().sort().join(",") || "all"}`;
+}
+
+function buildSectionEventsCacheKey(input: {
+  portalId: string;
+  today: string;
+  eventIds: number[];
+  pinnedEventIds: number[];
+}): string {
+  return JSON.stringify({
+    portalId: input.portalId,
+    today: input.today,
+    eventIds: [...input.eventIds].sort((a, b) => a - b),
+    pinnedEventIds: [...input.pinnedEventIds].sort((a, b) => a - b),
+  });
 }
 
 type Props = {
@@ -111,6 +222,7 @@ type AutoFilter = {
   subcategories?: string[];
   neighborhoods?: string[];
   tags?: string[];
+  source_slugs?: string[];
   is_free?: boolean;
   price_max?: number;
   date_filter?:
@@ -187,210 +299,9 @@ type Event = {
   } | null;
 };
 
-// Check if section should be visible based on schedule rules
-function isSectionVisible(section: Section): boolean {
-  const now = new Date();
-  const today = getLocalDateString();
-  const currentTime = now.toTimeString().slice(0, 5); // HH:MM
-  const currentDay = now
-    .toLocaleDateString("en-US", { weekday: "long" })
-    .toLowerCase();
-
-  // Check date range
-  if (section.schedule_start && today < section.schedule_start) {
-    return false;
-  }
-  if (section.schedule_end && today > section.schedule_end) {
-    return false;
-  }
-
-  // Check day of week
-  if (section.show_on_days && section.show_on_days.length > 0) {
-    if (!section.show_on_days.includes(currentDay)) {
-      return false;
-    }
-  }
-
-  // Check time of day
-  if (section.show_after_time && currentTime < section.show_after_time) {
-    return false;
-  }
-  if (section.show_before_time && currentTime > section.show_before_time) {
-    return false;
-  }
-
-  return true;
-}
-
-// Get date range for filter
-function getDateRange(filter: string): { start: string; end: string } {
-  const now = new Date();
-  const today = startOfDay(now);
-
-  switch (filter) {
-    case "today":
-      return {
-        start: getLocalDateString(today),
-        end: getLocalDateString(today),
-      };
-    case "tomorrow":
-      const tomorrow = addDays(today, 1);
-      return {
-        start: getLocalDateString(tomorrow),
-        end: getLocalDateString(tomorrow),
-      };
-    case "this_weekend": {
-      // Friday through Sunday
-      let friday: Date;
-      let sunday: Date;
-
-      if (isFriday(now) || isSaturday(now) || isSunday(now)) {
-        // We're in the weekend, use current week
-        friday = isFriday(now) ? today : addDays(today, -(now.getDay() - 5));
-        sunday = isSunday(now) ? today : addDays(today, 7 - now.getDay());
-      } else {
-        // Use next weekend
-        friday = nextFriday(today);
-        sunday = nextSunday(today);
-      }
-
-      return {
-        start: getLocalDateString(friday),
-        end: getLocalDateString(sunday),
-      };
-    }
-    case "next_7_days":
-      return {
-        start: getLocalDateString(today),
-        end: getLocalDateString(addDays(today, 7)),
-      };
-    case "next_30_days":
-      return {
-        start: getLocalDateString(today),
-        end: getLocalDateString(addDays(today, 30)),
-      };
-    default:
-      return {
-        start: getLocalDateString(today),
-        end: getLocalDateString(addDays(today, 14)),
-      };
-  }
-}
-
-// Classify a nightlife event into its activity type
-// Reusable across nightlife carousel counting + event stamping
-function classifyNightlifeActivity(event: {
-  title: string;
-  category: string | null;
-  genres?: string[] | null;
-}): string {
-  // Genre values that map directly to nightlife activity keys
-  const genreActivityMap: Record<string, string> = {
-    karaoke: "karaoke",
-    trivia: "trivia",
-    bar_games: "bar_games",
-    poker: "poker",
-    bingo: "bingo",
-    dj: "dj",
-    drag: "drag",
-    burlesque: "drag", // Merged into drag
-    latin_night: "latin_night",
-    line_dancing: "line_dancing",
-    party: "party",
-    pub_crawl: "pub_crawl",
-    specials: "specials",
-  };
-  const titlePatterns: [RegExp, string][] = [
-    [/karaoke/i, "karaoke"],
-    [/trivia/i, "trivia"],
-    [/bingo/i, "bingo"],
-    [/poker/i, "poker"],
-    [/two.?step|line.?danc|country.?danc/i, "line_dancing"],
-    [/salsa|bachata|latin|reggaeton/i, "latin_night"],
-    [/drag\b|cabaret|burlesque/i, "drag"],
-    [/\bdj\b|dance.?party|club.?night/i, "dj"],
-    [
-      /bocce|skee.?ball|curling|darts|shuffleboard|bowling|arcade|bar.?game/i,
-      "bar_games",
-    ],
-    [/pub.?crawl/i, "pub_crawl"],
-  ];
-
-  // 1. Check genres first (preferred source)
-  if (event.genres?.length) {
-    for (const genre of event.genres) {
-      if (genreActivityMap[genre]) return genreActivityMap[genre];
-    }
-  }
-  // 2. Infer from title
-  for (const [pattern, key] of titlePatterns) {
-    if (pattern.test(event.title)) {
-      return key;
-    }
-  }
-  // 3. Fall back to cross-category mapping
-  if (event.category === "music") return "live_music";
-  if (event.category === "comedy") return "comedy";
-  if (event.category === "dance") return "dance";
-  return "other";
-}
-
-const NIGHTLIFE_ACTIVITY_LABELS: Record<string, string> = {
-  karaoke: "Karaoke",
-  trivia: "Trivia",
-  bar_games: "Bar Games",
-  poker: "Poker",
-  bingo: "Bingo",
-  dj: "DJ Night",
-  drag: "Drag & Cabaret",
-  latin_night: "Latin Night",
-  line_dancing: "Line Dancing",
-  party: "Party",
-  pub_crawl: "Pub Crawl",
-  specials: "Specials",
-  live_music: "Live Music",
-  comedy: "Freakin Clowns",
-  dance: "Dance",
-  other: "Nightlife",
-};
-
-const COMMUNITY_SECTION_HINT =
-  /\b(get[-\s]?involved|volunteer|activism|civic|community\s+support|community\s+action)\b/i;
-
-function isCommunityActionSection(
-  section: Pick<Section, "slug" | "title" | "auto_filter">,
-): boolean {
-  const categories = section.auto_filter?.categories || [];
-  const subcategories = section.auto_filter?.subcategories || [];
-  const tags = section.auto_filter?.tags || [];
-
-  if (
-    categories.some(
-      (category) => category === "community" || category === "activism",
-    )
-  ) {
-    return true;
-  }
-
-  if (
-    subcategories.some((subcategory) =>
-      /\b(community|volunteer|activism|civic)\b/i.test(subcategory),
-    )
-  ) {
-    return true;
-  }
-
-  if (
-    tags.some((tag) => /\b(volunteer|activism|community|civic)\b/i.test(tag))
-  ) {
-    return true;
-  }
-
-  return COMMUNITY_SECTION_HINT.test(`${section.slug} ${section.title}`);
-}
-
 // GET /api/portals/[slug]/feed - Get feed content for a portal
 export async function GET(request: NextRequest, { params }: Props) {
+  const timing = createServerTimingRecorder();
   // Rate limit - feed endpoints are high fanout and should use tighter controls.
   const rateLimitResult = await applyRateLimit(
     request,
@@ -415,15 +326,36 @@ export async function GET(request: NextRequest, { params }: Props) {
   const sectionKey = (sectionIds || []).slice().sort().join(",");
   const currentHour = new Date().getHours().toString().padStart(2, "0");
   const cacheKey = `${canonicalSlug}|${defaultLimit}|${sectionKey}|${currentHour}`;
-  const cachedPayload = await getCachedFeedPayload(cacheKey);
+  const cachedPayload = await timing.measure("cache_lookup", () =>
+    getCachedFeedPayload(cacheKey)
+  );
   if (cachedPayload) {
+    timing.addMetric("cache_hit", 0, "shared");
     return NextResponse.json(cachedPayload, {
       headers: {
         "Cache-Control": FEED_CACHE_CONTROL,
+        "Server-Timing": timing.toHeader(),
       },
     });
   }
 
+  const existingFeedLoad = FEED_IN_FLIGHT_LOADS.get(cacheKey);
+  if (existingFeedLoad) {
+    const result = await existingFeedLoad;
+    timing.addMetric("coalesced", 0, "inflight");
+    return NextResponse.json(result.payload, {
+      headers: {
+        "Cache-Control": FEED_CACHE_CONTROL,
+        "Server-Timing": `${result.serverTiming}, ${timing.toHeader()}`,
+      },
+    });
+  }
+
+  async function loadFeed(): Promise<{
+    payload: unknown;
+    serverTiming: string;
+    status?: number;
+  }> {
   const supabase = await createClient();
 
   // Get portal
@@ -455,7 +387,11 @@ export async function GET(request: NextRequest, { params }: Props) {
   } | null;
 
   if (portalResult.error || !portalData) {
-    return NextResponse.json({ error: "Portal not found" }, { status: 404 });
+    return {
+      payload: { error: "Portal not found" },
+      serverTiming: timing.toHeader(),
+      status: 404,
+    };
   }
 
   // Parse portal filters to extract city constraint for geo-filtering
@@ -500,7 +436,11 @@ export async function GET(request: NextRequest, { params }: Props) {
 
   // Validate portal ID to prevent injection
   if (!isValidUUID(portal.id)) {
-    return NextResponse.json({ error: "Invalid portal" }, { status: 400 });
+    return {
+      payload: { error: "Invalid portal" },
+      serverTiming: timing.toHeader(),
+      status: 400,
+    };
   }
 
   const portalClient = await createPortalScopedClient(portal.id);
@@ -520,52 +460,75 @@ export async function GET(request: NextRequest, { params }: Props) {
     sectionsToFetch = feedSettings.featured_section_ids;
   }
 
-  // Fetch sections with their items
-  let sectionsQuery = supabase
-    .from("portal_sections")
-    .select(
-      `
-      id,
-      title,
-      slug,
-      description,
-      section_type,
-      block_type,
-      layout,
-      items_per_row,
-      max_items,
-      auto_filter,
-      block_content,
-      display_order,
-      is_visible,
-      schedule_start,
-      schedule_end,
-      show_on_days,
-      show_after_time,
-      show_before_time,
-      style,
-      portal_section_items(id, entity_type, entity_id, display_order)
-    `,
-    )
-    .eq("portal_id", portal.id)
-    .eq("is_visible", true)
-    .order("display_order", { ascending: true });
+  const sectionsCacheKey = buildPortalSectionsCacheKey(portal.id, sectionsToFetch);
+  let sectionsData = await getSharedCacheJson<Section[]>(
+    SECTION_CACHE_NAMESPACE,
+    sectionsCacheKey,
+  );
 
-  if (sectionsToFetch?.length) {
-    sectionsQuery = sectionsQuery.in("id", sectionsToFetch);
-  }
+  if (!sectionsData) {
+    let sectionsQuery = supabase
+      .from("portal_sections")
+      .select(
+        `
+        id,
+        title,
+        slug,
+        description,
+        section_type,
+        block_type,
+        layout,
+        items_per_row,
+        max_items,
+        auto_filter,
+        block_content,
+        display_order,
+        is_visible,
+        schedule_start,
+        schedule_end,
+        show_on_days,
+        show_after_time,
+        show_before_time,
+        style,
+        portal_section_items(id, entity_type, entity_id, display_order)
+      `,
+      )
+      .eq("portal_id", portal.id)
+      .eq("is_visible", true)
+      .order("display_order", { ascending: true });
 
-  const { data: sectionsData, error: sectionsError } = await sectionsQuery;
+    if (sectionsToFetch?.length) {
+      sectionsQuery = sectionsQuery.in("id", sectionsToFetch);
+    }
 
-  if (sectionsError) {
-    return errorResponse(sectionsError, "portal feed sections");
+    const { data, error: sectionsError } = await sectionsQuery;
+
+    if (sectionsError) {
+      return {
+        payload: {
+          error:
+            sectionsError.message || "Failed to load portal feed sections",
+        },
+        serverTiming: timing.toHeader(),
+        status: 500,
+      };
+    }
+
+    sectionsData = (data || []) as Section[];
+    await setSharedCacheJson(
+      SECTION_CACHE_NAMESPACE,
+      sectionsCacheKey,
+      sectionsData,
+      SECTION_CACHE_TTL_MS,
+      { maxEntries: FEED_CACHE_MAX_ENTRIES },
+    );
   }
 
   const allSections = (sectionsData || []) as Section[];
 
   // Filter sections by visibility rules
   const sections = allSections.filter((section) => {
-    if (!isSectionVisible(section)) return false;
+    if (!isPortalSectionVisible(section)) return false;
 
     // Health-vertical sections belong only on hospital portals, not city feeds.
     const hospitalOnlySections = [
@@ -582,18 +545,6 @@ export async function GET(request: NextRequest, { params }: Props) {
 
     return true;
   });
-
-  const existingFeedLoad = FEED_IN_FLIGHT_LOADS.get(cacheKey);
-  if (existingFeedLoad) {
-    const payload = await existingFeedLoad;
-    return NextResponse.json(payload, {
-      headers: {
-        "Cache-Control": FEED_CACHE_CONTROL,
-      },
-    });
-  }
-
-  const feedLoadPromise = (async () => {
 
   // Collect all curated and pinned event IDs from sections
   const eventIds = new Set<number>();
@@ -650,39 +601,73 @@ export async function GET(request: NextRequest, { params }: Props) {
         venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city, lat, lng, image_url, active)
       `;
 
-  const curatedEventsPromise =
-    eventIds.size > 0
-      ? applyFeedGate(
-          portalClient
-            .from("events")
-            .select(curatedEventSelect)
-            .in("id", Array.from(eventIds))
-            .or(`start_date.gte.${today},end_date.gte.${today}`)
-            .is("canonical_event_id", null)
-            .or("is_class.eq.false,is_class.is.null")
-            .or("is_sensitive.eq.false,is_sensitive.is.null"),
-        )
-      : Promise.resolve({ data: [] as Event[] });
+  const sectionEventsCacheKey = buildSectionEventsCacheKey({
+    portalId: portal.id,
+    today,
+    eventIds: Array.from(eventIds),
+    pinnedEventIds: Array.from(pinnedEventIds),
+  });
 
-  const pinnedEventsPromise =
-    pinnedEventIds.size > 0
-      ? applyFeedGate(
-          portalClient
-            .from("events")
-            .select(curatedEventSelect)
-            .in("id", Array.from(pinnedEventIds))
-            .is("canonical_event_id", null)
-            .or("is_class.eq.false,is_class.is.null")
-            .or("is_sensitive.eq.false,is_sensitive.is.null"),
-        )
-      : Promise.resolve({ data: [] as Event[] });
+  const [cachedSectionEvents, federationAccess] = await timing.measure(
+    "seed_queries",
+    () =>
+      Promise.all([
+        getSharedCacheJson<{
+          curatedEvents: Event[];
+          pinnedEvents: Event[];
+        }>(SECTION_EVENTS_CACHE_NAMESPACE, sectionEventsCacheKey),
+        federationAccessPromise,
+      ]),
+  );
 
-  const [{ data: curatedEvents }, { data: pinnedEvents }, federationAccess] =
-    await Promise.all([
-      curatedEventsPromise,
-      pinnedEventsPromise,
-      federationAccessPromise,
-    ]);
+  let curatedEvents = cachedSectionEvents?.curatedEvents || [];
+  let pinnedEvents = cachedSectionEvents?.pinnedEvents || [];
+
+  if (!cachedSectionEvents) {
+    const curatedEventsPromise =
+      eventIds.size > 0
+        ? applyFeedGate(
+            portalClient
+              .from("events")
+              .select(curatedEventSelect)
+              .in("id", Array.from(eventIds))
+              .or(`start_date.gte.${today},end_date.gte.${today}`)
+              .is("canonical_event_id", null)
+              .or("is_class.eq.false,is_class.is.null")
+              .or("is_sensitive.eq.false,is_sensitive.is.null"),
+          )
+        : Promise.resolve({ data: [] as Event[] });
+
+    const pinnedEventsPromise =
+      pinnedEventIds.size > 0
+        ? applyFeedGate(
+            portalClient
+              .from("events")
+              .select(curatedEventSelect)
+              .in("id", Array.from(pinnedEventIds))
+              .is("canonical_event_id", null)
+              .or("is_class.eq.false,is_class.is.null")
+              .or("is_sensitive.eq.false,is_sensitive.is.null"),
+          )
+        : Promise.resolve({ data: [] as Event[] });
+
+    const [{ data: fetchedCuratedEvents }, { data: fetchedPinnedEvents }] =
+      await Promise.all([curatedEventsPromise, pinnedEventsPromise]);
+
+    curatedEvents = (fetchedCuratedEvents || []) as Event[];
+    pinnedEvents = (fetchedPinnedEvents || []) as Event[];
+
+    await setSharedCacheJson(
+      SECTION_EVENTS_CACHE_NAMESPACE,
+      sectionEventsCacheKey,
+      {
+        curatedEvents,
+        pinnedEvents,
+      },
+      SECTION_EVENTS_CACHE_TTL_MS,
+      { maxEntries: FEED_CACHE_MAX_ENTRIES },
+    );
+  }
 
   const manifest = buildPortalManifest({
     portalId: portal.id,
@@ -695,6 +680,14 @@ export async function GET(request: NextRequest, { params }: Props) {
   });
   const enforcePortalCityFilter = shouldApplyCityFilter(manifest);
   const hasSubscribedSources = manifest.scope.allowFederatedSources;
+  const applyPortalEventScope = (query: ReturnType<typeof supabase.from>) =>
+    applyPortalCategoryFilters(
+      applyManifestFederatedScopeToQuery(query, manifest, {
+        sourceIds: hasSubscribedSources ? federationAccess.sourceIds : [],
+        publicOnlyWhenNoPortal: true,
+      }),
+      portalContentFilters,
+    );
 
   // Merge curated + pinned event rows into a single lookup map
   const eventMap = new Map<number, Event>();
@@ -710,64 +703,78 @@ export async function GET(request: NextRequest, { params }: Props) {
   }
 
   // Step 3: Determine if we need auto-filtered events and get widest date range needed
-  const sectionsNeedingAutoEvents = sections.filter(
-    (s) =>
-      (s.section_type === "auto" || s.section_type === "mixed") &&
-      s.auto_filter &&
-      !s.auto_filter.event_ids?.length &&
-      !["category_grid", "announcement", "external_link", "countdown"].includes(
-        s.block_type,
-      ),
+  const sectionsNeedingAutoEvents = sections.filter((section) =>
+    shouldSectionUseAutoEventPool({
+      blockType: section.block_type,
+      sectionType: section.section_type,
+      maxItems: section.max_items,
+      autoFilter: section.auto_filter
+        ? {
+            eventIds: section.auto_filter.event_ids,
+            sourceSlugs: section.auto_filter.source_slugs,
+            sourceIds: section.auto_filter.source_ids,
+            venueIds: section.auto_filter.venue_ids,
+            dateFilter: section.auto_filter.date_filter,
+            nightlifeMode: section.auto_filter.nightlife_mode,
+          }
+        : null,
+    }),
   );
 
   // Build master event pool for auto sections
   const autoEventPool = new Map<number, Event>();
 
+  await timing.measure("auto_pool", async () => {
   if (sectionsNeedingAutoEvents.length > 0) {
+    const autoSectionPlan = buildPortalFeedAutoSectionPlan({
+      sections: sectionsNeedingAutoEvents.map((section) => ({
+        blockType: section.block_type,
+        sectionType: section.section_type,
+        maxItems: section.max_items,
+        autoFilter: section.auto_filter
+          ? {
+              eventIds: section.auto_filter.event_ids,
+              sourceSlugs: section.auto_filter.source_slugs,
+              sourceIds: section.auto_filter.source_ids,
+              venueIds: section.auto_filter.venue_ids,
+              dateFilter: section.auto_filter.date_filter,
+              nightlifeMode: section.auto_filter.nightlife_mode,
+            }
+          : null,
+      })),
+      defaultLimit,
+      itemsPerSection: feedSettings.items_per_section,
+      defaultMaxEndDate: getLocalDateString(addDays(new Date(), 14)),
+      resolveDateRangeEnd: (filter) => getPortalFeedDateRange(filter).end,
+    });
+    const requestedSourceSlugs = autoSectionPlan.requestedSourceSlugs;
+    const accessibleSourceIdSet = new Set(federationAccess.sourceIds || []);
+
     // Source/venue-constrained sections can be starved by a globally limited pool.
     // Track explicit constraints so we can merge a targeted supplement query.
-    const constrainedSourceIds = Array.from(
-      new Set(
-        sectionsNeedingAutoEvents.flatMap(
-          (section) => section.auto_filter?.source_ids || [],
-        ),
-      ),
-    );
-    const constrainedVenueIds = Array.from(
-      new Set(
-        sectionsNeedingAutoEvents.flatMap(
-          (section) => section.auto_filter?.venue_ids || [],
-        ),
-      ),
-    );
-
-    // Find the widest date range needed across all sections
-    let maxEndDate = getLocalDateString(addDays(new Date(), 14)); // Default 2 weeks
-
-    for (const section of sectionsNeedingAutoEvents) {
-      const filter = section.auto_filter!;
-      if (filter.date_filter) {
-        const { end } = getDateRange(filter.date_filter);
-        if (end > maxEndDate) maxEndDate = end;
-      }
-    }
-
-    // Calculate max events needed
-    // Per-section budget for each date bucket
-    const requestedPerBucket = sectionsNeedingAutoEvents.reduce((sum, s) => {
-      return (
-        sum +
-        (s.max_items || feedSettings.items_per_section || defaultLimit) * 2
+    const constrainedSourceIds = autoSectionPlan.constrainedSourceIds;
+    const constrainedVenueIds = autoSectionPlan.constrainedVenueIds;
+    const maxEndDate = autoSectionPlan.maxEndDate;
+    const perBucketLimit = autoSectionPlan.perBucketLimit;
+    const onlyNightlifeSections =
+      sectionsNeedingAutoEvents.length > 0 &&
+      sectionsNeedingAutoEvents.every((section) =>
+        Boolean(section.auto_filter?.nightlife_mode),
       );
-    }, 0);
-    // Keep cold-load DB fanout bounded for large portals while preserving enough candidates.
-    // Nightlife sections need a bigger pool because nightlife events (7pm+) sort to the end
-    // of time-ordered queries and get cut off on busy days.
-    const hasNightlifeSectionInFeed = sectionsNeedingAutoEvents.some(
-      (s) => !!(s.auto_filter as Record<string, unknown>)?.nightlife_mode,
-    );
-    const poolCeiling = hasNightlifeSectionInFeed ? 200 : 120;
-    const perBucketLimit = Math.max(40, Math.min(requestedPerBucket, poolCeiling));
+    const autoPoolCacheKey = buildAutoPoolCacheKey({
+      portalId: portal.id,
+      today,
+      maxEndDate,
+      perBucketLimit,
+      constrainedSupplementalLimit: autoSectionPlan.constrainedSupplementalLimit,
+      hasNightlifeSection: autoSectionPlan.hasNightlifeSection,
+      onlyNightlifeSections,
+      constrainedSourceIds,
+      constrainedSourceSlugs: requestedSourceSlugs,
+      constrainedVenueIds,
+      portalCities,
+      contentFilters: portalContentFilters,
+    });
 
     // Build a base query with shared filters, then run it per date bucket
     // so that busy days (100+ events) don't starve later dates
@@ -804,59 +811,6 @@ export async function GET(request: NextRequest, { params }: Props) {
         source_id,
         venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city, lat, lng, image_url, active)
     `;
-
-    const applyPortalFilter = (query: ReturnType<typeof supabase.from>) => {
-      return applyManifestFederatedScopeToQuery(query, manifest, {
-        sourceIds: hasSubscribedSources ? federationAccess.sourceIds : [],
-        publicOnlyWhenNoPortal: true,
-      });
-    };
-
-    // Date bucket boundaries
-    const dayOfWeek = new Date().getDay();
-    const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
-    const endOfWeekDate = new Date();
-    endOfWeekDate.setDate(endOfWeekDate.getDate() + daysUntilSunday);
-    const endOfWeekStr = getLocalDateString(endOfWeekDate);
-    const tomorrowDate = new Date();
-    tomorrowDate.setDate(tomorrowDate.getDate() + 1);
-    const tomorrowStr = getLocalDateString(tomorrowDate);
-
-    // Run 3 queries in parallel: today, rest of week, rest of month
-    const buildBucketQuery = (
-      startDate: string,
-      endDate: string,
-      limit: number,
-    ) => {
-      let q = portalClient
-        .from("events")
-        .select(eventSelect)
-        .gte("start_date", startDate)
-        .lte("start_date", endDate)
-        .is("canonical_event_id", null)
-        .or("is_class.eq.false,is_class.is.null")
-        .or("is_sensitive.eq.false,is_sensitive.is.null");
-      q = applyFeedGate(q);
-      q = applyPortalFilter(q);
-      q = applyPortalCategoryFilters(q, portalContentFilters);
-      return q
-        .order("start_date", { ascending: true })
-        .order("data_quality", { ascending: false, nullsFirst: false })
-        .order("start_time", { ascending: true })
-        .limit(limit);
-    };
-
-    const [todayResult, weekResult, laterResult] = await Promise.all([
-      buildBucketQuery(today, today, perBucketLimit),
-      daysUntilSunday > 0
-        ? buildBucketQuery(tomorrowStr, endOfWeekStr, perBucketLimit)
-        : Promise.resolve({ data: [] as Event[] }),
-      buildBucketQuery(
-        getLocalDateString(new Date(endOfWeekDate.getTime() + 86400000)),
-        maxEndDate,
-        perBucketLimit,
-      ),
-    ]);
 
     // Merge all buckets into the pool
     const addToPool = (events: Event[]) => {
@@ -904,17 +858,167 @@ export async function GET(request: NextRequest, { params }: Props) {
       }
     };
 
-    addToPool(filterByPortalContentScope((todayResult.data || []) as Event[], portalContentFilters));
-    addToPool(filterByPortalContentScope(((weekResult as { data: Event[] | null }).data || []) as Event[], portalContentFilters));
-    addToPool(filterByPortalContentScope((laterResult.data || []) as Event[], portalContentFilters));
+    const sourceSlugCacheKey = buildSourceSlugCacheKey({
+      portalId: portal.id,
+      sourceSlugs: requestedSourceSlugs,
+      accessibleSourceIds: federationAccess.sourceIds || [],
+    });
+    const [cachedAutoPoolEvents, cachedSourceSlugMap] = await Promise.all([
+      timing.measure("auto_pool_cache_lookup", () =>
+        getSharedCacheJson<Event[]>(AUTO_POOL_CACHE_NAMESPACE, autoPoolCacheKey),
+      ),
+      requestedSourceSlugs.length > 0
+        ? timing.measure("auto_pool_source_lookup_cache", () =>
+            getSharedCacheJson<Record<string, number>>(
+              SOURCE_SLUG_CACHE_NAMESPACE,
+              sourceSlugCacheKey,
+            ),
+          )
+        : Promise.resolve(null),
+    ]);
 
-    // Supplemental query: explicitly pull from constrained sources/venues so those
-    // sections always have a fair candidate pool before section-level filtering.
-    if (constrainedSourceIds.length > 0 || constrainedVenueIds.length > 0) {
-      let constrainedQuery = portalClient
-        .from("events")
-        .select(
-          `
+    let sourceIdBySlug = new Map<string, number>(
+      Object.entries(cachedSourceSlugMap || {}).map(([slug, id]) => [slug, id]),
+    );
+
+    if (requestedSourceSlugs.length > 0 && sourceIdBySlug.size === 0) {
+      const { data: sourceRows, error: sourceLookupError } = await timing.measure(
+        "auto_pool_source_lookup_query",
+        () =>
+          supabase
+            .from("sources")
+            .select("id, slug")
+            .in("slug", requestedSourceSlugs),
+      );
+
+      if (sourceLookupError) {
+        console.error(
+          "Failed resolving auto-filter source slugs:",
+          sourceLookupError,
+        );
+      } else {
+        sourceIdBySlug = new Map<string, number>();
+        for (const row of (sourceRows || []) as Array<{ id: number; slug: string }>) {
+          if (
+            accessibleSourceIdSet.size > 0 &&
+            !accessibleSourceIdSet.has(row.id)
+          ) {
+            continue;
+          }
+          sourceIdBySlug.set(row.slug, row.id);
+        }
+
+        await setSharedCacheJson(
+          SOURCE_SLUG_CACHE_NAMESPACE,
+          sourceSlugCacheKey,
+          Object.fromEntries(sourceIdBySlug),
+          SOURCE_SLUG_CACHE_TTL_MS,
+          { maxEntries: FEED_CACHE_MAX_ENTRIES },
+        );
+      }
+    }
+
+    if (sourceIdBySlug.size > 0) {
+      timing.start("auto_pool_source_apply");
+      for (const section of sectionsNeedingAutoEvents) {
+        const sourceSlugs = (section.auto_filter?.source_slugs || []).filter(
+          (slug): slug is string => typeof slug === "string" && slug.length > 0,
+        );
+        if (sourceSlugs.length === 0 || !section.auto_filter) continue;
+
+        const existingSourceIds = Array.isArray(section.auto_filter.source_ids)
+          ? section.auto_filter.source_ids.filter(
+              (id): id is number => typeof id === "number",
+            )
+          : [];
+        const resolvedSourceIds = sourceSlugs
+          .map((slug) => sourceIdBySlug.get(slug))
+          .filter((id): id is number => typeof id === "number");
+
+        section.auto_filter.source_ids = Array.from(
+          new Set([...existingSourceIds, ...resolvedSourceIds]),
+        );
+      }
+      timing.end("auto_pool_source_apply");
+    }
+
+    if (cachedAutoPoolEvents) {
+      addToPool(cachedAutoPoolEvents);
+    } else {
+      // Date bucket boundaries
+      const dayOfWeek = new Date().getDay();
+      const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
+      const endOfWeekDate = new Date();
+      endOfWeekDate.setDate(endOfWeekDate.getDate() + daysUntilSunday);
+      const endOfWeekStr = getLocalDateString(endOfWeekDate);
+      const tomorrowDate = new Date();
+      tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+      const tomorrowStr = getLocalDateString(tomorrowDate);
+
+      const buildBucketQuery = (
+        startDate: string,
+        endDate: string,
+        limit: number,
+      ) => {
+        let q = portalClient
+          .from("events")
+          .select(eventSelect)
+          .gte("start_date", startDate)
+          .lte("start_date", endDate)
+          .is("canonical_event_id", null)
+          .or("is_class.eq.false,is_class.is.null")
+          .or("is_sensitive.eq.false,is_sensitive.is.null");
+        q = applyFeedGate(q);
+        q = applyPortalEventScope(q);
+        return q
+          .order("start_date", { ascending: true })
+          .order("data_quality", { ascending: false, nullsFirst: false })
+          .order("start_time", { ascending: true })
+          .limit(limit);
+      };
+
+      if (!onlyNightlifeSections) {
+        const [todayResult, weekResult, laterResult] = await timing.measure(
+          "auto_pool_buckets",
+          () =>
+            Promise.all([
+              buildBucketQuery(today, today, perBucketLimit),
+              daysUntilSunday > 0
+                ? buildBucketQuery(tomorrowStr, endOfWeekStr, perBucketLimit)
+                : Promise.resolve({ data: [] as Event[] }),
+              buildBucketQuery(
+                getLocalDateString(new Date(endOfWeekDate.getTime() + 86400000)),
+                maxEndDate,
+                perBucketLimit,
+              ),
+            ]),
+        );
+
+        addToPool(
+          filterByPortalContentScope(
+            (todayResult.data || []) as Event[],
+            portalContentFilters,
+          ),
+        );
+        addToPool(
+          filterByPortalContentScope(
+            ((weekResult as { data: Event[] | null }).data || []) as Event[],
+            portalContentFilters,
+          ),
+        );
+        addToPool(
+          filterByPortalContentScope(
+            (laterResult.data || []) as Event[],
+            portalContentFilters,
+          ),
+        );
+      }
+
+      if (constrainedSourceIds.length > 0 || constrainedVenueIds.length > 0) {
+        let constrainedQuery = portalClient
+          .from("events")
+          .select(
+            `
           id,
           title,
           start_date,
@@ -947,148 +1051,136 @@ export async function GET(request: NextRequest, { params }: Props) {
           source_id,
           venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city, image_url, active)
         `,
-        )
-        .or(`start_date.gte.${today},end_date.gte.${today}`) // Include ongoing events (exhibitions)
-        .lte("start_date", maxEndDate)
-        .is("canonical_event_id", null)
-        .or("is_class.eq.false,is_class.is.null")
-        .or("is_sensitive.eq.false,is_sensitive.is.null");
+          )
+          .or(`start_date.gte.${today},end_date.gte.${today}`)
+          .lte("start_date", maxEndDate)
+          .is("canonical_event_id", null)
+          .or("is_class.eq.false,is_class.is.null")
+          .or("is_sensitive.eq.false,is_sensitive.is.null");
 
-      if (constrainedSourceIds.length > 0 && constrainedVenueIds.length > 0) {
-        constrainedQuery = constrainedQuery.or(
-          `source_id.in.(${constrainedSourceIds.join(",")}),venue_id.in.(${constrainedVenueIds.join(",")})`,
+        if (constrainedSourceIds.length > 0 && constrainedVenueIds.length > 0) {
+          constrainedQuery = constrainedQuery.or(
+            `source_id.in.(${constrainedSourceIds.join(",")}),venue_id.in.(${constrainedVenueIds.join(",")})`,
+          );
+        } else if (constrainedSourceIds.length > 0) {
+          constrainedQuery = constrainedQuery.in("source_id", constrainedSourceIds);
+        } else if (constrainedVenueIds.length > 0) {
+          constrainedQuery = constrainedQuery.in("venue_id", constrainedVenueIds);
+        }
+
+        constrainedQuery = applyFeedGate(constrainedQuery);
+        constrainedQuery = applyPortalEventScope(constrainedQuery);
+
+        const { data: constrainedEvents } = await timing.measure(
+          "auto_pool_constrained",
+          () =>
+            constrainedQuery
+              .order("start_date", { ascending: true })
+              .order("data_quality", { ascending: false, nullsFirst: false })
+              .order("start_time", { ascending: true })
+              .limit(autoSectionPlan.constrainedSupplementalLimit),
         );
-      } else if (constrainedSourceIds.length > 0) {
-        constrainedQuery = constrainedQuery.in(
-          "source_id",
-          constrainedSourceIds,
-        );
-      } else if (constrainedVenueIds.length > 0) {
-        constrainedQuery = constrainedQuery.in("venue_id", constrainedVenueIds);
+
+        addToPool((constrainedEvents || []) as Event[]);
       }
 
-      constrainedQuery = applyFeedGate(constrainedQuery);
+      if (autoSectionPlan.hasNightlifeSection) {
+        const nightlifeVenueFilter = [
+          "bar", "nightclub", "rooftop", "karaoke",
+          "brewery", "cocktail_bar",
+        ];
 
-      // Re-apply portal federation visibility guardrails
-      constrainedQuery = applyPortalFilter(constrainedQuery);
+        const supplementEndDate = tomorrowStr;
 
-      const supplementalLimit = Math.min(
-        220,
-        Math.max(
-          constrainedSourceIds.length * 30,
-          constrainedVenueIds.length * 25,
-          80,
+        let nightlifeCoreQuery = portalClient
+          .from("events")
+          .select(eventSelect)
+          .or(`start_date.gte.${today},end_date.gte.${today}`)
+          .lte("start_date", supplementEndDate)
+          .is("canonical_event_id", null)
+          .or("is_class.eq.false,is_class.is.null")
+          .or("is_sensitive.eq.false,is_sensitive.is.null")
+          .eq("category_id", "nightlife");
+        nightlifeCoreQuery = applyFeedGate(nightlifeCoreQuery);
+        nightlifeCoreQuery = applyPortalEventScope(nightlifeCoreQuery);
+
+        let entertainmentQuery = portalClient
+          .from("events")
+          .select(eventSelect)
+          .or(`start_date.gte.${today},end_date.gte.${today}`)
+          .lte("start_date", supplementEndDate)
+          .is("canonical_event_id", null)
+          .or("is_class.eq.false,is_class.is.null")
+          .or("is_sensitive.eq.false,is_sensitive.is.null")
+          .in("category_id", ["music", "comedy", "dance"])
+          .gte("start_time", "17:00:00");
+        entertainmentQuery = applyFeedGate(entertainmentQuery);
+        entertainmentQuery = applyPortalEventScope(entertainmentQuery);
+
+        let venueBasedQuery = portalClient
+          .from("events")
+          .select(
+            eventSelect.replace(
+              "venue:venues(",
+              "venue:venues!inner(",
+            ),
+          )
+          .or(`start_date.gte.${today},end_date.gte.${today}`)
+          .lte("start_date", supplementEndDate)
+          .is("canonical_event_id", null)
+          .or("is_class.eq.false,is_class.is.null")
+          .or("is_sensitive.eq.false,is_sensitive.is.null")
+          .in("venues.venue_type", nightlifeVenueFilter)
+          .gte("start_time", "17:00:00");
+        venueBasedQuery = applyFeedGate(venueBasedQuery);
+        venueBasedQuery = applyPortalEventScope(venueBasedQuery);
+
+        const [coreResult, entertainmentResult, venueResult] =
+          await timing.measure("auto_pool_nightlife", () =>
+            Promise.all([
+              nightlifeCoreQuery
+                .order("start_date", { ascending: true })
+                .order("data_quality", { ascending: false, nullsFirst: false })
+                .order("start_time", { ascending: true })
+                .limit(60),
+              entertainmentQuery
+                .order("start_date", { ascending: true })
+                .order("data_quality", { ascending: false, nullsFirst: false })
+                .order("start_time", { ascending: true })
+                .limit(120),
+              venueBasedQuery
+                .order("start_date", { ascending: true })
+                .order("data_quality", { ascending: false, nullsFirst: false })
+                .order("start_time", { ascending: true })
+                .limit(60),
+            ]),
+          );
+
+        addToPool((coreResult.data || []) as Event[]);
+        addToPool((entertainmentResult.data || []) as Event[]);
+        addToPool((venueResult.data || []) as Event[]);
+      }
+
+      await timing.measure("auto_pool_finalize", async () => {
+        for (const [eventId, event] of autoEventPool) {
+          if (shouldSuppressChainShowtime(event.tags, event.venue)) {
+            autoEventPool.delete(eventId);
+          }
+        }
+      });
+
+      await timing.measure("auto_pool_cache_store", () =>
+        setSharedCacheJson(
+          AUTO_POOL_CACHE_NAMESPACE,
+          autoPoolCacheKey,
+          Array.from(autoEventPool.values()),
+          AUTO_POOL_CACHE_TTL_MS,
+          { maxEntries: FEED_CACHE_MAX_ENTRIES },
         ),
       );
-
-      const { data: constrainedEvents } = await constrainedQuery
-        .order("start_date", { ascending: true })
-        .order("data_quality", { ascending: false, nullsFirst: false })
-        .order("start_time", { ascending: true })
-        .limit(supplementalLimit);
-
-      addToPool((constrainedEvents || []) as Event[]);
-    }
-
-    // Supplemental query: nightlife_mode sections need evening/late-night events
-    // that get cut off by the per-bucket limit on busy days (bucket queries are ordered
-    // by start_time ASC, so daytime events fill the pool before evening ones).
-    // We run two targeted passes: (1) nightlife-category events at any time,
-    // (2) adjacent-category events starting 5pm+ (the bucket pool already has daytime ones).
-    const hasNightlifeSection = sectionsNeedingAutoEvents.some(
-      (s) => s.auto_filter?.nightlife_mode,
-    );
-    if (hasNightlifeSection) {
-      const nightlifeVenueFilter = [
-        "bar", "nightclub", "rooftop", "karaoke",
-        "brewery", "cocktail_bar",
-      ];
-
-      // Scope supplemental queries to today + tomorrow only. The bucket queries
-      // already cover the full date range; these exist to backfill events that
-      // the bucket's per-day limit (200) cuts off on busy days.
-      const supplementEndDate = tomorrowStr;
-
-      // Pass 1: all nightlife-category events today/tomorrow
-      let nightlifeCoreQuery = portalClient
-        .from("events")
-        .select(eventSelect)
-        .or(`start_date.gte.${today},end_date.gte.${today}`)
-        .lte("start_date", supplementEndDate)
-        .is("canonical_event_id", null)
-        .or("is_class.eq.false,is_class.is.null")
-        .or("is_sensitive.eq.false,is_sensitive.is.null")
-        .eq("category_id", "nightlife");
-      nightlifeCoreQuery = applyFeedGate(nightlifeCoreQuery);
-      nightlifeCoreQuery = applyPortalFilter(nightlifeCoreQuery);
-
-      // Pass 2: entertainment categories (music/comedy/dance) evening events
-      let entertainmentQuery = portalClient
-        .from("events")
-        .select(eventSelect)
-        .or(`start_date.gte.${today},end_date.gte.${today}`)
-        .lte("start_date", supplementEndDate)
-        .is("canonical_event_id", null)
-        .or("is_class.eq.false,is_class.is.null")
-        .or("is_sensitive.eq.false,is_sensitive.is.null")
-        .in("category_id", ["music", "comedy", "dance"])
-        .gte("start_time", "17:00:00");
-      entertainmentQuery = applyFeedGate(entertainmentQuery);
-      entertainmentQuery = applyPortalFilter(entertainmentQuery);
-
-      // Pass 3: any event at nightlife venues starting 5pm+
-      // Catches art at bars, watch parties, food_drink at breweries, etc.
-      // Use inner join on venues to filter by venue_type at the DB level
-      let venueBasedQuery = portalClient
-        .from("events")
-        .select(
-          eventSelect.replace(
-            "venue:venues(",
-            "venue:venues!inner(",
-          ),
-        )
-        .or(`start_date.gte.${today},end_date.gte.${today}`)
-        .lte("start_date", supplementEndDate)
-        .is("canonical_event_id", null)
-        .or("is_class.eq.false,is_class.is.null")
-        .or("is_sensitive.eq.false,is_sensitive.is.null")
-        .in("venues.venue_type", nightlifeVenueFilter)
-        .gte("start_time", "17:00:00");
-      venueBasedQuery = applyFeedGate(venueBasedQuery);
-      venueBasedQuery = applyPortalFilter(venueBasedQuery);
-
-      const [coreResult, entertainmentResult, venueResult] =
-        await Promise.all([
-          nightlifeCoreQuery
-            .order("start_date", { ascending: true })
-            .order("data_quality", { ascending: false, nullsFirst: false })
-            .order("start_time", { ascending: true })
-            .limit(60),
-          entertainmentQuery
-            .order("start_date", { ascending: true })
-            .order("data_quality", { ascending: false, nullsFirst: false })
-            .order("start_time", { ascending: true })
-            .limit(120),
-          venueBasedQuery
-            .order("start_date", { ascending: true })
-            .order("data_quality", { ascending: false, nullsFirst: false })
-            .order("start_time", { ascending: true })
-            .limit(60),
-        ]);
-
-      addToPool((coreResult.data || []) as Event[]);
-      addToPool((entertainmentResult.data || []) as Event[]);
-      addToPool((venueResult.data || []) as Event[]);
-    }
-
-    // Suppress chain-cinema regular showtimes from auto sections.
-    // Keep indie theater showtimes so dedicated film/theater sections still work.
-    for (const [eventId, event] of autoEventPool) {
-      if (shouldSuppressChainShowtime(event.tags, event.venue)) {
-        autoEventPool.delete(eventId);
-      }
     }
   }
+  });
 
   // Step 4: Check if any section needs popularity sorting - batch fetch RSVP counts
   const needsPopularitySort = sectionsNeedingAutoEvents.some(
@@ -1097,521 +1189,286 @@ export async function GET(request: NextRequest, { params }: Props) {
   const rsvpCounts: Record<number, number> = {};
 
   if (needsPopularitySort && autoEventPool.size > 0) {
-    const { data: rsvpData } = await supabase
-      .from("event_rsvps")
-      .select("event_id")
-      .in("event_id", Array.from(autoEventPool.keys()))
-      .eq("status", "going");
+    await timing.measure("popularity_counts", async () => {
+      const { data: rsvpData } = await supabase
+        .from("event_rsvps")
+        .select("event_id")
+        .in("event_id", Array.from(autoEventPool.keys()))
+        .eq("status", "going");
 
-    for (const rsvp of (rsvpData || []) as { event_id: number }[]) {
-      rsvpCounts[rsvp.event_id] = (rsvpCounts[rsvp.event_id] || 0) + 1;
-    }
+      for (const rsvp of (rsvpData || []) as { event_id: number }[]) {
+        rsvpCounts[rsvp.event_id] = (rsvpCounts[rsvp.event_id] || 0) + 1;
+      }
+    });
   }
 
   // Step 5: Add programmatic holiday sections
-  const holidaySections: Section[] = [];
-  const currentDate = new Date();
-  const currentYear = currentDate.getFullYear();
-  const currentMonth = currentDate.getMonth() + 1; // 1-12
-  const currentDay = currentDate.getDate();
-
-  // Add holiday sections starting late January through end of March
-  const showHolidaySections =
-    (currentMonth === 1 && currentDay >= 20) || // Late January
-    currentMonth === 2 || // All of February
-    currentMonth === 3; // All of March (Ramadan, Holi, WHM, St. Patrick's)
-
-  if (showHolidaySections) {
-    // Friday the 13th section (Feb 10-13)
-    if (currentMonth === 2 && currentDay >= 10 && currentDay <= 13) {
-      holidaySections.push({
-        id: `friday-the-13th-${currentYear}`,
-        title: "Friday the 13th",
-        slug: "friday-the-13th",
-        description: "Embrace the unlucky",
-        section_type: "auto",
-        block_type: "collapsible_events",
-        layout: "grid",
-        items_per_row: 2,
-        max_items: 20,
-        auto_filter: {
-          tags: ["friday-13"],
-          date_filter: "next_7_days",
-          sort_by: "date",
-        },
-        block_content: null,
-        display_order: -8,
-        is_visible: true,
-        schedule_start: null,
-        schedule_end: null,
-        show_on_days: null,
-        show_after_time: null,
-        show_before_time: null,
-        style: {
-          accent_color: "#00ff41", // Matrix green
-          icon: "knife",
-        },
-        portal_section_items: [],
-      });
-    }
-
-    // Valentine's Day section (Jan 20 - Feb 14)
-    if (
-      (currentMonth === 1 && currentDay >= 20) ||
-      (currentMonth === 2 && currentDay <= 14)
-    ) {
-      holidaySections.push({
-        id: `valentines-${currentYear}`,
-        title: "Valentine's Day",
-        slug: "valentines-day",
-        description: "Be still thy beating heart",
-        section_type: "auto",
-        block_type: "collapsible_events",
-        layout: "grid",
-        items_per_row: 2,
-        max_items: 20,
-        auto_filter: {
-          tags: ["valentines"],
-          date_filter: "next_30_days",
-          sort_by: "date",
-        },
-        block_content: null,
-        display_order: -5,
-        is_visible: true,
-        schedule_start: null,
-        schedule_end: null,
-        show_on_days: null,
-        show_after_time: null,
-        show_before_time: null,
-        style: {
-          accent_color: "#FF69B4", // Neon pink
-          icon: "anatomical-heart",
-        },
-        portal_section_items: [],
-      });
-    }
-
-    // Mardi Gras section (Feb 12-17 for Fat Tuesday Feb 17, 2026)
-    if (currentMonth === 2 && currentDay >= 12 && currentDay <= 17) {
-      holidaySections.push({
-        id: `mardi-gras-${currentYear}`,
-        title: "Mardi Gras",
-        slug: "mardi-gras",
-        description: "Laissez les bons temps rouler",
-        section_type: "auto",
-        block_type: "collapsible_events",
-        layout: "grid",
-        items_per_row: 2,
-        max_items: 20,
-        auto_filter: {
-          tags: ["mardi-gras"],
-          date_filter: "next_7_days",
-          sort_by: "date",
-        },
-        block_content: null,
-        display_order: -3,
-        is_visible: true,
-        schedule_start: null,
-        schedule_end: null,
-        show_on_days: null,
-        show_after_time: null,
-        show_before_time: null,
-        style: {
-          accent_color: "#ffd700", // Mardi Gras gold
-          icon: "mardi-gras-mask",
-        },
-        portal_section_items: [],
-      });
-    }
-
-    // Lunar New Year section (Jan 20 - Feb 28)
-    if ((currentMonth === 1 && currentDay >= 20) || currentMonth === 2) {
-      holidaySections.push({
-        id: `lunar-new-year-${currentYear}`,
-        title: "Lunar New Year",
-        slug: "lunar-new-year",
-        description: "A Year of Fire Horsin' Around",
-        section_type: "auto",
-        block_type: "collapsible_events",
-        layout: "grid",
-        items_per_row: 2,
-        max_items: 20,
-        auto_filter: {
-          tags: ["lunar-new-year"],
-          date_filter: "next_30_days",
-          sort_by: "date",
-        },
-        block_content: null,
-        display_order: -4,
-        is_visible: true,
-        schedule_start: null,
-        schedule_end: null,
-        show_on_days: null,
-        show_after_time: null,
-        show_before_time: null,
-        style: {
-          accent_color: "#DC143C", // Crimson red
-          icon: "fire-horse",
-        },
-        portal_section_items: [],
-      });
-    }
-
-    // Super Bowl section (show the full week leading up + game day)
-    if (currentMonth === 2 && currentDay >= 2 && currentDay <= 9) {
-      holidaySections.push({
-        id: `super-bowl-${currentYear}`,
-        title: "Super Bowl LX",
-        slug: "super-bowl",
-        description: "Patriots vs Seahawks - Watch parties & game day events",
-        section_type: "auto",
-        block_type: "collapsible_events",
-        layout: "grid",
-        items_per_row: 2,
-        max_items: 20,
-        auto_filter: {
-          tags: ["super-bowl"],
-          date_filter: "next_7_days",
-          sort_by: "date",
-        },
-        block_content: null,
-        display_order: -7,
-        is_visible: true,
-        schedule_start: null,
-        schedule_end: null,
-        show_on_days: null,
-        show_after_time: null,
-        show_before_time: null,
-        style: {
-          accent_color: "var(--neon-green)",
-          icon: "football",
-        },
-        portal_section_items: [],
-      });
-    }
-
-    // Black History Month section (Jan 20 - Feb 28)
-    if ((currentMonth === 1 && currentDay >= 20) || currentMonth === 2) {
-      holidaySections.push({
-        id: `black-history-month-${currentYear}`,
-        title: "Black History Month",
-        slug: "black-history-month",
-        description: "Celebrate and learn",
-        section_type: "auto",
-        block_type: "collapsible_events",
-        layout: "grid",
-        items_per_row: 2,
-        max_items: 20,
-        auto_filter: {
-          tags: ["black-history-month"],
-          date_filter: "next_30_days",
-          sort_by: "date",
-        },
-        block_content: null,
-        display_order: -6,
-        is_visible: true,
-        schedule_start: null,
-        schedule_end: null,
-        show_on_days: null,
-        show_after_time: null,
-        show_before_time: null,
-        style: {
-          accent_color: "#e53935", // Pan-African red
-          icon: "raised-fist",
-        },
-        portal_section_items: [],
-      });
-    }
-
-    // Ramadan section (Feb 18 - Mar 19, 2026)
-    if (
-      (currentMonth === 2 && currentDay >= 18) ||
-      (currentMonth === 3 && currentDay <= 19)
-    ) {
-      holidaySections.push({
-        id: `ramadan-${currentYear}`,
-        title: "Ramadan",
-        slug: "ramadan",
-        description: "Iftars, community meals & reflection",
-        section_type: "auto",
-        block_type: "collapsible_events",
-        layout: "grid",
-        items_per_row: 2,
-        max_items: 20,
-        auto_filter: {
-          tags: ["ramadan"],
-          date_filter: "next_30_days",
-          sort_by: "date",
-        },
-        block_content: null,
-        display_order: -9,
-        is_visible: true,
-        schedule_start: null,
-        schedule_end: null,
-        show_on_days: null,
-        show_after_time: null,
-        show_before_time: null,
-        style: {
-          accent_color: "#c5a028", // Gold
-          icon: "crescent-moon",
-        },
-        portal_section_items: [],
-      });
-    }
-
-    // Holi section (Feb 28 - Mar 5)
-    if (
-      (currentMonth === 2 && currentDay >= 28) ||
-      (currentMonth === 3 && currentDay <= 5)
-    ) {
-      holidaySections.push({
-        id: `holi-${currentYear}`,
-        title: "Holi",
-        slug: "holi",
-        description: "Festival of Colors",
-        section_type: "auto",
-        block_type: "collapsible_events",
-        layout: "grid",
-        items_per_row: 2,
-        max_items: 20,
-        auto_filter: {
-          tags: ["holi"],
-          date_filter: "next_7_days",
-          sort_by: "date",
-        },
-        block_content: null,
-        display_order: -10,
-        is_visible: true,
-        schedule_start: null,
-        schedule_end: null,
-        show_on_days: null,
-        show_after_time: null,
-        show_before_time: null,
-        style: {
-          accent_color: "#e040fb", // Vibrant magenta
-          icon: "paint-palette",
-        },
-        portal_section_items: [],
-      });
-    }
-
-    // Women's History Month section (Feb 25 - Mar 31)
-    if (
-      (currentMonth === 2 && currentDay >= 25) ||
-      currentMonth === 3
-    ) {
-      holidaySections.push({
-        id: `womens-history-month-${currentYear}`,
-        title: "Women's History Month",
-        slug: "womens-history-month",
-        description: "Celebrating the women shaping Atlanta",
-        section_type: "auto",
-        block_type: "collapsible_events",
-        layout: "grid",
-        items_per_row: 2,
-        max_items: 20,
-        auto_filter: {
-          tags: ["womens-history-month"],
-          date_filter: "next_30_days",
-          sort_by: "date",
-        },
-        block_content: null,
-        display_order: -11,
-        is_visible: true,
-        schedule_start: null,
-        schedule_end: null,
-        show_on_days: null,
-        show_after_time: null,
-        show_before_time: null,
-        style: {
-          accent_color: "#ab47bc", // Purple
-          icon: "purple-heart",
-        },
-        portal_section_items: [],
-      });
-    }
-
-    // St. Patrick's Day section (Mar 10 - Mar 17)
-    if (currentMonth === 3 && currentDay >= 10 && currentDay <= 17) {
-      holidaySections.push({
-        id: `st-patricks-day-${currentYear}`,
-        title: "St. Patrick's Day",
-        slug: "st-patricks-day",
-        description: "Parade, pubs & plenty of green",
-        section_type: "auto",
-        block_type: "collapsible_events",
-        layout: "grid",
-        items_per_row: 2,
-        max_items: 20,
-        auto_filter: {
-          tags: ["st-patricks-day"],
-          date_filter: "next_7_days",
-          sort_by: "date",
-        },
-        block_content: null,
-        display_order: -12,
-        is_visible: true,
-        schedule_start: null,
-        schedule_end: null,
-        show_on_days: null,
-        show_after_time: null,
-        show_before_time: null,
-        style: {
-          accent_color: "#4caf50", // Shamrock green
-          icon: "shamrock",
-        },
-        portal_section_items: [],
-      });
-    }
-  }
+  const holidaySections: Section[] = buildPortalHolidaySections(new Date());
 
   // Fetch events for holiday sections and track them by tag
   const holidayEventsByTag = new Map<string, Event[]>();
+  await timing.measure("holidays", async () => {
   if (holidaySections.length > 0) {
-    // Collect all unique tags from holiday sections
-    const holidayTags = Array.from(new Set(holidaySections
-      .map((section) => section.auto_filter?.tags?.[0])
-      .filter((tag): tag is string => tag !== undefined)));
-
-    if (holidayTags.length > 0) {
-      const holidayTagKey = holidayTags.slice().sort().join(",");
-      const holidayCityKey = portalCities.length > 0 ? portalCities.join(",") : "all";
-      const holidayCacheKey = `${portal.id}|${today}|${holidayCityKey}|${holidayTagKey}`;
-      const holidaySectionCapacity = holidaySections.reduce((sum, section) => {
-        const maxItems = Math.max(1, Math.min(section.max_items || 20, 24));
-        return sum + maxItems;
-      }, 0);
-      const holidayFetchLimit = Math.min(
-        240,
-        Math.max(80, holidayTags.length * 18, Math.ceil(holidaySectionCapacity * 1.8)),
-      );
-      let holidayEvents = await getSharedCacheJson<
-        (Event & { tags?: string[] })[]
-      >(HOLIDAY_EVENTS_CACHE_NAMESPACE, holidayCacheKey);
-
-      if (!holidayEvents) {
-        const { data: allHolidayEvents } = await portalClient
-          .from("events")
-          .select(
-            `
-            id,
-            title,
-            start_date,
-            start_time,
-            end_date,
-            end_time,
-            is_all_day,
-            is_free,
-            price_min,
-            price_max,
-            category:category_id,
-            genres,
-              image_url,
-            description,
-            featured_blurb,
-            tags,
-            festival_id,
-            is_tentpole,
-            series_id,
-            series:series_id(
-              id,
-              slug,
-              title,
-              series_type,
-              image_url,
-              frequency,
-              day_of_week,
-              festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
-            ),
-            venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city, image_url, active)
-        `,
-          )
-          .overlaps("tags", holidayTags)
-          .gte("start_date", today)
-          .lte("start_date", getLocalDateString(addDays(new Date(), 30)))
-          .is("canonical_event_id", null)
-          .or("is_class.eq.false,is_class.is.null")
-          .or("is_sensitive.eq.false,is_sensitive.is.null")
-          .or("is_feed_ready.eq.true,is_feed_ready.is.null")
-          .order("start_date", { ascending: true })
-          .order("data_quality", { ascending: false, nullsFirst: false })
-          .limit(holidayFetchLimit);
-
-        const cityFilteredHolidayEvents: (Event & { tags?: string[] })[] = [];
-        const suppressedHolidayEvents = suppressEventImagesIfVenueFlagged(
-          allHolidayEvents as (Event & { tags?: string[] })[] || [],
-        );
-        for (const event of filterOutInactiveVenueEvents(suppressedHolidayEvents)) {
-          if (portalCities.length > 0 && event.venue?.city) {
-            const venueCity = event.venue.city.trim().toLowerCase();
-            if (
-              venueCity &&
-              !portalCities.some((pc) => {
-                if (venueCity === pc) return true;
-                const regex = new RegExp(
-                  `\\b${pc.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`,
-                );
-                return regex.test(venueCity);
-              })
-            ) {
-              continue;
-            }
+    const holidayCityKey = portalCities.length > 0 ? portalCities.join(",") : "all";
+    const holidayGroups = Array.from(
+      holidaySections.reduce(
+        (
+          groups,
+          section,
+        ) => {
+          const dateFilter = section.auto_filter?.date_filter;
+          const tag = section.auto_filter?.tags?.[0];
+          if (!dateFilter || !tag) {
+            return groups;
           }
-          cityFilteredHolidayEvents.push(event);
+
+          const existing = groups.get(dateFilter) || {
+            dateFilter,
+            tags: new Set<string>(),
+            sectionCapacity: 0,
+          };
+          existing.tags.add(tag);
+          existing.sectionCapacity += Math.max(
+            1,
+            Math.min(section.max_items || 20, 24),
+          );
+          groups.set(dateFilter, existing);
+          return groups;
+        },
+        new Map<
+          string,
+          {
+            dateFilter: string;
+            tags: Set<string>;
+            sectionCapacity: number;
+          }
+        >(),
+      ).values(),
+    );
+
+    if (holidayGroups.length > 0) {
+      const mergedHolidayEvents = new Map<number, Event & { tags?: string[] }>();
+
+      for (const group of holidayGroups) {
+        const groupTags = Array.from(group.tags).sort();
+        const groupEndDate = getPortalFeedDateRange(group.dateFilter).end;
+        const holidayCacheKey = [
+          portal.id,
+          today,
+          holidayCityKey,
+          group.dateFilter,
+          groupEndDate,
+          groupTags.join(","),
+        ].join("|");
+        const holidayFetchLimit = Math.min(
+          96,
+          Math.max(
+            24,
+            groupTags.length * 10,
+            group.sectionCapacity + Math.max(6, groupTags.length * 3),
+          ),
+        );
+        let holidayEvents = await timing.measure(
+          "holidays_cache_lookup",
+          () =>
+            getSharedCacheJson<(Event & { tags?: string[] })[]>(
+              HOLIDAY_EVENTS_CACHE_NAMESPACE,
+              holidayCacheKey,
+            ),
+          group.dateFilter,
+        );
+
+        if (!holidayEvents) {
+          let holidayCandidateQuery = portalClient
+            .from("events")
+            .select(
+              `
+              id,
+              start_date,
+              tags,
+              venue:venues(id, city, active)
+          `,
+            )
+            .overlaps("tags", groupTags)
+            .gte("start_date", today)
+            .lte("start_date", groupEndDate)
+            .is("canonical_event_id", null)
+            .or("is_class.eq.false,is_class.is.null")
+            .or("is_sensitive.eq.false,is_sensitive.is.null");
+          holidayCandidateQuery = applyFeedGate(holidayCandidateQuery);
+          holidayCandidateQuery = applyPortalEventScope(holidayCandidateQuery);
+          const { data: holidayCandidates } = await timing.measure(
+            "holidays_candidates_query",
+            () =>
+              holidayCandidateQuery
+                .order("start_date", { ascending: true })
+                .order("data_quality", { ascending: false, nullsFirst: false })
+                .limit(holidayFetchLimit),
+            group.dateFilter,
+          );
+
+          const holidayCandidateIds = await timing.measure(
+            "holidays_filter",
+            async () => {
+              const filteredIds: number[] = [];
+              for (const event of (holidayCandidates ||
+                []) as Array<{
+                id: number;
+                venue?: { city?: string | null; active?: boolean | null } | null;
+              }>) {
+                if (event.venue?.active === false) {
+                  continue;
+                }
+                if (portalCities.length > 0 && event.venue?.city) {
+                  const venueCity = event.venue.city.trim().toLowerCase();
+                  if (
+                    venueCity &&
+                    !portalCities.some((pc) => {
+                      if (venueCity === pc) return true;
+                      const regex = new RegExp(
+                        `\\b${pc.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`,
+                      );
+                      return regex.test(venueCity);
+                    })
+                  ) {
+                    continue;
+                  }
+                }
+                filteredIds.push(event.id);
+              }
+              return filteredIds;
+            },
+            group.dateFilter,
+          );
+
+          if (holidayCandidateIds.length > 0) {
+            let holidayDetailsQuery = portalClient
+              .from("events")
+              .select(
+                `
+                id,
+                title,
+                start_date,
+                start_time,
+                end_date,
+                end_time,
+                is_all_day,
+                is_free,
+                price_min,
+                price_max,
+                category:category_id,
+                genres,
+                image_url,
+                description,
+                featured_blurb,
+                tags,
+                festival_id,
+                is_tentpole,
+                series_id,
+                series:series_id(
+                  id,
+                  slug,
+                  title,
+                  series_type,
+                  image_url,
+                  frequency,
+                  day_of_week,
+                  festival:festivals(id, slug, name, image_url, festival_type, location, neighborhood)
+                ),
+                venue:venues(id, name, neighborhood, slug, venue_type, location_designator, city, image_url, active)
+            `,
+              )
+              .in("id", holidayCandidateIds);
+            holidayDetailsQuery = applyFeedGate(holidayDetailsQuery);
+            holidayDetailsQuery = applyPortalEventScope(holidayDetailsQuery);
+
+            const { data: holidayDetailRows } = await timing.measure(
+              "holidays_details_query",
+              () =>
+                holidayDetailsQuery
+                  .order("start_date", { ascending: true })
+                  .order("data_quality", { ascending: false, nullsFirst: false }),
+              group.dateFilter,
+            );
+
+            const holidayEventsById = new Map(
+              suppressEventImagesIfVenueFlagged(
+                (holidayDetailRows as (Event & { tags?: string[] })[]) || [],
+              ).map((event) => [event.id, event]),
+            );
+            holidayEvents = holidayCandidateIds
+              .map((eventId) => holidayEventsById.get(eventId))
+              .filter(
+                (event): event is Event & { tags?: string[] } =>
+                  event !== undefined,
+              );
+          } else {
+            holidayEvents = [];
+          }
+
+          await timing.measure(
+            "holidays_cache_store",
+            () =>
+              setSharedCacheJson(
+                HOLIDAY_EVENTS_CACHE_NAMESPACE,
+                holidayCacheKey,
+                holidayEvents,
+                HOLIDAY_EVENTS_CACHE_TTL_MS,
+                { maxEntries: 80 },
+              ),
+            group.dateFilter,
+          );
         }
 
-        holidayEvents = cityFilteredHolidayEvents;
-        await setSharedCacheJson(
-          HOLIDAY_EVENTS_CACHE_NAMESPACE,
-          holidayCacheKey,
-          holidayEvents,
-          HOLIDAY_EVENTS_CACHE_TTL_MS,
-          { maxEntries: 80 },
+        await timing.measure(
+          "holidays_index",
+          async () => {
+            for (const typedEvent of holidayEvents) {
+              mergedHolidayEvents.set(typedEvent.id, typedEvent);
+
+              for (const tag of groupTags) {
+                if (typedEvent.tags?.includes(tag)) {
+                  if (!holidayEventsByTag.has(tag)) {
+                    holidayEventsByTag.set(tag, []);
+                  }
+                  holidayEventsByTag.get(tag)!.push(typedEvent);
+                }
+              }
+            }
+          },
+          group.dateFilter,
         );
       }
 
-      for (const typedEvent of holidayEvents) {
+      for (const typedEvent of mergedHolidayEvents.values()) {
         eventMap.set(typedEvent.id, typedEvent);
-
-        for (const tag of holidayTags) {
-          if (typedEvent.tags?.includes(tag)) {
-            if (!holidayEventsByTag.has(tag)) {
-              holidayEventsByTag.set(tag, []);
-            }
-            holidayEventsByTag.get(tag)!.push(typedEvent);
-          }
-        }
       }
     }
   }
+  });
 
   // Step 6: Build sections synchronously using pre-fetched data
-  const feedSections = sections
-    .map((section) => {
+  const autoEventPoolValues = Array.from(autoEventPool.values());
+  const feedSections = await timing.measure("sections", async () =>
+    sections
+      .map((section) => {
       let events: Event[] = [];
       let fullFilteredPool: Event[] | null = null;
       // Nightlife carousel needs a larger pool for client-side filtering across activity types
       const isNightlifeSection = !!(
         section.auto_filter as Record<string, unknown>
       )?.nightlife_mode;
-      const isCommunitySection = isCommunityActionSection(section);
+      const isCommunitySection = isPortalCommunityActionSection(section);
       const baseLimit =
         section.max_items || feedSettings.items_per_section || defaultLimit;
-      const limit = isNightlifeSection
-        ? 80
-        : isCommunitySection
-          ? Math.max(baseLimit, 10)
-          : baseLimit;
+      const limit = getPortalSectionEventLimit({
+        baseLimit,
+        isNightlifeSection,
+        isCommunitySection,
+      });
 
       // Non-event block types don't need events
-      if (
-        [
-          "category_grid",
-          "announcement",
-          "external_link",
-          "countdown",
-        ].includes(section.block_type)
-      ) {
+      if (isPortalNoEventContentBlockType(section.block_type)) {
         return {
           id: section.id,
           title: section.title,
@@ -1647,291 +1504,16 @@ export async function GET(request: NextRequest, { params }: Props) {
         (section.section_type === "auto" || section.section_type === "mixed") &&
         section.auto_filter
       ) {
-        // Filter from pre-fetched pool instead of making new query
-        const filter = section.auto_filter;
-
-        // Start with all pool events
-        let filtered = Array.from(autoEventPool.values());
-
-        // Apply date filter
-        if (filter.date_filter) {
-          const { start, end } = getDateRange(filter.date_filter);
-          filtered = filtered.filter(
-            (e) => e.start_date >= start && e.start_date <= end,
-          );
-        }
-
-        // Apply category filter
-        if (filter.categories?.length) {
-          filtered = filtered.filter(
-            (e) => e.category && filter.categories!.includes(e.category),
-          );
-        }
-
-        // Apply nightlife_mode compound filter
-        // "Going Out Tonight" = events you'd actually go out to on a night out
-        if (filter.nightlife_mode) {
-          const nightlifeVenueTypes = new Set([
-            "bar",
-            "nightclub",
-            "rooftop",
-            "karaoke",
-            "brewery",
-            "cocktail_bar",
-          ]);
-          // Entertainment venues that host going-out-worthy events
-          const entertainmentVenueTypes = new Set([
-            "music_venue",
-            "theater",
-            "amphitheater",
-          ]);
-          // Entertainment categories qualify with just an evening time
-          const entertainmentCategories = new Set([
-            "music",
-            "comedy",
-            "dance",
-          ]);
-          // Context-dependent categories only qualify at nightlife/entertainment venues
-          const venueRequiredCategories = new Set([
-            "gaming",
-            "food_drink",
-            "social",
-            "community",
-          ]);
-          filtered = filtered.filter((e) => {
-            // Always include events with nightlife category
-            if (e.category === "nightlife") return true;
-            const vType = e.venue?.venue_type;
-            const atNightlifeVenue = vType && nightlifeVenueTypes.has(vType);
-            const atEntertainmentVenue =
-              vType && entertainmentVenueTypes.has(vType);
-            const startsEvening = e.start_time && e.start_time >= "17:00";
-            const startsAfter7pm = e.start_time && e.start_time >= "19:00";
-            // Any event at a nightlife venue starting 5pm+ counts
-            if (atNightlifeVenue && startsEvening) return true;
-            // Entertainment (music/comedy/dance): at nightlife venues (evening),
-            // at entertainment venues (evening), or anywhere after 7pm
-            if (e.category && entertainmentCategories.has(e.category)) {
-              if (atNightlifeVenue && startsEvening) return true;
-              if (atEntertainmentVenue && startsEvening) return true;
-              return startsAfter7pm;
-            }
-            // Context-dependent categories (gaming/food_drink/social/community):
-            // only qualify at nightlife or entertainment venues
-            if (e.category && venueRequiredCategories.has(e.category)) {
-              return (
-                (atNightlifeVenue || atEntertainmentVenue) && startsEvening
-              );
-            }
-            return false;
-          });
-        }
-
-        // Restrict to specific source IDs (strict portal attribution)
-        if (filter.source_ids?.length) {
-          const sourceSet = new Set(filter.source_ids);
-          filtered = filtered.filter(
-            (e) =>
-              e.source_id !== null &&
-              e.source_id !== undefined &&
-              sourceSet.has(e.source_id),
-          );
-        }
-
-        // Restrict to specific venue IDs
-        if (filter.venue_ids?.length) {
-          const venueSet = new Set(filter.venue_ids);
-          filtered = filtered.filter(
-            (e) =>
-              e.venue?.id !== null &&
-              e.venue?.id !== undefined &&
-              venueSet.has(e.venue.id),
-          );
-        }
-
-        // Restrict to specific neighborhoods
-        if (filter.neighborhoods?.length) {
-          const neighborhoods = new Set(
-            filter.neighborhoods.map((n) => n.toLowerCase()),
-          );
-          filtered = filtered.filter(
-            (e) =>
-              e.venue?.neighborhood &&
-              neighborhoods.has(e.venue.neighborhood.toLowerCase()),
-          );
-        }
-
-        // Match events that include at least one requested tag
-        if (filter.tags?.length) {
-          const tagSet = new Set(filter.tags);
-          filtered = filtered.filter(
-            (e) =>
-              Array.isArray(e.tags) && e.tags.some((tag) => tagSet.has(tag)),
-          );
-        }
-
-        // Exclude categories
-        if (filter.exclude_categories?.length) {
-          filtered = filtered.filter(
-            (e) =>
-              !e.category || !filter.exclude_categories!.includes(e.category),
-          );
-        }
-
-        // Apply subcategory/genre filter (genres[] only — subcategory column removed)
-        if (filter.subcategories?.length) {
-          // Convert dotted subcategory values to genre values (strip prefix)
-          const genreValues = filter.subcategories.map((sub) => {
-            const parts = sub.split(".");
-            return parts.length > 1 ? parts.slice(1).join(".") : sub;
-          });
-          // Extract parent categories for fallback
-          const parentCategories = new Set(
-            filter.subcategories.map((sub) => sub.split(".")[0]),
-          );
-
-          filtered = filtered.filter((e) => {
-            // Check genres (preferred)
-            if (e.genres?.some((g: string) => genreValues.includes(g)))
-              return true;
-            // If no genre match, include if category matches a parent and has no genres
-            return (
-              e.category &&
-              parentCategories.has(e.category) &&
-              !e.genres?.length
-            );
-          });
-        }
-
-        // Apply free filter
-        if (filter.is_free) {
-          filtered = filtered.filter((e) => e.is_free);
-        }
-
-        // Apply price max filter
-        if (filter.price_max !== undefined) {
-          filtered = filtered.filter(
-            (e) =>
-              e.is_free ||
-              (e.price_min !== null && e.price_min <= filter.price_max!),
-          );
-        }
-
-        // Apply exclusions
-        if (filter.exclude_ids?.length) {
-          const excludeSet = new Set(filter.exclude_ids);
-          filtered = filtered.filter((e) => !excludeSet.has(e.id));
-        }
-
-        // For nightlife_mode, sort by how "going out" an event feels:
-        // Tier 0: nightlife category (bars, clubs, DJ nights)
-        // Tier 1: music/comedy/dance at nightlife or entertainment venues
-        // Tier 2: other events at nightlife venues (trivia at a bar, etc.)
-        // Tier 3: music/comedy/dance at other venues (still going out, just less core)
-        // Within each tier, sort by start_time
-        if (filter.nightlife_mode) {
-          const nightlifeVenueSet = new Set([
-            "bar", "nightclub", "rooftop", "karaoke",
-            "brewery", "cocktail_bar",
-          ]);
-          const entertainmentVenueSet = new Set([
-            "music_venue", "theater", "amphitheater",
-          ]);
-          const entertainmentCatSet = new Set(["music", "comedy", "dance"]);
-
-          const getTier = (e: Event) => {
-            if (e.category === "nightlife") return 0;
-            const vt = e.venue?.venue_type;
-            const atNightlife = vt && nightlifeVenueSet.has(vt);
-            const atEntertainment = vt && entertainmentVenueSet.has(vt);
-            const isEntertainment =
-              e.category && entertainmentCatSet.has(e.category);
-            if (isEntertainment && (atNightlife || atEntertainment)) return 1;
-            if (atNightlife) return 2;
-            if (isEntertainment) return 3;
-            return 4;
-          };
-          filtered.sort((a, b) => {
-            const tierDiff = getTier(a) - getTier(b);
-            if (tierDiff !== 0) return tierDiff;
-            return (a.start_time || "23:59").localeCompare(
-              b.start_time || "23:59",
-            );
-          });
-        }
-
-        // Save full filtered pool before slicing (used by nightlife carousel for category counts)
-        fullFilteredPool = filter.nightlife_mode ? [...filtered] : null;
-
-        // Apply sorting
-        switch (filter.sort_by) {
-          case "popularity":
-            filtered = filtered.map((e) => ({
-              ...e,
-              going_count: rsvpCounts[e.id] || 0,
-            }));
-            filtered.sort(
-              (a, b) => (b.going_count || 0) - (a.going_count || 0),
-            );
-            break;
-          case "trending":
-            // For now, same as date sort
-            filtered.sort((a, b) => a.start_date.localeCompare(b.start_date));
-            break;
-          case "random":
-            filtered = filtered.sort(() => Math.random() - 0.5);
-            break;
-          default:
-            // Already sorted by date from query
-            break;
-        }
-
-        // Distribute events across progressive date buckets (today / this week / later)
-        // so one busy day doesn't monopolize the entire section
-        if (limit >= 8 && filtered.length > limit) {
-          const todayStr = getLocalDateString();
-          const dayOfWeek = new Date().getDay();
-          const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
-          const endOfWeekDate = new Date();
-          endOfWeekDate.setDate(endOfWeekDate.getDate() + daysUntilSunday);
-          const endOfWeekStr = getLocalDateString(endOfWeekDate);
-
-          const todayPool = filtered.filter((e) => e.start_date === todayStr);
-          const weekPool = filtered.filter(
-            (e) => e.start_date > todayStr && e.start_date <= endOfWeekStr,
-          );
-          const laterPool = filtered.filter((e) => e.start_date > endOfWeekStr);
-
-          // Budget: today gets half, week and later split the rest
-          const todayBudget = Math.min(todayPool.length, Math.ceil(limit / 2));
-          const remaining = limit - todayBudget;
-          const weekBudget = Math.min(
-            weekPool.length,
-            Math.ceil(remaining / 2),
-          );
-          const laterBudget = Math.min(
-            laterPool.length,
-            remaining - weekBudget,
-          );
-
-          // Fill any unused budget from other buckets
-          let result = [
-            ...todayPool.slice(0, todayBudget),
-            ...weekPool.slice(0, weekBudget),
-            ...laterPool.slice(0, laterBudget),
-          ];
-
-          // If we have room left, backfill from whichever buckets have more
-          if (result.length < limit) {
-            const used = new Set(result.map((e) => e.id));
-            const backfill = filtered.filter((e) => !used.has(e.id));
-            result = [...result, ...backfill.slice(0, limit - result.length)];
-          }
-
-          events = result;
-        } else {
-          events = filtered.slice(0, limit);
-        }
+        const autoSectionResult = selectPortalAutoSectionEvents({
+          pool: autoEventPoolValues,
+          filter: section.auto_filter,
+          limit,
+          currentDate: new Date(),
+          rsvpCounts,
+          resolveDateRange: (dateFilter) => getPortalFeedDateRange(dateFilter),
+        });
+        events = autoSectionResult.events;
+        fullFilteredPool = autoSectionResult.fullFilteredPool;
 
         // For mixed sections, also add curated items at the top
         if (section.section_type === "mixed") {
@@ -1943,12 +1525,7 @@ export async function GET(request: NextRequest, { params }: Props) {
             .map((item) => eventMap.get(item.entity_id))
             .filter((e): e is Event => e !== undefined);
 
-          // Merge: curated first, then auto (avoiding duplicates)
-          const curatedIds = new Set(curatedEvents.map((e) => e.id));
-          const autoEventsFiltered = events.filter(
-            (e) => !curatedIds.has(e.id),
-          );
-          events = [...curatedEvents, ...autoEventsFiltered].slice(0, limit);
+          events = mergePortalMixedSectionEvents(curatedEvents, events, limit);
         }
       }
 
@@ -1963,33 +1540,8 @@ export async function GET(request: NextRequest, { params }: Props) {
           fullFilteredPool && fullFilteredPool.length > 0
             ? fullFilteredPool
             : events;
-        // Group events into nightlife activity types for the carousel
-        const activityCounts = new Map<
-          string,
-          { count: number; label: string }
-        >();
-
-        for (const event of poolForCounts) {
-          const actKey = classifyNightlifeActivity(event);
-          const existing = activityCounts.get(actKey) || {
-            count: 0,
-            label: NIGHTLIFE_ACTIVITY_LABELS[actKey] || actKey,
-          };
-          existing.count++;
-          activityCounts.set(actKey, existing);
-        }
-
-        // Sort by count descending, filter out "other" unless it's the only one
-        const categories = Array.from(activityCounts.entries())
-          .map(([id, { count, label }]) => ({ id, label, count }))
-          .filter((c) => c.id !== "other" || activityCounts.size === 1)
-          .sort((a, b) => b.count - a.count);
-
-        // Stamp each event with its activity_type for client-side filtering
-        const stampedEvents = events.map((e) => ({
-          ...e,
-          activity_type: classifyNightlifeActivity(e),
-        }));
+        const nightlifePoolData = buildPortalNightlifeCarouselData(poolForCounts);
+        const nightlifeEventData = buildPortalNightlifeCarouselData(events);
 
         return {
           id: section.id,
@@ -2002,27 +1554,21 @@ export async function GET(request: NextRequest, { params }: Props) {
           items_per_row: section.items_per_row,
           style: section.style,
           block_content: {
-            nightlife_categories: categories,
+            nightlife_categories: nightlifePoolData.categories,
             total_events: poolForCounts.length,
           },
           auto_filter: section.auto_filter,
-          events: stampedEvents,
+          events: nightlifeEventData.stampedEvents,
         };
       }
 
       // Only convert to collapsible if section has many events (8+)
       // Sections with fewer events render as event_list for direct visibility
-      const collapsibleBlockTypes = ["event_cards", "event_carousel"];
-      let finalBlockType = section.block_type;
-      if (collapsibleBlockTypes.includes(section.block_type)) {
-        // Keep volunteer/community sections expanded and rich instead of a single compact jump card.
-        if (isCommunityActionSection(section)) {
-          finalBlockType = "event_cards";
-        } else {
-          finalBlockType =
-            events.length >= 8 ? "collapsible_events" : "event_list";
-        }
-      }
+      const finalBlockType = resolvePortalSectionBlockType({
+        requestedBlockType: section.block_type,
+        eventCount: events.length,
+        isCommunitySection,
+      });
 
       return {
         id: section.id,
@@ -2040,72 +1586,26 @@ export async function GET(request: NextRequest, { params }: Props) {
       };
     })
     // Filter out event sections with fewer than 2 events (not worth a section header)
-    .filter((section) => {
-      const nonEventTypes = [
-        "category_grid",
-        "announcement",
-        "external_link",
-        "countdown",
-        "venue_list",
-        "nightlife_carousel",
-      ];
-      if (nonEventTypes.includes(section.block_type)) return true;
-      return section.events.length >= 2;
-    });
+      .filter((section) =>
+        shouldKeepPortalSection({
+          blockType: section.block_type,
+          eventCount: section.events.length,
+        }),
+      )
+  );
 
   // Step 7: Build holiday sections using the same pattern
-  const holidayFeedSections = holidaySections.map((section) => {
-    // Holiday sections get events by tag
-    const tag = section.auto_filter?.tags?.[0];
-    const maxItems = section.max_items || 20;
-    const events = tag
-      ? (holidayEventsByTag.get(tag) || []).slice(0, maxItems)
-      : [];
-
-    return {
-      id: section.id,
-      title: section.title,
-      slug: section.slug,
-      description: section.description,
-      section_type: section.section_type,
-      block_type: section.block_type,
-      layout: section.layout,
-      items_per_row: section.items_per_row,
-      style: section.style,
-      block_content: section.block_content,
-      auto_filter: section.auto_filter,
-      events,
-    };
-  });
-
-  // Sort holiday sections by display_order and combine with regular sections
-  const sortedHolidaySections = holidayFeedSections
-    .filter((s) => s.events.length > 0)
-    .sort((a, b) => {
-      const orderA =
-        holidaySections.find((h) => h.id === a.id)?.display_order ?? 0;
-      const orderB =
-        holidaySections.find((h) => h.id === b.id)?.display_order ?? 0;
-      return orderA - orderB;
-    });
-
-  const finalSections = dedupeSectionEventsById([
-    ...sortedHolidaySections,
-    ...feedSections,
-  ]);
-
-  const filteredFinalSections = finalSections.filter((section) => {
-    const nonEventTypes = new Set([
-      "category_grid",
-      "announcement",
-      "external_link",
-      "countdown",
-      "venue_list",
-      "nightlife_carousel",
-    ]);
-    if (nonEventTypes.has(section.block_type)) return true;
-    return section.events.length >= 2;
-  });
+  const holidayFeedSections = buildPortalHolidayFeedSections(
+    holidaySections,
+    holidayEventsByTag,
+  );
+  const filteredFinalSections = finalizePortalFeedSections(
+    feedSections,
+    holidayFeedSections,
+    new Map(
+      holidaySections.map((section) => [section.id, section.display_order]),
+    ),
+  );
 
   const allEventIds = Array.from(
     new Set(
@@ -2114,20 +1614,58 @@ export async function GET(request: NextRequest, { params }: Props) {
       ),
     ),
   );
-  const socialCounts = await fetchSocialProofCounts(allEventIds);
+  let socialCountsDeferred = false;
+  const socialCounts = await timing.measure("social_counts", async () => {
+    if (allEventIds.length === 0) {
+      return new Map<
+        number,
+        { going: number; interested: number; recommendations: number }
+      >();
+    }
 
-  const sectionsWithCounts = filteredFinalSections.map((section) => ({
-    ...section,
-    events: section.events.map((event: Event) => {
-      const eventCounts = socialCounts.get(event.id);
-      return {
-        ...event,
-        going_count: eventCounts?.going || 0,
-        interested_count: eventCounts?.interested || 0,
-        recommendation_count: eventCounts?.recommendations || 0,
-      };
-    }),
-  }));
+    const socialCountsPromise = fetchSocialProofCounts(allEventIds).catch(() =>
+      new Map<
+        number,
+        { going: number; interested: number; recommendations: number }
+      >(),
+    );
+
+    const result = await Promise.race([
+      socialCountsPromise.then((counts) => ({
+        counts,
+        timedOut: false as const,
+      })),
+      new Promise<{
+        counts: Map<
+          number,
+          { going: number; interested: number; recommendations: number }
+        >;
+        timedOut: true;
+      }>((resolve) => {
+        setTimeout(() => {
+          socialCountsDeferred = true;
+          resolve({
+            counts: new Map(),
+            timedOut: true,
+          });
+        }, PORTAL_FEED_SOCIAL_COUNTS_TIMEOUT_MS);
+      }),
+    ]);
+
+    return result.counts;
+  });
+  if (socialCountsDeferred) {
+    timing.addMetric(
+      "social_counts_deferred",
+      0,
+      `${PORTAL_FEED_SOCIAL_COUNTS_TIMEOUT_MS}ms budget`,
+    );
+  }
+
+  const sectionsWithCounts = attachPortalSocialCounts(
+    filteredFinalSections,
+    socialCounts,
+  );
 
   const responsePayload = {
     portal: {
@@ -2157,15 +1695,22 @@ export async function GET(request: NextRequest, { params }: Props) {
   };
 
   await setCachedFeedPayload(cacheKey, responsePayload);
-  return responsePayload;
-  })();
+  return {
+    payload: responsePayload,
+    serverTiming: timing.toHeader(),
+  };
+  }
+
+  const feedLoadPromise = loadFeed();
 
   FEED_IN_FLIGHT_LOADS.set(cacheKey, feedLoadPromise);
   try {
-    const responsePayload = await feedLoadPromise;
-    return NextResponse.json(responsePayload, {
+    const result = await feedLoadPromise;
+    return NextResponse.json(result.payload, {
+      status: result.status,
       headers: {
         "Cache-Control": FEED_CACHE_CONTROL,
+        "Server-Timing": result.serverTiming,
       },
     });
   } finally {

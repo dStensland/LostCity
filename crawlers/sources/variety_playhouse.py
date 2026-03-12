@@ -52,6 +52,48 @@ def parse_time(time_text: str) -> Optional[str]:
     return None
 
 
+def build_event_record(
+    *,
+    source_id: int,
+    venue_id: int,
+    title: str,
+    description: str | None,
+    start_date: str,
+    start_time: str | None,
+    price_note: str | None,
+    source_url: str,
+    image_url: str | None,
+    raw_text: str,
+) -> dict:
+    hash_key = f"{start_date}|{start_time}" if start_time else start_date
+    return {
+        "source_id": source_id,
+        "venue_id": venue_id,
+        "title": title,
+        "description": description,
+        "start_date": start_date,
+        "start_time": start_time,
+        "end_date": None,
+        "end_time": None,
+        "is_all_day": False,
+        "category": "music",
+        "subcategory": "concert",
+        "tags": ["music", "concert", "variety-playhouse", "little-five-points"],
+        "price_min": None,
+        "price_max": None,
+        "price_note": price_note,
+        "is_free": None,
+        "source_url": source_url,
+        "ticket_url": None,
+        "image_url": image_url,
+        "raw_text": raw_text,
+        "extraction_confidence": 0.90,
+        "is_recurring": False,
+        "recurrence_rule": None,
+        "content_hash": generate_content_hash(title, "Variety Playhouse", hash_key),
+    }
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
     """Crawl Variety Playhouse events using Playwright."""
     source_id = source["id"]
@@ -204,32 +246,19 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     if opener:
                         description = f"With {opener}"
 
-                    event_record = {
-                        "source_id": source_id,
-                        "venue_id": venue_id,
-                        "title": title,
-                        "description": description,
-                        "start_date": start_date,
-                        "start_time": start_time,
-                        "end_date": None,
-                        "end_time": None,
-                        "is_all_day": False,
-                        "category": "music",
-                        "subcategory": "concert",
-                        "tags": ["music", "concert", "variety-playhouse", "little-five-points"],
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": "Sold Out" if status == "sold_out" else None,
-                        "is_free": None,
-                        "source_url": CALENDAR_URL,
-                        "ticket_url": CALENDAR_URL,
-                        "image_url": image_map.get(title),
-                        "raw_text": f"{title} - {opener}" if opener else title,
-                        "extraction_confidence": 0.90,
-                        "is_recurring": False,
-                        "recurrence_rule": None,
-                        "content_hash": content_hash,
-                    }
+                    detail_url = detail_links.get(title) or CALENDAR_URL
+                    event_record = build_event_record(
+                        source_id=source_id,
+                        venue_id=venue_id,
+                        title=title,
+                        description=description,
+                        start_date=start_date,
+                        start_time=start_time,
+                        price_note="Sold Out" if status == "sold_out" else None,
+                        source_url=detail_url,
+                        image_url=image_map.get(title),
+                        raw_text=f"{title} - {opener}" if opener else title,
+                    )
 
                     existing = find_event_by_hash(content_hash)
                     if existing:

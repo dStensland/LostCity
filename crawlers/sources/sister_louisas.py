@@ -37,7 +37,22 @@ VENUE_DATA = {
     "venue_type": "bar",
     "spot_type": "bar",
     "website": BASE_URL,
-    "vibes": ["dive-bar", "iconic", "art", "ping-pong", "late-night", "lgbtq-friendly"],
+    "description": (
+        "Sister Louisa's Church of the Living Room & Ping Pong Emporium is one of Atlanta's "
+        "most beloved dive bars — a gloriously irreverent space filled with outsider religious art, "
+        "ping pong tables, and a weekly lineup of drag bingo, karaoke, and tarot readings. "
+        "A community anchor on Edgewood Ave and essential LGBTQ+ friendly hangout."
+    ),
+    "hours": {
+        "monday": {"open": "17:00", "close": "02:00"},
+        "tuesday": {"open": "17:00", "close": "02:00"},
+        "wednesday": {"open": "17:00", "close": "02:00"},
+        "thursday": {"open": "17:00", "close": "02:00"},
+        "friday": {"open": "17:00", "close": "03:00"},
+        "saturday": {"open": "14:00", "close": "03:00"},
+        "sunday": {"open": "14:00", "close": "02:00"},
+    },
+    "vibes": ["dive-bar", "iconic", "art", "ping-pong", "late-night", "lgbtq-friendly", "edgewood", "quirky"],
 }
 
 WEEKLY_SCHEDULE = [

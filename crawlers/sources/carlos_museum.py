@@ -35,7 +35,38 @@ VENUE_DATA = {
     "venue_type": "museum",
     "spot_type": "museum",
     "website": BASE_URL,
+    # description and image_url are extracted dynamically from og: tags on the homepage
+    # at crawl time — see _enrich_venue_data() called before get_or_create_venue().
+    # Hours verified 2026-03-11: Tue-Fri 10am-4pm, Sat 10am-5pm, Sun 12-5pm, Mon closed
+    "hours": {
+        "tuesday": "10:00-16:00",
+        "wednesday": "10:00-16:00",
+        "thursday": "10:00-16:00",
+        "friday": "10:00-16:00",
+        "saturday": "10:00-17:00",
+        "sunday": "12:00-17:00",
+    },
+    "vibes": ["free", "educational", "cultural", "art", "historic", "university"],
 }
+
+
+def _enrich_venue_data(page) -> None:
+    """
+    Fetch og:description and og:image from the Carlos Museum homepage and inject
+    them into VENUE_DATA so get_or_create_venue() stores them on first creation.
+    Only fills fields that are not already set.
+    """
+    try:
+        page.goto(BASE_URL, wait_until="domcontentloaded", timeout=20000)
+        page.wait_for_timeout(1500)
+        og_desc = page.get_attribute('meta[property="og:description"]', "content")
+        og_image = page.get_attribute('meta[property="og:image"]', "content")
+        if og_desc and not VENUE_DATA.get("description"):
+            VENUE_DATA["description"] = re.sub(r"\s+", " ", og_desc).strip()
+        if og_image and not VENUE_DATA.get("image_url"):
+            VENUE_DATA["image_url"] = og_image.strip()
+    except Exception as exc:
+        logger.debug("Carlos Museum homepage og: fetch failed: %s", exc)
 
 
 def parse_time(time_text: str) -> Optional[str]:
@@ -68,6 +99,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
+            _enrich_venue_data(page)
             venue_id = get_or_create_venue(VENUE_DATA)
 
             logger.info(f"Fetching Michael C. Carlos Museum: {EVENTS_URL}")
@@ -171,11 +203,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "is_all_day": False,
                         "category": "museums",
                         "subcategory": "exhibition",
-                        "tags": ["carlos-museum", "emory", "museum", "art", "antiquities"],
+                        "tags": ["carlos-museum", "emory", "museum", "art", "antiquities", "free"],
                         "price_min": None,
                         "price_max": None,
-                        "price_note": None,
-                        "is_free": False,
+                        "price_note": "Suggested donation $8",
+                        "is_free": True,
                         "source_url": event_url,
                         "ticket_url": event_url,
                         "image_url": image_map.get(title),

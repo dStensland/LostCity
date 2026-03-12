@@ -66,7 +66,7 @@ const LOCATION_PATTERNS: RegExp[] = [
 
 // Category-related patterns and keywords
 const CATEGORY_KEYWORDS: { pattern: RegExp; category: string }[] = [
-  { pattern: /\b(live music|live show|live band|concert|band|show|live)\b/i, category: "music" },
+  { pattern: /\b(live music|live show|live band|concert|band|show|live|music)\b/i, category: "music" },
   { pattern: /\b(comedy|standup|stand-up|improv|open mic)\b/i, category: "comedy" },
   { pattern: /\b(theater|theatre|play|musical|drama)\b/i, category: "theater" },
   { pattern: /\b(art|gallery|exhibit|exhibition|museum)\b/i, category: "art" },
@@ -79,6 +79,22 @@ const CATEGORY_KEYWORDS: { pattern: RegExp; category: string }[] = [
   { pattern: /\b(family|kids|children|all ages)\b/i, category: "family" },
   { pattern: /\b(free|no cover|donation)\b/i, category: "free" },
 ];
+
+export function extractCategorySignals(query: string): string[] {
+  const trimmedQuery = query.trim().toLowerCase();
+  if (!trimmedQuery) {
+    return [];
+  }
+
+  const matches = new Set<string>();
+  for (const { pattern, category } of CATEGORY_KEYWORDS) {
+    if (pattern.test(trimmedQuery)) {
+      matches.add(category);
+    }
+  }
+
+  return Array.from(matches);
+}
 
 // Venue search indicators
 const VENUE_PATTERNS: RegExp[] = [
@@ -179,8 +195,8 @@ export function analyzeQueryIntent(query: string): QueryIntentResult {
   }
 
   // Check for category queries
-  for (const { pattern, category } of CATEGORY_KEYWORDS) {
-    if (pattern.test(trimmedQuery)) {
+  for (const category of extractCategorySignals(trimmedQuery)) {
+    if (category) {
       return {
         intent: "category",
         confidence: 0.75,

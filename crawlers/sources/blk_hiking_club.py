@@ -1,202 +1,296 @@
 """
 Crawler for BLK Hiking Club Atlanta (blkhikingclub.com/atlanta).
 
-Site uses JavaScript rendering - must use Playwright.
+The Atlanta landing page exposes event detail links directly. Each detail page
+contains schema.org `Event` JSON-LD, which is more reliable than scraping the
+rendered Squarespace layout.
 """
 
 from __future__ import annotations
 
-import re
+import json
 import logging
-from datetime import datetime
+import re
+from datetime import date, datetime
 from typing import Optional
+from urllib.parse import urljoin
 
-from playwright.sync_api import sync_playwright
+import requests
+from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
-from utils import extract_images_from_page, extract_event_links, find_event_url
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.blkhikingclub.com"
-EVENTS_URL = "https://www.blkhikingclub.com"
+EVENTS_URL = f"{BASE_URL}/atlanta"
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+    )
+}
 
-VENUE_DATA = {}
+ORG_VENUE = {
+    "name": "BLK Hiking Club Atlanta",
+    "slug": "blk-hiking-club",
+    "city": "Atlanta",
+    "state": "GA",
+    "venue_type": "organization",
+    "spot_type": "organization",
+    "website": EVENTS_URL,
+}
 
 
-def parse_time(time_text: str) -> Optional[str]:
-    """Parse time from '7:00 PM' format."""
-    match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", time_text, re.IGNORECASE)
-    if match:
-        hour, minute, period = match.groups()
-        hour = int(hour)
-        if period.lower() == "pm" and hour != 12:
-            hour += 12
-        elif period.lower() == "am" and hour == 12:
-            hour = 0
-        return f"{hour:02d}:{minute}"
+def parse_event_jsonld(detail_soup: BeautifulSoup) -> Optional[dict]:
+    for script in detail_soup.select('script[type="application/ld+json"]'):
+        raw = script.get_text(strip=True)
+        if not raw:
+            continue
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            continue
+
+        candidates = parsed if isinstance(parsed, list) else [parsed]
+        for candidate in candidates:
+            if isinstance(candidate, dict) and candidate.get("@type") == "Event":
+                return candidate
     return None
 
 
+def meta_content(detail_soup: BeautifulSoup, attr: str, value: str) -> str:
+    tag = detail_soup.find("meta", attrs={attr: value})
+    if not tag or not tag.get("content"):
+        return ""
+    return " ".join(tag.get("content", "").split())
+
+
+def clean_title(value: str) -> str:
+    return (
+        value.replace("— BLK Hiking Club", "")
+        .replace("- BLK Hiking Club", "")
+        .strip()
+    )
+
+
+def select_event_title(detail_soup: BeautifulSoup, event_json: dict) -> str:
+    candidates = [
+        str(event_json.get("name", "")),
+        meta_content(detail_soup, "property", "og:title"),
+        meta_content(detail_soup, "name", "twitter:title"),
+    ]
+
+    title_tag = detail_soup.find("title")
+    if title_tag:
+        candidates.append(title_tag.get_text(" ", strip=True))
+
+    h1 = detail_soup.find("h1")
+    if h1:
+        candidates.append(h1.get_text(" ", strip=True))
+
+    for candidate in candidates:
+        cleaned = clean_title(candidate)
+        if cleaned:
+            return cleaned
+    return ""
+
+
+def derive_location_name(title: str) -> str:
+    lowered = title.lower()
+    if lowered.startswith("blk hike:"):
+        return title.split(":", 1)[1].strip()
+    if lowered.startswith("blk hiking club:"):
+        return title.split(":", 1)[1].strip()
+    if lowered.startswith("blk hike at "):
+        return title[12:].strip()
+    if lowered.startswith("blk hiking club at "):
+        return title[20:].strip()
+    if ":" in title:
+        return title.split(":", 1)[1].strip()
+    return title.strip()
+
+
+def parse_iso_datetime(value: str) -> Optional[datetime]:
+    cleaned = value.strip()
+    if not cleaned:
+        return None
+
+    try:
+        return datetime.fromisoformat(cleaned.replace("Z", "+00:00"))
+    except ValueError:
+        pass
+
+    for fmt in ("%Y-%m-%dT%H:%M:%S%z", "%Y-%m-%dT%H:%M:%S"):
+        try:
+            return datetime.strptime(cleaned, fmt)
+        except ValueError:
+            continue
+
+    return None
+
+
+def categorize_event(title: str, description: str) -> tuple[str, Optional[str], list[str]]:
+    combined = f"{title} {description}".lower()
+    tags = ["blk-hiking-club", "outdoor", "adventure", "hiking"]
+
+    if "kid" in combined or "family" in combined:
+        tags.append("family")
+        return "family", "outdoor", tags
+    if "women" in combined:
+        tags.append("womens-group")
+    if "sunset" in combined or "sunrise" in combined:
+        tags.append("scenic")
+    return "community", "outdoor", tags
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Unknown events using Playwright."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
 
+    session = requests.Session()
+    fallback_venue_id = get_or_create_venue(ORG_VENUE)
+
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                viewport={"width": 1920, "height": 1080},
+        logger.info("Fetching BLK Hiking Club listing: %s", EVENTS_URL)
+        response = session.get(EVENTS_URL, headers=HEADERS, timeout=20)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, "html.parser")
+
+        event_links: list[str] = []
+        seen = set()
+        for anchor in soup.select('a[href^="/atlanta/"]'):
+            href = anchor.get("href", "")
+            if not href or href == "/atlanta":
+                continue
+            if href.endswith("?format=ical"):
+                continue
+            if "google.com/calendar" in href:
+                continue
+            absolute = urljoin(BASE_URL, href)
+            if absolute not in seen:
+                seen.add(absolute)
+                event_links.append(absolute)
+
+        today = date.today()
+        for detail_url in event_links:
+            detail_response = session.get(detail_url, headers=HEADERS, timeout=20)
+            detail_response.raise_for_status()
+            detail_soup = BeautifulSoup(detail_response.text, "html.parser")
+            event_json = parse_event_jsonld(detail_soup)
+            if not event_json:
+                continue
+
+            title = select_event_title(detail_soup, event_json)
+            start_raw = str(event_json.get("startDate", "")).strip()
+            end_raw = str(event_json.get("endDate", "")).strip()
+            if not title or not start_raw:
+                continue
+
+            start_dt = parse_iso_datetime(start_raw)
+            if start_dt is None:
+                logger.debug("Skipping BLK Hiking Club event with bad startDate: %s", start_raw)
+                continue
+
+            if start_dt.date() < today:
+                continue
+
+            end_dt = parse_iso_datetime(end_raw) if end_raw else None
+
+            description = (
+                detail_soup.find("meta", attrs={"property": "og:description"}) or
+                detail_soup.find("meta", attrs={"name": "description"})
             )
-            page = context.new_page()
+            description_text = ""
+            if description and description.get("content"):
+                description_text = " ".join(description.get("content", "").split())
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            image_tag = detail_soup.find("meta", attrs={"property": "og:image"})
+            image_url = image_tag.get("content") if image_tag else None
 
-            logger.info(f"Fetching Unknown: {EVENTS_URL}")
-            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)
+            location_name = (
+                str((event_json.get("location") or {}).get("name", "")).strip()
+                if isinstance(event_json.get("location"), dict)
+                else ""
+            )
+            if not location_name:
+                location_name = derive_location_name(title)
 
-            # Extract images from page
-            image_map = extract_images_from_page(page)
+            if title == location_name and location_name:
+                title = f"BLK Hike: {location_name}"
 
-            # Extract event links for specific URLs
-            event_links = extract_event_links(page, BASE_URL)
+            venue_id = fallback_venue_id
+            if location_name:
+                venue_record = {
+                    "name": location_name,
+                    "slug": re.sub(r"[^a-z0-9]+", "-", location_name.lower()).strip("-")[:80],
+                    "city": "Atlanta",
+                    "state": "GA",
+                    "venue_type": "park",
+                    "spot_type": "trail",
+                    "website": detail_url,
+                }
+                try:
+                    venue_id = get_or_create_venue(venue_record)
+                except Exception as exc:
+                    logger.debug("Falling back to org venue for %s: %s", title, exc)
 
-            # Scroll to load all content
-            for _ in range(5):
-                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                page.wait_for_timeout(1000)
+            category, subcategory, tags = categorize_event(title, description_text)
+            content_hash = generate_content_hash(title, location_name or "BLK Hiking Club Atlanta", start_dt.strftime("%Y-%m-%d"))
+            events_found += 1
 
-            # Get page text and parse line by line
-            body_text = page.inner_text("body")
-            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
+            event_record = {
+                "source_id": source_id,
+                "venue_id": venue_id,
+                "title": title[:500],
+                "description": (description_text or f"{title} hosted by BLK Hiking Club Atlanta.")[:2000],
+                "start_date": start_dt.strftime("%Y-%m-%d"),
+                "start_time": start_dt.strftime("%H:%M"),
+                "end_date": end_dt.strftime("%Y-%m-%d") if end_dt else start_dt.strftime("%Y-%m-%d"),
+                "end_time": end_dt.strftime("%H:%M") if end_dt else None,
+                "is_all_day": False,
+                "category": category,
+                "subcategory": subcategory,
+                "tags": tags[:10],
+                "price_min": None,
+                "price_max": None,
+                "price_note": "Registration details on BLK Hiking Club",
+                "is_free": False,
+                "source_url": detail_url,
+                "ticket_url": detail_url,
+                "image_url": image_url,
+                "raw_text": description_text[:500] or title,
+                "extraction_confidence": 0.95,
+                "is_recurring": False,
+                "recurrence_rule": None,
+                "content_hash": content_hash,
+            }
 
-            # Parse events - look for date patterns
-            i = 0
-            while i < len(lines):
-                line = lines[i]
+            existing = find_event_by_hash(content_hash)
+            if existing:
+                smart_update_existing_event(existing, event_record)
+                events_updated += 1
+                continue
 
-                # Skip navigation items
-                if len(line) < 3:
-                    i += 1
-                    continue
-
-                # Look for date patterns
-                date_match = re.match(
-                    r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)?,?\s*(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})(?:,?\s+(\d{4}))?",
-                    line,
-                    re.IGNORECASE
-                )
-
-                if date_match:
-                    month = date_match.group(1)
-                    day = date_match.group(2)
-                    year = date_match.group(3) if date_match.group(3) else str(datetime.now().year)
-
-                    # Look for title in surrounding lines
-                    title = None
-                    start_time = None
-
-                    for offset in [-2, -1, 1, 2, 3]:
-                        idx = i + offset
-                        if 0 <= idx < len(lines):
-                            check_line = lines[idx]
-                            if re.match(r"(January|February|March)", check_line, re.IGNORECASE):
-                                continue
-                            if not start_time:
-                                time_result = parse_time(check_line)
-                                if time_result:
-                                    start_time = time_result
-                                    continue
-                            if not title and len(check_line) > 5:
-                                if not re.match(r"\d{1,2}[:/]", check_line):
-                                    if not re.match(r"(free|tickets|register|\$|more info)", check_line.lower()):
-                                        title = check_line
-                                        break
-
-                    if not title:
-                        i += 1
-                        continue
-
-                    # Parse date
-                    try:
-                        month_str = month[:3] if len(month) > 3 else month
-                        dt = datetime.strptime(f"{month_str} {day} {year}", "%b %d %Y")
-                        if dt.date() < datetime.now().date():
-                            dt = datetime.strptime(f"{month_str} {day} {int(year) + 1}", "%b %d %Y")
-                        start_date = dt.strftime("%Y-%m-%d")
-                    except ValueError:
-                        i += 1
-                        continue
-
-                    events_found += 1
-
-                    content_hash = generate_content_hash(title, "Unknown", start_date)
-
-
-                    # Get specific event URL
-
-
-                    event_url = find_event_url(title, event_links, EVENTS_URL)
-
-
-
-                    event_record = {
-                        "source_id": source_id,
-                        "venue_id": venue_id,
-                        "title": title,
-                        "description": "Event at Unknown",
-                        "start_date": start_date,
-                        "start_time": start_time,
-                        "end_date": None,
-                        "end_time": None,
-                        "is_all_day": False,
-                        "category": "community",
-                        "subcategory": None,
-                        "tags": ["event"],
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": None,
-                        "is_free": False,
-                        "source_url": event_url,
-                        "ticket_url": event_url,
-                        "image_url": image_map.get(title),
-                        "raw_text": f"{title} - {start_date}",
-                        "extraction_confidence": 0.80,
-                        "is_recurring": False,
-                        "recurrence_rule": None,
-                        "content_hash": content_hash,
-                    }
-
-                    existing = find_event_by_hash(content_hash)
-                    if existing:
-                        smart_update_existing_event(existing, event_record)
-                        events_updated += 1
-                        i += 1
-                        continue
-
-                    try:
-                        insert_event(event_record)
-                        events_new += 1
-                        logger.info(f"Added: {title} on {start_date}")
-                    except Exception as e:
-                        logger.error(f"Failed to insert: {title}: {e}")
-
-                i += 1
-
-            browser.close()
+            try:
+                insert_event(event_record)
+                events_new += 1
+            except Exception as exc:
+                logger.error("Failed to insert BLK Hiking Club event '%s': %s", title, exc)
 
         logger.info(
-            f"Unknown crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
+            "BLK Hiking Club crawl complete: %s found, %s new, %s updated",
+            events_found,
+            events_new,
+            events_updated,
         )
-
-    except Exception as e:
-        logger.error(f"Failed to crawl Unknown: {e}")
+    except Exception as exc:
+        logger.error("Failed to crawl BLK Hiking Club: %s", exc)
         raise
+    finally:
+        session.close()
 
     return events_found, events_new, events_updated

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   FIND_FILTER_RESET_KEYS,
+  hasAnyActiveFindFilters,
   SHOWTIMES_EXCLUDED_FILTER_KEYS,
   hasActiveFindFilters,
 } from "@/lib/find-filter-schema";
@@ -23,6 +24,18 @@ describe("find-filter-schema", () => {
     };
 
     expect(hasActiveFindFilters(params, "classes")).toBe(true);
+  });
+
+  it("detects active destination filters and any-find state", () => {
+    const params = new URLSearchParams({
+      venue_type: "restaurant",
+      open_now: "true",
+      type: "destinations",
+    });
+
+    expect(hasActiveFindFilters(params, "destinations")).toBe(true);
+    expect(hasActiveFindFilters(params, "events")).toBe(false);
+    expect(hasAnyActiveFindFilters(params)).toBe(true);
   });
 
   it("keeps showtimes strict to showtimes keys only", () => {

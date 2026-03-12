@@ -18,8 +18,12 @@ import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
 import { isDogPortal } from "@/lib/dog-art";
 import { HIGHLIGHT_CONFIG, type VenueHighlight } from "@/lib/venue-highlights";
-import { type VenueFeature } from "@/lib/venue-features";
+import {
+  filterVenueFeaturesForPortal,
+  type VenueFeature,
+} from "@/lib/venue-features";
 import VenueFeaturesSection from "@/components/detail/VenueFeaturesSection";
+import { AccoladesSection, type EditorialMention } from "@/components/detail/AccoladesSection";
 import VenueSpecialsSection, { type VenueSpecial } from "@/components/detail/VenueSpecialsSection";
 import DirectionsDropdown from "@/components/DirectionsDropdown";
 import GettingThereSection, { type WalkableNeighbor } from "@/components/GettingThereSection";
@@ -117,6 +121,33 @@ type UpcomingEvent = {
   recommendation_count?: number;
 };
 
+// EditorialMention type imported from AccoladesSection
+
+type VenueOccasion = {
+  occasion: string;
+  confidence: number;
+  source: string;
+};
+
+// EDITORIAL_SOURCE_LABELS moved to AccoladesSection
+
+const OCCASION_LABELS: Record<string, string> = {
+  date_night: "Date Night",
+  groups: "Groups",
+  solo: "Solo",
+  outdoor_dining: "Outdoor Dining",
+  late_night: "Late Night",
+  quick_bite: "Quick Bite",
+  special_occasion: "Special Occasion",
+  beltline: "BeltLine",
+  pre_game: "Pre-Game",
+  brunch: "Brunch",
+  family_friendly: "Family Friendly",
+  dog_friendly: "Dog Friendly",
+  live_music: "Live Music",
+  dancing: "Dancing",
+};
+
 type NearbyDestination = {
   id: number;
   name: string;
@@ -139,6 +170,10 @@ type NearbyDestinations = {
   caffeine: NearbyDestination[];
   fun: NearbyDestination[];
 };
+
+// AccoladesSection imported from @/components/detail/AccoladesSection
+
+// ── Main Component ───────────────────────────────────────────────────────────
 
 interface VenueDetailViewProps {
   slug: string;
@@ -180,6 +215,8 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
   const [features, setFeatures] = useState<VenueFeature[]>([]);
   const [specials, setSpecials] = useState<VenueSpecial[]>([]);
   const [artifacts, setArtifacts] = useState<{id: number; name: string; slug: string | null; image_url: string | null; short_description: string | null}[]>([]);
+  const [editorialMentions, setEditorialMentions] = useState<EditorialMention[]>([]);
+  const [occasions, setOccasions] = useState<VenueOccasion[]>([]);
   const [walkableNeighbors, setWalkableNeighbors] = useState<WalkableNeighbor[]>([]);
   const [showTagModal, setShowTagModal] = useState(false);
   const [showOutingSheet, setShowOutingSheet] = useState(false);
@@ -207,8 +244,15 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
         setUpcomingEvents(data.upcomingEvents || []);
         setNearbyDestinations(data.nearbyDestinations || null);
         setHighlights(data.highlights || []);
-        setFeatures(data.features || []);
+        setFeatures(
+          filterVenueFeaturesForPortal(data.features || [], {
+            portalSlug,
+            venueSlug: slug,
+          })
+        );
         setSpecials(data.specials || []);
+        setEditorialMentions(data.editorialMentions || []);
+        setOccasions(data.occasions || []);
         setArtifacts(data.artifacts || []);
         setStatus("ready");
       } catch (err) {
@@ -418,6 +462,25 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
           </div>
         )}
 
+        {/* ── PERFECT FOR (Occasions) ────────────────────── */}
+        {occasions.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {occasions.map((o) => (
+              <span
+                key={o.occasion}
+                className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-mono font-medium bg-[var(--gold)]/10 text-[var(--gold)] border border-[var(--gold)]/20"
+              >
+                {OCCASION_LABELS[o.occasion] || o.occasion.replace(/_/g, " ")}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* ── ACCOLADES ────────────────────────────────────── */}
+        {editorialMentions.length > 0 && (
+          <AccoladesSection mentions={editorialMentions} />
+        )}
+
         {/* ── QUICK ACTIONS ───────────────────────────────── */}
         <div className="flex flex-wrap gap-2">
           {spot.website && (
@@ -554,6 +617,8 @@ export default function VenueDetailView({ slug, portalSlug, onClose }: VenueDeta
 
         {/* ── SPECIALS ──────────────────────────────────── */}
         <VenueSpecialsSection specials={specials} />
+
+        {/* (Accolades section moved above Quick Actions) */}
 
         {/* ── ARTIFACTS ───────────────────────────────────── */}
         {artifacts.length > 0 && (

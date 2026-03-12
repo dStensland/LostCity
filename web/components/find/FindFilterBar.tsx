@@ -12,6 +12,7 @@ type FindFilterBarProps = {
   portalId?: string;
   portalExclusive?: boolean;
   portalSlug?: string;
+  vertical?: string | null;
 };
 
 // ─── Filter counts hook ─────────────────────────────────────────────────────
@@ -81,6 +82,14 @@ const MOBILE_CATEGORIES = [
   { value: "family",     label: "Family" },
 ] as const;
 
+// Civic portals show only relevant categories on mobile
+const CIVIC_MOBILE_CATEGORIES = [
+  { value: "government",  label: "Government" },
+  { value: "community",   label: "Community" },
+  { value: "volunteer",   label: "Volunteer" },
+  { value: "family",      label: "Family" },
+] as const;
+
 // Resolves the CSS variable for a category's accent color.
 // Tailwind can't generate dynamic arbitrary values at build time, so we use
 // inline styles here. Falls back to --muted if no variable exists.
@@ -95,9 +104,11 @@ type MobileFilterStripProps = {
   variant: "full" | "compact";
   onOpenSheet: () => void;
   onSetDate: (date: string) => void;
+  vertical?: string | null;
 };
 
-function MobileFilterStrip({ f, variant, onOpenSheet, onSetDate, timeEmphasis }: MobileFilterStripProps & { timeEmphasis: "tonight" | "weekend" | null }) {
+function MobileFilterStrip({ f, variant, onOpenSheet, onSetDate, timeEmphasis, vertical }: MobileFilterStripProps & { timeEmphasis: "tonight" | "weekend" | null }) {
+  const mobileCategories = vertical === "community" ? CIVIC_MOBILE_CATEGORIES : MOBILE_CATEGORIES;
   const handleCategoryTap = useCallback((value: string) => {
     triggerHaptic("selection");
     f.toggleCategory(value);
@@ -186,7 +197,7 @@ function MobileFilterStrip({ f, variant, onOpenSheet, onSetDate, timeEmphasis }:
         )}
 
         {/* Category pills */}
-        {MOBILE_CATEGORIES.map((cat) => {
+        {mobileCategories.map((cat) => {
           const isActive = f.currentCategories.includes(cat.value);
           const color = catColor(cat.value);
           return (
@@ -249,11 +260,18 @@ function MobileFilterStrip({ f, variant, onOpenSheet, onSetDate, timeEmphasis }:
   );
 }
 
-export default function FindFilterBar({ variant = "full", portalId, portalExclusive = false, portalSlug }: FindFilterBarProps) {
+export default function FindFilterBar({ variant = "full", portalId, portalExclusive = false, portalSlug, vertical }: FindFilterBarProps) {
   const f = useFilterEngine({ portalId, portalExclusive });
   const filterCounts = useFilterCounts(portalSlug);
   const timeEmphasis = useTimeEmphasis();
   const categoryCounts = filterCounts.category || {};
+  const isCommunity = vertical === "community";
+
+  // For civic portals, filter desktop category dropdown to relevant options
+  const CIVIC_CATEGORY_VALUES = new Set(["government", "community", "volunteer", "family", "education"]);
+  const desktopCategoryOptions = isCommunity
+    ? f.categoryOptions.filter((c) => CIVIC_CATEGORY_VALUES.has(c.value))
+    : f.categoryOptions;
 
   // ─── Dropdown state (single active dropdown) ──────────────────────────────
   const [activeDropdown, setActiveDropdown] = useState<DropdownId>(null);
@@ -336,7 +354,7 @@ export default function FindFilterBar({ variant = "full", portalId, portalExclus
               {activeDropdown === "category" && (
                 <div className="absolute top-full left-0 mt-1 w-64 max-h-80 overflow-y-auto rounded-xl border border-[var(--twilight)] shadow-xl z-50 bg-[var(--void)]/95 backdrop-blur-md animate-dropdown-in">
                   <div className="p-2">
-                    {f.categoryOptions.map((cat) => {
+                    {desktopCategoryOptions.map((cat) => {
                       const isActive = f.currentCategories.includes(cat.value);
                       const count = categoryCounts[cat.value];
                       const isEmpty = count === 0;
@@ -551,6 +569,7 @@ export default function FindFilterBar({ variant = "full", portalId, portalExclus
         onOpenSheet={() => setMobileSheetOpen(true)}
         onSetDate={handleSetDate}
         timeEmphasis={timeEmphasis}
+        vertical={vertical}
       />
 
       {/* Mobile filter sheet */}

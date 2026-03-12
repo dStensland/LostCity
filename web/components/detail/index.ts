@@ -15,3 +15,5 @@ export { default as VenueEventsSection } from "./VenueEventsSection";
 export { QuickActionLink } from "./QuickActionLink";
 export { CollapsibleSection } from "./CollapsibleSection";
 export { default as VenueFeaturesSection } from "./VenueFeaturesSection";
+export { default as YonderAdventureSnapshot } from "./YonderAdventureSnapshot";
+export { AccoladesSection, type EditorialMention } from "./AccoladesSection";

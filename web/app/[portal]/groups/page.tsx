@@ -4,6 +4,7 @@ import { getCachedPortalBySlug, getPortalVertical } from "@/lib/portal";
 import PortalGroupsClient from "@/components/channels/PortalGroupsClient";
 import { CivicTabBar } from "@/components/civic/CivicTabBar";
 import { Suspense } from "react";
+import { getInterestChannelPresentation } from "@/lib/interest-channel-presentation";
 
 export const revalidate = 60;
 
@@ -36,9 +37,9 @@ export default async function PortalGroupsPage({ params }: Props) {
   const portal = await getCachedPortalBySlug(portalSlug);
   if (!portal) notFound();
 
-  const channelsLabel = typeof portal.settings.interest_channels_label === "string"
-    ? portal.settings.interest_channels_label
-    : "Interest Channels";
+  const presentation = getInterestChannelPresentation(portal);
+  const channelsLabel = presentation.channelsLabel;
+  const groupsPageTitle = presentation.groupsPageTitle;
   const groupsDescription = typeof portal.settings.groups_page_description === "string"
     ? portal.settings.groups_page_description
     : "Follow city, county, school board, and topic groups to keep the feed aligned with what you care about.";
@@ -61,7 +62,7 @@ export default async function PortalGroupsPage({ params }: Props) {
           <p className="font-mono text-xs uppercase tracking-[0.14em] text-[var(--muted)]">
             {channelsLabel}
           </p>
-          <h1 className="text-2xl font-semibold text-[var(--cream)]">Groups</h1>
+          <h1 className="text-2xl font-semibold text-[var(--cream)]">{groupsPageTitle}</h1>
           <p className="text-sm text-[var(--soft)] max-w-3xl">
             {groupsDescription}
           </p>
@@ -75,7 +76,7 @@ export default async function PortalGroupsPage({ params }: Props) {
           <Suspense fallback={null}>
             <CivicTabBar portalSlug={portalSlug} actLabel={actLabel} />
           </Suspense>
-          <div className="h-14" />
+          <div className="h-14 sm:hidden" />
         </>
       )}
     </div>

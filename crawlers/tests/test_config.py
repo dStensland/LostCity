@@ -175,13 +175,14 @@ class TestCrawlerConfig:
         assert cfg.max_retries == 3
 
     def test_user_agent(self):
-        """Should have user agent set."""
+        """Should allow empty user agent (falls back to random_user_agent() at call time)."""
         import importlib
         import config
 
         importlib.reload(config)
         cfg = config.CrawlerConfig()
-        assert "LostCity" in cfg.user_agent
+        # Empty user_agent is intentional — fetch.py uses random_user_agent() as fallback
+        assert cfg.user_agent == ""
 
     def test_respects_robots_txt(self):
         """Should respect robots.txt by default."""

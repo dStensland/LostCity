@@ -64,6 +64,8 @@ export interface SearchOptions {
   includeFacets?: boolean; // Include facet aggregation (extra DB query)
   includeDidYouMean?: boolean; // Include spelling suggestions (extra DB query)
   includeSocialProof?: boolean; // Include social proof fanout queries
+  includeEventPopularitySignals?: boolean; // Include per-event social proof used in scoring
+  timingRecorder?: SearchTimingRecorder;
 }
 
 export interface SearchFacet {
@@ -77,6 +79,10 @@ export interface UnifiedSearchResponse {
   total: number;
   didYouMean?: string[];
 }
+
+type SearchTimingRecorder = {
+  measure<T>(name: string, fn: () => Promise<T> | T, desc?: string): Promise<T>;
+};
 
 /** Convert legacy subcategory values (e.g., "nightlife.karaoke") to genre values ("karaoke") and merge with explicit genres */
 function mergeSubcategoriesToGenres(subcategories?: string[], genres?: string[]): string[] | undefined {
@@ -255,6 +261,17 @@ const SCORING = {
 const PORTAL_CITY_CACHE_TTL_MS = 5 * 60 * 1000;
 const portalCityCache = new Map<string, { city: string | undefined; expiresAt: number }>();
 
+async function measureSearchTiming<T>(
+  timingRecorder: SearchTimingRecorder | undefined,
+  name: string,
+  fn: () => Promise<T> | T,
+): Promise<T> {
+  if (!timingRecorder) {
+    return await fn();
+  }
+  return timingRecorder.measure(name, fn);
+}
+
 // ============================================
 // Helper Functions
 // ============================================
@@ -358,21 +375,6 @@ function calculateRelevanceScore(
 }
 
 /**
- * Get days until a date (negative if past)
- */
-function getDaysUntilDate(dateStr: string): number {
-  try {
-    const date = new Date(dateStr);
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
-    const diff = date.getTime() - now.getTime();
-    return Math.floor(diff / (1000 * 60 * 60 * 24));
-  } catch {
-    return 999; // Far future if can't parse
-  }
-}
-
-/**
  * Escape special regex characters
  */
 function escapeRegex(str: string): string {
@@ -426,6 +428,8 @@ export async function unifiedSearch(
     includeFacets = true,
     includeDidYouMean = true,
     includeSocialProof = false,
+    includeEventPopularitySignals = true,
+    timingRecorder,
   } = options;
 
   const trimmedQuery = query.trim();
@@ -451,11 +455,16 @@ export async function unifiedSearch(
     if (cachedCity && cachedCity.expiresAt > Date.now()) {
       resolvedCity = cachedCity.city;
     } else {
-      const { data: portalData } = await client
-        .from("portals")
-        .select("filters")
-        .eq("id", portalId)
-        .maybeSingle();
+      const { data: portalData } = await measureSearchTiming(
+        timingRecorder,
+        "search_resolve_city",
+        () =>
+          client
+            .from("portals")
+            .select("filters")
+            .eq("id", portalId)
+            .maybeSingle(),
+      );
       const pRow = portalData as {
         filters?: Record<string, unknown> | string | null;
       } | null;
@@ -482,105 +491,124 @@ export async function unifiedSearch(
   if (types.includes("event")) {
     searchTypes.push("event");
     searchPromises.push(
-      searchEvents(client, effectiveQuery, {
-        limit: limitPerType,
-        offset,
-        categories,
-        genres: mergeSubcategoriesToGenres(subcategories, genres),
-        tags,
-        neighborhoods,
-        dateFilter: effectiveDateFilter,
-        isFree,
-        portalId,
-      })
+      measureSearchTiming(timingRecorder, "search_events_rpc", () =>
+        searchEvents(client, effectiveQuery, {
+          limit: limitPerType,
+          offset,
+          categories,
+          genres: mergeSubcategoriesToGenres(subcategories, genres),
+          tags,
+          neighborhoods,
+          dateFilter: effectiveDateFilter,
+          isFree,
+          portalId,
+        }),
+      )
     );
   }
 
   if (types.includes("venue")) {
     searchTypes.push("venue");
     searchPromises.push(
-      searchVenues(client, effectiveQuery, {
-        limit: limitPerType,
-        offset,
-        neighborhoods,
-        city: resolvedCity,
-      })
+      measureSearchTiming(timingRecorder, "search_venues_rpc", () =>
+        searchVenues(client, effectiveQuery, {
+          limit: limitPerType,
+          offset,
+          neighborhoods,
+          city: resolvedCity,
+        }),
+      )
     );
   }
 
   if (types.includes("organizer")) {
     searchTypes.push("organizer");
     searchPromises.push(
-      searchOrganizations(client, effectiveQuery, {
-        limit: limitPerType,
-        offset,
-        categories,
-        portalId,
-      })
+      measureSearchTiming(timingRecorder, "search_organizers_rpc", () =>
+        searchOrganizations(client, effectiveQuery, {
+          limit: limitPerType,
+          offset,
+          categories,
+          portalId,
+        }),
+      )
     );
   }
 
   if (types.includes("series")) {
     searchTypes.push("series");
     searchPromises.push(
-      searchSeries(client, effectiveQuery, {
-        limit: limitPerType,
-        offset,
-        categories,
-        portalId,
-      })
+      measureSearchTiming(timingRecorder, "search_series_rpc", () =>
+        searchSeries(client, effectiveQuery, {
+          limit: limitPerType,
+          offset,
+          categories,
+          portalId,
+        }),
+      )
     );
   }
 
   if (types.includes("list")) {
     searchTypes.push("list");
     searchPromises.push(
-      searchLists(client, effectiveQuery, {
-        limit: limitPerType,
-        offset,
-        portalId,
-      })
+      measureSearchTiming(timingRecorder, "search_lists_rpc", () =>
+        searchLists(client, effectiveQuery, {
+          limit: limitPerType,
+          offset,
+          portalId,
+        }),
+      )
     );
   }
 
   if (types.includes("festival")) {
     searchTypes.push("festival");
     searchPromises.push(
-      searchFestivals(client, effectiveQuery, {
-        limit: limitPerType,
-        offset,
-        portalId,
-      })
+      measureSearchTiming(timingRecorder, "search_festivals_rpc", () =>
+        searchFestivals(client, effectiveQuery, {
+          limit: limitPerType,
+          offset,
+          portalId,
+        }),
+      )
     );
   }
 
-  // Execute searches, facets, and spelling suggestions in parallel
-  const [searchResultsArrays, facets, didYouMean] = await Promise.all([
+  // Execute the core searches and facets first.
+  // Spelling suggestions are only useful for empty-result searches.
+  const [searchResultsArrays, facets] = await Promise.all([
     Promise.all(searchPromises),
     includeFacets
-      ? getSearchFacets(client, effectiveQuery, portalId, resolvedCity)
-      : Promise.resolve([]),
-    includeDidYouMean
-      ? getSpellingSuggestions(client, effectiveQuery, resolvedCity)
+      ? measureSearchTiming(timingRecorder, "search_facets", () =>
+          getSearchFacets(client, effectiveQuery, portalId, resolvedCity),
+        )
       : Promise.resolve([]),
   ]);
 
   // Combine all results
   let allResults: SearchResult[] = dedupeByTypeAndId(searchResultsArrays.flat());
+  let eventCountsForResults:
+    | Map<number, { going: number; interested: number; recommendations: number }>
+    | null = null;
 
   // Always enrich events with basic social proof (rsvpCount, recommendationCount)
   // so the popularity multiplier in calculateRelevanceScore has data to work with.
   // The full social proof fanout (venue followers, etc.) is still gated on includeSocialProof.
-  {
+  if (includeEventPopularitySignals) {
     const eventIds = allResults
       .filter((r) => r.type === "event")
       .map((r) => Number(r.id))
       .filter((id) => !Number.isNaN(id));
     if (eventIds.length > 0) {
-      const basicCounts = await fetchSocialProofCounts(eventIds);
+      eventCountsForResults = await measureSearchTiming(
+        timingRecorder,
+        "search_event_social_proof",
+        () => fetchSocialProofCounts(eventIds),
+      );
       allResults = allResults.map((result) => {
         if (result.type !== "event") return result;
-        const counts = basicCounts.get(Number(result.id));
+        const counts = eventCountsForResults?.get(Number(result.id));
         if (!counts) return result;
         return {
           ...result,
@@ -621,6 +649,13 @@ export async function unifiedSearch(
   // Sort by enhanced score
   allResults.sort((a, b) => b.score - a.score);
 
+  const didYouMean =
+    includeDidYouMean && allResults.length === 0
+      ? await measureSearchTiming(timingRecorder, "search_spelling", () =>
+          getSpellingSuggestions(client, effectiveQuery, resolvedCity),
+        )
+      : [];
+
   if (includeSocialProof) {
     // Add social proof metadata for search cards
     const eventIds = allResults
@@ -647,7 +682,11 @@ export async function unifiedSearch(
       organizerLegacyRecData,
       seriesEvents,
     ] = await Promise.all([
-      fetchSocialProofCounts(eventIds),
+      eventCountsForResults
+        ? Promise.resolve(eventCountsForResults)
+        : measureSearchTiming(timingRecorder, "search_event_social_proof", () =>
+            fetchSocialProofCounts(eventIds),
+          ),
       venueIds.length > 0
         ? client
             .from("follows")
@@ -766,7 +805,11 @@ export async function unifiedSearch(
       const seriesEventIdList = Array.from(
         new Set(seriesEventIds.map((row) => row.id)),
       );
-      const seriesEventCounts = await fetchSocialProofCounts(seriesEventIdList);
+      const seriesEventCounts = await measureSearchTiming(
+        timingRecorder,
+        "search_series_social_proof",
+        () => fetchSocialProofCounts(seriesEventIdList),
+      );
       for (const [seriesId, ids] of seriesEventMap.entries()) {
         let rsvp = 0;
         let recs = 0;
@@ -1220,20 +1263,26 @@ export async function instantSearch(
   query: string,
   options: {
     portalId?: string;
+    city?: string;
     limit?: number;
     types?: ("event" | "venue" | "organizer" | "series" | "list" | "festival")[];
     includeSocialProof?: boolean;
     includeFacets?: boolean;
     includeDidYouMean?: boolean;
+    includeEventPopularitySignals?: boolean;
+    timingRecorder?: SearchTimingRecorder;
   } = {}
 ): Promise<InstantSearchResponse> {
   const {
     portalId,
+    city,
     limit = 8,
     types,
     includeSocialProof = false,
     includeFacets = false,
     includeDidYouMean = false,
+    includeEventPopularitySignals = false,
+    timingRecorder,
   } = options;
   const trimmedQuery = query.trim();
 
@@ -1255,11 +1304,14 @@ export async function instantSearch(
     types: selectedTypes,
     limit: limit * 2, // Get more to split between suggestions and results
     portalId,
+    city,
     useIntentAnalysis: true,
     boostExactMatches: true,
     includeSocialProof,
     includeFacets,
     includeDidYouMean,
+    includeEventPopularitySignals,
+    timingRecorder,
   });
 
   // Split results: top matches as suggestions, rest as results

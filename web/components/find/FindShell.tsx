@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import AddNewChooser from "@/components/find/AddNewChooser";
 import EventsFinder, { EventsFinderFilters } from "@/components/find/EventsFinder";
 import { FindContext } from "@/lib/find-context";
+import { getFindTypeLabel } from "@/lib/find-labels";
 
 const ClassesView = dynamic(() => import("@/components/find/ClassesView"), {
   loading: () => <div className="py-16 text-center text-[var(--muted)] font-mono text-sm">Loading classes...</div>,
@@ -14,7 +15,7 @@ const ShowtimesView = dynamic(() => import("@/components/find/ShowtimesView"), {
   loading: () => <div className="py-16 text-center text-[var(--muted)] font-mono text-sm">Loading showtimes...</div>,
 });
 const SpotsFinder = dynamic(() => import("@/components/find/SpotsFinder"), {
-  loading: () => <div className="py-16 text-center text-[var(--muted)] font-mono text-sm">Loading spots...</div>,
+  loading: () => <div className="py-16 text-center text-[var(--muted)] font-mono text-sm">Loading places...</div>,
 });
 const RegularsView = dynamic(() => import("@/components/find/RegularsView"), {
   loading: () => <div className="py-16 text-center text-[var(--muted)] font-mono text-sm">Loading regulars...</div>,
@@ -40,7 +41,7 @@ type DisplayMode = "list" | "map" | "calendar";
 const TYPE_OPTIONS: { key: FindType; label: string; icon: React.ReactNode }[] = [
   {
     key: "events",
-    label: "Events",
+    label: getFindTypeLabel("events"),
     icon: (
       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -49,7 +50,7 @@ const TYPE_OPTIONS: { key: FindType; label: string; icon: React.ReactNode }[] = 
   },
   {
     key: "classes",
-    label: "Classes",
+    label: getFindTypeLabel("classes"),
     icon: (
       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
@@ -58,7 +59,7 @@ const TYPE_OPTIONS: { key: FindType; label: string; icon: React.ReactNode }[] = 
   },
   {
     key: "destinations",
-    label: "Spots",
+    label: getFindTypeLabel("destinations"),
     icon: (
       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -68,7 +69,7 @@ const TYPE_OPTIONS: { key: FindType; label: string; icon: React.ReactNode }[] = 
   },
   {
     key: "showtimes",
-    label: "Now Playing",
+    label: getFindTypeLabel("showtimes"),
     icon: (
       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
@@ -77,7 +78,7 @@ const TYPE_OPTIONS: { key: FindType; label: string; icon: React.ReactNode }[] = 
   },
   {
     key: "regulars",
-    label: "Regulars",
+    label: getFindTypeLabel("regulars"),
     icon: (
       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -125,9 +126,13 @@ interface FindShellProps {
   findType: FindType;
   displayMode: DisplayMode;
   hasActiveFilters: boolean;
+  vertical?: string | null;
 }
 
 // ─── Inner Component ──────────────────────────────────────────────────────────
+
+// Tabs available per vertical — community portals only show Events
+const COMMUNITY_TABS = new Set<FindType>(["events"]);
 
 function FindShellInner({
   portalId,
@@ -136,7 +141,12 @@ function FindShellInner({
   findType,
   displayMode,
   hasActiveFilters,
+  vertical,
 }: FindShellProps) {
+  const isCommunity = vertical === "community";
+  const visibleTabs = isCommunity
+    ? TYPE_OPTIONS.filter((t) => COMMUNITY_TABS.has(t.key))
+    : TYPE_OPTIONS;
   const viewRootRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -321,7 +331,7 @@ function FindShellInner({
         {/* Type selector tabs */}
         <div className="flex items-center justify-between gap-3">
           <div className="flex gap-1.5 flex-1 min-w-0 overflow-x-auto scrollbar-hide">
-            {TYPE_OPTIONS.map((option) => {
+            {visibleTabs.map((option) => {
               const isActive = findType === option.key;
               return (
                 <button
@@ -407,6 +417,7 @@ function FindShellInner({
             portalExclusive={portalExclusive}
             displayMode={displayMode}
             hasActiveFilters={hasActiveFilters}
+            vertical={vertical}
           />
         )}
       </section>

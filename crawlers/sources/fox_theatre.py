@@ -15,7 +15,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_venue, get_client, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, extract_event_links, find_event_url, enrich_event_record
 
@@ -32,8 +32,35 @@ VENUE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30308",
+    "lat": 33.7725,
+    "lng": -84.3856,
     "venue_type": "theater",
+    "spot_type": "theater",
     "website": BASE_URL,
+    # Box office: Mon–Fri 10am–6pm, Sat 10am–2pm, closed Sunday
+    "hours": {
+        "monday": "10:00-18:00",
+        "tuesday": "10:00-18:00",
+        "wednesday": "10:00-18:00",
+        "thursday": "10:00-18:00",
+        "friday": "10:00-18:00",
+        "saturday": "10:00-14:00",
+        "sunday": "closed",
+    },
+    "vibes": [
+        "historic",
+        "landmark",
+        "broadway",
+        "architecture",
+        "Midtown",
+        "performing-arts",
+    ],
+    # Fallback description — overridden at runtime by og:description if available
+    "description": (
+        "The Fox Theatre is Atlanta's premier performing arts venue, a National Historic Landmark "
+        "and one of the most magnificent examples of Moorish-Egyptian architecture in the world. "
+        "Home to Broadway in Atlanta, concerts, and special events since 1929."
+    ),
 }
 
 
@@ -95,7 +122,41 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
+            # ----------------------------------------------------------------
+            # 0. Homepage — extract og:image / og:description for venue record
+            # ----------------------------------------------------------------
+            try:
+                page.goto(BASE_URL, wait_until="domcontentloaded", timeout=30000)
+                og_image = page.evaluate(
+                    "() => { const m = document.querySelector('meta[property=\"og:image\"]'); return m ? m.content : null; }"
+                )
+                og_desc = page.evaluate(
+                    "() => { const m = document.querySelector('meta[property=\"og:description\"]') "
+                    "|| document.querySelector('meta[name=\"description\"]'); return m ? m.content : null; }"
+                )
+                if og_image:
+                    VENUE_DATA["image_url"] = og_image
+                    logger.debug("Fox Theatre: og:image = %s", og_image)
+                if og_desc:
+                    VENUE_DATA["description"] = og_desc
+                    logger.debug("Fox Theatre: og:description captured")
+            except Exception as _meta_exc:
+                logger.debug("Fox Theatre: could not extract og meta from homepage: %s", _meta_exc)
+
             venue_id = get_or_create_venue(VENUE_DATA)
+
+            # Persist any og: enrichment to the venue record
+            try:
+                venue_update: dict = {}
+                if VENUE_DATA.get("image_url"):
+                    venue_update["image_url"] = VENUE_DATA["image_url"]
+                if VENUE_DATA.get("description"):
+                    venue_update["description"] = VENUE_DATA["description"]
+                if venue_update:
+                    get_client().table("venues").update(venue_update).eq("id", venue_id).execute()
+                    logger.info("Fox Theatre: enriched venue record from homepage og: metadata")
+            except Exception as _upd_exc:
+                logger.warning("Fox Theatre: venue update failed: %s", _upd_exc)
 
             logger.info(f"Fetching Fox Theatre: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)

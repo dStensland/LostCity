@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
 import {
   applyRateLimit,
   RATE_LIMITS,
@@ -30,14 +31,15 @@ export async function GET(request: NextRequest, context: RouteContext) {
     return errorApiResponse("Invalid share token", 400);
   }
 
-  // Use anon client — this is a public endpoint
+  // Use anon client for the initial lookup
   const supabase = await createClient();
 
+  // Accept itineraries that are public OR invitees-visible (share link is the gate)
   const { data: itinerary, error } = await supabase
     .from("itineraries")
     .select("*")
     .eq("share_token", token)
-    .eq("is_public", true)
+    .in("visibility", ["public", "invitees"])
     .maybeSingle();
 
   if (error) {
@@ -49,7 +51,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     return errorApiResponse("Itinerary not found or not shared", 404);
   }
 
-  const itineraryData = itinerary as { id: string };
+  const itineraryData = itinerary as { id: string; portal_id: string };
 
   // Fetch items with joined data (events don't have lat/lng — join through venues)
   const { data: rawItems } = await supabase
@@ -78,16 +80,25 @@ export async function GET(request: NextRequest, context: RouteContext) {
     return item;
   });
 
+  // Fetch crew data using service client (bypasses RLS for public view)
+  const serviceClient = createServiceClient();
+  const { data: crew } = await serviceClient.rpc("get_itinerary_crew", {
+    p_itinerary_id: itineraryData.id,
+  } as never);
+
   // Fetch portal info for branding
-  const itineraryWithPortal = itinerary as { portal_id: string };
   const { data: portal } = await supabase
     .from("portals")
     .select("id, slug, name, branding")
-    .eq("id", itineraryWithPortal.portal_id)
+    .eq("id", itineraryData.portal_id)
     .maybeSingle();
 
   return successResponse({
-    itinerary: { ...(itinerary as Record<string, unknown>), items: items || [] },
+    itinerary: {
+      ...(itinerary as Record<string, unknown>),
+      items: items || [],
+      crew: crew || null,
+    },
     portal: portal || null,
   });
 }

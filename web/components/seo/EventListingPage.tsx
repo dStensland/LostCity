@@ -3,6 +3,7 @@ import { safeJsonLd, formatTime } from "@/lib/formats";
 import { buildBreadcrumbSchema } from "@/lib/breadcrumb-schema";
 import { toAbsoluteUrl } from "@/lib/site-url";
 import type { EventWithLocation } from "@/lib/search";
+import { getEventListingEmptyStateCopy } from "@/lib/empty-state-copy";
 
 type Props = {
   title: string;
@@ -92,6 +93,7 @@ export default function EventListingPage({
   breadcrumbLabel,
   events,
 }: Props) {
+  const emptyState = getEventListingEmptyStateCopy();
   const collectionSchema = buildCollectionSchema({
     title,
     description,
@@ -164,20 +166,21 @@ export default function EventListingPage({
           </ul>
 
           {events.length === 0 && (
-            <p className="text-center text-[var(--soft)] py-12">
-              No events found right now. Check back soon.
-            </p>
+            <div className="text-center py-12">
+              <p className="text-[var(--cream)] font-medium">{emptyState.headline}</p>
+              <p className="text-[var(--soft)] text-sm mt-2">{emptyState.subline}</p>
+            </div>
           )}
 
           <div className="mt-8 text-center">
             <Link
               href={findHref}
-              className="inline-flex items-center gap-2 px-6 py-2.5 bg-[var(--coral)] text-[var(--void)] rounded-lg font-mono text-sm font-medium hover:opacity-90 transition-opacity"
-            >
-              See all events
-            </Link>
-          </div>
-        </main>
+            className="inline-flex items-center gap-2 px-6 py-2.5 bg-[var(--coral)] text-[var(--void)] rounded-lg font-mono text-sm font-medium hover:opacity-90 transition-opacity"
+          >
+            {emptyState.actionLabel}
+          </Link>
+        </div>
+      </main>
       </div>
     </>
   );

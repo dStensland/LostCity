@@ -1,0 +1,20 @@
+version: 1
+slug: atlanta-rec-center-pickleball
+name: Atlanta Rec Center Pickleball
+integration_method: python
+defaults:
+  category: sports
+  tags:
+  - pickleball
+  - recreation-center
+  - public-play
+discovery:
+  enabled: false
+  type: list
+  urls:
+  - https://www.atlantaga.gov/government/departments/department-parks-recreation/office-of-parks/city-of-atlanta-pickleball
+detail:
+  enabled: false
+data_goals:
+- events
+- venue_hours

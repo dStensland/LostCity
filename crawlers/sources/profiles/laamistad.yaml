@@ -1,0 +1,16 @@
+version: 1
+slug: laamistad
+name: LaAmistad
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://laamistadinc.org/volunteer/
+detail:
+  enabled: true
+data_goals:
+- events
+- images
+- tickets

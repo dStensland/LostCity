@@ -50,12 +50,6 @@ export function AtForthSection({ moments, portalName, onMomentClick }: AtForthSe
         <h2 className="font-body text-xs font-semibold uppercase tracking-[0.15em] text-[var(--hotel-champagne)]">
           At {portalName.toUpperCase()}
         </h2>
-        <a
-          href="#at-property"
-          className="text-xs font-body text-[var(--hotel-stone)] hover:text-[var(--hotel-charcoal)] transition-colors"
-        >
-          See all →
-        </a>
       </div>
 
       {/* Cards: horizontal scroll on mobile, 3-col grid on desktop */}
@@ -64,7 +58,7 @@ export function AtForthSection({ moments, portalName, onMomentClick }: AtForthSe
           <MomentCard key={`m-${moment.venue.id}`} moment={moment} onClick={onMomentClick} />
         ))}
       </div>
-      <div className="hidden md:grid grid-cols-3 gap-4">
+      <div className="hidden md:grid grid-cols-2 md:grid-cols-4 gap-4">
         {moments.map((moment) => (
           <MomentCard key={`d-${moment.venue.id}`} moment={moment} onClick={onMomentClick} />
         ))}

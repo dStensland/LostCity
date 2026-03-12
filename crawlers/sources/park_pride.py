@@ -5,6 +5,8 @@ Atlanta nonprofit supporting parks and greenspaces. Events include park cleanups
 community garden workdays, tree plantings, and park improvement projects.
 
 Uses The Events Calendar WordPress plugin with REST API.
+Each event includes a venue object with the specific park name and address — we
+create a separate venue record per park so events appear at the right location.
 """
 
 from __future__ import annotations
@@ -16,7 +18,13 @@ from typing import Optional
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    find_existing_event_for_insert,
+    get_or_create_venue,
+    insert_event,
+    remove_stale_source_events,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -24,7 +32,8 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://parkpride.org"
 API_URL = f"{BASE_URL}/wp-json/tribe/events/v1/events"
 
-VENUE_DATA = {
+# Fallback venue used only when an event has no venue data from the API
+FALLBACK_VENUE_DATA = {
     "name": "Park Pride",
     "slug": "park-pride",
     "address": "233 Peachtree St NE #900",
@@ -40,7 +49,7 @@ VENUE_DATA = {
     "vibes": ["volunteer", "outdoors", "family-friendly"],
 }
 
-# Skip staff meetings and internal events
+# Skip internal/non-public events
 SKIP_KEYWORDS = [
     "staff meeting",
     "board meeting",
@@ -50,7 +59,6 @@ SKIP_KEYWORDS = [
     "private",
 ]
 
-# Volunteer event indicators
 VOLUNTEER_KEYWORDS = [
     "volunteer",
     "cleanup",
@@ -62,18 +70,42 @@ VOLUNTEER_KEYWORDS = [
     "community",
 ]
 
+# Known Atlanta neighborhoods by park name keywords — used to set neighborhood field
+PARK_NEIGHBORHOODS = {
+    "brownwood": "East Atlanta",
+    "lionel hampton": "Vine City",
+    "murphey candler": "Brookhaven",
+    "piedmont": "Midtown",
+    "grant park": "Grant Park",
+    "inman park": "Inman Park",
+    "freedom park": "Candler Park",
+    "candler park": "Candler Park",
+    "kirkwood": "Kirkwood",
+    "beltline": "Old Fourth Ward",
+    "old fourth ward": "Old Fourth Ward",
+    "eastside trail": "Old Fourth Ward",
+    "westside": "West End",
+    "ponce de leon": "Poncey-Highland",
+    "olmsted": "Midtown",
+    "tanyard creek": "Buckhead",
+    "chastain": "Buckhead",
+    "morningside": "Virginia-Highland",
+    "lenox": "Buckhead",
+}
+
 
 def parse_datetime(dt_str: str) -> tuple[Optional[str], Optional[str]]:
     """
-    Parse ISO datetime string to date and time.
-    Returns (YYYY-MM-DD, HH:MM) tuple.
+    Parse ISO datetime string from Tribe Events API to (YYYY-MM-DD, HH:MM).
+    Handles both "2026-02-14 10:00:00" and ISO 8601 with timezone.
     """
     if not dt_str:
         return None, None
 
     try:
-        # Parse ISO format: "2026-02-14 10:00:00"
-        dt = datetime.fromisoformat(dt_str.replace("T", " ").split("+")[0].split("Z")[0].strip())
+        # Normalize: strip timezone suffix and T separator
+        clean = dt_str.replace("T", " ").split("+")[0].split("Z")[0].strip()
+        dt = datetime.fromisoformat(clean)
         return dt.strftime("%Y-%m-%d"), dt.strftime("%H:%M")
     except (ValueError, AttributeError) as e:
         logger.debug(f"Could not parse datetime '{dt_str}': {e}")
@@ -81,23 +113,66 @@ def parse_datetime(dt_str: str) -> tuple[Optional[str], Optional[str]]:
 
 
 def strip_html(html: str) -> str:
-    """Strip HTML tags and clean up text."""
+    """Strip HTML tags and normalize whitespace."""
     if not html:
         return ""
-
     soup = BeautifulSoup(html, "html.parser")
     text = soup.get_text(separator=" ", strip=True)
-    # Clean up multiple spaces
-    text = re.sub(r"\s+", " ", text)
-    return text.strip()
+    return re.sub(r"\s+", " ", text).strip()
 
 
-def determine_category_and_tags(title: str, description: str) -> tuple[str, Optional[str], list[str]]:
-    """Determine category based on title and description."""
+def get_neighborhood_for_park(park_name: str) -> Optional[str]:
+    """Infer Atlanta neighborhood from park name keywords."""
+    name_lower = park_name.lower()
+    for keyword, neighborhood in PARK_NEIGHBORHOODS.items():
+        if keyword in name_lower:
+            return neighborhood
+    return None
+
+
+def build_venue_from_api(venue_data: dict) -> Optional[dict]:
+    """
+    Build a venue dict from the Tribe Events API venue object.
+    Returns None if the venue object is empty or missing a name.
+    """
+    if not isinstance(venue_data, dict):
+        return None
+
+    park_name = (venue_data.get("venue") or "").strip()
+    if not park_name:
+        return None
+
+    address = (venue_data.get("address") or "").strip()
+    city = (venue_data.get("city") or "Atlanta").strip()
+    state = (venue_data.get("state") or venue_data.get("stateprovince") or "GA").strip()
+    zip_code = (venue_data.get("zip") or "").strip()
+
+    # Build slug from park name
+    slug = re.sub(r"[^a-z0-9]+", "-", park_name.lower()).strip("-")
+
+    neighborhood = get_neighborhood_for_park(park_name)
+
+    return {
+        "name": park_name,
+        "slug": slug,
+        "address": address or None,
+        "neighborhood": neighborhood,
+        "city": city,
+        "state": state,
+        "zip": zip_code or None,
+        "venue_type": "park",
+        "spot_type": "park",
+        "website": None,
+    }
+
+
+def determine_category_and_tags(
+    title: str, description: str
+) -> tuple[str, Optional[str], list[str]]:
+    """Determine category/subcategory/tags from event title and description."""
     text = f"{title} {description}".lower()
-    tags = ["volunteer", "nonprofit", "parks", "outdoors"]
+    tags = ["volunteer", "nonprofit", "parks", "outdoors", "environment"]
 
-    # Most events are volunteer opportunities
     if any(kw in text for kw in VOLUNTEER_KEYWORDS):
         tags.append("volunteer-opportunity")
 
@@ -113,7 +188,7 @@ def determine_category_and_tags(title: str, description: str) -> tuple[str, Opti
     if any(kw in text for kw in ["tree", "trees", "arbor"]):
         tags.append("trees")
 
-    if any(kw in text for kw in ["trail", "path", "greenway"]):
+    if any(kw in text for kw in ["trail", "path", "greenway", "beltline"]):
         tags.append("trails")
 
     if any(kw in text for kw in ["training", "orientation", "workshop", "class"]):
@@ -125,20 +200,13 @@ def determine_category_and_tags(title: str, description: str) -> tuple[str, Opti
     if any(kw in text for kw in ["walk", "hike", "nature walk"]):
         return "community", "outdoor", tags + ["walking"]
 
-    # Default to community/volunteer
     return "community", "volunteer", tags
 
 
 def is_public_event(title: str, description: str) -> bool:
-    """Determine if event is public vs. internal."""
+    """Return False for internal/non-public events."""
     text = f"{title} {description}".lower()
-
-    # Skip internal events
-    if any(kw in text for kw in SKIP_KEYWORDS):
-        return False
-
-    # Most events are public volunteer opportunities
-    return True
+    return not any(kw in text for kw in SKIP_KEYWORDS)
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
@@ -148,28 +216,42 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_new = 0
     events_updated = 0
 
-    try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+    # Cache of park slug -> venue_id to avoid redundant DB lookups
+    venue_cache: dict[str, int] = {}
+    current_hashes: set[str] = set()
 
-        # Fetch events from API
+    try:
+        # Ensure fallback venue exists
+        fallback_venue_id = get_or_create_venue(FALLBACK_VENUE_DATA)
+
         headers = {
-            "User-Agent": "Mozilla/5.0 (compatible; LostCity/1.0)",
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "application/json",
+            "Referer": f"{BASE_URL}/events/",
         }
 
         page = 1
         per_page = 50
-        seen_events = set()
+        max_pages = 10
+        seen_keys: set[str] = set()
 
-        while True:
+        while page <= max_pages:
             params = {
                 "per_page": per_page,
                 "page": page,
                 "start_date": datetime.now().strftime("%Y-%m-%d"),
+                "status": "publish",
             }
 
             logger.info(f"Fetching Park Pride events API page {page}")
-            response = requests.get(API_URL, params=params, headers=headers, timeout=30)
-            response.raise_for_status()
+            try:
+                response = requests.get(
+                    API_URL, params=params, headers=headers, timeout=30
+                )
+                response.raise_for_status()
+            except requests.exceptions.RequestException as e:
+                logger.error(f"Failed to fetch Park Pride events page {page}: {e}")
+                break
 
             data = response.json()
             events = data.get("events", [])
@@ -182,62 +264,98 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             for event_data in events:
                 try:
-                    title = event_data.get("title", "").strip()
-
+                    title = (event_data.get("title") or "").strip()
                     if not title or len(title) < 5:
                         continue
 
                     # Parse dates and times
-                    start_date_str = event_data.get("start_date")
-                    end_date_str = event_data.get("end_date")
-
-                    start_date, start_time = parse_datetime(start_date_str)
-                    end_date, end_time = parse_datetime(end_date_str) if end_date_str else (None, None)
+                    start_date, start_time = parse_datetime(event_data.get("start_date"))
+                    end_date, end_time = (
+                        parse_datetime(event_data.get("end_date"))
+                        if event_data.get("end_date")
+                        else (None, None)
+                    )
 
                     if not start_date:
                         logger.debug(f"No valid date for: {title}")
                         continue
 
-                    # Extract description (HTML)
+                    # Description from HTML
                     description_html = event_data.get("description", "")
-                    description = strip_html(description_html)[:500]
+                    description = strip_html(description_html)[:800]
 
-                    # Get URL
-                    event_url = event_data.get("url", f"{BASE_URL}/events/")
-
-                    # Check if public
+                    # Filter internal events
                     if not is_public_event(title, description):
                         logger.debug(f"Skipping internal event: {title}")
                         continue
 
-                    # Dedupe by title and date
+                    # Dedupe by title + date within this crawl run
                     event_key = f"{title}|{start_date}"
-                    if event_key in seen_events:
+                    if event_key in seen_keys:
                         continue
-                    seen_events.add(event_key)
+                    seen_keys.add(event_key)
+
+                    # --- Venue: use per-event park data from API ---
+                    venue_id = fallback_venue_id
+                    venue_name_for_hash = "Park Pride"
+
+                    api_venue = event_data.get("venue")
+                    if api_venue:
+                        venue_dict = build_venue_from_api(api_venue)
+                        if venue_dict:
+                            slug = venue_dict["slug"]
+                            if slug not in venue_cache:
+                                venue_cache[slug] = get_or_create_venue(venue_dict)
+                            venue_id = venue_cache[slug]
+                            venue_name_for_hash = venue_dict["name"]
 
                     events_found += 1
 
-                    # Generate content hash
-                    content_hash = generate_content_hash(
-                        title, "Park Pride", start_date
+                    # Category and tags
+                    category, subcategory, tags = determine_category_and_tags(
+                        title, description
                     )
 
-                    # Check for existing
+                    # All-day flag from API
+                    is_all_day = bool(event_data.get("all_day", False))
 
-                    # Determine category and tags
-                    category, subcategory, tags = determine_category_and_tags(title, description)
-
-                    # Check if all day
-                    all_day = event_data.get("all_day", False)
-                    is_all_day = bool(all_day)
-
-                    # Get image
+                    # Image — prefer the 'large' size if available
                     image_url = None
-                    if event_data.get("image"):
-                        image_url = event_data["image"].get("url")
+                    img = event_data.get("image")
+                    if isinstance(img, dict):
+                        sizes = img.get("sizes", {})
+                        image_url = (
+                            sizes.get("large", {}).get("url")
+                            or sizes.get("slide", {}).get("url")
+                            or img.get("url")
+                        )
 
-                    # Build event record
+                    # Source URL
+                    event_url = event_data.get("url", f"{BASE_URL}/events/")
+
+                    # Determine if free (Park Pride volunteer events are always free)
+                    cost = (event_data.get("cost") or "").strip()
+                    is_free = not cost or "free" in cost.lower()
+
+                    # Series hint for recurring "Second Friday Walk" events
+                    series_hint = None
+                    if re.search(r"second friday|monthly|weekly", title, re.IGNORECASE):
+                        series_hint = {
+                            "series_type": "recurring_show",
+                            "series_title": re.sub(
+                                r"\s*@\s*.+$", "", title
+                            ).strip(),  # strip "@ Park Name" suffix
+                            "frequency": "monthly"
+                            if "second friday" in title.lower()
+                            else "irregular",
+                        }
+
+                    # Generate content hash
+                    content_hash = generate_content_hash(
+                        title, venue_name_for_hash, start_date
+                    )
+                    current_hashes.add(content_hash)
+
                     event_record = {
                         "source_id": source_id,
                         "venue_id": venue_id,
@@ -254,43 +372,52 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "price_min": None,
                         "price_max": None,
                         "price_note": None,
-                        "is_free": True,
+                        "is_free": is_free,
                         "source_url": event_url,
                         "ticket_url": event_url,
                         "image_url": image_url,
                         "raw_text": f"{title} {description}"[:500],
-                        "extraction_confidence": 0.9,
-                        "is_recurring": False,
+                        "extraction_confidence": 0.92,
+                        "is_recurring": series_hint is not None,
                         "recurrence_rule": None,
                         "content_hash": content_hash,
                     }
 
-                    existing = find_event_by_hash(content_hash)
+                    existing = find_existing_event_for_insert(event_record)
                     if existing:
                         smart_update_existing_event(existing, event_record)
                         events_updated += 1
                         continue
 
                     try:
-                        insert_event(event_record)
+                        insert_event(event_record, series_hint=series_hint)
                         events_new += 1
-                        logger.info(f"Added: {title[:50]}... on {start_date}")
+                        logger.info(
+                            f"Added: {title[:50]} on {start_date} @ {venue_name_for_hash}"
+                        )
                     except Exception as e:
-                        logger.error(f"Failed to insert: {title}: {e}")
+                        logger.error(f"Failed to insert event '{title}': {e}")
 
                 except Exception as e:
-                    logger.error(f"Error processing event: {e}")
+                    logger.error(f"Error processing Park Pride event: {e}")
                     continue
 
-            # Check if there are more pages
             total_pages = data.get("total_pages", 1)
             if page >= total_pages:
                 break
 
             page += 1
 
+        stale_deleted = remove_stale_source_events(source_id, current_hashes)
+        if stale_deleted:
+            logger.info(
+                "Removed %s stale Park Pride events after schedule refresh",
+                stale_deleted,
+            )
+
         logger.info(
-            f"Park Pride crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
+            f"Park Pride crawl complete: {events_found} found, "
+            f"{events_new} new, {events_updated} updated"
         )
 
     except requests.exceptions.RequestException as e:

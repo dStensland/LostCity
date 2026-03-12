@@ -11,12 +11,9 @@ import httpx
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
 from pipeline.models import FetchConfig
-from utils import validate_url
+from utils import validate_url, random_user_agent
 
 logger = logging.getLogger(__name__)
-
-
-DEFAULT_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
 
 
 def fetch_html(url: str, fetch: Optional[FetchConfig] = None) -> Tuple[str, Optional[str]]:
@@ -26,7 +23,7 @@ def fetch_html(url: str, fetch: Optional[FetchConfig] = None) -> Tuple[str, Opti
     Returns: (html, error)
     """
     cfg = fetch or FetchConfig()
-    ua = cfg.user_agent or DEFAULT_UA
+    ua = cfg.user_agent or random_user_agent()
 
     if not url:
         return "", "missing-url"

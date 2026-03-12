@@ -3,24 +3,12 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { SUBMISSION_EVENT_CATEGORY_OPTIONS } from "@/lib/event-taxonomy";
 
-const CATEGORIES = [
-  { value: "music", label: "Music" },
-  { value: "nightlife", label: "Nightlife" },
-  { value: "food-drink", label: "Food & Drink" },
-  { value: "arts", label: "Arts" },
-  { value: "sports", label: "Sports" },
-  { value: "community", label: "Community" },
-  { value: "film", label: "Film" },
-  { value: "theater", label: "Theater" },
-  { value: "comedy", label: "Comedy" },
-  { value: "markets", label: "Markets" },
-  { value: "kids-family", label: "Kids & Family" },
-  { value: "wellness", label: "Wellness" },
-  { value: "learning", label: "Learning" },
-  { value: "outdoor", label: "Outdoor" },
-  { value: "tours", label: "Tours" },
-];
+const CATEGORIES = SUBMISSION_EVENT_CATEGORY_OPTIONS.map(({ id, label }) => ({
+  value: id,
+  label,
+}));
 
 export default function SubmitEventPage({
   params,

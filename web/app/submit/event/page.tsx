@@ -11,25 +11,7 @@ import { useAuth } from "@/lib/auth-context";
 import type { EventSubmissionData, VenueSubmissionData } from "@/lib/types";
 import { getLocalDateString } from "@/lib/formats";
 import PageFooter from "@/components/PageFooter";
-
-const EVENT_CATEGORIES = [
-  { id: "music", label: "Music" },
-  { id: "film", label: "Film" },
-  { id: "comedy", label: "Comedy" },
-  { id: "theater", label: "Theater" },
-  { id: "art", label: "Art" },
-  { id: "community", label: "Community" },
-  { id: "food_drink", label: "Food & Drink" },
-  { id: "sports", label: "Sports" },
-  { id: "fitness", label: "Fitness" },
-  { id: "nightlife", label: "Nightlife" },
-  { id: "family", label: "Family" },
-  { id: "learning", label: "Learning" },
-  { id: "dance", label: "Dance" },
-  { id: "outdoors", label: "Outdoors" },
-  { id: "markets", label: "Markets" },
-  { id: "other", label: "Other" },
-];
+import { SUBMISSION_EVENT_CATEGORY_OPTIONS as EVENT_CATEGORIES } from "@/lib/event-taxonomy";
 
 const VENUE_TYPES = [
   { id: "bar", label: "Bar" },

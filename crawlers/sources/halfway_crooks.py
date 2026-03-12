@@ -1,40 +1,160 @@
 """
-Crawler for Halfway Crooks.
-Craft brewery with taproom events and live music.
+Crawler for Halfway Crooks Beer (halfwaycrooks.beer).
+Craft brewery in Summerhill with taproom events.
 
 Site uses JavaScript rendering - must use Playwright.
+Also generates recurring Wednesday trivia (Geeks Who Drink) and Sunday run club.
 """
 
 from __future__ import annotations
 
 import re
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    get_or_create_venue,
+    insert_event,
+    find_event_by_hash,
+    find_existing_event_for_insert,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
 from utils import extract_images_from_page
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = "https://www.halfwaycrooks.com"
+BASE_URL = "https://halfwaycrooks.beer"
 EVENTS_URL = f"{BASE_URL}/events"
 
+WEEKS_AHEAD = 6
+
 VENUE_DATA = {
-    "name": "Halfway Crooks",
+    "name": "Halfway Crooks Beer",
     "slug": "halfway-crooks",
-    "address": "479 Flat Shoals Ave SE",
+    "address": "60 Georgia Ave SE",
     "neighborhood": "Summerhill",
     "city": "Atlanta",
     "state": "GA",
     "zip": "30312",
+    "lat": 33.7402,
+    "lng": -84.3850,
     "venue_type": "brewery",
+    "spot_type": "bar",
     "website": BASE_URL,
-    "description": "Craft brewery in Summerhill with rooftop bar, Czech Beer Days festival, and regular events.",
+    "vibes": ["brewery", "craft-beer", "european-style", "rooftop", "summerhill"],
 }
+
+WEEKLY_SCHEDULE = [
+    {
+        "day": 2,  # Wednesday
+        "title": "Geeks Who Drink Trivia at Halfway Crooks",
+        "description": (
+            "Wednesday trivia night at Halfway Crooks Beer in Summerhill. "
+            "Geeks Who Drink pub quiz on the rooftop with craft lagers and ales."
+        ),
+        "start_time": "19:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.trivia",
+        "tags": ["trivia", "nightlife", "weekly", "brewery", "geeks-who-drink"],
+    },
+    {
+        "day": 6,  # Sunday
+        "title": "Run Club at Halfway Crooks",
+        "description": (
+            "Sunday run club at Halfway Crooks Beer in Summerhill. "
+            "Community run starting at 6:45pm, followed by post-run beers on the rooftop."
+        ),
+        "start_time": "18:45",
+        "category": "fitness",
+        "subcategory": "fitness.running",
+        "tags": ["run-club", "running", "fitness", "weekly", "brewery", "summerhill"],
+    },
+]
+
+DAY_CODES = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
+DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+
+def get_next_weekday(start_date: datetime, weekday: int) -> datetime:
+    days_ahead = weekday - start_date.weekday()
+    if days_ahead < 0:
+        days_ahead += 7
+    return start_date + timedelta(days=days_ahead)
+
+
+def _generate_recurring_events(source_id: int, venue_id: int) -> tuple[int, int, int]:
+    """Generate recurring trivia events for Halfway Crooks."""
+    events_found = 0
+    events_new = 0
+    events_updated = 0
+
+    today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+    for template in WEEKLY_SCHEDULE:
+        next_date = get_next_weekday(today, template["day"])
+        day_code = DAY_CODES[template["day"]]
+        day_name = DAY_NAMES[template["day"]]
+
+        series_hint = {
+            "series_type": "recurring_show",
+            "series_title": template["title"],
+            "frequency": "weekly",
+            "day_of_week": day_name.lower(),
+            "description": template["description"],
+        }
+
+        for week in range(WEEKS_AHEAD):
+            event_date = next_date + timedelta(weeks=week)
+            start_date = event_date.strftime("%Y-%m-%d")
+            events_found += 1
+
+            content_hash = generate_content_hash(
+                template["title"], VENUE_DATA["name"], start_date
+            )
+
+            event_record = {
+                "source_id": source_id,
+                "venue_id": venue_id,
+                "title": template["title"],
+                "description": template["description"],
+                "start_date": start_date,
+                "start_time": template["start_time"],
+                "end_date": None,
+                "end_time": None,
+                "is_all_day": False,
+                "category": template["category"],
+                "subcategory": template.get("subcategory"),
+                "tags": template["tags"],
+                "is_free": True,
+                "price_min": None,
+                "price_max": None,
+                "source_url": BASE_URL,
+                "ticket_url": None,
+                "image_url": None,
+                "raw_text": f"{template['title']} at Halfway Crooks Beer - {start_date}",
+                "extraction_confidence": 0.90,
+                "is_recurring": True,
+                "recurrence_rule": f"FREQ=WEEKLY;BYDAY={day_code}",
+                "content_hash": content_hash,
+            }
+
+            existing = find_existing_event_for_insert(event_record)
+            if existing:
+                smart_update_existing_event(existing, event_record)
+                events_updated += 1
+                continue
+
+            try:
+                insert_event(event_record, series_hint=series_hint)
+                events_new += 1
+            except Exception as exc:
+                logger.error(f"Failed to insert {template['title']} on {start_date}: {exc}")
+
+    return events_found, events_new, events_updated
 
 
 def parse_time(time_text: str) -> Optional[str]:
@@ -118,7 +238,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     continue
 
                 events_found += 1
-                content_hash = generate_content_hash(title, "Halfway Crooks", start_date)
+                content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
 
 
                 # Determine event type and time based on title
@@ -178,10 +298,21 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             browser.close()
 
-        logger.info(f"Halfway Crooks crawl complete: {events_found} found, {events_new} new, {events_updated} updated")
+        logger.info(f"Halfway Crooks scrape complete: {events_found} found, {events_new} new, {events_updated} updated")
 
     except Exception as e:
         logger.error(f"Failed to crawl Halfway Crooks: {e}")
         raise
+
+    # Generate recurring trivia events
+    venue_id = get_or_create_venue(VENUE_DATA)
+    r_found, r_new, r_updated = _generate_recurring_events(source_id, venue_id)
+    events_found += r_found
+    events_new += r_new
+    events_updated += r_updated
+
+    logger.info(
+        f"Halfway Crooks crawl complete (incl. recurring): {events_found} found, {events_new} new, {events_updated} updated"
+    )
 
     return events_found, events_new, events_updated

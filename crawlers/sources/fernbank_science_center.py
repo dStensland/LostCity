@@ -41,6 +41,23 @@ VENUE_DATA = {
     "venue_type": "museum",
     "spot_type": "museum",
     "website": BASE_URL,
+    "description": (
+        "Fernbank Science Center is a free public science facility operated by DeKalb County Schools, "
+        "featuring a planetarium, observatory, exhibit hall, and outdoor nature trail. All programming "
+        "is free and open to the community."
+    ),
+    # Hero image from fernbank.edu — verified 2026-03-11
+    "image_url": "http://www.fernbank.edu/assets/images/Fernbank-Science-Center.jpg",
+    # Hours verified 2026-03-11: Mon-Fri 2-5pm (school year), Sat 10am-5pm; Sun varies
+    "hours": {
+        "monday": "14:00-17:00",
+        "tuesday": "14:00-17:00",
+        "wednesday": "14:00-17:00",
+        "thursday": "14:00-17:00",
+        "friday": "14:00-17:00",
+        "saturday": "10:00-17:00",
+    },
+    "vibes": ["free", "educational", "family-friendly", "science", "planetarium"],
 }
 
 
@@ -54,32 +71,37 @@ def parse_date(date_text: str) -> Optional[str]:
 
     Returns first date found in YYYY-MM-DD format.
     """
-    # Try "Month Day(th/st/nd/rd)" format first
-    match = re.search(
+    # Collect every month/day mention and choose the next non-past occurrence.
+    matches = re.findall(
         r"(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})(?:st|nd|rd|th)?",
         date_text,
         re.IGNORECASE
     )
 
-    if match:
-        month, day = match.groups()
+    if matches:
         current_year = datetime.now().year
+        today = datetime.now().date()
+        candidates = []
 
-        # Try full month name
-        try:
-            dt = datetime.strptime(f"{month} {day} {current_year}", "%B %d %Y")
-        except ValueError:
-            # Try abbreviated month name
-            try:
-                dt = datetime.strptime(f"{month} {day} {current_year}", "%b %d %Y")
-            except ValueError:
-                return None
+        for month, day in matches:
+            parsed = None
+            for fmt in ("%B %d %Y", "%b %d %Y"):
+                try:
+                    parsed = datetime.strptime(f"{month} {day} {current_year}", fmt).date()
+                    break
+                except ValueError:
+                    continue
+            if parsed:
+                candidates.append(parsed)
 
-        # If date is in the past, assume next year
-        if dt.date() < datetime.now().date():
-            dt = dt.replace(year=current_year + 1)
+        if not candidates:
+            return None
 
-        return dt.strftime("%Y-%m-%d")
+        upcoming = [candidate for candidate in candidates if candidate >= today]
+        if upcoming:
+            return min(upcoming).strftime("%Y-%m-%d")
+
+        return None
 
     return None
 

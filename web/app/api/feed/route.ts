@@ -27,8 +27,15 @@ import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
 import { isSuppressedFromGeneralEventFeed } from "@/lib/event-content-classification";
 import { filterOutInactiveVenueEvents } from "@/lib/event-feed-health";
 import { applyFeedGate } from "@/lib/feed-gate";
-import { getUserFollowedEntityIds } from "@/lib/follows";
+import {
+  buildPersonalizedFeedSections,
+  rankAndFilterPersonalizedFeedEvents,
+  type FeedRecommendationReason,
+} from "@/lib/feed-personalization";
+import { buildFeedRequestPlan } from "@/lib/feed-request-plan";
+import { getCachedFeedSocialGraphContext } from "@/lib/feed-social-graph-context";
 import { ENABLE_INTEREST_CHANNELS_V1 } from "@/lib/launch-flags";
+import { createServerTimingRecorder } from "@/lib/server-timing";
 import {
   getUserSubscribedChannelMatchesForEvents,
   type EventChannelMatch,
@@ -36,20 +43,6 @@ import {
 
 import { fetchSocialProofCounts } from "@/lib/social-proof";
 import { format, startOfDay, addDays } from "date-fns";
-
-type RecommendationReason = {
-  type:
-    | "followed_venue"
-    | "followed_organization"
-    | "followed_channel"
-    | "neighborhood"
-    | "price"
-    | "friends_going"
-    | "trending"
-    | "category";
-  label: string;
-  detail?: string;
-};
 
 type FeedSectionId =
   | "tonight_for_you"
@@ -130,6 +123,7 @@ export async function GET(request: Request) {
   if (rateLimitResult) return rateLimitResult;
 
   try {
+    const timing = createServerTimingRecorder();
     const { searchParams } = new URL(request.url);
     const limit = Math.min(
       parseInt(searchParams.get("limit") || "50", 10),
@@ -163,11 +157,27 @@ export async function GET(request: Request) {
       // Private cache for user-specific content
       "Cache-Control": "private, max-age=60, stale-while-revalidate=120",
     };
+    const requestPlan = buildFeedRequestPlan({
+      personalized,
+      hasCategories: Boolean(categories?.length),
+      hasSearchQuery: Boolean(searchQuery),
+      hasTags: Boolean(tags?.length),
+      hasNeighborhoods: Boolean(neighborhoods?.length),
+      hasDateFilter: Boolean(dateFilter),
+      freeOnly,
+      hasCursor: Boolean(cursor),
+    });
     const cacheKey = `${user.id}|${searchParams.toString()}|${Math.floor(Date.now() / FEED_RESPONSE_CACHE_TTL_MS)}`;
-    const cachedResponse = await getCachedFeedResponse(cacheKey);
+    const cachedResponse = await timing.measure("cache_lookup", () =>
+      getCachedFeedResponse(cacheKey)
+    );
     if (cachedResponse) {
+      timing.addMetric("cache_hit", 0, "shared");
       return NextResponse.json(cachedResponse, {
-        headers: responseHeaders,
+        headers: {
+          ...responseHeaders,
+          "Server-Timing": timing.toHeader(),
+        },
       });
     }
 
@@ -190,18 +200,20 @@ export async function GET(request: Request) {
 
     // Get portal context, user preferences, and trending events in parallel (independent queries)
     const [portalContext, prefsResult, trendingEventsResult] =
-      await Promise.all([
-        resolvePortalQueryContext(supabase, searchParams),
-        supabase
-          .from("user_preferences")
-          .select("*")
-          .eq("user_id", user.id)
-          .maybeSingle(),
-        // Fetch trending events (same logic as /api/trending)
-        supabase
-          .from("events")
-          .select(
-            `
+      await timing.measure("bootstrap", () =>
+        Promise.all([
+          resolvePortalQueryContext(supabase, searchParams),
+          supabase
+            .from("user_preferences")
+            .select("*")
+            .eq("user_id", user.id)
+            .maybeSingle(),
+          // Fetch trending events (same logic as /api/trending)
+          requestPlan.shouldFetchTrending
+            ? supabase
+                .from("events")
+                .select(
+                  `
         id,
         title,
         start_date,
@@ -227,17 +239,19 @@ export async function GET(request: Request) {
         ),
         venue:venues(id, name, slug, neighborhood, location_designator, blurhash, city, image_url, active)
       `,
-          )
-          .gte("start_date", todayForTrending)
-          .lte("start_date", weekFromNow)
-          .is("canonical_event_id", null)
-          .is("portal_id", null)
-          .or("is_feed_ready.eq.true,is_feed_ready.is.null")
-          .or("is_sensitive.eq.false,is_sensitive.is.null")
-          .order("start_date", { ascending: true })
-          .order("data_quality", { ascending: false, nullsFirst: false })
-          .limit(200),
-      ]);
+              )
+              .gte("start_date", todayForTrending)
+              .lte("start_date", weekFromNow)
+              .is("canonical_event_id", null)
+              .is("portal_id", null)
+              .or("is_feed_ready.eq.true,is_feed_ready.is.null")
+              .or("is_sensitive.eq.false,is_sensitive.is.null")
+              .order("start_date", { ascending: true })
+              .order("data_quality", { ascending: false, nullsFirst: false })
+                .limit(200)
+            : Promise.resolve({ data: null, error: null }),
+        ])
+      );
 
     if (portalContext.hasPortalParamMismatch) {
       return NextResponse.json(
@@ -301,46 +315,12 @@ export async function GET(request: Request) {
     const {
       followedVenueIds,
       followedOrganizationIds,
-    } = await getUserFollowedEntityIds(supabase, user.id, {
-      portalId,
-      includeUnscoped: true,
-    });
-
-    // Parallelize independent queries: producerSources and friend IDs
-    type GetFriendIdsResult = { friend_id: string }[];
-    const [producerSourcesResult, friendIdsResult] = await Promise.all([
-      // Get sources that map to followed organizations (for querying events via source relationship)
-      followedOrganizationIds.length > 0
-        ? supabase
-            .from("sources")
-            .select("id, organization_id")
-            .in("organization_id", followedOrganizationIds)
-        : Promise.resolve({ data: null }),
-      // Get friends using the friendships table
-      supabase.rpc(
-        "get_friend_ids" as never,
-        { user_id: user.id } as never,
-      ) as unknown as Promise<{ data: GetFriendIdsResult | null }>,
-    ]);
-
-    // Extract producer sources data
-    let producerSourceIds: number[] = [];
-    const sourceOrganizationMap: Record<number, string> = {};
-
-    if (producerSourcesResult.data) {
-      producerSourceIds = producerSourcesResult.data.map(
-        (s: { id: number }) => s.id,
-      );
-      for (const source of producerSourcesResult.data as {
-        id: number;
-        organization_id: string;
-      }[]) {
-        sourceOrganizationMap[source.id] = source.organization_id;
-      }
-    }
-
-    // Extract friend IDs
-    const friendIds = (friendIdsResult.data || []).map((row) => row.friend_id);
+      producerSourceIds,
+      sourceOrganizationMap,
+      friendIds,
+    } = await timing.measure("social_graph_context", () =>
+      getCachedFeedSocialGraphContext(supabase as never, user.id, portalId)
+    );
 
     // Get events friends are going to
     // Use local date (not UTC from toISOString)
@@ -522,15 +502,22 @@ export async function GET(request: Request) {
     venue:venues(id, name, neighborhood, slug, location_designator, blurhash, city, image_url, active)
   `;
 
+    const shouldRunSupplementalQueries =
+      requestPlan.shouldRunSupplementalQueries;
+
     // Build all queries, tracking which ones we're running
-    const queries = [];
+    type FeedQueryResult = {
+      data: unknown[] | null;
+      error: unknown;
+    };
+    const queries: Array<PromiseLike<FeedQueryResult>> = [];
     const queryTypes: string[] = [];
 
     queries.push(query);
     queryTypes.push("main");
 
     // Followed venues query
-    if (followedVenueIds.length > 0) {
+    if (shouldRunSupplementalQueries && followedVenueIds.length > 0) {
       let venueQuery = portalClient
         .from("events")
         .select(eventSelect)
@@ -559,7 +546,7 @@ export async function GET(request: Request) {
     }
 
     // Followed organizations by organization_id query
-    if (followedOrganizationIds.length > 0) {
+    if (shouldRunSupplementalQueries && followedOrganizationIds.length > 0) {
       let producerQuery = portalClient
         .from("events")
         .select(eventSelect)
@@ -588,7 +575,7 @@ export async function GET(request: Request) {
     }
 
     // Followed organizations by source_id query
-    if (producerSourceIds.length > 0) {
+    if (shouldRunSupplementalQueries && producerSourceIds.length > 0) {
       let sourceQuery = portalClient
         .from("events")
         .select(eventSelect)
@@ -618,7 +605,7 @@ export async function GET(request: Request) {
 
     // OPTIMIZATION: Fetch neighborhood events directly with venue join
     // This avoids the sequential query pattern (venues -> venue_ids -> events)
-    if (favoriteNeighborhoods.length > 0) {
+    if (shouldRunSupplementalQueries && favoriteNeighborhoods.length > 0) {
       // Query events with venues in favorite neighborhoods
       // We filter by joining venue data and checking neighborhood
       let neighborhoodQuery = portalClient
@@ -651,7 +638,7 @@ export async function GET(request: Request) {
     }
 
     // Category events query
-    if (favoriteCategories.length > 0) {
+    if (shouldRunSupplementalQueries && favoriteCategories.length > 0) {
       let categoryQuery = portalClient
         .from("events")
         .select(eventSelect)
@@ -680,11 +667,16 @@ export async function GET(request: Request) {
     }
 
     // Execute all queries in parallel
-    const results = await Promise.all(queries);
+    const results = await timing.measure("event_queries", () =>
+      Promise.all(queries)
+    );
 
     // Extract main result
     const mainResult = results[0];
-    const { data: eventsData, error } = mainResult;
+    const { data: rawEventsData, error } = mainResult;
+    const eventsData = ((rawEventsData || []) as Array<
+      { id: number } & Record<string, unknown>
+    >);
 
     if (error) {
       return errorResponse(error, "GET /api/feed");
@@ -702,6 +694,7 @@ export async function GET(request: Request) {
       const { data } = result;
 
       if (data) {
+        const supplementalData = data as typeof eventsData;
         if (
           queryType === "venue" ||
           queryType === "org" ||
@@ -709,21 +702,21 @@ export async function GET(request: Request) {
         ) {
           followedEventsData = [
             ...followedEventsData,
-            ...(data as typeof eventsData),
+            ...supplementalData,
           ];
         } else if (queryType === "neighborhood") {
-          neighborhoodEventsData = data as typeof eventsData;
+          neighborhoodEventsData = supplementalData;
         } else if (queryType === "category") {
-          categoryEventsData = data as typeof eventsData;
+          categoryEventsData = supplementalData;
         }
       }
     }
 
     const mainEventIds = new Set(
-      (eventsData || []).map((e: { id: number }) => e.id),
+      eventsData.map((e) => e.id),
     );
-    const uniqueFollowedEvents = (followedEventsData || []).filter(
-      (e: { id: number }) => !mainEventIds.has(e.id),
+    const uniqueFollowedEvents = followedEventsData.filter(
+      (e) => !mainEventIds.has(e.id),
     );
 
     // Add followed events to the set
@@ -732,8 +725,8 @@ export async function GET(request: Request) {
     }
 
     // Add neighborhood events (avoiding duplicates with main + followed)
-    const uniqueNeighborhoodEvents = (neighborhoodEventsData || []).filter(
-      (e: { id: number }) => !mainEventIds.has(e.id),
+    const uniqueNeighborhoodEvents = neighborhoodEventsData.filter(
+      (e) => !mainEventIds.has(e.id),
     );
 
     // Add neighborhood events to the set
@@ -742,12 +735,12 @@ export async function GET(request: Request) {
     }
 
     // Add category events (avoiding duplicates with main + followed + neighborhood)
-    const uniqueCategoryEvents = (categoryEventsData || []).filter(
-      (e: { id: number }) => !mainEventIds.has(e.id),
+    const uniqueCategoryEvents = categoryEventsData.filter(
+      (e) => !mainEventIds.has(e.id),
     );
 
     const mergedEventsData = [
-      ...(eventsData || []),
+      ...eventsData,
       ...uniqueFollowedEvents,
       ...uniqueNeighborhoodEvents,
       ...uniqueCategoryEvents,
@@ -758,64 +751,68 @@ export async function GET(request: Request) {
       { user_id: string; username: string; display_name: string | null }[]
     > = {};
     if (friendIds.length > 0 && mergedEventsData.length > 0) {
-      const candidateEventIds = [
-        ...new Set((mergedEventsData as { id: number }[]).map((e) => e.id)),
-      ];
-      const { data: friendRsvpsData } = await supabase
-        .from("event_rsvps")
-        .select("event_id, user_id")
-        .in("event_id", candidateEventIds)
-        .in("user_id", friendIds)
-        .in("status", ["going", "interested"]);
+      await timing.measure("friend_signals", async () => {
+        const candidateEventIds = [
+          ...new Set((mergedEventsData as { id: number }[]).map((e) => e.id)),
+        ];
+        const { data: friendRsvpsData } = await supabase
+          .from("event_rsvps")
+          .select("event_id, user_id")
+          .in("event_id", candidateEventIds)
+          .in("user_id", friendIds)
+          .in("status", ["going", "interested"]);
 
-      const friendRsvps = (friendRsvpsData || []) as {
-        event_id: number;
-        user_id: string;
-      }[];
-      const rsvpUserIds = [...new Set(friendRsvps.map((rsvp) => rsvp.user_id))];
+        const friendRsvps = (friendRsvpsData || []) as {
+          event_id: number;
+          user_id: string;
+        }[];
+        const rsvpUserIds = [
+          ...new Set(friendRsvps.map((rsvp) => rsvp.user_id)),
+        ];
 
-      let profilesMap: Record<
-        string,
-        { username: string; display_name: string | null }
-      > = {};
-      if (rsvpUserIds.length > 0) {
-        const { data: profilesData } = await supabase
-          .from("profiles")
-          .select("id, username, display_name")
-          .in("id", rsvpUserIds);
+        let profilesMap: Record<
+          string,
+          { username: string; display_name: string | null }
+        > = {};
+        if (rsvpUserIds.length > 0) {
+          const { data: profilesData } = await supabase
+            .from("profiles")
+            .select("id, username, display_name")
+            .in("id", rsvpUserIds);
 
-        profilesMap = (profilesData || []).reduce(
-          (acc, p) => {
-            const profile = p as {
-              id: string;
-              username: string;
-              display_name: string | null;
-            };
-            acc[profile.id] = {
-              username: profile.username,
-              display_name: profile.display_name,
-            };
-            return acc;
-          },
-          {} as Record<
-            string,
-            { username: string; display_name: string | null }
-          >,
-        );
-      }
-
-      for (const rsvp of friendRsvps) {
-        const profile = profilesMap[rsvp.user_id];
-        if (!profile) continue;
-        if (!friendsGoingMap[rsvp.event_id]) {
-          friendsGoingMap[rsvp.event_id] = [];
+          profilesMap = (profilesData || []).reduce(
+            (acc, p) => {
+              const profile = p as {
+                id: string;
+                username: string;
+                display_name: string | null;
+              };
+              acc[profile.id] = {
+                username: profile.username,
+                display_name: profile.display_name,
+              };
+              return acc;
+            },
+            {} as Record<
+              string,
+              { username: string; display_name: string | null }
+            >,
+          );
         }
-        friendsGoingMap[rsvp.event_id].push({
-          user_id: rsvp.user_id,
-          username: profile.username,
-          display_name: profile.display_name,
-        });
-      }
+
+        for (const rsvp of friendRsvps) {
+          const profile = profilesMap[rsvp.user_id];
+          if (!profile) continue;
+          if (!friendsGoingMap[rsvp.event_id]) {
+            friendsGoingMap[rsvp.event_id] = [];
+          }
+          friendsGoingMap[rsvp.event_id].push({
+            user_id: rsvp.user_id,
+            username: profile.username,
+            display_name: profile.display_name,
+          });
+        }
+      });
     }
 
     type EventResult = {
@@ -868,7 +865,7 @@ export async function GET(request: Request) {
         active?: boolean | null;
       } | null;
       score?: number;
-      reasons?: RecommendationReason[];
+      reasons?: FeedRecommendationReason[];
       friends_going?: {
         user_id: string;
         username: string;
@@ -910,322 +907,58 @@ export async function GET(request: Request) {
     let channelMatchesByEventId = new Map<number, EventChannelMatch[]>();
 
     if (ENABLE_INTEREST_CHANNELS_V1 && events.length > 0) {
-      const channelMatchResult = await getUserSubscribedChannelMatchesForEvents(
-        serviceClient,
-        user.id,
-        events.map((event) => ({
-          id: event.id,
-          source_id: event.source_id ?? null,
-          organization_id: event.organization_id ?? null,
-          category: event.category ?? null,
-          tags: event.tags || [],
-          venue: event.venue ? { id: event.venue.id } : null,
-        })),
-        {
-          portalId,
-          includeUnscoped: true,
-        },
+      const channelMatchResult = await timing.measure("channel_matches", () =>
+        getUserSubscribedChannelMatchesForEvents(
+          serviceClient,
+          user.id,
+          events.map((event) => ({
+            id: event.id,
+            source_id: event.source_id ?? null,
+            organization_id: event.organization_id ?? null,
+            category: event.category ?? null,
+            tags: event.tags || [],
+            venue: event.venue ? { id: event.venue.id } : null,
+          })),
+          {
+            portalId,
+            includeUnscoped: true,
+          },
+        )
       );
 
       followedChannelCount = channelMatchResult.subscribedChannelCount;
       channelMatchesByEventId = channelMatchResult.matchesByEventId;
     }
 
-    // Score and sort events by relevance
-    events = events.map((event) => {
-      let score = 0;
-      const reasons: RecommendationReason[] = [];
-      const tasteMatches: string[] = [];
-      const eventGenres = normalizeLowercaseStringList(event.genres);
-      const haystack = [event.title, ...(event.tags || []), ...eventGenres]
-        .join(" ")
-        .toLowerCase();
-
-      // Boost for friends going (highest priority)
-      const friendsGoing = friendsGoingMap[event.id] || [];
-      if (friendsGoing.length > 0) {
-        score += 60 + friendsGoing.length * 10; // 60 base + 10 per friend
-        const friendNames = friendsGoing
-          .slice(0, 2)
-          .map((f) => f.display_name || `@${f.username}`);
-        const othersCount = friendsGoing.length - 2;
-        let detail = friendNames.join(" and ");
-        if (othersCount > 0) {
-          detail = `${friendNames[0]} and ${friendsGoing.length - 1} others`;
-        }
-        reasons.push({
-          type: "friends_going",
-          label: "Friends going",
-          detail,
-        });
-      }
-
-      // Boost for followed venues
-      if (event.venue?.id && followedVenueIds.includes(event.venue.id)) {
-        score += 50;
-        reasons.push({
-          type: "followed_venue",
-          label: recommendationLabels?.followed_venue ?? "You follow this venue",
-          detail: event.venue.name,
-        });
-      }
-
-      // Boost for followed organizations - check both direct organization_id and via source mapping
-      const eventOrganizationId =
-        event.organization_id ||
-        (event.source_id ? sourceOrganizationMap[event.source_id] : null);
-      if (
-        eventOrganizationId &&
-        followedOrganizationIds.includes(eventOrganizationId)
-      ) {
-        score += 45;
-        reasons.push({
-          type: "followed_organization",
-          label: recommendationLabels?.followed_organization ?? "From an organizer you follow",
-        });
-      }
-
-      const channelMatches = channelMatchesByEventId.get(event.id) || [];
-      if (channelMatches.length > 0) {
-        score += 40 + Math.min(10, (channelMatches.length - 1) * 3);
-        reasons.push({
-          type: "followed_channel",
-          label: recommendationLabels?.followed_channel ?? "Matches your channels",
-          detail: channelMatches
-            .slice(0, 2)
-            .map((match) => match.channel_name)
-            .join(", "),
-        });
-      }
-
-      // Boost for matching favorite categories
-      if (prefs?.favorite_categories && event.category) {
-        if (prefs.favorite_categories.includes(event.category)) {
-          score += 25;
-          tasteMatches.push(event.category);
-        }
-      }
-
-      // Boost for matching favorite genres
-      const matchingGenres = eventGenres.filter((genre) =>
-        favoriteGenreSet.has(genre),
-      );
-      if (matchingGenres.length > 0) {
-        score += Math.min(24, 8 + matchingGenres.length * 4);
-        tasteMatches.push(...matchingGenres.slice(0, 2));
-      }
-
-      // Boost for matching neighborhoods
-      if (prefs?.favorite_neighborhoods && event.venue?.neighborhood) {
-        if (prefs.favorite_neighborhoods.includes(event.venue.neighborhood)) {
-          score += 30;
-          reasons.push({
-            type: "neighborhood",
-            label: recommendationLabels?.neighborhood ?? "In your favorite area",
-            detail: event.venue.neighborhood,
-          });
-        }
-      }
-
-      if (
-        needsAccessibility.length > 0 &&
-        needsAccessibility.some((need) => haystack.includes(need))
-      ) {
-        score += 8;
-      }
-
-      if (
-        needsDietary.length > 0 &&
-        ((event.category || "").toLowerCase() === "food_drink" ||
-          needsDietary.some((need) => haystack.includes(need)))
-      ) {
-        score += 8;
-      }
-
-      if (
-        needsFamily.length > 0 &&
-        ((event.category || "").toLowerCase() === "family" ||
-          needsFamily.some((need) => haystack.includes(need)))
-      ) {
-        score += 12;
-      }
-
-      // Price preference
-      if (prefs?.price_preference === "free" && event.is_free) {
-        score += 20;
-        reasons.push({
-          type: "price",
-          label: "Free event",
-        });
-      } else if (prefs?.price_preference === "budget") {
-        if (
-          event.is_free ||
-          (event.price_min !== null && event.price_min <= 25)
-        ) {
-          score += 15;
-          reasons.push({
-            type: "price",
-            label: "Budget-friendly",
-          });
-        }
-      }
-
-      // Quality boost: events with images are more engaging
-      if (event.image_url) {
-        score += 5;
-      }
-
-      // Slight boost for events happening sooner
-      const daysAway = Math.max(
-        0,
-        Math.floor(
-          (new Date(event.start_date).getTime() - Date.now()) /
-            (1000 * 60 * 60 * 24),
-        ),
-      );
-      if (daysAway <= 7) {
-        score += Math.max(0, 14 - daysAway * 2);
-      } else if (daysAway <= 14) {
-        score += Math.max(0, 7 - (daysAway - 7));
-      }
-
-      if (tasteMatches.length > 0) {
-        const detail = tasteMatches[0]
-          .split("-")
-          .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
-          .join(" ");
-        reasons.push({
-          type: "category",
-          label: recommendationLabels?.category ?? "Fits your interests",
-          detail,
-        });
-      }
-
-      return {
-        ...event,
-        score,
-        reasons: reasons.length > 0 ? reasons : undefined,
-        friends_going: friendsGoing.length > 0 ? friendsGoing : undefined,
-      };
-    });
-
-    // Apply tag filter (post-query since tags is an array field)
-    if (tags?.length) {
-      events = events.filter((event) => {
-        const eventTags = (event as { tags?: string[] }).tags || [];
-        return tags.some((tag) => eventTags.includes(tag));
+    // Score, filter, and sort events by relevance
+    await timing.measure("ranking", async () => {
+      events = rankAndFilterPersonalizedFeedEvents(events, {
+        now,
+        tagsFilter: tags,
+        neighborhoodsFilter: neighborhoods,
+        favoriteCategories,
+        favoriteGenreSet,
+        favoriteNeighborhoods,
+        needsAccessibility,
+        needsDietary,
+        needsFamily,
+        followedVenueIds,
+        followedOrganizationIds,
+        sourceOrganizationMap,
+        channelMatchesByEventId,
+        friendsGoingMap,
+        recommendationLabels,
+        pricePreference: prefs?.price_preference || null,
+        restrictToPersonalizedMatches:
+          requestPlan.shouldRestrictToPersonalizedMatches,
+        shouldSuppressRegularShowtime: (event) => {
+          if (!isRegularShowtimeEvent(event.tags)) return false;
+          if (event.venue?.id && followedVenueIds.includes(event.venue.id)) {
+            return false;
+          }
+          return !event.venue || isChainCinemaVenue(event.venue);
+        },
       });
-    }
-
-    // Apply neighborhood filter (post-query since it requires venue join)
-    if (neighborhoods?.length) {
-      events = events.filter((event) => {
-        return (
-          event.venue?.neighborhood &&
-          neighborhoods.includes(event.venue.neighborhood)
-        );
-      });
-    }
-
-    // Filter only chain-cinema regular showtimes from curated feed.
-    // Indie theaters (Plaza/Tara/Landmark/Starlight, etc.) are intentionally kept.
-    // Followed venues always bypass suppression.
-    events = events.filter((event) => {
-      if (!isRegularShowtimeEvent(event.tags)) return true;
-      if (event.venue?.id && followedVenueIds.includes(event.venue.id))
-        return true;
-      return !isChainCinemaVenue(event.venue);
-    });
-
-    // When personalized mode is ON, filter to only events from followed entities
-    // or matching user preferences (unless user has explicitly applied other filters)
-    if (
-      personalized &&
-      !categories?.length &&
-      !searchQuery &&
-      !tags?.length &&
-      !neighborhoods?.length
-    ) {
-      events = events.filter((event) => {
-        const haystack = [
-          event.title,
-          ...(event.tags || []),
-          ...(event.genres || []),
-        ]
-          .join(" ")
-          .toLowerCase();
-        // Keep events from followed venues
-        if (event.venue?.id && followedVenueIds.includes(event.venue.id))
-          return true;
-        // Keep events from followed organizations
-        const eventOrgId =
-          event.organization_id ||
-          (event.source_id ? sourceOrganizationMap[event.source_id] : null);
-        if (eventOrgId && followedOrganizationIds.includes(eventOrgId))
-          return true;
-        // Keep events matching subscribed channels
-        if (channelMatchesByEventId.has(event.id)) return true;
-        // Keep events matching favorite categories
-        if (
-          prefs?.favorite_categories?.length &&
-          event.category &&
-          prefs.favorite_categories.includes(event.category)
-        )
-          return true;
-        // Keep events matching favorite genres
-        if (
-          event.genres?.some(
-            (genre) =>
-              typeof genre === "string" &&
-              favoriteGenreSet.has(genre.toLowerCase()),
-          )
-        )
-          return true;
-        // Keep events in favorite neighborhoods
-        if (
-          prefs?.favorite_neighborhoods?.length &&
-          event.venue?.neighborhood &&
-          prefs.favorite_neighborhoods.includes(event.venue.neighborhood)
-        )
-          return true;
-        // Keep events matching declared needs
-        if (
-          needsAccessibility.length &&
-          needsAccessibility.some((need) => haystack.includes(need))
-        )
-          return true;
-        if (
-          needsDietary.length &&
-          ((event.category || "").toLowerCase() === "food_drink" ||
-            needsDietary.some((need) => haystack.includes(need)))
-        )
-          return true;
-        if (
-          needsFamily.length &&
-          ((event.category || "").toLowerCase() === "family" ||
-            needsFamily.some((need) => haystack.includes(need)))
-        )
-          return true;
-        // Keep events where friends are going
-        if (friendsGoingMap[event.id]?.length) return true;
-        return false;
-      });
-    }
-
-    // Sort by relevance first, then by date/time.
-    events.sort((a, b) => {
-      const scoreDiff = (b.score || 0) - (a.score || 0);
-      if (scoreDiff !== 0) return scoreDiff;
-
-      const dateCompare = a.start_date.localeCompare(b.start_date);
-      if (dateCompare !== 0) return dateCompare;
-
-      const timeA = a.start_time || "23:59:59";
-      const timeB = b.start_time || "23:59:59";
-      const timeCompare = timeA.localeCompare(timeB);
-      if (timeCompare !== 0) return timeCompare;
-
-      return a.id - b.id;
     });
 
     // Handle cursor-based pagination
@@ -1250,158 +983,27 @@ export async function GET(request: Request) {
       events: EventResult[];
     };
 
-    const shouldBuildSections =
-      !parsedCursor &&
-      personalized &&
-      !categories?.length &&
-      !searchQuery &&
-      !tags?.length &&
-      !neighborhoods?.length &&
-      !dateFilter &&
-      !freeOnly;
+    const shouldBuildSections = requestPlan.shouldBuildSections && !parsedCursor;
 
     const sections: FeedSection[] = [];
 
-    if (shouldBuildSections) {
-      const sectionSeenIds = new Set<number>();
-      const takeForSection = (
-        candidates: EventResult[],
-        maxEvents = 8,
-      ): EventResult[] => {
-        const selected: EventResult[] = [];
-        for (const candidate of candidates) {
-          if (sectionSeenIds.has(candidate.id)) continue;
-          sectionSeenIds.add(candidate.id);
-          selected.push(candidate);
-          if (selected.length >= maxEvents) break;
-        }
-        return selected;
-      };
-
-      const isFollowedOrSocial = (event: EventResult) =>
-        Boolean(
-          event.friends_going?.length ||
-          event.reasons?.some(
-            (reason) =>
-              reason.type === "friends_going" ||
-              reason.type === "followed_venue" ||
-              reason.type === "followed_organization" ||
-              reason.type === "followed_channel",
-          ),
+    await timing.measure("sections", async () => {
+      if (shouldBuildSections) {
+        sections.push(
+          ...buildPersonalizedFeedSections(events, {
+            now,
+            today,
+            weekFromNow,
+            favoriteCategories,
+            favoriteGenreSet,
+            favoriteNeighborhoods,
+            needsAccessibility,
+            needsDietary,
+            needsFamily,
+          }),
         );
-
-      const matchesTaste = (event: EventResult) =>
-        Boolean(
-          (event.category && favoriteCategories.includes(event.category)) ||
-          event.genres?.some(
-            (genre) =>
-              typeof genre === "string" &&
-              favoriteGenreSet.has(genre.toLowerCase()),
-          ) ||
-          (event.venue?.neighborhood &&
-            favoriteNeighborhoods.includes(event.venue.neighborhood)),
-        );
-
-      const matchesNeeds = (event: EventResult) => {
-        if (
-          !needsAccessibility.length &&
-          !needsDietary.length &&
-          !needsFamily.length
-        )
-          return false;
-        const haystack = [
-          event.title,
-          ...(event.tags || []),
-          ...(event.genres || []),
-        ]
-          .join(" ")
-          .toLowerCase();
-
-        if (
-          needsAccessibility.length &&
-          needsAccessibility.some((need) => haystack.includes(need))
-        )
-          return true;
-        if (
-          needsDietary.length &&
-          ((event.category || "").toLowerCase() === "food_drink" ||
-            needsDietary.some((need) => haystack.includes(need)))
-        )
-          return true;
-        if (
-          needsFamily.length &&
-          ((event.category || "").toLowerCase() === "family" ||
-            needsFamily.some((need) => haystack.includes(need)))
-        )
-          return true;
-        return false;
-      };
-
-      const tonightCandidates = events.filter(
-        (event) =>
-          event.start_date === today &&
-          ((event.score || 0) >= 20 ||
-            isFollowedOrSocial(event) ||
-            matchesTaste(event)),
-      );
-      // Friday/Saturday nights deserve a bigger tonight section
-      const dayOfWeek = now.getDay(); // 0=Sun, 5=Fri, 6=Sat
-      const isWeekendNight = dayOfWeek === 5 || dayOfWeek === 6;
-      const tonightMax = isWeekendNight ? 12 : 8;
-      const tonightForYou = takeForSection(tonightCandidates, tonightMax);
-      if (tonightForYou.length >= 2) {
-        sections.push({
-          id: "tonight_for_you",
-          title: "Your Tonight",
-          description: "What's calling your name today.",
-          events: tonightForYou,
-        });
       }
-
-      const thisWeekCandidates = events.filter((event) => {
-        if (event.start_date < today || event.start_date > weekFromNow)
-          return false;
-        return matchesTaste(event) || matchesNeeds(event);
-      });
-      const thisWeekFitsYourTaste = takeForSection(thisWeekCandidates, 10);
-      if (thisWeekFitsYourTaste.length >= 2) {
-        sections.push({
-          id: "this_week_fits_your_taste",
-          title: "On Your Radar",
-          description: "This week's picks based on what you love.",
-          events: thisWeekFitsYourTaste,
-        });
-      }
-
-      const followedCandidates = events.filter((event) =>
-        isFollowedOrSocial(event),
-      );
-      const fromPlacesPeopleYouFollow = takeForSection(followedCandidates, 10);
-      if (fromPlacesPeopleYouFollow.length >= 2) {
-        sections.push({
-          id: "from_places_people_you_follow",
-          title: "Your Scene",
-          description: "From the spots and people you're into.",
-          events: fromPlacesPeopleYouFollow,
-        });
-      }
-
-      const exploreCandidates = events.filter(
-        (event) => !isFollowedOrSocial(event) && !matchesTaste(event),
-      );
-      const exploreSomethingNew = takeForSection(
-        exploreCandidates.length > 0 ? exploreCandidates : events,
-        6,
-      );
-      if (exploreSomethingNew.length >= 2) {
-        sections.push({
-          id: "explore_something_new",
-          title: "Wild Card",
-          description: "Something outside your usual orbit.",
-          events: exploreSomethingNew,
-        });
-      }
-    }
+    });
 
     // Get page of results
     const pageEvents = filteredEvents.slice(0, limit);
@@ -1413,7 +1015,9 @@ export async function GET(request: Request) {
     ];
     const counts =
       countEventIds.length > 0
-        ? await fetchSocialProofCounts(countEventIds)
+        ? await timing.measure("social_counts", () =>
+            fetchSocialProofCounts(countEventIds)
+          )
         : new Map<
             number,
             { going: number; interested: number; recommendations: number }
@@ -1505,73 +1109,76 @@ export async function GET(request: Request) {
       } | null;
     };
 
-    const trendingEventsRaw = suppressEventImagesIfVenueFlagged(
-      (trendingEventsResult.data || []) as TrendingEventData[],
-    );
-    // Filter by city to prevent cross-city leakage, then by adult content preference
-    const trendingEventsData = filterByPortalCity(
-      filterOutInactiveVenueEvents(trendingEventsRaw),
-      portalFilters.city || "Atlanta",
-      { allowMissingCity: true },
-    );
-    const filteredTrendingEventsData = (hideAdultContent
-      ? trendingEventsData.filter((event) => event.is_adult !== true)
-      : trendingEventsData).filter(
-      (event) => includeExhibits || !isSuppressedFromGeneralEventFeed(event),
-    );
     let trendingEvents: (TrendingEventData & {
       score: number;
       going_count: number;
     })[] = [];
 
-    if (filteredTrendingEventsData.length > 0) {
-      const trendingEventIds = filteredTrendingEventsData.map((e) => e.id);
+    await timing.measure("trending", async () => {
+      const trendingEventsRaw = suppressEventImagesIfVenueFlagged(
+        (trendingEventsResult.data || []) as TrendingEventData[],
+      );
+      // Filter by city to prevent cross-city leakage, then by adult content preference
+      const trendingEventsData = filterByPortalCity(
+        filterOutInactiveVenueEvents(trendingEventsRaw),
+        portalFilters.city || "Atlanta",
+        { allowMissingCity: true },
+      );
+      const filteredTrendingEventsData = (hideAdultContent
+        ? trendingEventsData.filter((event) => event.is_adult !== true)
+        : trendingEventsData).filter(
+        (event) => includeExhibits || !isSuppressedFromGeneralEventFeed(event),
+      );
 
-      // Get recent RSVPs and total going counts in parallel
-      const [recentRsvpsResult, goingCountsResult] = await Promise.all([
-        supabase
-          .from("event_rsvps")
-          .select("event_id")
-          .in("event_id", trendingEventIds)
-          .gte("created_at", hours48Ago),
-        supabase
-          .from("event_rsvps")
-          .select("event_id")
-          .in("event_id", trendingEventIds)
-          .eq("status", "going"),
-      ]);
+      if (filteredTrendingEventsData.length > 0) {
+        const trendingEventIds = filteredTrendingEventsData.map((e) => e.id);
 
-      // Count recent RSVPs per event
-      const recentRsvpCounts: Record<number, number> = {};
-      for (const rsvp of (recentRsvpsResult.data || []) as {
-        event_id: number;
-      }[]) {
-        recentRsvpCounts[rsvp.event_id] =
-          (recentRsvpCounts[rsvp.event_id] || 0) + 1;
+        // Get recent RSVPs and total going counts in parallel
+        const [recentRsvpsResult, goingCountsResult] = await Promise.all([
+          supabase
+            .from("event_rsvps")
+            .select("event_id")
+            .in("event_id", trendingEventIds)
+            .gte("created_at", hours48Ago),
+          supabase
+            .from("event_rsvps")
+            .select("event_id")
+            .in("event_id", trendingEventIds)
+            .eq("status", "going"),
+        ]);
+
+        // Count recent RSVPs per event
+        const recentRsvpCounts: Record<number, number> = {};
+        for (const rsvp of (recentRsvpsResult.data || []) as {
+          event_id: number;
+        }[]) {
+          recentRsvpCounts[rsvp.event_id] =
+            (recentRsvpCounts[rsvp.event_id] || 0) + 1;
+        }
+
+        // Count total going per event
+        const totalGoingCounts: Record<number, number> = {};
+        for (const rsvp of (goingCountsResult.data || []) as {
+          event_id: number;
+        }[]) {
+          totalGoingCounts[rsvp.event_id] =
+            (totalGoingCounts[rsvp.event_id] || 0) + 1;
+        }
+
+        // Score events based on recent activity + total interest
+        const scored = filteredTrendingEventsData.map((event) => ({
+          ...suppressEventImageIfVenueFlagged(event),
+          score:
+            (recentRsvpCounts[event.id] || 0) * 3 +
+            (totalGoingCounts[event.id] || 0),
+          going_count: totalGoingCounts[event.id] || 0,
+        }));
+
+        // Sort by score descending, take top 6
+        scored.sort((a, b) => b.score - a.score);
+        trendingEvents = scored.slice(0, 6);
       }
-
-      // Count total going per event
-      const totalGoingCounts: Record<number, number> = {};
-      for (const rsvp of (goingCountsResult.data || []) as {
-        event_id: number;
-      }[]) {
-        totalGoingCounts[rsvp.event_id] =
-          (totalGoingCounts[rsvp.event_id] || 0) + 1;
-      }
-
-      // Score events based on recent activity + total interest
-      const scored = filteredTrendingEventsData.map((event) => ({
-        ...suppressEventImageIfVenueFlagged(event),
-        score:
-          (recentRsvpCounts[event.id] || 0) * 3 +
-          (totalGoingCounts[event.id] || 0),
-        going_count: totalGoingCounts[event.id] || 0,
-      }));
-
-      // Sort by score descending, take top 6
-      scored.sort((a, b) => b.score - a.score);
-      trendingEvents = scored.slice(0, 6);
-    }
+    });
 
     // Build preferences response object (matching /api/preferences format)
     const preferencesResponse = prefs
@@ -1622,7 +1229,10 @@ export async function GET(request: Request) {
     await setCachedFeedResponse(cacheKey, payload);
 
     return NextResponse.json(payload, {
-      headers: responseHeaders,
+      headers: {
+        ...responseHeaders,
+        "Server-Timing": timing.toHeader(),
+      },
     });
     })();
 

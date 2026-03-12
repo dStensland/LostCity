@@ -2,13 +2,14 @@ export type PortalNavLabels = {
   feed?: string;
   find?: string;
   community?: string;
+  support?: string;
   groups?: string;
   events?: string;
   spots?: string;
   [key: string]: string | undefined;
 };
 
-export type PortalNavKey = "feed" | "find" | "community" | "events" | "spots";
+export type PortalNavKey = "feed" | "find" | "community" | "support" | "events" | "spots";
 
 export function getPortalNavLabel(
   navLabels: PortalNavLabels,
@@ -25,6 +26,10 @@ export function getPortalNavLabel(
 
   if (key === "community") {
     return navLabels.community || navLabels.groups || defaultLabel;
+  }
+
+  if (key === "support") {
+    return navLabels.support || defaultLabel;
   }
 
   if (key === "events") {

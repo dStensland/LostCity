@@ -11,6 +11,8 @@ import logging
 from datetime import datetime
 from typing import Optional
 
+import requests
+from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
@@ -35,6 +37,14 @@ VENUE_DATA = {
     "venue_type": "stadium",
     "spot_type": "stadium",
     "website": BASE_URL,
+    "vibes": ["sports", "landmark", "tours-available", "downtown", "world-class"],
+    "description": (
+        "Mercedes-Benz Stadium is the home of the Atlanta Falcons (NFL) and Atlanta United FC (MLS), "
+        "and one of the most acclaimed sports and entertainment venues in the world. The stadium "
+        "features a retractable roof, a 360-degree halo video board, and hosts major events including "
+        "Super Bowls, College Football Playoff games, MLS Cup, soccer internationals, concerts, and "
+        "college football. Tours available on non-event days."
+    ),
 }
 
 
@@ -52,6 +62,17 @@ def parse_time(time_text: str) -> Optional[str]:
     return None
 
 
+def should_skip_official_match(title: str) -> bool:
+    lowered = title.lower()
+    if lowered.startswith("atlanta united") and (" vs " in lowered or " vs." in lowered):
+        return True
+    if lowered.startswith("usmnt vs"):
+        return True
+    if lowered.startswith("18th match - usmnt"):
+        return True
+    return False
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
     """Crawl Mercedes-Benz Stadium events using Playwright."""
     source_id = source["id"]
@@ -60,6 +81,22 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     try:
+        # Fetch og:image from homepage to enrich venue record
+        venue_data = dict(VENUE_DATA)
+        try:
+            _headers = {
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+            }
+            _home_resp = requests.get(BASE_URL, headers=_headers, timeout=15)
+            if _home_resp.status_code == 200:
+                _home_soup = BeautifulSoup(_home_resp.text, "html.parser")
+                _og_image = _home_soup.find("meta", attrs={"property": "og:image"})
+                if _og_image and _og_image.get("content"):
+                    venue_data["image_url"] = _og_image["content"]
+                    logger.debug("Fetched og:image for Mercedes-Benz Stadium")
+        except Exception as _e:
+            logger.debug(f"Could not fetch og:image for Mercedes-Benz Stadium: {_e}")
+
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             context = browser.new_context(
@@ -68,7 +105,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_venue(venue_data)
 
             logger.info(f"Fetching Mercedes-Benz Stadium: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
@@ -133,6 +170,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                         break
 
                     if not title:
+                        i += 1
+                        continue
+
+                    if should_skip_official_match(title):
                         i += 1
                         continue
 

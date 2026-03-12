@@ -1,0 +1,39 @@
+name: Migration Parity
+
+on:
+  pull_request:
+    paths:
+      - "database/migrations/**"
+      - "supabase/migrations/**"
+      - "database/schema.sql"
+      - "database/audit_migration_parity.py"
+      - ".github/workflows/migration-parity.yml"
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - "database/migrations/**"
+      - "supabase/migrations/**"
+      - "database/schema.sql"
+      - "database/audit_migration_parity.py"
+      - ".github/workflows/migration-parity.yml"
+  workflow_dispatch:
+
+jobs:
+  verify-migration-parity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Verify migration parity
+        run: |
+          python3 database/audit_migration_parity.py --fail-on-unmatched

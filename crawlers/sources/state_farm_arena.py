@@ -15,6 +15,7 @@ from typing import Optional
 from playwright.sync_api import sync_playwright
 
 from db import (
+    get_client,
     get_or_create_venue,
     insert_event,
     find_event_by_hash,
@@ -40,9 +41,14 @@ VENUE_DATA = {
     "lat": 33.7573,
     "lng": -84.3963,
     "venue_type": "arena",
-    "spot_type": "stadium",
+    "spot_type": "arena",
     "website": BASE_URL,
-    "description": "State Farm Arena is a multi-purpose indoor arena in Atlanta, home of the Atlanta Hawks NBA team.",
+    "description": (
+        "State Farm Arena is a 21,000-seat multi-purpose indoor arena in "
+        "Downtown Atlanta, home of the Atlanta Hawks NBA team. It hosts "
+        "major concerts, sporting events, and family shows."
+    ),
+    "vibes": ["sports", "concerts", "downtown", "nba", "entertainment"],
 }
 
 
@@ -101,7 +107,17 @@ def determine_category(title: str) -> tuple[str, str, list[str]]:
         return "family", "show", ["family", "kids", "monster-trucks", "state-farm-arena", "downtown"]
     elif any(word in title_lower for word in ["disney", "ice show", "circus", "sesame"]):
         return "family", "show", ["family", "kids", "show", "state-farm-arena", "downtown"]
-    elif any(word in title_lower for word in ["comedy", "comedian", "katt williams", "kevin hart", "stand-up"]):
+    elif any(
+        word in title_lower
+        for word in [
+            "comedy",
+            "comedian",
+            "katt williams",
+            "kevin hart",
+            "gabriel iglesias",
+            "stand-up",
+        ]
+    ):
         return "nightlife", "comedy", ["comedy", "standup", "state-farm-arena", "downtown"]
     elif any(word in title_lower for word in ["tour", "concert", "live", "r&b", "hip hop", "country"]):
         return "music", "concert", ["concert", "live-music", "arena-show", "state-farm-arena", "downtown"]
@@ -111,6 +127,62 @@ def determine_category(title: str) -> tuple[str, str, list[str]]:
         return "music", "concert", ["concert", "live-music", "arena-show", "state-farm-arena", "downtown"]
     else:
         return "community", "event", ["event", "state-farm-arena", "downtown"]
+
+
+def should_skip_official_hawks_match(title: str) -> bool:
+    """Defer official Hawks home games to the dedicated team source."""
+    lowered = title.lower().strip()
+    return (
+        lowered.startswith("atlanta hawks vs")
+        or lowered.startswith("atlanta hawks v.")
+        or lowered.startswith("atlanta hawks v ")
+        or lowered.startswith("hawks vs ")
+        or lowered.startswith("hawks v. ")
+        or lowered.startswith("hawks v ")
+    )
+
+
+def build_event_record(
+    *,
+    source_id: int,
+    venue_id: int,
+    title: str,
+    start_date: str,
+    start_time: Optional[str],
+    category: str,
+    subcategory: str,
+    tags: list[str],
+    source_url: str,
+    image_url: Optional[str],
+) -> dict:
+    """Build the pre-enrichment event record for State Farm Arena."""
+    return {
+        "source_id": source_id,
+        "venue_id": venue_id,
+        "title": title,
+        "description": None,
+        "start_date": start_date,
+        "start_time": start_time,
+        "end_date": None,
+        "end_time": None,
+        "is_all_day": False,
+        "category": category,
+        "subcategory": subcategory,
+        "tags": tags,
+        "price_min": None,
+        "price_max": None,
+        "price_note": None,
+        "is_free": None,
+        "source_url": source_url,
+        # Leave blank so detail enrichment can replace it with offers.url.
+        "ticket_url": None,
+        "image_url": image_url,
+        "raw_text": f"{title} - {start_date}",
+        "extraction_confidence": 0.90,
+        "is_recurring": False,
+        "recurrence_rule": None,
+        "content_hash": generate_content_hash(title, "State Farm Arena", start_date),
+    }
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
@@ -137,6 +209,20 @@ def crawl(source: dict) -> tuple[int, int, int]:
             logger.info(f"Fetching State Farm Arena: {EVENTS_URL}")
             page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
             page.wait_for_timeout(3000)
+
+            # Enrich venue with og:image extracted from the events page
+            try:
+                og_image = page.evaluate(
+                    "() => { const m = document.querySelector('meta[property=\"og:image\"]'); "
+                    "return m ? m.getAttribute('content') : null; }"
+                )
+                if og_image:
+                    get_client().table("venues").update(
+                        {"image_url": og_image}
+                    ).eq("id", venue_id).execute()
+                    logger.debug("State Farm Arena: updated venue image from og:image")
+            except Exception as enrich_exc:
+                logger.warning(f"State Farm Arena: og:image enrichment failed: {enrich_exc}")
 
             # Scroll to load all content
             for _ in range(5):
@@ -178,6 +264,9 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     if title.lower() in skip_titles:
                         continue
 
+                    if should_skip_official_hawks_match(title):
+                        continue
+
                     # Try to find the date in a nearby h4 element
                     # Look at siblings and parent siblings
                     parent = h3.evaluate_handle("el => el.parentElement")
@@ -217,9 +306,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     events_found += 1
 
-                    content_hash = generate_content_hash(title, "State Farm Arena", date_text)
-
-
                     category, subcategory, tags = determine_category(title)
 
                     # Get specific event URL
@@ -233,34 +319,21 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             event_image = img_url
                             break
 
-                    event_record = {
-                        "source_id": source_id,
-                        "venue_id": venue_id,
-                        "title": title,
-                        "description": f"{title} at State Farm Arena in downtown Atlanta",
-                        "start_date": date_text,
-                        "start_time": start_time,
-                        "end_date": None,
-                        "end_time": None,
-                        "is_all_day": False,
-                        "category": category,
-                        "subcategory": subcategory,
-                        "tags": tags,
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": None,
-                        "is_free": None,
-                        "source_url": event_url,
-                        "ticket_url": event_url,
-                        "image_url": event_image,
-                        "raw_text": f"{title} - {date_text}",
-                        "extraction_confidence": 0.90,
-                        "is_recurring": False,
-                        "recurrence_rule": None,
-                        "content_hash": content_hash,
-                    }
+                    event_record = build_event_record(
+                        source_id=source_id,
+                        venue_id=venue_id,
+                        title=title,
+                        start_date=date_text,
+                        start_time=start_time,
+                        category=category,
+                        subcategory=subcategory,
+                        tags=tags,
+                        source_url=event_url,
+                        image_url=event_image,
+                    )
+                    content_hash = event_record["content_hash"]
 
-                    # Enrich from detail page
+                    # Enrich from detail page (description, image, price, artists)
                     enrich_event_record(event_record, source_name="State Farm Arena")
 
                     # Determine is_free if still unknown after enrichment
@@ -305,7 +378,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
     return events_found, events_new, events_updated
 
 
-def parse_text_events(page, source_id: int, venue_id: int) -> tuple[int, int, int]:
+def parse_text_events(page, source_id: int, venue_id: int, event_links: dict = None) -> tuple[int, int, int]:
     """Fallback text-based parsing when DOM selectors don't work."""
     events_found = 0
     events_new = 0
@@ -367,6 +440,9 @@ def parse_text_events(page, source_id: int, venue_id: int) -> tuple[int, int, in
             if not title:
                 continue
 
+            if should_skip_official_hawks_match(title):
+                continue
+
             # Check for duplicates
             event_key = f"{title}|{start_date}"
             if event_key in seen_events:
@@ -384,26 +460,15 @@ def parse_text_events(page, source_id: int, venue_id: int) -> tuple[int, int, in
 
             content_hash = generate_content_hash(title, "State Farm Arena", start_date)
 
-            existing = find_event_by_hash(content_hash)
-            if existing:
-                smart_update_existing_event(existing, event_record)
-                events_updated += 1
-                continue
-
             category, subcategory, tags = determine_category(title)
 
-            # Get specific event URL
-
-
-            event_url = find_event_url(title, event_links, EVENTS_URL)
-
-
+            event_url = find_event_url(title, event_links or {}, EVENTS_URL)
 
             event_record = {
                 "source_id": source_id,
                 "venue_id": venue_id,
                 "title": title,
-                "description": f"{title} at State Farm Arena in downtown Atlanta",
+                "description": None,
                 "start_date": start_date,
                 "start_time": start_time,
                 "end_date": None,
@@ -440,6 +505,12 @@ def parse_text_events(page, source_id: int, venue_id: int) -> tuple[int, int, in
                     event_record["price_max"] = event_record.get("price_max") or 0
                 else:
                     event_record["is_free"] = False
+
+            existing = find_event_by_hash(content_hash)
+            if existing:
+                smart_update_existing_event(existing, event_record)
+                events_updated += 1
+                continue
 
             try:
                 insert_event(event_record)

@@ -1,0 +1,111 @@
+name: Interest Channel Match Refresh
+
+on:
+  schedule:
+    # Hourly refresh to keep channel/event matches current.
+    - cron: "20 * * * *"
+  workflow_dispatch:
+    inputs:
+      portal_slug:
+        description: "Optional portal slug (leave empty for all eligible active portals)"
+        required: false
+        default: ""
+      start_date:
+        description: "Optional YYYY-MM-DD start date"
+        required: false
+        default: ""
+      end_date:
+        description: "Optional YYYY-MM-DD end date"
+        required: false
+        default: ""
+      max_events:
+        description: "Optional max events per portal (integer)"
+        required: false
+        default: ""
+      continue_on_error:
+        description: "Continue refreshing other portals if one fails"
+        required: false
+        default: "true"
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Resolve configuration
+        id: config
+        env:
+          BASE_URL: ${{ secrets.INTEREST_CHANNELS_REFRESH_BASE_URL }}
+          API_KEY: ${{ secrets.INTEREST_CHANNELS_REFRESH_API_KEY }}
+        run: |
+          if [ -z "$BASE_URL" ]; then
+            echo "Missing secret INTEREST_CHANNELS_REFRESH_BASE_URL"
+            exit 1
+          fi
+          if [ -z "$API_KEY" ]; then
+            echo "Missing secret INTEREST_CHANNELS_REFRESH_API_KEY"
+            exit 1
+          fi
+          echo "base_url=$BASE_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Build request payload
+        id: payload
+        run: |
+          payload="$(jq -n \
+            --arg portal_slug "${{ github.event.inputs.portal_slug || '' }}" \
+            --arg start_date "${{ github.event.inputs.start_date || '' }}" \
+            --arg end_date "${{ github.event.inputs.end_date || '' }}" \
+            --arg max_events "${{ github.event.inputs.max_events || '' }}" \
+            --arg continue_on_error "${{ github.event.inputs.continue_on_error || 'true' }}" \
+            '{
+              portal_slug: (if $portal_slug != "" then $portal_slug else null end),
+              start_date: (if $start_date != "" then $start_date else null end),
+              end_date: (if $end_date != "" then $end_date else null end),
+              max_events: (if $max_events != "" then ($max_events | tonumber) else null end),
+              continue_on_error: ($continue_on_error == "true")
+            } | with_entries(select(.value != null))'
+          )"
+
+          echo "$payload" > /tmp/interest_channel_refresh_payload.json
+          echo "payload=$payload" >> "$GITHUB_OUTPUT"
+
+      - name: Trigger refresh endpoint
+        id: call
+        env:
+          BASE_URL: ${{ steps.config.outputs.base_url }}
+          API_KEY: ${{ secrets.INTEREST_CHANNELS_REFRESH_API_KEY }}
+        run: |
+          set -euo pipefail
+
+          response="$(curl -sS -w '\n%{http_code}' \
+            -X POST "$BASE_URL/api/cron/interest-channel-matches" \
+            -H "Authorization: Bearer $API_KEY" \
+            -H "Content-Type: application/json" \
+            --data-binary @/tmp/interest_channel_refresh_payload.json)"
+
+          status_code="$(echo "$response" | tail -n1)"
+          body="$(echo "$response" | sed '$d')"
+
+          echo "$body" > /tmp/interest_channel_refresh_response.json
+          echo "status_code=$status_code" >> "$GITHUB_OUTPUT"
+
+          if [ "$status_code" -lt 200 ] || [ "$status_code" -ge 300 ]; then
+            echo "Refresh endpoint failed with status $status_code"
+            cat /tmp/interest_channel_refresh_response.json
+            exit 1
+          fi
+
+      - name: Publish summary
+        if: always()
+        run: |
+          echo "## Interest Channel Match Refresh" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Endpoint status: \`${{ steps.call.outputs.status_code || 'n/a' }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Triggered at: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f /tmp/interest_channel_refresh_response.json ]; then
+            echo '```json' >> "$GITHUB_STEP_SUMMARY"
+            cat /tmp/interest_channel_refresh_response.json >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi

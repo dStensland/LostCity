@@ -1341,8 +1341,7 @@ body[data-animations="none"] *::after {
   transition: none !important;
 }
 
-body[data-animations="subtle"] *:not(.ambient-layer):not(.ambient-layer *) {
-  animation-duration: calc(var(--animation-duration-multiplier) * 0.5s) !important;
+body[data-animations="subtle"] *:not(.ambient-layer):not(.ambient-layer *):not(.skeleton-shimmer):not(.skeleton-shimmer-light):not(.skeleton-shimmer-enhanced):not(.skeleton-card):not([class*="animate-pulse"]):not([class*="animate-horse"]) {
   transition-duration: 0.1s !important;
 }
 
@@ -2951,32 +2950,17 @@ body:has([data-forth-experience="true"]) {
   }
 }
 
-/* Horse gallop — trot with occasional backflip */
+/* Horse gallop — gentle trot */
 @keyframes horse-gallop {
-  /* Trot cycle: 0–80% (repeats ~4 times over 3s) */
   0%       { transform: translateY(0) rotate(0deg); }
-  5%       { transform: translateY(-3px) rotate(-4deg); }
-  10%      { transform: translateY(0) rotate(0deg); }
-  15%      { transform: translateY(-2px) rotate(3deg); }
-  20%      { transform: translateY(0) rotate(0deg); }
-  25%      { transform: translateY(-3px) rotate(-4deg); }
-  30%      { transform: translateY(0) rotate(0deg); }
-  35%      { transform: translateY(-2px) rotate(3deg); }
-  40%      { transform: translateY(0) rotate(0deg); }
-  45%      { transform: translateY(-3px) rotate(-4deg); }
+  12%      { transform: translateY(-3px) rotate(-3deg); }
+  25%      { transform: translateY(0) rotate(0deg); }
+  37%      { transform: translateY(-2px) rotate(2deg); }
   50%      { transform: translateY(0) rotate(0deg); }
-  55%      { transform: translateY(-2px) rotate(3deg); }
-  60%      { transform: translateY(0) rotate(0deg); }
-  65%      { transform: translateY(-3px) rotate(-4deg); }
-  70%      { transform: translateY(0) rotate(0deg); }
-  75%      { transform: translateY(-2px) rotate(3deg); }
-  /* Backflip: 80–95% */
-  80%      { transform: translateY(0) rotate(0deg); }
-  82%      { transform: translateY(-8px) rotate(0deg); }
-  87%      { transform: translateY(-12px) rotate(-180deg); }
-  92%      { transform: translateY(-8px) rotate(-340deg); }
-  95%      { transform: translateY(0) rotate(-360deg); }
-  100%     { transform: translateY(0) rotate(-360deg); }
+  62%      { transform: translateY(-3px) rotate(-3deg); }
+  75%      { transform: translateY(0) rotate(0deg); }
+  87%      { transform: translateY(-2px) rotate(2deg); }
+  100%     { transform: translateY(0) rotate(0deg); }
 }
 
 /* Horse walk — drifts left-to-right across the cityscape skeleton */
@@ -2988,7 +2972,7 @@ body:has([data-forth-experience="true"]) {
 /* Animation theme — NOT inline so Tailwind v4 generates animate-* utilities.
    (@theme inline only sets CSS vars but doesn't create utility classes.) */
 @theme {
-  --animate-horse-gallop: horse-gallop 3s ease-in-out infinite;
+  --animate-horse-gallop: horse-gallop 5s ease-in-out infinite;
   --animate-horse-walk: horse-walk 6s linear infinite alternate;
   --animate-neon-spin: neon-spin 1s linear infinite, neon-pulse 1.5s ease-in-out infinite;
 }
@@ -3539,7 +3523,7 @@ textarea:focus-visible {
     var(--twilight) 70%
   );
   background-size: 300% 100%;
-  animation: skeleton-shimmer 1.5s linear infinite;
+  animation: skeleton-shimmer 2.5s ease-in-out infinite;
 }
 
 /* Light mode skeleton shimmer - for family/light theme portals */
@@ -3551,7 +3535,7 @@ textarea:focus-visible {
     rgba(0, 0, 0, 0.06) 70%
   );
   background-size: 300% 100%;
-  animation: skeleton-shimmer 1.5s linear infinite;
+  animation: skeleton-shimmer 2.5s ease-in-out infinite;
 }
 
 /* Skeleton base - for use with shimmer */
@@ -3568,7 +3552,7 @@ textarea:focus-visible {
     rgba(37, 37, 48, 0.3) 70%
   );
   background-size: 300% 100%;
-  animation: skeleton-shimmer 1.5s linear infinite;
+  animation: skeleton-shimmer 2.5s ease-in-out infinite;
 }
 
 /* ============================================
@@ -5345,7 +5329,7 @@ body[data-forth-bg="off"] .rain-overlay {
     var(--twilight) 70%
   );
   background-size: 300% 100%;
-  animation: skeleton-shimmer 1.5s linear infinite;
+  animation: skeleton-shimmer 2.5s ease-in-out infinite;
 }
 
 /* Disable all micro-interactions for reduced motion */
@@ -7953,7 +7937,7 @@ body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-
     rgba(22, 22, 22, 0.6) 70%
   );
   background-size: 300% 100%;
-  animation: skeleton-shimmer 1.5s linear infinite;
+  animation: skeleton-shimmer 2.5s ease-in-out infinite;
 }
 
 /* ============================================
@@ -7997,7 +7981,7 @@ body:is([data-portal-slug="atlanta-test"], [data-portal-slug="atlanta-test-mood-
     rgba(22, 22, 22, 0.8) 70%
   );
   background-size: 300% 100%;
-  animation: skeleton-shimmer 1.5s linear infinite;
+  animation: skeleton-shimmer 2.5s ease-in-out infinite;
 }
 
 /* Detail hero image — brighter than mobile banner treatment */

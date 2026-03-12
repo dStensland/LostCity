@@ -1,0 +1,17 @@
+version: 1
+slug: delta-flight-museum
+name: Delta Flight Museum
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.deltamuseum.org/visit/whats-on/upcoming-events
+detail:
+  enabled: true
+data_goals:
+- events
+- images
+- tickets
+- planning

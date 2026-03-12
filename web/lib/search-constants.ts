@@ -1,28 +1,9 @@
-export const CATEGORIES = [
-  { value: "music", label: "Music" },
-  { value: "film", label: "Film" },
-  { value: "comedy", label: "Comedy" },
-  { value: "theater", label: "Theater" },
-  { value: "art", label: "Art" },
-  { value: "museums", label: "Museums" },
-  { value: "sports", label: "Sports" },
-  { value: "food_drink", label: "Food & Drink" },
-  { value: "nightlife", label: "Nightlife" },
-  { value: "community", label: "Community" },
-  { value: "fitness", label: "Fitness" },
-  { value: "family", label: "Family" },
-  { value: "learning", label: "Learning" },
-  { value: "dance", label: "Dance" },
-  { value: "tours", label: "Tours" },
-  { value: "meetup", label: "Meetup" },
-  { value: "words", label: "Words" },
-  { value: "religious", label: "Religious" },
-  { value: "markets", label: "Markets" },
-  { value: "wellness", label: "Wellness" },
-  { value: "gaming", label: "Gaming" },
-  { value: "outdoors", label: "Outdoors" },
-  { value: "other", label: "Other" },
-] as const;
+import { PUBLIC_EVENT_CATEGORY_OPTIONS } from "@/lib/event-taxonomy";
+
+export const CATEGORIES = PUBLIC_EVENT_CATEGORY_OPTIONS.map(({ id, label }) => ({
+  value: id,
+  label,
+}));
 
 
 export const DATE_FILTERS = [

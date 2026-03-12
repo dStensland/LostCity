@@ -13,6 +13,7 @@ import logging
 from datetime import datetime
 from typing import Optional
 
+from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
@@ -78,6 +79,7 @@ MONTH_MAP = {
     "JAN": 1, "FEB": 2, "MAR": 3, "APR": 4, "MAY": 5, "JUN": 6,
     "JUL": 7, "AUG": 8, "SEP": 9, "OCT": 10, "NOV": 11, "DEC": 12,
 }
+PRICE_RE = re.compile(r"\$(\d+(?:\.\d{2})?)")
 
 
 def parse_time(time_text: str) -> Optional[str]:
@@ -114,6 +116,63 @@ def parse_date_line(line: str) -> Optional[tuple[str, int, str]]:
         if day_name.upper() in DAY_NAMES and month_abbr.upper() in MONTH_MAP:
             return (month_abbr.upper(), int(day_num), suffix)
     return None
+
+
+def extract_detail_fields_from_html(html: str) -> dict:
+    """Extract the canonical ticket CTA and availability/price metadata."""
+    soup = BeautifulSoup(html, "html.parser")
+
+    ticket_url = None
+    price_note = None
+    price_min: Optional[float] = None
+    price_max: Optional[float] = None
+
+    button = soup.select_one("a.buy-tickets[href]")
+    if button:
+        href = (button.get("href") or "").strip()
+        if href.startswith("http"):
+            ticket_url = href
+        button_text = " ".join(button.get_text(" ", strip=True).split())
+        if button_text:
+            normalized = button_text.title()
+            if normalized in {"Sold Out", "Canceled", "Cancelled"}:
+                price_note = "Canceled" if normalized == "Cancelled" else normalized
+
+    price_block = soup.select_one(".price")
+    if price_block:
+        price_text = " ".join(price_block.get_text(" ", strip=True).split())
+        if price_text:
+            values = [float(value) for value in PRICE_RE.findall(price_text)]
+            if values:
+                price_min = min(values)
+                price_max = max(values)
+                price_note = price_text
+            elif not price_note:
+                price_note = price_text.title() if price_text.isupper() else price_text
+
+    return {
+        "ticket_url": ticket_url,
+        "price_min": price_min,
+        "price_max": price_max,
+        "price_note": price_note,
+    }
+
+
+def fetch_detail_fields(context, event_url: Optional[str]) -> dict:
+    """Fetch detail fields while the Playwright context is still active."""
+    if not event_url:
+        return {}
+
+    try:
+        detail_page = context.new_page()
+        detail_page.goto(event_url, wait_until="domcontentloaded", timeout=30000)
+        detail_page.wait_for_timeout(1500)
+        detail_fields = extract_detail_fields_from_html(detail_page.content())
+        detail_page.close()
+        return detail_fields
+    except Exception as exc:
+        logger.debug("Center Stage detail extraction failed for %s: %s", event_url, exc)
+        return {}
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
@@ -155,209 +214,182 @@ def crawl(source: dict) -> tuple[int, int, int]:
             # Get page text and parse line by line
             body_text = page.inner_text("body")
             lines = [l.strip() for l in body_text.split("\n") if l.strip()]
+            # Valid venue names to look for
+            venue_names = set(VENUE_DATA.keys())
+            venue_names.add("ATLANTA SYMPHONY HALL")
+
+            current_year = datetime.now().year
+            seen_events = set()
+
+            i = 0
+            while i < len(lines):
+                line = lines[i].upper()
+
+                skip_patterns = [
+                    "SKIP TO", "NEWSLETTER", "INSTAGRAM", "FACEBOOK", "TWITTER",
+                    "ABOUT THE", "FAQS", "VENUE RENTAL", "DIRECTIONS", "CONTACT",
+                    "FEATURED EVENTS", "UPCOMING SHOWS", "PREVIOUS", "NEXT",
+                    "BUY TICKETS", "MORE INFO", "ALL CENTER STAGE", "SUBMIT",
+                ]
+                if any(skip in line for skip in skip_patterns):
+                    i += 1
+                    continue
+
+                venue_key = None
+                if line in venue_names:
+                    venue_key = "CENTER STAGE" if line == "ATLANTA SYMPHONY HALL" else line
+
+                if venue_key and i + 1 < len(lines):
+                    date_info = parse_date_line(lines[i + 1])
+
+                    if date_info:
+                        month_abbr, day_num, date_suffix = date_info
+
+                        if i + 2 >= len(lines):
+                            i += 1
+                            continue
+
+                        title = lines[i + 2].strip()
+                        if title.upper() in venue_names or "BUY TICKETS" in title.upper():
+                            i += 1
+                            continue
+
+                        month_num = MONTH_MAP[month_abbr]
+                        year = current_year
+                        try:
+                            event_date = datetime(year, month_num, day_num)
+                            if event_date < datetime.now():
+                                year += 1
+                                event_date = datetime(year, month_num, day_num)
+                            start_date = event_date.strftime("%Y-%m-%d")
+                        except ValueError:
+                            i += 1
+                            continue
+
+                        presenter = None
+                        age_restriction = None
+                        start_time = None
+                        for j in range(3, 7):
+                            if i + j >= len(lines):
+                                break
+                            next_line = lines[i + j]
+                            if next_line.upper() in venue_names or "BUY TICKETS" in next_line.upper():
+                                break
+                            if next_line.lower().startswith("presented by"):
+                                presenter = next_line
+                            elif next_line in ["All Ages", "18+", "21+"]:
+                                age_restriction = next_line
+                            elif "Doors" in next_line or "Show" in next_line:
+                                start_time = parse_time(next_line)
+
+                        event_key = f"{title}|{start_date}|{venue_key}"
+                        if event_key in seen_events:
+                            i += 1
+                            continue
+                        seen_events.add(event_key)
+
+                        events_found += 1
+                        venue_name = VENUE_DATA.get(venue_key, VENUE_DATA["CENTER STAGE"])["name"]
+                        content_hash = generate_content_hash(title, venue_name, start_date)
+
+                        category = "music"
+                        subcategory = "concert"
+                        tags = ["live-music", "concert", "midtown"]
+
+                        title_lower = title.lower()
+                        if any(w in title_lower for w in ["comedy", "comedian", "stand-up", "stand up"]):
+                            category = "comedy"
+                            subcategory = None
+                            tags = ["comedy", "midtown"]
+                        elif any(w in title_lower for w in ["podcast", "had it"]):
+                            category = "community"
+                            subcategory = "podcast"
+                            tags = ["podcast", "midtown"]
+
+                        if venue_key == "THE LOFT":
+                            tags.append("the-loft")
+                        elif venue_key == "VINYL":
+                            tags.append("vinyl")
+                        else:
+                            tags.append("center-stage")
+
+                        description_parts = []
+                        if presenter:
+                            description_parts.append(presenter)
+                        if age_restriction:
+                            description_parts.append(age_restriction)
+                        if date_suffix:
+                            description_parts.append(date_suffix)
+                        description = ". ".join(description_parts) if description_parts else None
+
+                        event_url = find_event_url(title, event_links, EVENTS_URL)
+
+                        event_record = {
+                            "source_id": source_id,
+                            "venue_id": venue_ids.get(venue_key, venue_ids["CENTER STAGE"]),
+                            "title": title,
+                            "description": description,
+                            "start_date": start_date,
+                            "start_time": start_time,
+                            "end_date": None,
+                            "end_time": None,
+                            "is_all_day": False,
+                            "category": category,
+                            "subcategory": subcategory,
+                            "tags": tags,
+                            "price_min": None,
+                            "price_max": None,
+                            "price_note": None,
+                            "is_free": None,
+                            "source_url": event_url,
+                            "ticket_url": None,
+                            "image_url": image_map.get(title),
+                            "raw_text": f"{venue_key} - {lines[i + 1]} - {title}",
+                            "extraction_confidence": 0.90,
+                            "is_recurring": False,
+                            "recurrence_rule": None,
+                            "content_hash": content_hash,
+                        }
+
+                        enrich_event_record(event_record, source_name="Center Stage")
+                        detail_fields = fetch_detail_fields(context, event_url)
+
+                        if detail_fields.get("ticket_url"):
+                            event_record["ticket_url"] = detail_fields["ticket_url"]
+                        if detail_fields.get("price_min") is not None:
+                            event_record["price_min"] = detail_fields["price_min"]
+                        if detail_fields.get("price_max") is not None:
+                            event_record["price_max"] = detail_fields["price_max"]
+                        if detail_fields.get("price_note"):
+                            event_record["price_note"] = detail_fields["price_note"]
+
+                        if event_record.get("is_free") is None:
+                            desc_lower = (event_record.get("description") or "").lower()
+                            combined = f"{event_record.get('title', '').lower()} {desc_lower}"
+                            if any(kw in combined for kw in ["free", "no cost", "no charge", "complimentary"]):
+                                event_record["is_free"] = True
+                                event_record["price_min"] = event_record.get("price_min") or 0
+                                event_record["price_max"] = event_record.get("price_max") or 0
+                            else:
+                                event_record["is_free"] = False
+
+                        existing = find_event_by_hash(content_hash)
+                        if existing:
+                            smart_update_existing_event(existing, event_record)
+                            events_updated += 1
+                            i += 1
+                            continue
+
+                        try:
+                            insert_event(event_record)
+                            events_new += 1
+                            logger.info(f"Added: {title} at {venue_name} on {start_date}")
+                        except Exception as e:
+                            logger.error(f"Failed to insert: {title}: {e}")
+
+                i += 1
 
             browser.close()
-
-        # Valid venue names to look for
-        venue_names = set(VENUE_DATA.keys())
-        # Also match "ATLANTA SYMPHONY HALL" but map to Center Stage
-        venue_names.add("ATLANTA SYMPHONY HALL")
-
-        current_year = datetime.now().year
-        seen_events = set()
-
-        i = 0
-        while i < len(lines):
-            line = lines[i].upper()
-
-            # Skip navigation and non-event content
-            skip_patterns = [
-                "SKIP TO", "NEWSLETTER", "INSTAGRAM", "FACEBOOK", "TWITTER",
-                "ABOUT THE", "FAQS", "VENUE RENTAL", "DIRECTIONS", "CONTACT",
-                "FEATURED EVENTS", "UPCOMING SHOWS", "PREVIOUS", "NEXT",
-                "BUY TICKETS", "MORE INFO", "ALL CENTER STAGE", "SUBMIT",
-            ]
-            if any(skip in line for skip in skip_patterns):
-                i += 1
-                continue
-
-            # Check for venue name line
-            venue_key = None
-            if line in venue_names:
-                venue_key = line
-                # Map Symphony Hall to Center Stage
-                if venue_key == "ATLANTA SYMPHONY HALL":
-                    venue_key = "CENTER STAGE"
-
-            if venue_key and i + 1 < len(lines):
-                # Next line should be date
-                date_info = parse_date_line(lines[i + 1])
-
-                if date_info:
-                    month_abbr, day_num, date_suffix = date_info
-
-                    # Title should be on line i + 2
-                    if i + 2 >= len(lines):
-                        i += 1
-                        continue
-
-                    title = lines[i + 2].strip()
-
-                    # Skip if title looks like nav/UI
-                    if title.upper() in venue_names or "BUY TICKETS" in title.upper():
-                        i += 1
-                        continue
-
-                    # Build the date
-                    month_num = MONTH_MAP[month_abbr]
-                    year = current_year
-                    try:
-                        event_date = datetime(year, month_num, day_num)
-                        # If date is in the past, use next year
-                        if event_date < datetime.now():
-                            year += 1
-                            event_date = datetime(year, month_num, day_num)
-                        start_date = event_date.strftime("%Y-%m-%d")
-                    except ValueError:
-                        i += 1
-                        continue
-
-                    # Look for additional info in subsequent lines
-                    presenter = None
-                    age_restriction = None
-                    start_time = None
-
-                    # Scan next few lines for presenter, age, and time
-                    for j in range(3, 7):
-                        if i + j >= len(lines):
-                            break
-                        next_line = lines[i + j]
-
-                        # Stop if we hit another venue or navigation
-                        if next_line.upper() in venue_names:
-                            break
-                        if "BUY TICKETS" in next_line.upper():
-                            break
-
-                        # Check for presenter
-                        if next_line.lower().startswith("presented by"):
-                            presenter = next_line
-                        # Check for age restriction
-                        elif next_line in ["All Ages", "18+", "21+"]:
-                            age_restriction = next_line
-                        # Check for time
-                        elif "Doors" in next_line or "Show" in next_line:
-                            start_time = parse_time(next_line)
-
-                    # Create unique key for deduplication
-                    event_key = f"{title}|{start_date}|{venue_key}"
-                    if event_key in seen_events:
-                        i += 1
-                        continue
-                    seen_events.add(event_key)
-
-                    events_found += 1
-
-                    # Get venue name for hash
-                    venue_name = VENUE_DATA.get(venue_key, VENUE_DATA["CENTER STAGE"])["name"]
-
-                    # Generate content hash
-                    content_hash = generate_content_hash(title, venue_name, start_date)
-
-                    # Determine category based on title and presenter
-                    category = "music"
-                    subcategory = "concert"
-                    tags = ["live-music", "concert", "midtown"]
-
-                    title_lower = title.lower()
-                    if any(w in title_lower for w in ["comedy", "comedian", "stand-up", "stand up"]):
-                        category = "comedy"
-                        subcategory = None
-                        tags = ["comedy", "midtown"]
-                    elif any(w in title_lower for w in ["podcast", "had it"]):
-                        category = "community"
-                        subcategory = "podcast"
-                        tags = ["podcast", "midtown"]
-
-                    # Add venue-specific tag
-                    if venue_key == "THE LOFT":
-                        tags.append("the-loft")
-                    elif venue_key == "VINYL":
-                        tags.append("vinyl")
-                    else:
-                        tags.append("center-stage")
-
-                    # Build description
-                    description_parts = []
-                    if presenter:
-                        description_parts.append(presenter)
-                    if age_restriction:
-                        description_parts.append(age_restriction)
-                    if date_suffix:
-                        description_parts.append(date_suffix)
-                    description = ". ".join(description_parts) if description_parts else None
-
-                    # Get specific event URL
-                    event_url = find_event_url(title, event_links, EVENTS_URL)
-
-                    event_record = {
-                        "source_id": source_id,
-                        "venue_id": venue_ids.get(venue_key, venue_ids["CENTER STAGE"]),
-                        "title": title,
-                        "description": description,
-                        "start_date": start_date,
-                        "start_time": start_time,
-                        "end_date": None,
-                        "end_time": None,
-                        "is_all_day": False,
-                        "category": category,
-                        "subcategory": subcategory,
-                        "tags": tags,
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": None,
-                        "is_free": None,
-                        "source_url": event_url,
-                        "ticket_url": event_url,
-                        "image_url": image_map.get(title),
-                        "raw_text": f"{venue_key} - {lines[i + 1]} - {title}",
-                        "extraction_confidence": 0.90,
-                        "is_recurring": False,
-                        "recurrence_rule": None,
-                        "content_hash": content_hash,
-                    }
-
-                    # Enrich from detail page
-                    enrich_event_record(event_record, source_name="Center Stage")
-
-                    # Determine is_free if still unknown after enrichment
-                    if event_record.get("is_free") is None:
-                        desc_lower = (event_record.get("description") or "").lower()
-                        title_lower = event_record.get("title", "").lower()
-                        combined = f"{title_lower} {desc_lower}"
-                        if any(kw in combined for kw in ["free", "no cost", "no charge", "complimentary"]):
-                            event_record["is_free"] = True
-                            event_record["price_min"] = event_record.get("price_min") or 0
-                            event_record["price_max"] = event_record.get("price_max") or 0
-                        else:
-                            event_record["is_free"] = False
-
-                    # Check for existing event
-                    existing = find_event_by_hash(content_hash)
-                    if existing:
-                        smart_update_existing_event(existing, event_record)
-                        events_updated += 1
-                        i += 1
-                        continue
-
-                    try:
-                        insert_event(event_record)
-                        events_new += 1
-                        logger.info(f"Added: {title} at {venue_name} on {start_date}")
-                    except Exception as e:
-                        logger.error(f"Failed to insert: {title}: {e}")
-
-            i += 1
 
         logger.info(
             f"Center Stage crawl complete: {events_found} found, {events_new} new, {events_updated} updated"

@@ -11,6 +11,7 @@ from datetime import datetime
 from bs4 import BeautifulSoup
 import requests
 
+from sources._sports_bar_common import detect_sports_watch_party
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
@@ -140,14 +141,18 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 category = "nightlife"
                 subcategory = "drag"
                 tags = ["lgbtq", "drag", "nightlife", "woofs"]
-            elif any(sport in title_lower for sport in ["football", "soccer", "basketball", "baseball"]):
-                category = "sports"
-                subcategory = "watch_party"
-                tags = ["lgbtq", "sports", "watch-party", "woofs"]
             else:
-                category = "nightlife"
-                subcategory = "bar_event"
-                tags = ["lgbtq", "nightlife", "woofs"]
+                watch_party = detect_sports_watch_party(
+                    title,
+                    event_data.get("description", ""),
+                    extra_tags=["lgbtq", "woofs"],
+                )
+                if watch_party:
+                    category, subcategory, tags = watch_party
+                else:
+                    category = "nightlife"
+                    subcategory = "bar_event"
+                    tags = ["lgbtq", "nightlife", "woofs"]
 
             event_record = {
                 "source_id": source_id,

@@ -3,7 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePortal } from "@/lib/portal-context";
+import { getGroupsUnavailableCopy } from "@/lib/empty-state-copy";
 import { usePortalInterestChannels, type PortalChannel } from "@/lib/hooks/usePortalInterestChannels";
+import { getInterestChannelPresentation, getInterestChannelTypeLabel } from "@/lib/interest-channel-presentation";
+import { getPortalVertical } from "@/lib/portal";
 import {
   trackInterestChannelFilterUsage,
   trackInterestChannelPageView,
@@ -15,19 +18,7 @@ type PortalGroupsClientProps = {
 
 type PresetFilter = "all" | "city_county" | "school_board" | "volunteer" | "community";
 
-const CHANNEL_TYPE_LABELS: Record<string, string> = {
-  jurisdiction: "Jurisdiction",
-  institution: "Institution",
-  topic: "Topic",
-  community: "Community",
-  intent: "Intent",
-};
-
 const TYPE_ORDER = ["jurisdiction", "institution", "topic", "community", "intent"];
-
-function getTypeLabel(channelType: string): string {
-  return CHANNEL_TYPE_LABELS[channelType] || channelType;
-}
 
 function isSchoolBoardChannel(channel: PortalChannel): boolean {
   const sourceText = `${channel.slug} ${channel.name} ${channel.description || ""}`.toLowerCase();
@@ -56,8 +47,9 @@ function matchesPreset(channel: PortalChannel, preset: PresetFilter): boolean {
 
 export default function PortalGroupsClient({ portalSlug }: PortalGroupsClientProps) {
   const { portal } = usePortal();
-  const groupsLabel = (portal.settings.nav_labels as Record<string, string> | undefined)?.groups ?? "Interest Groups";
-  const isCivicPortal = portal.settings.vertical === "community";
+  const presentation = getInterestChannelPresentation(portal);
+  const groupsLabel = presentation.channelsLabel;
+  const isCivicPortal = getPortalVertical(portal) === "community";
   const trackingContext = useMemo(
     () => ({
       portalSlug,
@@ -134,10 +126,17 @@ export default function PortalGroupsClient({ portalSlug }: PortalGroupsClientPro
   }, [joinedOnly, orderedChannels, presetFilter, query, typeFilter]);
 
   if (isDisabled) {
+    const emptyState = getGroupsUnavailableCopy(groupsLabel);
     return (
       <div className="text-center py-16">
-        <p className="text-lg font-semibold text-[var(--cream)]">Groups coming soon</p>
-        <p className="text-sm text-[var(--muted)] mt-2">Community groups and interest channels are being set up for this portal.</p>
+        <p className="text-lg font-semibold text-[var(--cream)]">{emptyState.headline}</p>
+        <p className="text-sm text-[var(--muted)] mt-2">{emptyState.subline}</p>
+        <Link
+          href={`/${portalSlug}`}
+          className="inline-flex mt-4 px-4 py-2 rounded-lg bg-[var(--twilight)]/30 font-mono text-sm text-[var(--cream)] hover:bg-[var(--twilight)]/50 transition-colors"
+        >
+          {emptyState.actionLabel}
+        </Link>
       </div>
     );
   }
@@ -156,9 +155,9 @@ export default function PortalGroupsClient({ portalSlug }: PortalGroupsClientPro
 
         {joinedChannels.length > 0 && (
           <div>
-            <p className="font-mono text-2xs uppercase tracking-[0.14em] text-[var(--muted)]">
-              Joined Groups
-            </p>
+          <p className="font-mono text-2xs uppercase tracking-[0.14em] text-[var(--muted)]">
+            {presentation.joinedGroupsLabel}
+          </p>
             <div className="mt-2 flex flex-wrap gap-1.5">
               {joinedChannels.slice(0, 8).map((channel) => (
                 <Link
@@ -211,7 +210,7 @@ export default function PortalGroupsClient({ portalSlug }: PortalGroupsClientPro
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search groups (city, county, school board, volunteer...)"
+          placeholder={presentation.searchPlaceholder}
           className="w-full px-3 py-2 rounded-lg bg-[var(--night)] border border-[var(--twilight)] text-[var(--cream)] font-mono text-sm"
         />
 
@@ -289,7 +288,7 @@ export default function PortalGroupsClient({ portalSlug }: PortalGroupsClientPro
                   : "border-[var(--twilight)] text-[var(--muted)] hover:text-[var(--soft)]"
               }`}
             >
-              {getTypeLabel(type)}
+              {getInterestChannelTypeLabel(portal, type)}
             </button>
           ))}
           <button
@@ -340,7 +339,7 @@ export default function PortalGroupsClient({ portalSlug }: PortalGroupsClientPro
             >
               <div className="min-w-0">
                 <p className="font-mono text-xs uppercase tracking-[0.12em] text-[var(--muted)] flex items-center gap-1.5">
-                  {getTypeLabel(channel.channel_type)}
+                  {getInterestChannelTypeLabel(portal, channel.channel_type)}
                   {channel.scope === "global" ? " • Global" : ""}
                   {isSchoolBoardChannel(channel) && (
                     <span className="rounded-full border border-cyan-400/45 bg-cyan-500/15 px-1.5 py-0.5 text-2xs text-cyan-300 normal-case tracking-normal">

@@ -1,9 +1,9 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import {
-  getNeighborhoodsByTier,
   type Neighborhood,
 } from "@/config/neighborhoods";
+import { buildNeighborhoodIndexSections } from "@/lib/neighborhood-index";
 import { supabase } from "@/lib/supabase";
 import { toAbsoluteUrl } from "@/lib/site-url";
 
@@ -16,9 +16,9 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { portal } = await params;
   return {
-    title: "Neighborhoods — Atlanta Events & Spots | Lost City",
+    title: "Neighborhoods — Atlanta Events & Places | Lost City",
     description:
-      "Explore Atlanta neighborhoods — find events, spots, and things to do across the city's most vibrant areas.",
+      "Explore Atlanta neighborhoods and find events, places, and things to do across the city.",
     alternates: {
       canonical: toAbsoluteUrl(`/${portal}/neighborhoods`),
     },
@@ -53,29 +53,18 @@ function NeighborhoodIndexCard({
   count: number;
   portalSlug: string;
 }) {
-  const hasVenues = count > 0;
   return (
     <Link
       href={`/${portalSlug}/neighborhoods/${neighborhood.id}`}
-      className={`block p-3 rounded-lg border transition-all ${
-        hasVenues
-          ? "border-[var(--twilight)] bg-[var(--dusk)]/30 hover:bg-[var(--dusk)]/60 hover:border-[var(--muted)]"
-          : "border-[var(--twilight)]/50 bg-[var(--dusk)]/10 opacity-60 hover:opacity-80"
-      }`}
+      className="block p-3 rounded-lg border border-[var(--twilight)] bg-[var(--dusk)]/30 transition-all hover:bg-[var(--dusk)]/60 hover:border-[var(--muted)]"
     >
       <div className="font-mono text-xs font-medium text-[var(--cream)] truncate">
         {neighborhood.name}
       </div>
       <div className="flex items-center gap-2 mt-1">
-        {count > 0 ? (
-          <span className="font-mono text-2xs text-[var(--soft)]">
-            {count} {count === 1 ? "spot" : "spots"}
-          </span>
-        ) : (
-          <span className="font-mono text-2xs text-[var(--muted)]">
-            No spots yet
-          </span>
-        )}
+        <span className="font-mono text-2xs text-[var(--soft)]">
+          {count} {count === 1 ? "place" : "places"}
+        </span>
       </div>
     </Link>
   );
@@ -84,28 +73,7 @@ function NeighborhoodIndexCard({
 export default async function NeighborhoodsIndexPage({ params }: Props) {
   const { portal } = await params;
   const counts = await getVenueCountsByNeighborhood();
-
-  const tier1 = getNeighborhoodsByTier(1);
-  const tier2ITP = getNeighborhoodsByTier(2);
-  const tier3ITP = getNeighborhoodsByTier(3);
-
-  // Sort each group by venue count descending, then alphabetically
-  const sortByCount = (a: Neighborhood, b: Neighborhood) => {
-    const ca = counts[a.name] || 0;
-    const cb = counts[b.name] || 0;
-    if (cb !== ca) return cb - ca;
-    return a.name.localeCompare(b.name);
-  };
-
-  tier1.sort(sortByCount);
-  tier2ITP.sort(sortByCount);
-  tier3ITP.sort(sortByCount);
-
-  const sections = [
-    { title: "Active Neighborhoods", neighborhoods: tier1 },
-    { title: "Neighborhoods", neighborhoods: tier2ITP },
-    { title: "Emerging Areas", neighborhoods: tier3ITP },
-  ];
+  const sections = buildNeighborhoodIndexSections(counts);
 
   return (
     <div className="max-w-5xl mx-auto px-4 pb-20">
@@ -114,7 +82,7 @@ export default async function NeighborhoodsIndexPage({ params }: Props) {
           Neighborhoods
         </h1>
         <p className="text-sm text-[var(--soft)] mt-2 max-w-xl">
-          Explore events and spots across Atlanta&apos;s neighborhoods and metro areas.
+          Explore events and places across Atlanta&apos;s neighborhoods.
         </p>
       </section>
 
@@ -129,11 +97,11 @@ export default async function NeighborhoodsIndexPage({ params }: Props) {
             </span>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-            {section.neighborhoods.map((n) => (
+            {section.neighborhoods.map(({ neighborhood, count }) => (
               <NeighborhoodIndexCard
-                key={n.id}
-                neighborhood={n}
-                count={counts[n.name] || 0}
+                key={neighborhood.id}
+                neighborhood={neighborhood}
+                count={count}
                 portalSlug={portal}
               />
             ))}

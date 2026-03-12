@@ -26,7 +26,7 @@ function getDayLabel(dateStr: string): string {
   tomorrow.setDate(today.getDate() + 1);
 
   const toDateOnly = (d: Date) =>
-    `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
   if (toDateOnly(eventDate) === toDateOnly(today)) return "Today";
   if (toDateOnly(eventDate) === toDateOnly(tomorrow)) return "Tomorrow";

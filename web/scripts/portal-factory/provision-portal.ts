@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import {
   collectManifestSourceSlugs,
+  collectManifestStructuredSourceSlugs,
   loadBestEffortEnv,
   loadPortalManifest,
   parseCliOptions,
@@ -13,6 +14,7 @@ import {
 import {
   getCrawlerSupportedSlugs,
   profileExists,
+  validatePortalAccessibleSourceRowsInDb,
   validateSourceRowsInDb,
 } from "./source-pack-utils";
 
@@ -105,6 +107,33 @@ async function validateSourcePack(
     }
     if (dbValidation.inactiveInDb.length > 0) {
       throw new Error(`Source pack includes inactive sources: ${dbValidation.inactiveInDb.join(", ")}`);
+    }
+  }
+}
+
+async function validateStructuredOpportunitySources(
+  manifest: PortalManifest,
+  skipDb: boolean,
+): Promise<void> {
+  const structuredSourceSlugs = collectManifestStructuredSourceSlugs(manifest);
+  if (structuredSourceSlugs.length === 0 || skipDb) return;
+
+  const validation = await validatePortalAccessibleSourceRowsInDb(
+    manifest.portal.slug,
+    structuredSourceSlugs,
+  );
+
+  if (validation.portalFound) {
+    if (validation.missingInDb.length > 0) {
+      throw new Error(`Structured opportunity sources missing from sources table: ${validation.missingInDb.join(", ")}`);
+    }
+    if (validation.inactiveInDb.length > 0) {
+      throw new Error(`Structured opportunity sources are inactive: ${validation.inactiveInDb.join(", ")}`);
+    }
+    if (validation.inaccessibleInPortal.length > 0) {
+      throw new Error(
+        `Structured opportunity sources are not accessible via portal_source_access: ${validation.inaccessibleInPortal.join(", ")}`,
+      );
     }
   }
 }
@@ -694,6 +723,7 @@ async function main(): Promise<void> {
 
   await upsertSourceSubscriptions(supabase, portal.id, manifest, sourceIdsBySlug, options.dryRun);
   await refreshPortalSourceAccess(supabase, options.dryRun);
+  await validateStructuredOpportunitySources(manifest, options.skipDb);
   await upsertSections(supabase, portal.id, manifest, options.dryRun);
   await upsertChannelsAndRules(supabase, portal.id, manifest, sourceIdsBySlug, options.dryRun);
   await applyRefreshSchedule(supabase, portal, manifest, options.dryRun);

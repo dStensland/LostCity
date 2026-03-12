@@ -41,6 +41,7 @@ VENUES = {
         "state": "GA",
         "zip": "30315",
         "venue_type": "stadium",
+        "active": True,
         "website": "https://georgiastatesports.com",
     },
     "mens-basketball": {
@@ -52,6 +53,7 @@ VENUES = {
         "state": "GA",
         "zip": "30303",
         "venue_type": "arena",
+        "active": True,
         "website": "https://georgiastatesports.com",
     },
     "womens-basketball": {
@@ -63,6 +65,7 @@ VENUES = {
         "state": "GA",
         "zip": "30303",
         "venue_type": "arena",
+        "active": True,
         "website": "https://georgiastatesports.com",
     },
     "baseball": {
@@ -74,6 +77,7 @@ VENUES = {
         "state": "GA",
         "zip": "30034",
         "venue_type": "stadium",
+        "active": True,
         "website": "https://georgiastatesports.com",
     },
     "softball": {
@@ -85,6 +89,7 @@ VENUES = {
         "state": "GA",
         "zip": "30034",
         "venue_type": "stadium",
+        "active": True,
         "website": "https://georgiastatesports.com",
     },
     "default": {
@@ -96,6 +101,7 @@ VENUES = {
         "state": "GA",
         "zip": "30303",
         "venue_type": "university",
+        "active": True,
         "website": "https://gsu.edu",
     },
 }

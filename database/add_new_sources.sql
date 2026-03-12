@@ -27,7 +27,10 @@ INSERT INTO sources (name, slug, url, source_type, crawl_frequency) VALUES
 INSERT INTO sources (name, slug, url, source_type, crawl_frequency) VALUES
   ('Ferst Center for the Arts', 'ferst-center', 'https://arts.gatech.edu', 'scrape', 'daily'),
   ('Schwartz Center for Performing Arts', 'schwartz-center', 'https://arts.emory.edu', 'scrape', 'daily'),
-  ('Rialto Center for the Arts', 'rialto-center', 'https://rfrialto.gsu.edu', 'scrape', 'daily');
+  ('Rialto Center for the Arts', 'rialto-center', 'https://calendar.gsu.edu/rialto', 'scrape', 'daily'),
+  ('404 Day Weekend', '404-weekend', 'https://404weekend.com', 'scrape', 'weekly'),
+  ('Atlanta Fair', 'atlanta-fair', 'https://atlantafair.net', 'scrape', 'weekly'),
+  ('African Film Festival Atlanta', 'african-film-festival-atlanta', 'https://africanfilmfestatl.com', 'scrape', 'daily');
 
 -- ===== Additional Festivals =====
 INSERT INTO sources (name, slug, url, source_type, crawl_frequency) VALUES

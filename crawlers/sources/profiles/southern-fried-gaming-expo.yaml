@@ -1,0 +1,16 @@
+version: 1
+slug: southern-fried-gaming-expo
+name: Southern-Fried Gaming Expo
+integration_method: festival_schedule
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.southernfriedgamingexpo.com
+detail:
+  enabled: true
+data_goals:
+- events
+- images
+- tickets

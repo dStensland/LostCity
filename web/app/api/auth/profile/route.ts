@@ -2,8 +2,11 @@ import { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier } from "@/lib/rate-limit";
-import { isValidString, isValidUrl, validationError, checkBodySize, errorApiResponse, successResponse } from "@/lib/api-utils";
+import { isValidString, isValidUrl, isValidEnum, validationError, checkBodySize, errorApiResponse, successResponse } from "@/lib/api-utils";
 import { logger } from "@/lib/logger";
+import type { PrivacyMode } from "@/lib/types/profile";
+
+const PRIVACY_MODE_VALUES = ["low_key", "social", "open_book"] as const;
 
 /**
  * GET /api/auth/profile
@@ -155,7 +158,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { display_name, bio, location, website, is_public } = body;
+    const { display_name, bio, location, website, is_public, privacy_mode } = body;
 
     // Validate input fields to prevent DoS and XSS
     if (display_name !== undefined && !isValidString(display_name, 0, 100)) {
@@ -175,6 +178,9 @@ export async function PATCH(request: NextRequest) {
         return validationError("Invalid website URL");
       }
     }
+    if (privacy_mode !== undefined && !isValidEnum<PrivacyMode>(privacy_mode, PRIVACY_MODE_VALUES)) {
+      return validationError("privacy_mode must be one of: low_key, social, open_book");
+    }
 
     // Use service client for reliable database access
     const serviceClient = createServiceClient();
@@ -187,6 +193,7 @@ export async function PATCH(request: NextRequest) {
         ...(location !== undefined && { location }),
         ...(website !== undefined && { website }),
         ...(is_public !== undefined && { is_public }),
+        ...(privacy_mode !== undefined && { privacy_mode }),
         updated_at: new Date().toISOString(),
       } as never)
       .eq("id", user.id)

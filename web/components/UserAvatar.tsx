@@ -1,9 +1,10 @@
 "use client";
 
 import Image from "@/components/SmartImage";
-import { memo, useMemo, useState } from "react";
+import { memo, useMemo, useState, useRef, useEffect, useCallback } from "react";
 import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass, createCssVarClassForLength, createCssVarClassForNumber } from "@/lib/css-utils";
+import { ENABLE_CITY_MOMENTS } from "@/lib/launch-flags";
 
 // Neon color palette for avatar gradients
 const NEON_GRADIENTS = [
@@ -36,6 +37,11 @@ const SIZE_CONFIG: Record<AvatarSize, { size: number; text: string; ring: string
   xl: { size: 64, text: "text-base", ring: "ring-[3px]", glow: "20px" },
 };
 
+// Only one video plays at a time globally
+let activeVideo: HTMLVideoElement | null = null;
+
+type MomentPlayMode = "hover" | "auto" | "none";
+
 interface UserAvatarProps {
   src?: string | null;
   name: string;
@@ -46,6 +52,12 @@ interface UserAvatarProps {
   online?: boolean;
   /** Additional CSS classes */
   className?: string;
+  /** City moment video URL */
+  momentUrl?: string | null;
+  /** City moment thumbnail URL */
+  momentThumbnailUrl?: string | null;
+  /** How to play the city moment video */
+  momentPlayMode?: MomentPlayMode;
 }
 
 function UserAvatar({
@@ -55,12 +67,102 @@ function UserAvatar({
   glow = false,
   online,
   className = "",
+  momentUrl,
+  momentThumbnailUrl,
+  momentPlayMode = "none",
 }: UserAvatarProps) {
   const config = SIZE_CONFIG[size];
   const gradient = useMemo(() => getGradientForString(name), [name]);
   const initial = name.charAt(0).toUpperCase();
   const [imgError, setImgError] = useState(false);
+  const [videoPlaying, setVideoPlaying] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const onlineSize = Math.max(8, Math.round(config.size * 0.25));
+
+  // Gate: city moments must be enabled, and video is only playable at md+ sizes
+  const hasMoment = ENABLE_CITY_MOMENTS && !!momentUrl;
+  const canPlayVideo = hasMoment && (size === "md" || size === "lg" || size === "xl");
+  const effectivePlayMode = canPlayVideo ? momentPlayMode : "none";
+
+  const playVideo = useCallback(() => {
+    const video = videoRef.current;
+    if (!video || videoPlaying) return;
+
+    // Check reduced motion preference
+    if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      return;
+    }
+
+    // Pause any other playing video
+    if (activeVideo && activeVideo !== video) {
+      activeVideo.pause();
+    }
+
+    video.preload = "auto";
+    const playPromise = video.play();
+    if (playPromise) {
+      playPromise
+        .then(() => {
+          activeVideo = video;
+          setVideoPlaying(true);
+        })
+        .catch(() => {
+          // Autoplay blocked or video error — stay on avatar
+        });
+    }
+  }, [videoPlaying]);
+
+  const pauseVideo = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.pause();
+    video.currentTime = 0;
+    if (activeVideo === video) {
+      activeVideo = null;
+    }
+    setVideoPlaying(false);
+  }, []);
+
+  // Hover mode handlers
+  const handleMouseEnter = useCallback(() => {
+    if (effectivePlayMode === "hover") playVideo();
+  }, [effectivePlayMode, playVideo]);
+
+  const handleMouseLeave = useCallback(() => {
+    if (effectivePlayMode === "hover") pauseVideo();
+  }, [effectivePlayMode, pauseVideo]);
+
+  // Auto mode via IntersectionObserver
+  useEffect(() => {
+    if (effectivePlayMode !== "auto") return;
+    const container = containerRef.current;
+    if (!container) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          playVideo();
+        } else {
+          pauseVideo();
+        }
+      },
+      { threshold: 0.5 },
+    );
+
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [effectivePlayMode, playVideo, pauseVideo]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      const video = videoRef.current;
+      if (video && activeVideo === video) {
+        activeVideo = null;
+      }
+    };
+  }, []);
 
   const sizeClass = createCssVarClassForLength("--avatar-size", `${config.size}px`, "avatar-size");
   const glowSizeClass = createCssVarClassForLength("--avatar-glow-size", config.glow, "avatar-glow");
@@ -86,34 +188,67 @@ function UserAvatar({
 
   return (
     <div
+      ref={containerRef}
       className={`relative flex-shrink-0 avatar-root ${className} ${varClasses}`}
       style={{ width: config.size, height: config.size }}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       <ScopedStyles css={css} />
-      {/* Neon ring background */}
-      <div className="absolute inset-0 rounded-full opacity-60 blur-[1px] avatar-gradient avatar-ring-scale" />
+
+      {/* Moment indicator ring — animated gradient ring when user has a city moment */}
+      {hasMoment ? (
+        <div
+          className="absolute -inset-[3px] rounded-full opacity-80"
+          style={{
+            background: `conic-gradient(from 0deg, ${gradient.from}, ${gradient.to}, ${gradient.from})`,
+            animation: "spin 3s linear infinite",
+          }}
+        />
+      ) : (
+        /* Standard neon ring background */
+        <div className="absolute inset-0 rounded-full opacity-60 blur-[1px] avatar-gradient avatar-ring-scale" />
+      )}
 
       {/* Main avatar container */}
       <div
         className={`relative rounded-full overflow-hidden ${config.ring} ring-[var(--void)] transition-all duration-300 avatar-ring ${glow ? "avatar-glow" : ""}`}
         style={{ width: config.size, height: config.size }}
       >
-        {src && !imgError ? (
-          <Image
-            src={src}
-            alt={name}
-            width={config.size}
-            height={config.size}
-            className="w-full h-full object-cover"
-            onError={() => setImgError(true)}
+        {/* Static avatar layer */}
+        <div
+          className={`absolute inset-0 transition-opacity duration-300 ${videoPlaying ? "opacity-0" : "opacity-100"}`}
+        >
+          {src && !imgError ? (
+            <Image
+              src={src}
+              alt={name}
+              width={config.size}
+              height={config.size}
+              className="w-full h-full object-cover"
+              onError={() => setImgError(true)}
+            />
+          ) : (
+            <div
+              className={`w-full h-full flex items-center justify-center font-bold ${config.text} avatar-gradient avatar-initial`}
+            >
+              {initial}
+            </div>
+          )}
+        </div>
+
+        {/* Video layer — only rendered when moment exists and can play */}
+        {canPlayVideo && effectivePlayMode !== "none" && (
+          <video
+            ref={videoRef}
+            src={momentUrl!}
+            poster={momentThumbnailUrl || undefined}
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${videoPlaying ? "opacity-100" : "opacity-0"}`}
+            loop
+            muted
+            playsInline
+            preload="none"
           />
-        ) : (
-          /* Gradient fallback with initial */
-          <div
-            className={`w-full h-full flex items-center justify-center font-bold ${config.text} avatar-gradient avatar-initial`}
-          >
-            {initial}
-          </div>
         )}
       </div>
 

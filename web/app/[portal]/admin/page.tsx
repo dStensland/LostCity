@@ -9,6 +9,7 @@ type Stats = {
   activeSubscriptionsCount: number;
   totalSubscribersCount: number;
   channelsCount: number;
+  volunteerOpportunitiesCount: number;
 };
 
 export default function PortalAdminDashboard({ params }: { params: Promise<{ portal: string }> }) {
@@ -21,15 +22,17 @@ export default function PortalAdminDashboard({ params }: { params: Promise<{ por
   useEffect(() => {
     async function loadStats() {
       try {
-        const [subsRes, fedRes, channelsRes] = await Promise.all([
+        const [subsRes, fedRes, channelsRes, volunteerRes] = await Promise.all([
           fetch(`/api/admin/portals/${portal.id}/subscriptions`),
           fetch("/api/admin/federation/stats"),
           fetch(`/api/admin/portals/${portal.id}/channels`),
+          fetch(`/api/admin/portals/${portal.id}/volunteer/quality`),
         ]);
 
         const subsData = subsRes.ok ? await subsRes.json() : { subscriptions: [] };
         const fedData = fedRes.ok ? await fedRes.json() : { sources: [] };
         const channelsData = channelsRes.ok ? await channelsRes.json() : { channels: [] };
+        const volunteerData = volunteerRes.ok ? await volunteerRes.json() : { summary: { total_opportunities: 0 } };
 
         const ownedSources = (fedData.sources || []).filter(
           (s: { ownerPortalId: string | null }) => s.ownerPortalId === portal.id
@@ -45,6 +48,7 @@ export default function PortalAdminDashboard({ params }: { params: Promise<{ por
           activeSubscriptionsCount: subsData.subscriptions?.length || 0,
           totalSubscribersCount: totalSubscribers,
           channelsCount: channelsData.channels?.length || 0,
+          volunteerOpportunitiesCount: volunteerData.summary?.total_opportunities || 0,
         });
       } catch (err) {
         console.error("Failed to load stats:", err);
@@ -62,19 +66,19 @@ export default function PortalAdminDashboard({ params }: { params: Promise<{ por
           {portal.name} Admin
         </h1>
         <p className="font-mono text-sm text-[var(--muted)]">
-          Manage your portal&apos;s sources and subscriptions
+          Manage your portal&apos;s source access, live event feeds, and ongoing opportunity inventory
         </p>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
         <StatCard
           label="Owned Sources"
           value={loading ? "..." : stats?.ownedSourcesCount || 0}
           href={`/${slug}/admin/sources`}
         />
         <StatCard
-          label="Active Subscriptions"
+          label="Live Event Sources"
           value={loading ? "..." : stats?.activeSubscriptionsCount || 0}
           href={`/${slug}/admin/subscriptions`}
         />
@@ -87,6 +91,12 @@ export default function PortalAdminDashboard({ params }: { params: Promise<{ por
           label="Interest Channels"
           value={loading ? "..." : stats?.channelsCount || 0}
           href={`/${slug}/admin/channels`}
+        />
+        <StatCard
+          label="Volunteer Roles"
+          value={loading ? "..." : stats?.volunteerOpportunitiesCount || 0}
+          href={`/${slug}/admin/volunteer`}
+          color="green"
         />
       </div>
 
@@ -107,9 +117,9 @@ export default function PortalAdminDashboard({ params }: { params: Promise<{ por
             href={`/${slug}/admin/subscriptions`}
             className="p-4 bg-[var(--night)] rounded-lg hover:bg-[var(--twilight)] transition-colors"
           >
-            <h3 className="font-mono text-sm text-[var(--coral)] mb-1">Manage Subscriptions</h3>
+            <h3 className="font-mono text-sm text-[var(--coral)] mb-1">Manage Live Event Sources</h3>
             <p className="font-mono text-xs text-[var(--muted)]">
-              Subscribe to sources shared by other portals
+              Add dated event feeds shared by other portals
             </p>
           </Link>
           <Link
@@ -139,6 +149,15 @@ export default function PortalAdminDashboard({ params }: { params: Promise<{ por
               Update branding, filters, and configuration
             </p>
           </Link>
+          <Link
+            href={`/${slug}/admin/volunteer`}
+            className="p-4 bg-[var(--night)] rounded-lg hover:bg-[var(--twilight)] transition-colors"
+          >
+            <h3 className="font-mono text-sm text-[var(--coral)] mb-1">Volunteer Ops</h3>
+            <p className="font-mono text-xs text-[var(--muted)]">
+              Review volunteer funnel health, stale roles, and low-conversion opportunities
+            </p>
+          </Link>
         </div>
       </div>
 
@@ -146,10 +165,10 @@ export default function PortalAdminDashboard({ params }: { params: Promise<{ por
       <div className="mt-8 p-4 bg-[var(--night)] border border-[var(--twilight)] rounded-lg">
         <h3 className="font-mono text-sm text-[var(--coral)] mb-2">About Source Federation</h3>
         <p className="font-mono text-xs text-[var(--muted)] leading-relaxed">
-          As a portal owner, you can share your event sources with other portals.
-          Configure sharing rules to control which categories other portals can access.
-          You can also subscribe to sources shared by other portals and define Interest Channels
-          (city/county/school-board/topic groups) for user follow experiences.
+          As a portal owner, you can share your sources with other portals.
+          Live Event Sources are the dated feeds that power calendars and activity streams.
+          Ongoing Opportunity Sources support longer-term roles and program pathways.
+          Configure sharing rules to control access, and use Interest Channels to route civic and community activity.
         </p>
       </div>
     </div>

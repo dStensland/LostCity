@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
 import { useAuthenticatedFetch } from "./useAuthenticatedFetch";
+import { ENABLE_HANGS_V1 } from "@/lib/launch-flags";
 import type {
   HangWithVenue,
   FriendHang,
@@ -28,7 +29,7 @@ type FriendHangsResponse = {
 
 /**
  * Current user's active hang + planned hangs.
- * Refetches every 60s because active hangs can auto-expire.
+ * Refetches every 90s because active hangs can auto-expire.
  * Only enabled when user is authenticated.
  */
 export function useMyHangs() {
@@ -38,13 +39,14 @@ export function useMyHangs() {
     queryKey: ["hangs", "mine"],
     queryFn: async () => {
       const res = await fetch("/api/hangs");
-      if (!res.ok) throw new Error("Failed to fetch hangs");
+      if (!res.ok) return { active: null, planned: [] };
       return res.json();
     },
-    enabled: !!user,
+    enabled: !!user && ENABLE_HANGS_V1,
     staleTime: 30_000,
-    refetchInterval: 60_000,
+    refetchInterval: 90_000,
     gcTime: 5 * 60 * 1000,
+    retry: false,
   });
 }
 
@@ -108,10 +110,11 @@ export function useCreateHang() {
 
       return { previousData };
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       // Replace the optimistic placeholder with real server data.
       queryClient.invalidateQueries({ queryKey: ["hangs", "mine"] });
       queryClient.invalidateQueries({ queryKey: ["hangs", "hot"] });
+      queryClient.invalidateQueries({ queryKey: ["hangs", "venue", variables.venue_id] });
     },
     onError: (_error, _variables, context) => {
       if (context?.previousData !== undefined) {
@@ -148,6 +151,7 @@ export function useUpdateHang() {
       await queryClient.cancelQueries({ queryKey: ["hangs", "mine"] });
 
       const previousData = queryClient.getQueryData<MyHangsResponse>(["hangs", "mine"]);
+      const activeVenueId = previousData?.active?.venue_id ?? null;
 
       // Optimistically apply note/visibility changes to the active hang.
       // If action=end, clear the active hang immediately.
@@ -171,10 +175,13 @@ export function useUpdateHang() {
         };
       });
 
-      return { previousData };
+      return { previousData, activeVenueId };
     },
-    onSuccess: () => {
+    onSuccess: (_data, _variables, context) => {
       queryClient.invalidateQueries({ queryKey: ["hangs", "mine"] });
+      if (context?.activeVenueId != null) {
+        queryClient.invalidateQueries({ queryKey: ["hangs", "venue", context.activeVenueId] });
+      }
     },
     onError: (_error, _variables, context) => {
       if (context?.previousData !== undefined) {
@@ -210,6 +217,7 @@ export function useEndHang() {
       await queryClient.cancelQueries({ queryKey: ["hangs", "mine"] });
 
       const previousData = queryClient.getQueryData<MyHangsResponse>(["hangs", "mine"]);
+      const activeVenueId = previousData?.active?.venue_id ?? null;
 
       // Optimistically clear the active hang.
       queryClient.setQueryData<MyHangsResponse>(["hangs", "mine"], (old) => {
@@ -217,11 +225,14 @@ export function useEndHang() {
         return { active: null, planned: old.planned };
       });
 
-      return { previousData };
+      return { previousData, activeVenueId };
     },
-    onSuccess: () => {
+    onSuccess: (_data, _variables, context) => {
       queryClient.invalidateQueries({ queryKey: ["hangs", "mine"] });
       queryClient.invalidateQueries({ queryKey: ["hangs", "hot"] });
+      if (context?.activeVenueId != null) {
+        queryClient.invalidateQueries({ queryKey: ["hangs", "venue", context.activeVenueId] });
+      }
     },
     onError: (_error, _variables, context) => {
       if (context?.previousData !== undefined) {
@@ -235,7 +246,7 @@ export function useEndHang() {
 
 /**
  * Friends' active hangs.
- * Refetches every 60s. Only enabled when user is authenticated.
+ * Refetches every 90s. Only enabled when user is authenticated.
  */
 export function useFriendHangs() {
   const { user } = useAuth();
@@ -244,13 +255,14 @@ export function useFriendHangs() {
     queryKey: ["hangs", "friends"],
     queryFn: async () => {
       const res = await fetch("/api/hangs/friends");
-      if (!res.ok) throw new Error("Failed to fetch friend hangs");
+      if (!res.ok) return { friends: [], count: 0 };
       return res.json();
     },
-    enabled: !!user,
+    enabled: !!user && ENABLE_HANGS_V1,
     staleTime: 30_000,
-    refetchInterval: 60_000,
+    refetchInterval: 90_000,
     gcTime: 5 * 60 * 1000,
+    retry: false,
   });
 }
 
@@ -265,11 +277,13 @@ export function useVenueHangs(venueId: number) {
     queryKey: ["hangs", "venue", venueId],
     queryFn: async () => {
       const res = await fetch(`/api/hangs/venue/${venueId}`);
-      if (!res.ok) throw new Error("Failed to fetch venue hangs");
+      if (!res.ok) return { venue_id: venueId, total_count: 0, friend_hangs: [], public_count: 0 };
       return res.json();
     },
+    enabled: ENABLE_HANGS_V1,
     staleTime: 30_000,
     gcTime: 5 * 60 * 1000,
+    retry: false,
   });
 }
 
@@ -292,10 +306,12 @@ export function useHotVenues(portalSlug?: string, limit?: number) {
       if (limit !== undefined) params.set("limit", String(limit));
       const qs = params.toString();
       const res = await fetch(`/api/hangs/hot${qs ? `?${qs}` : ""}`);
-      if (!res.ok) throw new Error("Failed to fetch hot venues");
+      if (!res.ok) return { venues: [] };
       return res.json();
     },
+    enabled: ENABLE_HANGS_V1,
     staleTime: 60_000,
     gcTime: 5 * 60 * 1000,
+    retry: false,
   });
 }

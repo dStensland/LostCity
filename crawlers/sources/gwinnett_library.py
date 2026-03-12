@@ -236,50 +236,75 @@ def determine_category_and_tags(title: str, description: str = "") -> tuple[str,
 
     tags = ["library", "free", "gwinnett"]
 
-    # Add age-specific tags
-    if any(word in text for word in ["baby", "infant", "toddler", "preschool"]):
-        tags.append("kids")
-        tags.append("family-friendly")
-    elif any(word in text for word in ["storytime", "story time", "children"]):
-        tags.append("kids")
-        tags.append("family-friendly")
-    elif "teen" in text or "tween" in text or "young adult" in text or "ya " in text:
-        tags.append("teens")
+    # Add age-specific tags with granular age-band coverage
+    baby_words = ["baby", "infant", "toddler", "preschool", "birth to five"]
+    child_words = ["storytime", "story time", "children", "kids", "elementary"]
+    teen_words = ["teen", "tween", "young adult", "ya "]
+
+    is_family_audience = False
+
+    if any(word in text for word in baby_words):
+        # Add granular infant/toddler/preschool tags for birth-to-five content
+        if "baby" in text or "infant" in text:
+            tags.append("infant")
+        if "toddler" in text:
+            tags.append("toddler")
+        if "preschool" in text or "birth to five" in text:
+            tags.append("preschool")
+        tags += ["kids", "family-friendly"]
+        is_family_audience = True
+    elif any(word in text for word in child_words):
+        tags += ["elementary", "kids", "family-friendly"]
+        is_family_audience = True
+    elif any(word in text for word in teen_words):
+        tags.append("teen")
     elif "adult" in text and "young adult" not in text:
         tags.append("adults")
     else:
         tags.append("family-friendly")
 
     # Determine category and subcategory
+    # Override to "family" when child/family audience is detected
     if "book club" in text or "reading group" in text or "book discussion" in text:
-        return "words", "words.bookclub", tags
+        cat = "family" if is_family_audience else "words"
+        return cat, "words.bookclub", tags
     elif "storytime" in text or "story time" in text:
-        return "words", "words.storytelling", tags
+        return "family", "words.storytelling", tags
     elif "author" in text or "book signing" in text:
-        return "words", "words.reading", tags
+        cat = "family" if is_family_audience else "words"
+        return cat, "words.reading", tags
     elif "poetry" in text or "poem" in text:
-        return "words", "words.poetry", tags
+        cat = "family" if is_family_audience else "words"
+        return cat, "words.poetry", tags
     elif "writing" in text or "writer" in text:
-        return "words", "words.workshop", tags
+        cat = "family" if is_family_audience else "words"
+        return cat, "words.workshop", tags
     elif any(word in text for word in ["computer", "technology", "coding", "tech", "digital"]):
         tags.append("educational")
-        return "learning", None, tags
+        cat = "family" if is_family_audience else "learning"
+        return cat, None, tags
     elif any(word in text for word in ["craft", "art", "make", "create", "diy"]):
         tags.append("hands-on")
-        return "art", None, tags
+        cat = "family" if is_family_audience else "art"
+        return cat, None, tags
     elif any(word in text for word in ["music", "concert", "sing"]):
-        return "music", None, tags
+        cat = "family" if is_family_audience else "music"
+        return cat, None, tags
     elif any(word in text for word in ["film", "movie", "cinema"]):
-        return "film", None, tags
+        cat = "family" if is_family_audience else "film"
+        return cat, None, tags
     elif any(word in text for word in ["game", "gaming", "play"]):
         tags.append("play")
-        return "play", None, tags
+        cat = "family" if is_family_audience else "play"
+        return cat, None, tags
     elif any(word in text for word in ["fitness", "yoga", "exercise", "wellness"]):
-        return "fitness", None, tags
+        cat = "family" if is_family_audience else "fitness"
+        return cat, None, tags
     else:
         # Default to words/lecture for general library programs
         tags.append("educational")
-        return "words", "words.lecture", tags
+        cat = "family" if is_family_audience else "words"
+        return cat, "words.lecture", tags
 
 
 def crawl(source: dict) -> tuple[int, int, int]:

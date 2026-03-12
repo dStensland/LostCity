@@ -27,6 +27,33 @@ interface FindSearchInputProps {
   placeholder?: string;
 }
 
+function resolveViewAllHref(params: {
+  portalSlug: string;
+  resultType: SearchResult["type"];
+  query: string;
+  findType?: string | null;
+}): string {
+  const encodedQuery = encodeURIComponent(params.query);
+
+  if (params.resultType === "festival") {
+    return `/${params.portalSlug}/festivals?search=${encodedQuery}`;
+  }
+
+  if (params.resultType === "organizer") {
+    return `/${params.portalSlug}?view=community&search=${encodedQuery}`;
+  }
+
+  if (params.resultType === "venue") {
+    return `/${params.portalSlug}?view=find&type=destinations&search=${encodedQuery}`;
+  }
+
+  if (params.findType === "classes") {
+    return `/${params.portalSlug}?view=find&type=classes&search=${encodedQuery}`;
+  }
+
+  return `/${params.portalSlug}?view=find&type=events&search=${encodedQuery}`;
+}
+
 export default function FindSearchInput({
   portalSlug,
   portalId,
@@ -77,7 +104,7 @@ export default function FindSearchInput({
       }
       params.delete("page");
       const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
-      router.push(newUrl, { scroll: false });
+      router.replace(newUrl, { scroll: false });
     }, 300);
 
     return () => clearTimeout(urlSyncRef.current);
@@ -174,8 +201,19 @@ export default function FindSearchInput({
   const showPreSearch = search.showDropdown && search.query.length < 2;
   const showDropdown = search.shouldShowDropdown || showPreSearch;
 
-  // Track currentIndex for grouped display
-  let currentIndex = 0;
+  const quickActionsStartIndex = 0;
+  const groupedStartIndexes = search.groupOrder.reduce<Record<string, number>>(
+    (acc, type) => {
+      const priorTypes = search.groupOrder.slice(0, search.groupOrder.indexOf(type));
+      const priorResultsCount = priorTypes.reduce((sum, priorType) => {
+        const results = search.groupedResults[priorType as SearchResult["type"]] || [];
+        return sum + Math.min(results.length, 3);
+      }, 0);
+      acc[type] = search.quickActions.length + priorResultsCount;
+      return acc;
+    },
+    {}
+  );
 
   const searchId = "find-search";
   const suggestionsId = "find-search-suggestions";
@@ -195,7 +233,7 @@ export default function FindSearchInput({
           </svg>
         )}
       </div>
-      <label htmlFor={searchId} className="sr-only">Search events, venues, and organizers</label>
+      <label htmlFor={searchId} className="sr-only">Search events, places, and organizations</label>
       <input
         ref={inputRef}
         id={searchId}
@@ -352,11 +390,7 @@ export default function FindSearchInput({
             <QuickActionsList
               actions={search.quickActions}
               selectedIndex={search.selectedIndex}
-              startIndex={(() => {
-                const idx = currentIndex;
-                currentIndex += search.quickActions.length;
-                return idx;
-              })()}
+              startIndex={quickActionsStartIndex}
               onSelect={handleSelectQuickAction}
               onHover={search.setSelectedIndex}
             />
@@ -368,9 +402,6 @@ export default function FindSearchInput({
               {search.groupOrder.map((type, groupIdx) => {
                 const results = search.groupedResults[type as SearchResult["type"]] || [];
                 if (results.length === 0) return null;
-
-                const startIdx = currentIndex;
-                currentIndex += Math.min(results.length, 3);
 
                 const facetCount = search.facets.find(f => f.type === type)?.count;
                 const totalCount = facetCount ?? results.length;
@@ -390,7 +421,7 @@ export default function FindSearchInput({
                       results={results}
                       query={search.query}
                       selectedIndex={search.selectedIndex}
-                      startIndex={startIdx}
+                      startIndex={groupedStartIndexes[type] ?? search.quickActions.length}
                       onSelect={handleSelectSuggestion}
                       onHover={search.setSelectedIndex}
                       maxItems={3}
@@ -398,14 +429,15 @@ export default function FindSearchInput({
                       onViewAll={hasMore ? () => {
                         search.setShowDropdown(false);
                         search.setSelectedIndex(-1);
-                        if (type === "festival") {
-                          router.push(`/${portalSlug}/festivals?search=${encodeURIComponent(search.query)}`, { scroll: false });
-                        } else if (type === "organizer") {
-                          router.push(`/${portalSlug}?view=community&search=${encodeURIComponent(search.query)}`, { scroll: false });
-                        } else {
-                          const ft = type === "venue" ? "destinations" : "events";
-                          router.push(`/${portalSlug}?view=find&type=${ft}&search=${encodeURIComponent(search.query)}`, { scroll: false });
-                        }
+                        router.push(
+                          resolveViewAllHref({
+                            portalSlug,
+                            resultType: type as SearchResult["type"],
+                            query: search.query,
+                            findType,
+                          }),
+                          { scroll: false },
+                        );
                       } : undefined}
                     />
                   </div>

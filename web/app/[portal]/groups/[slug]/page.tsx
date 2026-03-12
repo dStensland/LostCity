@@ -491,7 +491,7 @@ export default async function GroupDetailPage({ params }: Props) {
           <Suspense fallback={null}>
             <CivicTabBar portalSlug={portalSlug} actLabel={actLabel} />
           </Suspense>
-          <div className="h-14" />
+          <div className="h-14 sm:hidden" />
         </>
       )}
     </>

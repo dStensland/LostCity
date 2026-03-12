@@ -237,6 +237,7 @@ def get_venues_needing_hours(
     limit: int = 50,
     destinations_only: bool = False,
     max_age_days: int = 30,
+    city: Optional[str] = None,
 ) -> list[dict]:
     """Get venues missing hours, with stale hours, or from lower-confidence sources."""
     client = get_client()
@@ -244,6 +245,9 @@ def get_venues_needing_hours(
     query = client.table("venues").select(
         "id, name, slug, address, city, lat, lng, hours, venue_type, hours_source, hours_updated_at"
     ).eq("active", True).not_.is_("lat", "null").not_.is_("lng", "null")
+
+    if city:
+        query = query.eq("city", city)
 
     if venue_type:
         query = query.eq("venue_type", venue_type)
@@ -373,6 +377,7 @@ def hydrate_venue_hours(venue: dict, dry_run: bool = False) -> dict:
 def main():
     parser = argparse.ArgumentParser(description="Hydrate venue hours from Google Places")
     parser.add_argument("--venue-type", help="Filter by venue type")
+    parser.add_argument("--city", help="Filter by city")
     parser.add_argument("--destinations", action="store_true", help="Only destination types (bars, restaurants, etc.)")
     parser.add_argument("--limit", type=int, default=50, help="Max venues to process")
     parser.add_argument("--dry-run", action="store_true", help="Preview without updating")
@@ -387,7 +392,13 @@ def main():
     logger.info("Google Places Hours Hydration")
     logger.info("=" * 70)
 
-    venues = get_venues_needing_hours(args.venue_type, args.limit, destinations_only=args.destinations, max_age_days=args.max_age_days)
+    venues = get_venues_needing_hours(
+        args.venue_type,
+        args.limit,
+        destinations_only=args.destinations,
+        max_age_days=args.max_age_days,
+        city=args.city,
+    )
     logger.info(f"Found {len(venues)} venues missing hours")
     logger.info("")
 

@@ -1,13 +1,13 @@
 version: 1
 slug: big-peach-running
 name: Big Peach Running Co
-integration_method: llm_crawler
+integration_method: python
 defaults: {}
 discovery:
   enabled: true
   type: html
   urls:
-  - https://www.bigpeachrunningco.com
+  - https://www.bigpeachrunningco.com/group-runs/
 detail:
   enabled: true
 data_goals:

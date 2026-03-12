@@ -35,7 +35,23 @@ VENUE_DATA = {
     "venue_type": "museum",
     "spot_type": "museum",
     "website": BASE_URL,
-    "description": "Historic house museum showcasing African American and Haitian art in restored Victorian home.",
+    "description": (
+        "Hammonds House Museum is a historic house museum dedicated to African American and Haitian art, "
+        "housed in the restored Victorian home of collector Dr. Otis Thrash Hammonds in Atlanta's West End. "
+        "Founded in 1988, it presents rotating exhibitions and community programs celebrating the African diaspora."
+    ),
+    # Hours verified 2026-03-11 from hammondshousemuseum.org
+    "hours": {
+        "monday": "closed",
+        "tuesday": "12:00-16:00",
+        "wednesday": "12:00-16:00",
+        "thursday": "12:00-16:00",
+        "friday": "12:00-16:00",
+        "saturday": "10:00-16:00",
+        "sunday": "closed",
+    },
+    # Admission: $5 adults, $3 students/seniors; verify at box office
+    "vibes": ["historic", "cultural", "art", "west-end"],
 }
 
 HEADERS = {
@@ -132,6 +148,24 @@ def parse_time_range(time_str: str) -> tuple[Optional[str], Optional[str]]:
     return start, end
 
 
+def normalize_ongoing_exhibit_dates(start_date: str, end_date: Optional[str]) -> tuple[str, Optional[str]]:
+    """
+    Keep ongoing exhibits active by normalizing the visible start date to today
+    once the run has already started.
+    """
+    if not start_date or not end_date:
+        return start_date, end_date
+
+    today = datetime.now().date()
+    start_dt = datetime.strptime(start_date, "%Y-%m-%d").date()
+    end_dt = datetime.strptime(end_date, "%Y-%m-%d").date()
+
+    if start_dt < today <= end_dt:
+        return today.strftime("%Y-%m-%d"), end_date
+
+    return start_date, end_date
+
+
 def is_title_candidate(line: str) -> bool:
     """Heuristic filter for event title lines in plain-text page content."""
     text = " ".join((line or "").split()).strip()
@@ -184,6 +218,24 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     try:
+        # ----------------------------------------------------------------
+        # 0. Homepage — extract og:image for venue record
+        # ----------------------------------------------------------------
+        try:
+            home_resp = requests.get(BASE_URL, headers=HEADERS, timeout=20)
+            if home_resp.status_code == 200:
+                home_soup = BeautifulSoup(home_resp.text, "html.parser")
+                og_img = home_soup.find("meta", property="og:image")
+                og_desc = home_soup.find("meta", property="og:description") or home_soup.find("meta", attrs={"name": "description"})
+                if og_img and og_img.get("content"):
+                    VENUE_DATA["image_url"] = og_img["content"]
+                    logger.debug("Hammonds House: og:image = %s", og_img["content"])
+                if og_desc and og_desc.get("content") and len(og_desc["content"]) > 30:
+                    VENUE_DATA["description"] = og_desc["content"]
+                    logger.debug("Hammonds House: og:description captured")
+        except Exception as _meta_exc:
+            logger.debug("Hammonds House: could not extract og meta from homepage: %s", _meta_exc)
+
         venue_id = get_or_create_venue(VENUE_DATA)
 
         # Try multiple potential event page paths
@@ -433,6 +485,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 if exhibit_title and on_view_line:
                     start_date, end_date = parse_date_range(on_view_line)
                     if start_date and end_date:
+                        start_date, end_date = normalize_ongoing_exhibit_dates(start_date, end_date)
                         content_hash = generate_content_hash(exhibit_title, "Hammonds House Museum", start_date)
                         event_record = {
                             "source_id": source_id,

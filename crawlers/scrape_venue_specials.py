@@ -171,9 +171,9 @@ HOURS_TIME_RE = re.compile(
 
 # Day range regex: "Tue-Sat", "Mon-Fri", "Tuesday-Saturday"
 DAY_RANGE_RE = re.compile(
-    r"\b(mon(?:day)?|tue(?:s(?:day)?)?|wed(?:nesday)?|thu(?:r(?:s(?:day)?)?)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)"
+    r"\b(mon(?:day)?s?|tue(?:s(?:day)?)?s?|wed(?:nesday)?s?|thu(?:r(?:s(?:day)?)?)?s?|fri(?:day)?s?|sat(?:urday)?s?|sun(?:day)?s?)"
     r"\s*[-–—&/,]\s*"
-    r"(mon(?:day)?|tue(?:s(?:day)?)?|wed(?:nesday)?|thu(?:r(?:s(?:day)?)?)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)",
+    r"(mon(?:day)?s?|tue(?:s(?:day)?)?s?|wed(?:nesday)?s?|thu(?:r(?:s(?:day)?)?)?s?|fri(?:day)?s?|sat(?:urday)?s?|sun(?:day)?s?)",
     re.I,
 )
 
@@ -181,6 +181,98 @@ DAY_RANGE_RE = re.compile(
 _playwright = None
 _browser = None
 _playwright_fallback_count = 0
+
+_EMPTY_EXTRACTION_PAYLOAD = {
+    "specials": [],
+    "holiday_hours": [],
+    "holiday_specials": [],
+    "hours": None,
+    "menu_url": None,
+    "reservation_url": None,
+    "description": None,
+    "short_description": None,
+    "phone": None,
+    "instagram": None,
+    "price_level": None,
+    "vibes": [],
+    "cuisine": None,
+    "service_style": None,
+    "genres": [],
+    "accepts_reservations": None,
+    "is_event_venue": None,
+    "is_chain": None,
+    "dietary_options": [],
+    "parking": [],
+    "menu_highlights": None,
+    "payment_notes": None,
+}
+
+_PARKED_SITE_RE = re.compile(
+    r"\b("
+    r"this domain is for sale|buy now for|start payment plan|hugedomains|"
+    r"domain expert|captcha security check|please prove you're not a robot|"
+    r"processing\s+or\s+start payment plan"
+    r")\b",
+    re.I,
+)
+
+_DAY_OR_RANGE_ONLY_RE = re.compile(
+    r"^(?:"
+    r"(?:mondays?|tuesdays?|wednesdays?|thursdays?|fridays?|saturdays?|sundays?|"
+    r"mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)"
+    r"(?:\s*(?:to|through|thru|and|[-–—&/,])\s*"
+    r"(?:mondays?|tuesdays?|wednesdays?|thursdays?|fridays?|saturdays?|sundays?|"
+    r"mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun))?"
+    r"|weekdays?|weekends?|daily|every day|7 days"
+    r")$",
+    re.I,
+)
+
+_SPECIAL_TRIGGER_RE = re.compile(
+    r"\b("
+    r"happy hour|brunch|bottomless|bogo|half[\s-]?off|half[\s-]?price|"
+    r"\$\d|taco|wing|oyster|wine|margarita|mimosa|sangria|mojito|"
+    r"industry night|ladies night|special"
+    r")\b",
+    re.I,
+)
+
+_TITLE_PATTERN_MAP: list[tuple[re.Pattern, str]] = [
+    (re.compile(r"\bhappy hour\b", re.I), "Happy Hour"),
+    (re.compile(r"\bbottomless brunch\b", re.I), "Bottomless Brunch"),
+    (re.compile(r"\bbrunch\b", re.I), "Weekend Brunch"),
+    (re.compile(r"\btaco\b", re.I), "Taco Tuesday"),
+    (re.compile(r"\bwing\b", re.I), "Wing Night"),
+    (re.compile(r"\boyster\b", re.I), "Oyster Night"),
+    (re.compile(r"\bwine\b", re.I), "Wine Night"),
+    (re.compile(r"\bmargarita\b", re.I), "Margarita Night"),
+    (re.compile(r"\bindustry night\b", re.I), "Industry Night"),
+    (re.compile(r"\bladies night\b", re.I), "Ladies Night"),
+]
+
+_PRICE_NOTE_PATTERNS: list[re.Pattern] = [
+    re.compile(r"(?:BOGO|bogo)\s+[A-Za-z][^|,.]*", re.I),
+    re.compile(r"half[\s-]?(?:off|price)\s+[A-Za-z][^|,.]*", re.I),
+    re.compile(r"\$\d+(?:\.\d{2})?(?:\s*[-/]\s*\$\d+(?:\.\d{2})?)?\s+[A-Za-z][^|,.]*", re.I),
+]
+
+_TITLE_SENTENCE_START_RE = re.compile(
+    r"^(join|grab|come|meet|bring|follow|click|view|learn|read|watch|shop|dine|every)\b",
+    re.I,
+)
+
+_EVENT_PROMO_RE = re.compile(
+    r"\b("
+    r"click here|make your reservation(?: today)?|buy tickets?|tickets? on sale|"
+    r"raffle prizes?|free yoga session|register now"
+    r")\b",
+    re.I,
+)
+
+_DATED_PROMO_RE = re.compile(
+    r"\b(save the date|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+\d{1,2}\b|\d{1,2}/\d{1,2}(?:/\d{2,4})?)",
+    re.I,
+)
 
 
 def _get_browser():
@@ -229,8 +321,13 @@ def _normalize_day(day_str: str) -> Optional[str]:
     d = day_str.strip().lower().rstrip(".")
     # Map full names and common abbreviations to canonical 3-letter keys
     _FULL_TO_ABBREV = {
-        "monday": "mon", "tuesday": "tue", "wednesday": "wed",
-        "thursday": "thu", "friday": "fri", "saturday": "sat", "sunday": "sun",
+        "monday": "mon", "mondays": "mon",
+        "tuesday": "tue", "tuesdays": "tue",
+        "wednesday": "wed", "wednesdays": "wed",
+        "thursday": "thu", "thursdays": "thu",
+        "friday": "fri", "fridays": "fri",
+        "saturday": "sat", "saturdays": "sat",
+        "sunday": "sun", "sundays": "sun",
     }
     if d in _FULL_TO_ABBREV:
         return _FULL_TO_ABBREV[d]
@@ -269,6 +366,251 @@ def _to_24h(hour: int, minute: int, ampm: Optional[str]) -> str:
     elif hour <= 6:
         hour += 12
     return f"{hour:02d}:{minute:02d}"
+
+
+def _empty_extraction_payload() -> dict:
+    """Return a fresh empty payload matching the LLM schema."""
+    return dict(_EMPTY_EXTRACTION_PAYLOAD)
+
+
+def _normalize_compact_time_tokens(text: str) -> str:
+    """Expand compact time suffixes like 3p-6p into 3pm-6pm."""
+    if not text:
+        return text
+    text = re.sub(r"(\d{1,2})(:\d{2})?\s*([ap])\b", r"\1\2\3m", text, flags=re.I)
+    return re.sub(r"\b(noon)\b", "12pm", text, flags=re.I)
+
+
+def _looks_like_parked_site(text: str) -> bool:
+    """Detect domain-sale / captcha placeholder pages that should never hydrate venues."""
+    if not text:
+        return False
+    return bool(_PARKED_SITE_RE.search(text))
+
+
+def _normalize_special_title(title: str, text: str) -> str:
+    """Normalize inferred special titles to something displayable."""
+    raw_title = re.sub(r"\s+", " ", (title or "").strip(" -:|"))
+    title = re.sub(r"\s+", " ", (title or "").strip(" -:|"))
+    title = re.sub(r"\s*\((?:except holidays?|holiday excluded?)\)\s*$", "", title, flags=re.I)
+    title = re.sub(r"\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)\s*(?:to|[-–—])\s*\d{1,2}(?::\d{2})?\s*(?:am|pm)\s*$", "", title, flags=re.I)
+    title = re.sub(r"^[^A-Za-z$]+", "", title)
+    skip_fallback = False
+    if _DAY_OR_RANGE_ONLY_RE.match(title):
+        title = ""
+    generic_title = title.lower() if title else ""
+    if generic_title == "brunch":
+        title = "Weekend Brunch"
+        generic_title = "weekend brunch"
+    if generic_title.startswith("brunch served"):
+        title = "Weekend Brunch"
+        generic_title = "weekend brunch"
+    if generic_title and any(token in generic_title for token in ("special", "menu", "deal", "rotating")):
+        title = ""
+    if generic_title in {"restaurant", "brewery", "brewpub", "bar", "home"}:
+        title = ""
+        skip_fallback = True
+    if title and (_TITLE_SENTENCE_START_RE.match(title) or title.isdigit()):
+        skip_fallback = True
+        title = ""
+    if title and re.search(r"\bbottomless brunch\b", text, re.I):
+        title = "Bottomless Brunch"
+    if title and "weekend brunch" in title.lower() and re.search(r"\bbottomless brunch\b", text, re.I):
+        title = "Bottomless Brunch"
+    if title and len(title.split()) > 8:
+        title = ""
+    if not skip_fallback and raw_title and (
+        _TITLE_SENTENCE_START_RE.match(raw_title) or raw_title.strip().isdigit()
+    ):
+        skip_fallback = True
+    if title:
+        return title[:80]
+    if skip_fallback:
+        return ""
+    for pattern, replacement in _TITLE_PATTERN_MAP:
+        if pattern.search(text):
+            return replacement
+    return ""
+
+
+def _extract_price_note(text: str) -> Optional[str]:
+    """Extract the most useful pricing phrase from a specials candidate line."""
+    cleaned = re.sub(r"\s+", " ", text).strip(" |")
+    for pattern in _PRICE_NOTE_PATTERNS:
+        match = pattern.search(cleaned)
+        if match:
+            return match.group(0).strip(" .")
+    if re.search(r"\bhappy hour\b", cleaned, re.I):
+        compact = re.sub(r".*?\bhappy hour\b[:!\s-]*", "", cleaned, count=1, flags=re.I).strip(" .")
+        return compact[:160] if compact else None
+    return None
+
+
+def _candidate_special_text(lines: list[str], idx: int) -> Optional[str]:
+    """Build a candidate specials string from the current line and nearby day labels."""
+    line = lines[idx].strip()
+    if not line:
+        return None
+
+    parts = [line]
+    if idx > 0 and _DAY_OR_RANGE_ONLY_RE.match(lines[idx - 1].strip()):
+        parts.insert(0, lines[idx - 1].strip())
+    if _DAY_OR_RANGE_ONLY_RE.match(line):
+        for next_idx in range(idx + 1, min(idx + 3, len(lines))):
+            nxt = lines[next_idx].strip()
+            if not nxt:
+                continue
+            parts.append(nxt)
+            if not _DAY_OR_RANGE_ONLY_RE.match(nxt):
+                following_idx = next_idx + 1
+                if following_idx < len(lines):
+                    following = lines[following_idx].strip()
+                    if following and (re.search(r"\$\d", following) or _SPECIAL_TRIGGER_RE.search(following)):
+                        parts.append(following)
+                break
+
+    candidate = " | ".join(part for part in parts if part)
+    if re.match(r"^(open|hours?)\b", candidate, re.I):
+        return None
+    if "|" not in candidate and len(candidate.split()) > 22:
+        return None
+    if not _SPECIAL_TRIGGER_RE.search(candidate):
+        return None
+    if not _infer_days_from_text(candidate):
+        return None
+    return candidate
+
+
+def _fallback_extract_specials(text: str) -> list[dict]:
+    """Heuristically extract recurring specials when the LLM path is unavailable."""
+    if not text:
+        return []
+
+    text = _normalize_compact_time_tokens(text)
+    lines = [line.strip(" |") for line in text.splitlines() if line.strip()]
+    seen: set[tuple[str, tuple[int, ...], Optional[str], Optional[str]]] = set()
+    extracted: list[dict] = []
+
+    for idx, _line in enumerate(lines):
+        if idx > 0 and _DAY_OR_RANGE_ONLY_RE.match(lines[idx - 1].strip()):
+            continue
+        candidate = _candidate_special_text(lines, idx)
+        if not candidate:
+            continue
+        if _EVENT_PROMO_RE.search(candidate):
+            continue
+        if _DATED_PROMO_RE.search(candidate):
+            continue
+
+        days = _infer_days_from_text(candidate)
+        if not days:
+            continue
+
+        time_start, time_end = _infer_time_from_text(candidate)
+        title_parts = [part.strip() for part in candidate.split("|") if part.strip()]
+        title_seed = ""
+        for part in title_parts:
+            if not _DAY_OR_RANGE_ONLY_RE.match(part):
+                title_seed = re.split(r"\bfrom\b|\. ", part, maxsplit=1, flags=re.I)[0].strip()
+                break
+        title = _normalize_special_title(title_seed, candidate)
+        if not title:
+            continue
+
+        lowered = candidate.lower()
+        special_type = "event_night" if any(
+            phrase in lowered
+            for phrase in (
+                "happy hour", "brunch", "taco", "wing", "oyster", "wine",
+                "margarita", "industry night", "ladies night", "bogo",
+            )
+        ) else "daily_special"
+
+        price_note = _extract_price_note(candidate)
+        key = (title.lower(), tuple(days), time_start, price_note)
+        if key in seen:
+            continue
+        seen.add(key)
+
+        extracted.append(
+            {
+                "title": title,
+                "type": special_type,
+                "description": None,
+                "days": days,
+                "time_start": time_start,
+                "time_end": time_end,
+                "price_note": price_note,
+                "_days_already_parsed": True,
+            }
+        )
+
+    collapsed: dict[tuple[str, tuple[int, ...]], dict] = {}
+    for item in extracted:
+        key = (item["title"].lower(), tuple(item["days"]))
+        current = collapsed.get(key)
+        candidate_score = (
+            int(bool(item.get("time_start"))) +
+            int(bool(item.get("time_end"))) +
+            int(bool(item.get("price_note")))
+        )
+        if current is None:
+            collapsed[key] = item
+            continue
+        current_score = (
+            int(bool(current.get("time_start"))) +
+            int(bool(current.get("time_end"))) +
+            int(bool(current.get("price_note")))
+        )
+        if candidate_score > current_score:
+            collapsed[key] = item
+
+    return list(collapsed.values())
+
+
+def _fallback_extract_hours(text: str) -> Optional[dict]:
+    """Extract only operating-hours lines, excluding specials/happy-hour noise."""
+    if not text:
+        return None
+    candidate_lines = []
+    for line in text.splitlines():
+        cleaned = line.strip()
+        if not cleaned:
+            continue
+        lowered = cleaned.lower()
+        if "happy hour" in lowered or "special" in lowered:
+            continue
+        if "brunch" in lowered and "open" not in lowered:
+            continue
+        if re.search(r"\b(open|hours?)\b", lowered) and (
+            DAY_RANGE_RE.search(cleaned) or _DAY_NAME_RE.search(cleaned)
+        ):
+            candidate_lines.append(cleaned)
+    if not candidate_lines:
+        return None
+    merged_hours = {}
+    for line in candidate_lines:
+        parsed = parse_bio_hours(line)
+        if not parsed:
+            continue
+        for day, value in parsed.items():
+            merged_hours.setdefault(day, value)
+    return merged_hours or None
+
+
+def _fallback_extract_data(combined: str) -> dict:
+    """Build a minimal extraction payload without any LLM dependency."""
+    payload = _empty_extraction_payload()
+    normalized = _normalize_compact_time_tokens(combined)
+    payload["specials"] = _fallback_extract_specials(normalized)
+    if re.search(r"\bbottomless brunch\b", normalized, re.I):
+        for special in payload["specials"]:
+            if special.get("title") == "Weekend Brunch":
+                special["title"] = "Bottomless Brunch"
+    payload["hours"] = _fallback_extract_hours(normalized)
+    if payload["hours"]:
+        payload["_hours_source"] = "website"
+    return payload
 
 
 def parse_bio_hours(text: str) -> Optional[dict]:
@@ -1044,12 +1386,12 @@ def parse_days(day_names: list) -> list[int]:
 # ---------------------------------------------------------------------------
 
 _DAY_NAME_RE = re.compile(
-    r"\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday"
+    r"\b(mondays?|tuesdays?|wednesdays?|thursdays?|fridays?|saturdays?|sundays?"
     r"|mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun)\b", re.I
 )
 _EVERY_DAY_RE = re.compile(r"\b(every\s*day|daily|7\s*days)\b", re.I)
-_WEEKDAY_RE = re.compile(r"\b(weekdays?|mon(?:day)?\s*(?:[-–—through]+|to)\s*fri(?:day)?)\b", re.I)
-_WEEKEND_RE = re.compile(r"\b(weekends?|sat(?:urday)?\s*(?:[-–—&/,]|and)\s*sun(?:day)?)\b", re.I)
+_WEEKDAY_RE = re.compile(r"\b(weekdays?|mon(?:day)?s?\s*(?:[-–—through]+|to)\s*fri(?:day)?s?)\b", re.I)
+_WEEKEND_RE = re.compile(r"\b(weekends?|sat(?:urday)?s?\s*(?:[-–—&/,]|and)\s*sun(?:day)?s?)\b", re.I)
 _TIME_EXTRACT_RE = re.compile(
     r"\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b", re.I
 )
@@ -1059,9 +1401,11 @@ def _infer_days_from_text(text: str) -> Optional[list[int]]:
     """Parse day-of-week info from free text. Returns ISO weekday ints or None."""
     if not text:
         return None
-    if _EVERY_DAY_RE.search(text):
-        return [1, 2, 3, 4, 5, 6, 7]
     days = set()
+    for match in DAY_RANGE_RE.finditer(text):
+        for day in _expand_day_range(match.group(1), match.group(2)):
+            if day in DAY_MAP:
+                days.add(DAY_MAP[day])
     if _WEEKDAY_RE.search(text):
         days.update([1, 2, 3, 4, 5])
     if _WEEKEND_RE.search(text):
@@ -1070,6 +1414,8 @@ def _infer_days_from_text(text: str) -> Optional[list[int]]:
         d = m.group(1).lower()
         if d in DAY_MAP:
             days.add(DAY_MAP[d])
+    if not days and _EVERY_DAY_RE.search(text):
+        return [1, 2, 3, 4, 5, 6, 7]
     return sorted(days) if days else None
 
 
@@ -1077,6 +1423,20 @@ def _infer_time_from_text(text: str) -> tuple[Optional[str], Optional[str]]:
     """Parse start/end times from free text. Returns (time_start, time_end) in HH:MM."""
     if not text:
         return None, None
+    range_match = HOURS_TIME_RE.search(text)
+    if range_match:
+        open_h = int(range_match.group(1))
+        open_m = int(range_match.group(2) or 0)
+        open_ampm = range_match.group(3)
+        close_h = int(range_match.group(4))
+        close_m = int(range_match.group(5) or 0)
+        close_ampm = range_match.group(6)
+        if close_ampm and not open_ampm:
+            if open_h == 12:
+                open_ampm = close_ampm
+            else:
+                open_ampm = "am" if open_h > close_h else close_ampm
+        return _to_24h(open_h, open_m, open_ampm), _to_24h(close_h, close_m, close_ampm)
     matches = _TIME_EXTRACT_RE.findall(text)
     if not matches:
         return None, None
@@ -1165,7 +1525,10 @@ def _fixup_common_fields(s: dict) -> dict:
     days = s.get("days") or []
 
     # Parse structured days from LLM output
-    parsed_days = parse_days(days) if days else []
+    if days and all(isinstance(day, int) for day in days):
+        parsed_days = sorted(day for day in days if 1 <= day <= 7)
+    else:
+        parsed_days = parse_days(days) if days else []
 
     # If no structured days, try to infer from description or title
     if not parsed_days:
@@ -1334,14 +1697,19 @@ def upsert_event_items(venue: dict, event_items: list[dict], dry_run: bool = Fal
         price_note = item.get("price_note") or item.get("_price_note")
         iso_days = item["days"]  # Already ISO weekday ints
 
-        # Create one series per day — "Happy Hour" Mon-Fri = 5 series, each recurring weekly.
-        # Series title includes venue name to prevent cross-venue sharing.
-        # ("Happy Hour at Barcelona" is unrelated to "Happy Hour at 9 Mile")
-        series_title = f"{title} at {venue_name}" if venue_name else title
-
         for iso_day in iso_days:
             day_name = _ISO_DAY_NAMES.get(iso_day, "")
             py_day = _ISO_TO_PYTHON_WEEKDAY[iso_day]
+            day_label = day_name.title() if day_name else ""
+
+            # Create one series per day. Multi-day operations need distinct titles
+            # so series records stay stable instead of mutating across weekdays.
+            if len(iso_days) > 1 and venue_name and day_label:
+                series_title = f"{title} ({day_label}) at {venue_name}"
+            elif venue_name:
+                series_title = f"{title} at {venue_name}"
+            else:
+                series_title = title
 
             # Series hint scoped to this venue + this day
             series_hint = {
@@ -1378,6 +1746,7 @@ def upsert_event_items(venue: dict, event_items: list[dict], dry_run: bool = Fal
                     "source_url": venue.get("website"),
                     "is_recurring": True,
                     "content_hash": content_hash,
+                    "_suppress_title_participants": True,
                 }
 
                 if dry_run:
@@ -1485,6 +1854,9 @@ def fetch_venue_content(venue: dict, use_playwright: bool = True, include_social
     # Extract meta info and links from HTML
     meta = extract_meta_and_links(main_html, website)
     main_text = extract_page_content(main_html, max_chars=10000)
+    if _looks_like_parked_site(main_text) or _looks_like_parked_site(main_html):
+        logger.info("  Website appears to be a parked or placeholder domain; skipping")
+        return None
 
     # Smart link discovery — sitemap + HTML link scoring
     discovered_urls = discover_relevant_pages(main_html, website, max_pages=5)
@@ -1719,6 +2091,9 @@ def scrape_venue(venue: dict, use_playwright: bool = True, include_social_bios: 
         return None
     combined, meta = result
 
+    data = None
+    extraction_mode = "llm"
+
     # LLM extraction
     try:
         raw = generate_text(EXTRACTION_PROMPT, combined, provider_override="anthropic", model_override="claude-sonnet-4-20250514")
@@ -1734,7 +2109,14 @@ def scrape_venue(venue: dict, use_playwright: bool = True, include_social_bios: 
         data = json.loads(raw)
     except (json.JSONDecodeError, Exception) as e:
         logger.info(f"  LLM extraction failed: {e}")
-        return None
+        data = _fallback_extract_data(combined)
+        extraction_mode = "heuristic"
+
+    if extraction_mode == "heuristic":
+        logger.info(
+            f"  Fallback extraction: {len(data.get('specials', []))} specials"
+            + (" + hours" if data.get("hours") else "")
+        )
 
     data = merge_meta_and_validate(data, meta, venue)
 

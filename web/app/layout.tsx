@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { Suspense } from "react";
-import { Outfit, JetBrains_Mono, Space_Grotesk, Bebas_Neue } from "next/font/google";
+import { Outfit, JetBrains_Mono, Space_Grotesk, Bebas_Neue, Newsreader } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { AuthProvider } from "@/lib/auth-context";
 import { ThemeProvider } from "@/lib/theme-context";
@@ -51,23 +51,32 @@ const bebasNeue = Bebas_Neue({
   display: "swap",
 });
 
+// Serif display font - civic/editorial headings
+const newsreader = Newsreader({
+  weight: ["400", "500", "600"],
+  style: ["normal", "italic"],
+  variable: "--font-serif",
+  subsets: ["latin"],
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: "Lost City - Find Your People",
-  description: "Find your people. Discover the underground events, shows, and happenings in your city.",
+  title: "Lost City - Find Your Thing and Do It",
+  description: "Find your thing and do it. Events, destinations, and everything worth doing in your city.",
   alternates: {
     canonical: "/",
   },
   openGraph: {
-    title: "Lost City - Find Your People",
-    description: "Find your people. Discover the underground.",
+    title: "Lost City - Find Your Thing and Do It",
+    description: "Events, destinations, and everything worth doing in your city.",
     url: SITE_URL,
     images: ["/og-image.png"],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Lost City - Find Your People",
-    description: "Find your people. Discover the underground events, shows, and happenings in your city.",
+    title: "Lost City - Find Your Thing and Do It",
+    description: "Events, destinations, and everything worth doing in your city.",
     images: ["/og-image.png"],
   },
 };
@@ -116,7 +125,7 @@ export default async function RootLayout({
         <link rel="preconnect" href="https://s1.ticketm.net" />
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
       </head>
-      <body className={`${outfit.variable} ${jetbrainsMono.variable} ${spaceGrotesk.variable} ${bebasNeue.variable} antialiased`}>
+      <body className={`${outfit.variable} ${jetbrainsMono.variable} ${spaceGrotesk.variable} ${bebasNeue.variable} ${newsreader.variable} antialiased`}>
         <ThemeProvider>
           <QueryProvider>
             {/* Skip link for keyboard users */}

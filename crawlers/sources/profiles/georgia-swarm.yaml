@@ -1,0 +1,21 @@
+version: 1
+slug: georgia-swarm
+name: Georgia Swarm
+integration_method: python
+defaults:
+  category: sports
+  tags:
+  - lacrosse
+  - nll
+  - georgia-swarm
+discovery:
+  enabled: false
+  type: list
+  urls:
+  - https://www.georgiaswarm.com/schedule/
+  - https://www.ticketmaster.com/georgia-swarm-tickets/artist/2162829?home_away=home
+detail:
+  enabled: false
+data_goals:
+- events
+- tickets

@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { usePortalOptional, DEFAULT_PORTAL } from "@/lib/portal-context";
 import type { SearchResult, SearchFacet } from "@/lib/unified-search";
+import { buildStableSearchCacheKey } from "@/lib/search-cache-key";
 import SearchResultItem, { SearchResultSection, TypeIcon } from "./SearchResultItem";
 import { getRecentSearches, addRecentSearch, clearRecentSearches } from "@/lib/searchHistory";
 import { buildSearchResultHref } from "@/lib/search-navigation";
@@ -29,7 +30,7 @@ const QUICK_ACTIONS: Array<{
 ];
 
 const SEARCH_PLACEHOLDERS = [
-  "Search events, venues, organizers...",
+  "Search events, places, organizations...",
   "Try 'live music tonight'",
   "Try 'free events this weekend'",
   "Try 'comedy shows'",
@@ -37,6 +38,7 @@ const SEARCH_PLACEHOLDERS = [
 ];
 
 type TypeFilter = "event" | "venue" | "organizer" | "series" | "list" | null;
+const OVERLAY_SEARCH_TYPES = "event,venue,organizer";
 
 // Custom hook for debounced value
 function useDebounce<T>(value: T, delay: number): T {
@@ -51,7 +53,15 @@ function useDebounce<T>(value: T, delay: number): T {
 }
 
 // LRU cache for search results with bounded size
-const searchCache = new Map<string, { data: SearchResult[]; facets: SearchFacet[]; timestamp: number }>();
+const searchCache = new Map<
+  string,
+  {
+    data: SearchResult[];
+    facets: SearchFacet[];
+    didYouMean: string[];
+    timestamp: number;
+  }
+>();
 const MAX_CACHE_SIZE = 100;
 const CACHE_TTL = 30 * 1000; // 30 seconds
 
@@ -77,9 +87,9 @@ function pruneCache() {
 
 // Clear cache for a specific portal
 function clearCacheForPortal(portalId: string | undefined) {
-  const prefix = portalId ? `:${portalId}:` : "::";
+  const prefix = portalId ? `portal_id=${portalId}` : "";
   for (const key of searchCache.keys()) {
-    if (key.includes(prefix)) {
+    if (!portalId || key.includes(prefix)) {
       searchCache.delete(key);
     }
   }
@@ -132,6 +142,14 @@ function dedupeSearchResults(items: SearchResult[]): SearchResult[] {
   }
 
   return deduped;
+}
+
+function filterCachedResultsByType(
+  items: SearchResult[],
+  type: TypeFilter,
+): SearchResult[] {
+  if (!type) return items;
+  return items.filter((item) => item.type === type);
 }
 
 export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
@@ -439,8 +457,27 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
     // Use ref to get latest filter value without recreating callback
     const currentTypeFilter = activeTypeFilterRef.current;
 
+    const params = new URLSearchParams({
+      q: searchQuery,
+      limit: "12",
+      types: OVERLAY_SEARCH_TYPES,
+      include_facets: "false",
+      include_did_you_mean: "false",
+      include_event_popularity: "false",
+    });
+
+    if (currentTypeFilter) {
+      params.set("types", currentTypeFilter);
+    }
+    if (portal?.slug) {
+      params.set("portal", portal.slug);
+    }
+    if (portal?.id) {
+      params.set("portal_id", portal.id);
+    }
+
     // Check cache first
-    const cacheKey = `${searchQuery}:${portal?.id || portal?.slug || ""}:${currentTypeFilter || "all"}`;
+    const cacheKey = buildStableSearchCacheKey(params);
 
     // Clear cache if requested (e.g., when filter changes)
     if (clearCache) {
@@ -451,9 +488,23 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
       setResults(cached.data);
       setFacets(cached.facets);
-      setDidYouMean([]);
+      setDidYouMean(cached.didYouMean);
       setError(null);
       return;
+    }
+
+    if (currentTypeFilter) {
+      const fallbackParams = new URLSearchParams(params);
+      fallbackParams.set("types", OVERLAY_SEARCH_TYPES);
+      const fallbackCacheKey = buildStableSearchCacheKey(fallbackParams);
+      const fallbackCached = searchCache.get(fallbackCacheKey);
+
+      if (fallbackCached && Date.now() - fallbackCached.timestamp < CACHE_TTL) {
+        setResults(filterCachedResultsByType(fallbackCached.data, currentTypeFilter));
+        setFacets(fallbackCached.facets);
+        setDidYouMean(fallbackCached.didYouMean);
+        setError(null);
+      }
     }
 
     searchAbortRef.current?.abort();
@@ -465,21 +516,6 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
     setError(null);
 
     try {
-      const params = new URLSearchParams({
-        q: searchQuery,
-        limit: "15",
-      });
-
-      if (currentTypeFilter) {
-        params.set("types", currentTypeFilter);
-      }
-      if (portal?.slug) {
-        params.set("portal", portal.slug);
-      }
-      if (portal?.id) {
-        params.set("portal_id", portal.id);
-      }
-
       const response = await fetch(`/api/search?${params.toString()}`, {
         signal: controller.signal,
       });
@@ -493,21 +529,20 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
       const nextResults = dedupeSearchResults((data.results || []) as SearchResult[]);
       setResults(nextResults);
       setFacets((data.facets || []) as SearchFacet[]);
+      const nextDidYouMean: string[] = Array.isArray(data.didYouMean)
+        ? (data.didYouMean as string[])
+        : [];
 
       // Cache the results and prune if needed
       searchCache.set(cacheKey, {
         data: nextResults,
         facets: (data.facets || []) as SearchFacet[],
+        didYouMean: nextDidYouMean,
         timestamp: Date.now(),
       });
       pruneCache();
 
-      // Set didYouMean from search response
-      if (data.didYouMean && data.didYouMean.length > 0) {
-        setDidYouMean(data.didYouMean);
-      } else {
-        setDidYouMean([]);
-      }
+      setDidYouMean(nextDidYouMean);
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") {
         return;
@@ -519,6 +554,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
       setError("Search failed. Please try again.");
       setResults([]);
       setFacets([]);
+      setDidYouMean([]);
     } finally {
       if (!controller.signal.aborted && requestId === searchRequestIdRef.current) {
         setIsLoading(false);

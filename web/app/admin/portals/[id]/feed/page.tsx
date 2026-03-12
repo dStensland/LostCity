@@ -2,31 +2,7 @@
 
 import Link from "next/link";
 import { usePortalEdit } from "@/lib/admin/portal-edit-context";
-
-const ALL_CATEGORIES = [
-  { id: "music", label: "Music" },
-  { id: "film", label: "Film" },
-  { id: "comedy", label: "Comedy" },
-  { id: "theater", label: "Theater" },
-  { id: "art", label: "Art" },
-  { id: "sports", label: "Sports" },
-  { id: "food_drink", label: "Food & Drink" },
-  { id: "nightlife", label: "Nightlife" },
-  { id: "community", label: "Community" },
-  { id: "fitness", label: "Fitness" },
-  { id: "family", label: "Family" },
-  { id: "learning", label: "Learning" },
-  { id: "dance", label: "Dance" },
-  { id: "tours", label: "Tours" },
-  { id: "meetup", label: "Meetup" },
-  { id: "words", label: "Words" },
-  { id: "religious", label: "Religious" },
-  { id: "markets", label: "Markets" },
-  { id: "wellness", label: "Wellness" },
-  { id: "gaming", label: "Gaming" },
-  { id: "outdoors", label: "Outdoors" },
-  { id: "other", label: "Other" },
-];
+import { PORTAL_EVENT_CATEGORY_OPTIONS as ALL_CATEGORIES } from "@/lib/event-taxonomy";
 
 export default function PortalFeedPage() {
   const {

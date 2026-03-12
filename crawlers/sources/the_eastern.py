@@ -39,6 +39,29 @@ VENUE_DATA = {
 }
 
 
+def goto_with_retry(
+    page,
+    url: str,
+    *,
+    attempts: int = 3,
+    timeout_ms: int = 45000,
+    wait_until: str = "domcontentloaded",
+) -> None:
+    """Navigate with retry/backoff for transient timeout/network failures."""
+    last_exc: Exception | None = None
+    for attempt in range(1, attempts + 1):
+        try:
+            page.goto(url, wait_until=wait_until, timeout=timeout_ms)
+            return
+        except Exception as exc:  # noqa: BLE001 - crawler retry guard
+            last_exc = exc
+            if attempt >= attempts:
+                raise
+            page.wait_for_timeout(1500 * attempt)
+    if last_exc:
+        raise last_exc
+
+
 def parse_time(time_text: str) -> Optional[str]:
     """Parse time from '7:00 PM' format."""
     match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", time_text, re.IGNORECASE)
@@ -72,7 +95,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
             venue_id = get_or_create_venue(VENUE_DATA)
 
             logger.info(f"Fetching The Eastern: {EVENTS_URL}")
-            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
+            goto_with_retry(
+                page,
+                EVENTS_URL,
+                attempts=3,
+                timeout_ms=45000,
+                wait_until="domcontentloaded",
+            )
             page.wait_for_timeout(3000)
 
             # Extract images from page

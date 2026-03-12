@@ -43,6 +43,7 @@ interface DiscoverHeroProps {
 function getCTALabel(dayPart: AmbientContext["dayPart"]): string {
   if (dayPart === "morning") return "Plan My Morning";
   if (dayPart === "afternoon") return "Plan My Afternoon";
+  if (dayPart === "late_night") return "Plan Tomorrow";
   return "Plan Your Evening";
 }
 
@@ -67,8 +68,8 @@ export function DiscoverHero({ ambient, onOpenPlanner }: DiscoverHeroProps) {
             (e.target as HTMLImageElement).style.display = "none";
           }}
         />
-        {/* Gradient: bottom-to-top, ivory to transparent */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[var(--hotel-ivory)] via-black/30 to-transparent" />
+        {/* Gradient: bottom-to-top, darken for text legibility without washing out photo */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
 
         {/* Text content anchored to bottom */}
         <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8 space-y-2">

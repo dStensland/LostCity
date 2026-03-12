@@ -13,14 +13,48 @@ See `BACKLOG.md` for the full prioritized roadmap with implementation status.
 **We capture DESTINATIONS, not just events.** Every crawler should ensure the venue/spot it crawls is fully represented in our database as a place people would want to visit, regardless of whether it currently has scheduled events.
 
 This means:
-- **Restaurants, bars, coffee shops, breweries, entertainment venues, parks, galleries, theaters, music venues, nightclubs, sports bars, food halls, bookstores** — any place people would want to go out to in the city
+- **Restaurants, bars, coffee shops, breweries, entertainment venues, parks, galleries, theaters, music venues, nightclubs, sports bars, food halls, bookstores, trails, campgrounds, rec centers** — any place people would want to go out to in the city
 - Organizations that throw events (arts orgs, community groups, sports teams, etc.)
+- Programs and structured activities (swim lessons, summer camps, rec leagues, pottery classes)
 - The venue record itself is valuable data — name, address, neighborhood, hours, vibe tags, type, lat/lng
 - Events are additional value on top of the destination, not the only reason to have it
 
 When building a new crawler or importing data, always ask: "Would someone visiting this city want to know about this place?" If yes, it belongs in our database as a venue/spot even if it has zero upcoming events.
 
-**Always crawl original sources, never curators.** If an event exists at Alliance Theatre, crawl alliancetheatre.org -- not ArtsATL or Creative Loafing. Editorial aggregators (ArtsATL, Nashville Scene, Discover Atlanta, AccessAtlanta, tourism boards) duplicate data with lower quality. The only allowed aggregators are ticketing platforms (Ticketmaster, Eventbrite) that cover venues without their own calendars.
+### CRITICAL: Capture Everything On The First Pass
+
+**This is the single most violated rule in the codebase. We have built 20+ enrichment scripts to backfill data that crawlers should have captured originally. Every enrichment script is a failure of the crawler that made it necessary.**
+
+**Do not build a crawler that only grabs events and ignores everything else on the page.** Every time we touch a venue's website, we should extract ALL available signal in one pass. Going back later for enrichment is expensive, error-prone, and creates a maintenance burden that grows with every source.
+
+When a crawler visits a venue page, look for and capture:
+
+1. **Events** — the obvious one, but not the only one
+2. **Programs** — structured activities with sessions, age ranges, registration (swim lessons, camps, classes, leagues). These are NOT events — they go in the `programs` table if it exists, or as events with `age_min`/`age_max` and appropriate series grouping.
+3. **Recurring programming** — weekly trivia, DJ nights, open mic, karaoke, brunch, yoga. These are `series` with `is_recurring: True`. If the page has a "Weekly Events" or "Regular Programming" section, grab it.
+4. **Specials & deals** — happy hours, daily food/drink specials, brunch deals, industry nights. These go in `venue_specials`, NOT events. Look for "Specials", "Happy Hour", "Daily Deals" sections on venue websites.
+5. **Hours of operation** — opening/closing times by day. Store in `venues.hours` as structured JSON.
+6. **Venue metadata** — description, hero image (og:image), vibe tags, cuisine type, price range, parking info, reservation links, social media handles.
+7. **Menu highlights** — not the full menu, but categories that inform vibes (craft cocktails, natural wine, vegan-friendly, etc.)
+
+The goal: after a single crawl, the venue record should be complete enough that someone could decide whether to visit without ever going to the venue's own website. Don't leave fields empty that are sitting right there on the page.
+
+### First-Pass Validation Checklist
+
+Before submitting a new crawler, verify it captures everything available:
+
+- [ ] `VENUE_DATA` has all fields filled (name, slug, address, neighborhood, city, state, zip, lat, lng, venue_type, website, vibes)
+- [ ] `image_url` set from og:image or hero image on the page
+- [ ] `description` set from meta description or about section
+- [ ] Hours captured if visible on the page
+- [ ] Recurring events grouped into series (not individual events for each occurrence)
+- [ ] Specials captured in `venue_specials` if the page has a specials/happy hour section
+- [ ] Programs captured with age ranges if the source has structured classes/lessons
+- [ ] No fields left empty that are available on the page
+
+**If you're building an enrichment script, stop and ask: why didn't the crawler capture this?** The answer is almost always "it should have." Fix the crawler instead.
+
+**Always crawl original sources, never curators.** If an event exists at Alliance Theatre, crawl alliancetheatre.org -- not ArtsATL or Creative Loafing. Editorial aggregators (ArtsATL, Nashville Scene, Discover Atlanta, AccessAtlanta, tourism boards) duplicate data with lower quality. Treat them as discovery-only research inputs for gap finding; they are not canonical event sources. The only allowed aggregators are ticketing platforms (Ticketmaster, Eventbrite) that cover venues without their own calendars.
 
 **Never create events for permanent attractions or daily operations.** "Play at the Museum", "Summit Skyride", "Mini Golf" are not events -- they mean the place is open. Only crawl actual programmed events (workshops, performances, festivals, special exhibitions with dates).
 
@@ -39,7 +73,7 @@ crawlers/
 ├── series.py              # Event series linking (recurring shows, residencies)
 ├── posters.py             # TMDB poster fetching for film events
 ├── artist_images.py       # Spotify artist image + genre fetching for music events
-├── sources/               # One file per source (~500+ crawlers)
+├── sources/               # One file per source (~1,000+ crawlers)
 │   ├── marys_bar.py       # Single-venue bar (Playwright pattern)
 │   ├── terminal_west.py   # Music venue (BeautifulSoup pattern)
 │   ├── ticketmaster.py    # API aggregator pattern

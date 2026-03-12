@@ -1,0 +1,21 @@
+version: 1
+slug: dekalb-county-schools-board
+name: DeKalb County Schools Board of Education
+integration_method: html
+defaults:
+  category: community
+  tags:
+  - school-board
+  - education
+  - public-meeting
+  - government
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.dekalbschoolsga.org/board/board-meetings
+detail:
+  enabled: true
+data_goals:
+- events
+- images

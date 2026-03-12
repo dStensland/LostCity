@@ -11,6 +11,8 @@ import logging
 from datetime import datetime
 from typing import Optional
 
+import requests
+from bs4 import BeautifulSoup
 from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
@@ -35,6 +37,20 @@ VENUE_DATA = {
     "venue_type": "entertainment",
     "spot_type": "arts",
     "website": ATLANTA_URL,
+    "vibes": ["immersive", "date-night", "interactive", "technology", "adult-friendly"],
+    "description": (
+        "Illuminarium Atlanta is a groundbreaking immersive experience venue in Poncey-Highland, "
+        "featuring floor-to-ceiling 360-degree projections, spatial audio, and haptic technology "
+        "that transport visitors to otherworldly environments. Shows include deep-space journeys, "
+        "African wildlife safaris, and exclusive ticketed experiences. Also hosts yoga sessions, "
+        "private events, and rotating special programming."
+    ),
+    "hours": {
+        "thursday": {"open": "10:00", "close": "22:00"},
+        "friday": {"open": "10:00", "close": "22:00"},
+        "saturday": {"open": "10:00", "close": "22:00"},
+        "sunday": {"open": "10:00", "close": "20:00"},
+    },
 }
 
 
@@ -178,6 +194,22 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     try:
+        # Fetch og:image from homepage to enrich venue record
+        venue_data = dict(VENUE_DATA)
+        try:
+            _headers = {
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+            }
+            _home_resp = requests.get(ATLANTA_URL, headers=_headers, timeout=15)
+            if _home_resp.status_code == 200:
+                _home_soup = BeautifulSoup(_home_resp.text, "html.parser")
+                _og_image = _home_soup.find("meta", attrs={"property": "og:image"})
+                if _og_image and _og_image.get("content"):
+                    venue_data["image_url"] = _og_image["content"]
+                    logger.debug("Fetched og:image for Illuminarium Atlanta")
+        except Exception as _e:
+            logger.debug(f"Could not fetch og:image for Illuminarium Atlanta: {_e}")
+
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             context = browser.new_context(
@@ -186,7 +218,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            venue_id = get_or_create_venue(venue_data)
 
             logger.info(f"Fetching Illuminarium Atlanta: {ATLANTA_URL}")
 

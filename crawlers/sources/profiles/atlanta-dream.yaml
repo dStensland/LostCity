@@ -1,0 +1,22 @@
+version: 1
+slug: atlanta-dream
+name: Atlanta Dream
+integration_method: python
+defaults:
+  category: sports
+  tags:
+  - basketball
+  - wnba
+  - atlanta-dream
+discovery:
+  enabled: false
+  type: list
+  urls:
+  - https://dream.wnba.com/2026-schedule-release
+  - https://dream.wnba.com/schedule
+  - https://dream.wnba.com/single-game-tickets
+detail:
+  enabled: false
+data_goals:
+- events
+- tickets

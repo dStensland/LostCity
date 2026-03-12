@@ -16,6 +16,7 @@ from urllib.parse import urlparse
 
 from playwright.sync_api import sync_playwright
 
+from artist_images import fetch_artist_info
 from db import (
     get_client,
     get_or_create_venue,
@@ -24,6 +25,7 @@ from db import (
     smart_update_existing_event,
 )
 from dedupe import generate_content_hash
+from description_quality import is_likely_truncated_description
 from utils import extract_images_from_page, extract_event_links, find_event_url, enrich_event_record
 
 logger = logging.getLogger(__name__)
@@ -198,6 +200,35 @@ def _repair_listing_url_events(source_id: int, event_links: dict[str, str]) -> t
             url_repairs += 1
 
     return url_repairs, artist_fallback_attempts
+
+
+def _repair_description_from_artist_bio(event_record: dict) -> None:
+    """Replace truncated venue excerpts with a real artist bio when available."""
+    description = str(event_record.get("description") or "").strip()
+    if description and len(description) >= 80 and not is_likely_truncated_description(description):
+        return
+
+    artist_name = None
+    parsed_artists = event_record.get("_parsed_artists") or []
+    if parsed_artists:
+        artist_name = str(parsed_artists[0].get("name") or "").strip()
+
+    if not artist_name:
+        artist_name = _extract_artist_from_event_url(
+            event_record.get("source_url") or event_record.get("ticket_url") or ""
+        )
+
+    if not artist_name:
+        return
+
+    artist_info = fetch_artist_info(artist_name)
+    if not artist_info:
+        return
+
+    if artist_info.bio:
+        event_record["description"] = artist_info.bio[:2000]
+    if not event_record.get("image_url") and artist_info.image_url:
+        event_record["image_url"] = artist_info.image_url
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
@@ -401,6 +432,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                                     }
                                 ]
 
+                        # Enrich from detail page (description, image, price, artists)
+                        # Skip if URL fell back to listing page
+                        if event_url and event_url != EVENTS_URL:
+                            enrich_event_record(event_record, "The Masquerade")
+                        _repair_description_from_artist_bio(event_record)
+
                         existing = find_event_by_hash(content_hash)
                         if existing:
                             smart_update_existing_event(existing, event_record)
@@ -409,9 +446,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             continue
 
                         try:
-                            # Only enrich from detail page — skip if URL fell back to listing page
-                            if event_url and event_url != EVENTS_URL:
-                                enrich_event_record(event_record, "The Masquerade")
                             insert_event(event_record)
                             events_new += 1
                             logger.info(f"Added: {title} on {start_date}")

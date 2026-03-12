@@ -1,318 +1,493 @@
 """
-Crawler for All Fired Up Art pottery/painting studio (allfiredupart.com).
+Crawler for All Fired Up Art (allfiredupart.com).
 
-Site uses BookThatApp calendar iframe - must use Playwright to extract text content.
+Paint-your-own pottery studio with 3 metro Atlanta locations:
+  - Alpharetta: 53 South Main St, Alpharetta, GA 30009
+  - Emory Village: 1563 North Decatur Rd, Atlanta, GA 30307
+  - Sandy Plains / Marietta: 2960 Shallowford Rd Suite 305, Marietta, GA 30066
+
+Programs include drop-in studio sessions, special workshops/events (pottery, clay,
+resin, canvas painting), kids camps, and birthday parties.
+
+Data source: BookThatApp (BTA) widget embedded in the Shopify site.
+API endpoint: /apps/bookthatapp/api/v1/products?widget_id=86126
+Schedule dates are stored as DTSTART/RRULE in schedule_items (UTC). The schedule
+item title also carries the local-time representation ('2026-03-27 18:00'), which
+is what we prefer — avoids DST math.
+
+The drop-in studio appointment product (profile=appt) represents open-hours
+booking slots, not a discrete event, so it is excluded per the
+'no permanent attractions' rule. Only profile=class products are crawled.
 """
 
 from __future__ import annotations
 
-import re
 import logging
-from datetime import datetime
+import re
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from playwright.sync_api import sync_playwright
+import requests
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    get_or_create_venue,
+    insert_event,
+    find_event_by_hash,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
-from utils import extract_images_from_page, extract_event_links, find_event_url
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://allfiredupart.com"
-EVENTS_URL = f"{BASE_URL}/pages/things-to-do"
-RESERVATIONS_URL = f"{BASE_URL}/pages/reservations"
+CALENDAR_URL = f"{BASE_URL}/pages/calendar"
+BTA_PRODUCTS_URL = f"{BASE_URL}/apps/bookthatapp/api/v1/products?widget_id=86126"
+SHOPIFY_PRODUCTS_URL = f"{BASE_URL}/products.json?limit=100"
 
-VENUE_DATA = {
-    "name": "All Fired Up Art",
-    "slug": "all-fired-up-art",
-    "address": "1090 Euclid Ave NE",
-    "neighborhood": "Little Five Points",
+# Locations — 3 metro Atlanta studios
+VENUE_ALPHARETTA = {
+    "name": "All Fired Up Art - Alpharetta",
+    "slug": "all-fired-up-art-alpharetta",
+    "address": "53 South Main St",
+    "neighborhood": "Alpharetta",
+    "city": "Alpharetta",
+    "state": "GA",
+    "zip": "30009",
+    "lat": 34.0754,
+    "lng": -84.2941,
+    "venue_type": "studio",
+    "website": BASE_URL,
+    "vibes": ["family-friendly", "all-ages"],
+}
+
+VENUE_EMORY_VILLAGE = {
+    "name": "All Fired Up Art - Emory Village",
+    "slug": "all-fired-up-art-emory-village",
+    "address": "1563 North Decatur Rd",
+    "neighborhood": "Emory Village",
     "city": "Atlanta",
     "state": "GA",
     "zip": "30307",
-    "lat": 33.7647,
-    "lng": -84.3494,
+    "lat": 33.7952,
+    "lng": -84.3283,
     "venue_type": "studio",
-    "spot_type": "studio",
     "website": BASE_URL,
+    "vibes": ["family-friendly", "all-ages"],
 }
 
+VENUE_MARIETTA = {
+    "name": "All Fired Up Art - Marietta",
+    "slug": "all-fired-up-art-marietta",
+    "address": "2960 Shallowford Rd Suite 305",
+    "neighborhood": "Sandy Plains",
+    "city": "Marietta",
+    "state": "GA",
+    "zip": "30066",
+    "lat": 34.0070,
+    "lng": -84.4741,
+    "venue_type": "studio",
+    "website": BASE_URL,
+    "vibes": ["family-friendly", "all-ages"],
+}
 
-def parse_time(time_text: str) -> Optional[str]:
-    """Parse time from various formats like '7:00 PM', '7pm', '19:00'."""
-    match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", time_text, re.IGNORECASE)
+# Location keyword → venue data (longest match first)
+_LOCATION_MAP: list[tuple[str, dict]] = [
+    ("emory village", VENUE_EMORY_VILLAGE),
+    ("alpharetta", VENUE_ALPHARETTA),
+    ("marietta", VENUE_MARIETTA),
+    ("sandy plains", VENUE_MARIETTA),
+    ("emory", VENUE_EMORY_VILLAGE),
+]
+
+
+def _infer_venue(title: str) -> dict:
+    """Infer venue data from a product title containing a location keyword."""
+    title_lower = title.lower()
+    for keyword, venue_data in _LOCATION_MAP:
+        if keyword in title_lower:
+            return venue_data
+    # Default to Alpharetta when no location keyword is found
+    return VENUE_ALPHARETTA
+
+
+def _parse_schedule_title_date(item_title: str) -> Optional[tuple[str, str]]:
+    """
+    Parse (date, time) from a BTA schedule item title string.
+
+    BTA stores the local Eastern time in the item title, e.g. '2026-03-27 18:00'.
+    This is preferable to converting from the UTC DTSTART.
+
+    Returns (start_date, start_time) or None.
+    """
+    match = re.match(r"(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})", item_title)
     if match:
-        hour, minute, period = match.groups()
-        hour = int(hour)
-        if period.lower() == "pm" and hour != 12:
-            hour += 12
-        elif period.lower() == "am" and hour == 12:
-            hour = 0
-        return f"{hour:02d}:{minute}"
-
-    # Try simplified format like "7pm"
-    match = re.search(r"(\d{1,2})\s*(am|pm)", time_text, re.IGNORECASE)
-    if match:
-        hour, period = match.groups()
-        hour = int(hour)
-        if period.lower() == "pm" and hour != 12:
-            hour += 12
-        elif period.lower() == "am" and hour == 12:
-            hour = 0
-        return f"{hour:02d}:00"
-
+        return match.group(1), match.group(2)
     return None
 
 
-def parse_date_from_line(line: str) -> Optional[tuple[str, str, str]]:
+def _parse_dtstart_utc(rules: str) -> Optional[datetime]:
     """
-    Parse date from a line of text.
-    Returns (month, day, year) tuple or None.
+    Parse DTSTART from a BTA schedule_items rules string and return as UTC datetime.
+
+    Format: 'DTSTART:20260327T220000Z\\nRRULE:FREQ=DAILY;COUNT=1'
     """
-    # Try full date patterns
-    date_match = re.search(
-        r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)?,?\s*"
-        r"(January|February|March|April|May|June|July|August|September|October|November|December|"
-        r"Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)"
-        r"\s+(\d{1,2})(?:st|nd|rd|th)?"
-        r"(?:,?\s+(\d{4}))?",
-        line,
-        re.IGNORECASE
-    )
+    match = re.search(r"DTSTART:(\d{8}T\d{6}Z)", rules)
+    if not match:
+        return None
+    try:
+        return datetime.strptime(match.group(1), "%Y%m%dT%H%M%SZ").replace(
+            tzinfo=timezone.utc
+        )
+    except ValueError:
+        return None
 
-    if date_match:
-        month = date_match.group(1)
-        day = date_match.group(2)
-        year = date_match.group(3) if date_match.group(3) else str(datetime.now().year)
-        return month, day, year
 
-    return None
+def _strip_html(html: str) -> str:
+    """Strip HTML tags and decode basic HTML entities."""
+    text = re.sub(r"<[^>]+>", " ", html)
+    text = text.replace("&amp;", "&").replace("&nbsp;", " ").replace("&#39;", "'")
+    text = re.sub(r"&[a-z]+;", "", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def _clean_title(raw_title: str) -> str:
+    """
+    Produce a display-friendly event title from a BTA product title.
+
+    BTA product titles embed location and sometimes a date:
+      'Katie the Messy Artist - Resin Ocean Dish - Alpharetta 3/27'
+    becomes:
+      'Katie the Messy Artist: Resin Ocean Dish'
+
+    Strategy:
+    1. Strip a trailing date pattern like '3/27' or '11/8'.
+    2. Strip the trailing location name (preceded by ' - ').
+    3. Strip date again in case it was after the location.
+    """
+    title = raw_title.strip()
+
+    # Strip trailing date like '3/27' or '11/8'
+    title = re.sub(r"\s+\d{1,2}/\d{1,2}$", "", title)
+
+    # Strip trailing location (after last ' - ')
+    location_keywords = [
+        "emory village atlanta",
+        "emory village",
+        "alpharetta",
+        "marietta",
+        "sandy plains",
+        "emory",
+    ]
+    title_lower = title.lower()
+    for loc in location_keywords:
+        pattern = f" - {loc}"
+        if title_lower.endswith(pattern):
+            title = title[: len(title) - len(pattern)].rstrip()
+            break
+        if title_lower.endswith(loc):
+            title = title[: len(title) - len(loc)].rstrip(" -")
+            break
+
+    # Strip date again after location removal
+    title = re.sub(r"\s+\d{1,2}/\d{1,2}$", "", title).strip()
+
+    return title
+
+
+def _build_description(
+    *,
+    clean_title: str,
+    raw_description: str,
+    venue_name: str,
+    price_min: Optional[float],
+    duration_minutes: int,
+    source_url: str,
+) -> str:
+    """Build a clean event description."""
+    parts: list[str] = []
+
+    if raw_description and len(raw_description.strip()) > 30:
+        body = raw_description.strip()
+        parts.append(body if body.endswith(".") else f"{body}.")
+    else:
+        parts.append(f"Special art event at {venue_name}.")
+
+    if price_min is not None and price_min > 0:
+        parts.append(f"Tickets: ${price_min:.0f} per person.")
+    elif price_min == 0:
+        parts.append("Free to attend.")
+
+    if duration_minutes > 0:
+        hours, mins = divmod(duration_minutes, 60)
+        if hours and mins:
+            parts.append(f"Duration: {hours}h {mins}m.")
+        elif hours:
+            parts.append(f"Duration: {hours} hour{'s' if hours > 1 else ''}.")
+        else:
+            parts.append(f"Duration: {mins} minutes.")
+
+    parts.append(f"Register and book at {source_url}")
+    return " ".join(parts)[:1400]
+
+
+def _is_future_date(date_str: str) -> bool:
+    """Return True if date_str (YYYY-MM-DD) is today or in the future."""
+    try:
+        return datetime.strptime(date_str, "%Y-%m-%d").date() >= datetime.now().date()
+    except ValueError:
+        return False
+
+
+def _fetch_bta_products(session: requests.Session) -> list[dict]:
+    """Fetch all BTA product definitions with schedule_items."""
+    try:
+        resp = session.get(BTA_PRODUCTS_URL, timeout=20)
+        resp.raise_for_status()
+        return resp.json().get("products", [])
+    except Exception as exc:
+        logger.error(f"All Fired Up Art: failed to fetch BTA products: {exc}")
+        return []
+
+
+def _fetch_shopify_products(session: requests.Session) -> dict[int, dict]:
+    """
+    Fetch Shopify storefront products for description/image enrichment.
+
+    Returns mapping of Shopify product ID (int) → product dict.
+    """
+    result: dict[int, dict] = {}
+    try:
+        resp = session.get(SHOPIFY_PRODUCTS_URL, timeout=20)
+        resp.raise_for_status()
+        for p in resp.json().get("products", []):
+            pid = p.get("id")
+            if pid:
+                result[int(pid)] = p
+    except Exception as exc:
+        logger.error(f"All Fired Up Art: failed to fetch Shopify products: {exc}")
+    return result
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl All Fired Up Art events using Playwright."""
+    """
+    Crawl All Fired Up Art special events and workshops via the BookThatApp API.
+
+    Coverage:
+    - All 3 locations (Alpharetta, Emory Village, Marietta)
+    - profile=class products only (discrete scheduled events)
+    - Future events only (past events skipped)
+
+    Enrichment: Shopify products.json provides description text, hero images,
+    and confirmed pricing for each class SKU.
+    """
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
 
-    try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                viewport={"width": 1920, "height": 1080},
+    session = requests.Session()
+    session.headers.update(
+        {
+            "User-Agent": (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            ),
+            "Accept": "application/json, */*",
+            "Referer": BASE_URL,
+        }
+    )
+
+    # Ensure all 3 venue records exist in the DB before processing events
+    venue_ids: dict[str, int] = {}
+    for venue_data in (VENUE_ALPHARETTA, VENUE_EMORY_VILLAGE, VENUE_MARIETTA):
+        try:
+            vid = get_or_create_venue(venue_data)
+            venue_ids[venue_data["slug"]] = vid
+        except Exception as exc:
+            logger.error(
+                f"All Fired Up Art: failed to create venue '{venue_data['name']}': {exc}"
             )
-            page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+    # Fetch BTA scheduled events and Shopify product enrichment
+    bta_products = _fetch_bta_products(session)
+    shopify_by_id = _fetch_shopify_products(session)
 
-            # Try both URLs to get comprehensive event listings
-            urls_to_try = [EVENTS_URL, RESERVATIONS_URL]
-            all_events = {}  # Use dict to dedupe by title+date
+    logger.info(
+        f"All Fired Up Art: {len(bta_products)} BTA products, "
+        f"{len(shopify_by_id)} Shopify products"
+    )
 
-            for url in urls_to_try:
+    for product in bta_products:
+        if product.get("profile") != "class":
+            # Skip appt (open drop-in hours), course, deposit, bond
+            continue
+
+        schedule = product.get("schedule") or {}
+        schedule_items = (schedule.get("schedule_items") or []) if schedule else []
+        if not schedule_items:
+            continue
+
+        product_title = product.get("title", "").strip()
+        bta_product_id = product.get("id")
+        external_id = product.get("external_id")  # Shopify product ID
+
+        # Shopify enrichment: description, image, price
+        shopify_product: Optional[dict] = (
+            shopify_by_id.get(int(external_id)) if external_id else None
+        )
+        raw_desc = ""
+        image_url: Optional[str] = None
+        price_min: Optional[float] = None
+
+        if shopify_product:
+            body_html = shopify_product.get("body_html") or ""
+            raw_desc = _strip_html(body_html)[:500]
+            images = shopify_product.get("images") or []
+            if images:
+                image_url = images[0].get("src")
+            variants = shopify_product.get("variants") or []
+            if variants:
                 try:
-                    logger.info(f"Fetching All Fired Up Art: {url}")
-                    page.goto(url, wait_until="domcontentloaded", timeout=30000)
-                    page.wait_for_timeout(3000)
+                    price_min = float(variants[0].get("price", 0)) or None
+                except (TypeError, ValueError):
+                    price_min = None
 
-                    # Extract images from page
-                    image_map = extract_images_from_page(page)
+        # BTA variant price as fallback
+        if price_min is None:
+            bta_variants = product.get("variants") or []
+            if bta_variants:
+                try:
+                    val = float(bta_variants[0].get("price", 0))
+                    price_min = val if val > 0 else None
+                except (TypeError, ValueError):
+                    pass
 
-                    # Extract event links for specific URLs
-                    event_links = extract_event_links(page, BASE_URL)
+        # Duration: BTA stores seconds
+        duration_data = product.get("duration") or {}
+        duration_sec = int(duration_data.get("duration") or 0) if duration_data else 0
+        duration_minutes = duration_sec // 60
 
-                    # Scroll to load all content (including iframe content if visible)
-                    for _ in range(5):
-                        page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                        page.wait_for_timeout(1000)
-
-                    # Get page text and parse line by line
-                    body_text = page.inner_text("body")
-                    lines = [l.strip() for l in body_text.split("\n") if l.strip()]
-
-                    # Parse events - look for date patterns
-                    i = 0
-                    while i < len(lines):
-                        line = lines[i]
-
-                        # Skip very short lines
-                        if len(line) < 3:
-                            i += 1
-                            continue
-
-                        # Look for date patterns
-                        date_result = parse_date_from_line(line)
-
-                        if date_result:
-                            month, day, year = date_result
-
-                            # Look for title and time in surrounding lines
-                            title = None
-                            start_time = None
-                            description_parts = []
-
-                            # Check surrounding lines
-                            for offset in range(-3, 6):
-                                idx = i + offset
-                                if 0 <= idx < len(lines):
-                                    check_line = lines[idx]
-
-                                    # Skip lines that are dates themselves
-                                    if parse_date_from_line(check_line):
-                                        continue
-
-                                    # Try to extract time
-                                    if not start_time:
-                                        time_result = parse_time(check_line)
-                                        if time_result:
-                                            start_time = time_result
-
-                                    # Look for title - longer text that's not time, price, or navigation
-                                    if not title and len(check_line) > 8:
-                                        # Skip lines with prices, times, common UI text
-                                        skip_patterns = [
-                                            r"^\d{1,2}[:/]",  # Times
-                                            r"^\$\d+",  # Prices
-                                            r"^(book now|register|tickets|more info|learn more|sign up|contact)",
-                                            r"^(home|about|events|classes|shop|cart)",
-                                        ]
-
-                                        if not any(re.match(pat, check_line.lower()) for pat in skip_patterns):
-                                            # This looks like a title
-                                            if not title:
-                                                title = check_line
-                                            elif len(check_line) > 15:  # Could be description
-                                                description_parts.append(check_line)
-
-                            if not title:
-                                i += 1
-                                continue
-
-                            # Clean up title
-                            title = title.strip()
-
-                            # Skip if title looks like navigation or boilerplate
-                            if len(title) < 5 or title.lower() in ["class", "event", "workshop", "session"]:
-                                i += 1
-                                continue
-
-                            # Parse date
-                            try:
-                                month_str = month[:3] if len(month) > 3 else month
-                                dt = datetime.strptime(f"{month_str} {day} {year}", "%b %d %Y")
-                                if dt.date() < datetime.now().date():
-                                    dt = datetime.strptime(f"{month_str} {day} {int(year) + 1}", "%b %d %Y")
-                                start_date = dt.strftime("%Y-%m-%d")
-                            except ValueError:
-                                i += 1
-                                continue
-
-                            # Create unique key for deduping across URLs
-                            event_key = f"{title}|{start_date}"
-
-                            # Skip if we already have this event
-                            if event_key in all_events:
-                                i += 1
-                                continue
-
-                            # Build description
-                            description = " ".join(description_parts) if description_parts else "Pottery and painting class at All Fired Up Art in Little Five Points"
-
-                            # Store event info
-                            all_events[event_key] = {
-                                "title": title,
-                                "description": description,
-                                "start_date": start_date,
-                                "start_time": start_time,
-                                "image_url": image_map.get(title),
-                            }
-
-                        i += 1
-
-                except Exception as e:
-                    logger.warning(f"Error fetching {url}: {e}")
-                    continue
-
-            # Now insert all unique events
-            for event_key, event_data in all_events.items():
-                events_found += 1
-
-                content_hash = generate_content_hash(
-                    event_data["title"],
-                    "All Fired Up Art",
-                    event_data["start_date"]
+        # Infer venue from product title
+        venue_data = _infer_venue(product_title)
+        venue_id = venue_ids.get(venue_data["slug"])
+        if not venue_id:
+            try:
+                venue_id = get_or_create_venue(venue_data)
+                venue_ids[venue_data["slug"]] = venue_id
+            except Exception as exc:
+                logger.error(
+                    f"All Fired Up Art: venue fallback creation failed for "
+                    f"'{venue_data['name']}': {exc}"
                 )
+                continue
 
+        clean_title = _clean_title(product_title)
 
-                # Get specific event URL
-
-
-                event_url = find_event_url(title, event_links, EVENTS_URL)
-
-
-
-                event_record = {
-                    "source_id": source_id,
-                    "venue_id": venue_id,
-                    "title": event_data["title"],
-                    "description": event_data["description"],
-                    "start_date": event_data["start_date"],
-                    "start_time": event_data["start_time"],
-                    "end_date": None,
-                    "end_time": None,
-                    "is_all_day": False,
-                    "category": "art",
-                    "subcategory": "arts.workshop",
-                    "tags": [
-                        "pottery",
-                        "painting",
-                        "ceramics",
-                        "workshop",
-                        "creative",
-                        "hands-on",
-                        "little-five-points",
-                        "art-class",
-                    ],
-                    "price_min": None,
-                    "price_max": None,
-                    "price_note": None,
-                    "is_free": False,
-                    "source_url": event_url,
-                    "ticket_url": RESERVATIONS_URL,
-                    "image_url": event_data["image_url"],
-                    "raw_text": f"{event_data['title']} - {event_data['start_date']}",
-                    "extraction_confidence": 0.75,
-                    "is_recurring": False,
-                    "recurrence_rule": None,
-                    "content_hash": content_hash,
-                    "is_class": True,
-                    "class_category": "pottery",
-                }
-
-                existing = find_event_by_hash(content_hash)
-                if existing:
-                    smart_update_existing_event(existing, event_record)
-                    events_updated += 1
-                    continue
-
-                try:
-                    insert_event(event_record)
-                    events_new += 1
-                    logger.info(f"Added: {event_data['title']} on {event_data['start_date']}")
-                except Exception as e:
-                    logger.error(f"Failed to insert: {event_data['title']}: {e}")
-
-            browser.close()
-
-        logger.info(
-            f"All Fired Up Art crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
+        # Shopify product URL for booking (deeplinks directly to booking flow)
+        shopify_handle = (shopify_product or {}).get("handle") or ""
+        source_url = (
+            f"{BASE_URL}/products/{shopify_handle}" if shopify_handle else CALENDAR_URL
         )
 
-    except Exception as e:
-        logger.error(f"Failed to crawl All Fired Up Art: {e}")
-        raise
+        for item in schedule_items:
+            item_title = item.get("title", "")
+            rules = item.get("rules", "")
 
+            # Prefer item title time (already local ET)
+            parsed = _parse_schedule_title_date(item_title)
+            if parsed:
+                start_date, start_time = parsed
+            else:
+                # Fallback: parse DTSTART UTC → approximate ET (UTC-5)
+                dt_utc = _parse_dtstart_utc(rules)
+                if not dt_utc:
+                    logger.warning(
+                        f"All Fired Up Art: could not parse date for "
+                        f"product '{product_title}' item {item.get('id')}"
+                    )
+                    continue
+                dt_local = dt_utc - timedelta(hours=5)
+                start_date = dt_local.strftime("%Y-%m-%d")
+                start_time = dt_local.strftime("%H:%M")
+
+            if not _is_future_date(start_date):
+                continue
+
+            events_found += 1
+
+            description = _build_description(
+                clean_title=clean_title,
+                raw_description=raw_desc,
+                venue_name=venue_data["name"],
+                price_min=price_min,
+                duration_minutes=duration_minutes,
+                source_url=source_url,
+            )
+
+            content_hash = generate_content_hash(
+                clean_title, venue_data["name"], start_date
+            )
+
+            is_free = price_min is not None and price_min == 0
+
+            tags = ["family-friendly", "hands-on", "class", "kids", "rsvp-required"]
+            title_lower = clean_title.lower()
+            if any(
+                kw in title_lower
+                for kw in ["katie", "canvas", "resin", "pottery", "clay", "ceramic"]
+            ):
+                tags.append("arts")
+            if price_min:
+                tags.append("ticketed")
+
+            event_record = {
+                "source_id": source_id,
+                "venue_id": venue_id,
+                "title": clean_title,
+                "description": description,
+                "start_date": start_date,
+                "start_time": start_time,
+                "end_date": None,
+                "end_time": None,
+                "is_all_day": False,
+                "category": "family",
+                "subcategory": "art",
+                "tags": list(dict.fromkeys(tags)),  # dedupe, preserve order
+                "price_min": price_min,
+                "price_max": price_min,  # BTA single-tier pricing
+                "price_note": "Registration required. Price per person.",
+                "is_free": is_free,
+                "source_url": source_url,
+                "ticket_url": source_url,
+                "image_url": image_url,
+                "raw_text": f"{product_title} | BTA product {bta_product_id}",
+                "extraction_confidence": 0.92,
+                "is_recurring": False,
+                "recurrence_rule": None,
+                "content_hash": content_hash,
+            }
+
+            existing = find_event_by_hash(content_hash)
+            if existing:
+                smart_update_existing_event(existing, event_record)
+                events_updated += 1
+                continue
+
+            try:
+                insert_event(event_record)
+                events_new += 1
+                logger.info(
+                    f"All Fired Up Art: added '{clean_title}' "
+                    f"at {venue_data['name']} on {start_date}"
+                )
+            except Exception as exc:
+                logger.error(
+                    f"All Fired Up Art: insert failed for '{clean_title}' "
+                    f"on {start_date}: {exc}"
+                )
+
+    logger.info(
+        f"All Fired Up Art: {events_found} found, "
+        f"{events_new} new, {events_updated} updated"
+    )
     return events_found, events_new, events_updated

@@ -10,11 +10,14 @@ export type Profile = {
   username: string;
   display_name: string | null;
   avatar_url: string | null;
+  city_moment_url: string | null;
+  city_moment_thumbnail_url: string | null;
   bio: string | null;
   location: string | null;
   website: string | null;
   is_public: boolean;
   is_admin: boolean;
+  privacy_mode: "low_key" | "social" | "open_book";
   created_at: string;
   updated_at: string;
 };

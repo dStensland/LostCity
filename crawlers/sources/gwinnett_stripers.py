@@ -9,9 +9,16 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 import httpx
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    find_existing_event_for_insert,
+    get_or_create_venue,
+    insert_event,
+    remove_stale_source_events,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -37,7 +44,15 @@ VENUE_DATA = {
 
 # Team ID for Gwinnett Stripers in MLB Stats API
 # sportId=11 is Triple-A
-STRIPERS_TEAM_ID = 536  # May need verification
+STRIPERS_TEAM_ID = 431
+
+
+def build_matchup_participants(opponent: str) -> list[dict]:
+    return [
+        {"name": "Gwinnett Stripers", "role": "team", "billing_order": 1},
+        {"name": opponent, "role": "team", "billing_order": 2},
+    ]
+ATLANTA_TZ = ZoneInfo("America/New_York")
 
 
 def find_stripers_team_id() -> int:
@@ -74,12 +89,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
         # Find the correct team ID
         team_id = find_stripers_team_id()
 
-        # Get schedule for next 3 months
-        today = datetime.now()
-        end_date = today + timedelta(days=90)
+        # Get schedule through the end of the regular season horizon.
+        today = datetime.now(ATLANTA_TZ)
+        end_date = today + timedelta(days=240)
+        today_date = today.date().isoformat()
 
-        start_str = today.strftime("%Y-%m-%d")
-        end_str = end_date.strftime("%Y-%m-%d")
+        start_str = today_date
+        end_str = end_date.date().isoformat()
 
         schedule_url = f"{MLB_API_BASE}/schedule?sportId=11&teamId={team_id}&startDate={start_str}&endDate={end_str}"
         logger.info(f"Fetching Gwinnett Stripers schedule from MLB API: {schedule_url}")
@@ -89,6 +105,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
         data = response.json()
 
         dates = data.get("dates", [])
+        current_hashes: set[str] = set()
         logger.info(f"Found {len(dates)} dates with games")
 
         for date_entry in dates:
@@ -111,11 +128,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         continue
 
                     game_dt = datetime.fromisoformat(game_date_str.replace("Z", "+00:00"))
-                    game_date = game_dt.strftime("%Y-%m-%d")
-                    game_time = game_dt.strftime("%H:%M")
+                    local_dt = game_dt.astimezone(ATLANTA_TZ)
+                    game_date = local_dt.strftime("%Y-%m-%d")
+                    game_time = local_dt.strftime("%H:%M")
 
                     # Skip past games
-                    if game_date < today.strftime("%Y-%m-%d"):
+                    if game_date < today_date:
                         continue
 
                     # Get opponent
@@ -129,6 +147,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     events_found += 1
 
                     content_hash = generate_content_hash(title, VENUE_DATA["name"], game_date)
+                    current_hashes.add(content_hash)
 
 
                     # Get game link if available
@@ -160,9 +179,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "is_recurring": False,
                         "recurrence_rule": None,
                         "content_hash": content_hash,
+                        "_parsed_artists": build_matchup_participants(opponent),
                     }
 
-                    existing = find_event_by_hash(content_hash)
+                    existing = find_existing_event_for_insert(event_record)
                     if existing:
                         smart_update_existing_event(existing, event_record)
                         events_updated += 1
@@ -178,6 +198,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 except Exception as e:
                     logger.debug(f"Error processing game: {e}")
                     continue
+
+        stale_removed = remove_stale_source_events(source_id, current_hashes)
+        if stale_removed:
+            logger.info("Removed %s stale Gwinnett Stripers rows after official refresh", stale_removed)
 
         logger.info(
             f"Gwinnett Stripers crawl complete: {events_found} found, {events_new} new, {events_updated} existing"

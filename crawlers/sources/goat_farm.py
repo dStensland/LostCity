@@ -35,6 +35,15 @@ VENUE_DATA = {
     "venue_type": "arts_center",
     "spot_type": "arts",
     "website": BASE_URL,
+    "description": (
+        "Goat Farm Arts Center is a 12-acre post-industrial arts campus on Atlanta's Westside, "
+        "home to artist studios, performance spaces, galleries, and an event lawn. "
+        "A hub for alternative music, experimental performance, gallery openings, and community events."
+    ),
+    "hours": {
+        "note": "Hours vary by event. Check website for specific event times."
+    },
+    "vibes": ["arts-center", "alternative", "live-music", "gallery", "outdoor", "westside", "eclectic"],
 }
 
 
@@ -451,18 +460,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         # Generate content hash
                         content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
 
-                        # Check if exists
-                        existing = find_event_by_hash(content_hash)
-                        if existing:
-                            smart_update_existing_event(existing, event_record)
-                            events_updated += 1
-                            continue
-
-                        # Build event record
-                        # Get specific event URL
-
-                        event_url = find_event_url(title, event_links, EVENTS_URL)
-
+                        # event_url is already the individual event page URL from the loop variable
 
                         event_record = {
                             "source_id": source_id,
@@ -490,6 +488,12 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             "recurrence_rule": None,
                             "content_hash": content_hash,
                         }
+
+                        existing = find_event_by_hash(content_hash)
+                        if existing:
+                            smart_update_existing_event(existing, event_record)
+                            events_updated += 1
+                            continue
 
                         try:
                             insert_event(event_record)

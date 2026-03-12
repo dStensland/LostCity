@@ -2,7 +2,7 @@ import { getCachedPortalBySlug, getPortalVertical } from "@/lib/portal";
 import { EmoryDemoHeader, PortalHeader, DogHeader } from "@/components/headers";
 import { AmbientBackground } from "@/components/ambient";
 import FindView from "@/components/find/FindView";
-import CommunityView from "@/components/community/CommunityView";
+import CommunityHub from "@/components/community/CommunityHub";
 import DetailViewRouter from "@/components/views/DetailViewRouter";
 import { DefaultTemplate } from "./_templates/default";
 import { GalleryTemplate } from "./_templates/gallery";
@@ -23,6 +23,10 @@ import DogSavedView from "./_components/dog/DogSavedView";
 import { isDogPortal, DOG_PORTAL_VAR_OVERRIDES, DOG_DETAIL_VIEW_CSS } from "@/lib/dog-art";
 import { safeJsonLd } from "@/lib/formats";
 import { toAbsoluteUrl, getSiteUrl } from "@/lib/site-url";
+import {
+  hasActiveFindFilters,
+  hasAnyActiveFindFilters,
+} from "@/lib/find-filter-schema";
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import HorseSpinner from "@/components/ui/HorseSpinner";
@@ -76,6 +80,24 @@ type PortalSearchParams = {
   neighborhoods?: string;
   price?: string;
   free?: string;
+  open_now?: string;
+  with_events?: string;
+  price_level?: string;
+  venue_type?: string;
+  venue_types?: string;
+  neighborhood?: string;
+  cuisine?: string;
+  label?: string;
+  occasion?: string;
+  activity?: string;
+  weekday?: string;
+  theater?: string;
+  class_category?: string;
+  class_date?: string;
+  class_skill?: string;
+  skill_level?: string;
+  start_date?: string;
+  end_date?: string;
   date?: string;
   view?: string;
   tab?: string;
@@ -206,17 +228,7 @@ export default async function PortalPage({ params, searchParams }: Props) {
   const hasFindSignals = Boolean(
     findTypeParam ||
       findDisplayParam ||
-      searchParamsData.search ||
-      searchParamsData.categories ||
-      searchParamsData.subcategories ||
-      searchParamsData.genres ||
-      searchParamsData.tags ||
-      searchParamsData.vibes ||
-      searchParamsData.neighborhoods ||
-      searchParamsData.price ||
-      searchParamsData.free ||
-      searchParamsData.date ||
-      searchParamsData.mood
+      hasAnyActiveFindFilters(searchParamsData)
   );
 
   // Parse view mode with deterministic fallback behavior.
@@ -265,6 +277,11 @@ export default async function PortalPage({ params, searchParams }: Props) {
     findType = "destinations";
   }
 
+  // Community portals only support events in the Find view
+  if (isCommunity && findType !== "events") {
+    findType = "events";
+  }
+
   // Determine display mode - support legacy view params
   let findDisplay: FindDisplay = "list";
   if (findDisplayParam) {
@@ -275,28 +292,8 @@ export default async function PortalPage({ params, searchParams }: Props) {
     findDisplay = "calendar";
   }
 
-  // Community sub-tab - default to "people" (Your People)
-  let communityTab: "people" | "groups" | "curations" = "people";
-  if (searchParamsData.tab === "curations") {
-    communityTab = "curations";
-  } else if (searchParamsData.tab === "groups") {
-    communityTab = "groups";
-  }
-
   // Check for active filters
-  const hasActiveFilters = !!(
-    searchParamsData.search ||
-    searchParamsData.categories ||
-    searchParamsData.subcategories ||
-    searchParamsData.genres ||
-    searchParamsData.tags ||
-    searchParamsData.vibes ||
-    searchParamsData.neighborhoods ||
-    searchParamsData.price ||
-    searchParamsData.free ||
-    searchParamsData.date ||
-    searchParamsData.mood
-  );
+  const hasActiveFilters = hasActiveFindFilters(searchParamsData, findType);
   const hospitalMode = normalizeHospitalMode(searchParamsData.mode);
   const portalPageSchema = {
     "@context": "https://schema.org",
@@ -312,16 +309,16 @@ export default async function PortalPage({ params, searchParams }: Props) {
   };
 
   const mainClassName = (() => {
-    const base = "mx-auto px-4 pb-20";
+    const base = "mx-auto px-4 sm:px-6 lg:px-8 pb-20";
     if (viewMode !== "find") {
       return isEmoryNativeHospital || isFilm
         ? `max-w-6xl ${base}`
-        : `max-w-5xl ${base}`;
+        : `max-w-[1600px] ${base}`;
     }
     if (findDisplay === "calendar" || findDisplay === "map") {
-      return `max-w-[1500px] ${base}`;
+      return `max-w-[1600px] ${base}`;
     }
-    return `max-w-5xl ${base}`;
+    return `max-w-[1600px] ${base}`;
   })();
 
   return (
@@ -397,6 +394,7 @@ export default async function PortalPage({ params, searchParams }: Props) {
                         findType={findType}
                         displayMode={findDisplay}
                         hasActiveFilters={hasActiveFilters}
+                        vertical={vertical}
                       />
                     </div>
                   )}
@@ -410,11 +408,8 @@ export default async function PortalPage({ params, searchParams }: Props) {
                           includeSupportSensitive={searchParamsData.support === "1"}
                         />
                       ) : (
-                        <CommunityView
-                          portalId={portal.id}
+                        <CommunityHub
                           portalSlug={portal.slug}
-                          portalName={portal.name}
-                          activeTab={communityTab}
                         />
                       )}
                     </div>
@@ -447,7 +442,7 @@ export default async function PortalPage({ params, searchParams }: Props) {
               }
             />
           </Suspense>
-          <div className="h-14" />
+          <div className="h-14 sm:hidden" />
         </>
       )}
     </div>

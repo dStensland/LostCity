@@ -1,5 +1,13 @@
 export type FindType = "events" | "classes" | "destinations" | "showtimes" | "regulars";
 
+export const FIND_TYPES: readonly FindType[] = [
+  "events",
+  "classes",
+  "destinations",
+  "showtimes",
+  "regulars",
+];
+
 export const FIND_TYPE_FILTER_KEYS: Record<FindType, readonly string[]> = {
   events: [
     "search",
@@ -94,4 +102,10 @@ export function hasActiveFindFilters(
     const value = readParamValue(params, key);
     return Boolean(value && value.trim().length > 0);
   });
+}
+
+export function hasAnyActiveFindFilters(
+  params: SearchParamsLike | SearchParamRecord
+): boolean {
+  return FIND_TYPES.some((findType) => hasActiveFindFilters(params, findType));
 }

@@ -1,513 +1,382 @@
 """
-Crawler for Gas South Arena (gassouthdistrict.com).
-Formerly known as Infinite Energy Arena.
+Crawler for Gas South District events (gassouthdistrict.com).
 
-Hosts concerts, hockey (Atlanta Gladiators), and major events in Gwinnett County.
-Site uses JavaScript rendering - must use Playwright.
-
-Updated to use DOM extraction instead of fragile text parsing.
+The public event calendar is server-rendered and exposes structured event cards
+with date ranges, venue labels, times, and detail URLs. This source should
+cover non-team district events such as conventions, expos, theater bookings,
+and specialty shows without relying on brittle body-text parsing.
 """
 
 from __future__ import annotations
 
-import re
-import json
 import logging
-from datetime import datetime
+import re
+from datetime import date, datetime
 from typing import Optional
 
-from playwright.sync_api import sync_playwright
+import requests
+from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event, remove_stale_source_events
+from db import (
+    find_existing_event_for_insert,
+    get_or_create_venue,
+    insert_event,
+    remove_stale_source_events,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
-from utils import extract_event_links, find_event_url, extract_images_from_page, enrich_event_record, is_junk_description
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.gassouthdistrict.com"
 EVENTS_URL = f"{BASE_URL}/events"
+USER_AGENT = "Mozilla/5.0 (compatible; LostCityBot/1.0)"
 
-VENUE_DATA = {
-    "name": "Gas South Arena",
-    "slug": "gas-south-arena",
-    "address": "6400 Sugarloaf Pkwy",
-    "neighborhood": "Duluth",
-    "city": "Duluth",
-    "state": "GA",
-    "zip": "30097",
-    "lat": 33.9618,
-    "lng": -84.0965,
-    "venue_type": "arena",
-    "spot_type": "stadium",
-    "website": BASE_URL,
+VENUE_DATA_BY_LABEL = {
+    "gas south arena": {
+        "name": "Gas South Arena",
+        "slug": "gas-south-arena",
+        "address": "6400 Sugarloaf Pkwy",
+        "city": "Duluth",
+        "state": "GA",
+        "zip": "30097",
+        "lat": 33.9618,
+        "lng": -84.0965,
+        "venue_type": "arena",
+        "spot_type": "arena",
+        "website": "https://www.gassouthdistrict.com/arena",
+    },
+    "gas south convention center": {
+        "name": "Gas South Convention Center",
+        "slug": "gas-south-convention-center",
+        "address": "6400 Sugarloaf Pkwy",
+        "city": "Duluth",
+        "state": "GA",
+        "zip": "30097",
+        "lat": 33.9618,
+        "lng": -84.0965,
+        "venue_type": "convention_center",
+        "spot_type": "convention_center",
+        "website": "https://www.gassouthdistrict.com/convention-center",
+    },
+    "gas south theater": {
+        "name": "Gas South Theater",
+        "slug": "gas-south-theater",
+        "address": "6400 Sugarloaf Pkwy",
+        "city": "Duluth",
+        "state": "GA",
+        "zip": "30097",
+        "lat": 33.9618,
+        "lng": -84.0965,
+        "venue_type": "theater",
+        "spot_type": "theater",
+        "website": "https://www.gassouthdistrict.com/theater",
+    },
+    "hudgens center for art & learning": {
+        "name": "Hudgens Center for Art & Learning",
+        "slug": "hudgens-center-for-art-and-learning",
+        "address": "6400 Sugarloaf Pkwy",
+        "city": "Duluth",
+        "state": "GA",
+        "zip": "30097",
+        "lat": 33.9618,
+        "lng": -84.0965,
+        "venue_type": "arts_center",
+        "spot_type": "arts_center",
+        "website": "https://www.hudgens.org/",
+    },
+}
+
+TEAM_SOURCE_TITLES = {
+    "atlanta gladiators",
+    "atlanta vibe",
+    "georgia swarm",
+}
+
+TAG_KEYWORDS = {
+    "expo": "expo",
+    "show": "show",
+    "festival": "festival",
+    "market": "market",
+    "quilt": "quilting",
+    "sewing": "sewing",
+    "craft": "crafts",
+    "dance": "dance",
+    "theater": "theater",
+    "tribute": "music",
+    "comedy": "comedy",
+    "monster": "family",
 }
 
 
 def parse_time(time_text: str) -> Optional[str]:
-    """Parse time from '7:00 PM', '7pm', '7:00pm' formats."""
-    # Try HH:MM AM/PM format
-    match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", time_text, re.IGNORECASE)
-    if match:
-        hour, minute, period = match.groups()
-        hour = int(hour)
-        if period.lower() == "pm" and hour != 12:
-            hour += 12
-        elif period.lower() == "am" and hour == 12:
-            hour = 0
-        return f"{hour:02d}:{minute}"
+    """Parse time from '7:00 PM', '7pm', '7:00pm', or '7:00PM'."""
+    if not time_text:
+        return None
 
-    # Try H AM/PM format (e.g., "7pm")
-    match = re.search(r"(\d{1,2})\s*(am|pm)", time_text, re.IGNORECASE)
-    if match:
-        hour, period = match.groups()
-        hour = int(hour)
-        if period.lower() == "pm" and hour != 12:
-            hour += 12
-        elif period.lower() == "am" and hour == 12:
-            hour = 0
-        return f"{hour:02d}:00"
+    match = re.search(r"(\d{1,2})(?::(\d{2}))?\s*(am|pm)", time_text, re.IGNORECASE)
+    if not match:
+        return None
 
-    return None
+    hour, minute, period = match.groups()
+    value = int(hour)
+    if period.lower() == "pm" and value != 12:
+        value += 12
+    if period.lower() == "am" and value == 12:
+        value = 0
+    return f"{value:02d}:{minute or '00'}"
 
 
-def parse_jsonld_events(page) -> list[dict]:
-    """Extract event data from JSON-LD structured data."""
-    events = []
+def parse_date_label(date_label: str, today: date | None = None) -> tuple[str, Optional[str]]:
+    """Parse Gas South card date labels into ISO dates."""
+    today = today or datetime.now().date()
+    cleaned = re.sub(r"\s+", " ", (date_label or "").strip())
 
-    scripts = page.query_selector_all('script[type="application/ld+json"]')
-    for script in scripts:
-        try:
-            content = script.inner_html()
-            data = json.loads(content)
+    range_match = re.match(
+        r"([A-Za-z]+)\s+(\d{1,2})\s+to\s+([A-Za-z]+)\s+(\d{1,2})\s+(\d{4})",
+        cleaned,
+        re.IGNORECASE,
+    )
+    if range_match:
+        start_month, start_day, end_month, end_day, year_str = range_match.groups()
+        start_dt = datetime.strptime(f"{start_month[:3]} {start_day} {year_str}", "%b %d %Y")
+        end_dt = datetime.strptime(f"{end_month[:3]} {end_day} {year_str}", "%b %d %Y")
+        return start_dt.date().isoformat(), end_dt.date().isoformat()
 
-            if isinstance(data, dict) and data.get("@type") == "Event":
-                events.append(data)
-            elif isinstance(data, list):
-                for item in data:
-                    if isinstance(item, dict) and item.get("@type") == "Event":
-                        events.append(item)
-        except (json.JSONDecodeError, Exception) as e:
-            logger.debug(f"Could not parse JSON-LD: {e}")
-            continue
+    single_match = re.match(r"([A-Za-z]+)\s+(\d{1,2})\s+(\d{4})", cleaned, re.IGNORECASE)
+    if not single_match:
+        raise ValueError(f"Could not parse Gas South date label: {date_label}")
 
-    return events
+    month_name, day_str, year_str = single_match.groups()
+    parsed = datetime.strptime(f"{month_name[:3]} {day_str} {year_str}", "%b %d %Y").date()
 
+    # Guard against cards that drop the year, even though the current markup includes it.
+    if parsed < today and str(today.year) == year_str and today.month >= 10 and parsed.month <= 3:
+        parsed = parsed.replace(year=parsed.year + 1)
 
-def extract_events_from_dom(page) -> list[dict]:
-    """Extract event data by parsing the page text content.
-
-    The site structure has a predictable pattern:
-    - Title
-    - Venue (GAS SOUTH ARENA® or GAS SOUTH THEATER®)
-    - Date (e.g., "Feb 4" or "Feb 7 - 8")
-    - Time (e.g., "7:10pm")
-    """
-    body_text = page.inner_text("body")
-    lines = [l.strip() for l in body_text.split("\n") if l.strip()]
-
-    events = []
-    skip_titles = {
-        'grid', 'list', 'atlanta vibe', 'georgia swarm', 'buy tickets', 'more info',
-        'search', 'accessibility', 'gas south district', 'events & tickets',
-        'arena', 'convention center', 'theater', 'connect with us', 'upcoming events',
-        'sort by venue', 'event list', 'cal'
-    }
-    used_title_indices = set()  # Track which lines we've already used as titles
-
-    i = 0
-    while i < len(lines):
-        line = lines[i]
-
-        # Look for venue indicators (these mark event boundaries)
-        if "GAS SOUTH" in line.upper():
-            title = None
-            title_index = None
-            date_text = None
-            time_text = None
-
-            # Look backward for title (skip backwards until we find a valid title)
-            for j in range(i-1, max(0, i-5), -1):
-                # Skip if we already used this line as a title
-                if j in used_title_indices:
-                    continue
-
-                candidate = lines[j].strip()
-                if candidate and len(candidate) > 3:
-                    # Skip known non-title lines
-                    if candidate.lower() in skip_titles:
-                        continue
-
-                    # Skip if it contains "GAS SOUTH" (venue names)
-                    if "GAS SOUTH" in candidate.upper():
-                        continue
-
-                    # Skip if it looks like a date (e.g., "Feb 7", "Feb 7 - 8")
-                    if re.match(
-                        r'^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}',
-                        candidate,
-                        re.IGNORECASE
-                    ):
-                        continue
-
-                    # Skip if it looks like a time (e.g., "7:10pm")
-                    if re.search(r'\d{1,2}:\d{2}\s*(am|pm)', candidate, re.IGNORECASE):
-                        continue
-
-                    title = candidate
-                    title_index = j
-                    break
-
-            # Look forward for date and time
-            for j in range(i+1, min(len(lines), i+5)):
-                check_line = lines[j].strip()
-
-                # Date pattern: "Feb 4", "February 4", "Feb 7 - 8"
-                if not date_text:
-                    date_match = re.match(
-                        r'(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:\s*-\s*\d{1,2})?',
-                        check_line,
-                        re.IGNORECASE
-                    )
-                    if date_match:
-                        date_text = date_match.group(0)
-
-                # Time pattern: "7:10pm", "7:10 pm"
-                if not time_text:
-                    time_match = re.search(r'\d{1,2}:\d{2}\s*(am|pm)', check_line, re.IGNORECASE)
-                    if time_match:
-                        time_text = time_match.group(0)
-
-            if title and date_text:
-                # Mark this title line as used
-                if title_index is not None:
-                    used_title_indices.add(title_index)
-
-                events.append({
-                    'title': title,
-                    'dateText': date_text,
-                    'timeText': time_text or '',
-                })
-
-        i += 1
-
-    return events
+    return parsed.isoformat(), None
 
 
-def infer_category(title: str) -> str:
-    """Infer event category from title."""
-    title_lower = title.lower()
+def normalize_venue_label(label: str) -> str:
+    text = re.sub(r"[®™]", "", label or "").strip().lower()
+    text = re.sub(r"\s+", " ", text)
+    return text
 
-    # Sports events
-    if any(word in title_lower for word in ["gladiators", "hockey", "game", "vs.", "vs"]):
-        return "sports"
 
-    # Music events
-    if any(word in title_lower for word in ["concert", "tour", "band", "music", "fest", "festival"]):
+def venue_data_for_label(label: str) -> dict:
+    normalized = normalize_venue_label(label)
+    return VENUE_DATA_BY_LABEL.get(normalized, VENUE_DATA_BY_LABEL["gas south arena"])
+
+
+def should_skip_official_gladiators_event(title: str) -> bool:
+    lowered = title.lower().strip()
+    return (
+        lowered == "atlanta gladiators"
+        or lowered.startswith("atlanta gladiators vs")
+        or lowered.startswith("gladiators vs ")
+    )
+
+
+def should_skip_dedicated_team_event(title: str) -> bool:
+    lowered = title.lower().strip()
+    return lowered in TEAM_SOURCE_TITLES or should_skip_official_gladiators_event(title)
+
+
+def infer_category(title: str, venue_label: str) -> str:
+    text = f"{title} {venue_label}".lower()
+    if any(token in text for token in ("concert", "tribute", "symphony", "tour")):
         return "music"
-
-    # Family/kids events
-    if any(word in title_lower for word in ["disney", "kids", "family", "children", "paw patrol", "sesame"]):
-        return "family"
-
-    # Comedy
-    if any(word in title_lower for word in ["comedy", "comedian", "laugh"]):
+    if any(token in text for token in ("comedy", "garage")):
         return "nightlife"
-
-    # Default to community for other events (conventions, expos, etc.)
+    if any(token in text for token in ("expo", "show", "market", "convention")):
+        return "community"
+    if any(token in text for token in ("dance", "theater")):
+        return "arts"
     return "community"
 
 
+def infer_tags(title: str, venue_label: str) -> list[str]:
+    text = f"{title} {venue_label}".lower()
+    tags = ["gas-south", "duluth"]
+    for keyword, tag in TAG_KEYWORDS.items():
+        if keyword in text and tag not in tags:
+            tags.append(tag)
+    normalized_venue = normalize_venue_label(venue_label)
+    if "arena" in normalized_venue:
+        tags.append("arena")
+    elif "convention center" in normalized_venue:
+        tags.append("convention-center")
+    elif "theater" in normalized_venue:
+        tags.append("theater")
+    elif "hudgens" in normalized_venue:
+        tags.append("arts-center")
+    return tags
+
+
+def clean_description(text: Optional[str]) -> Optional[str]:
+    if not text:
+        return None
+    cleaned = re.sub(r"\s+", " ", text).strip()
+    if not cleaned:
+        return None
+    if "gas south district" in cleaned.lower() and len(cleaned) < 80:
+        return None
+    return cleaned[:1000]
+
+
+def fetch_detail_description(detail_url: str) -> Optional[str]:
+    try:
+        response = requests.get(
+            detail_url,
+            headers={"User-Agent": USER_AGENT},
+            timeout=30,
+        )
+        if response.status_code != 200:
+            return None
+    except Exception:
+        return None
+
+    soup = BeautifulSoup(response.text, "html.parser")
+    meta = soup.select_one('meta[name="description"]')
+    if meta and meta.get("content"):
+        description = clean_description(meta["content"])
+        if description and description.lower() != "gas south district":
+            return description
+    return None
+
+
+def parse_event_cards(html_text: str, today: date | None = None) -> list[dict]:
+    """Extract district event cards from the public events page."""
+    today = today or datetime.now().date()
+    soup = BeautifulSoup(html_text, "html.parser")
+    events: list[dict] = []
+
+    for card in soup.select(".eventItem"):
+        title_link = card.select_one("h3.title a")
+        if not title_link:
+            continue
+
+        title = title_link.get_text(" ", strip=True)
+        if not title or should_skip_dedicated_team_event(title):
+            continue
+
+        href = title_link.get("href") or ""
+        detail_url = href if href.startswith("http") else f"{BASE_URL}{href}"
+
+        location_el = card.select_one(".meta .location")
+        date_el = card.select_one(".date")
+        time_el = card.select_one(".date .time")
+        image_el = card.select_one(".thumb img")
+        tagline_el = card.select_one("h4.tagline")
+
+        if not location_el or not date_el:
+            continue
+
+        start_date, end_date = parse_date_label(date_el.get("aria-label", ""), today=today)
+        if datetime.strptime(start_date, "%Y-%m-%d").date() < today:
+            continue
+
+        location_label = location_el.get_text(" ", strip=True)
+        start_time = parse_time(time_el.get_text(" ", strip=True)) if time_el else None
+        is_all_day = start_time is None
+        description = clean_description(tagline_el.get_text(" ", strip=True) if tagline_el else None)
+        image_url = image_el.get("src") if image_el else None
+        if image_url and not image_url.startswith("http"):
+            image_url = f"{BASE_URL}{image_url}"
+
+        events.append(
+            {
+                "title": title,
+                "location_label": location_label,
+                "start_date": start_date,
+                "end_date": end_date,
+                "start_time": start_time,
+                "end_time": None,
+                "is_all_day": is_all_day,
+                "detail_url": detail_url,
+                "image_url": image_url,
+                "description": description,
+            }
+        )
+
+    return events
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Gas South Arena events using Playwright with DOM extraction."""
+    """Crawl Gas South District events from the official event cards."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
-    current_hashes = set()
+    current_hashes: set[str] = set()
 
-    try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                viewport={"width": 1920, "height": 1080},
-            )
-            page = context.new_page()
+    response = requests.get(
+        EVENTS_URL,
+        headers={"User-Agent": USER_AGENT},
+        timeout=30,
+    )
+    response.raise_for_status()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+    events = parse_event_cards(response.text)
+    if not events:
+        raise ValueError("Gas South District event page did not yield any non-team future events")
 
-            logger.info(f"Fetching Gas South Arena: {EVENTS_URL}")
-            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)
+    for event in events:
+        title = event["title"]
+        venue_data = venue_data_for_label(event["location_label"])
+        venue_id = get_or_create_venue(venue_data)
+        content_hash = generate_content_hash(title, venue_data["name"], event["start_date"])
+        current_hashes.add(content_hash)
+        events_found += 1
 
-            # Scroll to load lazy-loaded content
-            for _ in range(5):
-                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                page.wait_for_timeout(1000)
+        description = event["description"] or fetch_detail_description(event["detail_url"])
+        category = infer_category(title, event["location_label"])
+        tags = infer_tags(title, event["location_label"])
 
-            # Extract image map for event images
-            image_map = extract_images_from_page(page)
+        event_record = {
+            "source_id": source_id,
+            "venue_id": venue_id,
+            "title": title,
+            "description": description,
+            "start_date": event["start_date"],
+            "start_time": event["start_time"],
+            "end_date": event["end_date"],
+            "end_time": event["end_time"],
+            "is_all_day": event["is_all_day"],
+            "category": category,
+            "subcategory": "expo" if "convention-center" in tags else None,
+            "tags": tags,
+            "price_min": None,
+            "price_max": None,
+            "price_note": None,
+            "is_free": False,
+            "source_url": event["detail_url"],
+            "ticket_url": event["detail_url"],
+            "image_url": event["image_url"],
+            "raw_text": (
+                f"{title} | {event['location_label']} | {event['start_date']} | "
+                f"{event.get('start_time') or 'all-day'}"
+            ),
+            "extraction_confidence": 0.93,
+            "is_recurring": False,
+            "recurrence_rule": None,
+            "content_hash": content_hash,
+        }
 
-            # Extract event links for specific URLs
-            event_links = extract_event_links(page, BASE_URL)
+        existing = find_existing_event_for_insert(event_record)
+        if existing:
+            smart_update_existing_event(existing, event_record)
+            events_updated += 1
+        else:
+            insert_event(event_record)
+            events_new += 1
 
-            # Try JSON-LD extraction first (structured data)
-            jsonld_events = parse_jsonld_events(page)
-
-            if jsonld_events:
-                logger.info(f"Found {len(jsonld_events)} events in JSON-LD data")
-
-                for event_data in jsonld_events:
-                    try:
-                        title = event_data.get("name", "")
-                        if not title:
-                            continue
-
-                        # Parse ISO datetime
-                        start_date_str = event_data.get("startDate", "")
-                        if not start_date_str:
-                            continue
-
-                        try:
-                            start_dt = datetime.fromisoformat(start_date_str.replace("Z", "+00:00"))
-                            start_date = start_dt.strftime("%Y-%m-%d")
-                            start_time = start_dt.strftime("%H:%M")
-                        except ValueError:
-                            continue
-
-                        # Skip past events
-                        if datetime.strptime(start_date, "%Y-%m-%d").date() < datetime.now().date():
-                            continue
-
-                        events_found += 1
-                        content_hash = generate_content_hash(title, "Gas South Arena", start_date)
-                        current_hashes.add(content_hash)
-
-
-                        # Extract image and description
-                        image_url = event_data.get("image")
-                        if isinstance(image_url, list):
-                            image_url = image_url[0] if image_url else None
-
-                        description = event_data.get("description") or None
-                        if is_junk_description(description):
-                            description = None
-
-                        category = infer_category(title)
-
-                        # Get specific event URL
-                        event_url = find_event_url(title, event_links, EVENTS_URL)
-
-                        # If no JSON-LD image, try matching from image map
-                        if not image_url:
-                            title_lower = title.lower()
-                            for img_alt, img_url_mapped in image_map.items():
-                                if img_alt.lower() == title_lower or title_lower in img_alt.lower() or img_alt.lower() in title_lower:
-                                    image_url = img_url_mapped
-                                    break
-
-                        event_record = {
-                            "source_id": source_id,
-                            "venue_id": venue_id,
-                            "title": title,
-                            "description": description[:1000] if description else None,
-                            "start_date": start_date,
-                            "start_time": start_time,
-                            "end_date": None,
-                            "end_time": None,
-                            "is_all_day": False,
-                            "category": category,
-                            "subcategory": None,
-                            "tags": ["gas-south", "duluth", "arena"],
-                            "price_min": None,
-                            "price_max": None,
-                            "price_note": None,
-                            "is_free": None,
-                            "source_url": event_url,
-                            "ticket_url": event_data.get("url", EVENTS_URL),
-                            "image_url": image_url,
-                            "raw_text": f"{title} - {start_date}",
-                            "extraction_confidence": 0.90,
-                            "is_recurring": False,
-                            "recurrence_rule": None,
-                            "content_hash": content_hash,
-                        }
-
-                        # Enrich from detail page
-                        enrich_event_record(event_record, source_name="Gas South Arena")
-
-                        # Determine is_free if still unknown after enrichment
-                        if event_record.get("is_free") is None:
-                            desc_lower = (event_record.get("description") or "").lower()
-                            title_lower = event_record.get("title", "").lower()
-                            combined = f"{title_lower} {desc_lower}"
-                            if any(kw in combined for kw in ["free", "no cost", "no charge", "complimentary"]):
-                                event_record["is_free"] = True
-                                event_record["price_min"] = event_record.get("price_min") or 0
-                                event_record["price_max"] = event_record.get("price_max") or 0
-                            else:
-                                event_record["is_free"] = False
-
-                        existing = find_event_by_hash(content_hash)
-                        if existing:
-                            smart_update_existing_event(existing, event_record)
-                            events_updated += 1
-                            continue
-
-                        try:
-                            insert_event(event_record)
-                            events_new += 1
-                            logger.info(f"Added: {title} on {start_date}")
-                        except Exception as e:
-                            logger.error(f"Failed to insert: {title}: {e}")
-
-                    except Exception as e:
-                        logger.error(f"Error processing JSON-LD event: {e}")
-                        continue
-
-            # Fallback to DOM extraction if no JSON-LD data
-            else:
-                logger.info("No JSON-LD data found, using DOM extraction")
-                dom_events = extract_events_from_dom(page)
-                logger.info(f"Extracted {len(dom_events)} events from DOM")
-
-                for event_data in dom_events:
-                    try:
-                        title = event_data.get("title", "").strip()
-                        if not title or len(title) < 3:
-                            continue
-
-                        # Parse date from dateText (e.g., "Feb 4" or "Feb 7 - 8")
-                        date_text = event_data.get("dateText", "")
-                        if not date_text:
-                            continue
-
-                        # Extract month and day from date text
-                        # Handle ranges by taking first date only
-                        date_match = re.match(
-                            r'(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})',
-                            date_text,
-                            re.IGNORECASE
-                        )
-
-                        if not date_match:
-                            logger.debug(f"Could not parse date from: {date_text}")
-                            continue
-
-                        month = date_match.group(1)
-                        day = date_match.group(2)
-                        year = str(datetime.now().year)
-
-                        try:
-                            month_str = month[:3] if len(month) > 3 else month
-                            dt = datetime.strptime(f"{month_str} {day} {year}", "%b %d %Y")
-
-                            # If date is in the past, assume next year
-                            if dt.date() < datetime.now().date():
-                                dt = datetime.strptime(f"{month_str} {day} {int(year) + 1}", "%b %d %Y")
-
-                            start_date = dt.strftime("%Y-%m-%d")
-                        except ValueError as e:
-                            logger.debug(f"Could not parse date for {title}: {e}")
-                            continue
-
-                        # Parse time
-                        time_text = event_data.get("timeText", "")
-                        start_time = parse_time(time_text) if time_text else None
-
-                        # Default to 7:00 PM for arena events if no time found
-                        if not start_time:
-                            start_time = "19:00"
-                            logger.debug(f"No time found for {title}, defaulting to 7:00 PM")
-
-                        events_found += 1
-                        content_hash = generate_content_hash(title, "Gas South Arena", start_date)
-                        current_hashes.add(content_hash)
-
-                        existing = find_event_by_hash(content_hash)
-                        if existing:
-                            smart_update_existing_event(existing, event_record)
-                            events_updated += 1
-                            continue
-
-                        category = infer_category(title)
-
-                        # Get specific event URL
-                        event_url = find_event_url(title, event_links, EVENTS_URL)
-
-                        # Find image by title match
-                        event_image = None
-                        title_lower = title.lower()
-                        for img_alt, img_url in image_map.items():
-                            if img_alt.lower() == title_lower or title_lower in img_alt.lower() or img_alt.lower() in title_lower:
-                                event_image = img_url
-                                break
-
-                        event_record = {
-                            "source_id": source_id,
-                            "venue_id": venue_id,
-                            "title": title,
-                            "description": None,
-                            "start_date": start_date,
-                            "start_time": start_time,
-                            "end_date": None,
-                            "end_time": None,
-                            "is_all_day": False,
-                            "category": category,
-                            "subcategory": None,
-                            "tags": ["gas-south", "duluth", "arena"],
-                            "price_min": None,
-                            "price_max": None,
-                            "price_note": None,
-                            "is_free": None,
-                            "source_url": event_url,
-                            "ticket_url": event_url,
-                            "image_url": event_image,
-                            "raw_text": f"{title} - {date_text} {time_text}",
-                            "extraction_confidence": 0.80,
-                            "is_recurring": False,
-                            "recurrence_rule": None,
-                            "content_hash": content_hash,
-                        }
-
-                        # Enrich from detail page
-                        enrich_event_record(event_record, source_name="Gas South Arena")
-
-                        # Determine is_free if still unknown after enrichment
-                        if event_record.get("is_free") is None:
-                            desc_lower = (event_record.get("description") or "").lower()
-                            title_lower = event_record.get("title", "").lower()
-                            combined = f"{title_lower} {desc_lower}"
-                            if any(kw in combined for kw in ["free", "no cost", "no charge", "complimentary"]):
-                                event_record["is_free"] = True
-                                event_record["price_min"] = event_record.get("price_min") or 0
-                                event_record["price_max"] = event_record.get("price_max") or 0
-                            else:
-                                event_record["is_free"] = False
-
-                        try:
-                            insert_event(event_record)
-                            events_new += 1
-                            logger.info(f"Added: {title} on {start_date} at {start_time}")
-                        except Exception as e:
-                            logger.error(f"Failed to insert: {title}: {e}")
-
-                    except Exception as e:
-                        logger.error(f"Error processing DOM event: {e}")
-                        continue
-
-            browser.close()
-
-        # Remove stale events (events that are no longer listed on the source)
-        removed = remove_stale_source_events(source_id, current_hashes)
-        logger.info(f"Removed {removed} stale events")
-
-        logger.info(
-            f"Gas South Arena crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
-        )
-
-    except Exception as e:
-        logger.error(f"Failed to crawl Gas South Arena: {e}")
-        raise
-
+    removed = remove_stale_source_events(source_id, current_hashes)
+    logger.info("Removed %s stale Gas South District events", removed)
+    logger.info(
+        "Gas South District crawl complete: %s found, %s new, %s updated",
+        events_found,
+        events_new,
+        events_updated,
+    )
     return events_found, events_new, events_updated

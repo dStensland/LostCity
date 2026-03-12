@@ -163,7 +163,7 @@ function dayPartTimeReason(dayPart: DayPart, hour: number | null): string | null
 
   if (dayPart === "morning" && hour >= 6 && hour < 11) return "Morning pick";
   if (dayPart === "afternoon" && hour >= 11 && hour < 17) return "Afternoon pick";
-  if (dayPart === "evening" && hour >= 17 && hour < 23) return "Tonight's pick";
+  if (dayPart === "evening" && hour >= 17 && hour < 23) return "Perfect for tonight";
   if (dayPart === "late_night" && (hour >= 22 || hour < 3)) return "Open late";
   return null;
 }
@@ -218,7 +218,7 @@ function distanceScore(distanceKm: number | null | undefined): number {
 
 function distanceReason(distanceKm: number | null | undefined): string | null {
   if (typeof distanceKm !== "number") return null;
-  if (distanceKm <= 1.2) return "Easy walk";
+  if (distanceKm <= 1.2) return "Walkable from hotel";
   if (distanceKm <= 2.5) return "Quick ride";
   return null;
 }

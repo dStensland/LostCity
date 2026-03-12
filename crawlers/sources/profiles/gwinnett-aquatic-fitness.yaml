@@ -1,0 +1,20 @@
+version: 1
+slug: gwinnett-aquatic-fitness
+name: Gwinnett Aquatic Fitness
+integration_method: python
+defaults:
+  category: fitness
+  tags:
+  - aquatics
+  - water-fitness
+  - fitness-class
+  - public-fitness
+discovery:
+  enabled: false
+  type: list
+  urls:
+  - https://secure.rec1.com/GA/gwinnett-county-parks-recreation/catalog
+detail:
+  enabled: false
+data_goals:
+- events

@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import re
 import logging
-from datetime import datetime
+from datetime import datetime, date
 from typing import Optional
 from urllib.parse import urljoin
 
@@ -66,6 +66,17 @@ def parse_time(time_text: str) -> Optional[str]:
     except Exception as e:
         logger.debug(f"Failed to parse time '{time_text}': {e}")
         return None
+
+
+def is_future_or_current_date(start_date: Optional[str], *, today: Optional[date] = None) -> bool:
+    """Return True when the event date is today or in the future."""
+    if not start_date:
+        return False
+    try:
+        parsed = datetime.strptime(start_date, "%Y-%m-%d").date()
+    except ValueError:
+        return False
+    return parsed >= (today or date.today())
 
 
 def extract_price_info(text: str) -> tuple[Optional[float], Optional[float], Optional[str], bool]:
@@ -433,6 +444,14 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                 event_data = scrape_event_page(page, event_url)
                 if not event_data:
+                    continue
+
+                if not is_future_or_current_date(event_data.get("start_date")):
+                    logger.info(
+                        "Skipping stale Roswell365 event: %s on %s",
+                        event_data.get("title"),
+                        event_data.get("start_date"),
+                    )
                     continue
 
                 # Get or create venue

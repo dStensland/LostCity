@@ -1,19 +1,20 @@
 version: 1
 slug: apex-museum
 name: APEX Museum
-integration_method: aggregator
+integration_method: html
 defaults: {}
 discovery:
   enabled: true
-  type: api
+  type: html
   urls:
-  - https://www.eventbrite.com/d/ga--atlanta/apex-museum/
-  api:
-    adapter: eventbrite
+  - https://www.apexmuseum.org/visit-2026
+  - https://www.apexmuseum.org/directions-parking
+  - https://www.apexmuseum.org/vistor-faqs
 detail:
-  enabled: false
+  enabled: true
 data_goals:
-- events
-- exhibits
 - images
 - tickets
+- venue_hours
+- planning
+- accessibility

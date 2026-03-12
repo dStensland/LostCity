@@ -1,0 +1,16 @@
+version: 1
+slug: lovb-atlanta
+name: LOVB Atlanta
+integration_method: python
+defaults: {}
+discovery:
+  enabled: false
+  type: api
+  urls:
+  - https://www.lovb.com/2026/schedule
+detail:
+  enabled: false
+data_goals:
+  - events
+  - tickets
+  - schedule

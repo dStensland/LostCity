@@ -143,6 +143,7 @@ export default function DiscoverShell({ portal, data }: DiscoverShellProps) {
           events={data.tonightEvents}
           dayPart={data.ambient.dayPart}
           onEventClick={handleEventClick}
+          isFallback={data.tonightFallback}
         />
 
         <DiscoverSceneSection regulars={data.regulars} />

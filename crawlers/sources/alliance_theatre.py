@@ -12,7 +12,7 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import get_or_create_venue, get_client, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, extract_event_links, find_event_url, enrich_event_record
 
@@ -29,8 +29,34 @@ VENUE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30309",
+    "lat": 33.7892,
+    "lng": -84.3862,
     "venue_type": "theater",
+    "spot_type": "theater",
     "website": BASE_URL,
+    # Box office hours (verified from alliancetheatre.org/visit)
+    "hours": {
+        "monday": "closed",
+        "tuesday": "12:00-18:00",
+        "wednesday": "12:00-18:00",
+        "thursday": "12:00-18:00",
+        "friday": "12:00-18:00",
+        "saturday": "12:00-18:00",
+        "sunday": "closed",
+    },
+    "vibes": [
+        "theater",
+        "tony-award-winning",
+        "performing-arts",
+        "Midtown",
+        "Woodruff-Arts-Center",
+    ],
+    # Fallback description — overridden at runtime by og:description if available
+    "description": (
+        "Alliance Theatre is Atlanta's leading nonprofit theater company and one of the most "
+        "celebrated regional theaters in the nation, with multiple Tony Awards for excellence. "
+        "Located at the Woodruff Arts Center in Midtown Atlanta."
+    ),
 }
 
 # Date pattern: MM/DD/YYYY – MM/DD/YYYY or MM/DD/YYYY
@@ -120,6 +146,42 @@ def crawl(source: dict) -> tuple[int, int, int]:
             )
             page = context.new_page()
 
+            # ----------------------------------------------------------------
+            # 0. Homepage — extract og:image / og:description for venue record
+            # ----------------------------------------------------------------
+            try:
+                page.goto(BASE_URL, wait_until="domcontentloaded", timeout=30000)
+                og_image = page.evaluate(
+                    "() => { const m = document.querySelector('meta[property=\"og:image\"]'); return m ? m.content : null; }"
+                )
+                og_desc = page.evaluate(
+                    "() => { const m = document.querySelector('meta[property=\"og:description\"]') "
+                    "|| document.querySelector('meta[name=\"description\"]'); return m ? m.content : null; }"
+                )
+                if og_image:
+                    VENUE_DATA["image_url"] = og_image
+                    logger.debug("Alliance Theatre: og:image = %s", og_image)
+                if og_desc:
+                    VENUE_DATA["description"] = og_desc
+                    logger.debug("Alliance Theatre: og:description captured")
+            except Exception as _meta_exc:
+                logger.debug("Alliance Theatre: could not extract og meta from homepage: %s", _meta_exc)
+
+            venue_id = get_or_create_venue(VENUE_DATA)
+
+            # Persist any og: enrichment to the venue record
+            try:
+                venue_update: dict = {}
+                if VENUE_DATA.get("image_url"):
+                    venue_update["image_url"] = VENUE_DATA["image_url"]
+                if VENUE_DATA.get("description"):
+                    venue_update["description"] = VENUE_DATA["description"]
+                if venue_update:
+                    get_client().table("venues").update(venue_update).eq("id", venue_id).execute()
+                    logger.info("Alliance Theatre: enriched venue record from homepage og: metadata")
+            except Exception as _upd_exc:
+                logger.warning("Alliance Theatre: venue update failed: %s", _upd_exc)
+
             logger.info(f"Fetching Alliance Theatre: {SHOWS_URL}")
             page.goto(SHOWS_URL, wait_until="domcontentloaded", timeout=30000)
             page.wait_for_timeout(3000)
@@ -143,8 +205,6 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     page.wait_for_timeout(500)
             except Exception:
                 pass
-
-            venue_id = get_or_create_venue(VENUE_DATA)
 
             body_text = page.inner_text("body")
             lines = [l.strip() for l in body_text.split("\n") if l.strip()]

@@ -50,6 +50,8 @@ export interface ItineraryItem {
   };
 }
 
+export type ItineraryVisibility = "private" | "invitees" | "public";
+
 export interface Itinerary {
   id: string;
   user_id: string | null;
@@ -58,11 +60,104 @@ export interface Itinerary {
   date: string | null;
   description: string | null;
   is_public: boolean;
+  visibility: ItineraryVisibility;
   share_token: string | null;
   created_at: string;
   updated_at: string;
   items?: ItineraryItem[];
+  crew?: ItineraryCrew;
 }
+
+// ============================================================================
+// SOCIAL LAYER TYPES
+// ============================================================================
+
+export type RsvpStatus = "pending" | "going" | "cant_go";
+export type StopStatus = "joining" | "skipping";
+
+export interface ItineraryParticipant {
+  id: string;
+  user_id: string | null;
+  username: string | null;
+  display_name: string | null;
+  avatar_url: string | null;
+  rsvp_status: RsvpStatus;
+  responded_at: string | null;
+  stops: ItineraryParticipantStop[];
+}
+
+export interface ItineraryParticipantStop {
+  item_id: string;
+  status: StopStatus;
+  arrival_time: string | null;
+  note: string | null;
+}
+
+export interface ItineraryCrew {
+  total: number;
+  going: number;
+  pending: number;
+  cant_go: number;
+  participants: ItineraryParticipant[];
+}
+
+/**
+ * Get participants who are joining a specific stop
+ */
+export function getStopCrew(
+  crew: ItineraryCrew | undefined,
+  itemId: string
+): ItineraryParticipant[] {
+  if (!crew) return [];
+  return crew.participants.filter((p) => {
+    if (p.rsvp_status === "cant_go") return false;
+    const stop = p.stops.find((s) => s.item_id === itemId);
+    // If no stop record, default to joining (they haven't opted out)
+    return !stop || stop.status === "joining";
+  });
+}
+
+/**
+ * Get a participant's stop status for an item
+ */
+export function getParticipantStopStatus(
+  participant: ItineraryParticipant,
+  itemId: string
+): { status: StopStatus; arrival_time: string | null; note: string | null } {
+  const stop = participant.stops.find((s) => s.item_id === itemId);
+  return {
+    status: stop?.status ?? "joining",
+    arrival_time: stop?.arrival_time ?? null,
+    note: stop?.note ?? null,
+  };
+}
+
+/**
+ * Format RSVP status for display
+ */
+export function formatRsvpStatus(status: RsvpStatus): string {
+  switch (status) {
+    case "going": return "I'm in";
+    case "cant_go": return "Can't go";
+    case "pending": return "Pending";
+  }
+}
+
+// ============================================================================
+// LIST TYPES (for "My Plans" surface)
+// ============================================================================
+
+export type ItineraryRole = "owner" | "participant";
+
+export interface ItineraryListItem extends Itinerary {
+  role: ItineraryRole;
+  my_rsvp_status?: RsvpStatus;
+  my_participant_id?: string;
+}
+
+// ============================================================================
+// CRUD INPUT TYPES
+// ============================================================================
 
 export interface CreateItineraryInput {
   portal_id: string;

@@ -2,8 +2,23 @@ import { NextRequest, NextResponse } from "next/server";
 import { unifiedSearch, type SearchOptions } from "@/lib/unified-search";
 import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limit";
 import { createClient } from "@/lib/supabase/server";
-import { resolvePortalQueryContext } from "@/lib/portal-query-context";
+import {
+  getCachedPortalQueryContext,
+  resolvePortalQueryContext,
+} from "@/lib/portal-query-context";
 import { logger } from "@/lib/logger";
+import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
+import { buildStableSearchCacheKey } from "@/lib/search-cache-key";
+import { createServerTimingRecorder } from "@/lib/server-timing";
+
+type SearchRoutePayload =
+  | {
+      results: [];
+      facets: [];
+      total: 0;
+      error: string;
+    }
+  | Awaited<ReturnType<typeof unifiedSearch>>;
 
 // Helper to safely parse integers with validation
 function safeParseInt(
@@ -17,6 +32,19 @@ function safeParseInt(
   if (isNaN(parsed)) return defaultValue;
   return Math.min(Math.max(parsed, min), max);
 }
+
+const SEARCH_CACHE_TTL_MS = 60 * 1000;
+const SEARCH_CACHE_MAX_ENTRIES = 200;
+const SEARCH_CACHE_NAMESPACE = "api:search";
+const SEARCH_CACHE_CONTROL = "public, s-maxage=60, stale-while-revalidate=300";
+const SEARCH_IN_FLIGHT_LOADS = new Map<
+  string,
+  Promise<{
+    payload: SearchRoutePayload;
+    serverTiming: string;
+    status?: number;
+  }>
+>();
 
 /**
  * Unified search API endpoint.
@@ -52,6 +80,7 @@ export async function GET(request: NextRequest) {
   if (rateLimitResult) return rateLimitResult;
 
   try {
+    const timing = createServerTimingRecorder();
     const { searchParams } = new URL(request.url);
 
     const query = searchParams.get("q") || "";
@@ -115,47 +144,123 @@ export async function GET(request: NextRequest) {
         : undefined;
 
     const isFree = searchParams.get("free") === "true" ? true : undefined;
+    const includeFacets = searchParams.get("include_facets") !== "false";
+    const includeDidYouMean =
+      searchParams.get("include_did_you_mean") !== "false";
+    const includeEventPopularity =
+      searchParams.get("include_event_popularity") !== "false";
+    const cacheKey = buildStableSearchCacheKey(searchParams);
 
-    const supabase = await createClient();
-    const portalContext = await resolvePortalQueryContext(supabase, searchParams);
-    if (portalContext.hasPortalParamMismatch) {
-      return NextResponse.json(
-        {
-          results: [],
-          facets: [],
-          total: 0,
-          error: "portal and portal_id parameters must reference the same portal",
+    const cachedPayload = await timing.measure("cache_lookup", () =>
+      getSharedCacheJson<Record<string, unknown>>(SEARCH_CACHE_NAMESPACE, cacheKey)
+    );
+    if (cachedPayload) {
+      timing.addMetric("cache_hit", 0, "shared");
+      return NextResponse.json(cachedPayload, {
+        headers: {
+          "Cache-Control": SEARCH_CACHE_CONTROL,
+          "Server-Timing": timing.toHeader(),
         },
-        { status: 400 }
-      );
+      });
     }
-    const portalId = portalContext.portalId || undefined;
-    const city = searchParams.get("city") || portalContext.filters.city || undefined;
 
-    // Build search options
-    const options: SearchOptions = {
-      query,
-      types,
-      limit,
-      offset,
-      categories,
-      subcategories,
-      genres,
-      tags,
-      neighborhoods,
-      dateFilter,
-      isFree,
-      portalId,
-      city,
+    const existingLoad = SEARCH_IN_FLIGHT_LOADS.get(cacheKey);
+    if (existingLoad) {
+      const result = await existingLoad;
+      timing.addMetric("coalesced", 0, "inflight");
+      return NextResponse.json(result.payload, {
+        status: result.status,
+        headers: {
+          "Cache-Control": SEARCH_CACHE_CONTROL,
+          "Server-Timing": `${result.serverTiming}, ${timing.toHeader()}`,
+        },
+      });
+    }
+
+    const searchLoadPromise: Promise<{
+      payload: SearchRoutePayload;
+      serverTiming: string;
+      status?: number;
+    }> = (async () => {
+      const portalContext = await timing.measure("bootstrap", async () => {
+        const cachedContext = await getCachedPortalQueryContext(searchParams);
+        if (cachedContext) {
+          timing.addMetric("portal_context_cache_hit", 0, "shared");
+          return cachedContext;
+        }
+        return resolvePortalQueryContext(await createClient(), searchParams);
+      });
+      if (portalContext.hasPortalParamMismatch) {
+        return {
+          payload: {
+            results: [],
+            facets: [],
+            total: 0,
+            error: "portal and portal_id parameters must reference the same portal",
+          },
+          serverTiming: timing.toHeader(),
+          status: 400,
+        };
+      }
+      const portalId = portalContext.portalId || undefined;
+      const city = searchParams.get("city") || portalContext.filters.city || undefined;
+
+      const options: SearchOptions = {
+        query,
+        types,
+        limit,
+        offset,
+        categories,
+        subcategories,
+        genres,
+        tags,
+        neighborhoods,
+        dateFilter,
+        isFree,
+        portalId,
+        city,
+        includeFacets,
+        includeDidYouMean,
+        includeEventPopularitySignals: includeEventPopularity,
+        timingRecorder: timing,
+      };
+
+      const payload = await timing.measure("unified_search", () =>
+        unifiedSearch(options)
+      );
+      await setSharedCacheJson(
+        SEARCH_CACHE_NAMESPACE,
+        cacheKey,
+        payload as unknown as Record<string, unknown>,
+        SEARCH_CACHE_TTL_MS,
+        { maxEntries: SEARCH_CACHE_MAX_ENTRIES },
+      );
+      return {
+        payload,
+        serverTiming: timing.toHeader(),
+      };
+    })();
+
+    SEARCH_IN_FLIGHT_LOADS.set(cacheKey, searchLoadPromise);
+    let result: {
+      payload: SearchRoutePayload;
+      serverTiming: string;
+      status?: number;
     };
+    try {
+      result = await searchLoadPromise;
+    } finally {
+      const currentLoad = SEARCH_IN_FLIGHT_LOADS.get(cacheKey);
+      if (currentLoad === searchLoadPromise) {
+        SEARCH_IN_FLIGHT_LOADS.delete(cacheKey);
+      }
+    }
 
-    // Perform search
-    const result = await unifiedSearch(options);
-
-    // Return with caching headers
-    return NextResponse.json(result, {
+    return NextResponse.json(result.payload, {
+      status: result.status,
       headers: {
-        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+        "Cache-Control": SEARCH_CACHE_CONTROL,
+        "Server-Timing": result.serverTiming,
       },
     });
   } catch (error) {

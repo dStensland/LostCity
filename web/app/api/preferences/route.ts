@@ -11,35 +11,14 @@ import { logger } from "@/lib/logger";
 import type { FeedBlockId, FeedLayout } from "@/lib/city-pulse/types";
 import { LEGACY_BLOCK_IDS } from "@/lib/city-pulse/types";
 import { ALL_INTEREST_IDS } from "@/lib/city-pulse/interests";
+import {
+  isPublicEventCategoryId,
+  type PublicEventCategoryId,
+  normalizeEventCategory,
+} from "@/lib/event-taxonomy";
 
 const VALID_BLOCK_IDS: FeedBlockId[] = [
   "events", "recurring", "festivals", "experiences", "community", "cinema", "browse",
-];
-
-// Valid categories from search-constants.ts
-const VALID_CATEGORIES = [
-  "music",
-  "film",
-  "comedy",
-  "theater",
-  "art",
-  "sports",
-  "food_drink",
-  "nightlife",
-  "community",
-  "fitness",
-  "family",
-  "learning",
-  "dance",
-  "tours",
-  "meetup",
-  "words",
-  "religious",
-  "markets",
-  "wellness",
-  "gaming",
-  "outdoors",
-  "other",
 ];
 
 export async function POST(request: NextRequest) {
@@ -69,9 +48,12 @@ export async function POST(request: NextRequest) {
     // Validate genre strings (alphanumeric, hyphens, underscores, dots only)
     const isValidGenre = (g: string): boolean => /^[a-z0-9._-]+$/i.test(g);
 
-    const favorite_categories = sanitizeArray(body.favorite_categories).filter(
-      (c) => VALID_CATEGORIES.includes(c),
-    );
+    const favorite_categories = sanitizeArray(body.favorite_categories)
+      .map((category) => normalizeEventCategory(category))
+      .filter(
+        (category): category is PublicEventCategoryId =>
+          isPublicEventCategoryId(category),
+      );
     const favorite_neighborhoods = sanitizeArray(body.favorite_neighborhoods);
     const favorite_vibes = sanitizeArray(body.favorite_vibes);
     const needs_accessibility = sanitizeArray(body.needs_accessibility);
@@ -85,15 +67,27 @@ export async function POST(request: NextRequest) {
       !Array.isArray(body.favorite_genres)
         ? Object.fromEntries(
             Object.entries(body.favorite_genres as Record<string, unknown>)
+              .map(([k, v]) => {
+                const normalizedCategory = normalizeEventCategory(k);
+                if (
+                  !isPublicEventCategoryId(normalizedCategory) ||
+                  !Array.isArray(v)
+                ) {
+                  return null;
+                }
+
+                return [
+                  normalizedCategory,
+                  (v as string[])
+                    .filter((g) => typeof g === "string" && isValidGenre(g))
+                    .slice(0, 30),
+                ] as const satisfies readonly [PublicEventCategoryId, string[]];
+              })
               .filter(
-                ([k, v]) => VALID_CATEGORIES.includes(k) && Array.isArray(v),
-              )
-              .map(([k, v]) => [
-                k,
-                (v as string[])
-                  .filter((g) => typeof g === "string" && isValidGenre(g))
-                  .slice(0, 30),
-              ]),
+                (
+                  entry
+                ): entry is readonly [PublicEventCategoryId, string[]] => Boolean(entry)
+              ),
           )
         : undefined;
     const hide_adult_content =

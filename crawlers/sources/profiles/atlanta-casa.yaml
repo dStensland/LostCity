@@ -1,0 +1,16 @@
+version: 1
+slug: atlanta-casa
+name: Atlanta CASA
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://atlantacasa.org/get-involved/become-a-volunteer/
+detail:
+  enabled: true
+data_goals:
+- events
+- images
+- tickets

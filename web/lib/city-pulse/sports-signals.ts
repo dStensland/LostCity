@@ -1,0 +1,32 @@
+export const SPORTS_SIGNAL_GENRES = [
+  "sports",
+  "watch-party",
+  "viewing-party",
+  "football",
+  "nfl",
+  "soccer",
+  "basketball",
+  "baseball",
+  "hockey",
+  "mma",
+  "ufc",
+  "boxing",
+  "wrestling",
+  "pickleball",
+  "tennis",
+  "volleyball",
+  "softball",
+  "ultimate-frisbee",
+  "pickup",
+  "open-play",
+  "drop-in",
+  "league",
+  "athletics",
+  "adaptive-sports",
+  "wheelchair-sports",
+  "recreation",
+  "batting-cage",
+] as const;
+
+export const SPORTS_TITLE_PATTERN =
+  /viewing party|watch party|\b(nfl|nba|mlb|nhl|mls|ufc|mma)\b|game\s*day|fight night|pickup|open play|drop-in|drop in|\brec( league| center)?\b|batting cage|pickleball|tennis|ultimate frisbee|softball|volleyball/i;

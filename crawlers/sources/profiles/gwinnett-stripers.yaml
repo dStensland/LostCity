@@ -1,17 +1,16 @@
 version: 1
 slug: gwinnett-stripers
 name: Gwinnett Stripers
-integration_method: playwright
+integration_method: python
 defaults: {}
 discovery:
-  enabled: true
-  type: list
+  enabled: false
+  type: api
   urls:
-  - https://www.gostripers.com/schedule
+  - https://www.milb.com/gwinnett/schedule
 detail:
-  enabled: true
-  fetch:
-    render_js: true
+  enabled: false
 data_goals:
-- events
-- tickets
+  - events
+  - tickets
+  - schedule

@@ -1,409 +1,455 @@
 """
-Crawler for Atlanta Community Food Bank (acfb.org).
+Crawler for Atlanta Community Food Bank (ACFB) volunteer shifts.
 
-The largest hunger relief organization in Georgia. Volunteer opportunities include
-warehouse packing, food sorting, community distributions, and special events.
-Most popular volunteer activity in Atlanta.
+Source: https://acfb.volunteerhub.com/internalapi/volunteerview/view/index
+Platform: VolunteerHub internal API — no auth required for public listings.
 
-Uses EventON WordPress plugin for calendar.
+ACFB runs volunteer shifts at multiple locations:
+- Hunger Action Center (East Point warehouse) — morning and afternoon sorts
+- Community Food Centers in Atlanta, Marietta, Stone Mountain, Jonesboro
+- Jesse Hill Jr Dr Market (Downtown)
+- Special events (food drives, mobile distributions, advocacy)
+
+The VolunteerHub API returns 7-day blocks. We page forward via nextBlockUrl
+until we reach HORIZON_DAYS days out or the API returns no further blocks.
+
+Each shift instance is one event. Recurring shift types at the same location
+are grouped into a series (e.g., "ACFB Hunger Action Center Sort").
+
+Previous implementation used Playwright against the ACFB EventON WordPress
+calendar, which was an iframe embed of VolunteerHub and yielded nothing.
+This version hits the VolunteerHub internal API directly.
 """
 
 from __future__ import annotations
 
-import re
 import logging
-from datetime import datetime
+import re
+from datetime import datetime, timedelta
 from typing import Optional
+from urllib.parse import urljoin
 
-from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
+import requests
+from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    find_event_by_hash,
+    get_or_create_venue,
+    insert_event,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
-from utils import extract_images_from_page, extract_event_links, find_event_url
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = "https://www.acfb.org"
-EVENTS_URL = f"{BASE_URL}/volunteer/"
+VOLUNTEERHUB_BASE = "https://acfb.volunteerhub.com"
+INDEX_API = f"{VOLUNTEERHUB_BASE}/internalapi/volunteerview/view/index"
+BLOCK_API_TEMPLATE = (
+    f"{VOLUNTEERHUB_BASE}/internalapi/volunteerview/view/indexlistblock"
+)
 
-VENUE_DATA = {
-    "name": "Atlanta Community Food Bank",
-    "slug": "atlanta-community-food-bank",
-    "address": "3400 N Desert Dr",
-    "neighborhood": "East Point",
-    "city": "East Point",
-    "state": "GA",
-    "zip": "30344",
-    "lat": 33.6591,
-    "lng": -84.4682,
-    "venue_type": "nonprofit",
-    "spot_type": "nonprofit",
-    "website": BASE_URL,
-    "vibes": ["volunteer", "family-friendly", "all-ages"],
+# Public sign-up landing pages
+REGISTER_BASE = f"{VOLUNTEERHUB_BASE}/vv2/"
+
+# Maximum calendar days to harvest
+HORIZON_DAYS = 30
+
+# Request headers — no auth needed for public volunteer listing
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (compatible; LostCity/1.0; +https://lostcity.app)",
+    "Accept": "application/json",
+    "Referer": f"{VOLUNTEERHUB_BASE}/vv2/",
 }
 
-# Skip staff meetings and internal events
-SKIP_KEYWORDS = [
-    "staff meeting",
-    "board meeting",
-    "committee",
-    "internal",
-    "closed",
-    "private",
-]
+# -----------------------------------------------------------------
+# Known ACFB venue records keyed by locationId from the API.
+# We fall back to dynamic construction for unknown IDs.
+# -----------------------------------------------------------------
+KNOWN_VENUES: dict[int, dict] = {
+    49830: {
+        "name": "ACFB Hunger Action Center",
+        "slug": "acfb-hunger-action-center",
+        "address": "3400 North Desert Drive",
+        "neighborhood": "East Point",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30344",
+        "lat": 33.6495,
+        "lng": -84.4390,
+        "venue_type": "organization",
+        "spot_type": "organization",
+        "website": "https://www.acfb.org",
+    },
+    # Alternate address string for same facility
+    50056: {
+        "name": "ACFB Hunger Action Center",
+        "slug": "acfb-hunger-action-center",
+        "address": "3400 N Desert Dr",
+        "neighborhood": "East Point",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30344",
+        "lat": 33.6495,
+        "lng": -84.4390,
+        "venue_type": "organization",
+        "spot_type": "organization",
+        "website": "https://www.acfb.org",
+    },
+    50110: {
+        "name": "ACFB Stone Mountain Community Food Center",
+        "slug": "acfb-stone-mountain-cfc",
+        "address": "1979 Parker Court Suite D",
+        "neighborhood": "Stone Mountain",
+        "city": "Stone Mountain",
+        "state": "GA",
+        "zip": "30087",
+        "lat": 33.8265,
+        "lng": -84.1068,
+        "venue_type": "organization",
+        "spot_type": "organization",
+        "website": "https://www.acfb.org",
+    },
+    90734: {
+        "name": "ACFB Marietta Community Food Center",
+        "slug": "acfb-marietta-cfc",
+        "address": "1605 Austell Road SE",
+        "neighborhood": "Marietta",
+        "city": "Marietta",
+        "state": "GA",
+        "zip": "30008",
+        "lat": 33.9133,
+        "lng": -84.5547,
+        "venue_type": "organization",
+        "spot_type": "organization",
+        "website": "https://www.acfb.org",
+    },
+    97700: {
+        "name": "ACFB Jesse Hill Market",
+        "slug": "acfb-jesse-hill-market",
+        "address": "92 Jesse Hill Jr Dr SE",
+        "neighborhood": "Downtown",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30303",
+        "lat": 33.7513,
+        "lng": -84.3832,
+        "venue_type": "organization",
+        "spot_type": "organization",
+        "website": "https://www.acfb.org",
+    },
+    98838: {
+        "name": "ACFB Jonesboro Community Food Center",
+        "slug": "acfb-jonesboro-cfc",
+        "address": "6805 Tara Blvd",
+        "neighborhood": "Jonesboro",
+        "city": "Jonesboro",
+        "state": "GA",
+        "zip": "30236",
+        "lat": 33.5682,
+        "lng": -84.3724,
+        "venue_type": "organization",
+        "spot_type": "organization",
+        "website": "https://www.acfb.org",
+    },
+    114401: {
+        "name": "ACFB Atlanta Community Food Center",
+        "slug": "acfb-atlanta-cfc",
+        "address": "3500 MLK Jr Dr SW",
+        "neighborhood": "Westside",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30331",
+        "lat": 33.7573,
+        "lng": -84.5029,
+        "venue_type": "organization",
+        "spot_type": "organization",
+        "website": "https://www.acfb.org",
+    },
+    # Remote / online opportunities default to main campus
+    50270: {
+        "name": "Atlanta Community Food Bank",
+        "slug": "atlanta-community-food-bank",
+        "address": "3400 N Desert Dr",
+        "neighborhood": "East Point",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30344",
+        "lat": 33.6495,
+        "lng": -84.4390,
+        "venue_type": "organization",
+        "spot_type": "organization",
+        "website": "https://www.acfb.org",
+    },
+}
 
-# Volunteer event indicators
-VOLUNTEER_KEYWORDS = [
-    "volunteer",
-    "packing",
-    "sorting",
-    "distribution",
-    "warehouse",
-    "shift",
-    "opportunity",
-    "help",
-    "service",
-]
+
+def _clean_html(raw: str) -> str:
+    """Strip HTML tags and collapse whitespace from a description string."""
+    if not raw:
+        return ""
+    text = BeautifulSoup(raw, "lxml").get_text(separator=" ")
+    return re.sub(r"\s+", " ", text).strip()
 
 
-def parse_time(time_text: str) -> Optional[str]:
-    """Parse time from various formats like '7pm', '10:30 AM', '9:00 am - 12:00 pm'."""
-    if not time_text:
+def _venue_for(location_id: int, location_str: str) -> dict:
+    """
+    Return a venue dict for the given VolunteerHub locationId.
+
+    Uses KNOWN_VENUES where possible; builds a minimal fallback for unknowns.
+    """
+    if location_id in KNOWN_VENUES:
+        return KNOWN_VENUES[location_id]
+
+    name_part = location_str.split(",")[0].strip() if location_str else "ACFB Location"
+    slug = re.sub(r"[^a-z0-9]+", "-", name_part.lower()).strip("-")[:80]
+    city = "Atlanta"
+    state = "GA"
+    city_match = re.search(r",\s*([A-Za-z\s]+),\s*GA", location_str)
+    if city_match:
+        city = city_match.group(1).strip()
+
+    return {
+        "name": name_part or "Atlanta Community Food Bank",
+        "slug": slug or "acfb-location",
+        "address": location_str,
+        "city": city,
+        "state": state,
+        "venue_type": "organization",
+        "spot_type": "organization",
+        "website": "https://www.acfb.org",
+    }
+
+
+def _series_title_for(shift_name: str, venue_name: str) -> str:
+    """
+    Derive a stable series title from shift name + venue.
+
+    Strips time-of-day qualifiers ("Morning", "Afternoon") so that morning
+    and afternoon sorts at the same location belong to one series, keeping
+    the feed from being spammed with near-identical cards.
+    """
+    clean = re.sub(
+        r"\s*\((Morning|Afternoon|Evening|AM|PM)\)",
+        "",
+        shift_name,
+        flags=re.IGNORECASE,
+    )
+    clean = re.sub(
+        r"\s+(Morning|Afternoon|Evening)\s*(Distr\.|Distribution|Sort|Crew)?$",
+        "",
+        clean,
+        flags=re.IGNORECASE,
+    ).strip()
+    return f"{clean} — {venue_name}"
+
+
+def _fetch_block(url: str) -> Optional[dict]:
+    """Fetch a single VolunteerHub JSON block. Returns None on error."""
+    try:
+        resp = requests.get(url, headers=HEADERS, timeout=20)
+        resp.raise_for_status()
+        return resp.json()
+    except Exception as exc:
+        logger.error(f"ACFB: failed fetching VolunteerHub block {url}: {exc}")
         return None
 
-    # Try to extract first time from range
-    match = re.search(r"(\d{1,2})(?::(\d{2}))?\s*(am|pm)", time_text, re.IGNORECASE)
-    if match:
-        hour = int(match.group(1))
-        minute = match.group(2) or "00"
-        period = match.group(3).lower()
 
-        if period == "pm" and hour != 12:
-            hour += 12
-        elif period == "am" and hour == 12:
-            hour = 0
-
-        return f"{hour:02d}:{minute}"
-    return None
-
-
-def parse_date_string(date_str: str) -> Optional[str]:
+def _collect_shifts(horizon_days: int) -> list[dict]:
     """
-    Parse date from various formats.
-    Returns YYYY-MM-DD format string or None.
+    Page through the VolunteerHub API and collect all shifts within the horizon.
+
+    The index endpoint returns the first 7-day block. Subsequent blocks are
+    fetched via nextBlockUrl, adjusted to use the internal API path prefix.
+    Each shift dict is augmented with a `_date` field (YYYY-MM-DD).
     """
-    if not date_str:
-        return None
+    cutoff = datetime.now().date() + timedelta(days=horizon_days)
+    shifts: list[dict] = []
+    pages_fetched = 0
 
-    date_str = date_str.strip()
-    current_year = datetime.now().year
+    data = _fetch_block(INDEX_API)
 
-    # Remove day name if present
-    date_str = re.sub(r"^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)[a-z]*,?\s+", "", date_str, flags=re.IGNORECASE)
+    while data:
+        pages_fetched += 1
+        days = data.get("days", [])
+        stop_paging = False
 
-    # Try full month name formats
-    date_match = re.search(
-        r"(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})(?:,?\s+(\d{4}))?",
-        date_str,
-        re.IGNORECASE
+        for day_block in days:
+            raw_date = day_block.get("date", "")
+            try:
+                block_date = datetime.fromisoformat(raw_date).date()
+            except (ValueError, TypeError):
+                continue
+
+            if block_date > cutoff:
+                stop_paging = True
+                break
+
+            date_str = block_date.strftime("%Y-%m-%d")
+            for event in day_block.get("events", []):
+                event["_date"] = date_str
+                shifts.append(event)
+
+        if stop_paging:
+            break
+
+        next_path = data.get("nextBlockUrl")
+        if not next_path:
+            break
+
+        # nextBlockUrl uses a mixed-case MVC path; remap to the internal API path
+        next_path_internal = re.sub(
+            r"(?i)/VolunteerView/View/IndexListBlock",
+            "/internalapi/volunteerview/view/indexlistblock",
+            next_path,
+        )
+        next_url = urljoin(VOLUNTEERHUB_BASE, next_path_internal)
+        data = _fetch_block(next_url)
+
+        if pages_fetched >= 20:
+            logger.warning("ACFB: hit 20-page safety limit")
+            break
+
+    logger.info(
+        f"ACFB: collected {len(shifts)} shifts across {pages_fetched} API pages"
     )
-    if date_match:
-        month = date_match.group(1)
-        day = int(date_match.group(2))
-        year = int(date_match.group(3)) if date_match.group(3) else current_year
-        try:
-            dt = datetime.strptime(f"{month} {day} {year}", "%B %d %Y")
-            if dt.date() < datetime.now().date() and not date_match.group(3):
-                dt = datetime.strptime(f"{month} {day} {year + 1}", "%B %d %Y")
-            return dt.strftime("%Y-%m-%d")
-        except ValueError:
-            pass
-
-    # Try short month name formats
-    date_match = re.search(
-        r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})(?:,?\s+(\d{4}))?",
-        date_str,
-        re.IGNORECASE
-    )
-    if date_match:
-        month = date_match.group(1)
-        day = int(date_match.group(2))
-        year = int(date_match.group(3)) if date_match.group(3) else current_year
-        try:
-            dt = datetime.strptime(f"{month} {day} {year}", "%b %d %Y")
-            if dt.date() < datetime.now().date() and not date_match.group(3):
-                dt = datetime.strptime(f"{month} {day} {year + 1}", "%b %d %Y")
-            return dt.strftime("%Y-%m-%d")
-        except ValueError:
-            pass
-
-    # Try M/D/YYYY
-    date_match = re.search(r"(\d{1,2})/(\d{1,2})/(\d{4})", date_str)
-    if date_match:
-        month, day, year = date_match.groups()
-        try:
-            dt = datetime.strptime(f"{month}/{day}/{year}", "%m/%d/%Y")
-            return dt.strftime("%Y-%m-%d")
-        except ValueError:
-            pass
-
-    return None
-
-
-def determine_category_and_tags(title: str, description: str) -> tuple[str, Optional[str], list[str]]:
-    """Determine category based on title and description."""
-    text = f"{title} {description}".lower()
-    tags = ["volunteer", "nonprofit", "food-bank"]
-
-    # Most events are volunteer opportunities
-    if any(kw in text for kw in VOLUNTEER_KEYWORDS):
-        tags.append("volunteer-opportunity")
-
-    if any(kw in text for kw in ["family", "kid", "children", "all ages"]):
-        tags.append("family-friendly")
-
-    if any(kw in text for kw in ["warehouse", "packing", "sorting"]):
-        tags.append("warehouse")
-
-    if any(kw in text for kw in ["distribution", "community"]):
-        tags.append("community-service")
-
-    if any(kw in text for kw in ["training", "orientation", "workshop"]):
-        return "learning", "workshop", tags + ["education"]
-
-    if any(kw in text for kw in ["fundraiser", "gala", "benefit"]):
-        return "community", "fundraiser", tags + ["fundraiser"]
-
-    # Default to community/volunteer
-    return "community", "volunteer", tags
-
-
-def is_public_event(title: str, description: str) -> bool:
-    """Determine if event is public volunteer opportunity vs. internal."""
-    text = f"{title} {description}".lower()
-
-    # Skip internal events
-    if any(kw in text for kw in SKIP_KEYWORDS):
-        return False
-
-    # Most events are volunteer opportunities
-    return True
+    return shifts
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Atlanta Community Food Bank volunteer events using Playwright."""
+    """
+    Crawl Atlanta Community Food Bank volunteer shifts via VolunteerHub API.
+
+    Returns (events_found, events_new, events_updated).
+    """
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
 
-    try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                viewport={"width": 1920, "height": 1080},
+    # Cache venue DB IDs to avoid repeated get_or_create calls
+    venue_id_cache: dict[int, int] = {}
+
+    raw_shifts = _collect_shifts(HORIZON_DAYS)
+    if not raw_shifts:
+        logger.warning("ACFB: no shifts returned from VolunteerHub API")
+        return 0, 0, 0
+
+    seen_hashes: set[str] = set()
+
+    for shift in raw_shifts:
+        try:
+            shift_name = (shift.get("name") or "").strip()
+            if not shift_name:
+                continue
+
+            start_date = shift.get("_date")
+            if not start_date:
+                continue
+
+            # Parse start/end times from ISO datetime strings ("2026-03-09T08:30:00")
+            start_time: Optional[str] = None
+            end_time: Optional[str] = None
+            s_raw = shift.get("sTime")
+            e_raw = shift.get("eTime")
+            if s_raw:
+                try:
+                    start_time = datetime.fromisoformat(s_raw).strftime("%H:%M")
+                except ValueError:
+                    pass
+            if e_raw:
+                try:
+                    end_time = datetime.fromisoformat(e_raw).strftime("%H:%M")
+                except ValueError:
+                    pass
+
+            location_id: int = shift.get("locationId") or 0
+            location_str: str = shift.get("location") or ""
+            venue_data = _venue_for(location_id, location_str)
+
+            if location_id not in venue_id_cache:
+                venue_id_cache[location_id] = get_or_create_venue(venue_data)
+            venue_id = venue_id_cache[location_id]
+            venue_name = venue_data["name"]
+
+            # Build description from VolunteerHub HTML fields
+            short = _clean_html(shift.get("shortDescription") or "")
+            long_ = _clean_html(shift.get("longDescription") or "")
+            description = (long_[:800] if long_ else short[:400]) or (
+                f"Volunteer shift with the Atlanta Community Food Bank "
+                f"at {venue_name}. Help fight hunger in the Atlanta region."
             )
-            page = context.new_page()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+            # Registration URL (deep link to this shift's sign-up page)
+            guid = shift.get("guid") or ""
+            register_url = f"{REGISTER_BASE}lp/{guid}" if guid else REGISTER_BASE
 
-            logger.info(f"Fetching Atlanta Community Food Bank: {EVENTS_URL}")
-            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(5000)
+            # Series grouping: one series per shift-type + location
+            series_title = _series_title_for(shift_name, venue_name)
+            series_hint = {
+                "series_type": "recurring_show",
+                "series_title": series_title,
+                "frequency": "daily",
+            }
 
-            # Scroll to load EventON calendar
-            for _ in range(5):
-                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                page.wait_for_timeout(1000)
+            title = f"Volunteer: {shift_name}"
+            content_hash = generate_content_hash(title, venue_name, start_date)
+            if content_hash in seen_hashes:
+                continue
+            seen_hashes.add(content_hash)
 
-            # Extract images from page
-            image_map = extract_images_from_page(page)
+            events_found += 1
 
-            # Extract event links for specific URLs
-            event_links = extract_event_links(page, BASE_URL)
+            slots = shift.get("slotsRemaining")
+            price_note = "Free"
+            if slots is not None:
+                price_note += f" — {slots} spots available"
 
-            # EventON uses .eventon_list_event class
-            event_selectors = [
-                ".eventon_list_event",
-                ".evo_event",
-                "[class*='event']",
-                ".event-item",
-            ]
+            event_record = {
+                "source_id": source_id,
+                "venue_id": venue_id,
+                "title": title,
+                "description": description,
+                "start_date": start_date,
+                "start_time": start_time,
+                "end_date": start_date,
+                "end_time": end_time,
+                "is_all_day": False,
+                "category": "community",
+                "subcategory": "volunteer",
+                "tags": ["food-security", "volunteer", "drop-in", "community"],
+                "price_min": 0,
+                "price_max": 0,
+                "price_note": price_note,
+                "is_free": True,
+                "source_url": REGISTER_BASE,
+                "ticket_url": register_url,
+                "image_url": None,
+                "raw_text": f"{shift_name} | {location_str} | {start_date}",
+                "extraction_confidence": 0.95,
+                "is_recurring": True,
+                "recurrence_rule": "FREQ=DAILY",
+                "content_hash": content_hash,
+            }
 
-            event_elements = []
-            for selector in event_selectors:
-                elements = page.query_selector_all(selector)
-                if elements and len(elements) > 0:
-                    logger.info(f"Found {len(elements)} events using selector: {selector}")
-                    event_elements = elements
-                    break
+            existing = find_event_by_hash(content_hash)
+            if existing:
+                smart_update_existing_event(existing, event_record)
+                events_updated += 1
+                logger.debug(f"Updated: {title} on {start_date} at {venue_name}")
+                continue
 
-            seen_events = set()
+            insert_event(event_record, series_hint=series_hint)
+            events_new += 1
+            logger.info(f"Added: {title} on {start_date} at {venue_name}")
 
-            if event_elements:
-                logger.info(f"Processing {len(event_elements)} event containers")
+        except Exception as exc:
+            logger.warning(
+                f"ACFB: error processing shift id={shift.get('id')!r}: {exc}"
+            )
+            continue
 
-                for elem in event_elements:
-                    try:
-                        # Extract full text from container
-                        elem_text = elem.inner_text().strip()
-
-                        # Skip if too short to be an event
-                        if len(elem_text) < 20:
-                            continue
-
-                        lines = [l.strip() for l in elem_text.split("\n") if l.strip()]
-
-                        if not lines:
-                            continue
-
-                        # Look for title - usually in a heading or prominent text
-                        title_elem = elem.query_selector("h1, h2, h3, h4, .event-title, .evcal_event_title, [class*='title']")
-                        if title_elem:
-                            title = title_elem.inner_text().strip()
-                        else:
-                            # Fallback to first substantial line
-                            title = None
-                            for line in lines:
-                                if len(line) > 10 and len(line) < 200:
-                                    title = line
-                                    break
-
-                        if not title or len(title) < 5:
-                            continue
-
-                        # Look for date in the element
-                        start_date = None
-                        date_elem = elem.query_selector(".evcal_date, .event-date, .date, time")
-                        if date_elem:
-                            date_text = date_elem.inner_text().strip()
-                            start_date = parse_date_string(date_text)
-
-                        # If not found in element, search in text
-                        if not start_date:
-                            for line in lines:
-                                parsed_date = parse_date_string(line)
-                                if parsed_date:
-                                    start_date = parsed_date
-                                    break
-
-                        if not start_date:
-                            logger.debug(f"No date found for: {title[:50]}")
-                            continue
-
-                        # Look for time
-                        start_time = None
-                        time_elem = elem.query_selector(".evcal_time, .event-time, .time")
-                        if time_elem:
-                            time_text = time_elem.inner_text().strip()
-                            start_time = parse_time(time_text)
-
-                        if not start_time:
-                            for line in lines:
-                                parsed_time = parse_time(line)
-                                if parsed_time:
-                                    start_time = parsed_time
-                                    break
-
-                        # Extract description
-                        description = ""
-                        desc_elem = elem.query_selector(".evcal_desc, .event-description, .description, p")
-                        if desc_elem:
-                            description = desc_elem.inner_text().strip()[:500]
-
-                        if not description:
-                            # Use text that's not the title
-                            desc_parts = []
-                            for line in lines:
-                                if line != title and len(line) > 30:
-                                    desc_parts.append(line)
-                                    if len(" ".join(desc_parts)) > 200:
-                                        break
-                            description = " ".join(desc_parts)[:500]
-
-                        # Check if public
-                        if not is_public_event(title, description):
-                            logger.debug(f"Skipping internal event: {title}")
-                            continue
-
-                        # Dedupe
-                        event_key = f"{title}|{start_date}"
-                        if event_key in seen_events:
-                            continue
-                        seen_events.add(event_key)
-
-                        events_found += 1
-
-                        # Generate content hash
-                        content_hash = generate_content_hash(
-                            title, "Atlanta Community Food Bank", start_date
-                        )
-
-                        # Check for existing
-
-                        # Determine category and tags
-                        category, subcategory, tags = determine_category_and_tags(title, description)
-
-                        # Look for event URL
-                        event_url = find_event_url(title, event_links, EVENTS_URL)
-
-                        # Build event record
-                        event_record = {
-                            "source_id": source_id,
-                            "venue_id": venue_id,
-                            "title": title[:200],
-                            "description": description if description else None,
-                            "start_date": start_date,
-                            "start_time": start_time,
-                            "end_date": None,
-                            "end_time": None,
-                            "is_all_day": False,
-                            "category": category,
-                            "subcategory": subcategory,
-                            "tags": tags,
-                            "price_min": None,
-                            "price_max": None,
-                            "price_note": None,
-                            "is_free": True,
-                            "source_url": event_url,
-                            "ticket_url": event_url,
-                            "image_url": image_map.get(title),
-                            "raw_text": f"{title} {description}"[:500],
-                            "extraction_confidence": 0.85,
-                            "is_recurring": False,
-                            "recurrence_rule": None,
-                            "content_hash": content_hash,
-                        }
-
-                        existing = find_event_by_hash(content_hash)
-                        if existing:
-                            smart_update_existing_event(existing, event_record)
-                            events_updated += 1
-                            continue
-
-                        try:
-                            insert_event(event_record)
-                            events_new += 1
-                            logger.info(f"Added: {title[:50]}... on {start_date}")
-                        except Exception as e:
-                            logger.error(f"Failed to insert: {title}: {e}")
-
-                    except Exception as e:
-                        logger.error(f"Error processing event element: {e}")
-                        continue
-
-            browser.close()
-
-        logger.info(
-            f"Atlanta Community Food Bank crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
-        )
-
-    except PlaywrightTimeout as e:
-        logger.error(f"Timeout fetching Atlanta Community Food Bank: {e}")
-        raise
-    except Exception as e:
-        logger.error(f"Failed to crawl Atlanta Community Food Bank: {e}")
-        raise
-
+    logger.info(
+        f"ACFB crawl complete: "
+        f"{events_found} found, {events_new} new, {events_updated} updated"
+    )
     return events_found, events_new, events_updated

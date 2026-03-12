@@ -15,7 +15,7 @@ from playwright.sync_api import sync_playwright
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
-from utils import extract_images_from_page, enrich_event_record
+from utils import extract_images_from_page, enrich_event_record, find_event_url
 from description_fetcher import fetch_detail_html_playwright
 from pipeline.detail_enrich import enrich_from_detail
 from pipeline.models import DetailConfig
@@ -57,6 +57,47 @@ MONTH_MAP = {
 }
 
 
+def build_event_record(
+    *,
+    source_id: int,
+    venue_id: int,
+    title: str,
+    start_date: str,
+    category: str,
+    subcategory: str | None,
+    tags: list[str],
+    event_url: str,
+    image_url: str | None,
+    raw_text: str,
+) -> dict:
+    return {
+        "source_id": source_id,
+        "venue_id": venue_id,
+        "title": title,
+        "description": None,
+        "start_date": start_date,
+        "start_time": None,
+        "end_date": None,
+        "end_time": None,
+        "is_all_day": False,
+        "category": category,
+        "subcategory": subcategory,
+        "tags": tags,
+        "price_min": None,
+        "price_max": None,
+        "price_note": None,
+        "is_free": None,
+        "source_url": event_url,
+        "ticket_url": event_url if event_url != SHOWS_URL else None,
+        "image_url": image_url,
+        "raw_text": raw_text,
+        "extraction_confidence": 0.90,
+        "is_recurring": False,
+        "recurrence_rule": None,
+        "content_hash": generate_content_hash(title, "The Tabernacle", start_date),
+    }
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
     """Crawl The Tabernacle events using Playwright."""
     source_id = source["id"]
@@ -87,16 +128,17 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
                 page.wait_for_timeout(1000)
 
-            # Extract event detail links from page
-            detail_links = page.evaluate("""
+            # Tabernacle's listing titles link directly to Ticketmaster event pages.
+            event_links = page.evaluate("""
                 () => {
                     const links = {};
-                    document.querySelectorAll('a[href*="/shows/"], a[href*="/events/"]').forEach(a => {
-                        const text = a.textContent.trim();
+                    document.querySelectorAll('a[href*="ticketmaster.com"]').forEach((a) => {
+                        const text = (a.textContent || '').trim();
                         const href = a.href;
-                        if (text && text.length > 3 && href) {
-                            links[text] = href;
-                        }
+                        const lower = text.toLowerCase();
+                        if (!href || !text || text.length < 4) return;
+                        if (lower === 'buy tickets' || lower === 'sold out') return;
+                        links[lower] = href;
                     });
                     return links;
                 }
@@ -206,32 +248,19 @@ def crawl(source: dict) -> tuple[int, int, int]:
                             subcategory = "podcast"
                             tags = ["podcast", "tabernacle", "downtown"]
 
-                        event_record = {
-                            "source_id": source_id,
-                            "venue_id": venue_id,
-                            "title": title,
-                            "description": None,
-                            "start_date": start_date,
-                            "start_time": None,
-                            "end_date": None,
-                            "end_time": None,
-                            "is_all_day": False,
-                            "category": category,
-                            "subcategory": subcategory,
-                            "tags": tags,
-                            "price_min": None,
-                            "price_max": None,
-                            "price_note": None,
-                            "is_free": None,
-                            "source_url": SHOWS_URL,
-                            "ticket_url": SHOWS_URL,
-                            "image_url": image_map.get(title),
-                            "raw_text": f"{line} {day_num} {month} - {title}",
-                            "extraction_confidence": 0.90,
-                            "is_recurring": False,
-                            "recurrence_rule": None,
-                            "content_hash": content_hash,
-                        }
+                        event_url = find_event_url(title, event_links, SHOWS_URL)
+                        event_record = build_event_record(
+                            source_id=source_id,
+                            venue_id=venue_id,
+                            title=title,
+                            start_date=start_date,
+                            category=category,
+                            subcategory=subcategory,
+                            tags=tags,
+                            event_url=event_url,
+                            image_url=image_map.get(title),
+                            raw_text=f"{line} {day_num} {month} - {title}",
+                        )
 
                         new_events.append(event_record)
 
@@ -245,8 +274,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
             detail_fetches = 0
             detail_config = DetailConfig()
             for evt in new_events:
-                title = evt["title"]
-                detail_url = detail_links.get(title)
+                detail_url = evt.get("source_url")
                 if detail_url and detail_fetches < 20:
                     html = fetch_detail_html_playwright(detail_page, detail_url)
                     if html:

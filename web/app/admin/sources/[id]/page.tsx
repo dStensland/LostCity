@@ -3,6 +3,7 @@
 import { useState, useEffect, use } from "react";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
+import { ADMIN_EVENT_CATEGORY_IDS as CATEGORIES } from "@/lib/event-taxonomy";
 
 type Portal = {
   id: string;
@@ -43,13 +44,6 @@ type SourceData = {
   subscriberCount: number;
   subscribers: Subscriber[];
 };
-
-const CATEGORIES = [
-  "music", "film", "comedy", "theater", "art", "sports",
-  "food_drink", "nightlife", "community", "fitness", "family",
-  "learning", "dance", "tours", "meetup", "words", "religious",
-  "markets", "wellness", "gaming", "outdoors", "other"
-];
 
 export default function SourceDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);

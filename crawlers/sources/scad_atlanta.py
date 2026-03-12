@@ -42,6 +42,17 @@ VENUES = {
 }
 
 
+def _is_cloudflare_challenge(text: str) -> bool:
+    """Detect Cloudflare interstitials so blocked pages don't look like empty feeds."""
+    normalized = (text or "").lower()
+    return (
+        "just a moment" in normalized
+        or "enable javascript and cookies to continue" in normalized
+        or "attention required" in normalized
+        or "cloudflare" in normalized
+    )
+
+
 def parse_jsonld_events(soup: BeautifulSoup) -> list[dict]:
     """Extract Event data from JSON-LD scripts."""
     events = []
@@ -77,7 +88,17 @@ def crawl(source: dict) -> tuple[int, int, int]:
     try:
         response = requests.get(EVENTS_URL, headers=headers, timeout=30)
         if response.status_code in {401, 403}:
-            logger.warning("SCAD Atlanta blocked request with status %s; skipping run", response.status_code)
+            if _is_cloudflare_challenge(response.text):
+                logger.warning(
+                    "SCAD Atlanta blocked by Cloudflare challenge (status %s); "
+                    "treat as source-access failure, not empty feed",
+                    response.status_code,
+                )
+            else:
+                logger.warning(
+                    "SCAD Atlanta blocked request with status %s; skipping run",
+                    response.status_code,
+                )
             return 0, 0, 0
         response.raise_for_status()
 

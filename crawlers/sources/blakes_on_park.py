@@ -34,21 +34,39 @@ VENUE_DATA = {
 WEEKLY_SCHEDULE = [
     {
         "day": 1,  # Tuesday
-        "title": "Latino Tuesdays",
-        "description": "Weekly Latin night at Blake's on the Park. Latin music, dancing, and drink specials in Midtown's gayborhood.",
+        "title": "Latino Tuesdays at Blake's",
+        "description": "Weekly Latin night at Blake's on the Park in Midtown. Latin music, dancing, and drink specials in Atlanta's gayborhood since 1988.",
         "start_time": "21:00",
         "category": "nightlife",
-        "subcategory": "nightlife.dj",
-        "tags": ["lgbtq", "latin", "dancing", "nightlife", "weekly"],
+        "subcategory": "nightlife.latin_night",
+        "tags": ["lgbtq-friendly", "latin", "dancing", "nightlife", "weekly"],
     },
     {
         "day": 3,  # Thursday
-        "title": "Atlanta's Angels",
-        "description": "Weekly drag show at Blake's on the Park featuring Atlanta's finest queens. An Atlanta landmark since 1988.",
+        "title": "Atlanta's Angels Drag Show at Blake's",
+        "description": "Thursday drag show at Blake's on the Park featuring Atlanta's finest queens. A Midtown institution since 1988.",
         "start_time": "23:00",
         "category": "nightlife",
         "subcategory": "nightlife.drag",
-        "tags": ["lgbtq", "drag", "drag-show", "nightlife", "weekly"],
+        "tags": ["lgbtq-friendly", "drag", "drag-show", "nightlife", "weekly"],
+    },
+    {
+        "day": 4,  # Friday
+        "title": "Friday Night Drag Show at Blake's",
+        "description": "Friday night drag show at Blake's on the Park in Midtown. Late-night performances from Atlanta's top queens.",
+        "start_time": "23:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.drag",
+        "tags": ["lgbtq-friendly", "drag", "drag-show", "nightlife", "weekly"],
+    },
+    {
+        "day": 5,  # Saturday
+        "title": "Saturday Night Drag Show at Blake's",
+        "description": "Saturday night drag show at Blake's on the Park. The biggest night of the week at Midtown's legendary LGBTQ bar.",
+        "start_time": "23:00",
+        "category": "nightlife",
+        "subcategory": "nightlife.drag",
+        "tags": ["lgbtq-friendly", "drag", "drag-show", "nightlife", "weekly"],
     },
 ]
 
@@ -108,7 +126,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 "price_max": None,
                 "price_note": None,
                 "is_free": False,
-                "source_url": "https://www.instagram.com/blakesatl/",
+                "source_url": VENUE_DATA["website"],
                 "ticket_url": None,
                 "image_url": None,
                 "raw_text": f"{event_template['title']} - {start_date}",
@@ -124,7 +142,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 events_updated += 1
                 continue
 
-            day_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+            day_names = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
             series_hint = {
                 "series_type": "recurring_show",
                 "series_title": event_template["title"],

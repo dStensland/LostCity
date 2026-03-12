@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { loadBestEffortEnv, resolveWorkspaceRoot } from "./manifest-utils";
+import { resolveNetworkFeedAccess } from "@/lib/network-feed-access";
 
 type PortalRow = {
   id: string;
@@ -10,6 +11,7 @@ type PortalRow = {
 type ValidationRow = {
   portal_slug: string;
   inherited_from_portal_slug: string | null;
+  accessible_feed_portal_slugs: string[];
   local_active_network_sources: number;
   parent_active_network_sources: number;
   resolved_feed_portal_slug: string;
@@ -28,20 +30,6 @@ function parsePortalSlugs(argv: string[]): string[] {
   return values.length > 0 ? [...new Set(values)] : ["helpatl"];
 }
 
-async function countActiveNetworkSources(supabase: ReturnType<typeof createClient>, portalId: string): Promise<number> {
-  const { count, error } = await supabase
-    .from("network_sources")
-    .select("id", { count: "exact", head: true })
-    .eq("portal_id", portalId)
-    .eq("is_active", true);
-
-  if (error) {
-    throw new Error(`Failed counting network_sources for portal ${portalId}: ${error.message}`);
-  }
-
-  return count || 0;
-}
-
 async function countPosts30d(supabase: ReturnType<typeof createClient>, portalId: string): Promise<number> {
   const { count, error } = await supabase
     .from("network_posts")
@@ -54,44 +42,6 @@ async function countPosts30d(supabase: ReturnType<typeof createClient>, portalId
   }
 
   return count || 0;
-}
-
-async function resolveFeedPortal(
-  supabase: ReturnType<typeof createClient>,
-  portal: PortalRow,
-): Promise<{ resolvedPortal: PortalRow; localSourceCount: number; parentSourceCount: number }> {
-  const localSourceCount = await countActiveNetworkSources(supabase, portal.id);
-  if (localSourceCount > 0 || !portal.parent_portal_id) {
-    return { resolvedPortal: portal, localSourceCount, parentSourceCount: 0 };
-  }
-
-  const { data: parentPortal, error: parentError } = await supabase
-    .from("portals")
-    .select("id, slug, parent_portal_id")
-    .eq("id", portal.parent_portal_id)
-    .eq("status", "active")
-    .maybeSingle();
-
-  if (parentError) {
-    throw new Error(`Failed loading parent portal for ${portal.slug}: ${parentError.message}`);
-  }
-
-  if (!parentPortal) {
-    return { resolvedPortal: portal, localSourceCount, parentSourceCount: 0 };
-  }
-
-  const typedParent = parentPortal as PortalRow;
-  const parentSourceCount = await countActiveNetworkSources(supabase, typedParent.id);
-
-  if (parentSourceCount > 0) {
-    return {
-      resolvedPortal: typedParent,
-      localSourceCount,
-      parentSourceCount,
-    };
-  }
-
-  return { resolvedPortal: portal, localSourceCount, parentSourceCount };
 }
 
 async function validatePortal(
@@ -114,18 +64,21 @@ async function validatePortal(
   }
 
   const portal = portalData as PortalRow;
-  const { resolvedPortal, localSourceCount, parentSourceCount } = await resolveFeedPortal(supabase, portal);
-  const [localPosts30d, resolvedPosts30d] = await Promise.all([
+  const access = await resolveNetworkFeedAccess(supabase, portal);
+  const [localPosts30d, ...accessiblePostCounts] = await Promise.all([
     countPosts30d(supabase, portal.id),
-    countPosts30d(supabase, resolvedPortal.id),
+    ...access.accessiblePortalIds.map((portalId) => countPosts30d(supabase, portalId)),
   ]);
+  const resolvedPosts30d = accessiblePostCounts.reduce((sum, count) => sum + count, 0);
 
   return {
     portal_slug: portal.slug,
-    inherited_from_portal_slug: resolvedPortal.slug !== portal.slug ? resolvedPortal.slug : null,
-    local_active_network_sources: localSourceCount,
-    parent_active_network_sources: parentSourceCount,
-    resolved_feed_portal_slug: resolvedPortal.slug,
+    inherited_from_portal_slug:
+      access.accessiblePortalSlugs.length > 1 ? access.accessiblePortalSlugs.slice(1).join(", ") : null,
+    accessible_feed_portal_slugs: access.accessiblePortalSlugs,
+    local_active_network_sources: access.localSourceCount,
+    parent_active_network_sources: access.parentSourceCount,
+    resolved_feed_portal_slug: access.accessiblePortalSlugs.join(", "),
     local_posts_30d: localPosts30d,
     resolved_posts_30d: resolvedPosts30d,
   };
@@ -151,6 +104,7 @@ async function main(): Promise<void> {
     console.log("");
     console.log(`Portal: ${row.portal_slug}`);
     console.log(`  Inherited from: ${row.inherited_from_portal_slug || "none"}`);
+    console.log(`  Accessible feed portals: ${row.accessible_feed_portal_slugs.join(", ")}`);
     console.log(`  Local active sources: ${row.local_active_network_sources}`);
     console.log(`  Parent active sources: ${row.parent_active_network_sources}`);
     console.log(`  Resolved feed portal: ${row.resolved_feed_portal_slug}`);

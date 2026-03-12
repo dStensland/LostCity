@@ -12,14 +12,14 @@ import { safeJsonLd } from "@/lib/formats";
 import { getSiteUrl } from "@/lib/site-url";
 
 // Static brag stats — updated periodically, not worth blocking page render.
-// Last verified: 2026-03-02 against Supabase.
-// Real counts: 18,505 future events, 1,054 total sources, 810 active venues,
-// 113 neighborhoods. 470 sources active, 128 producing events.
+// Last verified: 2026-03-12 against Supabase.
+// Real counts: 26,192 future events, 1,334 total sources, 5,411 venues,
+// 262 neighborhoods. 659 sources active.
 const STATS = [
-  { value: "18k+", label: "events", colorClass: "home-stat-cyan" },
-  { value: "1k+", label: "sources", colorClass: "home-stat-pink" },
-  { value: "800+", label: "venues", colorClass: "home-stat-purple" },
-  { value: "110+", label: "hoods", colorClass: "home-stat-cyan" },
+  { value: "26k+", label: "events", colorClass: "home-stat-cyan" },
+  { value: "1.3k+", label: "sources", colorClass: "home-stat-pink" },
+  { value: "5.4k+", label: "venues", colorClass: "home-stat-purple" },
+  { value: "260+", label: "hoods", colorClass: "home-stat-cyan" },
 ];
 
 export default function Home() {
@@ -27,8 +27,8 @@ export default function Home() {
   const homepageSchema = {
     "@context": "https://schema.org",
     "@type": "WebPage",
-    name: "Lost City - Find Your People",
-    description: "Find your people. Discover the underground events, shows, and happenings in your city.",
+    name: "Lost City - Find Your Thing and Do It",
+    description: "Find your thing and do it. Events, destinations, and everything worth doing in your city.",
     url: siteUrl,
     isPartOf: {
       "@type": "WebSite",
@@ -81,7 +81,7 @@ export default function Home() {
           <div className="flex items-center justify-center gap-4 mb-6">
             <div className="h-px flex-1 max-w-16 bg-gradient-to-r from-transparent to-[#00e5ff]/40" />
             <span className="text-xs uppercase tracking-[0.4em] text-[#00e5ff]/85">
-              GO BE COMMUNITY
+              FIND YOUR THING AND DO IT
             </span>
             <div className="h-px flex-1 max-w-16 bg-gradient-to-l from-transparent to-[#00e5ff]/40" />
           </div>
@@ -154,6 +154,391 @@ export default function Home() {
         </div>
       </div>
 
+      {/* Pillar portals — coming soon previews */}
+      <div className="px-4 pb-8 md:pb-10 relative z-10">
+        <div className="max-w-lg mx-auto">
+          <div className="grid grid-cols-2 gap-3">
+
+            {/* ── LOST CITIZEN ─────────────────────────────────────
+                Editorial / newspaper. White card. Left teal bar.
+                "SHOW UP." is the hero — massive ghost type behind.
+                Teal rules as texture. Broadsheet energy.
+            ──────────────────────────────────────────────────────── */}
+            <ScrollReveal direction="up" delay={0}>
+              <div
+                className="relative overflow-hidden rounded-xl h-full flex flex-col"
+                style={{
+                  backgroundColor: "#F5F4F1",
+                  borderLeft: "4px solid #2D6A4F",
+                  minHeight: "220px",
+                }}
+              >
+                {/* Ghost headline — watermark at bottom-right, doesn't compete */}
+                <div
+                  className="absolute bottom-2 right-2 pointer-events-none select-none overflow-hidden"
+                  aria-hidden
+                >
+                  <span
+                    className="font-[family-name:var(--font-masthead)] leading-none whitespace-nowrap"
+                    style={{
+                      fontSize: "clamp(2rem, 9vw, 3.5rem)",
+                      color: "#2D6A4F",
+                      opacity: 0.12,
+                      letterSpacing: "-0.02em",
+                    }}
+                  >
+                    SHOW UP.
+                  </span>
+                </div>
+
+                {/* Teal rule lines — editorial texture */}
+                <div className="absolute top-0 left-0 right-0 h-1" style={{ backgroundColor: "#2D6A4F" }} />
+                <div className="absolute top-2 left-4 right-4 h-px" style={{ backgroundColor: "#2D6A4F", opacity: 0.15 }} />
+                <div className="absolute top-4 left-4 right-4 h-px" style={{ backgroundColor: "#2D6A4F", opacity: 0.08 }} />
+
+                {/* Content */}
+                <div className="relative flex flex-col flex-1 p-3 pt-4">
+                  {/* Category stamp */}
+                  <div
+                    className="self-start mb-3"
+                    style={{
+                      fontFamily: "var(--font-mono)",
+                      fontSize: "8px",
+                      fontWeight: 700,
+                      letterSpacing: "0.2em",
+                      textTransform: "uppercase",
+                      color: "#2D6A4F",
+                      borderBottom: "1px solid #2D6A4F",
+                      paddingBottom: "2px",
+                    }}
+                  >
+                    Civic
+                  </div>
+
+                  {/* Wordmark lockup */}
+                  <div className="mb-3">
+                    <div
+                      className="font-[family-name:var(--font-mono)]"
+                      style={{ fontSize: "7px", fontWeight: 500, letterSpacing: "0.35em", color: "#2D6A4F", textTransform: "uppercase" }}
+                    >
+                      Lost
+                    </div>
+                    <div
+                      className="font-[family-name:var(--font-masthead)] leading-[0.85]"
+                      style={{ fontSize: "clamp(2.2rem, 10vw, 3rem)", color: "#1A3A2A", letterSpacing: "0.02em" }}
+                    >
+                      CITIZEN
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <div style={{ width: "24px", height: "2px", backgroundColor: "#2D6A4F" }} />
+                      <span
+                        className="font-[family-name:var(--font-serif)] italic"
+                        style={{ fontSize: "11px", color: "#2D6A4F" }}
+                      >
+                        show up.
+                      </span>
+                    </div>
+                  </div>
+
+                  <p style={{ fontSize: "10px", lineHeight: 1.55, color: "#2A2A24" }} className="flex-1">
+                    Get involved and stay informed.
+                  </p>
+
+                  {/* Bottom rule + label */}
+                  <div className="mt-3 pt-2 flex items-center justify-between" style={{ borderTop: "1px solid #2D6A4F40" }}>
+                    <span
+                      style={{ fontFamily: "var(--font-mono)", fontSize: "8px", letterSpacing: "0.18em", textTransform: "uppercase", color: "#2D6A4F" }}
+                    >
+                      Coming soon
+                    </span>
+                    <span style={{ color: "#2D6A4F", fontSize: "12px" }}>→</span>
+                  </div>
+                </div>
+              </div>
+            </ScrollReveal>
+
+            {/* ── LOST TRACK ────────────────────────────────────────
+                Nordic Brutalist. Cream bg. Heavy black border.
+                Zero radius. "WANDER" bleeds off the top edge.
+                Terracotta hit. Space Grotesk heavy.
+            ──────────────────────────────────────────────────────── */}
+            <ScrollReveal direction="up" delay={80}>
+              <div
+                className="relative overflow-hidden h-full flex flex-col font-[family-name:var(--font-display-alt)]"
+                style={{
+                  backgroundColor: "#F0EDE8",
+                  border: "3px solid #1A1A1A",
+                  borderRadius: "0",
+                  minHeight: "220px",
+                }}
+              >
+                {/* Terracotta top band with wordmark */}
+                <div
+                  className="w-full overflow-hidden relative"
+                  style={{ height: "80px", backgroundColor: "#C45A3B" }}
+                >
+                  {/* Stacked wordmark: LOST over TRACK */}
+                  <div className="absolute left-2.5 top-1.5">
+                    <div
+                      className="font-[family-name:var(--font-mono)]"
+                      style={{ fontSize: "7px", fontWeight: 500, letterSpacing: "0.5em", color: "#F0EDE8", opacity: 0.7, textTransform: "uppercase" }}
+                    >
+                      Lost
+                    </div>
+                    <div
+                      className="font-[family-name:var(--font-display-alt)] font-bold leading-[0.8]"
+                      style={{ fontSize: "clamp(2.8rem, 12vw, 4rem)", color: "#F0EDE8", letterSpacing: "-0.02em" }}
+                    >
+                      TRACK
+                    </div>
+                  </div>
+
+                  {/* Label stamp top-right */}
+                  <div
+                    className="absolute top-2 right-2"
+                    style={{ fontFamily: "var(--font-mono)", fontSize: "7px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#F0EDE8", opacity: 0.8 }}
+                  >
+                    Adventure
+                  </div>
+                </div>
+
+                {/* Below the band — content sits on cream */}
+                <div className="flex flex-col flex-1 px-3 pt-3 pb-3">
+                  {/* Tagline */}
+                  <div className="flex items-center gap-2 mb-2.5">
+                    <div style={{ width: "16px", height: "2px", backgroundColor: "#C45A3B" }} />
+                    <span
+                      className="font-[family-name:var(--font-display-alt)] font-semibold"
+                      style={{ fontSize: "clamp(0.7rem, 3vw, 0.8rem)", letterSpacing: "0.04em", color: "#1A1A1A" }}
+                    >
+                      Wander out yonder.
+                    </span>
+                  </div>
+
+                  <p style={{ fontSize: "10px", lineHeight: 1.55, color: "#3A3530", flex: 1 }}>
+                    Trails, camps, and outdoor adventures worth the drive.
+                  </p>
+
+                  {/* Heavy border bottom label */}
+                  <div
+                    className="mt-3 pt-2 flex items-center justify-between"
+                    style={{ borderTop: "2px solid #1A1A1A" }}
+                  >
+                    <span style={{ fontFamily: "var(--font-mono)", fontSize: "8px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#1A1A1A" }}>
+                      Coming soon
+                    </span>
+                    <span style={{ fontFamily: "var(--font-display-alt)", fontSize: "14px", fontWeight: 900, color: "#C45A3B" }}>↗</span>
+                  </div>
+                </div>
+              </div>
+            </ScrollReveal>
+
+            {/* ── LOST YOUTH ────────────────────────────────────────
+                Warm Saturday morning energy. Light cream surface.
+                Outfit font — rounded, friendly, not condensed.
+                Bright amber top band. Playful but tasteful.
+                Round corners, warm and inviting.
+            ──────────────────────────────────────────────────────── */}
+            <ScrollReveal direction="up" delay={160}>
+              <div
+                className="relative overflow-hidden rounded-2xl h-full flex flex-col"
+                style={{
+                  backgroundColor: "#FFFBF2",
+                  minHeight: "220px",
+                  border: "2px solid #F0E6D2",
+                }}
+              >
+                {/* Bright amber top band — sunshine energy */}
+                <div
+                  className="w-full relative"
+                  style={{ height: "8px", backgroundColor: "#E8830A" }}
+                />
+
+                {/* Warm sunshine glow from top */}
+                <div
+                  className="absolute top-0 left-0 right-0 pointer-events-none"
+                  style={{
+                    height: "80px",
+                    background: "radial-gradient(ellipse at 50% 0%, #E8830A12 0%, transparent 70%)",
+                  }}
+                  aria-hidden
+                />
+
+                <div className="relative flex flex-col flex-1 p-3.5 pt-3">
+                  {/* Small label */}
+                  <div
+                    style={{
+                      fontFamily: "var(--font-outfit)",
+                      fontSize: "8px",
+                      fontWeight: 700,
+                      letterSpacing: "0.2em",
+                      textTransform: "uppercase",
+                      color: "#E8830A",
+                      marginBottom: "8px",
+                    }}
+                  >
+                    Family
+                  </div>
+
+                  {/* Wordmark: brand name big, tagline small — matches other cards */}
+                  <div className="mb-3">
+                    <div
+                      className="font-[family-name:var(--font-outfit)] leading-[0.92]"
+                      style={{ fontSize: "7px", fontWeight: 600, letterSpacing: "0.35em", color: "#E8830A", textTransform: "uppercase" }}
+                    >
+                      Lost
+                    </div>
+                    <div
+                      className="font-[family-name:var(--font-outfit)] leading-[0.88]"
+                      style={{ fontSize: "clamp(2.2rem, 10vw, 3rem)", fontWeight: 800, color: "#2A2017", letterSpacing: "-0.01em" }}
+                    >
+                      Youth
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-1.5">
+                      <svg width="20" height="6" viewBox="0 0 20 6" fill="none" style={{ opacity: 0.5 }}>
+                        <path d="M0 3C2 1 3 1 5 3C7 5 8 5 10 3C12 1 13 1 15 3C17 5 18 5 20 3" stroke="#E8830A" strokeWidth="1.5" fill="none" />
+                      </svg>
+                      <span
+                        className="font-[family-name:var(--font-outfit)]"
+                        style={{ fontSize: "11px", fontWeight: 600, color: "#E8830A", letterSpacing: "0.02em" }}
+                      >
+                        go play.
+                      </span>
+                    </div>
+                  </div>
+
+                  <p style={{ fontSize: "10px", lineHeight: 1.55, color: "#5C5040", flex: 1 }}>
+                    Explore and organize adventures and activities with your family.
+                  </p>
+
+                  <div
+                    className="mt-3 pt-2 flex items-center justify-between"
+                    style={{ borderTop: "1.5px solid #E8830A30" }}
+                  >
+                    <span style={{ fontFamily: "var(--font-outfit)", fontSize: "8px", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: "#E8830A" }}>
+                      Coming soon
+                    </span>
+                    <div
+                      style={{
+                        width: "20px",
+                        height: "20px",
+                        borderRadius: "50%",
+                        backgroundColor: "#E8830A",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "10px",
+                        color: "#FFFBF2",
+                        fontWeight: 900,
+                      }}
+                    >
+                      →
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </ScrollReveal>
+
+            {/* ── LOST ARTS ─────────────────────────────────────────
+                Gallery opening. Near-black canvas. Copper hairline.
+                "Lost Arts" in MASSIVE italic serif — type AS art.
+                Copper stroke label box. JetBrains mono metadata.
+                Zero radius, no gradients. The art IS the space.
+            ──────────────────────────────────────────────────────── */}
+            <ScrollReveal direction="up" delay={240}>
+              <div
+                className="relative overflow-hidden h-full flex flex-col"
+                style={{
+                  backgroundColor: "#0E0C0A",
+                  border: "1px solid #C9874F",
+                  borderRadius: "2px",
+                  minHeight: "220px",
+                }}
+              >
+                {/* Corner registration marks — gallery aesthetic */}
+                <div className="absolute top-2 left-2 pointer-events-none" aria-hidden>
+                  <div style={{ width: "12px", height: "1px", backgroundColor: "#C9874F", opacity: 0.5 }} />
+                  <div style={{ width: "1px", height: "12px", backgroundColor: "#C9874F", opacity: 0.5, marginTop: "-1px" }} />
+                </div>
+                <div className="absolute top-2 right-2 pointer-events-none" aria-hidden>
+                  <div style={{ width: "12px", height: "1px", backgroundColor: "#C9874F", opacity: 0.5, marginLeft: "auto" }} />
+                  <div style={{ width: "1px", height: "12px", backgroundColor: "#C9874F", opacity: 0.5, marginTop: "-1px", marginLeft: "11px" }} />
+                </div>
+                <div className="absolute bottom-2 left-2 pointer-events-none" aria-hidden>
+                  <div style={{ width: "1px", height: "12px", backgroundColor: "#C9874F", opacity: 0.5 }} />
+                  <div style={{ width: "12px", height: "1px", backgroundColor: "#C9874F", opacity: 0.5 }} />
+                </div>
+
+                <div className="relative flex flex-col flex-1 p-3 pt-5">
+                  {/* Stroke-only label */}
+                  <div
+                    className="self-start mb-4"
+                    style={{
+                      fontFamily: "var(--font-mono)",
+                      fontSize: "7px",
+                      fontWeight: 500,
+                      letterSpacing: "0.22em",
+                      textTransform: "uppercase",
+                      color: "#C9874F",
+                      border: "1px solid #C9874F",
+                      padding: "2px 5px",
+                    }}
+                  >
+                    Creative
+                  </div>
+
+                  {/* Wordmark: // lost prefix + massive italic Arts */}
+                  <div className="flex-1 flex flex-col justify-center">
+                    <div
+                      className="font-[family-name:var(--font-mono)]"
+                      style={{ fontSize: "9px", color: "#C9874F", opacity: 0.5, letterSpacing: "0.1em" }}
+                    >
+                      // lost
+                    </div>
+                    <div
+                      className="font-[family-name:var(--font-serif)] italic leading-[0.8]"
+                      style={{
+                        fontSize: "clamp(3.5rem, 16vw, 5rem)",
+                        color: "#F0EBE3",
+                        letterSpacing: "-0.03em",
+                        marginTop: "-2px",
+                      }}
+                    >
+                      Arts
+                    </div>
+                    <div className="flex items-center gap-2 mt-2">
+                      <div style={{ width: "20px", height: "1px", backgroundColor: "#C9874F", opacity: 0.5 }} />
+                      <span
+                        className="font-[family-name:var(--font-mono)]"
+                        style={{ fontSize: "9px", color: "#C9874F", letterSpacing: "0.08em" }}
+                      >
+                        scene, surfaced.
+                      </span>
+                    </div>
+                  </div>
+
+                  <p style={{ fontSize: "10px", lineHeight: 1.55, color: "#9A8F84", marginBottom: "10px" }}>
+                    Exhibitions, open calls, and support for local artists.
+                  </p>
+
+                  {/* Bottom copper rule + label */}
+                  <div
+                    className="flex items-center justify-between pt-2"
+                    style={{ borderTop: "1px solid #C9874F", opacity: 0.6 }}
+                  >
+                    <span style={{ fontFamily: "var(--font-mono)", fontSize: "8px", letterSpacing: "0.18em", textTransform: "uppercase", color: "#C9874F", opacity: 1 }}>
+                      Coming soon
+                    </span>
+                    <span style={{ color: "#C9874F", fontSize: "11px", fontFamily: "var(--font-mono)" }}>_</span>
+                  </div>
+                </div>
+              </div>
+            </ScrollReveal>
+
+          </div>
+        </div>
+      </div>
+
       {/* Stats — staggered reveal */}
       <div className="px-4 pb-10 md:pb-14 relative z-10">
         <div className="max-w-2xl mx-auto">
@@ -184,13 +569,15 @@ export default function Home() {
           <div className="mb-8 md:mb-10 space-y-4">
             <ScrollReveal direction="up" delay={0}>
               <p className="text-base md:text-lg text-[var(--soft)] leading-relaxed">
-                We&apos;re of a mind that if it&apos;s easier for people to find cool
-                stuff to do, more people will go do cool stuff.
+                Your city is full of places to go and things to do. We show you
+                all of it — events, destinations, spots worth checking out — so
+                you can find your thing and go do it.
               </p>
             </ScrollReveal>
             <ScrollReveal direction="up" delay={150}>
               <p className="text-base md:text-lg text-[var(--soft)] leading-relaxed">
-                When more people go do cool stuff, other people make more cool stuff to go do.
+                When it&apos;s easy to find cool stuff, more people go do cool stuff.
+                When more people show up, more cool stuff gets made.
               </p>
             </ScrollReveal>
             <ScrollReveal direction="up" delay={300}>
@@ -205,10 +592,11 @@ export default function Home() {
             <ScrollReveal direction="left">
               <div className="pl-6 border-l-2 border-[#00e5ff]/30 hover:border-[#00e5ff]/60 transition-colors duration-300">
                 <p className="text-[var(--soft)] leading-relaxed text-sm md:text-base">
-                  Lost City crawls hundreds of sources across the city — venues, promoters,
-                  galleries, breweries, theaters, clubs, nonprofits — so you don&apos;t
-                  have to check a dozen websites. Shows, classes, openings, pop-ups, free
-                  stuff. It&apos;s all here.
+                  Lost City crawls hundreds of sources across the city — venues,
+                  promoters, galleries, breweries, parks, theaters, escape rooms,
+                  nonprofits — so you don&apos;t have to check a dozen websites.
+                  Shows, tours, classes, pop-ups, places to eat, things to do. It&apos;s
+                  all here.
                 </p>
               </div>
             </ScrollReveal>
@@ -223,10 +611,9 @@ export default function Home() {
             <ScrollReveal direction="left" delay={200}>
               <div className="pl-6 border-l-2 border-[#b06bff]/30 hover:border-[#b06bff]/60 transition-colors duration-300">
                 <p className="text-[var(--soft)] leading-relaxed text-sm md:text-base">
-                  Not drowning you with ads. No annoying subscriptions. No algorithm trying to
-                  keep you scrolling braindead forever. Just a simple way to find cool stuff
-                  happening nearby so you can get off your butt, put your screens down, and
-                  get out into it.
+                  No ads. No subscriptions. No algorithm trying to keep you
+                  scrolling braindead forever. Just everything going on in your
+                  city, organized so you can find your thing and go do it.
                 </p>
               </div>
             </ScrollReveal>
@@ -241,7 +628,7 @@ export default function Home() {
       <ScrollReveal direction="up" className="px-4 pb-10 md:pb-14 relative z-10">
         <div className="max-w-2xl mx-auto text-center">
           <p className="text-[var(--cream)]/70 text-xs uppercase tracking-[0.3em] mb-6">
-            What&apos;s on tonight?
+            What are you into?
           </p>
           <div className="flex flex-wrap justify-center gap-2.5 md:gap-3 mb-8">
             {[
@@ -305,29 +692,32 @@ export default function Home() {
           <ScrollReveal direction="up">
             <ExpandableSection title="About the Platform">
               <p>
-                Lost City is a series of portals allowing you to explore
-                what&apos;s going on in and around different locations.
+                Lost City is a network of city portals — each one a complete
+                picture of what&apos;s going on. Events, destinations, places
+                worth going, things worth doing. We crawl hundreds of sources
+                so you get everything in one place instead of checking a dozen
+                apps and websites.
               </p>
               <div>
                 <p className="text-[var(--cream)] font-medium mb-3">
-                  You can do things like:
+                  What you can do:
                 </p>
                 <ul className="space-y-3 ml-4">
                   <li className="flex items-start gap-3">
                     <span className="text-[#00e5ff] mt-0.5">◆</span>
-                    <span>Find events and spots that are worthy of checking out</span>
+                    <span>See everything happening in your city — shows, classes, openings, pop-ups, free stuff, places to explore</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <span className="text-[#00e5ff] mt-0.5">◆</span>
-                    <span>Keep a calendar going between portals, link with whatever your normal one is</span>
+                    <span>Discover destinations worth visiting — not just events, but the places themselves</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <span className="text-[#ff6b9d] mt-0.5">◆</span>
-                    <span>Add your friends, invite them out, see what they&apos;re up to</span>
+                    <span>Add your friends, see where they&apos;re headed, make plans without the group text chaos</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <span className="text-[#ff6b9d] mt-0.5">◆</span>
-                    <span>Follow venues and organizations that are always throwing good stuff</span>
+                    <span>Follow the venues and orgs that consistently do great stuff</span>
                   </li>
                 </ul>
               </div>
@@ -337,17 +727,17 @@ export default function Home() {
           <ScrollReveal direction="up" delay={100}>
             <ExpandableSection title="Our Philosophy">
               <p>
-                The current event discovery space isn&apos;t the best. There are
-                large platforms mostly focused on ticketing, other large social
-                platforms who just want you doomscrolling all day, and also just a
-                ton of people off doing their own thing. We&apos;re leveraging fancy
-                new tech to bring it all together.
+                The way people find things to do is broken. Ticketing platforms
+                only show you what they sell tickets to. Social platforms want
+                you scrolling, not going. And the best stuff in any city is
+                scattered across hundreds of small websites nobody checks.
               </p>
               <p>
-                Lost City is designed as an{" "}
-                <span className="text-[#00e5ff] font-medium">anti-platform</span>.
-                A series of portals for cities, businesses, conferences, events
-                that can share info between them or just go off and do their own thing.
+                Lost City is an{" "}
+                <span className="text-[#00e5ff] font-medium">access layer</span>,
+                not a recommendation engine. We don&apos;t decide what you should do —
+                we show you everything that&apos;s going on and let you figure it out.
+                Your city, your call.
               </p>
             </ExpandableSection>
           </ScrollReveal>
@@ -355,24 +745,36 @@ export default function Home() {
           <ScrollReveal direction="up" delay={200}>
             <ExpandableSection title="Why AI?">
               <p>
-                AI is a dirty word in some circles. At Lost City we use AI as a{" "}
-                <span className="text-[#ff6b9d] font-medium">technical enabler</span>.
-                Some of the architecture we employ would frankly be quite stupid
-                without modern AI capabilities when it comes to generating web crawlers.
+                We use AI to crawl and organize the city at a scale that would
+                be impossible by hand — hundreds of sources, thousands of events
+                and places, updated constantly. The computers do what computers
+                are good at: reading websites, matching data, keeping things
+                current.
               </p>
               <p>
-                We&apos;ll continue to explore the latest tech, but always with the goal
-                of celebrating true blue human creators and getting people connected
-                in the real world. Our goal is to make it easier to find cool stuff to do, and to get people out and doing it - leave the computers to the computers.
+                That frees us up to focus on what actually matters:{" "}
+                <span className="text-[#ff6b9d] font-medium">
+                  getting people connected in the real world
+                </span>
+                . Leave the computers to the computers.{" "}
+                <span className="text-[var(--cream)] font-medium">
+                  The cities belong to us.
+                </span>
               </p>
             </ExpandableSection>
           </ScrollReveal>
 
           <ScrollReveal direction="up" delay={300}>
-            <ExpandableSection title="Want Your City Portal?">
+            <ExpandableSection title="Want a Portal?">
               <p>
-                Interested in a comprehensive events platform for your city, conference,
-                or big event? We can get something special going for you.
+                Hotels, conferences, neighborhoods, cities, niche communities —
+                if your people need to know what&apos;s going on, we can build you
+                a portal. White-labeled or branded, with data tailored to your
+                audience.
+              </p>
+              <p>
+                Already running portals for hotels, civic organizations, and
+                vertical communities. Same platform, different lens.
               </p>
               <div className="mt-4 font-mono">
                 <a

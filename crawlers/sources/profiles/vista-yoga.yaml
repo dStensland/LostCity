@@ -4,10 +4,10 @@ name: Vista Yoga
 integration_method: playwright
 defaults: {}
 discovery:
-  enabled: false
+  enabled: true
   type: list
   urls:
-  - https://www.vistayogaatl.com
+  - https://vistayoga.com/workshops-and-events/upcoming/
   fetch:
     render_js: true
 detail:
@@ -15,5 +15,4 @@ detail:
 data_goals:
 - classes
 - events
-- images
 - tickets

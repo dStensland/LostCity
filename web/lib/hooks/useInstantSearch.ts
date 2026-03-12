@@ -21,6 +21,50 @@ import {
 } from "@/lib/search-ranking";
 import { type SearchResult } from "@/lib/unified-search";
 import type { FindType as SearchContextFindType } from "@/lib/search-context";
+import { buildStableInstantSearchCacheKey } from "@/lib/search-cache-key";
+
+const INSTANT_SEARCH_CLIENT_CACHE_TTL_MS = 20 * 1000;
+const INSTANT_SEARCH_CLIENT_CACHE_MAX_ENTRIES = 100;
+const instantSearchClientCache = new Map<
+  string,
+  { data: InstantSearchResponse; expiresAt: number }
+>();
+
+function pruneInstantSearchClientCache() {
+  const now = Date.now();
+
+  for (const [key, value] of instantSearchClientCache.entries()) {
+    if (value.expiresAt <= now) {
+      instantSearchClientCache.delete(key);
+    }
+  }
+
+  if (instantSearchClientCache.size > INSTANT_SEARCH_CLIENT_CACHE_MAX_ENTRIES) {
+    const overflow =
+      instantSearchClientCache.size - INSTANT_SEARCH_CLIENT_CACHE_MAX_ENTRIES;
+    const keys = Array.from(instantSearchClientCache.keys()).slice(0, overflow);
+    for (const key of keys) {
+      instantSearchClientCache.delete(key);
+    }
+  }
+}
+
+function getLongestPrefixCachedInstantSearch(
+  params: URLSearchParams,
+  query: string,
+): InstantSearchResponse | null {
+  const normalizedQuery = query.trim();
+  for (let length = normalizedQuery.length - 1; length >= 2; length -= 1) {
+    const prefixParams = new URLSearchParams(params);
+    prefixParams.set("q", normalizedQuery.slice(0, length));
+    const prefixKey = buildStableInstantSearchCacheKey(prefixParams);
+    const cached = instantSearchClientCache.get(prefixKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.data;
+    }
+  }
+  return null;
+}
 
 // ============================================
 // Types
@@ -225,6 +269,7 @@ export function useInstantSearch({
   // Refs
   const fetchIdRef = useRef(0);
   const analyticsTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const abortRef = useRef<AbortController | null>(null);
 
   // Build ranking context
   const rankingContext = useMemo<RankingContext>(() => ({
@@ -251,8 +296,6 @@ export function useInstantSearch({
     const fetchId = ++fetchIdRef.current;
 
     const timer = setTimeout(async () => {
-      setIsLoading(true);
-
       try {
         const params = new URLSearchParams({
           q: query,
@@ -268,7 +311,56 @@ export function useInstantSearch({
           params.set("portal_id", portalId);
         }
 
-        const response = await fetch(`/api/search/instant?${params.toString()}`);
+        const cacheKey = buildStableInstantSearchCacheKey(params);
+        const cached = instantSearchClientCache.get(cacheKey);
+        if (cached && cached.expiresAt > Date.now()) {
+          const rankedResults = dedupeResultsSemantically(
+            rankResults(cached.data.suggestions, rankingContext)
+          );
+          const fallbackActions = detectQuickActions(query, portalSlug, rankingContext);
+          const nextQuickActions = dedupeQuickActions(
+            cached.data.quickActions || fallbackActions
+          );
+
+          setSuggestions(rankedResults);
+          setQuickActions(nextQuickActions);
+          setFacets(cached.data.facets || []);
+          setApiGroupedResults(dedupeGroupedResults(cached.data.groupedResults || {}));
+          setIntentType((cached.data.intent?.type as IntentType | undefined) || null);
+          setSelectedIndex(-1);
+          return;
+        }
+
+        const prefixCached = getLongestPrefixCachedInstantSearch(params, query);
+        if (prefixCached) {
+          const rankedResults = dedupeResultsSemantically(
+            rankResults(prefixCached.suggestions, rankingContext)
+          );
+          const fallbackActions = detectQuickActions(query, portalSlug, rankingContext);
+          const nextQuickActions = dedupeQuickActions(
+            prefixCached.quickActions || fallbackActions
+          );
+
+          setSuggestions(rankedResults);
+          setQuickActions(nextQuickActions);
+          setFacets(prefixCached.facets || []);
+          setApiGroupedResults(
+            dedupeGroupedResults(prefixCached.groupedResults || {})
+          );
+          setIntentType(
+            (prefixCached.intent?.type as IntentType | undefined) || null
+          );
+          setSelectedIndex(-1);
+        }
+
+        setIsLoading(true);
+        abortRef.current?.abort();
+        const controller = new AbortController();
+        abortRef.current = controller;
+
+        const response = await fetch(`/api/search/instant?${params.toString()}`, {
+          signal: controller.signal,
+        });
 
         if (fetchId !== fetchIdRef.current) return; // Stale request
 
@@ -277,6 +369,11 @@ export function useInstantSearch({
         }
 
         const data: InstantSearchResponse = await response.json();
+        instantSearchClientCache.set(cacheKey, {
+          data,
+          expiresAt: Date.now() + INSTANT_SEARCH_CLIENT_CACHE_TTL_MS,
+        });
+        pruneInstantSearchClientCache();
 
         const rankedResults = dedupeResultsSemantically(
           rankResults(data.suggestions, rankingContext)
@@ -291,6 +388,9 @@ export function useInstantSearch({
         setIntentType((data.intent?.type as IntentType | undefined) || null);
         setSelectedIndex(-1);
       } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") {
+          return;
+        }
         console.error("Search error:", err);
         setSuggestions([]);
         setQuickActions([]);
@@ -306,6 +406,7 @@ export function useInstantSearch({
 
     return () => {
       clearTimeout(timer);
+      abortRef.current?.abort();
     };
   }, [query, portalSlug, rankingContext, enabled, debounceMs, findType, portalId, viewMode]);
 
@@ -428,7 +529,8 @@ export function useInstantSearch({
   }, []);
 
   const selectSuggestion = useCallback(
-    (result: SearchResult) => {
+    (_result: SearchResult) => {
+      void _result;
       if (query.trim()) {
         addRecentSearch(query.trim());
         setRecentSearches(getRecentSearches());
@@ -440,7 +542,8 @@ export function useInstantSearch({
   );
 
   const selectQuickAction = useCallback(
-    (action: QuickAction) => {
+    (_action: QuickAction) => {
+      void _action;
       if (query.trim()) {
         addRecentSearch(query.trim());
         setRecentSearches(getRecentSearches());

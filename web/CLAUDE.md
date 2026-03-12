@@ -668,6 +668,79 @@ Before modifying ANY component's visual styling:
 
 ---
 
+## Shipping Standards (No Smoke and Mirrors)
+
+**The #1 failure mode is code that compiles but doesn't actually work.** Components that reference non-existent APIs, sections that render with hardcoded data, CSS that looks right in code but renders wrong in the browser. This wastes more time than any other category of bug because it looks "done" until someone actually uses it.
+
+### Before ANY UI Work Is "Done"
+
+Every component, section, or page change must pass this checklist before being called complete:
+
+1. **Data layer exists and returns real data.** Before building a UI section, verify:
+   - The API route exists and is deployed (or exists locally)
+   - The database table/columns it queries exist
+   - The query returns actual rows, not an empty set
+   - If the data layer doesn't exist yet, build it first or don't build the UI. A beautiful component with no data behind it is waste.
+
+2. **No hardcoded or placeholder data in production components.** These are all red flags:
+   - Arrays of sample events/venues defined inline in a component
+   - `const MOCK_DATA = [...]` anywhere outside a test file
+   - Hardcoded strings that should come from the database ("Atlanta's Best Restaurants")
+   - Fallback data that masks an empty API response (showing 3 hardcoded items when the real query returns 0)
+
+   If a section has no data, it should render nothing or a proper empty state — never fake content.
+
+3. **Browser-verified.** Before calling UI work done:
+   - Actually load the page in a browser (dev server or preview deploy)
+   - Check that text renders at the expected size (not 16px fallback)
+   - Check that colors match the design system tokens (not transparent/invisible)
+   - Check that the section renders with real data from the API
+   - Check empty states: what happens with 0 results?
+   - Check on mobile viewport (375px) — not just desktop
+   - If you can't browser-test, say so explicitly rather than marking it done
+
+4. **TypeScript builds clean.** Run `npx tsc --noEmit` — not just "no red squiggles in my editor." The full project must compile.
+
+5. **Portal-aware.** If the component reads portal context:
+   - Does it work on Atlanta (base portal)?
+   - Does it work on a non-Atlanta portal (FORTH, HelpATL)?
+   - Does it respect portal attribution (not leaking cross-portal data)?
+
+### Common Hallucination Patterns to Catch
+
+| What it looks like | What's actually happening | How to prevent |
+|---|---|---|
+| Component imports a hook that fetches from `/api/foo` | `/api/foo` doesn't exist | Check `app/api/` directory before writing the import |
+| Section renders 5 beautiful cards | Data is a hardcoded array, not a fetch | Search for `const ` arrays of objects in the component |
+| Typography looks correct in code review | `text-[var(--text-sm)]` generates `color:` not `font-size:` | Use bare `text-sm`, never `text-[var(--text-*)]` |
+| Empty state says "No events found" | The query works but returns 0 rows because the data doesn't exist yet | Check row counts before building UI |
+| Section looks great on desktop | Mobile viewport is broken (overflow, tiny text, missing padding) | Always check 375px viewport |
+| Component "works" in isolation | Parent page doesn't import it, or route doesn't exist | Verify the full user path from navigation to render |
+
+### The Data-First Rule
+
+**Never build a UI section before its data layer is confirmed working.** The correct order is:
+
+1. Verify the database has the data (query it directly)
+2. Verify the API route returns it correctly (curl it or check in browser)
+3. Build the component that renders it
+4. Browser-test the result
+
+If you reverse this order — building the component first and "planning to wire up the data later" — you get smoke and mirrors. The component gets merged, looks done in the PR, and nobody notices it's hollow until a user hits it.
+
+### Design Consistency Across Portals
+
+Each portal has its own design language (typography, colors, layout), but shared infrastructure must be consistent:
+
+- **Use the token system.** Never hardcode hex colors. Never use `text-white` or `bg-gray-*` when tokens exist.
+- **Use existing components.** Check `components/ui/`, `components/detail/`, `components/feed/` before building from scratch. If a Badge, Card, or Section pattern exists, use it.
+- **Portal-specific design goes in portal-specific files.** Don't add portal-specific CSS to `globals.css`. Don't add portal-specific logic to shared components with `if (portal === 'forth')` checks.
+- **Reference the component recipes above.** They exist because we've rebuilt the same patterns multiple times. Copy them — don't improvise from primitives.
+
+When building a new portal's unique pages (Adventure's trail detail, Arts' exhibition page), start from the Pencil designs if they exist, but use the shared token system for colors, typography, and spacing. The portal's personality comes from layout, content hierarchy, and accent colors — not from reinventing the button.
+
+---
+
 ## Common Gotchas
 
 1. **TypeScript and Supabase**: Use `as never` for insert/update operations to bypass strict typing:

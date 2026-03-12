@@ -60,6 +60,61 @@ export type Database = {
           search_vector: unknown | null; // tsvector for full-text search
         };
       };
+      venue_inventory_snapshots: {
+        Row: {
+          id: string;
+          venue_id: number;
+          provider_id: string;
+          inventory_scope: string;
+          arrival_date: string;
+          nights: number;
+          captured_for_date: string;
+          captured_at: string;
+          window_label: string | null;
+          total_results: number | null;
+          source_url: string | null;
+          records: unknown;
+          sample_sites: unknown;
+          metadata: Record<string, unknown>;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          venue_id: number;
+          provider_id: string;
+          inventory_scope?: string;
+          arrival_date: string;
+          nights: number;
+          captured_for_date?: string;
+          captured_at?: string;
+          window_label?: string | null;
+          total_results?: number | null;
+          source_url?: string | null;
+          records?: unknown;
+          sample_sites?: unknown;
+          metadata?: Record<string, unknown>;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          venue_id?: number;
+          provider_id?: string;
+          inventory_scope?: string;
+          arrival_date?: string;
+          nights?: number;
+          captured_for_date?: string;
+          captured_at?: string;
+          window_label?: string | null;
+          total_results?: number | null;
+          source_url?: string | null;
+          records?: unknown;
+          sample_sites?: unknown;
+          metadata?: Record<string, unknown>;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
       sources: {
         Row: {
           id: number;

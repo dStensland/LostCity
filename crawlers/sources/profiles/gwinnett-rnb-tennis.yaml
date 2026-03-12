@@ -1,0 +1,20 @@
+version: 1
+slug: gwinnett-rnb-tennis
+name: Gwinnett RNB Tennis
+integration_method: python
+defaults:
+  category: sports
+  tags:
+  - tennis
+  - sports-class
+  - youth-sports
+  - public-play
+discovery:
+  enabled: false
+  type: list
+  urls:
+  - https://secure.rec1.com/GA/gwinnett-county-parks-recreation/catalog
+detail:
+  enabled: false
+data_goals:
+- events

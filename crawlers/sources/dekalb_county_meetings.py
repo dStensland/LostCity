@@ -1,45 +1,40 @@
 """
-Crawler for DeKalb County Government Meetings via Legistar.
+Crawler for DeKalb County Government Meetings via the Legistar REST API.
 
-Source: https://dekalbcountyga.legistar.com/Calendar.aspx
-Events: Board of Commissioners meetings, public hearings, committee meetings, planning meetings
+Source API: https://webapi.legistar.com/v1/dekalbcountyga/events
+Calendar URL: https://dekalbcountyga.legistar.com/Calendar.aspx
 
-Legistar is a government meeting management platform used by many counties.
-The calendar page shows a month view with meeting listings that can be scraped.
+The Legistar API returns structured JSON — no authentication required. Each
+record includes body name, date, time, location, agenda status, agenda file
+URL, and a canonical meeting detail URL (EventInSiteURL).
 
-Meeting types include:
-- Board of Commissioners meetings (monthly)
-- Committee meetings (various committees)
-- Public hearings on zoning, land use, budget
-- Planning commission meetings
+EventItems are fetched per-event to detect public comment opportunities.
 
-All meetings are free and open to the public.
+Volume: approximately 6 meetings per month across all bodies.
 """
 
 from __future__ import annotations
 
-import re
-import time
 import logging
+import re
 from datetime import datetime, timedelta
 from typing import Optional
-from urllib.parse import urljoin
 
-from playwright.sync_api import sync_playwright
-from bs4 import BeautifulSoup
+import requests
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
-from date_utils import parse_human_date
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = "https://dekalbcountyga.legistar.com"
-CALENDAR_URL = f"{BASE_URL}/Calendar.aspx"
+API_BASE = "https://webapi.legistar.com/v1/dekalbcountyga"
+CALENDAR_URL = "https://dekalbcountyga.legistar.com/Calendar.aspx"
+LOOKAHEAD_DAYS = 90
 
-VENUE_DATA = {
-    "name": "Manuel J. Maloof Center",
-    "slug": "manuel-j-maloof-center",
+# Default meeting venue
+DEFAULT_VENUE_DATA = {
+    "name": "Manuel J. Maloof Auditorium",
+    "slug": "manuel-j-maloof-auditorium",
     "address": "1300 Commerce Dr",
     "neighborhood": "Decatur",
     "city": "Decatur",
@@ -47,258 +42,273 @@ VENUE_DATA = {
     "zip": "30030",
     "lat": 33.7748,
     "lng": -84.2963,
-    "venue_type": "government",
-    "spot_type": "government",
+    "venue_type": "community_center",
+    "spot_type": "community_center",
     "website": "https://www.dekalbcountyga.gov",
 }
 
+# Body name substrings → cause tag. Checked case-insensitively.
+BODY_CAUSE_MAP: list[tuple[str, str]] = [
+    ("planning commission", "housing"),
+    ("zoning board of appeals", "housing"),
+    ("board of commissioners - zoning", "housing"),
+    ("transportation committee", "transit"),
+]
 
-def parse_time_string(time_str: str) -> Optional[str]:
+# Strings that indicate a meeting has been cancelled or postponed.
+CANCEL_KEYWORDS = {"cancelled", "canceled", "postponed", "rescheduled"}
+
+
+def _parse_legistar_datetime(date_str: str, time_str: str) -> tuple[Optional[str], Optional[str]]:
     """
-    Parse time string to 24-hour format.
-    Examples: '6:00 PM', '12:30 PM', '10:00 AM'
+    Parse Legistar EventDate and EventTime into (YYYY-MM-DD, HH:MM).
+
+    EventDate arrives as ISO-8601: "2026-03-18T00:00:00"
+    EventTime arrives as 12-hour clock: "9:30 AM", "1:00 PM", or "" when unknown.
     """
-    try:
-        time_str = time_str.strip().upper()
+    parsed_date: Optional[str] = None
+    parsed_time: Optional[str] = None
 
-        # If it's a range, extract the first time
-        if '-' in time_str or '–' in time_str:
-            time_str = re.split(r'[-–]', time_str)[0].strip()
+    if date_str:
+        date_part = date_str.split("T")[0]
+        try:
+            dt = datetime.strptime(date_part, "%Y-%m-%d")
+            parsed_date = dt.strftime("%Y-%m-%d")
+        except ValueError:
+            logger.debug("Could not parse EventDate: %s", date_str)
 
-        # Pattern: H:MM AM/PM
-        match = re.search(r'(\d{1,2}):(\d{2})\s*(AM|PM)', time_str)
+    if time_str:
+        time_str = time_str.strip()
+        match = re.match(r"(\d{1,2}):(\d{2})\s*(AM|PM)", time_str, re.IGNORECASE)
         if match:
             hour = int(match.group(1))
             minute = match.group(2)
-            period = match.group(3)
-
+            period = match.group(3).upper()
             if period == "PM" and hour != 12:
                 hour += 12
             elif period == "AM" and hour == 12:
                 hour = 0
+            parsed_time = f"{hour:02d}:{minute}"
 
-            return f"{hour:02d}:{minute}"
+    return parsed_date, parsed_time
 
-    except (ValueError, AttributeError) as e:
-        logger.debug(f"Could not parse time '{time_str}': {e}")
 
+def _is_cancelled(event: dict) -> bool:
+    """Return True if the event record indicates a cancellation."""
+    status = (event.get("EventAgendaStatusName") or "").lower()
+    if any(kw in status for kw in CANCEL_KEYWORDS):
+        return True
+    body = (event.get("EventBodyName") or "").lower()
+    if any(kw in body for kw in CANCEL_KEYWORDS):
+        return True
+    comment = (event.get("EventComment") or "").lower()
+    if any(kw in comment for kw in CANCEL_KEYWORDS):
+        return True
+    return False
+
+
+def _has_public_comment(items: list[dict]) -> bool:
+    """Return True if any agenda item title contains a public comment marker."""
+    pattern = re.compile(r"public\s+comment|comment\s+from\s+the\s+public", re.IGNORECASE)
+    for item in items:
+        title = item.get("EventItemTitle") or ""
+        if pattern.search(title):
+            return True
+    return False
+
+
+def _cause_tag_for_body(body_name: str) -> Optional[str]:
+    """Return a cause tag based on the meeting body name, or None."""
+    body_lower = body_name.strip().lower()
+    for pattern, tag in BODY_CAUSE_MAP:
+        if pattern in body_lower:
+            return tag
     return None
 
 
-def determine_series_hint(meeting_name: str) -> Optional[dict]:
+def _venue_id_for_location(location: str, default_id: int) -> int:
     """
-    Determine if a meeting is part of a recurring series.
-
-    Examples:
-    - "Board of Commissioners Regular Meeting" -> monthly recurring
-    - "Planning Commission Meeting" -> monthly recurring
-    - "Public Hearing" -> not a series (each is unique)
+    Return the default venue ID unless the location is materially different.
+    If so, get-or-create a venue record for the alternate address.
     """
-    meeting_name_lower = meeting_name.lower()
+    if not location or not location.strip():
+        return default_id
 
-    # Board of Commissioners meetings are monthly recurring
-    if "board of commissioners" in meeting_name_lower and "regular" in meeting_name_lower:
-        return {
-            "series_type": "recurring_show",
-            "series_title": "DeKalb County Board of Commissioners Regular Meeting",
-            "frequency": "monthly",
-        }
+    loc = location.strip()
+    if DEFAULT_VENUE_DATA["name"].lower() in loc.lower():
+        return default_id
+    if DEFAULT_VENUE_DATA["address"].lower() in loc.lower():
+        return default_id
 
-    # Committee meetings are typically monthly
-    if "committee" in meeting_name_lower and "meeting" in meeting_name_lower:
-        # Use the full committee name as the series title
-        return {
-            "series_type": "recurring_show",
-            "series_title": meeting_name,
-            "frequency": "monthly",
-        }
+    slug = re.sub(r"[^a-z0-9]+", "-", loc[:60].lower()).strip("-")
+    venue_data = {
+        "name": loc[:100],
+        "slug": slug,
+        "address": loc,
+        "city": "Decatur",
+        "state": "GA",
+        "venue_type": "community_center",
+        "spot_type": "community_center",
+        "website": "https://www.dekalbcountyga.gov",
+    }
+    try:
+        return get_or_create_venue(venue_data)
+    except Exception as exc:
+        logger.warning("Could not create venue for location '%s': %s", loc, exc)
+        return default_id
 
-    # Planning Commission meetings are monthly
-    if "planning commission" in meeting_name_lower:
-        return {
-            "series_type": "recurring_show",
-            "series_title": "DeKalb County Planning Commission Meeting",
-            "frequency": "monthly",
-        }
 
-    # Public hearings and one-off meetings are not series
-    return None
+def _fetch_events(start_date: str, end_date: str) -> list[dict]:
+    """Fetch upcoming events from the Legistar API for the given date window."""
+    params = {
+        "$filter": (
+            f"EventDate ge datetime'{start_date}' "
+            f"and EventDate le datetime'{end_date}'"
+        ),
+        "$orderby": "EventDate",
+    }
+    response = requests.get(f"{API_BASE}/events", params=params, timeout=30)
+    response.raise_for_status()
+    return response.json()
+
+
+def _fetch_event_items(event_id: int) -> list[dict]:
+    """Fetch agenda items for a single event. Returns empty list on failure."""
+    try:
+        response = requests.get(
+            f"{API_BASE}/events/{event_id}/eventitems", timeout=15
+        )
+        if response.status_code == 200:
+            return response.json()
+    except requests.exceptions.RequestException as exc:
+        logger.debug("Could not fetch items for event %s: %s", event_id, exc)
+    return []
+
+
+def _series_hint_for_body(body_name: str) -> dict:
+    """Return a series_hint dict for a recurring government body."""
+    return {
+        "series_type": "recurring_show",
+        "series_title": f"DeKalb County {body_name}",
+        "frequency": "monthly",
+    }
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
-    """
-    Crawl DeKalb County Legistar calendar for upcoming government meetings.
-
-    Uses Playwright to load the calendar page and extract meeting data.
-    """
+    """Crawl DeKalb County government meetings via the Legistar REST API."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
 
+    today = datetime.now().date()
+    end_date = today + timedelta(days=LOOKAHEAD_DAYS)
+    start_str = today.strftime("%Y-%m-%d")
+    end_str = end_date.strftime("%Y-%m-%d")
+
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        default_venue_id = get_or_create_venue(DEFAULT_VENUE_DATA)
 
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                viewport={"width": 1920, "height": 1080},
-            )
-            page = context.new_page()
+        logger.info(
+            "Fetching DeKalb Legistar events %s to %s", start_str, end_str
+        )
 
-            logger.info(f"Fetching DeKalb County Legistar calendar: {CALENDAR_URL}")
+        try:
+            raw_events = _fetch_events(start_str, end_str)
+        except requests.exceptions.RequestException as exc:
+            logger.error("Failed to fetch DeKalb Legistar events: %s", exc)
+            raise
 
+        logger.info("Legistar returned %d events for DeKalb", len(raw_events))
+
+        for event in raw_events:
             try:
-                response = page.goto(CALENDAR_URL, wait_until="domcontentloaded", timeout=30000)
-
-                if not response or response.status >= 400:
-                    logger.error(f"Calendar returned error status: {response.status if response else 'no response'}")
-                    browser.close()
-                    return 0, 0, 0
-
-                # Wait for calendar to load
-                page.wait_for_timeout(3000)
-
-                # Try to load next month's meetings as well (look ahead 60 days)
-                # Some Legistar sites have a "next month" button we can click
-                try:
-                    next_button = page.locator("text=Next")
-                    if next_button.count() > 0:
-                        next_button.first.click()
-                        page.wait_for_timeout(2000)
-                except Exception:
-                    pass  # No next button or couldn't click it
-
-                html_content = page.content()
-                soup = BeautifulSoup(html_content, "html.parser")
-
-            except Exception as e:
-                logger.error(f"Failed to load calendar page: {e}")
-                browser.close()
-                return 0, 0, 0
-            finally:
-                browser.close()
-
-        # Parse calendar events
-        # Legistar typically uses a table structure with class names like:
-        # - rgMasterTable (Telerik grid)
-        # - CalendarDetails, MeetingRow
-
-        # Look for meeting rows in the calendar
-        meeting_rows = soup.select("tr.rgRow, tr.rgAltRow, tr[id*='CalendarRow'], tr[class*='MeetingRow']")
-
-        if not meeting_rows:
-            # Try generic table rows as fallback
-            calendar_table = soup.find("table", {"class": re.compile(r"(rgMasterTable|CalendarTable)")})
-            if calendar_table:
-                meeting_rows = calendar_table.find_all("tr")[1:]  # Skip header row
-
-        if not meeting_rows or len(meeting_rows) == 0:
-            logger.warning("No meeting rows found in calendar")
-            return 0, 0, 0
-
-        logger.info(f"Found {len(meeting_rows)} potential meeting rows")
-
-        today = datetime.now().date()
-        seen_events = set()
-
-        for row in meeting_rows:
-            try:
-                # Extract meeting name/body
-                name_cell = row.find("td", {"class": re.compile(r"(EventName|MeetingBody)")})
-                if not name_cell:
-                    # Try to find the first cell with substantial text
-                    cells = row.find_all("td")
-                    name_cell = cells[0] if len(cells) > 0 else None
-
-                if not name_cell:
+                if _is_cancelled(event):
+                    logger.debug(
+                        "Skipping cancelled: %s", event.get("EventBodyName")
+                    )
                     continue
 
-                meeting_name = name_cell.get_text(strip=True)
+                event_id = event.get("EventId")
+                body_name = (event.get("EventBodyName") or "").strip()
+                raw_date = event.get("EventDate") or ""
+                raw_time = event.get("EventTime") or ""
+                location = (event.get("EventLocation") or "").strip()
+                agenda_file = (event.get("EventAgendaFile") or "").strip()
+                agenda_status = (event.get("EventAgendaStatusName") or "").strip()
+                # EventInSiteURL is the canonical meeting detail page
+                detail_url = (event.get("EventInSiteURL") or "").strip() or CALENDAR_URL
 
-                # Skip empty rows or header rows
-                if not meeting_name or len(meeting_name) < 3:
-                    continue
-                if meeting_name.lower() in ["meeting", "date", "time", "name", "body"]:
-                    continue
-
-                # Extract date
-                date_cell = row.find("td", {"class": re.compile(r"(EventDate|MeetingDate)")})
-                if not date_cell:
-                    # Try to find a date in any cell
-                    date_text = row.get_text()
-                    date_match = re.search(r'\d{1,2}/\d{1,2}/\d{4}', date_text)
-                    date_str = date_match.group(0) if date_match else None
-                else:
-                    date_str = date_cell.get_text(strip=True)
-
-                if not date_str:
-                    logger.debug(f"No date found for meeting: {meeting_name}")
+                if not body_name or not raw_date:
                     continue
 
-                start_date = parse_human_date(date_str)
+                start_date, start_time = _parse_legistar_datetime(raw_date, raw_time)
                 if not start_date:
-                    logger.debug(f"Could not parse date '{date_str}' for: {meeting_name}")
+                    logger.debug("Could not parse date for event %s", event_id)
                     continue
 
-                # Skip past events
+                # Defensive past-event guard (API filter handles this, but be safe)
                 try:
-                    event_date = datetime.strptime(start_date, "%Y-%m-%d").date()
-                    if event_date < today:
-                        logger.debug(f"Skipping past meeting: {meeting_name} on {start_date}")
+                    if datetime.strptime(start_date, "%Y-%m-%d").date() < today:
                         continue
                 except ValueError:
                     continue
 
-                # Extract time
-                time_cell = row.find("td", {"class": re.compile(r"(EventTime|MeetingTime)")})
-                time_str = time_cell.get_text(strip=True) if time_cell else None
+                # Build title
+                title = body_name
 
-                if not time_str:
-                    # Try to find time in row text
-                    time_match = re.search(r'\d{1,2}:\d{2}\s*[AP]M', row.get_text())
-                    time_str = time_match.group(0) if time_match else None
-
-                start_time = parse_time_string(time_str) if time_str else None
-
-                # Extract location/room
-                location_cell = row.find("td", {"class": re.compile(r"(EventLocation|MeetingLocation)")})
-                location = location_cell.get_text(strip=True) if location_cell else None
-
-                # Extract meeting details URL
-                detail_link = row.find("a", href=re.compile(r"MeetingDetail\.aspx|Calendar\.aspx"))
-                detail_url = urljoin(BASE_URL, detail_link["href"]) if detail_link else CALENDAR_URL
-
-                # Dedupe check
-                event_key = f"{meeting_name}|{start_date}"
-                if event_key in seen_events:
-                    continue
-                seen_events.add(event_key)
+                # Venue — use location-specific venue if meaningfully different
+                venue_id = _venue_id_for_location(location, default_venue_id)
+                venue_name_for_hash = (
+                    location if location else DEFAULT_VENUE_DATA["name"]
+                )
 
                 events_found += 1
 
-                # Build event title
-                title = meeting_name
-                if not title.lower().endswith("meeting"):
-                    title = f"{title} Meeting"
+                # Fetch agenda items for public comment detection
+                items = _fetch_event_items(event_id) if event_id else []
+                has_public_comment = _has_public_comment(items)
 
-                # Build description
-                description_parts = [f"{meeting_name} of DeKalb County Government."]
+                # Tags
+                tags = [
+                    "dekalb-county",
+                    "government",
+                    "public-meeting",
+                    "civic-engagement",
+                ]
+                cause = _cause_tag_for_body(body_name)
+                if cause:
+                    tags.append(cause)
+                if has_public_comment:
+                    tags.append("public-comment")
+                else:
+                    tags.append("attend")
+
+                # Description
+                desc_parts = [
+                    f"{body_name} meeting of DeKalb County Government.",
+                ]
+                if agenda_status:
+                    desc_parts.append(f"Agenda status: {agenda_status}.")
                 if location:
-                    description_parts.append(f"Location: {location}.")
-                description_parts.append("All meetings are open to the public. Check the meeting agenda for public comment periods.")
-                description = " ".join(description_parts)
+                    desc_parts.append(f"Location: {location}.")
+                if has_public_comment:
+                    desc_parts.append(
+                        "Public comment is available at this meeting."
+                    )
+                else:
+                    desc_parts.append(
+                        "This meeting is open to the public."
+                    )
+                if agenda_file:
+                    desc_parts.append(f"Agenda: {agenda_file}")
+                description = " ".join(desc_parts)
 
-                # Determine series hint
-                series_hint = determine_series_hint(meeting_name)
-
-                # Generate content hash
+                series_hint = _series_hint_for_body(body_name)
                 content_hash = generate_content_hash(
-                    title, VENUE_DATA["name"], start_date
+                    title, venue_name_for_hash, start_date
                 )
 
-                # Create event record
                 event_record = {
                     "source_id": source_id,
                     "venue_id": venue_id,
@@ -310,7 +320,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "end_time": None,
                     "is_all_day": False,
                     "category": "community",
-                    "tags": ["government", "public-meeting", "civic-engagement", "dekalb-county"],
+                    "subcategory": None,
+                    "tags": tags,
                     "price_min": None,
                     "price_max": None,
                     "price_note": None,
@@ -318,7 +329,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "source_url": detail_url,
                     "ticket_url": None,
                     "image_url": None,
-                    "is_recurring": bool(series_hint),
+                    "raw_text": f"{title} | {start_date} | {location}",
+                    "extraction_confidence": 0.95,
+                    "is_recurring": True,
+                    "recurrence_rule": None,
                     "content_hash": content_hash,
                 }
 
@@ -326,24 +340,29 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 if existing:
                     smart_update_existing_event(existing, event_record)
                     events_updated += 1
-                    logger.debug(f"Event updated: {title}")
                     continue
 
                 insert_event(event_record, series_hint=series_hint)
                 events_new += 1
-                logger.info(f"Added: {title} on {start_date}")
+                logger.info("Added: %s on %s", title, start_date)
 
-            except Exception as e:
-                logger.warning(f"Error parsing meeting row: {e}")
+            except Exception as exc:
+                logger.warning(
+                    "Error processing DeKalb event %s: %s",
+                    event.get("EventId"),
+                    exc,
+                )
                 continue
 
         logger.info(
-            f"DeKalb County crawl complete: {events_found} found, "
-            f"{events_new} new, {events_updated} updated"
+            "DeKalb County crawl complete: %d found, %d new, %d updated",
+            events_found,
+            events_new,
+            events_updated,
         )
 
-    except Exception as e:
-        logger.error(f"Failed to crawl DeKalb County meetings: {e}")
+    except Exception as exc:
+        logger.error("Failed to crawl DeKalb County meetings: %s", exc)
         raise
 
     return events_found, events_new, events_updated

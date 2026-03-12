@@ -1,0 +1,21 @@
+version: 1
+slug: atlanta-natatorium-open-swim
+name: Atlanta Natatorium Open Swim
+integration_method: python
+defaults:
+  category: fitness
+  tags:
+  - swimming
+  - lap-swim
+  - open-swim
+  - public-play
+  - atlanta-dpr
+discovery:
+  enabled: false
+  type: list
+  urls:
+  - https://www.atlantaga.gov/government/departments/department-parks-recreation/office-of-recreation/aquatics/pools-indoor-outdoor
+detail:
+  enabled: false
+data_goals:
+- events

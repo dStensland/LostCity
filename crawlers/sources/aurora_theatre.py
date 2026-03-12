@@ -46,6 +46,7 @@ SKIP_PATTERNS = [
     r"^\d+$",
     r"^[a-z]{1,3}$",
 ]
+PRICE_RE = re.compile(r"\$(\d+(?:\.\d{2})?)")
 
 
 def is_valid_title(title: str) -> bool:
@@ -139,6 +140,43 @@ def parse_date_range(date_text: str) -> tuple[Optional[str], Optional[str]]:
     return None, None
 
 
+def extract_price_info(body_text: str) -> tuple[Optional[float], Optional[float], Optional[str]]:
+    """Extract ticket pricing from the show page body text."""
+    if not body_text:
+        return None, None, None
+
+    normalized = " ".join(body_text.split())
+    snippet = None
+
+    section_match = re.search(
+        r"Tickets:\s*(.*?)(?:Date:|Location:|Attire:|Vote for Patron|MEDIA|JOIN OUR MAILING LISTS)",
+        normalized,
+        re.IGNORECASE,
+    )
+    if section_match:
+        snippet = section_match.group(1).strip()
+    else:
+        start_match = re.search(
+            r"(Tickets start at\s*\$\d+(?:\.\d{2})?.*?)(?:Date:|Location:|ABOUT|MEDIA)",
+            normalized,
+            re.IGNORECASE,
+        )
+        if start_match:
+            snippet = start_match.group(1).strip()
+
+    if not snippet:
+        return None, None, None
+
+    values = [float(value) for value in PRICE_RE.findall(snippet)]
+    if not values:
+        return None, None, None
+
+    price_min = min(values)
+    price_max = max(values)
+    price_note = snippet[:240]
+    return price_min, price_max, price_note
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
     """Crawl Aurora Theatre productions."""
     source_id = source["id"]
@@ -226,6 +264,7 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     # Get description - it's typically in the ABOUT section
                     description = None
                     body_text = page.inner_text("body")
+                    price_min, price_max, price_note = extract_price_info(body_text)
 
                     # Look for text after "ABOUT" heading — anchor to line start to avoid nav prefixes
                     about_match = re.search(r'(?:^|\n)ABOUT\n+(.*?)(?:Buy Tickets|MEDIA|January|February|March|April|May|June|July|August|September|October|November|December|\n\n\n)', body_text, re.DOTALL)
@@ -299,10 +338,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                         "category": category,
                         "subcategory": subcategory,
                         "tags": tags,
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": None,
-                        "is_free": False,
+                        "price_min": price_min,
+                        "price_max": price_max,
+                        "price_note": price_note,
+                        "is_free": price_max == 0.0 if price_max is not None else False,
                         "source_url": show_url,
                         "ticket_url": show_url,
                         "image_url": image_url,

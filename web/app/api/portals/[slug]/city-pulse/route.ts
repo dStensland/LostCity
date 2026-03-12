@@ -848,6 +848,27 @@ export async function GET(request: NextRequest, { params }: Props) {
       ? supabase.from("profiles").select("display_name, username").eq("id", userId).maybeSingle()
       : Promise.resolve({ data: null });
 
+  // Venue type counts for browse section "Places to Go" tiles
+  const buildVenueTypeCountsQuery = () => {
+    let q = supabase
+      .from("venues")
+      .select("venue_type")
+      .eq("active", true)
+      .not("venue_type", "is", null);
+    if (geoCenter) {
+      const radiusKm = portalFilters.geo_radius_km ?? 25;
+      const degOffset = radiusKm / 111;
+      q = q
+        .gte("lat", geoCenter[0] - degOffset)
+        .lte("lat", geoCenter[0] + degOffset)
+        .gte("lng", geoCenter[1] - degOffset)
+        .lte("lng", geoCenter[1] + degOffset);
+    } else if (portalCity) {
+      q = q.ilike("city", `%${portalCity}%`);
+    }
+    return q;
+  };
+
   // Curated sections (same as portal feed)
   const buildCuratedQuery = () => {
     return supabase
@@ -1139,8 +1160,9 @@ export async function GET(request: NextRequest, { params }: Props) {
     profileResult,
     userSignals,
     countCategoryResults,
+    venueTypeResult,
   ] = await Promise.all([
-    buildEventQuery(today, today, 50),
+    buildEventQuery(today, today, 300),
     buildEveningQuery(),
     Promise.all(todayInterestQueries),
     buildTrendingQuery(),
@@ -1151,7 +1173,16 @@ export async function GET(request: NextRequest, { params }: Props) {
     buildProfileQuery(),
     loadUserSignals(),
     countCategoryQueries,
+    buildVenueTypeCountsQuery(),
   ]);
+
+  // Aggregate venue type counts for browse "Places to Go" tiles
+  const venueTypeCounts: Record<string, number> = {};
+  for (const row of (venueTypeResult.data || []) as { venue_type: string }[]) {
+    if (row.venue_type) {
+      venueTypeCounts[row.venue_type] = (venueTypeCounts[row.venue_type] || 0) + 1;
+    }
+  }
 
   const ccRows = countCategoryResults.map(
     (r) => (r.data || []) as CountRow[],
@@ -1384,6 +1415,19 @@ export async function GET(request: NextRequest, { params }: Props) {
     .slice(0, 4);
 
   // ---------------------------------------------------------------------------
+  // Combined event category counts (all time windows) for browse section
+  // ---------------------------------------------------------------------------
+
+  const allEventCategoryCounts: Record<string, number> = {};
+  for (const rows of ccRows) {
+    for (const row of dedupeCountRows(excludeSceneRows(rows))) {
+      if (row.category_id) {
+        allEventCategoryCounts[row.category_id] = (allEventCategoryCounts[row.category_id] || 0) + 1;
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // Assemble sections — today + specials + sidebar only (no week/coming-up)
   // ---------------------------------------------------------------------------
 
@@ -1412,7 +1456,7 @@ export async function GET(request: NextRequest, { params }: Props) {
     buildYourPeopleSection({ friendRsvps: friendRsvpEvents }),
     buildNewFromSpotsSection(newFromSpots),
     buildTrendingSection(trendingEventsWithProof, trendingDestinations, userSignals, friendsGoingMap),
-    buildBrowseSection(canonicalSlug),
+    buildBrowseSection(canonicalSlug, venueTypeCounts, allEventCategoryCounts),
   ].filter(Boolean) as import("@/lib/city-pulse/types").CityPulseSection[];
 
   // ---------------------------------------------------------------------------

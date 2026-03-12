@@ -9,6 +9,7 @@
  */
 
 import type { CityPulseEventItem } from "./types";
+import { SPORTS_SIGNAL_GENRES } from "./sports-signals";
 
 // ---------------------------------------------------------------------------
 // Interest chip type
@@ -59,6 +60,8 @@ const genreMatch =
       (Array.isArray(t) && genres.some((x) => t.includes(x)))
     );
   };
+
+const sportsSignalMatch = genreMatch(...SPORTS_SIGNAL_GENRES);
 
 export const INTEREST_CHIPS: InterestChip[] = [
   // --- Default interests ---
@@ -117,7 +120,7 @@ export const INTEREST_CHIPS: InterestChip[] = [
     iconName: "PersonSimpleRun",
     color: "#7DD3FC",
     type: "category",
-    match: catMatch("sports"),
+    match: (item) => catMatch("sports")(item) || sportsSignalMatch(item),
   },
   {
     id: "family",
@@ -324,6 +327,7 @@ const CHIP_COUNT_KEYS: Record<string, string[]> = {
   improv: ["genre:improv", "tag:improv"],
   dj_electronic: ["genre:dj", "genre:electronic", "genre:edm", "tag:dj", "tag:electronic", "tag:edm"],
   food_specials: ["genre:happy-hour", "genre:food-specials", "genre:specials", "genre:oysters", "genre:taco-tuesday", "genre:wings", "genre:drink-specials", "tag:happy-hour", "tag:food-specials", "tag:specials", "tag:oysters", "tag:taco-tuesday", "tag:wings", "tag:drink-specials"],
+  sports: SPORTS_SIGNAL_GENRES.flatMap((genre) => [`genre:${genre}`, `tag:${genre}`]),
   run_fitness: ["genre:run-club", "genre:running", "genre:cycling", "genre:bike-ride", "genre:yoga", "genre:pickleball", "tag:run-club", "tag:running", "tag:cycling", "tag:bike-ride", "tag:yoga", "tag:pickleball"],
   bingo: ["genre:bingo", "tag:bingo"],
   jazz_blues: ["genre:jazz", "genre:blues", "genre:jam-session", "tag:jazz", "tag:blues", "tag:jam-session"],

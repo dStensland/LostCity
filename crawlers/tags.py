@@ -36,6 +36,13 @@ PRACTICAL_TAGS = {
     "rsvp-required",  # Must register
     "sold-out",  # No tickets available
     "limited-seating",  # Small capacity
+    # Age band tags (Hooky family portal)
+    "infant",  # Ages 0-1 / newborns
+    "toddler",  # Ages 1-3
+    "preschool",  # Ages 3-5 / pre-K
+    "elementary",  # Ages 5-12 / grades K-5
+    "tween",  # Ages 10-13 / grades 6-8
+    "teen",  # Ages 13-18 / high school
 }
 
 # Content tags (what it is)
@@ -60,6 +67,43 @@ CONTENT_TAGS = {
     "activism",  # Civic engagement / organizing
     "mobilize",  # From Mobilize platform (activism source)
     "community",  # Community gathering/meetup
+
+    # Civic/government
+    "civic",  # Civic engagement event
+    "civic-engagement",  # Civic participation
+    "government",  # Government meeting/hearing
+    "public-meeting",  # Open public meeting
+    "public-comment",  # Public comment period available
+    "attend",  # Worth attending in person
+    "npu",  # Neighborhood Planning Unit meeting
+    "neighborhood",  # Neighborhood-level event
+    "zoning",  # Zoning hearing/review
+    "land-use",  # Land use decision
+    "urban-planning",  # Urban planning/design
+    "transit",  # Transit-related
+    "advocacy",  # Advocacy/organizing
+    "school-board",  # School board meeting
+    "education",  # Education-focused
+    "environment",  # Environmental cause
+    "food-security",  # Food security/hunger
+    "housing",  # Housing/homelessness
+    "health",  # Health-related
+    "election",  # Election-related event
+    "voter-registration",  # Voter registration drive
+    "arts",  # Arts & culture event
+    "artsatl",  # ArtsATL calendar source
+    "design-review",  # Design review hearing
+    "trees",  # Tree conservation/urban forestry
+    "planning",  # Planning-related meeting
+    "marta-army",  # MARTA Army transit advocacy
+    "arc",  # Atlanta Regional Commission
+    "regional-planning",  # Regional planning event
+    "streets-alive",  # Atlanta Streets Alive car-free event
+    "bike",  # Bike/cycling related
+    "pedestrian",  # Pedestrian/walkability
+    "bus",  # Bus transit
+    "rail",  # Rail transit
+    "service-change",  # Transit service change
 
     "valentines",  # Valentine's Day related
     "black-history-month",  # Black History Month
@@ -256,15 +300,10 @@ VALID_CATEGORIES = {
     "fitness",
     "family",
     "learning",
-    "dance",
-    "tours",
-    "meetup",
     "words",
     "religious",
-    "markets",
     "wellness",
     "support_group",
-    "gaming",
     "outdoors",
     "other",
 }
@@ -324,6 +363,7 @@ VALID_VENUE_TYPES = {
     "arcade",
     "karaoke",
     "park",
+    "campground",
     "garden",
     "outdoor_venue",
     "farmers_market",

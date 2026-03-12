@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* eslint-disable @typescript-eslint/no-require-imports */
 /**
- * Add boundary polygons for the 5 config neighborhoods that don't have
+ * Add boundary polygons for the config neighborhoods that don't have
  * official City of Atlanta boundaries:
  *
  * 1. Decatur — city boundary from DeKalb County GIS
@@ -9,6 +9,8 @@
  * 3. Toco Hills — custom polygon around shopping/residential area
  * 4. Armour — custom polygon around Armour/Ottley industrial district
  * 5. Glenwood Park — custom polygon around the development
+ * 6. Ponce City Market Area — branded micro-district around PCM
+ * 7. Krog Street — branded micro-district around Krog Street Market / Krog District
  *
  * Usage:
  *   node scripts/add-missing-boundaries.js
@@ -82,6 +84,30 @@ const CUSTOM_BOUNDARIES = {
       [-84.3510, 33.7340], // SW: Boulevard & I-20
       [-84.3510, 33.7380], // W: Boulevard north
       [-84.3500, 33.7410], // close
+    ]],
+  },
+  "Ponce City Market Area": {
+    // Commercial core around the PCM building / courtyard / rooftop cluster.
+    // Bounded roughly by Glen Iris Dr, North Ave, the BeltLine edge, and PCM parking structure.
+    type: "Polygon",
+    coordinates: [[
+      [-84.3688, 33.7739],
+      [-84.3612, 33.7739],
+      [-84.3608, 33.7712],
+      [-84.3679, 33.7709],
+      [-84.3688, 33.7739],
+    ]],
+  },
+  "Krog Street": {
+    // The Krog District / Krog Street Market cluster on both sides of Krog St.
+    // Keeps the destination compact instead of swallowing all of Inman Park/Cabbagetown.
+    type: "Polygon",
+    coordinates: [[
+      [-84.3663, 33.7597],
+      [-84.3618, 33.7597],
+      [-84.3618, 33.7551],
+      [-84.3666, 33.7551],
+      [-84.3663, 33.7597],
     ]],
   },
 };

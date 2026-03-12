@@ -4,13 +4,23 @@ Yellow Jackets sports events - football, basketball, baseball, etc.
 Scrapes sport-specific schedule pages for game information.
 """
 
+from __future__ import annotations
+
 import logging
 import re
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from bs4 import BeautifulSoup
 import requests
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from date_utils import MAX_FUTURE_DAYS_DEFAULT
+from db import (
+    find_existing_event_for_insert,
+    get_client,
+    get_or_create_venue,
+    insert_event,
+    smart_update_existing_event,
+    writes_enabled,
+)
 from dedupe import generate_content_hash
 from utils import extract_image_url
 
@@ -74,6 +84,17 @@ VENUES = {
         "venue_type": "stadium",
         "website": "https://ramblinwreck.com",
     },
+    "softball": {
+        "name": "Shirley C. Mewborn Field",
+        "slug": "shirley-c-mewborn-field",
+        "address": "955 Fowler Street NW",
+        "neighborhood": "Midtown",
+        "city": "Atlanta",
+        "state": "GA",
+        "zip": "30332",
+        "venue_type": "stadium",
+        "website": "https://ramblinwreck.com",
+    },
     "default": {
         "name": "Georgia Tech Campus",
         "slug": "georgia-tech-campus",
@@ -87,8 +108,68 @@ VENUES = {
     },
 }
 
+SPORT_TITLE_FORMATS = {
+    "baseball": ("Georgia Tech Yellow Jackets Baseball", "Baseball"),
+    "softball": ("Georgia Tech Yellow Jackets Softball", "Softball"),
+}
 
-def parse_schedule_page(soup: BeautifulSoup, sport_name: str) -> list[dict]:
+
+def resolve_schedule_date(
+    month_str: str,
+    day_str: str,
+    *,
+    today: date | None = None,
+) -> str | None:
+    """
+    Infer a year for season schedule dates without explicit year metadata.
+
+    Sidearm season pages frequently mix Nov/Dec dates with Jan/Feb dates for the
+    same season. We allow year rollover for winter dates, but skip anything
+    beyond the event validation horizon instead of attempting inserts that will
+    be rejected downstream.
+    """
+    reference_date = today or datetime.now().date()
+
+    try:
+        candidate = datetime.strptime(
+            f"{month_str} {day_str} {reference_date.year}",
+            "%b %d %Y",
+        ).date()
+    except ValueError as exc:
+        logger.debug(f"Failed to parse date {month_str} {day_str}: {exc}")
+        return None
+
+    if candidate < reference_date - timedelta(days=30):
+        try:
+            candidate = candidate.replace(year=candidate.year + 1)
+        except ValueError as exc:
+            logger.debug(
+                "Failed to roll Georgia Tech schedule date %s %s into next year: %s",
+                month_str,
+                day_str,
+                exc,
+            )
+            return None
+
+    if candidate > reference_date + timedelta(days=MAX_FUTURE_DAYS_DEFAULT):
+        logger.debug(
+            "Skipping Georgia Tech schedule date outside %s-day horizon: %s-%02d-%02d",
+            MAX_FUTURE_DAYS_DEFAULT,
+            candidate.year,
+            candidate.month,
+            candidate.day,
+        )
+        return None
+
+    return candidate.isoformat()
+
+
+def parse_schedule_page(
+    soup: BeautifulSoup,
+    sport_name: str,
+    *,
+    today: date | None = None,
+) -> list[dict]:
     """Parse game information from schedule page by finding schedule item divs."""
     games = []
 
@@ -135,24 +216,27 @@ def parse_schedule_page(soup: BeautifulSoup, sport_name: str) -> list[dict]:
                 logger.debug(f"Could not parse date: {date_str}")
                 continue
 
-            # Determine year (assume current or next year)
-            year = datetime.now().year
-            try:
-                test_date = datetime.strptime(f"{month_str} {day_str} {year}", "%b %d %Y")
-                # If date is more than 30 days in the past, assume it's next year
-                if test_date < datetime.now() - timedelta(days=30):
-                    year += 1
-                parsed_date = f"{year}-{test_date.month:02d}-{int(day_str):02d}"
-            except ValueError as e:
-                logger.debug(f"Failed to parse date {month_str} {day_str}: {e}")
+            parsed_date = resolve_schedule_date(month_str, day_str, today=today)
+            if not parsed_date:
                 continue
 
-            # Extract opponent from img alt tags - second image is opponent
-            logos = item.select("img[alt]")
-            if len(logos) < 2:
-                logger.debug("Could not find opponent logo")
-                continue
-            opponent = logos[1].get("alt", "").strip()
+            # Extract opponent from the explicit team-name block when available.
+            opponent_name_block = item.select_one("div.matchup .name")
+            opponent = ""
+            if opponent_name_block:
+                school = opponent_name_block.select_one("span")
+                mascot = opponent_name_block.select_one("p")
+                school_text = school.get_text(" ", strip=True) if school else ""
+                mascot_text = mascot.get_text(" ", strip=True) if mascot else ""
+                opponent = " ".join(part for part in [school_text, mascot_text] if part)
+
+            if not opponent:
+                # Fallback to the opponent logo alt if the name block is absent.
+                logos = item.select("img[alt]")
+                if len(logos) < 2:
+                    logger.debug("Could not find opponent logo")
+                    continue
+                opponent = logos[1].get("alt", "").strip()
 
             # Extract time if available
             # NOTE: ramblinwreck.com typically does not publish game times until closer
@@ -175,10 +259,24 @@ def parse_schedule_page(soup: BeautifulSoup, sport_name: str) -> list[dict]:
                     game_time = f"{hour:02d}:{minute}"
                     logger.debug(f"Found game time: {game_time}")
 
+            ticket_link = None
+            for link in item.select("div.information a[href]"):
+                if "ticket" not in link.get_text(" ", strip=True).lower():
+                    continue
+                href = link.get("href", "").strip()
+                if not href:
+                    continue
+                if href.startswith("http://") or href.startswith("https://"):
+                    ticket_link = href
+                else:
+                    ticket_link = f"{BASE_URL}{href}"
+                break
+
             games.append({
                 "date": parsed_date,
                 "time": game_time,
                 "opponent": opponent,
+                "ticket_url": ticket_link,
                 "is_home": is_home,
             })
             logger.debug(f"Found game: {opponent} on {parsed_date}")
@@ -188,6 +286,145 @@ def parse_schedule_page(soup: BeautifulSoup, sport_name: str) -> list[dict]:
             continue
 
     return games
+
+
+def build_consumer_title(sport_name: str, opponent: str, is_home: bool) -> str:
+    """Emit consumer-facing matchup titles that can hand off weaker sources."""
+    label_pair = SPORT_TITLE_FORMATS.get(sport_name)
+    if label_pair:
+        team_label, opponent_suffix = label_pair
+        separator = "vs." if is_home else "at"
+        return f"{team_label} {separator} {opponent} {opponent_suffix}"
+
+    sport_display = sport_name.replace("-", " ").title()
+    separator = "vs." if is_home else "at"
+    return f"Georgia Tech Yellow Jackets {sport_display} {separator} {opponent}"
+
+
+def build_matchup_participants(
+    sport_name: str, opponent: str, is_home: bool
+) -> list[dict]:
+    label_pair = SPORT_TITLE_FORMATS.get(sport_name)
+    if label_pair:
+        team_label, opponent_suffix = label_pair
+        opponent_label = f"{opponent} {opponent_suffix}".strip()
+    else:
+        sport_display = sport_name.replace("-", " ").title()
+        team_label = f"Georgia Tech Yellow Jackets {sport_display}"
+        opponent_label = opponent
+
+    participants = [
+        {"name": team_label, "role": "team", "billing_order": 1},
+        {"name": opponent_label, "role": "team", "billing_order": 2},
+    ]
+    if not is_home:
+        # Keep Georgia Tech first for stable participant matching across home/away rows.
+        return participants
+    return participants
+
+
+def maybe_adopt_existing_public_title(
+    source_id: int,
+    venue_id: int | None,
+    start_date: str,
+    generated_title: str,
+) -> str:
+    """Borrow the fuller public title when one same-slot external row already exists."""
+    if not venue_id or not start_date:
+        return generated_title
+
+    title_lower = generated_title.lower()
+    if "yellow jackets baseball" not in title_lower and "yellow jackets softball" not in title_lower:
+        return generated_title
+
+    client = get_client()
+    result = (
+        client.table("events")
+        .select("title,source_id")
+        .eq("venue_id", venue_id)
+        .eq("start_date", start_date)
+        .eq("is_active", True)
+        .neq("source_id", source_id)
+        .execute()
+    )
+    candidates = result.data or []
+    candidates = [
+        row for row in candidates
+        if isinstance(row.get("title"), str)
+        and row["title"].startswith("Georgia Tech Yellow Jackets ")
+    ]
+    if len(candidates) == 1:
+        return candidates[0]["title"]
+    return generated_title
+
+
+def _score_same_slot_variant(row: dict) -> tuple[int, int]:
+    title = str(row.get("title") or "").strip()
+    title_lower = title.lower()
+    score = 0
+    if title_lower.startswith("georgia tech yellow jackets"):
+        score += 20
+    if " vs. " in title_lower:
+        score += 10
+    if " baseball" in title_lower or " softball" in title_lower:
+        score += 5
+    if "gt softball:" in title_lower or "gt baseball:" in title_lower:
+        score -= 5
+    return score, len(title)
+
+
+def select_preferred_same_slot_variant(rows: list[dict]) -> dict | None:
+    if not rows:
+        return None
+    return max(rows, key=_score_same_slot_variant)
+
+
+def reconcile_same_slot_variants(
+    source_id: int,
+    venue_id: int | None,
+    start_date: str,
+    keep_event_id: int,
+) -> int:
+    """Deactivate stale same-slot Georgia Tech title variants after canonical update."""
+    if not venue_id or not start_date:
+        return 0
+
+    client = get_client()
+    result = (
+        client.table("events")
+        .select("id,title,is_active")
+        .eq("source_id", source_id)
+        .eq("venue_id", venue_id)
+        .eq("start_date", start_date)
+        .eq("is_active", True)
+        .execute()
+    )
+    rows = result.data or []
+    duplicate_ids = [row["id"] for row in rows if row.get("id") != keep_event_id]
+    if not duplicate_ids:
+        return 0
+
+    if not writes_enabled():
+        logger.info(
+            "[DRY RUN] Would deactivate %s Georgia Tech same-slot variants for %s",
+            len(duplicate_ids),
+            start_date,
+        )
+        return len(duplicate_ids)
+
+    (
+        client.table("events")
+        .update({"is_active": False})
+        .in_("id", duplicate_ids)
+        .execute()
+    )
+    logger.info(
+        "Deactivated %s stale Georgia Tech same-slot variants for venue %s on %s",
+        len(duplicate_ids),
+        venue_id,
+        start_date,
+    )
+    return len(duplicate_ids)
 
 
 def crawl(source: dict) -> tuple[int, int, int]:
@@ -222,14 +459,17 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 opponent = game["opponent"]
                 start_date = game["date"]
                 start_time = game["time"]
+                ticket_url = game.get("ticket_url")
                 is_home = game["is_home"]
 
-                # Build title
                 sport_display = sport_name.replace("-", " ").title()
-                if is_home:
-                    title = f"GT {sport_display}: vs {opponent}"
-                else:
-                    title = f"GT {sport_display}: at {opponent}"
+                title = build_consumer_title(sport_name, opponent, is_home)
+                title = maybe_adopt_existing_public_title(
+                    source_id,
+                    venue_id if is_home else None,
+                    start_date,
+                    title,
+                )
 
                 # Generate hash
                 content_hash = generate_content_hash(
@@ -260,23 +500,57 @@ def crawl(source: dict) -> tuple[int, int, int]:
                     "price_note": "Check ramblinwreck.com for tickets",
                     "is_free": False,
                     "source_url": url,
-                    "ticket_url": None,
+                    "ticket_url": ticket_url,
                     "image_url": extract_image_url(soup) if soup else None,
                     "raw_text": None,
                     "extraction_confidence": 0.80,
                     "is_recurring": False,
                     "recurrence_rule": None,
                     "content_hash": content_hash,
+                    "_parsed_artists": build_matchup_participants(
+                        sport_name, opponent, is_home
+                    ),
                 }
 
-                existing = find_event_by_hash(content_hash)
+                existing = find_existing_event_for_insert(event_record)
+                if sport_name in {"baseball", "softball"} and venue_id:
+                    same_slot_rows = (
+                        get_client()
+                        .table("events")
+                        .select("id,title,is_active")
+                        .eq("source_id", source_id)
+                        .eq("venue_id", venue_id)
+                        .eq("start_date", start_date)
+                        .eq("is_active", True)
+                        .execute()
+                        .data
+                        or []
+                    )
+                    preferred = select_preferred_same_slot_variant(same_slot_rows)
+                    if preferred:
+                        existing = preferred
+
                 if existing:
                     smart_update_existing_event(existing, event_record)
+                    if sport_name in {"baseball", "softball"}:
+                        reconcile_same_slot_variants(
+                            source_id,
+                            venue_id,
+                            start_date,
+                            existing["id"],
+                        )
                     events_updated += 1
                     continue
 
                 try:
-                    insert_event(event_record)
+                    event_id = insert_event(event_record)
+                    if sport_name in {"baseball", "softball"}:
+                        reconcile_same_slot_variants(
+                            source_id,
+                            venue_id,
+                            start_date,
+                            event_id,
+                        )
                     events_new += 1
                     logger.debug(f"Added: {title} on {start_date}")
                 except Exception as e:

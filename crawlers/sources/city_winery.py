@@ -33,7 +33,7 @@ VENUE_DATA = {
     "name": "City Winery Atlanta",
     "slug": "city-winery-atlanta",
     "address": "650 North Ave NE",
-    "neighborhood": "Ponce City Market",
+    "neighborhood": "Ponce City Market Area",
     "city": "Atlanta",
     "state": "GA",
     "zip": "30308",

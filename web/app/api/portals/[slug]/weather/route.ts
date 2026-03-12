@@ -6,7 +6,7 @@ import {
   getClientIdentifier,
 } from "@/lib/rate-limit";
 import { successResponse, errorApiResponse } from "@/lib/api-utils";
-import { getPortalWeather } from "@/lib/weather";
+import { getPortalWeather, getPortalForecast } from "@/lib/weather";
 
 type RouteContext = {
   params: Promise<{ slug: string }>;
@@ -45,15 +45,14 @@ export async function GET(request: NextRequest, context: RouteContext) {
     return errorApiResponse("Portal has no geo_center configured", 400);
   }
 
-  const weather = await getPortalWeather(
-    portalData.id,
-    geoCenter[0],
-    geoCenter[1]
-  );
+  const [weather, forecast] = await Promise.all([
+    getPortalWeather(portalData.id, geoCenter[0], geoCenter[1]),
+    getPortalForecast(geoCenter[0], geoCenter[1]),
+  ]);
 
   if (!weather) {
     return errorApiResponse("Weather data unavailable", 503);
   }
 
-  return successResponse({ weather });
+  return successResponse({ weather, forecast });
 }

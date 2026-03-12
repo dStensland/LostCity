@@ -8,6 +8,7 @@ interface DiscoverTonightSectionProps {
   events: FeedEvent[];
   dayPart: DayPart;
   onEventClick?: (event: FeedEvent) => void;
+  isFallback?: boolean;
 }
 
 function formatTime(time: string | null | undefined): string {
@@ -19,19 +20,36 @@ function formatTime(time: string | null | undefined): string {
   return `${hour12}:${m.toString().padStart(2, "0")} ${period}`;
 }
 
-export function DiscoverTonightSection({ events, dayPart, onEventClick }: DiscoverTonightSectionProps) {
-  if (events.length === 0) return null;
+export function DiscoverTonightSection({ events, dayPart, onEventClick, isFallback }: DiscoverTonightSectionProps) {
+  if (events.length === 0) {
+    return (
+      <section id="tonight" className="space-y-3">
+        <div>
+          <h2 className="font-display text-2xl text-[var(--hotel-charcoal)]">Tonight</h2>
+        </div>
+        <div className="rounded-xl border border-[var(--hotel-sand)] bg-white p-8 text-center">
+          <p className="font-body text-sm text-[var(--hotel-stone)] italic">
+            The city&apos;s winding down — check back tomorrow for fresh picks.
+          </p>
+        </div>
+      </section>
+    );
+  }
 
   const visible = events.slice(0, 8);
+  const sectionTitle = isFallback ? "Tomorrow" : "Tonight";
+  const sectionSubtitle = isFallback
+    ? "Worth planning for"
+    : "Our picks for guests this evening";
 
   return (
     <section id="tonight" className="space-y-3">
       {/* Section header */}
       <div className="flex items-baseline justify-between">
         <div>
-          <h2 className="font-display text-2xl text-[var(--hotel-charcoal)]">Tonight</h2>
+          <h2 className="font-display text-2xl text-[var(--hotel-charcoal)]">{sectionTitle}</h2>
           <p className="text-sm font-body text-[var(--hotel-stone)] mt-0.5">
-            Our picks for guests this evening
+            {sectionSubtitle}
           </p>
         </div>
         <span className="text-sm font-body text-[var(--hotel-stone)]">{events.length} events</span>
@@ -60,6 +78,9 @@ export function DiscoverTonightSection({ events, dayPart, onEventClick }: Discov
                     alt={event.title}
                     className="w-full h-full object-cover"
                     loading="lazy"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = "none";
+                    }}
                   />
                 ) : (
                   <div className="w-full h-full bg-[var(--hotel-cream)]" />

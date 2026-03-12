@@ -122,16 +122,20 @@ def get_venues_needing_hours(
     venue_type: Optional[str] = None,
     limit: int = 30,
     max_age_days: int = 30,
+    city: Optional[str] = None,
 ) -> list[dict]:
     """Get venues with foursquare_id that need hours (missing, stale, or lower-confidence)."""
     client = get_client()
 
     query = client.table("venues").select(
-        "id, name, slug, foursquare_id, hours, venue_type, hours_source, hours_updated_at"
+        "id, name, slug, city, foursquare_id, hours, venue_type, hours_source, hours_updated_at"
     ).eq("active", True)
 
     # Must have foursquare_id
     query = query.not_.is_("foursquare_id", "null")
+
+    if city:
+        query = query.eq("city", city)
 
     if venue_type:
         query = query.eq("venue_type", venue_type)
@@ -195,6 +199,7 @@ def update_venue_hours(venue_id: int, hours: dict, hours_display: str, dry_run: 
 def main():
     parser = argparse.ArgumentParser(description="Hydrate venue hours from Foursquare")
     parser.add_argument("--venue-type", help="Filter by venue type (bar, restaurant, etc.)")
+    parser.add_argument("--city", help="Filter by city")
     parser.add_argument("--limit", type=int, default=30, help="Max venues to process")
     parser.add_argument("--dry-run", action="store_true", help="Preview without updating")
     parser.add_argument("--max-age-days", type=int, default=30, help="Re-fetch hours older than this many days (default: 30)")
@@ -208,7 +213,12 @@ def main():
     logger.info("Foursquare Hours Hydration")
     logger.info("=" * 60)
 
-    venues = get_venues_needing_hours(args.venue_type, args.limit, max_age_days=args.max_age_days)
+    venues = get_venues_needing_hours(
+        args.venue_type,
+        args.limit,
+        max_age_days=args.max_age_days,
+        city=args.city,
+    )
     logger.info(f"Found {len(venues)} venues needing Foursquare hours")
     logger.info("")
 

@@ -205,7 +205,7 @@ export const HangShareFlow = memo(function HangShareFlow({
               ) : (
                 <button
                   onClick={handleShare}
-                  className="bg-[var(--neon-green)] text-[var(--void)] font-mono text-sm font-medium rounded-lg py-2.5 w-full hover:opacity-90 active:scale-[0.98] transition-all"
+                  className="bg-[var(--coral)] text-[var(--void)] font-mono text-sm font-medium rounded-lg py-2.5 w-full hover:opacity-90 active:scale-[0.98] transition-all"
                 >
                   Share
                 </button>

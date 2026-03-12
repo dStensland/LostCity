@@ -1,0 +1,21 @@
+version: 1
+slug: sharon-lester-tennis-center
+name: Sharon Lester Tennis Center at Piedmont Park
+integration_method: beautifulsoup
+defaults:
+  category: sports
+  tags:
+  - tennis
+  - pickleball
+  - agape-tennis
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://sharonlester.agapetennisacademy.com/events/
+detail:
+  enabled: true
+data_goals:
+- events
+- images
+- tickets

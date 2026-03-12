@@ -11,6 +11,9 @@ def test_normalize_goal_aliases():
     assert normalize_goal("event") == "events"
     assert normalize_goal("workshops") == "classes"
     assert normalize_goal("hours") == "venue_hours"
+    assert normalize_goal("parking") == "planning"
+    assert normalize_goal("ada") == "accessibility"
+    assert normalize_goal("allergies") == "dietary"
     assert normalize_goal("not-a-goal") is None
 
 
@@ -57,3 +60,11 @@ def test_resolve_source_data_goals_falls_back_to_inference(monkeypatch):
     assert mode == "inferred"
     assert "events" in goals
     assert "exhibits" in goals
+
+
+def test_destination_only_helper():
+    from source_goals import source_has_event_feed_goal, source_is_destination_only
+
+    assert source_has_event_feed_goal(["tickets", "events"]) is True
+    assert source_is_destination_only(["tickets", "images", "venue_hours", "planning"]) is True
+    assert source_is_destination_only(["tickets", "images", "events"]) is False

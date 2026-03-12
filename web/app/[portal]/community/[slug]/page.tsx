@@ -23,6 +23,12 @@ import {
   DetailStickyBar,
 } from "@/components/detail";
 import { getLocalDateString, safeJsonLd } from "@/lib/formats";
+import {
+  formatCommitmentLevel,
+  formatOnboardingLevel,
+  getVolunteerOpportunitiesForOrganization,
+  type VolunteerOpportunity,
+} from "@/lib/volunteer-opportunities";
 
 export const revalidate = 300;
 
@@ -56,6 +62,14 @@ type Organization = {
   city: string | null;
   featured: boolean;
 };
+
+function formatTimeHorizon(value: VolunteerOpportunity["time_horizon"]): string | null {
+  if (value === "multi_month") return "Multi-month";
+  if (value === "multi_week") return "Multi-week";
+  if (value === "one_day") return "One day";
+  if (value === "ongoing") return "Open-ended";
+  return null;
+}
 
 // Cache organization data
 const getOrganization = unstable_cache(
@@ -292,9 +306,10 @@ export default async function PortalOrganizerPage({ params }: Props) {
   }).toString()}`;
 
   // Fetch data in parallel
-  const [events, similarOrgs] = await Promise.all([
+  const [events, similarOrgs, volunteerOpportunities] = await Promise.all([
     getOrganizationEvents(organization.id),
     getSimilarOrganizations(organization.id, organization.org_type, organization.categories),
+    getVolunteerOpportunitiesForOrganization({ organizationSlug: organization.slug, limit: 8 }),
   ]);
 
   const orgColor = getOrgTypeColor(organization.org_type);
@@ -392,6 +407,7 @@ export default async function PortalOrganizerPage({ params }: Props) {
                 { label: "Type", value: formatOrgType(organization.org_type) },
                 { label: "Location", value: locationDisplay },
                 { label: "Events", value: `${events.length} upcoming` },
+                { label: "Volunteer roles", value: `${volunteerOpportunities.length} active` },
               ]}
               className="mb-6"
             />
@@ -429,6 +445,101 @@ export default async function PortalOrganizerPage({ params }: Props) {
               </>
             )}
           </InfoCard>
+
+          {volunteerOpportunities.length > 0 && (
+            <section className="rounded-xl border border-[var(--twilight)]/85 bg-[var(--night)] px-4 py-4 sm:px-5 sm:py-5">
+              <div className="mb-4">
+                <p className="font-mono text-[10px] uppercase tracking-[0.13em] text-[var(--muted)] mb-1">
+                  Ongoing Opportunities
+                </p>
+                <h2 className="text-lg font-semibold text-[var(--cream)]">
+                  Commitment roles from {organization.name}
+                </h2>
+                <p className="mt-2 text-sm text-[var(--muted)]">
+                  These are structured volunteer roles, not dated event listings.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                {volunteerOpportunities.map((opportunity) => {
+                  const onboardingLabel = formatOnboardingLevel(opportunity.onboarding_level);
+                  const timeHorizonLabel = formatTimeHorizon(opportunity.time_horizon);
+                  const sourceName = opportunity.source?.name || organization.name;
+
+                  return (
+                    <div
+                      key={opportunity.id}
+                      className="rounded-lg border border-[var(--twilight)]/70 bg-[var(--night)]/95 px-4 py-4"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="inline-flex items-center rounded-full border border-accent-40 bg-accent-15 px-2.5 py-1 text-[10px] font-mono uppercase tracking-[0.14em] text-accent">
+                              {formatCommitmentLevel(opportunity.commitment_level)}
+                            </span>
+                            {timeHorizonLabel && (
+                              <span className="inline-flex items-center rounded-full border border-[var(--twilight)]/70 px-2.5 py-1 text-[10px] font-mono uppercase tracking-[0.14em] text-[var(--muted)]">
+                                {timeHorizonLabel}
+                              </span>
+                            )}
+                            {opportunity.remote_allowed && (
+                              <span className="inline-flex items-center rounded-full border border-[var(--twilight)]/70 px-2.5 py-1 text-[10px] font-mono uppercase tracking-[0.14em] text-[var(--muted)]">
+                                Remote-friendly
+                              </span>
+                            )}
+                          </div>
+
+                          <div>
+                            <h3 className="text-base font-semibold text-[var(--cream)]">
+                              {opportunity.title}
+                            </h3>
+                            <p className="mt-1 text-sm text-[var(--soft)]">
+                              {opportunity.summary || opportunity.description}
+                            </p>
+                          </div>
+                        </div>
+
+                        <a
+                          href={opportunity.application_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 rounded-lg border border-accent-40 bg-accent-15 px-3 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent-20"
+                        >
+                          Learn more
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5h5m0 0v5m0-5L10 14" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10v9h9" />
+                          </svg>
+                        </a>
+                      </div>
+
+                      <div className="mt-3 flex flex-wrap gap-2 text-xs text-[var(--muted)]">
+                        {opportunity.schedule_summary && (
+                          <span>{opportunity.schedule_summary}</span>
+                        )}
+                        {opportunity.location_summary && (
+                          <span>{opportunity.location_summary}</span>
+                        )}
+                        {onboardingLabel && (
+                          <span>{onboardingLabel}</span>
+                        )}
+                        {opportunity.background_check_required && (
+                          <span>Background check</span>
+                        )}
+                        {opportunity.training_required && (
+                          <span>Training</span>
+                        )}
+                      </div>
+
+                      <div className="mt-3 text-xs text-[var(--muted)]">
+                        Source: {sourceName}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
 
           {/* Next Events */}
           <section id="upcoming-events" className="rounded-xl border border-[var(--twilight)]/85 bg-[var(--night)] px-4 py-4 sm:px-5 sm:py-5">

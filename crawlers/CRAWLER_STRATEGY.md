@@ -68,6 +68,73 @@ festival source container row even when there is no standalone crawler module.
 
 Schema.org-only is enforced via `detail.jsonld_only: true` in the source profile.
 
+### Current Data Model Contract (Required)
+
+Crawler strategy has to align with the live persistence model:
+
+- `events.category_id` is canonical. Treat `category` as an input alias only.
+- `events.content_kind` is required for museum/gallery quality. Use `event` for
+  programmed happenings and `exhibit` for real exhibition runs.
+- Permanent attractions, venue operations, and happy-hour style offers are not
+  feed events. They belong either in `venues` metadata or `venue_specials`.
+- `sources` are operating objects, not just registry rows. `owner_portal_id`,
+  `health_tags`, `expected_event_count`, `active_months`, and `last_crawled_at`
+  should influence activation, prioritization, and triage.
+- Coverage quality is measured on future active inventory plus destination
+  hydration, not just on how many rows were ever inserted.
+- `series` and festival hierarchy should absorb recurring structure before we
+  add more flat event rows.
+
+### Destination-First Product Rule
+
+LostCity is not only an event feed. It is also a city decision layer.
+
+That means a venue can be healthy and strategically valuable even when it has no
+upcoming events if it helps users answer questions like:
+
+- Where should we go before or after?
+- What nearby places are walkable?
+- Where can we grab drinks, dinner, coffee, or dessert?
+- What is good for a group hang, date, family outing, or low-friction meetup?
+- What places are accessible, reservation-friendly, allergy-aware, or easy to park near?
+
+Operational implication:
+
+- Do not mark a venue or venue-oriented source as unhealthy solely because it
+  has zero future events.
+- Evaluate destination-oriented coverage on venue completeness, planning
+  usefulness, and specials/supporting metadata as well as event yield.
+- Keep event health and destination health as separate but equally important
+  lanes in audits and prioritization.
+
+### First-Pass Completeness Rule
+
+**Every crawler should extract all available signal in a single pass.** Do not
+build a crawler that only grabs events and leaves everything else for later
+enrichment scripts. Going back to re-scrape for hours, specials, images, and
+descriptions is expensive, error-prone, and we've done it too many times.
+
+When visiting a venue page, a well-built crawler captures:
+
+| Data Type | Storage | Look For |
+|-----------|---------|----------|
+| Events | `events` table | Calendar, upcoming shows, classes |
+| Recurring programming | `events` + `series` | "Weekly Events", "Regular Programming", trivia/DJ/open mic nights |
+| Specials & deals | `venue_specials` table | "Happy Hour", "Daily Specials", "Brunch Deals", "Industry Night" |
+| Hours | `venues.hours` | Opening/closing by day of week |
+| Description | `venues.description` | About page, meta description, og:description |
+| Hero image | `venues.image_url` | og:image, hero banner, featured photo |
+| Vibes / tags | `venues.vibes` | Cuisine type, atmosphere cues, menu categories |
+
+The enrichment scripts (Lane 3/4 below) exist as a safety net for data that
+crawlers missed or couldn't access — not as the primary path. A crawler that
+ignores specials sitting right on the page and relies on `scrape_venue_specials.py`
+to come back later is doing it wrong.
+
+**Benchmark:** After a single crawl run, could someone decide whether to visit
+this venue without ever going to its website? If not, the crawler is leaving
+value on the table.
+
 ### Source Audit CLI
 Use the audit tool when investigating a new source to recommend an integration method:
 ```
@@ -88,6 +155,59 @@ Operational rule:
 - Activate only after non-zero signal and quality check
 
 This keeps user-submitted websites in a continuous crawler intake loop.
+
+### Curator Discovery Rule
+
+Curator/editorial calendars are valid research inputs, but not canonical source
+rows.
+
+Required workflow when a curator reveals a likely gap:
+
+1. Record the missing title or umbrella event
+2. Identify the direct organizer / venue / ticketing / festival source
+3. Add or repair the direct-source crawler
+4. Re-check the curator sample only as QA
+
+Do not close a curator-discovered gap by adding the curator itself as the new
+canonical source unless there is no real first-party source and a product
+decision explicitly allows that exception.
+
+### New Source Quality Contract
+
+A source is not ready for activation just because it returns rows.
+
+Before activation, every new or rehabbed source should be checked for:
+
+1. Canonical `source_url` points to the true detail page or organizer page
+2. External `ticket_url` is stored separately when present
+3. Real event imagery is present; logos/badges/site chrome do not count
+4. Real event description is present; about-page or institution boilerplate does not count
+5. Date/time fields are normalized from structured data or selectors
+6. Price/status fields are normalized cleanly and not mixed together
+7. Venue metadata is preserved when the source provides it
+8. Parent tentpole/umbrella modeling is considered when the source represents a festival, fair, exhibition run, or branded civic weekend
+9. **Recurring programming** captured as series when the page shows weekly/regular events (trivia, DJ nights, open mic, brunch, etc.)
+10. **Venue specials** captured to `venue_specials` when the page shows happy hours, daily deals, or recurring food/drink offers
+11. **Hours of operation** captured when visible on the page
+12. **Venue description and hero image** filled from the source page (og:image, about section)
+
+If multiple sources show the same defect class, fix the shared enrichment path
+before adding more source-local cleanup.
+
+### Profile Extraction Rule
+
+If a source uses a selector profile and its detail page exposes structured
+consumer fields, the profile should attempt to declare:
+
+- `date`
+- `time`
+- `price`
+- `links`
+- `image_url`
+- `ticket_url`
+
+Do not leave these fields as raw text if the shared enrichment pipeline already
+has normalizers for them.
 
 ### Tier 1: High-Volume Aggregators (Priority: First)
 **Goal:** Establish baseline coverage quickly
@@ -702,40 +822,80 @@ if not (has_good_desc and has_image and has_ticket and has_time):
 
 ### Hydration Techniques (Post-Crawl Gap Filling)
 
-When the standard enrichment stack leaves gaps (especially for start_time), two additional hydration techniques can recover data from existing records:
+**These are safety nets, not the primary path.** A well-built crawler should
+capture events, specials, hours, images, and descriptions on the first pass
+(see First-Pass Completeness Rule above). These enrichment lanes exist to
+backfill data from older crawlers that didn't follow that rule, or for data
+that genuinely requires a separate API (Google Places hours, Foursquare metadata).
 
-#### Technique 1: Description Text Mining
-- **Target:** Events with missing start_time but existing description text
-- **Method:** Regex extraction of time patterns from description field
+If you find yourself running enrichment scripts on venues that were just crawled,
+the crawler needs fixing — not another enrichment pass.
+
+Hydration should follow the entity boundary of the live data model. The order
+matters: fix the source first, then the event row, then the destination row.
+
+#### Lane 1: Source Repair Before Backfill
+- **Target:** Sources with zero/low future yield, write-path rejects, or stale selectors
+- **Method:** Fix discovery/detail extraction or write-path normalization first
+- **Why first:** Repeated backfills on broken sources create churn without raising durable coverage
+- **Signals:** `health_tags`, `expected_event_count`, low future item count, repeated crawl errors
+
+#### Lane 2: Event Detail Recovery
+- **Target:** Valid future events missing key presentation fields like `start_time`, `ticket_url`, `image_url`, or description
+- **Method:** Use targeted re-hydration on rows that already belong in `events`
+- **Rule:** Never use event hydration to rescue venue specials or permanent attractions into the feed
+
+Technique 2.1: Description Text Mining
+- **Target:** Events with missing `start_time` but existing description text
+- **Method:** Regex extraction of time patterns from `description`
 - **Patterns matched:**
-  - `at 8:00 pm`, `at 7pm` — explicit time markers
-  - `Doors open at 6:30 PM` — door/show time phrases
-  - `7:00 PM - 10:00 PM` — time ranges
-  - `starts at 8pm`, `begins at 7:30 PM` — start markers
-- **Implementation:** SQL query finds candidates, Python regex extracts and updates
-- **Success rate:** ~12-15% of missing-time events have times buried in descriptions
-- **Cost:** Zero (no API calls, operates on existing data)
+  - `at 8:00 pm`, `at 7pm`
+  - `Doors open at 6:30 PM`
+  - `7:00 PM - 10:00 PM`
+  - `starts at 8pm`, `begins at 7:30 PM`
+- **Implementation:** Query candidates, extract via regex, update only if confidence is reasonable
+- **Cost:** Zero API cost
 
-#### Technique 2: Page Re-fetch with Playwright
-- **Target:** Events with `detail_url` but missing start_time after standard extraction
-- **Method:** Re-fetch the detail page using Playwright (JS rendering), then run JSON-LD + heuristic extractors
-- **Why separate:** Many venue sites render event times via JavaScript that plain HTTP fetch misses
-- **Implementation:** `render_js: true` fetch → parse JSON-LD → parse heuristic → update if time found
-- **URL dedup:** Cache fetched URLs to avoid re-fetching the same page for multiple events at same venue
-- **Success rate:** ~25-30% of remaining missing-time events yield times via JS rendering
-- **Cost:** ~30 seconds per page (Playwright startup + render), no API cost
-- **When to use:** As a targeted backfill after the standard crawl, not during the main pipeline (too slow)
+Technique 2.2: Page Re-fetch with Playwright
+- **Target:** Events with `source_url`/detail URL but missing fields after standard extraction
+- **Method:** Re-fetch detail pages with JS rendering, then rerun JSON-LD + heuristic extraction
+- **Why separate:** Some sites render timing and ticket links only after hydration
+- **When to use:** Targeted backfill after the main crawl, not as the default path
+
+#### Lane 3: Venue Metadata Hydration
+- **Target:** `venues` rows with incomplete destination metadata
+- **Fields:** `website`, `image_url`, `hours`, `neighborhood`, `lat/lng`,
+  `location_designator`, `planning_notes`
+- **Methods:**
+  - `hydrate_venues_foursquare.py` for website and neighborhood improvements
+  - `hydrate_hours_google.py` / `hydrate_hours_foursquare.py` for hours
+  - source-website scraping for image/description/planning context
+- **Why it matters:** Atlanta quality depends on destination completeness as much as feed breadth
+- **Important:** treat `hours` as a primary health metric for fixed-hours
+  destinations like museums, galleries, cinemas, bars, restaurants, and
+  gardens. For event-led venues such as theaters, amphitheaters, and music
+  rooms, prioritize planning logistics over weekly hours.
+
+#### Lane 4: Specials Hydration
+- **Target:** recurring deals, happy hours, and venue operating offers
+- **Storage:** `venue_specials`, never `events`
+- **Methods:** `scrape_venue_specials.py`, Instagram specials ingestion, structured menu/deal extraction
+- **Why it matters:** hotel/concierge experiences depend on this lane, but it should not pollute event coverage metrics
 
 ### Category Inference for Enrichment Triggers
 
-Film poster/metadata fetch and music artist lookup depend on correct `category`. Category is inferred in this priority order:
+Film poster/metadata fetch and music artist lookup depend on correct
+`category_id`. Category is inferred in this priority order:
 
 1. **Explicit from source:** Crawler or feed provides category directly
 2. **Profile defaults:** `defaults.category` in YAML profile (e.g., cinema profiles set `film`)
 3. **Venue-type inference:** `_infer_category()` maps venue_type → category (e.g., `music_venue` → `music`, `comedy_club` → `comedy`, `cinema` → `film`)
 4. **Title keyword matching:** Fallback regex patterns in event titles
 
-**Critical:** Cinema profiles MUST have `defaults.category: film` set, otherwise OMDB metadata fetch never triggers and film events lack posters and descriptions.
+`category` is normalized into `events.category_id` during the write path.
+
+**Critical:** Cinema profiles MUST have `defaults.category: film` set, otherwise
+OMDB metadata fetch never triggers and film events lack posters and descriptions.
 
 ---
 
@@ -790,6 +950,18 @@ When duplicate detected, merge logic:
 5. If no hash match → fuzzy search via `find_events_by_date_and_venue_family()`
 6. If fuzzy match ≥85% → merge data and update existing event
 7. If no match → insert as new event
+
+### Quality-First Prioritization Rule
+
+When deciding where to spend crawler effort, use this order:
+
+1. Repair broken high-yield sources already in the system.
+2. Repair write-path classification errors (`category_id`, `content_kind`, series, portal attribution).
+3. Activate dormant district or anchor sources that can hydrate many venues/neighborhoods at once.
+4. Backfill venue metadata and `venue_specials`.
+5. Only then add more long-tail source count.
+
+This keeps "coverage" tied to user-visible quality instead of raw crawler volume.
 
 ---
 
@@ -1028,6 +1200,11 @@ Each entity type gets a weighted health score (0-100). System-wide health is the
 
 Venues are the core entity — every destination a user might want to visit.
 
+A venue does not need an attached event to be considered healthy. Restaurants,
+lodging, bars, bookstores, food halls, entertainment venues, and other social
+destinations are valuable because they help people decide how to spend time
+together before, after, or instead of an event.
+
 #### Field Requirements
 
 | Field | Priority | Weight | Target | Notes |
@@ -1040,11 +1217,15 @@ Venues are the core entity — every destination a user might want to visit.
 | city | Critical | 10% | > 98% | |
 | state | Critical | 5% | > 98% | |
 | venue_type | Critical | 15% | > 98% | From valid taxonomy (see CLAUDE.md) |
-| website | Important | 5% | > 70% | Enables image scraping, description extraction |
+| website | Important | 5% | > 70% | Enables image scraping, planning details, description extraction |
 | image_url | Important | 10% | > 80% | Hero image for cards, sourced from website or Google |
 | description | Important | 5% | > 50% | Short blurb about what the venue is |
+| location_designator | Important | 5% | > 95% | Helps explain whether a place is standard, virtual, signup-only, etc. |
+| planning_notes | Important | 5% | > 20% | Human-usable notes for friction: reservations, parking, allergy/access context |
+| parking_note / transit_note | Important | 5% | > 30% | Pre/post-event and hang logistics |
+| walkable_neighbor_count | Important | 5% | > 35% | Supports nearby recommendations and hangs |
 | vibes | Nice-to-have | - | > 40% | Discovery tags from website analysis |
-| hours | Nice-to-have | - | > 30% | From Google Places |
+| hours | Important | 5% | > 50% | Critical for destination usefulness |
 | zip | Nice-to-have | - | > 70% | |
 
 #### Venue Quality Rules
@@ -1054,6 +1235,13 @@ Venues are the core entity — every destination a user might want to visit.
 - **Neighborhood from coordinates**: Use `determine_neighborhood()` in `venue_enrich.py` after setting lat/lng
 - **venue_type from taxonomy**: Must match one of the valid types (see CLAUDE.md). Run `classify_venues.py` for cleanup
 - **Image sources (priority)**: 1) Website og:image, 2) Google Places photo, 3) null (never use placeholder)
+- **Destination health is independent from event yield**: a venue can be high
+  quality with zero future events if it is complete, relevant, and useful in
+  nearby/hangs/concierge flows
+- **Planning friction matters**: parking, transit, reservations, accessibility,
+  and allergy-aware guidance should be captured whenever the source makes them available
+- **Specials belong in `venue_specials`**: recurring deals improve destination
+  usefulness but should never be forced into the events feed
 
 #### Enrichment Tools
 

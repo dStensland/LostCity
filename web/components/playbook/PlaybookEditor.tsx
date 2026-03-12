@@ -314,7 +314,7 @@ export default function PlaybookEditor({ itineraryId, portalId, portalSlug, port
     addItem,
     removeItem,
     reorderItems,
-    getShareUrl,
+    makeShareable,
   } = useItinerary(portalId, portalSlug);
 
   const [mapExpanded, setMapExpanded] = useState(true);
@@ -357,19 +357,14 @@ export default function PlaybookEditor({ itineraryId, portalId, portalSlug, port
       showToast("Sign in to share your playbook", "info");
       return;
     }
-    const ok = await updateItinerary({ is_public: true });
-    if (!ok) {
-      showToast("Failed to share playbook", "error");
-      return;
-    }
-    const url = getShareUrl();
+    const url = await makeShareable();
     if (url) {
       await navigator.clipboard.writeText(url);
       showToast("Share link copied!", "success");
     } else {
-      showToast("Share link not available yet — try again", "error");
+      showToast("Failed to share playbook", "error");
     }
-  }, [user, updateItinerary, getShareUrl, showToast]);
+  }, [user, makeShareable, showToast]);
 
   const handleDelete = useCallback(async () => {
     if (!activeItinerary) return;

@@ -5,18 +5,17 @@ The playbook for what to build next and how. Written for AI agents.
 Each phase is a self-contained block of work an agent can pick up cold. Phases within a tier can often run in parallel. Each phase lists: goal, files changed, concrete steps, and verification criteria.
 
 **Principles for agent-driven development:**
-- Prefer brute-force over elegance. 500 crawlers > 1 smart abstraction.
+- Prefer brute-force over elegance. 1,000+ crawlers > 1 smart abstraction.
 - Every phase should be completable in one session with clear verification.
 - Agents should be able to validate their own work (tests, type checks, data queries).
 - When a phase says "for each X, do Y" — that's a parallelizable loop. Spin up agents.
 
 **Key reference docs:**
+- `.claude/north-star.md` — Mission, core bets, decision filters
+- `STRATEGIC_PRINCIPLES.md` — Hypotheses and principles
 - `BACKLOG.md` — Product roadmap
 - `ARCHITECTURE_PLAN.md` — System gaps and implementation priorities
-- `docs/portal-surfaces-contract.md` — Consumer Portal vs Admin Portal contract
-- `STRATEGIC_PRINCIPLES.md` — Core hypotheses and decision framework
 - `TECH_DEBT.md` — Code-level debt items
-- `prds/004-taxonomy-personalization-refactor.md` — Taxonomy + personalization bible (most detailed PRD)
 - `crawlers/CLAUDE.md` — Crawler patterns and data requirements
 - `web/CLAUDE.md` — Web app patterns, auth, API routes
 
@@ -31,453 +30,280 @@ Every new phase/PRD/checklist must declare target surface:
 
 If this declaration is missing, the work is not ready.
 
-Anti-conflation check:
-1. Does this accidentally introduce admin UX into consumer flows?
-2. Does this accidentally simplify away needed operational depth in admin UX?
-3. Are acceptance criteria written for the correct surface?
-
 ---
 
 ## Status
 
 | Phase | Status | Date | Tier |
 |-------|--------|------|------|
+| **Foundation (Done)** | | | |
 | A: Seal the Data Boundary | Done | 2026-02-10 | Data |
 | B: Data Quality Triage | Done | 2026-02-10 | Data |
 | C: Crawler Coverage Blitz | Done (batch 1) | 2026-02-10 | Data |
 | D: Genre Backfill (events) | Done | 2026-02-10 | Taxonomy |
 | E: Drop Subcategory | Done | 2026-02-10 | Taxonomy |
-| F: Schema Migrations (genres on venues, needs on users) | Done | 2026-02-10 | Taxonomy |
-| G: Onboarding Revamp (categories → genres) | Done | 2026-02-10 | UX |
+| F: Schema Migrations | Done | 2026-02-10 | Taxonomy |
+| G: Onboarding Revamp | Done | 2026-02-10 | UX |
 | H: User Profile & Preferences UX | Done | 2026-02-10 | UX |
-| I: Discovery UX (genre filter pills, cross-entity search) | Done (pre-existing) | 2026-02-10 | UX |
-| J: Hotel Concierge Demo | Done | 2026-02-10 | Demo |
-| K: Admin Portal Onboarding Flow | Delivered (Paused) | 2026-02-10 | Demo |
-| L: API Route Test Coverage | Done (events route) | 2026-02-10 | Eng Health |
-| M: Community Needs Tags | Done | 2026-02-10 | Network |
-| N: Strict Portal Attribution Hardening | Done | 2026-02-16 | Foundation |
-| O: Atlanta Usage + Quality Proof | Done | 2026-02-16 | Launch |
-| P: Demo Portfolio (FORTH + 2 verticals) | Done | 2026-02-16 | Launch |
-| Q: Scale Guardrails (Isolation/Perf/Test) | Done | 2026-02-16 | Foundation |
-| R: Public Developer API | Iceboxed (Post-Launch) | 2026-02-11 | Platform |
+| I: Discovery UX | Done | 2026-02-10 | UX |
+| N: Strict Portal Attribution | Done | 2026-02-16 | Foundation |
+| Q: Scale Guardrails | Done | 2026-02-16 | Foundation |
+| **Live Portals** | | | |
+| J: FORTH Hotel Concierge | Done | 2026-02-10 | Live Portal |
+| K: Admin Portal Onboarding | Paused | 2026-02-10 | Admin |
+| **Atlanta Consumer Quality** | | | |
+| O: Atlanta Consumer Product | Active | 2026-03-09 | Live Product |
+| **Portal Ecosystem** | | | |
+| P1: HelpATL (Citizen) | Active | 2026-03-09 | Content Pillar |
+| P2: Family Portal | Active | 2026-03-11 | Content Pillar |
+| P3: Adventure Portal | Active | 2026-03-11 | Content Pillar |
+| P4: Arts Portal | Design Complete | 2026-03-11 | Content Pillar |
+| P5: Sports Portal | Active | 2026-03-11 | Content Pillar |
+| **Data & Intelligence** | | | |
+| S1: Crawler Scaling | Active (ongoing) | 2026-03-11 | Data |
+| S2: Editorial + Occasion Intelligence | Done | 2026-03-11 | Data |
+| S3: Interest Channels | Done | 2026-03-11 | Data |
+| **Social Layer** | | | |
+| T1: Hangs + Profiles | Done (v1) | 2026-03-10 | Social |
+| T2: My Plans + Social Proof | Done | 2026-03-11 | Social |
+| **Engineering Health** | | | |
+| L: API Route Test Coverage | Backlog | — | Eng Health |
+| M: Community Needs Tags | Backlog | — | Network |
+| R: Public Developer API | Iceboxed | — | Platform |
 
 ---
 
-## Reprioritization (2026-02-11)
+## Reprioritization (2026-03-11)
 
-Execution is now constrained by the launch hypothesis:
+We are no longer building demos. Every portal and product ships consumer-ready or doesn't ship.
 
-1. **Strict portal attribution first** across data, behavior, enrichment, and analytics.
-2. **Atlanta usage and quality proof** before productizing self-serve workflows.
-3. **Demo quality over demo quantity** (FORTH first, then 1-2 high-signal vertical demos).
-4. **Self-serve Admin Portal onboarding/product expansion paused** until customer pull is real.
-5. **Public Developer API iceboxed** until after launch traction.
+**Strategic shift**: LostCity is now building a constellation of first-party content pillar portals alongside B2B distribution portals. Each content pillar produces unique entities that enrich the shared data layer. This is the growth engine — not just B2B sales.
 
-This means completed work like Phase K remains available but is not an active investment area until reprioritized.
-
----
-
-## Surface Map (Planning Guardrail)
-
-- Shared infrastructure (not a UX surface): `A`, `B`, `C`, `D`, `E`, `F`, `N`, `Q`
-- Consumer Portal-first: `G`, `H`, `I`, `J`, `M`, `O`, `P`
-- Admin Portal-first: `K`
-- Both consumer + admin concerns: `L` (API test coverage), selected parts of `N`
-
-When editing any phase, add or preserve a `Surface:` line in that phase block.
+1. **Consumer-grade quality on everything live.** Atlanta, FORTH, HelpATL — all must work unsupervised for real users.
+2. **First-party portals are content factories.** Family, Adventure, Arts, Sports each introduce unique entity types (programs, trails, exhibitions, schedules) that make the whole network richer.
+3. **Fix what's live before adding what's next.** Feature breadth without quality depth is demo thinking.
+4. **Social layer is live — iterate on real usage.** Hangs, profiles, plans are shipped. Polish based on actual behavior.
+5. **Strict portal attribution** across data, behavior, enrichment, and analytics.
+6. **A live product with real users IS the sales motion.** Optimize for real usage, not presentation-readiness.
+7. **Self-serve Admin Portal and Public API paused** until customer pull is real.
 
 ---
 
-## Tier 1: Data Foundation
+## Active Work
 
-### Phase A: Seal the Data Boundary [DONE]
-
-Added validation whitelists (categories, venue types, vibes, festival types), genre-to-tag mapping, new high-value tags (live-music, class), tag health metrics, and expanded the web filter UI from 17 to 31 surfaced tags.
-
-**Files changed:** `tags.py`, `tag_inference.py`, `db.py`, `series.py`, `data_health.py`, `web/lib/search-constants.ts`
-
----
-
-### Phase B: Data Quality Triage
-
-**Goal:** Identify broken/degraded crawlers, measure tag coverage, produce fix-or-disable list.
-
-**Why:** Phase A added validation rules. Phase B measures what breaks and prioritizes repairs.
-
-**Steps:**
-
-1. **Run data health diagnostic**
-   ```bash
-   python3 data_health.py
-   ```
-   Capture full output. Note entity health scores and the new tag health section.
-
-2. **Query source health from crawl_logs**
-   ```sql
-   SELECT s.slug, s.name,
-     COUNT(*) as runs,
-     SUM(CASE WHEN cl.status = 'success' THEN 1 ELSE 0 END) as successes,
-     AVG(cl.events_found) as avg_found,
-     AVG(cl.events_new) as avg_new
-   FROM crawl_logs cl
-   JOIN sources s ON s.id = cl.source_id
-   WHERE cl.started_at > NOW() - INTERVAL '30 days'
-   GROUP BY s.slug, s.name
-   HAVING COUNT(*) >= 2
-   ORDER BY (SUM(CASE WHEN cl.status = 'success' THEN 1 ELSE 0 END)::float / COUNT(*)) ASC
-   LIMIT 30;
-   ```
-
-3. **Query category distribution and NULL categories by source**
-
-4. **Produce triage report** — Save to `reports/data_quality_triage_YYYY-MM-DD.md`
-
-5. **Disable broken sources** via `scripts/disable_broken_sources.py`
-
-**Verification:** `data_health.py` runs clean. Triage report exists with actionable recommendations.
-
----
-
-### Phase C: Crawler Coverage Blitz (can run in parallel with anything)
-
-**Goal:** Add 50+ new venue crawlers for Atlanta neighborhoods with gaps.
-
-**Why:** Coverage is the moat (Strategic Principle 2). The long tail of local venues is where no competitor can follow.
-
-**Agent pattern:** For each venue, an agent should:
-1. Visit the venue's website
-2. Run `python scripts/source_audit.py --url <url>` to determine best method
-3. Create crawler file in `sources/<slug>.py` following patterns in `crawlers/CLAUDE.md`
-4. Include complete VENUE_DATA with lat/lng, neighborhood, venue_type, vibes
-5. Test with `python main.py --source <slug> --verbose`
-6. Register source in DB
-
-**Priority neighborhoods:** Little Five Points, East Atlanta Village, Edgewood Ave, Virginia-Highland, Midtown, Old Fourth Ward, Decatur, West Midtown, Inman Park, Downtown. Full venue lists in `crawlers/CLAUDE.md`.
-
-**Also expand:** Coffee shops, restaurants with events, breweries, bookstores, fitness/wellness venues.
-
-**Verification:** Each new crawler runs successfully, produces valid events or at minimum creates the venue record with full data.
-
----
-
-## Tier 2: Taxonomy (nail this down before building UX)
-
-**Reference:** `prds/004-taxonomy-personalization-refactor.md` is the bible for this tier.
-
-### Phase D: Genre Backfill (events) [DONE]
-
-Enhanced `scripts/backfill_genres.py` to backfill both genres AND tags with genre context (GENRE_TO_TAGS mapping). Processed 10,000 events: 3,005 got genres from inference, 203 from subcategory migration, 802 normalized, 3,871 got new experiential tags via genre→tag mapping. 0 errors.
-
-**Post-backfill tag health:**
-- With any tags: 98.6%
-- With 3+ tags: 51.5%
-- With experiential tags: 46.2%
-- With genres: 33.6%
-
-**Deferred:** Venue genre backfill blocked by Phase F (needs `venues.genres` column). The `backfill_genres.py --venues-only` command is ready once the column exists.
-
-**Script:** `scripts/backfill_genres.py` — supports `--retag-all`, `--dry-run`, `--category`, `--events-only`, `--venues-only`
-
----
-
-### Phase E: Drop Subcategory [DONE]
-
-Stopped writing subcategory across the entire stack. Subcategory→genre migration was already handled in Phase D (backfill_genres.py uses `genre_from_subcategory()`).
-
-**Crawlers:**
-- `db.py`: `event_data.pop("subcategory", None)` before insert — silently strips subcategory from any crawler that still sets it
-- `pipeline_main.py`: Removed all 4 subcategory passthrough lines
-- `tag_inference.py`: Marked `infer_subcategory()` as DEPRECATED (was already dead code, never called)
-
-**Web frontend (12 files modified):**
-- Removed `SubcategoryRow` filter component (stubbed to return null)
-- Removed `SubcategoryChip`, `getSubcategoryLabel()`, `shouldShowSubcategory()` from `ActivityChip.tsx`
-- Removed subcategory from `EventCard.tsx`, `ActiveFiltersRow.tsx`
-- Removed subcategory step from onboarding flow (Categories → Neighborhoods now)
-- Removed subcategory signals from `onboarding/complete` API
-- Removed `subcategories` from `SearchFilters` interface and all API routes
-- Removed subcategory from `useEventFilters.ts` filter state
-
-**Still in place (intentionally):**
-- `SUBCATEGORIES` constant in `search-constants.ts` (orphaned, no imports)
-- `PREFERENCE_SUBCATEGORIES` in `preferences.ts` (cleanup in Phase G)
-- `events.subcategory` DB column (drop after 4 weeks)
-- `infer_subcategory()` function body (reference only)
-
-**Verification:** `npx tsc --noEmit` clean. 189 pytest pass. No code writes to subcategory.
-
----
-
-### Phase F: Schema Migrations [DONE]
-
-Applied two migrations to add all taxonomy + personalization columns:
-
-- **Migration 165** (`165_taxonomy_genre_refactor.sql`): Added `venues.genres TEXT[]` + GIN index, `festivals.genres TEXT[]` + GIN index, `genre_options.is_format`, `user_preferences.needs_accessibility/dietary/family TEXT[]`, 86 new genre_options across 12 categories, venue type normalization (sports_bar→bar, wine_bar→bar, cocktail_bar→bar), subcategory deprecation comment.
-- **Migration 171** (`171_taxonomy_preferences_expansion.sql`): Added `user_preferences.favorite_genres JSONB`, `inferred_preferences.portal_id UUID` + FK, updated events search vector (replaced `subcategory` with `genres` at weight B), updated venues search vector (added `genres` at weight B), backfilled 4,050 event search vectors, created `venue_genre_inference` materialized view (427 venue-genre pairs from 365-day event history).
-- **Venue genre backfill**: Ran `backfill_genres.py --venues-only` — 241 venues updated with genres inferred from event history, 0 errors.
-- **TypeScript types regenerated**: All 7 new columns reflected in `database.types.ts`. `npx tsc --noEmit` clean.
-
----
-
-## Tier 3: UX Foundations (patterns every portal will use)
-
-### Phase G: Onboarding Revamp
-
-**Goal:** Replace the current 3-step onboarding (categories → subcategories → neighborhoods) with the PRD 004 flow (categories → genres → location → needs).
-
-**Why:** The current onboarding captures subcategories (deprecated) and misses genres (the core personalization dimension) and needs (accessibility/dietary — the stickiest feature).
-
-**Reference:** PRD 004 Section 6.1 (Onboarding)
-
-**Current state:**
-- `web/app/onboarding/page.tsx` — 3-step flow
-- `web/app/onboarding/steps/CategoryPicker.tsx` — category grid
-- `web/app/onboarding/steps/SubcategoryPicker.tsx` — subcategory pills (TO BE REPLACED)
-- `web/app/onboarding/steps/NeighborhoodPicker.tsx` — neighborhood picker
-- `web/app/api/onboarding/complete/route.ts` — saves to `user_preferences` + `inferred_preferences`
-
-**New flow (4 screens, < 45 seconds):**
-
-1. **"What brings you out?"** — Category selection (keep existing `CategoryPicker`, minor updates)
-2. **"Dial it in"** — Genre selection (NEW: replace `SubcategoryPicker`)
-   - Show genre pills based on selected categories
-   - Music → jazz, hip-hop, indie, electronic, rock, country, folk, soul, etc.
-   - Comedy → stand-up, improv, sketch
-   - etc. (full lists in PRD 004 Section 3)
-   - Multi-select, minimum 5
-3. **"Where & when?"** — Location + lifestyle (update existing `NeighborhoodPicker`)
-   - Add quick toggles: Weeknight / Weekend warrior / Anytime
-   - Add price preference: $ / $$ / $$$ / Any
-4. **"Anything we should know?"** (optional) — Needs
-   - Toggle chips: Wheelchair accessible, Gluten-free, Vegan, Kid-friendly, ASL, Sensory-friendly
-   - Skip is prominent
-   - Saved to `user_preferences.needs_*`
-
-**Files to change:**
-- `web/app/onboarding/page.tsx` — Add step 4, rename step 2
-- `web/app/onboarding/steps/GenrePicker.tsx` — NEW (replaces SubcategoryPicker)
-- `web/app/onboarding/steps/NeedsPicker.tsx` — NEW
-- `web/app/onboarding/steps/NeighborhoodPicker.tsx` — Add time/price toggles
-- `web/app/api/onboarding/complete/route.ts` — Save genres + needs to DB
-- `web/lib/preferences.ts` — Add genre lists per category, needs definitions
-
-**Verification:** Full onboarding flow works end-to-end. Genres saved to `user_preferences.favorite_genres`. Needs saved to `user_preferences.needs_*`. `npx tsc --noEmit` clean.
-
----
-
-### Phase H: User Profile & Preferences UX
-
-**Goal:** Add taste profile and needs management to user settings.
-
-**Why:** Users need to edit preferences after onboarding. Needs must be editable (they change — someone gets a wheelchair, has a kid, develops an allergy).
-
-**Reference:** PRD 004 Section 6.2-6.4
-
-**Current state:**
-- `web/app/settings/profile/page.tsx` — display name, bio, location, website, public/private
-- `web/app/api/preferences/profile/route.ts` — reads explicit + inferred preferences
-- No UI to edit favorite genres, vibes, or needs
-
-**Steps:**
-
-1. **Add "Taste Profile" section to settings**
-   - Show favorite categories (editable)
-   - Show favorite genres per category (editable, same pills as onboarding)
-   - Show favorite neighborhoods (editable)
-   - Show favorite vibes (editable)
-   - Show inferred preferences with "learned from your activity" label
-
-2. **Add "Needs" section to settings**
-   - Accessibility needs (wheelchair, elevator, hearing loop, ASL, etc.)
-   - Dietary needs (gluten-free, vegan, halal, kosher, etc.)
-   - Family needs (stroller, kid-friendly, changing table, etc.)
-   - Clear messaging: "These are applied everywhere — every portal, every city"
-
-3. **Add API endpoints**
-   - `PATCH /api/preferences/profile` — update explicit preferences (genres, needs)
-   - Existing GET already returns preferences
-
-**Files to change:**
-- `web/app/settings/profile/page.tsx` — Add taste + needs sections
-- `web/app/api/preferences/profile/route.ts` — Add PATCH handler
-- `web/lib/preferences.ts` — Needs definitions (accessibility, dietary, family)
-
-**Verification:** Can edit genres, neighborhoods, needs from settings. Changes persist. Needs show on preference profile API.
-
----
-
-### Phase I: Discovery UX (Genre Filter Pills)
-
-**Goal:** Add genre filter pills to the Find view and cross-entity genre search.
-
-**Why:** Users currently filter by category only. With genres populated (Phase D) and the taxonomy clean (Phase E), we can offer much richer filtering. This is the core UX improvement that makes the data layer visible.
-
-**Reference:** PRD 004 Section 5
-
-**Steps:**
-
-1. **Genre filter pills in Find view**
-   - When user selects a category, show genre pills below
-   - Pills ordered: user's preferred genres first, then popular, then alpha
-   - Multiple genres selectable (OR logic)
-   - Genre selection persists in URL params (`?category=music&genres=jazz,blues`)
-
-2. **Update search API** — `/api/events` and `/api/spots` accept `genres` param
-   - Filter events by `genres @> ARRAY[...]` (contains)
-   - Filter venues by `genres @> ARRAY[...]`
-
-3. **Genre on event/venue cards**
-   - Show genre pills on event cards (small, below title)
-   - Show venue genres separately from vibes on venue cards
-
-4. **Cross-entity genre search** (stretch goal)
-   - URL: `/[portal]/genres/[slug]`
-   - Shows events + venues + series matching genre
-
-**Files to change:**
-- `web/lib/search-constants.ts` — Add genre lists per category (from PRD 004 Section 3)
-- `web/components/SimpleFilterBar.tsx` — Add genre pill row
-- `web/app/api/events/route.ts` — Accept `genres` filter param
-- `web/app/api/spots/route.ts` — Accept `genres` filter param
-- `web/components/EventCard.tsx` — Show genre pills
-- `web/components/SpotCard.tsx` — Show genre pills
-
-**Verification:** Category + genre filtering works in Find view. URL params are shareable. Cards show genres.
-
----
-
-## Tier 4: Demo Sprint (Operator-led)
-
-### Phase J: Hotel Concierge Demo
+### Phase O: Atlanta Consumer Product Quality
 
 **Surface:** `consumer`
 
-**Goal:** Build the FORTH Hotel concierge portal as a distinct vertical.
+**Goal:** Make the Atlanta consumer product good enough that someone would recommend it to a friend.
 
-**Why:** First sales vertical. All the taxonomy and UX patterns from Tiers 2-3 are now in place.
-
-**Reference:** Read ALL PRDs in `prds/001*.md` before starting.
-
-**Key files:**
-- `web/app/[portal]/_templates/hotel.tsx` (stub exists)
-- `web/app/[portal]/_components/hotel/` (directory exists)
-
-**Steps:**
-1. Add `vertical` field to portal settings if not present
-2. Create hotel route group with independent layout
-3. Build hotel-specific components: tonight's picks, neighborhood guide, concierge CTA
-4. Distinct visual language (read 001a for direction)
-5. Configure FORTH Hotel portal with curated sections
-6. QR code integration for in-room tablets
-
-**Verification:** `localhost:3000/forth-hotel` renders the hotel concierge UI. `npx tsc --noEmit` clean.
-
----
-
-### Phase K: Admin Portal Onboarding Flow
-
-**Surface:** `admin`
-
-**Goal:** Keep existing Admin Portal onboarding wizard functional, but pause major self-serve expansion.
-
-**Why:** Self-serve is intentionally deferred until post-launch customer pull. Current priority is attribution, Atlanta usage, and demo quality.
-
-**Reference:** `prds/002-portal-onboarding-wizard.md`
-
-**Scope now:**
-1. Maintain current Admin Portal onboarding flow for internal operator use.
-2. Fix critical defects only.
-3. Do not invest in broad UX polish or public self-serve growth features.
-
-**Verification:** Existing internal portal creation flow continues to work without regressions.
-
----
-
-## Tier 5: Launch Foundation (Current Priority)
-
-### Phase N: Strict Portal Attribution Hardening
-
-**Surface:** `both` (shared infra with consumer-facing impact and admin-facing reporting impact)
-
-**Goal:** Make portal attribution explicit and enforceable across all critical write paths.
-
-**Why:** Attribution correctness is a launch blocker and the foundation for trustworthy cross-portal analytics/personalization.
-
-**Core tasks:**
-1. Add/propagate `portal_id` attribution in behavioral writes (`signals`, `activities`, relevant preference writes).
-2. Ensure portal-context writes to `inferred_preferences` include portal attribution.
-3. Add schema/app-level guardrails preventing unattributed writes where attribution is required.
-4. Add audits and alerts for attribution drift (missing/invalid `portal_id` by table).
-5. Add tests for portal isolation and attribution invariants.
-
-**Verification:** No critical attribution writes are missing portal context in audit queries; test suite covers portal attribution invariants.
-
-### Phase O: Atlanta Usage + Quality Proof
-
-**Surface:** `consumer`
-
-**Goal:** Improve Atlanta engagement and reliability metrics used in sales narratives.
-
-**Why:** Launch thesis depends on proving user value in the core city product.
+**Why:** Atlanta is a live consumer product, not a proof-of-concept. The bar is real daily usage.
 
 **Core tasks:**
 1. Tighten feed/search quality and ranking consistency.
 2. Reduce low-quality/duplicate/noisy event surfacing.
-3. Improve conversion flows (RSVP/save/follow/return behavior).
-4. Instrument and track weekly usage metrics for sales proof.
+3. Eliminate dead links, broken empty states, and confusing error states.
+4. Improve conversion flows (RSVP/save/follow/return behavior).
+5. Ensure every user-facing path works without supervision or explanation.
+6. Editorial mentions and occasion intelligence live on venue detail pages.
+7. Hangs and social proof integrated into discovery flows.
 
-**Verification:** Atlanta usage dashboards show measurable week-over-week improvement in engagement quality metrics.
-
-### Phase P: Demo Portfolio Expansion
-
-**Surface:** `consumer`
-
-**Goal:** Deliver polished demo experiences for high-priority vertical sales motions.
-
-**Why:** Near-term growth is sales-led, not self-serve-led.
-
-**Core tasks:**
-1. Complete FORTH demo polish and attribution QA.
-2. Build one film-focused demo experience.
-3. Build one hospital-visitor-focused demo experience.
-
-**Verification:** Each demo is presentation-ready with stable flows and a documented walkthrough script.
-
-### Phase Q: Scale Guardrails (Isolation/Perf/Test)
-
-**Goal:** Build scale resilience before broad customer rollout.
-
-**Why:** We are deferring self-serve UX but not deferring backend scalability and correctness.
-
-**Core tasks:**
-1. Harden portal-isolation query patterns and indexes.
-2. Expand API and DB tests around portal access boundaries.
-3. Improve operational observability for crawler, attribution, and portal health.
-4. Keep integration methods/profile alignment and source health reporting current.
-
-**Verification:** Performance and correctness checks pass for portal-scoped queries at current production scale.
+**Verification:** Cold-start test — someone unfamiliar with LostCity can open Atlanta, understand what it is, find something to do tonight, and get there. No dead ends.
 
 ---
 
-## Tier 6: Engineering Health
+### Phase P1: HelpATL — Lost City: Citizen
+
+**Surface:** `consumer`
+
+**Goal:** Ship HelpATL as a functional civic portal for real volunteer/civic users.
+
+**Why:** First content pillar portal. Proves the model: unique entity types (volunteer opportunities, civic meetings, advocacy actions) enriching the shared layer.
+
+**Current state:** Live with 786+ feed-ready events. CivicHero, CivicFeedShell, light-mode theme, source-backed badges all shipped. 87% of content from Hands on Atlanta.
+
+**Remaining work:**
+1. Fix HOA crawler error handling (primary content source).
+2. School board crawlers (APS, Fulton, DeKalb) producing events.
+3. Venue image enrichment (13% coverage).
+4. Verify all hero CTAs lead to populated channels.
+5. Cold-start test for a civic-minded Atlanta resident.
+
+**Reference:** `prds/030-volunteer-engagement-capability.md`, migrations 288-350+
+
+---
+
+### Phase P2: Lost City: Family
+
+**Surface:** `consumer`
+
+**Goal:** Ship a family activities portal with programs as a first-class entity.
+
+**Why:** Programs (swim lessons, summer camps, rec leagues) are a new entity type that no competitor handles well. Massive data moat — 5,000+ family events/programs across parks & rec departments, private venues, and community orgs.
+
+**Unique entities:** Programs (structured activities with sessions, age ranges, registration links).
+
+**Current state:** Schema built (`programs` table, `age_min`/`age_max` on events, `school_calendar_events`). 28+ crawlers built (Cobb/Gwinnett/Atlanta/DeKalb parks & rec, YMCA 22 branches, Children's Museum, Puppetry Arts, swim schools, summer camps). Portal migration drafted. School calendar seeded (62 events, 4 districts).
+
+**Design:** Warm amber (Outfit font, honey #C48B1D, sage #7D8B72, cream #F3EEE8). Tagline: "Play hooky."
+
+**Remaining work:**
+1. Source registration migrations for all 28+ crawlers.
+2. Web: feed template, programs API, age filter, school calendar integration.
+3. Per-kid profiles (COPPA safe).
+4. Consumer-quality cold-start test for a parent.
+
+**Reference:** `prds/035-hooky-family-portal.md`
+
+---
+
+### Phase P3: Lost City: Adventure
+
+**Surface:** `consumer`
+
+**Goal:** Ship an outdoor adventure portal with destinations as the primary entity.
+
+**Why:** Destinations-first portal (not events-first). Proves that persistent places (trails, campgrounds, parks) are independently valuable. Commitment filter (hour/halfday/fullday/weekend) is a novel UX pattern.
+
+**Unique entities:** Outdoor destinations (trails, campgrounds, parks, waterfalls) with difficulty ratings, conditions intelligence, commitment levels.
+
+**Current state:** Strategy locked. 31 curated destinations fully enriched. Nordic Brutalist design (Space Grotesk, terracotta #C45A3B, olive #6B8E5E, cream #F5F2ED). Pencil screens designed. NPS campground and public land trail data seeded. Accommodation inventory modeled.
+
+**Design:** Sharp corners, heavy borders, terracotta accent. Tagline: "Wander over yonder."
+
+**Remaining work:**
+1. Web: destination detail pages, commitment filter, conditions intelligence.
+2. Trip hangs (social coordination for outdoor plans).
+3. Geographic scope expansion: Atlanta → North Georgia mountains.
+4. Consumer-quality cold-start test for an outdoor enthusiast.
+
+**Reference:** `prds/034-yonder-adventure-portal.md` and `prds/034a-034q` workstream docs
+
+---
+
+### Phase P4: Lost City: Arts
+
+**Surface:** `consumer`
+
+**Goal:** Ship an arts portal with exhibitions as the primary entity.
+
+**Why:** Exhibition-first (not events-first). Core entity = EXHIBITION with run dates, not a single event. Killer feature: artist tracking across venues over time (living CV). Open calls aggregation for working artists.
+
+**Unique entities:** Exhibitions (time-bounded, has run dates), Artists (tracked across venues), Studios/Workspaces (directory), Open Calls (deadline-driven submissions/residencies/grants).
+
+**Current state:** Design complete — 5 Pencil screens. "Underground Gallery" aesthetic (dark warm canvas #141210, copper #C9874F, warm red #B54A3A). Type: Space Grotesk / Playfair Display italic / IBM Plex Mono.
+
+**Design:** `// code comment` section headers, stroke-defined cards, zero corner radius, art provides the only color. Tagline: "Atlanta's underground art scene, surfaced."
+
+**Remaining work:**
+1. Schema: exhibitions table, artists table, studios table, open_calls table.
+2. Crawlers: gallery exhibition scrapers, open call aggregation.
+3. Web: all 5 screens (Feed, Exhibition Detail, Artist Profile, Open Calls Board, Studios).
+4. Artist tracking: auto-update profiles when venues add exhibitions.
+5. Consumer-quality cold-start test for a gallery-goer.
+
+**Anti-features:** No social comments (tight community, wrong dynamics), no artist networking (they already know each other), no sales (Artsy exists).
+
+---
+
+### Phase P5: Lost City: Sports
+
+**Surface:** `consumer`
+
+**Goal:** Ship a sports portal spanning spectator, social, and participation tiers.
+
+**Why:** Three-tier coverage is unique — no one else combines pro team schedules with bar watch parties with rec league signups. Data already crawled for 15+ teams.
+
+**Unique entities:** Team schedules (structured game data), watch party venues (social layer), rec leagues/pickup (participation programs).
+
+**Current state:** Pro team crawlers live (Hawks, United, Dream, Gladiators, Swarm, Hustle, Skyhawks, Stripers, LOVB). Watch party bar crawlers active (ATL UTD pubs, Hawks bars, Sports Social). Pencil design in progress.
+
+**Remaining work:**
+1. Schema: structured game/match data (opponent, score, broadcast info).
+2. Web: game day experience, watch party finder, rec league discovery.
+3. Participation tier: pickup games, rec leagues, adult sports.
+4. Consumer-quality cold-start test for a sports fan.
+
+---
+
+### Phase S1: Crawler Scaling (Ongoing)
+
+**Surface:** infrastructure
+
+**Goal:** Maintain and expand the 1,000+ source crawler fleet.
+
+**Why:** Coverage is the moat. Every new source compounds defensibility.
+
+**Current state:** 1,000+ active sources. Platform crawlers built: `_rec1_base.py` (Cobb+Gwinnett parks), ACTIVENet (Atlanta DPR+DeKalb), `_tribe_events_base.py` (WordPress venues), Eventbrite family URLs. UA rotation and 429/403 retry logic added.
+
+**Ongoing work:**
+- Fix broken/degraded crawlers as detected by health monitoring.
+- Add crawlers for new venues and coverage gaps.
+- Expand to new entity types as portals demand (programs, exhibitions, trails).
+- Maintain crawler quality: first-pass capture of all signal, validation at ingestion.
+
+---
+
+### Phase S2: Editorial + Occasion Intelligence [DONE]
+
+**Surface:** infrastructure
+
+**Goal:** Build editorial mention tracking and occasion-based venue intelligence.
+
+**Done:**
+- `editorial_ingest.py`: RSS/sitemap pipeline across 4 sources (Eater, Infatuation, Rough Draft, Atlanta Eats). 193 mentions, 139 venues, 49 articles.
+- `occasion_inference.py`: 14 occasions (date_night, groups, solo, etc.) inferred from venue attributes. 4,431 occasion rows across 2,491 venues.
+- Web: "In the Press" + "Perfect For" sections on venue detail pages.
+
+---
+
+### Phase S3: Interest Channels [DONE]
+
+**Surface:** infrastructure
+
+**Goal:** Build interest-based content channels for cross-portal content organization.
+
+**Done:** `interest_channels` table, `event_channel_matches` table, Atlanta seed data. Migrations 284-286.
+
+---
+
+### Phase T1: Hangs + Profiles [DONE v1]
+
+**Surface:** `consumer`
+
+**Goal:** Ship lightweight social coordination (check-ins, profiles, friend activity).
+
+**Done:**
+- Schema: `privacy_mode`, `user_regular_spots`, `user_portal_activity`, `get_public_profile` RPC, blocking/unfriending triggers, hangs RLS.
+- API: `/api/profile/[username]`, `/api/hangs/venue/[id]`, `/api/hangs/friends`, `/api/auth/profile` PATCH.
+- Components: ProfileView, PrivacyTierSelector, VenueHangStrip (compact+full), HangFeedSection, ActiveHangBanner.
+- Feature flag: `ENABLE_HANGS_V1` in `lib/launch-flags.ts`.
+
+---
+
+### Phase T2: My Plans + Social Proof [DONE]
+
+**Surface:** `consumer`
+
+**Goal:** Plans page + join/RSVP notification flow.
+
+**Done:** My Plans page, join/RSVP notifications, plan sharing. Shipped 2026-03-11.
+
+---
+
+## Backlog
 
 ### Phase L: API Route Test Coverage
 
-**Surface:** `both` (consumer + admin APIs)
+**Surface:** `both`
 
-**Goal:** Add tests for the most critical API routes. Currently 139 routes, 0 tests.
-
-**Why:** TECH_DEBT A1. Highest-risk gap.
+**Goal:** Add tests for the most critical API routes.
 
 **Priority routes:** `/api/rsvp`, `/api/saved`, `/api/auth/profile`, `/api/follow`, `/api/events`, `/api/spots`, `/api/tonight`, `/api/admin/portals`
 
 **Pattern:** Mock Supabase, test auth (401/200), test validation (400), test happy path, test rate limiting.
 
-**Verification:** `npx vitest run` passes with new test files.
-
 ---
-
-## Tier 7: Network Effects
 
 ### Phase M: Community Needs Tags
 
@@ -487,17 +313,15 @@ Applied two migrations to add all taxonomy + personalization columns:
 
 **Why:** PRD 004 identifies needs-verified data as the #1 most defensible data in the system. "Wheelchair accessible (47 confirm)" is data no competitor has.
 
-**Reference:** PRD 004 Section 7
+---
 
-**Steps:**
-1. Rename `venue_tag_definitions` → `tag_definitions` with `entity_types[]`
-2. Create `needs` tag category with definitions (accessibility, dietary, family, sensory)
-3. Extend voting to events, series, festivals
-4. Post-RSVP tag prompt: "Is this good for date night?"
-5. Post-check-in vibe prompt
-6. Needs auto-filter in search (deprioritize non-matching, badge confirmed matches)
+### Phase R: Public Developer API [Iceboxed]
 
-**Verification:** Tags can be added/voted on events. Needs filter works in search.
+**Surface:** `platform`
+
+**Goal:** Ship a public API for third-party developers.
+
+**Why:** The endgame is infrastructure (Principle 10). Deferred until live portals prove the model and customer pull is real.
 
 ---
 
@@ -506,27 +330,22 @@ Applied two migrations to add all taxonomy + personalization columns:
 ### How to hand off between agents
 
 Each phase is designed so an agent can:
-1. Read this file + the relevant CLAUDE.md + any referenced PRDs
+1. Read this file + `.claude/north-star.md` + the relevant CLAUDE.md + any referenced PRDs
 2. Execute the steps
 3. Run verification
 4. Update the Status table at the top of this file
 
 ### Parallelization
 
-- **C** (crawler blitz) can run alongside ANYTHING — it's fully independent
-- **B** (data triage) can run alongside C and D
-- **D** and **E** are sequential (D first, then E)
-- **F** (migrations) must complete before G, H, I
-- **G**, **H**, **I** can run in parallel after F
-- **J** is active; **K** is maintenance-only until reprioritized
-- **N** should run before O/P in any launch-critical branch
-- **O** and **P** can run in parallel once N guardrails are in place
-- **Q** can run in parallel with O/P after N starts
+- **S1** (crawler scaling) can run alongside ANYTHING — it's fully independent
+- **O** (Atlanta quality) can run in parallel with any portal phase
+- **P1-P5** (portal phases) are independent of each other — parallelize freely
 - **L** (API tests) is independent of everything
-- **M** can start after F
+- **M** (needs tags) can start anytime but is lower priority than portal work
 
 ### When to spin up sub-agents
 
-- Phase C: one agent per 5-10 crawlers (batch by neighborhood)
-- Phase L: one agent per API route group
+- S1: one agent per 5-10 crawlers (batch by neighborhood or entity type)
+- P1-P5: one agent per portal (each is independent)
+- L: one agent per API route group
 - Any phase that says "for each X, do Y" — parallelize across X

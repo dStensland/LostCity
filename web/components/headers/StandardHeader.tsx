@@ -11,6 +11,7 @@ import HeaderSearchButton from "../HeaderSearchButton";
 import { usePortalOptional, DEFAULT_PORTAL, DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
 import { useAuth } from "@/lib/auth-context";
 import { getPortalNavLabel } from "@/lib/nav-labels";
+import { isHelpAtlSupportDirectoryEnabled } from "@/lib/helpatl-support";
 import type { HeaderConfig } from "@/lib/visual-presets";
 import type { PortalBranding } from "@/lib/portal-context";
 
@@ -28,7 +29,7 @@ interface StandardHeaderProps {
 }
 
 type NavTab = {
-  key: "feed" | "find" | "community";
+  key: "feed" | "find" | "community" | "support";
   defaultLabel: string;
   authRequired?: boolean;
   icon?: React.ReactNode;
@@ -55,7 +56,7 @@ const DEFAULT_TABS: NavTab[] = [
   },
   {
     key: "community",
-    defaultLabel: "Community",
+    defaultLabel: "Going Out",
     icon: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -87,9 +88,20 @@ export default function StandardHeader({
 
   // Get custom nav labels from portal settings
   const navLabels = (portal.settings?.nav_labels || {}) as Record<string, string | undefined>;
+  const showSupportTab = isHelpAtlSupportDirectoryEnabled(portalSlug);
 
   // Build tabs with custom labels, filtering out auth-required tabs when not logged in
-  const TABS = DEFAULT_TABS
+  const TABS = [
+    ...DEFAULT_TABS,
+    ...(showSupportTab
+      ? [
+          {
+            key: "support" as const,
+            defaultLabel: "Support",
+          },
+        ]
+      : []),
+  ]
     .filter(tab => !tab.authRequired || user)
     .map(tab => ({
       ...tab,
@@ -145,11 +157,13 @@ export default function StandardHeader({
     if (tab.key === "find") {
       params.set("view", "find");
       params.delete("tab");
-    } else {
+    } else if (tab.key === "community") {
       params.set("view", "community");
       params.delete("type");
       params.delete("display");
-      if (!params.get("tab")) params.set("tab", "people");
+      params.delete("tab");
+    } else {
+      return `/${portalSlug}/support`;
     }
 
     const query = params.toString();
@@ -179,6 +193,9 @@ export default function StandardHeader({
     }
     if (tab.key === "community") {
       return isCommunityRoute || (isPortalPage && currentView === "community");
+    }
+    if (tab.key === "support") {
+      return pathname.startsWith(`/${portalSlug}/support`);
     }
     return false;
   };

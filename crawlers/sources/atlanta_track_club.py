@@ -18,7 +18,13 @@ from typing import Optional
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    find_event_by_hash,
+    find_existing_event_for_insert,
+    get_or_create_venue,
+    insert_event,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
 from utils import extract_images_from_page, enrich_event_record
 from date_utils import parse_human_date
@@ -27,6 +33,9 @@ logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.atlantatrackclub.org"
 CALENDAR_URL = f"{BASE_URL}/calendar"
+WEEKS_AHEAD = 6
+DAY_CODES = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
+DAY_NAMES = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 
 VENUE_DATA = {
     "name": "Atlanta Track Club",
@@ -43,6 +52,53 @@ VENUE_DATA = {
     "website": BASE_URL,
     "vibes": ["running", "fitness", "community", "racing"],
 }
+
+CLUB_NIGHT_VENUE_DATA = {
+    "name": "Piedmont Park",
+    "slug": "piedmont-park",
+    "address": "1320 Monroe Dr NE",
+    "neighborhood": "Midtown",
+    "city": "Atlanta",
+    "state": "GA",
+    "zip": "30306",
+    "lat": 33.7875,
+    "lng": -84.3733,
+    "venue_type": "park",
+    "spot_type": "outdoor",
+    "website": "https://www.piedmontpark.org",
+}
+
+RECURRING_PROGRAMS = [
+    {
+        "day": 1,  # Tuesday
+        "title": "Atlanta Track Club Club Night",
+        "source_url": f"{BASE_URL}/club-nights",
+        "venue_data": CLUB_NIGHT_VENUE_DATA,
+        "start_time": "18:30",
+        "description": (
+            "Atlanta Track Club Club Night at Piedmont Park's Active Oval. No-cost weekly "
+            "community workout focused on speed and endurance. From March through October the "
+            "group meets at the top of the west side stairs of the Active Oval; from November "
+            "through February it meets at the Ladies Waiting Room near 12th Street."
+        ),
+        "tags": ["running", "track-workout", "group-run", "free", "weekly", "piedmont-park"],
+    },
+    {
+        "day": 3,  # Thursday
+        "title": "Atlanta Track Club BeltLine Run Club",
+        "source_url": f"{BASE_URL}/monthly-group-run-schedule",
+        "venue_data": VENUE_DATA,
+        "start_time": "18:15",
+        "description": (
+            "Atlanta Track Club BeltLine Run Club. Free weekly run/walk that rotates between "
+            "Atlanta BeltLine meeting spots including New Realm Brewing, Monday Night Garage, "
+            "Wild Heaven West End, Three Taverns Imaginarium, BrewDog Atlanta, SweetWater "
+            "Brewing, and Westside Motor Lounge. Gather at 6:15 p.m.; two- to four-mile run "
+            "or walk begins promptly at 6:30 p.m."
+        ),
+        "tags": ["running", "walking", "group-run", "beltline", "free", "weekly"],
+    },
+]
 
 
 def categorize_event(title: str, description: str = "") -> dict:
@@ -393,6 +449,76 @@ def parse_event_cards(page, venue_id: int, source_id: int, image_map: dict) -> l
     return events
 
 
+def get_next_weekday(start_date: datetime, weekday: int) -> datetime:
+    days_ahead = weekday - start_date.weekday()
+    if days_ahead < 0:
+        days_ahead += 7
+    return start_date + timedelta(days=days_ahead)
+
+
+def seed_recurring_programs(source_id: int) -> tuple[int, int, int]:
+    events_found = 0
+    events_new = 0
+    events_updated = 0
+    today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+    for program in RECURRING_PROGRAMS:
+        venue_id = get_or_create_venue(program["venue_data"])
+        next_date = get_next_weekday(today, program["day"])
+        day_code = DAY_CODES[program["day"]]
+
+        series_hint = {
+            "series_type": "recurring_show",
+            "series_title": program["title"],
+            "frequency": "weekly",
+            "day_of_week": DAY_NAMES[program["day"]],
+            "description": program["description"],
+        }
+
+        for week in range(WEEKS_AHEAD):
+            event_date = next_date + timedelta(weeks=week)
+            start_date = event_date.strftime("%Y-%m-%d")
+            events_found += 1
+
+            event_record = {
+                "source_id": source_id,
+                "venue_id": venue_id,
+                "title": program["title"],
+                "description": program["description"],
+                "start_date": start_date,
+                "start_time": program["start_time"],
+                "end_date": None,
+                "end_time": None,
+                "is_all_day": False,
+                "category": "fitness",
+                "subcategory": "running",
+                "tags": program["tags"] + ["atlanta-track-club"],
+                "price_min": None,
+                "price_max": None,
+                "price_note": None,
+                "is_free": True,
+                "source_url": program["source_url"],
+                "ticket_url": None,
+                "image_url": None,
+                "raw_text": f"{program['title']} - {start_date}",
+                "extraction_confidence": 0.9,
+                "is_recurring": True,
+                "recurrence_rule": f"FREQ=WEEKLY;BYDAY={day_code}",
+                "content_hash": generate_content_hash(program["title"], program["venue_data"]["name"], start_date),
+            }
+
+            existing = find_existing_event_for_insert(event_record)
+            if existing:
+                smart_update_existing_event(existing, event_record)
+                events_updated += 1
+                continue
+
+            insert_event(event_record, series_hint=series_hint)
+            events_new += 1
+
+    return events_found, events_new, events_updated
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
     """
     Crawl Atlanta Track Club calendar using Playwright.
@@ -424,6 +550,11 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             # Get venue ID
             venue_id = get_or_create_venue(VENUE_DATA)
+
+            recurring_found, recurring_new, recurring_updated = seed_recurring_programs(source_id)
+            events_found += recurring_found
+            events_new += recurring_new
+            events_updated += recurring_updated
 
             # Extract images
             image_map = extract_images_from_page(page)

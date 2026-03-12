@@ -104,56 +104,21 @@ class TestFindSeriesByTitleWithDayOfWeek:
 
         assert result == record
 
-    def test_any_day_fallback_prevents_duplicate_series(self):
+    def test_different_day_does_not_reuse_existing_series(self):
         """
-        Core regression test: a subsequent crawl with a different day_of_week
-        must NOT create a new series — instead it must return the existing one.
-
-        Sequence of execute() calls when use_day=True and all prior checks miss:
-          1. exact title + day_of_week filter  → []
-          2. slug + day_of_week filter          → []
-          3. exact title + NULL day_of_week     → []
-          4. slug + NULL day_of_week            → []
-          5. exact title, no day filter         → [record]   ← new fallback
+        Different weekday series must not collapse onto the same record just
+        because title + series_type match. That corrupts recurring metadata.
         """
-        existing = {"id": "tour-1", "title": "OutSpoken Team Trivia", "day_of_week": "wednesday"}
-        client = _make_client([[], [], [], [], [existing]])
+        client = _make_client([[], [], [], []])
 
         result = find_series_by_title(
             client,
             "OutSpoken Team Trivia",
             "recurring_show",
-            day_of_week="monday",  # different day than what's stored
+            day_of_week="monday",
         )
 
-        assert result == existing, (
-            "Should have found the existing touring series via the any-day fallback "
-            "instead of returning None (which would trigger duplicate creation)"
-        )
-
-    def test_any_day_slug_fallback(self):
-        """
-        Same as above but the any-day title query misses and the slug query hits.
-
-        Sequence:
-          1. exact title + day  → []
-          2. slug + day         → []
-          3. exact + NULL day   → []
-          4. slug + NULL day    → []
-          5. exact, no day      → []
-          6. slug, no day       → [record]   ← slug variant of new fallback
-        """
-        existing = {"id": "tour-2", "title": "Geeks Who Drink", "day_of_week": "thursday"}
-        client = _make_client([[], [], [], [], [], [existing]])
-
-        result = find_series_by_title(
-            client,
-            "Geeks Who Drink",
-            "recurring_show",
-            day_of_week="friday",
-        )
-
-        assert result == existing
+        assert result is None
 
     def test_no_false_positive_without_day(self):
         """
@@ -169,16 +134,15 @@ class TestFindSeriesByTitleWithDayOfWeek:
         assert result is None
         assert client.table().execute.call_count == 2
 
-    def test_class_series_also_uses_any_day_fallback(self):
-        """The any-day fallback applies to class_series too, not just recurring_show."""
-        existing = {"id": "yoga-1", "title": "Morning Yoga", "day_of_week": "monday"}
-        client = _make_client([[], [], [], [], [existing]])
+    def test_class_series_also_keeps_day_boundaries(self):
+        """class_series should not reuse a different-day series record either."""
+        client = _make_client([[], [], [], []])
 
         result = find_series_by_title(
             client, "Morning Yoga", "class_series", day_of_week="tuesday"
         )
 
-        assert result == existing
+        assert result is None
 
     def test_film_type_does_not_use_any_day_fallback(self):
         """

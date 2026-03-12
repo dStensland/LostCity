@@ -13,7 +13,9 @@ type NotificationType =
   | "friend_accepted"
   | "friend_rsvp"
   | "recommendation"
-  | "event_reminder";
+  | "event_reminder"
+  | "plan_join"
+  | "plan_rsvp_change";
 
 type Notification = {
   id: string;
@@ -35,6 +37,12 @@ type Notification = {
     id: number;
     name: string;
     slug: string;
+  } | null;
+  itinerary: {
+    id: string;
+    title: string;
+    share_token: string;
+    portal_id: string;
   } | null;
 };
 
@@ -90,14 +98,21 @@ export default function NotificationDropdown() {
     return () => controller.abort();
   }, [user, isOpen, authLoading]);
 
-  // Poll for unread count periodically
+  // Poll for unread count periodically — backs off after repeated failures
   useEffect(() => {
     // Wait for auth to settle before starting polls
     if (authLoading || !user) return;
 
     const controller = new AbortController();
+    let failures = 0;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
 
     async function fetchUnreadCount() {
+      // Stop polling after 3 consecutive failures
+      if (failures >= 3) {
+        if (intervalId) clearInterval(intervalId);
+        return;
+      }
       try {
         const res = await fetch("/api/notifications?limit=1&unread=true", {
           signal: controller.signal,
@@ -105,19 +120,22 @@ export default function NotificationDropdown() {
         if (res.ok) {
           const data = await res.json();
           setUnreadCount(data.unreadCount || 0);
+          failures = 0;
+        } else {
+          failures++;
         }
       } catch (err) {
         // Ignore abort errors (expected during unmount/navigation)
         if (err instanceof Error && err.name === "AbortError") return;
-        // Silent fail for other polling errors
+        failures++;
       }
     }
 
     fetchUnreadCount();
-    const interval = setInterval(fetchUnreadCount, 60000); // Poll every minute
+    intervalId = setInterval(fetchUnreadCount, 60000); // Poll every minute
     return () => {
       controller.abort();
-      clearInterval(interval);
+      if (intervalId) clearInterval(intervalId);
     };
   }, [user, authLoading]);
 
@@ -334,6 +352,32 @@ function NotificationItem({
           </>
         );
 
+      case "plan_join":
+        return (
+          <>
+            <span className="font-medium text-[var(--cream)]">
+              {notification.actor?.display_name || notification.actor?.username || "Someone"}
+            </span>{" "}
+            joined your plan{" "}
+            <span className="font-medium text-[var(--cream)]">
+              {notification.itinerary?.title || ""}
+            </span>
+          </>
+        );
+
+      case "plan_rsvp_change":
+        return (
+          <>
+            <span className="font-medium text-[var(--cream)]">
+              {notification.actor?.display_name || notification.actor?.username || "Someone"}
+            </span>{" "}
+            updated their RSVP for{" "}
+            <span className="font-medium text-[var(--cream)]">
+              {notification.itinerary?.title || "your plan"}
+            </span>
+          </>
+        );
+
       default:
         return notification.message || "You have a notification";
     }
@@ -346,6 +390,10 @@ function NotificationItem({
     }
     if (notification.type === "new_follower" && notification.actor) {
       return `/profile/${notification.actor.username}`;
+    }
+    if (notification.itinerary?.share_token) {
+      const slug = portal?.slug || "atlanta";
+      return `/${slug}/itinerary/${notification.itinerary.share_token}`;
     }
     if (notification.event) {
       return portal?.slug ? `/${portal.slug}?event=${notification.event.id}` : `/events/${notification.event.id}`;
@@ -439,6 +487,14 @@ function NotificationIcon({ type }: { type: NotificationType }) {
       return (
         <svg className={iconClasses} fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      );
+
+    case "plan_join":
+    case "plan_rsvp_change":
+      return (
+        <svg className={iconClasses} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
         </svg>
       );
 

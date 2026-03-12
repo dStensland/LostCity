@@ -1,19 +1,22 @@
 version: 1
 slug: rialto-center
 name: Rialto Center for the Arts
-integration_method: playwright
+integration_method: jsonld_only
 defaults: {}
 discovery:
   enabled: true
   type: html
   urls:
-  - https://rfrialto.gsu.edu
+  - https://calendar.gsu.edu/rialto
+  - https://rialto.gsu.edu/
   fetch:
-    render_js: true
+    render_js: false
 detail:
   enabled: true
+  jsonld_only: true
+  use_jsonld: true
   fetch:
-    render_js: true
+    render_js: false
 data_goals:
 - events
 - images

@@ -35,7 +35,72 @@ VENUE_DATA = {
     "venue_type": "entertainment",
     "spot_type": "entertainment",
     "website": BASE_URL,
+    "description": (
+        "The Painted Pin is Buckhead's upscale bowling and bocce bar, featuring craft cocktails, "
+        "artisanal food, and a calendar of leagues, private events, and themed nights. "
+        "A sophisticated alternative to the standard bar scene."
+    ),
+    "hours": {
+        "monday": {"open": "17:00", "close": "23:00"},
+        "tuesday": {"open": "17:00", "close": "23:00"},
+        "wednesday": {"open": "17:00", "close": "23:00"},
+        "thursday": {"open": "17:00", "close": "24:00"},
+        "friday": {"open": "17:00", "close": "02:00"},
+        "saturday": {"open": "12:00", "close": "02:00"},
+        "sunday": {"open": "12:00", "close": "22:00"},
+    },
+    "vibes": ["bowling", "bocce", "cocktails", "upscale", "bar-games", "buckhead", "date-night"],
 }
+
+
+def determine_event_type(title: str) -> tuple[str, Optional[str]]:
+    """Infer category and subcategory from event title."""
+    t = title.lower()
+    if any(w in t for w in ["league", "bowling league", "bocce league"]):
+        return "community", "sports"
+    if any(w in t for w in ["trivia", "quiz night"]):
+        return "community", "trivia"
+    if any(w in t for w in ["brunch", "sunday funday"]):
+        return "food_drink", None
+    if any(w in t for w in ["live music", "band", "concert", "dj", "karaoke"]):
+        return "music", "live"
+    if any(w in t for w in ["comedy", "stand-up"]):
+        return "comedy", None
+    if any(w in t for w in ["tournament", "championship", "competition"]):
+        return "community", "sports"
+    if any(w in t for w in ["class", "lesson", "workshop"]):
+        return "community", "class"
+    if any(w in t for w in ["party", "celebration", "holiday", "themed"]):
+        return "nightlife", None
+    return "community", None
+
+
+def extract_description_from_context(lines: list[str], title_idx: int, title: str) -> str:
+    """Pull a meaningful description from lines surrounding the event title."""
+    candidates = []
+    for offset in range(1, 6):
+        idx = title_idx + offset
+        if idx >= len(lines):
+            break
+        line = lines[idx]
+        if re.match(
+            r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday|January|February|March|April|May|June|July|August|September|October|November|December)",
+            line,
+            re.IGNORECASE,
+        ):
+            break
+        if re.match(r"(tickets?|register|buy|more info|\$\d|reserve)", line, re.IGNORECASE):
+            break
+        if len(line) > 20 and line != title:
+            candidates.append(line)
+        if len(candidates) >= 2:
+            break
+    if candidates:
+        desc = " ".join(candidates)
+        if len(desc) > 400:
+            desc = desc[:397] + "..."
+        return desc
+    return ""
 
 
 def parse_time(time_text: str) -> Optional[str]:
@@ -151,38 +216,53 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     content_hash = generate_content_hash(title, "The Painted Pin", start_date)
 
-
-                    # Get specific event URL
-
-
                     event_url = find_event_url(title, event_links, EVENTS_URL)
 
+                    # Extract real description from surrounding lines
+                    description = extract_description_from_context(lines, i, title)
 
+                    # Detect free events from surrounding context
+                    context_text = " ".join(lines[max(0, i - 3):min(len(lines), i + 6)]).lower()
+                    is_free = any(
+                        w in context_text
+                        for w in ["free", "no cover", "no charge", "free admission", "free event"]
+                    )
+
+                    # Detect price from surrounding context
+                    price_min = None
+                    price_max = None
+                    price_match = re.search(r"\$(\d+(?:\.\d{2})?)", context_text)
+                    if price_match and not is_free:
+                        price_min = float(price_match.group(1))
+                        price_max = price_min
+
+                    # Infer category from title
+                    category, subcategory = determine_event_type(title)
 
                     event_record = {
                         "source_id": source_id,
                         "venue_id": venue_id,
                         "title": title,
-                        "description": "Event at The Painted Pin",
+                        "description": description or None,
                         "start_date": start_date,
                         "start_time": start_time,
                         "end_date": None,
                         "end_time": None,
                         "is_all_day": False,
-                        "category": "community",
-                        "subcategory": None,
+                        "category": category,
+                        "subcategory": subcategory,
                         "tags": [
-                        "painted-pin",
-                        "bowling",
-                        "bocce",
-                        "buckhead",
-                        "games",
-                        "cocktails",
-                    ],
-                        "price_min": None,
-                        "price_max": None,
+                            "painted-pin",
+                            "bowling",
+                            "bocce",
+                            "buckhead",
+                            "games",
+                            "cocktails",
+                        ],
+                        "price_min": price_min,
+                        "price_max": price_max,
                         "price_note": None,
-                        "is_free": False,
+                        "is_free": is_free,
                         "source_url": event_url,
                         "ticket_url": event_url,
                         "image_url": image_map.get(title),

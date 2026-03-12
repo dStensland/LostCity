@@ -128,7 +128,7 @@ class CrawlerConfig(BaseModel):
     request_timeout: int = 30
     max_retries: int = 3
     retry_delay: float = 1.0
-    user_agent: str = "LostCity/1.0 (https://lostcity.ai; events@lostcity.ai)"
+    user_agent: str = ""  # Empty = use random_user_agent() from utils at call time
     respect_robots_txt: bool = True
     min_request_interval: float = 1.0  # seconds between requests to same domain
 

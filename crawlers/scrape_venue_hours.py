@@ -18,6 +18,7 @@ import sys
 import re
 import json
 import time
+import subprocess
 import logging
 import argparse
 import requests
@@ -110,9 +111,14 @@ def normalize_time(time_str: str) -> Optional[str]:
     return None
 
 
-def parse_schema_hours(hours_spec: list) -> Optional[dict]:
+def parse_schema_hours(hours_spec) -> Optional[dict]:
     """Parse Schema.org openingHoursSpecification format."""
-    if not hours_spec or not isinstance(hours_spec, list):
+    if not hours_spec:
+        return None
+
+    if isinstance(hours_spec, dict):
+        hours_spec = [hours_spec]
+    elif not isinstance(hours_spec, list):
         return None
 
     hours = {}
@@ -286,7 +292,7 @@ def parse_text_hours(text: str) -> Optional[dict]:
 
     # Pattern: "Day(s): time - time" or "Day(s) time-time"
     # Match: Monday - Friday: 9am - 5pm, Mon-Fri 9am-5pm, Saturday 10am-2pm
-    pattern = r'(?i)((?:mon(?:day)?|tue(?:sday)?|wed(?:nesday)?|thu(?:rsday)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)\s*(?:-|to|through)\s*(?:mon(?:day)?|tue(?:sday)?|wed(?:nesday)?|thu(?:rsday)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)|(?:mon(?:day)?|tue(?:sday)?|wed(?:nesday)?|thu(?:rsday)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?))\s*:?\s*(\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.)?)\s*[-–to]+\s*(\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.)?)'
+    pattern = r'(?i)((?:mon(?:day)?|tue(?:sday)?|wed(?:nesday)?|thu(?:rsday)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)\s*(?:-|to|through)\s*(?:mon(?:day)?|tue(?:sday)?|wed(?:nesday)?|thu(?:rsday)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)|(?:mon(?:day)?|tue(?:sday)?|wed(?:nesday)?|thu(?:rsday)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?))\s*:?\s*(?:from\s+)?(\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.)?)\s*[-–to]+\s*(\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.)?)'
 
     matches = re.findall(pattern, text, re.IGNORECASE)
 
@@ -305,6 +311,23 @@ def parse_text_hours(text: str) -> Optional[dict]:
         days = parse_day_range(days_str)
         for day in days:
             hours[day] = {"open": open_time, "close": close_time}
+
+    generic_match = re.search(
+        r'(?i)(?:museum\s+hours|hours\s+of\s+operation|open)?[^.]{0,80}?'
+        r'(\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.))\s*[-–to]+\s*'
+        r'(\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.))[^.]{0,120}?'
+        r'closed(?:\s+on)?\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)s?',
+        text,
+        re.IGNORECASE,
+    )
+    if generic_match:
+        open_time = normalize_time(generic_match.group(1))
+        close_time = normalize_time(generic_match.group(2))
+        closed_day = DAY_NAMES.get(generic_match.group(3).lower(), "")
+        if open_time and close_time:
+            for day in ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]:
+                if day != closed_day:
+                    hours[day] = {"open": open_time, "close": close_time}
 
     return hours if hours else None
 
@@ -328,7 +351,9 @@ def parse_day_range(days_str: str) -> list[str]:
         if start_code in day_order and end_code in day_order:
             start_idx = day_order.index(start_code)
             end_idx = day_order.index(end_code)
-            return day_order[start_idx:end_idx + 1]
+            if start_idx <= end_idx:
+                return day_order[start_idx:end_idx + 1]
+            return day_order[start_idx:] + day_order[:end_idx + 1]
 
     # Single day
     for name, code in DAY_NAMES.items():
@@ -359,21 +384,35 @@ def get_hours_from_text(soup: BeautifulSoup) -> Optional[dict]:
         except:
             continue
 
+    hours = parse_text_hours(soup.get_text(separator=" ", strip=True))
+    if hours and len(hours) >= 3:
+        return hours
+
     return None
 
 
 def scrape_hours_from_website(url: str) -> Optional[dict]:
     """Scrape operating hours from a website."""
     try:
-        response = requests.get(
-            url,
-            headers=HEADERS,
-            timeout=10,
-            allow_redirects=True
-        )
-        response.raise_for_status()
+        try:
+            response = requests.get(
+                url,
+                headers=HEADERS,
+                timeout=10,
+                allow_redirects=True
+            )
+            response.raise_for_status()
+            html = response.text
+        except requests.exceptions.RequestException:
+            # Some venues block requests-based clients but allow curl/browser fetches.
+            html = subprocess.run(
+                ["curl", "-L", "--max-time", "20", "--silent", "--show-error", url],
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout
 
-        soup = BeautifulSoup(response.text, "html.parser")
+        soup = BeautifulSoup(html, "html.parser")
 
         # Try methods in order of reliability
         # 1. JSON-LD structured data (most reliable)
@@ -398,9 +437,6 @@ def scrape_hours_from_website(url: str) -> Optional[dict]:
 
     except requests.exceptions.Timeout:
         logger.debug(f"    Timeout: {url}")
-        return None
-    except requests.exceptions.RequestException as e:
-        logger.debug(f"    Request error: {e}")
         return None
     except Exception as e:
         logger.debug(f"    Error: {e}")

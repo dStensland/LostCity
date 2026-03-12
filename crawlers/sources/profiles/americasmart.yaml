@@ -7,7 +7,7 @@ discovery:
   enabled: true
   type: html
   urls:
-  - https://www.americasmart.com
+  - https://www.atlantamarket.com/Attend/Market-Dates-and-Hours
 detail:
   enabled: true
 data_goals:

@@ -47,6 +47,7 @@ export type Plan = {
   plan_date: string;
   plan_time: string | null;
   status: string;
+  share_token?: string | null;
   created_at: string;
   updated_at: string;
   creator: {

@@ -30,6 +30,7 @@ detail:
   - https://www.thecraftivist.com/products/knit-togethers
   selectors:
     description: .product-single__description, .product-description
+    links: footer a[href*='instagram.com'], footer a[href*='facebook.com'], footer a[href*='/pages/about']@href
   use_jsonld: true
   use_open_graph: true
   use_heuristic: true

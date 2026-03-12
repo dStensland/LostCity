@@ -1,0 +1,20 @@
+version: 1
+slug: gwinnett-line-dancing
+name: Gwinnett Line Dancing
+integration_method: python
+defaults:
+  category: fitness
+  tags:
+  - dance
+  - line-dancing
+  - public-fitness
+  - gwinnett
+discovery:
+  enabled: false
+  type: list
+  urls:
+  - https://secure.rec1.com/GA/gwinnett-county-parks-recreation/catalog
+detail:
+  enabled: false
+data_goals:
+- events

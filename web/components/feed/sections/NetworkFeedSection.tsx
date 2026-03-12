@@ -56,6 +56,18 @@ interface NetworkFeedSectionProps {
   isLoading?: boolean;
   /** Override section accent color (default: var(--neon-cyan)). */
   accentColor?: string;
+  /** Override section title (default: "Local News"). */
+  sectionTitle?: string;
+  /**
+   * When provided, only show category filter tabs whose id is in this list.
+   * The "All" tab always appears first regardless of this setting.
+   * When undefined, all categories are shown (default behavior).
+   */
+  visibleCategories?: string[];
+  /** When provided, fetch this category first instead of "all". */
+  defaultCategory?: string;
+  /** Limit feed to local or parent source pools when needed. */
+  sourceScope?: "all" | "local" | "parent";
 }
 
 // ── Category config ─────────────────────────────────────────────────
@@ -136,12 +148,12 @@ export function PostSkeleton() {
   return (
     <div className="flex gap-3 px-3.5 py-3 animate-pulse">
       <div className="flex-1 min-w-0 space-y-2">
-        <div className="h-3 w-24 rounded bg-white/[0.06]" />
-        <div className="h-4 w-full rounded bg-white/[0.08]" />
-        <div className="h-3.5 w-3/4 rounded bg-white/[0.05]" />
-        <div className="h-3 w-32 rounded bg-white/[0.04]" />
+        <div className="h-3 w-24 rounded bg-[var(--twilight)]/40" />
+        <div className="h-4 w-full rounded bg-[var(--twilight)]/50" />
+        <div className="h-3.5 w-3/4 rounded bg-[var(--twilight)]/35" />
+        <div className="h-3 w-32 rounded bg-[var(--twilight)]/30" />
       </div>
-      <div className="w-16 h-16 rounded-lg bg-white/[0.06] shrink-0" />
+      <div className="w-16 h-16 rounded-lg bg-[var(--twilight)]/40 shrink-0" />
     </div>
   );
 }
@@ -276,9 +288,30 @@ export default function NetworkFeedSection({
   posts: postsProp,
   isLoading: isLoadingProp,
   accentColor: accentColorProp,
+  sectionTitle = "Local News",
+  visibleCategories,
+  defaultCategory = "all",
+  sourceScope = "all",
 }: NetworkFeedSectionProps) {
   const sectionAccent = accentColorProp || "var(--neon-cyan)";
-  const [filter, setFilter] = useState("all");
+
+  // Derive the visible filter tabs. "All" always leads; remaining tabs are
+  // either the full default set or narrowed by the visibleCategories prop.
+  const visibleFilterCategories =
+    visibleCategories === undefined
+      ? FILTER_CATEGORIES
+      : [
+          FILTER_CATEGORIES[0], // "All" tab — always first
+          ...FILTER_CATEGORIES.slice(1).filter((cat) =>
+            visibleCategories.includes(cat.id)
+          ),
+        ];
+  const initialFilter =
+    defaultCategory !== "all" &&
+    visibleFilterCategories.some((cat) => cat.id === defaultCategory)
+      ? defaultCategory
+      : "all";
+  const [filter, setFilter] = useState(initialFilter);
   const [fetchedPosts, setFetchedPosts] = useState<NetworkPost[] | null>(null);
   const [isFetching, setIsFetching] = useState(postsProp === undefined);
 
@@ -288,7 +321,11 @@ export default function NetworkFeedSection({
 
     let cancelled = false;
 
-    fetch(`/api/portals/${portalSlug}/network-feed?limit=3`)
+    const params = new URLSearchParams({ limit: "3" });
+    if (initialFilter !== "all") params.set("category", initialFilter);
+    if (sourceScope !== "all") params.set("source_scope", sourceScope);
+
+    fetch(`/api/portals/${portalSlug}/network-feed?${params}`)
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
@@ -304,7 +341,7 @@ export default function NetworkFeedSection({
       });
 
     return () => { cancelled = true; };
-  }, [portalSlug, postsProp]);
+  }, [initialFilter, portalSlug, postsProp, sourceScope]);
 
   const handleFilterChange = (category: string) => {
     if (category === filter || postsProp !== undefined) return;
@@ -313,6 +350,7 @@ export default function NetworkFeedSection({
 
     const params = new URLSearchParams({ limit: "3" });
     if (category !== "all") params.set("category", category);
+    if (sourceScope !== "all") params.set("source_scope", sourceScope);
 
     fetch(`/api/portals/${portalSlug}/network-feed?${params}`)
       .then((res) => {
@@ -333,7 +371,7 @@ export default function NetworkFeedSection({
     <section>
       {/* Section header */}
       <FeedSectionHeader
-        title="Local News"
+        title={sectionTitle}
         priority="secondary"
         accentColor={sectionAccent}
         icon={<Broadcast weight="duotone" className="w-5 h-5" />}
@@ -342,7 +380,7 @@ export default function NetworkFeedSection({
 
       {/* Category filter pills */}
       <div className="flex items-center gap-1.5 mb-3 overflow-x-auto scrollbar-none -mx-1 px-1">
-        {FILTER_CATEGORIES.map((cat) => {
+        {visibleFilterCategories.map((cat) => {
           const isActive = filter === cat.id;
           const color =
             cat.id === "all" ? "#00D4E8" : CATEGORY_COLORS[cat.id] || "#00D4E8";

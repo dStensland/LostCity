@@ -203,24 +203,6 @@ def find_series_by_title(
         if result.data:
             return result.data[0]
 
-    # Fallback: for touring recurring shows (e.g. OutSpoken Team Trivia, Geeks Who Drink)
-    # that run at multiple venues, a misparse of day_of_week on a subsequent crawl must
-    # not create a duplicate series record.  If use_day is True and nothing matched yet,
-    # try ignoring day_of_week entirely — same title + same series_type is enough to
-    # treat two events as the same touring operation.
-    # This is exact-title-only; no fuzzy matching.
-    if use_day:
-        q = client.table("series").select("*").eq("series_type", series_type)
-        if series_type == "festival_program" and festival_id:
-            q = q.eq("festival_id", festival_id)
-        result = q.eq("title", title).execute()
-        if result.data:
-            return result.data[0]
-        slug = slugify(normalized)
-        result = q.eq("slug", slug).execute()
-        if result.data:
-            return result.data[0]
-
     return None
 
 

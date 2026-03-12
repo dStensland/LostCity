@@ -189,21 +189,7 @@ export default function EveningPlannerResult({
                       </p>
                     )}
 
-                    {/* Actions */}
-                    <div className="flex items-center gap-2 pt-1.5">
-                      <button
-                        onClick={() => onSwapStop(idx)}
-                        className="px-3 py-1 rounded-full bg-[var(--hotel-cream)] border border-[var(--hotel-sand)] text-xs font-body text-[var(--hotel-charcoal)] hover:border-[var(--hotel-champagne)] hover:bg-[var(--hotel-champagne)]/10 transition-colors"
-                      >
-                        Swap
-                      </button>
-                      <button
-                        onClick={() => onRemoveStop(idx)}
-                        className="px-3 py-1 rounded-full bg-[var(--hotel-cream)] border border-[var(--hotel-sand)] text-xs font-body text-[var(--hotel-stone)] hover:border-red-300 hover:text-red-500 transition-colors"
-                      >
-                        Remove
-                      </button>
-                    </div>
+                    {/* TODO: Re-enable Swap/Remove when outing-suggestions API is integrated */}
                   </div>
                 </div>
               </div>

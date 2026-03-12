@@ -16,7 +16,7 @@ import { NextResponse } from "next/server";
 
 type Params = { id: string };
 
-// GET /api/itineraries/[id] — fetch itinerary with items
+// GET /api/itineraries/[id] — fetch itinerary with items + crew
 export const GET = withAuthAndParams<Params>(
   async (request, { user, serviceClient, params }) => {
     const rateLimitResult = await applyRateLimit(
@@ -30,11 +30,11 @@ export const GET = withAuthAndParams<Params>(
       return validationError("Invalid itinerary ID");
     }
 
+    // First try as owner
     const { data: itinerary, error } = await serviceClient
       .from("itineraries")
       .select("*")
       .eq("id", params.id)
-      .eq("user_id", user.id)
       .maybeSingle();
 
     if (error) {
@@ -44,6 +44,31 @@ export const GET = withAuthAndParams<Params>(
 
     if (!itinerary) {
       return errorApiResponse("Itinerary not found", 404);
+    }
+
+    const itin = itinerary as { id: string; user_id: string; visibility: string };
+
+    // Check access: owner, participant, or public
+    const isOwner = itin.user_id === user.id;
+    if (!isOwner) {
+      if (itin.visibility === "public") {
+        // Public — anyone can view
+      } else if (itin.visibility === "invitees") {
+        // Check if user is a participant
+        const { data: myParticipant } = await serviceClient
+          .from("itinerary_participants")
+          .select("id")
+          .eq("itinerary_id", params.id)
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (!myParticipant) {
+          return errorApiResponse("Not authorized", 403);
+        }
+      } else {
+        // Private — owner only
+        return errorApiResponse("Not authorized", 403);
+      }
     }
 
     // Fetch items with joined event/venue data
@@ -78,8 +103,18 @@ export const GET = withAuthAndParams<Params>(
       return item;
     });
 
+    // Include crew data if itinerary has social layer (not private)
+    let crew = null;
+    if (itin.visibility !== "private") {
+      const { data: crewData } = await serviceClient.rpc(
+        "get_itinerary_crew",
+        { p_itinerary_id: params.id } as never
+      );
+      crew = crewData;
+    }
+
     return successResponse({
-      itinerary: { ...itinerary, items },
+      itinerary: { ...itinerary, items, crew },
     });
   }
 );
@@ -144,6 +179,12 @@ export const PATCH = withAuthAndParams<Params>(
     }
     if (typeof body.is_public === "boolean") {
       updates.is_public = body.is_public;
+    }
+    if (
+      typeof body.visibility === "string" &&
+      ["private", "invitees", "public"].includes(body.visibility)
+    ) {
+      updates.visibility = body.visibility;
     }
 
     const { data: itinerary, error } = await serviceClient

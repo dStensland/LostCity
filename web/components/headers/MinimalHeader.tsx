@@ -9,6 +9,7 @@ import UserMenu from "../UserMenu";
 import HeaderSearchButton from "../HeaderSearchButton";
 import BackButton from "./BackButton";
 import { DEFAULT_PORTAL_SLUG } from "@/lib/portal-context";
+import { isHelpAtlSupportDirectoryEnabled } from "@/lib/helpatl-support";
 import type { HeaderConfig } from "@/lib/visual-presets";
 import type { PortalBranding } from "@/lib/portal-context";
 
@@ -40,6 +41,7 @@ export default function MinimalHeader({
   const [isScrolled, setIsScrolled] = useState(false);
   const searchParams = useSearchParams();
   const currentView = searchParams?.get("view");
+  const showSupportLink = isHelpAtlSupportDirectoryEnabled(portalSlug);
 
   // Track scroll for glass effect
   useEffect(() => {
@@ -141,6 +143,14 @@ export default function MinimalHeader({
 
         {/* Right: Search (optional) + User menu */}
         <div className="flex items-center gap-2 flex-shrink-0">
+          {showSupportLink && (
+            <Link
+              href={`/${portalSlug}/support`}
+              className="hidden sm:inline-flex items-center rounded-full border border-[var(--action-primary)]/25 bg-[var(--action-primary)]/8 px-3 py-1.5 text-xs font-medium text-[var(--action-primary)] transition-colors hover:border-[var(--action-primary)]/45 hover:bg-[var(--action-primary)]/12"
+            >
+              Support
+            </Link>
+          )}
           {headerConfig.show_search_in_header && currentView !== "find" && <HeaderSearchButton portalSlug={portalSlug} />}
           <UserMenu />
         </div>

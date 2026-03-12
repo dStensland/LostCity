@@ -1,0 +1,20 @@
+version: 1
+slug: monsterama-con
+name: Monsterama Con
+integration_method: festival_schedule
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://monsteramacon.com/monsterama-program-schedule/
+  fetch:
+    render_js: true
+detail:
+  enabled: true
+  fetch:
+    render_js: true
+data_goals:
+- events
+- images
+- tickets

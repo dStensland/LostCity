@@ -54,7 +54,7 @@ VENUE_DATA = {
     "name": "Ponce City Market",
     "slug": "ponce-city-market",
     "address": "675 Ponce De Leon Ave NE",
-    "neighborhood": "Old Fourth Ward",
+    "neighborhood": "Ponce City Market Area",
     "city": "Atlanta",
     "state": "GA",
     "zip": "30308",

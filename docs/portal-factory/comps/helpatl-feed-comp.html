@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>HelpATL Feed Comp</title>
+    <style>
+      :root {
+        --bg: #eef3f1;
+        --paper: #f8fbfa;
+        --ink: #0f172a;
+        --muted: #4b5563;
+        --line: #cfd9d5;
+        --teal: #0f766e;
+        --teal-soft: #e0f2ef;
+        --orange: #ea580c;
+        --orange-soft: #fff1e8;
+        --blue: #1d4ed8;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Manrope", "Sora", "Avenir Next", "Segoe UI", sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 10% 0%, #ffffff 0%, #eef3f1 50%),
+          linear-gradient(180deg, #f6faf8 0%, #e9efec 100%);
+      }
+      .canvas {
+        width: 1440px;
+        min-height: 1024px;
+        margin: 0 auto;
+        padding: 28px;
+      }
+      .browser {
+        border: 1px solid #b9c8c2;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 24px 60px rgba(15, 23, 42, 0.14);
+        background: var(--paper);
+      }
+      .chrome {
+        background: linear-gradient(180deg, #f2f7f5, #e6efeb);
+        border-bottom: 1px solid #c8d5d0;
+        height: 42px;
+        display: flex;
+        align-items: center;
+        padding: 0 16px;
+        gap: 8px;
+      }
+      .dot { width: 10px; height: 10px; border-radius: 50%; background: #94a3b8; }
+      .dot:nth-child(1) { background: #f87171; }
+      .dot:nth-child(2) { background: #facc15; }
+      .dot:nth-child(3) { background: #34d399; }
+      .url {
+        margin-left: 10px;
+        background: #f8fbfa;
+        border: 1px solid #cdd8d4;
+        color: #475569;
+        border-radius: 10px;
+        padding: 4px 10px;
+        font-size: 12px;
+        letter-spacing: .02em;
+      }
+      .content {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+      }
+      .left-rail {
+        border-right: 1px solid var(--line);
+        background: #f3f8f6;
+        padding: 20px 16px;
+      }
+      .logo {
+        font-family: "Sora", "Avenir Next", sans-serif;
+        letter-spacing: .08em;
+        font-weight: 800;
+        font-size: 20px;
+      }
+      .logo .accent { color: var(--orange); }
+      .tagline {
+        margin-top: 6px;
+        font-size: 12px;
+        line-height: 1.4;
+        color: var(--muted);
+      }
+      .nav { margin-top: 18px; display: grid; gap: 8px; }
+      .nav .item {
+        border: 1px solid transparent;
+        padding: 10px 12px;
+        border-radius: 10px;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+      }
+      .nav .item.active {
+        border-color: #99b9ae;
+        background: #ffffff;
+      }
+      .impact {
+        margin-top: 18px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: white;
+        padding: 12px;
+      }
+      .impact h4 {
+        margin: 0;
+        font-size: 11px;
+        letter-spacing: .1em;
+        text-transform: uppercase;
+        color: #64748b;
+      }
+      .impact .num { font-size: 34px; margin-top: 4px; font-weight: 800; color: var(--teal); }
+      .impact .meta { font-size: 12px; color: var(--muted); }
+      .main { padding: 18px 18px 24px; }
+      .hero {
+        border: 1px solid #b7ccc4;
+        border-radius: 16px;
+        overflow: hidden;
+        background:
+          linear-gradient(125deg, rgba(15,118,110,.92), rgba(3,105,161,.88)),
+          repeating-linear-gradient(90deg, rgba(255,255,255,.08) 0 1px, transparent 1px 16px);
+        color: white;
+      }
+      .hero-inner { padding: 18px; }
+      .eyebrow { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; opacity: .9; }
+      h1 { margin: 8px 0 8px; font-family: "Sora", sans-serif; font-size: 40px; line-height: .95; }
+      .sub { max-width: 620px; font-size: 14px; opacity: .95; }
+      .actions { margin-top: 14px; display: flex; gap: 8px; flex-wrap: wrap; }
+      .pill {
+        background: rgba(255,255,255,.16);
+        border: 1px solid rgba(255,255,255,.32);
+        color: white;
+        border-radius: 999px;
+        padding: 8px 12px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .row { margin-top: 14px; display: grid; grid-template-columns: 1.2fr .8fr; gap: 12px; }
+      .card {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: white;
+        padding: 14px;
+      }
+      .card h3 {
+        margin: 0 0 6px;
+        font-size: 12px;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+        color: #64748b;
+      }
+      .chip-wrap { display: flex; gap: 6px; flex-wrap: wrap; }
+      .chip {
+        border: 1px solid #9bb7ad;
+        background: var(--teal-soft);
+        color: #0f766e;
+        border-radius: 999px;
+        padding: 6px 10px;
+        font-size: 11px;
+        font-weight: 700;
+      }
+      .deadline-item {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 8px;
+        margin-top: 8px;
+      }
+      .deadline-item .t { font-size: 13px; font-weight: 700; }
+      .deadline-item .m { font-size: 11px; color: #475569; }
+      .list { margin-top: 12px; display: grid; gap: 8px; }
+      .event {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: linear-gradient(180deg, #ffffff, #f8fbfa);
+        padding: 10px 12px;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+      }
+      .event .title { font-weight: 800; font-size: 14px; }
+      .event .meta { font-size: 11px; color: #475569; margin-top: 2px; }
+      .reason {
+        align-self: center;
+        border: 1px solid #b9d9d2;
+        background: #ebf8f5;
+        color: #0f766e;
+        border-radius: 999px;
+        padding: 6px 9px;
+        font-size: 10px;
+        letter-spacing: .05em;
+        text-transform: uppercase;
+        font-weight: 800;
+      }
+      .footer-note {
+        margin-top: 10px;
+        font-size: 12px;
+        color: #64748b;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="canvas">
+      <div class="browser">
+        <div class="chrome">
+          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          <span class="url">https://lostcity.com/helpatl</span>
+        </div>
+        <div class="content">
+          <aside class="left-rail">
+            <div class="logo">HELP<span class="accent">ATL</span></div>
+            <div class="tagline">Follow civic groups and volunteer opportunities across Atlanta.</div>
+            <div class="nav">
+              <div class="item active">Act</div>
+              <div class="item">Calendar</div>
+              <div class="item">Groups</div>
+            </div>
+            <div class="impact">
+              <h4>Impact Snapshot</h4>
+              <div class="num">27</div>
+              <div class="meta">matched opportunities this week</div>
+            </div>
+          </aside>
+          <main class="main">
+            <section class="hero">
+              <div class="hero-inner">
+                <div class="eyebrow">Atlanta Civic Briefing</div>
+                <h1>Your Civic Week in Atlanta</h1>
+                <div class="sub">Join groups to personalize city/county meetings, school board agendas, and volunteer opportunities.</div>
+                <div class="actions">
+                  <span class="pill">Follow Government</span>
+                  <span class="pill">Join Volunteer</span>
+                  <span class="pill">Track School Board</span>
+                </div>
+              </div>
+            </section>
+
+            <div class="row">
+              <section class="card">
+                <h3>My Groups</h3>
+                <div class="chip-wrap">
+                  <span class="chip">City of Atlanta Government</span>
+                  <span class="chip">Fulton County Government</span>
+                  <span class="chip">School Board Watch</span>
+                  <span class="chip">Volunteer Opportunities</span>
+                </div>
+              </section>
+              <section class="card">
+                <h3>Upcoming Deadlines</h3>
+                <div class="deadline-item">
+                  <div>
+                    <div class="t">APS Board Work Session</div>
+                    <div class="m">Mon 6:00 PM</div>
+                  </div>
+                  <div class="reason">Source-backed</div>
+                </div>
+                <div class="deadline-item">
+                  <div>
+                    <div class="t">Park Pride Planting Shift</div>
+                    <div class="m">Tue 9:00 AM</div>
+                  </div>
+                  <div class="reason">Matched</div>
+                </div>
+              </section>
+            </div>
+
+            <section class="list">
+              <div class="event">
+                <div>
+                  <div class="title">Atlanta City Council Zoning Committee</div>
+                  <div class="meta">Today • City Hall • Agenda posted 3h ago</div>
+                </div>
+                <div class="reason">Jurisdiction</div>
+              </div>
+              <div class="event">
+                <div>
+                  <div class="title">DeKalb BOE Monthly Meeting</div>
+                  <div class="meta">Wed • 5:30 PM • Administrative HQ</div>
+                </div>
+                <div class="reason">Institution</div>
+              </div>
+              <div class="event">
+                <div>
+                  <div class="title">Atlanta Community Food Bank Volunteer Shift</div>
+                  <div class="meta">Thu • 6:00 PM • Eastside Center</div>
+                </div>
+                <div class="reason">Matched</div>
+              </div>
+            </section>
+
+            <div class="footer-note">Comp intent: action-first IA, trust cues, and explainable matching.</div>
+          </main>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

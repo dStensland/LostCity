@@ -95,16 +95,19 @@ export default function DiscoverNeighborhoodSection({ destinations, onDestinatio
             onClick={() => onDestinationClick?.(dest)}
             className="rounded-xl border border-[var(--hotel-sand)] bg-white overflow-hidden shadow-sm hover:shadow-md transition-shadow text-left"
           >
-            {dest.venue.image_url && (
-              <div className="h-32 relative overflow-hidden">
+            <div className="h-32 relative overflow-hidden bg-[var(--hotel-cream)]">
+              {dest.venue.image_url && (
                 <img
                   src={dest.venue.image_url}
                   alt={dest.venue.name}
                   className="absolute inset-0 w-full h-full object-cover"
                   loading="lazy"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = "none";
+                  }}
                 />
-              </div>
-            )}
+              )}
+            </div>
             <div className="p-3 space-y-1.5">
               <p className="text-base font-body font-medium text-[var(--hotel-charcoal)]">
                 {dest.venue.name}
@@ -113,12 +116,12 @@ export default function DiscoverNeighborhoodSection({ destinations, onDestinatio
                 {[dest.venue.neighborhood, dest.proximity_label].filter(Boolean).join(" · ")}
               </p>
               {dest.special_state === "active_now" && dest.top_special && (
-                <p className="text-xs font-body font-medium text-green-700">
+                <p className="text-xs font-body font-medium text-[var(--hotel-champagne)]">
                   {dest.top_special.title}
                 </p>
               )}
               {dest.special_state === "starting_soon" && dest.top_special && (
-                <p className="text-xs font-body text-amber-600">
+                <p className="text-xs font-body text-[var(--hotel-stone)]">
                   {dest.top_special.title}
                 </p>
               )}

@@ -17,6 +17,18 @@ This system standardizes how Lost City builds white-label portals with radical c
 4. `03-design-system-brief.md`
 5. `04-quality-gate-scorecard.md`
 6. `05-launch-hypothesis-dashboard.md`
+7. `06-provisioning-readiness-gate.md`
+
+Execution runbook:
+- `PROVISIONING_PROCESS.md`
+
+Capability reference:
+- `PORTAL_CAPABILITY_CATALOG.md`
+
+Manifest + scripts:
+- `manifests/`
+- `/Users/coach/Projects/LostCity/web/scripts/portal-factory/validate-source-pack.ts`
+- `/Users/coach/Projects/LostCity/web/scripts/portal-factory/provision-portal.ts`
 
 ## Core Rule
 
@@ -42,7 +54,8 @@ Non-negotiable: shared infrastructure is expected; mixed UX intent is not.
 
 - Brand expression (tokens, voice, interaction tone)
 - Persona weighting
-- Source packs and exclusions
+- `Live Event Sources` inventories and exclusions
+- `Ongoing Opportunity Sources` inventories when a portal mixes scheduled events with longer-term roles
 - Primary action semantics and partner integrations
 - KPI definitions and commercial proof framing
 

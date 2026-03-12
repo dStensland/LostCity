@@ -1,373 +1,299 @@
 """
 Crawler for BlazeSports America (blazesports.org).
 
-BlazeSports America is the nation's leading provider of adaptive sports programs
-for youth and adults with physical disabilities. Based in metro Atlanta, they offer
-Paralympic training and community sports programs.
-
-Events include:
-- Adaptive sports clinics (basketball, track & field, archery)
-- Paralympic training camps
-- Wheelchair basketball leagues
-- Youth sports days
-- Community fitness programs
-- Adaptive recreation events
-
-Site uses WordPress with server-rendered HTML event listings.
+BlazeSports publishes events via The Events Calendar. The official JSON API
+includes recurring instances directly, along with structured venue, image, and
+category data. This crawler uses that API instead of the older first-page HTML
+scrape so adaptive sports programs are surfaced consistently.
 """
 
 from __future__ import annotations
 
-import re
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 import requests
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    find_existing_event_for_insert,
+    get_or_create_venue,
+    insert_event,
+    remove_stale_source_events,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://blazesports.org"
-EVENTS_URL = f"{BASE_URL}/events/"
-
-# BlazeSports headquarters in Norcross
-VENUE_DATA = {
-    "name": "BlazeSports America",
-    "slug": "blazesports-america",
-    "address": "1670 Oakbrook Dr, Suite 331",
-    "neighborhood": "Norcross",
-    "city": "Norcross",
-    "state": "GA",
-    "zip": "30093",
-    "lat": 33.9371,
-    "lng": -84.2053,
-    "venue_type": "organization",
-    "spot_type": "organization",
-    "website": BASE_URL,
-}
+API_URL = f"{BASE_URL}/wp-json/tribe/events/v1/events"
+PER_PAGE = 50
+HORIZON_DAYS = 120
 
 
-def parse_date_from_text(date_text: str) -> Optional[str]:
-    """
-    Parse date from formats like 'Feb 23' or 'February 23, 2026'.
-    Returns YYYY-MM-DD format.
-    """
-    if not date_text:
-        return None
-
-    current_year = datetime.now().year
-    date_text = date_text.strip()
-
-    # Try "Mon DD, YYYY" format (full month name)
-    match = re.match(
-        r'(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2})(?:,?\s+(\d{4}))?',
-        date_text,
-        re.IGNORECASE
-    )
-    if match:
-        month = match.group(1)
-        day = int(match.group(2))
-        year = int(match.group(3)) if match.group(3) else current_year
-        try:
-            dt = datetime.strptime(f"{month} {day} {year}", "%B %d %Y")
-            # If no year provided and date is in the past, assume next year
-            if not match.group(3) and dt.date() < datetime.now().date():
-                dt = datetime.strptime(f"{month} {day} {year + 1}", "%B %d %Y")
-            return dt.strftime("%Y-%m-%d")
-        except ValueError:
-            pass
-
-    # Try "Mon DD" format (abbreviated month)
-    match = re.match(
-        r'(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})(?:,?\s+(\d{4}))?',
-        date_text,
-        re.IGNORECASE
-    )
-    if match:
-        month = match.group(1)
-        day = int(match.group(2))
-        year = int(match.group(3)) if match.group(3) else current_year
-        try:
-            dt = datetime.strptime(f"{month} {day} {year}", "%b %d %Y")
-            # If no year provided and date is in the past, assume next year
-            if not match.group(3) and dt.date() < datetime.now().date():
-                dt = datetime.strptime(f"{month} {day} {year + 1}", "%b %d %Y")
-            return dt.strftime("%Y-%m-%d")
-        except ValueError:
-            pass
-
-    return None
+def _text_from_html(value: str) -> str:
+    return " ".join(BeautifulSoup(value or "", "html.parser").get_text(" ").split())
 
 
-def parse_time_from_text(time_text: str) -> Optional[str]:
-    """
-    Parse time from formats like '10:00 am' or '2:30 pm'.
-    Returns HH:MM in 24-hour format.
-    """
-    if not time_text:
-        return None
+def _extract_price_range(cost_text: str) -> tuple[Optional[float], Optional[float], bool]:
+    if not cost_text:
+        return None, None, False
 
-    time_text = time_text.strip()
+    text = cost_text.strip()
+    if text.lower() == "free":
+        return 0.0, 0.0, True
 
-    # Match "H:MM am/pm" or "HH:MM am/pm"
-    match = re.match(r'(\d{1,2}):(\d{2})\s*(am|pm)', time_text, re.IGNORECASE)
-    if match:
-        hour = int(match.group(1))
-        minute = int(match.group(2))
-        period = match.group(3).lower()
+    prices: list[float] = []
+    for token in text.replace("$", " $").split():
+        if token.startswith("$"):
+            try:
+                prices.append(float(token[1:].replace(",", "")))
+            except ValueError:
+                continue
 
-        if period == 'pm' and hour != 12:
-            hour += 12
-        elif period == 'am' and hour == 12:
-            hour = 0
+    if not prices:
+        return None, None, False
 
-        return f"{hour:02d}:{minute:02d}"
-
-    return None
+    return min(prices), max(prices), all(price == 0 for price in prices)
 
 
-def categorize_event(title: str, description: str) -> tuple[str, Optional[str], list[str]]:
-    """
-    Categorize BlazeSports events based on content.
+def build_venue_data(api_venue: dict | None) -> dict:
+    if not api_venue:
+        return {
+            "name": "BlazeSports America",
+            "slug": "blazesports-america",
+            "address": "1670 Oakbrook Dr, Suite 331",
+            "neighborhood": "Norcross",
+            "city": "Norcross",
+            "state": "GA",
+            "zip": "30093",
+            "venue_type": "organization",
+            "spot_type": "organization",
+            "website": BASE_URL,
+            "description": "Adaptive sports organization serving metro Atlanta.",
+        }
 
-    Returns: (category, subcategory, tags)
-    """
+    city = api_venue.get("city") or ""
+    return {
+        "name": api_venue.get("venue") or "BlazeSports America",
+        "slug": api_venue.get("slug") or "blazesports-america",
+        "address": api_venue.get("address") or "",
+        "neighborhood": city or "Metro Atlanta",
+        "city": city or "Atlanta",
+        "state": api_venue.get("state") or "GA",
+        "zip": api_venue.get("zip") or "",
+        "venue_type": "fitness_center",
+        "spot_type": "fitness",
+        "website": api_venue.get("url") or BASE_URL,
+        "description": "Venue hosting BlazeSports adaptive sports programming.",
+    }
+
+
+def categorize_event(title: str, description: str, category_slugs: list[str]) -> tuple[str, str, list[str]]:
     text = f"{title} {description}".lower()
-    tags = ["adaptive-sports", "disability", "family-friendly"]
+    tags = ["adaptive-sports", "accessible", "family-friendly"]
 
-    # Paralympic training
-    if any(kw in text for kw in [
-        "paralympic", "elite training", "team usa", "national team"
-    ]):
-        tags.extend(["paralympic", "elite-sports"])
-        return "sports", "training", tags
+    for slug in category_slugs:
+        if slug and slug not in tags:
+            tags.append(slug)
 
-    # Wheelchair basketball
-    if any(kw in text for kw in [
-        "wheelchair basketball", "hoops", "basketball league"
-    ]):
-        tags.extend(["basketball", "wheelchair-sports"])
-        return "sports", "basketball", tags
+    if "veteran" in text:
+        tags.append("veterans")
 
-    # Track and field
-    if any(kw in text for kw in [
-        "track", "field", "athletics", "racing", "throwing"
-    ]):
-        tags.extend(["track-and-field", "athletics"])
+    if "wheelchair" in text:
+        tags.append("wheelchair-sports")
+
+    if any(slug in category_slugs for slug in ("yoga", "crossfit", "water-aerobics")):
+        tags.append("community")
+        return "fitness", "adaptive_fitness", tags
+
+    if any(slug in category_slugs for slug in ("swimming", "learn-to-swim", "swim")) or "swim" in text:
+        tags.append("swimming")
+        return "sports", "swimming", tags
+
+    if "rowing" in category_slugs or "rowing" in text:
+        tags.append("rowing")
+        return "sports", "rowing", tags
+
+    if "bowling" in category_slugs or "bowling" in text:
+        tags.append("bowling")
+        return "sports", "bowling", tags
+
+    if "track" in text or "field" in text:
+        tags.append("track-and-field")
         return "sports", "track_field", tags
 
-    # Youth programs
-    if any(kw in text for kw in [
-        "youth", "kids", "junior", "children", "family"
-    ]):
-        tags.extend(["youth", "kids-friendly"])
-        return "sports", "youth_program", tags
+    if "basketball" in text or "ballers" in text:
+        tags.append("basketball")
+        return "sports", "basketball", tags
 
-    # Clinics and training
-    if any(kw in text for kw in [
-        "clinic", "training", "camp", "workshop", "learn"
-    ]):
-        tags.extend(["training", "education"])
-        return "sports", "clinic", tags
+    if "archery" in text:
+        tags.append("archery")
+        return "sports", "archery", tags
 
-    # Community events
-    if any(kw in text for kw in [
-        "community", "recreation", "fitness", "wellness"
-    ]):
-        tags.extend(["community", "fitness"])
-        return "sports", "community", tags
+    if "indoor sports" in text:
+        tags.append("multi-sport")
+        return "sports", "pickup_sports", tags
 
-    # Default to sports/adaptive
-    tags.append("fitness")
+    if "train" in text or "clinic" in text or "camp" in text:
+        tags.append("training")
+        return "sports", "training", tags
+
+    tags.append("community")
     return "sports", "adaptive_sports", tags
 
 
-def crawl(source: dict) -> tuple[int, int, int]:
-    """
-    Crawl BlazeSports America events using BeautifulSoup.
+def parse_api_event(event: dict) -> Optional[dict]:
+    title = (event.get("title") or "").strip()
+    start_date_raw = event.get("start_date")
+    end_date_raw = event.get("end_date")
+    if not title or not start_date_raw:
+        return None
 
-    The site uses WordPress with server-rendered HTML.
-    """
+    start_dt = datetime.strptime(start_date_raw, "%Y-%m-%d %H:%M:%S")
+    end_dt = (
+        datetime.strptime(end_date_raw, "%Y-%m-%d %H:%M:%S")
+        if end_date_raw
+        else None
+    )
+
+    description_text = _text_from_html(event.get("description") or "")
+    venue_data = build_venue_data(event.get("venue"))
+    category_slugs = [
+        category.get("slug")
+        for category in (event.get("categories") or [])
+        if category.get("slug")
+    ]
+    category, subcategory, tags = categorize_event(title, description_text, category_slugs)
+    price_min, price_max, is_free = _extract_price_range(event.get("cost") or "")
+
+    return {
+        "title": title,
+        "description": description_text,
+        "start_date": start_dt.strftime("%Y-%m-%d"),
+        "start_time": start_dt.strftime("%H:%M"),
+        "end_time": end_dt.strftime("%H:%M") if end_dt else None,
+        "venue_data": venue_data,
+        "category": category,
+        "subcategory": subcategory,
+        "tags": tags,
+        "price_min": price_min,
+        "price_max": price_max,
+        "is_free": is_free,
+        "price_note": event.get("cost") or None,
+        "source_url": event.get("url") or BASE_URL,
+        "ticket_url": event.get("website") or event.get("url") or BASE_URL,
+        "image_url": ((event.get("image") or {}).get("url") or None),
+        "raw_text": description_text,
+    }
+
+
+def _fetch_events(start_date: str, end_date: str) -> list[dict]:
+    events: list[dict] = []
+    page = 1
+    total_pages = 1
+
+    while page <= total_pages:
+        response = requests.get(
+            API_URL,
+            params={
+                "start_date": start_date,
+                "end_date": end_date,
+                "per_page": PER_PAGE,
+                "page": page,
+            },
+            headers={"User-Agent": "Mozilla/5.0 (compatible; LostCity/1.0)"},
+            timeout=30,
+        )
+        response.raise_for_status()
+        payload = response.json()
+        total_pages = payload.get("total_pages", 1)
+        events.extend(payload.get("events", []))
+        page += 1
+
+    return events
+
+
+def crawl(source: dict) -> tuple[int, int, int]:
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
+    current_hashes: set[str] = set()
+
+    today = datetime.now().date()
+    start_date = f"{today.isoformat()} 00:00:00"
+    end_date = f"{(today + timedelta(days=HORIZON_DAYS)).isoformat()} 23:59:59"
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        api_events = _fetch_events(start_date, end_date)
+    except Exception as exc:
+        logger.error("Failed to fetch BlazeSports API events: %s", exc)
+        return 0, 0, 0
 
-        logger.info(f"Fetching BlazeSports events: {EVENTS_URL}")
+    logger.info("Fetched %s BlazeSports API events through %s", len(api_events), end_date)
 
-        response = requests.get(
-            EVENTS_URL,
-            headers={
-                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
-            },
-            timeout=20
+    for event in api_events:
+        parsed = parse_api_event(event)
+        if not parsed:
+            continue
+
+        venue_id = get_or_create_venue(parsed["venue_data"])
+        events_found += 1
+
+        content_hash = generate_content_hash(
+            parsed["title"],
+            parsed["venue_data"]["name"],
+            parsed["start_date"],
         )
-        response.raise_for_status()
+        current_hashes.add(content_hash)
 
-        soup = BeautifulSoup(response.text, "html.parser")
+        event_record = {
+            "source_id": source_id,
+            "venue_id": venue_id,
+            "title": parsed["title"],
+            "description": parsed["description"],
+            "start_date": parsed["start_date"],
+            "start_time": parsed["start_time"],
+            "end_date": None,
+            "end_time": parsed["end_time"],
+            "is_all_day": False,
+            "category": parsed["category"],
+            "subcategory": parsed["subcategory"],
+            "tags": parsed["tags"],
+            "price_min": parsed["price_min"],
+            "price_max": parsed["price_max"],
+            "price_note": parsed["price_note"],
+            "is_free": parsed["is_free"],
+            "source_url": parsed["source_url"],
+            "ticket_url": parsed["ticket_url"],
+            "image_url": parsed["image_url"],
+            "raw_text": parsed["raw_text"],
+            "extraction_confidence": 0.97,
+            "is_recurring": False,
+            "recurrence_rule": None,
+            "content_hash": content_hash,
+        }
 
-        # Find all event containers
-        event_containers = soup.find_all(["article", "div"], class_=re.compile(r"event|tribe-events|post"))
+        existing = find_existing_event_for_insert(event_record)
+        if existing:
+            smart_update_existing_event(existing, event_record)
+            events_updated += 1
+            continue
 
-        if not event_containers:
-            logger.warning("No events found on page")
-            return events_found, events_new, events_updated
+        insert_event(event_record)
+        events_new += 1
 
-        logger.info(f"Found {len(event_containers)} event containers")
+    stale_removed = remove_stale_source_events(source_id, current_hashes)
+    if stale_removed:
+        logger.info("Removed %s stale BlazeSports rows after API refresh", stale_removed)
 
-        seen_events = set()
-        today = datetime.now().date()
-
-        for container in event_containers:
-            try:
-                # Extract title and URL
-                title_elem = container.find(["h2", "h3", "h4"], class_=re.compile(r"entry-title|event-title|title"))
-                if not title_elem:
-                    continue
-
-                link_elem = title_elem.find("a") if title_elem.name != "a" else title_elem
-
-                title = title_elem.get_text(strip=True)
-                event_url = link_elem.get("href", EVENTS_URL) if link_elem else EVENTS_URL
-
-                if not title:
-                    continue
-
-                # Extract description
-                desc_elem = container.find(["div", "p"], class_=re.compile(r"entry-content|description|excerpt|summary"))
-                description = None
-                if desc_elem:
-                    desc_text = desc_elem.get_text(" ", strip=True)
-                    desc_text = re.sub(r'\s*Read More\s*$', '', desc_text)
-                    description = desc_text if len(desc_text) > 10 else None
-
-                # Extract date
-                date_elem = container.find(["time", "span"], class_=re.compile(r"date|published|event-date|tribe-event-date"))
-                if not date_elem:
-                    logger.debug(f"No date found for: {title}")
-                    continue
-
-                # Try datetime attribute first
-                start_date = None
-                if date_elem.has_attr("datetime"):
-                    datetime_str = date_elem["datetime"]
-                    try:
-                        dt = datetime.fromisoformat(datetime_str.replace("Z", "+00:00"))
-                        start_date = dt.strftime("%Y-%m-%d")
-                    except ValueError:
-                        pass
-
-                # Fallback to text parsing
-                if not start_date:
-                    date_text = date_elem.get_text(strip=True)
-                    start_date = parse_date_from_text(date_text)
-
-                if not start_date:
-                    logger.debug(f"Could not parse date for: {title}")
-                    continue
-
-                # Skip past events
-                try:
-                    event_date = datetime.strptime(start_date, "%Y-%m-%d").date()
-                    if event_date < today:
-                        logger.debug(f"Skipping past event: {title} on {start_date}")
-                        continue
-                except ValueError:
-                    continue
-
-                # Extract start time
-                start_time = None
-                time_elem = container.find("span", class_=re.compile(r"time|event-time|tribe-event-time"))
-                if time_elem:
-                    time_text = time_elem.get_text(strip=True)
-                    start_time = parse_time_from_text(time_text)
-
-                # Dedupe check
-                event_key = f"{title}|{start_date}"
-                if event_key in seen_events:
-                    continue
-                seen_events.add(event_key)
-
-                events_found += 1
-
-                # Generate content hash
-                content_hash = generate_content_hash(
-                    title, VENUE_DATA["name"], start_date
-                )
-
-                # Check for existing
-
-                # Categorize event
-                category, subcategory, tags = categorize_event(
-                    title, description or ""
-                )
-
-                # Only mark free if text explicitly says so
-                is_free = False
-                if description and any(kw in description.lower() for kw in ["free", "no cost", "no charge", "complimentary"]):
-                    is_free = True
-
-                # Build event record
-                event_record = {
-                    "source_id": source_id,
-                    "venue_id": venue_id,
-                    "title": title[:200],
-                    "description": description[:1000] if description else None,
-                    "start_date": start_date,
-                    "start_time": start_time,
-                    "end_date": start_date,
-                    "end_time": None,
-                    "is_all_day": False,
-                    "category": category,
-                    "subcategory": subcategory,
-                    "tags": tags,
-                    "price_min": 0 if is_free else None,
-                    "price_max": 0 if is_free else None,
-                    "price_note": "Free" if is_free else None,
-                    "is_free": is_free,
-                    "source_url": event_url,
-                    "ticket_url": event_url,
-                    "image_url": None,
-                    "raw_text": f"{title} {description or ''}"[:500],
-                    "extraction_confidence": 0.9,
-                    "is_recurring": False,
-                    "recurrence_rule": None,
-                    "content_hash": content_hash,
-                }
-
-                existing = find_event_by_hash(content_hash)
-                if existing:
-                    smart_update_existing_event(existing, event_record)
-                    events_updated += 1
-                    continue
-
-                try:
-                    insert_event(event_record)
-                    events_new += 1
-                    logger.info(f"Added: {title} on {start_date}")
-                except Exception as e:
-                    logger.error(f"Failed to insert {title}: {e}")
-
-            except Exception as e:
-                logger.debug(f"Failed to parse event container: {e}")
-                continue
-
-        logger.info(
-            f"BlazeSports crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
-        )
-
-    except requests.RequestException as e:
-        logger.error(f"Failed to fetch BlazeSports events: {e}")
-        raise
-    except Exception as e:
-        logger.error(f"Failed to crawl BlazeSports: {e}")
-        raise
-
+    logger.info(
+        "BlazeSports crawl complete: found=%s new=%s updated=%s",
+        events_found,
+        events_new,
+        events_updated,
+    )
     return events_found, events_new, events_updated

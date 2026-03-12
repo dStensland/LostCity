@@ -1,0 +1,315 @@
+-- ============================================
+-- MIGRATION 314: HelpATL NPU Participation Opportunities
+-- ============================================
+-- Adds structured official neighborhood-governance participation pathways
+-- tied to Atlanta's Neighborhood Planning Unit system and NPU University.
+
+WITH helpatl AS (
+  SELECT id
+  FROM portals
+  WHERE slug = 'helpatl'
+  LIMIT 1
+),
+org_seed(name, slug, org_type, website, description, categories, city, portal_id) AS (
+  SELECT
+    seed.name,
+    seed.slug,
+    seed.org_type,
+    seed.website,
+    seed.description,
+    seed.categories,
+    'Atlanta',
+    (SELECT id FROM helpatl)
+  FROM (
+    VALUES
+      (
+        'Atlanta Department of City Planning',
+        'atlanta-department-of-city-planning',
+        'government',
+        'https://www.atlantaga.gov/government/departments/city-planning',
+        'Official City of Atlanta department overseeing planning, NPUs, neighborhood engagement, and public participation in land use and city design.',
+        ARRAY['community']
+      ),
+      (
+        'Atlanta Neighborhood Planning Units',
+        'atlanta-neighborhood-planning-units',
+        'government',
+        'https://www.atlantaga.gov/government/departments/city-planning/neighborhood-planning-units',
+        'Official Neighborhood Planning Unit system for resident input on zoning, land use, planning, and neighborhood concerns across Atlanta.',
+        ARRAY['community']
+      )
+  ) AS seed(name, slug, org_type, website, description, categories)
+)
+INSERT INTO organizations (
+  id,
+  name,
+  slug,
+  org_type,
+  website,
+  description,
+  categories,
+  city,
+  portal_id,
+  hidden,
+  featured
+)
+SELECT
+  gen_random_uuid(),
+  name,
+  slug,
+  org_type,
+  website,
+  description,
+  categories,
+  city,
+  portal_id,
+  false,
+  false
+FROM org_seed
+ON CONFLICT (slug) DO UPDATE SET
+  name = EXCLUDED.name,
+  org_type = EXCLUDED.org_type,
+  website = COALESCE(organizations.website, EXCLUDED.website),
+  description = COALESCE(organizations.description, EXCLUDED.description),
+  categories = COALESCE(organizations.categories, EXCLUDED.categories),
+  city = COALESCE(organizations.city, EXCLUDED.city),
+  portal_id = COALESCE(organizations.portal_id, EXCLUDED.portal_id),
+  hidden = false;
+
+WITH helpatl AS (
+  SELECT id
+  FROM portals
+  WHERE slug = 'helpatl'
+  LIMIT 1
+),
+opportunity_seed AS (
+  SELECT *
+  FROM (
+    VALUES
+      (
+        'join-your-neighborhood-planning-unit',
+        'atlanta-neighborhood-planning-units',
+        'atlanta-city-planning',
+        'Join Your Neighborhood Planning Unit',
+        'Take part in the official neighborhood body that advises Atlanta on zoning, land use, and community planning decisions.',
+        'NPUs are the City of Atlanta''s official avenue for residents to express concerns, receive city updates, and make recommendations on planning issues. Membership is open to adult residents and qualifying organizations with a place in the NPU.',
+        'ongoing',
+        'ongoing',
+        'none',
+        'Monthly NPU meetings with agendas, contacts, and neighborhood lookup tools published by the city.',
+        'Atlanta neighborhood meetings',
+        ARRAY['advocacy']::text[],
+        ARRAY[]::text[],
+        'low',
+        18,
+        false,
+        false,
+        false,
+        'Use the official city directory to find your NPU, meeting schedule, and contact information.',
+        false,
+        false,
+        NULL::integer,
+        NULL::integer,
+        'normal',
+        NULL::date,
+        NULL::date,
+        'https://www.atlantaga.gov/government/departments/city-planning/neighborhood-planning-units',
+        'https://www.atlantaga.gov/government/departments/city-planning/neighborhood-planning-units/neighborhood-and-npu-contacts',
+        '{"cause":"civic_engagement"}'::jsonb
+      ),
+      (
+        'npu-university-community-leader',
+        'atlanta-department-of-city-planning',
+        'atlanta-city-planning',
+        'Train Through NPU University',
+        'Build neighborhood leadership skills through Atlanta''s official NPU University training program.',
+        'NPU University is the Department of City Planning''s community engagement initiative for residents, neighborhood officers, volunteers, business owners, and other aspiring community leaders who want to participate effectively in civic decision-making.',
+        'ongoing',
+        'multi_week',
+        'training_required',
+        'Enroll in hands-on courses and workshops when sessions are offered through NPU University.',
+        'Atlanta and city-led training settings',
+        ARRAY['leadership']::text[],
+        ARRAY[]::text[],
+        'low',
+        NULL::integer,
+        false,
+        false,
+        true,
+        'Designed for both first-time participants and experienced neighborhood leaders.',
+        false,
+        true,
+        NULL::integer,
+        NULL::integer,
+        'normal',
+        NULL::date,
+        NULL::date,
+        'https://www.atlantaga.gov/government/departments/city-planning/neighborhood-planning-units/npu-university',
+        'https://www.atlantaga.gov/government/departments/city-planning/neighborhood-planning-units/npu-university',
+        '{"cause":"civic_engagement"}'::jsonb
+      ),
+      (
+        'present-at-an-npu-meeting',
+        'atlanta-neighborhood-planning-units',
+        'atlanta-city-planning',
+        'Present at an NPU Meeting',
+        'Use Atlanta''s official request flow to present information or proposals to one or more Neighborhood Planning Units.',
+        'The city''s NPU presentation request process is the formal path for community groups, institutions, and other stakeholders who need time on an NPU agenda. It supports neighborhood-facing outreach that goes beyond simply attending meetings.',
+        'ongoing',
+        'multi_week',
+        'light',
+        'Submit the official presentation request form ahead of the meeting cycle and coordinate with NPU contacts for multi-NPU presentations.',
+        'Atlanta neighborhood meetings',
+        ARRAY['leadership']::text[],
+        ARRAY[]::text[],
+        'low',
+        NULL::integer,
+        false,
+        true,
+        true,
+        'This is appropriate for organizations, community groups, institutions, and other stakeholders with neighborhood-facing information to share.',
+        false,
+        false,
+        NULL::integer,
+        NULL::integer,
+        'normal',
+        NULL::date,
+        NULL::date,
+        'https://www.atlantaga.gov/government/departments/city-planning/neighborhood-planning-units/npu-presentation-request',
+        'https://www.atlantaga.gov/government/departments/city-planning/neighborhood-planning-units/npu-presentation-request',
+        '{"cause":"civic_engagement"}'::jsonb
+      )
+  ) AS seed(
+    slug,
+    org_slug,
+    source_slug,
+    title,
+    summary,
+    description,
+    commitment_level,
+    time_horizon,
+    onboarding_level,
+    schedule_summary,
+    location_summary,
+    skills_required,
+    language_support,
+    physical_demand,
+    min_age,
+    family_friendly,
+    group_friendly,
+    remote_allowed,
+    accessibility_notes,
+    background_check_required,
+    training_required,
+    capacity_total,
+    capacity_remaining,
+    urgency_level,
+    starts_on,
+    ends_on,
+    application_url,
+    source_url,
+    metadata
+  )
+)
+INSERT INTO volunteer_opportunities (
+  slug,
+  organization_id,
+  source_id,
+  portal_id,
+  event_id,
+  title,
+  summary,
+  description,
+  commitment_level,
+  time_horizon,
+  onboarding_level,
+  schedule_summary,
+  location_summary,
+  skills_required,
+  language_support,
+  physical_demand,
+  min_age,
+  family_friendly,
+  group_friendly,
+  remote_allowed,
+  accessibility_notes,
+  background_check_required,
+  training_required,
+  capacity_total,
+  capacity_remaining,
+  urgency_level,
+  starts_on,
+  ends_on,
+  application_url,
+  source_url,
+  metadata,
+  is_active
+)
+SELECT
+  seed.slug,
+  org.id,
+  src.id,
+  (SELECT id FROM helpatl),
+  NULL::integer,
+  seed.title,
+  seed.summary,
+  seed.description,
+  seed.commitment_level::text,
+  seed.time_horizon::text,
+  seed.onboarding_level::text,
+  seed.schedule_summary,
+  seed.location_summary,
+  seed.skills_required,
+  seed.language_support,
+  seed.physical_demand::text,
+  seed.min_age,
+  seed.family_friendly,
+  seed.group_friendly,
+  seed.remote_allowed,
+  seed.accessibility_notes,
+  seed.background_check_required,
+  seed.training_required,
+  seed.capacity_total,
+  seed.capacity_remaining,
+  seed.urgency_level::text,
+  seed.starts_on,
+  seed.ends_on,
+  seed.application_url,
+  seed.source_url,
+  seed.metadata,
+  true
+FROM opportunity_seed seed
+JOIN organizations org ON org.slug = seed.org_slug
+LEFT JOIN sources src ON src.slug = seed.source_slug
+ON CONFLICT (slug) DO UPDATE SET
+  organization_id = EXCLUDED.organization_id,
+  source_id = EXCLUDED.source_id,
+  portal_id = EXCLUDED.portal_id,
+  title = EXCLUDED.title,
+  summary = EXCLUDED.summary,
+  description = EXCLUDED.description,
+  commitment_level = EXCLUDED.commitment_level,
+  time_horizon = EXCLUDED.time_horizon,
+  onboarding_level = EXCLUDED.onboarding_level,
+  schedule_summary = EXCLUDED.schedule_summary,
+  location_summary = EXCLUDED.location_summary,
+  skills_required = EXCLUDED.skills_required,
+  language_support = EXCLUDED.language_support,
+  physical_demand = EXCLUDED.physical_demand,
+  min_age = EXCLUDED.min_age,
+  family_friendly = EXCLUDED.family_friendly,
+  group_friendly = EXCLUDED.group_friendly,
+  remote_allowed = EXCLUDED.remote_allowed,
+  accessibility_notes = EXCLUDED.accessibility_notes,
+  background_check_required = EXCLUDED.background_check_required,
+  training_required = EXCLUDED.training_required,
+  capacity_total = EXCLUDED.capacity_total,
+  capacity_remaining = EXCLUDED.capacity_remaining,
+  urgency_level = EXCLUDED.urgency_level,
+  starts_on = EXCLUDED.starts_on,
+  ends_on = EXCLUDED.ends_on,
+  application_url = EXCLUDED.application_url,
+  source_url = EXCLUDED.source_url,
+  metadata = EXCLUDED.metadata,
+  is_active = true,
+  updated_at = now();

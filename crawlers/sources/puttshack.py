@@ -24,7 +24,7 @@ EVENTS_URL = f"{BASE_URL}/locations/atlanta"
 
 VENUE_DATA = {
     "name": "Puttshack Atlanta",
-    "slug": "puttshack",
+    "slug": "puttshack-atlanta",
     "address": "1075 Howell Mill Rd NW",
     "neighborhood": "West Midtown",
     "city": "Atlanta",
@@ -34,7 +34,7 @@ VENUE_DATA = {
     "lng": -84.4139,
     "venue_type": "entertainment",
     "spot_type": "entertainment",
-    "website": BASE_URL,
+    "website": f"{BASE_URL}/locations/atlanta",
 }
 
 

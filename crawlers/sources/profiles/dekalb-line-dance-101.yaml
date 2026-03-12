@@ -1,0 +1,20 @@
+version: 1
+slug: dekalb-line-dance-101
+name: DeKalb Line Dance 101
+integration_method: python
+defaults:
+  category: fitness
+  tags:
+  - dance
+  - line-dance
+  - public-fitness
+  - dekalb
+discovery:
+  enabled: false
+  type: list
+  urls:
+  - https://apm.activecommunities.com/dekalbcountyrecreation/Activity_Search
+detail:
+  enabled: false
+data_goals:
+- events

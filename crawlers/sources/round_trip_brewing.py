@@ -1,8 +1,9 @@
 """
-Crawler for Round Trip Brewing.
-Craft brewery with taproom events.
+Crawler for Round Trip Brewing (roundtripbrewing.com).
+West Midtown craft brewery specializing in German-style beers.
 
-Site uses JavaScript rendering - must use Playwright.
+Scrapes one-off events from their JS-rendered site using Playwright.
+Wednesday trivia is handled by dirty_south_trivia.py.
 """
 
 from __future__ import annotations
@@ -31,10 +32,13 @@ VENUE_DATA = {
     "city": "Atlanta",
     "state": "GA",
     "zip": "30318",
+    "lat": 33.8095,
+    "lng": -84.4235,
     "venue_type": "brewery",
+    "spot_type": "brewery",
     "website": BASE_URL,
+    "vibes": ["craft-beer", "brewery", "german-beer", "west-midtown", "dog-friendly", "kid-friendly"],
 }
-
 
 def parse_time(time_text: str) -> Optional[str]:
     match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", time_text, re.IGNORECASE)

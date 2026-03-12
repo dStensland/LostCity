@@ -29,6 +29,7 @@ import {
   getProximityLabel,
   type ProximityTier,
 } from "./geo";
+import { expandCityFilterForMetro } from "./portal-scope";
 import { addDays, startOfDay, nextFriday, nextSunday, isFriday, isSaturday, isSunday } from "date-fns";
 import { applyFeedGate } from "@/lib/feed-gate";
 
@@ -94,7 +95,7 @@ export function getQuickActions(dayPart: DayPart): QuickAction[] {
       return [
         { label: "Still serving", icon: "utensils", sectionId: "nearby" },
         { label: "Where to drink", icon: "glass", sectionId: "nearby" },
-        { label: "Tomorrow morning", icon: "coffee", sectionId: "coming-up" },
+        { label: "Tomorrow morning", icon: "coffee", sectionId: "tonight" },
       ];
   }
 }
@@ -328,6 +329,47 @@ export type ForthFeedOptions = {
   sourceAccess?: PortalSourceAccess;
 };
 
+export function getPortalCityAllowlist(
+  filters: Portal["filters"] | null | undefined,
+): string[] {
+  const normalizedFilters = (filters ?? {}) as {
+    city?: string;
+    cities?: string[];
+  };
+  const configuredCities = [
+    ...(Array.isArray(normalizedFilters.cities) ? normalizedFilters.cities : []),
+    ...(typeof normalizedFilters.city === "string" ? [normalizedFilters.city] : []),
+  ]
+    .map((city) => city.trim())
+    .filter(Boolean);
+
+  if (configuredCities.length === 0) return [];
+
+  return Array.from(
+    new Set(
+      expandCityFilterForMetro(configuredCities).map((city) =>
+        city.trim().toLowerCase(),
+      ),
+    ),
+  );
+}
+
+export function isVenueCityInPortalAllowlist(
+  venueCity: string | null | undefined,
+  portalCities: string[],
+): boolean {
+  if (portalCities.length === 0 || !venueCity) return true;
+
+  const normalizedVenueCity = venueCity.trim().toLowerCase();
+  return portalCities.some((portalCity) => {
+    if (normalizedVenueCity === portalCity) return true;
+    const matcher = new RegExp(
+      `\\b${portalCity.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`,
+    );
+    return matcher.test(normalizedVenueCity);
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Section visibility + date range helpers (from feed route)
 // ---------------------------------------------------------------------------
@@ -497,11 +539,7 @@ async function fetchFeedSectionsDirect(
   const isExclusivePortal = portal.portal_type === "business" && !portal.parent_portal_id;
 
   // Parse city filters for geo-filtering
-  const portalCities = Array.from(new Set(
-    [...(portal.filters?.city ? [portal.filters.city] : [])]
-      .map((c) => c?.trim().toLowerCase())
-      .filter(Boolean) as string[]
-  ));
+  const portalCities = getPortalCityAllowlist(portal.filters);
 
   // 1. Fetch visible sections for this portal
   const { data: sectionsRaw } = await supabase
@@ -600,13 +638,8 @@ async function fetchFeedSectionsDirect(
         if (allowed !== null && allowed !== undefined && event.category_id && !allowed.includes(event.category_id)) continue;
       }
       // City geo-filter
-      if (portalCities.length > 0 && event.venue?.city) {
-        const venueCity = event.venue.city.trim().toLowerCase();
-        if (venueCity && !portalCities.some((pc) => {
-          if (venueCity === pc) return true;
-          const regex = new RegExp(`\\b${pc.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`);
-          return regex.test(venueCity);
-        })) continue;
+      if (!isVenueCityInPortalAllowlist(event.venue?.city, portalCities)) {
+        continue;
       }
       // Skip showtimes
       if (event.tags?.includes("showtime")) continue;

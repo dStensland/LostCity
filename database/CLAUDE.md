@@ -88,8 +88,13 @@ When multiple Claude Code sessions work in parallel, check `ACTIVE_WORK.md` in t
 2. When you start a task, ask the user to update `ACTIVE_WORK.md` with your assignment (or update it yourself if instructed to).
 3. When you finish, ask the user to clear your entry from `ACTIVE_WORK.md`.
 4. If you need to touch a claimed file, stop and tell the user — they'll coordinate.
-5. Database migrations: always check the latest migration number before creating a new one to avoid collisions. Use `ls database/migrations/ | tail -5` to find the next number.
-6. Prefer working in git worktrees (`/worktree`) for isolation when touching shared files.
+5. Prefer generating new migration pairs with:
+   `python3 /Users/coach/Projects/LostCity/database/create_migration_pair.py your_migration_name`
+6. If you create files manually, always check the latest migration number before creating a new one to avoid collisions. Use `ls database/migrations/ | tail -5` to find the next number.
+7. Every schema/data migration that matters to deploys must exist in both tracks: `database/migrations/` and `supabase/migrations/`.
+8. Before finishing migration-heavy work, run the parity audit:
+   `python3 /Users/coach/Projects/LostCity/database/audit_migration_parity.py --fail-on-unmatched`
+9. Prefer working in git worktrees (`/worktree`) for isolation when touching shared files.
 
 See `BACKLOG.md` for the full prioritized roadmap with implementation status.
 
@@ -107,13 +112,17 @@ Optional:
 
 ### Full flow (venue with crawlable events page)
 
-1. **Research** — Fetch the site, identify platform (Shopify, Wix, WordPress, etc.), find the events/classes URL, note the HTML structure
-2. **Migration** — Create `database/migrations/NNN_source_name.sql` with:
+> **Portal attribution is mandatory.** Every active source MUST have `owner_portal_id` set in the migration. The CHECK constraint on the sources table enforces this — you cannot set `is_active = true` without an owner. Use `(SELECT id FROM portals WHERE slug = 'atlanta')` for Atlanta sources. Events automatically inherit `portal_id` from their source's `owner_portal_id` via a database trigger.
+
+1. **Research** — Fetch the site, identify platform (Shopify, Wix, WordPress, etc.), find the events/classes URL, note the HTML structure. Also look for: specials/happy hour pages, hours of operation, recurring programming (trivia, DJ nights, etc.), about/description text, hero images.
+2. **Migration** — Prefer `python3 /Users/coach/Projects/LostCity/database/create_migration_pair.py source_name` to scaffold both files, then fill in:
    - Source INSERT (`sources` table): slug, name, url, source_type (`venue` or `organization`), crawl_frequency, is_active, integration_method
    - Venue INSERT (`venues` table): name, slug, address, neighborhood, city, state, zip, lat, lng, venue_type, spot_type, website, phone, description, vibes
-3. **Crawler** — Create `crawlers/sources/source_slug.py` (underscores, matching the source slug with hyphens → underscores). Must export `crawl(source: dict) -> tuple[int, int, int]`. See `crawlers/CLAUDE.md` for the full pattern and required fields.
+   - Matching `supabase/migrations/YYYYMMDDHHMMSS_source_name.sql` with the same SQL body unless there is an explicit documented reason not to
+3. **Crawler** — Create `crawlers/sources/source_slug.py` (underscores, matching the source slug with hyphens → underscores). Must export `crawl(source: dict) -> tuple[int, int, int]`. See `crawlers/CLAUDE.md` for the full pattern and required fields. **The crawler should capture everything in one pass:** events, recurring programming (as series), specials (to `venue_specials`), hours, venue description/image. Don't leave data on the page for a later enrichment script to pick up.
 4. **Profile** — Create `crawlers/sources/profiles/source-slug.yaml` with discovery URLs, selectors, and defaults
 5. **Test** — `python main.py --source source-slug`
+6. **Parity check** — `python3 /Users/coach/Projects/LostCity/database/audit_migration_parity.py --fail-on-unmatched`
 
 ### Venue only (no crawlable events page)
 

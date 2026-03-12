@@ -5,6 +5,7 @@ import {
   parseIntParam,
   parseFloatParam,
   isValidString,
+  escapeSQLPattern,
 } from "@/lib/api-utils";
 import {
   applyRateLimit,
@@ -49,6 +50,15 @@ const CLASSES_CACHE_TTL_MS = 90 * 1000;
 const CLASSES_CACHE_NAMESPACE = "api:classes";
 const CLASSES_CACHE_CONTROL = "public, s-maxage=90, stale-while-revalidate=180";
 
+function escapePostgrestLikeValue(value: string): string {
+  return escapeSQLPattern(value)
+    .replace(/"/g, '\\"')
+    .replace(/'/g, "''")
+    .replace(/\(/g, "\\(")
+    .replace(/\)/g, "\\)")
+    .replace(/,/g, "\\,");
+}
+
 // GET /api/classes — List class events with filters
 export async function GET(request: NextRequest) {
   const rateLimitResult = await applyRateLimit(
@@ -69,6 +79,7 @@ export async function GET(request: NextRequest) {
   const skillLevel = searchParams.get("skill_level");
   const portalExclusive = searchParams.get("portal_exclusive") === "true";
   const neighborhood = searchParams.get("neighborhood");
+  const search = (searchParams.get("search") || searchParams.get("q") || "").trim();
   const sort = searchParams.get("sort") || "date";
   const limit = Math.min(parseIntParam(searchParams.get("limit"), 20) ?? 20, 50);
   const offset = parseIntParam(searchParams.get("offset"), 0) ?? 0;
@@ -95,6 +106,23 @@ export async function GET(request: NextRequest) {
   const portalCity = !portalExclusive ? portalContext.filters.city : undefined;
   const portalContentFilters = parsePortalContentFilters(portalContext.filters as Record<string, unknown> | null);
   const today = new Date().toISOString().split("T")[0];
+  let matchingVenueIds: number[] = [];
+  if (search.length >= 2) {
+    let venueSearchQuery = supabase
+      .from("venues")
+      .select("id")
+      .ilike("name", `%${escapePostgrestLikeValue(search)}%`)
+      .limit(40);
+
+    if (portalCity) {
+      venueSearchQuery = venueSearchQuery.eq("city", portalCity);
+    }
+
+    const { data: matchingVenues } = await venueSearchQuery;
+    matchingVenueIds = (
+      (matchingVenues as Array<{ id: number }> | null) || []
+    ).map((venue) => venue.id);
+  }
   const cacheBucket = Math.floor(Date.now() / CLASSES_CACHE_TTL_MS);
   const cacheKey = [
     portalId || "no-portal",
@@ -172,6 +200,7 @@ export async function GET(request: NextRequest) {
         is_recurring,
         recurrence_rule,
         series_id,
+        venue_id,
         venue:venues(id, name, slug, address, neighborhood, city, state, lat, lng),
         ${seriesSelect}
       `,
@@ -205,6 +234,20 @@ export async function GET(request: NextRequest) {
 
     if (neighborhood && isValidString(neighborhood, 1, 100)) {
       query = query.eq("venues.neighborhood", neighborhood);
+    }
+
+    if (search.length >= 2) {
+      const escapedSearch = escapePostgrestLikeValue(search);
+      const searchClauses = [
+        `title.ilike.%${escapedSearch}%`,
+        `description.ilike.%${escapedSearch}%`,
+        `instructor.ilike.%${escapedSearch}%`,
+      ];
+      if (matchingVenueIds.length > 0) {
+        searchClauses.push(`venue_id.in.(${matchingVenueIds.join(",")})`);
+      }
+
+      query = query.or(searchClauses.join(","));
     }
 
     query = applyFederatedPortalScopeToQuery(query, {

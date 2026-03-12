@@ -1,14 +1,3 @@
-import type { ComponentType } from "react";
-import type { IconProps } from "@phosphor-icons/react";
-import {
-  PaintBrush,
-  Image,
-  TreePalm,
-  FilmSlate,
-  Compass,
-  Star,
-} from "@phosphor-icons/react";
-
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -36,39 +25,10 @@ export type VenueFeature = {
   sort_order: number;
 };
 
-// ---------------------------------------------------------------------------
-// Section config per venue type
-// ---------------------------------------------------------------------------
-
-export type FeatureSectionConfig = {
-  title: string;
-  Icon: ComponentType<IconProps>;
-  color: string;
+type VenueFeatureFilterOptions = {
+  portalSlug?: string | null;
+  venueSlug?: string | null;
 };
-
-export const FEATURE_SECTION_CONFIG: Record<string, FeatureSectionConfig> = {
-  museum: { title: "On View", Icon: PaintBrush, color: "#F472B6" },
-  gallery: { title: "Current Exhibition", Icon: Image, color: "#A78BFA" },
-  park: { title: "Things to Do", Icon: TreePalm, color: "#4ADE80" },
-  cinema: { title: "Now Playing", Icon: FilmSlate, color: "#FBBF24" },
-  theater: { title: "Now Playing", Icon: FilmSlate, color: "#FBBF24" },
-  historic_site: { title: "Points of Interest", Icon: Compass, color: "#38BDF8" },
-};
-
-const DEFAULT_CONFIG: FeatureSectionConfig = {
-  title: "Features & Attractions",
-  Icon: Star,
-  color: "#FB923C",
-};
-
-export function getFeatureSectionConfig(
-  venueType: string | null | undefined
-): FeatureSectionConfig {
-  if (venueType && FEATURE_SECTION_CONFIG[venueType]) {
-    return FEATURE_SECTION_CONFIG[venueType];
-  }
-  return DEFAULT_CONFIG;
-}
 
 // ---------------------------------------------------------------------------
 // Feature type labels (for badges)
@@ -111,4 +71,65 @@ export function isFeatureHeavyType(
   venueType: string | null | undefined
 ): boolean {
   return !!venueType && FEATURE_HEAVY_TYPES.has(venueType);
+}
+
+const HOOKY_GLOBAL_EXCLUDED_SLUGS = new Set(["birdseed-fundraiser-pick-up"]);
+
+const HOOKY_EXCLUDED_TEXT_PATTERNS = [
+  /\bfundraiser\b/i,
+  /\bpick[\s-]?up\b/i,
+  /\bmember(s)? only\b/i,
+  /\bstaff\b/i,
+  /\bvolunteer\b/i,
+];
+
+const HOOKY_ALLOWED_SLUGS_BY_VENUE: Record<string, Set<string>> = {
+  "chattahoochee-nature-center": new Set([
+    "wildlife-walk",
+    "river-boardwalk-trails",
+    "interactive-nature-play",
+    "weekend-activities",
+    "river-roots-science-stations",
+    "naturally-artistic-interactive-exhibits",
+    "winter-gallery",
+    "spring-gallery",
+  ]),
+};
+
+function shouldExcludeFromHooky(
+  feature: VenueFeature,
+  venueSlug: string | null
+): boolean {
+  if (HOOKY_GLOBAL_EXCLUDED_SLUGS.has(feature.slug)) {
+    return true;
+  }
+
+  const combinedText = [feature.slug, feature.title, feature.description]
+    .filter(Boolean)
+    .join(" ");
+  if (HOOKY_EXCLUDED_TEXT_PATTERNS.some((pattern) => pattern.test(combinedText))) {
+    return true;
+  }
+
+  if (venueSlug) {
+    const allowlist = HOOKY_ALLOWED_SLUGS_BY_VENUE[venueSlug];
+    if (allowlist && !allowlist.has(feature.slug)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+export function filterVenueFeaturesForPortal(
+  features: VenueFeature[],
+  { portalSlug, venueSlug }: VenueFeatureFilterOptions = {}
+): VenueFeature[] {
+  if (portalSlug !== "hooky") {
+    return features;
+  }
+
+  return features.filter(
+    (feature) => !shouldExcludeFromHooky(feature, venueSlug ?? null)
+  );
 }

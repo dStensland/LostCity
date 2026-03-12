@@ -13,7 +13,7 @@ interface DashboardShellProps {
 }
 
 const TABS: { key: DashboardTab; label: string; mobileLabel: string }[] = [
-  { key: "feed", label: "Your Scene", mobileLabel: "Feed" },
+  { key: "feed", label: "Your People", mobileLabel: "Feed" },
   { key: "activity", label: "The Scene", mobileLabel: "Activity" },
   { key: "planning", label: "Your Moves", mobileLabel: "Planning" },
 ];
@@ -72,7 +72,7 @@ export default function DashboardShell({
         <div>
           <h1 className="text-2xl font-semibold text-[var(--cream)]">
             {currentTab === "feed"
-              ? "Your scene"
+              ? "Your people"
               : currentTab === "activity"
               ? "The scene"
               : "Your moves"}

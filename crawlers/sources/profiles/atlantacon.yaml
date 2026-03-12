@@ -1,0 +1,16 @@
+version: 1
+slug: atlantacon
+name: AtlantaCon
+integration_method: festival_schedule
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://ipmsusa.org/event/atlantacon-2026
+detail:
+  enabled: true
+data_goals:
+- events
+- images
+- tickets

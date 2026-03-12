@@ -28,6 +28,10 @@ cp .env.example .env
 3. Set up the database:
    - Create a new Supabase project
    - Run `database/schema.sql` in the SQL editor
+   - For migration-heavy changes, keep `database/migrations/` and `supabase/migrations/` in parity and verify with:
+```bash
+python3 /Users/coach/Projects/LostCity/database/audit_migration_parity.py --fail-on-unmatched
+```
 
 4. Install crawler dependencies:
 ```bash
@@ -100,6 +104,21 @@ lostcity/
 ├── database/           # SQL schemas
 └── .github/workflows/  # GitHub Actions
 ```
+
+## Migration Parity
+
+LostCity uses two migration tracks:
+- `database/migrations/` for repo-local database history
+- `supabase/migrations/` for Supabase deploy history
+
+When adding schema, source registration, portal provisioning, or data-healing migrations, mirror the change in both tracks in the same workstream. Use:
+
+```bash
+python3 /Users/coach/Projects/LostCity/database/create_migration_pair.py your_migration_name
+python3 /Users/coach/Projects/LostCity/database/audit_migration_parity.py --fail-on-unmatched
+```
+
+The current cleanup status is documented in [reports/migration-front-cleanup-2026-03-11.md](/Users/coach/Projects/LostCity/reports/migration-front-cleanup-2026-03-11.md).
 
 ## Data Flow
 

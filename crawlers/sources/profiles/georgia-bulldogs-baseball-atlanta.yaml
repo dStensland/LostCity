@@ -1,0 +1,14 @@
+version: 1
+slug: georgia-bulldogs-baseball-atlanta
+name: Georgia Bulldogs Baseball Atlanta
+integration_method: html
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+    - https://georgiadogs.com/sports/baseball/schedule
+detail:
+  enabled: false
+data_goals:
+  - events

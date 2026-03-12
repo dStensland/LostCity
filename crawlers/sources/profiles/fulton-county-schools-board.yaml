@@ -1,0 +1,21 @@
+version: 1
+slug: fulton-county-schools-board
+name: Fulton County Schools Board of Education
+integration_method: html
+defaults:
+  category: community
+  tags:
+  - school-board
+  - education
+  - public-meeting
+  - government
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://www.fultonschools.org/fcs-board-of-education
+detail:
+  enabled: true
+data_goals:
+- events
+- images

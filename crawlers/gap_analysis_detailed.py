@@ -1,38 +1,69 @@
 #!/usr/bin/env python3
 """
-Detailed gap analysis comparing actual coverage vs. expected coverage.
-Identifies missing neighborhoods, underrepresented areas, and missing major venues.
+Detailed gap analysis aligned to the live crawler data model.
+
+This script is intentionally future-facing: it uses active future items rather
+than lifetime totals so we prioritize what improves the Atlanta portal now.
 """
 
-from datetime import datetime
-from collections import defaultdict
+from __future__ import annotations
+
+from collections import Counter, defaultdict
+from datetime import date, datetime
+from typing import Any, Callable
+
+from db import get_client
+from source_goals import resolve_source_data_goals, source_is_destination_only
 
 # Expected ITP neighborhoods from web/config/neighborhoods.ts
 ITP_NEIGHBORHOODS = [
-    # Tier 1: High activity cores
-    "Downtown", "Midtown", "Buckhead", "Old Fourth Ward", "East Atlanta Village",
-    "Little Five Points", "Decatur", "West Midtown", "Ponce City Market Area", "Krog Street",
-    
-    # Tier 2: Active neighborhoods
-    "Virginia-Highland", "Inman Park", "Grant Park", "Cabbagetown", "Reynoldstown",
-    "Kirkwood", "Candler Park", "Edgewood", "West End", "Atlantic Station",
-    "Ansley Park", "Morningside", "Druid Hills", "East Lake", "Summerhill",
-    
-    # Tier 3: Residential-heavy
-    "Lake Claire", "Ormewood Park", "Poncey-Highland", "Castleberry Hill", "Sweet Auburn",
-    "Pittsburgh", "Mechanicsville", "Vine City", "English Avenue", "Grove Park",
-    "Collier Hills", "Brookwood Hills", "Adair Park", "Capitol View", "Peoplestown",
+    "Downtown",
+    "Midtown",
+    "Buckhead",
+    "Old Fourth Ward",
+    "East Atlanta Village",
+    "Little Five Points",
+    "Decatur",
+    "West Midtown",
+    "Ponce City Market Area",
+    "Krog Street",
+    "Virginia-Highland",
+    "Inman Park",
+    "Grant Park",
+    "Cabbagetown",
+    "Reynoldstown",
+    "Kirkwood",
+    "Candler Park",
+    "Edgewood",
+    "West End",
+    "Atlantic Station",
+    "Ansley Park",
+    "Morningside",
+    "Druid Hills",
+    "East Lake",
+    "Summerhill",
+    "Lake Claire",
+    "Ormewood Park",
+    "Poncey-Highland",
+    "Castleberry Hill",
+    "Sweet Auburn",
+    "Pittsburgh",
+    "Mechanicsville",
+    "Vine City",
+    "English Avenue",
+    "Grove Park",
+    "Collier Hills",
+    "Brookwood Hills",
+    "Adair Park",
+    "Capitol View",
+    "Peoplestown",
 ]
 
-# Major venues that should have crawlers
 EXPECTED_MAJOR_VENUES = {
-    # Major Arenas & Stadiums
     "State Farm Arena": "state-farm-arena",
     "Mercedes-Benz Stadium": "mercedes-benz-stadium",
     "Truist Park": "truist-park",
     "Gateway Center Arena": "gateway-center-arena",
-    
-    # Large Concert Venues
     "Fox Theatre": "fox-theatre",
     "Coca-Cola Roxy": "coca-cola-roxy",
     "Tabernacle": "tabernacle",
@@ -41,19 +72,13 @@ EXPECTED_MAJOR_VENUES = {
     "The Masquerade": "the-masquerade",
     "The Earl": "the-earl",
     "Center Stage": "center-stage",
-    "Buckhead Theatre": "buckhead-theatre",
-    
-    # Theaters
     "Alliance Theatre": "alliance-theatre",
-    "Fox Theatre": "fox-theatre",
     "Aurora Theatre": "aurora-theatre",
     "Dad's Garage": "dads-garage",
     "Horizon Theatre": "horizon-theatre",
     "Actor's Express": "actors-express",
     "7 Stages": "seven-stages",
     "Shakespeare Tavern": "shakespeare-tavern",
-    
-    # Museums
     "High Museum": "high-museum",
     "Atlanta Botanical Garden": "atlanta-botanical-garden",
     "Fernbank Museum": "fernbank",
@@ -61,13 +86,9 @@ EXPECTED_MAJOR_VENUES = {
     "Children's Museum of Atlanta": "childrens-museum",
     "Center for Civil and Human Rights": "civil-rights-center",
     "World of Coca-Cola": "world-of-coca-cola",
-    
-    # Comedy Venues
     "Punchline Comedy Club": "punchline",
     "Laughing Skull Lounge": "laughing-skull",
     "Uptown Comedy Corner": "uptown-comedy",
-    
-    # OTP Major Venues
     "Ameris Bank Amphitheatre": "ameris-bank-amphitheatre",
     "Cobb Energy Performing Arts Centre": "cobb-energy",
     "Gas South Arena": "gas-south",
@@ -75,257 +96,359 @@ EXPECTED_MAJOR_VENUES = {
     "Sandy Springs Performing Arts Center": "sandy-springs-pac",
 }
 
-# Key OTP cities that should have coverage
 OTP_CITIES = [
-    # North Fulton
     {"name": "Alpharetta", "tier": "high", "notes": "Major dining/shopping destination"},
     {"name": "Roswell", "tier": "high", "notes": "Historic district, arts scene"},
     {"name": "Johns Creek", "tier": "medium", "notes": "Family-oriented, parks"},
     {"name": "Milton", "tier": "low", "notes": "Equestrian events, parks"},
-    
-    # Cobb
     {"name": "Marietta", "tier": "high", "notes": "Historic square, theaters, museums"},
     {"name": "Smyrna", "tier": "medium", "notes": "Market Village, Battery Atlanta"},
     {"name": "Kennesaw", "tier": "medium", "notes": "KSU, Civil War history"},
     {"name": "Acworth", "tier": "low", "notes": "Historic downtown"},
-    
-    # Gwinnett
     {"name": "Duluth", "tier": "high", "notes": "Downtown, Gas South Arena"},
     {"name": "Lawrenceville", "tier": "medium", "notes": "Historic square"},
     {"name": "Snellville", "tier": "low", "notes": "Community events"},
     {"name": "Suwanee", "tier": "medium", "notes": "Town Center, arts"},
-    
-    # DeKalb
     {"name": "Decatur", "tier": "high", "notes": "Major events hub, festivals"},
     {"name": "Tucker", "tier": "low", "notes": "Community events"},
     {"name": "Stone Mountain", "tier": "medium", "notes": "Park attractions"},
-    
-    # South Metro
     {"name": "College Park", "tier": "medium", "notes": "Airport district, Gateway Center"},
     {"name": "East Point", "tier": "medium", "notes": "Arts district"},
     {"name": "Union City", "tier": "low", "notes": "Community events"},
     {"name": "Fairburn", "tier": "low", "notes": "Historic downtown"},
 ]
 
-def analyze_gaps():
+DISTRICT_HUB_SOURCES = {
+    "The Works ATL": "the-works-atl",
+    "The Interlock": "the-interlock",
+    "Colony Square": "colony-square",
+    "Chattahoochee Food Works": "chattahoochee-food-works",
+    "Westside Motor Lounge": "westside-motor-lounge",
+    "Underground Atlanta": "underground-atlanta",
+    "Atlantic Station": "atlantic-station",
+    "Pullman Yards": "pullman-yards",
+}
+
+
+def paged_select(
+    client,
+    table: str,
+    fields: str,
+    *,
+    query_builder: Callable[[Any], Any] | None = None,
+    page_size: int = 1000,
+    order_column: str | None = "id",
+) -> list[dict]:
+    rows: list[dict] = []
+    offset = 0
+
+    while True:
+        query = client.table(table).select(fields).range(offset, offset + page_size - 1)
+        if query_builder:
+            query = query_builder(query)
+        if order_column:
+            query = query.order(order_column)
+        result = query.execute()
+        batch = result.data or []
+        if not batch:
+            break
+        rows.extend(batch)
+        if len(batch) < page_size:
+            break
+        offset += page_size
+
+    return rows
+
+
+def pct(numerator: int, denominator: int) -> float:
+    if denominator == 0:
+        return 0.0
+    return round((numerator / denominator) * 100, 1)
+
+
+def analyze_gaps() -> None:
     """Perform detailed gap analysis."""
-    from db import get_client
     client = get_client()
-    
+    today = date.today().isoformat()
+
     print("=" * 80)
     print("LOSTCITY DETAILED GAP ANALYSIS")
     print(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"Future coverage window starts: {today}")
     print("=" * 80)
     print()
-    
-    # Get actual neighborhood coverage
-    result = client.table('events').select('venue_id, venues(neighborhood)').execute()
-    covered_neighborhoods = set()
-    neighborhood_event_counts = defaultdict(int)
-    
-    for event in (result.data or []):
-        if event.get('venues') and event['venues'].get('neighborhood'):
-            hood = event['venues']['neighborhood']
-            covered_neighborhoods.add(hood)
-            neighborhood_event_counts[hood] += 1
-    
-    # Gap 1: Missing ITP Neighborhoods
+
+    future_events = paged_select(
+        client,
+        "events",
+        "id,source_id,venue_id,category_id,content_kind,start_date,"
+        "venues(city,neighborhood,active)",
+        query_builder=lambda q: q.eq("is_active", True).gte("start_date", today),
+        order_column="start_date",
+    )
+    sources = paged_select(
+        client,
+        "sources",
+        "id,slug,name,is_active,owner_portal_id,last_crawled_at",
+    )
+    source_by_slug = {source["slug"]: source for source in sources if source.get("slug")}
+    source_goal_summary = {}
+    for source in sources:
+        goals, goal_mode = resolve_source_data_goals(
+            source.get("slug") or "",
+            source_name=source.get("name") or "",
+        )
+        source_goal_summary[source.get("slug")] = {
+            "goals": goals,
+            "goal_mode": goal_mode,
+            "destination_only": source_is_destination_only(goals),
+        }
+    future_items_by_source = defaultdict(int)
+    neighborhood_counts = defaultdict(int)
+    city_counts = defaultdict(int)
+
+    for event in future_events:
+        if event.get("source_id"):
+            future_items_by_source[event["source_id"]] += 1
+        venue = event.get("venues") or {}
+        if venue.get("active") is False:
+            continue
+        city = venue.get("city")
+        if city:
+            city_counts[city] += 1
+        if city == "Atlanta" and venue.get("neighborhood"):
+            neighborhood_counts[venue["neighborhood"]] += 1
+
     print("GAP ANALYSIS: ITP NEIGHBORHOODS")
     print("=" * 80)
     print()
-    
+
     missing_tier1 = []
     missing_tier2 = []
     missing_tier3 = []
-    low_coverage_tier1 = []
-    low_coverage_tier2 = []
-    
-    for hood in ITP_NEIGHBORHOODS[:10]:  # Tier 1
-        count = neighborhood_event_counts.get(hood, 0)
+    low_tier1 = []
+    low_tier2 = []
+
+    for hood in ITP_NEIGHBORHOODS[:10]:
+        count = neighborhood_counts.get(hood, 0)
         if count == 0:
             missing_tier1.append(hood)
         elif count < 10:
-            low_coverage_tier1.append((hood, count))
-    
-    for hood in ITP_NEIGHBORHOODS[10:25]:  # Tier 2
-        count = neighborhood_event_counts.get(hood, 0)
+            low_tier1.append((hood, count))
+
+    for hood in ITP_NEIGHBORHOODS[10:25]:
+        count = neighborhood_counts.get(hood, 0)
         if count == 0:
             missing_tier2.append(hood)
         elif count < 5:
-            low_coverage_tier2.append((hood, count))
-    
-    for hood in ITP_NEIGHBORHOODS[25:]:  # Tier 3
-        count = neighborhood_event_counts.get(hood, 0)
-        if count == 0:
+            low_tier2.append((hood, count))
+
+    for hood in ITP_NEIGHBORHOODS[25:]:
+        if neighborhood_counts.get(hood, 0) == 0:
             missing_tier3.append(hood)
-    
-    print("CRITICAL - Tier 1 (High Activity) Neighborhoods:")
+
+    print("CRITICAL - Tier 1 (High Activity) Neighborhoods")
     print("-" * 80)
     if missing_tier1:
         print(f"MISSING ({len(missing_tier1)}):")
         for hood in missing_tier1:
             print(f"  - {hood}")
-    if low_coverage_tier1:
-        print(f"\nLOW COVERAGE (<10 events):")
-        for hood, count in low_coverage_tier1:
-            print(f"  - {hood}: {count} events")
-    if not missing_tier1 and not low_coverage_tier1:
-        print("  All Tier 1 neighborhoods have good coverage!")
+    if low_tier1:
+        print("\nLOW COVERAGE (<10 future items):")
+        for hood, count in low_tier1:
+            print(f"  - {hood}: {count}")
+    if not missing_tier1 and not low_tier1:
+        print("  All Tier 1 neighborhoods have healthy future coverage.")
     print()
-    
-    print("HIGH - Tier 2 (Active) Neighborhoods:")
+
+    print("HIGH - Tier 2 (Active) Neighborhoods")
     print("-" * 80)
     if missing_tier2:
         print(f"MISSING ({len(missing_tier2)}):")
         for hood in missing_tier2:
             print(f"  - {hood}")
-    if low_coverage_tier2:
-        print(f"\nLOW COVERAGE (<5 events):")
-        for hood, count in low_coverage_tier2:
-            print(f"  - {hood}: {count} events")
+    if low_tier2:
+        print("\nLOW COVERAGE (<5 future items):")
+        for hood, count in low_tier2:
+            print(f"  - {hood}: {count}")
     print()
-    
-    print("MEDIUM - Tier 3 (Residential) Neighborhoods:")
+
+    print("MEDIUM - Tier 3 (Residential) Neighborhoods")
     print("-" * 80)
     if missing_tier3:
         print(f"MISSING ({len(missing_tier3)}):")
         for hood in missing_tier3:
             print(f"  - {hood}")
     else:
-        print("  All Tier 3 neighborhoods have some coverage.")
+        print("  All Tier 3 neighborhoods have some future coverage.")
     print()
-    
-    # Gap 2: OTP City Coverage
+
     print("GAP ANALYSIS: OTP CITIES")
     print("=" * 80)
     print()
-    
-    result = client.table('events').select('venue_id, venues(city)').execute()
-    city_event_counts = defaultdict(int)
-    for event in (result.data or []):
-        if event.get('venues') and event['venues'].get('city'):
-            city_event_counts[event['venues']['city']] += 1
-    
-    high_tier_missing = []
-    medium_tier_low = []
-    
+    high_missing = []
+    low_city_coverage = []
     for city_info in OTP_CITIES:
-        city = city_info['name']
-        tier = city_info['tier']
-        count = city_event_counts.get(city, 0)
-        
-        if tier == "high" and count < 10:
+        city = city_info["name"]
+        count = city_counts.get(city, 0)
+        if city_info["tier"] == "high" and count < 10:
             if count == 0:
-                high_tier_missing.append((city, city_info['notes']))
+                high_missing.append((city, city_info["notes"]))
             else:
-                medium_tier_low.append((city, count, city_info['notes']))
-        elif tier == "medium" and count < 5:
-            medium_tier_low.append((city, count, city_info['notes']))
-    
-    print("CRITICAL - High-Tier OTP Cities with Low/No Coverage:")
+                low_city_coverage.append((city, count, city_info["notes"]))
+        elif city_info["tier"] == "medium" and count < 5:
+            low_city_coverage.append((city, count, city_info["notes"]))
+
+    print("CRITICAL - High-tier cities with low future coverage")
     print("-" * 80)
-    if high_tier_missing:
+    if high_missing:
         print("MISSING:")
-        for city, notes in high_tier_missing:
+        for city, notes in high_missing:
             print(f"  - {city}: {notes}")
-    if medium_tier_low:
+    if low_city_coverage:
         print("\nLOW COVERAGE:")
-        for city, count, notes in medium_tier_low:
-            print(f"  - {city}: {count} events - {notes}")
+        for city, count, notes in low_city_coverage:
+            print(f"  - {city}: {count} future items - {notes}")
     print()
-    
-    # Gap 3: Missing Major Venues
-    print("GAP ANALYSIS: MAJOR VENUE CRAWLERS")
+
+    print("GAP ANALYSIS: MAJOR VENUE SOURCES")
     print("=" * 80)
     print()
-    
-    # Get list of implemented sources
-    sources_result = client.table('sources').select('slug, name, is_active').execute()
-    implemented_sources = {s['slug']: s for s in (sources_result.data or [])}
-    
-    missing_venues = []
-    inactive_venues = []
-    
+    missing_sources = []
+    inactive_sources = []
+    low_yield_sources = []
+    destination_first_major_sources = []
+
+    source_by_id = {source["id"]: source for source in sources if source.get("id") is not None}
     for venue_name, expected_slug in EXPECTED_MAJOR_VENUES.items():
-        if expected_slug not in implemented_sources:
-            missing_venues.append((venue_name, expected_slug))
-        elif not implemented_sources[expected_slug]['is_active']:
-            inactive_venues.append((venue_name, expected_slug))
-    
-    if missing_venues:
-        print("MISSING MAJOR VENUE CRAWLERS:")
+        source = source_by_slug.get(expected_slug)
+        if not source:
+            missing_sources.append((venue_name, expected_slug))
+            continue
+        goal_summary = source_goal_summary.get(expected_slug) or {}
+        future_items = future_items_by_source.get(source["id"], 0)
+        if goal_summary.get("destination_only"):
+            destination_first_major_sources.append(
+                (venue_name, expected_slug, source.get("is_active"), future_items, goal_summary.get("goals") or [])
+            )
+            continue
+        if not source.get("is_active"):
+            inactive_sources.append((venue_name, expected_slug))
+            continue
+        if future_items < 3:
+            low_yield_sources.append((venue_name, expected_slug, future_items))
+
+    if missing_sources:
+        print("MISSING SOURCE RECORDS OR CRAWLERS:")
         print("-" * 80)
-        for venue, slug in missing_venues:
-            print(f"  - {venue} (expected slug: {slug})")
+        for venue_name, slug in missing_sources:
+            print(f"  - {venue_name} ({slug})")
         print()
-    
-    if inactive_venues:
-        print("INACTIVE MAJOR VENUE CRAWLERS:")
+
+    if inactive_sources:
+        print("INACTIVE MAJOR VENUE SOURCES:")
         print("-" * 80)
-        for venue, slug in inactive_venues:
-            print(f"  - {venue} (slug: {slug})")
+        for venue_name, slug in inactive_sources:
+            print(f"  - {venue_name} ({slug})")
         print()
-    
-    # Gap 4: Category Analysis
-    print("GAP ANALYSIS: EVENT CATEGORIES")
+
+    if low_yield_sources:
+        print("LOW-YIELD ACTIVE MAJOR VENUE SOURCES (<3 FUTURE ITEMS):")
+        print("-" * 80)
+        for venue_name, slug, future_items in sorted(low_yield_sources, key=lambda item: item[2]):
+            print(f"  - {venue_name} ({slug}): {future_items}")
+        print()
+
+    if destination_first_major_sources:
+        print("DESTINATION-FIRST MAJOR VENUES (NOT JUDGED ON FUTURE ITEMS):")
+        print("-" * 80)
+        for venue_name, slug, is_active, future_items, goals in sorted(
+            destination_first_major_sources,
+            key=lambda item: item[0],
+        ):
+            status = "active" if is_active else "inactive"
+            print(
+                f"  - {venue_name} ({slug}): {status}, future_items={future_items}, "
+                f"goals={','.join(goals) or '-'}"
+            )
+        print()
+
+    print("GAP ANALYSIS: DISTRICT HUB SOURCES")
     print("=" * 80)
     print()
-    
-    result = client.table('events').select('category').execute()
-    category_counts = defaultdict(int)
-    total = 0
-    for event in (result.data or []):
-        cat = event.get('category') or 'uncategorized'
-        category_counts[cat] += 1
-        total += 1
-    
+    for label, slug in DISTRICT_HUB_SOURCES.items():
+        source = source_by_slug.get(slug)
+        if not source:
+            print(f"  - {label}: missing source ({slug})")
+            continue
+        future_items = future_items_by_source.get(source["id"], 0)
+        status = "active" if source.get("is_active") else "inactive"
+        print(f"  - {label}: {status}, future_items={future_items}")
+    print()
+
+    print("GAP ANALYSIS: FUTURE CATEGORY MIX")
+    print("=" * 80)
+    print()
+    category_counts = Counter(
+        event.get("category_id") or "uncategorized" for event in future_events
+    )
+    total_future = len(future_events)
     print("Category Distribution:")
     print("-" * 80)
-    for cat in ['music', 'theater', 'comedy', 'art', 'film', 'sports', 'food', 'nightlife', 'community', 'family']:
-        count = category_counts.get(cat, 0)
-        pct = (count / total * 100) if total > 0 else 0
-        status = "LOW" if pct < 5 else "OK"
-        print(f"  {cat:<15} {count:>5} events ({pct:>5.1f}%) [{status}]")
-    
+    for category, count in category_counts.most_common():
+        status = "LOW" if pct(count, total_future) < 5 else "OK"
+        print(f"  {category:<16} {count:>5} items ({pct(count, total_future):>5.1f}%) [{status}]")
     print()
-    print("UNDERREPRESENTED CATEGORIES (<5%):")
-    underrep = [(cat, count) for cat, count in category_counts.items() 
-                if (count / total * 100) < 5 and cat not in ['uncategorized']]
-    for cat, count in sorted(underrep, key=lambda x: x[1]):
-        print(f"  - {cat}: {count} events")
+
+    print("UNDERREPRESENTED CATEGORIES (<5% OF FUTURE ITEMS):")
+    for category, count in sorted(category_counts.items(), key=lambda item: item[1]):
+        if category == "uncategorized":
+            continue
+        if pct(count, total_future) < 5:
+            print(f"  - {category}: {count}")
     print()
-    
-    # Summary
+
     print("PRIORITIZED GAPS TO FILL")
     print("=" * 80)
     print()
-    
     print("CRITICAL PRIORITY:")
     print("-" * 80)
+    if inactive_sources:
+        print(f"1. Reactivate or replace {len(inactive_sources)} inactive major venue sources")
     if missing_tier1:
-        print(f"1. Add coverage for {len(missing_tier1)} Tier 1 neighborhoods")
-        for hood in missing_tier1[:3]:
-            print(f"   - {hood}")
-    if high_tier_missing:
-        print(f"2. Add crawlers for {len(high_tier_missing)} high-tier OTP cities")
-        for city, notes in high_tier_missing[:3]:
-            print(f"   - {city}: {notes}")
+        print(f"2. Fix future coverage for {len(missing_tier1)} Tier 1 Atlanta neighborhoods")
+    if high_missing:
+        print(f"3. Add or improve high-tier OTP coverage in {len(high_missing)} cities")
     print()
-    
+
     print("HIGH PRIORITY:")
     print("-" * 80)
+    if low_yield_sources:
+        print(f"1. Repair {len(low_yield_sources)} low-yield active major venue sources")
+    district_inactive = [
+        slug
+        for slug in DISTRICT_HUB_SOURCES.values()
+        if (source_by_slug.get(slug) or {}).get("is_active") is False
+    ]
+    if district_inactive:
+        print(f"2. Activate district hub sources for {len(district_inactive)} neighborhood anchors")
     if missing_tier2:
-        print(f"1. Add coverage for {len(missing_tier2)} Tier 2 neighborhoods")
-    if medium_tier_low:
-        print(f"2. Improve coverage for {len(medium_tier_low)} underrepresented OTP cities")
+        print(f"3. Add coverage for {len(missing_tier2)} Tier 2 neighborhoods")
     print()
-    
+
     print("MEDIUM PRIORITY:")
     print("-" * 80)
-    if missing_venues:
-        print(f"1. Add {len(missing_venues)} missing major venue crawlers")
-    print("2. Expand underrepresented event categories (music, sports, family)")
+    print("1. Normalize neighborhood attribution for zero-item districts before adding more crawlers")
+    if destination_first_major_sources:
+        print(
+            f"2. Refresh destination intelligence for {len(destination_first_major_sources)} "
+            "destination-first major venues"
+        )
+        print("3. Rebalance underrepresented future categories with direct-source crawlers")
+    else:
+        print("2. Rebalance underrepresented future categories with direct-source crawlers")
     print()
+
 
 if __name__ == "__main__":
     analyze_gaps()

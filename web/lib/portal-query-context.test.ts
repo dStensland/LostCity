@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { resolvePortalQueryContext } from "@/lib/portal-query-context";
+import {
+  getCachedPortalQueryContext,
+  resolvePortalQueryContext,
+} from "@/lib/portal-query-context";
+import { setSharedCacheJson } from "@/lib/shared-cache";
 
 type PortalRow = {
   id: string;
@@ -152,5 +156,47 @@ describe("resolvePortalQueryContext", () => {
     expect(result.portalSlug).toBe("unknown-portal");
     expect(result.filters).toEqual({});
     expect(result.hasPortalParamMismatch).toBe(false);
+  });
+
+  it("returns empty context without creating a client when no portal params are present", async () => {
+    const params = new URLSearchParams();
+    const result = await getCachedPortalQueryContext(params);
+
+    expect(result).toEqual({
+      portalId: null,
+      portalSlug: null,
+      filters: {},
+      portalSettings: {},
+      hasPortalParamMismatch: false,
+    });
+  });
+
+  it("returns cached portal context by slug", async () => {
+    const cachedRow = {
+      id: "33333333-3333-3333-3333-333333333333",
+      slug: "cached-portal-query-context-test",
+      filters: { city: "Atlanta", neighborhoods: ["Old Fourth Ward"] },
+      portalSettings: { preview: true },
+    };
+
+    await setSharedCacheJson(
+      "portal-query-context",
+      `slug:${cachedRow.slug}`,
+      cachedRow,
+      60_000,
+      { maxEntries: 400 },
+    );
+
+    const result = await getCachedPortalQueryContext(
+      new URLSearchParams({ portal: cachedRow.slug }),
+    );
+
+    expect(result).toEqual({
+      portalId: cachedRow.id,
+      portalSlug: cachedRow.slug,
+      filters: cachedRow.filters,
+      portalSettings: cachedRow.portalSettings,
+      hasPortalParamMismatch: false,
+    });
   });
 });

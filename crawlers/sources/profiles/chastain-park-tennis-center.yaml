@@ -1,0 +1,21 @@
+version: 1
+slug: chastain-park-tennis-center
+name: Chastain Park Tennis Center
+integration_method: beautifulsoup
+defaults:
+  category: sports
+  tags:
+  - tennis
+  - pickleball
+  - agape-tennis
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://chastainpark.agapetennisacademy.com/events/
+detail:
+  enabled: true
+data_goals:
+- events
+- images
+- tickets

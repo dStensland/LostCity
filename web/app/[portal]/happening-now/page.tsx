@@ -9,6 +9,7 @@ import { PortalHeader } from "@/components/headers";
 import CategoryFilterChips, { type FilterCategory } from "@/components/CategoryFilterChips";
 import AroundMeCard from "@/components/AroundMeCard";
 import { getDayPart, getHappeningNowGreeting } from "@/lib/time-greeting";
+import { getHappeningNowEmptyStateCopy } from "@/lib/empty-state-copy";
 import { Crosshair, MapTrifold, Clock, WarningCircle } from "@phosphor-icons/react";
 import type { AroundMeItem, AroundMeSpot, AroundMeEvent } from "@/app/api/around-me/route";
 
@@ -339,7 +340,7 @@ export default function WhatsOpenPage() {
             </div>
             <h2 className="text-lg text-[var(--cream)] mb-2">Couldn&apos;t load what&apos;s happening</h2>
             <p className="text-[var(--muted)] text-sm max-w-xs mx-auto mb-4">
-              Something went wrong fetching nearby spots and events.
+              Something went wrong fetching nearby places and events.
             </p>
             <button
               onClick={() => {
@@ -353,23 +354,26 @@ export default function WhatsOpenPage() {
             </button>
           </div>
         ) : filteredItems.length === 0 ? (
+          (() => {
+            const emptyState = getHappeningNowEmptyStateCopy({ modeLabel });
+            return (
           <div className="text-center py-16">
             <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[var(--twilight)]/30 flex items-center justify-center">
               <Clock weight="thin" className="w-8 h-8 text-[var(--muted)]" />
             </div>
-            <h2 className="text-lg text-[var(--cream)] mb-2">Nothing open right now</h2>
+            <h2 className="text-lg text-[var(--cream)] mb-2">{emptyState.headline}</h2>
             <p className="text-[var(--muted)] text-sm max-w-xs mx-auto mb-4">
-              {modeLabel !== "All of Atlanta"
-                ? `No spots or events found ${modeLabel}. Try expanding your search.`
-                : "Check back later or browse upcoming events"}
+              {emptyState.subline}
             </p>
             <Link
               href={`/${portal.slug || "atlanta"}`}
               className="inline-block px-4 py-2 bg-[var(--twilight)]/30 rounded-lg font-mono text-sm text-[var(--cream)] hover:bg-[var(--twilight)]/50 transition-colors"
             >
-              Browse events
+              {emptyState.actionLabel}
             </Link>
           </div>
+            );
+          })()
         ) : (
           <div>
             {/* Summary header */}
@@ -405,7 +409,7 @@ export default function WhatsOpenPage() {
                     <span className="font-mono text-xl font-semibold text-[var(--cream)]">{displayCounts.spots}</span>
                   </div>
                   <span className="font-mono text-xs text-[var(--muted)] mt-0.5">
-                    {displayCounts.spots === 1 ? "spot open" : "spots open"}
+                    {displayCounts.spots === 1 ? "place open" : "places open"}
                   </span>
                 </div>
               </div>

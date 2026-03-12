@@ -7,7 +7,7 @@ discovery:
   enabled: false
   type: list
   urls:
-  - https://www.dancingdogsyoga.com
+  - https://dancingdogsyoga.com/atlanta-yoga-workshops
 detail:
   enabled: true
 data_goals:

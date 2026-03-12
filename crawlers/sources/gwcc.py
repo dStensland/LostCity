@@ -1,28 +1,39 @@
 """
-Crawler for Georgia World Congress Center (gwcca.org/event-calendar).
-The largest convention center in Georgia - hosts 160+ expos/conventions per year.
-Uses Playwright for JavaScript-rendered content.
+Crawler for Georgia World Congress Center public calendar.
+
+This source should own the long-tail convention-center calendar on GWCCA's
+official event calendar page, while leaving dedicated stadium/arena sources to
+their stronger crawlers.
 """
 
 from __future__ import annotations
 
-import re
 import logging
-from datetime import datetime
+import re
+from datetime import date, datetime
 from typing import Optional
 
-from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
+from playwright.sync_api import TimeoutError as PlaywrightTimeout
+from playwright.sync_api import sync_playwright
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    find_existing_event_for_insert,
+    get_or_create_venue,
+    insert_event,
+    remove_stale_source_events,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
-from utils import enrich_event_record
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.gwcca.org"
 CALENDAR_URL = f"{BASE_URL}/event-calendar"
+USER_AGENT = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+)
 
-# GWCC has multiple venues
 VENUES = {
     "georgia world congress center": {
         "name": "Georgia World Congress Center",
@@ -33,7 +44,7 @@ VENUES = {
         "state": "GA",
         "zip": "30313",
         "venue_type": "convention_center",
-        "website": "https://www.gwcca.org",
+        "website": BASE_URL,
     },
     "centennial olympic park": {
         "name": "Centennial Olympic Park",
@@ -44,7 +55,7 @@ VENUES = {
         "state": "GA",
         "zip": "30313",
         "venue_type": "outdoor",
-        "website": "https://www.gwcca.org",
+        "website": BASE_URL,
     },
     "mercedes-benz stadium": {
         "name": "Mercedes-Benz Stadium",
@@ -55,7 +66,7 @@ VENUES = {
         "state": "GA",
         "zip": "30313",
         "venue_type": "stadium",
-        "website": "https://mercedesbenzstadium.com",
+        "website": "https://www.mercedesbenzstadium.com",
     },
     "state farm arena": {
         "name": "State Farm Arena",
@@ -70,280 +81,274 @@ VENUES = {
     },
 }
 
+DEDICATED_EVENT_PATTERNS = (
+    re.compile(r"^mbs:", re.IGNORECASE),
+    re.compile(r"\bfifa world cup\b", re.IGNORECASE),
+    re.compile(r"\batlanta united\b", re.IGNORECASE),
+    re.compile(r"\batlanta hawks\b", re.IGNORECASE),
+    re.compile(r"\bmomocon\b", re.IGNORECASE),
+    re.compile(r"\bmodex\b", re.IGNORECASE),
+    re.compile(r"\btransact\b", re.IGNORECASE),
+    re.compile(r"\binternational woodworking fair\b", re.IGNORECASE),
+    re.compile(r"\bhinman dental meeting\b", re.IGNORECASE),
+)
+
+
+def clean_text(value: str) -> str:
+    return re.sub(r"\s+", " ", (value or "").strip())
+
+
+def normalize_date_text(date_text: str) -> str:
+    cleaned = clean_text(date_text).replace("–", "-").replace("—", "-")
+    cleaned = re.sub(r"^(\d{1,2})\s+", "", cleaned)
+    cleaned = cleaned.replace("Sept.", "Sep").replace("Sept", "Sep")
+    cleaned = re.sub(r"\b([A-Za-z]{3,9})\.\s+", r"\1 ", cleaned)
+    return cleaned
+
 
 def parse_date_range(date_text: str) -> tuple[Optional[str], Optional[str]]:
     """
-    Parse date ranges like 'January 8-11, 2026', 'Jan 15, 2026', or 'March 15, 2026'.
-    Returns (start_date, end_date) in YYYY-MM-DD format.
+    Parse GWCCA date strings such as:
+    - "Jan 16, 2026"
+    - "Jan 8-11, 2026"
+    - "January 30 - February 2, 2026"
     """
-    try:
-        date_text = date_text.strip()
+    cleaned = normalize_date_text(date_text)
+    month_formats = ["%B %d, %Y", "%b %d, %Y"]
 
-        # Try both full and abbreviated month formats
-        month_formats = ["%B %d, %Y", "%b %d, %Y"]
+    def try_parse(text: str) -> Optional[datetime]:
+        for fmt in month_formats:
+            try:
+                return datetime.strptime(text, fmt)
+            except ValueError:
+                continue
+        return None
 
-        def try_parse(text: str) -> Optional[datetime]:
-            for fmt in month_formats:
-                try:
-                    return datetime.strptime(text, fmt)
-                except ValueError:
-                    continue
-            return None
+    cross_month_match = re.match(
+        r"([A-Za-z]+)\s+(\d{1,2})\s*-\s*([A-Za-z]+)\s+(\d{1,2}),\s*(\d{4})",
+        cleaned,
+        re.IGNORECASE,
+    )
+    if cross_month_match:
+        month1, day1, month2, day2, year = cross_month_match.groups()
+        start = try_parse(f"{month1} {day1}, {year}")
+        end = try_parse(f"{month2} {day2}, {year}")
+        if start and end:
+            return start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d")
 
-        # Handle range like "January 8-11, 2026" or "Jan 8-11, 2026"
-        range_match = re.match(r"(\w+)\s+(\d+)-(\d+),?\s*(\d{4})", date_text)
-        if range_match:
-            month, start_day, end_day, year = range_match.groups()
-            start = try_parse(f"{month} {start_day}, {year}")
-            end = try_parse(f"{month} {end_day}, {year}")
-            if start and end:
-                return start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d")
+    same_month_match = re.match(
+        r"([A-Za-z]+)\s+(\d{1,2})\s*-\s*(\d{1,2}),\s*(\d{4})",
+        cleaned,
+        re.IGNORECASE,
+    )
+    if same_month_match:
+        month, start_day, end_day, year = same_month_match.groups()
+        start = try_parse(f"{month} {start_day}, {year}")
+        end = try_parse(f"{month} {end_day}, {year}")
+        if start and end:
+            return start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d")
 
-        # Handle range across months like "January 30 - February 2, 2026"
-        cross_month_match = re.match(
-            r"(\w+)\s+(\d+)\s*[-–]\s*(\w+)\s+(\d+),?\s*(\d{4})", date_text
-        )
-        if cross_month_match:
-            month1, day1, month2, day2, year = cross_month_match.groups()
-            start = try_parse(f"{month1} {day1}, {year}")
-            end = try_parse(f"{month2} {day2}, {year}")
-            if start and end:
-                return start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d")
+    single_match = re.match(r"([A-Za-z]+)\s+(\d{1,2}),\s*(\d{4})", cleaned, re.IGNORECASE)
+    if single_match:
+        month, day, year = single_match.groups()
+        parsed = try_parse(f"{month} {day}, {year}")
+        if parsed:
+            return parsed.strftime("%Y-%m-%d"), None
 
-        # Handle single date like "March 15, 2026" or "Mar 15, 2026"
-        single_match = re.match(r"(\w+)\s+(\d+),?\s*(\d{4})", date_text)
-        if single_match:
-            month, day, year = single_match.groups()
-            date = try_parse(f"{month} {day}, {year}")
-            if date:
-                return date.strftime("%Y-%m-%d"), None
-
-        return None, None
-    except ValueError as e:
-        logger.warning(f"Failed to parse date '{date_text}': {e}")
-        return None, None
+    return None, None
 
 
 def determine_category(title: str, description: str = "") -> str:
-    """Determine event category based on title and description."""
     text = f"{title} {description}".lower()
-
-    if any(w in text for w in ["concert", "music", "festival", "band", "live"]):
+    if any(token in text for token in ("concert", "music", "live", "tour", "uncut")):
         return "music"
-    if any(
-        w in text for w in ["expo", "convention", "conference", "trade show", "summit"]
-    ):
+    if any(token in text for token in ("summit", "conference", "meeting", "expo", "convention", "tradeshow", "trade show")):
         return "community"
-    if any(w in text for w in ["boat", "auto", "car", "home", "garden"]):
+    if any(token in text for token in ("graduation", "commencement", "festival", "fanfare", "talent competition")):
         return "community"
-    if any(w in text for w in ["anime", "comic", "dragon", "momo", "fan"]):
-        return "community"
-    if any(w in text for w in ["food", "wine", "beer", "taste", "culinary"]):
-        return "food_drink"
-    if any(w in text for w in ["art", "craft", "design"]):
-        return "art"
-    if any(w in text for w in ["sports", "game", "championship", "tournament"]):
+    if any(token in text for token in ("volleyball", "championship", "tournament")):
         return "sports"
-    if any(w in text for w in ["family", "kid", "children"]):
-        return "family"
-
     return "community"
 
 
-def get_venue_for_event(event_text: str) -> dict:
-    """Determine which GWCC venue an event is at."""
-    text = event_text.lower()
+def infer_tags(title: str) -> list[str]:
+    text = title.lower()
+    tags = ["gwcc", "convention-center"]
+    if any(token in text for token in ("expo", "tradeshow", "trade show")):
+        tags.append("expo")
+    if any(token in text for token in ("conference", "summit", "meeting")):
+        tags.append("conference")
+    if any(token in text for token in ("commencement", "graduation")):
+        tags.append("graduation")
+    if any(token in text for token in ("talent", "dance", "volleyball")):
+        tags.append("competition")
+    return tags
 
-    for key, venue in VENUES.items():
-        if key in text:
-            return venue
 
-    # Default to main GWCC venue
+def get_venue_for_event(title: str, card_text: str = "") -> dict:
+    text = f"{title} {card_text}".lower()
+    if "centennial olympic park" in text:
+        return VENUES["centennial olympic park"]
+    if "mercedes-benz stadium" in text or title.lower().startswith("mbs:"):
+        return VENUES["mercedes-benz stadium"]
+    if "state farm arena" in text:
+        return VENUES["state farm arena"]
     return VENUES["georgia world congress center"]
 
 
+def should_skip_dedicated_event(title: str, venue_slug: str) -> bool:
+    if venue_slug in {"mercedes-benz-stadium", "state-farm-arena"}:
+        return True
+    return any(pattern.search(title) for pattern in DEDICATED_EVENT_PATTERNS)
+
+
+def build_description(title: str, venue: dict, start_date: str, end_date: Optional[str], start_time: Optional[str]) -> str:
+    date_label = start_date if not end_date else f"{start_date} through {end_date}"
+    time_label = f" starting at {start_time}" if start_time else ""
+    return (
+        f"{title} is listed on the official GWCCA event calendar at {venue['name']} in "
+        f"{venue['neighborhood']}, Atlanta. Scheduled for {date_label}{time_label}. "
+        f"Confirm final event details with the official event page before attending."
+    )
+
+
+def parse_card_date(raw_text: str, fallback_year: int) -> tuple[Optional[str], Optional[str]]:
+    start_date, end_date = parse_date_range(raw_text)
+    if start_date:
+        return start_date, end_date
+
+    short_match = re.search(r"([A-Za-z]{3,9})\s+(\d{1,2})", normalize_date_text(raw_text))
+    if short_match:
+        month, day = short_match.groups()
+        parsed = parse_date_range(f"{month} {day}, {fallback_year}")
+        if parsed[0]:
+            return parsed
+    return None, None
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
-    """
-    Crawl GWCC events using Playwright.
-
-    Args:
-        source: Source record from database
-
-    Returns:
-        Tuple of (events_found, events_new, events_updated)
-    """
+    """Crawl the GWCCA public event calendar with deterministic card parsing."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
+    current_hashes: set[str] = set()
 
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                viewport={"width": 1920, "height": 1080},
+                user_agent=USER_AGENT,
+                viewport={"width": 1600, "height": 2000},
             )
             page = context.new_page()
 
-            logger.info(f"Fetching GWCC calendar: {CALENDAR_URL}")
+            logger.info("Fetching GWCC calendar: %s", CALENDAR_URL)
             page.goto(CALENDAR_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)  # Wait for JS to render
+            page.wait_for_selector(".event-heading", timeout=15000)
+            page.wait_for_timeout(1500)
 
-            # Wait for events to load
-            page.wait_for_selector(".event-heading", timeout=10000)
-
-            # GWCC uses .event-heading for titles and .event-date for dates
-            # Get all event headings
             headings = page.query_selector_all(".event-heading")
             dates = page.query_selector_all(".event-date")
+            fallback_year = datetime.now().year
 
-            logger.info(f"Found {len(headings)} events on GWCC")
-
-            # Process each event
             for i, heading_el in enumerate(headings):
-                try:
-                    title = heading_el.inner_text().strip()
-                    if not title or len(title) < 3:
-                        continue
-
-                    # Get corresponding date
-                    date_text = ""
-                    if i < len(dates):
-                        date_text = dates[i].inner_text().strip()
-                        # Clean up format like "16 Jan. 16, 2026" -> "Jan 16, 2026"
-                        date_match = re.search(
-                            r"(\w+)\.?\s*(\d+),?\s*(\d{4})", date_text
-                        )
-                        if date_match:
-                            month, day, year = date_match.groups()
-                            date_text = f"{month} {day}, {year}"
-
-                    start_date, end_date = parse_date_range(date_text)
-                    if not start_date:
-                        logger.debug(f"Skipping event without date: {title}")
-                        continue
-
-                    # Get parent element for more details
-                    parent = heading_el.evaluate_handle(
-                        "el => el.closest('.event-card, .w-dyn-item, div')"
-                    )
-
-                    # Get URL from parent
-                    source_url = CALENDAR_URL
-                    try:
-                        link = parent.as_element().query_selector("a")
-                        if link:
-                            href = link.get_attribute("href")
-                            if href:
-                                source_url = (
-                                    href
-                                    if href.startswith("http")
-                                    else f"{BASE_URL}{href}"
-                                )
-                    except Exception:
-                        pass
-
-                    # Try to get image
-                    image_url = None
-                    try:
-                        img = parent.as_element().query_selector("img")
-                        if img:
-                            image_url = img.get_attribute("src")
-                            if image_url and not image_url.startswith("http"):
-                                image_url = f"{BASE_URL}{image_url}"
-                    except Exception:
-                        pass
-
-                    description = None
-
-                    events_found += 1
-
-                    # Determine venue and category
-                    full_text = f"{title} {description or ''}"
-                    venue_data = get_venue_for_event(full_text)
-                    category = determine_category(title, description or "")
-
-                    # Get or create venue
-                    venue_id = get_or_create_venue(venue_data)
-
-                    # Generate content hash
-                    content_hash = generate_content_hash(
-                        title, venue_data["name"], start_date
-                    )
-
-                    # Check for existing
-
-                    # Build event record
-                    event_record = {
-                        "source_id": source_id,
-                        "venue_id": venue_id,
-                        "title": title,
-                        "description": description,
-                        "start_date": start_date,
-                        "start_time": None,
-                        "end_date": end_date,
-                        "end_time": None,
-                        "is_all_day": True,
-                        "category": category,
-                        "subcategory": None,
-                        "tags": ["convention", "expo", "gwcc"],
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": None,
-                        "is_free": None,
-                        "source_url": source_url,
-                        "ticket_url": None,
-                        "image_url": image_url,
-                        "raw_text": None,
-                        "extraction_confidence": 0.85,
-                        "is_recurring": False,
-                        "recurrence_rule": None,
-                        "content_hash": content_hash,
-                    }
-
-                    # Only enrich from detail page — skip if URL fell back to listing page
-                    if source_url and source_url != CALENDAR_URL:
-                        enrich_event_record(event_record, source_name="Georgia World Congress Center")
-
-                    # Determine is_free if still unknown after enrichment
-                    if event_record.get("is_free") is None:
-                        desc_lower = (event_record.get("description") or "").lower()
-                        title_lower = event_record.get("title", "").lower()
-                        combined = f"{title_lower} {desc_lower}"
-                        if any(kw in combined for kw in ["free", "no cost", "no charge", "complimentary"]):
-                            event_record["is_free"] = True
-                            event_record["price_min"] = event_record.get("price_min") or 0
-                            event_record["price_max"] = event_record.get("price_max") or 0
-                        else:
-                            event_record["is_free"] = False
-
-                    existing = find_event_by_hash(content_hash)
-                    if existing:
-                        smart_update_existing_event(existing, event_record)
-                        events_updated += 1
-                        continue
-
-                    try:
-                        insert_event(event_record)
-                        events_new += 1
-                        logger.info(f"Added: {title} on {start_date}")
-                    except Exception as e:
-                        logger.error(f"Failed to insert: {title}: {e}")
-
-                except Exception as e:
-                    logger.warning(f"Failed to parse event element: {e}")
+                title = clean_text(heading_el.inner_text())
+                if not title or i >= len(dates):
                     continue
+
+                raw_date_text = clean_text(dates[i].inner_text())
+                start_date, end_date = parse_card_date(raw_date_text, fallback_year)
+                if not start_date:
+                    continue
+
+                card_handle = heading_el.evaluate_handle(
+                    "el => el.closest('.w-dyn-item') || el.closest('.event-card') || el.parentElement"
+                )
+                card = card_handle.as_element()
+                if card is None:
+                    continue
+
+                card_text = clean_text(card.inner_text())
+                venue_data = get_venue_for_event(title, card_text)
+                if should_skip_dedicated_event(title, venue_data["slug"]):
+                    continue
+
+                source_url = CALENDAR_URL
+                link = card.query_selector("a[href]")
+                if link:
+                    href = link.get_attribute("href")
+                    if href:
+                        source_url = href if href.startswith("http") else f"{BASE_URL}{href}"
+
+                image_url = None
+                img = card.query_selector("img[src]")
+                if img:
+                    src = img.get_attribute("src")
+                    if src and "atlblackexpo.com" not in src:
+                        image_url = src if src.startswith("http") else f"{BASE_URL}{src}"
+
+                category = determine_category(title, card_text)
+                venue_id = get_or_create_venue(venue_data)
+                content_hash = generate_content_hash(title, venue_data["name"], start_date)
+                current_hashes.add(content_hash)
+                events_found += 1
+
+                event_record = {
+                    "source_id": source_id,
+                    "venue_id": venue_id,
+                    "title": title,
+                    "description": build_description(title, venue_data, start_date, end_date, None),
+                    "start_date": start_date,
+                    "start_time": None,
+                    "end_date": end_date,
+                    "end_time": None,
+                    "is_all_day": True,
+                    "category": category,
+                    "subcategory": "expo" if "expo" in title.lower() or "convention" in title.lower() else None,
+                    "tags": infer_tags(title),
+                    "price_min": None,
+                    "price_max": None,
+                    "price_note": None,
+                    "is_free": False,
+                    "source_url": source_url,
+                    "ticket_url": None,
+                    "image_url": image_url,
+                    "raw_text": f"{title} | {raw_date_text}",
+                    "extraction_confidence": 0.9,
+                    "is_recurring": False,
+                    "recurrence_rule": None,
+                    "content_hash": content_hash,
+                }
+
+                existing = find_existing_event_for_insert(event_record)
+                if existing:
+                    smart_update_existing_event(existing, event_record)
+                    events_updated += 1
+                    continue
+
+                insert_event(event_record)
+                events_new += 1
+                logger.info("Added GWCC event: %s on %s", title, start_date)
 
             browser.close()
 
-        logger.info(f"GWCC crawl complete: {events_found} found, {events_new} new")
+        removed = remove_stale_source_events(source_id, current_hashes)
+        if removed:
+            logger.info("Removed %s stale GWCC rows after refresh", removed)
 
-    except PlaywrightTimeout as e:
-        logger.error(f"Timeout fetching GWCC: {e}")
+        logger.info(
+            "GWCC crawl complete: %s found, %s new, %s updated",
+            events_found,
+            events_new,
+            events_updated,
+        )
+
+    except PlaywrightTimeout as exc:
+        logger.error("Timeout fetching GWCC: %s", exc)
         raise
-    except Exception as e:
-        logger.error(f"Failed to crawl GWCC: {e}")
+    except Exception as exc:
+        logger.error("Failed to crawl GWCC: %s", exc)
         raise
 
     return events_found, events_new, events_updated

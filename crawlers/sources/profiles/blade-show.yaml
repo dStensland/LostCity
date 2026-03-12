@@ -7,7 +7,7 @@ discovery:
   enabled: true
   type: list
   urls:
-  - https://www.bladeshow.com
+  - https://www.bladeshow.com/show-info/
 detail:
   enabled: true
 data_goals:

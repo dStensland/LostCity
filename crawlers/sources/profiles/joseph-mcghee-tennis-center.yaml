@@ -1,0 +1,21 @@
+version: 1
+slug: joseph-mcghee-tennis-center
+name: Joseph McGhee Tennis Center
+integration_method: beautifulsoup
+defaults:
+  category: sports
+  tags:
+  - tennis
+  - pickleball
+  - agape-tennis
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://mcghee.agapetennisacademy.com/events/
+detail:
+  enabled: true
+data_goals:
+- events
+- images
+- tickets

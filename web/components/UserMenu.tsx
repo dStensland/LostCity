@@ -5,12 +5,15 @@ import Link from "next/link";
 import Image from "@/components/SmartImage";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { usePortalOptional, DEFAULT_PORTAL } from "@/lib/portal-context";
 import ShareInviteLink from "./ShareInviteLink";
 import NotificationDropdown from "./NotificationDropdown";
 import CalendarButton from "./CalendarButton";
 
 export default function UserMenu() {
   const { user, profile, loading, signOut } = useAuth();
+  const portalContext = usePortalOptional();
+  const portalSlug = portalContext?.portal?.slug ?? DEFAULT_PORTAL.slug;
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isOpen, setIsOpen] = useState(false);
@@ -178,6 +181,17 @@ export default function UserMenu() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
               <span className="font-mono text-sm">My Calendar</span>
+            </Link>
+
+            <Link
+              href={`/${portalSlug}/plans`}
+              onClick={() => setIsOpen(false)}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[var(--cream)] hover:bg-[var(--twilight)] transition-colors group"
+            >
+              <svg className="w-4 h-4 text-[var(--muted)] group-hover:text-[var(--coral)] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+              </svg>
+              <span className="font-mono text-sm">My Plans</span>
             </Link>
 
             <Link

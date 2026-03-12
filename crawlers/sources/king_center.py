@@ -13,6 +13,7 @@ import re
 from datetime import datetime
 from typing import Optional
 import requests
+from bs4 import BeautifulSoup
 
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
@@ -35,6 +36,13 @@ VENUE_DATA = {
     "venue_type": "museum",
     "spot_type": "memorial",
     "website": BASE_URL,
+    "vibes": ["historic", "civil-rights", "memorial", "free", "sweet-auburn"],
+    "description": (
+        "The Martin Luther King Jr. Center for Nonviolent Social Change — known as The King Center — "
+        "is the official living memorial to Dr. King, located in Atlanta's historic Sweet Auburn "
+        "neighborhood. The site includes Dr. King's birth home, his tomb, Ebenezer Baptist Church, "
+        "and a museum dedicated to his life and the civil rights movement. Open daily, free to visit."
+    ),
 }
 
 
@@ -145,7 +153,24 @@ def crawl(source: dict) -> tuple[int, int, int]:
     events_updated = 0
 
     try:
-        venue_id = get_or_create_venue(VENUE_DATA)
+        # Fetch og:image from homepage to enrich venue record
+        venue_data = dict(VENUE_DATA)
+        try:
+            _headers = {
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Accept": "text/html",
+            }
+            _home_resp = requests.get(BASE_URL, headers=_headers, timeout=15)
+            if _home_resp.status_code == 200:
+                _home_soup = BeautifulSoup(_home_resp.text, "html.parser")
+                _og_image = _home_soup.find("meta", attrs={"property": "og:image"})
+                if _og_image and _og_image.get("content"):
+                    venue_data["image_url"] = _og_image["content"]
+                    logger.debug("Fetched og:image for The King Center")
+        except Exception as _e:
+            logger.debug(f"Could not fetch og:image for The King Center: {_e}")
+
+        venue_id = get_or_create_venue(venue_data)
 
         # Fetch upcoming events from API
         # Start from today and fetch forward 2 years

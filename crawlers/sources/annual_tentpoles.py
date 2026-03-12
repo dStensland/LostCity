@@ -328,7 +328,7 @@ CONFIGS: dict[str, Config] = {
             "ESFNA Ethiopian Sports & Cultural Festival featuring tournament play, cultural "
             "celebrations, and community programming across a week-long event window."
         ),
-        category="community",
+        category="sports",
         subcategory="festival",
         tags=("ethiopian", "cultural-festival", "sports", "community"),
         is_tentpole=True,

@@ -9,6 +9,13 @@ import {
   getActiveHoliday,
 } from "@/config/holidays";
 
+/** Extract a mid-tone color from a CSS gradient string for photo fade-out */
+function extractFadeColor(gradient: string): string {
+  const hexes = gradient.match(/#[0-9a-fA-F]{6}/g);
+  // Second stop is typically the dominant mid-tone
+  return hexes?.[1] ?? hexes?.[0] ?? "#0f0f14";
+}
+
 // ============================================================================
 // Shared card renderer — used by both HolidayHero and HolidayHeroBanner
 // ============================================================================
@@ -16,14 +23,162 @@ import {
 function HolidayCard({
   holiday,
   eventCount,
+  portalSlug,
 }: {
   holiday: HolidayConfig & { countdown: string; daysUntil: number };
   eventCount: number | null;
+  portalSlug: string;
 }) {
   const isToday = !holiday.countdownOverride && holiday.daysUntil === 0;
   const isTomorrow = !holiday.countdownOverride && holiday.daysUntil === 1;
   const hasImageIcon = holiday.icon.startsWith("/");
+  const hasQuickLinks = holiday.quickLinks && holiday.quickLinks.length > 0;
 
+  // ── Marquee layout — cinematic card with full-height photo + CTA pills ──
+  if (hasQuickLinks && hasImageIcon) {
+    const fadeColor = extractFadeColor(holiday.gradient);
+
+    return (
+      <>
+        {/* Atmospheric glow orbs */}
+        <div
+          className="absolute -left-10 -top-10 w-[250px] h-[250px] sm:w-[300px] sm:h-[300px] rounded-full pointer-events-none"
+          style={{ background: holiday.glowColor, opacity: 0.12, filter: "blur(60px)" }}
+        />
+        <div
+          className="absolute right-0 bottom-0 w-[200px] h-[200px] sm:w-[350px] sm:h-[250px] rounded-full pointer-events-none"
+          style={{ background: holiday.glowColor, opacity: 0.06, filter: "blur(50px)" }}
+        />
+
+        {/* Full-height photo on the left */}
+        <div className="absolute inset-y-0 left-0 w-[46%] sm:w-[35%]">
+          <Image
+            src={holiday.icon}
+            alt=""
+            fill
+            priority
+            sizes="(max-width: 640px) 46vw, 280px"
+            className="object-cover"
+            style={{ objectPosition: "30% center" }}
+            unoptimized={holiday.icon.endsWith(".gif")}
+          />
+          {/* Gradient fade from photo → card background */}
+          <div
+            className="absolute inset-0"
+            style={{
+              background: `linear-gradient(90deg, transparent 40%, ${fadeColor} 100%)`,
+            }}
+          />
+        </div>
+
+        {/* Shimmer animation for urgent days */}
+        {(isToday || isTomorrow) && (
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            <div
+              className="absolute inset-y-0 w-[200%] animate-[shimmer_8s_ease-in-out_infinite]"
+              style={{
+                background: `linear-gradient(90deg, transparent, ${holiday.glowColor}08, transparent)`,
+              }}
+            />
+          </div>
+        )}
+
+        {/* Content area — right side */}
+        <Link
+          href={`/${portalSlug}?tags=${holiday.tag}&view=find`}
+          className="relative flex flex-col justify-center min-h-[280px] sm:min-h-[320px] pl-[48%] sm:pl-[38%] pr-5 sm:pr-8 py-7 sm:py-9 group/main"
+        >
+          {/* Countdown badge */}
+          <span
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-mono text-xs font-bold uppercase tracking-wider w-fit mb-2 sm:mb-3"
+            style={{
+              color: isToday || isTomorrow ? "#fff" : holiday.accentColor,
+              backgroundColor: isToday
+                ? holiday.glowColor
+                : `color-mix(in srgb, ${holiday.glowColor} 15%, transparent)`,
+              border: `1px solid color-mix(in srgb, ${holiday.glowColor} 25%, transparent)`,
+              boxShadow: isToday ? `0 0 16px ${holiday.glowColor}60` : undefined,
+            }}
+          >
+            {(isToday || isTomorrow) && (
+              <span className="relative flex h-2 w-2">
+                <span
+                  className="absolute inline-flex h-full w-full rounded-full opacity-75 animate-[ping_3s_cubic-bezier(0,0,0.2,1)_infinite]"
+                  style={{ backgroundColor: isToday ? "#fff" : holiday.glowColor }}
+                />
+                <span
+                  className="relative inline-flex h-2 w-2 rounded-full"
+                  style={{ backgroundColor: isToday ? "#fff" : holiday.glowColor }}
+                />
+              </span>
+            )}
+            {holiday.countdown}
+          </span>
+
+          {/* Title — large display type */}
+          <h3
+            className="text-[2.25rem] sm:text-[3rem] font-extrabold leading-[0.95] tracking-tight group-hover/main:text-white transition-colors"
+            style={{
+              color: "var(--cream, #F5F5F3)",
+              textShadow: `0 0 40px ${holiday.glowColor}25`,
+              letterSpacing: "-0.04em",
+            }}
+          >
+            {holiday.title}
+          </h3>
+
+          {/* Subtitle */}
+          <p
+            className="text-sm sm:text-base mt-1.5 sm:mt-2 italic max-w-[240px] sm:max-w-[350px]"
+            style={{ color: "var(--soft, #A1A1AA)" }}
+          >
+            {holiday.subtitle}
+          </p>
+
+          {/* Event count */}
+          {eventCount !== null && eventCount > 0 && (
+            <p
+              className="font-mono text-xs sm:text-sm font-bold mt-2 sm:mt-3"
+              style={{ color: holiday.accentColor, letterSpacing: "0.03em" }}
+            >
+              {eventCount} events this week
+            </p>
+          )}
+        </Link>
+
+        {/* CTA pills row — aligned under the copy, not the photo */}
+        <div className="relative flex items-center gap-2 sm:gap-2.5 pl-[48%] sm:pl-[38%] pr-5 sm:pr-8 pb-5 sm:pb-6 -mt-3 overflow-x-auto scrollbar-hide">
+          {holiday.quickLinks!.map((link, i) => {
+            const isFirst = i === 0;
+            const pillLabel = isFirst && eventCount !== null && eventCount > 0
+              ? `${eventCount} ${link.label}`
+              : link.label;
+
+            return (
+              <Link
+                key={link.label}
+                href={`/${portalSlug}${link.href}`}
+                className="flex-shrink-0 px-4 py-2 rounded-full font-mono text-xs font-medium transition-colors active:scale-95"
+                style={{
+                  color: isFirst ? "#fff" : holiday.accentColor,
+                  backgroundColor: isFirst
+                    ? `color-mix(in srgb, ${holiday.glowColor} 40%, transparent)`
+                    : `color-mix(in srgb, ${holiday.glowColor} 12%, transparent)`,
+                  border: `1px solid color-mix(in srgb, ${holiday.glowColor} ${isFirst ? "50" : "20"}%, transparent)`,
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.filter = "brightness(1.3)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.filter = ""; }}
+              >
+                {pillLabel}
+              </Link>
+            );
+          })}
+        </div>
+      </>
+    );
+  }
+
+  // ── Standard compact layout — icon + content side by side ──
   return (
     <>
       {/* Background image */}
@@ -39,7 +194,7 @@ function HolidayCard({
         />
       )}
 
-      {/* Blurred icon background glow (Valentine's / Friday 13th style) */}
+      {/* Blurred icon background glow */}
       {holiday.iconBgGlow && hasImageIcon && (
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           <div
@@ -76,7 +231,11 @@ function HolidayCard({
         </div>
       )}
 
-      <div className="relative flex items-center gap-5 px-5 py-5 sm:px-6 sm:py-6">
+      {/* Main content area — links to events page */}
+      <Link
+        href={`/${portalSlug}?tags=${holiday.tag}&view=find`}
+        className="relative flex items-center gap-5 px-5 py-5 sm:px-6 sm:py-6 group/main"
+      >
         {/* Icon */}
         <div className="flex-shrink-0 relative">
           <div
@@ -111,7 +270,7 @@ function HolidayCard({
               style={{ backgroundColor: holiday.glowColor }}
             />
           )}
-          {/* Pulsing glow ring (Valentine's / Friday 13th style) */}
+          {/* Pulsing glow ring */}
           {holiday.iconGlowRing && (
             <span
               className="absolute -inset-1.5 rounded-2xl animate-[heartbeat_2s_ease-in-out_infinite] opacity-40"
@@ -154,7 +313,7 @@ function HolidayCard({
 
           {/* Title */}
           <h3
-            className="text-xl sm:text-2xl font-bold leading-tight"
+            className="text-xl sm:text-2xl font-bold leading-tight group-hover/main:text-white transition-colors"
             style={{
               color: "var(--cream)",
               textShadow: `0 0 30px ${holiday.glowColor}30`,
@@ -184,14 +343,14 @@ function HolidayCard({
 
         {/* Arrow */}
         <svg
-          className="w-6 h-6 text-[var(--muted)] group-hover:text-[var(--cream)] transition-colors flex-shrink-0 group-hover:translate-x-1 transition-transform"
+          className="w-6 h-6 text-[var(--muted)] group-hover/main:text-[var(--cream)] transition-colors flex-shrink-0 group-hover/main:translate-x-1 transition-transform"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
         >
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
         </svg>
-      </div>
+      </Link>
     </>
   );
 }
@@ -223,15 +382,11 @@ export default function HolidayHero({ portalSlug, position = 1, eventCount: pref
 
     async function fetchCount() {
       try {
-        const res = await fetch(`/api/portals/${portalSlug}/feed`);
+        const res = await fetch(`/api/events/tag-count?tag=${encodeURIComponent(holiday!.tag)}`);
         if (!res.ok) return;
         const data = await res.json();
-        const sections = data?.sections ?? [];
-        const section = sections.find(
-          (s: { slug?: string }) => s.slug === holiday!.slug
-        );
-        if (section?.events) {
-          setFetchedCount(section.events.length);
+        if (typeof data.count === "number" && data.count > 0) {
+          setFetchedCount(data.count);
         }
       } catch {
         // Silently fail — hero still renders without count
@@ -244,13 +399,31 @@ export default function HolidayHero({ portalSlug, position = 1, eventCount: pref
 
   if (!holiday) return null;
 
+  const hasQuickLinks = holiday.quickLinks && holiday.quickLinks.length > 0;
+
+  // Marquee cards: outer glow shadow + div wrapper (multiple <Link> inside)
+  if (hasQuickLinks) {
+    return (
+      <div
+        className="relative rounded-2xl overflow-hidden"
+        style={{
+          background: holiday.gradient,
+          boxShadow: `0 0 40px -4px ${holiday.glowColor}25`,
+        }}
+      >
+        <HolidayCard holiday={holiday} eventCount={eventCount} portalSlug={portalSlug} />
+      </div>
+    );
+  }
+
+  // Standard cards: entire card is one link
   return (
     <Link
       href={`/${portalSlug}?tags=${holiday.tag}&view=find`}
       className="block relative rounded-2xl overflow-hidden group"
       style={{ background: holiday.gradient }}
     >
-      <HolidayCard holiday={holiday} eventCount={eventCount} />
+      <HolidayCard holiday={holiday} eventCount={eventCount} portalSlug={portalSlug} />
     </Link>
   );
 }

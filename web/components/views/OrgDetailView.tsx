@@ -58,6 +58,23 @@ type EventData = {
   } | null;
 };
 
+type VolunteerOpportunityData = {
+  id: string;
+  slug: string;
+  title: string;
+  summary: string | null;
+  description: string | null;
+  commitment_level: "drop_in" | "ongoing" | "lead_role";
+  time_horizon: "one_day" | "multi_week" | "multi_month" | "ongoing" | null;
+  onboarding_level: "none" | "light" | "screening_required" | "training_required" | null;
+  schedule_summary: string | null;
+  location_summary: string | null;
+  remote_allowed: boolean;
+  background_check_required: boolean;
+  training_required: boolean;
+  application_url: string;
+};
+
 interface OrgDetailViewProps {
   slug: string;
   portalSlug: string;
@@ -90,6 +107,7 @@ export default function OrgDetailView({ slug, portalSlug, onClose }: OrgDetailVi
   const searchParams = useSearchParams();
   const [producer, setProducer] = useState<ProducerData | null>(null);
   const [events, setEvents] = useState<EventData[]>([]);
+  const [volunteerOpportunities, setVolunteerOpportunities] = useState<VolunteerOpportunityData[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [error, setError] = useState<string | null>(null);
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -119,6 +137,7 @@ export default function OrgDetailView({ slug, portalSlug, onClose }: OrgDetailVi
         if (cancelled) return;
         setProducer(data.organization);
         setEvents(data.events || []);
+        setVolunteerOpportunities(data.volunteer_opportunities || []);
         setStatus("ready");
       } catch (err) {
         if (controller.signal.aborted) return;
@@ -148,6 +167,28 @@ export default function OrgDetailView({ slug, portalSlug, onClose }: OrgDetailVi
   };
 
   const handleEventClick = (id: number) => navigateToDetail("event", id);
+
+  const formatCommitmentLevel = (value: VolunteerOpportunityData["commitment_level"]) => {
+    if (value === "lead_role") return "Lead";
+    if (value === "ongoing") return "Ongoing";
+    return "Drop-in";
+  };
+
+  const formatTimeHorizon = (value: VolunteerOpportunityData["time_horizon"]) => {
+    if (value === "multi_month") return "Multi-month";
+    if (value === "multi_week") return "Multi-week";
+    if (value === "one_day") return "One day";
+    if (value === "ongoing") return "Open-ended";
+    return null;
+  };
+
+  const formatOnboarding = (value: VolunteerOpportunityData["onboarding_level"]) => {
+    if (value === "screening_required") return "Screening required";
+    if (value === "training_required") return "Training required";
+    if (value === "light") return "Light onboarding";
+    if (value === "none") return "No onboarding";
+    return null;
+  };
 
   if (status === "loading") {
     return (
@@ -368,6 +409,62 @@ export default function OrgDetailView({ slug, portalSlug, onClose }: OrgDetailVi
         </div>
 
       </InfoCard>
+
+      {volunteerOpportunities.length > 0 && (
+        <div className="mt-8">
+          <CollapsibleSection
+            title="Ongoing Opportunities"
+            count={volunteerOpportunities.length}
+            icon={CategoryIcons.events}
+            accentColor={CATEGORY_COLORS.events}
+            defaultOpen
+          >
+            <div className="space-y-2">
+              {volunteerOpportunities.map((opportunity) => {
+                const onboardingLabel = formatOnboarding(opportunity.onboarding_level);
+                const timeHorizonLabel = formatTimeHorizon(opportunity.time_horizon);
+
+                return (
+                  <div
+                    key={opportunity.id}
+                    className="border border-[var(--twilight)] rounded-card bg-[var(--dusk)] p-4"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap gap-2 mb-2">
+                          <Badge>{formatCommitmentLevel(opportunity.commitment_level)}</Badge>
+                          {timeHorizonLabel && <Badge>{timeHorizonLabel}</Badge>}
+                          {opportunity.remote_allowed && <Badge>Remote-friendly</Badge>}
+                        </div>
+                        <h3 className="text-[var(--cream)] font-medium">{opportunity.title}</h3>
+                        <p className="text-sm text-[var(--muted)] mt-1">
+                          {opportunity.summary || opportunity.description}
+                        </p>
+                        <div className="flex flex-wrap gap-2 mt-3 text-xs text-[var(--muted)]">
+                          {opportunity.schedule_summary && <span>{opportunity.schedule_summary}</span>}
+                          {opportunity.location_summary && <span>{opportunity.location_summary}</span>}
+                          {onboardingLabel && <span>{onboardingLabel}</span>}
+                          {opportunity.background_check_required && <span>Background check</span>}
+                          {opportunity.training_required && <span>Training</span>}
+                        </div>
+                      </div>
+                      <a
+                        href={opportunity.application_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-sm font-medium text-[var(--coral)] hover:text-[var(--cream)] transition-colors"
+                      >
+                        Learn more
+                        <CaretRight weight="bold" className="w-4 h-4" />
+                      </a>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CollapsibleSection>
+        </div>
+      )}
 
       {/* Upcoming Events */}
       <div className="mt-8">

@@ -1,19 +1,16 @@
 version: 1
 slug: sports-social
 name: Sports Social
-integration_method: jsonld_only
+integration_method: python
 defaults: {}
 discovery:
   enabled: false
   type: list
   urls:
-  - https://www.sportssocial.com
+  - https://liveatthebatteryatlanta.com/events-and-entertainment/events
 detail:
   enabled: true
-  jsonld_only: true
-  use_jsonld: true
 data_goals:
 - events
 - images
-- lineup
 - tickets

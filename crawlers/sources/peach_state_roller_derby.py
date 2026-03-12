@@ -16,7 +16,13 @@ from typing import Optional
 from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    find_event_by_hash,
+    get_or_create_venue,
+    insert_event,
+    remove_stale_source_events,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
@@ -26,7 +32,7 @@ BASE_URL = "https://www.peachstaterollerderby.com"
 # Venue where bouts are held
 VENUE_DATA = {
     "name": "Sparkles Family Fun Center",
-    "slug": "sparkles-kennesaw",
+    "slug": "sparkles-family-fun-center-kennesaw",
     "address": "1000 McCollum Pkwy NW",
     "neighborhood": "Kennesaw",
     "city": "Kennesaw",
@@ -34,8 +40,8 @@ VENUE_DATA = {
     "zip": "30144",
     "lat": 34.0234,
     "lng": -84.6155,
-    "venue_type": "arena",
-    "spot_type": "arena",
+    "venue_type": "games",
+    "spot_type": "games",
     "website": "https://www.sparkles.com",
     "description": "Family entertainment center with roller skating rink, bowling, laser tag, and arcade games. Home venue for Peach State Roller Derby.",
     "vibes": ["family-friendly", "roller-skating", "entertainment-center", "kennesaw"],
@@ -152,12 +158,35 @@ def parse_time(time_str: str) -> Optional[str]:
     return f"{hour:02d}:{minute}"
 
 
+def canonicalize_event_title(raw_title: str) -> str:
+    """Normalize noisy source copy into a stable event title."""
+    clean_title = re.sub(r'\S+@\S+', '', raw_title or '').strip()
+    clean_title = re.sub(r'^contact\s+', '', clean_title, flags=re.IGNORECASE)
+    clean_title = re.sub(r'\s+', ' ', clean_title).strip(" -:|")
+
+    lowered = clean_title.lower()
+    if 'crash course' in lowered:
+        title = "Peach State Roller Derby Crash Course"
+    elif 'training' in lowered:
+        title = "Peach State Roller Derby Training"
+    elif 'bout' in lowered or 'vs' in lowered or 'versus' in lowered or 'v.' in lowered:
+        title = clean_title if 5 <= len(clean_title) <= 100 else "Peach State Roller Derby Bout"
+    else:
+        title = clean_title if 5 <= len(clean_title) <= 100 else "Peach State Roller Derby Event"
+
+    if not any(keyword in title.lower() for keyword in ['derby', 'bout', 'peach state']):
+        title = f"Peach State Roller Derby: {title}"
+
+    return title[:500]
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
     """Crawl Peach State Roller Derby schedule using Playwright."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
+    current_hashes: set[str] = set()
 
     try:
         with sync_playwright() as p:
@@ -265,37 +294,8 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             events_found += 1
 
-            # Build title with validation
             raw_title = event_data['title'] or "Event"
-
-            # Clean up title - extract meaningful part
-            # Remove email addresses
-            clean_title = re.sub(r'\S+@\S+', '', raw_title)
-            # Remove "Contact" prefix if present
-            clean_title = re.sub(r'^Contact\s+', '', clean_title, flags=re.IGNORECASE)
-            # Extract event type keywords
-            if 'crash course' in clean_title.lower():
-                title = "Peach State Roller Derby Crash Course"
-            elif 'training' in clean_title.lower():
-                title = "Peach State Roller Derby Training"
-            elif 'bout' in clean_title.lower() or 'vs' in clean_title.lower():
-                # Try to extract team matchup
-                title = clean_title.strip()
-                if len(title) > 100:
-                    title = "Peach State Roller Derby Bout"
-            else:
-                # Generic cleanup
-                title = clean_title.strip()
-                if len(title) > 100 or len(title) < 5:
-                    title = "Peach State Roller Derby Event"
-
-            # Add prefix if it doesn't mention derby/bout/peach state
-            if not any(keyword in title.lower() for keyword in ['derby', 'bout', 'peach state']):
-                title = f"Peach State Roller Derby: {title}"
-
-            # Ensure title is under 500 chars
-            if len(title) > 500:
-                title = title[:497] + "..."
+            title = canonicalize_event_title(raw_title)
 
             start_date = event_data['date']
             start_time = event_data['time'] or "20:00"  # Default to 8pm (from Crash Course schedule)
@@ -313,12 +313,38 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
             # Generate content hash
             content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+            current_hashes.add(content_hash)
 
             # Check for existing event
             existing = find_event_by_hash(content_hash)
             if existing:
+                smart_update_existing_event(existing, {
+                    "source_id": source_id,
+                    "venue_id": venue_id,
+                    "title": title,
+                    "description": description,
+                    "start_date": start_date,
+                    "start_time": start_time,
+                    "end_date": None,
+                    "end_time": None,
+                    "is_all_day": False,
+                    "category": "sports",
+                    "subcategory": "roller_derby",
+                    "tags": ["roller-derby", "peach-state-roller-derby", "kennesaw", "women-sports", "live-sports"],
+                    "price_min": None,
+                    "price_max": None,
+                    "price_note": "Check Facebook or website for ticket information",
+                    "is_free": False,
+                    "source_url": BASE_URL,
+                    "ticket_url": None,
+                    "image_url": None,
+                    "raw_text": event_data['raw_line'],
+                    "extraction_confidence": 0.75,
+                    "is_recurring": False,
+                    "recurrence_rule": None,
+                    "content_hash": content_hash,
+                })
                 events_updated += 1
-                logger.debug(f"Event already exists: {title} on {start_date}")
                 continue
 
             # Create event record
@@ -355,6 +381,10 @@ def crawl(source: dict) -> tuple[int, int, int]:
                 logger.info(f"Added: {title} on {start_date}")
             except Exception as e:
                 logger.error(f"Failed to insert event: {title}: {e}")
+
+        removed = remove_stale_source_events(source_id, current_hashes)
+        if removed:
+            logger.info(f"Removed {removed} stale Peach State Roller Derby events")
 
         # If no events found, log schedule links for manual review
         if events_found == 0 and schedule_links:

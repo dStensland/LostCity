@@ -15,6 +15,7 @@ class SelectorSet(BaseModel):
     time: Optional[str] = None
     detail_url: Optional[str] = None
     ticket_url: Optional[str] = None
+    links: Optional[str] = None
     image_url: Optional[str] = None
     description: Optional[str] = None
     price: Optional[str] = None
@@ -82,6 +83,9 @@ class SourceProfile(BaseModel):
             "tickets",
             "images",
             "venue_hours",
+            "planning",
+            "accessibility",
+            "dietary",
         ]
     ] = Field(default_factory=list)
     discovery: DiscoveryConfig = Field(default_factory=DiscoveryConfig)

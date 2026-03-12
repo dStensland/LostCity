@@ -34,6 +34,12 @@ type CachedPortalRow = {
   portalSettings: Record<string, unknown>;
 };
 
+type RequestedPortalRef = {
+  portalSlug: string | null;
+  portalId: string | null;
+  portalIdParam: string | null;
+};
+
 function parsePortalFilters(raw: unknown): PortalFilters {
   if (!raw) return {};
 
@@ -91,6 +97,104 @@ function parsePortalFilters(raw: unknown): PortalFilters {
   };
 }
 
+function getRequestedPortalRef(searchParams: URLSearchParams): RequestedPortalRef {
+  const portalParam = searchParams.get("portal")?.trim() || null;
+  const portalIdParam = searchParams.get("portal_id")?.trim() || null;
+
+  let portalSlug: string | null = null;
+  let portalId: string | null = isValidUUID(portalIdParam) ? portalIdParam : null;
+
+  if (portalParam) {
+    if (isValidUUID(portalParam)) {
+      portalId = portalId || portalParam;
+    } else {
+      portalSlug = resolvePortalSlugAlias(String(portalParam).toLowerCase());
+    }
+  }
+
+  return {
+    portalSlug,
+    portalId,
+    portalIdParam,
+  };
+}
+
+function toPortalQueryContext(
+  row: CachedPortalRow,
+  portalIdParam: string | null,
+): PortalQueryContext {
+  return {
+    portalId: row.id,
+    portalSlug: row.slug,
+    filters: row.filters,
+    portalSettings: row.portalSettings ?? {},
+    hasPortalParamMismatch:
+      Boolean(portalIdParam && isValidUUID(portalIdParam) && row.id !== portalIdParam),
+  };
+}
+
+function emptyPortalQueryContext(portalSlug: string | null): PortalQueryContext {
+  return {
+    portalId: null,
+    portalSlug,
+    filters: {},
+    portalSettings: {},
+    hasPortalParamMismatch: false,
+  };
+}
+
+async function readCachedPortal(cacheKey: string): Promise<CachedPortalRow | null> {
+  return getSharedCacheJson<CachedPortalRow>(PORTAL_QUERY_CACHE_NAMESPACE, cacheKey);
+}
+
+async function writeCachedPortal(row: CachedPortalRow): Promise<void> {
+  await Promise.all([
+    setSharedCacheJson(
+      PORTAL_QUERY_CACHE_NAMESPACE,
+      `slug:${row.slug}`,
+      row,
+      PORTAL_QUERY_CACHE_TTL_MS,
+      { maxEntries: 400 },
+    ),
+    setSharedCacheJson(
+      PORTAL_QUERY_CACHE_NAMESPACE,
+      `id:${row.id}`,
+      row,
+      PORTAL_QUERY_CACHE_TTL_MS,
+      { maxEntries: 400 },
+    ),
+  ]);
+}
+
+export async function getCachedPortalQueryContext(
+  searchParams: URLSearchParams,
+): Promise<PortalQueryContext | null> {
+  const { portalSlug, portalId, portalIdParam } = getRequestedPortalRef(searchParams);
+
+  if (!portalSlug && !portalId) {
+    return emptyPortalQueryContext(null);
+  }
+
+  if (portalSlug) {
+    const cachedRow = await readCachedPortal(`slug:${portalSlug}`);
+    if (cachedRow) {
+      return toPortalQueryContext(cachedRow, portalIdParam);
+    }
+  }
+
+  if (portalId) {
+    const cachedRow = await readCachedPortal(`id:${portalId}`);
+    if (cachedRow) {
+      return {
+        ...toPortalQueryContext(cachedRow, portalIdParam),
+        hasPortalParamMismatch: false,
+      };
+    }
+  }
+
+  return null;
+}
+
 /**
  * Canonical portal query semantics:
  * - `portal` => slug
@@ -102,20 +206,7 @@ export async function resolvePortalQueryContext(
   supabase: AnySupabase,
   searchParams: URLSearchParams
 ): Promise<PortalQueryContext> {
-  const portalParam = searchParams.get("portal")?.trim() || null;
-  const portalIdParam = searchParams.get("portal_id")?.trim() || null;
-
-  let portalSlug: string | null = null;
-  let portalId: string | null = isValidUUID(portalIdParam) ? portalIdParam : null;
-
-  if (portalParam) {
-    if (isValidUUID(portalParam)) {
-      // Legacy input support: treat `portal=<uuid>` as `portal_id=<uuid>`.
-      portalId = portalId || portalParam;
-    } else {
-      portalSlug = resolvePortalSlugAlias((portalParam as string).toLowerCase());
-    }
-  }
+  const { portalSlug, portalId, portalIdParam } = getRequestedPortalRef(searchParams);
 
   type PortalRow = {
     id: string;
@@ -124,40 +215,11 @@ export async function resolvePortalQueryContext(
     settings: Record<string, unknown> | null;
   };
 
-  const readCachedPortal = async (cacheKey: string): Promise<CachedPortalRow | null> =>
-    getSharedCacheJson<CachedPortalRow>(PORTAL_QUERY_CACHE_NAMESPACE, cacheKey);
-
-  const writeCachedPortal = async (row: CachedPortalRow): Promise<void> => {
-    await Promise.all([
-      setSharedCacheJson(
-        PORTAL_QUERY_CACHE_NAMESPACE,
-        `slug:${row.slug}`,
-        row,
-        PORTAL_QUERY_CACHE_TTL_MS,
-        { maxEntries: 400 },
-      ),
-      setSharedCacheJson(
-        PORTAL_QUERY_CACHE_NAMESPACE,
-        `id:${row.id}`,
-        row,
-        PORTAL_QUERY_CACHE_TTL_MS,
-        { maxEntries: 400 },
-      ),
-    ]);
-  };
-
   // Slug takes precedence when both slug and UUID are present.
   if (portalSlug) {
     const cachedRow = await readCachedPortal(`slug:${portalSlug}`);
     if (cachedRow) {
-      return {
-        portalId: cachedRow.id,
-        portalSlug: cachedRow.slug,
-        filters: cachedRow.filters,
-        portalSettings: cachedRow.portalSettings ?? {},
-        hasPortalParamMismatch:
-          Boolean(portalIdParam && isValidUUID(portalIdParam) && cachedRow.id !== portalIdParam),
-      };
+      return toPortalQueryContext(cachedRow, portalIdParam);
     }
 
     const { data } = await supabase
@@ -191,10 +253,7 @@ export async function resolvePortalQueryContext(
     const cachedRow = await readCachedPortal(`id:${portalId}`);
     if (cachedRow) {
       return {
-        portalId: cachedRow.id,
-        portalSlug: cachedRow.slug,
-        filters: cachedRow.filters,
-        portalSettings: cachedRow.portalSettings ?? {},
+        ...toPortalQueryContext(cachedRow, portalIdParam),
         hasPortalParamMismatch: false,
       };
     }
@@ -226,11 +285,5 @@ export async function resolvePortalQueryContext(
     }
   }
 
-  return {
-    portalId: null,
-    portalSlug: portalSlug,
-    filters: {},
-    portalSettings: {},
-    hasPortalParamMismatch: false,
-  };
+  return emptyPortalQueryContext(portalSlug);
 }

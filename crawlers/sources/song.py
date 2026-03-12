@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import re
 import logging
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional
 
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
@@ -38,7 +38,7 @@ SONG_HQ = {
 }
 
 
-def parse_date(date_str: str) -> Optional[str]:
+def parse_date(date_str: str, *, today: Optional[date] = None) -> Optional[str]:
     """
     Parse various date formats to YYYY-MM-DD.
 
@@ -52,12 +52,14 @@ def parse_date(date_str: str) -> Optional[str]:
         return None
 
     date_str = date_str.strip()
-    current_year = datetime.now().year
+    reference_date = today or datetime.now().date()
+    current_year = reference_date.year
 
     # Try "Month DD, YYYY" or "Month DD"
     match = re.match(r'(?:\w+,?\s+)?(\w+)\s+(\d{1,2})(?:,?\s+(\d{4}))?', date_str, re.IGNORECASE)
     if match:
         month_str, day, year = match.groups()
+        explicit_year = year is not None
         year = year or str(current_year)
         try:
             # Handle full month name or abbreviation
@@ -68,9 +70,15 @@ def parse_date(date_str: str) -> Optional[str]:
             except ValueError:
                 return None
 
-        # If date is in the past, assume next year
-        if dt.date() < datetime.now().date():
-            dt = datetime.strptime(f"{month_str} {day} {current_year + 1}", "%B %d %Y" if len(month_str) > 3 else "%b %d %Y")
+        # Only roll yearless dates forward when they are clearly intended to be next-year.
+        # Explicit years should be preserved even when the page is stale.
+        if not explicit_year and dt.date() < reference_date:
+            days_past = (reference_date - dt.date()).days
+            if days_past >= 180:
+                dt = datetime.strptime(
+                    f"{month_str} {day} {current_year + 1}",
+                    "%B %d %Y" if len(month_str) > 3 else "%b %d %Y",
+                )
 
         return dt.strftime("%Y-%m-%d")
 

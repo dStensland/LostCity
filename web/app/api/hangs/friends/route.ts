@@ -55,7 +55,23 @@ export const GET = withAuth(async (request, { user, serviceClient }) => {
 
     const rows = (data ?? []) as FriendsHangRow[];
 
-    const friends: FriendHang[] = rows.map((row) => ({
+    // Defense-in-depth: filter blocked users even though enforce_block_unfriend
+    // should prevent blocked users from appearing as friends
+    const { data: blocks } = await serviceClient
+      .from("user_blocks")
+      .select("blocker_id, blocked_id")
+      .or(`blocker_id.eq.${user.id},blocked_id.eq.${user.id}`);
+
+    const blockedIds = new Set<string>();
+    if (blocks) {
+      for (const b of blocks as { blocker_id: string; blocked_id: string }[]) {
+        blockedIds.add(b.blocker_id === user.id ? b.blocked_id : b.blocker_id);
+      }
+    }
+
+    const filteredRows = rows.filter((row) => !blockedIds.has(row.user_id));
+
+    const friends: FriendHang[] = filteredRows.map((row) => ({
       hang: {
         id: row.id,
         user_id: row.user_id,

@@ -1,0 +1,44 @@
+"""
+Crawler for Watchman's (Krog Street Market cocktail bar).
+Inman Park cocktail bar located inside Krog Street Market.
+
+Website (watchmans.com) returns connection errors as of 2026-03-05.
+Registered as destination-only until the site becomes reliably accessible.
+"""
+
+from __future__ import annotations
+
+import logging
+
+from db import get_or_create_venue
+
+logger = logging.getLogger(__name__)
+
+BASE_URL = "https://watchmans.com"
+
+VENUE_DATA = {
+    "name": "Watchman's",
+    "slug": "watchmans",
+    "address": "99 Krog St NE",
+    "neighborhood": "Inman Park",
+    "city": "Atlanta",
+    "state": "GA",
+    "zip": "30307",
+    "lat": 33.7536,
+    "lng": -84.3594,
+    "venue_type": "bar",
+    "spot_type": "bar",
+    "website": BASE_URL,
+    "vibes": ["cocktails", "craft-cocktails", "inman-park", "krog-street-market", "date-night"],
+}
+
+
+def crawl(source: dict) -> tuple[int, int, int]:
+    """Ensure Watchman's exists as a venue."""
+    try:
+        venue_id = get_or_create_venue(VENUE_DATA)
+        logger.info(f"Watchman's venue record ensured (ID: {venue_id})")
+        return 0, 0, 0
+    except Exception as e:
+        logger.error(f"Failed to create Watchman's venue: {e}")
+        raise

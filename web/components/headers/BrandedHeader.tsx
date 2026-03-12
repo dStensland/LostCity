@@ -12,6 +12,7 @@ import BackButton from "./BackButton";
 import { usePortalOptional, DEFAULT_PORTAL } from "@/lib/portal-context";
 import { useAuth } from "@/lib/auth-context";
 import { getPortalNavLabel } from "@/lib/nav-labels";
+import { isHelpAtlSupportDirectoryEnabled } from "@/lib/helpatl-support";
 import type { HeaderConfig } from "@/lib/visual-presets";
 import type { PortalBranding } from "@/lib/portal-context";
 
@@ -29,7 +30,7 @@ interface BrandedHeaderProps {
 }
 
 type NavTab = {
-  key: "feed" | "find" | "community";
+  key: "feed" | "find" | "community" | "support";
   defaultLabel: string;
   href: string;
   authRequired?: boolean;
@@ -38,7 +39,7 @@ type NavTab = {
 const DEFAULT_TABS: NavTab[] = [
   { key: "feed", defaultLabel: "Feed", href: "feed" },
   { key: "find", defaultLabel: "Find", href: "find" },
-  { key: "community", defaultLabel: "Community", href: "community" },
+  { key: "community", defaultLabel: "Going Out", href: "community" },
 ];
 
 /**
@@ -66,9 +67,15 @@ export default function BrandedHeader({
 
   // Get custom nav labels from portal settings
   const navLabels = (portal.settings?.nav_labels || {}) as Record<string, string | undefined>;
+  const showSupportTab = isHelpAtlSupportDirectoryEnabled(portalSlug);
 
   // Build tabs with custom labels
-  const TABS = DEFAULT_TABS
+  const TABS = [
+    ...DEFAULT_TABS,
+    ...(showSupportTab
+      ? [{ key: "support" as const, defaultLabel: "Support", href: "support" }]
+      : []),
+  ]
     .filter(tab => !tab.authRequired || user)
     .map(tab => ({
       ...tab,
@@ -100,6 +107,7 @@ export default function BrandedHeader({
 
   const getHref = useCallback((tab: typeof TABS[0]) => {
     if (tab.key === "feed") return `/${portalSlug}`;
+    if (tab.key === "support") return `/${portalSlug}/support`;
     return `/${portalSlug}?view=${tab.key}`;
   }, [portalSlug]);
 
@@ -113,6 +121,9 @@ export default function BrandedHeader({
     }
     if (tab.key === "community") {
       return isPortalPage && currentView === "community";
+    }
+    if (tab.key === "support") {
+      return pathname.startsWith(`/${portalSlug}/support`);
     }
     return false;
   };

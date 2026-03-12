@@ -1,26 +1,36 @@
 """
-Crawler for Cobb Convention Center-Atlanta (cobbgalleria.com).
+Crawler for Cobb Galleria Centre public events (cobbgalleria.com/events).
 
-Site uses JavaScript rendering - must use Playwright.
+The official calendar is server-rendered as event cards with explicit dates,
+titles, descriptions, and outbound organizer links. This source should own the
+long-tail trade shows and public expos that do not already have stronger
+dedicated crawlers.
 """
 
 from __future__ import annotations
 
-import re
 import logging
-from datetime import datetime
+import re
+from datetime import date, datetime
 from typing import Optional
 
-from playwright.sync_api import sync_playwright
+import requests
+from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    find_existing_event_for_insert,
+    get_or_create_venue,
+    insert_event,
+    remove_stale_source_events,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
-from utils import extract_images_from_page, extract_event_links, find_event_url
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://cobbgalleria.com"
 EVENTS_URL = f"{BASE_URL}/events"
+USER_AGENT = "Mozilla/5.0 (compatible; LostCityBot/1.0)"
 
 VENUE_DATA = {
     "name": "Cobb Convention Center-Atlanta",
@@ -37,179 +47,265 @@ VENUE_DATA = {
     "website": BASE_URL,
 }
 
+DEDICATED_SOURCE_TITLES = {
+    "atlanta home show",
+    "the blade show",
+    "front row card show",
+    "importexpo car show",
+    "southern-fried gaming expo",
+    "critical materials & minerals expo 2026 (north america)",
+}
 
-def parse_time(time_text: str) -> Optional[str]:
-    """Parse time from '7:00 PM' format."""
-    match = re.search(r"(\d{1,2}):(\d{2})\s*(am|pm)", time_text, re.IGNORECASE)
-    if match:
-        hour, minute, period = match.groups()
-        hour = int(hour)
-        if period.lower() == "pm" and hour != 12:
-            hour += 12
-        elif period.lower() == "am" and hour == 12:
-            hour = 0
-        return f"{hour:02d}:{minute}"
+TAG_KEYWORDS = {
+    "expo": "expo",
+    "show": "show",
+    "tradeshow": "trade-show",
+    "trade show": "trade-show",
+    "home": "home",
+    "card": "collectibles",
+    "gaming": "gaming",
+    "knife": "collectibles",
+    "minerals": "minerals",
+    "materials": "industry",
+    "car": "cars",
+}
+
+
+def normalize_title(title: str) -> str:
+    return re.sub(r"\s+", " ", (title or "").strip())
+
+
+def should_skip_dedicated_event(title: str) -> bool:
+    return normalize_title(title).lower() in DEDICATED_SOURCE_TITLES
+
+
+def parse_date_parts(month_text: str, day_text: str, year_text: str) -> tuple[str, Optional[str]]:
+    """Parse Cobb calendar date blocks such as 'March' + '20-22' + '2026'."""
+    month = datetime.strptime(month_text[:3], "%b").month
+    year = int(year_text)
+
+    if "-" not in day_text:
+        start_date = date(year, month, int(day_text))
+        return start_date.isoformat(), None
+
+    start_day_str, end_day_str = day_text.split("-", 1)
+    start_day = int(start_day_str)
+    end_day = int(end_day_str)
+
+    start_date = date(year, month, start_day)
+    end_month = month + 1 if end_day < start_day else month
+    end_year = year
+    if end_month == 13:
+        end_month = 1
+        end_year += 1
+    end_date = date(end_year, end_month, end_day)
+    return start_date.isoformat(), end_date.isoformat()
+
+
+def parse_time_range(text: str) -> tuple[Optional[str], Optional[str]]:
+    """Parse a simple '5 to 10 p.m.' or '10 a.m. to 6 p.m.' range."""
+    cleaned = re.sub(r"\s+", " ", (text or "").strip().lower())
+    shorthand_match = re.search(
+        r"(\d{1,2})(?::(\d{2}))?\s*to\s*(\d{1,2})(?::(\d{2}))?\s*(a\.m\.|p\.m\.|am|pm)",
+        cleaned,
+    )
+    if shorthand_match:
+        start_hour, start_minute, end_hour, end_minute, end_period = shorthand_match.groups()
+        normalized_end = end_period.replace(".", "")
+        inferred_start = normalized_end
+        if normalized_end == "pm" and int(start_hour) > int(end_hour):
+            inferred_start = "am"
+        return (
+            _to_24h(start_hour, start_minute or "00", inferred_start),
+            _to_24h(end_hour, end_minute or "00", normalized_end),
+        )
+
+    match = re.search(
+        r"(\d{1,2})(?::(\d{2}))?\s*(a\.m\.|p\.m\.|am|pm)\s*to\s*(\d{1,2})(?::(\d{2}))?\s*(a\.m\.|p\.m\.|am|pm)",
+        cleaned,
+    )
+    if not match:
+        return None, None
+
+    start_hour, start_minute, start_period, end_hour, end_minute, end_period = match.groups()
+    return (
+        _to_24h(start_hour, start_minute or "00", start_period),
+        _to_24h(end_hour, end_minute or "00", end_period),
+    )
+
+
+def _to_24h(hour: str, minute: str, period: str) -> str:
+    value = int(hour)
+    normalized = period.replace(".", "")
+    if normalized == "pm" and value != 12:
+        value += 12
+    if normalized == "am" and value == 12:
+        value = 0
+    return f"{value:02d}:{minute}"
+
+
+def clean_text(value: str) -> str:
+    return re.sub(r"\s+", " ", (value or "").strip())
+
+
+def choose_external_url(excerpt: BeautifulSoup) -> Optional[str]:
+    for anchor in excerpt.select("a[href]"):
+        href = (anchor.get("href") or "").strip()
+        if not href or href.startswith("mailto:"):
+            continue
+        lowered = href.lower()
+        if any(domain in lowered for domain in ("facebook.com", "instagram.com", "bsky.app", "twitter.com", "x.com")):
+            continue
+        return href
     return None
 
 
+def infer_category(title: str, description: str) -> str:
+    text = f"{title} {description}".lower()
+    if any(token in text for token in ("home show", "expo", "trade show", "tradeshow", "collector", "convention")):
+        return "community"
+    if any(token in text for token in ("car show", "importexpo")):
+        return "community"
+    return "community"
+
+
+def infer_tags(title: str, description: str) -> list[str]:
+    text = f"{title} {description}".lower()
+    tags = ["cobb-galleria", "convention-center"]
+    for keyword, tag in TAG_KEYWORDS.items():
+        if keyword in text and tag not in tags:
+            tags.append(tag)
+    return tags
+
+
+def parse_event_cards(html_text: str, today: date | None = None) -> list[dict]:
+    today = today or datetime.now().date()
+    soup = BeautifulSoup(html_text, "html.parser")
+    events: list[dict] = []
+
+    for item in soup.select(".item[data-event-id]"):
+        title_el = item.select_one(".title h4")
+        excerpt_el = item.select_one(".excerpt")
+        month_el = item.select_one(".date .month")
+        day_el = item.select_one(".date .day")
+        year_el = item.select_one(".date .year")
+
+        if not title_el or not excerpt_el or not month_el or not day_el or not year_el:
+            continue
+
+        title = normalize_title(title_el.get_text(" ", strip=True))
+        if not title or should_skip_dedicated_event(title):
+            continue
+
+        start_date, end_date = parse_date_parts(
+            month_el.get_text(" ", strip=True),
+            day_el.get_text(" ", strip=True),
+            year_el.get_text(" ", strip=True),
+        )
+        if datetime.strptime(start_date, "%Y-%m-%d").date() < today:
+            continue
+
+        description = clean_text(excerpt_el.get_text(" ", strip=True))
+        first_line = clean_text(excerpt_el.get_text("\n", strip=True).split("\n", 1)[0])
+        start_time, end_time = parse_time_range(first_line)
+        external_url = choose_external_url(excerpt_el)
+        image_url = None
+        image_container = item.select_one(".image")
+        if image_container:
+            style = image_container.get("style") or ""
+            match = re.search(r"url\(([^)]+)\)", style)
+            if match:
+                image_url = match.group(1).strip().strip("'\"")
+
+        event_id = item.get("data-event-id")
+        source_url = f"{EVENTS_URL}#{event_id}" if event_id else EVENTS_URL
+
+        events.append(
+            {
+                "title": title,
+                "start_date": start_date,
+                "end_date": end_date,
+                "start_time": start_time,
+                "end_time": end_time,
+                "is_all_day": start_time is None,
+                "description": description[:1000],
+                "source_url": source_url,
+                "ticket_url": external_url,
+                "image_url": image_url,
+            }
+        )
+
+    return events
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Cobb Convention Center-Atlanta events using Playwright."""
+    """Crawl the public Cobb Galleria Centre events calendar."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
+    current_hashes: set[str] = set()
 
-    try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                viewport={"width": 1920, "height": 1080},
-            )
-            page = context.new_page()
+    response = requests.get(
+        EVENTS_URL,
+        headers={"User-Agent": USER_AGENT},
+        timeout=30,
+    )
+    response.raise_for_status()
 
-            venue_id = get_or_create_venue(VENUE_DATA)
+    events = parse_event_cards(response.text)
+    if not events:
+        raise ValueError("Cobb Galleria public events page did not yield any future non-dedicated events")
 
-            logger.info(f"Fetching Cobb Convention Center-Atlanta: {EVENTS_URL}")
-            page.goto(EVENTS_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)
+    venue_id = get_or_create_venue(VENUE_DATA)
 
-            # Extract images from page
-            image_map = extract_images_from_page(page)
+    for event in events:
+        title = event["title"]
+        content_hash = generate_content_hash(title, VENUE_DATA["name"], event["start_date"])
+        current_hashes.add(content_hash)
+        events_found += 1
 
-            # Extract event links for specific URLs
-            event_links = extract_event_links(page, BASE_URL)
+        event_record = {
+            "source_id": source_id,
+            "venue_id": venue_id,
+            "title": title,
+            "description": event["description"],
+            "start_date": event["start_date"],
+            "start_time": event["start_time"],
+            "end_date": event["end_date"],
+            "end_time": event["end_time"],
+            "is_all_day": event["is_all_day"],
+            "category": infer_category(title, event["description"]),
+            "subcategory": "expo",
+            "tags": infer_tags(title, event["description"]),
+            "price_min": None,
+            "price_max": None,
+            "price_note": None,
+            "is_free": False,
+            "source_url": event["source_url"],
+            "ticket_url": event["ticket_url"],
+            "image_url": event["image_url"],
+            "raw_text": f"{title} | {event['start_date']} | {event['description']}",
+            "extraction_confidence": 0.93,
+            "is_recurring": False,
+            "recurrence_rule": None,
+            "content_hash": content_hash,
+        }
 
-            # Scroll to load all content
-            for _ in range(5):
-                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                page.wait_for_timeout(1000)
+        existing = find_existing_event_for_insert(event_record)
+        if existing:
+            smart_update_existing_event(existing, event_record)
+            events_updated += 1
+        else:
+            insert_event(event_record)
+            events_new += 1
 
-            # Get page text and parse line by line
-            body_text = page.inner_text("body")
-            lines = [l.strip() for l in body_text.split("\n") if l.strip()]
-
-            # Parse events - look for date patterns
-            i = 0
-            while i < len(lines):
-                line = lines[i]
-
-                # Skip navigation items
-                if len(line) < 3:
-                    i += 1
-                    continue
-
-                # Look for date patterns
-                date_match = re.match(
-                    r"(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)?,?\s*(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})(?:,?\s+(\d{4}))?",
-                    line,
-                    re.IGNORECASE
-                )
-
-                if date_match:
-                    month = date_match.group(1)
-                    day = date_match.group(2)
-                    year = date_match.group(3) if date_match.group(3) else str(datetime.now().year)
-
-                    # Look for title in surrounding lines
-                    title = None
-                    start_time = None
-
-                    for offset in [-2, -1, 1, 2, 3]:
-                        idx = i + offset
-                        if 0 <= idx < len(lines):
-                            check_line = lines[idx]
-                            if re.match(r"(January|February|March)", check_line, re.IGNORECASE):
-                                continue
-                            if not start_time:
-                                time_result = parse_time(check_line)
-                                if time_result:
-                                    start_time = time_result
-                                    continue
-                            if not title and len(check_line) > 5:
-                                if not re.match(r"\d{1,2}[:/]", check_line):
-                                    if not re.match(r"(free|tickets|register|\$|more info)", check_line.lower()):
-                                        title = check_line
-                                        break
-
-                    if not title:
-                        i += 1
-                        continue
-
-                    # Parse date
-                    try:
-                        month_str = month[:3] if len(month) > 3 else month
-                        dt = datetime.strptime(f"{month_str} {day} {year}", "%b %d %Y")
-                        if dt.date() < datetime.now().date():
-                            dt = datetime.strptime(f"{month_str} {day} {int(year) + 1}", "%b %d %Y")
-                        start_date = dt.strftime("%Y-%m-%d")
-                    except ValueError:
-                        i += 1
-                        continue
-
-                    events_found += 1
-
-                    content_hash = generate_content_hash(title, "Cobb Convention Center-Atlanta", start_date)
-
-
-                    # Get specific event URL
-
-
-                    event_url = find_event_url(title, event_links, EVENTS_URL)
-
-
-
-                    event_record = {
-                        "source_id": source_id,
-                        "venue_id": venue_id,
-                        "title": title,
-                        "description": "Event at Cobb Convention Center-Atlanta",
-                        "start_date": start_date,
-                        "start_time": start_time,
-                        "end_date": None,
-                        "end_time": None,
-                        "is_all_day": False,
-                        "category": "community",
-                        "subcategory": None,
-                        "tags": ["event"],
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": None,
-                        "is_free": False,
-                        "source_url": event_url,
-                        "ticket_url": event_url,
-                        "image_url": image_map.get(title),
-                        "raw_text": f"{title} - {start_date}",
-                        "extraction_confidence": 0.80,
-                        "is_recurring": False,
-                        "recurrence_rule": None,
-                        "content_hash": content_hash,
-                    }
-
-                    existing = find_event_by_hash(content_hash)
-                    if existing:
-                        smart_update_existing_event(existing, event_record)
-                        events_updated += 1
-                        i += 1
-                        continue
-
-                    try:
-                        insert_event(event_record)
-                        events_new += 1
-                        logger.info(f"Added: {title} on {start_date}")
-                    except Exception as e:
-                        logger.error(f"Failed to insert: {title}: {e}")
-
-                i += 1
-
-            browser.close()
-
-        logger.info(
-            f"Cobb Convention Center-Atlanta crawl complete: {events_found} found, {events_new} new, {events_updated} updated"
-        )
-
-    except Exception as e:
-        logger.error(f"Failed to crawl Cobb Convention Center-Atlanta: {e}")
-        raise
-
+    removed = remove_stale_source_events(source_id, current_hashes)
+    logger.info("Removed %s stale Cobb Galleria events", removed)
+    logger.info(
+        "Cobb Galleria crawl complete: %s found, %s new, %s updated",
+        events_found,
+        events_new,
+        events_updated,
+    )
     return events_found, events_new, events_updated

@@ -38,6 +38,7 @@ import { useAuth } from "@/lib/auth-context";
 import { usePortal } from "@/lib/portal-context";
 import { getVisualPreset } from "@/lib/visual-presets";
 import Link from "next/link";
+import CityBriefing from "./CityBriefing";
 import GreetingBar from "./GreetingBar";
 import LineupSection from "./LineupSection";
 import CityPulseSection from "./CityPulseSection";
@@ -47,11 +48,12 @@ import InterestChannelsSection from "./sections/InterestChannelsSection";
 import { HangFeedSection } from "./sections/HangFeedSection";
 
 import NowShowingSection from "./sections/NowShowingSection";
-import NetworkFeedSection from "./sections/NetworkFeedSection";
 import FeedSectionSkeleton from "@/components/feed/FeedSectionSkeleton";
 
-import ExperiencesSection from "./sections/ExperiencesSection";
-import FestivalsSection from "./sections/FestivalsSection";
+import YonderRegionalEscapesSection from "./sections/YonderRegionalEscapesSection";
+import YonderArtifactQuestsSection from "./sections/YonderArtifactQuestsSection";
+import ActiveContestSection from "./sections/ActiveContestSection";
+import HolidayHero from "./HolidayHero";
 import FeedTimeMachine from "./FeedTimeMachine";
 import FeedPageIndex from "./FeedPageIndex";
 import type {
@@ -98,6 +100,7 @@ const BLOCK_TO_SECTION: Record<string, CityPulseSectionType> = {
 const MIDDLE_BLOCK_IDS: FeedBlockId[] = DEFAULT_FEED_ORDER.filter(
   (b) => !ALWAYS_VISIBLE_BLOCKS.includes(b) && !FIXED_LAST_BLOCKS.includes(b),
 );
+
 
 // ---------------------------------------------------------------------------
 // Client-side default shell — renders at T=0 with no API call
@@ -330,62 +333,16 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
           </div>
         );
 
+      // festivals + community blocks removed — covered by CityBriefing
+      // (Coming Up = festivals, Today in Atlanta = local news)
       case "festivals":
-        return portal ? (
-          <div
-            key="city-pulse-festivals"
-            id="city-pulse-festivals"
-            data-feed-anchor="true"
-            data-index-label="The Big Stuff"
-            data-block-id="festivals"
-            className="mt-8 scroll-mt-28"
-          >
-            <div className="h-px bg-[var(--twilight)]" />
-            <div className="pt-6">
-              <LazySection minHeight={200}>
-                <FestivalsSection portalSlug={portalSlug} portalId={portal.id} />
-              </LazySection>
-            </div>
-          </div>
-        ) : null;
-
+        return null;
       case "community":
-        return (
-          <div
-            key="city-pulse-community"
-            id="city-pulse-community"
-            data-feed-anchor="true"
-            data-index-label="The Network"
-            data-block-id="community"
-            className="mt-8 scroll-mt-28"
-          >
-            <div className="h-px bg-[var(--twilight)]" />
-            <div className="pt-6">
-              <LazySection minHeight={400}>
-                <NetworkFeedSection portalSlug={portalSlug} />
-              </LazySection>
-            </div>
-          </div>
-        );
+        return null;
 
+      // experiences block removed — destinations now in browse section
       case "experiences":
-        return (
-          <div
-            key="city-pulse-experiences"
-            id="city-pulse-experiences"
-            data-feed-anchor="true"
-            data-index-label="Things to Do"
-            data-block-id="experiences"
-            className="mt-8 scroll-mt-28"
-          >
-            <div className="h-px bg-[var(--twilight)]" />
-            <div className="pt-6">
-              <LazySection minHeight={200}>
-                <ExperiencesSection portalSlug={portalSlug} />
-              </LazySection>
-            </div>
-          </div>
-        );
+        return null;
 
       case "cinema":
         return (
@@ -426,15 +383,32 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
         ...(showTimeMachine ? { paddingBottom: "5.5rem" } : {}),
       }}
     >
-      {/* 1. GreetingBar — renders instantly from client-side defaults */}
-      {/*    Quick links are rendered inside the hero as subtle glassmorphic pills */}
-      <GreetingBar
-        header={header}
-        context={context}
-        portalSlug={portalSlug}
-        quickLinks={quickLinks}
-        dashboardCards={dashboardCards}
-      />
+      {/* 1. City Briefing (Atlanta) or GreetingBar (other portals) */}
+      {portal ? (
+        <div
+          id="city-pulse-briefing"
+          data-feed-anchor="true"
+          data-index-label="City Briefing"
+          data-block-id="briefing"
+          className="scroll-mt-28"
+        >
+          <CityBriefing
+            header={header}
+            context={context}
+            portalSlug={portalSlug}
+            portalId={portal.id}
+            quickLinks={quickLinks}
+          />
+        </div>
+      ) : (
+        <GreetingBar
+          header={header}
+          context={context}
+          portalSlug={portalSlug}
+          quickLinks={quickLinks}
+          dashboardCards={dashboardCards}
+        />
+      )}
       {/* CTA (if present — only from CMS override, so only after API loads) */}
       {header.cta && (
         <div className="mt-2.5">
@@ -451,9 +425,12 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
         </div>
       )}
 
-      <InterestChannelsSection portalSlug={portalSlug} onSubscriptionChange={refresh} />
+      {/* 3. Holiday Hero — seasonal card (self-gating, renders null when inactive) */}
+      <div className="mt-4">
+        <HolidayHero portalSlug={portalSlug} />
+      </div>
 
-      {/* 3. LineupSection — shows spinner until events arrive */}
+      {/* 4. LineupSection — shows spinner until events arrive */}
       <div
         id="city-pulse-events"
         data-feed-anchor="true"
@@ -465,7 +442,7 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
         {lineupLoading ? (
           <FeedSectionSkeleton accentColor="var(--coral)" minHeight={400} />
         ) : lineupSections.length > 0 || hasAnyTabEvents ? (
-          <div className="animate-fade-in">
+          <div>
             <LineupSection
               sections={lineupSections}
               portalSlug={portalSlug}
@@ -482,18 +459,38 @@ export default function CityPulseShell({ portalSlug }: CityPulseShellProps) {
         ) : null}
       </div>
 
+      {/* 5. Interest Channels — only on civic portals where groups are meaningful */}
+      {portal?.settings?.vertical === "community" && (
+        <InterestChannelsSection portalSlug={portalSlug} onSubscriptionChange={refresh} compact />
+      )}
+
+      {/* Active Contest card — self-fetching, renders only when a contest is live */}
+      <ActiveContestSection portalSlug={portalSlug} />
+
+      {portalSlug === "yonder" && (
+        <>
+          <YonderRegionalEscapesSection
+            portalSlug={portalSlug}
+            weatherSignal={context.weather_signal ?? null}
+            dayOfWeek={context.day_of_week ?? null}
+            timeSlot={context.time_slot ?? null}
+          />
+          <YonderArtifactQuestsSection portalSlug={portalSlug} />
+        </>
+      )}
+
       {/* Middle sections — order + visibility controlled by feedLayout */}
       {middleSectionOrder.map((blockId) => {
         if (hiddenBlockSet.has(blockId)) return null;
         return renderMiddleSection(blockId);
       })}
 
-      {/* Browse by Category (always last) */}
+      {/* Browse — Places to Go + Things to Do (always last) */}
       {!hiddenBlockSet.has("browse") && (
         <div
           id="city-pulse-browse"
           data-feed-anchor="true"
-          data-index-label="Browse by Category"
+          data-index-label="Browse"
           data-block-id="browse"
           className="scroll-mt-28"
         >

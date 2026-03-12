@@ -9,6 +9,7 @@ import logging
 from bs4 import BeautifulSoup
 import requests
 
+from sources._sports_bar_common import detect_sports_watch_party
 from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
 from dedupe import generate_content_hash
 
@@ -86,20 +87,13 @@ def crawl(source: dict) -> tuple[int, int, int]:
 
                     content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
 
-                    # Sports bar category detection
-                    title_lower = title.lower()
-                    if any(w in title_lower for w in ["nfl", "football", "falcons", "super bowl"]):
-                        category, subcategory = "sports", "watch_party"
-                        tags = ["sports", "nfl", "football", "watch-party", "downtown"]
-                    elif any(w in title_lower for w in ["nba", "basketball", "hawks"]):
-                        category, subcategory = "sports", "watch_party"
-                        tags = ["sports", "nba", "basketball", "watch-party", "downtown"]
-                    elif any(w in title_lower for w in ["braves", "mlb", "baseball"]):
-                        category, subcategory = "sports", "watch_party"
-                        tags = ["sports", "mlb", "baseball", "watch-party", "downtown"]
-                    elif any(w in title_lower for w in ["atlutd", "soccer", "mls"]):
-                        category, subcategory = "sports", "watch_party"
-                        tags = ["sports", "soccer", "mls", "watch-party", "downtown"]
+                    watch_party = detect_sports_watch_party(
+                        title,
+                        event_data.get("description", ""),
+                        extra_tags=["downtown"],
+                    )
+                    if watch_party:
+                        category, subcategory, tags = watch_party
                     else:
                         category, subcategory = "sports", "watch_party"
                         tags = ["sports", "watch-party", "downtown"]

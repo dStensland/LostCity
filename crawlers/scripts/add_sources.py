@@ -29,7 +29,10 @@ NEW_SOURCES = [
     # ===== University Venues =====
     {"name": "Ferst Center for the Arts", "slug": "ferst-center", "url": "https://arts.gatech.edu", "source_type": "scrape", "crawl_frequency": "daily"},
     {"name": "Schwartz Center for Performing Arts", "slug": "schwartz-center", "url": "https://arts.emory.edu", "source_type": "scrape", "crawl_frequency": "daily"},
-    {"name": "Rialto Center for the Arts", "slug": "rialto-center", "url": "https://rfrialto.gsu.edu", "source_type": "scrape", "crawl_frequency": "daily"},
+    {"name": "Rialto Center for the Arts", "slug": "rialto-center", "url": "https://calendar.gsu.edu/rialto", "source_type": "scrape", "crawl_frequency": "daily"},
+    {"name": "404 Day Weekend", "slug": "404-weekend", "url": "https://404weekend.com", "source_type": "scrape", "crawl_frequency": "weekly"},
+    {"name": "Atlanta Fair", "slug": "atlanta-fair", "url": "https://atlantafair.net", "source_type": "scrape", "crawl_frequency": "weekly"},
+    {"name": "African Film Festival Atlanta", "slug": "african-film-festival-atlanta", "url": "https://africanfilmfestatl.com", "source_type": "scrape", "crawl_frequency": "daily"},
 
     # ===== Additional Festivals =====
     {"name": "Atlanta Food & Wine Festival", "slug": "atlanta-food-wine", "url": "https://www.atlantafoodandwinefestival.com", "source_type": "scrape", "crawl_frequency": "weekly"},

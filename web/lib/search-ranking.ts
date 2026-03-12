@@ -275,10 +275,19 @@ const TIME_PATTERNS: { pattern: RegExp; dateFilter: string; label: string }[] = 
  */
 export function detectQuickActions(
   query: string,
-  portalSlug: string
+  portalSlug: string,
+  context?: Pick<SearchContext, "viewMode" | "findType">,
 ): QuickAction[] {
   const trimmedQuery = query.trim().toLowerCase();
   if (!trimmedQuery || trimmedQuery.length < 2) {
+    return [];
+  }
+
+  if (
+    context?.viewMode === "find" &&
+    context.findType &&
+    context.findType !== "events"
+  ) {
     return [];
   }
 

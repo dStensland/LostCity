@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" fill="none">
+  <!-- Shield shape — civic identity -->
+  <path d="M18 2 L32 8 L32 18 C32 26.5 26 32 18 35 C10 32 4 26.5 4 18 L4 8 Z" fill="#0D6E6E"/>
+  <!-- Inner shield highlight -->
+  <path d="M18 4.5 L30 9.5 L30 18 C30 25.3 24.8 30.5 18 33 C11.2 30.5 6 25.3 6 18 L6 9.5 Z" fill="#0A5A5A"/>
+  <!-- Stylized H — two pillars + arch bridge -->
+  <rect x="12" y="12" width="3.2" height="14" rx="1.2" fill="white"/>
+  <rect x="20.8" y="12" width="3.2" height="14" rx="1.2" fill="white"/>
+  <!-- Arch crossbar — civic bridge motif -->
+  <path d="M15.2 19.5 C15.2 16, 18 14, 18 14 C18 14, 20.8 16, 20.8 19.5" stroke="white" stroke-width="2.8" stroke-linecap="round" fill="none"/>
+  <!-- Upward arrow tip at arch peak — "help" / progress -->
+  <path d="M16.2 14.5 L18 11.5 L19.8 14.5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>

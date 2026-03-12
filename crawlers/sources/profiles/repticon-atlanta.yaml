@@ -1,0 +1,20 @@
+version: 1
+slug: repticon-atlanta
+name: Repticon Atlanta
+integration_method: festival_schedule
+defaults: {}
+discovery:
+  enabled: true
+  type: list
+  urls:
+  - https://repticon.com/georgia/atlanta
+  fetch:
+    render_js: true
+detail:
+  enabled: true
+  fetch:
+    render_js: true
+data_goals:
+- events
+- images
+- tickets

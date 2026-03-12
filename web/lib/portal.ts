@@ -6,14 +6,28 @@ import { normalizePortalSlug, resolvePortalSlugAlias } from "@/lib/portal-aliase
 import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
 import crypto from "crypto";
 
-export type PortalVertical = "city" | "hotel" | "film" | "hospital" | "community" | "marketplace" | "dog";
+export type PortalVertical =
+  | "city"
+  | "hotel"
+  | "film"
+  | "hospital"
+  | "community"
+  | "marketplace"
+  | "dog"
+  | "arts"
+  | "adventure"
+  | "family";
 
 /**
  * Get the portal vertical type (defaults to "city" if not set).
  * Server-safe version — can be used in server components and layouts.
  */
 export function getPortalVertical(portal: Portal): PortalVertical {
-  return (portal.settings?.vertical as PortalVertical) || "city";
+  const configured = portal.settings?.vertical as string | undefined;
+  if (configured === "civic") {
+    return "community";
+  }
+  return (configured as PortalVertical) || "city";
 }
 
 // Base columns that always exist in the portals table

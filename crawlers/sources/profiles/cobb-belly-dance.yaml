@@ -1,0 +1,19 @@
+version: 1
+slug: cobb-belly-dance
+name: Cobb Belly Dance
+integration_method: python
+defaults:
+  category: dance
+  tags:
+  - belly-dance
+  - dance-class
+  - public-fitness
+discovery:
+  enabled: false
+  type: list
+  urls:
+  - https://secure.rec1.com/GA/cobb-county-ga/catalog
+detail:
+  enabled: false
+data_goals:
+- events

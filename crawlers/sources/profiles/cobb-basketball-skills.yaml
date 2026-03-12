@@ -1,0 +1,19 @@
+version: 1
+slug: cobb-basketball-skills
+name: Cobb Basketball Skills
+integration_method: python
+defaults:
+  category: sports
+  tags:
+  - basketball
+  - sports-class
+  - youth-sports
+discovery:
+  enabled: false
+  type: list
+  urls:
+  - https://secure.rec1.com/GA/cobb-county-ga/catalog
+detail:
+  enabled: false
+data_goals:
+- events

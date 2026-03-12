@@ -22,6 +22,17 @@ def test_normalize_registration_status_detects_waitlist():
     assert status == "waitlist"
 
 
+def test_normalize_registration_status_maps_cancelled_ticket_status():
+    status = normalize_registration_status(
+        ticket_status="cancelled",
+        title="Summer Robotics Camp",
+        description="Registration is open.",
+        tags=[],
+        has_ticket_url=True,
+    )
+    assert status == "cancelled"
+
+
 def test_extract_age_range_from_text():
     result = extract_age_range(
         age_policy=None,
@@ -38,6 +49,15 @@ def test_source_reliability_marks_aggregators_low():
     source_info = {
         "slug": "eventbrite-atlanta-camps",
         "url": "https://www.eventbrite.com/d/united-states--atlanta/kids-camps/",
+        "source_type": "website",
+    }
+    assert derive_source_reliability(source_info) == "low"
+
+
+def test_source_reliability_marks_editorial_curators_low():
+    source_info = {
+        "slug": "discover-atlanta",
+        "url": "https://discoveratlanta.com/events/main/",
         "source_type": "website",
     }
     assert derive_source_reliability(source_info) == "low"

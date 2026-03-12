@@ -14,7 +14,7 @@ export const PREFERENCE_CATEGORIES = [
   { value: "community", label: "Community", icon: "community", emoji: "🤝" },
   { value: "fitness", label: "Fitness", icon: "fitness", emoji: "💪" },
   { value: "family", label: "Family", icon: "family", emoji: "👨‍👩‍👧" },
-  { value: "meetup", label: "Meetup", icon: "meetup", emoji: "👋" },
+  { value: "outdoors", label: "Outdoors", icon: "outdoors", emoji: "🌳" },
   { value: "words", label: "Words", icon: "words", emoji: "📚" },
 ] as const;
 
@@ -193,8 +193,8 @@ export const ONBOARDING_MOODS = [
     value: "social" as const,
     label: "Social",
     emoji: "🎉",
-    description: "Group hangs, food, meetups, sports",
-    categories: ["food_drink", "meetup", "sports"] as PreferenceCategory[],
+    description: "Group hangs, food, community, sports",
+    categories: ["food_drink", "community", "sports"] as PreferenceCategory[],
     vibes: ["good-for-groups"] as PreferenceVibe[],
   },
   {

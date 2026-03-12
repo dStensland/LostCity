@@ -13,6 +13,7 @@ import {
   errorApiResponse,
   validationError,
 } from "@/lib/api-utils";
+import { resolvePortalAttributionForWrite } from "@/lib/portal-attribution";
 
 // GET /api/itineraries — list current user's itineraries
 export const GET = withAuth(async (request, { user, serviceClient }) => {
@@ -44,7 +45,61 @@ export const GET = withAuth(async (request, { user, serviceClient }) => {
     return errorApiResponse("Failed to list itineraries", 500);
   }
 
-  return successResponse({ itineraries: data || [] });
+  // Tag owned itineraries
+  const owned = (data || []).map((itin: Record<string, unknown>) => ({
+    ...itin,
+    role: "owner",
+  }));
+  const ownedIds = new Set(owned.map((i: Record<string, unknown>) => i.id));
+
+  // Fetch itineraries where user is a participant (not cant_go)
+  const { data: participations } = await serviceClient
+    .from("itinerary_participants")
+    .select("itinerary_id, rsvp_status, id")
+    .eq("user_id", user.id)
+    .neq("rsvp_status", "cant_go");
+
+  let joined: Record<string, unknown>[] = [];
+  if (participations && participations.length > 0) {
+    const parts = participations as { itinerary_id: string; rsvp_status: string; id: string }[];
+    const joinedIds = parts
+      .map((p) => p.itinerary_id)
+      .filter((id) => !ownedIds.has(id));
+
+    if (joinedIds.length > 0) {
+      let joinedQuery = serviceClient
+        .from("itineraries")
+        .select("*")
+        .in("id", joinedIds)
+        .order("updated_at", { ascending: false });
+
+      if (portalId && isValidUUID(portalId)) {
+        joinedQuery = joinedQuery.eq("portal_id", portalId);
+      }
+
+      const { data: joinedData } = await joinedQuery;
+
+      const partMap = new Map(parts.map((p) => [p.itinerary_id, p]));
+      joined = (joinedData || []).map((itin: Record<string, unknown>) => {
+        const part = partMap.get(itin.id as string);
+        return {
+          ...itin,
+          role: "participant",
+          my_rsvp_status: part?.rsvp_status,
+          my_participant_id: part?.id,
+        };
+      });
+    }
+  }
+
+  // Merge and sort by updated_at DESC
+  const all = [...owned, ...joined].sort((a, b) => {
+    const aTime = new Date((a as Record<string, unknown>).updated_at as string).getTime();
+    const bTime = new Date((b as Record<string, unknown>).updated_at as string).getTime();
+    return bTime - aTime;
+  });
+
+  return successResponse({ itineraries: all });
 });
 
 // POST /api/itineraries — create a new itinerary
@@ -66,20 +121,23 @@ export const POST = withAuth(async (request, { user, serviceClient }) => {
     return validationError("Invalid JSON body");
   }
 
-  if (!isValidUUID(body.portal_id)) {
-    return validationError("portal_id is required and must be a valid UUID");
+  const attribution = await resolvePortalAttributionForWrite(request, {
+    endpoint: "/api/itineraries",
+    body,
+    required: true,
+  });
+
+  if (attribution.response) {
+    return attribution.response;
   }
 
-  // Verify portal exists
-  const { data: portal } = await serviceClient
-    .from("portals")
-    .select("id")
-    .eq("id", body.portal_id)
-    .eq("status", "active")
-    .maybeSingle();
+  const portalId = attribution.portalId;
+  if (!portalId) {
+    return validationError("Portal attribution is required for itinerary creation");
+  }
 
-  if (!portal) {
-    return errorApiResponse("Portal not found", 404);
+  if (isValidUUID(body.portal_id) && body.portal_id !== portalId) {
+    return validationError("portal and portal_id parameters must reference the same portal");
   }
 
   const title =
@@ -105,12 +163,13 @@ export const POST = withAuth(async (request, { user, serviceClient }) => {
     .from("itineraries")
     .insert({
       user_id: user.id,
-      portal_id: body.portal_id,
+      portal_id: portalId,
       title,
       date,
       description,
       share_token: shareToken,
       is_public: false,
+      visibility: "invitees",
     } as never)
     .select()
     .single();
