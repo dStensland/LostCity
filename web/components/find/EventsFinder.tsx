@@ -27,6 +27,7 @@ interface EventsFinderProps {
   portalExclusive: boolean;
   displayMode: DisplayMode;
   hasActiveFilters: boolean;
+  vertical?: string | null;
 }
 
 /**
@@ -38,6 +39,7 @@ export function EventsFinderFilters({
   portalExclusive,
   displayMode,
   hasActiveFilters,
+  vertical,
 }: EventsFinderProps) {
   return (
     <Suspense fallback={<div className="h-10 bg-[var(--night)] rounded-xl mt-3" />}>
@@ -56,6 +58,7 @@ export function EventsFinderFilters({
           portalId={portalId}
           portalExclusive={portalExclusive}
           portalSlug={portalSlug}
+          vertical={vertical}
         />
         {/* Active Filters */}
         {hasActiveFilters && displayMode === "list" && (

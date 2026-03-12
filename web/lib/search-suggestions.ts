@@ -6,6 +6,47 @@
  */
 
 import { createServiceClient } from "./supabase/service";
+import { getSharedCacheJson, setSharedCacheJson } from "./shared-cache";
+
+const SEARCH_SUGGESTIONS_CACHE_TTL_MS = 5 * 60 * 1000;
+const SEARCH_SUGGESTIONS_CACHE_MAX_ENTRIES = 300;
+const SEARCH_SUGGESTIONS_CACHE_NAMESPACE = "search-suggestions";
+const SPELLING_SUGGESTIONS_CACHE_NAMESPACE = "search-spelling-suggestions";
+const SUGGESTION_FALLBACK_STOP_WORDS = new Set([
+  "and",
+  "at",
+  "bar",
+  "club",
+  "event",
+  "events",
+  "for",
+  "in",
+  "live",
+  "music",
+  "night",
+  "nights",
+  "party",
+  "show",
+  "shows",
+  "the",
+  "with",
+]);
+const searchSuggestionsMemoryCache = new Map<
+  string,
+  { expiresAt: number; value: SearchSuggestion[] }
+>();
+const spellingSuggestionsMemoryCache = new Map<
+  string,
+  { expiresAt: number; value: SuggestionWithCorrection[] }
+>();
+const searchSuggestionsInFlight = new Map<
+  string,
+  Promise<SearchSuggestion[]>
+>();
+const spellingSuggestionsInFlight = new Map<
+  string,
+  Promise<SuggestionWithCorrection[]>
+>();
 
 // ============================================
 // Types
@@ -36,6 +77,70 @@ interface SpellingSuggestionRow {
   similarity_score: number;
 }
 
+function normalizeSuggestionQuery(value: string): string {
+  return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function extractSuggestionFallbackToken(value: string): string | null {
+  const normalized = normalizeSuggestionQuery(value);
+  if (!/\s/.test(normalized)) {
+    return null;
+  }
+
+  const tokens = normalized
+    .split(" ")
+    .map((token) => token.replace(/[^a-z0-9+&-]/g, ""))
+    .filter(
+      (token) => token.length >= 4 && !SUGGESTION_FALLBACK_STOP_WORDS.has(token),
+    )
+    .sort((left, right) => right.length - left.length);
+
+  return tokens[0] || null;
+}
+
+function buildSuggestionCacheKey(
+  prefix: string,
+  limit: number,
+  city?: string,
+): string {
+  return JSON.stringify({
+    q: normalizeSuggestionQuery(prefix),
+    limit,
+    city: city ? normalizeSuggestionQuery(city) : null,
+  });
+}
+
+function getMemoryCachedValue<T>(
+  cache: Map<string, { expiresAt: number; value: T }>,
+  cacheKey: string,
+): T | null {
+  const cached = cache.get(cacheKey);
+  if (!cached) return null;
+  if (cached.expiresAt <= Date.now()) {
+    cache.delete(cacheKey);
+    return null;
+  }
+  return cached.value;
+}
+
+function setMemoryCachedValue<T>(
+  cache: Map<string, { expiresAt: number; value: T }>,
+  cacheKey: string,
+  value: T,
+): void {
+  cache.set(cacheKey, {
+    expiresAt: Date.now() + SEARCH_SUGGESTIONS_CACHE_TTL_MS,
+    value,
+  });
+
+  if (cache.size > SEARCH_SUGGESTIONS_CACHE_MAX_ENTRIES) {
+    const oldestKey = cache.keys().next().value;
+    if (oldestKey) {
+      cache.delete(oldestKey);
+    }
+  }
+}
+
 // ============================================
 // Main Functions
 // ============================================
@@ -53,34 +158,92 @@ export async function getSearchSuggestions(
   limit = 8,
   city?: string
 ): Promise<SearchSuggestion[]> {
-  const trimmed = prefix.trim();
+  const trimmed = normalizeSuggestionQuery(prefix);
   if (!trimmed || trimmed.length < 2) {
     return [];
   }
 
-  const client = createServiceClient();
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (client.rpc as any)("get_similar_suggestions", {
-    p_query: trimmed,
-    p_limit: limit,
-    p_min_similarity: 0.2,
-    p_city: city || null,
-  });
-
-  if (error) {
-    console.error("Error getting search suggestions:", error);
-    return [];
+  const cacheKey = buildSuggestionCacheKey(trimmed, limit, city);
+  const memoryCached = getMemoryCachedValue(searchSuggestionsMemoryCache, cacheKey);
+  if (memoryCached) {
+    return memoryCached;
+  }
+  const cached = await getSharedCacheJson<SearchSuggestion[]>(
+    SEARCH_SUGGESTIONS_CACHE_NAMESPACE,
+    cacheKey,
+  );
+  if (cached) {
+    setMemoryCachedValue(searchSuggestionsMemoryCache, cacheKey, cached);
+    return cached;
   }
 
-  const rows = (data as SuggestionRow[]) || [];
+  const inFlight = searchSuggestionsInFlight.get(cacheKey);
+  if (inFlight) {
+    return inFlight;
+  }
 
-  return rows.map((row) => ({
-    text: row.suggestion,
-    type: mapSuggestionType(row.type),
-    frequency: row.frequency,
-    similarity: row.similarity_score,
-  }));
+  const loadPromise = (async () => {
+    const client = createServiceClient();
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (client.rpc as any)("get_similar_suggestions", {
+      p_query: trimmed,
+      p_limit: limit,
+      p_min_similarity: 0.2,
+      p_city: city || null,
+    });
+
+    if (error) {
+      console.error("Error getting search suggestions:", error);
+      return [];
+    }
+
+    const rows = (data as SuggestionRow[]) || [];
+    const suggestions = rows.map((row) => ({
+      text: row.suggestion,
+      type: mapSuggestionType(row.type),
+      frequency: row.frequency,
+      similarity: row.similarity_score,
+    }));
+
+    await setSharedCacheJson(
+      SEARCH_SUGGESTIONS_CACHE_NAMESPACE,
+      cacheKey,
+      suggestions,
+      SEARCH_SUGGESTIONS_CACHE_TTL_MS,
+      { maxEntries: SEARCH_SUGGESTIONS_CACHE_MAX_ENTRIES },
+    );
+    setMemoryCachedValue(searchSuggestionsMemoryCache, cacheKey, suggestions);
+    return suggestions;
+  })();
+
+  searchSuggestionsInFlight.set(cacheKey, loadPromise);
+  try {
+    return await loadPromise;
+  } finally {
+    const current = searchSuggestionsInFlight.get(cacheKey);
+    if (current === loadPromise) {
+      searchSuggestionsInFlight.delete(cacheKey);
+    }
+  }
+}
+
+export async function getSearchSuggestionsWithFallback(
+  query: string,
+  limit = 8,
+  city?: string,
+): Promise<SearchSuggestion[]> {
+  const directSuggestions = await getSearchSuggestions(query, limit, city);
+  if (directSuggestions.length > 0) {
+    return directSuggestions;
+  }
+
+  const fallbackToken = extractSuggestionFallbackToken(query);
+  if (!fallbackToken) {
+    return directSuggestions;
+  }
+
+  return getSearchSuggestions(fallbackToken, limit, city);
 }
 
 /**
@@ -96,31 +259,71 @@ export async function getTypoCorrectedSuggestions(
   limit = 3,
   city?: string
 ): Promise<SuggestionWithCorrection[]> {
-  const trimmed = query.trim();
+  const trimmed = normalizeSuggestionQuery(query);
   if (!trimmed || trimmed.length < 3) {
     return [];
   }
 
-  const client = createServiceClient();
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (client.rpc as any)("get_spelling_suggestions", {
-    p_query: trimmed,
-    p_limit: limit,
-    p_city: city || null,
-  });
-
-  if (error) {
-    console.error("Error getting typo corrections:", error);
-    return [];
+  const cacheKey = buildSuggestionCacheKey(trimmed, limit, city);
+  const memoryCached = getMemoryCachedValue(spellingSuggestionsMemoryCache, cacheKey);
+  if (memoryCached) {
+    return memoryCached;
+  }
+  const cached = await getSharedCacheJson<SuggestionWithCorrection[]>(
+    SPELLING_SUGGESTIONS_CACHE_NAMESPACE,
+    cacheKey,
+  );
+  if (cached) {
+    setMemoryCachedValue(spellingSuggestionsMemoryCache, cacheKey, cached);
+    return cached;
   }
 
-  const rows = (data as SpellingSuggestionRow[]) || [];
+  const inFlight = spellingSuggestionsInFlight.get(cacheKey);
+  if (inFlight) {
+    return inFlight;
+  }
 
-  return rows.map((row) => ({
-    suggestion: row.suggestion,
-    similarity: row.similarity_score,
-  }));
+  const loadPromise = (async () => {
+    const client = createServiceClient();
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (client.rpc as any)("get_spelling_suggestions", {
+      p_query: trimmed,
+      p_limit: limit,
+      p_city: city || null,
+    });
+
+    if (error) {
+      console.error("Error getting typo corrections:", error);
+      return [];
+    }
+
+    const rows = (data as SpellingSuggestionRow[]) || [];
+    const suggestions = rows.map((row) => ({
+      suggestion: row.suggestion,
+      similarity: row.similarity_score,
+    }));
+
+    await setSharedCacheJson(
+      SPELLING_SUGGESTIONS_CACHE_NAMESPACE,
+      cacheKey,
+      suggestions,
+      SEARCH_SUGGESTIONS_CACHE_TTL_MS,
+      { maxEntries: SEARCH_SUGGESTIONS_CACHE_MAX_ENTRIES },
+    );
+    setMemoryCachedValue(spellingSuggestionsMemoryCache, cacheKey, suggestions);
+    return suggestions;
+  })();
+
+  spellingSuggestionsInFlight.set(cacheKey, loadPromise);
+  try {
+    return await loadPromise;
+  } finally {
+    const current = spellingSuggestionsInFlight.get(cacheKey);
+    if (current === loadPromise) {
+      spellingSuggestionsInFlight.delete(cacheKey);
+    }
+  }
 }
 
 /**

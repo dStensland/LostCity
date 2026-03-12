@@ -23,6 +23,14 @@ export function buildSearchResultHref(
   result: SearchResult,
   options: { portalSlug?: string } = {}
 ): string {
+  if (
+    typeof result.id === "string" &&
+    result.id.startsWith("search:") &&
+    result.href
+  ) {
+    return result.href;
+  }
+
   const portal = resolvePortalSlug(options.portalSlug);
   const hasPortalContext = Boolean(options.portalSlug?.trim());
   const slug = extractSlugFromHref(result.href) || String(result.id);

@@ -108,6 +108,7 @@ type VenueFeatureRow = {
   feature_type: string;
   description: string | null;
   image_url: string | null;
+  url: string | null;
   is_seasonal: boolean;
   start_date: string | null;
   end_date: string | null;
@@ -129,6 +130,23 @@ type VenueSpecialRow = {
   source_url: string | null;
 };
 
+export type EditorialMentionRow = {
+  id: number;
+  source_key: string;
+  article_url: string;
+  article_title: string;
+  mention_type: string;
+  published_at: string | null;
+  guide_name: string | null;
+  snippet: string | null;
+};
+
+export type VenueOccasionRow = {
+  occasion: string;
+  confidence: number;
+  source: string;
+};
+
 export type SpotDetailPayload = {
   spot: Record<string, unknown>;
   upcomingEvents: Array<Record<string, unknown>>;
@@ -137,6 +155,8 @@ export type SpotDetailPayload = {
   artifacts: Array<Record<string, unknown>>;
   features: VenueFeatureRow[];
   specials: VenueSpecialRow[];
+  editorialMentions: EditorialMentionRow[];
+  occasions: VenueOccasionRow[];
   yonderDestinationIntelligence: YonderDestinationIntelligence | null;
   yonderAccommodationInventorySource: YonderAccommodationInventorySource | null;
   yonderRuntimeInventorySnapshot: YonderRuntimeInventorySnapshot | null;
@@ -355,7 +375,7 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
   }
 
   const spot = spotData as SpotRecord;
-  const spotSlug = typeof spotData.slug === "string" ? spotData.slug : slug;
+  const spotSlug = typeof spot.slug === "string" ? spot.slug : slug;
   const yonderDestinationIntelligence =
     getYonderDestinationIntelligence(spotSlug);
   const yonderAccommodationInventorySource =
@@ -388,6 +408,19 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
     .eq("venue_id", spot.id)
     .eq("is_active", true)
     .order("sort_order", { ascending: true });
+  const editorialMentionsPromise = supabase
+    .from("editorial_mentions")
+    .select("id, source_key, article_url, article_title, mention_type, published_at, guide_name, snippet")
+    .eq("venue_id", spot.id)
+    .eq("is_active", true)
+    .order("published_at", { ascending: false })
+    .limit(10);
+  const occasionsPromise = supabase
+    .from("venue_occasions")
+    .select("occasion, confidence, source")
+    .eq("venue_id", spot.id)
+    .gte("confidence", 0.5)
+    .order("confidence", { ascending: false });
 
   const isCinema = (spotData as Record<string, unknown>).venue_type === "cinema";
 
@@ -445,6 +478,8 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
     { data: artifacts },
     { data: features },
     { data: specials },
+    { data: editorialMentions },
+    { data: occasions },
   ] = await Promise.all([
     upcomingCountsPromise,
     nearbyDestinationsPromise,
@@ -453,6 +488,8 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
     artifactsPromise,
     featuresPromise,
     specialsPromise,
+    editorialMentionsPromise,
+    occasionsPromise,
   ]);
 
   const upcomingEventsWithCounts: Array<Record<string, unknown>> = dedupedRows.map((event) => {
@@ -486,6 +523,8 @@ export async function getSpotDetail(slug: string): Promise<SpotDetailPayload | n
     artifacts: (artifacts || []) as Array<Record<string, unknown>>,
     features: (features as VenueFeatureRow[] | null) || [],
     specials: (specials as VenueSpecialRow[] | null) || [],
+    editorialMentions: (editorialMentions as EditorialMentionRow[] | null) || [],
+    occasions: (occasions as VenueOccasionRow[] | null) || [],
     yonderDestinationIntelligence,
     yonderAccommodationInventorySource,
     yonderRuntimeInventorySnapshot,

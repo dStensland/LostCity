@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
-import { addRecentSearch, getRecentSearches } from "@/lib/searchHistory";
+import { addRecentSearch } from "@/lib/searchHistory";
 import { useSearchContext } from "@/lib/search-context";
 import { useSearchPersonalization } from "@/lib/hooks/useSearchPersonalization";
 import { useInstantSearch } from "@/lib/hooks/useInstantSearch";
@@ -106,7 +106,7 @@ export default function SearchBar() {
 
       params.delete("page");
       const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
-      router.push(newUrl, { scroll: false });
+      router.replace(newUrl, { scroll: false });
     }, 150);
 
     return () => {
@@ -216,8 +216,19 @@ export default function SearchBar() {
   const showPreSearch = search.showDropdown && search.query.length < 2;
   const showDropdown = search.shouldShowDropdown || showPreSearch;
 
-  // Calculate indices for grouped display
-  let currentIndex = 0;
+  const quickActionsStartIndex = 0;
+  const groupedStartIndexes = search.groupOrder.reduce<Record<string, number>>(
+    (acc, type) => {
+      const priorTypes = search.groupOrder.slice(0, search.groupOrder.indexOf(type));
+      const priorResultsCount = priorTypes.reduce((sum, priorType) => {
+        const results = search.groupedResults[priorType as SearchResult["type"]] || [];
+        return sum + Math.min(results.length, 3);
+      }, 0);
+      acc[type] = search.quickActions.length + priorResultsCount;
+      return acc;
+    },
+    {}
+  );
 
   return (
     <div className="relative w-full" ref={dropdownRef} role="search">
@@ -395,11 +406,7 @@ export default function SearchBar() {
             <QuickActionsList
               actions={search.quickActions}
               selectedIndex={search.selectedIndex}
-              startIndex={(() => {
-                const idx = currentIndex;
-                currentIndex += search.quickActions.length;
-                return idx;
-              })()}
+              startIndex={quickActionsStartIndex}
               onSelect={handleSelectQuickAction}
               onHover={search.setSelectedIndex}
             />
@@ -411,9 +418,6 @@ export default function SearchBar() {
               {search.groupOrder.map((type, groupIdx) => {
                 const results = search.groupedResults[type as SearchResult["type"]] || [];
                 if (results.length === 0) return null;
-
-                const startIdx = currentIndex;
-                currentIndex += Math.min(results.length, 3);
 
                 const facetCount = search.facets.find(f => f.type === type)?.count;
                 const totalCount = facetCount ?? results.length;
@@ -433,7 +437,7 @@ export default function SearchBar() {
                       results={results}
                       query={search.query}
                       selectedIndex={search.selectedIndex}
-                      startIndex={startIdx}
+                      startIndex={groupedStartIndexes[type] ?? search.quickActions.length}
                       onSelect={handleSelectSuggestion}
                       onHover={search.setSelectedIndex}
                       maxItems={3}

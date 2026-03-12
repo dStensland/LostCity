@@ -491,7 +491,7 @@ export async function GET(request: NextRequest) {
 
       venues = (fallbackVenues as VenueRow[] | null) || [];
       const venueIdsForCounts = venues.map((venue) => venue.id);
-      const eventCountChunks: Promise<{ data: EventRow[] | null }>[] = [];
+      const eventCountChunks: ReturnType<typeof buildEventCountsQuery>[] = [];
       const EVENT_COUNT_CHUNK_SIZE = 400;
 
       for (let i = 0; i < venueIdsForCounts.length; i += EVENT_COUNT_CHUNK_SIZE) {
@@ -519,12 +519,15 @@ export async function GET(request: NextRequest) {
 
     if (!venues || venues.length === 0) {
       return {
-        spots: [],
-        meta: {
-          total: 0,
-          openCount: 0,
-          neighborhoods: [],
+        payload: {
+          spots: [],
+          meta: {
+            total: 0,
+            openCount: 0,
+            neighborhoods: [],
+          },
         },
+        serverTiming: timing.toHeader(),
       };
     }
 
