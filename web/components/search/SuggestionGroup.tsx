@@ -153,8 +153,8 @@ export default function SuggestionGroup({
 function getTypeLabel(type: SearchResult["type"]): string {
   const labels: Record<SearchResult["type"], string> = {
     event: "Events",
-    venue: "Venues",
-    organizer: "Organizers",
+    venue: "Places",
+    organizer: "Organizations",
     series: "Series",
     list: "Curations",
     neighborhood: "Neighborhoods",

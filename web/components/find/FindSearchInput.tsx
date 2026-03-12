@@ -27,6 +27,33 @@ interface FindSearchInputProps {
   placeholder?: string;
 }
 
+function resolveViewAllHref(params: {
+  portalSlug: string;
+  resultType: SearchResult["type"];
+  query: string;
+  findType?: string | null;
+}): string {
+  const encodedQuery = encodeURIComponent(params.query);
+
+  if (params.resultType === "festival") {
+    return `/${params.portalSlug}/festivals?search=${encodedQuery}`;
+  }
+
+  if (params.resultType === "organizer") {
+    return `/${params.portalSlug}?view=community&search=${encodedQuery}`;
+  }
+
+  if (params.resultType === "venue") {
+    return `/${params.portalSlug}?view=find&type=destinations&search=${encodedQuery}`;
+  }
+
+  if (params.findType === "classes") {
+    return `/${params.portalSlug}?view=find&type=classes&search=${encodedQuery}`;
+  }
+
+  return `/${params.portalSlug}?view=find&type=events&search=${encodedQuery}`;
+}
+
 export default function FindSearchInput({
   portalSlug,
   portalId,
@@ -206,7 +233,7 @@ export default function FindSearchInput({
           </svg>
         )}
       </div>
-      <label htmlFor={searchId} className="sr-only">Search events, venues, and organizers</label>
+      <label htmlFor={searchId} className="sr-only">Search events, places, and organizations</label>
       <input
         ref={inputRef}
         id={searchId}
@@ -402,14 +429,15 @@ export default function FindSearchInput({
                       onViewAll={hasMore ? () => {
                         search.setShowDropdown(false);
                         search.setSelectedIndex(-1);
-                        if (type === "festival") {
-                          router.push(`/${portalSlug}/festivals?search=${encodeURIComponent(search.query)}`, { scroll: false });
-                        } else if (type === "organizer") {
-                          router.push(`/${portalSlug}?view=community&search=${encodeURIComponent(search.query)}`, { scroll: false });
-                        } else {
-                          const ft = type === "venue" ? "destinations" : "events";
-                          router.push(`/${portalSlug}?view=find&type=${ft}&search=${encodeURIComponent(search.query)}`, { scroll: false });
-                        }
+                        router.push(
+                          resolveViewAllHref({
+                            portalSlug,
+                            resultType: type as SearchResult["type"],
+                            query: search.query,
+                            findType,
+                          }),
+                          { scroll: false },
+                        );
                       } : undefined}
                     />
                   </div>

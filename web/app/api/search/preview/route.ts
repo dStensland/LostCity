@@ -4,11 +4,12 @@ import { buildStableSearchCacheKey } from "@/lib/search-cache-key";
 import { createServerTimingRecorder } from "@/lib/server-timing";
 import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
 import { createClient } from "@/lib/supabase/server";
+import type { FindType as SearchFindType } from "@/lib/search-context";
 import {
   getCachedPortalQueryContext,
   resolvePortalQueryContext,
 } from "@/lib/portal-query-context";
-import { runSearchPreview, type PreviewSearchType } from "@/lib/search-preview";
+import { buildInstantSearchPayload, type InstantSearchEntityType } from "@/lib/instant-search-service";
 import type { UnifiedSearchResponse } from "@/lib/unified-search";
 
 const PREVIEW_CACHE_TTL_MS = 30 * 1000;
@@ -36,6 +37,13 @@ function safeParseInt(
   return Math.min(Math.max(parsed, min), max);
 }
 
+function normalizeFindType(value: string | null): SearchFindType {
+  if (value === "events" || value === "classes" || value === "destinations") {
+    return value;
+  }
+  return null;
+}
+
 export async function GET(request: NextRequest) {
   const rateLimitResult = await applyRateLimit(
     request,
@@ -57,6 +65,8 @@ export async function GET(request: NextRequest) {
     }
 
     const limit = safeParseInt(searchParams.get("limit"), 8, 1, 12);
+    const viewMode = (searchParams.get("viewMode") as "feed" | "find" | "community") || "feed";
+    const findType = normalizeFindType(searchParams.get("findType"));
     const typesParam = searchParams.get("types");
     const validTypes = ["event", "venue", "organizer"] as const;
     const requestedTypes = typesParam
@@ -64,8 +74,8 @@ export async function GET(request: NextRequest) {
           .split(",")
           .filter((value) =>
             validTypes.includes(value as (typeof validTypes)[number]),
-          ) as PreviewSearchType[])
-      : (["event", "venue"] as PreviewSearchType[]);
+          ) as InstantSearchEntityType[])
+      : (["event", "venue"] as InstantSearchEntityType[]);
 
     const cacheKey = buildStableSearchCacheKey(searchParams);
     const cachedPayload = await timing.measure("cache_lookup", () =>
@@ -128,16 +138,26 @@ export async function GET(request: NextRequest) {
         };
       }
 
-      const payload = await runSearchPreview({
-        getSupabase,
+      const instantPayload = await buildInstantSearchPayload({
         query,
         limit,
-        requestedTypes,
+        requestedTypes: requestedTypes as InstantSearchEntityType[],
         portalId: portalContext.portalId,
-        portalSlug: portalContext.portalSlug,
+        portalSlug: portalContext.portalSlug || "atlanta",
         portalCity: portalContext.filters.city || undefined,
+        viewMode,
+        findType,
         timing,
       });
+
+      const payload: UnifiedSearchResponse = {
+        results: instantPayload.suggestions,
+        facets: instantPayload.facets as UnifiedSearchResponse["facets"],
+        total:
+          instantPayload.facets.length > 0
+            ? instantPayload.facets.reduce((sum, facet) => sum + facet.count, 0)
+            : instantPayload.suggestions.length,
+      };
 
       await setSharedCacheJson(
         PREVIEW_CACHE_NAMESPACE,

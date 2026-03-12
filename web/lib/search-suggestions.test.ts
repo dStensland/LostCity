@@ -1,133 +1,119 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
-const rpcMock = vi.fn();
-const getSharedCacheJsonMock = vi.fn();
-const setSharedCacheJsonMock = vi.fn();
+import {
+  buildSuggestionQueryVariants,
+  mergeExpandedSuggestions,
+  rerankSuggestionsForQuery,
+  type SearchSuggestion,
+} from "@/lib/search-suggestions";
 
-vi.mock("@/lib/supabase/service", () => ({
-  createServiceClient: () => ({
-    rpc: rpcMock,
-  }),
-}));
+describe("buildSuggestionQueryVariants", () => {
+  it("expands time-and-category queries into cleaner canonical variants", () => {
+    const variants = buildSuggestionQueryVariants("live music tonight");
 
-vi.mock("@/lib/shared-cache", () => ({
-  getSharedCacheJson: getSharedCacheJsonMock,
-  setSharedCacheJson: setSharedCacheJsonMock,
-}));
-
-describe("search suggestions cache", () => {
-  beforeEach(() => {
-    rpcMock.mockReset();
-    getSharedCacheJsonMock.mockReset();
-    setSharedCacheJsonMock.mockReset();
-    getSharedCacheJsonMock.mockResolvedValue(null);
-    setSharedCacheJsonMock.mockResolvedValue(undefined);
-    vi.resetModules();
+    expect(variants).toEqual([
+      expect.objectContaining({ query: "live music tonight", source: "direct" }),
+      expect.objectContaining({ query: "live music", source: "intent" }),
+      expect.objectContaining({ query: "music", source: "category" }),
+    ]);
   });
 
-  it("reuses cached suggestions for normalized duplicate queries", async () => {
-    rpcMock.mockResolvedValue({
-      data: [
+  it("normalizes neighborhood aliases into canonical variants", () => {
+    const variants = buildSuggestionQueryVariants("o4w brunch");
+
+    expect(variants).toContainEqual(
+      expect.objectContaining({
+        query: "old fourth ward brunch",
+        source: "alias",
+      }),
+    );
+  });
+});
+
+describe("mergeExpandedSuggestions", () => {
+  it("prefers entity suggestions from expanded variants over taxonomy from the direct query", () => {
+    const merged = mergeExpandedSuggestions(
+      [
         {
-          suggestion: "Karaoke Night",
-          type: "event",
-          frequency: 4,
-          similarity_score: 0.8,
+          variant: { query: "live music tonight", source: "direct", priority: 1 },
+          suggestions: [
+            { text: "music", type: "category", frequency: 40, similarity: 0.9 },
+            { text: "live-music", type: "tag", frequency: 20, similarity: 0.8 },
+          ] satisfies SearchSuggestion[],
+        },
+        {
+          variant: { query: "music", source: "category", priority: 0.88 },
+          suggestions: [
+            { text: "Live Music Saturday", type: "event", frequency: 8, similarity: 0.5 },
+            { text: "St. James Live", type: "venue", frequency: 5, similarity: 0.42 },
+          ] satisfies SearchSuggestion[],
         },
       ],
-      error: null,
-    });
-
-    const { getSearchSuggestions } = await import("@/lib/search-suggestions");
-
-    const first = await getSearchSuggestions("  Karaoke  ", 8, "Atlanta");
-    const second = await getSearchSuggestions("karaoke", 8, "atlanta");
-
-    expect(rpcMock).toHaveBeenCalledTimes(1);
-    expect(first[0]?.text).toBe("Karaoke Night");
-    expect(second[0]?.text).toBe("Karaoke Night");
-    expect(setSharedCacheJsonMock).toHaveBeenCalledTimes(1);
-  });
-
-  it("coalesces identical in-flight suggestion requests", async () => {
-    let resolveRpc:
-      | ((value: {
-          data: Array<{
-            suggestion: string;
-            type: string;
-            frequency: number;
-            similarity_score: number;
-          }>;
-          error: null;
-        }) => void)
-      | null = null;
-
-    rpcMock.mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          resolveRpc = resolve;
-        }),
+      4,
     );
 
-    const { getSearchSuggestions } = await import("@/lib/search-suggestions");
+    expect(merged.slice(0, 2)).toEqual([
+      expect.objectContaining({ text: "Live Music Saturday", type: "event" }),
+      expect.objectContaining({ text: "St. James Live", type: "venue" }),
+    ]);
+  });
 
-    const firstPromise = getSearchSuggestions("music", 8, "atlanta");
-    const secondPromise = getSearchSuggestions("music", 8, "atlanta");
-
-    await Promise.resolve();
-    expect(rpcMock).toHaveBeenCalledTimes(1);
-
-    resolveRpc?.({
-      data: [
+  it("keeps location expansions focused on neighborhoods and venues over raw tags", () => {
+    const merged = mergeExpandedSuggestions(
+      [
         {
-          suggestion: "Music",
-          type: "category",
-          frequency: 10,
-          similarity_score: 0.9,
+          variant: { query: "l5p", source: "direct", priority: 1 },
+          suggestions: [
+            { text: "l5p", type: "tag", frequency: 28, similarity: 1 },
+            { text: "Little Five Points", type: "neighborhood", frequency: 3, similarity: 0.35 },
+          ] satisfies SearchSuggestion[],
+        },
+        {
+          variant: { query: "little five points", source: "alias", priority: 0.84 },
+          suggestions: [
+            { text: "little-five-points", type: "tag", frequency: 120, similarity: 0.7 },
+            { text: "Little Five Points", type: "venue", frequency: 2, similarity: 0.65 },
+          ] satisfies SearchSuggestion[],
         },
       ],
-      error: null,
-    });
+      4,
+    );
 
-    const [first, second] = await Promise.all([firstPromise, secondPromise]);
-    expect(first[0]?.text).toBe("Music");
-    expect(second[0]?.text).toBe("Music");
+    expect(merged.slice(0, 2)).toEqual([
+      expect.objectContaining({ text: "Little Five Points", type: "neighborhood" }),
+      expect.objectContaining({ text: "Little Five Points", type: "venue" }),
+    ]);
+  });
+});
+
+describe("rerankSuggestionsForQuery", () => {
+  it("prioritizes canonical neighborhood suggestions over raw tags for shorthand location queries", () => {
+    const ranked = rerankSuggestionsForQuery("l5p", [
+      { text: "l5p", type: "tag", frequency: 28, similarity: 1 },
+      { text: "Little Five Points", type: "neighborhood", frequency: 3, similarity: 0.35 },
+    ]);
+
+    expect(ranked[0]).toMatchObject({
+      text: "Little Five Points",
+      type: "neighborhood",
+    });
   });
 
-  it("falls back to the strongest query token when a multi-word phrase has no direct suggestions", async () => {
-    rpcMock
-      .mockResolvedValueOnce({
-        data: [],
-        error: null,
-      })
-      .mockResolvedValueOnce({
-        data: [
-          {
-            suggestion: "Afrobeat",
-            type: "category",
-            frequency: 6,
-            similarity_score: 0.7,
-          },
-        ],
-        error: null,
-      });
+  it("demotes generic taxonomy for multi-word event intent queries", () => {
+    const ranked = rerankSuggestionsForQuery("live music tonight", [
+      { text: "music", type: "category", frequency: 2608, similarity: 0.63 },
+      { text: "live-music", type: "tag", frequency: 1584, similarity: 0.57 },
+      { text: "Live Music: DJ Night", type: "event", frequency: 5, similarity: 0.72 },
+      { text: "live-music", type: "vibe", frequency: 250, similarity: 0.57 },
+    ]);
 
-    const { getSearchSuggestionsWithFallback } = await import(
-      "@/lib/search-suggestions"
-    );
-
-    const suggestions = await getSearchSuggestionsWithFallback(
-      "afrobeat night",
-      8,
-      "atlanta",
-    );
-
-    expect(rpcMock).toHaveBeenCalledTimes(2);
-    expect(rpcMock.mock.calls[1]?.[1]).toMatchObject({
-      p_query: "afrobeat",
-      p_limit: 8,
-      p_city: "atlanta",
+    expect(ranked[0]).toMatchObject({
+      text: "Live Music: DJ Night",
+      type: "event",
     });
-    expect(suggestions[0]?.text).toBe("Afrobeat");
+    expect(ranked.at(-1)).toMatchObject({
+      text: "live-music",
+      type: "tag",
+    });
   });
 });

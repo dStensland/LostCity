@@ -317,7 +317,7 @@ export function useInstantSearch({
           const rankedResults = dedupeResultsSemantically(
             rankResults(cached.data.suggestions, rankingContext)
           );
-          const fallbackActions = detectQuickActions(query, portalSlug);
+          const fallbackActions = detectQuickActions(query, portalSlug, rankingContext);
           const nextQuickActions = dedupeQuickActions(
             cached.data.quickActions || fallbackActions
           );
@@ -336,7 +336,7 @@ export function useInstantSearch({
           const rankedResults = dedupeResultsSemantically(
             rankResults(prefixCached.suggestions, rankingContext)
           );
-          const fallbackActions = detectQuickActions(query, portalSlug);
+          const fallbackActions = detectQuickActions(query, portalSlug, rankingContext);
           const nextQuickActions = dedupeQuickActions(
             prefixCached.quickActions || fallbackActions
           );
@@ -530,6 +530,7 @@ export function useInstantSearch({
 
   const selectSuggestion = useCallback(
     (_result: SearchResult) => {
+      void _result;
       if (query.trim()) {
         addRecentSearch(query.trim());
         setRecentSearches(getRecentSearches());
@@ -542,6 +543,7 @@ export function useInstantSearch({
 
   const selectQuickAction = useCallback(
     (_action: QuickAction) => {
+      void _action;
       if (query.trim()) {
         addRecentSearch(query.trim());
         setRecentSearches(getRecentSearches());

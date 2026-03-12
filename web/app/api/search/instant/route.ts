@@ -5,27 +5,15 @@ import {
   getCachedPortalQueryContext,
   resolvePortalQueryContext,
 } from "@/lib/portal-query-context";
-import {
-  type SearchContext,
-  rankResults,
-  detectQuickActions,
-  groupResultsByType,
-  getGroupDisplayOrder,
-} from "@/lib/search-ranking";
 import type { ViewMode, FindType } from "@/lib/search-context";
 import { logger } from "@/lib/logger";
 import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
 import { buildStableInstantSearchCacheKey } from "@/lib/search-cache-key";
 import { createServerTimingRecorder } from "@/lib/server-timing";
 import {
-  runSearchPreview,
-  type PreviewSearchType,
-} from "@/lib/search-preview";
-import {
-  getSearchSuggestionsWithFallback,
-} from "@/lib/search-suggestions";
-import type { SearchResult } from "@/lib/unified-search";
-import { mapSuggestionToSearchResult } from "@/lib/search-suggestion-results";
+  buildInstantSearchPayload,
+  type InstantSearchEntityType,
+} from "@/lib/instant-search-service";
 
 // Helper to safely parse integers with validation
 function safeParseInt(
@@ -205,99 +193,18 @@ export async function GET(request: NextRequest) {
       const portalSlug =
         portalContext.portalSlug || searchParams.get("portalSlug") || "atlanta";
 
-        // Build search context
-        const context: SearchContext = {
+        const payload = await buildInstantSearchPayload({
+          query,
+          limit,
+          portalId: portalId ?? null,
+          portalSlug,
+          portalCity: portalContext.filters.city || undefined,
           viewMode,
           findType,
-          portalSlug,
-          portalId,
-        };
-
-        const trimmedQuery = query.trim();
-        const instantTypes =
-          requestedTypes && requestedTypes.length > 0
-            ? requestedTypes
-            : includeOrganizers
-              ? trimmedQuery.length >= 4
-              ? (["event", "venue", "organizer"] as const)
-                : (["event", "venue"] as const)
-              : (["event", "venue"] as const);
-        const searchLimit = Math.min(limit * 2, limit + 4);
-        const suggestionFastPathEligible =
-          trimmedQuery.length <= 24 && !typesParam && !includeOrganizers;
-        const result = await timing.measure("instant_search", async () => {
-          if (suggestionFastPathEligible) {
-            const suggestionRows = await timing.measure("instant_suggestions", () =>
-              getSearchSuggestionsWithFallback(
-                trimmedQuery,
-                searchLimit,
-                portalContext.filters.city || undefined,
-              )
-            );
-            const shouldUseSuggestions =
-              suggestionRows.length > 0 &&
-              (
-                trimmedQuery.length <= 5 ||
-                /\s/.test(trimmedQuery) ||
-                suggestionRows.length >= Math.min(4, limit)
-              );
-
-            if (shouldUseSuggestions) {
-              const mappedResults = suggestionRows
-                .map((suggestion) =>
-                  mapSuggestionToSearchResult(suggestion, portalSlug, "instant"),
-                )
-                .filter((result): result is SearchResult => result !== null);
-
-              const grouped = groupResultsByType(mappedResults);
-              return {
-                results: mappedResults,
-                facets: Object.entries(grouped)
-                  .filter(([, items]) => items.length > 0)
-                  .map(([type, items]) => ({
-                    type: type as SearchResult["type"],
-                    count: items.length,
-                  })),
-                total: mappedResults.length,
-              };
-            }
-          }
-
-          return runSearchPreview({
-            getSupabase,
-            query,
-            limit: searchLimit, // Keep autocomplete lean
-            requestedTypes: instantTypes as PreviewSearchType[],
-            portalId: portalId ?? null,
-            portalSlug,
-            portalCity: portalContext.filters.city || undefined,
-            timing,
-          });
+          includeOrganizers,
+          requestedTypes: requestedTypes as InstantSearchEntityType[] | undefined,
+          timing,
         });
-
-        // Apply context-aware ranking
-        const rankedResults = rankResults(result.results, context);
-
-        // Detect quick actions based on query
-        const quickActions = detectQuickActions(query, portalSlug);
-
-        // Group results by type
-        const groupedResults = groupResultsByType(rankedResults);
-
-        // Get display order based on context
-        const groupOrder = getGroupDisplayOrder(context);
-
-        // Build response with facet counts
-        const facets = result.facets ?? [];
-        const payload = {
-          suggestions: rankedResults.slice(0, limit),
-          topResults: rankedResults.slice(limit, limit * 2),
-          quickActions,
-          groupedResults,
-          groupOrder,
-          facets,
-          intent: "intent" in result ? result.intent : undefined,
-        };
         await setSharedCacheJson(
           INSTANT_SEARCH_CACHE_NAMESPACE,
           cacheKey,

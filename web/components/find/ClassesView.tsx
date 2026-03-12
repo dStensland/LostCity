@@ -9,6 +9,7 @@ import { formatTimeSplit } from "@/lib/formats";
 import CategoryIcon, { getCategoryColor, getCategoryLabel } from "@/components/CategoryIcon";
 import SeriesCard, { type SeriesInfo, type SeriesVenueGroup } from "@/components/SeriesCard";
 import ScopedStyles from "@/components/ScopedStyles";
+import FindSearchInput from "@/components/find/FindSearchInput";
 import { createCssVarClass } from "@/lib/css-utils";
 import { getReflectionClass } from "@/lib/card-utils";
 import Dot from "@/components/ui/Dot";
@@ -777,6 +778,7 @@ export default function ClassesView({
   const initialCategory = searchParams?.get("class_category") || "all";
   const initialDateWindow = searchParams?.get("class_date") || "upcoming";
   const initialSkill = searchParams?.get("class_skill") || "all";
+  const searchTerm = searchParams?.get("search")?.trim() || "";
 
   const [classes, setClasses] = useState<ClassEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -820,6 +822,7 @@ export default function ClassesView({
       cat: string,
       datePreset: string,
       skillPreset: string,
+      activeSearch: string,
       append = false
     ) => {
       const requestId = ++requestIdRef.current;
@@ -839,6 +842,7 @@ export default function ClassesView({
         if (startDate) params.set("start_date", startDate);
         if (endDate) params.set("end_date", endDate);
         if (skillPreset !== "all") params.set("skill_level", skillPreset);
+        if (activeSearch.length >= 2) params.set("search", activeSearch);
         if (portalId) params.set("portal_id", portalId);
 
         const res = await fetch(`/api/classes?${params.toString()}`);
@@ -896,8 +900,8 @@ export default function ClassesView({
     offsetRef.current = 0;
     hasLoadedRef.current = false;
     requestIdRef.current += 1;
-    fetchClasses(0, category, dateWindow, skillLevel);
-  }, [category, dateWindow, skillLevel, fetchClasses]);
+    fetchClasses(0, category, dateWindow, skillLevel, searchTerm);
+  }, [category, dateWindow, skillLevel, searchTerm, fetchClasses]);
 
   // Infinite scroll via IntersectionObserver
   useEffect(() => {
@@ -906,7 +910,14 @@ export default function ClassesView({
     observerRef.current = new IntersectionObserver(
       (entries) => {
         if (entries[0]?.isIntersecting && hasMore && !loadingMore && !loading) {
-          fetchClasses(offsetRef.current, category, dateWindow, skillLevel, true);
+          fetchClasses(
+            offsetRef.current,
+            category,
+            dateWindow,
+            skillLevel,
+            searchTerm,
+            true,
+          );
         }
       },
       { rootMargin: "400px" }
@@ -917,7 +928,7 @@ export default function ClassesView({
     }
 
     return () => observerRef.current?.disconnect();
-  }, [category, dateWindow, fetchClasses, hasMore, loading, loadingMore, skillLevel]);
+  }, [category, dateWindow, fetchClasses, hasMore, loading, loadingMore, searchTerm, skillLevel]);
 
   // Group classes by day and venue
   const dayGroups = groupClassesByDayAndVenue(classes);
@@ -928,10 +939,11 @@ export default function ClassesView({
           class_category: category !== "all" ? category : undefined,
           class_date: dateWindow !== "upcoming" ? dateWindow : undefined,
           class_skill: skillLevel !== "all" ? skillLevel : undefined,
+          search: searchTerm || undefined,
         },
         "classes"
       ),
-    [category, dateWindow, skillLevel]
+    [category, dateWindow, searchTerm, skillLevel]
   );
 
   useEffect(() => {
@@ -957,6 +969,14 @@ export default function ClassesView({
   return (
     <div>
       <section className="mb-4 rounded-2xl border border-[var(--twilight)]/80 bg-[var(--void)]/70 backdrop-blur-md p-3 sm:p-4 relative z-30">
+        <div className="mb-3">
+          <FindSearchInput
+            portalSlug={portalSlug}
+            portalId={portalId}
+            findType="classes"
+            placeholder="Search classes..."
+          />
+        </div>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
             <CategoryDropdown category={category} onSelect={setCategory} />

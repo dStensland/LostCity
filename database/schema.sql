@@ -679,6 +679,117 @@ CREATE TRIGGER update_programs_updated_at
 ALTER TABLE programs ENABLE ROW LEVEL SECURITY;
 
 -- -------------------------------------------------------
+-- Search term corpus (migration 486)
+-- -------------------------------------------------------
+-- Canonical display terms plus alias-aware match terms used to build the
+-- autocomplete corpus from crawled entities.
+
+CREATE OR REPLACE FUNCTION normalize_search_term(p_input TEXT)
+RETURNS TEXT AS $$
+  SELECT NULLIF(
+    regexp_replace(lower(trim(COALESCE(p_input, ''))), '\s+', ' ', 'g'),
+    ''
+  );
+$$ LANGUAGE sql IMMUTABLE;
+
+CREATE TABLE IF NOT EXISTS entity_search_terms (
+  entity_type TEXT NOT NULL,
+  entity_id TEXT NOT NULL,
+  suggestion_type TEXT NOT NULL CHECK (
+    suggestion_type IN (
+      'event',
+      'venue',
+      'organizer',
+      'category',
+      'tag',
+      'vibe',
+      'festival',
+      'neighborhood'
+    )
+  ),
+  term_type TEXT NOT NULL CHECK (
+    term_type IN (
+      'primary',
+      'alias',
+      'artist',
+      'provider',
+      'venue',
+      'category',
+      'tag',
+      'vibe',
+      'neighborhood'
+    )
+  ),
+  display_term TEXT NOT NULL,
+  match_term TEXT NOT NULL,
+  city TEXT,
+  weight INTEGER NOT NULL DEFAULT 1 CHECK (weight >= 1),
+  source TEXT NOT NULL DEFAULT 'generated',
+  confidence NUMERIC(3, 2) NOT NULL DEFAULT 1.00 CHECK (confidence >= 0 AND confidence <= 1),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (entity_type, entity_id, suggestion_type, term_type, match_term)
+);
+
+CREATE INDEX IF NOT EXISTS idx_entity_search_terms_match_term
+  ON entity_search_terms(match_term);
+
+CREATE INDEX IF NOT EXISTS idx_entity_search_terms_city_type
+  ON entity_search_terms(city, suggestion_type);
+
+CREATE INDEX IF NOT EXISTS idx_entity_search_terms_display_term
+  ON entity_search_terms(display_term);
+
+CREATE TRIGGER update_entity_search_terms_updated_at
+  BEFORE UPDATE ON entity_search_terms
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TABLE IF NOT EXISTS search_term_overrides (
+  id BIGSERIAL PRIMARY KEY,
+  entity_type TEXT NOT NULL,
+  entity_id TEXT NOT NULL,
+  suggestion_type TEXT NOT NULL CHECK (
+    suggestion_type IN (
+      'event',
+      'venue',
+      'organizer',
+      'category',
+      'tag',
+      'vibe',
+      'festival',
+      'neighborhood'
+    )
+  ),
+  term_type TEXT NOT NULL DEFAULT 'alias' CHECK (
+    term_type IN ('alias', 'abbreviation', 'nickname', 'synonym')
+  ),
+  display_term TEXT NOT NULL,
+  match_term TEXT NOT NULL,
+  city TEXT,
+  weight INTEGER NOT NULL DEFAULT 2 CHECK (weight >= 1),
+  confidence NUMERIC(3, 2) NOT NULL DEFAULT 1.00 CHECK (confidence >= 0 AND confidence <= 1),
+  notes TEXT,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (entity_type, entity_id, suggestion_type, match_term)
+);
+
+CREATE INDEX IF NOT EXISTS idx_search_term_overrides_match_term
+  ON search_term_overrides(match_term)
+  WHERE is_active = TRUE;
+
+CREATE INDEX IF NOT EXISTS idx_search_term_overrides_city_type
+  ON search_term_overrides(city, suggestion_type)
+  WHERE is_active = TRUE;
+
+CREATE TRIGGER update_search_term_overrides_updated_at
+  BEFORE UPDATE ON search_term_overrides
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- -------------------------------------------------------
 -- School calendar events (Hooky family portal — migration 307)
 -- -------------------------------------------------------
 -- Public school system calendar reference data (APS, DeKalb, Cobb, Gwinnett).

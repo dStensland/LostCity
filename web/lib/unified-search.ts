@@ -1263,6 +1263,7 @@ export async function instantSearch(
   query: string,
   options: {
     portalId?: string;
+    city?: string;
     limit?: number;
     types?: ("event" | "venue" | "organizer" | "series" | "list" | "festival")[];
     includeSocialProof?: boolean;
@@ -1274,6 +1275,7 @@ export async function instantSearch(
 ): Promise<InstantSearchResponse> {
   const {
     portalId,
+    city,
     limit = 8,
     types,
     includeSocialProof = false,
@@ -1302,6 +1304,7 @@ export async function instantSearch(
     types: selectedTypes,
     limit: limit * 2, // Get more to split between suggestions and results
     portalId,
+    city,
     useIntentAnalysis: true,
     boostExactMatches: true,
     includeSocialProof,

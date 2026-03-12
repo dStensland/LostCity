@@ -7,6 +7,11 @@
 
 import { createServiceClient } from "./supabase/service";
 import { getSharedCacheJson, setSharedCacheJson } from "./shared-cache";
+import {
+  analyzeQueryIntent,
+  extractCategorySignals,
+  extractCleanQuery,
+} from "@/lib/query-intent";
 
 const SEARCH_SUGGESTIONS_CACHE_TTL_MS = 5 * 60 * 1000;
 const SEARCH_SUGGESTIONS_CACHE_MAX_ENTRIES = 300;
@@ -29,7 +34,12 @@ const SUGGESTION_FALLBACK_STOP_WORDS = new Set([
   "show",
   "shows",
   "the",
+  "today",
+  "tonight",
+  "tomorrow",
   "with",
+  "week",
+  "weekend",
 ]);
 const searchSuggestionsMemoryCache = new Map<
   string,
@@ -77,8 +87,284 @@ interface SpellingSuggestionRow {
   similarity_score: number;
 }
 
+export type SuggestionQueryVariant = {
+  query: string;
+  source: "direct" | "intent" | "category" | "alias" | "token";
+  priority: number;
+};
+
+type SuggestionVariantResult = {
+  variant: SuggestionQueryVariant;
+  suggestions: SearchSuggestion[];
+};
+
 function normalizeSuggestionQuery(value: string): string {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+const QUERY_ALIAS_REPLACEMENTS: Array<{
+  pattern: RegExp;
+  replacement: string;
+}> = [
+  { pattern: /\bo4w\b/g, replacement: "old fourth ward" },
+  { pattern: /\bl5p\b/g, replacement: "little five points" },
+  { pattern: /\bva[\s-]?hi\b/g, replacement: "virginia highland" },
+  { pattern: /\bstand[\s-]?up\b/g, replacement: "comedy" },
+  { pattern: /\blive music\b/g, replacement: "music" },
+  { pattern: /\brooftop bars?\b/g, replacement: "rooftop" },
+  { pattern: /\bdjs?\b/g, replacement: "dj" },
+];
+
+function normalizeAliasedSuggestionQuery(value: string): string {
+  let normalized = normalizeSuggestionQuery(value);
+  for (const { pattern, replacement } of QUERY_ALIAS_REPLACEMENTS) {
+    normalized = normalized.replace(pattern, replacement);
+  }
+  return normalizeSuggestionQuery(normalized);
+}
+
+function isHighValueSuggestionType(type: SearchSuggestion["type"]): boolean {
+  return (
+    type === "event" ||
+    type === "venue" ||
+    type === "organizer" ||
+    type === "festival" ||
+    type === "vibe" ||
+    type === "neighborhood"
+  );
+}
+
+function countHighValueSuggestions(suggestions: SearchSuggestion[]): number {
+  return suggestions.filter((suggestion) => isHighValueSuggestionType(suggestion.type)).length;
+}
+
+function getIntentAwareSuggestionTypePriority(
+  query: string,
+  type: SearchSuggestion["type"],
+): number {
+  const intent = analyzeQueryIntent(query);
+  const hasMultipleWords = /\s/.test(query.trim());
+  const isEventIntent =
+    intent.intent === "time" ||
+    intent.intent === "category" ||
+    intent.intent === "series" ||
+    (hasMultipleWords && intent.intent === "general");
+
+  if (intent.intent === "location") {
+    switch (type) {
+      case "neighborhood":
+        return 620;
+      case "venue":
+        return 540;
+      case "event":
+        return 380;
+      case "organizer":
+        return 280;
+      case "festival":
+        return 240;
+      case "category":
+        return 140;
+      case "vibe":
+        return 110;
+      case "tag":
+        return 80;
+      default:
+        return 100;
+    }
+  }
+
+  if (isEventIntent) {
+    switch (type) {
+      case "event":
+        return 620;
+      case "festival":
+        return 520;
+      case "venue":
+        return 360;
+      case "organizer":
+        return 320;
+      case "neighborhood":
+        return 240;
+      case "category":
+        return 170;
+      case "vibe":
+        return 90;
+      case "tag":
+        return 70;
+      default:
+        return 100;
+    }
+  }
+
+  switch (type) {
+    case "venue":
+      return 460;
+    case "organizer":
+      return 420;
+    case "event":
+      return 400;
+    case "festival":
+      return 360;
+    case "neighborhood":
+      return 300;
+    case "category":
+      return 180;
+    case "vibe":
+      return 140;
+    case "tag":
+      return 120;
+    default:
+      return 100;
+  }
+}
+
+export function rerankSuggestionsForQuery(
+  query: string,
+  suggestions: SearchSuggestion[],
+): SearchSuggestion[] {
+  const normalizedQuery = normalizeSuggestionQuery(query);
+  if (!normalizedQuery || suggestions.length <= 1) {
+    return suggestions;
+  }
+
+  return [...suggestions]
+    .map((suggestion, index) => {
+      const normalizedText = normalizeSuggestionQuery(suggestion.text);
+      const similarity = suggestion.similarity || 0;
+      const exactPrefixBonus = normalizedText.startsWith(normalizedQuery) ? 80 : 0;
+      const containsBonus = normalizedText.includes(normalizedQuery) ? 30 : 0;
+      const score =
+        getIntentAwareSuggestionTypePriority(normalizedQuery, suggestion.type) +
+        Math.round(similarity * 100) +
+        Math.min(suggestion.frequency, 60) +
+        exactPrefixBonus +
+        containsBonus -
+        index * 2;
+
+      return { suggestion, score };
+    })
+    .sort((left, right) => right.score - left.score)
+    .map(({ suggestion }) => suggestion);
+}
+
+export function buildSuggestionQueryVariants(query: string): SuggestionQueryVariant[] {
+  const normalized = normalizeSuggestionQuery(query);
+  if (normalized.length < 2) {
+    return [];
+  }
+
+  const variants: SuggestionQueryVariant[] = [
+    { query: normalized, source: "direct", priority: 1.0 },
+  ];
+
+  const intent = analyzeQueryIntent(normalized);
+  const cleaned = normalizeSuggestionQuery(extractCleanQuery(normalized, intent));
+  if (cleaned.length >= 2 && cleaned !== normalized) {
+    variants.push({ query: cleaned, source: "intent", priority: 0.92 });
+  }
+
+  const categorySignals = new Set<string>();
+  if (intent.intent === "category" && typeof intent.extractedValue === "string") {
+    categorySignals.add(intent.extractedValue);
+  }
+  for (const signal of extractCategorySignals(cleaned || normalized)) {
+    categorySignals.add(signal);
+  }
+
+  for (const signal of categorySignals) {
+    const categoryVariant = normalizeSuggestionQuery(signal);
+    if (categoryVariant.length >= 2 && categoryVariant !== normalized && categoryVariant !== cleaned) {
+      variants.push({ query: categoryVariant, source: "category", priority: 0.88 });
+    }
+  }
+
+  const aliased = normalizeAliasedSuggestionQuery(cleaned || normalized);
+  if (aliased.length >= 2 && aliased !== normalized && aliased !== cleaned) {
+    variants.push({ query: aliased, source: "alias", priority: 0.84 });
+  }
+
+  const fallbackToken = extractSuggestionFallbackToken(normalized);
+  if (
+    fallbackToken &&
+    fallbackToken !== normalized &&
+    fallbackToken !== cleaned &&
+    fallbackToken !== aliased
+  ) {
+    variants.push({ query: fallbackToken, source: "token", priority: 0.78 });
+  }
+
+  const byQuery = new Map<string, SuggestionQueryVariant>();
+  for (const variant of variants) {
+    const existing = byQuery.get(variant.query);
+    if (!existing || existing.priority < variant.priority) {
+      byQuery.set(variant.query, variant);
+    }
+  }
+
+  return Array.from(byQuery.values()).sort((left, right) => right.priority - left.priority);
+}
+
+function getSuggestionTypePriority(type: SearchSuggestion["type"]): number {
+  switch (type) {
+    case "event":
+      return 500;
+    case "venue":
+      return 440;
+    case "festival":
+      return 400;
+    case "organizer":
+      return 360;
+    case "vibe":
+      return 300;
+    case "neighborhood":
+      return 260;
+    case "category":
+      return 140;
+    case "tag":
+      return 120;
+    default:
+      return 100;
+  }
+}
+
+export function mergeExpandedSuggestions(
+  variantResults: SuggestionVariantResult[],
+  limit: number,
+): SearchSuggestion[] {
+  const ranked = new Map<
+    string,
+    SearchSuggestion & { score: number; source: SuggestionQueryVariant["source"] }
+  >();
+
+  for (const { variant, suggestions } of variantResults) {
+    suggestions.forEach((suggestion, index) => {
+      const key = `${suggestion.type}:${normalizeSuggestionQuery(suggestion.text)}`;
+      const score =
+        getIntentAwareSuggestionTypePriority(variant.query, suggestion.type) +
+        Math.round(variant.priority * 220) +
+        Math.round((suggestion.similarity || 0) * 100) +
+        Math.min(suggestion.frequency, 250) -
+        index * 3;
+      const existing = ranked.get(key);
+      if (!existing || score > existing.score) {
+        ranked.set(key, {
+          ...suggestion,
+          score,
+          source: variant.source,
+        });
+      }
+    });
+  }
+
+  return Array.from(ranked.values())
+    .sort((left, right) => right.score - left.score)
+    .slice(0, limit)
+    .map((suggestion) => ({
+      text: suggestion.text,
+      type: suggestion.type,
+      frequency: suggestion.frequency,
+      similarity: suggestion.similarity,
+    }));
 }
 
 function extractSuggestionFallbackToken(value: string): string | null {
@@ -199,12 +485,13 @@ export async function getSearchSuggestions(
     }
 
     const rows = (data as SuggestionRow[]) || [];
-    const suggestions = rows.map((row) => ({
+    const mappedSuggestions = rows.map((row) => ({
       text: row.suggestion,
       type: mapSuggestionType(row.type),
       frequency: row.frequency,
       similarity: row.similarity_score,
     }));
+    const suggestions = rerankSuggestionsForQuery(trimmed, mappedSuggestions);
 
     await setSharedCacheJson(
       SEARCH_SUGGESTIONS_CACHE_NAMESPACE,
@@ -233,17 +520,38 @@ export async function getSearchSuggestionsWithFallback(
   limit = 8,
   city?: string,
 ): Promise<SearchSuggestion[]> {
-  const directSuggestions = await getSearchSuggestions(query, limit, city);
-  if (directSuggestions.length > 0) {
+  const variants = buildSuggestionQueryVariants(query);
+  if (variants.length === 0) {
+    return [];
+  }
+
+  const [primaryVariant, ...secondaryVariants] = variants;
+  const directSuggestions = await getSearchSuggestions(primaryVariant.query, limit, city);
+  const shouldExpand =
+    secondaryVariants.length > 0 &&
+    (
+      directSuggestions.length === 0 ||
+      countHighValueSuggestions(directSuggestions) < Math.min(3, Math.ceil(limit / 2))
+    );
+
+  if (!shouldExpand) {
     return directSuggestions;
   }
 
-  const fallbackToken = extractSuggestionFallbackToken(query);
-  if (!fallbackToken) {
-    return directSuggestions;
-  }
+  const secondaryResults = await Promise.all(
+    secondaryVariants.slice(0, 2).map(async (variant) => ({
+      variant,
+      suggestions: await getSearchSuggestions(variant.query, limit, city),
+    })),
+  );
 
-  return getSearchSuggestions(fallbackToken, limit, city);
+  return mergeExpandedSuggestions(
+    [
+      { variant: primaryVariant, suggestions: directSuggestions },
+      ...secondaryResults,
+    ],
+    limit,
+  );
 }
 
 /**

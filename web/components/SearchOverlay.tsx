@@ -30,7 +30,7 @@ const QUICK_ACTIONS: Array<{
 ];
 
 const SEARCH_PLACEHOLDERS = [
-  "Search events, venues, organizers...",
+  "Search events, places, organizations...",
   "Try 'live music tonight'",
   "Try 'free events this weekend'",
   "Try 'comedy shows'",
@@ -38,6 +38,7 @@ const SEARCH_PLACEHOLDERS = [
 ];
 
 type TypeFilter = "event" | "venue" | "organizer" | "series" | "list" | null;
+const OVERLAY_SEARCH_TYPES = "event,venue,organizer";
 
 // Custom hook for debounced value
 function useDebounce<T>(value: T, delay: number): T {
@@ -458,7 +459,11 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
 
     const params = new URLSearchParams({
       q: searchQuery,
-      limit: "8",
+      limit: "12",
+      types: OVERLAY_SEARCH_TYPES,
+      include_facets: "false",
+      include_did_you_mean: "false",
+      include_event_popularity: "false",
     });
 
     if (currentTypeFilter) {
@@ -490,7 +495,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
 
     if (currentTypeFilter) {
       const fallbackParams = new URLSearchParams(params);
-      fallbackParams.delete("types");
+      fallbackParams.set("types", OVERLAY_SEARCH_TYPES);
       const fallbackCacheKey = buildStableSearchCacheKey(fallbackParams);
       const fallbackCached = searchCache.get(fallbackCacheKey);
 
@@ -511,7 +516,7 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
     setError(null);
 
     try {
-      const response = await fetch(`/api/search/preview?${params.toString()}`, {
+      const response = await fetch(`/api/search?${params.toString()}`, {
         signal: controller.signal,
       });
       if (!response.ok) throw new Error("Search request failed");
@@ -524,7 +529,9 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
       const nextResults = dedupeSearchResults((data.results || []) as SearchResult[]);
       setResults(nextResults);
       setFacets((data.facets || []) as SearchFacet[]);
-      const nextDidYouMean: string[] = [];
+      const nextDidYouMean: string[] = Array.isArray(data.didYouMean)
+        ? (data.didYouMean as string[])
+        : [];
 
       // Cache the results and prune if needed
       searchCache.set(cacheKey, {
@@ -535,7 +542,6 @@ export default function SearchOverlay({ isOpen, onClose }: SearchOverlayProps) {
       });
       pruneCache();
 
-      // Set didYouMean from search response
       setDidYouMean(nextDidYouMean);
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") {

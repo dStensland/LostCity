@@ -10,6 +10,7 @@ import type { SearchFacet, SearchResult, UnifiedSearchResponse } from "@/lib/uni
 import { getSearchSuggestionsWithFallback } from "@/lib/search-suggestions";
 import { mapSuggestionToSearchResult } from "@/lib/search-suggestion-results";
 import { getFindSearchSubtitle } from "@/lib/find-labels";
+import type { FindType } from "@/lib/find-filter-schema";
 
 export type PreviewSearchType = "event" | "venue" | "organizer";
 
@@ -108,21 +109,22 @@ function buildPreviewResponse(results: SearchResult[]): UnifiedSearchResponse {
   };
 }
 
-function buildDirectQueryFallbackResults(
+export function buildDirectQueryFallbackResults(
   query: string,
   portalSlug: string,
   requestedTypes: PreviewSearchType[],
+  findType?: FindType | null,
 ): SearchResult[] {
-  const encodedQuery = encodeURIComponent(query);
   const results: SearchResult[] = [];
+  const eventTarget = findType === "classes" ? "classes" : "events";
 
   if (requestedTypes.includes("event")) {
     results.push({
       id: `search:query:event:${query.toLowerCase()}`,
       type: "event",
       title: query,
-      subtitle: "Search events",
-      href: `/${portalSlug}?view=find&type=events&search=${encodedQuery}`,
+      subtitle: findType === "classes" ? "Search classes" : "Search events",
+      href: `/${portalSlug}?view=find&type=${eventTarget}&search=${encodeURIComponent(query)}`,
       score: 560,
     });
   }
@@ -133,7 +135,7 @@ function buildDirectQueryFallbackResults(
       type: "venue",
       title: query,
       subtitle: getFindSearchSubtitle("venue"),
-      href: `/${portalSlug}?view=find&type=destinations&search=${encodedQuery}`,
+      href: `/${portalSlug}?view=find&type=destinations&search=${encodeURIComponent(query)}`,
       score: 540,
     });
   }
@@ -444,6 +446,7 @@ export async function runSearchPreview(options: {
   portalId: string | null;
   portalSlug: string | null;
   portalCity?: string;
+  findType?: FindType | null;
   timing?: TimingRecorder;
 }): Promise<UnifiedSearchResponse> {
   const {
@@ -455,6 +458,7 @@ export async function runSearchPreview(options: {
     portalId,
     portalSlug,
     portalCity,
+    findType,
     timing,
   } = options;
   const escapedQuery = escapeSQLPattern(query.toLowerCase().trim());
@@ -484,6 +488,7 @@ export async function runSearchPreview(options: {
               suggestion,
               portalSlug || "atlanta",
               "preview",
+              { findType },
             ),
           )
           .filter((result): result is SearchResult => result !== null),
@@ -497,6 +502,7 @@ export async function runSearchPreview(options: {
             query.trim(),
             portalSlug || "atlanta",
             requestedTypes,
+            findType,
           ),
         ),
       );

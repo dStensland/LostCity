@@ -13,6 +13,8 @@ const SEARCH_CACHE_KEY_PARAMS = new Set([
   "portal",
   "portal_id",
   "city",
+  "viewMode",
+  "findType",
   "include_facets",
   "include_did_you_mean",
   "include_event_popularity",
