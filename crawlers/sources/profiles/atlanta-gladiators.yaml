@@ -1,16 +1,15 @@
 version: 1
 slug: atlanta-gladiators
 name: Atlanta Gladiators
-integration_method: html
+integration_method: python
 defaults: {}
 discovery:
-  enabled: true
+  enabled: false
   type: html
   urls:
-  - https://www.atlantagladiators.com/schedule
+    - https://atlantagladiators.com/
 detail:
-  enabled: true
+  enabled: false
 data_goals:
-- events
-- images
-- tickets
+  - events
+  - tickets

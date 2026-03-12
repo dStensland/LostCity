@@ -1,18 +1,16 @@
 version: 1
 slug: hawks-bars
 name: Atlanta Hawks Bar Network
-integration_method: html
+integration_method: python
 defaults: {}
 discovery:
   enabled: false
-  type: list
+  type: json
   urls:
-  - https://www.nba.com/hawks
+  - https://www.nba.com/hawks/barnetwork
 detail:
   enabled: false
 data_goals:
 - events
 - images
-- specials
-- tickets
 - venue_hours

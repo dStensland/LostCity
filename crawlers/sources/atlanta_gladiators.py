@@ -1,24 +1,39 @@
 """
-Crawler for Atlanta Gladiators (ECHL Hockey).
-Home games at Gas South Arena in Duluth.
+Crawler for Atlanta Gladiators home games.
+
+Uses the official Atlanta Gladiators site and each game page's SportsEvent
+JSON-LD to model upcoming ECHL home games at Gas South Arena.
 """
 
 from __future__ import annotations
 
-import re
+import json
 import logging
+import re
 from datetime import datetime
-from typing import Optional
+from typing import Any, Iterable
+from urllib.parse import urljoin, urlparse
 
-from playwright.sync_api import sync_playwright
+import requests
+from bs4 import BeautifulSoup
 
-from db import get_or_create_venue, insert_event, find_event_by_hash, smart_update_existing_event
+from db import (
+    find_existing_event_for_insert,
+    get_or_create_venue,
+    insert_event,
+    remove_stale_source_events,
+    smart_update_existing_event,
+)
 from dedupe import generate_content_hash
 
 logger = logging.getLogger(__name__)
 
+HEADERS = {"User-Agent": "Mozilla/5.0"}
 BASE_URL = "https://atlantagladiators.com"
-SCHEDULE_URL = f"{BASE_URL}/#schedule"
+SCHEDULE_URL = f"{BASE_URL}/"
+DEFAULT_TICKETS_URL = "https://www.ticketmaster.com/atlanta-gladiators-tickets/artist/874463?home_away=home"
+TEAM_NAME = "Atlanta Gladiators"
+GAME_LINK_RE = re.compile(r"^/games/\d{4}/\d{2}/\d{2}/[^/?#]+/?$")
 
 VENUE_DATA = {
     "name": "Gas South Arena",
@@ -32,207 +47,194 @@ VENUE_DATA = {
     "lng": -84.0723,
     "venue_type": "arena",
     "spot_type": "arena",
-    "website": "https://www.gassouthenarena.com",
+    "website": "https://www.gassouthdistrict.com/arena",
     "vibes": ["sports", "hockey", "family-friendly"],
 }
 
 
-def parse_game_date(date_text: str) -> Optional[str]:
-    """Parse date from schedule listings.
+def extract_game_links(html: str) -> list[str]:
+    soup = BeautifulSoup(html, "html.parser")
+    links: list[str] = []
+    seen: set[str] = set()
 
-    Handles formats like "Wednesday, February 4th, 2026" with ordinal suffixes.
-    """
-    if not date_text:
-        return None
-    date_text = date_text.strip()
+    for anchor in soup.select('a[href*="/games/"]'):
+        href = (anchor.get("href") or "").strip()
+        absolute = urljoin(BASE_URL, href)
+        if not GAME_LINK_RE.match(urlparse(absolute).path):
+            continue
+        if absolute in seen:
+            continue
+        seen.add(absolute)
+        links.append(absolute)
 
-    # Strip ordinal suffixes: 1st, 2nd, 3rd, 4th, etc.
-    date_text = re.sub(r'(\d+)(st|nd|rd|th)', r'\1', date_text)
+    return links
 
-    for fmt in ["%B %d, %Y", "%b %d, %Y", "%m/%d/%Y", "%Y-%m-%d",
-                "%A, %B %d, %Y", "%a, %b %d, %Y"]:
+
+def _iter_jsonld_objects(soup: BeautifulSoup) -> Iterable[dict[str, Any]]:
+    for script in soup.find_all("script", {"type": "application/ld+json"}):
+        content = script.get_text(strip=True)
+        if not content:
+            continue
         try:
-            dt = datetime.strptime(date_text, fmt)
-            return dt.strftime("%Y-%m-%d")
-        except ValueError:
+            data = json.loads(content)
+        except json.JSONDecodeError:
             continue
 
-    # Try extracting date from mixed text
-    match = re.search(r"(\w+,?\s+\w+\s+\d+,?\s*\d{4})", date_text)
-    if match:
-        clean = re.sub(r'(\d+)(st|nd|rd|th)', r'\1', match.group(1))
-        for fmt in ["%A, %B %d, %Y", "%a, %b %d, %Y", "%B %d, %Y", "%b %d, %Y", "%B %d %Y"]:
-            try:
-                dt = datetime.strptime(clean, fmt)
-                return dt.strftime("%Y-%m-%d")
-            except ValueError:
-                continue
+        if isinstance(data, dict):
+            yield data
+        elif isinstance(data, list):
+            for item in data:
+                if isinstance(item, dict):
+                    yield item
+
+
+def _extract_sports_event(soup: BeautifulSoup) -> dict[str, Any] | None:
+    for item in _iter_jsonld_objects(soup):
+        if item.get("@type") == "SportsEvent":
+            return item
     return None
 
 
+def _team_name(value: Any) -> str:
+    if isinstance(value, dict):
+        return str(value.get("name") or "").strip()
+    return str(value or "").strip()
+
+
+def _offer_url(value: Any) -> str | None:
+    if isinstance(value, list):
+        for item in value:
+            if isinstance(item, dict) and item.get("url"):
+                return str(item["url"]).strip()
+    elif isinstance(value, dict) and value.get("url"):
+        return str(value["url"]).strip()
+    return None
+
+
+def _image_url(value: Any) -> str | None:
+    if isinstance(value, list):
+        for item in value:
+            if item:
+                return str(item).strip()
+    elif value:
+        return str(value).strip()
+    return None
+
+
+def build_event_title(opponent: str) -> str:
+    return f"{TEAM_NAME} vs. {opponent}"
+
+
+def build_description(opponent: str, start_dt: datetime) -> str:
+    puck_drop_text = start_dt.strftime("%B %-d, %Y at %-I:%M %p")
+    return (
+        f"Official Atlanta Gladiators ECHL home game versus the {opponent} at Gas South Arena. "
+        f"The official game page lists puck drop for {puck_drop_text} Eastern. "
+        "Check the official game page and ticket link for the latest promotions, entry rules, and gameday details."
+    )[:1400]
+
+
+def parse_game_page(html: str, *, source_url: str, now: datetime | None = None) -> dict[str, Any] | None:
+    soup = BeautifulSoup(html, "html.parser")
+    sports_event = _extract_sports_event(soup)
+    if not sports_event:
+        return None
+
+    home_team = _team_name(sports_event.get("homeTeam"))
+    away_team = _team_name(sports_event.get("awayTeam"))
+    if home_team != TEAM_NAME or not away_team:
+        return None
+
+    start_dt = datetime.fromisoformat(str(sports_event["startDate"]))
+    cutoff = now or datetime.now(start_dt.tzinfo)
+    if start_dt < cutoff:
+        return None
+
+    title = build_event_title(away_team)
+    return {
+        "title": title,
+        "description": build_description(away_team, start_dt),
+        "start_date": start_dt.strftime("%Y-%m-%d"),
+        "start_time": start_dt.strftime("%H:%M"),
+        "source_url": str(sports_event.get("url") or source_url).strip(),
+        "ticket_url": _offer_url(sports_event.get("offers")) or DEFAULT_TICKETS_URL,
+        "image_url": _image_url(sports_event.get("image")),
+        "raw_text": f"{sports_event.get('name', title)} | {start_dt.isoformat()}",
+    }
+
+
 def crawl(source: dict) -> tuple[int, int, int]:
-    """Crawl Atlanta Gladiators schedule for home games."""
     source_id = source["id"]
     events_found = 0
     events_new = 0
     events_updated = 0
+    current_hashes: set[str] = set()
 
     venue_id = get_or_create_venue(VENUE_DATA)
+    homepage_response = requests.get(SCHEDULE_URL, headers=HEADERS, timeout=30)
+    homepage_response.raise_for_status()
+    game_links = extract_game_links(homepage_response.text)
 
-    try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-                viewport={"width": 1920, "height": 1080},
-            )
-            page = context.new_page()
+    for game_url in game_links:
+        response = requests.get(game_url, headers=HEADERS, timeout=30)
+        response.raise_for_status()
+        parsed = parse_game_page(response.text, source_url=game_url)
+        if not parsed:
+            continue
 
-            logger.info(f"Fetching Atlanta Gladiators schedule: {SCHEDULE_URL}")
-            # Navigate to base URL first (SPA)
-            page.goto(BASE_URL, wait_until="domcontentloaded", timeout=30000)
-            page.wait_for_timeout(3000)
+        title = parsed["title"]
+        start_date = parsed["start_date"]
+        content_hash = generate_content_hash(title, VENUE_DATA["name"], start_date)
+        current_hashes.add(content_hash)
+        events_found += 1
 
-            # Scroll to schedule section to trigger SPA load
-            for _ in range(5):
-                page.keyboard.press("End")
-                page.wait_for_timeout(1000)
+        event_record = {
+            "source_id": source_id,
+            "venue_id": venue_id,
+            "title": title,
+            "description": parsed["description"],
+            "start_date": start_date,
+            "start_time": parsed["start_time"],
+            "end_date": None,
+            "end_time": None,
+            "is_all_day": False,
+            "category": "sports",
+            "subcategory": "hockey",
+            "tags": ["hockey", "echl", "atlanta-gladiators", "gas-south-arena", "home-game"],
+            "price_min": None,
+            "price_max": None,
+            "price_note": "See the official Atlanta Gladiators ticket link for current pricing.",
+            "is_free": False,
+            "source_url": parsed["source_url"],
+            "ticket_url": parsed["ticket_url"],
+            "image_url": parsed["image_url"],
+            "raw_text": parsed["raw_text"],
+            "extraction_confidence": 0.95,
+            "is_recurring": False,
+            "recurrence_rule": None,
+            "content_hash": content_hash,
+        }
 
-            # Find home game cards with Tailwind classes
-            # Look for elements with class containing "game-home" (specifically !bg-team-game-home-bac)
-            home_games = page.query_selector_all('[class*="game-home"]')
-            logger.info(f"Found {len(home_games)} home game cards")
+        existing = find_existing_event_for_insert(event_record)
+        if existing:
+            smart_update_existing_event(existing, event_record)
+            events_updated += 1
+            continue
 
-            for game_card in home_games:
-                try:
-                    text = game_card.inner_text().strip()
-                    if not text or len(text) < 10:
-                        continue
+        try:
+            insert_event(event_record)
+            events_new += 1
+        except Exception as exc:
+            logger.error("Failed to insert Atlanta Gladiators game %s on %s: %s", title, start_date, exc)
 
-                    # Parse date: "Wednesday, February 4th, 2026"
-                    game_date = None
-                    date_match = re.search(
-                        r"(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),?\s+(\w+\s+\d+(?:st|nd|rd|th)?,?\s*\d{4})",
-                        text
-                    )
-                    if date_match:
-                        game_date = parse_game_date(date_match.group(2))
+    stale_removed = remove_stale_source_events(source_id, current_hashes)
+    if stale_removed:
+        logger.info("Removed %s stale Atlanta Gladiators rows after official refresh", stale_removed)
 
-                    if not game_date:
-                        # Try simpler pattern
-                        for line in text.split("\n"):
-                            d = parse_game_date(line)
-                            if d:
-                                game_date = d
-                                break
-
-                    if not game_date:
-                        continue
-
-                    # Skip past events
-                    if game_date < datetime.now().strftime("%Y-%m-%d"):
-                        continue
-
-                    # Parse time: "Puck Drops: 7:10 PM EST"
-                    game_time = None
-                    time_match = re.search(r"Puck Drops:\s*(\d{1,2}:\d{2}\s*[AaPp][Mm])", text)
-                    if time_match:
-                        try:
-                            dt = datetime.strptime(time_match.group(1).strip(), "%I:%M %p")
-                            game_time = dt.strftime("%H:%M")
-                        except ValueError:
-                            pass
-
-                    # Parse opponent: "FLA Florida Everblades at ATL Atlanta Gladiators"
-                    opponent = None
-                    opponent_match = re.search(r"([A-Z]{3})\s+([A-Za-z\s]+)\s+at\s+ATL\s+Atlanta Gladiators", text)
-                    if opponent_match:
-                        opponent = opponent_match.group(2).strip()
-
-                    # Parse event name/promo: "College Night #2"
-                    event_name = None
-                    # Look for text that's not date, time, opponent
-                    lines = [l.strip() for l in text.split("\n") if l.strip()]
-                    for line in lines:
-                        if ("Night" in line or "Promo" in line or "#" in line) and len(line) < 50:
-                            event_name = line
-                            break
-
-                    # Find detail link
-                    detail_link = game_card.query_selector('a[href*="/games/"]')
-                    detail_url = SCHEDULE_URL
-                    if detail_link:
-                        href = detail_link.get_attribute("href")
-                        if href:
-                            detail_url = href if href.startswith("http") else f"{BASE_URL}{href}"
-
-                    # Build title
-                    if event_name and opponent:
-                        title = f"{event_name}: Atlanta Gladiators vs {opponent}"
-                    elif opponent:
-                        title = f"Atlanta Gladiators vs {opponent}"
-                    elif event_name:
-                        title = f"{event_name} - Atlanta Gladiators"
-                    else:
-                        title = "Atlanta Gladiators Home Game"
-
-                    events_found += 1
-
-                    content_hash = generate_content_hash(title, VENUE_DATA["name"], game_date)
-
-
-                    event_record = {
-                        "source_id": source_id,
-                        "venue_id": venue_id,
-                        "title": title,
-                        "description": f"{title} at Gas South Arena. ECHL hockey action in Duluth, GA.",
-                        "start_date": game_date,
-                        "start_time": game_time or "19:10",
-                        "end_date": game_date,
-                        "end_time": None,
-                        "is_all_day": False,
-                        "category": "sports",
-                        "subcategory": "sports.hockey",
-                        "tags": ["hockey", "sports", "family-friendly", "gladiators", "echl"],
-                        "price_min": None,
-                        "price_max": None,
-                        "price_note": "See atlantagladiators.com for tickets",
-                        "is_free": False,
-                        "source_url": detail_url,
-                        "ticket_url": f"{BASE_URL}/tickets",
-                        "image_url": None,
-                        "raw_text": text[:500],
-                        "extraction_confidence": 0.80,
-                        "is_recurring": False,
-                        "recurrence_rule": None,
-                        "content_hash": content_hash,
-                    }
-
-                    existing = find_event_by_hash(content_hash)
-                    if existing:
-                        smart_update_existing_event(existing, event_record)
-                        events_updated += 1
-                        continue
-
-                    try:
-                        insert_event(event_record)
-                        events_new += 1
-                        logger.info(f"Added: {title} on {game_date}")
-                    except Exception as e:
-                        logger.error(f"Failed to insert: {title}: {e}")
-
-                except Exception as e:
-                    logger.debug(f"Error processing game card: {e}")
-                    continue
-
-            browser.close()
-
-        logger.info(
-            f"Atlanta Gladiators crawl complete: {events_found} found, {events_new} new, {events_updated} existing"
-        )
-
-    except Exception as e:
-        logger.error(f"Failed to crawl Atlanta Gladiators: {e}")
-        raise
-
+    logger.info(
+        "Atlanta Gladiators crawl complete: %s found, %s new, %s updated",
+        events_found,
+        events_new,
+        events_updated,
+    )
     return events_found, events_new, events_updated
