@@ -1208,9 +1208,9 @@ export function buildExperiencesSection(
 
 export function buildBrowseSection(
   portalSlug: string,
+  venueTypeCounts?: Record<string, number>,
+  eventCategoryCounts?: Record<string, number>,
 ): CityPulseSection {
-  // Browse section is a static category grid + neighborhood links.
-  // Items are empty — the frontend renders this from the section type.
   return {
     id: "browse",
     type: "browse",
@@ -1220,7 +1220,11 @@ export function buildBrowseSection(
     accent_color: "var(--neon-cyan)",
     items: [],
     layout: "grid",
-    meta: { portal_slug: portalSlug },
+    meta: {
+      portal_slug: portalSlug,
+      ...(venueTypeCounts && { venue_type_counts: venueTypeCounts }),
+      ...(eventCategoryCounts && { category_counts: eventCategoryCounts }),
+    },
   };
 }
 

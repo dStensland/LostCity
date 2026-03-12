@@ -392,10 +392,7 @@ export interface FeedLayout {
 export const DEFAULT_FEED_ORDER: FeedBlockId[] = [
   "events",
   "recurring",
-  "festivals",
   "hangs",
-  "experiences",
-  "community",
   "cinema",
   "browse",
 ];

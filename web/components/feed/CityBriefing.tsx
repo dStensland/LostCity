@@ -20,7 +20,6 @@ import Image from "next/image";
 import {
   Lightning,
   ArrowRight,
-  ArrowSquareOut,
   Broadcast,
   Sun,
   Cloud,
@@ -66,7 +65,7 @@ import type {
   TextTreatment,
   QuickLink,
 } from "@/lib/city-pulse/types";
-import { formatTemperature, getWeatherIconName } from "@/lib/weather-utils";
+import { formatTemperature, getWeatherIconName, type ForecastDay, type WeatherData } from "@/lib/weather-utils";
 import { useFeedVisible } from "@/lib/feed-visibility";
 
 // ── Icon map for quick link pills ────────────────────────────────────────────
@@ -109,6 +108,7 @@ type BigStuffItem = {
   href: string;
   countdownText: string;
   urgencyColor: string;
+  description: string | null;
 };
 
 export interface CityBriefingProps {
@@ -133,7 +133,12 @@ function getLayoutVariant(timeSlot: TimeSlot, dayOfWeek: string): LayoutVariant 
   };
   const slotIdx = SLOT_INDEX[timeSlot];
 
-  const variants: LayoutVariant[] = ["centered", "bottom-left", "split", "editorial"];
+  // Bottom-left is the most reliable layout (text always in darkest gradient zone).
+  // Use it as the dominant variant, with editorial and centered as occasional variety.
+  const variants: LayoutVariant[] = [
+    "bottom-left", "editorial", "bottom-left", "centered",
+    "bottom-left", "editorial", "bottom-left",
+  ];
   return variants[(dayIdx + slotIdx) % variants.length];
 }
 
@@ -181,14 +186,15 @@ const GRADIENT_PRESETS: Record<GradientIntensity, string> = {
   ].join(" "),
   standard: [
     "linear-gradient(to bottom,",
-    "rgba(9,9,11,0.55) 0%,",
-    "rgba(9,9,11,0.45) 10%,",
-    "rgba(9,9,11,0.3) 25%,",
-    "rgba(9,9,11,0.22) 40%,",
-    "rgba(9,9,11,0.25) 52%,",
-    "rgba(9,9,11,0.45) 65%,",
-    "rgba(9,9,11,0.7) 78%,",
-    "rgba(9,9,11,0.9) 90%,",
+    "rgba(9,9,11,0.72) 0%,",
+    "rgba(9,9,11,0.55) 8%,",
+    "rgba(9,9,11,0.35) 20%,",
+    "rgba(9,9,11,0.22) 35%,",
+    "rgba(9,9,11,0.2) 45%,",
+    "rgba(9,9,11,0.3) 55%,",
+    "rgba(9,9,11,0.55) 68%,",
+    "rgba(9,9,11,0.78) 80%,",
+    "rgba(9,9,11,0.93) 92%,",
     "#09090b 100%)",
   ].join(" "),
   heavy: [
@@ -244,7 +250,7 @@ function getTreatmentStyle(treatment: TextTreatment): TreatmentStyle {
       };
     default:
       return {
-        overlay: { background: GRADIENT_PRESETS.light },
+        overlay: { background: GRADIENT_PRESETS.standard },
         mastheadShadow: "0 2px 16px rgba(0,0,0,0.85), 0 1px 4px rgba(0,0,0,0.95), 0 0 40px rgba(0,0,0,0.4)",
         bodyShadow: "0 1px 8px rgba(0,0,0,0.75), 0 0 3px rgba(0,0,0,0.9)",
       };
@@ -330,31 +336,128 @@ function WeatherPill({
   weather,
   parallaxY,
   position = "top-right",
+  portalSlug,
 }: {
   weather: FeedContext["weather"];
   parallaxY: number;
   position?: "top-right" | "top-left" | "inline";
+  portalSlug: string;
 }) {
+  const [open, setOpen] = useState(false);
+  const [forecast, setForecast] = useState<ForecastDay[] | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
+
+  // Fetch forecast on first open
+  useEffect(() => {
+    if (!open || forecast) return;
+    const controller = new AbortController();
+    fetch(`/api/portals/${portalSlug}/weather`, { signal: controller.signal })
+      .then((r) => r.json())
+      .then((d) => {
+        if (!controller.signal.aborted && d.forecast) {
+          setForecast(d.forecast);
+        }
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, [open, forecast, portalSlug]);
+
+  // Close on click outside
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
   if (!weather) return null;
 
   const posClass =
     position === "top-right"
-      ? "absolute top-4 right-20"
+      ? "absolute top-4 right-4 z-20"
       : position === "top-left"
-        ? "absolute top-4 left-4"
-        : "";
+        ? "absolute top-4 right-4 z-20"
+        : "z-20";
+
+  const condition = weather.condition.charAt(0).toUpperCase() + weather.condition.slice(1);
 
   return (
     <div
+      ref={ref}
       className={`${posClass} animate-fade-in hero-stagger-1 will-change-transform`}
       style={{ transform: `translateY(${parallaxY}px)` }}
     >
-      <div className="flex items-center gap-1.5 rounded-full px-3 py-1.5 bg-black/25 backdrop-blur-md border border-white/10 text-[var(--cream)]/80">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-1.5 rounded-full px-3 py-1.5 bg-black/25 backdrop-blur-md border border-white/10 text-[var(--cream)]/80 hover:bg-black/35 transition-colors cursor-pointer"
+      >
         <WeatherIcon icon={weather.icon} className="w-3.5 h-3.5" />
         <span className="font-mono text-xs tracking-wide">
           {formatTemperature(weather.temperature_f)}
         </span>
-      </div>
+      </button>
+
+      {/* Forecast popover */}
+      {open && (
+        <div className="absolute top-full right-0 mt-2 w-56 rounded-xl bg-[var(--night)]/95 backdrop-blur-xl border border-[var(--twilight)] shadow-2xl overflow-hidden animate-fade-in z-50">
+          {/* Current */}
+          <div className="px-4 py-3 border-b border-[var(--twilight)]/50">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-mono text-2xs uppercase tracking-wider text-[var(--muted)]">Now</p>
+                <p className="text-2xl font-semibold text-[var(--cream)] tabular-nums">
+                  {formatTemperature(weather.temperature_f)}
+                </p>
+              </div>
+              <div className="text-right">
+                <WeatherIcon icon={weather.icon} className="w-8 h-8 text-[var(--soft)] ml-auto" />
+                <p className="text-xs text-[var(--soft)] mt-0.5">{condition}</p>
+              </div>
+            </div>
+            {"humidity" in weather && "wind_mph" in weather && (
+              <div className="flex gap-3 mt-1.5">
+                <span className="font-mono text-2xs text-[var(--muted)]">
+                  💧 {(weather as WeatherData).humidity}%
+                </span>
+                <span className="font-mono text-2xs text-[var(--muted)]">
+                  💨 {Math.round((weather as WeatherData).wind_mph)} mph
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Forecast days */}
+          {forecast && forecast.length > 0 ? (
+            <div className="divide-y divide-[var(--twilight)]/30">
+              {forecast.map((day) => (
+                <div key={day.date} className="flex items-center gap-3 px-4 py-2.5">
+                  <span className="font-mono text-xs text-[var(--soft)] w-16 shrink-0">
+                    {day.day_label}
+                  </span>
+                  <WeatherIcon icon={day.icon} className="w-4 h-4 text-[var(--soft)] shrink-0" />
+                  <span className="font-mono text-xs text-[var(--cream)] tabular-nums">
+                    {Math.round(day.high_f)}°
+                  </span>
+                  <span className="font-mono text-xs text-[var(--muted)] tabular-nums">
+                    {Math.round(day.low_f)}°
+                  </span>
+                  <span className="text-2xs text-[var(--muted)] truncate ml-auto">
+                    {day.condition.charAt(0).toUpperCase() + day.condition.slice(1)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="px-4 py-3">
+              <div className="h-3 w-24 rounded bg-[var(--twilight)] animate-pulse" />
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -416,7 +519,7 @@ function CenteredLayout({
   return (
     <div className="relative z-10 flex flex-col items-center justify-end text-center min-h-[300px] sm:min-h-[480px] px-6 pb-7 pt-5">
       <LiveBadge liveCount={liveCount} portalSlug={portalSlug} />
-      <WeatherPill weather={weather} parallaxY={contentParallax.weather} position="top-right" />
+      <WeatherPill weather={weather} parallaxY={contentParallax.weather} position="top-right" portalSlug={portalSlug} />
 
       <div className={`mt-auto mb-1 ${treatment.contentClass || ""}`} style={treatment.contentStyle}>
         <div
@@ -460,9 +563,9 @@ function BottomLeftLayout({
   contentParallax, liveCount, portalSlug,
 }: LayoutProps) {
   return (
-    <div className="relative z-10 flex flex-col justify-end min-h-[300px] sm:min-h-[480px] px-6 pb-7 pt-5">
+    <div className="relative z-10 flex flex-col justify-end min-h-[300px] sm:min-h-[520px] px-6 sm:px-10 pb-8 pt-5">
       <LiveBadge liveCount={liveCount} portalSlug={portalSlug} />
-      <WeatherPill weather={weather} parallaxY={contentParallax.weather} position="top-right" />
+      <WeatherPill weather={weather} parallaxY={contentParallax.weather} position="top-right" portalSlug={portalSlug} />
 
       <div className={`mt-auto ${treatment.contentClass || ""}`} style={treatment.contentStyle}>
         <div
@@ -534,7 +637,7 @@ function SplitLayout({
             </p>
           )}
         </div>
-        <WeatherPill weather={weather} parallaxY={contentParallax.weather} position="inline" />
+        <WeatherPill weather={weather} parallaxY={contentParallax.weather} position="inline" portalSlug={portalSlug} />
       </div>
 
       <div className="flex-1" />
@@ -559,7 +662,7 @@ function EditorialLayout({
   return (
     <div className="relative z-10 flex flex-col min-h-[300px] sm:min-h-[480px] px-6 pb-7 pt-5">
       <LiveBadge liveCount={liveCount} portalSlug={portalSlug} />
-      <WeatherPill weather={weather} parallaxY={contentParallax.weather} position="top-left" />
+      <WeatherPill weather={weather} parallaxY={contentParallax.weather} position="top-right" portalSlug={portalSlug} />
 
       <div className="flex-1" />
 
@@ -619,16 +722,16 @@ function UrgencyBadge({ text, color }: { text: string; color: string }) {
   const isLive = text === "Happening Now";
   return (
     <span
-      className="inline-flex items-center gap-1 font-mono text-2xs font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
+      className="inline-flex items-center gap-1.5 font-mono text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-md shadow-lg"
       style={{
-        color,
-        backgroundColor: `${color}18`,
+        color: "#fff",
+        backgroundColor: `color-mix(in srgb, ${color} 45%, rgba(0,0,0,0.7))`,
       }}
     >
       {isLive && (
         <span
-          className="w-1.5 h-1.5 rounded-full animate-pulse"
-          style={{ backgroundColor: color }}
+          className="w-2 h-2 rounded-full animate-pulse"
+          style={{ backgroundColor: color, boxShadow: `0 0 6px ${color}` }}
         />
       )}
       {text}
@@ -640,50 +743,56 @@ function ComingUpCard({ item }: { item: BigStuffItem }) {
   return (
     <Link
       href={item.href}
-      className="flex items-center gap-3 rounded-lg p-2.5 bg-[var(--dusk)]/60 border border-[var(--twilight)]/40 hover:bg-[var(--dusk)] transition-colors group"
+      className="flex-shrink-0 w-72 sm:w-80 rounded-card overflow-hidden bg-[var(--dusk)]/60 border border-[var(--twilight)]/40 hover:border-[var(--twilight)] transition-colors group snap-start"
     >
-      <div className="relative w-12 h-12 flex-shrink-0 rounded-md overflow-hidden bg-[var(--night)]">
+      {/* Image — contain so posters/banners show in full without text cutoff */}
+      <div className="relative aspect-video overflow-hidden bg-[var(--night)]">
         {item.imageUrl ? (
           <SmartImage
             src={item.imageUrl}
             alt={item.title}
             fill
-            className="object-cover"
-            sizes="48px"
+            className="object-contain group-hover:scale-105 transition-transform duration-500"
+            sizes="(min-width: 768px) 33vw, 320px"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <Lightning weight="duotone" className="w-4 h-4 text-[var(--muted)]" />
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-[var(--dusk)] to-[var(--night)]">
+            <Lightning weight="duotone" className="w-8 h-8 text-[var(--muted)]" />
           </div>
         )}
+        {/* Urgency badge — bottom-left, prominent */}
+        <div className="absolute bottom-2.5 left-2.5">
+          <UrgencyBadge text={item.countdownText} color={item.urgencyColor} />
+        </div>
       </div>
 
-      <div className="flex-1 min-w-0">
-        <UrgencyBadge text={item.countdownText} color={item.urgencyColor} />
-        <p className="text-sm font-semibold text-[var(--cream)] truncate leading-snug mt-0.5 group-hover:text-[var(--gold)] transition-colors">
+      {/* Content */}
+      <div className="p-3.5">
+        <p className="text-base font-semibold text-[var(--cream)] leading-snug group-hover:text-[var(--gold)] transition-colors">
           {item.title}
         </p>
         {(item.location || item.start) && (
-          <p className="text-xs text-[var(--muted)] truncate mt-0.5">
-            {item.location}
-            {item.location && item.start && <Dot />}
+          <p className="text-xs text-[var(--muted)] mt-1">
             {item.start && formatFestivalDates(item.start, item.end)}
+            {item.location && item.start && <Dot />}
+            {item.location}
+          </p>
+        )}
+        {item.description && (
+          <p className="text-sm text-[var(--soft)] mt-2 line-clamp-3 leading-relaxed">
+            {item.description}
           </p>
         )}
       </div>
-
-      <ArrowRight
-        weight="bold"
-        className="w-3.5 h-3.5 text-[var(--muted)] flex-shrink-0 opacity-40 group-hover:opacity-100 transition-opacity"
-      />
     </Link>
   );
 }
 
-function NewsItem({ post, isLast }: { post: NetworkPost; isLast: boolean }) {
+function NewsRow({ post, isLast }: { post: NetworkPost; isLast: boolean }) {
   const cats = post.categories ?? post.source?.categories ?? [];
   const catColor = getCategoryColor(cats);
   const CatIcon = CATEGORY_ICONS[cats[0] || "news"] || CATEGORY_ICONS.news;
+  const catLabel = (cats[0] || "news").replace(/_/g, " ");
 
   return (
     <a
@@ -691,32 +800,28 @@ function NewsItem({ post, isLast }: { post: NetworkPost; isLast: boolean }) {
       target="_blank"
       rel="noopener noreferrer"
       className={[
-        "flex items-start gap-2 py-2 -mx-1 px-1 rounded-lg transition-colors group",
-        "hover:bg-[var(--dusk)]/60",
-        !isLast && "border-b border-[var(--twilight)]/25",
+        "flex items-center gap-2.5 py-2 px-1 transition-colors group",
+        "hover:bg-[var(--dusk)]/40 rounded-lg",
+        !isLast && "border-b border-[var(--twilight)]/20",
       ]
         .filter(Boolean)
         .join(" ")}
     >
-      <CatIcon
-        weight="duotone"
-        className="w-3.5 h-3.5 mt-0.5 flex-shrink-0"
-        style={{ color: catColor }}
-      />
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-[var(--cream)] leading-snug line-clamp-2 group-hover:text-[var(--cream)] group-hover:underline underline-offset-2 transition-colors">
-          {post.title}
-        </p>
-        <p className="text-xs text-[var(--muted)] mt-0.5">
-          {post.source.name}
-          <Dot />
-          {timeAgo(post.published_at)}
-        </p>
+      {/* Category icon */}
+      <div
+        className="flex-shrink-0 w-6 h-6 rounded-md flex items-center justify-center"
+        style={{ backgroundColor: `${catColor}18` }}
+      >
+        <CatIcon weight="duotone" className="w-3 h-3" style={{ color: catColor }} />
       </div>
-      <ArrowSquareOut
-        weight="bold"
-        className="w-3 h-3 text-[var(--muted)] flex-shrink-0 mt-0.5 opacity-0 group-hover:opacity-60 transition-opacity"
-      />
+
+      {/* Headline + source */}
+      <p className="flex-1 min-w-0 text-sm text-[var(--cream)] leading-snug truncate group-hover:underline underline-offset-2">
+        {post.title}
+      </p>
+
+      {/* Time ago */}
+      <span className="flex-shrink-0 text-2xs text-[var(--muted)]">{timeAgo(post.published_at)}</span>
     </a>
   );
 }
@@ -800,6 +905,7 @@ export default function CityBriefing({
           : `/${portalSlug}/festivals`,
         countdownText: countdown.text,
         urgencyColor: getUrgencyColor(countdown.urgency),
+        description: festival.description,
       }];
     });
 
@@ -826,6 +932,7 @@ export default function CityBriefing({
         href: `/${portalSlug}?event=${event.id}`,
         countdownText: countdown.text,
         urgencyColor: getUrgencyColor(countdown.urgency),
+        description: event.description,
       }];
     });
 
@@ -839,7 +946,7 @@ export default function CityBriefing({
         const bStart = b.start || "9999-12-31";
         return aStart.localeCompare(bStart);
       })
-      .slice(0, 4);
+      .slice(0, 10);
   }, [festivals, tentpoles, today, portalSlug]);
 
   // ── Hero configuration ───────────────────────────────────────────────────
@@ -893,6 +1000,10 @@ export default function CityBriefing({
     return () => window.removeEventListener("scroll", handleScroll);
   }, [feedVisible]);
 
+  // ── Hero image with fallback ─────────────────────────────────────────────
+  const [heroImageUrl, setHeroImageUrl] = useState(header.hero_image_url);
+  useEffect(() => { setHeroImageUrl(header.hero_image_url); }, [header.hero_image_url]);
+
   // ── Derived state ────────────────────────────────────────────────────────
   const effectiveQuickLinks = quickLinks ?? header.quick_links ?? [];
   const hasBriefingContent = !loading && (bigItems.length > 0 || posts.length > 0);
@@ -932,15 +1043,23 @@ export default function CityBriefing({
             }}
           >
             <Image
-              src={header.hero_image_url}
+              src={heroImageUrl}
               alt=""
               fill
               priority
-              unoptimized={header.hero_image_url.startsWith("http")}
+              unoptimized={heroImageUrl.startsWith("http")}
               className="object-cover hero-ken-burns"
+              style={{ objectPosition: "center 70%" }}
               sizes="100vw"
+              onError={() => setHeroImageUrl("/portals/atlanta/jackson-st-bridge.jpg")}
             />
           </div>
+
+          {/* Warm color wash — tames bright skies, adds atmosphere */}
+          <div
+            className="absolute inset-0"
+            style={{ background: "rgba(9,9,11,0.15)", mixBlendMode: "multiply" }}
+          />
 
           {/* Gradient overlay */}
           <div className="absolute inset-0" style={treatment.overlay} />
@@ -949,7 +1068,7 @@ export default function CityBriefing({
           <div
             className="absolute inset-0"
             style={{
-              background: "radial-gradient(ellipse at 50% 40%, transparent 50%, rgba(9,9,11,0.2) 100%)",
+              background: "radial-gradient(ellipse at 50% 40%, transparent 50%, rgba(9,9,11,0.25) 100%)",
             }}
           />
 
@@ -988,18 +1107,18 @@ export default function CityBriefing({
         )}
       </div>
 
-      {/* ── Zone 2: Briefing card ────────────────────────────────────────── */}
+      {/* ── Zone 2: Briefing strips (full-bleed breakout) ────────────────── */}
       {loading && (
-        <div className="mt-3 rounded-card bg-[var(--night)] border border-[var(--twilight)]/40 overflow-hidden">
-          <div className="px-4 pb-4 pt-3">
-            <div className="space-y-3">
-              <div className="h-3 w-24 rounded bg-[var(--twilight)]/40 animate-pulse" />
+        <div className="mt-4 space-y-4">
+          <div>
+            <div className="h-3 w-24 rounded bg-[var(--twilight)]/40 animate-pulse mb-2.5" />
+            <div className="grid grid-cols-3 gap-3">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="flex items-center gap-3 rounded-lg p-2.5 bg-[var(--dusk)]/30">
-                  <div className="w-12 h-12 rounded-md bg-[var(--twilight)]/30 animate-pulse" />
-                  <div className="flex-1 space-y-2">
-                    <div className="h-3 w-20 rounded bg-[var(--twilight)]/30 animate-pulse" />
-                    <div className="h-4 w-3/4 rounded bg-[var(--twilight)]/40 animate-pulse" />
+                <div key={i} className="rounded-card overflow-hidden bg-[var(--dusk)]/30 border border-[var(--twilight)]/20">
+                  <div className="aspect-video bg-[var(--twilight)]/20 animate-pulse" />
+                  <div className="p-3 space-y-2">
+                    <div className="h-4 w-3/4 rounded bg-[var(--twilight)]/30 animate-pulse" />
+                    <div className="h-3 w-1/2 rounded bg-[var(--twilight)]/20 animate-pulse" />
                   </div>
                 </div>
               ))}
@@ -1008,62 +1127,66 @@ export default function CityBriefing({
         </div>
       )}
       {hasBriefingContent && (
-        <div className="mt-3 rounded-card bg-[var(--night)] border border-[var(--twilight)]/40 overflow-hidden">
-          <div className="md:grid md:grid-cols-2 md:gap-4 px-4 pb-4 pt-3">
-            {/* Coming Up — left column (cap at 3 for column balance) */}
-            {bigItems.length > 0 && (
-              <div>
-                <div className="flex items-center gap-1.5 mb-2">
+        <div className="mt-4 space-y-5">
+          {/* Coming Up — horizontal card strip */}
+          {bigItems.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-2.5">
+                <div className="flex items-center gap-1.5">
                   <Lightning
                     weight="duotone"
-                    className="w-3 h-3"
+                    className="w-3.5 h-3.5"
                     style={{ color: "var(--gold)" }}
                   />
-                  <span className="font-mono text-2xs font-bold uppercase tracking-wider text-[var(--gold)]">
+                  <span className="font-mono text-xs font-bold uppercase tracking-wider text-[var(--gold)]">
                     Coming Up
                   </span>
                 </div>
-                <div className="space-y-1.5">
-                  {bigItems.slice(0, 3).map((item) => (
-                    <ComingUpCard key={item.id} item={item} />
-                  ))}
-                </div>
+                <Link
+                  href={`/${portalSlug}/festivals`}
+                  className="flex items-center gap-0.5 text-xs font-mono text-[var(--gold)] opacity-70 hover:opacity-100 transition-opacity"
+                >
+                  See all
+                  <ArrowRight weight="bold" className="w-2.5 h-2.5" />
+                </Link>
               </div>
-            )}
+              {/* Always horizontal scroll — show all items */}
+              <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-1">
+                {bigItems.map((item) => (
+                  <ComingUpCard key={item.id} item={item} />
+                ))}
+              </div>
+            </div>
+          )}
 
-            {/* News — right column */}
-            {posts.length > 0 && (
-              <div className={bigItems.length > 0 ? "mt-4 md:mt-0" : ""}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <div className="flex items-center gap-1.5">
-                    <Broadcast
-                      weight="duotone"
-                      className="w-3 h-3 text-[var(--neon-cyan)]"
-                    />
-                    <span className="font-mono text-2xs font-bold uppercase tracking-wider text-[var(--neon-cyan)]">
-                      Today in Atlanta
-                    </span>
-                  </div>
-                  <Link
-                    href={`/${portalSlug}/network`}
-                    className="flex items-center gap-0.5 text-xs font-mono text-[var(--neon-cyan)] opacity-70 hover:opacity-100 transition-opacity"
-                  >
-                    All local news
-                    <ArrowRight weight="bold" className="w-2.5 h-2.5" />
-                  </Link>
+          {/* News — compact list */}
+          {posts.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-1.5">
+                  <Broadcast
+                    weight="duotone"
+                    className="w-3.5 h-3.5 text-[var(--neon-cyan)]"
+                  />
+                  <span className="font-mono text-xs font-bold uppercase tracking-wider text-[var(--neon-cyan)]">
+                    Today in Atlanta
+                  </span>
                 </div>
-                <div className="rounded-lg bg-[var(--dusk)]/40 border border-[var(--twilight)]/30 px-3 py-1">
-                  {posts.slice(0, 3).map((post, index) => (
-                    <NewsItem
-                      key={post.id}
-                      post={post}
-                      isLast={index === Math.min(posts.length, 3) - 1}
-                    />
-                  ))}
-                </div>
+                <Link
+                  href={`/${portalSlug}/network`}
+                  className="flex items-center gap-0.5 text-xs font-mono text-[var(--neon-cyan)] opacity-70 hover:opacity-100 transition-opacity"
+                >
+                  All local news
+                  <ArrowRight weight="bold" className="w-2.5 h-2.5" />
+                </Link>
               </div>
-            )}
-          </div>
+              <div className="rounded-card bg-[var(--night)] border border-[var(--twilight)]/30 px-3">
+                {posts.slice(0, 4).map((post, i) => (
+                  <NewsRow key={post.id} post={post} isLast={i === Math.min(posts.length, 4) - 1} />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </section>

@@ -12,6 +12,15 @@ export interface WeatherData {
   fetched_at: string;
 }
 
+export interface ForecastDay {
+  date: string;        // ISO date string (YYYY-MM-DD)
+  day_label: string;   // "Today", "Tomorrow", "Wed", etc.
+  high_f: number;
+  low_f: number;
+  condition: string;
+  icon: string;
+}
+
 export type WeatherSignal =
   | "rain"
   | "cold"

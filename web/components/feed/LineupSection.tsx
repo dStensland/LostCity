@@ -26,12 +26,10 @@ import {
   INTEREST_MAP,
   DEFAULT_INTEREST_IDS,
   buildUnionMatcher,
-  getServerChipCount,
   type InterestChip,
 } from "@/lib/city-pulse/interests";
 import { isSceneEvent } from "@/lib/city-pulse/section-builders";
 import FeedSectionHeader from "./FeedSectionHeader";
-import LineupHero from "./LineupHero";
 import CompactEventRow from "./CompactEventRow";
 import { useAuth } from "@/lib/auth-context";
 import {
@@ -52,7 +50,7 @@ import type { ComponentType } from "react";
 import type { IconProps } from "@phosphor-icons/react";
 import { triggerHaptic } from "@/lib/haptics";
 
-const INITIAL_ROWS = 4;
+// All events shown — horizontal scroll handles discovery
 
 // ---------------------------------------------------------------------------
 // Icon resolver — maps iconName string → Phosphor component
@@ -428,47 +426,17 @@ export default function LineupSection({
   }, [tabDateEvents, activeChipId, unionMatcher]);
 
   // Merged category counts: initial response + lazy-loaded tab overrides
-  const mergedCategoryCounts = useMemo(() => {
-    const merged: Record<string, Record<string, number>> = {};
-    // Start with initial-load counts
-    if (categoryCounts) {
-      for (const [tab, counts] of Object.entries(categoryCounts)) {
-        merged[tab] = { ...counts };
-      }
-    }
-    // Override with lazy-loaded tab counts (fresher)
-    for (const [tab, counts] of Object.entries(lazyCategoryCounts)) {
-      merged[tab] = { ...counts };
-    }
-    return merged;
-  }, [categoryCounts, lazyCategoryCounts]);
-
-  // Date tab counts — sum server-side category counts for the user's active interests.
-  // Falls back to ratio estimation only if server counts aren't available.
+  // Date tab counts — show TOTAL lineup depth per tab (not filtered by interests).
+  // The badge signals city vitality to the user; interest chips filter the list below.
   const dateTabCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-
     for (const tab of TABS) {
-      const serverCats = mergedCategoryCounts[tab.id];
-      if (serverCats) {
-        // Exact server count: sum all active interest chip counts
-        let total = 0;
-        for (const id of localInterests) {
-          const chip = INTEREST_MAP.get(id);
-          if (!chip || chip.type === "tag") continue;
-          const chipCount = getServerChipCount(id, serverCats);
-          if (chipCount != null) total += chipCount;
-        }
-        counts[tab.id] = total;
-      } else {
-        // Fallback: use raw tab count (no interest filtering)
-        counts[tab.id] = lazyTabCounts[tab.id]
-          ?? tabCounts?.[tab.id as keyof typeof tabCounts]
-          ?? 0;
-      }
+      counts[tab.id] = lazyTabCounts[tab.id]
+        ?? tabCounts?.[tab.id as keyof typeof tabCounts]
+        ?? 0;
     }
     return counts as { today: number; this_week: number; coming_up: number };
-  }, [mergedCategoryCounts, localInterests, tabCounts, lazyTabCounts]);
+  }, [tabCounts, lazyTabCounts]);
 
   // Category chip counts — always computed from the actual event pool so
   // counts match what the user sees when clicking a chip. Server counts
@@ -489,49 +457,8 @@ export default function LineupSection({
     return counts;
   }, [tabDateEvents, unionMatcher]);
 
-  // Hero event
-  const heroEventId = useMemo(() => {
-    const nowHH = new Date().getHours();
-    const isStale = (e: CityPulseEventItem) => {
-      if (e.event.end_time) {
-        const endHour = parseInt(e.event.end_time.split(":")[0], 10);
-        if (endHour > 0 && endHour < nowHH) return true;
-      }
-      return false;
-    };
-
-    const isFeaturedEvent = (e: CityPulseEventItem) =>
-      e.event.featured || e.event.is_tentpole || (e.event as Record<string, unknown>).is_featured;
-
-    const featured = events.find(
-      (e) => isFeaturedEvent(e) && e.event.image_url && !isStale(e),
-    );
-    if (featured) return featured.event.id;
-
-    const featuredAny = events.find(
-      (e) => isFeaturedEvent(e) && e.event.image_url,
-    );
-    if (featuredAny) return featuredAny.event.id;
-
-    const withImage = events.find((e) => e.event.image_url);
-    if (withImage) return withImage.event.id;
-
-    return null;
-  }, [events]);
-
-  const heroEvent = useMemo(() => {
-    if (!heroEventId) return null;
-    return events.find((e) => e.event.id === heroEventId) || null;
-  }, [events, heroEventId]);
-
-  const listEvents = useMemo(() => {
-    if (!heroEventId) return events;
-    return events.filter((e) => e.event.id !== heroEventId);
-  }, [events, heroEventId]);
-
-  const visibleItems = showAllRows
-    ? listEvents
-    : listEvents.slice(0, INITIAL_ROWS);
+  // Horizontal scroll handles discovery — show all filtered events
+  const visibleItems = events;
 
   // If no sections have any events at all, hide entirely
   const hasAnyContent = sections.some((s) =>
@@ -718,27 +645,19 @@ export default function LineupSection({
         </div>
       )}
 
-      {/* Event view: hero + grid */}
+      {/* Event grid */}
       {loadingTab !== activeTabId && (
         <>
-          {heroEvent && (
-            <LineupHero
-              event={heroEvent.event as FeedEventData}
-              portalSlug={portalSlug}
-              vertical={vertical}
-            />
-          )}
-
           {visibleItems.length > 0 && (
-            <div className="grid grid-cols-3 gap-2 mt-3">
+            <div className="flex gap-3 mt-3 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-1">
               {visibleItems.map((item) => (
-                <CompactEventRow
-                  key={`row-${item.event.id}`}
-                  event={item.event as FeedEventData}
-                  portalSlug={portalSlug}
-                  vertical={vertical}
-                  size="sm"
-                />
+                <div key={`row-${item.event.id}`} className="flex-shrink-0 w-56 sm:w-64 snap-start">
+                  <CompactEventRow
+                    event={item.event as FeedEventData}
+                    portalSlug={portalSlug}
+                    vertical={vertical}
+                  />
+                </div>
               ))}
             </div>
           )}

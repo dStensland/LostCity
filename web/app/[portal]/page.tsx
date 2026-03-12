@@ -2,7 +2,7 @@ import { getCachedPortalBySlug, getPortalVertical } from "@/lib/portal";
 import { EmoryDemoHeader, PortalHeader, DogHeader } from "@/components/headers";
 import { AmbientBackground } from "@/components/ambient";
 import FindView from "@/components/find/FindView";
-import CommunityView from "@/components/community/CommunityView";
+import CommunityHub from "@/components/community/CommunityHub";
 import DetailViewRouter from "@/components/views/DetailViewRouter";
 import { DefaultTemplate } from "./_templates/default";
 import { GalleryTemplate } from "./_templates/gallery";
@@ -292,14 +292,6 @@ export default async function PortalPage({ params, searchParams }: Props) {
     findDisplay = "calendar";
   }
 
-  // Community sub-tab - default to "people" (Your People)
-  let communityTab: "people" | "groups" | "curations" = "people";
-  if (searchParamsData.tab === "curations") {
-    communityTab = "curations";
-  } else if (searchParamsData.tab === "groups") {
-    communityTab = "groups";
-  }
-
   // Check for active filters
   const hasActiveFilters = hasActiveFindFilters(searchParamsData, findType);
   const hospitalMode = normalizeHospitalMode(searchParamsData.mode);
@@ -317,16 +309,16 @@ export default async function PortalPage({ params, searchParams }: Props) {
   };
 
   const mainClassName = (() => {
-    const base = "mx-auto px-4 pb-20";
+    const base = "mx-auto px-4 sm:px-6 lg:px-8 pb-20";
     if (viewMode !== "find") {
       return isEmoryNativeHospital || isFilm
         ? `max-w-6xl ${base}`
-        : `max-w-5xl ${base}`;
+        : `max-w-[1600px] ${base}`;
     }
     if (findDisplay === "calendar" || findDisplay === "map") {
-      return `max-w-[1500px] ${base}`;
+      return `max-w-[1600px] ${base}`;
     }
-    return `max-w-5xl ${base}`;
+    return `max-w-[1600px] ${base}`;
   })();
 
   return (
@@ -416,11 +408,8 @@ export default async function PortalPage({ params, searchParams }: Props) {
                           includeSupportSensitive={searchParamsData.support === "1"}
                         />
                       ) : (
-                        <CommunityView
-                          portalId={portal.id}
+                        <CommunityHub
                           portalSlug={portal.slug}
-                          portalName={portal.name}
-                          activeTab={communityTab}
                         />
                       )}
                     </div>
