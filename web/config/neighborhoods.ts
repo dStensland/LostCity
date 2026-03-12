@@ -397,6 +397,7 @@ export const NEIGHBORHOOD_ALIASES: Record<string, string> = {
   "l5p": "Little Five Points",
   "PCM": "Ponce City Market Area",
   "Ponce City Market": "Ponce City Market Area",
+  "Krog Street Market": "Krog Street",
   // Westside variations
   "Westside": "West Midtown",
   "West Side": "West Midtown",

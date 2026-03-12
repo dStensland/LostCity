@@ -141,6 +141,15 @@ interface BoundaryCollection {
   features: BoundaryFeature[];
 }
 
+const CONTAINMENT_PRIORITY = [
+  "Ponce City Market Area",
+  "Krog Street",
+  "Little Five Points",
+  "Glenwood Park",
+  "Armour",
+  "Toco Hills",
+] as const;
+
 let cachedBoundaries: BoundaryCollection | null = null;
 
 function loadBoundaries(): BoundaryCollection {
@@ -186,9 +195,16 @@ function pointInMultiPolygon(lat: number, lng: number, coords: number[][][][]): 
  */
 export function resolveNeighborhood(lat: number, lng: number): string | null {
   const boundaries = loadBoundaries();
+  const features = [...boundaries.features].sort((a, b) => {
+    const aPriority = CONTAINMENT_PRIORITY.indexOf(a.properties.name as (typeof CONTAINMENT_PRIORITY)[number]);
+    const bPriority = CONTAINMENT_PRIORITY.indexOf(b.properties.name as (typeof CONTAINMENT_PRIORITY)[number]);
+    const aRank = aPriority === -1 ? Number.MAX_SAFE_INTEGER : aPriority;
+    const bRank = bPriority === -1 ? Number.MAX_SAFE_INTEGER : bPriority;
+    return aRank - bRank;
+  });
 
   // Try polygon containment
-  for (const feature of boundaries.features) {
+  for (const feature of features) {
     const { geometry, properties } = feature;
     const match =
       geometry.type === "Polygon"

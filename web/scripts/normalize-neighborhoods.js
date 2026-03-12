@@ -35,7 +35,7 @@ const NEIGHBORHOOD_ALIASES = {
   "eav": "East Atlanta Village",
   "L5P": "Little Five Points",
   "l5p": "Little Five Points",
-  "PCM": "Old Fourth Ward",
+  "PCM": "Ponce City Market Area",
   "AUC": "Vine City",
   "East Atlanta": "East Atlanta Village",
   "Westside": "West Midtown",
@@ -45,9 +45,10 @@ const NEIGHBORHOOD_ALIASES = {
   "Reynolds Town": "Reynoldstown",
   "Downtown Decatur": "Decatur",
   "Oakhurst": "Decatur",
-  "Ponce City Market": "Old Fourth Ward",
-  "Ponce City Market Area": "Old Fourth Ward",
-  "Krog Street": "Cabbagetown",
+  "Ponce City Market": "Ponce City Market Area",
+  "Ponce City Market Area": "Ponce City Market Area",
+  "Krog Street Market": "Krog Street",
+  "Krog Street": "Krog Street",
   "The Battery": "Cumberland",
   "The Battery / Cumberland": "Cumberland",
   "Georgia Tech": "Midtown",
@@ -96,6 +97,15 @@ function pointInMultiPolygon(lng, lat, coords) {
   return coords.some((poly) => pointInPolygon(lng, lat, poly));
 }
 
+const CONTAINMENT_PRIORITY = [
+  "Ponce City Market Area",
+  "Krog Street",
+  "Little Five Points",
+  "Glenwood Park",
+  "Armour",
+  "Toco Hills",
+];
+
 function haversineKm(lat1, lng1, lat2, lng2) {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -108,7 +118,15 @@ function haversineKm(lat1, lng1, lat2, lng2) {
 
 function findNearestNeighborhood(lat, lng) {
   // Try polygon containment first
-  for (const feature of boundaries.features) {
+  const features = [...boundaries.features].sort((a, b) => {
+    const aPriority = CONTAINMENT_PRIORITY.indexOf(a.properties.name);
+    const bPriority = CONTAINMENT_PRIORITY.indexOf(b.properties.name);
+    const aRank = aPriority === -1 ? Number.MAX_SAFE_INTEGER : aPriority;
+    const bRank = bPriority === -1 ? Number.MAX_SAFE_INTEGER : bPriority;
+    return aRank - bRank;
+  });
+
+  for (const feature of features) {
     const geom = feature.geometry;
     const inside = geom.type === "Polygon"
       ? pointInPolygon(lng, lat, geom.coordinates)

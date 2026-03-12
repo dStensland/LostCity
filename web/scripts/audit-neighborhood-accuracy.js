@@ -47,8 +47,25 @@ function pointInMultiPolygon(lng, lat, coords) {
   return coords.some((poly) => pointInPolygon(lng, lat, poly));
 }
 
+const CONTAINMENT_PRIORITY = [
+  "Ponce City Market Area",
+  "Krog Street",
+  "Little Five Points",
+  "Glenwood Park",
+  "Armour",
+  "Toco Hills",
+];
+
 function findNeighborhood(lat, lng) {
-  for (const feature of boundaries.features) {
+  const features = [...boundaries.features].sort((a, b) => {
+    const aPriority = CONTAINMENT_PRIORITY.indexOf(a.properties.name);
+    const bPriority = CONTAINMENT_PRIORITY.indexOf(b.properties.name);
+    const aRank = aPriority === -1 ? Number.MAX_SAFE_INTEGER : aPriority;
+    const bRank = bPriority === -1 ? Number.MAX_SAFE_INTEGER : bPriority;
+    return aRank - bRank;
+  });
+
+  for (const feature of features) {
     const geom = feature.geometry;
     const inside =
       geom.type === "Polygon"
