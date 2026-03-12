@@ -1,25 +1,37 @@
 "use client";
 
+import {
+  Brain,
+  CalendarBlank,
+  ForkKnife,
+  Microphone,
+  Moon,
+  MusicNote,
+  Palette,
+  SoccerBall,
+  Users,
+  type Icon,
+} from "@phosphor-icons/react";
 import type { RegularHang } from "@/lib/concierge/concierge-types";
 
 interface DiscoverSceneSectionProps {
   regulars: RegularHang[];
 }
 
-const ACTIVITY_EMOJI: Record<string, string> = {
-  music: "🎸",
-  comedy: "🎤",
-  trivia: "🧠",
-  art: "🎨",
-  food_drink: "🍷",
-  sports: "⚽",
-  nightlife: "🌙",
-  community: "👥",
+const ACTIVITY_ICONS: Record<string, Icon> = {
+  music: MusicNote,
+  comedy: Microphone,
+  trivia: Brain,
+  art: Palette,
+  food_drink: ForkKnife,
+  sports: SoccerBall,
+  nightlife: Moon,
+  community: Users,
 };
 
-function getActivityEmoji(activityType: string | null | undefined): string {
-  if (!activityType) return "📅";
-  return ACTIVITY_EMOJI[activityType] ?? "📅";
+function getActivityIcon(activityType: string | null | undefined): Icon {
+  if (!activityType) return CalendarBlank;
+  return ACTIVITY_ICONS[activityType] ?? CalendarBlank;
 }
 
 function formatTime(time: string | null | undefined): string {
@@ -57,7 +69,7 @@ export function DiscoverSceneSection({ regulars }: DiscoverSceneSectionProps) {
 
       <div className="space-y-1">
         {regulars.map((hang) => {
-          const emoji = getActivityEmoji(hang.activity_type);
+          const ActivityIcon = getActivityIcon(hang.activity_type);
           const timeDisplay = formatTime(hang.start_time);
 
           return (
@@ -65,9 +77,9 @@ export function DiscoverSceneSection({ regulars }: DiscoverSceneSectionProps) {
               key={hang.id}
               className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/60 transition-colors"
             >
-              {/* Activity emoji */}
+              {/* Activity icon */}
               <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shrink-0 shadow-sm">
-                <span className="text-lg" aria-hidden="true">{emoji}</span>
+                <ActivityIcon size={20} weight="duotone" className="text-[var(--hotel-champagne)]" />
               </div>
 
               {/* Title + venue/time */}

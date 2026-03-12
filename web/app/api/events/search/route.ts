@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
     start_date: string;
     end_date: string | null;
     is_all_day: boolean;
-    category: string | null;
+    category_id: string | null;
     tags: string[] | null;
     venue: {
       id: number;

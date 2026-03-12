@@ -8,6 +8,7 @@ import CategoryPlaceholder from "../CategoryPlaceholder";
 import FeedSectionHeader from "../feed/FeedSectionHeader";
 import HighlightsTabs, { type HighlightsPeriod } from "./HighlightsTabs";
 import Dot from "@/components/ui/Dot";
+import { getHighlightsEmptyStateCopy } from "@/lib/empty-state-copy";
 
 type HighlightEvent = {
   id: number;
@@ -436,6 +437,7 @@ export default function HighlightsPicks({ portalSlug }: { portalSlug?: string } 
 
   const { title, subtitle } = getSectionHeader(period);
   const heroCategory = events[0]?.category || "other";
+  const emptyState = getHighlightsEmptyStateCopy({ period });
 
   return (
     <section className="-mx-4 px-4 relative overflow-hidden rounded-[1.35rem] picks-atmosphere-shell">
@@ -468,8 +470,9 @@ export default function HighlightsPicks({ portalSlug }: { portalSlug?: string } 
             </div>
           </div>
         ) : events.length === 0 ? (
-          <div className="text-center py-8 text-[var(--muted)] text-sm font-mono">
-            No highlights for this period yet
+          <div className="rounded-2xl border border-[var(--twilight)]/35 bg-[var(--dusk)]/35 px-5 py-8 text-center">
+            <p className="text-[var(--cream)] font-medium">{emptyState.headline}</p>
+            <p className="text-[var(--muted)] text-sm mt-2">{emptyState.subline}</p>
           </div>
         ) : (
           <HighlightsLayout

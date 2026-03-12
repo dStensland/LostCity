@@ -28,6 +28,17 @@ import { rankEventsForConcierge } from "./event-relevance";
 import { getDayPart } from "@/lib/forth-data";
 
 // ---------------------------------------------------------------------------
+// Title cleanup
+// ---------------------------------------------------------------------------
+
+/** Strip "- Mar 09, 2026 10:00AM" suffixes from crawler-extracted titles */
+function cleanEventTitle(title: string): string {
+  return title
+    .replace(/\s*[-–]\s*(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},?\s+\d{4}\s*\d{1,2}:\d{2}\s*(?:AM|PM)?$/i, "")
+    .trim();
+}
+
+// ---------------------------------------------------------------------------
 // Property moment computation
 // ---------------------------------------------------------------------------
 
@@ -266,6 +277,12 @@ async function fetchRegulars(
     .lte("venues.lng", centerLng + lngDelta)
     .limit(50);
 
+  // Apply portal-level category exclusions (e.g. FORTH excludes civic/volunteer content)
+  const portalExcludeCategories = (portal.filters?.exclude_categories as string[]) || [];
+  if (portalExcludeCategories.length > 0) {
+    query = query.not("category_id", "in", `(${portalExcludeCategories.join(",")})`);
+  }
+
   // Apply portal federation scope to prevent data leakage across portals
   query = applyFederatedPortalScopeToQuery(query, {
     portalId: portal.id,
@@ -472,6 +489,17 @@ export async function getDiscoverFeedData(
   const ambient = buildAmbientContext(now, weather, portal.name);
   const config = getConciergeConfig(portal, conciergePhone);
 
+  // Clean up event titles (strip date suffixes from crawler-extracted titles)
+  for (const e of tonightEvents) e.title = cleanEventTitle(e.title);
+  for (const e of comingUpEvents) e.title = cleanEventTitle(e.title);
+
+  // If no tonight events at late night, use tomorrow's picks as fallback
+  let tonightFallback = false;
+  if (tonightEvents.length === 0 && dayPart === "late_night") {
+    tonightEvents.push(...comingUpEvents.slice(0, 6));
+    tonightFallback = true;
+  }
+
   return {
     ambient,
     config,
@@ -482,5 +510,6 @@ export async function getDiscoverFeedData(
     regulars,
     destinations,
     agentNarrative: agentNarrative as AgentNarrative | null,
+    tonightFallback,
   };
 }

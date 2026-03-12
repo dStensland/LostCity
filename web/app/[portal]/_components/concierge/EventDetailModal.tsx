@@ -228,16 +228,8 @@ export default function EventDetailModal({
             </div>
           )}
 
-          {/* Add to Evening CTA */}
-          {onAddToPlan && (
-            <button
-              onClick={() => onAddToPlan(event)}
-              className="w-full py-3.5 rounded-full bg-[var(--hotel-champagne)] text-[var(--hotel-charcoal)] font-body font-bold text-base shadow-lg hover:shadow-xl active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-            >
-              <span>✨</span>
-              <span>Add to Your Evening</span>
-            </button>
-          )}
+          {/* TODO: Re-enable when Playbook persistence is ready */}
+          {/* Add to Evening CTA — hidden until outing persistence is wired */}
         </div>
       </div>
     </div>

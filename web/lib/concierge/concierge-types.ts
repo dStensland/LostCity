@@ -130,4 +130,5 @@ export type DiscoverFeedData = {
   regulars: RegularHang[];
   destinations: import("@/lib/forth-types").Destination[];
   agentNarrative: import("@/lib/forth-types").AgentNarrative | null;
+  tonightFallback: boolean;
 };

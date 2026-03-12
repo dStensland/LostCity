@@ -8,6 +8,7 @@ import ScopedStyles from "@/components/ScopedStyles";
 import { createCssVarClass } from "@/lib/css-utils";
 import VenueListSkeleton from "@/components/find/VenueListSkeleton";
 import CategoryTileGrid from "@/components/find/CategoryTileGrid";
+import { getSpotsEmptyStateCopy } from "@/lib/empty-state-copy";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -233,6 +234,7 @@ export default function VenueListView({
 
   // ── Empty state ────────────────────────────────────────────────────────
   if (filteredCount === 0 && !loading && !fetchError) {
+    const emptyState = getSpotsEmptyStateCopy({ activeChipLabel });
     return (
       <div className="py-12 sm:py-16 text-center">
         <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[var(--twilight)]/25 border border-[var(--twilight)]/50 mb-4">
@@ -247,9 +249,9 @@ export default function VenueListView({
           </svg>
         </div>
         <div className="text-[var(--muted)] font-mono text-sm">
-          {activeChipLabel ? `No spots found for \u2018${activeChipLabel}\u2019` : "No spots found"}
+          {emptyState.headline}
         </div>
-        <div className="text-[var(--muted)]/60 font-mono text-xs mt-2 mb-4">Try adjusting your filters</div>
+        <div className="text-[var(--muted)]/60 font-mono text-xs mt-2 mb-4">{emptyState.subline}</div>
       </div>
     );
   }
@@ -259,7 +261,7 @@ export default function VenueListView({
     <div className="flex items-center justify-between gap-4">
       <p className="text-sm text-[var(--muted)]">
         <span className="text-[var(--soft)] font-medium">{filteredCount}</span>
-        {filteredCount !== totalCount ? ` of ${totalCount}` : ""} spots
+        {filteredCount !== totalCount ? ` of ${totalCount}` : ""} places
       </p>
       <div className="flex items-center gap-3">
         {/* Expand/Collapse All Toggle */}

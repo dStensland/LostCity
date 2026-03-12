@@ -23,6 +23,10 @@ import DogSavedView from "./_components/dog/DogSavedView";
 import { isDogPortal, DOG_PORTAL_VAR_OVERRIDES, DOG_DETAIL_VIEW_CSS } from "@/lib/dog-art";
 import { safeJsonLd } from "@/lib/formats";
 import { toAbsoluteUrl, getSiteUrl } from "@/lib/site-url";
+import {
+  hasActiveFindFilters,
+  hasAnyActiveFindFilters,
+} from "@/lib/find-filter-schema";
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import HorseSpinner from "@/components/ui/HorseSpinner";
@@ -76,6 +80,24 @@ type PortalSearchParams = {
   neighborhoods?: string;
   price?: string;
   free?: string;
+  open_now?: string;
+  with_events?: string;
+  price_level?: string;
+  venue_type?: string;
+  venue_types?: string;
+  neighborhood?: string;
+  cuisine?: string;
+  label?: string;
+  occasion?: string;
+  activity?: string;
+  weekday?: string;
+  theater?: string;
+  class_category?: string;
+  class_date?: string;
+  class_skill?: string;
+  skill_level?: string;
+  start_date?: string;
+  end_date?: string;
   date?: string;
   view?: string;
   tab?: string;
@@ -206,17 +228,7 @@ export default async function PortalPage({ params, searchParams }: Props) {
   const hasFindSignals = Boolean(
     findTypeParam ||
       findDisplayParam ||
-      searchParamsData.search ||
-      searchParamsData.categories ||
-      searchParamsData.subcategories ||
-      searchParamsData.genres ||
-      searchParamsData.tags ||
-      searchParamsData.vibes ||
-      searchParamsData.neighborhoods ||
-      searchParamsData.price ||
-      searchParamsData.free ||
-      searchParamsData.date ||
-      searchParamsData.mood
+      hasAnyActiveFindFilters(searchParamsData)
   );
 
   // Parse view mode with deterministic fallback behavior.
@@ -265,6 +277,11 @@ export default async function PortalPage({ params, searchParams }: Props) {
     findType = "destinations";
   }
 
+  // Community portals only support events in the Find view
+  if (isCommunity && findType !== "events") {
+    findType = "events";
+  }
+
   // Determine display mode - support legacy view params
   let findDisplay: FindDisplay = "list";
   if (findDisplayParam) {
@@ -284,19 +301,7 @@ export default async function PortalPage({ params, searchParams }: Props) {
   }
 
   // Check for active filters
-  const hasActiveFilters = !!(
-    searchParamsData.search ||
-    searchParamsData.categories ||
-    searchParamsData.subcategories ||
-    searchParamsData.genres ||
-    searchParamsData.tags ||
-    searchParamsData.vibes ||
-    searchParamsData.neighborhoods ||
-    searchParamsData.price ||
-    searchParamsData.free ||
-    searchParamsData.date ||
-    searchParamsData.mood
-  );
+  const hasActiveFilters = hasActiveFindFilters(searchParamsData, findType);
   const hospitalMode = normalizeHospitalMode(searchParamsData.mode);
   const portalPageSchema = {
     "@context": "https://schema.org",
@@ -397,6 +402,7 @@ export default async function PortalPage({ params, searchParams }: Props) {
                         findType={findType}
                         displayMode={findDisplay}
                         hasActiveFilters={hasActiveFilters}
+                        vertical={vertical}
                       />
                     </div>
                   )}
@@ -447,7 +453,7 @@ export default async function PortalPage({ params, searchParams }: Props) {
               }
             />
           </Suspense>
-          <div className="h-14" />
+          <div className="h-14 sm:hidden" />
         </>
       )}
     </div>
