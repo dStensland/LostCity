@@ -215,7 +215,7 @@ function HolidayCard({
               <Link
                 key={link.label}
                 href={`/${portalSlug}${link.href}`}
-                className="flex-shrink-0 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-all hover:scale-105 active:scale-95"
+                className="flex-shrink-0 px-3 py-1.5 rounded-full font-mono text-xs font-medium transition-colors active:scale-95"
                 style={{
                   color: isFirst ? "#fff" : holiday.accentColor,
                   backgroundColor: isFirst
@@ -223,6 +223,8 @@ function HolidayCard({
                     : `color-mix(in srgb, ${holiday.glowColor} 15%, transparent)`,
                   border: `1px solid color-mix(in srgb, ${holiday.glowColor} ${isFirst ? "50" : "25"}%, transparent)`,
                 }}
+                onMouseEnter={(e) => { e.currentTarget.style.filter = "brightness(1.3)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.filter = ""; }}
               >
                 {pillLabel}
               </Link>

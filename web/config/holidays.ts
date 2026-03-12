@@ -174,9 +174,9 @@ export const HOLIDAYS: HolidayConfig[] = [
     iconGlowRing: true,
     quickLinks: [
       { label: "Events", href: "?tags=st-patricks-day&view=find" },
-      { label: "Get a Pint", href: "?type=destinations&venue_type=bar&search=irish&view=find" },
-      { label: "Live Music", href: "?type=events&categories=music&date=weekend&view=find" },
-      { label: "Going Out", href: "?type=events&categories=nightlife&date=weekend&view=find" },
+      { label: "Irish Pubs", href: "?type=destinations&venue_type=bar&search=irish&view=find" },
+      { label: "Parades", href: "?tags=st-patricks-day&search=parade&view=find" },
+      { label: "Pub Crawls", href: "?tags=st-patricks-day&search=crawl&view=find" },
     ],
   },
 ];
