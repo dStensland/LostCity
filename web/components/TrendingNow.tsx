@@ -7,6 +7,7 @@ import FeedSectionHeader from "@/components/feed/FeedSectionHeader";
 import { groupEventsForDisplay } from "@/lib/event-grouping";
 import type { EventWithLocation } from "@/lib/search";
 import { TrendingEventCard, type FeedEventData } from "@/components/EventCard";
+import { getTrendingEmptyStateCopy } from "@/lib/empty-state-copy";
 
 type TrendingEvent = {
   id: number;
@@ -94,9 +95,42 @@ export default function TrendingNow({ portalSlug }: { portalSlug?: string } = {}
     return null; // Parent will show skeleton
   }
 
-  // Don't render if no trending events
+  const emptyState = getTrendingEmptyStateCopy();
+
   if (events.length === 0) {
-    return null;
+    return (
+      <section className="py-6 border-b border-[var(--twilight)]/50">
+        <FeedSectionHeader
+          title="Trending Now"
+          subtitle="Most popular this week"
+          priority="tertiary"
+          accentColor="var(--neon-magenta)"
+          badge="Hot"
+          icon={
+            <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5">
+              <path
+                d="M4 14l5-5 4 4 7-7"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M14 6h6v6"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          }
+        />
+        <div className="rounded-2xl border border-[var(--twilight)]/35 bg-[var(--dusk)]/35 px-5 py-6 text-center">
+          <p className="text-[var(--cream)] font-medium">{emptyState.headline}</p>
+          <p className="text-[var(--muted)] text-sm mt-2">{emptyState.subline}</p>
+        </div>
+      </section>
+    );
   }
 
   return (

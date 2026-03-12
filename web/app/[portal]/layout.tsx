@@ -10,6 +10,9 @@ import { Cormorant_Garamond, Inter } from "next/font/google";
 import { Suspense } from "react";
 import { isEmoryDemoPortal } from "@/lib/hospital-art";
 import { isPCMDemoPortal } from "@/lib/marketplace-art";
+import { applyPreset } from "@/lib/apply-preset";
+import type { PortalBranding } from "@/lib/portal-context";
+import { getVerticalStyles } from "@/lib/portal-animation-config";
 
 import type { Metadata } from "next";
 
@@ -76,185 +79,35 @@ export default async function PortalLayout({ children, params }: Props) {
     notFound();
   }
 
-  // Detect vertical type to apply appropriate styling and components
+  // Detect vertical type to apply appropriate styling and components.
+  // Slug-based overrides (Emory demo → hospital, PCM demo → marketplace) are
+  // resolved here so getVerticalStyles receives the canonical vertical key.
   const vertical = getPortalVertical(portal);
   const isHotel = vertical === "hotel";
-  const isFilm = vertical === "film";
-  const isMarketplace = vertical === "marketplace" || isPCMDemoPortal(portal.slug);
+  const resolvedBranding = applyPreset((portal.branding || {}) as PortalBranding);
+  const isLightTheme = resolvedBranding.theme_mode === "light";
   const isEmoryDemo = isEmoryDemoPortal(portal.slug);
+  const isMarketplace = vertical === "marketplace" || isPCMDemoPortal(portal.slug);
+
+  // Resolve the effective vertical key for animation/style config. Slug-based
+  // demo portals use their canonical vertical name regardless of what
+  // getPortalVertical() returns for their DB record.
+  const effectiveVertical = isEmoryDemo
+    ? "hospital"
+    : isMarketplace
+      ? "marketplace"
+      : vertical;
+
+  const verticalStyles = getVerticalStyles(effectiveVertical);
 
   return (
     <PortalProvider portal={portal}>
       <PortalTheme portal={portal} />
       <PortalThemeClient portal={portal} />
-      {isEmoryDemo && (
-        <style>{`
-          html, body { background-color: #f2f5fa !important; }
-          body::before { opacity: 0 !important; }
-          body::after { opacity: 0 !important; }
-          .ambient-glow { opacity: 0 !important; }
-          .rain-overlay { display: none !important; }
-          .cursor-glow { display: none !important; }
-
-          [data-vertical="hospital"] .animate-page-enter,
-          [data-vertical="hospital"] .animate-glitch-flicker,
-          [data-vertical="hospital"] .animate-flicker,
-          [data-vertical="hospital"] .animate-flicker-fast,
-          [data-vertical="hospital"] .animate-coral-shimmer,
-          [data-vertical="hospital"] .animate-coral-scan,
-          [data-vertical="hospital"] .animate-coral-pulse,
-          [data-vertical="hospital"] .animate-happening-now-pulse,
-          [data-vertical="hospital"] .animate-pulse-glow {
-            animation: none !important;
-          }
-
-          [data-vertical="hospital"] [class*="animate-"] {
-            animation: none !important;
-          }
-        `}</style>
-      )}
-      {isMarketplace && (
-        <style>{`
-          body::before { opacity: 0 !important; }
-          body::after { opacity: 0 !important; }
-          .ambient-glow { opacity: 0 !important; }
-          .rain-overlay { display: none !important; }
-          .cursor-glow { display: none !important; }
-
-          [data-vertical="marketplace"] .animate-page-enter,
-          [data-vertical="marketplace"] .animate-glitch-flicker,
-          [data-vertical="marketplace"] .animate-flicker,
-          [data-vertical="marketplace"] .animate-flicker-fast,
-          [data-vertical="marketplace"] .animate-coral-shimmer,
-          [data-vertical="marketplace"] .animate-coral-scan,
-          [data-vertical="marketplace"] .animate-coral-pulse,
-          [data-vertical="marketplace"] .animate-happening-now-pulse,
-          [data-vertical="marketplace"] .animate-pulse-glow {
-            animation: none !important;
-          }
-
-          [data-vertical="marketplace"] [class*="animate-"] {
-            animation: none !important;
-          }
-        `}</style>
-      )}
-      {vertical === "dog" && (
-        <style>{`
-          body::before { opacity: 0 !important; }
-          body::after { opacity: 0 !important; }
-          .ambient-glow { opacity: 0 !important; }
-          .rain-overlay { display: none !important; }
-          .cursor-glow { display: none !important; }
-
-          [data-vertical="dog"] .animate-page-enter,
-          [data-vertical="dog"] .animate-glitch-flicker,
-          [data-vertical="dog"] .animate-flicker,
-          [data-vertical="dog"] .animate-flicker-fast,
-          [data-vertical="dog"] .animate-coral-shimmer,
-          [data-vertical="dog"] .animate-coral-scan,
-          [data-vertical="dog"] .animate-coral-pulse,
-          [data-vertical="dog"] .animate-happening-now-pulse,
-          [data-vertical="dog"] .animate-pulse-glow {
-            animation: none !important;
-          }
-
-          [data-vertical="dog"] [class*="animate-"] {
-            animation: none !important;
-          }
-        `}</style>
-      )}
-      {vertical === "community" && (
-        <style>{`
-          body::before { opacity: 0 !important; }
-          body::after { opacity: 0 !important; }
-          .ambient-glow { opacity: 0 !important; }
-          .rain-overlay { display: none !important; }
-          .cursor-glow { display: none !important; }
-
-          [data-vertical="community"] .animate-page-enter,
-          [data-vertical="community"] .animate-glitch-flicker,
-          [data-vertical="community"] .animate-flicker,
-          [data-vertical="community"] .animate-flicker-fast,
-          [data-vertical="community"] .animate-coral-shimmer,
-          [data-vertical="community"] .animate-coral-scan,
-          [data-vertical="community"] .animate-coral-pulse,
-          [data-vertical="community"] .animate-happening-now-pulse,
-          [data-vertical="community"] .animate-pulse-glow {
-            animation: none !important;
-          }
-
-          /* Civic editorial typography */
-          [data-vertical="community"] .civic-hero-heading {
-            font-family: var(--portal-font-heading, 'Source Serif 4', Georgia, serif);
-            font-weight: 600;
-            letter-spacing: -0.01em;
-          }
-
-          /* Civic card refinements — slightly warmer and softer */
-          [data-vertical="community"] .civic-quick-link {
-            border-color: color-mix(in srgb, var(--twilight) 70%, transparent);
-          }
-          [data-vertical="community"] .civic-quick-link:hover {
-            box-shadow: 0 2px 12px color-mix(in srgb, var(--action-primary) 8%, transparent);
-          }
-
-          /* Override nav-tab active for civic green instead of coral */
-          [data-vertical="community"] .nav-tab-active {
-            background-color: var(--action-primary) !important;
-          }
-
-          /* Override the skeleton shimmer for light theme */
-          [data-vertical="community"] .skeleton-shimmer {
-            background: linear-gradient(
-              90deg,
-              color-mix(in srgb, var(--twilight) 15%, transparent) 0%,
-              color-mix(in srgb, var(--twilight) 25%, transparent) 50%,
-              color-mix(in srgb, var(--twilight) 15%, transparent) 100%
-            ) !important;
-            background-size: 200% 100% !important;
-          }
-
-          /* Feed section header — use portal accent for "See all" link */
-          [data-vertical="community"] .text-accent {
-            color: var(--action-primary);
-          }
-        `}</style>
-      )}
-      {isFilm && (
-        <style>{`
-          [data-vertical="film"] {
-            --coral: #b8c8f8;
-            --coral-hsl: 225 80% 85%;
-            --neon-amber: #b8c8f8;
-            --neon-amber-hsl: 225 80% 85%;
-            --gold: #dbe5ff;
-          }
-
-          body::before { opacity: 0 !important; }
-          body::after { opacity: 0 !important; }
-          .ambient-glow { opacity: 0 !important; }
-          .rain-overlay { display: none !important; }
-          .cursor-glow { display: none !important; }
-
-          [data-vertical="film"] .animate-page-enter,
-          [data-vertical="film"] .animate-glitch-flicker,
-          [data-vertical="film"] .animate-flicker,
-          [data-vertical="film"] .animate-flicker-fast,
-          [data-vertical="film"] .animate-coral-shimmer,
-          [data-vertical="film"] .animate-coral-scan,
-          [data-vertical="film"] .animate-coral-pulse,
-          [data-vertical="film"] .animate-happening-now-pulse,
-          [data-vertical="film"] .animate-pulse-glow {
-            animation: none !important;
-          }
-
-          [data-vertical="film"] [class*="animate-"] {
-            animation: none !important;
-          }
-        `}</style>
-      )}
+      {verticalStyles && <style>{verticalStyles}</style>}
       <div
         data-vertical={vertical}
+        data-theme={isLightTheme ? "light" : undefined}
         className={isHotel ? `${cormorantGaramond.variable} ${inter.variable}` : ""}
       >
         <Suspense fallback={null}>

@@ -279,7 +279,7 @@ export default function ExperiencesSection({ portalSlug }: Props) {
   if (experiences.length === 0) return null;
 
   return (
-    <section className="animate-fade-in">
+    <section>
       {/* Section header */}
       <FeedSectionHeader
         title="Things to Do"

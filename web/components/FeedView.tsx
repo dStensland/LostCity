@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { getFeedEmptyStateCopy } from "@/lib/empty-state-copy";
 import { usePortal } from "@/lib/portal-context";
 import FeedSection, { type FeedSectionData, THEMED_SLUGS, HolidayGrid } from "./feed/FeedSection";
 import { getActiveHeroSlugs } from "@/config/holidays";
@@ -273,6 +274,7 @@ export default function FeedView({ prefetchedSections, enableSectionIndex = true
 
   // Empty state
   if (sections.length === 0) {
+    const emptyState = getFeedEmptyStateCopy();
     return (
       <div className="py-16 text-center">
         <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[var(--twilight)]/50 flex items-center justify-center">
@@ -280,15 +282,15 @@ export default function FeedView({ prefetchedSections, enableSectionIndex = true
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
           </svg>
         </div>
-        <h2 className="text-lg text-[var(--cream)] mb-2">Nothing here yet</h2>
+        <h2 className="text-lg text-[var(--cream)] mb-2">{emptyState.headline}</h2>
         <p className="text-[var(--muted)] text-sm max-w-xs mx-auto mb-4">
-          Check back soon for curated events and recommendations.
+          {emptyState.subline}
         </p>
         <Link
           href={`/${portal.slug}?view=events`}
           className="inline-block px-4 py-2 bg-[var(--coral)] text-[var(--void)] rounded-lg font-mono text-sm font-medium hover:bg-[var(--rose)] transition-colors"
         >
-          Browse All Events
+          {emptyState.actionLabel}
         </Link>
       </div>
     );

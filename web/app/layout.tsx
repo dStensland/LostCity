@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { Suspense } from "react";
-import { Outfit, JetBrains_Mono, Space_Grotesk, Bebas_Neue } from "next/font/google";
+import { Outfit, JetBrains_Mono, Space_Grotesk, Bebas_Neue, Newsreader } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { AuthProvider } from "@/lib/auth-context";
 import { ThemeProvider } from "@/lib/theme-context";
@@ -47,6 +47,15 @@ const spaceGrotesk = Space_Grotesk({
 const bebasNeue = Bebas_Neue({
   weight: ["400"],
   variable: "--font-masthead",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+// Serif display font - civic/editorial headings
+const newsreader = Newsreader({
+  weight: ["400", "500", "600"],
+  style: ["normal", "italic"],
+  variable: "--font-serif",
   subsets: ["latin"],
   display: "swap",
 });
@@ -116,7 +125,7 @@ export default async function RootLayout({
         <link rel="preconnect" href="https://s1.ticketm.net" />
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
       </head>
-      <body className={`${outfit.variable} ${jetbrainsMono.variable} ${spaceGrotesk.variable} ${bebasNeue.variable} antialiased`}>
+      <body className={`${outfit.variable} ${jetbrainsMono.variable} ${spaceGrotesk.variable} ${bebasNeue.variable} ${newsreader.variable} antialiased`}>
         <ThemeProvider>
           <QueryProvider>
             {/* Skip link for keyboard users */}

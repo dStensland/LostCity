@@ -343,17 +343,20 @@ export default function LineupSection({
       return items.filter((e) => {
         if (!keepRecurring && isSceneEvent(e.event as FeedEventData)) return false;
         const ev = e.event as FeedEventData & Record<string, unknown>;
-        // Film events → Now Showing block handles all showtimes; special
-        // screenings route to Big Stuff via festival_id/is_tentpole
-        const series = ev.series as { series_type?: string | null } | null;
-        if (series?.series_type === "film") return false;
-        if (ev.category === "film") return false;
-        // Activism/mobilize → separate opt-in block (not general Lineup)
+        const ev_series = ev.series as { series_type?: string | null } | null;
         const evTags = ((ev.tags as string[] | null) ?? []);
-        if (evTags.includes("activism") || evTags.includes("mobilize")) return false;
-        // Tentpole & festival events → Big Stuff block
-        if (ev.is_tentpole) return false;
-        if (ev.festival_id) return false;
+
+        // Entertainment-specific filters — skip for civic portals (keepRecurring)
+        if (!keepRecurring) {
+          // Film events → Now Showing block handles all showtimes
+          if (ev_series?.series_type === "film") return false;
+          if (ev.category === "film") return false;
+          // Activism/mobilize → separate opt-in block
+          if (evTags.includes("activism") || evTags.includes("mobilize")) return false;
+          // Festival-linked events → Big Stuff block (individual sessions within a festival)
+          // Note: is_tentpole events now STAY in the Lineup — they deserve hero treatment here
+          if (ev.festival_id) return false;
+        }
         // Recurring fall-throughs: recurring events that don't match any Scene
         // activity type AND have no premium signal (touring, album-release, tour
         // series) are low-signal for the Lineup — they belong in their category
@@ -366,7 +369,7 @@ export default function LineupSection({
             const hasLineupTag = evTags.some((t: string) =>
               t === "touring" || t === "album-release" || t === "one-night-only",
             );
-            const hasTourSeries = series?.series_type === "tour";
+            const hasTourSeries = ev_series?.series_type === "tour";
             if (!hasLineupTag && !hasTourSeries) return false;
           }
         }
