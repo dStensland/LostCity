@@ -545,6 +545,7 @@ Yonder is not yet credible as:
 - a full regional weekend-adventure portal
 - a camping finder
 - a robust longer-trip planner
+- a route-catalog completeness product, which it should not try to become
 
 The weekend/longer-trip risk is still real.
 
@@ -575,5 +576,6 @@ It should separate work into four buckets:
 
 4. **Decide which Yonder promises are V1 versus later**
    - weekend / camping / artifacts / quests / conditions / trip hangs
+   - outbound route curation instead of internal trail comprehensiveness
 
 This doc should be treated as the baseline for that gap-closing plan.

@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Atlanta vs HelpATL Comps</title>
+    <style>
+      :root {
+        --bg: #070b16;
+        --panel: #0f172a;
+        --line: #263247;
+        --soft: #93a4bf;
+        --cream: #f6f8ff;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Space Grotesk", "Sora", "Avenir Next", sans-serif;
+        background:
+          radial-gradient(circle at 0% 0%, #172554 0%, transparent 45%),
+          radial-gradient(circle at 100% 0%, #042f2e 0%, transparent 35%),
+          linear-gradient(180deg, #070b16, #060913);
+        color: var(--cream);
+      }
+      .board {
+        width: 1600px;
+        min-height: 1100px;
+        margin: 0 auto;
+        padding: 28px;
+      }
+      .headline { display: flex; justify-content: space-between; align-items: end; }
+      .headline h1 {
+        margin: 0;
+        font-size: 40px;
+        letter-spacing: .02em;
+      }
+      .headline p { margin: 0; color: var(--soft); font-size: 14px; }
+      .grid {
+        margin-top: 20px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+      }
+      .frame {
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        overflow: hidden;
+        background: rgba(15, 23, 42, .75);
+        box-shadow: 0 20px 50px rgba(0,0,0,.35);
+      }
+      .top {
+        height: 42px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 14px;
+        background: rgba(2, 6, 23, .8);
+        border-bottom: 1px solid var(--line);
+      }
+      .dot { width: 10px; height: 10px; border-radius: 50%; background: #475569; }
+      .view { padding: 14px; }
+      .label {
+        display: inline-flex;
+        border: 1px solid #334155;
+        border-radius: 999px;
+        padding: 4px 10px;
+        font-size: 11px;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        color: #cbd5e1;
+      }
+      .hero {
+        margin-top: 10px;
+        border-radius: 14px;
+        padding: 16px;
+      }
+      .hero h2 { margin: 0; font-size: 30px; line-height: .96; }
+      .hero p { margin: 8px 0 0; font-size: 13px; max-width: 90%; }
+      .chips { margin-top: 10px; display: flex; gap: 7px; flex-wrap: wrap; }
+      .chips span {
+        border-radius: 999px;
+        padding: 6px 10px;
+        font-size: 11px;
+        font-weight: 700;
+      }
+      .list { margin-top: 12px; display: grid; gap: 8px; }
+      .item {
+        border: 1px solid #334155;
+        border-radius: 11px;
+        padding: 9px 10px;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+        font-size: 12px;
+      }
+      .item .title { font-weight: 800; }
+      .item .meta { color: #94a3b8; margin-top: 2px; }
+      .badge {
+        border-radius: 999px;
+        padding: 5px 8px;
+        font-size: 10px;
+        letter-spacing: .06em;
+        text-transform: uppercase;
+        font-weight: 800;
+      }
+      .atlanta .hero {
+        background:
+          linear-gradient(130deg, rgba(15,23,42,.86), rgba(30,41,59,.78)),
+          radial-gradient(circle at 80% 20%, rgba(45,212,191,.25), transparent 50%),
+          radial-gradient(circle at 20% 80%, rgba(251,191,36,.20), transparent 45%);
+        border: 1px solid #334155;
+      }
+      .atlanta .chips span { background: rgba(15,23,42,.75); border: 1px solid #475569; color: #dbeafe; }
+      .atlanta .badge { background: rgba(14,165,233,.18); border: 1px solid rgba(56,189,248,.5); color: #7dd3fc; }
+
+      .helpatl .hero {
+        background:
+          linear-gradient(130deg, rgba(15,118,110,.94), rgba(8,145,178,.86)),
+          repeating-linear-gradient(90deg, rgba(255,255,255,.08) 0 1px, transparent 1px 16px);
+        border: 1px solid #2dd4bf;
+      }
+      .helpatl .chips span { background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.34); color: #ecfeff; }
+      .helpatl .badge { background: rgba(16,185,129,.17); border: 1px solid rgba(74,222,128,.5); color: #86efac; }
+
+      .mobile-row {
+        margin-top: 18px;
+        display: grid;
+        grid-template-columns: 320px 320px;
+        justify-content: center;
+        gap: 22px;
+      }
+      .phone {
+        border: 1px solid #334155;
+        border-radius: 24px;
+        overflow: hidden;
+        background: #0b1326;
+      }
+      .phone .notch { height: 24px; background: #020617; }
+      .phone .screen { padding: 12px; }
+      .phone .mini-hero {
+        border-radius: 14px;
+        padding: 12px;
+        font-size: 12px;
+      }
+      .phone h4 { margin: 8px 0 0; font-size: 20px; line-height: .95; }
+      .phone .nav {
+        margin-top: 10px;
+        display: flex;
+        justify-content: space-between;
+        font-size: 11px;
+        color: #cbd5e1;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="board">
+      <div class="headline">
+        <h1>Portal Comps: Atlanta vs HelpATL</h1>
+        <p>Same platform primitives, distinct IA voice and action model</p>
+      </div>
+
+      <div class="grid">
+        <section class="frame atlanta">
+          <div class="top"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+          <div class="view">
+            <span class="label">Atlanta • Discovery-first</span>
+            <div class="hero">
+              <h2>Friday Night in the City</h2>
+              <p>Editorial discovery framing prioritizing variety, culture, and social energy.</p>
+              <div class="chips">
+                <span>Live Music</span><span>Open Late</span><span>Trending This Week</span>
+              </div>
+            </div>
+            <div class="list">
+              <div class="item"><div><div class="title">Rooftop Jazz @ Midtown</div><div class="meta">Tonight • 8:00 PM</div></div><span class="badge">Trending</span></div>
+              <div class="item"><div><div class="title">Indie Film + Q&amp;A</div><div class="meta">Sat • 7:30 PM</div></div><span class="badge">Community</span></div>
+              <div class="item"><div><div class="title">Late-Night Market</div><div class="meta">Sun • 9:00 PM</div></div><span class="badge">Discover</span></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="frame helpatl">
+          <div class="top"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+          <div class="view">
+            <span class="label">HelpATL • Action-first</span>
+            <div class="hero">
+              <h2>Your Civic Week</h2>
+              <p>Civic action framing prioritizing meetings, volunteer shifts, and explainable matches.</p>
+              <div class="chips">
+                <span>Follow Government</span><span>Join Volunteer</span><span>Track School Board</span>
+              </div>
+            </div>
+            <div class="list">
+              <div class="item"><div><div class="title">City Council Zoning Agenda</div><div class="meta">Mon • 5:30 PM</div></div><span class="badge">Jurisdiction</span></div>
+              <div class="item"><div><div class="title">APS Board Session</div><div class="meta">Tue • 6:00 PM</div></div><span class="badge">Institution</span></div>
+              <div class="item"><div><div class="title">Food Bank Volunteer Shift</div><div class="meta">Wed • 6:00 PM</div></div><span class="badge">Matched</span></div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div class="mobile-row">
+        <article class="phone atlanta">
+          <div class="notch"></div>
+          <div class="screen">
+            <div class="mini-hero" style="background:linear-gradient(130deg,#111827,#1f2937)">
+              ATLANTA
+              <h4>Tonight</h4>
+            </div>
+            <div class="nav"><span>Discover</span><span>Find</span><span>Scene</span></div>
+          </div>
+        </article>
+        <article class="phone helpatl">
+          <div class="notch"></div>
+          <div class="screen">
+            <div class="mini-hero" style="background:linear-gradient(130deg,#0f766e,#0ea5a4)">
+              HELPATL
+              <h4>Act This Week</h4>
+            </div>
+            <div class="nav"><span>Act</span><span>Calendar</span><span>Groups</span></div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </body>
+</html>

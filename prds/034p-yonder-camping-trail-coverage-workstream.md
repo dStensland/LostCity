@@ -392,16 +392,19 @@ Why:
 
 ### Workstream C: Trail review queue
 
-The next hiking candidates should be route-level and recognizable:
+The next trail work should be support-oriented, not comprehensiveness-driven.
 
-- `Trillium Trail`
-- `Spruce Pine Trail`
-- `White Oak Trail`
-- `Perimeter Trail`
+Priority uses:
+
+- canonical routes that materially improve destination pages
+- trailheads/access points that clarify how to do the outing
+- link-out support to specialist route curators where users need dense route choice
 
 Why:
 
-- the remaining trail queue is small enough to curate instead of brute-force
+- Yonder does not need to beat AllTrails on route density to win the decision layer
+- the remaining trail queue is small enough to curate selectively
+- campground, park, water-access, and overnight depth now matter more than long-tail trail coverage
 
 ### Workstream D: Snapshot participation under new state-park parents
 
@@ -423,6 +426,7 @@ Do not:
 - treat numbered sub-sites as standalone campgrounds
 - let generic park rows stand in for campground truth
 - treat `special_permit` or `group_camp` as automatic seed lanes
+- turn Yonder into a route-catalog completeness project
 
 Do:
 
@@ -430,6 +434,7 @@ Do:
 - prefer official operator URLs when present
 - attach child rows to broader anchors when the relationship is obvious
 - let new coverage enrich the shared venue graph, not only Yonder
+- use canonical trail coverage to support destination and recommendation quality, then link out for route-depth specialists
 
 ---
 

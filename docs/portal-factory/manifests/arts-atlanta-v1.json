@@ -1,0 +1,332 @@
+{
+  "portal": {
+    "slug": "arts-atlanta",
+    "name": "Lost City: Arts",
+    "tagline": "what's on the walls",
+    "portal_type": "event",
+    "visibility": "public",
+    "plan": "professional",
+    "parent_portal_slug": "atlanta",
+    "filters": {
+      "categories": ["art", "theater", "community"],
+      "tags": ["visual-art", "gallery", "exhibition", "sculpture", "painting", "photography", "ceramics", "printmaking", "mixed-media", "installation", "mural", "street-art"]
+    },
+    "branding": {
+      "visual_preset": "cosmic_dark",
+      "theme_mode": "dark",
+      "primary_color": "#D4944C",
+      "secondary_color": "#E8B931",
+      "accent_color": "#D4567A",
+      "background_color": "#12100E",
+      "card_color": "#1A1714",
+      "text_color": "#F5F0EB",
+      "muted_color": "#6B6259",
+      "border_color": "#2A2521",
+      "button_color": "#D4944C",
+      "button_text_color": "#12100E",
+      "font_heading": "Space Grotesk",
+      "font_body": "IBM Plex Mono",
+      "header": {
+        "template": "standard",
+        "logo_position": "left",
+        "nav_style": "minimal",
+        "show_search_in_header": true
+      },
+      "ambient": {
+        "effect": "none",
+        "intensity": "subtle"
+      },
+      "component_style": {
+        "border_radius": "none",
+        "shadows": "subtle",
+        "card_style": "outlined",
+        "button_style": "sharp",
+        "glow_enabled": false,
+        "glass_enabled": false,
+        "animations": "subtle"
+      }
+    },
+    "settings": {
+      "vertical": "arts",
+      "show_categories": true,
+      "show_map": false,
+      "default_view": "list",
+      "exclude_adult": true,
+      "nav_labels": {
+        "feed": "What's On",
+        "find": "Browse",
+        "community": "Artists",
+        "spots": "Venues"
+      }
+    }
+  },
+  "source_subscriptions": {
+    "source_slugs": [
+      "high-museum",
+      "atlanta-contemporary",
+      "moca-ga",
+      "hammonds-house",
+      "clark-atlanta-art-museum",
+      "scad-atlanta",
+      "scad-fash",
+      "callanwolde",
+      "callanwolde-fine-arts-center",
+      "spruill-center-for-the-arts",
+      "marcia-wood-gallery",
+      "whitespace-gallery",
+      "kai-lin-art",
+      "mason-fine-art",
+      "sandler-hudson",
+      "zucot-gallery",
+      "poem88-gallery",
+      "abv-gallery",
+      "hathaway-contemporary",
+      "mint-gallery",
+      "goat-farm",
+      "eyedrum",
+      "wonderroot",
+      "pushpush-arts",
+      "flux-projects",
+      "supermarket-atl",
+      "the-bakery",
+      "atlanta-art-fair",
+      "elevate-atl-art",
+      "castleberry-art-stroll",
+      "hudgens-center",
+      "carlos-museum",
+      "apex-museum",
+      "breman-museum",
+      "millennium-gate",
+      "atlanta-history-center",
+      "civil-rights-center",
+      "arts-atl",
+      "artsatl",
+      "mudfire",
+      "mudfire-pottery",
+      "atlanta-clay-works",
+      "atlanta-craft-club",
+      "the-craftivist",
+      "needle-nook",
+      "board-and-brush",
+      "painting-with-a-twist",
+      "puppetry-arts",
+      "horizon-theatre",
+      "shakespeare-tavern",
+      "aurora-theatre",
+      "terminus-modern-ballet",
+      "terminus-mbt",
+      "atlanta-workshop-players",
+      "chastain-arts",
+      "avondale-arts",
+      "doraville-art-center",
+      "south-river-art",
+      "janke-studios",
+      "pullman-yards",
+      "trap-music-museum",
+      "oddities-museum",
+      "exhibition-hub",
+      "wrens-nest",
+      "decatur-arts-festival",
+      "atlanta-dogwood",
+      "georgia-tech-arts",
+      "emory-schwartz-center",
+      "agnes-scott",
+      "oglethorpe-university",
+      "spelman-college",
+      "forefront-arts",
+      "forward-warrior",
+      "hambidge",
+      "four04-found-atl"
+    ],
+    "subscription_scope": "all",
+    "is_active": true
+  },
+  "sections": [
+    {
+      "title": "Fresh on the Walls",
+      "slug": "fresh-on-the-walls",
+      "description": "Exhibitions that just opened or open this week.",
+      "section_type": "auto",
+      "auto_filter": {
+        "categories": ["art"],
+        "tags": ["exhibition", "gallery", "opening"],
+        "date_filter": "next_7_days",
+        "sort_by": "date"
+      },
+      "is_visible": true,
+      "display_order": 1
+    },
+    {
+      "title": "Don't Sleep on These",
+      "slug": "closing-soon",
+      "description": "Exhibitions closing in the next two weeks.",
+      "section_type": "auto",
+      "auto_filter": {
+        "categories": ["art"],
+        "tags": ["exhibition", "gallery"],
+        "date_filter": "next_14_days",
+        "sort_by": "date"
+      },
+      "is_visible": true,
+      "display_order": 2
+    },
+    {
+      "title": "Happening This Week",
+      "slug": "events-this-week",
+      "description": "Gallery openings, artist talks, workshops, and performances.",
+      "section_type": "auto",
+      "auto_filter": {
+        "categories": ["art", "theater", "community"],
+        "date_filter": "next_7_days",
+        "sort_by": "date"
+      },
+      "is_visible": true,
+      "display_order": 3
+    },
+    {
+      "title": "The Scene",
+      "slug": "the-scene",
+      "description": "What the art community is talking about right now.",
+      "section_type": "auto",
+      "auto_filter": {
+        "source_slugs": ["arts-atl", "artsatl", "creative-loafing"],
+        "sort_by": "date"
+      },
+      "is_visible": true,
+      "display_order": 4
+    },
+    {
+      "title": "Classes + Workshops",
+      "slug": "classes-workshops",
+      "description": "Learn from local artists. Ceramics, printmaking, painting, and more.",
+      "section_type": "auto",
+      "auto_filter": {
+        "source_slugs": [
+          "mudfire", "mudfire-pottery", "atlanta-clay-works",
+          "spruill-center-for-the-arts", "callanwolde",
+          "painting-with-a-twist", "board-and-brush",
+          "the-craftivist", "needle-nook", "atlanta-craft-club"
+        ],
+        "categories": ["art", "community"],
+        "date_filter": "next_30_days",
+        "sort_by": "date"
+      },
+      "is_visible": true,
+      "display_order": 5
+    }
+  ],
+  "interest_channels": [
+    {
+      "slug": "visual-art",
+      "name": "Visual Art",
+      "channel_type": "topic",
+      "description": "Painting, sculpture, photography, and mixed media exhibitions.",
+      "is_active": true,
+      "sort_order": 1,
+      "rules": [
+        {
+          "rule_type": "source",
+          "rule_payload": { "source_slugs": ["high-museum", "atlanta-contemporary", "moca-ga", "hammonds-house", "clark-atlanta-art-museum"] },
+          "priority": 10,
+          "is_active": true
+        },
+        {
+          "rule_type": "tag",
+          "rule_payload": { "any_tags": ["visual-art", "painting", "sculpture", "photography", "exhibition"] },
+          "priority": 20,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "slug": "galleries",
+      "name": "Galleries",
+      "channel_type": "topic",
+      "description": "Commercial and independent gallery shows, openings, and receptions.",
+      "is_active": true,
+      "sort_order": 2,
+      "rules": [
+        {
+          "rule_type": "source",
+          "rule_payload": { "source_slugs": ["marcia-wood-gallery", "whitespace-gallery", "kai-lin-art", "mason-fine-art", "sandler-hudson", "zucot-gallery", "poem88-gallery", "abv-gallery", "hathaway-contemporary", "mint-gallery"] },
+          "priority": 10,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "slug": "performance",
+      "name": "Performance",
+      "channel_type": "topic",
+      "description": "Theater, dance, spoken word, and live performance art.",
+      "is_active": true,
+      "sort_order": 3,
+      "rules": [
+        {
+          "rule_type": "source",
+          "rule_payload": { "source_slugs": ["horizon-theatre", "shakespeare-tavern", "aurora-theatre", "terminus-modern-ballet", "terminus-mbt", "atlanta-workshop-players", "puppetry-arts"] },
+          "priority": 10,
+          "is_active": true
+        },
+        {
+          "rule_type": "category",
+          "rule_payload": { "category_slugs": ["theater"] },
+          "priority": 20,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "slug": "maker-spaces",
+      "name": "Maker Spaces",
+      "channel_type": "topic",
+      "description": "Ceramics, printmaking, textiles, and hands-on creative studios.",
+      "is_active": true,
+      "sort_order": 4,
+      "rules": [
+        {
+          "rule_type": "source",
+          "rule_payload": { "source_slugs": ["mudfire", "mudfire-pottery", "atlanta-clay-works", "spruill-center-for-the-arts", "the-craftivist", "needle-nook", "atlanta-craft-club"] },
+          "priority": 10,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "slug": "underground",
+      "name": "Underground",
+      "channel_type": "topic",
+      "description": "DIY spaces, artist-run galleries, experimental art, and alternative venues.",
+      "is_active": true,
+      "sort_order": 5,
+      "rules": [
+        {
+          "rule_type": "source",
+          "rule_payload": { "source_slugs": ["goat-farm", "eyedrum", "wonderroot", "pushpush-arts", "flux-projects", "supermarket-atl", "the-bakery", "pullman-yards", "four04-found-atl"] },
+          "priority": 10,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "slug": "art-festivals",
+      "name": "Festivals + Fairs",
+      "channel_type": "topic",
+      "description": "Art walks, festivals, fairs, and large-scale cultural events.",
+      "is_active": true,
+      "sort_order": 6,
+      "rules": [
+        {
+          "rule_type": "source",
+          "rule_payload": { "source_slugs": ["atlanta-art-fair", "elevate-atl-art", "castleberry-art-stroll", "decatur-arts-festival", "atlanta-dogwood"] },
+          "priority": 10,
+          "is_active": true
+        }
+      ]
+    }
+  ],
+  "refresh_schedule": {
+    "cadence": "daily",
+    "hour_utc": 10
+  }
+}

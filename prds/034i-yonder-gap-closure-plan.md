@@ -22,6 +22,8 @@ The main strategic correction is simple:
 
 - do not let future-facing features like camping, quests, badges, and trip hangs define launch scope
 - use them as Phase 2 and Phase 3 platform work once Yonder is already useful
+- do not spend disproportionate effort chasing route-level trail comprehensiveness where specialist products already win
+- let Yonder own destination context, commitment framing, and recommendation quality, then link out when deep route catalog depth matters
 
 ---
 
@@ -184,12 +186,14 @@ Make this lane credible, even if not yet deep.
 
 - weak in live event inventory
 - destination coverage is the main bottleneck
+- route-level trail comprehensiveness is not the main bottleneck and should not become a primary build goal
 
 ### Needed work
 
 - seed the first regional destination wave
 - add manual commitment and activity classification to seeded anchors
 - combine event-driven and destination-driven discovery instead of waiting for event supply alone
+- treat canonical trails as support data for destination pages and shelves, not as a standalone comprehensiveness race
 
 ### Launch posture
 
@@ -210,6 +214,7 @@ Keep the lane present without letting it define launch quality.
 - seed a regional weekend anchor set
 - present weekend content as curated escape ideas, not a high-volume live feed
 - explicitly defer true camping and trip-planning depth
+- use external route curators when users need detailed route choice beyond Yonder's canonical trail layer
 
 ### Launch posture
 
@@ -368,6 +373,7 @@ Make the launch shape explicit so the product does not drift into fantasy-scope 
 - artifact discovery system as a real data model
 - quests / badges / progress tracking
 - rich trip hangs coordination
+- route-level trail catalog completeness beyond Yonder's canonical/support layer
 
 ### Success criteria
 
@@ -394,6 +400,7 @@ Separate what is Yonder-local from what should become shared platform capability
 - quest / progress model
 - camping inventory model
 - trip-planning extensions for outings / hangs
+- outbound route-curation contract for destination pages and recommendation modules
 
 ### Success criteria
 
@@ -486,6 +493,7 @@ Separate what is Yonder-local from what should become shared platform capability
 - quest/progress model
 - camping model
 - trip-hangs extension plan
+- outbound route-link strategy for AllTrails and similar curators where specialist depth is better than internal replication
 
 ### Exit gate
 

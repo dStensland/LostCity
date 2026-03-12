@@ -1,0 +1,371 @@
+{
+  "portal": {
+    "slug": "helpatl",
+    "name": "HelpATL",
+    "tagline": "Volunteer this week, join longer-term causes, and follow Atlanta civic action",
+    "portal_type": "event",
+    "visibility": "public",
+    "plan": "professional",
+    "parent_portal_slug": "atlanta",
+    "filters": {
+      "city": "Atlanta",
+      "categories": ["community", "learning", "family"],
+      "exclude_categories": ["nightlife"]
+    },
+    "branding": {
+      "visual_preset": "editorial_light",
+      "theme_mode": "light",
+      "primary_color": "#0f766e",
+      "secondary_color": "#1d4ed8",
+      "accent_color": "#ea580c",
+      "background_color": "#f8fafc",
+      "text_color": "#0f172a",
+      "button_color": "#0f766e",
+      "button_text_color": "#ffffff",
+      "font_heading": "Sora",
+      "font_body": "Manrope"
+    },
+    "settings": {
+      "vertical": "civic",
+      "show_categories": true,
+      "show_map": false,
+      "default_view": "list",
+      "nav_labels": {
+        "feed": "Act",
+        "find": "Calendar",
+        "community": "Groups",
+        "events": "Calendar",
+        "spots": "Community Spots"
+      }
+    }
+  },
+  "source_subscriptions": {
+    "source_slugs": [
+      "atlanta-city-meetings",
+      "fulton-county-meetings",
+      "dekalb-county-meetings",
+      "atlanta-public-schools-board",
+      "fulton-county-schools-board",
+      "dekalb-county-schools-board",
+      "hands-on-atlanta",
+      "united-way-atlanta",
+      "atlanta-community-food-bank",
+      "open-hand-atlanta",
+      "trees-atlanta",
+      "concrete-jungle",
+      "habitat-for-humanity-atlanta",
+      "chattahoochee-riverkeeper",
+      "park-pride",
+      "atlanta-mission",
+      "medshare",
+      "atlanta-humane-society",
+      "lifeline-animal-project",
+      "atlanta-legal-aid",
+      "marta-board",
+      "big-brothers-big-sisters-atl",
+      "everybody-wins-atlanta"
+    ],
+    "subscription_scope": "all",
+    "is_active": true
+  },
+  "sections": [
+    {
+      "title": "Volunteer This Week",
+      "slug": "volunteer-this-week",
+      "description": "High-conversion drop-in shifts and service projects happening in the next two weeks.",
+      "section_type": "auto",
+      "auto_filter": {
+        "source_slugs": [
+          "hands-on-atlanta",
+          "united-way-atlanta",
+          "atlanta-community-food-bank",
+          "open-hand-atlanta",
+          "trees-atlanta",
+          "concrete-jungle",
+          "habitat-for-humanity-atlanta",
+          "chattahoochee-riverkeeper",
+          "park-pride",
+          "atlanta-mission",
+          "medshare",
+          "atlanta-humane-society",
+          "lifeline-animal-project",
+          "atlanta-legal-aid"
+        ],
+        "categories": ["community"],
+        "tags": ["volunteer", "drop-in", "service"],
+        "date_filter": "next_14_days",
+        "sort_by": "date"
+      },
+      "is_visible": true,
+      "display_order": 1
+    },
+    {
+      "title": "Ongoing Opportunities",
+      "slug": "ongoing-opportunities",
+      "description": "Repeatable volunteer work, trainings, and service paths that reward showing up again.",
+      "section_type": "auto",
+      "auto_filter": {
+        "source_slugs": [
+          "trees-atlanta",
+          "park-pride",
+          "chattahoochee-riverkeeper",
+          "habitat-for-humanity-atlanta",
+          "atlanta-mission",
+          "medshare",
+          "big-brothers-big-sisters-atl",
+          "everybody-wins-atlanta",
+          "atlanta-legal-aid",
+          "atlanta-casa",
+          "laamistad"
+        ],
+        "categories": ["community", "learning"],
+        "tags": ["volunteer", "orientation", "training", "mentorship", "education"],
+        "date_filter": "next_30_days",
+        "sort_by": "date"
+      },
+      "is_visible": true,
+      "display_order": 2
+    },
+    {
+      "title": "Commit to a Cause",
+      "slug": "commit-to-a-cause",
+      "description": "Orientations, trainings, and recurring roles that lead into longer-term service.",
+      "section_type": "auto",
+      "auto_filter": {
+        "source_slugs": [
+          "big-brothers-big-sisters-atl",
+          "everybody-wins-atlanta",
+          "habitat-for-humanity-atlanta",
+          "atlanta-mission",
+          "atlanta-legal-aid",
+          "atlanta-casa",
+          "laamistad"
+        ],
+        "categories": ["community", "learning"],
+        "tags": ["orientation", "training", "mentorship", "education"],
+        "date_filter": "next_30_days",
+        "sort_by": "date"
+      },
+      "is_visible": true,
+      "display_order": 3
+    },
+    {
+      "title": "Government Meetings",
+      "slug": "government-meetings",
+      "description": "City, county, and transit board agendas, hearings, and public meetings.",
+      "section_type": "auto",
+      "auto_filter": {
+        "categories": ["community"],
+        "tags": ["civic", "government", "public-meeting"],
+        "date_filter": "next_30_days",
+        "sort_by": "date"
+      },
+      "is_visible": true,
+      "display_order": 4
+    },
+    {
+      "title": "School Board Watch",
+      "slug": "school-board-watch",
+      "description": "Atlanta, Fulton, and DeKalb school board meetings and related education actions.",
+      "section_type": "auto",
+      "auto_filter": {
+        "categories": ["community", "learning"],
+        "tags": ["school-board", "education", "public-meeting"],
+        "date_filter": "next_30_days",
+        "sort_by": "date"
+      },
+      "is_visible": true,
+      "display_order": 5
+    }
+  ],
+  "interest_channels": [
+    {
+      "slug": "atlanta-city-government",
+      "name": "City of Atlanta Government",
+      "channel_type": "jurisdiction",
+      "description": "City council and city government meetings and civic updates.",
+      "sort_order": 10,
+      "is_active": true,
+      "rules": [
+        {
+          "rule_type": "source",
+          "rule_payload": { "source_slug": "atlanta-city-meetings" },
+          "priority": 10,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "slug": "fulton-county-government",
+      "name": "Fulton County Government",
+      "channel_type": "jurisdiction",
+      "description": "Fulton County commission and public meetings.",
+      "sort_order": 20,
+      "is_active": true,
+      "rules": [
+        {
+          "rule_type": "source",
+          "rule_payload": { "source_slug": "fulton-county-meetings" },
+          "priority": 10,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "slug": "dekalb-county-government",
+      "name": "DeKalb County Government",
+      "channel_type": "jurisdiction",
+      "description": "DeKalb County board and public meetings.",
+      "sort_order": 30,
+      "is_active": true,
+      "rules": [
+        {
+          "rule_type": "source",
+          "rule_payload": { "source_slug": "dekalb-county-meetings" },
+          "priority": 10,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "slug": "school-board-watch",
+      "name": "School Board Watch",
+      "channel_type": "institution",
+      "description": "Track school board and district meetings from Atlanta Public Schools, Fulton, and DeKalb.",
+      "sort_order": 40,
+      "is_active": true,
+      "rules": [
+        {
+          "rule_type": "source",
+          "rule_payload": {
+            "source_slugs": [
+              "atlanta-public-schools-board",
+              "fulton-county-schools-board",
+              "dekalb-county-schools-board"
+            ]
+          },
+          "priority": 10,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "slug": "volunteer-this-week-atl",
+      "name": "Volunteer This Week",
+      "channel_type": "topic",
+      "description": "Drop-in shifts and time-bound service projects with low signup friction.",
+      "sort_order": 50,
+      "is_active": true,
+      "rules": [
+        {
+          "rule_type": "source",
+          "rule_payload": {
+            "source_slugs": [
+              "hands-on-atlanta",
+              "united-way-atlanta",
+              "atlanta-community-food-bank",
+              "open-hand-atlanta",
+              "trees-atlanta",
+              "concrete-jungle",
+              "habitat-for-humanity-atlanta",
+              "chattahoochee-riverkeeper",
+              "park-pride",
+              "atlanta-mission"
+            ]
+          },
+          "priority": 10,
+          "is_active": true
+        },
+        {
+          "rule_type": "tag",
+          "rule_payload": { "tag": "volunteer" },
+          "priority": 30,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "slug": "ongoing-opportunities-atl",
+      "name": "Ongoing Opportunities",
+      "channel_type": "topic",
+      "description": "Recurring volunteer work, trainings, and cause-based roles that reward repeat participation.",
+      "sort_order": 60,
+      "is_active": true,
+      "rules": [
+        {
+          "rule_type": "source",
+          "rule_payload": {
+            "source_slugs": [
+              "trees-atlanta",
+              "park-pride",
+              "chattahoochee-riverkeeper",
+              "habitat-for-humanity-atlanta",
+              "atlanta-mission",
+              "big-brothers-big-sisters-atl",
+              "everybody-wins-atlanta"
+            ]
+          },
+          "priority": 10,
+          "is_active": true
+        },
+        {
+          "rule_type": "tag",
+          "rule_payload": { "tag": "training" },
+          "priority": 20,
+          "is_active": true
+        },
+        {
+          "rule_type": "tag",
+          "rule_payload": { "tag": "orientation" },
+          "priority": 20,
+          "is_active": true
+        },
+        {
+          "rule_type": "tag",
+          "rule_payload": { "tag": "mentorship" },
+          "priority": 20,
+          "is_active": true
+        }
+      ]
+    },
+    {
+      "slug": "commit-to-a-cause-atl",
+      "name": "Commit to a Cause",
+      "channel_type": "topic",
+      "description": "Mentoring, literacy, and deeper service pathways that require orientation or regular commitment.",
+      "sort_order": 70,
+      "is_active": true,
+      "rules": [
+        {
+          "rule_type": "source",
+          "rule_payload": {
+            "source_slugs": [
+              "big-brothers-big-sisters-atl",
+              "everybody-wins-atlanta",
+              "habitat-for-humanity-atlanta",
+              "atlanta-mission"
+            ]
+          },
+          "priority": 10,
+          "is_active": true
+        },
+        {
+          "rule_type": "tag",
+          "rule_payload": { "tag": "mentorship" },
+          "priority": 20,
+          "is_active": true
+        },
+        {
+          "rule_type": "tag",
+          "rule_payload": { "tag": "orientation" },
+          "priority": 20,
+          "is_active": true
+        }
+      ]
+    }
+  ],
+  "refresh_schedule": {
+    "cadence": "daily",
+    "hour_utc": 13
+  }
+}
