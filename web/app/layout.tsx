@@ -62,21 +62,21 @@ const newsreader = Newsreader({
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: "Lost City - Find Your People",
-  description: "Find your people. Discover the underground events, shows, and happenings in your city.",
+  title: "Lost City - Find Your Thing and Do It",
+  description: "Find your thing and do it. Events, destinations, and everything worth doing in your city.",
   alternates: {
     canonical: "/",
   },
   openGraph: {
-    title: "Lost City - Find Your People",
-    description: "Find your people. Discover the underground.",
+    title: "Lost City - Find Your Thing and Do It",
+    description: "Events, destinations, and everything worth doing in your city.",
     url: SITE_URL,
     images: ["/og-image.png"],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Lost City - Find Your People",
-    description: "Find your people. Discover the underground events, shows, and happenings in your city.",
+    title: "Lost City - Find Your Thing and Do It",
+    description: "Events, destinations, and everything worth doing in your city.",
     images: ["/og-image.png"],
   },
 };
