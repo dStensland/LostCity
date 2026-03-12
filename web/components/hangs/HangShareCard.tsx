@@ -102,7 +102,13 @@ export const HangShareCard = memo(function HangShareCard({
 
         {/* LostCity branding */}
         <div className="flex items-center gap-1.5 mt-1">
-          <div className="w-3.5 h-3.5 rounded-sm bg-[var(--coral)]/80 flex-shrink-0" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/icon.svg"
+            alt="Lost City"
+            className="w-3.5 h-3.5 flex-shrink-0 opacity-60"
+            draggable={false}
+          />
           <span className="text-2xs text-white/40 font-mono tracking-wider">
             lostcity.app
           </span>

@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { createClient } from "@/lib/supabase/client";
 import ToggleRow from "./ToggleRow";
+import { PrivacyTierSelector } from "./PrivacyTierSelector";
+import type { PrivacyMode } from "@/lib/types/profile";
 
 type PrivacyPrefs = {
   cross_portal_recommendations: boolean | null;
@@ -11,7 +13,7 @@ type PrivacyPrefs = {
 };
 
 export default function PrivacyPanel() {
-  const { user, profile, refreshProfile, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const supabase = createClient();
 
   const [loading, setLoading] = useState(true);
@@ -19,15 +21,10 @@ export default function PrivacyPanel() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [isPublic, setIsPublic] = useState(true);
   const [crossPortalRecommendations, setCrossPortalRecommendations] = useState(true);
   const [hideAdultContent, setHideAdultContent] = useState(false);
 
-  useEffect(() => {
-    if (profile) {
-      setIsPublic(profile.is_public ?? true);
-    }
-  }, [profile]);
+  const initialPrivacyMode: PrivacyMode = profile?.privacy_mode ?? "social";
 
   useEffect(() => {
     async function loadPrivacySettings() {
@@ -68,14 +65,6 @@ export default function PrivacyPanel() {
     setError(null);
 
     try {
-      const { error: profileError } = await (
-        supabase.from("profiles") as ReturnType<typeof supabase.from>
-      )
-        .update({ is_public: isPublic } as never)
-        .eq("id", user.id);
-
-      if (profileError) throw profileError;
-
       const prefsPayload = {
         cross_portal_recommendations: crossPortalRecommendations,
         hide_adult_content: hideAdultContent,
@@ -100,10 +89,6 @@ export default function PrivacyPanel() {
           user_id: user.id,
           ...prefsPayload,
         } as never);
-      }
-
-      if (refreshProfile) {
-        await refreshProfile();
       }
 
       setSaved(true);
@@ -136,31 +121,35 @@ export default function PrivacyPanel() {
         </p>
       </div>
 
-      {(saved || saving) && (
-        <span
-          className={`inline-block px-2 py-1 text-xs font-mono rounded transition-colors ${
-            saving
-              ? "text-[var(--muted)] bg-[var(--twilight)]"
-              : "text-[var(--neon-green)] bg-[var(--neon-green)]/10"
-          }`}
-        >
-          {saving ? "Saving..." : "Saved"}
-        </span>
-      )}
+      {/* Profile Visibility — 3-tier privacy mode */}
+      <div className="space-y-3">
+        <p className="font-mono text-xs font-bold tracking-[0.12em] uppercase text-[var(--muted)]">
+          Profile Visibility
+        </p>
+        <PrivacyTierSelector initialMode={initialPrivacyMode} />
+      </div>
 
-      {error && (
-        <div className="p-4 rounded-lg bg-red-500/10 border border-red-500 text-red-400 font-mono text-sm">
-          {error}
-        </div>
-      )}
+      <div className="border-t border-[var(--twilight)]" />
 
+      {/* Other preferences */}
       <div className="space-y-4">
-        <ToggleRow
-          label="Public Profile"
-          description="Allow others to discover your profile and social activity."
-          value={isPublic}
-          onToggle={() => setIsPublic(!isPublic)}
-        />
+        {(saved || saving) && (
+          <span
+            className={`inline-block px-2 py-1 text-xs font-mono rounded transition-colors ${
+              saving
+                ? "text-[var(--muted)] bg-[var(--twilight)]"
+                : "text-[var(--neon-green)] bg-[var(--neon-green)]/10"
+            }`}
+          >
+            {saving ? "Saving..." : "Saved"}
+          </span>
+        )}
+
+        {error && (
+          <div className="rounded-lg border border-[var(--coral)] bg-[var(--coral)]/10 px-4 py-3 text-[var(--coral)] font-mono text-xs">
+            {error}
+          </div>
+        )}
 
         <ToggleRow
           label="Use Activity Across Portals"
@@ -177,13 +166,13 @@ export default function PrivacyPanel() {
         />
       </div>
 
-      <div className="pt-4">
+      <div className="pt-2">
         <button
           onClick={handleSave}
           disabled={saving}
           className="px-6 py-2.5 rounded-lg bg-[var(--coral)] text-[var(--void)] font-mono text-sm font-medium hover:bg-[var(--rose)] transition-colors disabled:opacity-50"
         >
-          {saving ? "Saving..." : "Save Privacy Settings"}
+          {saving ? "Saving..." : "Save Preferences"}
         </button>
       </div>
     </div>

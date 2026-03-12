@@ -13,6 +13,7 @@ import {
   errorApiResponse,
   validationError,
 } from "@/lib/api-utils";
+import { resolvePortalAttributionForWrite } from "@/lib/portal-attribution";
 
 // GET /api/itineraries — list current user's itineraries
 export const GET = withAuth(async (request, { user, serviceClient }) => {
@@ -120,20 +121,23 @@ export const POST = withAuth(async (request, { user, serviceClient }) => {
     return validationError("Invalid JSON body");
   }
 
-  if (!isValidUUID(body.portal_id)) {
-    return validationError("portal_id is required and must be a valid UUID");
+  const attribution = await resolvePortalAttributionForWrite(request, {
+    endpoint: "/api/itineraries",
+    body,
+    required: true,
+  });
+
+  if (attribution.response) {
+    return attribution.response;
   }
 
-  // Verify portal exists
-  const { data: portal } = await serviceClient
-    .from("portals")
-    .select("id")
-    .eq("id", body.portal_id)
-    .eq("status", "active")
-    .maybeSingle();
+  const portalId = attribution.portalId;
+  if (!portalId) {
+    return validationError("Portal attribution is required for itinerary creation");
+  }
 
-  if (!portal) {
-    return errorApiResponse("Portal not found", 404);
+  if (isValidUUID(body.portal_id) && body.portal_id !== portalId) {
+    return validationError("portal and portal_id parameters must reference the same portal");
   }
 
   const title =
@@ -159,12 +163,13 @@ export const POST = withAuth(async (request, { user, serviceClient }) => {
     .from("itineraries")
     .insert({
       user_id: user.id,
-      portal_id: body.portal_id,
+      portal_id: portalId,
       title,
       date,
       description,
       share_token: shareToken,
       is_public: false,
+      visibility: "invitees",
     } as never)
     .select()
     .single();

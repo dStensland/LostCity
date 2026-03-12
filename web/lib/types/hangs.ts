@@ -82,6 +82,39 @@ export interface UpdateHangRequest {
   action?: "end"; // End the active hang
 }
 
+/**
+ * Compact hang record returned by /api/venues/[id]/hangs.
+ * Includes only the profile fields needed for the venue hang strip UI.
+ */
+export interface ActiveHang {
+  id: string;
+  user_id: string;
+  venue_id: number;
+  portal_id: string | null;
+  visibility: "friends" | "public";
+  note: string | null;
+  started_at: string;
+  auto_expire_at: string;
+  status: "active";
+  profile: {
+    id: string;
+    username: string;
+    display_name: string | null;
+    avatar_url: string | null;
+  };
+}
+
+/** Response shape returned by GET /api/venues/[id]/hangs */
+export interface VenueHangsSummary {
+  venue_id: number;
+  /** Hangs from mutual friends (visibility = 'friends' or 'public') */
+  friend_hangs: ActiveHang[];
+  /** Hangs from non-friends with visibility = 'public' */
+  open_hangs: ActiveHang[];
+  /** Total unique active hangers visible to the viewer */
+  total_count: number;
+}
+
 // Constants
 export const HANG_DURATION_OPTIONS = [
   { label: "1 hour", hours: 1 },

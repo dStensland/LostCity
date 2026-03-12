@@ -38,6 +38,7 @@ import {
   CollapsibleSection,
   VenueFeaturesSection,
   YonderAdventureSnapshot,
+  AccoladesSection,
 } from "@/components/detail";
 import Badge from "@/components/ui/Badge";
 import HoursSection from "@/components/HoursSection";
@@ -47,7 +48,10 @@ import GettingThereSection, {
 } from "@/components/GettingThereSection";
 import { buildBreadcrumbSchema } from "@/lib/breadcrumb-schema";
 import { isOpenAt, formatCloseTime } from "@/lib/hours";
-import type { VenueFeature } from "@/lib/venue-features";
+import {
+  filterVenueFeaturesForPortal,
+  type VenueFeature,
+} from "@/lib/venue-features";
 
 // Inline to avoid importing @phosphor-icons/react in server component
 const EVENT_HEAVY_TYPES = new Set([
@@ -386,6 +390,7 @@ export default async function PortalSpotPage({ params }: Props) {
     highlights,
     artifacts,
     features,
+    editorialMentions,
     yonderDestinationIntelligence,
     yonderAccommodationInventorySource,
     yonderRuntimeInventorySnapshot,
@@ -396,6 +401,13 @@ export default async function PortalSpotPage({ params }: Props) {
     portal?.name ||
     portalSlug.charAt(0).toUpperCase() + portalSlug.slice(1);
   const isYonderPortal = activePortalSlug === "yonder";
+  const visibleFeatures = filterVenueFeaturesForPortal(
+    features as VenueFeature[],
+    {
+      portalSlug: activePortalSlug,
+      venueSlug: typeof spot.slug === "string" ? spot.slug : slug,
+    }
+  );
 
   const primaryType = spot.venue_type as SpotType | null;
   const typeInfo = primaryType ? SPOT_TYPES[primaryType] : null;
@@ -424,7 +436,7 @@ export default async function PortalSpotPage({ params }: Props) {
     spot,
     openStatus,
     upcomingEvents.length,
-    features.length
+    visibleFeatures.length
   );
 
   // Flatten nearby destinations
@@ -783,6 +795,11 @@ export default async function PortalSpotPage({ params }: Props) {
             </div>
           )}
 
+          {/* ── 5b. ACCOLADES — editorial mentions ───────────────── */}
+          {editorialMentions.length > 0 && (
+            <AccoladesSection mentions={editorialMentions} />
+          )}
+
           {/* ── 6. EVENTS (promoted for event-heavy venue types) ──── */}
           {isEventHeavy && upcomingEvents.length > 0 && (
             <VenueShowtimes
@@ -827,9 +844,9 @@ export default async function PortalSpotPage({ params }: Props) {
           )}
 
           {/* ── 8. FEATURES — type-aware attractions/exhibits ──────── */}
-          {features.length > 0 && (
+          {visibleFeatures.length > 0 && (
             <VenueFeaturesSection
-              features={features as VenueFeature[]}
+              features={visibleFeatures}
               venueType={spot.venue_type ?? null}
             />
           )}

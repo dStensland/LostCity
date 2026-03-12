@@ -29,6 +29,7 @@ export default function ItineraryBuilder({
     addItem,
     removeItem,
     getShareUrl,
+    makeShareable,
   } = useItinerary(portal.id, portal.slug);
 
   const [showAddDrawer, setShowAddDrawer] = useState(false);
@@ -48,11 +49,9 @@ export default function ItineraryBuilder({
   );
 
   const handleShare = useCallback(async () => {
-    if (activeItinerary && !(activeItinerary as Itinerary).is_public) {
-      await updateItinerary({ is_public: true });
-    }
+    await makeShareable();
     setShowShareModal(true);
-  }, [activeItinerary, updateItinerary]);
+  }, [makeShareable]);
 
   const handleSaveTitle = useCallback(async () => {
     if (titleInput.trim()) {

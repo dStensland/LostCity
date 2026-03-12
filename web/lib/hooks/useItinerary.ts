@@ -38,6 +38,7 @@ type UseItineraryReturn = {
   removeItem: (itemId: string) => Promise<boolean>;
   reorderItems: (itemIds: string[]) => Promise<boolean>;
   getShareUrl: () => string | null;
+  makeShareable: () => Promise<string | null>;
   createOutingFromEvent: (portalId: string, event: OutingEvent) => Promise<string | null>;
 };
 
@@ -154,7 +155,7 @@ export function useItinerary(portalId: string, portalSlug: string): UseItinerary
   );
 
   const updateItinerary = useCallback(
-    async (updates: { title?: string; date?: string; is_public?: boolean }): Promise<boolean> => {
+    async (updates: { title?: string; date?: string; is_public?: boolean; visibility?: string }): Promise<boolean> => {
       if (!activeItinerary) return false;
       setSaving(true);
 
@@ -425,8 +426,25 @@ export function useItinerary(portalId: string, portalSlug: string): UseItinerary
     const token = (activeItinerary as Itinerary).share_token;
     if (!token) return null;
     if (typeof window === "undefined") return null;
-    return `${window.location.origin}/${portalSlug}/playbook/share/${token}`;
+    return `${window.location.origin}/${portalSlug}/itinerary/${token}`;
   }, [activeItinerary, portalSlug]);
+
+  /**
+   * Make the itinerary shareable — upgrades visibility and returns the share URL.
+   * Call this when the user explicitly shares (not on every render).
+   */
+  const makeShareable = useCallback(async (): Promise<string | null> => {
+    if (!activeItinerary || !user) return null;
+    const itin = activeItinerary as Itinerary;
+
+    // Only upgrade if currently private
+    if (!itin.visibility || itin.visibility === "private") {
+      const ok = await updateItinerary({ visibility: "invitees" });
+      if (!ok) return null;
+    }
+
+    return getShareUrl();
+  }, [activeItinerary, user, updateItinerary, getShareUrl]);
 
   const createOutingFromEvent = useCallback(
     async (pid: string, event: OutingEvent): Promise<string | null> => {
@@ -455,6 +473,7 @@ export function useItinerary(portalId: string, portalSlug: string): UseItinerary
     removeItem,
     reorderItems,
     getShareUrl,
+    makeShareable,
     createOutingFromEvent,
   };
 }

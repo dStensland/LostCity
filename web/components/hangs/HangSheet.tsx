@@ -32,20 +32,20 @@ interface HangSheetProps {
   onHangCreated?: () => void;
 }
 
-// Color per visibility option
+// Color per visibility option — coral for social choices, gold for temporal
 const VISIBILITY_COLORS: Record<HangVisibility, string> = {
-  private: "var(--neon-green)",
+  private: "var(--coral)",
   friends: "var(--coral)",
-  public: "var(--neon-cyan)",
+  public: "var(--coral)",
 };
 
 const VISIBILITY_ACTIVE_CLASSES: Record<HangVisibility, string> = {
   private:
-    "bg-[var(--neon-green)]/15 border-[var(--neon-green)]/60 text-[var(--neon-green)]",
+    "bg-[var(--coral)]/15 border-[var(--coral)]/60 text-[var(--coral)]",
   friends:
     "bg-[var(--coral)]/15 border-[var(--coral)]/60 text-[var(--coral)]",
   public:
-    "bg-[var(--neon-cyan)]/15 border-[var(--neon-cyan)]/60 text-[var(--neon-cyan)]",
+    "bg-[var(--coral)]/15 border-[var(--coral)]/60 text-[var(--coral)]",
 };
 
 export const HangSheet = memo(function HangSheet({
@@ -361,7 +361,7 @@ export const HangSheet = memo(function HangSheet({
                   onClick={() => !isPlanned || handleModeToggle()}
                   className={`min-h-[44px] px-3 py-2.5 rounded-lg border font-mono text-xs font-medium transition-all ${
                     !isPlanned
-                      ? "bg-[var(--neon-green)]/15 border-[var(--neon-green)]/60 text-[var(--neon-green)]"
+                      ? "bg-[var(--gold)]/15 border-[var(--gold)]/60 text-[var(--gold)]"
                       : "bg-[var(--dusk)] border-[var(--twilight)] text-[var(--soft)] hover:border-[var(--soft)]"
                   }`}
                   aria-pressed={!isPlanned}
@@ -372,7 +372,7 @@ export const HangSheet = memo(function HangSheet({
                   onClick={() => isPlanned || handleModeToggle()}
                   className={`min-h-[44px] px-3 py-2.5 rounded-lg border font-mono text-xs font-medium transition-all ${
                     isPlanned
-                      ? "bg-[var(--vibe)]/15 border-[var(--vibe)]/60 text-[var(--vibe)]"
+                      ? "bg-[var(--gold)]/15 border-[var(--gold)]/60 text-[var(--gold)]"
                       : "bg-[var(--dusk)] border-[var(--twilight)] text-[var(--soft)] hover:border-[var(--soft)]"
                   }`}
                   aria-pressed={isPlanned}

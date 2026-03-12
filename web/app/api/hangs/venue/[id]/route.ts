@@ -90,7 +90,24 @@ export async function GET(request: NextRequest, context: RouteContext) {
       } | null;
     };
 
-    const publicHangs = (publicRows ?? []) as HangProfileRow[];
+    const publicHangsRaw = (publicRows ?? []) as HangProfileRow[];
+
+    // Block filtering: exclude users the viewer has blocked or been blocked by
+    let blockedUserIds = new Set<string>();
+    if (user) {
+      const { data: blocks } = await serviceClient
+        .from("user_blocks")
+        .select("blocker_id, blocked_id")
+        .or(`blocker_id.eq.${user.id},blocked_id.eq.${user.id}`);
+
+      if (blocks) {
+        for (const b of blocks as { blocker_id: string; blocked_id: string }[]) {
+          blockedUserIds.add(b.blocker_id === user.id ? b.blocked_id : b.blocker_id);
+        }
+      }
+    }
+
+    const publicHangs = publicHangsRaw.filter((row) => !blockedUserIds.has(row.user_id));
     const publicCount = publicHangs.length;
 
     // For authenticated users, also fetch friends' hangs at this venue
@@ -133,7 +150,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
         };
 
         const allFriendRows = (friendRows ?? []) as FriendsHangRow[];
-        const venueRows = allFriendRows.filter((row) => row.venue_id === venueId);
+        const venueRows = allFriendRows.filter(
+          (row) => row.venue_id === venueId && !blockedUserIds.has(row.user_id)
+        );
 
         friendHangs = venueRows.map((row) => ({
           hang: {

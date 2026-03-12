@@ -6,11 +6,20 @@ import { applyRateLimit, RATE_LIMITS, getClientIdentifier} from "@/lib/rate-limi
 import { parseFloatParam } from "@/lib/api-utils";
 import { haversineDistanceKm, getWalkingMinutes, getProximityTier, getProximityLabel } from "@/lib/geo";
 import { logger } from "@/lib/logger";
-import { resolvePortalQueryContext } from "@/lib/portal-query-context";
+import {
+  getCachedPortalQueryContext,
+  resolvePortalQueryContext,
+} from "@/lib/portal-query-context";
 import { applyPortalScopeToQuery, expandCityFilterForMetro } from "@/lib/portal-scope";
 import { applyFeedGate } from "@/lib/feed-gate";
-import { getOrSetSharedCacheJson } from "@/lib/shared-cache";
+import { getSharedCacheJson, setSharedCacheJson } from "@/lib/shared-cache";
+import { buildStableSpotsSearchParamsKey } from "@/lib/spots-cache-key";
 import { VENUE_TYPE_ALIASES } from "@/lib/spots-constants";
+import { createServerTimingRecorder } from "@/lib/server-timing";
+import {
+  getEventLedVenueCandidateLimit,
+  shouldUseEventLedSpotsDiscovery,
+} from "@/lib/spots-request-plan";
 
 export const dynamic = "force-dynamic";
 
@@ -24,32 +33,73 @@ function expandVenueTypes(types: string[]): string[] {
   return Array.from(expanded);
 }
 
+function getBoundingBoxForRadiusKm(
+  latitude: number,
+  longitude: number,
+  radiusKm: number,
+): {
+  minLat: number;
+  maxLat: number;
+  minLng: number;
+  maxLng: number;
+} {
+  const latDelta = radiusKm / 111.32;
+  const lngDelta =
+    radiusKm /
+    (111.32 * Math.max(Math.cos((latitude * Math.PI) / 180), 0.1));
+
+  return {
+    minLat: latitude - latDelta,
+    maxLat: latitude + latDelta,
+    minLng: longitude - lngDelta,
+    maxLng: longitude + lngDelta,
+  };
+}
+
 const SPOTS_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes — venue data is stable
 const SPOTS_CACHE_MAX_ENTRIES = 160;
 const SPOTS_CACHE_NAMESPACE = "api:spots";
+const SPOTS_RESPONSE_CACHE_CONTROL = "public, s-maxage=60, stale-while-revalidate=120";
+const SPOTS_EVENT_COUNTS_CACHE_NAMESPACE = "api:spots:event-counts";
+const SPOTS_EVENT_COUNTS_CACHE_TTL_MS = 2 * 60 * 1000;
+const SPOTS_NEIGHBORHOODS_CACHE_NAMESPACE = "api:spots:neighborhoods";
+const SPOTS_NEIGHBORHOODS_CACHE_TTL_MS = 30 * 60 * 1000;
+const SPOTS_IN_FLIGHT_LOADS = new Map<
+  string,
+  Promise<{ payload: Record<string, unknown>; serverTiming: string }>
+>();
+const PORTAL_PARAM_MISMATCH_ERROR = "PORTAL_PARAM_MISMATCH";
 
-// Only include data-shaping params in cache key.
-// Presentation params (limit, sort, center coords, radius) are excluded
-// so identical filter combos hit the same cache entry.
-const CACHE_KEY_PARAMS = new Set([
-  "portal_id", "portal", "exclusive", "open_now", "with_events",
-  "price_level", "venue_type", "neighborhood", "vibes", "genres", "cuisine", "q", "include_hours",
-  "include_events",
-]);
+function buildSpotsEventCountsCacheKey(params: {
+  portalId: string | null;
+  isExclusive: boolean;
+  today: string;
+  eventsWindowEnd: string;
+  portalCities: string[];
+}): string {
+  return JSON.stringify({
+    portalId: params.portalId,
+    exclusive: params.isExclusive,
+    today: params.today,
+    eventsWindowEnd: params.eventsWindowEnd,
+    cities: [...params.portalCities].sort(),
+  });
+}
 
-function buildStableSearchParamsKey(searchParams: URLSearchParams): string {
-  return Array.from(searchParams.entries())
-    .filter(([key]) => CACHE_KEY_PARAMS.has(key))
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
-    .join("&");
+function buildSpotsNeighborhoodsCacheKey(params: {
+  portalId: string | null;
+  portalCities: string[];
+}): string {
+  return JSON.stringify({
+    portalId: params.portalId,
+    cities: [...params.portalCities].sort(),
+  });
 }
 
 export async function GET(request: NextRequest) {
+  const timing = createServerTimingRecorder();
   const rateLimitResult = await applyRateLimit(request, RATE_LIMITS.read, getClientIdentifier(request));
   if (rateLimitResult) return rateLimitResult;
-
-  const supabase = await createClient();
   const { searchParams } = new URL(request.url);
   const isLegacyDefaultPortal = searchParams.get("portal_id") === "default";
   const isExclusive = searchParams.get("exclusive") === "true";
@@ -71,12 +121,24 @@ export async function GET(request: NextRequest) {
   const sortBy = searchParams.get("sort"); // distance | special_relevance | hybrid
   const includeHours = searchParams.get("include_hours") === "true";
   const includeEvents = searchParams.get("include_events") === "true";
+  const cuisineParam = searchParams.get("cuisine")?.split(",").filter(Boolean);
   const responseLimitRaw = Number.parseInt(searchParams.get("limit") || "600", 10);
   const responseLimit = Number.isFinite(responseLimitRaw)
     ? Math.max(1, Math.min(responseLimitRaw, 1200))
     : 600;
 
   const hasCenter = centerLat !== null && centerLng !== null;
+  const useEventLedDiscovery = shouldUseEventLedSpotsDiscovery({
+    hasCenter,
+    hasSearch: Boolean(safeSearch),
+    sortBy,
+    hasPriceLevel: Boolean(priceLevel),
+    venueTypesCount: venueTypes?.length || 0,
+    neighborhoodsCount: neighborhoods?.length || 0,
+    vibesCount: vibes?.length || 0,
+    genresCount: genres?.length || 0,
+    cuisinesCount: cuisineParam?.length || 0,
+  });
 
   if (hasCenter) {
     if (centerLat! < -90 || centerLat! > 90 || centerLng! < -180 || centerLng! > 180) {
@@ -84,35 +146,70 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const cacheKey = buildStableSearchParamsKey(searchParams);
+  const cacheKey = buildStableSpotsSearchParamsKey(searchParams);
+  const cachedPayload = await timing.measure("cache_lookup", () =>
+    getSharedCacheJson<Record<string, unknown>>(SPOTS_CACHE_NAMESPACE, cacheKey)
+  );
+  if (cachedPayload) {
+    return NextResponse.json(cachedPayload, {
+      headers: {
+        "Cache-Control": SPOTS_RESPONSE_CACHE_CONTROL,
+        "Server-Timing": `${timing.toHeader()}, cache_hit;dur=0.0;desc="shared"`,
+      },
+    });
+  }
+
+  const existingLoad = SPOTS_IN_FLIGHT_LOADS.get(cacheKey);
+  if (existingLoad) {
+    const result = await existingLoad;
+    timing.addMetric("coalesced", 0, "inflight");
+    return NextResponse.json(result.payload, {
+      headers: {
+        "Cache-Control": SPOTS_RESPONSE_CACHE_CONTROL,
+        "Server-Timing": `${result.serverTiming}, ${timing.toHeader()}`,
+      },
+    });
+  }
 
   const today = getLocalDateString();
   const eventsWindowEndDate = new Date();
   eventsWindowEndDate.setDate(eventsWindowEndDate.getDate() + 45);
   const eventsWindowEnd = getLocalDateString(eventsWindowEndDate);
-  const portalContext = await resolvePortalQueryContext(supabase, searchParams);
-  if (portalContext.hasPortalParamMismatch) {
-    return NextResponse.json(
-      { error: "portal and portal_id parameters must reference the same portal" },
-      { status: 400 },
-    );
-  }
-  const portalId = isLegacyDefaultPortal ? null : portalContext.portalId;
-  const portalClient = await createPortalScopedClient(portalId);
-  const portalCityFilter = Array.from(
-    new Set(
-      [...(portalContext.filters.cities || []), ...(portalContext.filters.city ? [portalContext.filters.city] : [])]
-        .map((c) => c.trim())
-        .filter(Boolean),
-    ),
-  );
+  let spotsLoadPromise:
+    | Promise<{ payload: Record<string, unknown>; serverTiming: string }>
+    | null = null;
 
   try {
-    const payload = await getOrSetSharedCacheJson<Record<string, unknown>>(
-      SPOTS_CACHE_NAMESPACE,
-      cacheKey,
-      SPOTS_CACHE_TTL_MS,
-      async (): Promise<Record<string, unknown>> => {
+    async function loadSpotsPayload(): Promise<{
+      payload: Record<string, unknown>;
+      serverTiming: string;
+    }> {
+      const supabase = await createClient();
+      const portalContext = await timing.measure("bootstrap", async () => {
+        const cachedContext = await getCachedPortalQueryContext(searchParams);
+        if (cachedContext) {
+          timing.addMetric("portal_context_cache_hit", 0, "shared");
+          return cachedContext;
+        }
+        return resolvePortalQueryContext(supabase, searchParams);
+      });
+      if (portalContext.hasPortalParamMismatch) {
+        throw new Error(PORTAL_PARAM_MISMATCH_ERROR);
+      }
+      const portalId = isLegacyDefaultPortal ? null : portalContext.portalId;
+      const portalClient = await createPortalScopedClient(portalId);
+      const portalCityFilter = Array.from(
+        new Set(
+          [...(portalContext.filters.cities || []), ...(portalContext.filters.city ? [portalContext.filters.city] : [])]
+            .map((c) => c.trim())
+            .filter(Boolean),
+        ),
+      );
+      const expandedPortalCities =
+        portalCityFilter.length > 0
+          ? expandCityFilterForMetro(portalCityFilter)
+          : [];
+
     type VenueRow = {
       id: number;
       name: string;
@@ -178,6 +275,17 @@ export async function GET(request: NextRequest) {
       query = query.in("city", expandedCities);
     }
 
+    if (hasCenter && radiusKm !== null && radiusKm > 0) {
+      const bounds = getBoundingBoxForRadiusKm(centerLat!, centerLng!, radiusKm);
+      query = query
+        .not("lat", "is", null)
+        .not("lng", "is", null)
+        .gte("lat", bounds.minLat)
+        .lte("lat", bounds.maxLat)
+        .gte("lng", bounds.minLng)
+        .lte("lng", bounds.maxLng);
+    }
+
     // Apply venue type filter — expand through alias map to catch legacy DB types
     if (venueTypes && venueTypes.length > 0) {
       query = query.in("venue_type", expandVenueTypes(venueTypes));
@@ -207,7 +315,6 @@ export async function GET(request: NextRequest) {
     }
 
     // Apply cuisine filter (array overlap)
-    const cuisineParam = searchParams.get("cuisine")?.split(",").filter(Boolean);
     if (cuisineParam && cuisineParam.length > 0) {
       query = query.overlaps("cuisine", cuisineParam);
     }
@@ -219,40 +326,195 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const venueCandidateLimit = Math.max(
-      700,
-      Math.min(3000, responseLimit * 3),
-    );
-    query = query.order("name").limit(venueCandidateLimit);
+    let venues: VenueRow[] | null = null;
+    let eventCounts = new Map<number, number>();
+    let allNeighborhoods: string[] = [];
 
-    // Get event counts for venues with upcoming events (built independently)
-    let eventsQuery = portalClient
-      .from("events")
-      .select("venue_id")
-      .gte("start_date", today)
-      .lte("start_date", eventsWindowEnd)
-      .not("venue_id", "is", null);
+    let usedEventLedDiscovery = false;
+    if (useEventLedDiscovery) {
+      try {
+      const eventCountsCacheKey = buildSpotsEventCountsCacheKey({
+        portalId,
+        isExclusive,
+        today,
+        eventsWindowEnd,
+        portalCities: expandedPortalCities,
+      });
+        const cachedEventCounts = await timing.measure("event_counts_cache_lookup", () =>
+          getSharedCacheJson<Array<[number, number]>>(
+            SPOTS_EVENT_COUNTS_CACHE_NAMESPACE,
+            eventCountsCacheKey,
+          ),
+        );
 
-    eventsQuery = applyPortalScopeToQuery(eventsQuery, {
-      portalId,
-      portalExclusive: isExclusive,
-      publicOnlyWhenNoPortal: true,
-    });
-    eventsQuery = applyFeedGate(eventsQuery);
+        let sortedVenueCounts = cachedEventCounts;
+        if (!sortedVenueCounts) {
+          const { data: discoveryEvents, error: discoveryEventsError } =
+            await timing.measure("event_counts_discovery", () =>
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (portalClient.rpc as any)("get_spot_event_counts", {
+                p_start_date: today,
+                p_end_date: eventsWindowEnd,
+                p_portal_id: portalId,
+                p_city_names: expandedPortalCities.length > 0 ? expandedPortalCities : null,
+                p_limit: getEventLedVenueCandidateLimit(responseLimit, openNow),
+              })
+            );
+          if (discoveryEventsError) {
+            throw discoveryEventsError;
+          }
 
-    const eventCandidateLimit = Math.max(
-      400,
-      Math.min(3500, responseLimit * 5),
-    );
+          const discoveryCounts = new Map<number, number>();
+          for (const row of
+            ((discoveryEvents as Array<{ venue_id: number; event_count: number }> | null) ||
+              [])) {
+            discoveryCounts.set(row.venue_id, Number(row.event_count) || 0);
+          }
+          sortedVenueCounts = Array.from(discoveryCounts.entries()).sort(
+            (left, right) => right[1] - left[1],
+          );
+          await setSharedCacheJson(
+            SPOTS_EVENT_COUNTS_CACHE_NAMESPACE,
+            eventCountsCacheKey,
+            sortedVenueCounts,
+            SPOTS_EVENT_COUNTS_CACHE_TTL_MS,
+            { maxEntries: 120 },
+          );
+        }
 
-    // Run venues and events queries in parallel — they are independent
-    const [{ data: venues, error: venuesError }, { data: events }] = await Promise.all([
-      query,
-      eventsQuery.limit(eventCandidateLimit),
-    ]);
+        eventCounts = new Map(sortedVenueCounts);
+        const candidateVenueIds = sortedVenueCounts
+          .slice(0, getEventLedVenueCandidateLimit(responseLimit, openNow))
+          .map(([venueId]) => venueId);
 
-    if (venuesError) {
-      throw venuesError;
+        if (candidateVenueIds.length > 0) {
+          query = query.in("id", candidateVenueIds).limit(candidateVenueIds.length);
+        } else {
+          query = query.limit(responseLimit);
+        }
+
+        const { data: fastPathVenues, error: venuesError } = await timing.measure(
+          "venues_query",
+          () => query,
+        );
+        if (venuesError) {
+          throw venuesError;
+        }
+        venues = (fastPathVenues as VenueRow[] | null) || [];
+
+        const neighborhoodsCacheKey = buildSpotsNeighborhoodsCacheKey({
+          portalId,
+          portalCities: expandedPortalCities,
+        });
+        const cachedNeighborhoods = await timing.measure(
+          "neighborhoods_cache_lookup",
+          () =>
+            getSharedCacheJson<string[]>(
+              SPOTS_NEIGHBORHOODS_CACHE_NAMESPACE,
+              neighborhoodsCacheKey,
+            ),
+        );
+        if (cachedNeighborhoods) {
+          allNeighborhoods = cachedNeighborhoods;
+        } else {
+          let neighborhoodsQuery = supabase
+            .from("venues")
+            .select("neighborhood")
+            .neq("active", false);
+          if (portalCityFilter.length > 0) {
+            neighborhoodsQuery = neighborhoodsQuery.in(
+              "city",
+              expandedPortalCities,
+            );
+          }
+          const { data: neighborhoodRows, error: neighborhoodsError } =
+            await timing.measure("neighborhoods_query", () => neighborhoodsQuery);
+          if (neighborhoodsError) {
+            throw neighborhoodsError;
+          }
+          allNeighborhoods = Array.from(
+            new Set(
+              ((neighborhoodRows as Array<{ neighborhood: string | null }> | null) || [])
+                .map((row) => row.neighborhood)
+                .filter(Boolean) as string[],
+            ),
+          ).sort();
+          await setSharedCacheJson(
+            SPOTS_NEIGHBORHOODS_CACHE_NAMESPACE,
+            neighborhoodsCacheKey,
+            allNeighborhoods,
+            SPOTS_NEIGHBORHOODS_CACHE_TTL_MS,
+            { maxEntries: 120 },
+          );
+        }
+        usedEventLedDiscovery = true;
+      } catch (error) {
+        timing.addMetric("event_led_fallback", 0, "error");
+        logger.warn("Spots event-led discovery failed; falling back to venue-first path", {
+          component: "api/spots",
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    if (!usedEventLedDiscovery) {
+      const venueCandidateLimit = Math.max(
+        700,
+        Math.min(3000, responseLimit * 3),
+      );
+      query = query.order("name").limit(venueCandidateLimit);
+
+      const buildEventCountsQuery = (venueIds: number[]) => {
+        let scopedQuery = portalClient
+          .from("events")
+          .select("venue_id")
+          .gte("start_date", today)
+          .lte("start_date", eventsWindowEnd)
+          .not("venue_id", "is", null)
+          .in("venue_id", venueIds);
+
+        scopedQuery = applyPortalScopeToQuery(scopedQuery, {
+          portalId,
+          portalExclusive: isExclusive,
+          publicOnlyWhenNoPortal: true,
+        });
+        return applyFeedGate(scopedQuery);
+      };
+
+      const { data: fallbackVenues, error: venuesError } = await timing.measure(
+        "venues_query",
+        () => query,
+      );
+      if (venuesError) {
+        throw venuesError;
+      }
+
+      venues = (fallbackVenues as VenueRow[] | null) || [];
+      const venueIdsForCounts = venues.map((venue) => venue.id);
+      const eventCountChunks: Promise<{ data: EventRow[] | null }>[] = [];
+      const EVENT_COUNT_CHUNK_SIZE = 400;
+
+      for (let i = 0; i < venueIdsForCounts.length; i += EVENT_COUNT_CHUNK_SIZE) {
+        const venueIdChunk = venueIdsForCounts.slice(i, i + EVENT_COUNT_CHUNK_SIZE);
+        eventCountChunks.push(buildEventCountsQuery(venueIdChunk));
+      }
+
+      const eventCountResults =
+        eventCountChunks.length > 0
+          ? await timing.measure("event_counts", () => Promise.all(eventCountChunks))
+          : [];
+      const events = eventCountResults.flatMap((result) => result.data || []);
+
+      if (events) {
+        for (const event of events as EventRow[]) {
+          const count = eventCounts.get(event.venue_id) || 0;
+          eventCounts.set(event.venue_id, count + 1);
+        }
+      }
+
+      allNeighborhoods = [
+        ...new Set(venues.map((v) => v.neighborhood).filter(Boolean)),
+      ] as string[];
     }
 
     if (!venues || venues.length === 0) {
@@ -264,15 +526,6 @@ export async function GET(request: NextRequest) {
           neighborhoods: [],
         },
       };
-    }
-
-    // Count events per venue
-    const eventCounts = new Map<number, number>();
-    if (events) {
-      for (const event of events as EventRow[]) {
-        const count = eventCounts.get(event.venue_id) || 0;
-        eventCounts.set(event.venue_id, count + 1);
-      }
     }
 
     // Combine venues with event counts and compute open status
@@ -386,7 +639,7 @@ export async function GET(request: NextRequest) {
 
     // Optionally enrich with upcoming event details (next 2 per venue)
     if (includeEvents && venueIds.length > 0) {
-      let eventDetailsQuery = supabase
+      let eventDetailsQuery = portalClient
         .from("events")
         .select("venue_id, id, title, start_date, start_time")
         .in("venue_id", venueIds)
@@ -396,8 +649,15 @@ export async function GET(request: NextRequest) {
         .order("start_date", { ascending: true })
         .order("start_time", { ascending: true, nullsFirst: false })
         .limit(venueIds.length * 4); // fetch a few per venue, trim client-side
+      eventDetailsQuery = applyPortalScopeToQuery(eventDetailsQuery, {
+        portalId,
+        portalExclusive: isExclusive,
+        publicOnlyWhenNoPortal: true,
+      });
       eventDetailsQuery = applyFeedGate(eventDetailsQuery);
-      const { data: eventDetails } = await eventDetailsQuery;
+      const { data: eventDetails } = await timing.measure("event_details", () =>
+        eventDetailsQuery
+      );
 
       if (eventDetails) {
         type EventDetail = { venue_id: number; id: number; title: string; start_date: string; start_time: string | null };
@@ -426,29 +686,65 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Compute metadata for filter UI (from full unfiltered data)
-    const allNeighborhoods = [...new Set((venues as VenueRow[]).map(v => v.neighborhood).filter(Boolean))] as string[];
     const openCount = spots.filter(s => s.is_open).length;
 
-        return {
-          spots,
-          meta: {
-            total: spots.length,
-            openCount,
-            neighborhoods: allNeighborhoods.sort(),
-          }
-        };
-      },
-      { maxEntries: SPOTS_CACHE_MAX_ENTRIES }
-    );
+      const payload = {
+        spots,
+        meta: {
+          total: spots.length,
+          openCount,
+          neighborhoods: allNeighborhoods.sort(),
+        },
+      };
 
-    return NextResponse.json(payload, {
+      return {
+        payload,
+        serverTiming: timing.toHeader(),
+      };
+    }
+
+    spotsLoadPromise = loadSpotsPayload();
+    SPOTS_IN_FLIGHT_LOADS.set(cacheKey, spotsLoadPromise);
+    const result = await spotsLoadPromise;
+    await setSharedCacheJson(
+      SPOTS_CACHE_NAMESPACE,
+      cacheKey,
+      result.payload,
+      SPOTS_CACHE_TTL_MS,
+      { maxEntries: SPOTS_CACHE_MAX_ENTRIES },
+    );
+    return NextResponse.json(result.payload, {
       headers: {
-        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
+        "Cache-Control": SPOTS_RESPONSE_CACHE_CONTROL,
+        "Server-Timing": result.serverTiming,
       },
     });
   } catch (error) {
+    if ((error as Error).message === PORTAL_PARAM_MISMATCH_ERROR) {
+      return NextResponse.json(
+        { error: "portal and portal_id parameters must reference the same portal" },
+        {
+          status: 400,
+          headers: {
+            "Server-Timing": timing.toHeader(),
+          },
+        },
+      );
+    }
     logger.error("Spots API error:", error);
-    return NextResponse.json({ spots: [], error: "Failed to fetch spots" }, { status: 500 });
+    return NextResponse.json(
+      { spots: [], error: "Failed to fetch spots" },
+      {
+        status: 500,
+        headers: {
+          "Server-Timing": timing.toHeader(),
+        },
+      },
+    );
+  } finally {
+    const currentLoad = SPOTS_IN_FLIGHT_LOADS.get(cacheKey);
+    if (currentLoad === spotsLoadPromise) {
+      SPOTS_IN_FLIGHT_LOADS.delete(cacheKey);
+    }
   }
 }

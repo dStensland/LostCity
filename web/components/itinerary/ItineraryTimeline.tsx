@@ -1,18 +1,20 @@
 "use client";
 
-import type { ItineraryItem, LocalItineraryItem } from "@/lib/itinerary-utils";
+import type { ItineraryItem, LocalItineraryItem, ItineraryCrew } from "@/lib/itinerary-utils";
 import ItineraryItemCard from "./ItineraryItemCard";
 
 interface ItineraryTimelineProps {
   items: (ItineraryItem | LocalItineraryItem)[];
   onRemoveItem?: (id: string) => void;
   compact?: boolean;
+  crew?: ItineraryCrew | null;
 }
 
 export default function ItineraryTimeline({
   items,
   onRemoveItem,
   compact = false,
+  crew,
 }: ItineraryTimelineProps) {
   if (items.length === 0) {
     return (
@@ -70,6 +72,7 @@ export default function ItineraryTimeline({
             showWalkTime={i > 0}
             onRemove={onRemoveItem}
             compact={compact}
+            crew={crew}
           />
         ))}
       </div>

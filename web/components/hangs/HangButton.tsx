@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
 import { triggerHaptic } from "@/lib/haptics";
 import { usePortalSlug } from "@/lib/portal-context";
+import { useMyHangs } from "@/lib/hooks/useHangs";
 import { HangSheet } from "./HangSheet";
 import { HangShareFlow } from "./HangShareFlow";
 
@@ -24,7 +25,7 @@ interface HangButtonProps {
   /** Compact mode for icon-only use in cards */
   compact?: boolean;
   className?: string;
-  /** Whether the current user already has an active hang at this venue */
+  /** Override: explicitly set hang state (auto-detected from useMyHangs if omitted) */
   isHanging?: boolean;
   onHangCreated?: () => void;
 }
@@ -34,9 +35,12 @@ export const HangButton = memo(function HangButton({
   event,
   compact = false,
   className,
-  isHanging = false,
+  isHanging: isHangingProp,
   onHangCreated,
 }: HangButtonProps) {
+  // Auto-detect if user is hanging at this venue via React Query
+  const { data: myHangs } = useMyHangs();
+  const isHanging = isHangingProp ?? (myHangs?.active?.venue_id === venue.id);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [shareFlowOpen, setShareFlowOpen] = useState(false);
   const { user, loading } = useAuth();

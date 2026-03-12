@@ -1,9 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import type { ItineraryItem, LocalItineraryItem } from "@/lib/itinerary-utils";
+import type { ItineraryItem, LocalItineraryItem, ItineraryCrew } from "@/lib/itinerary-utils";
 import {
   getItemTitle,
+  getStopCrew,
   formatItineraryTime,
   formatWalkTime,
   formatWalkDistance,
@@ -16,6 +17,7 @@ interface ItineraryItemCardProps {
   showWalkTime?: boolean;
   onRemove?: (id: string) => void;
   compact?: boolean;
+  crew?: ItineraryCrew | null;
 }
 
 function getItemImage(item: ItineraryItem | LocalItineraryItem): string | null {
@@ -51,6 +53,7 @@ export default function ItineraryItemCard({
   showWalkTime = true,
   onRemove,
   compact = false,
+  crew,
 }: ItineraryItemCardProps) {
   const title = getItemTitle(item);
   const subtitle = getItemSubtitle(item);
@@ -59,6 +62,7 @@ export default function ItineraryItemCard({
   const walkDistance = formatWalkDistance(item.walk_distance_meters);
   const timeDisplay = formatItineraryTime(item.start_time);
   const proxiedImage = imageUrl ? getProxiedImageSrc(imageUrl) : null;
+  const stopCrew = crew ? getStopCrew(crew, item.id) : [];
 
   return (
     <div className="group">
@@ -134,6 +138,36 @@ export default function ItineraryItemCard({
             <p className="text-[10px] text-white/30 mt-1">
               ~{item.duration_minutes} min
             </p>
+          )}
+          {stopCrew.length > 0 && (
+            <div className="flex items-center gap-1.5 mt-2">
+              <div className="flex -space-x-1.5">
+                {stopCrew.slice(0, 4).map((p) => (
+                  <div
+                    key={p.id}
+                    className="w-5 h-5 rounded-full border border-[var(--night)] bg-[var(--twilight)] flex items-center justify-center overflow-hidden"
+                    title={p.display_name || p.username || "Crew"}
+                  >
+                    {p.avatar_url ? (
+                      <img
+                        src={p.avatar_url}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-[8px] font-medium text-[var(--soft)]">
+                        {(p.display_name || p.username || "?")[0].toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <span className="text-[10px] text-[var(--muted)]">
+                {stopCrew.length === 1
+                  ? stopCrew[0].display_name || stopCrew[0].username || "1 person"
+                  : `${stopCrew.length} joining`}
+              </span>
+            </div>
           )}
         </div>
 
